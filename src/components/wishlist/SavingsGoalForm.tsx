@@ -78,7 +78,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         </FormField>
         <FormField label="Priority">
           <CustomSelect
-            ariaLabel="Goal priority"
+            ariaLabel="Commitment priority"
             value={props.priority}
             onChange={props.onPriorityChange}
             options={['High', 'Medium', 'Low'].map(value => ({ value, label: value }))}
@@ -91,7 +91,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
       <FormField label="Where should this money come from?">
         <div className="flex items-center gap-1.5">
           <CustomSelect
-            ariaLabel="Goal funding bucket"
+            ariaLabel="Commitment funding bucket"
             value={props.fundingBucket}
             onChange={value => props.onFundingBucketChange(value as SavingsGoalFundingBucket)}
             options={[
@@ -101,8 +101,8 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             className="w-full"
           />
           <InfoHint
-            label="goal funding bucket"
-            text="Essentials is the money your bills come out of. Rewards is the money you set aside for treats and wishlist items."
+            label="commitment funding bucket"
+            text="Essentials is the money your bills come out of. Rewards is the money you set aside for treats and rewards."
           />
         </div>
       </FormField>
@@ -172,7 +172,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
           type="submit"
           className="rounded-xl py-2.5 shadow-lg shadow-primary/25"
         >
-          {isAdd ? 'Add Goal' : 'Save Changes'}
+          {isAdd ? 'Add Commitment' : 'Save Changes'}
         </Button>
       </ModalActions>
     </form>

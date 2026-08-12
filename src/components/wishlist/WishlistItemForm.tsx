@@ -28,7 +28,7 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
   const isAdd = props.mode === 'add'
   return (
     <form noValidate onSubmit={props.onSubmit} className="space-y-4 text-xs font-semibold">
-      <FormField label="Goal name" required error={props.errors.name}>
+      <FormField label="Reward name" required error={props.errors.name}>
         <Input
           type="text"
           value={props.name}
@@ -56,7 +56,7 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
         </FormField>
         <FormField label="Priority">
           <CustomSelect
-            ariaLabel="Goal priority"
+            ariaLabel="Reward priority"
             value={props.priority}
             onChange={props.onPriorityChange}
             options={['High', 'Medium', 'Low'].map(value => ({ value, label: value }))}
@@ -73,7 +73,7 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
           className="size-3.5 border-border rounded focus:ring-ring"
         />
         <label htmlFor={`wishlist-active-${props.mode}`} className="text-muted-foreground font-medium cursor-pointer">
-          Set as Active Focus Goal
+          Focus on this reward first
         </label>
       </div>
 
@@ -85,7 +85,7 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
           type="submit"
           className="rounded-xl py-2.5 shadow-lg shadow-primary/25"
         >
-          {isAdd ? 'Add Goal' : 'Save Changes'}
+          {isAdd ? 'Add Reward' : 'Save Changes'}
         </Button>
       </ModalActions>
     </form>

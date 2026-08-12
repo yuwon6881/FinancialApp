@@ -16,6 +16,8 @@ export * from './investments'
 // './loans' is deliberately NOT re-exported: loan cards and their full-history replay are only
 // needed by the lazy Recurring Payments section; bootstrap maps the payload at the boundary and
 // CRUD/sync callers import this module directly.
+// './accounts' is deliberately NOT re-exported: the Settings account-management tab is lazy,
+// while the startup list arrives in bootstrap. CRUD and queued sync callers import it directly.
 //
 // './documents' is deliberately NOT re-exported here. This barrel is on the eager
 // critical path, and every vault consumer is lazy (the Documents view, the ledger

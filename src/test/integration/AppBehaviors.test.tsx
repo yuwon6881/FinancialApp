@@ -10,6 +10,27 @@ const apiMocks = vi.hoisted(() => ({
   updateSummarySeen: vi.fn().mockResolvedValue(undefined),
 }))
 
+const mobilePwaGateMocks = vi.hoisted(() => ({
+  credentialId: null as string | null,
+  verify: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+}))
+
+vi.mock('@/lib/mobilePwaDeviceGateEligibility', async () => {
+  const actual = await vi.importActual('@/lib/mobilePwaDeviceGateEligibility') as object
+  return {
+    ...actual,
+    getMobilePwaLaunchGateCredential: () => mobilePwaGateMocks.credentialId,
+  }
+})
+
+vi.mock('@/lib/mobilePwaDeviceGate', async () => {
+  const actual = await vi.importActual('@/lib/mobilePwaDeviceGate') as object
+  return {
+    ...actual,
+    verifyMobilePwaDeviceGate: mobilePwaGateMocks.verify,
+  }
+})
+
 // The outbox resolves its dispatch table through the financial API module. Mock
 // that source module as well as the barrel so the test never reaches the network
 // when Vite gives the re-export and source module separate graph identities.
@@ -138,6 +159,8 @@ describe('App behaviors', () => {
     localStorage.clear()
     sessionStorage.clear()
     vi.clearAllMocks()
+    mobilePwaGateMocks.credentialId = null
+    mobilePwaGateMocks.verify.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -176,6 +199,31 @@ describe('App behaviors', () => {
     await waitFor(() => {
       expect(screen.getByTestId('dashboard-view')).toBeDefined()
     }, { timeout: 15000 })
+  })
+
+  it('keeps cached content behind the startup gate while bootstrap wakes the API', async () => {
+    localStorage.setItem('auth_session', '1')
+    localStorage.setItem('auth_username', 'alice')
+    localStorage.setItem('cached_dashboard_data', JSON.stringify({
+      setting: { selectedMonth: 'Jun', selectedYear: 2026, cycleDay: 28, currency: 'USD', hideSensitive: true, darkMode: false },
+      stats: { pastThreeMonthsRewardsAverage: 120, hasRewardsHistory: true },
+      categories: [],
+      pendingNotifications: [],
+    }))
+    mobilePwaGateMocks.credentialId = '010203'
+    localStorage.setItem('fingerprint_credential_id_on_this_device:ALICE', '010203')
+    let finishDeviceUnlock!: () => void
+    mobilePwaGateMocks.verify.mockImplementationOnce(() => new Promise(resolve => { finishDeviceUnlock = resolve }))
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'Unlock FinancialApp' }, { timeout: 15_000 })).toBeDefined()
+    expect(screen.queryByTestId('dashboard-view')).toBeNull()
+    await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalled())
+    await waitFor(() => expect(mobilePwaGateMocks.verify).toHaveBeenCalledOnce())
+
+    finishDeviceUnlock()
+    await waitFor(() => expect(screen.getByTestId('dashboard-view')).toBeDefined())
   })
 
   it('shows the skeleton and fetches data immediately after login', async () => {
@@ -248,13 +296,13 @@ describe('App behaviors', () => {
     }, { timeout: 5000 })
 
     fireEvent.click(await screen.findByRole('button', { name: 'Open Menu' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Ask AI' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Ask AI' }))
 
     // The panel is lazy behind a null fallback, so this waits on a real dynamic import
     // rather than a render; the default 1s is not enough for its chunk here.
     expect(await screen.findByRole('dialog', { name: 'ASK AI' }, { timeout: 5000 })).toBeDefined()
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'Ask AI' })).toBeNull()
+      expect(screen.queryByRole('menuitem', { name: 'Ask AI' })).toBeNull()
     })
   })
 

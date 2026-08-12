@@ -21,6 +21,10 @@ export function bucketAmount(transaction: AttributableTransaction, bucket: strin
   const ledgerCategory = transaction.ledgerCategory ?? ''
   const target = bucket.toLowerCase()
 
+  // AccountMove is an in-bucket movement. Its two account legs are handled by
+  // accountAttribution; it must never change a bucket total.
+  if (ledgerCategory.toLowerCase() === 'accountmove') return 0
+
   if (ledgerCategory.toLowerCase() === target) return transaction.amount
 
   if (ledgerCategory.toLowerCase().startsWith('incomesplit:')) {

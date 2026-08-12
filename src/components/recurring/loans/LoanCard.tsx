@@ -1,6 +1,8 @@
-import { Pencil, Trash2 } from 'lucide-react'
+import { MessageCircleQuestion, Pencil, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { fetchLoanSchedule } from '../../../lib/api/loans'
+import { SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
+import { entryRateFromAnnual, formatRatePercent, loanInterestMethodCopy } from '../../../lib/loanTerms'
 import type { Loan, LoanScheduleEntry } from '../../../types'
 import { Button } from '../../ui/Button'
 import { AlertBanner } from '../../ui/AlertBanner'
@@ -15,10 +17,8 @@ interface LoanCardProps {
   isSyncing: boolean
   onEdit: () => void
   onDelete: () => void
+  onExplain: () => void
 }
-
-const methodLabel = (method: Loan['interestMethod']) =>
-  method === 'Flat' ? 'Interest on the original amount' : "Interest on what's left"
 
 const formatDate = (value?: string | null) => value
   ? new Date(`${value}T12:00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
@@ -32,9 +32,16 @@ export function LoanCard({
   isSyncing,
   onEdit,
   onDelete,
+  onExplain,
 }: LoanCardProps) {
-  const scheduleUnavailable = loan.scheduleStatus === 'Incomplete' || !loan.scheduleFrequency || !loan.scheduleDueDay || !loan.scheduleStartDate
+  const scheduleUnavailable = loan.isRecalculating === true || loan.scheduleStatus === 'Incomplete' || !loan.scheduleFrequency || !loan.scheduleDueDay || !loan.scheduleStartDate
   const next = loan.snapshot.nextPayment
+  const rateBasis = loan.rateBasis ?? 'Yearly'
+  const rateText = rateBasis === 'Monthly'
+    ? `${formatRatePercent(entryRateFromAnnual(loan.annualRatePercent, rateBasis))} a month (${formatRatePercent(loan.annualRatePercent)} a year)`
+    : `${formatRatePercent(loan.annualRatePercent)} a year`
+  const interestOnlyBalanceRemains = loan.interestMethod === 'InterestOnly' && loan.snapshot.outstandingBalance > 0
+  const finalBalanceDueNow = interestOnlyBalanceRemains && next === null
   const actualRows = loan.snapshot.payments.map(payment => ({ ...payment, kind: 'Paid' as const }))
   const replayRevision = JSON.stringify([loan.snapshot.payments, loan.snapshot.futureSchedule, loan.snapshot.nextPayment])
   const scheduleKey = useMemo(() => [
@@ -117,6 +124,9 @@ export function LoanCard({
           </p>
         </div>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" aria-label={`Explain ${loan.name}`} title={hideSensitive ? 'Unhide balances to explain this loan' : 'Explain this loan'} onClick={onExplain} disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}>
+            <MessageCircleQuestion className="size-4" aria-hidden="true" />
+          </Button>
           <Button variant="ghost" size="icon" aria-label={`Edit ${loan.name}`} title={hideSensitive ? 'Unhide balances to edit' : 'Edit loan'} onClick={onEdit} disabled={hideSensitive}>
             <Pencil className="size-4" aria-hidden="true" />
           </Button>
@@ -126,29 +136,36 @@ export function LoanCard({
         </div>
       </div>
 
-      {loan.scheduleStatus === 'NeedsReview' && (
+      {loan.isRecalculating ? (
         <AlertBanner variant="warning" className="mt-4">
-          This loan predates the saved cadence. Its schedule was recovered from the linked bill and needs your review before you rely on the forecast.
+          Recalculating from {loan.recurringPaymentName || 'the selected bill'} history. Forecasts will return after the change syncs.
         </AlertBanner>
-      )}
-
-      {scheduleUnavailable ? (
+      ) : scheduleUnavailable ? (
         <AlertBanner variant="warning" className="mt-4">
-          This loan cannot show a trustworthy balance or payment schedule because its original bill cadence or payment history is incomplete. Keep this history with the loan; create a separate loan for a different bill.
+          This loan cannot show a trustworthy balance or payment schedule because its bill cadence or payment history is incomplete. Choose a valid linked bill in Edit loan to recalculate it.
         </AlertBanner>
       ) : (
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Metric label="Still owed" value={formatSensitive(loan.snapshot.outstandingBalance)} />
-          <Metric label="Next instalment" value={formatSensitive(loan.snapshot.scheduledPayment)} />
-          <Metric label="Expected payoff" value={formatDate(loan.snapshot.payoffDate)} />
-          <Metric label="Total interest" value={formatSensitive(loan.snapshot.totalScheduledInterest)} />
+          <Metric label="Next instalment" value={finalBalanceDueNow ? 'Final balance due now' : formatSensitive(loan.snapshot.scheduledPayment)} />
+          <Metric label="Expected payoff" value={interestOnlyBalanceRemains ? 'No automatic payoff' : formatDate(loan.snapshot.payoffDate)} />
+          <Metric label="Remaining interest" value={formatSensitive(loan.snapshot.totalScheduledInterest)} />
         </div>
       )}
 
-      <div className="mt-4 grid gap-3 rounded-xl border border-border/50 bg-muted/20 p-3 text-xs sm:grid-cols-3">
+      <div className="mt-4 grid gap-3 rounded-xl border border-border/50 bg-muted/20 p-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="text-muted-foreground">Interest method</p>
-          <p className="mt-1 font-semibold text-foreground">{methodLabel(loan.interestMethod)}</p>
+          <div className="flex items-start gap-1.5">
+            <div>
+              <p className="text-muted-foreground">Interest method</p>
+              <p className="mt-1 font-semibold text-foreground">{loanInterestMethodCopy(loan.interestMethod).label}</p>
+            </div>
+            <InfoHint label="interest method" text={loanInterestMethodCopy(loan.interestMethod).hint} />
+          </div>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Interest rate</p>
+          <p className="mt-1 font-semibold text-foreground" aria-hidden={hideSensitive || undefined}>{hideSensitive ? SENSITIVE_AMOUNT_MASK : rateText}</p>
         </div>
         <div>
           <p className="text-muted-foreground">Next instalment split</p>
@@ -158,6 +175,8 @@ export function LoanCard({
             <p className="mt-1 font-semibold text-foreground">
               {formatSensitive(next.principal)} clears the debt · {formatSensitive(next.interest)} interest
             </p>
+          ) : finalBalanceDueNow ? (
+            <p className="mt-1 font-semibold text-muted-foreground">Final balance due now</p>
           ) : (
             <p className="mt-1 font-semibold text-muted-foreground">Unavailable</p>
           )}

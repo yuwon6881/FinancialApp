@@ -191,7 +191,12 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
           />
         </FormField>
 
-        <FormField label="End billing date (optional)">
+        <FormField
+          label={editingPayment?.linkedLoanId ? 'End billing date' : 'End billing date (optional)'}
+          hint={editingPayment?.linkedLoanId
+            ? `Changing this updates the payment count for ${editingPayment.linkedLoanName || 'the linked loan'}.`
+            : undefined}
+        >
           <DatePicker
             value={endDateInput}
             onChange={onEndDateChange}

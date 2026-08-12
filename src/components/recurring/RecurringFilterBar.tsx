@@ -16,6 +16,10 @@ interface RecurringFilterBarProps {
   onToggleCategoryFilter: (cat: string) => void
   onClearFilters: () => void
   onSortChange: (value: string) => void
+  allLabel?: string
+  filterAriaLabel?: string
+  sortAriaLabel?: string
+  sortOptions?: Array<{ value: string; label: string }>
 }
 
 // Filter and Sort controls
@@ -29,6 +33,15 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
   onToggleCategoryFilter,
   onClearFilters,
   onSortChange,
+  allLabel = 'All Categories',
+  filterAriaLabel = 'Filter recurring payment categories',
+  sortAriaLabel = 'Sort recurring payments',
+  sortOptions = [
+    { value: 'amount-desc', label: 'Sort by: Amount (High to Low)' },
+    { value: 'amount-asc', label: 'Sort by: Amount (Low to High)' },
+    { value: 'name-asc', label: 'Sort by: Name (A-Z)' },
+    { value: 'due-date', label: 'Sort by: Next Due Date' },
+  ],
 }) => {
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs select-none">
@@ -54,7 +67,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
           <span className="flex items-center gap-2 text-muted-foreground">
             <span className="truncate">
               {selectedCategories.length === 0
-                ? 'All Categories'
+                ? allLabel
                 : `${selectedCategories.length} category filter${selectedCategories.length > 1 ? 's' : ''} active`}
             </span>
           </span>
@@ -68,7 +81,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
           align="left"
           side="bottom"
           role="dialog"
-          aria-label="Filter recurring payment categories"
+          aria-label={filterAriaLabel}
           className="recurring-filter-dropdown w-60 overflow-y-auto overscroll-contain bg-card border border-border rounded-2xl shadow-xl p-4 z-[200] animate-in fade-in slide-in-from-top-2 duration-150"
         >
             <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
@@ -148,15 +161,10 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
       {/* Sort Select */}
       <div className="w-full sm:w-60">
         <CustomSelect
-          ariaLabel="Sort recurring payments"
+          ariaLabel={sortAriaLabel}
           value={sortOrder}
           onChange={(val) => onSortChange(val)}
-          options={[
-            { value: 'amount-desc', label: 'Sort by: Amount (High to Low)' },
-            { value: 'amount-asc', label: 'Sort by: Amount (Low to High)' },
-            { value: 'name-asc', label: 'Sort by: Name (A-Z)' },
-            { value: 'due-date', label: 'Sort by: Next Due Date' }
-          ]}
+          options={sortOptions}
           className="w-full"
         />
       </div>

@@ -1,5 +1,6 @@
 import React from 'react'
-import { AlertTriangle, CalendarClock, CheckCircle2, Coins, History, Loader2 } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CheckCircle2, History, Loader2 } from 'lucide-react'
+import { CommitmentIcon } from '../semanticIcons'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import type { GoalPoolSummary } from '../../lib/savingsGoals'
@@ -84,10 +85,10 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   const fundTitle = isOffline
     ? `Funding needs a connection — it checks your real ${bucketLabel} balance`
     : hideSensitive
-      ? 'Unhide balances to fund your goals'
+      ? 'Unhide balances to fund your commitments'
       : unassigned <= 0
         ? `No free ${bucketLabel.toLowerCase()} money left to set aside`
-        : 'Set aside what your goals still need this cycle'
+        : 'Set aside what your commitments still need this cycle'
 
   return (
     <Card className="space-y-4 p-4 sm:p-5">
@@ -123,7 +124,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
               aria-busy={isFunding}
               title={fundTitle}
             >
-              {isFunding ? <Loader2 className="size-3 animate-spin" /> : <Coins className="size-3" />}
+              {isFunding ? <Loader2 className="size-3 animate-spin" /> : <CommitmentIcon className="size-3" aria-hidden />}
               {isFunding ? 'Setting aside…' : <>Set aside {formatSensitive(fundableNow)}</>}
             </Button>
           ))}
@@ -136,8 +137,8 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         className="w-full h-2.5 rounded-full bg-muted overflow-hidden"
         role="img"
         aria-label={hasGoals
-          ? `${committedPct.toFixed(0)}% of your ${bucketLabel.toLowerCase()} money is committed to goals`
-          : `No ${bucketLabel.toLowerCase()} money committed to goals yet`}
+          ? `${committedPct.toFixed(0)}% of your ${bucketLabel.toLowerCase()} money is set aside for commitments`
+          : `No ${bucketLabel.toLowerCase()} money set aside for commitments yet`}
       >
         <div className="h-full transition-all duration-500" style={{ width: `${committedPct}%`, backgroundColor: bucketColor }} />
       </div>
@@ -216,7 +217,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         <p className="flex items-start gap-2 text-xs font-semibold text-amber-500">
           <AlertTriangle className="size-3.5 shrink-0 mt-px" />
           <span>
-            Your goals need {formatSensitive(summary.requiredPerCycleTotal)} a cycle —{' '}
+            Your commitments need {formatSensitive(summary.requiredPerCycleTotal)} a cycle —{' '}
             {formatSensitive(paceShortfall)} above your {bucketLabel.toLowerCase()} budget. Extend a deadline, lower a
             target, or raise your {bucketLabel} share.
           </span>

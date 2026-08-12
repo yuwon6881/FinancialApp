@@ -17,6 +17,7 @@ import { useReceiptSplitPolling } from './lib/useReceiptSplitPolling'
 import { useInvestmentScanPolling } from './lib/useInvestmentScanPolling'
 import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
 const LockScreen = lazy(() => import('./components/LockScreen').then(m => ({ default: m.LockScreen })))
+const PwaLaunchGate = lazy(() => import('./app/PwaLaunchGate').then(m => ({ default: m.PwaLaunchGate })))
 const AiAssistantPanel = lazy(() => import('./components/AiAssistantPanel').then(m => ({ default: m.AiAssistantPanel })))
 const CycleSkeleton = lazy(() => import('./components/ui/CycleSkeleton').then(m => ({ default: m.CycleSkeleton })))
 import { AppLogo } from './components/ui/AppLogo'
@@ -481,6 +482,22 @@ function App() {
         <LaunchReady>
           <LoginView onLoginSuccess={session.handleLoginSuccess} />
         </LaunchReady>
+      </Suspense>
+    )
+  }
+
+  if (session.isPwaLaunchGateLocked) {
+    return (
+      <Suspense fallback={<ViewFallback />}>
+        <PwaLaunchGate
+          appContextValue={appContextValue}
+          toasts={dialogs.toasts}
+          onDismissToast={dialogs.dismissToast}
+          username={session.username}
+          onTryDeviceUnlock={session.unlockPwaLaunchGateWithDevice}
+          onUnlocked={session.handlePwaLaunchGateUnlocked}
+          onSignOut={session.handleLogout}
+        />
       </Suspense>
     )
   }

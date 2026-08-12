@@ -242,6 +242,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       <BalanceAdjustmentModals
         adjustingCategory={view.adjustingCategory}
         newBalanceInput={view.newBalanceInput}
+        accountBalanceInputs={view.accountBalanceInputs}
         balanceErrors={view.balanceErrors}
         adjustmentDescription={view.adjustmentDescription}
         pendingBalanceAdjustment={view.pendingBalanceAdjustment}
@@ -249,6 +250,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         adjustmentPreviewDiff={view.adjustmentPreviewDiff}
         formatSensitive={view.formatSensitive}
         onBalanceInputChange={view.handleBalanceInputChange}
+        onAccountBalanceInputChange={view.handleAccountBalanceInputChange}
         onDescriptionChange={view.handleDescriptionChange}
         onClose={view.handleCloseAdjustBalance}
         onReview={view.prepareBalanceAdjustment}

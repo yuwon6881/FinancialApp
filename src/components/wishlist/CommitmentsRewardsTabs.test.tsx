@@ -1,7 +1,7 @@
 import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { WishlistSectionToggle } from './WishlistSectionToggle'
+import { CommitmentsRewardsTabs } from './CommitmentsRewardsTabs'
 
 // Mock framer-motion cleanly without forwarding non-DOM props like layoutId to <span>
 vi.mock('framer-motion', () => ({
@@ -13,31 +13,30 @@ vi.mock('framer-motion', () => ({
   useReducedMotion: () => false,
 }))
 
-describe('WishlistSectionToggle', () => {
-  it('renders all section tabs with correct counts', () => {
+describe('CommitmentsRewardsTabs', () => {
+  it('renders exactly the two section tabs with correct counts', () => {
     render(
-      <WishlistSectionToggle
-        activeSection="all"
+      <CommitmentsRewardsTabs
+        activeTab="commitments"
         onChange={() => undefined}
         commitmentsCount={3}
         rewardsCount={5}
       />
     )
 
-    expect(screen.getByRole('tablist', { name: /goals and rewards sections/i })).not.toBeNull()
-    expect(screen.getByRole('tab', { name: /all/i })).not.toBeNull()
+    expect(screen.getByRole('tablist', { name: /commitments and rewards sections/i })).not.toBeNull()
+    expect(screen.getAllByRole('tab')).toHaveLength(2)
     expect(screen.getByRole('tab', { name: /commitments/i })).not.toBeNull()
     expect(screen.getByRole('tab', { name: /rewards/i })).not.toBeNull()
 
-    expect(screen.getByText('8')).not.toBeNull() // All count (3 + 5)
     expect(screen.getByText('3')).not.toBeNull() // Commitments count
     expect(screen.getByText('5')).not.toBeNull() // Rewards count
   })
 
   it('marks active tab with aria-selected=true', () => {
     render(
-      <WishlistSectionToggle
-        activeSection="commitments"
+      <CommitmentsRewardsTabs
+        activeTab="commitments"
         onChange={() => undefined}
         commitmentsCount={2}
         rewardsCount={4}
@@ -56,8 +55,8 @@ describe('WishlistSectionToggle', () => {
   it('calls onChange when clicking a tab', () => {
     const handleChange = vi.fn()
     render(
-      <WishlistSectionToggle
-        activeSection="all"
+      <CommitmentsRewardsTabs
+        activeTab="commitments"
         onChange={handleChange}
         commitmentsCount={1}
         rewardsCount={2}
@@ -71,16 +70,42 @@ describe('WishlistSectionToggle', () => {
   it('handles keyboard navigation across tabs', () => {
     const handleChange = vi.fn()
     render(
-      <WishlistSectionToggle
-        activeSection="all"
+      <CommitmentsRewardsTabs
+        activeTab="commitments"
         onChange={handleChange}
         commitmentsCount={1}
         rewardsCount={2}
       />
     )
 
-    const allTab = screen.getByRole('tab', { name: /all/i })
-    fireEvent.keyDown(allTab, { key: 'ArrowRight' })
+    const commitmentsTab = screen.getByRole('tab', { name: /commitments/i })
+    fireEvent.keyDown(commitmentsTab, { key: 'ArrowRight' })
+    expect(handleChange).toHaveBeenCalledWith('rewards')
+
+    fireEvent.keyDown(commitmentsTab, { key: 'ArrowLeft' })
+    expect(handleChange).toHaveBeenCalledWith('rewards')
+
+    fireEvent.keyDown(commitmentsTab, { key: 'End' })
+    expect(handleChange).toHaveBeenCalledWith('rewards')
+
+    const rewardsTab = screen.getByRole('tab', { name: /rewards/i })
+    fireEvent.keyDown(rewardsTab, { key: 'Home' })
     expect(handleChange).toHaveBeenCalledWith('commitments')
+  })
+
+  it('wires each tab to its matching panel id', () => {
+    render(
+      <CommitmentsRewardsTabs
+        activeTab="commitments"
+        onChange={() => undefined}
+        commitmentsCount={1}
+        rewardsCount={2}
+      />
+    )
+
+    expect(screen.getByRole('tab', { name: /commitments/i }).getAttribute('aria-controls'))
+      .toBe('commitments-rewards-panel-commitments')
+    expect(screen.getByRole('tab', { name: /rewards/i }).getAttribute('aria-controls'))
+      .toBe('commitments-rewards-panel-rewards')
   })
 })

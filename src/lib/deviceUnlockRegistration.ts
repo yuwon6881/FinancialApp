@@ -49,7 +49,8 @@ export function getDeviceUnlockRegistrationMarker(username: string): string | nu
 
 /** Returns the credential this browser recorded for this account at enrollment time. */
 export function getRegisteredDeviceCredentialId(username: string): string | null {
-  return normalizeCredentialId(getDeviceUnlockRegistrationMarker(username))
+  if (!username.trim()) return null
+  return normalizeCredentialId(localStorage.getItem(storageKey(username)))
 }
 
 export function rememberDeviceUnlockCredential(username: string, credentialId: string): void {

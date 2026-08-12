@@ -1,5 +1,5 @@
 import * as api from './api'
-import type { CategoryFlowType, FinancialSetting, InvestmentCashFlow, InvestmentAllocationSleeve, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { CategoryFlowType, FinancialSetting, InvestmentCashFlow, InvestmentAllocationSleeve, LedgerAccount, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, WishlistItem } from '../types'
 import type { DispatchResult, OutboxPayload, QueuedOp } from './outbox'
 import type { BulkTransactionMutationResult } from './api/transactionBulk'
 
@@ -86,6 +86,19 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'loan:delete': async (op) => {
     const { deleteLoan } = await import('./api/loans')
     return deleteLoan(op.targetId)
+  },
+
+  'ledgerAccount:add': async (op) => {
+    const { addLedgerAccount } = await import('./api/accounts')
+    return addLedgerAccount({ ...(op.payload as Partial<LedgerAccount>), id: op.targetId } as import('./api/accounts').LedgerAccountMutation)
+  },
+  'ledgerAccount:update': async (op) => {
+    const { updateLedgerAccount } = await import('./api/accounts')
+    return updateLedgerAccount(op.targetId, withoutUndoSnapshot(op.payload) as unknown as import('./api/accounts').LedgerAccountMutation)
+  },
+  'ledgerAccount:delete': async (op) => {
+    const { deleteLedgerAccount } = await import('./api/accounts')
+    return deleteLedgerAccount(op.targetId)
   },
 
   'category:add': (op) => api.addCategory({ ...(op.payload as Partial<TransactionCategory>), id: op.targetId } as Omit<TransactionCategory, 'id'> & { id?: string }),

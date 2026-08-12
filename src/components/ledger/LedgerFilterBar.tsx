@@ -240,13 +240,13 @@ export function LedgerFilterBar({
           ],
         },
         {
-          label: 'Wishlist purchases',
+          label: 'Reward purchases',
           value: wishlistFilter,
           onChange: onWishlistFilterChange,
           options: [
             { value: 'all', label: 'Include all' },
-            { value: 'exclude', label: 'Exclude wishlist purchases' },
-            { value: 'only', label: 'Wishlist purchases only' },
+            { value: 'exclude', label: 'Exclude reward purchases' },
+            { value: 'only', label: 'Reward purchases only' },
           ],
         },
       ] satisfies Array<{

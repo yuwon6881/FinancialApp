@@ -15,6 +15,7 @@ import type {
   AutocompleteSuggestion,
   TransactionDocumentChanges,
   StabilityRecovery,
+  LedgerAccount,
 } from '../../types'
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../../lib/useReceiptSplitPolling'
 import type { ReceiptScanResult } from '../../lib/api'
@@ -27,6 +28,7 @@ const ReceiptSplitSheet = lazy(() =>
 
 export interface TransactionFormSheetProps {
   categories: TransactionCategory[]
+  accounts?: LedgerAccount[]
   currency: string
   hideSensitive: boolean
   sensitivePreferenceStatus?: SensitivePreferenceStatus
@@ -169,7 +171,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           />
 
           <TransactionTypeFields
-            txType={form.state.transactionType}
+            txType={form.state.ledgerCategory === 'AccountMove' ? 'transfer' : form.state.transactionType}
             onChangeTxType={(type: TransactionType) => form.changeTransactionType(type)}
             disabled={form.state.mode === 'edit'}
           />
@@ -181,6 +183,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             autocompletedDescriptionRef={form.autocompletedDescriptionRef}
             currency={props.currency}
             categories={props.categories}
+            accounts={props.accounts}
             errors={form.state.errors}
             onSetField={(field: any, val: any) => form.dispatch({ type: 'SET_FIELD', field, value: val })}
             onSelectSuggestion={form.handleSelectSuggestion}

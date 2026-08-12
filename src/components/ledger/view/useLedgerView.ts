@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import type { Transaction } from '../../../types'
+import type { LedgerAccount, Transaction } from '../../../types'
 import type { PagedTransactionResult } from '../../../lib/api'
 import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi, MONTH_NAMES } from '../../../lib/cycle'
 import { getCycleLabelForDropdown } from '../../../lib/cycleLabels'
@@ -13,6 +13,7 @@ import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
 
 export interface UseLedgerViewOptions {
   transactions: Transaction[]
+  accounts?: LedgerAccount[]
   categories: any[]
   selectedMonth: string
   selectedYear: number
@@ -94,6 +95,7 @@ const earlierDate = (first?: string | null, second?: string | null) => {
 export function useLedgerView(options: UseLedgerViewOptions) {
   const {
     transactions,
+    accounts,
     categories,
     selectedMonth,
     selectedYear,
@@ -884,8 +886,8 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     }
     if (appliedRecurringFilter === 'only') parts.push('Recurring')
     else if (appliedRecurringFilter === 'exclude') parts.push('Without Recurring')
-    if (appliedWishlistFilter === 'only') parts.push('Wishlist Purchases')
-    else if (appliedWishlistFilter === 'exclude') parts.push('Without Wishlist Purchases')
+    if (appliedWishlistFilter === 'only') parts.push('Reward Purchases')
+    else if (appliedWishlistFilter === 'exclude') parts.push('Without Reward Purchases')
     if (appliedSearch) {
       parts.push(`Search ${appliedSearch}`)
     }
@@ -924,7 +926,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const handleExportPage = () => {
     if (hideSensitive) return
     const rows = showAllCycles && serverResult ? displayTransactions : paginatedTransactions
-    downloadCsvRows(rows, getPageExportFilename(rows))
+    downloadCsvRows(rows, getPageExportFilename(rows), accounts)
     setShowExportModal(false)
   }
 
@@ -957,7 +959,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       }
       return
     }
-    downloadCsvRows(filteredTransactions, getExportAllFilename())
+    downloadCsvRows(filteredTransactions, getExportAllFilename(), accounts)
     setShowExportModal(false)
   }
 

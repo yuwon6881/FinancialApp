@@ -1,10 +1,10 @@
 import React from 'react'
-import { CheckCircle2, Flag, Plus } from 'lucide-react'
+import { CheckCircle2, Plus } from 'lucide-react'
+import { CommitmentIcon } from '../semanticIcons'
 import type { SavingsGoal } from '../../types'
 import type { GoalPoolSummary } from '../../lib/savingsGoals'
 import { getPaceStatus } from '../../lib/savingsGoals'
 import { Button } from '../ui/Button'
-import { Card } from '../ui/Card'
 import { HorizontalRail } from '../ui/HorizontalRail'
 import { SavingsGoalCard } from './SavingsGoalCard'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
@@ -105,31 +105,31 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
        so the page started as chrome and then stopped, which is most of why it reads as a different
        application from the rest of the app. */
     <section
-      aria-labelledby="wishlist-commitments-heading"
+      aria-labelledby="commitments-rewards-commitments-heading"
       className="app-panel space-y-3 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h3 id="wishlist-commitments-heading" className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-            <Flag className="size-4 text-pink-500" />
+          <h3 id="commitments-rewards-commitments-heading" className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+            <CommitmentIcon className="size-4 text-accent-ink" aria-hidden />
             Commitments
-            {pool.activeGoals.length > 0 && (
+            {pool.activeGoals.length + completedGoals.length > 0 && (
               <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                {pool.activeGoals.length}
+                {pool.activeGoals.length + completedGoals.length}
               </span>
             )}
           </h3>
           <p className="mt-0.5 text-[11px] text-muted-foreground">Money held back from an existing bucket for something specific.</p>
         </div>
         <Button variant="secondary" size="sm" className="shrink-0" onClick={onAddGoal} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a commitment' : undefined}>
-          <Plus className="size-3" /> Add goal
+          <Plus className="size-3" aria-hidden /> Add commitment
         </Button>
       </div>
 
       {!hasAny ? (
-        <Card className="p-5 border-dashed text-center">
-          <p className="text-xs text-muted-foreground">No commitments yet. Add a goal to save a set amount each cycle.</p>
-        </Card>
+        <div className="rounded-xl border border-dashed border-border/60 bg-muted/15 px-4 py-6 text-center">
+          <p className="text-xs text-muted-foreground">No commitments yet. Add one to save a set amount each cycle.</p>
+        </div>
       ) : isSolo ? (
         <div>{goalCards}{completedChips}</div>
       ) : (

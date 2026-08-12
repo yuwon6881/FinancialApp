@@ -1,6 +1,6 @@
 import React from 'react'
 import { m, AnimatePresence } from 'framer-motion'
-import { Calendar, CreditCard, Edit, FastForward, Repeat, Trash2, Wallet } from 'lucide-react'
+import { Calendar, CreditCard, Edit, FastForward, Link2, Repeat, Trash2, Wallet } from 'lucide-react'
 import type { RecurringPayment, RecurringReminderSettings } from '../../types'
 import { listContainerVariants, listItemVariants, listItemExit } from '../../lib/animations'
 import { isEligibleForPayEarly, normalizeRecurringFrequency, RECURRING_PAYMENT_MODE_LABELS } from '../../lib/recurringPayments'
@@ -111,6 +111,16 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                     {rp.startDate}
                   </span>
                 </div>
+                {rp.linkedLoanId && (
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                    <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+                      <Link2 className="size-3.5" /> Linked to loan
+                    </span>
+                    <span className="min-w-0 max-w-full break-words text-right font-semibold text-foreground">
+                      {rp.linkedLoanName || 'Loan'}
+                    </span>
+                  </div>
+                )}
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                   <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                     <Repeat className="size-3.5" /> Recurs
@@ -184,8 +194,12 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                   <Button
                     variant="danger"
                     onClick={() => { if (!hideSensitive) onDeletePayment(rp.id) }}
-                    disabled={isBusy || hideSensitive}
-                    title={hideSensitive ? 'Unhide balances to edit' : 'Delete subscription'}
+                    disabled={isBusy || hideSensitive || Boolean(rp.linkedLoanId)}
+                    title={hideSensitive
+                      ? 'Unhide balances to edit'
+                      : rp.linkedLoanId
+                        ? `Linked to ${rp.linkedLoanName || 'a loan'} and cannot be deleted`
+                        : 'Delete subscription'}
                   >
                     <Trash2 className="size-3.5 shrink-0" /> <span className="max-[420px]:hidden">Delete</span>
                   </Button>

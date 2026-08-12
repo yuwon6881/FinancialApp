@@ -1,7 +1,7 @@
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
-import { Loader2, Plus, Search, Trash2, X } from 'lucide-react'
+import { Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
@@ -28,7 +28,9 @@ interface ManageableNameListProps<T extends ManageableNameItem> {
   disabled?: boolean
   isLoading?: boolean
   onAdd: (name: string) => Promise<void> | void
+  onAddClick?: () => void
   onDelete: (item: T) => Promise<void> | void
+  onEdit?: (item: T) => void
   renderName?: (item: T) => ReactNode
   renderMeta?: (item: T) => ReactNode
   renderStatus?: (item: T) => ReactNode
@@ -47,7 +49,9 @@ export function ManageableNameList<T extends ManageableNameItem>({
   disabled = false,
   isLoading = false,
   onAdd,
+  onAddClick,
   onDelete,
+  onEdit,
   renderName,
   renderMeta,
   renderStatus,
@@ -129,7 +133,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
           variant={isAddOpen ? 'outline' : 'primary'}
           size="sm"
           type="button"
-          onClick={toggleAdd}
+          onClick={onAddClick ?? toggleAdd}
           disabled={disabled}
           aria-expanded={isAddOpen}
           aria-controls={addPanelId}
@@ -140,7 +144,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
         </Button>
       </div>
 
-      <div id={addPanelId}>
+      {!onAddClick && <div id={addPanelId}>
         <CollapsibleBody open={isAddOpen}>
           <div className="space-y-3 rounded-xl border border-border/60 bg-muted/15 p-3">
             {addFormTitle && (
@@ -180,7 +184,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
             {validationError && <p className="text-[10px] font-semibold text-destructive">{validationError}</p>}
           </div>
         </CollapsibleBody>
-      </div>
+      </div>}
 
       <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1" aria-busy={isLoading}>
         {isLoading ? (
@@ -200,6 +204,17 @@ export function ManageableNameList<T extends ManageableNameItem>({
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {renderStatus?.(item)}
+              {onEdit && (
+                <Button variant="unstyled"
+                  type="button"
+                  disabled={disabled || busyId !== null}
+                  onClick={() => onEdit(item)}
+                  aria-label={`Edit ${item.name}`}
+                  className="inline-grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 sm:size-8"
+                >
+                  <Pencil className="size-3.5" />
+                </Button>
+              )}
               <Button variant="unstyled"
                 type="button"
                 disabled={disabled || busyId !== null}

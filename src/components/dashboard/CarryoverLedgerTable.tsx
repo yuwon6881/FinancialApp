@@ -74,6 +74,7 @@ export function CarryoverLedgerTable({
                       <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                     </div>
                     {pending > 0 && <div className={`text-[10px] font-semibold ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</div>}
+                    <AccountBreakdown category={category} amountsMasked={amountsMasked} formatCurrency={formatCurrency} />
                   </div>
                   {adjustButton(category)}
                 </div>
@@ -116,7 +117,7 @@ export function CarryoverLedgerTable({
                     {adjustButton(category)}
                   </div>
                 </div>
-                {pending > 0 && (
+                    {pending > 0 && (
                   <>
                     <div className="col-start-1">
                       <span className="text-[10px] font-semibold text-yellow-500 block truncate">Pending: -{amount(pending)}</span>
@@ -124,15 +125,49 @@ export function CarryoverLedgerTable({
                     <div className="col-start-2">
                       <span className={`text-[10px] font-semibold block truncate ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</span>
                     </div>
-                  </>
-                )}
-              </div>
+                      </>
+                    )}
+                    <AccountBreakdown category={category} amountsMasked={amountsMasked} formatCurrency={formatCurrency} />
+                  </div>
             </div>
           )
         })}
       </div>
       )}
     </div>
+  )
+}
+
+function AccountBreakdown({
+  category,
+  amountsMasked,
+  formatCurrency,
+}: {
+  category: CategorySummary
+  amountsMasked: boolean
+  formatCurrency: (value: number) => string
+}) {
+  if (!category.accounts?.length) return null
+  return (
+    <details className="w-full text-left text-[10px] sm:max-w-[230px]">
+      <summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
+        {category.accounts.length} {category.accounts.length === 1 ? 'account' : 'accounts'}
+      </summary>
+      <div className="mt-1.5 space-y-1 rounded-lg border border-border/50 bg-muted/10 p-2">
+        {category.accounts.map(account => (
+          <div key={account.id} className="flex items-center justify-between gap-2">
+            <span className={`min-w-0 truncate ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}>
+              {account.name}{account.isArchived ? ' (Closed)' : ''}
+            </span>
+            <SensitiveAmount value={account.remaining} isMasked={amountsMasked} formatFn={formatCurrency} className="shrink-0 font-semibold" />
+          </div>
+        ))}
+        <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-1 font-bold text-foreground">
+          <span>Accounts total</span>
+          <SensitiveAmount value={category.accounts.reduce((sum, account) => sum + account.remaining, 0)} isMasked={amountsMasked} formatFn={formatCurrency} />
+        </div>
+      </div>
+    </details>
   )
 }
 

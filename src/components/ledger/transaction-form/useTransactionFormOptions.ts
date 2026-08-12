@@ -1,9 +1,10 @@
-import type { AutocompleteSuggestion, StabilityRecovery, Transaction, TransactionCategory, TransactionDocumentChanges } from '../../../types'
+import type { AutocompleteSuggestion, LedgerAccount, StabilityRecovery, Transaction, TransactionCategory, TransactionDocumentChanges } from '../../../types'
 import type { ReceiptScanResult } from '../../../lib/api'
 import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
 
 export interface UseTransactionFormOptions {
   categories: TransactionCategory[]
+  accounts?: LedgerAccount[]
   currency: string
   hideSensitive: boolean
   sensitivePreferenceStatus?: SensitivePreferenceStatus

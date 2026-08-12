@@ -4,6 +4,7 @@ const CATEGORY_CHART_FALLBACK = 'var(--color-slate-500)'
 const CATEGORY_FILTER_FALLBACK = 'bg-background/50 border-border hover:bg-muted text-muted-foreground'
 
 function normalizeCategoryName(category: string): string {
+  if (category.toLowerCase() === 'accountmove') return 'Transfer'
   if (category.startsWith('Transfer:')) return 'Transfer'
   if (category.startsWith('IncomeSplit:')) return 'Income'
   return category

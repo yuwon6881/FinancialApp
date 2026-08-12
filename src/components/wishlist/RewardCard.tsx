@@ -1,6 +1,7 @@
 import React from 'react'
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
-import { Edit2, MoreHorizontal, Target, Trash2, X } from 'lucide-react'
+import { Edit2, MoreHorizontal, Trash2, X } from 'lucide-react'
+import { RewardIcon } from '../semanticIcons'
 import type { WishlistItem } from '../../types'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
@@ -102,7 +103,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
 
       {canAfford && item.price > freeAfterGoalPace && (
         <p className="text-xs font-medium text-muted-foreground">
-          Buying this leaves your goals <span className="font-bold text-amber-500">{formatSensitive(goalPaceShortfall)}</span> short this cycle.
+          Buying this leaves your commitments <span className="font-bold text-amber-500">{formatSensitive(goalPaceShortfall)}</span> short this cycle.
         </p>
       )}
 
@@ -182,7 +183,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
                   aria-label={`Focus ${item.name}`}
                   title="Save toward this one next"
                 >
-                  <Target className="size-3.5" />
+                  <RewardIcon className="size-3.5" aria-hidden />
                 </Button>
               )}
               {/* Swipe-to-reveal is not an option here either: the card lives in a horizontally

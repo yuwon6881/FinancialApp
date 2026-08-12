@@ -8,13 +8,13 @@ interface RecurringTabsProps {
   activeTab: RecurringTabId
   onChange: (tab: RecurringTabId) => void
   recurringCount: number
-  loansCount: number
+  loansCount?: number
 }
 
 interface TabOption {
   id: RecurringTabId
   label: string
-  count: number
+  count?: number
 }
 
 export const RecurringTabs: React.FC<RecurringTabsProps> = ({
@@ -71,13 +71,13 @@ export const RecurringTabs: React.FC<RecurringTabsProps> = ({
             }`}
           >
             <span>{tab.label}</span>
-            <span
+            {tab.count !== undefined && <span
               className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold transition-colors ${
                 isActive ? 'bg-primary/15 text-accent-ink' : 'bg-muted/80 text-muted-foreground'
               }`}
             >
               {tab.count}
-            </span>
+            </span>}
             {isActive && (
               <m.span
                 layoutId="activeRecurringTabLine"

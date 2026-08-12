@@ -132,6 +132,18 @@ describe('projectLoanStates', () => {
     expect(projected.snapshot.futureSchedule[0].occurrenceDate).toBe('2026-01-01')
   })
 
+  it('projects a linked bill end-date edit into the loan payment count', () => {
+    const projected = projectLoanStates([loan()], [op({
+      entity: 'recurringPayment',
+      type: 'update',
+      targetId: 'bill-test',
+      payload: { endDate: '2027-12-01' },
+    })], [linkedPayment])[0]
+
+    expect(projected.termPeriods).toBe(24)
+    expect(projected.snapshot.scheduledPayment).toBe(41.67)
+  })
+
   it('marks the schedule unavailable when the linked bill is queued for deletion', () => {
     const projected = projectLoanStates([loan()], [op({ entity: 'recurringPayment', type: 'delete', targetId: 'bill-test', payload: {
       undoSnapshot: linkedPayment,
@@ -150,6 +162,56 @@ describe('projectLoanStates', () => {
     expect(projected.annualRatePercent).toBe(12)
     expect(projected.snapshot.scheduledPayment).toBe(88.85)
     expect(projected.isPendingSync).toBe(true)
+  })
+
+  it('keeps the rate basis through before, syncing, completed, and refreshed projections', () => {
+    const payload = {
+      annualRatePercent: 17.04,
+      rateBasis: 'Monthly' as const,
+      interestMethod: 'InterestOnly' as const,
+    }
+    const loanOp = (overrides: Partial<QueuedOp> = {}): QueuedOp => op({
+      entity: 'loan',
+      type: 'update',
+      targetId: 'loan-test',
+      payload,
+      ...overrides,
+    })
+    const before = projectLoanStates([loan()], [loanOp()])[0]
+    const syncing = projectLoanStates([before], [loanOp()])[0]
+    const completed = projectLoanStates([before], [loanOp({ isCompleted: true })])[0]
+    const refreshed = projectLoanStates([{ ...completed, isPendingSync: false }], [])[0]
+
+    for (const projected of [before, syncing, completed, refreshed]) {
+      expect(projected.rateBasis).toBe('Monthly')
+      expect(projected.annualRatePercent).toBe(17.04)
+      expect(projected.interestMethod).toBe('InterestOnly')
+    }
+  })
+
+  it('moves recurring link protection immediately while a relink is syncing', () => {
+    const replacement = {
+      ...linkedPayment,
+      id: 'bill-replacement',
+      name: 'Replacement bill',
+      dueDate: 15,
+      startDate: '2026-01-15',
+    }
+    const projectedLoan = projectLoanStates([loan()], [op({
+      entity: 'loan',
+      type: 'update',
+      targetId: 'loan-test',
+      payload: {
+        recurringPaymentId: replacement.id,
+        recurringPaymentName: replacement.name,
+        scheduleFrequency: replacement.frequency,
+        scheduleDueDay: replacement.dueDate,
+        scheduleStartDate: replacement.startDate,
+      },
+    })], [linkedPayment, replacement])[0]
+
+    expect(projectedLoan.recurringPaymentId).toBe('bill-replacement')
+    expect(projectedLoan.isRecalculating).toBe(true)
   })
 
   it('keeps the first debt-free occurrence when later history has surplus payments', () => {

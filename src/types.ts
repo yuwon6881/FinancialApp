@@ -274,6 +274,27 @@ export interface Transaction {
   // Set when this transaction consumed a savings commitment. Deleting this row restores the
   // commitment while it is still the latest untouched completion.
   savingsGoalId?: number | null
+  /** The account that receives this row's bucket leg, when it is explicitly placed. */
+  accountId?: string | null
+  /** Destination account for an in-bucket AccountMove row. */
+  counterAccountId?: string | null
+}
+
+export type LedgerAccountKind = 'Bank' | 'EWallet' | 'Cash' | 'Card'
+
+export interface LedgerAccount {
+  id: string
+  name: string
+  bucket: 'Essentials' | 'Growth' | 'Stability' | 'Rewards'
+  kind: LedgerAccountKind
+  isDefault: boolean
+  isArchived: boolean
+  remaining: number
+  createdAt: string
+  updatedAt: string
+  isPendingSync?: boolean
+  pendingSyncOperationId?: string
+  isPendingDelete?: boolean
 }
 
 export type RecurringFrequency = 'Monthly' | 'Annually'
@@ -313,10 +334,13 @@ export interface RecurringPayment {
   reminderEnabled?: boolean
   reminderMode?: RecurringReminderMode
   reminderLeadDays?: number
+  linkedLoanId?: string | null
+  linkedLoanName?: string | null
 }
 
-export type LoanInterestMethod = 'ReducingBalance' | 'Flat'
-export type LoanScheduleStatus = 'Complete' | 'NeedsReview' | 'Incomplete'
+export type LoanInterestMethod = 'ReducingBalance' | 'ReducingBalanceDaily' | 'Flat' | 'InterestOnly'
+export type LoanRateBasis = 'Yearly' | 'Monthly'
+export type LoanScheduleStatus = 'Complete' | 'Incomplete'
 
 export interface LoanPaymentSplit {
   occurrenceDate: string
@@ -359,10 +383,12 @@ export interface Loan {
   annualRatePercent: number
   termPeriods: number
   interestMethod: LoanInterestMethod
+  rateBasis?: LoanRateBasis
   recurringPaymentExists?: boolean
   recurringPaymentName?: string | null
   recurringPaymentFrequency?: RecurringFrequency | null
   recurringPaymentDueDate?: number | null
+  recurringPaymentLedgerCategory?: string | null
   scheduleFrequency?: RecurringFrequency | null
   scheduleDueDay?: number | null
   scheduleStartDate?: string | null
@@ -371,6 +397,7 @@ export interface Loan {
   isPendingSync?: boolean
   pendingSyncOperationId?: string
   isPendingDelete?: boolean
+  isRecalculating?: boolean
 }
 
 /** The two notification kinds. Each is opted into separately, and per device. */
@@ -451,6 +478,12 @@ export interface CategorySummary {
   // excludes allocated income and transfers between envelopes.
   spent?: number
   remaining: number
+  accounts?: Array<{
+    id: string
+    name: string
+    remaining: number
+    isArchived?: boolean
+  }>
 }
 
 export interface DashboardStats {

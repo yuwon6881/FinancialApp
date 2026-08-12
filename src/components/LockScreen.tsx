@@ -1,5 +1,5 @@
 import { Input } from './ui/Input'
-import { useState, useEffect, useId, useRef } from 'react'
+import { useState, useEffect, useId, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { ShieldCheck } from 'lucide-react'
 import * as api from '../lib/api'
@@ -17,21 +17,36 @@ import { Z_LAYERS } from '../lib/zLayers'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
 import { useDialog } from '../lib/useDialog'
+import { rememberDeviceUnlockCredential } from '../lib/deviceUnlockRegistration'
+
+type LockScreenMode = 'session-timeout' | 'pwa-launch'
 
 interface LockScreenProps {
+  mode?: LockScreenMode
   isOpen: boolean
   username: string
+  onTryDeviceUnlock?: () => Promise<void>
   onUnlocked: () => void
   onSignOut: () => void
 }
 
-export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScreenProps) {
+export function LockScreen({
+  mode = 'session-timeout',
+  isOpen,
+  username,
+  onTryDeviceUnlock,
+  onUnlocked,
+  onSignOut,
+}: LockScreenProps) {
   const [lockPassword, setLockPassword] = useState('')
   const [lockError, setLockError] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordVerifying, setPasswordVerifying] = useState(false)
   const [fingerprintVerifying, setFingerprintVerifying] = useState(false)
   const [fingerprintAvailable, setFingerprintAvailable] = useState(false)
+  const [hasAttemptedDeviceUnlock, setHasAttemptedDeviceUnlock] = useState(false)
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine)
+  const automaticLaunchAttemptRef = useRef(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const descriptionId = useId()
@@ -47,6 +62,11 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
     if (!isOpen) {
       setFingerprintAvailable(false)
       clearCachedFingerprintAssertOptions()
+      return
+    }
+
+    if (mode === 'pwa-launch') {
+      setFingerprintAvailable(true)
       return
     }
 
@@ -70,28 +90,55 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
       cancelled = true
       clearCachedFingerprintAssertOptions()
     }
-  }, [isOpen, username])
+  }, [isOpen, mode, username])
 
-  const handleFingerprintUnlock = async () => {
+  useEffect(() => {
+    if (mode !== 'pwa-launch') return
+    const online = () => setIsOnline(true)
+    const offline = () => setIsOnline(false)
+    window.addEventListener('online', online)
+    window.addEventListener('offline', offline)
+    return () => {
+      window.removeEventListener('online', online)
+      window.removeEventListener('offline', offline)
+    }
+  }, [mode])
+
+  const handleFingerprintUnlock = useCallback(async () => {
+    if (fingerprintVerifying || passwordVerifying) return
+    setHasAttemptedDeviceUnlock(true)
     setFingerprintVerifying(true)
     setLockError(null)
     setPasswordError(null)
     try {
+      if (mode === 'pwa-launch') {
+        if (!onTryDeviceUnlock) throw new Error('Device unlock is unavailable.')
+        await onTryDeviceUnlock()
+        onUnlocked()
+        return
+      }
       const { challengeId, options } = await getCachedFingerprintAssertOptions()
       const credential = await getFingerprintAssertion(options)
       await api.verifyFingerprintAssert(challengeId, credential)
+      rememberDeviceUnlockCredential(username, credential.id)
       setLockPassword('')
       onUnlocked()
     } catch (err: unknown) {
-      console.error(err)
       if (getErrorName(err) !== 'NotAllowedError') {
+        console.error(err)
         setLockError(getErrorMessage(err, 'Device unlock failed. Please use your password.'))
       }
     } finally {
       clearCachedFingerprintAssertOptions()
       setFingerprintVerifying(false)
     }
-  }
+  }, [fingerprintVerifying, mode, onTryDeviceUnlock, onUnlocked, passwordVerifying, username])
+
+  useEffect(() => {
+    if (!isOpen || mode !== 'pwa-launch' || automaticLaunchAttemptRef.current) return
+    automaticLaunchAttemptRef.current = true
+    void handleFingerprintUnlock()
+  }, [handleFingerprintUnlock, isOpen, mode])
 
   if (!isOpen) return null
 
@@ -114,9 +161,15 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
       >
         <AppLogo className="size-16 rounded-2xl shadow-xl shadow-primary/20" />
         <div className="text-center">
-          <h2 id={titleId} className="text-xl font-bold text-foreground">Session locked</h2>
+          <h2 id={titleId} className="text-xl font-bold text-foreground">
+            {mode === 'pwa-launch' ? 'Unlock FinancialApp' : 'Session locked'}
+          </h2>
           <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
-            {fingerprintAvailable
+            {mode === 'pwa-launch'
+              ? isOnline
+                ? 'Verify with your device to open FinancialApp. Password unlock needs an internet connection.'
+                : 'Verify with your device to open FinancialApp. You are offline, so password unlock is unavailable.'
+              : fingerprintAvailable
               ? 'You were inactive for 5 minutes. Use your device unlock or enter your password to continue.'
               : 'You were inactive for 5 minutes. Enter your password to continue.'}
           </p>
@@ -134,7 +187,11 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
             className="w-full rounded-xl py-3 shadow-lg shadow-emerald-500/10"
           >
             <ShieldCheck className="size-5 text-emerald-400 animate-pulse" />
-            {fingerprintVerifying ? 'Verifying device...' : 'Unlock with device'}
+            {fingerprintVerifying
+              ? 'Verifying device...'
+              : mode === 'pwa-launch' && hasAttemptedDeviceUnlock
+                ? 'Try again'
+                : 'Unlock with device'}
           </Button>
         )}
 
@@ -150,6 +207,10 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
             setPasswordVerifying(true)
             setLockError(null)
             setPasswordError(null)
+            if (mode === 'pwa-launch' && !navigator.onLine) {
+              setLockError('Password unlock needs an internet connection. Try device unlock instead.')
+              return
+            }
             try {
               const res = await api.verifyPassword(lockPassword)
               if (res.verified) {
@@ -189,7 +250,7 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
           <Button
             type="submit"
             size="lg"
-            disabled={passwordVerifying || fingerprintVerifying || !lockPassword}
+            disabled={passwordVerifying || fingerprintVerifying || !lockPassword || (mode === 'pwa-launch' && !isOnline)}
             className="w-full rounded-xl py-3 shadow-lg shadow-primary/20"
           >
             {passwordVerifying ? 'Unlocking…' : 'Unlock with Password'}

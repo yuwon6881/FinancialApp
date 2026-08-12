@@ -75,7 +75,7 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
     if (parsed > ceiling + 0.005) {
       setError(isTopUp
         ? `That is more than your free ${bucketLabel} money can cover.`
-        : 'That is more than this goal is holding.')
+        : 'That is more than this commitment is holding.')
       focusFirstInvalidField(event.currentTarget)
       return
     }
@@ -95,7 +95,7 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
   return (
     <BottomSheet
       isOpen
-      title={isTopUp ? 'Top Up This Goal' : 'Release From This Goal'}
+      title={isTopUp ? 'Top Up This Commitment' : 'Release From This Commitment'}
       onClose={onClose}
       maxWidthClassName="max-w-md"
     >

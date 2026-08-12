@@ -2,23 +2,23 @@ import React, { useRef, type KeyboardEvent } from 'react'
 import { m, useReducedMotion } from 'framer-motion'
 import { Button } from '../ui/Button'
 
-export type WishlistSectionId = 'all' | 'commitments' | 'rewards'
+export type CommitmentsRewardsTabId = 'commitments' | 'rewards'
 
-interface WishlistSectionToggleProps {
-  activeSection: WishlistSectionId
-  onChange: (section: WishlistSectionId) => void
+interface CommitmentsRewardsTabsProps {
+  activeTab: CommitmentsRewardsTabId
+  onChange: (tab: CommitmentsRewardsTabId) => void
   commitmentsCount: number
   rewardsCount: number
 }
 
 interface SectionOption {
-  id: WishlistSectionId
+  id: CommitmentsRewardsTabId
   label: string
   count: number
 }
 
-export const WishlistSectionToggle: React.FC<WishlistSectionToggleProps> = ({
-  activeSection,
+export const CommitmentsRewardsTabs: React.FC<CommitmentsRewardsTabsProps> = ({
+  activeTab,
   onChange,
   commitmentsCount,
   rewardsCount,
@@ -26,10 +26,7 @@ export const WishlistSectionToggle: React.FC<WishlistSectionToggleProps> = ({
   const reduceMotion = useReducedMotion()
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
 
-  const totalCount = commitmentsCount + rewardsCount
-
   const sections: SectionOption[] = [
-    { id: 'all', label: 'All', count: totalCount },
     { id: 'commitments', label: 'Commitments', count: commitmentsCount },
     { id: 'rewards', label: 'Rewards', count: rewardsCount },
   ]
@@ -50,22 +47,22 @@ export const WishlistSectionToggle: React.FC<WishlistSectionToggleProps> = ({
   return (
     <div
       role="tablist"
-      aria-label="Goals and rewards sections"
+      aria-label="Commitments and rewards sections"
       className="flex items-center gap-4 border-b border-border/30 pb-1 select-none"
     >
       {sections.map((section, index) => {
-        const isActive = activeSection === section.id
+        const isActive = activeTab === section.id
 
         return (
           <Button
             variant="unstyled"
             key={section.id}
             ref={element => { tabRefs.current[index] = element }}
-            id={`wishlist-tab-${section.id}`}
+            id={`commitments-rewards-tab-${section.id}`}
             type="button"
             role="tab"
             aria-selected={isActive}
-            aria-controls={`wishlist-panel-${section.id}`}
+            aria-controls={`commitments-rewards-panel-${section.id}`}
             tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(section.id)}
             onKeyDown={event => handleKeyDown(event, index)}
@@ -83,7 +80,7 @@ export const WishlistSectionToggle: React.FC<WishlistSectionToggleProps> = ({
             </span>
             {isActive && (
               <m.span
-                layoutId="activeWishlistSectionLine"
+                layoutId="activeCommitmentsRewardsTabLine"
                 className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-primary"
                 transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 30 }}
               />

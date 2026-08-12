@@ -19,6 +19,7 @@ import type {
   Loan,
   LoanPaymentSplit,
   LoanScheduleEntry,
+  LedgerAccount,
 } from '../types'
 
 type WireAmount = string | number
@@ -81,6 +82,10 @@ export interface WireSavingsGoalFundingResult {
   essentialsFreeToSpend?: WireAmount
 }
 
+export type WireLedgerAccount = Omit<LedgerAccount, 'remaining'> & {
+  remaining: WireAmount
+}
+
 export interface WireSavingsGoalCompletionResult {
   goal: WireSavingsGoal
   transaction: WireTransaction
@@ -90,13 +95,14 @@ type WireDashboardSetting = Omit<FinancialSetting, 'targetStabilityFund'> & {
   targetStabilityFund: WireAmount
 }
 
-export type WireCategorySummary = Omit<CategorySummary, 'target' | 'incomeAllocated' | 'budget' | 'netChange' | 'spent' | 'remaining'> & {
+export type WireCategorySummary = Omit<CategorySummary, 'target' | 'incomeAllocated' | 'budget' | 'netChange' | 'spent' | 'remaining' | 'accounts'> & {
   target: WireAmount
   incomeAllocated: WireAmount
   budget: WireAmount
   netChange: WireAmount
   spent?: WireAmount
   remaining: WireAmount
+  accounts?: Array<Omit<NonNullable<CategorySummary['accounts']>[number], 'remaining'> & { remaining: WireAmount }>
 }
 
 // pastThreeMonthsRewardsAverage/hasRewardsHistory are no longer part of the /dashboard response --

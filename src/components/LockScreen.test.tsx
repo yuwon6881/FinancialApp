@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { StrictMode } from 'react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LockScreen } from './LockScreen'
 import * as api from '../lib/api'
@@ -52,5 +53,54 @@ describe('LockScreen device unlock availability', () => {
     render(<LockScreen isOpen username="alice" onUnlocked={vi.fn()} onSignOut={vi.fn()} />)
 
     expect(await screen.findByRole('button', { name: 'Unlock with device' })).toBeTruthy()
+  })
+
+  it('automatically requests the local PWA gate exactly once and never repeats on resume', async () => {
+    const tryDeviceUnlock = vi.fn().mockRejectedValue(Object.assign(new Error('cancelled'), { name: 'NotAllowedError' }))
+
+    render(
+      <StrictMode>
+        <LockScreen
+          mode="pwa-launch"
+          isOpen
+          username="alice"
+          onTryDeviceUnlock={tryDeviceUnlock}
+          onUnlocked={vi.fn()}
+          onSignOut={vi.fn()}
+        />
+      </StrictMode>,
+    )
+
+    await waitFor(() => expect(tryDeviceUnlock).toHaveBeenCalledTimes(1))
+    expect(await screen.findByRole('button', { name: 'Try again' })).toBeTruthy()
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' })
+    fireEvent(document, new Event('visibilitychange'))
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+    fireEvent(document, new Event('visibilitychange'))
+    window.dispatchEvent(new Event('pageshow'))
+
+    expect(tryDeviceUnlock).toHaveBeenCalledTimes(1)
+    expect(api.fetchAuthStatus).not.toHaveBeenCalled()
+  })
+
+  it('opens after local verification without contacting the server', async () => {
+    const onUnlocked = vi.fn()
+    const tryDeviceUnlock = vi.fn().mockResolvedValue(undefined)
+
+    render(
+      <LockScreen
+        mode="pwa-launch"
+        isOpen
+        username="alice"
+        onTryDeviceUnlock={tryDeviceUnlock}
+        onUnlocked={onUnlocked}
+        onSignOut={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(onUnlocked).toHaveBeenCalledOnce())
+    expect(api.fetchAuthStatus).not.toHaveBeenCalled()
+    expect(api.verifyFingerprintAssert).not.toHaveBeenCalled()
   })
 })

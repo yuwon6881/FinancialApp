@@ -20,7 +20,9 @@ import {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export interface PendingBalanceAdjustment {
-  transaction: Omit<Transaction, 'id'>
+  transaction?: Omit<Transaction, 'id'>
+  transactions: Array<Omit<Transaction, 'id'>>
+  accountAdjustments: Array<{ id: string; name: string; current: number; target: number; diff: number }>
   categoryName: string
   currentBalance: number
   targetBalance: number
@@ -52,6 +54,7 @@ export function useDashboardView(options: UseDashboardViewOptions) {
   // Balance adjustment modal state
   const [adjustingCategory, setAdjustingCategory] = useState<CategorySummary | null>(null)
   const [newBalanceInput, setNewBalanceInput] = useState<string>('')
+  const [accountBalanceInputs, setAccountBalanceInputs] = useState<Record<string, string>>({})
   const [balanceErrors, setBalanceErrors] = useState<Record<string, string>>({})
   const [adjustmentDescription, setAdjustmentDescription] = useState<string>('Balance Adjustment')
   const [pendingBalanceAdjustment, setPendingBalanceAdjustment] = useState<PendingBalanceAdjustment | null>(null)
@@ -60,6 +63,7 @@ export function useDashboardView(options: UseDashboardViewOptions) {
     if (!hideSensitive) return
     setAdjustingCategory(null)
     setNewBalanceInput('')
+    setAccountBalanceInputs({})
     setAdjustmentDescription('')
     setBalanceErrors({})
     setPendingBalanceAdjustment(null)
@@ -188,22 +192,35 @@ export function useDashboardView(options: UseDashboardViewOptions) {
   // Disable the review button while the entered target matches the current balance.
   const isAdjustmentUnchanged = useMemo(() => {
     if (!adjustingCategory) return false
+    if (adjustingCategory.accounts?.length) {
+      return adjustingCategory.accounts.every(account => account.isArchived || (() => {
+        const target = parseFloat(accountBalanceInputs[account.id] ?? '')
+        return !Number.isNaN(target) && Math.abs(target - account.remaining) < 0.005
+      })())
+    }
     const targetVal = parseFloat(newBalanceInput)
     return !isNaN(targetVal) && Math.abs(targetVal - adjustingCategory.remaining) < 0.005
-  }, [adjustingCategory, newBalanceInput])
+  }, [accountBalanceInputs, adjustingCategory, newBalanceInput])
 
   // The signed ledger entry the current input would produce, for the live preview.
   const adjustmentPreviewDiff = useMemo(() => {
     if (!adjustingCategory) return null
+    if (adjustingCategory.accounts?.length) {
+      return adjustingCategory.accounts.reduce((sum, account) => {
+        const target = parseFloat(accountBalanceInputs[account.id] ?? '')
+        return Number.isNaN(target) ? sum : sum + target - account.remaining
+      }, 0)
+    }
     const parsed = parseFloat(newBalanceInput)
     if (isNaN(parsed)) return null
     return parsed - adjustingCategory.remaining
-  }, [adjustingCategory, newBalanceInput])
+  }, [accountBalanceInputs, adjustingCategory, newBalanceInput])
 
   const openBalanceAdjustment = (category: CategorySummary) => {
     if (hideSensitive) return
     setAdjustingCategory(category)
     setNewBalanceInput(category.remaining.toFixed(2))
+    setAccountBalanceInputs(Object.fromEntries((category.accounts ?? []).map(account => [account.id, account.remaining.toFixed(2)])))
     setAdjustmentDescription('Balance Adjustment')
     setBalanceErrors({})
   }
@@ -211,6 +228,7 @@ export function useDashboardView(options: UseDashboardViewOptions) {
   const handleCloseAdjustBalance = () => {
     setAdjustingCategory(null)
     setNewBalanceInput('')
+    setAccountBalanceInputs({})
     setAdjustmentDescription('')
     setBalanceErrors({})
   }
@@ -220,6 +238,15 @@ export function useDashboardView(options: UseDashboardViewOptions) {
     setNewBalanceInput(val)
     if (balanceErrors.balance) {
       setBalanceErrors(prev => ({ ...prev, balance: '' }))
+    }
+  }
+
+  const handleAccountBalanceInputChange = (accountId: string, rawValue: string) => {
+    const current = accountBalanceInputs[accountId] ?? ''
+    const val = maskCurrencyInput(rawValue, current)
+    setAccountBalanceInputs(previous => ({ ...previous, [accountId]: val }))
+    if (balanceErrors[accountId]) {
+      setBalanceErrors(previous => ({ ...previous, [accountId]: '' }))
     }
   }
 
@@ -233,13 +260,25 @@ export function useDashboardView(options: UseDashboardViewOptions) {
   const prepareBalanceAdjustment = () => {
     if (!adjustingCategory) return
 
-    const targetVal = parseFloat(newBalanceInput)
     const newErrors: Record<string, string> = {}
-    if (isNaN(targetVal)) {
-      newErrors.balance = 'Please enter a valid balance amount.'
-    }
     if (!adjustmentDescription.trim()) {
       newErrors.description = 'Description is required.'
+    }
+
+    const accounts = adjustingCategory.accounts ?? []
+    const accountTargets = accounts.map(account => ({
+      ...account,
+      target: parseFloat(accountBalanceInputs[account.id] ?? ''),
+    }))
+    if (accounts.length) {
+      for (const account of accountTargets) {
+        if (!account.isArchived && Number.isNaN(account.target)) {
+          newErrors[account.id] = 'Enter a valid balance amount.'
+        }
+      }
+    } else {
+      const targetVal = parseFloat(newBalanceInput)
+      if (Number.isNaN(targetVal)) newErrors.balance = 'Please enter a valid balance amount.'
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -248,6 +287,17 @@ export function useDashboardView(options: UseDashboardViewOptions) {
     }
     setBalanceErrors({})
 
+    const activeAccountTargets = accountTargets.filter(account => !account.isArchived)
+    const accountAdjustments = activeAccountTargets.map(account => ({
+      id: account.id,
+      name: account.name,
+      current: account.remaining,
+      target: account.target,
+      diff: account.target - account.remaining,
+    })).filter(account => Math.abs(account.diff) >= 0.005)
+    const targetVal = accounts.length
+      ? accountTargets.reduce((sum, account) => sum + (account.isArchived ? account.remaining : account.target), 0)
+      : parseFloat(newBalanceInput)
     const diff = targetVal - adjustingCategory.remaining
     if (Math.abs(diff) < 0.005) {
       setAdjustingCategory(null)
@@ -260,14 +310,27 @@ export function useDashboardView(options: UseDashboardViewOptions) {
     const d = String(now.getDate()).padStart(2, '0')
     const dateStr = `${y}-${mo}-${d}`
 
-    setPendingBalanceAdjustment({
-      transaction: {
+    const transactions = accounts.length
+      ? accountAdjustments.map(account => ({
+        description: `${adjustmentDescription.trim() || 'Balance Adjustment'} — ${account.name}`,
+        amount: account.diff,
+        category: 'Adjustment',
+        ledgerCategory: adjustingCategory.name,
+        accountId: account.id,
+        date: dateStr,
+      }))
+      : [{
         description: adjustmentDescription.trim() || 'Balance Adjustment',
         amount: diff,
         category: 'Adjustment',
         ledgerCategory: adjustingCategory.name,
-        date: dateStr
-      },
+        date: dateStr,
+      }]
+
+    setPendingBalanceAdjustment({
+      transaction: accounts.length ? undefined : transactions[0],
+      transactions,
+      accountAdjustments,
       categoryName: adjustingCategory.name,
       currentBalance: adjustingCategory.remaining,
       targetBalance: targetVal,
@@ -280,9 +343,10 @@ export function useDashboardView(options: UseDashboardViewOptions) {
 
   const confirmBalanceAdjustment = () => {
     if (!pendingBalanceAdjustment) return
-    const tx = pendingBalanceAdjustment.transaction
     setPendingBalanceAdjustment(null)
-    void onAddBalanceAdjustment?.(tx)
+    for (const transaction of pendingBalanceAdjustment.transactions) {
+      void onAddBalanceAdjustment?.(transaction)
+    }
   }
 
   return {
@@ -307,6 +371,7 @@ export function useDashboardView(options: UseDashboardViewOptions) {
     formatCompactSensitive,
     adjustingCategory,
     newBalanceInput,
+    accountBalanceInputs,
     balanceErrors,
     adjustmentDescription,
     pendingBalanceAdjustment,
@@ -315,6 +380,7 @@ export function useDashboardView(options: UseDashboardViewOptions) {
     openBalanceAdjustment,
     handleCloseAdjustBalance,
     handleBalanceInputChange,
+    handleAccountBalanceInputChange,
     handleDescriptionChange,
     prepareBalanceAdjustment,
     cancelBalanceAdjustment,

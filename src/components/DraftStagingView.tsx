@@ -130,7 +130,7 @@ export function DraftStagingView({
 
       <div className="space-y-3">
         {draftTransactions.map((draft, index) => {
-          const isTransfer = draft.ledgerCategory.startsWith('Transfer:')
+          const isTransfer = draft.ledgerCategory.startsWith('Transfer:') || draft.ledgerCategory.toLowerCase() === 'accountmove'
           const isOutflow = draft.amount < 0
           const issues = issuesById.get(draft.id) ?? []
           const amountClass = isTransfer ? 'text-accent-ink' : isOutflow ? 'text-orange-500' : 'text-emerald-500'

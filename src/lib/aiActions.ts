@@ -436,7 +436,7 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
       const id = getPayloadNumber(payload, 'id')
       const item = id == null ? undefined : deps.allWishlist.find(w => Number(w.id) === id)
       if (!item) {
-        deps.showToast('The wishlist item could not be found.', 'Wishlist action unavailable', 'warning')
+        deps.showToast('The reward could not be found.', 'Reward action unavailable', 'warning')
         continue
       }
       const undoPurchase = action.type === 'requestUnpurchaseWishlist'
@@ -460,7 +460,7 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
         }
       }
       deps.setConfirmModalData({
-        title: undoPurchase ? 'Undo Wishlist Purchase' : 'Claim Wishlist Item',
+        title: undoPurchase ? 'Undo Reward Claim' : 'Claim Reward',
         message: undoPurchase
           ? `Undo the purchase of "${item.name}" and remove its linked ledger transaction?`
           : `Claim "${item.name}" and create its linked Rewards transaction?`,

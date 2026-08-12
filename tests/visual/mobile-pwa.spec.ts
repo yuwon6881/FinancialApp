@@ -21,7 +21,7 @@ test('production routes do not create viewport horizontal overflow', async ({ pa
   await seedDraftTransaction(page)
   await mockApi(page)
 
-  for (const route of ['/dashboard', '/reports', '/recurring', '/ledger', '/wishlist', '/settings', '/investments', '/vault', '/drafts']) {
+  for (const route of ['/dashboard', '/reports', '/recurring', '/ledger', '/commitments-rewards', '/settings', '/investments', '/vault', '/drafts']) {
     await page.goto(route, { waitUntil: 'domcontentloaded' })
     await expect(page.locator('main')).toBeVisible()
     await page.waitForFunction(() => document.fonts.status === 'loaded')
@@ -92,7 +92,7 @@ test('mobile quick actions move focus into the menu and restore it on Escape', a
   const trigger = page.getByRole('button', { name: 'Open Menu' })
   await trigger.click()
 
-  const firstAction = page.getByRole('menuitem', { name: 'Add Wish Goal' })
+  const firstAction = page.getByRole('menuitem', { name: 'Add Reward' })
   await expect(firstAction).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(trigger).toBeFocused()
@@ -202,7 +202,7 @@ const mobilePwaRoutes = [
   { path: '/reports', slug: 'reports', readyText: 'Carryover Rolling Ledgers' },
   { path: '/recurring', slug: 'recurring', readyText: 'Recurring Bills & Subscriptions' },
   { path: '/ledger', slug: 'ledger', readyText: 'Neighbourhood Grocer' },
-  { path: '/wishlist', slug: 'wishlist', readyText: 'Commitments' },
+  { path: '/commitments-rewards', slug: 'commitments-rewards', readyText: 'Commitments & Rewards' },
   { path: '/settings', slug: 'settings', readyText: 'Financial Model' },
   { path: '/investments', slug: 'investments', readyText: 'Build your investment view' },
   { path: '/vault', slug: 'vault', readyText: '2 documents stored' },
@@ -220,7 +220,7 @@ for (const route of mobilePwaRoutes) {
     await expect(page.locator('main')).toBeVisible()
     await expect(page.getByText(route.readyText, { exact: true }).first()).toBeVisible()
     const logo = page.getByRole('button', { name: 'Go to Today' })
-    const wishlistAction = page.locator('header').getByRole('button', { name: 'Goals', exact: true })
+    const wishlistAction = page.locator('header').getByRole('button', { name: 'Commitments and Rewards', exact: true })
     const billsAction = page.getByRole('button', { name: /Bills:/ })
     await expect(logo).toBeVisible()
     await expect(wishlistAction).toBeVisible()

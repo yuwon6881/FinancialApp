@@ -229,10 +229,6 @@ export default defineConfig(({ mode }) => {
           // whichever caller's manual chunk it happens to be reached through first.
           if (id.includes('/src/lib/api/client') || id.includes('\\src\\lib\\api\\client') ||
               id.includes('/src/lib/auth/') || id.includes('\\src\\lib\\auth\\')) return 'api-client'
-          // DatePicker is shared between the eager app shell (TopNav bell) and
-          // several lazy views; keep it in its own parallel-loaded chunk instead
-          // of pinning it into the main bundle (mirrors CustomSelect).
-          if (id.includes('components/ui/DatePicker') || id.includes('components\\ui\\DatePicker')) return 'DatePicker'
           // Note: the two ledger layouts are deliberately NOT split into their own
           // chunks. They are mutually exclusive at runtime, but measured separately the
           // mobile list is only ~1.4 kB of unique code while giving the desktop table its

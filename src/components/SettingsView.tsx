@@ -2,7 +2,7 @@ import { Input } from './ui/Input'
 import { RangeInput } from './ui/RangeInput'
 import React from 'react'
 import { Save, Settings, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from 'lucide-react'
-import type { DashboardData, PushChannel, TransactionCategory, CategoryFlowType } from '../types'
+import type { DashboardData, LedgerAccount, PushChannel, TransactionCategory, CategoryFlowType } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { CurrencySelect } from './ui/CurrencySelect'
 import { RowSyncStatus } from './ui/RowSyncBadge'
@@ -30,6 +30,8 @@ import { FormField } from './ui/FormField'
 import { Button } from './ui/Button'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { SettingsTabs, type SettingsTabId } from './settings/SettingsTabs'
+import type { LedgerAccountInput } from '../app/financialData/accountActions'
+const AccountsSection = React.lazy(() => import('./settings/accounts/AccountsSection').then(m => ({ default: m.AccountsSection })))
 
 interface SettingsViewProps {
   dashboardData: DashboardData | null
@@ -54,6 +56,10 @@ interface SettingsViewProps {
   onUpdateCategoryType?: (id: string, type: CategoryFlowType) => void
   onDeleteCategory: (id: string) => void | Promise<void>
   onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
+  accounts?: LedgerAccount[]
+  onAddAccount?: (input: LedgerAccountInput) => Promise<void> | void
+  onUpdateAccount?: (id: string, input: LedgerAccountInput) => Promise<void> | void
+  onRequestDeleteAccount?: (id: string) => void
   notifyOnLoginEnabled?: boolean
   onToggleNotifyOnLogin?: (checked: boolean) => void
   activeSyncId?: string | null
@@ -153,6 +159,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
         return 'categories-preferences'
       }
+      if (search.includes('account') || hash.includes('account')) return 'accounts'
     }
     return 'financial-model'
   })
@@ -172,8 +179,12 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             const rect = el.getBoundingClientRect()
             if (rect.top > window.innerHeight || rect.top < 0) {
               el.scrollIntoView({ behavior: 'auto', block: 'start' })
-            }
-          }
+        }
+        return
+      }
+      if (search.includes('account') || hash.includes('account')) {
+        setActiveTab('accounts')
+      }
         })
       }
     }
@@ -769,6 +780,23 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             />
           </div>
         </div>
+      )}
+
+      {activeTab === 'accounts' && (
+        <React.Suspense fallback={<div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}>
+          <AccountsSection
+            accounts={props.accounts ?? []}
+            currency={view.activeSettings.currency || 'USD'}
+            hideSensitive={hideSensitive}
+            activeSyncId={activeSyncId}
+            activeSyncIds={activeSyncIds}
+            deletingId={deletingId}
+            disabled={hideSensitive}
+            onAddAccount={input => props.onAddAccount?.(input)}
+            onUpdateAccount={(id, input) => props.onUpdateAccount?.(id, input)}
+            onRequestDeleteAccount={id => props.onRequestDeleteAccount?.(id)}
+          />
+        </React.Suspense>
       )}
 
       {activeTab === 'security' && (

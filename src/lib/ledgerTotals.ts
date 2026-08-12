@@ -9,6 +9,7 @@ export interface LedgerTotalTransaction {
 
 function isTransferTransaction(transaction: LedgerTotalTransaction): boolean {
   return (transaction.ledgerCategory ?? '').toLowerCase().startsWith('transfer:') ||
+    (transaction.ledgerCategory ?? '').toLowerCase() === 'accountmove' ||
     (transaction.category ?? '').toLowerCase() === 'transfer'
 }
 

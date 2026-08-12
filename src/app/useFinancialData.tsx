@@ -13,7 +13,7 @@ import type {
   AutocompleteSuggestion,
   PendingNotification,
   TransactionDocumentChanges,
-  Loan,
+  LedgerAccount,
 } from '../types'
 import type { CategoryCleanupSuggestion } from '../lib/api'
 import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, setCachedCycleSnapshot } from '../lib/cache'
@@ -24,6 +24,8 @@ import { useOptimisticDashboard } from './useOptimisticDashboard'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
 import { createFinalId, projectFinancialSetting, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
 import { projectLoanStates } from '../lib/loanProjection'
+import { loanEndDate } from '../lib/loanTermSchedule'
+import { projectAccountBalances, projectAccountBalancesFromTransactions } from '../lib/accountProjection'
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
@@ -36,6 +38,8 @@ import type { ConfirmModalData } from './useAppDialogs'
 import { fetchBootstrapPayload } from './financialData/bootstrap'
 import { createWishlistSavingsActions } from './financialData/wishlistSavingsActions'
 import { createLoanActions } from './financialData/loanActions'
+import { createLedgerAccountActions } from './financialData/accountActions'
+import { useLoanData } from './financialData/useLoanData'
 // Deliberately the deferred wrapper, not the picker itself: importing CategoryReplacementSelect
 // directly here pulled its CustomSelect -> AnchoredPopover chain onto the eager critical path. See
 // the comment in CategoryReplacementSelectLazy for the measurement.
@@ -109,7 +113,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const [walletBalance, setWalletBalance] = useState<number | null>(() => getCachedJSON<number | null>(CACHE_KEYS.walletBalance, null))
   const [wishlist, setWishlist] = useState<WishlistItem[]>(() => getCachedWishlist(CACHE_KEYS.wishlist))
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(() => getCachedJSON(CACHE_KEYS.savingsGoals, []))
-  const [loans, setLoans] = useState<Loan[]>(() => getCachedJSON(CACHE_KEYS.loans, []))
+  const [accounts, setAccounts] = useState<LedgerAccount[]>(() => getCachedJSON(CACHE_KEYS.accounts, []))
+  const loanData = useLoanData()
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<AutocompleteSuggestion[]>([])
 
   const [error, setError] = useState<string | null>(null)
@@ -374,10 +379,24 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         op.entity === 'loan' && (op.type === 'add' || op.type === 'update' || op.type === 'delete')
       )
       if (onlyLoanCrud) {
-        const { fetchLoans } = await import('../lib/api/loans')
-        const refreshedLoans = await fetchLoans()
-        setLoans(refreshedLoans)
-        setCachedJSON(CACHE_KEYS.loans, refreshedLoans)
+        await loanData.refresh()
+        const refreshedPayments = await api.fetchRecurringPayments()
+        setRecurringPayments(refreshedPayments)
+        setCachedJSON(CACHE_KEYS.recurringPayments, refreshedPayments)
+        setError(null)
+        isServerAwakeRef.current = true
+        return
+      }
+
+      const onlyLedgerAccountCrud = ops.length > 0 && ops.every(op =>
+        op.entity === 'ledgerAccount' && (op.type === 'add' || op.type === 'update' || op.type === 'delete'))
+      const accountOpeningChanges = ops.some(op =>
+        op.entity === 'ledgerAccount' && op.type === 'add' && Number(op.payload?.openingAmount ?? 0) !== 0)
+      if (onlyLedgerAccountCrud && !accountOpeningChanges) {
+        const { fetchLedgerAccounts } = await import('../lib/api/accounts')
+        const refreshedAccounts = await fetchLedgerAccounts()
+        setAccounts(refreshedAccounts)
+        setCachedJSON(CACHE_KEYS.accounts, refreshedAccounts)
         setError(null)
         isServerAwakeRef.current = true
         return
@@ -400,6 +419,10 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       // Reconcile those together and propagate any failure so completed
       // optimistic operations remain projected until a later successful fetch.
       await loadAll(selectedMonth || undefined, selectedYear || undefined, true, true)
+      if (loanData.hasLoadedFromServer && ops.some(op =>
+        op.entity === 'transaction' || op.entity === 'recurringPayment' || op.entity === 'recurringOccurrence')) {
+        await loanData.refresh()
+      }
       if (ops.some(op => op.entity === 'settings' && typeof op.payload?.currency === 'string')) {
         window.dispatchEvent(new CustomEvent('investment-sync'))
       }
@@ -448,7 +471,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       // otherwise be permanently unable to load.
       const bootstrapped = await fetchBootstrapPayload(month, year, ac.signal)
 
-      const [dbData, txs, recs, cats, wishes, autoSuggests, wallet, insights, goals, loadedLoans] = bootstrapped ?? await (async () => {
+      const [dbData, txs, recs, cats, wishes, autoSuggests, wallet, insights, goals, bootAccounts] = bootstrapped ?? await (async () => {
         const dashboardPromise = api.fetchDashboard(month, year, ac.signal)
         const transactionsPromise = (month && year !== undefined)
           ? api.fetchTransactions(month, year, undefined, ac.signal)
@@ -477,9 +500,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
             console.warn('Could not refresh savings goals; keeping the last known local copy.', goalsError)
             return null
           }),
-          import('../lib/api/loans').then(m => m.fetchLoans(ac.signal)).catch((loansError: unknown) => {
-            if (getErrorName(loansError) === 'AbortError' || rethrowOnError) throw loansError
-            console.warn('Could not refresh loans; keeping the last known local copy.', loansError)
+          import('../lib/api/accounts').then(m => m.fetchLedgerAccounts(ac.signal)).catch((accountsError: unknown) => {
+            if (getErrorName(accountsError) === 'AbortError' || rethrowOnError) throw accountsError
+            console.warn('Could not refresh ledger accounts; keeping the last known local copy.', accountsError)
             return null
           }),
         ] as const)
@@ -533,8 +556,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       if (Array.isArray(goals)) {
         setSavingsGoals(goals)
       }
-      if (Array.isArray(loadedLoans)) {
-        setLoans(loadedLoans)
+      if (Array.isArray(bootAccounts)) {
+        setAccounts(bootAccounts)
       }
       setAutocompleteSuggestions(autoSuggests)
       setError(null)
@@ -550,8 +573,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       if (Array.isArray(goals)) {
         setCachedJSON(CACHE_KEYS.savingsGoals, goals)
       }
-      if (Array.isArray(loadedLoans)) {
-        setCachedJSON(CACHE_KEYS.loans, loadedLoans)
+      if (Array.isArray(bootAccounts)) {
+        setCachedJSON(CACHE_KEYS.accounts, bootAccounts)
       }
       // This snapshot duplicates the two large payloads just written above. Let React paint
       // the fresh screen before serialising and rotating the offline cycle history.
@@ -714,7 +737,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setCategoriesList([])
     setWishlist([])
     setSavingsGoals([])
-    setLoans([])
+    setAccounts([])
+    loanData.reset()
     setDirectSyncIds([])
     setPendingLedgerTransactions([])
     setSelectedMonth('')
@@ -729,6 +753,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       CACHE_KEYS.categories,
       CACHE_KEYS.wishlist,
       CACHE_KEYS.savingsGoals,
+      CACHE_KEYS.accounts,
       CACHE_KEYS.loans,
       CACHE_KEYS.walletBalance,
       CACHE_KEYS.pendingTransactions,
@@ -892,11 +917,82 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     transactions,
   ])
   const queuedRecurringPayments = useOptimisticList(recurringPayments, activeOps, 'recurringPayment')
-  const allRecurringPayments = queuedRecurringPayments
   const allWishlist = useOptimisticList(wishlist, activeOps, 'wishlistItem')
   const allSavingsGoals = useOptimisticList(savingsGoals, activeOps, 'savingsGoal')
-  const queuedLoans = useOptimisticList(loans, activeOps, 'loan')
+  const queuedAccounts = useOptimisticList(accounts, activeOps, 'ledgerAccount')
+  const allAccounts = useMemo(
+    () => projectAccountBalances(queuedAccounts, activeOps, transactions, incomeSplitOptions.incomeAllocations),
+    [activeOps, incomeSplitOptions, queuedAccounts, transactions],
+  )
+  const optimisticDashboardWithAccounts = useMemo(() => {
+    if (!optimisticDashboardData) return null
+
+    const accountSnapshots = new Map(
+      (dashboardData?.categories ?? []).flatMap(category =>
+        (category.accounts ?? []).map(account => [account.id, account] as const)),
+    )
+    const snapshotAccounts = allAccounts.map(account => ({
+      ...account,
+      remaining: accountSnapshots.get(account.id)?.remaining ?? account.remaining,
+    }))
+    const projectedAccounts = projectAccountBalancesFromTransactions(
+      snapshotAccounts,
+      transactions,
+      allTransactions,
+    )
+    const projectedById = new Map(projectedAccounts.map(account => [account.id, account]))
+
+    return {
+      ...optimisticDashboardData,
+      categories: optimisticDashboardData.categories.map(category => {
+        const serverAccounts = category.accounts ?? []
+        const bucketAccounts = projectedAccounts.filter(account =>
+          account.bucket.toLowerCase() === category.name.toLowerCase(),
+        )
+        if (serverAccounts.length === 0 && bucketAccounts.length === 0) return category
+        const accountIds = new Set(serverAccounts.map(account => account.id))
+        const accountsForCategory = [
+          ...serverAccounts.map(account => ({
+            ...account,
+            remaining: projectedById.get(account.id)?.remaining ?? account.remaining,
+          })),
+          ...bucketAccounts
+            .filter(account => !accountIds.has(account.id))
+            .map(account => ({
+              id: account.id,
+              name: account.name,
+              remaining: account.remaining,
+              isArchived: account.isArchived,
+            })),
+        ]
+        return { ...category, accounts: accountsForCategory }
+      }),
+    }
+  }, [allAccounts, allTransactions, dashboardData, optimisticDashboardData, transactions])
+  const queuedLoans = useOptimisticList(loanData.loans, activeOps, 'loan')
   const allLoans = useMemo(() => projectLoanStates(queuedLoans, activeOps, queuedRecurringPayments), [activeOps, queuedLoans, queuedRecurringPayments])
+  const allRecurringPayments = useMemo(() => {
+    const hasProjectedLoanMutation = activeOps.some(operation => operation.entity === 'loan')
+    if (!loanData.hasLoadedFromServer && !hasProjectedLoanMutation) return queuedRecurringPayments
+    return queuedRecurringPayments.map(payment => {
+      const loan = allLoans.find(candidate => !candidate.isPendingDelete && candidate.recurringPaymentId === payment.id)
+      const persistedLoan = loan ? loanData.loans.find(candidate => candidate.id === loan.id) : undefined
+      const hasLoanTermMutation = loan && activeOps.some(operation => operation.entity === 'loan'
+        && operation.targetId === loan.id
+        && (operation.type === 'add' || operation.type === 'update')
+        && typeof operation.payload?.termPeriods === 'number'
+        && (operation.type === 'add'
+          || !payment.endDate
+          || operation.payload.termPeriods !== persistedLoan?.termPeriods))
+      const projectedEndDate = hasLoanTermMutation ? loanEndDate(loan) : null
+      return {
+        ...payment,
+        endDate: projectedEndDate ?? payment.endDate,
+        linkedLoanId: loan?.id ?? null,
+        linkedLoanName: loan?.name ?? null,
+      }
+    })
+  }, [activeOps, allLoans, loanData.hasLoadedFromServer, queuedRecurringPayments])
   const allCategories = useOptimisticList(categoriesList, activeOps, 'category')
 
   const formatSensitive = useCallback((val: number) => {
@@ -1392,6 +1488,15 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const handleDeletePayment = (id: string) => {
     if (!guardSensitive()) return
+    const linkedPayment = allRecurringPayments.find(payment => payment.id === id)
+    if (linkedPayment?.linkedLoanId) {
+      showToast(
+        `“${linkedPayment.name}” is linked to ${linkedPayment.linkedLoanName || 'a loan'} and cannot be deleted.`,
+        'Recurring bill kept',
+        'warning',
+      )
+      return
+    }
     void triggerHaptic(30)
     const payment = allRecurringPayments.find(p => String(p.id) === String(id))
     snapshotForUndo('recurringPayment', String(id), payment)
@@ -1403,7 +1508,15 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const requestDeletePayment = (id: string) => {
     if (!guardSensitive()) return
-    const payment = recurringPayments.find(p => p.id === id)
+    const payment = allRecurringPayments.find(p => p.id === id)
+    if (payment?.linkedLoanId) {
+      showToast(
+        `“${payment.name}” is linked to ${payment.linkedLoanName || 'a loan'} and cannot be deleted.`,
+        'Recurring bill kept',
+        'warning',
+      )
+      return
+    }
     setConfirmModalData({
       title: 'Delete Subscription',
       message: `Delete "${payment?.name || 'this recurring subscription'}"? Future reminders stop; past ledger entries stay.`,
@@ -1494,7 +1607,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     savingsGoals,
     allWishlist,
     allSavingsGoals,
-    currency: optimisticDashboardData?.setting?.currency || 'USD',
+    currency: optimisticDashboardWithAccounts?.setting?.currency || 'USD',
     editingPendingId,
     guardSensitive,
     showToast,
@@ -1525,6 +1638,15 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setConfirmModalData,
   })
 
+  const accountActions = createLedgerAccountActions({
+    accounts: allAccounts,
+    guardSensitive,
+    enqueue,
+    mutateQueue,
+    snapshotForUndo,
+    setConfirmModalData,
+  })
+
   return {
     transactions,
     allTransactions,
@@ -1536,10 +1658,16 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     allWishlist,
     savingsGoals,
     allSavingsGoals,
-    loans,
+    accounts,
+    allAccounts,
+    loans: loanData.loans,
     allLoans,
+    loanLoadStatus: loanData.status,
+    hasLoadedLoans: loanData.hasLoadedFromServer,
+    loadLoans: loanData.load,
+    refreshLoans: loanData.refresh,
     dashboardData,
-    optimisticDashboardData,
+    optimisticDashboardData: optimisticDashboardWithAccounts,
     walletBalance,
     totalBalance,
     autocompleteSuggestions,
@@ -1607,5 +1735,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     requestPayEarly,
     ...wishlistSavingsActions,
     ...loanActions,
+    ...accountActions,
   }
 }

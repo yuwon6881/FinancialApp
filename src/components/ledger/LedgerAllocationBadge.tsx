@@ -31,6 +31,13 @@ export function LedgerAllocationBadge({
   transactionId,
   compact = false,
 }: LedgerAllocationBadgeProps) {
+  if (ledgerCategory.toLowerCase() === 'accountmove') {
+    return (
+      <span className={`${badgeClass(compact)} ${getCategoryBadgeClass('Transfer')}`}>
+        Between accounts
+      </span>
+    )
+  }
   const route = parseTransferRoute(ledgerCategory)
   const generatedIncomeAllocation = transactionId.includes('-split-') || route?.source === 'Income'
 

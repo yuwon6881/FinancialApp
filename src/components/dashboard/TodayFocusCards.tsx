@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
-import { CalendarClock, PiggyBank } from 'lucide-react'
+import { CalendarClock } from 'lucide-react'
+import { RewardIcon } from '../semanticIcons'
 import type { AppTab, WishlistItem } from '../../types'
 import { AnimatedNumber } from '../ui/AnimatedNumber'
 import { SensitiveAmount } from '../ui/SensitiveAmount'
@@ -78,7 +79,7 @@ export const TodayFocusCards: React.FC<TodayFocusCardsProps> = ({
         <p className="text-[10px] mt-2 text-muted-foreground">{progressCaption}</p>
       </div>
 
-      {/* Wishlist goal (shown when an active goal exists) */}
+      {/* Focused reward (shown when an open reward exists) */}
       {wishlistGoal && (
         <div
           onClick={() => onNavigate('wishlist')}
@@ -92,9 +93,9 @@ export const TodayFocusCards: React.FC<TodayFocusCardsProps> = ({
           }`}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-muted-foreground truncate max-w-[70%]">Goal: {wishlistGoal.item.name}</span>
+            <span className="text-xs font-semibold text-muted-foreground truncate max-w-[70%]">Reward: {wishlistGoal.item.name}</span>
             <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
-              <PiggyBank className="size-4" />
+              <RewardIcon className="size-4" aria-hidden />
             </div>
           </div>
           <div className="text-2xl font-black text-foreground">

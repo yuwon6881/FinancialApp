@@ -48,6 +48,20 @@ describe('app URL state', () => {
     expect(window.location.search).toBe('?month=Jul&year=2026')
   })
 
+  it('uses the canonical commitments and rewards route', () => {
+    navigateToAppTab('wishlist')
+    expect(window.location.pathname).toBe('/commitments-rewards')
+    expect(window.location.search).toBe('?month=Jul&year=2026')
+  })
+
+  it('recognizes the legacy wishlist route and query view', () => {
+    window.history.replaceState({}, '', '/wishlist?month=Jul&year=2026')
+    expect(readAppLocation().tab).toBe('wishlist')
+
+    window.history.replaceState({}, '', '/?view=wishlist&month=Jul&year=2026')
+    expect(readAppLocation().tab).toBe('wishlist')
+  })
+
   it('updates live search state without changing the route', () => {
     updateAppSearch({ q: 'rent', recurring: true })
     expect(window.location.pathname).toBe('/dashboard')

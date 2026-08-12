@@ -48,6 +48,9 @@ export function buildAiLedgerDraftTransactions(
     const requestedCategory = text(fields, 'category')?.toLowerCase()
     const category = (requestedCategory && categoriesByName.get(requestedCategory)) || fallbackCategory
     const rawLedger = text(fields, 'ledgerCategory')?.toLowerCase().replace(/^reward$/, 'rewards')
+    // AccountMove is a persisted internal marker, not a route the assistant is allowed to
+    // invent. It requires two same-bucket account ids that are unavailable to this draft parser.
+    if (rawLedger === 'accountmove') return []
     const allowedLedgers = txType === 'inflow' ? INFLOW_LEDGERS : LEDGERS
     const defaultLedger = txType === 'inflow' ? 'Income' : 'Essentials'
     const ledger = fields.ledgerCategorySpecified === true

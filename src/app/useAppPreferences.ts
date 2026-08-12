@@ -59,7 +59,7 @@ export function useAppPreferences(): AppPreferences {
   }, [activeTab])
 
   useEffect(() => {
-    if (window.location.pathname === '/' || window.location.search.includes('view=')) {
+    if (window.location.pathname === '/' || window.location.pathname === '/wishlist' || window.location.search.includes('view=')) {
       navigateToAppTab(activeTab, { replace: true })
     }
     const handlePopState = () => setActiveTabState(readAppLocation().tab)

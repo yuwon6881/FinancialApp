@@ -179,11 +179,11 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.queryByText(/is over its budget/)).toBeNull()
   })
 
-  it('renders the today focus cards and the active wish goal', () => {
+  it('renders the today focus cards and the focused reward', () => {
     render(<DashboardView {...makeProps()} />)
     expect(screen.getByText('$1,234.56')).toBeTruthy()
     expect(screen.getByText('Cycle progress')).toBeTruthy()
-    expect(screen.getByText('Goal: Camera')).toBeTruthy()
+    expect(screen.getByText('Reward: Camera')).toBeTruthy()
     expect(screen.getByText('40%')).toBeTruthy()
     // Cycle inflow/outflow moved to the Reports tab.
     expect(screen.queryByText('Cycle Inflow')).toBeNull()

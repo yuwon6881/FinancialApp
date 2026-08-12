@@ -31,7 +31,7 @@ const SUGGESTED_PROMPTS = [
   'What unusual spending happened this cycle?',
   'Which subscriptions are due next?',
   'How much did I spend on Food this cycle?',
-  'Which wishlist items can I afford now?',
+  'Which rewards can I afford now?',
   'Show my most recent transactions',
 ]
 
@@ -47,7 +47,7 @@ const SENSITIVE_SUGGESTED_PROMPTS = [
 const SURFACE_SUGGESTED_PROMPTS: Partial<Record<AppTab, string[]>> = {
   reports: ['Compare this cycle with the previous one', 'What unusual spending happened this cycle?', 'Review this cycle'],
   investments: ['Explain my portfolio', 'What is On paper versus Already banked?', 'Which holdings have incomplete prices?'],
-  wishlist: ['Explain my plan', 'Which wishlist items can I afford now?', 'How are my Savings Goals pacing?'],
+  wishlist: ['Explain my plan', 'Which rewards can I afford now?', 'How are my commitments pacing?'],
 }
 
 // AI replies commonly use Markdown emphasis. Render the supported safe subset as React

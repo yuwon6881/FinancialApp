@@ -13,7 +13,7 @@ interface FailedSyncModalProps {
 const ENTITY_LABELS: Record<string, string> = {
   transaction: 'Transaction',
   recurringPayment: 'Recurring payment',
-  wishlistItem: 'Wishlist item',
+  wishlistItem: 'Reward',
   category: 'Category',
   settings: 'Settings',
   investmentAccount: 'Investment account',

@@ -8,6 +8,7 @@ import type {
   TransactionCategory,
   WishlistItem,
   Loan,
+  LedgerAccount,
 } from '../../types'
 import type {
   WireDashboardData,
@@ -17,6 +18,7 @@ import type {
   WireTransaction,
   WireWishlistItem,
   WireLoan,
+  WireLedgerAccount,
 } from '../apiTypes'
 import {
   deobfuscateAmount,
@@ -25,6 +27,7 @@ import {
   deobfuscateTransaction,
   deobfuscateWishlistItem,
   deobfuscateLoan,
+  deobfuscateLedgerAccount,
 } from './amounts'
 import { mapCategory, type WireTransactionCategory } from './categories'
 import { mapDashboardCore, mapDashboardInsights } from './financial'
@@ -40,7 +43,8 @@ export interface BootstrapPayload {
   categories: TransactionCategory[]
   wishlist: WishlistItem[]
   savingsGoals: SavingsGoal[]
-  loans: Loan[]
+  loans: Loan[] | null
+  accounts: LedgerAccount[]
   autocomplete: AutocompleteSuggestion[]
   walletBalance: number
 }
@@ -57,6 +61,7 @@ interface WireBootstrapPayload {
   // Absent from an older server that predates savings goals; treated as "none" rather than an error.
   savingsGoals: WireSavingsGoal[] | null
   loans?: WireLoan[] | null
+  accounts?: WireLedgerAccount[] | null
   autocomplete: AutocompleteSuggestion[] | null
   walletBalance: { totalBalance: string | number }
 }
@@ -81,6 +86,7 @@ export async function fetchBootstrap(
   const params = new URLSearchParams()
   if (month) params.append('month', month)
   if (year) params.append('year', year.toString())
+  params.append('includeLoans', 'false')
   const query = params.size ? `?${params}` : ''
 
   const data = await request<WireBootstrapPayload>(`/bootstrap${query}`, {
@@ -98,7 +104,8 @@ export async function fetchBootstrap(
     categories: (data.categories || []).map(mapCategory),
     wishlist: (data.wishlist || []).map(deobfuscateWishlistItem),
     savingsGoals: (data.savingsGoals || []).map(deobfuscateSavingsGoal),
-    loans: (data.loans || []).map(deobfuscateLoan),
+    loans: Array.isArray(data.loans) ? data.loans.map(deobfuscateLoan) : null,
+    accounts: (data.accounts || []).map(deobfuscateLedgerAccount),
     autocomplete: data.autocomplete || [],
     walletBalance: deobfuscateAmount(data.walletBalance?.totalBalance),
   }

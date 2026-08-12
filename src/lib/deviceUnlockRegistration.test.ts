@@ -15,7 +15,7 @@ describe('device unlock registration', () => {
     rememberDeviceUnlockCredential(' Alice ', 'AQID')
 
     expect(getRegisteredDeviceCredentialId('alice')).toBe('010203')
-    expect(getRegisteredDeviceCredentialId('bob')).toBe('010203')
+    expect(getRegisteredDeviceCredentialId('bob')).toBeNull()
 
     // Once Bob has an account-specific registration, it cannot replace Alice's mapping.
     rememberDeviceUnlockCredential('bob', 'BAUG')

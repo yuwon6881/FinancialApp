@@ -17,6 +17,7 @@ export function DesktopLedgerTable({
   isTxDeleting,
   isTxSyncing,
   onStartEdit,
+  accounts,
   onDeleteClick,
   onEditBlocked,
   isSelecting = false,
@@ -53,6 +54,7 @@ export function DesktopLedgerTable({
                 key={t.id}
                 index={idx}
                 transaction={t}
+                accounts={accounts}
                 isDeleting={isTxDeleting(t.id)}
                 isSyncing={isTxSyncing(t.id)}
                 hideSensitive={hideSensitive}

@@ -101,8 +101,8 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     if (!guardSensitive()) return
     const item = wishlist.find(wish => wish.id === id)
     setConfirmModalData({
-      title: 'Delete Wishlist Item',
-      message: `Delete "${item?.name || 'this wishlist item'}"? This removes the item from your wishlist.`,
+      title: 'Delete Reward',
+      message: `Delete "${item?.name || 'this reward'}"? This removes the reward from your plan.`,
       confirmText: 'Delete',
       onConfirm: () => { handleDeleteWishlistItem(id) },
     })

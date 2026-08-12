@@ -215,13 +215,13 @@ describe('SavingsGoalCard cycle share', () => {
 describe('RewardCard management actions', () => {
   it('warns when a claimable reward would consume this cycle\'s goal pace', () => {
     renderRewardCard(200, 300)
-    expect(screen.getByText(/Buying this leaves your goals/)).toBeTruthy()
+    expect(screen.getByText(/Buying this leaves your commitments/)).toBeTruthy()
     expect(screen.getByText('RM 50.00')).toBeTruthy()
   })
 
   it('does not warn when the claim leaves enough free money for the goal pace', () => {
     renderRewardCard(300, 300)
-    expect(screen.queryByText(/leaves your goals/)).toBeNull()
+    expect(screen.queryByText(/leaves your commitments/)).toBeNull()
   })
 
   it('animates into compact management actions without inheriting the claim style', async () => {

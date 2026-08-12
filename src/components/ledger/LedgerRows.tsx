@@ -1,6 +1,6 @@
 import React, { type ReactNode } from 'react'
 import { Edit2, Trash2 } from 'lucide-react'
-import type { Transaction } from '../../types'
+import type { LedgerAccount, Transaction } from '../../types'
 import { formatCurrencyVal } from '../../lib/utils'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
@@ -14,6 +14,7 @@ import { isStabilityReloadDrawdown, stabilityReloadStatusLabel } from '../../lib
 
 export interface LedgerRowProps {
   transaction: Transaction
+  accounts?: LedgerAccount[]
   isDeleting: boolean
   isSyncing: boolean
   hideSensitive: boolean
@@ -72,6 +73,20 @@ const ReloadIntentChip = ({
   )
 }
 
+function AccountChip({ transaction, accounts }: { transaction: Transaction; accounts?: LedgerAccount[] }) {
+  if (!transaction.accountId) return null
+  const account = accounts?.find(item => item.id === transaction.accountId)
+  if (!account) return null
+  return (
+    <span
+      className={`inline-flex max-w-[15rem] shrink-0 truncate rounded-md border px-2 py-0.5 text-[10px] font-semibold ${account.isArchived ? 'border-border/60 bg-muted/40 text-muted-foreground' : 'border-primary/20 bg-primary/5 text-muted-foreground'}`}
+      title={`Account: ${account.name}${account.isArchived ? ' (Closed)' : ''}`}
+    >
+      Account: {account.name}{account.isArchived ? ' (Closed)' : ''}
+    </span>
+  )
+}
+
 export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: LedgerRowProps) {
   const transaction = props.transaction
   const outflow = transaction.amount < 0
@@ -79,7 +94,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
   const split = transaction.id.includes('-split-')
   const completion = transaction.savingsGoalId != null
   const editBlocked = split || completion
-  const transfer = transaction.ledgerCategory.startsWith('Transfer:')
+  const transfer = transaction.ledgerCategory.startsWith('Transfer:') || transaction.ledgerCategory.toLowerCase() === 'accountmove'
   const reloadDrawdown = isStabilityReloadDrawdown(transaction)
   const money = (value: number) => <Amount value={formatCurrencyVal(value, props.currency)} hidden={props.hideSensitive} />
   return (
@@ -105,6 +120,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
       <td className="p-4 font-semibold text-foreground">
         <div className="flex flex-wrap items-center gap-2">
           <span>{transaction.description}</span>
+          <AccountChip transaction={transaction} accounts={props.accounts} />
           {reloadDrawdown && <ReloadIntentChip intent={transaction.stabilityReloadIntent} status={transaction.stabilityReloadStatus} />}
           <RowSyncStatus isDeleting={props.isDeleting} isSyncing={props.isSyncing} isPending={transaction.isPendingSync} entityLabel="transaction" />
         </div>
@@ -137,7 +153,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
 export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: LedgerRowProps & { hint: boolean }) {
   const transaction = props.transaction
   const outflow = transaction.amount < 0
-  const transfer = transaction.ledgerCategory.startsWith('Transfer:')
+  const transfer = transaction.ledgerCategory.startsWith('Transfer:') || transaction.ledgerCategory.toLowerCase() === 'accountmove'
   const split = transaction.id.includes('-split-')
   const editBlocked = split || transaction.savingsGoalId != null
   const reloadDrawdown = isStabilityReloadDrawdown(transaction)
@@ -171,7 +187,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
             </label>
           </div>}
           <div className="flex items-center justify-between gap-2"><span className="shrink-0 text-[10px] text-muted-foreground font-mono">{transaction.date}</span><span title={transaction.category} className={`min-w-0 max-w-[65%] truncate px-2 py-0.5 text-right text-[10px] font-semibold rounded-full border ${getCategoryBadgeClass(transaction.category)}`}>{transaction.category}</span></div>
-          <div className="flex items-center justify-between gap-3"><div className="flex min-w-0 flex-1 items-center gap-1.5"><h4 className="min-w-0 truncate text-sm font-bold">{transaction.description}</h4><RowSyncStatus isDeleting={props.isDeleting} isSyncing={props.isSyncing} isPending={transaction.isPendingSync} entityLabel="transaction" /></div><span className={`max-w-[45%] shrink-0 break-words text-right text-sm font-bold ${transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>{props.hideSensitive ? <SensitiveMask /> : <>{transfer ? '' : outflow ? '-' : '+'}{formatted}</>}</span></div>
+          <div className="flex items-center justify-between gap-3"><div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"><h4 className="min-w-0 truncate text-sm font-bold">{transaction.description}</h4><AccountChip transaction={transaction} accounts={props.accounts} /><RowSyncStatus isDeleting={props.isDeleting} isSyncing={props.isSyncing} isPending={transaction.isPendingSync} entityLabel="transaction" /></div><span className={`max-w-[45%] shrink-0 break-words text-right text-sm font-bold ${transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>{props.hideSensitive ? <SensitiveMask /> : <>{transfer ? '' : outflow ? '-' : '+'}{formatted}</>}</span></div>
           {reloadDrawdown && <div className="flex"><ReloadIntentChip intent={transaction.stabilityReloadIntent} status={transaction.stabilityReloadStatus} /></div>}
            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/30"><span className="text-[10px] text-muted-foreground flex items-center gap-1.5">Ledger:<LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact /></span></div>
         </div>

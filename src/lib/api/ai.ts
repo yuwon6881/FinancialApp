@@ -60,7 +60,7 @@ export interface AiConversationState {
   lastComparison?: boolean
   lastRecurringReference?: string | null
   lastIntents?: string[] | null
-  lastTopic?: 'transactional' | 'wishlist' | 'recurring' | 'rewards' | 'investment' | 'report' | null
+  lastTopic?: 'transactional' | 'wishlist' | 'recurring' | 'rewards' | 'investment' | 'report' | 'loan' | null
   lastQueryFacets?: string[] | null
   lastRecurringStatus?: string | null
   lastWishlistStatus?: string | null
@@ -71,9 +71,10 @@ export interface AiConversationState {
   lastInvestmentRange?: string | null
   lastInvestmentInstrumentId?: string | null
   lastReportCycleKey?: string | null
+  lastLoanId?: string | null
 }
 
-export type AiInvocationPreset = 'report-review' | 'investment-explain' | 'rewards-plan'
+export type AiInvocationPreset = 'report-review' | 'investment-explain' | 'rewards-plan' | 'loan-explain'
 export type AiInvestmentRange = '1m' | '3m' | '6m' | '1y' | '3y' | '5y' | 'all'
 
 export interface AiInvocationContext {
@@ -82,6 +83,7 @@ export interface AiInvocationContext {
   cycleKey?: string
   investmentRange?: AiInvestmentRange
   savingsGoalId?: number
+  loanId?: string
   hasPendingLocalChanges: boolean
 }
 
@@ -153,7 +155,7 @@ function normalizeAiConversationState(value: unknown): AiConversationState | nul
     'lastResolvedCycle', 'lastCategory', 'lastLedgerCategory', 'lastTransactionType',
     'lastExactDate', 'lastRecurringReference', 'lastRecurringStatus', 'lastWishlistStatus',
     'lastRewardsTopic', 'lastInvestmentTopic', 'lastInvestmentRange', 'lastInvestmentInstrumentId',
-    'lastReportCycleKey',
+    'lastReportCycleKey', 'lastLoanId',
   ] as const) {
     if (Object.prototype.hasOwnProperty.call(candidate, key)) state[key] = text(key)
   }
@@ -178,6 +180,7 @@ function normalizeAiConversationState(value: unknown): AiConversationState | nul
       || candidate.lastTopic === 'rewards'
       || candidate.lastTopic === 'investment'
       || candidate.lastTopic === 'report'
+      || candidate.lastTopic === 'loan'
       ? candidate.lastTopic
       : null
   }

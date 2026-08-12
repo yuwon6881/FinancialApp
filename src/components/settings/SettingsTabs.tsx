@@ -2,12 +2,13 @@ import { useRef, type KeyboardEvent } from 'react'
 import { m, useReducedMotion } from 'framer-motion'
 import { Button } from '../ui/Button'
 
-export type SettingsTabId = 'financial-model' | 'investment-plan' | 'categories-preferences' | 'security'
+export type SettingsTabId = 'financial-model' | 'investment-plan' | 'categories-preferences' | 'accounts' | 'security'
 
 const SETTINGS_TABS: ReadonlyArray<readonly [SettingsTabId, string]> = [
   ['financial-model', 'Plan & Preferences'],
   ['investment-plan', 'Investment Plan'],
   ['categories-preferences', 'Categories & Limits'],
+  ['accounts', 'Accounts'],
   ['security', 'Security & Devices'],
 ]
 

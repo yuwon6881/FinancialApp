@@ -10,17 +10,20 @@ export function getDraftTransactionIssues(
   draft: Transaction,
   categories: TransactionCategory[],
 ): string[] {
-  const isTransfer = draft.ledgerCategory.startsWith('Transfer:')
-  const transactionType = isTransfer ? 'transfer' : draft.amount < 0 ? 'outflow' : 'inflow'
-  const transfer = isTransfer ? parseTransfer(draft.ledgerCategory) : { source: '', target: '' }
+  const isAccountMove = draft.ledgerCategory.toLowerCase() === 'accountmove'
+  const isTransfer = draft.ledgerCategory.startsWith('Transfer:') || isAccountMove
+  const transactionType = isAccountMove ? 'accountMove' : isTransfer ? 'transfer' : draft.amount < 0 ? 'outflow' : 'inflow'
+  const transfer = draft.ledgerCategory.startsWith('Transfer:') ? parseTransfer(draft.ledgerCategory) : { source: '', target: '' }
   const errors = validateTransactionForm({
     description: draft.description,
     amount: Math.abs(draft.amount).toFixed(2),
     date: draft.date,
     transactionType,
-    ledgerCategory: isTransfer ? '' : draft.ledgerCategory,
+    ledgerCategory: isAccountMove ? 'AccountMove' : isTransfer ? '' : draft.ledgerCategory,
     transferSource: transfer.source,
     transferTarget: transfer.target,
+    accountId: draft.accountId,
+    counterAccountId: draft.counterAccountId,
     stabilityReloadIntent: draft.stabilityReloadIntent,
   })
 

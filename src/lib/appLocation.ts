@@ -36,7 +36,7 @@ const PATH_BY_TAB: Record<AppTab, string> = {
   reports: '/reports',
   recurring: '/recurring',
   ledger: '/ledger',
-  wishlist: '/wishlist',
+  wishlist: '/commitments-rewards',
   drafts: '/drafts',
   settings: '/settings',
   investments: '/investments',
@@ -46,6 +46,7 @@ const PATH_BY_TAB: Record<AppTab, string> = {
 const TAB_BY_PATH = Object.fromEntries(
   Object.entries(PATH_BY_TAB).map(([tab, path]) => [path, tab]),
 ) as Record<string, AppTab>
+TAB_BY_PATH['/wishlist'] = 'wishlist'
 
 const LEDGER_PARAM_KEYS = [
   'filters',

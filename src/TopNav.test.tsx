@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import TopNav from './TopNav'
 
 describe('TopNav mobile primary navigation', () => {
-  it('keeps the five desktop workspaces in the bottom nav and routes Goals from the header', () => {
+  it('keeps the five desktop workspaces in the bottom nav and routes Commitments and Rewards from the header', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
     render(
       <TopNav
@@ -31,7 +31,7 @@ describe('TopNav mobile primary navigation', () => {
     expect(within(primary).getByRole('button', { name: 'Vault' })).toBeTruthy()
     expect(within(primary).queryByRole('button', { name: 'Wishlist' })).toBeNull()
     expect(within(primary).queryByRole('button', { name: /Investments/ })).toBeNull()
-    expect(screen.getByRole('button', { name: 'Goals' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Commitments and Rewards' })).toBeTruthy()
   })
 
   it('shows global synchronization feedback in the top-left brand area', () => {

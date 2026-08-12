@@ -16,6 +16,7 @@ export function MobileLedgerList({
   isTxDeleting,
   isTxSyncing,
   onStartEdit,
+  accounts,
   onDeleteClick,
   onEditBlocked,
   isSelecting = false,
@@ -38,6 +39,7 @@ export function MobileLedgerList({
         <MobileLedgerRow
           key={t.id}
           transaction={t}
+          accounts={accounts}
           index={idx}
           hint={idx === 0}
           isDeleting={isTxDeleting(t.id)}

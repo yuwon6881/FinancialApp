@@ -1,6 +1,7 @@
 import type { Loan, RecurringPayment } from '../types'
 import { expandBulkTransactionProjection, type QueuedOp } from './outbox'
 import { replayLoan, type LoanPaymentInput } from './loanMath'
+import { countLoanPaymentsThrough } from './loanTermSchedule'
 
 /**
  * Replays every queued operation that can change a loan's linked history. The server snapshot
@@ -43,7 +44,7 @@ function projectLoan(loan: Loan, ops: QueuedOp[], recurringPayments: RecurringPa
     }
 
     if (op.entity === 'loan' && op.targetId === loan.id) {
-      applyLoanOp(projectedLoan, op, linkedPayment)
+      applyLoanOp(projectedLoan, op, recurringPayments)
       if (!op.isCompleted) {
         hadPendingEffect = true
         firstPendingEffectId ??= op.id
@@ -101,6 +102,7 @@ function applyPaymentMetadata(loan: Loan, payment: RecurringPayment | undefined)
   loan.recurringPaymentName = payment.name
   loan.recurringPaymentFrequency = payment.frequency
   loan.recurringPaymentDueDate = payment.dueDate
+  loan.recurringPaymentLedgerCategory = payment.ledgerCategory
 }
 
 function applyRecurringPaymentOp(loan: Loan, op: QueuedOp) {
@@ -116,28 +118,50 @@ function applyRecurringPaymentOp(loan: Loan, op: QueuedOp) {
     loan.recurringPaymentFrequency = op.payload.frequency
   }
   if (typeof op.payload?.dueDate === 'number') loan.recurringPaymentDueDate = op.payload.dueDate
+  if (typeof op.payload?.endDate === 'string') {
+    const count = countLoanPaymentsThrough(loan, op.payload.endDate)
+    if (count != null) loan.termPeriods = count
+  }
 }
 
-function applyLoanOp(loan: Loan, op: QueuedOp, linkedPayment: RecurringPayment | undefined) {
+function applyLoanOp(loan: Loan, op: QueuedOp, recurringPayments: RecurringPayment[]) {
   if (op.type === 'delete') return
   if (op.type !== 'add' && op.type !== 'update') return
   const payload = op.payload
+  const previousPaymentId = loan.recurringPaymentId
   if (typeof payload?.name === 'string') loan.name = payload.name
   if (typeof payload?.openingPrincipal === 'number') loan.openingPrincipal = payload.openingPrincipal
   if (typeof payload?.trackingStartDate === 'string') loan.trackingStartDate = payload.trackingStartDate
   if (typeof payload?.annualRatePercent === 'number') loan.annualRatePercent = payload.annualRatePercent
   if (typeof payload?.termPeriods === 'number') loan.termPeriods = payload.termPeriods
-  if (payload?.interestMethod === 'ReducingBalance' || payload?.interestMethod === 'Flat') {
+  if (payload?.interestMethod === 'ReducingBalance'
+    || payload?.interestMethod === 'ReducingBalanceDaily'
+    || payload?.interestMethod === 'Flat'
+    || payload?.interestMethod === 'InterestOnly') {
     loan.interestMethod = payload.interestMethod
+  }
+  if (payload?.rateBasis === 'Yearly' || payload?.rateBasis === 'Monthly') {
+    loan.rateBasis = payload.rateBasis
   }
   if (payload?.scheduleFrequency === 'Monthly' || payload?.scheduleFrequency === 'Annually') {
     loan.scheduleFrequency = payload.scheduleFrequency
   }
   if (typeof payload?.scheduleDueDay === 'number') loan.scheduleDueDay = payload.scheduleDueDay
   if (typeof payload?.scheduleStartDate === 'string') loan.scheduleStartDate = payload.scheduleStartDate
-  if (payload?.scheduleStatus === 'Complete' || payload?.scheduleStatus === 'NeedsReview' || payload?.scheduleStatus === 'Incomplete') {
+  if (typeof payload?.recurringPaymentId === 'string') loan.recurringPaymentId = payload.recurringPaymentId
+  if (payload?.scheduleStatus === 'Complete' || payload?.scheduleStatus === 'Incomplete') {
     loan.scheduleStatus = payload.scheduleStatus
   }
+  const linkedPayment = recurringPayments.find(payment => payment.id === loan.recurringPaymentId)
+  if (linkedPayment && loan.recurringPaymentId !== previousPaymentId) {
+    loan.recurringPaymentExists = true
+    loan.recurringPaymentName = linkedPayment.name
+    loan.recurringPaymentFrequency = linkedPayment.frequency
+    loan.recurringPaymentDueDate = linkedPayment.dueDate
+    loan.recurringPaymentLedgerCategory = linkedPayment.ledgerCategory
+    loan.isRecalculating = true
+  }
+  if (payload?.isRecalculating === true) loan.isRecalculating = true
   if (op.type === 'add' && !loan.scheduleFrequency && linkedPayment) {
     loan.scheduleFrequency = linkedPayment.frequency
     loan.scheduleDueDay = linkedPayment.dueDate

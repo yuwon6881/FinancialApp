@@ -8,6 +8,8 @@ export function validateTransactionForm(state: {
   ledgerCategory?: string
   transferSource?: string
   transferTarget?: string
+  accountId?: string | null
+  counterAccountId?: string | null
   stabilityReloadIntent?: string
 }) {
   const errors: Record<string, string> = {}
@@ -25,6 +27,13 @@ export function validateTransactionForm(state: {
   }
   if (state.transactionType === 'transfer' && state.transferSource === state.transferTarget) {
     errors.transferTarget = 'Choose a different target category.'
+  }
+  if (state.ledgerCategory === 'AccountMove') {
+    if (!state.accountId) errors.accountId = 'Choose the account money is leaving.'
+    if (!state.counterAccountId) errors.counterAccountId = 'Choose the account receiving the money.'
+    if (state.accountId && state.accountId === state.counterAccountId) {
+      errors.counterAccountId = 'Choose two different accounts.'
+    }
   }
   if (isStabilityReloadFormDrawdown({
     transactionType: state.transactionType ?? '',

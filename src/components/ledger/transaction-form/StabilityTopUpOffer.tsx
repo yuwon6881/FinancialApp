@@ -110,13 +110,13 @@ export function StabilityTopUpOffer({
 
           {overSafe && (
             <p className="text-xs text-amber-600 dark:text-amber-400">
-              Above {money(offer.safeCap)}, bills or goals may be short this cycle. Still your call.
+              Above {money(offer.safeCap)}, bills or commitments may be short this cycle. Still your call.
             </p>
           )}
 
           {!invalid && !overSafe && offer.isReduced && (
             <p className="text-xs leading-relaxed text-muted-foreground">
-              The suggestion leaves room for this cycle’s bills and goals.
+              The suggestion leaves room for this cycle’s bills and commitments.
             </p>
           )}
 

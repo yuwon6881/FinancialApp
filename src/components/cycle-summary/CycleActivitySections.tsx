@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { Gift, Receipt } from 'lucide-react'
+import { Receipt } from 'lucide-react'
+import { RewardIcon } from '../semanticIcons'
 import type { buildCycleSummary } from '../../lib/cycleSummary'
 
 type Summary = ReturnType<typeof buildCycleSummary>
@@ -47,17 +48,17 @@ export function CycleActivitySections({
       )}
 
       {summary.purchasedThisCycle.length > 0 && (
-        <Section title="Wishlist purchases">
+        <Section title="Claimed rewards">
           <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <Gift className="size-3.5 shrink-0 text-pink-500" />
+                  <RewardIcon className="size-3.5 shrink-0 text-pink-500" aria-hidden />
                   <span className="text-xs font-bold text-foreground">
-                    {summary.purchasedThisCycle.length} {summary.purchasedThisCycle.length === 1 ? 'goal fulfilled' : 'goals fulfilled'}
+                    {summary.purchasedThisCycle.length} {summary.purchasedThisCycle.length === 1 ? 'reward claimed' : 'rewards claimed'}
                   </span>
                 </div>
-                <p className="mt-0.5 text-[10px] text-muted-foreground truncate">Achieved wishlist items for this cycle</p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground truncate">Rewards claimed during this cycle</p>
               </div>
               <div className="text-right shrink-0">
                 <span className="text-xs font-extrabold text-foreground block">{formatSensitive(summary.purchasedTotal)}</span>

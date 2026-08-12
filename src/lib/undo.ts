@@ -1,8 +1,8 @@
 import type { ToastAction } from '../components/ui/ToastViewport'
-import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, LedgerAccount, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
 import { createFinalId, createLocalNumericId, createLocalWishlistId, type DispatchResult, type EntityKind, type OutboxPayload, type QueuedOp } from './outbox'
 
-export type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | WishlistItem | SavingsGoal | InvestmentAccount | InvestmentInstrument | InvestmentActivity | InvestmentCashFlow | TaxReliefCategoryDefinition) & {
+export type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | WishlistItem | SavingsGoal | LedgerAccount | InvestmentAccount | InvestmentInstrument | InvestmentActivity | InvestmentCashFlow | TaxReliefCategoryDefinition) & {
   isPendingSync?: boolean
   isPendingDelete?: boolean
 }
@@ -65,6 +65,8 @@ export function buildUndoAction(
       return action('transaction', 'delete', String(op.targetId), op.payload)
     case 'recurringPayment:add':
       return action('recurringPayment', 'delete', String(op.targetId), op.payload)
+    case 'ledgerAccount:add':
+      return action('ledgerAccount', 'delete', String(op.targetId), op.payload)
     case 'recurringOccurrence:settle': {
       const transaction = result && typeof result === 'object' && 'transaction' in result
         ? result.transaction
@@ -101,6 +103,8 @@ export function buildUndoAction(
       return before ? action('transaction', 'add', String(before.id), toPayload(before)) : undefined
     case 'recurringPayment:delete':
       return before ? action('recurringPayment', 'add', String(before.id), toPayload(before)) : undefined
+    case 'ledgerAccount:delete':
+      return before ? action('ledgerAccount', 'add', String(before.id), toPayload(before)) : undefined
     case 'category:delete':
       return !op.payload?.replacementCategoryId && before
         ? action('category', 'add', String(before.id), toPayload(before))
@@ -144,6 +148,8 @@ export function buildUndoAction(
       return before ? action('transaction', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'recurringPayment:update':
       return before ? action('recurringPayment', 'update', String(op.targetId), toPayload(before)) : undefined
+    case 'ledgerAccount:update':
+      return before ? action('ledgerAccount', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'recurringPayment:reminder':
       return before ? action('recurringPayment', 'reminder', String(op.targetId), {
         name: (before as any).name,

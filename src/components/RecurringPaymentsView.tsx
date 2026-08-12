@@ -10,6 +10,7 @@ import { RecurringFilterBar } from './recurring/RecurringFilterBar'
 import { RecurringPaymentCards } from './recurring/RecurringPaymentCards'
 import { useRecurringPaymentsView } from './recurring/useRecurringPaymentsView'
 import { RecurringTabs, type RecurringTabId } from './recurring/RecurringTabs'
+import type { LoanLoadStatus } from '../app/financialData/useLoanData'
 
 const LoansSection = React.lazy(() => import('./recurring/loans/LoansSection').then(module => ({ default: module.LoansSection })))
 
@@ -47,6 +48,10 @@ interface RecurringPaymentsViewProps {
   onAddLoan?: (loan: Partial<Loan>) => void
   onUpdateLoan?: (id: string, loan: Loan) => void
   onRequestDeleteLoan?: (id: string) => void
+  loanLoadStatus?: LoanLoadStatus
+  hasLoadedLoans?: boolean
+  onLoadLoans?: () => Promise<Loan[]>
+  onExplainLoan?: (loan: Loan) => void
 }
 
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
@@ -83,6 +88,10 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   onAddLoan = () => {},
   onUpdateLoan = () => {},
   onRequestDeleteLoan = () => {},
+  loanLoadStatus = 'idle',
+  hasLoadedLoans = false,
+  onLoadLoans = async () => [],
+  onExplainLoan = () => {},
 }) => {
   const app = useAppContext()
   const hideSensitive = hideSensitiveProp ?? app.hideSensitive
@@ -138,7 +147,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         activeTab={activeTab}
         onChange={setActiveTab}
         recurringCount={payments.length}
-        loansCount={loans.length}
+        loansCount={hasLoadedLoans ? loans.length : undefined}
       />
 
       {activeTab === 'recurring' && (
@@ -201,6 +210,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             onAddLoan={onAddLoan}
             onUpdateLoan={onUpdateLoan}
             onRequestDeleteLoan={onRequestDeleteLoan}
+            loadStatus={loanLoadStatus}
+            onLoad={onLoadLoans}
+            onExplain={onExplainLoan}
           />
         </Suspense>
       )}

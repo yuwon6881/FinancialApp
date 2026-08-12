@@ -57,6 +57,10 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
         netChange: deobfuscateAmount(category.netChange),
         spent: deobfuscateAmount(category.spent),
         remaining: deobfuscateAmount(category.remaining),
+        accounts: (category.accounts || []).map(account => ({
+          ...account,
+          remaining: deobfuscateAmount(account.remaining),
+        })),
       })),
       stats: {
         ...data.stats,

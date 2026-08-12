@@ -7,7 +7,12 @@ import {
   getCachedFingerprintAssertOptions,
   prefetchFingerprintAssertOptions,
 } from '../lib/fingerprintOptionsCache'
-import { DEVICE_UNLOCK_REGISTRATION_EVENT } from '../lib/deviceUnlockRegistration'
+import {
+  DEVICE_UNLOCK_REGISTRATION_EVENT,
+  forgetDeviceUnlockCredential,
+  getRegisteredDeviceCredentialId,
+  rememberDeviceUnlockCredential,
+} from '../lib/deviceUnlockRegistration'
 import { useAutoLock } from '../lib/useAutoLock'
 
 export interface UseAppSessionOptions {
@@ -26,6 +31,9 @@ export interface AppSession {
   setToken: (token: string | null) => void
   username: string
   setUsername: (username: string) => void
+  isPwaLaunchGateLocked: boolean
+  unlockPwaLaunchGateWithDevice: () => Promise<void>
+  handlePwaLaunchGateUnlocked: () => void
   isLocked: boolean
   setIsLocked: (value: boolean) => void
   hasFingerprintSetup: boolean
@@ -47,6 +55,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   const [token, setToken] = useState<string | null>(null)
   const [isSessionResolved, setIsSessionResolved] = useState(false)
   const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
+  const [isPwaLaunchGateLocked, setIsPwaLaunchGateLocked] = useState(false)
 
   const lastUnlockedTimeRef = useRef<number>(0)
   const usernameRef = useRef(username)
@@ -68,8 +77,16 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
       try {
         const sessionToken = await resolveSessionToken()
         if (cancelled) return
-        onPreferenceOwnerChange(sessionToken ? (localStorage.getItem('auth_username') || null) : null)
+        const restoredUsername = localStorage.getItem('auth_username') || ''
+        onPreferenceOwnerChange(sessionToken ? (restoredUsername || null) : null)
         setToken(sessionToken)
+        let launchCredentialId: string | null = null
+        if (sessionToken === WEB_COOKIE_SESSION && restoredUsername) {
+          const { getMobilePwaLaunchGateCredential } = await import('../lib/mobilePwaDeviceGateEligibility')
+          if (cancelled) return
+          launchCredentialId = getMobilePwaLaunchGateCredential(true, restoredUsername)
+        }
+        setIsPwaLaunchGateLocked(launchCredentialId !== null)
         // Reconcile the global lock only when this tab has no explicit lock state yet.
         if (
           sessionToken
@@ -107,6 +124,17 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
     setIsLocked(false)
     loadAll(undefined, undefined, true)
   }, [loadAll])
+
+  const handlePwaLaunchGateUnlocked = useCallback(() => {
+    setIsPwaLaunchGateLocked(false)
+  }, [])
+
+  const unlockPwaLaunchGateWithDevice = useCallback(async () => {
+    const credentialId = getRegisteredDeviceCredentialId(usernameRef.current)
+    if (!credentialId) throw new Error('Device unlock is not configured for this app.')
+    const { verifyMobilePwaDeviceGate } = await import('../lib/mobilePwaDeviceGate')
+    await verifyMobilePwaDeviceGate(credentialId)
+  }, [])
 
   // Propagate a lock across open tabs.
   useEffect(() => {
@@ -157,6 +185,10 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
 
       const hasFingerprint = !!status?.hasFingerprintOnDevice
       setHasFingerprintSetup(hasFingerprint)
+      const exactCredentialId = getRegisteredDeviceCredentialId(username)
+      if (status && exactCredentialId && !hasFingerprint) {
+        forgetDeviceUnlockCredential(username, exactCredentialId)
+      }
       if (!hasFingerprint) {
         clearCachedFingerprintAssertOptions()
       }
@@ -218,6 +250,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
     setUsername('')
     setHasFingerprintSetup(false)
     clearCachedFingerprintAssertOptions()
+    setIsPwaLaunchGateLocked(false)
     setIsLocked(false)
   }
 
@@ -232,6 +265,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
     localStorage.setItem('last_active_time', now.toString())
     lastUnlockedTimeRef.current = now
     setIsLocked(false)
+    setIsPwaLaunchGateLocked(false)
     api.invalidateCache()
     onPreferenceOwnerChange(newUsername)
     // On the web the real bearer token is never held in memory — the cookie is the credential and
@@ -249,6 +283,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
       const { challengeId, options: fingerprintOptions } = await getCachedFingerprintAssertOptions()
       const credential = await getFingerprintAssertion(fingerprintOptions)
       await api.verifyFingerprintAssert(challengeId, credential)
+      rememberDeviceUnlockCredential(username, credential.id)
       setHideSensitive(false)
       verified = true
       return true
@@ -269,6 +304,9 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
     setToken,
     username,
     setUsername,
+    isPwaLaunchGateLocked,
+    unlockPwaLaunchGateWithDevice,
+    handlePwaLaunchGateUnlocked,
     isLocked,
     setIsLocked,
     hasFingerprintSetup,

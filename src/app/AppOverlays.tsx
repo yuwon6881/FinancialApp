@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
-import { CreditCard, PiggyBank, Sparkles, Wallet, X, Zap } from 'lucide-react'
+import { CreditCard, Sparkles, Wallet, X, Zap } from 'lucide-react'
+import { RewardIcon } from '../components/semanticIcons'
 import type { DashboardData, PendingNotification } from '../types'
 import { MONTH_NAMES } from '../lib/cycle'
 import type { useAppDialogs } from './useAppDialogs'
@@ -251,7 +252,7 @@ export function AppOverlays({
                 style={{ bottom: 'calc(164px + env(safe-area-inset-bottom, 0px))' }}
               >
                 {([
-                  { key: 'wishlist' as const, label: 'Add Wish Goal', Icon: PiggyBank, color: 'bg-pink-500' },
+                  { key: 'wishlist' as const, label: 'Add Reward', Icon: RewardIcon, color: 'bg-pink-500' },
                   { key: 'subscription' as const, label: 'New Subscription', Icon: CreditCard, color: 'bg-violet-500' },
                   { key: 'transaction' as const, label: 'Post Transaction', Icon: Wallet, color: 'bg-emerald-500' },
                   { key: 'ai' as const, label: 'Ask AI', Icon: Sparkles, color: 'bg-indigo-500' },

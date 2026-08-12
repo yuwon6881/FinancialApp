@@ -55,6 +55,7 @@ export function createLoanActions(deps: LoanActionDependencies) {
       annualRatePercent: value.annualRatePercent ?? 0,
       termPeriods: value.termPeriods ?? 0,
       interestMethod: value.interestMethod ?? 'ReducingBalance',
+      rateBasis: value.rateBasis ?? 'Yearly',
       scheduleFrequency: payment?.frequency ?? null,
       scheduleDueDay: payment?.dueDate ?? null,
       scheduleStartDate: payment?.startDate ?? null,
@@ -68,13 +69,16 @@ export function createLoanActions(deps: LoanActionDependencies) {
     if (!guardSensitive()) return
     const previous = loans.find(loan => loan.id === id)
     snapshotForUndo('loan', id, previous)
+    const selectedPayment = recurringPayments.find(payment => payment.id === value.recurringPaymentId)
+    const linkChanged = previous?.recurringPaymentId !== value.recurringPaymentId
     mutateQueue(queue => enqueue(queue, 'loan', 'update', id, {
       ...value,
-      recurringPaymentId: previous?.recurringPaymentId ?? value.recurringPaymentId,
-      scheduleFrequency: previous?.scheduleFrequency ?? value.scheduleFrequency,
-      scheduleDueDay: previous?.scheduleDueDay ?? value.scheduleDueDay,
-      scheduleStartDate: previous?.scheduleStartDate ?? value.scheduleStartDate,
-      scheduleStatus: previous?.scheduleStatus ?? value.scheduleStatus,
+      recurringPaymentId: value.recurringPaymentId,
+      scheduleFrequency: linkChanged ? selectedPayment?.frequency ?? null : previous?.scheduleFrequency,
+      scheduleDueDay: linkChanged ? selectedPayment?.dueDate ?? null : previous?.scheduleDueDay,
+      scheduleStartDate: linkChanged ? selectedPayment?.startDate ?? null : previous?.scheduleStartDate,
+      scheduleStatus: linkChanged ? 'Complete' : previous?.scheduleStatus,
+      isRecalculating: linkChanged,
       undoSnapshot: previous,
     }))
   }

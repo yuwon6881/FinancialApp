@@ -30,7 +30,7 @@ export const annualRate = (annualRatePercent: number) => annualRatePercent / 100
 
 export function totalScheduledInterest(loan: Pick<Loan, 'openingPrincipal' | 'annualRatePercent' | 'termPeriods' | 'interestMethod'>, frequency?: string | null): number {
   const periods = periodsPerYear(frequency)
-  if (loan.interestMethod === 'Flat') {
+  if (loan.interestMethod === 'Flat' || loan.interestMethod === 'InterestOnly') {
     return roundMoney(loan.openingPrincipal * annualRate(loan.annualRatePercent) * loan.termPeriods / periods)
   }
   const payment = scheduledPayment(loan, frequency)
@@ -40,11 +40,14 @@ export function totalScheduledInterest(loan: Pick<Loan, 'openingPrincipal' | 'an
 export function scheduledPayment(loan: Pick<Loan, 'openingPrincipal' | 'annualRatePercent' | 'termPeriods' | 'interestMethod'>, frequency?: string | null): number {
   const term = Math.max(1, loan.termPeriods)
   const periods = periodsPerYear(frequency)
+  const ratePerPeriod = annualRate(loan.annualRatePercent) / periods
   if (loan.interestMethod === 'Flat') {
     const totalInterest = loan.openingPrincipal * annualRate(loan.annualRatePercent) * term / periods
     return roundMoney((loan.openingPrincipal + totalInterest) / term)
   }
-  const ratePerPeriod = annualRate(loan.annualRatePercent) / periods
+  if (loan.interestMethod === 'InterestOnly') {
+    return roundMoney(loan.openingPrincipal * ratePerPeriod)
+  }
   if (ratePerPeriod === 0) return roundMoney(loan.openingPrincipal / term)
   const power = Math.pow(1 + ratePerPeriod, term)
   return roundMoney(loan.openingPrincipal * ratePerPeriod / (1 - 1 / power))
@@ -58,6 +61,7 @@ export function applyPayment(
   payment: number,
   paymentNumber: number,
   flatInterestPaidBefore: number,
+  previousAccrualDate: string,
   transactionId?: string | null,
 ): LoanPaymentSplit {
   const actualPayment = roundMoney(Math.max(0, payment))
@@ -67,7 +71,9 @@ export function applyPayment(
   }
   const interestDue = loan.interestMethod === 'Flat'
     ? flatInterestForPayment(loan, frequency, paymentNumber, flatInterestPaidBefore)
-    : roundMoney(balance * annualRate(loan.annualRatePercent) / periodsPerYear(frequency))
+    : loan.interestMethod === 'ReducingBalanceDaily'
+      ? dailyInterest(loan, balance, previousAccrualDate, occurrenceDate)
+      : roundMoney(balance * annualRate(loan.annualRatePercent) / periodsPerYear(frequency))
   const interest = Math.min(actualPayment, Math.max(0, interestDue))
   const didNotCoverInterest = actualPayment < interestDue && interestDue > 0
   const principal = didNotCoverInterest ? 0 : Math.min(balance, roundMoney(actualPayment - interest))
@@ -92,8 +98,9 @@ export function applyScheduledPayment(
   balanceBefore: number,
   paymentNumber: number,
   flatInterestPaidBefore: number,
+  previousAccrualDate: string,
 ): LoanScheduleEntry {
-  const split = applyPayment(loan, frequency, occurrenceDate, balanceBefore, scheduledPayment(loan, frequency), paymentNumber, flatInterestPaidBefore)
+  const split = applyPayment(loan, frequency, occurrenceDate, balanceBefore, scheduledPayment(loan, frequency), paymentNumber, flatInterestPaidBefore, previousAccrualDate)
   return { occurrenceDate, payment: split.payment, interest: split.interest, principal: split.principal, balanceAfter: split.balanceAfter }
 }
 
@@ -122,6 +129,7 @@ export function replayLoan(
   let flatInterestPaid = 0
   let paymentNumber = 0
   let totalInterestPaid = 0
+  let accrualDate = loan.trackingStartDate
   let lastOccurrenceDate: string | undefined
   let payoffDate: string | undefined
   const payments: LoanPaymentSplit[] = []
@@ -130,12 +138,14 @@ export function replayLoan(
     if (!lastOccurrenceDate || input.occurrenceDate > lastOccurrenceDate) lastOccurrenceDate = input.occurrenceDate
     if (input.isDiscarded) continue
     paymentNumber += 1
-    const split = applyPayment(loan, resolvedFrequency, input.occurrenceDate, balance, Math.abs(input.amount), paymentNumber, flatInterestPaid, input.transactionId)
+    const split = applyPayment(loan, resolvedFrequency, input.occurrenceDate, balance, Math.abs(input.amount), paymentNumber, flatInterestPaid, accrualDate, input.transactionId)
     payments.push(split)
     if (split.balanceBefore > 0 && split.balanceAfter <= 0) payoffDate ??= input.occurrenceDate
     balance = split.balanceAfter
     flatInterestPaid = roundMoney(flatInterestPaid + split.interest)
     totalInterestPaid = roundMoney(totalInterestPaid + split.interest)
+    // Underpayments still close the accrual window; interest is never capitalized.
+    accrualDate = input.occurrenceDate
   }
 
   const outstandingBalance = balance
@@ -143,11 +153,15 @@ export function replayLoan(
     ? addPeriod(lastOccurrenceDate, resolvedFrequency, resolvedDueDay)
     : findOccurrenceOnOrAfter(resolvedStartDate, resolvedFrequency!, resolvedDueDay!, loan.trackingStartDate)
   const futureSchedule: LoanScheduleEntry[] = []
-  for (let i = 0; i < 600 && balance > 0; i += 1) {
-    const entry = applyScheduledPayment(loan, resolvedFrequency, nextDate, balance, paymentNumber + i + 1, flatInterestPaid)
+  const futurePeriodLimit = loan.interestMethod === 'InterestOnly'
+    ? Math.max(0, loan.termPeriods - paymentNumber)
+    : 600
+  for (let i = 0; i < futurePeriodLimit && balance > 0; i += 1) {
+    const entry = applyScheduledPayment(loan, resolvedFrequency, nextDate, balance, paymentNumber + i + 1, flatInterestPaid, accrualDate)
     futureSchedule.push(entry)
     balance = entry.balanceAfter
     flatInterestPaid = roundMoney(flatInterestPaid + entry.interest)
+    accrualDate = nextDate
     if (balance <= 0) {
       payoffDate ??= nextDate
       break
@@ -243,4 +257,15 @@ function flatInterestForPayment(
   return paymentNumber >= Math.max(1, loan.termPeriods)
     ? remaining
     : Math.min(remaining, roundMoney(totalInterest / Math.max(1, loan.termPeriods)))
+}
+
+function dailyInterest(
+  loan: Pick<Loan, 'annualRatePercent'>,
+  balance: number,
+  previousAccrualDate: string,
+  occurrenceDate: string,
+) {
+  const days = (Date.parse(occurrenceDate) - Date.parse(previousAccrualDate)) / 86_400_000
+  if (days <= 0) return 0
+  return roundMoney(balance * annualRate(loan.annualRatePercent) * days / 365)
 }

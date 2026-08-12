@@ -60,4 +60,28 @@ describe('useAppPreferences', () => {
     expect(result.current.hideSensitive).toBe(true)
     expect(result.current.sensitivePreferenceStatus).toBe('pending')
   })
+
+  it('replaces legacy wishlist URLs with the canonical route and preserves the cycle', () => {
+    window.history.replaceState({}, '', '/wishlist?month=Jul&year=2026')
+    renderHook(() => useAppPreferences())
+
+    expect(window.location.pathname).toBe('/commitments-rewards')
+    expect(window.location.search).toBe('?month=Jul&year=2026')
+  })
+
+  it('tracks commitments and rewards through browser history navigation', () => {
+    window.history.replaceState({}, '', '/commitments-rewards?month=Jul&year=2026')
+    const { result } = renderHook(() => useAppPreferences())
+
+    act(() => result.current.setActiveTab('reports'))
+    expect(result.current.activeTab).toBe('reports')
+
+    act(() => {
+      window.history.replaceState({}, '', '/commitments-rewards?month=Jul&year=2026')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+
+    expect(result.current.activeTab).toBe('wishlist')
+    expect(window.location.search).toBe('?month=Jul&year=2026')
+  })
 })

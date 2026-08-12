@@ -22,6 +22,7 @@ function toMutationBody(loan: Partial<Loan>) {
     annualRatePercent: Number.isFinite(loan.annualRatePercent) ? loan.annualRatePercent : 0,
     termPeriods: loan.termPeriods,
     interestMethod: loan.interestMethod,
+    rateBasis: loan.rateBasis,
   }
 }
 

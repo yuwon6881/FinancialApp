@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Loan, RecurringPayment } from '../../../types'
 import { Button } from '../../ui/Button'
@@ -6,6 +6,9 @@ import { InfoHint } from '../../ui/InfoHint'
 import { LoanCard } from './LoanCard'
 import { LoanFormSheet } from './LoanFormSheet'
 import { useLoansView } from './view/useLoansView'
+import { RecurringFilterBar } from '../RecurringFilterBar'
+import { useIsMobile } from '../../../lib/useIsMobile'
+import type { LoanLoadStatus } from '../../../app/financialData/useLoanData'
 
 interface LoansSectionProps {
   loans: Loan[]
@@ -17,6 +20,9 @@ interface LoansSectionProps {
   onAddLoan: (loan: Partial<Loan>) => void
   onUpdateLoan: (id: string, loan: Loan) => void
   onRequestDeleteLoan: (id: string) => void
+  loadStatus: LoanLoadStatus
+  onLoad: () => Promise<Loan[]>
+  onExplain: (loan: Loan) => void
 }
 
 export function LoansSection({
@@ -29,6 +35,9 @@ export function LoansSection({
   onAddLoan,
   onUpdateLoan,
   onRequestDeleteLoan,
+  loadStatus,
+  onLoad,
+  onExplain,
 }: LoansSectionProps) {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null)
@@ -50,7 +59,12 @@ export function LoansSection({
     }
   }
 
-  const view = useLoansView(loans, activeSyncIds)
+  const isMobile = useIsMobile()
+  const view = useLoansView(loans, payments, activeSyncIds)
+
+  useEffect(() => {
+    void onLoad().catch(() => undefined)
+  }, [onLoad])
 
   return (
     <section className="app-panel space-y-4 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5" aria-labelledby="loans-heading">
@@ -65,13 +79,47 @@ export function LoansSection({
         <Button variant="primary" size="sm" className="shrink-0" onClick={openAdd}>Add loan</Button>
       </div>
 
-      {view.loans.length === 0 ? (
+      {loans.length > 0 && (
+        <RecurringFilterBar
+          isMobile={isMobile}
+          selectedCategories={view.selectedCategories}
+          sortOrder={view.sortOrder}
+          isFilterDropdownOpen={view.isFilterDropdownOpen}
+          filterButtonRef={view.filterButtonRef}
+          setIsFilterDropdownOpen={view.setIsFilterDropdownOpen}
+          onToggleCategoryFilter={view.toggleCategory}
+          onClearFilters={view.clearCategories}
+          onSortChange={view.setSortOrder}
+          allLabel="All bill categories"
+          filterAriaLabel="Filter loans by linked bill category"
+          sortAriaLabel="Sort loans"
+          sortOptions={[
+            { value: 'amount-desc', label: 'Sort by: Amount owed (High to Low)' },
+            { value: 'amount-asc', label: 'Sort by: Amount owed (Low to High)' },
+            { value: 'name-asc', label: 'Sort by: Name (A-Z)' },
+            { value: 'payoff-date', label: 'Sort by: Expected payoff' },
+          ]}
+        />
+      )}
+
+      {loadStatus === 'loading' && loans.length === 0 ? (
+        <div className="rounded-xl border border-border/60 bg-muted/20 p-6 text-center text-xs text-muted-foreground" aria-busy="true">Loading loans…</div>
+      ) : loadStatus === 'error' && loans.length === 0 ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-center text-xs text-destructive">
+          <p>{navigator.onLine === false ? 'Loans are not available offline until they have been loaded once.' : 'Loans could not be loaded.'}</p>
+          <Button variant="ghost" size="sm" className="mt-2" onClick={() => void onLoad()}>Retry</Button>
+        </div>
+      ) : loans.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-xs text-muted-foreground text-center">
           No loans yet. Add one to see the linked bill's payment history and estimated payoff.
         </div>
+      ) : view.filteredAndSortedLoans.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-xs text-muted-foreground text-center">
+          No loans match these filters.
+        </div>
       ) : (
         <div className="space-y-4">
-          {view.loans.map(loan => (
+          {view.filteredAndSortedLoans.map(loan => (
             <LoanCard
               key={loan.id}
               loan={loan}
@@ -81,6 +129,7 @@ export function LoansSection({
               isSyncing={view.activeSyncIdSet.has(loan.id)}
               onEdit={() => openEdit(loan)}
               onDelete={() => onRequestDeleteLoan(loan.id)}
+              onExplain={() => onExplain(loan)}
             />
           ))}
         </div>

@@ -35,7 +35,7 @@ vi.mock('./api/documents', () => ({
   deleteTaxReliefCategory: vi.fn(async () => undefined),
 }))
 
-import { applyOpsToList, createLocalNumericId, enqueue, getSyncSuccessToast, projectFinancialSetting, projectSettingPreference, type QueuedOp } from './outbox'
+import { applyOpsToList, createLocalNumericId, enqueue, ENTITY_LABELS, getSyncSuccessToast, projectFinancialSetting, projectSettingPreference, WELL_FORMED_ENTITY_KINDS, type QueuedOp } from './outbox'
 import { DISPATCH } from './outboxDispatch'
 import * as api from './api'
 import * as transactionBulkApi from './api/transactionBulk'
@@ -82,6 +82,16 @@ function makeOp(overrides: Partial<QueuedOp>): QueuedOp {
 }
 
 describe('DISPATCH idempotency wiring', () => {
+  it('keeps every entity registered for labels, persisted-op validation, and dispatch', () => {
+    for (const entity of Object.keys(ENTITY_LABELS)) {
+      expect(WELL_FORMED_ENTITY_KINDS).toContain(entity)
+      expect(Object.keys(DISPATCH).some(key => key.startsWith(`${entity}:`))).toBe(true)
+    }
+    for (const entity of WELL_FORMED_ENTITY_KINDS) {
+      expect(ENTITY_LABELS[entity]).toBeTruthy()
+    }
+  })
+
   it('dispatches a bulk transaction operation as one API request', async () => {
     const snapshot = { id: 'tx-1', date: '2026-08-08', description: 'Lunch', category: 'Food', ledgerCategory: 'Essentials', amount: -10 }
     await DISPATCH['transaction:bulkDelete'](makeOp({

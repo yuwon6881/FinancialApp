@@ -8,6 +8,7 @@ import { AnchoredPopover } from '../../ui/AnchoredPopover'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
 import { maskCurrencyInput } from '../../../lib/utils'
 import type { TransactionFormState, TransferBucket, SelectableLedgerCategory } from './transactionFormReducer'
+import type { LedgerAccount } from '../../../types'
 import { FormField } from '../../ui/FormField'
 import { Button } from '../../ui/Button'
 import { InfoHint } from '../../ui/InfoHint'
@@ -24,6 +25,7 @@ interface TransactionFormFieldsProps {
   autocompletedDescriptionRef: React.MutableRefObject<string | null>
   currency: string
   categories: any[]
+  accounts?: LedgerAccount[]
   errors: Record<string, string>
   onSetField: (field: keyof TransactionFormState, value: any) => void
   onSelectSuggestion: (s: any) => void
@@ -57,6 +59,7 @@ export function TransactionFormFields({
   autocompletedDescriptionRef,
   currency,
   categories,
+  accounts = [],
   errors,
   onSetField,
   onSelectSuggestion,
@@ -151,6 +154,38 @@ export function TransactionFormFields({
       }),
     ]
   }, [categories, suggestions.categorySuggestions, state.transactionType])
+
+  const isAccountMove = state.ledgerCategory === 'AccountMove'
+  const accountMoveBucket = accounts.find(account => account.id === state.accountId)?.bucket
+    ?? accounts.find(account => account.id === state.counterAccountId)?.bucket
+  const accountMoveOptions = React.useMemo(() => accounts
+    .filter(account => (!accountMoveBucket || account.bucket === accountMoveBucket)
+      && (!account.isArchived || account.id === state.accountId || account.id === state.counterAccountId))
+    .map(account => ({
+      value: account.id,
+      label: `${account.name} (${account.bucket})${account.isArchived ? ' (Closed)' : ''}`,
+      disabled: account.isArchived,
+    })), [accounts, accountMoveBucket, state.accountId, state.counterAccountId])
+  const accountBucket = state.transactionType === 'transfer'
+    ? state.transferSource
+    : (['Essentials', 'Growth', 'Stability', 'Rewards'].includes(state.ledgerCategory) ? state.ledgerCategory : null)
+  const isTransfer = String(state.transactionType) === 'transfer'
+  const accountOptions = React.useMemo(() => {
+    if (!accountBucket) return []
+    const bucketAccounts = accounts.filter(account =>
+      account.bucket === accountBucket && (!account.isArchived || account.id === state.accountId),
+    )
+    if (bucketAccounts.length === 0) return []
+    return [
+      { value: '', label: `Use ${accountBucket} default` },
+      { value: '__untracked__', label: 'Leave this transaction untracked' },
+      ...bucketAccounts.map(account => ({
+        value: account.id,
+        label: `${account.name}${account.isArchived ? ' (Closed)' : ''}${account.isDefault ? ' · Default' : ''}`,
+        disabled: account.isArchived,
+      })),
+    ]
+  }, [accountBucket, accounts, state.accountId])
 
   return (
     <>
@@ -344,7 +379,41 @@ export function TransactionFormFields({
         </div>
       </FormField>
 
-      {state.transactionType === 'transfer' ? (
+      {isAccountMove ? (
+        <>
+          <div className="space-y-1 rounded-xl border border-border/60 bg-muted/15 p-3 sm:col-span-2">
+            <p className="text-xs font-semibold text-foreground">Move money between accounts</p>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              This keeps the bucket total unchanged. Both accounts must belong to the same bucket.
+            </p>
+          </div>
+          <FormField label="Source account" required error={errors.accountId}>
+            <CustomSelect
+              ariaLabel="Account move source"
+              value={state.accountId ?? ''}
+              onChange={value => onSetField('accountId', value || null)}
+              options={[{ value: '', label: 'Choose source account' }, ...accountMoveOptions]}
+              className="w-full"
+            />
+          </FormField>
+          <FormField label="Destination account" required error={errors.counterAccountId}>
+            <CustomSelect
+              ariaLabel="Account move destination"
+              value={state.counterAccountId ?? ''}
+              onChange={value => onSetField('counterAccountId', value || null)}
+              options={[{ value: '', label: 'Choose destination account' }, ...accountMoveOptions.filter(option => option.value !== state.accountId)]}
+              className="w-full"
+            />
+          </FormField>
+          <FormField label="Posting date" className="sm:col-span-2" required error={errors.date}>
+            <DatePicker
+              value={state.date}
+              onChange={value => onSetField('date', value)}
+              className="w-full"
+            />
+          </FormField>
+        </>
+      ) : state.transactionType === 'transfer' ? (
         <>
           <FormField label="Source category (from)">
             <CustomSelect
@@ -375,6 +444,22 @@ export function TransactionFormFields({
               className="w-full"
             />
           </FormField>
+
+          {accountOptions.length > 0 && (
+            <FormField
+              className="sm:col-span-2"
+              label="Source account"
+              hint="Optional. This places the source side in one attached account; the target side follows its bucket default."
+            >
+              <CustomSelect
+                ariaLabel="Transfer source account"
+                value={state.accountId ?? '__untracked__'}
+                onChange={value => onSetField('accountId', value === '__untracked__' ? null : value)}
+                options={accountOptions}
+                className="w-full"
+              />
+            </FormField>
+          )}
 
           <FormField label="Posting date" className="sm:col-span-2" required error={errors.date}>
             <DatePicker
@@ -427,6 +512,21 @@ export function TransactionFormFields({
               className="w-full"
             />
           </FormField>
+
+          {accountOptions.length > 0 && (
+            <FormField
+              label={isTransfer ? 'Source account' : 'Account'}
+              hint="Optional. If you leave this untracked, the bucket total still works as before."
+            >
+              <CustomSelect
+                ariaLabel={isTransfer ? 'Source account' : 'Account'}
+                value={state.accountId ?? '__untracked__'}
+                onChange={value => onSetField('accountId', value === '__untracked__' ? null : value)}
+                options={accountOptions}
+                className="w-full"
+              />
+            </FormField>
+          )}
 
           <FormField label="Posting date" required error={errors.date}>
             <DatePicker

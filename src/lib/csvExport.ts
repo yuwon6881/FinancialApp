@@ -1,4 +1,4 @@
-import type { Transaction } from '../types'
+import type { LedgerAccount, Transaction } from '../types'
 import { displayLedgerCategory } from './utils'
 
 function escapeCsvField(val: string | number): string {
@@ -28,12 +28,16 @@ export function toFilename(value: string): string {
     .replace(/_+$/g, '')
 }
 
-export function buildCsvContent(rows: Transaction[]): string {
-  const headers = ['Date', 'Description', 'Category', 'Ledger Allocation', 'Debit (Outflow)', 'Credit (Inflow)', 'Internal Movement']
+export function buildCsvContent(rows: Transaction[], accounts: ReadonlyArray<Pick<LedgerAccount, 'id' | 'name'>> = []): string {
+  const accountNames = new Map(accounts.map(account => [account.id, account.name]))
+  const headers = ['Date', 'Description', 'Category', 'Ledger Allocation', 'Debit (Outflow)', 'Credit (Inflow)', 'Internal Movement', 'Account']
   const dataRows = rows.map(t => {
     const isOutflow = t.amount < 0
-    const isTransfer = (t.ledgerCategory || '').startsWith('Transfer:')
-    const ledgerAllocation = isTransfer
+    const isAccountMove = (t.ledgerCategory || '').toLowerCase() === 'accountmove'
+    const isTransfer = (t.ledgerCategory || '').startsWith('Transfer:') || isAccountMove
+    const ledgerAllocation = isAccountMove
+      ? 'Between accounts'
+      : isTransfer
       ? t.ledgerCategory.substring('Transfer:'.length).replace('->', ' -> ')
       : displayLedgerCategory(t.ledgerCategory)
     return [
@@ -44,6 +48,7 @@ export function buildCsvContent(rows: Transaction[]): string {
       !isTransfer && isOutflow ? escapeCsvField(Math.abs(t.amount).toFixed(2)) : '',
       !isTransfer && !isOutflow ? escapeCsvField(t.amount.toFixed(2)) : '',
       isTransfer ? escapeCsvField(Math.abs(t.amount).toFixed(2)) : '',
+      t.accountId ? escapeCsvTextField(accountNames.get(t.accountId) ?? t.accountId) : '',
     ]
   })
   return [headers.join(','), ...dataRows.map(e => e.join(','))].join('\n')
@@ -60,8 +65,8 @@ export function downloadCsvBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url)
 }
 
-export function downloadCsvRows(rows: Transaction[], filename: string): void {
-  const csvContent = buildCsvContent(rows)
+export function downloadCsvRows(rows: Transaction[], filename: string, accounts: ReadonlyArray<Pick<LedgerAccount, 'id' | 'name'>> = []): void {
+  const csvContent = buildCsvContent(rows, accounts)
   const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   downloadCsvBlob(csvBlob, filename)
 }

@@ -1,13 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Loan, LoanInterestMethod, RecurringPayment } from '../../../types'
+import type { Loan, LoanInterestMethod, LoanRateBasis, RecurringPayment } from '../../../types'
 import { financialDate } from '../../../lib/financialDate'
 import { scheduledPayment } from '../../../lib/loanAmortization'
+import {
+  LOAN_INTEREST_METHOD_OPTIONS,
+  LOAN_RATE_BASIS_OPTIONS,
+  annualRateFromEntry,
+  entryRateFromAnnual,
+  formatRatePercent,
+  loanInterestMethodCopy,
+} from '../../../lib/loanTerms'
+import {
+  countLoanPaymentsThrough,
+  durationFromTermPeriods,
+  termPeriodsFromDuration,
+  type LoanDurationUnit,
+} from '../../../lib/loanTermSchedule'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { Button } from '../../ui/Button'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { DatePicker } from '../../ui/DatePicker'
 import { FormField } from '../../ui/FormField'
-import { InfoHint } from '../../ui/InfoHint'
 import { Input } from '../../ui/Input'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
 
@@ -20,18 +33,15 @@ interface LoanFormSheetProps {
   onSave: (loan: Partial<Loan>) => void
 }
 
-const interestOptions = [
-  { value: 'ReducingBalance' as const, label: "Interest on what's left" },
-  { value: 'Flat' as const, label: 'Interest on the original amount' },
-]
-
 export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds, onClose, onSave }: LoanFormSheetProps) {
   const [name, setName] = useState('')
   const [recurringPaymentId, setRecurringPaymentId] = useState('')
   const [openingPrincipal, setOpeningPrincipal] = useState('')
   const [trackingStartDate, setTrackingStartDate] = useState(financialDate())
-  const [annualRatePercent, setAnnualRatePercent] = useState('')
-  const [termPeriods, setTermPeriods] = useState('')
+  const [rateEntry, setRateEntry] = useState('')
+  const [rateBasis, setRateBasis] = useState<LoanRateBasis>('Yearly')
+  const [termLength, setTermLength] = useState('')
+  const [termUnit, setTermUnit] = useState<LoanDurationUnit>('Months')
   const [interestMethod, setInterestMethod] = useState<LoanInterestMethod>('ReducingBalance')
   const [error, setError] = useState<string | null>(null)
 
@@ -41,8 +51,12 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
     setRecurringPaymentId(editingLoan?.recurringPaymentId ?? '')
     setOpeningPrincipal(editingLoan ? String(editingLoan.openingPrincipal) : '')
     setTrackingStartDate(editingLoan?.trackingStartDate ?? financialDate())
-    setAnnualRatePercent(editingLoan ? String(editingLoan.annualRatePercent) : '')
-    setTermPeriods(editingLoan ? String(editingLoan.termPeriods) : '')
+    const nextRateBasis = editingLoan?.rateBasis ?? 'Yearly'
+    setRateBasis(nextRateBasis)
+    setRateEntry(editingLoan ? String(entryRateFromAnnual(editingLoan.annualRatePercent, nextRateBasis)) : '')
+    const duration = durationFromTermPeriods(editingLoan?.termPeriods ?? 0, editingLoan?.scheduleFrequency)
+    setTermLength(editingLoan ? String(duration.value) : '')
+    setTermUnit(duration.unit)
     setInterestMethod(editingLoan?.interestMethod ?? 'ReducingBalance')
     setError(null)
   }, [editingLoan, isOpen])
@@ -50,12 +64,6 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
   const editingPaymentId = editingLoan?.recurringPaymentId
   const paymentOptions = useMemo(() => {
     const selected = payments.find(payment => payment.id === recurringPaymentId)
-    if (editingLoan) {
-      return [{
-        value: editingLoan.recurringPaymentId,
-        label: selected ? `${selected.name} - ${selected.frequency}` : 'Original bill deleted - history stays here',
-      }]
-    }
     const options = payments
       .filter(payment => !linkedPaymentIds.has(payment.id) || payment.id === editingPaymentId)
       .map(payment => ({ value: payment.id, label: `${payment.name} · ${payment.frequency}` }))
@@ -66,19 +74,64 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
   }, [editingPaymentId, linkedPaymentIds, payments, recurringPaymentId])
 
   const principal = Number(openingPrincipal)
-  const rate = Number(annualRatePercent)
-  const term = Number(termPeriods)
-  const previewFrequency = editingLoan?.scheduleFrequency ?? payments.find(payment => payment.id === recurringPaymentId)?.frequency
-  const preview = principal > 0 && Number.isFinite(rate) && term > 0
-    && (!editingLoan || editingLoan.scheduleStatus !== 'Incomplete')
-    ? scheduledPayment({ openingPrincipal: principal, annualRatePercent: rate, termPeriods: term, interestMethod }, previewFrequency)
+  const enteredRate = Number(rateEntry)
+  const annualRatePercent = annualRateFromEntry(enteredRate, rateBasis)
+  const selectedPayment = payments.find(payment => payment.id === recurringPaymentId)
+  const previewFrequency = recurringPaymentId === editingLoan?.recurringPaymentId
+    ? editingLoan.scheduleFrequency
+    : selectedPayment?.frequency
+  const term = termPeriodsFromDuration(Number(termLength), termUnit, previewFrequency)
+  const preview = principal > 0 && Number.isFinite(annualRatePercent) && term !== null
+    && Boolean(previewFrequency)
+    ? scheduledPayment({ openingPrincipal: principal, annualRatePercent, termPeriods: term, interestMethod }, previewFrequency)
     : null
+
+  useEffect(() => {
+    if (!selectedPayment?.endDate || !previewFrequency) return
+    const linkChanged = recurringPaymentId !== editingLoan?.recurringPaymentId
+    if (editingLoan && !linkChanged) return
+    const count = countLoanPaymentsThrough({
+      trackingStartDate,
+      scheduleFrequency: previewFrequency,
+      scheduleDueDay: selectedPayment.dueDate,
+      scheduleStartDate: selectedPayment.startDate,
+      scheduleStatus: 'Complete',
+    }, selectedPayment.endDate)
+    if (count == null) return
+    const duration = durationFromTermPeriods(count, previewFrequency)
+    setTermLength(String(duration.value))
+    setTermUnit(duration.unit)
+  }, [editingLoan, previewFrequency, recurringPaymentId, selectedPayment, trackingStartDate])
+
+  const handleTermUnitChange = (nextUnit: LoanDurationUnit) => {
+    const serialized = termPeriodsFromDuration(Number(termLength), termUnit, previewFrequency)
+    if (serialized != null) {
+      const nextValue = previewFrequency === 'Annually'
+        ? (nextUnit === 'Years' ? serialized : serialized * 12)
+        : (nextUnit === 'Years' ? serialized / 12 : serialized)
+      setTermLength(String(nextValue))
+    }
+    setTermUnit(nextUnit)
+  }
+
+  const handleRateBasisChange = (nextBasis: LoanRateBasis) => {
+    if (Number.isFinite(enteredRate)) {
+      const annual = annualRateFromEntry(enteredRate, rateBasis)
+      setRateEntry(String(entryRateFromAnnual(annual, nextBasis)))
+    }
+    setRateBasis(nextBasis)
+  }
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
+    if (!rateEntry.trim() || !Number.isFinite(enteredRate) || enteredRate < 0 || !Number.isFinite(annualRatePercent) || annualRatePercent < 0 || annualRatePercent > 100) {
+      setError(rateBasis === 'Monthly'
+        ? 'Interest rate must be between 0% and 8.3333% a month.'
+        : 'Interest rate must be between 0% and 100% a year.')
+      return
+    }
     if (!name.trim() || !recurringPaymentId || !(principal > 0) || !trackingStartDate
-      || !annualRatePercent.trim() || !Number.isFinite(rate) || rate < 0 || rate > 100
-      || !Number.isInteger(term) || term < 1 || term > 360) {
+      || term == null) {
       setError('Enter a name, link a bill, and complete the loan terms.')
       return
     }
@@ -88,8 +141,9 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
       recurringPaymentId,
       openingPrincipal: Math.round(principal * 100) / 100,
       trackingStartDate,
-      annualRatePercent: Math.round(rate * 10000) / 10000,
-      termPeriods: Math.trunc(term),
+      annualRatePercent,
+      rateBasis,
+      termPeriods: term,
       interestMethod,
       snapshot: editingLoan?.snapshot,
     })
@@ -101,8 +155,7 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
       isOpen={isOpen}
       title={editingLoan ? 'Edit loan' : 'Add a loan'}
       onClose={onClose}
-      description="Add the terms once. The balance is calculated from the linked bill's payment history. The original bill link stays with this loan."
-      maxWidthClassName="max-w-2xl"
+      maxWidthClassName="max-w-xl"
       footer={(
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -116,7 +169,7 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
           <FormField label="Loan name" required>
             <Input value={name} onChange={event => setName(event.target.value)} placeholder="Car loan" autoComplete="off" className="w-full" />
           </FormField>
-          <FormField label="Linked recurring bill" required hint={editingLoan ? 'This link cannot change because the payment history belongs to this loan.' : "The bill's occurrence date controls the payment order."}>
+          <FormField label="Linked recurring bill" required>
             <CustomSelect
               value={recurringPaymentId}
               onChange={setRecurringPaymentId}
@@ -124,40 +177,70 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
               placeholder="Select a recurring bill"
               ariaLabel="Linked recurring bill"
               className="w-full"
-              disabled={Boolean(editingLoan)}
             />
           </FormField>
-          <FormField label="Opening amount" required hint="The amount still owed when tracking starts.">
+          <FormField label="Amount owed when tracking starts" required>
             <SmartAmountInput value={openingPrincipal} onChange={event => setOpeningPrincipal(event.target.value)} placeholder="0.00" className="w-full" />
           </FormField>
-          <FormField label="Tracking starts" required hint="Payments before this date are not included.">
+          <FormField label="Include payments from" required>
             <DatePicker value={trackingStartDate} onChange={setTrackingStartDate} className="w-full" required />
           </FormField>
-          <FormField label="Annual interest rate" required hint="Enter 5.5 for 5.5%, not 0.055.">
-            <div className="relative w-full">
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                value={annualRatePercent}
-                onChange={event => setAnnualRatePercent(event.target.value)}
-                placeholder="5.50"
-                className="w-full pr-8"
+          <FormField
+            label="Interest rate"
+            hint={rateBasis === 'Monthly' && Number.isFinite(annualRatePercent) ? `That's ${formatRatePercent(annualRatePercent)} a year.` : undefined}
+            required
+          >
+            <div className="flex min-w-0 gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Input
+                  type="number"
+                  min="0"
+                  max={rateBasis === 'Monthly' ? '8.3333' : '100'}
+                  step={rateBasis === 'Monthly' ? '0.0001' : '0.01'}
+                  value={rateEntry}
+                  onChange={event => setRateEntry(event.target.value)}
+                  placeholder={rateBasis === 'Monthly' ? '1.50' : '5.50'}
+                  className="w-full pr-8"
+                />
+                <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground/80">%</span>
+              </div>
+              <CustomSelect
+                value={rateBasis}
+                onChange={handleRateBasisChange}
+                options={LOAN_RATE_BASIS_OPTIONS}
+                ariaLabel="Interest rate period"
+                className="w-[7.5rem] shrink-0"
               />
-              <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground/80">%</span>
             </div>
           </FormField>
-          <FormField label="Number of payments" required hint="Monthly bills count months; annual bills count years.">
-            <Input type="number" min="1" max="360" step="1" value={termPeriods} onChange={event => setTermPeriods(event.target.value)} placeholder="60" className="w-full" />
+          <FormField label="Loan length" required>
+            <div className="flex min-w-0 gap-2">
+              <Input
+                type="number"
+                min={termUnit === 'Years' ? 1 / 12 : 1}
+                max={termUnit === 'Years' ? (previewFrequency === 'Annually' ? 360 : 30) : (previewFrequency === 'Annually' ? 4320 : 360)}
+                step={termUnit === 'Years' && previewFrequency === 'Monthly' ? 1 / 12 : 1}
+                value={termLength}
+                onChange={event => setTermLength(event.target.value)}
+                placeholder={termUnit === 'Years' ? '5' : '60'}
+                className="w-full"
+              />
+              <CustomSelect
+                value={termUnit}
+                onChange={handleTermUnitChange}
+                options={[{ value: 'Years' as const, label: 'years' }, { value: 'Months' as const, label: 'months' }]}
+                ariaLabel="Loan length unit"
+                className="w-[7.5rem] shrink-0"
+              />
+            </div>
           </FormField>
         </div>
-        <FormField label={<span className="inline-flex items-center gap-1.5">Interest method <InfoHint label="interest method" text="Interest on what's left falls as the amount owed falls. Interest on the original amount keeps the interest base unchanged." /></span>} required>
-          <CustomSelect value={interestMethod} onChange={setInterestMethod} options={interestOptions} ariaLabel="Interest method" className="w-full" />
+        <FormField label="Interest method" hint={loanInterestMethodCopy(interestMethod).hint} required>
+          <CustomSelect value={interestMethod} onChange={setInterestMethod} options={LOAN_INTEREST_METHOD_OPTIONS} ariaLabel="Interest method" className="w-full" />
         </FormField>
         {preview !== null && (
           <p className="rounded-xl border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
-            Estimated scheduled payment: <strong className="text-foreground">{preview.toFixed(2)}</strong>. This is a planning figure; the recorded bill history remains the source for the live balance.
+            Estimated payment: <strong className="text-foreground">{preview.toFixed(2)}</strong>
           </p>
         )}
       </form>

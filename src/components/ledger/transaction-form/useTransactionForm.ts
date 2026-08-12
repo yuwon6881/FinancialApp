@@ -22,6 +22,7 @@ export type { UseTransactionFormOptions } from './useTransactionFormOptions'
 export function useTransactionForm(options: UseTransactionFormOptions) {
   const {
     categories,
+    accounts = [],
     essentialsAlloc,
     growthAlloc,
     stabilityAlloc,
@@ -121,6 +122,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       ledgerCategory: state.ledgerCategory,
       transferSource: state.transferSource,
       transferTarget: state.transferTarget,
+      accountId: state.accountId,
+      counterAccountId: state.counterAccountId,
       date: state.date
     },
     (draft) => {
@@ -136,6 +139,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
           txType: draft.txType,
           transferSource: draft.transferSource,
           transferTarget: draft.transferTarget,
+          accountId: draft.accountId,
+          counterAccountId: draft.counterAccountId,
         }
       })
       if (draft.editingTxId && onStartEditPending) {
@@ -253,6 +258,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
         txType: t.ledgerCategory.startsWith('Transfer:') ? 'transfer' : (t.amount < 0 ? 'outflow' : 'inflow'),
         transferSource: t.ledgerCategory.startsWith('Transfer:') ? (t.ledgerCategory.substring(9).split('->')[0].trim() as TransferBucket) : undefined,
         transferTarget: t.ledgerCategory.startsWith('Transfer:') ? (t.ledgerCategory.substring(9).split('->')[1].trim() as TransferBucket) : undefined,
+        accountId: t.accountId,
+        counterAccountId: t.counterAccountId,
         stabilityRecoveryTopUpAmount: t.stabilityRecoveryTopUpAmount,
         stabilityReloadIntent: t.stabilityReloadIntent,
       }
@@ -292,6 +299,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
         txType: draft.ledgerCategory.startsWith('Transfer:') ? 'transfer' : (draft.amount < 0 ? 'outflow' : 'inflow'),
         transferSource: draft.ledgerCategory.startsWith('Transfer:') ? (draft.ledgerCategory.substring(9).split('->')[0].trim() as TransferBucket) : undefined,
         transferTarget: draft.ledgerCategory.startsWith('Transfer:') ? (draft.ledgerCategory.substring(9).split('->')[1].trim() as TransferBucket) : undefined,
+        accountId: draft.accountId,
+        counterAccountId: draft.counterAccountId,
         stabilityRecoveryTopUpAmount: draft.stabilityRecoveryTopUpAmount,
         stabilityReloadIntent: draft.stabilityReloadIntent,
       },
@@ -356,6 +365,20 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   }, [state.transactionType, state.transferSource, state.transferTarget, state.editingId])
 
   useEffect(() => {
+    if (state.mode !== 'create' || state.accountId === null) return
+    const bucket = state.transactionType === 'transfer'
+      ? state.transferSource
+      : (['Essentials', 'Growth', 'Stability', 'Rewards'].includes(state.ledgerCategory) ? state.ledgerCategory : null)
+    if (!bucket) return
+    const selected = state.accountId ? accounts.find(account => account.id === state.accountId) : undefined
+    if (selected && selected.bucket === bucket) return
+    const defaultId = accounts.find(account => account.bucket === bucket && account.isDefault && !account.isArchived)?.id ?? ''
+    if (state.accountId !== defaultId) {
+      dispatch({ type: 'SET_FIELD', field: 'accountId', value: defaultId })
+    }
+  }, [accounts, state.accountId, state.ledgerCategory, state.mode, state.transactionType, state.transferSource])
+
+  useEffect(() => {
     if (categories.length > 0 && !state.category) {
       dispatch({ type: 'SET_FIELD', field: 'category', value: defaultCategory })
     }
@@ -370,7 +393,14 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
     setDocumentFieldRevision(revision => revision + 1)
     documentsFieldRef.current?.reset()
-    dispatch({ type: 'OPEN_CREATE', payload: { defaultCategory, todayDate } })
+    dispatch({
+      type: 'OPEN_CREATE',
+      payload: {
+        defaultCategory,
+        todayDate,
+        defaultAccountId: accounts.find(account => account.bucket === 'Essentials' && account.isDefault && !account.isArchived)?.id,
+      },
+    })
     const targetTxType = initialTxType || autoOpenTxType
     if (targetTxType) {
       dispatch({ type: 'SET_FIELD', field: 'transactionType', value: targetTxType })
@@ -379,7 +409,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     autocompletedDescriptionRef.current = null
     suggestions.clearSuggestions()
     openTransactionForm()
-  }, [hideSensitive, sensitivePreferenceStatus, defaultCategory, todayDate, autoOpenTxType, suggestions, openTransactionForm])
+  }, [accounts, hideSensitive, sensitivePreferenceStatus, defaultCategory, todayDate, autoOpenTxType, suggestions, openTransactionForm])
 
   useAutoOpenModal(autoOpenAddForm, () => openFresh(autoOpenTxType || undefined), onResetAutoOpen)
 
@@ -389,7 +419,14 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
     setDocumentFieldRevision(revision => revision + 1)
     documentsFieldRef.current?.reset()
-    dispatch({ type: 'OPEN_CREATE', payload: { defaultCategory, todayDate } })
+    dispatch({
+      type: 'OPEN_CREATE',
+      payload: {
+        defaultCategory,
+        todayDate,
+        defaultAccountId: accounts.find(account => account.bucket === 'Essentials' && account.isDefault && !account.isArchived)?.id,
+      },
+    })
     dispatch({
       type: 'APPLY_RECEIPT',
       payload: {
@@ -467,6 +504,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       ledgerCategory: state.ledgerCategory,
       transferSource: state.transferSource,
       transferTarget: state.transferTarget,
+      accountId: state.accountId,
+      counterAccountId: state.counterAccountId,
       stabilityReloadIntent: state.stabilityReloadIntent,
     })
 

@@ -1,5 +1,5 @@
-import type { Loan, LoanPaymentSplit, LoanScheduleEntry, RecurringPayment, SavingsGoal, Transaction, WishlistItem } from '../../types'
-import type { WireLoan, WireLoanPaymentSplit, WireLoanScheduleEntry, WireRecurringPayment, WireSavingsGoal, WireTransaction, WireWishlistItem } from '../apiTypes'
+import type { LedgerAccount, Loan, LoanPaymentSplit, LoanScheduleEntry, RecurringPayment, SavingsGoal, Transaction, WishlistItem } from '../../types'
+import type { WireLedgerAccount, WireLoan, WireLoanPaymentSplit, WireLoanScheduleEntry, WireRecurringPayment, WireSavingsGoal, WireTransaction, WireWishlistItem } from '../apiTypes'
 
 const OBFUSCATION_KEY = 'FinancialAppObfuscationKey'
 
@@ -40,6 +40,13 @@ export function deobfuscateTransaction(transaction: WireTransaction): Transactio
     stabilityRecoveryTopUpAmount: transaction.stabilityRecoveryTopUpAmount == null
       ? transaction.stabilityRecoveryTopUpAmount
       : deobfuscateAmount(transaction.stabilityRecoveryTopUpAmount),
+  }
+}
+
+export function deobfuscateLedgerAccount(account: WireLedgerAccount): LedgerAccount {
+  return {
+    ...account,
+    remaining: deobfuscateAmount(account.remaining),
   }
 }
 

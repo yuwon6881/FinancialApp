@@ -28,7 +28,7 @@ describe('loanAmortization', () => {
   it('matches the zero-rate reducing-balance case', () => {
     const value = loan({ openingPrincipal: 1200, annualRatePercent: 0 })
     expect(scheduledPayment(value, 'Monthly')).toBe(100)
-    const split = applyPayment(value, 'Monthly', '2026-01-01', 1200, 100, 1, 0)
+    const split = applyPayment(value, 'Monthly', '2026-01-01', 1200, 100, 1, 0, '2026-01-01')
     expect(split).toMatchObject({ interest: 0, principal: 100, balanceAfter: 1100 })
   })
 
@@ -54,7 +54,7 @@ describe('loanAmortization', () => {
   })
 
   it('treats exact interest payment as covered', () => {
-    const split = applyPayment(loan(), 'Monthly', '2026-01-01', 1000, 10, 1, 0)
+    const split = applyPayment(loan(), 'Monthly', '2026-01-01', 1000, 10, 1, 0, '2026-01-01')
     expect(split.paymentDidNotCoverInterest).toBe(false)
     expect(split.principal).toBe(0)
   })
@@ -112,7 +112,77 @@ describe('loanAmortization', () => {
 
   it('surfaces overpayment surplus instead of making the balance negative', () => {
     const value = loan({ annualRatePercent: 0 })
-    const split = applyPayment(value, 'Monthly', '2026-01-01', 1000, 1200, 1, 0)
+    const split = applyPayment(value, 'Monthly', '2026-01-01', 1000, 1200, 1, 0, '2026-01-01')
     expect(split).toMatchObject({ principal: 1000, balanceAfter: 0, surplus: 200 })
+  })
+
+  it('charges daily rest for the exact occurrence window', () => {
+    const value = loan({ interestMethod: 'ReducingBalanceDaily', annualRatePercent: 12 })
+
+    const fourteenDays = applyPayment(value, 'Monthly', '2026-01-15', 1000, 100, 1, 0, '2026-01-01')
+    const thirtyOneDays = applyPayment(value, 'Monthly', '2026-02-01', 1000, 100, 1, 0, '2026-01-01')
+
+    expect(fourteenDays.interest).toBe(4.6)
+    expect(thirtyOneDays.interest).toBe(10.19)
+    expect(fourteenDays.interest).not.toBe(applyPayment(loan(), 'Monthly', '2026-01-15', 1000, 100, 1, 0, '2026-01-01').interest)
+  })
+
+  it('charges no daily interest when the accrual window has zero days', () => {
+    const split = applyPayment(
+      loan({ interestMethod: 'ReducingBalanceDaily' }),
+      'Monthly',
+      '2026-01-01',
+      1000,
+      100,
+      1,
+      0,
+      '2026-01-01',
+    )
+
+    expect(split.interest).toBe(0)
+    expect(split.principal).toBe(100)
+  })
+
+  it('uses monthly rest for the daily method quote and scheduled payment', () => {
+    const monthly = loan({ annualRatePercent: 12, interestMethod: 'ReducingBalance' })
+    const daily = { ...monthly, interestMethod: 'ReducingBalanceDaily' as const }
+
+    expect(scheduledPayment(daily, 'Monthly')).toBe(scheduledPayment(monthly, 'Monthly'))
+    expect(totalScheduledInterest(daily, 'Monthly')).toBe(totalScheduledInterest(monthly, 'Monthly'))
+  })
+
+  it('keeps an interest-only balance flat but applies an overpayment to it', () => {
+    const value = loan({ interestMethod: 'InterestOnly', annualRatePercent: 12 })
+    const scheduled = replayLoan({ ...value, trackingStartDate: '2025-12-01' }, 'Monthly', [])
+    const overpayment = applyPayment(value, 'Monthly', '2026-01-01', 1000, 25, 1, 0, '2026-01-01')
+
+    expect(scheduled.futureSchedule[0]).toMatchObject({ interest: 10, principal: 0, balanceAfter: 1000 })
+    expect(overpayment).toMatchObject({ interest: 10, principal: 15, balanceAfter: 985 })
+  })
+
+  it('caps an interest-only forecast at the term and keeps the balloon state honest', () => {
+    const value = loan({
+      interestMethod: 'InterestOnly',
+      termPeriods: 3,
+      scheduleFrequency: 'Monthly',
+      scheduleDueDay: 1,
+      scheduleStartDate: '2026-01-01',
+      scheduleStatus: 'Complete',
+    })
+    const replay = replayLoan(value, undefined, [])
+
+    expect(replay.futureSchedule).toHaveLength(3)
+    expect(replay.payoffDate).toBeNull()
+    expect(replay.nextPayment).not.toBeNull()
+  })
+
+  it('keeps discarded days in the next daily-rest window', () => {
+    const value = loan({ interestMethod: 'ReducingBalanceDaily', annualRatePercent: 12 })
+    const replay = replayLoan(value, 'Monthly', [
+      { occurrenceDate: '2026-02-01', amount: 0, isDiscarded: true },
+      { occurrenceDate: '2026-03-01', amount: 100 },
+    ], 1)
+
+    expect(replay.payments[0].interest).toBe(19.4)
   })
 })

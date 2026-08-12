@@ -39,7 +39,7 @@ test('desktop top-bar icon actions stay compact', async ({ page }) => {
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
   const sizes = await Promise.all([
-    page.getByRole('button', { name: 'Goals', exact: true }).evaluate(element => {
+    page.getByRole('button', { name: 'Commitments and Rewards', exact: true }).evaluate(element => {
       const bounds = element.getBoundingClientRect()
       return { width: bounds.width, height: bounds.height }
     }),
@@ -133,7 +133,8 @@ test('rewards rail responds to a desktop mouse wheel and releases page scrolling
   await establishSession(page)
   await mockApi(page, { wishlist: rewardItems })
   await page.setViewportSize({ width: 1440, height: 600 })
-  await page.goto('/wishlist', { waitUntil: 'domcontentloaded' })
+  await page.goto('/commitments-rewards', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('tab', { name: /^Rewards/ }).click()
 
   const rail = page.getByRole('group', { name: 'Rewards' })
   await expect(rail).toBeVisible()

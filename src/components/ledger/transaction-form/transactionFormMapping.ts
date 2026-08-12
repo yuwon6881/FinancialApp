@@ -28,7 +28,10 @@ export function mapFormToTransaction(
   let finalAmount = parsedAmount
   let finalLedgerCategory: string = state.ledgerCategory
 
-  if (state.transactionType === 'outflow') {
+  if (state.ledgerCategory === 'AccountMove') {
+    finalAmount = Math.abs(parsedAmount)
+    finalLedgerCategory = 'AccountMove'
+  } else if (state.transactionType === 'outflow') {
     finalAmount = -Math.abs(parsedAmount)
   } else if (state.transactionType === 'inflow') {
     finalAmount = Math.abs(parsedAmount)
@@ -56,12 +59,14 @@ export function mapFormToTransaction(
   return {
     description: state.description,
     amount: finalAmount,
-    category: state.transactionType === 'transfer' ? 'Transfer' : state.category,
+    category: state.transactionType === 'transfer' || state.ledgerCategory === 'AccountMove' ? 'Transfer' : state.category,
     ledgerCategory: finalLedgerCategory,
     date: state.date,
     stabilityRecoveryTopUpAmount: isIncome ? Math.max(0, options.recoveryTopUp ?? 0) : undefined,
     stabilityReloadIntent: isStabilityReloadFormDrawdown(state)
       ? state.stabilityReloadIntent
       : undefined,
+    accountId: state.accountId || undefined,
+    counterAccountId: state.ledgerCategory === 'AccountMove' ? state.counterAccountId || undefined : undefined,
   }
 }

@@ -3,6 +3,7 @@ import React, { useState, useCallback, useRef } from 'react'
 import type {
   Transaction,
   TransactionCategory,
+  LedgerAccount,
   AutocompleteSuggestion,
   TransactionDocumentChanges,
   StabilityRecovery,
@@ -39,6 +40,7 @@ const LedgerExportModal = React.lazy(() =>
 
 interface LedgerViewProps {
   transactions: Transaction[]
+  accounts?: LedgerAccount[]
   autocompleteSuggestions?: AutocompleteSuggestion[]
   onAddTransaction: (
     transaction: Omit<Transaction, 'id'>,
@@ -224,6 +226,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
 
   const listProps: LedgerListProps = {
     transactions: ledger.displayTransactions,
+    accounts: props.accounts,
     listKey: `${props.selectedMonth}-${props.selectedYear}-${props.showAllCycles}-${ledger.currentPage}`,
     hideSensitive,
     currency,
@@ -312,8 +315,8 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         }
         if (activeRecurringFilter === 'only') filterDetails.push('recurring transactions only')
         else if (activeRecurringFilter === 'exclude') filterDetails.push('excluding recurring transactions')
-        if (activeWishlistFilter === 'only') filterDetails.push('wishlist purchases only')
-        else if (activeWishlistFilter === 'exclude') filterDetails.push('excluding wishlist purchases')
+        if (activeWishlistFilter === 'only') filterDetails.push('reward purchases only')
+        else if (activeWishlistFilter === 'exclude') filterDetails.push('excluding reward purchases')
         if (activeSearch) {
           filterDetails.push(`search "${activeSearch}"`)
         }
@@ -349,6 +352,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
       <TransactionFormSheet
         ref={formRef}
         categories={props.categories}
+        accounts={props.accounts}
         currency={currency}
         hideSensitive={hideSensitive}
         sensitivePreferenceStatus={app.sensitivePreferenceStatus}

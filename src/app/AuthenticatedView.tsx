@@ -25,7 +25,7 @@ const DashboardView = lazy(() => import('../components/DashboardView').then(modu
 const ReportsView = lazy(() => import('../components/ReportsView').then(module => ({ default: module.ReportsView })))
 const RecurringPaymentsView = lazy(() => import('../components/RecurringPaymentsView').then(module => ({ default: module.RecurringPaymentsView })))
 const LedgerView = lazy(() => import('../components/LedgerView').then(module => ({ default: module.LedgerView })))
-const WishlistView = lazy(() => import('../components/WishlistView').then(module => ({ default: module.WishlistView })))
+const CommitmentsRewardsView = lazy(() => import('../components/CommitmentsRewardsView').then(module => ({ default: module.CommitmentsRewardsView })))
 const SettingsView = lazy(() => import('../components/SettingsView').then(module => ({ default: module.SettingsView })))
 const DraftStagingView = lazy(() => import('../components/DraftStagingView').then(module => ({ default: module.DraftStagingView })))
 const InvestmentsView = lazy(() => import('../components/InvestmentsView').then(module => ({ default: module.InvestmentsView })))
@@ -257,6 +257,10 @@ export function AuthenticatedView({
                       onUpdateCategoryType={financial.handleUpdateCategoryType}
                       onDeleteCategory={financial.requestDeleteCategory}
                       onApplyCategoryCleanupSuggestion={financial.handleApplyCategoryCleanupSuggestion}
+                      accounts={financial.allAccounts}
+                      onAddAccount={financial.handleAddAccount}
+                      onUpdateAccount={financial.handleUpdateAccount}
+                      onRequestDeleteAccount={financial.requestDeleteAccount}
                       notifyOnLoginEnabled={prefs.notifyOnLogin}
                       onToggleNotifyOnLogin={(checked) => {
                         const previous = prefs.notifyOnLogin
@@ -352,6 +356,16 @@ export function AuthenticatedView({
                       onAddLoan={financial.handleAddLoan}
                       onUpdateLoan={financial.handleUpdateLoan}
                       onRequestDeleteLoan={financial.requestDeleteLoan}
+                      loanLoadStatus={financial.loanLoadStatus}
+                      hasLoadedLoans={financial.hasLoadedLoans}
+                      onLoadLoans={financial.loadLoans}
+                      onExplainLoan={loan => onExplainWithAi({
+                        surface: 'recurring',
+                        preset: 'loan-explain',
+                        loanId: loan.id,
+                        hasPendingLocalChanges: financial.pendingOps.length > 0 || financial.failedOps.length > 0 ||
+                          financial.draftTransactions.length > 0 || financial.activeSyncId != null,
+                      }, 'Explain this loan')}
                       aiDraft={aiRouter.state.aiRecurringDraft}
                       aiEditDraft={aiRouter.state.aiRecurringEditDraft}
                       onAiDraftConsumed={() => aiRouter.dispatch({ aiRecurringDraft: null })}
@@ -362,6 +376,7 @@ export function AuthenticatedView({
                   {prefs.activeTab === 'ledger' && (
                     <LedgerView 
                       transactions={financial.allTransactions}
+                      accounts={financial.allAccounts}
                       autocompleteSuggestions={financial.autocompleteSuggestions}
                       onAddTransaction={(tx, documents) => financial.handleAddTransaction(tx, prefs.setActiveTab, documents)}
                       onDeleteTransaction={financial.handleDeleteTransaction}
@@ -442,7 +457,7 @@ export function AuthenticatedView({
                   )}
 
                   {prefs.activeTab === 'wishlist' && (
-                    <WishlistView
+                    <CommitmentsRewardsView
                       wishlist={financial.allWishlist}
                       savingsGoals={financial.allSavingsGoals}
                       rewardsBalance={wishlistRewardsBalance}
@@ -510,6 +525,7 @@ export function AuthenticatedView({
                       editorProps={{
                         autocompleteSuggestions: financial.autocompleteSuggestions,
                         transactions: financial.allTransactions,
+                        accounts: financial.allAccounts,
                         essentialsAlloc: financial.optimisticDashboardData?.setting?.essentialsAlloc ?? 0.5,
                         growthAlloc: financial.optimisticDashboardData?.setting?.growthAlloc ?? 0.25,
                         stabilityAlloc: financial.optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15,

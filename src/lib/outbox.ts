@@ -1,7 +1,7 @@
 import type { BulkTransactionMutationResult } from './api/transactionBulk'
 import type { CategoryCleanupApplyResult } from './api/categories'
 import type { DeletedTransactionsSnapshot } from './api/investments'
-import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, Loan, PayEarlyResult, RecurringPayment, RecurringSettlementResult, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, LedgerAccount, Loan, PayEarlyResult, RecurringPayment, RecurringSettlementResult, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from './mutationToast'
 import { projectIncomeSplitRows, type IncomeAllocations } from './incomeSplitProjection'
 
@@ -14,6 +14,7 @@ export type EntityKind = 'transaction' | 'recurringPayment' | 'recurringOccurren
   | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentCashFlow'
   | 'investmentPlan' | 'investmentAllocation'
   | 'investmentAllocationOrder' | 'taxReliefCategory'
+  | 'ledgerAccount'
 export type OpType = 'add' | 'update' | 'delete' | 'restore' | 'toggle' | 'purchase' | 'unpurchase'
   | 'reminder' | 'payEarly' | 'settle' | 'cleanup' | 'bulkDelete' | 'bulkRestore'
 export interface OutboxPayload {
@@ -60,17 +61,27 @@ export interface OutboxPayload {
   annualRatePercent?: number
   termPeriods?: number
   interestMethod?: string
+  rateBasis?: string
   recurringPaymentId?: string | null
   scheduleFrequency?: string | null
   scheduleDueDay?: number | null
   scheduleStartDate?: string | null
   scheduleStatus?: string
+  accountId?: string | null
+  counterAccountId?: string | null
+  bucket?: string
+  kind?: string
+  isArchived?: boolean
+  isDefault?: boolean
+  openingAmount?: number
+  remaining?: number
 }
 export type DispatchResult =
   | Transaction
   | RecurringPayment
   | WishlistItem
   | Loan
+  | LedgerAccount
   | SavingsGoal
   | TransactionCategory
   | InvestmentAccount
@@ -160,7 +171,7 @@ export interface ToastCopy {
   tone: ToastTone
 }
 
-const ENTITY_LABELS: Record<EntityKind, string> = {
+export const ENTITY_LABELS: Record<EntityKind, string> = {
   transaction: 'Transaction',
   recurringPayment: 'Recurring payment',
   recurringOccurrence: 'Bill occurrence',
@@ -168,16 +179,38 @@ const ENTITY_LABELS: Record<EntityKind, string> = {
   savingsGoal: 'Savings goal',
   loan: 'Loan',
   category: 'Category',
-  settings: 'Settings'
-  , investmentAccount: 'Investment account'
-  , investmentInstrument: 'Investment'
-  , investmentActivity: 'Investment activity'
-  , investmentCashFlow: 'Cash movement'
-  , investmentPlan: 'Investment plan'
-  , investmentAllocation: 'Investment classification'
-  , investmentAllocationOrder: 'Investment classification order'
-  , taxReliefCategory: 'Tax relief category'
+  settings: 'Settings',
+  investmentAccount: 'Investment account',
+  investmentInstrument: 'Investment',
+  investmentActivity: 'Investment activity',
+  investmentCashFlow: 'Cash movement',
+  investmentPlan: 'Investment plan',
+  investmentAllocation: 'Investment classification',
+  investmentAllocationOrder: 'Investment classification order',
+  taxReliefCategory: 'Tax relief category',
+  ledgerAccount: 'Account',
 }
+
+/** Kept beside the validator's persisted-op shape so registration tests can detect drift. */
+export const WELL_FORMED_ENTITY_KINDS: readonly EntityKind[] = [
+  'transaction',
+  'recurringPayment',
+  'recurringOccurrence',
+  'wishlistItem',
+  'savingsGoal',
+  'category',
+  'settings',
+  'loan',
+  'ledgerAccount',
+  'investmentAccount',
+  'investmentInstrument',
+  'investmentActivity',
+  'investmentCashFlow',
+  'investmentPlan',
+  'investmentAllocation',
+  'investmentAllocationOrder',
+  'taxReliefCategory',
+]
 
 const TYPE_COPY: Partial<Record<OpType, { title: string; messageVerb: string }>> = {
   add: { title: 'Added', messageVerb: 'added' },
@@ -305,6 +338,7 @@ export function createFinalId(entity: EntityKind): string {
     : entity === 'category' ? 'cat'
     : entity === 'taxReliefCategory' ? 'relief'
     : entity === 'loan' ? 'loan'
+    : entity === 'ledgerAccount' ? 'acct'
     : 'op'
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }
@@ -349,6 +383,11 @@ const OPTIMISTIC_LIST_ORDER_POLICIES: Partial<Record<EntityKind, OptimisticListO
   },
   loan: {
     compare: (left, right) =>
+      (left.name ?? '').localeCompare(right.name ?? '') || compareIds(left, right),
+  },
+  ledgerAccount: {
+    compare: (left, right) =>
+      (left as OptimisticListItem & { bucket?: string }).bucket?.localeCompare((right as OptimisticListItem & { bucket?: string }).bucket ?? '') ||
       (left.name ?? '').localeCompare(right.name ?? '') || compareIds(left, right),
   },
   investmentAccount: {
@@ -1114,7 +1153,7 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
   return (
     typeof o.id === 'string' &&
     typeof o.entity === 'string' &&
-    ['transaction', 'recurringPayment', 'recurringOccurrence', 'wishlistItem', 'savingsGoal', 'category', 'settings', 'loan', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder', 'taxReliefCategory'].includes(o.entity as string) &&
+    WELL_FORMED_ENTITY_KINDS.includes(o.entity as EntityKind) &&
     typeof o.type === 'string' &&
     ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase', 'reminder', 'payEarly', 'settle', 'cleanup', 'bulkDelete', 'bulkRestore'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&

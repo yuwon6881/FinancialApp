@@ -102,7 +102,7 @@ export function useAppSync(): AppSyncValue {
  *
  * Prefer the narrow hooks: a component using this subscribes to sync churn even if it only
  * reads `currency`. This remains for the views that genuinely read from all three
- * (LedgerView, SettingsView, WishlistView, InvestmentsView, RecurringPaymentsView).
+ * (LedgerView, SettingsView, CommitmentsRewardsView, InvestmentsView, RecurringPaymentsView).
  */
 export function useAppContext(): AppContextValue {
   const prefs = useContext(AppPrefsContext)

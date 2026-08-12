@@ -1,0 +1,45 @@
+// Mirrors Services/Accounts/LedgerAccountAttribution.cs. Account balances are a partition of
+// bucket balances, so the bucket leg is resolved first and only then placed into one account.
+
+import type { LedgerAccount, Transaction } from '../types'
+import { bucketAmount } from './bucketAttribution'
+
+export function accountAmount(
+  transaction: Pick<Transaction, 'amount' | 'ledgerCategory' | 'accountId' | 'counterAccountId'>,
+  account: Pick<LedgerAccount, 'id' | 'bucket'>,
+  accountsById: ReadonlyMap<string, Pick<LedgerAccount, 'id' | 'bucket'>>,
+  defaultAccountIdByBucket: ReadonlyMap<string, string>,
+): number {
+  if (transaction.ledgerCategory.toLowerCase() === 'accountmove') {
+    if (transaction.accountId === account.id) return -Math.abs(transaction.amount)
+    if (transaction.counterAccountId === account.id) return Math.abs(transaction.amount)
+    return 0
+  }
+
+  const leg = bucketAmount(transaction, account.bucket)
+  if (leg === 0) return 0
+  const explicit = [transaction.accountId, transaction.counterAccountId]
+    .map(id => id ? accountsById.get(id) : undefined)
+    .find(candidate => candidate?.bucket.toLowerCase() === account.bucket.toLowerCase())
+  const placement = explicit?.id ?? defaultAccountIdByBucket.get(account.bucket.toLowerCase())
+  return placement === account.id ? leg : 0
+}
+
+export function getAccountBalances(
+  transactions: ReadonlyArray<Pick<Transaction, 'amount' | 'ledgerCategory' | 'accountId' | 'counterAccountId'>>,
+  accounts: ReadonlyArray<LedgerAccount>,
+): Map<string, number> {
+  const accountsById = new Map(accounts.map(account => [account.id, account]))
+  const defaults = new Map(
+    accounts
+      .filter(account => account.isDefault && !account.isArchived)
+      .map(account => [account.bucket.toLowerCase(), account.id]),
+  )
+  return new Map(accounts.map(account => [
+    account.id,
+    Math.round(transactions.reduce(
+      (total, transaction) => total + accountAmount(transaction, account, accountsById, defaults),
+      0,
+    ) * 100) / 100,
+  ]))
+}

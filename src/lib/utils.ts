@@ -115,6 +115,7 @@ export const getCurrencySymbol = (currencyCode: string = 'USD') => {
 // spec, e.g. "IncomeSplit:50,25,15,10" or "Transfer:Growth-Stability") to the
 // label a user should see.
 export const displayLedgerCategory = (cat: string) => {
+  if (cat.toLowerCase() === 'accountmove') return 'Between accounts'
   if (cat.startsWith('IncomeSplit:')) return 'Income'
   if (cat.startsWith('Transfer:Income->')) {
     return cat.substring(17)
