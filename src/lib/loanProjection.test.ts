@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Loan } from '../types'
+import type { Loan, RecurringPayment } from '../types'
 import type { QueuedOp } from './outbox'
 import { projectLoanStates } from './loanProjection'
 
@@ -14,6 +14,10 @@ function loan(): Loan {
     termPeriods: 10,
     interestMethod: 'ReducingBalance',
     recurringPaymentFrequency: 'Monthly',
+    scheduleFrequency: 'Monthly',
+    scheduleDueDay: 1,
+    scheduleStartDate: '2026-01-01',
+    scheduleStatus: 'Complete',
     snapshot: {
       outstandingBalance: 1000,
       scheduledPayment: 100,
@@ -27,6 +31,27 @@ function loan(): Loan {
 
 function op(overrides: Partial<QueuedOp>): QueuedOp {
   return { id: 'op-1', entity: 'recurringOccurrence', type: 'settle', targetId: 'bill-test:2026-01-01', createdAt: 1, retryCount: 0, ...overrides }
+}
+
+const settlement = {
+  id: 'tx-1',
+  recurringPaymentId: 'bill-test',
+  recurringOccurrenceDate: '2026-01-01',
+  amount: -100,
+}
+
+const linkedPayment: RecurringPayment = {
+  id: 'bill-test',
+  name: 'Original bill',
+  amount: -100,
+  frequency: 'Monthly',
+  category: 'Bills',
+  ledgerCategory: 'Essentials',
+  nextDueDate: '2026-01-01',
+  dueDate: 1,
+  startDate: '2026-01-01',
+  active: true,
+  paymentMode: 'Manual',
 }
 
 describe('projectLoanStates', () => {
@@ -68,6 +93,63 @@ describe('projectLoanStates', () => {
 
     expect(projected.snapshot.outstandingBalance).toBe(1000)
     expect(projected.snapshot.payments).toHaveLength(0)
+  })
+
+  it('replays a queued transaction edit instead of keeping the old amount', () => {
+    const server = loan()
+    server.snapshot.payments = [{ occurrenceDate: '2026-01-01', payment: 100, interest: 0, principal: 100, balanceBefore: 1000, balanceAfter: 900, surplus: 0, paymentDidNotCoverInterest: false, transactionId: 'tx-1' }]
+    const projected = projectLoanStates([server], [op({ entity: 'transaction', type: 'update', targetId: 'tx-1', payload: {
+      ...settlement, amount: -200, undoSnapshot: settlement,
+    } })])[0]
+
+    expect(projected.snapshot.outstandingBalance).toBe(800)
+    expect(projected.snapshot.payments[0].payment).toBe(200)
+  })
+
+  it('projects bulk transaction delete and restore through the same replay path', () => {
+    const server = loan()
+    server.snapshot.payments = [{ occurrenceDate: '2026-01-01', payment: 100, interest: 0, principal: 100, balanceBefore: 1000, balanceAfter: 900, surplus: 0, paymentDidNotCoverInterest: false, transactionId: 'tx-1' }]
+    const deleted = projectLoanStates([server], [op({ entity: 'transaction', type: 'bulkDelete', targetId: 'bulk-1', payload: {
+      transactionIds: ['tx-1'], transactions: [settlement],
+    } })])[0]
+    const restored = projectLoanStates([loan()], [op({ entity: 'transaction', type: 'bulkRestore', targetId: 'bulk-2', payload: {
+      transactions: [settlement],
+    } })])[0]
+
+    expect(deleted.snapshot.outstandingBalance).toBe(1000)
+    expect(restored.snapshot.outstandingBalance).toBe(900)
+  })
+
+  it('keeps frozen cadence when queued bill metadata changes', () => {
+    const projected = projectLoanStates([loan()], [op({ entity: 'recurringPayment', type: 'update', targetId: 'bill-test', payload: {
+      name: 'Edited bill', frequency: 'Annually', dueDate: 20,
+    } })], [linkedPayment])[0]
+
+    expect(projected.recurringPaymentName).toBe('Edited bill')
+    expect(projected.recurringPaymentFrequency).toBe('Annually')
+    expect(projected.scheduleFrequency).toBe('Monthly')
+    expect(projected.scheduleDueDay).toBe(1)
+    expect(projected.snapshot.futureSchedule[0].occurrenceDate).toBe('2026-01-01')
+  })
+
+  it('marks the schedule unavailable when the linked bill is queued for deletion', () => {
+    const projected = projectLoanStates([loan()], [op({ entity: 'recurringPayment', type: 'delete', targetId: 'bill-test', payload: {
+      undoSnapshot: linkedPayment,
+    } })], [linkedPayment])[0]
+
+    expect(projected.scheduleStatus).toBe('Incomplete')
+    expect(projected.snapshot.futureSchedule).toEqual([])
+    expect(projected.isPendingSync).toBe(true)
+  })
+
+  it('replays queued loan term edits immediately', () => {
+    const projected = projectLoanStates([loan()], [op({ entity: 'loan', type: 'update', targetId: 'loan-test', payload: {
+      annualRatePercent: 12, termPeriods: 12, interestMethod: 'ReducingBalance',
+    } })])[0]
+
+    expect(projected.annualRatePercent).toBe(12)
+    expect(projected.snapshot.scheduledPayment).toBe(88.85)
+    expect(projected.isPendingSync).toBe(true)
   })
 
   it('keeps the first debt-free occurrence when later history has surplus payments', () => {

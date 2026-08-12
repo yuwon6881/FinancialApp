@@ -39,7 +39,7 @@ test('desktop top-bar icon actions stay compact', async ({ page }) => {
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
   const sizes = await Promise.all([
-    page.getByRole('button', { name: 'Wishlist' }).evaluate(element => {
+    page.getByRole('button', { name: 'Goals', exact: true }).evaluate(element => {
       const bounds = element.getBoundingClientRect()
       return { width: bounds.width, height: bounds.height }
     }),

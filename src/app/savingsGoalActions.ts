@@ -83,7 +83,7 @@ export async function fundGoalsForCycle(deps: SavingsGoalActionDeps, bucket: Sav
   const syncIds = ['savings-goals-fund', ...(deps.getActiveGoalIds?.() ?? [])]
   deps.beginDirectSync?.(syncIds)
   try {
-    const result = await fundSavingsGoalsForCycle()
+    const result = await fundSavingsGoalsForCycle(bucket)
     deps.commitGoals(result.goals)
     const bucketLabel = bucket === 'Essentials' ? 'Essentials' : 'Rewards'
     const freeToSpend = bucket === 'Essentials' ? result.essentialsFreeToSpend : result.rewardsFreeToSpend
@@ -92,7 +92,7 @@ export async function fundGoalsForCycle(deps: SavingsGoalActionDeps, bucket: Sav
       const copy = buildMutationSuccessToast({
         entity: 'Savings Goals',
         action: 'Funded',
-        message: `Savings goals were funded for this cycle. ${formatCurrencyVal(result.totalGranted, deps.currency)} was set aside across your goals. ${formatCurrencyVal(freeToSpend, deps.currency)} remains free in ${bucketLabel}.`,
+        message: `${bucketLabel} commitments were funded for this cycle. ${formatCurrencyVal(result.totalGranted, deps.currency)} was set aside. ${formatCurrencyVal(freeToSpend, deps.currency)} remains free in ${bucketLabel}.`,
       })
       deps.showToast(copy.message, copy.title, copy.tone)
     } else {

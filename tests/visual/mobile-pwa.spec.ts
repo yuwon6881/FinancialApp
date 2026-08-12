@@ -202,7 +202,7 @@ const mobilePwaRoutes = [
   { path: '/reports', slug: 'reports', readyText: 'Carryover Rolling Ledgers' },
   { path: '/recurring', slug: 'recurring', readyText: 'Recurring Bills & Subscriptions' },
   { path: '/ledger', slug: 'ledger', readyText: 'Neighbourhood Grocer' },
-  { path: '/wishlist', slug: 'wishlist', readyText: 'Rewards plan' },
+  { path: '/wishlist', slug: 'wishlist', readyText: 'Commitments' },
   { path: '/settings', slug: 'settings', readyText: 'Financial Model' },
   { path: '/investments', slug: 'investments', readyText: 'Build your investment view' },
   { path: '/vault', slug: 'vault', readyText: '2 documents stored' },
@@ -220,7 +220,7 @@ for (const route of mobilePwaRoutes) {
     await expect(page.locator('main')).toBeVisible()
     await expect(page.getByText(route.readyText, { exact: true }).first()).toBeVisible()
     const logo = page.getByRole('button', { name: 'Go to Today' })
-    const wishlistAction = page.getByRole('button', { name: 'Wishlist' })
+    const wishlistAction = page.locator('header').getByRole('button', { name: 'Goals', exact: true })
     const billsAction = page.getByRole('button', { name: /Bills:/ })
     await expect(logo).toBeVisible()
     await expect(wishlistAction).toBeVisible()

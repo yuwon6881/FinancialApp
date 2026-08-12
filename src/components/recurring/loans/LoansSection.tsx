@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { ChevronDown } from 'lucide-react'
 import type { Loan, RecurringPayment } from '../../../types'
 import { Button } from '../../ui/Button'
 import { InfoHint } from '../../ui/InfoHint'
@@ -54,55 +53,38 @@ export function LoansSection({
   const view = useLoansView(loans, activeSyncIds)
 
   return (
-    <details
-      className="group app-panel rounded-2xl border border-border/60 bg-card/92 transition-all duration-200"
-      open={view.loans.length > 0}
-    >
-      <summary className="flex cursor-pointer select-none items-center justify-between gap-3 p-4 outline-none rounded-2xl focus-visible:ring-2 focus-visible:ring-ring/30">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
-          <h2 id="loans-heading" className="text-base font-bold text-foreground">Loans</h2>
-          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-            view.loans.length > 0
-              ? 'bg-primary/15 text-accent-ink font-bold'
-              : 'bg-muted/60 text-muted-foreground'
-          }`}>
-            {view.loans.length}
-          </span>
-          <InfoHint label="loans" text="A loan is a view of a linked recurring bill. Its balance is replayed from the full ledger history, so deleting or restoring a payment changes the result." />
-        </div>
-
-        <div className="flex items-center gap-2" onClick={event => event.stopPropagation()}>
-          <Button variant="primary" size="sm" onClick={openAdd}>Add loan</Button>
-        </div>
-      </summary>
-
-      <div className="border-t border-border/40 px-4 pb-4 pt-3">
-        <p className="mb-3 text-xs text-muted-foreground">
-          Track what is still owed without adding extra loan rows to your ledger.
-        </p>
-
-        {view.loans.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-3.5 text-xs text-muted-foreground">
-            No loans yet. Add one to see the linked bill's payment history and estimated payoff.
+    <section className="app-panel space-y-4 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5" aria-labelledby="loans-heading">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 id="loans-heading" className="text-base font-bold text-foreground">Loans</h2>
+            <InfoHint label="loans" text="A loan keeps the bill history it was created from. Its cadence is captured at creation, and deleting or restoring a payment changes the replay without adding a second ledger row." />
           </div>
-        ) : (
-          <div className="space-y-4">
-            {view.loans.map(loan => (
-              <LoanCard
-                key={loan.id}
-                loan={loan}
-                currency={currency}
-                hideSensitive={hideSensitive}
-                formatSensitive={formatSensitive}
-                isSyncing={view.activeSyncIdSet.has(loan.id)}
-                onEdit={() => openEdit(loan)}
-                onDelete={() => onRequestDeleteLoan(loan.id)}
-              />
-            ))}
-          </div>
-        )}
+          <p className="mt-0.5 text-xs text-muted-foreground">Track what is still owed without adding extra loan rows to your ledger.</p>
+        </div>
+        <Button variant="primary" size="sm" className="shrink-0" onClick={openAdd}>Add loan</Button>
       </div>
+
+      {view.loans.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-xs text-muted-foreground text-center">
+          No loans yet. Add one to see the linked bill's payment history and estimated payoff.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {view.loans.map(loan => (
+            <LoanCard
+              key={loan.id}
+              loan={loan}
+              currency={currency}
+              hideSensitive={hideSensitive}
+              formatSensitive={formatSensitive}
+              isSyncing={view.activeSyncIdSet.has(loan.id)}
+              onEdit={() => openEdit(loan)}
+              onDelete={() => onRequestDeleteLoan(loan.id)}
+            />
+          ))}
+        </div>
+      )}
 
       <LoanFormSheet
         isOpen={isFormOpen}
@@ -112,6 +94,6 @@ export function LoansSection({
         onClose={closeForm}
         onSave={handleSave}
       />
-    </details>
+    </section>
   )
 }

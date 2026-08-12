@@ -67,6 +67,49 @@ describe('loanAmortization', () => {
     expect(date).toBe('2026-05-31')
   })
 
+  it('starts monthly forecasts on the bill due day around the tracking date', () => {
+    const beforeDueDay = loan({
+      trackingStartDate: '2026-01-12',
+      scheduleFrequency: 'Monthly',
+      scheduleDueDay: 15,
+      scheduleStartDate: '2026-01-01',
+      scheduleStatus: 'Complete',
+    })
+    const afterDueDay = { ...beforeDueDay, trackingStartDate: '2026-01-16' }
+
+    expect(replayLoan(beforeDueDay, undefined, []).futureSchedule[0].occurrenceDate).toBe('2026-01-15')
+    expect(replayLoan(afterDueDay, undefined, []).futureSchedule[0].occurrenceDate).toBe('2026-02-15')
+  })
+
+  it('uses the frozen annual anchor month and recovers the day 31 anchor', () => {
+    const annual = loan({
+      trackingStartDate: '2026-04-01',
+      scheduleFrequency: 'Annually',
+      scheduleDueDay: 15,
+      scheduleStartDate: '2026-01-01',
+      scheduleStatus: 'Complete',
+    })
+    const annualBeforeAnchor = { ...annual, trackingStartDate: '2026-01-01' }
+    const monthEnd = loan({
+      trackingStartDate: '2026-01-31',
+      scheduleFrequency: 'Monthly',
+      scheduleDueDay: 31,
+      scheduleStartDate: '2026-01-01',
+      scheduleStatus: 'Complete',
+    })
+
+    expect(replayLoan(annual, undefined, []).futureSchedule[0].occurrenceDate).toBe('2027-01-15')
+    expect(replayLoan(annualBeforeAnchor, undefined, []).futureSchedule[0].occurrenceDate).toBe('2026-01-15')
+    const monthEndDates = replayLoan(monthEnd, undefined, [{ occurrenceDate: '2026-01-31', amount: 0, isDiscarded: true }]).futureSchedule.slice(0, 4).map(entry => entry.occurrenceDate)
+    expect(monthEndDates).toEqual(['2026-02-28', '2026-03-31', '2026-04-30', '2026-05-31'])
+  })
+
+  it('does not invent a schedule for an incomplete loan', () => {
+    const replay = replayLoan(loan({ scheduleStatus: 'Incomplete' }), undefined, [])
+    expect(replay.futureSchedule).toEqual([])
+    expect(replay.nextPayment).toBeNull()
+  })
+
   it('surfaces overpayment surplus instead of making the balance negative', () => {
     const value = loan({ annualRatePercent: 0 })
     const split = applyPayment(value, 'Monthly', '2026-01-01', 1000, 1200, 1, 0)

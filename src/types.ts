@@ -316,6 +316,7 @@ export interface RecurringPayment {
 }
 
 export type LoanInterestMethod = 'ReducingBalance' | 'Flat'
+export type LoanScheduleStatus = 'Complete' | 'NeedsReview' | 'Incomplete'
 
 export interface LoanPaymentSplit {
   occurrenceDate: string
@@ -362,6 +363,10 @@ export interface Loan {
   recurringPaymentName?: string | null
   recurringPaymentFrequency?: RecurringFrequency | null
   recurringPaymentDueDate?: number | null
+  scheduleFrequency?: RecurringFrequency | null
+  scheduleDueDay?: number | null
+  scheduleStartDate?: string | null
+  scheduleStatus?: LoanScheduleStatus
   snapshot: LoanSnapshot
   isPendingSync?: boolean
   pendingSyncOperationId?: string

@@ -24,7 +24,7 @@ describe('WishlistSectionToggle', () => {
       />
     )
 
-    expect(screen.getByRole('tablist', { name: /wishlist sections view/i })).not.toBeNull()
+    expect(screen.getByRole('tablist', { name: /goals and rewards sections/i })).not.toBeNull()
     expect(screen.getByRole('tab', { name: /all/i })).not.toBeNull()
     expect(screen.getByRole('tab', { name: /commitments/i })).not.toBeNull()
     expect(screen.getByRole('tab', { name: /rewards/i })).not.toBeNull()

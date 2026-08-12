@@ -47,22 +47,31 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
     setError(null)
   }, [editingLoan, isOpen])
 
+  const editingPaymentId = editingLoan?.recurringPaymentId
   const paymentOptions = useMemo(() => {
     const selected = payments.find(payment => payment.id === recurringPaymentId)
+    if (editingLoan) {
+      return [{
+        value: editingLoan.recurringPaymentId,
+        label: selected ? `${selected.name} - ${selected.frequency}` : 'Original bill deleted - history stays here',
+      }]
+    }
     const options = payments
-      .filter(payment => !linkedPaymentIds.has(payment.id) || payment.id === editingLoan?.recurringPaymentId)
+      .filter(payment => !linkedPaymentIds.has(payment.id) || payment.id === editingPaymentId)
       .map(payment => ({ value: payment.id, label: `${payment.name} · ${payment.frequency}` }))
     if (!selected && recurringPaymentId) {
       options.unshift({ value: recurringPaymentId, label: 'This bill was deleted — choose another' })
     }
     return options
-  }, [editingLoan?.recurringPaymentId, linkedPaymentIds, payments, recurringPaymentId])
+  }, [editingPaymentId, linkedPaymentIds, payments, recurringPaymentId])
 
   const principal = Number(openingPrincipal)
   const rate = Number(annualRatePercent)
   const term = Number(termPeriods)
+  const previewFrequency = editingLoan?.scheduleFrequency ?? payments.find(payment => payment.id === recurringPaymentId)?.frequency
   const preview = principal > 0 && Number.isFinite(rate) && term > 0
-    ? scheduledPayment({ openingPrincipal: principal, annualRatePercent: rate, termPeriods: term, interestMethod }, payments.find(payment => payment.id === recurringPaymentId)?.frequency)
+    && (!editingLoan || editingLoan.scheduleStatus !== 'Incomplete')
+    ? scheduledPayment({ openingPrincipal: principal, annualRatePercent: rate, termPeriods: term, interestMethod }, previewFrequency)
     : null
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -92,7 +101,7 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
       isOpen={isOpen}
       title={editingLoan ? 'Edit loan' : 'Add a loan'}
       onClose={onClose}
-      description="Add the terms once. The balance is calculated from the linked bill's payment history."
+      description="Add the terms once. The balance is calculated from the linked bill's payment history. The original bill link stays with this loan."
       maxWidthClassName="max-w-2xl"
       footer={(
         <div className="flex justify-end gap-2">
@@ -107,7 +116,7 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
           <FormField label="Loan name" required>
             <Input value={name} onChange={event => setName(event.target.value)} placeholder="Car loan" autoComplete="off" className="w-full" />
           </FormField>
-          <FormField label="Linked recurring bill" required hint="The bill's occurrence date controls the payment order.">
+          <FormField label="Linked recurring bill" required hint={editingLoan ? 'This link cannot change because the payment history belongs to this loan.' : "The bill's occurrence date controls the payment order."}>
             <CustomSelect
               value={recurringPaymentId}
               onChange={setRecurringPaymentId}
@@ -115,6 +124,7 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
               placeholder="Select a recurring bill"
               ariaLabel="Linked recurring bill"
               className="w-full"
+              disabled={Boolean(editingLoan)}
             />
           </FormField>
           <FormField label="Opening amount" required hint="The amount still owed when tracking starts.">

@@ -61,6 +61,10 @@ export interface OutboxPayload {
   termPeriods?: number
   interestMethod?: string
   recurringPaymentId?: string | null
+  scheduleFrequency?: string | null
+  scheduleDueDay?: number | null
+  scheduleStartDate?: string | null
+  scheduleStatus?: string
 }
 export type DispatchResult =
   | Transaction

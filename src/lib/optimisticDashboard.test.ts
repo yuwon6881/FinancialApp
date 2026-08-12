@@ -49,7 +49,7 @@ function dashboard(stabilityRecovery?: DashboardData['stabilityRecovery']): Dash
   }
 }
 
-const recovery = (): NonNullable<DashboardData['stabilityRecovery']> => ({
+const recovery = (overrides: Partial<NonNullable<DashboardData['stabilityRecovery']>> = {}): NonNullable<DashboardData['stabilityRecovery']> => ({
   isActive: true,
   markedTotal: 500,
   target: 1000,
@@ -65,6 +65,7 @@ const recovery = (): NonNullable<DashboardData['stabilityRecovery']> => ({
   essentialsCommitted: 0,
   rewardsCommitted: 0,
   suggestedDraws: [],
+  ...overrides,
 })
 
 const op = (partial: Partial<QueuedOp>): QueuedOp => ({
@@ -78,6 +79,32 @@ describe('computeOptimisticDashboard', () => {
     const result = computeOptimisticDashboard(source, { activeOps: [], transactions: baseTransactions() })!
     expect(result).not.toBe(source)
     expect(result.stats).toEqual(source.stats)
+  })
+
+  it('replays a queued target change even when no transaction operation is pending', () => {
+    const source = dashboard(recovery({
+      currentBalance: 900,
+      outstandingShortfall: 500,
+      openingOutstanding: 500,
+      openingOldestDate: '2026-08-01',
+    }))
+    const result = computeOptimisticDashboard(source, {
+      activeOps: [op({
+        entity: 'settings',
+        type: 'update',
+        targetId: 'settings',
+        createdAt: Date.parse('2026-08-12T08:00:00.000Z'),
+        payload: { targetStabilityFund: 800 },
+      })],
+      transactions: [],
+    })!
+
+    expect(result.setting.targetStabilityFund).toBe(800)
+    expect(result.stabilityRecovery).toMatchObject({
+      target: 800,
+      outstandingShortfall: 0,
+      isActive: false,
+    })
   })
 
   it('projects a selected-cycle expense through totals, spending, breakdown, and insights', () => {

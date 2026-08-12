@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SavingsGoal, Transaction } from '../types'
-import { completeGoal } from './savingsGoalActions'
-import { completeSavingsGoal } from '../lib/api/savingsGoals'
+import { completeGoal, fundGoalsForCycle } from './savingsGoalActions'
+import { completeSavingsGoal, fundSavingsGoalsForCycle } from '../lib/api/savingsGoals'
 import { deleteTransaction } from '../lib/api/transactions'
 
 vi.mock('../lib/api/savingsGoals', () => ({
   completeSavingsGoal: vi.fn(),
+  fundSavingsGoalsForCycle: vi.fn(),
 }))
 
 vi.mock('../lib/api/transactions', () => ({
@@ -171,5 +172,37 @@ describe('completeGoal', () => {
     resolveCompletion({ goal: committedGoal, transaction: committedTransaction })
     await request
     expect(endDirectSync).toHaveBeenCalledWith([String(goal.id), pending.id])
+  })
+})
+
+describe('fundGoalsForCycle', () => {
+  it('passes the selected bucket to the authoritative funding request', async () => {
+    const committedGoals = [{ ...goal, fundingBucket: 'Essentials' as const }]
+    vi.mocked(fundSavingsGoalsForCycle).mockResolvedValue({
+      goals: committedGoals,
+      totalGranted: 100,
+      freeToSpend: 0,
+      rewardsFreeToSpend: 0,
+      essentialsFreeToSpend: 50,
+    })
+    const commitGoals = vi.fn()
+    const showToast = vi.fn()
+
+    await fundGoalsForCycle({
+      currency: 'MYR',
+      commitGoals,
+      commitGoal: vi.fn(),
+      getGoalName: vi.fn(),
+      refreshAll: vi.fn().mockResolvedValue(undefined),
+      showToast,
+    }, 'Essentials')
+
+    expect(fundSavingsGoalsForCycle).toHaveBeenCalledWith('Essentials')
+    expect(commitGoals).toHaveBeenCalledWith(committedGoals)
+    expect(showToast).toHaveBeenCalledWith(
+      expect.stringContaining('Essentials commitments were funded'),
+      expect.any(String),
+      expect.any(String),
+    )
   })
 })

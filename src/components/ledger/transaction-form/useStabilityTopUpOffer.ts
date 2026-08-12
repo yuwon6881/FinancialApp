@@ -65,7 +65,7 @@ export function useStabilityTopUpOffer(options: UseStabilityTopUpOfferOptions) {
     const liveOffer = proposeTopUp(recoveryForOffer, Math.abs(amount), bucketsForOffer, stabilityAlloc)
     if (liveOffer) return liveOffer
 
-    const saved = state.mode === 'edit' && state.stabilityTopUpAccepted
+    const saved = (state.mode === 'edit' || state.mode === 'draft') && state.stabilityTopUpAccepted
       ? Number(state.stabilityTopUpAmount)
       : 0
     if (!Number.isFinite(saved) || saved <= 0) return null

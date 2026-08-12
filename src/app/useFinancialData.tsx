@@ -839,24 +839,25 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setIsOffline,
   })
 
-  // A queued salary generates four bucket rows server-side; projecting them needs the plan
-  // percentages whenever the row was saved as plain `Income` (see incomeSplitProjection.ts).
+  const optimisticDashboardData = useOptimisticDashboard(dashboardData, activeOps, transactions)
+
+  // A queued salary generates four bucket rows server-side; projecting them needs the optimistic
+  // plan percentages whenever the row was saved as plain `Income` (see incomeSplitProjection.ts).
   const incomeSplitOptions = useMemo(() => ({
-    incomeAllocations: dashboardData?.setting
+    incomeAllocations: optimisticDashboardData?.setting
       ? {
-          essentialsAlloc: dashboardData.setting.essentialsAlloc,
-          growthAlloc: dashboardData.setting.growthAlloc,
-          stabilityAlloc: dashboardData.setting.stabilityAlloc,
-          rewardsAlloc: dashboardData.setting.rewardsAlloc,
+          essentialsAlloc: optimisticDashboardData.setting.essentialsAlloc,
+          growthAlloc: optimisticDashboardData.setting.growthAlloc,
+          stabilityAlloc: optimisticDashboardData.setting.stabilityAlloc,
+          rewardsAlloc: optimisticDashboardData.setting.rewardsAlloc,
         }
       : undefined,
   }), [
-    dashboardData?.setting?.essentialsAlloc,
-    dashboardData?.setting?.growthAlloc,
-    dashboardData?.setting?.stabilityAlloc,
-    dashboardData?.setting?.rewardsAlloc,
+    optimisticDashboardData?.setting?.essentialsAlloc,
+    optimisticDashboardData?.setting?.growthAlloc,
+    optimisticDashboardData?.setting?.stabilityAlloc,
+    optimisticDashboardData?.setting?.rewardsAlloc,
   ])
-  const optimisticDashboardData = useOptimisticDashboard(dashboardData, activeOps, transactions)
   const queuedTransactions = useOptimisticList(transactions, activeOps, 'transaction', incomeSplitOptions)
   const allTransactions = useMemo(() => {
     // Direct server actions can create a ledger row before the next bootstrap response arrives.
@@ -895,7 +896,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const allWishlist = useOptimisticList(wishlist, activeOps, 'wishlistItem')
   const allSavingsGoals = useOptimisticList(savingsGoals, activeOps, 'savingsGoal')
   const queuedLoans = useOptimisticList(loans, activeOps, 'loan')
-  const allLoans = useMemo(() => projectLoanStates(queuedLoans, activeOps), [activeOps, queuedLoans])
+  const allLoans = useMemo(() => projectLoanStates(queuedLoans, activeOps, queuedRecurringPayments), [activeOps, queuedLoans, queuedRecurringPayments])
   const allCategories = useOptimisticList(categoriesList, activeOps, 'category')
 
   const formatSensitive = useCallback((val: number) => {
@@ -1516,6 +1517,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const loanActions = createLoanActions({
     loans: allLoans,
+    recurringPayments: allRecurringPayments,
     guardSensitive,
     enqueue,
     mutateQueue,

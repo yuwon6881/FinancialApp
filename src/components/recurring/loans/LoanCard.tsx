@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { fetchLoanSchedule } from '../../../lib/api/loans'
 import type { Loan, LoanScheduleEntry } from '../../../types'
 import { Button } from '../../ui/Button'
+import { AlertBanner } from '../../ui/AlertBanner'
 import { InfoHint } from '../../ui/InfoHint'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
 
@@ -32,29 +33,41 @@ export function LoanCard({
   onEdit,
   onDelete,
 }: LoanCardProps) {
+  const scheduleUnavailable = loan.scheduleStatus === 'Incomplete' || !loan.scheduleFrequency || !loan.scheduleDueDay || !loan.scheduleStartDate
   const next = loan.snapshot.nextPayment
   const actualRows = loan.snapshot.payments.map(payment => ({ ...payment, kind: 'Paid' as const }))
+  const replayRevision = JSON.stringify([loan.snapshot.payments, loan.snapshot.futureSchedule, loan.snapshot.nextPayment])
   const scheduleKey = useMemo(() => [
     loan.id,
+    loan.recurringPaymentId,
+    loan.trackingStartDate,
     loan.openingPrincipal,
     loan.annualRatePercent,
     loan.termPeriods,
     loan.interestMethod,
-    loan.recurringPaymentFrequency,
-    loan.recurringPaymentDueDate,
+    loan.scheduleFrequency,
+    loan.scheduleDueDay,
+    loan.scheduleStartDate,
+    loan.scheduleStatus,
     loan.snapshot.outstandingBalance,
     loan.snapshot.lastOccurrenceDate,
     loan.snapshot.payments.length,
+    replayRevision,
   ].join('|'), [
     loan.annualRatePercent,
     loan.id,
     loan.interestMethod,
     loan.openingPrincipal,
-    loan.recurringPaymentDueDate,
-    loan.recurringPaymentFrequency,
+    loan.recurringPaymentId,
+    loan.scheduleDueDay,
+    loan.scheduleFrequency,
+    loan.scheduleStartDate,
+    loan.scheduleStatus,
+    loan.trackingStartDate,
     loan.snapshot.lastOccurrenceDate,
     loan.snapshot.outstandingBalance,
     loan.snapshot.payments.length,
+    replayRevision,
     loan.termPeriods,
   ])
   const [isScheduleOpen, setIsScheduleOpen] = useState(false)
@@ -62,7 +75,7 @@ export function LoanCard({
   const [scheduleLoadingKey, setScheduleLoadingKey] = useState<string | null>(null)
   const [scheduleError, setScheduleError] = useState(false)
   const loadSchedule = useCallback(async () => {
-    if (loan.isPendingSync) return
+    if (loan.isPendingSync || scheduleUnavailable) return
     const key = scheduleKey
     setScheduleLoadingKey(key)
     setScheduleError(false)
@@ -74,12 +87,12 @@ export function LoanCard({
     } finally {
       setScheduleLoadingKey(current => current === key ? null : current)
     }
-  }, [loan.id, loan.isPendingSync, scheduleKey])
+  }, [loan.id, loan.isPendingSync, scheduleKey, scheduleUnavailable])
 
   useEffect(() => {
-    if (!isScheduleOpen || loan.isPendingSync || loadedSchedule?.key === scheduleKey || scheduleLoadingKey === scheduleKey) return
+    if (!isScheduleOpen || loan.isPendingSync || scheduleUnavailable || loadedSchedule?.key === scheduleKey || scheduleLoadingKey === scheduleKey) return
     void loadSchedule()
-  }, [isScheduleOpen, loadSchedule, loadedSchedule?.key, loan.isPendingSync, scheduleKey, scheduleLoadingKey])
+  }, [isScheduleOpen, loadSchedule, loadedSchedule?.key, loan.isPendingSync, scheduleKey, scheduleLoadingKey, scheduleUnavailable])
 
   const scheduleRows = (loadedSchedule?.key === scheduleKey ? loadedSchedule.rows : loan.snapshot.futureSchedule)
     .map(payment => ({ ...payment, kind: 'Planned' as const }))
@@ -100,7 +113,7 @@ export function LoanCard({
           <p className="mt-1 text-xs text-muted-foreground">
             {loan.recurringPaymentExists
               ? `Linked bill: ${loan.recurringPaymentName || 'Recurring bill'}`
-              : 'This bill was deleted — link another bill to keep tracking.'}
+              : 'This bill was deleted - this loan keeps its original history.'}
           </p>
         </div>
         <div className="flex items-center gap-1">
@@ -113,12 +126,24 @@ export function LoanCard({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric label="Still owed" value={formatSensitive(loan.snapshot.outstandingBalance)} />
-        <Metric label="Next instalment" value={formatSensitive(loan.snapshot.scheduledPayment)} />
-        <Metric label="Expected payoff" value={formatDate(loan.snapshot.payoffDate)} />
-        <Metric label="Total interest" value={formatSensitive(loan.snapshot.totalScheduledInterest)} />
-      </div>
+      {loan.scheduleStatus === 'NeedsReview' && (
+        <AlertBanner variant="warning" className="mt-4">
+          This loan predates the saved cadence. Its schedule was recovered from the linked bill and needs your review before you rely on the forecast.
+        </AlertBanner>
+      )}
+
+      {scheduleUnavailable ? (
+        <AlertBanner variant="warning" className="mt-4">
+          This loan cannot show a trustworthy balance or payment schedule because its original bill cadence or payment history is incomplete. Keep this history with the loan; create a separate loan for a different bill.
+        </AlertBanner>
+      ) : (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Metric label="Still owed" value={formatSensitive(loan.snapshot.outstandingBalance)} />
+          <Metric label="Next instalment" value={formatSensitive(loan.snapshot.scheduledPayment)} />
+          <Metric label="Expected payoff" value={formatDate(loan.snapshot.payoffDate)} />
+          <Metric label="Total interest" value={formatSensitive(loan.snapshot.totalScheduledInterest)} />
+        </div>
+      )}
 
       <div className="mt-4 grid gap-3 rounded-xl border border-border/50 bg-muted/20 p-3 text-xs sm:grid-cols-3">
         <div>
@@ -127,7 +152,9 @@ export function LoanCard({
         </div>
         <div>
           <p className="text-muted-foreground">Next instalment split</p>
-          {next ? (
+          {scheduleUnavailable ? (
+            <p className="mt-1 font-semibold text-muted-foreground">Unavailable</p>
+          ) : next ? (
             <p className="mt-1 font-semibold text-foreground">
               {formatSensitive(next.principal)} clears the debt · {formatSensitive(next.interest)} interest
             </p>
@@ -190,7 +217,7 @@ export function LoanCard({
           </table>
         </div>
       </details>
-      <p className="mt-3 text-[11px] text-muted-foreground">Amounts shown in {currency}. The bill's occurrence date determines the order, even when it was paid early.</p>
+      <p className="mt-3 text-[11px] text-muted-foreground">Amounts shown in {currency}. The original bill cadence determines the order, even when it was paid early.</p>
     </article>
   )
 }

@@ -1,4 +1,4 @@
-import type { SavingsGoal } from '../../types'
+import type { SavingsGoal, SavingsGoalFundingBucket } from '../../types'
 import type { WireSavingsGoal, WireSavingsGoalCompletionResult, WireSavingsGoalFundingResult, WireSavingsGoalPool } from '../apiTypes'
 import { deobfuscateAmount, deobfuscateSavingsGoal, deobfuscateTransaction, obfuscateAmount } from './amounts'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
@@ -96,13 +96,16 @@ export interface SavingsGoalFundingResult {
 }
 
 /**
- * Runs the per-cycle waterfall server-side. Deliberately NOT routed through the outbox: the
- * distribution depends on the authoritative Rewards balance, which only the server knows, so this
- * is an online-only action rather than an op that could replay against a stale balance.
+ * Runs the selected bucket's per-cycle waterfall server-side. Deliberately NOT routed through the
+ * outbox: the distribution depends on the authoritative bucket balance, which only the server
+ * knows, so this is an online-only action rather than an op that could replay against a stale balance.
  */
-export async function fundSavingsGoalsForCycle(): Promise<SavingsGoalFundingResult> {
+export async function fundSavingsGoalsForCycle(
+  fundingBucket: SavingsGoalFundingBucket = 'Rewards',
+): Promise<SavingsGoalFundingResult> {
   const data = await request<WireSavingsGoalFundingResult>('/savings-goals/fund', {
     method: 'POST',
+    ...jsonBody({ fundingBucket }),
     errorMessage: 'Failed to fund your goals for this cycle',
   })
   invalidateCache()

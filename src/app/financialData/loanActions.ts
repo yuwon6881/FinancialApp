@@ -1,4 +1,4 @@
-import type { Loan } from '../../types'
+import type { Loan, RecurringPayment } from '../../types'
 import { createFinalId, type OutboxPayload } from '../../lib/outbox'
 import { triggerHaptic } from '../../lib/haptics'
 import type { UseOutboxResult } from '../../lib/useOutbox'
@@ -6,6 +6,7 @@ import type { AppDialogs } from '../useAppDialogs'
 
 interface LoanActionDependencies {
   loans: Loan[]
+  recurringPayments: RecurringPayment[]
   guardSensitive: () => boolean
   enqueue: UseOutboxResult['enqueue']
   mutateQueue: UseOutboxResult['mutateQueue']
@@ -28,6 +29,7 @@ const emptySnapshot = {
 export function createLoanActions(deps: LoanActionDependencies) {
   const {
     loans,
+    recurringPayments,
     guardSensitive,
     enqueue,
     mutateQueue,
@@ -38,6 +40,11 @@ export function createLoanActions(deps: LoanActionDependencies) {
   const handleAddLoan = (value: Partial<Loan>) => {
     if (!guardSensitive()) return
     const id = createFinalId('loan')
+    const payment = recurringPayments.find(item => item.id === value.recurringPaymentId)
+    const scheduleStatus = payment && (payment.frequency === 'Monthly' || payment.frequency === 'Annually')
+      && payment.dueDate >= 1 && payment.dueDate <= 31 && Boolean(payment.startDate)
+      ? 'Complete'
+      : 'Incomplete'
     const payload: OutboxPayload = {
       ...value,
       id,
@@ -48,6 +55,10 @@ export function createLoanActions(deps: LoanActionDependencies) {
       annualRatePercent: value.annualRatePercent ?? 0,
       termPeriods: value.termPeriods ?? 0,
       interestMethod: value.interestMethod ?? 'ReducingBalance',
+      scheduleFrequency: payment?.frequency ?? null,
+      scheduleDueDay: payment?.dueDate ?? null,
+      scheduleStartDate: payment?.startDate ?? null,
+      scheduleStatus,
       snapshot: emptySnapshot,
     }
     mutateQueue(previous => enqueue(previous, 'loan', 'add', id, payload))
@@ -59,6 +70,11 @@ export function createLoanActions(deps: LoanActionDependencies) {
     snapshotForUndo('loan', id, previous)
     mutateQueue(queue => enqueue(queue, 'loan', 'update', id, {
       ...value,
+      recurringPaymentId: previous?.recurringPaymentId ?? value.recurringPaymentId,
+      scheduleFrequency: previous?.scheduleFrequency ?? value.scheduleFrequency,
+      scheduleDueDay: previous?.scheduleDueDay ?? value.scheduleDueDay,
+      scheduleStartDate: previous?.scheduleStartDate ?? value.scheduleStartDate,
+      scheduleStatus: previous?.scheduleStatus ?? value.scheduleStatus,
       undoSnapshot: previous,
     }))
   }

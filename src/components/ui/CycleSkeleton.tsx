@@ -238,7 +238,6 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
           <CompactMetricGridSkeleton count={6} />
           <div className="flex justify-end"><Skeleton className="h-8 w-32 rounded-lg" /></div>
         </div>
-        <CategoryWatchSkeleton />
       </div>
     )
   }
@@ -284,6 +283,10 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
     return (
       <div data-testid="recurring-skeleton" className="space-y-6">
         <RecurringHeaderSkeleton />
+        <div className="flex gap-2 rounded-xl bg-muted/40 p-1">
+          <Skeleton className="h-9 flex-1 rounded-lg" />
+          <Skeleton className="h-9 flex-1 rounded-lg" />
+        </div>
         <BillTimelineSkeleton />
         <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-border/60 bg-card p-4 shadow-xs sm:flex-row">
           <Skeleton className="h-10 w-full rounded-xl sm:w-60" />
@@ -315,6 +318,13 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
         <RewardsPoolSkeleton />
         {fullPage && (
           <>
+            <div className="flex items-center justify-between gap-3 py-1">
+              <div className="flex gap-1.5 rounded-xl bg-muted/40 p-1">
+                <Skeleton className="h-8 w-16 rounded-lg" />
+                <Skeleton className="h-8 w-28 rounded-lg" />
+                <Skeleton className="h-8 w-24 rounded-lg" />
+              </div>
+            </div>
             <HorizontalRailSkeleton kind="commitments" />
             <HorizontalRailSkeleton kind="rewards" />
           </>
@@ -327,9 +337,10 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
     return (
       <div data-testid="settings-skeleton" className="space-y-6">
         <SettingsHeaderSkeleton />
-        <div className="flex gap-6 border-b border-border/30 pb-3">
+        <div className="flex flex-wrap gap-3 sm:gap-6 border-b border-border/30 pb-3">
           <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-28" />
           <Skeleton className="h-4 w-32" />
         </div>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
@@ -362,9 +373,13 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
         </div>
         <div className="flex flex-wrap gap-2 rounded-2xl border border-border/60 bg-card/92 p-3">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-9 w-28 rounded-xl" />)}</div>
         <div className={`${panelClass} space-y-5 p-5`}><div className="space-y-2"><Skeleton className="h-5 w-40" /><Skeleton className="h-3 w-72 max-w-full" /></div><CompactMetricGridSkeleton count={3} /></div>
-        <div className={`${panelClass} space-y-4 p-5`}>
-          <div className="flex items-center justify-between gap-3"><div className="space-y-2"><Skeleton className="h-5 w-48" /><Skeleton className="h-3 w-64 max-w-full" /></div><Skeleton className="h-9 w-40 rounded-xl" /></div>
-          <div className="grid gap-3 lg:grid-cols-2">{[1, 2, 3, 4].map(i => <div key={i} className="flex items-center justify-between gap-3 rounded-xl bg-muted/25 p-3"><Skeleton className="h-4 w-40" /><Skeleton className="h-4 w-20" /></div>)}</div>
+        <div className={`${panelClass} flex items-center justify-between gap-3 p-4`}>
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-5 w-24 rounded-full" />
+            <Skeleton className="h-5 w-28 rounded-full" />
+          </div>
+          <Skeleton className="size-4 rounded-md" />
         </div>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <PanelSkeleton height="h-64" />

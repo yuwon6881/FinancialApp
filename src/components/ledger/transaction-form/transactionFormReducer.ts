@@ -66,6 +66,9 @@ export const getInitialState = (todayDate: string, defaultCategory: string): Tra
 const normalizeReloadIntent = (value: StabilityReloadIntent | undefined): StabilityReloadIntent =>
   value === 'Required' || value === 'NotRequired' ? value : 'Unanswered'
 
+const normalizeIncomeLedgerCategory = (value: string): SelectableLedgerCategory =>
+  value.toLowerCase().startsWith('incomesplit:') ? 'Income' : value as SelectableLedgerCategory
+
 export function transactionFormReducer(state: TransactionFormState, action: TransactionFormAction): TransactionFormState {
   switch (action.type) {
     case 'OPEN_CREATE':
@@ -99,7 +102,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         date: action.payload.date,
         transactionType: action.payload.txType,
         category: action.payload.category,
-        ledgerCategory: action.payload.ledgerCategory as SelectableLedgerCategory,
+        ledgerCategory: normalizeIncomeLedgerCategory(action.payload.ledgerCategory),
         transferSource: action.payload.transferSource ?? state.transferSource,
         transferTarget: action.payload.transferTarget ?? state.transferTarget,
         stabilityTopUpAccepted: (action.payload.stabilityRecoveryTopUpAmount ?? 0) > 0,

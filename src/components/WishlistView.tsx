@@ -324,7 +324,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     if (hideSensitive) return
     await onUpdateItem(item.id, {
       ...item,
-      isActive: true
+      isActive: true,
     })
   }
 
@@ -338,14 +338,11 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       ) : (
         <>
           <header className="app-panel flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5">
-            {/* The subtitle costs a phone a whole line above the first number on the page, so on
-                mobile it moves into the hint instead of being dropped — the explanation is still
-                one tap away for anyone who wants it. */}
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <h2 className="text-xl font-bold tracking-tight text-foreground">Rewards plan</h2>
+                <h2 className="text-xl font-bold tracking-tight text-foreground">Goals & Rewards plan</h2>
                 <InfoHint
-                  label="What the Rewards plan shows"
+                  label="What Goals & Rewards shows"
                   text="See what is free to spend now and what your commitments need next."
                   className="sm:hidden"
                 />
@@ -498,6 +495,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               <DatePicker
                 value={purchaseDateInput}
                 onChange={setPurchaseDateInput}
+                max={todayKey}
                 className="w-full"
               />
             </FormField>

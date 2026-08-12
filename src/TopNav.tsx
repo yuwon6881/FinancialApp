@@ -20,7 +20,7 @@ import {
   Bell,
   Moon,
   Sun,
-  PiggyBank,
+  Target,
   FileText,
   Settings,
   Sparkles,
@@ -251,16 +251,16 @@ const TopNav: React.FC<TopNavProps> = ({
             type="button"
             size="icon"
             onClick={() => onTabChange('wishlist')}
-            aria-label="Wishlist"
+            aria-label="Goals"
             aria-current={activeTab === 'wishlist' ? 'page' : undefined}
-            title="Wishlist"
+            title="Goals"
             className={`flex items-center justify-center rounded-xl border transition duration-150 cursor-pointer active:scale-95 ${
               activeTab === 'wishlist'
                 ? 'border-pink-500/30 bg-pink-500/12 text-pink-600 dark:text-pink-400'
                 : 'border-pink-500/10 bg-pink-500/5 text-pink-500/80 hover:border-pink-500/20 hover:bg-pink-500/10 hover:text-pink-500'
             }`}
           >
-            <PiggyBank className="size-4" />
+            <Target className="size-4" />
           </Button>
 
           {/* One notification entry point; the shared review sheet is owned by App. */}
@@ -308,7 +308,7 @@ const TopNav: React.FC<TopNavProps> = ({
                       onClick={() => onQuickAction?.('wishlist')}
                       className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer"
                     >
-                      Add Wish Goal <Plus className="size-3 text-pink-500" />
+                      Add Goal / Reward <Plus className="size-3 text-pink-500" />
                     </MenubarItem>
                   </MenubarGroup>
                 </MenubarContent>

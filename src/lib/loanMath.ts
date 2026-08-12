@@ -97,7 +97,22 @@ export function applyScheduledPayment(
   return { occurrenceDate, payment: split.payment, interest: split.interest, principal: split.principal, balanceAfter: split.balanceAfter }
 }
 
-export function replayLoan(loan: Loan, frequency: string | null | undefined, inputs: LoanPaymentInput[], dueDay?: number | null): LoanReplayResult {
+export function replayLoan(
+  loan: Loan,
+  frequency: string | null | undefined,
+  inputs: LoanPaymentInput[],
+  dueDay?: number | null,
+  scheduleStartDate?: string | null,
+): LoanReplayResult {
+  const resolvedFrequency = frequency ?? loan.scheduleFrequency
+  const resolvedDueDay = dueDay ?? loan.scheduleDueDay ?? (frequency !== undefined ? Number(loan.trackingStartDate.slice(-2)) : undefined)
+  const resolvedStartDate = scheduleStartDate ?? loan.scheduleStartDate ?? loan.trackingStartDate
+  const explicitCadence = frequency !== undefined || dueDay !== undefined || scheduleStartDate !== undefined
+  const scheduleAvailable = explicitCadence
+    ? hasValidCadence(resolvedFrequency, resolvedDueDay, resolvedStartDate)
+    : loan.scheduleStatus !== 'Incomplete' && hasValidCadence(resolvedFrequency, resolvedDueDay, resolvedStartDate)
+  if (!scheduleAvailable) return emptyReplay()
+
   const ordered = [...inputs]
     .filter(input => input.occurrenceDate >= loan.trackingStartDate)
     .sort((left, right) => left.occurrenceDate.localeCompare(right.occurrenceDate)
@@ -115,7 +130,7 @@ export function replayLoan(loan: Loan, frequency: string | null | undefined, inp
     if (!lastOccurrenceDate || input.occurrenceDate > lastOccurrenceDate) lastOccurrenceDate = input.occurrenceDate
     if (input.isDiscarded) continue
     paymentNumber += 1
-    const split = applyPayment(loan, frequency, input.occurrenceDate, balance, Math.abs(input.amount), paymentNumber, flatInterestPaid, input.transactionId)
+    const split = applyPayment(loan, resolvedFrequency, input.occurrenceDate, balance, Math.abs(input.amount), paymentNumber, flatInterestPaid, input.transactionId)
     payments.push(split)
     if (split.balanceBefore > 0 && split.balanceAfter <= 0) payoffDate ??= input.occurrenceDate
     balance = split.balanceAfter
@@ -125,11 +140,11 @@ export function replayLoan(loan: Loan, frequency: string | null | undefined, inp
 
   const outstandingBalance = balance
   let nextDate = lastOccurrenceDate
-    ? addPeriod(lastOccurrenceDate, frequency, dueDay ?? loan.recurringPaymentDueDate)
-    : loan.trackingStartDate
+    ? addPeriod(lastOccurrenceDate, resolvedFrequency, resolvedDueDay)
+    : findOccurrenceOnOrAfter(resolvedStartDate, resolvedFrequency!, resolvedDueDay!, loan.trackingStartDate)
   const futureSchedule: LoanScheduleEntry[] = []
   for (let i = 0; i < 600 && balance > 0; i += 1) {
-    const entry = applyScheduledPayment(loan, frequency, nextDate, balance, paymentNumber + i + 1, flatInterestPaid)
+    const entry = applyScheduledPayment(loan, resolvedFrequency, nextDate, balance, paymentNumber + i + 1, flatInterestPaid)
     futureSchedule.push(entry)
     balance = entry.balanceAfter
     flatInterestPaid = roundMoney(flatInterestPaid + entry.interest)
@@ -137,13 +152,13 @@ export function replayLoan(loan: Loan, frequency: string | null | undefined, inp
       payoffDate ??= nextDate
       break
     }
-    nextDate = addPeriod(nextDate, frequency, dueDay ?? loan.recurringPaymentDueDate)
+    nextDate = addPeriod(nextDate, resolvedFrequency, resolvedDueDay)
   }
 
   return {
     outstandingBalance,
-    scheduledPayment: scheduledPayment(loan, frequency),
-    totalScheduledInterest: totalScheduledInterest(loan, frequency),
+    scheduledPayment: scheduledPayment(loan, resolvedFrequency),
+    totalScheduledInterest: totalScheduledInterest(loan, resolvedFrequency),
     totalInterestPaid,
     payoffDate: balance > 0 ? null : payoffDate,
     lastOccurrenceDate,
@@ -151,6 +166,60 @@ export function replayLoan(loan: Loan, frequency: string | null | undefined, inp
     payments,
     futureSchedule,
   }
+}
+
+function emptyReplay(): LoanReplayResult {
+  return {
+    outstandingBalance: 0,
+    scheduledPayment: 0,
+    totalScheduledInterest: 0,
+    totalInterestPaid: 0,
+    payoffDate: null,
+    lastOccurrenceDate: null,
+    nextPayment: null,
+    payments: [],
+    futureSchedule: [],
+  }
+}
+
+function hasValidCadence(frequency: string | null | undefined, dueDay: number | null | undefined, startDate: string | null | undefined) {
+  return Boolean(
+    startDate
+    && Number.isInteger(dueDay)
+    && dueDay! >= 1
+    && dueDay! <= 31
+    && (frequency?.toLowerCase() === 'monthly' || frequency?.toLowerCase() === 'annually'),
+  )
+}
+
+function findOccurrenceOnOrAfter(start: string, frequency: string, dueDay: number, date: string) {
+  const [startYear, startMonth] = start.split('-').map(Number)
+  const [dateYear, dateMonth] = date.split('-').map(Number)
+  const annual = frequency.toLowerCase() === 'annually'
+  if (annual) {
+    const year = Math.max(startYear, dateYear)
+    let candidate = anchoredDate(year, startMonth, dueDay)
+    if (candidate < start || candidate < date) candidate = anchoredDate(year + 1, startMonth, dueDay)
+    return candidate
+  }
+
+  let year = Math.max(startYear, dateYear)
+  let month = year === startYear ? Math.max(startMonth, dateMonth) : dateMonth
+  let candidate = anchoredDate(year, month, dueDay)
+  if (candidate < start || candidate < date) {
+    month += 1
+    if (month === 13) {
+      month = 1
+      year += 1
+    }
+    candidate = anchoredDate(year, month, dueDay)
+  }
+  return candidate
+}
+
+function anchoredDate(year: number, month: number, dueDay: number) {
+  const day = Math.min(dueDay, new Date(Date.UTC(year, month, 0)).getUTCDate())
+  return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
 }
 
 export function addPeriod(date: string, frequency?: string | null, dueDay?: number | null) {

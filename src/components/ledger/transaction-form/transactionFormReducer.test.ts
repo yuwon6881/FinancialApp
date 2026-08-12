@@ -51,6 +51,21 @@ describe('transactionFormReducer stabilityTopUpAccepted', () => {
     expect(next.stabilityTopUpAmount).toBe('250.00')
   })
 
+  it.each(['OPEN_EDIT', 'OPEN_DRAFT'] as const)('normalizes an encoded income row for %s', type => {
+    const next = transactionFormReducer(getInitialState('2026-07-09', 'Other'), {
+      type,
+      payload: {
+        id: 'salary-1', description: 'Salary', amount: '1000', date: '2026-07-09',
+        category: 'Other', ledgerCategory: 'IncomeSplit:50,25,15,10', txType: 'inflow',
+        stabilityRecoveryTopUpAmount: 250,
+      },
+    })
+
+    expect(next.ledgerCategory).toBe('Income')
+    expect(next.stabilityTopUpAccepted).toBe(true)
+    expect(next.stabilityTopUpAmount).toBe('250.00')
+  })
+
   it('loads the persisted emergency-fund answer when editing', () => {
     const next = transactionFormReducer(getInitialState('2026-07-09', 'Other'), {
       type: 'OPEN_EDIT',

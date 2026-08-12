@@ -44,12 +44,14 @@ export function computeOptimisticDashboard(
     }
   }
 
+  const settingsOperations = activeOps.filter(operation =>
+    operation.entity === 'settings' && operation.type === 'update')
+  const hasSettingsProjection = settingsOperations.length > 0
   const hasTransactionProjection = activeOps.some(operation =>
     operation.entity === 'transaction' ||
     (operation.entity === 'wishlistItem' && ['purchase', 'unpurchase', 'delete'].includes(operation.type)) ||
     (operation.entity === 'recurringPayment' && operation.type === 'payEarly') ||
     (operation.entity === 'recurringOccurrence' && operation.type === 'settle'))
-  if (!hasTransactionProjection) return data
 
   const selectedMonth = MONTH_NAMES.indexOf(data.setting.selectedMonth) + 1
   const selectedRange = getCycleRangeDates(
@@ -61,6 +63,46 @@ export function computeOptimisticDashboard(
   const selectedEnd = dateKey(selectedRange.end)
   const inSelectedCycle = (transaction: Pick<Transaction, 'date'>) =>
     transaction.date >= selectedStart && transaction.date <= selectedEnd
+  const stabilityPlanPoints = buildStabilityPlanPoints(
+    dashboardData.stabilityRecovery?.target ?? data.setting.targetStabilityFund,
+    dashboardData.setting.stabilityAlloc,
+    settingsOperations.map(operation => ({
+      createdAt: operation.createdAt,
+      payload: operation.payload as Record<string, unknown> | undefined,
+    })),
+  )
+  const projectRecovery = (
+    baseCycleTransactions: Transaction[],
+    projectedCycleTransactions: Transaction[],
+    projectedBalance: number,
+  ) => {
+    if (!data.stabilityRecovery) return
+    data.stabilityRecovery = {
+      ...projectStabilityRecovery({
+        recovery: data.stabilityRecovery,
+        baseTransactions: baseCycleTransactions,
+        projectedTransactions: projectedCycleTransactions,
+        stabilityAlloc: data.setting.stabilityAlloc,
+        projectedBalance,
+        planPoints: stabilityPlanPoints,
+        currentCycleKey: `${data.setting.selectedYear}-${String(selectedMonth).padStart(2, '0')}`,
+      }),
+      target: data.setting.targetStabilityFund,
+    }
+  }
+
+  if (!hasTransactionProjection) {
+    if (hasSettingsProjection && data.stabilityRecovery) {
+      const cycleTransactions = transactions.filter(inSelectedCycle)
+      projectRecovery(cycleTransactions, cycleTransactions, data.stabilityRecovery.currentBalance)
+      const stability = data.categories.find(category => category.name.toLowerCase() === 'stability')
+      data.stats.stabilityPercentReached = stability && data.setting.targetStabilityFund > 0
+        ? Math.max(0, stability.remaining / data.setting.targetStabilityFund)
+        : 0
+    }
+    return data
+  }
+
   const incomeAllocations: IncomeAllocations = {
     essentialsAlloc: data.setting.essentialsAlloc,
     growthAlloc: data.setting.growthAlloc,
@@ -221,23 +263,7 @@ export function computeOptimisticDashboard(
 
   const stabilityDelta = bucketDeltas.get('Stability') || 0
   if (data.stabilityRecovery) {
-    const selectedCycleKey = `${data.setting.selectedYear}-${String(selectedMonth).padStart(2, '0')}`
-    const stabilityPlanPoints = buildStabilityPlanPoints(
-      dashboardData.stabilityRecovery?.target ?? data.setting.targetStabilityFund,
-      dashboardData.setting.stabilityAlloc,
-      activeOps
-        .filter(operation => operation.entity === 'settings' && operation.type === 'update')
-        .map(operation => ({ createdAt: operation.createdAt, payload: operation.payload as Record<string, unknown> | undefined })),
-    )
-    data.stabilityRecovery = projectStabilityRecovery({
-      recovery: data.stabilityRecovery,
-      baseTransactions: baseCycleTransactions,
-      projectedTransactions: projectedCycleTransactions,
-      stabilityAlloc: dashboardData.setting.stabilityAlloc,
-      projectedBalance: data.stabilityRecovery.currentBalance + stabilityDelta,
-      planPoints: stabilityPlanPoints,
-      currentCycleKey: selectedCycleKey,
-    })
+    projectRecovery(baseCycleTransactions, projectedCycleTransactions, data.stabilityRecovery.currentBalance + stabilityDelta)
   }
   const stability = data.categories.find(category => category.name.toLowerCase() === 'stability')
   data.stats.stabilityPercentReached = stability && data.setting.targetStabilityFund > 0
