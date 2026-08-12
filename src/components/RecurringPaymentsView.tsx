@@ -199,7 +199,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       )}
 
       {activeTab === 'loans' && (
-        <Suspense fallback={<div className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5" aria-busy="true"><div className="h-5 w-24 animate-pulse rounded bg-muted" /></div>}>
+        <Suspense fallback={<div className="app-panel rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:bg-card/92 sm:p-5" aria-busy="true"><div className="h-5 w-24 animate-pulse rounded bg-muted" /></div>}>
           <LoansSection
             loans={loans}
             payments={payments}

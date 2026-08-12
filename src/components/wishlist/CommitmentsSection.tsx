@@ -106,7 +106,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
        application from the rest of the app. */
     <section
       aria-labelledby="commitments-rewards-commitments-heading"
-      className="app-panel space-y-3 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5"
+      className="app-panel space-y-3 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/92 sm:p-5"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
@@ -121,8 +121,8 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
           </h3>
           <p className="mt-0.5 text-[11px] text-muted-foreground">Money held back from an existing bucket for something specific.</p>
         </div>
-        <Button variant="secondary" size="sm" className="shrink-0" onClick={onAddGoal} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a commitment' : undefined}>
-          <Plus className="size-3" aria-hidden /> Add commitment
+        <Button variant="secondary" size="sm" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5" onClick={onAddGoal} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a commitment' : undefined} aria-label="Add commitment">
+          <Plus className="size-3" aria-hidden /> <span className="hidden sm:inline">Add commitment</span>
         </Button>
       </div>
 

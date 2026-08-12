@@ -48,7 +48,7 @@ export const CommitmentsRewardsTabs: React.FC<CommitmentsRewardsTabsProps> = ({
     <div
       role="tablist"
       aria-label="Commitments and rewards sections"
-      className="flex items-center gap-4 border-b border-border/30 pb-1 select-none"
+      className="grid grid-cols-2 gap-0 border-b border-border/30 pb-1 select-none sm:flex sm:items-center sm:gap-4"
     >
       {sections.map((section, index) => {
         const isActive = activeTab === section.id
@@ -66,7 +66,7 @@ export const CommitmentsRewardsTabs: React.FC<CommitmentsRewardsTabsProps> = ({
             tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(section.id)}
             onKeyDown={event => handleKeyDown(event, index)}
-            className={`relative flex min-h-11 items-center gap-2 px-1 pb-3 text-xs font-bold transition sm:min-h-0 ${
+            className={`relative flex min-h-11 w-full items-center justify-center gap-2 px-1 pb-3 text-xs font-bold transition sm:min-h-0 sm:w-auto sm:justify-start ${
               isActive ? 'font-extrabold text-foreground' : 'text-muted-foreground hover:text-foreground'
             }`}
           >

@@ -1,1 +1,1 @@
-export { Coins as CommitmentIcon, PiggyBank as RewardIcon } from 'lucide-react'
+export { Banknote as CommitmentIcon, PiggyBank as RewardIcon } from 'lucide-react'

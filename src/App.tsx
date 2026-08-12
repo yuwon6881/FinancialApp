@@ -36,7 +36,7 @@ import { useCycleSummary } from './app/useCycleSummary'
 import { usePushNotifications } from './app/usePushNotifications'
 import { useInvestmentRefreshCoordinator } from './app/useInvestmentRefreshCoordinator'
 import { useAiEntryPoint } from './app/useAiEntryPoint'
-import { useFabMenu } from './app/useFabMenu'
+import { shouldShowMobileFab, useFabMenu } from './app/useFabMenu'
 import { useCurrentCycleDashboard } from './app/useCurrentCycleDashboard'
 import { AuthenticatedView } from './app/AuthenticatedView'
 import { LaunchReady } from './app/LaunchReady'
@@ -60,15 +60,17 @@ const AppOverlays = lazy(() => import('./app/AppOverlays').then(module => ({ def
 
 const AppOverlaysFallback = ({
   isOpen,
+  visible,
   onToggle,
   onAskAi,
 }: {
   isOpen: boolean
+  visible: boolean
   onToggle: () => void
   onAskAi: () => void
 }) => (
   <>
-    {isOpen && (
+    {visible && isOpen && (
       <Button
         variant="secondary"
         type="button"
@@ -79,17 +81,19 @@ const AppOverlaysFallback = ({
         <span>Ask AI</span>
       </Button>
     )}
-    <Button
-      variant="unstyled"
-      type="button"
-      aria-label={isOpen ? 'Close Menu' : 'Open Menu'}
-      title={isOpen ? 'Close Menu' : 'Open Menu'}
-      onClick={onToggle}
-      className="fixed right-6 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/25 cursor-pointer lg:hidden"
-      style={{ bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}
-    >
-      <Loader2 className="size-6 opacity-0" aria-hidden="true" />
-    </Button>
+    {visible && (
+      <Button
+        variant="unstyled"
+        type="button"
+        aria-label={isOpen ? 'Close Menu' : 'Open Menu'}
+        title={isOpen ? 'Close Menu' : 'Open Menu'}
+        onClick={onToggle}
+        className="fixed right-6 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/25 cursor-pointer lg:hidden"
+        style={{ bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}
+      >
+        <Loader2 className="size-6 opacity-0" aria-hidden="true" />
+      </Button>
+    )}
   </>
 )
 
@@ -658,6 +662,7 @@ function App() {
 
         <Suspense fallback={<AppOverlaysFallback
           isOpen={fabMenu.isOpen}
+          visible={shouldShowMobileFab(prefs.activeTab)}
           onToggle={fabMenu.toggle}
           onAskAi={() => {
             setIsAiOpen(true)

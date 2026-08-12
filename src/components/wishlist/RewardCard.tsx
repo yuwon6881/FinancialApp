@@ -9,6 +9,7 @@ import { RowSyncStatus } from '../ui/RowSyncBadge'
 
 interface RewardCardProps {
   item: WishlistItem
+  fullWidth?: boolean
   /** The one reward being saved toward: pinned leftmost and visually lifted out of the row. */
   isFocused: boolean
   /**
@@ -30,6 +31,7 @@ interface RewardCardProps {
 
 export const RewardCard: React.FC<RewardCardProps> = ({
   item,
+  fullWidth = false,
   isFocused,
   claimableBalance,
   freeAfterGoalPace,
@@ -57,7 +59,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
 
   return (
     <Card
-      className={`snap-start shrink-0 w-[80vw] sm:w-[22rem] flex flex-col gap-3 p-4 transition-colors duration-300 ${
+      className={`${fullWidth ? 'w-full sm:w-[22rem]' : 'snap-start shrink-0 w-[calc(100vw-3.5rem)] sm:w-[22rem]'} flex flex-col gap-3 p-4 transition-colors duration-300 ${
         isFocused ? 'border-pink-500/50 ring-1 ring-pink-500/20' : ''
       }`}
     >

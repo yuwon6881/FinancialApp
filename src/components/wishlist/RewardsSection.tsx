@@ -26,7 +26,7 @@ interface RewardsSectionProps {
 
 export function RewardsSection(props: RewardsSectionProps) {
   return (
-    <section aria-labelledby="commitments-rewards-rewards-heading" className="app-panel space-y-3 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5">
+    <section aria-labelledby="commitments-rewards-rewards-heading" className="app-panel space-y-3 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/92 sm:p-5">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h3 id="commitments-rewards-rewards-heading" className="flex items-center gap-1.5 text-sm font-bold text-foreground">
@@ -45,8 +45,8 @@ export function RewardsSection(props: RewardsSectionProps) {
               : <> · {props.activeItem.name} in {props.rewardTimeline(props.activeItem.price)}</>}
           </p>
         </div>
-        <Button variant="secondary" size="sm" className="shrink-0" onClick={props.onAdd} disabled={props.hideSensitive} title={props.hideSensitive ? 'Unhide balances to add a reward' : undefined}>
-          <Plus className="size-3" aria-hidden /> Add reward
+        <Button variant="secondary" size="sm" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5" onClick={props.onAdd} disabled={props.hideSensitive} title={props.hideSensitive ? 'Unhide balances to add a reward' : undefined} aria-label="Add reward">
+          <Plus className="size-3" aria-hidden /> <span className="hidden sm:inline">Add reward</span>
         </Button>
       </div>
 
@@ -67,6 +67,7 @@ export function RewardsSection(props: RewardsSectionProps) {
               onFocus={props.onFocus}
               onEdit={props.onEdit}
               onDelete={props.onDelete}
+              fullWidth={props.items.length === 1}
             />
           ))}
         </HorizontalRail>

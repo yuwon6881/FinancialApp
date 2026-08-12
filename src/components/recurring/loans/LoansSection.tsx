@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { Plus } from 'lucide-react'
 import type { Loan, RecurringPayment } from '../../../types'
 import { Button } from '../../ui/Button'
 import { InfoHint } from '../../ui/InfoHint'
@@ -67,7 +68,7 @@ export function LoansSection({
   }, [onLoad])
 
   return (
-    <section className="app-panel space-y-4 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5" aria-labelledby="loans-heading">
+    <section className="app-panel space-y-4 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/92 sm:p-5" aria-labelledby="loans-heading">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -76,7 +77,9 @@ export function LoansSection({
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">Track what is still owed without adding extra loan rows to your ledger.</p>
         </div>
-        <Button variant="primary" size="sm" className="shrink-0" onClick={openAdd}>Add loan</Button>
+        <Button variant="primary" size="sm" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5" onClick={openAdd} aria-label="Add loan">
+          <Plus className="size-3" aria-hidden /> <span className="hidden sm:inline">Add loan</span>
+        </Button>
       </div>
 
       {loans.length > 0 && (
@@ -127,6 +130,7 @@ export function LoansSection({
               hideSensitive={hideSensitive}
               formatSensitive={formatSensitive}
               isSyncing={view.activeSyncIdSet.has(loan.id)}
+              isMobile={isMobile}
               onEdit={() => openEdit(loan)}
               onDelete={() => onRequestDeleteLoan(loan.id)}
               onExplain={() => onExplain(loan)}

@@ -91,9 +91,9 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         : 'Set aside what your commitments still need this cycle'
 
   return (
-    <Card className="space-y-4 p-4 sm:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+    <Card className="space-y-3 p-3 sm:space-y-4 sm:p-5">
+      <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
             {bucketLabel} pool
           </span>
@@ -106,7 +106,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-2 sm:flex-wrap">
           {onViewRewardsHistory && (
             <Button variant="ghost" size="sm" onClick={onViewRewardsHistory}>
               <History className="size-3" /> History
@@ -143,16 +143,16 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         <div className="h-full transition-all duration-500" style={{ width: `${committedPct}%`, backgroundColor: bucketColor }} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs font-semibold">
-        <span className="flex items-center gap-1.5">
+      <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
+        <span className="flex min-w-0 items-center gap-1.5 rounded-lg bg-muted/20 px-2.5 py-2">
           <span className="size-2 rounded-full" style={{ backgroundColor: bucketColor }} aria-hidden />
-          <span className="text-muted-foreground">Committed</span>
-          <span className="text-foreground font-extrabold">{formatSensitive(totalEarmarked)}</span>
+          <span className="min-w-0 truncate text-muted-foreground">Committed</span>
+          <span className="ml-auto shrink-0 text-foreground font-extrabold">{formatSensitive(totalEarmarked)}</span>
         </span>
-        <span className="flex items-center gap-1.5">
+        <span className="flex min-w-0 items-center gap-1.5 rounded-lg bg-muted/20 px-2.5 py-2">
           <span className="size-2 rounded-full ring-1" style={{ backgroundColor: bucketColor, opacity: 0.3 }} aria-hidden />
-          <span className="text-muted-foreground">Free to spend</span>
-          <span className="text-foreground font-extrabold">{formatSensitive(unassigned)}</span>
+          <span className="min-w-0 truncate text-muted-foreground">Free to spend</span>
+          <span className="ml-auto shrink-0 text-foreground font-extrabold">{formatSensitive(unassigned)}</span>
         </span>
       </div>
 

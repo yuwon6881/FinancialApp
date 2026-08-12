@@ -9,6 +9,7 @@ import type { useAppPreferences } from './useAppPreferences'
 import type { useAppSession } from './useAppSession'
 import type { useCycleNavigation } from './useCycleNavigation'
 import type { useCycleSummary } from './useCycleSummary'
+import { shouldShowMobileFab } from './useFabMenu'
 import type { useFabMenu } from './useFabMenu'
 import type { useFinancialData } from './useFinancialData'
 
@@ -71,23 +72,24 @@ export function AppOverlays({
   const reduceMotion = useReducedMotion()
   const fabActionsRef = useRef<HTMLDivElement>(null)
   const fabTriggerRef = useRef<HTMLButtonElement>(null)
+  const showMobileFab = shouldShowMobileFab(prefs.activeTab)
 
   useEffect(() => {
     if (prefs.hideSensitive) fabMenu.close()
   }, [prefs.hideSensitive, fabMenu.close])
 
   useEffect(() => {
-    if (!fabMenu.isOpen || prefs.activeTab === 'drafts') return
+    if (!fabMenu.isOpen || !showMobileFab) return
     const frame = window.requestAnimationFrame(() => {
       fabActionsRef.current
         ?.querySelector<HTMLButtonElement>('[data-fab-action]:not(:disabled)')
         ?.focus({ preventScroll: true })
     })
     return () => window.cancelAnimationFrame(frame)
-  }, [fabMenu.isOpen, prefs.activeTab])
+  }, [fabMenu.isOpen, showMobileFab])
 
   useEffect(() => {
-    if (!fabMenu.isOpen || prefs.activeTab === 'drafts') return
+    if (!fabMenu.isOpen || !showMobileFab) return
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       event.preventDefault()
@@ -96,7 +98,7 @@ export function AppOverlays({
     }
     document.addEventListener('keydown', closeOnEscape)
     return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [fabMenu.close, fabMenu.isOpen, prefs.activeTab])
+  }, [fabMenu.close, fabMenu.isOpen, showMobileFab])
 
   const closeFabAndRestoreFocus = () => {
     fabMenu.close()
@@ -224,7 +226,7 @@ export function AppOverlays({
       {session.token && (
         <>
           <AnimatePresence>
-            {fabMenu.isOpen && prefs.activeTab !== 'drafts' && (
+            {fabMenu.isOpen && showMobileFab && (
               <m.div
                 initial={reduceMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -238,7 +240,7 @@ export function AppOverlays({
           </AnimatePresence>
 
           <AnimatePresence>
-            {fabMenu.isOpen && prefs.activeTab !== 'drafts' && (
+            {fabMenu.isOpen && showMobileFab && (
               <m.div
                 ref={fabActionsRef}
                 id="mobile-fab-actions"
@@ -286,7 +288,7 @@ export function AppOverlays({
               </m.div>
             )}
           </AnimatePresence>
-          {prefs.activeTab !== 'drafts' && <m.button
+          {showMobileFab && <m.button
             ref={fabTriggerRef}
             type="button"
             whileTap={reduceMotion ? undefined : { scale: 0.92 }}

@@ -508,6 +508,10 @@
     padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
 }
 
+.pb-nav-safe {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
 /* Full-screen states render under installed-PWA system chrome because the
    document opts into viewport-fit=cover. Keep their authored breathing room
    and add the device safe area instead of making each screen repeat four
@@ -523,6 +527,9 @@
 
 @media (min-width: 1024px) {
     .pb-fab-safe {
+        padding-bottom: 2rem;
+    }
+    .pb-nav-safe {
         padding-bottom: 2rem;
     }
 }

@@ -63,13 +63,13 @@ const WishlistHeaderSkeleton: React.FC = () => (
 )
 
 const RewardsPoolSkeleton: React.FC = () => (
-  <Card data-testid="wishlist-pool-skeleton" className="space-y-4 p-4 sm:p-5">
-    <div className="flex flex-wrap items-start justify-between gap-3">
+  <Card data-testid="wishlist-pool-skeleton" className="space-y-3 p-3 sm:space-y-4 sm:p-5">
+    <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-start sm:justify-between">
       <div className="space-y-2"><Skeleton className="h-3 w-24" /><Skeleton className="h-7 w-32" /></div>
-      <div className="flex flex-wrap justify-end gap-2"><Skeleton className="h-8 w-20 rounded-xl" /><Skeleton className="h-8 w-32 rounded-xl" /></div>
+      <div className="flex items-center justify-end gap-2"><Skeleton className="h-8 w-20 rounded-xl" /><Skeleton className="h-8 w-32 rounded-xl" /></div>
     </div>
     <Skeleton className="h-2.5 w-full rounded-full" />
-    <div className="flex flex-wrap gap-x-5 gap-y-2"><Skeleton className="h-3 w-32" /><Skeleton className="h-3 w-32" /></div>
+    <div className="grid grid-cols-2 gap-2"><Skeleton className="h-10 w-full rounded-xl" /><Skeleton className="h-10 w-full rounded-xl" /></div>
     <div className="space-y-2 rounded-xl border border-border/50 bg-muted/25 p-3">
       <div className="flex justify-between gap-3"><Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-36" /></div>
       <Skeleton className="h-1.5 w-full rounded-full" />
@@ -132,7 +132,7 @@ const CarryoverLedgerSkeleton: React.FC = () => (
 )
 
 const HorizontalRailSkeleton: React.FC<{ kind: 'commitments' | 'rewards'; cards?: number }> = ({ kind, cards = 3 }) => (
-  <section className={`${panelClass} space-y-3 p-4 sm:p-5`}>
+  <section className={`${panelClass} space-y-3 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:bg-card/92 sm:p-5 sm:shadow-xs`}>
     <div className="flex items-center justify-between gap-3 px-1">
       <div className="space-y-1.5"><Skeleton className="h-4 w-28" /><Skeleton className="h-2.5 w-64 max-w-full" /></div>
       <Skeleton className="h-8 w-24 rounded-lg" />
@@ -140,7 +140,7 @@ const HorizontalRailSkeleton: React.FC<{ kind: 'commitments' | 'rewards'; cards?
     <div className="group/horizontal-rail relative min-w-0">
       <div className="horizontal-rail no-scrollbar flex w-full min-w-0 gap-3 overflow-hidden pb-1">
       {Array.from({ length: cards }, (_, i) => (
-        <div key={i} className="snap-start flex w-[80vw] sm:w-[22rem] shrink-0 flex-col gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-xs">
+        <div key={i} className="snap-start flex w-[calc(100vw-3.5rem)] shrink-0 flex-col gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-xs sm:w-[22rem]">
           <div className="space-y-1.5"><Skeleton className="h-4 w-32" /><Skeleton className="h-2.5 w-28" /></div>
           <div className="space-y-2"><div className="flex justify-between"><Skeleton className="h-5 w-24" /><Skeleton className="h-3 w-20" /></div><Skeleton className="h-1.5 w-full rounded-full" /></div>
           {kind === 'commitments' ? (

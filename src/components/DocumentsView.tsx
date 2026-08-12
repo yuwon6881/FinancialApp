@@ -252,12 +252,12 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
       </div>
 
       {/* Documents */}
-      <section className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs sm:p-4" aria-labelledby="vault-documents-heading">
+      <section className="rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card sm:p-4 sm:shadow-xs" aria-labelledby="vault-documents-heading">
         {/* `px-3` matches the inner padding every boxed child below uses, so the heading, the filter
             controls, the selection count and each document's filename all start on one x. Without it
             the section had four different content edges: 12px here, 22px in the filter bar and
             toolbar, 26px inside a card. */}
-        <div className="mb-3 flex items-end justify-between gap-3 px-3">
+        <div className="mb-3 flex items-end justify-between gap-3 sm:px-3">
           <div>
             <h3 id="vault-documents-heading" className="text-sm font-black text-foreground">Your documents</h3>
             <p className="mt-0.5 text-[10px] text-muted-foreground">Filter, review, and manage the files in your Vault.</p>

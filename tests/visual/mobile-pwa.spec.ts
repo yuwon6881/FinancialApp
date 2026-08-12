@@ -331,7 +331,7 @@ test('vault controls stay beside the results and selection actions do not shift 
   await expect(results).toBeVisible()
 })
 
-test('mobile document cards keep amount editing and tax relief controls separated', async ({ page }) => {
+test('mobile document cards keep amount editing and tax relief controls aligned', async ({ page }) => {
   test.skip(!test.info().project.name.startsWith('mobile'), 'The card layout is mobile-only.')
 
   const document: VaultDocument = {
@@ -363,11 +363,11 @@ test('mobile document cards keep amount editing and tax relief controls separate
   const amountControls = await amountInput.evaluate(element => {
     const row = element.parentElement
     const bounds = row?.getBoundingClientRect()
-    return bounds ? { bottom: bounds.bottom } : null
+    return bounds ? { top: bounds.top, bottom: bounds.bottom } : null
   })
   const reliefBounds = await reliefButton.evaluate(element => {
     const bounds = element.getBoundingClientRect()
-    return { top: bounds.top, left: bounds.left, right: bounds.right }
+    return { top: bounds.top, bottom: bounds.bottom, left: bounds.left, right: bounds.right }
   })
   const cardBounds = await card.evaluate(element => {
     const bounds = element.getBoundingClientRect()
@@ -375,7 +375,8 @@ test('mobile document cards keep amount editing and tax relief controls separate
   })
 
   expect(amountControls).not.toBeNull()
-  expect(reliefBounds.top).toBeGreaterThan(amountControls!.bottom)
+  expect(reliefBounds.top).toBeLessThanOrEqual(amountControls!.bottom)
+  expect(reliefBounds.bottom).toBeGreaterThanOrEqual(amountControls!.top)
   expect(reliefBounds.left).toBeGreaterThanOrEqual(cardBounds.left)
   expect(reliefBounds.right).toBeLessThanOrEqual(cardBounds.right)
 })

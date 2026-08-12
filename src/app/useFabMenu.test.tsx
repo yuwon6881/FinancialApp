@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { AppTab } from '../types'
-import { useFabMenu } from './useFabMenu'
+import { shouldShowMobileFab, useFabMenu } from './useFabMenu'
 
 describe('useFabMenu', () => {
   it('toggles and closes on Escape', () => {
@@ -25,5 +25,13 @@ describe('useFabMenu', () => {
 
     rerender({ activeTab: 'ledger' })
     expect(result.current.isOpen).toBe(false)
+  })
+
+  it('hides the mobile quick-add on surfaces with their own primary add actions', () => {
+    expect(shouldShowMobileFab('dashboard')).toBe(true)
+    expect(shouldShowMobileFab('wishlist')).toBe(false)
+    expect(shouldShowMobileFab('recurring')).toBe(false)
+    expect(shouldShowMobileFab('documents')).toBe(false)
+    expect(shouldShowMobileFab('ledger')).toBe(true)
   })
 })

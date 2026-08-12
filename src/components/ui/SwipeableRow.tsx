@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
-import { m, useMotionValue, useAnimation, type PanInfo } from 'framer-motion'
+import { animate, m, useMotionValue, type PanInfo } from 'framer-motion'
 import { cn } from '../../lib/utils'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { prefersReducedMotion } from '../../lib/motionPreference'
@@ -10,6 +10,23 @@ import { Button } from './Button'
 
 // Module-level registry so only a single row is ever open at a time.
 let closeActiveRow: (() => void) | null = null
+
+export function resolveSwipeTarget({
+  currentX,
+  actionsWidth,
+  velocityX,
+  velocityThreshold = 200,
+}: {
+  currentX: number
+  actionsWidth: number
+  velocityX: number
+  velocityThreshold?: number
+}): number {
+  const boundedX = Math.max(-actionsWidth, Math.min(0, currentX))
+  if (velocityX <= -velocityThreshold) return -actionsWidth
+  if (velocityX >= velocityThreshold) return 0
+  return boundedX < -actionsWidth / 2 ? -actionsWidth : 0
+}
 
 interface SwipeableRowProps {
   children: React.ReactNode
@@ -38,7 +55,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   const reduceMotion = prefersReducedMotion()
   const [open, setOpen] = useState(false)
   const x = useMotionValue(0)
-  const controls = useAnimation()
+  const settleAnimationRef = useRef<{ stop: () => void } | null>(null)
   const suppressNextClick = useRef(false)
   const disclosureRef = useRef<HTMLButtonElement>(null)
   const actionDrawerRef = useRef<HTMLDivElement>(null)
@@ -46,26 +63,40 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   const generatedActionsId = useId().replace(/:/g, '')
   const actionsId = id ? `${id}-actions` : `swipe-row-actions-${generatedActionsId}`
 
-  const transition = reduceMotion ? { duration: 0 } : { type: 'spring' as const, stiffness: 750, damping: 42 }
+  const transition = useMemo(
+    () => (reduceMotion
+      ? { duration: 0 }
+      : { type: 'spring' as const, stiffness: 600, damping: 50, mass: 1 }),
+    [reduceMotion],
+  )
+
+  const stopSettle = useCallback(() => {
+    settleAnimationRef.current?.stop()
+    settleAnimationRef.current = null
+    x.stop()
+  }, [x])
+
+  const settle = useCallback((target: number) => {
+    stopSettle()
+    if (reduceMotion) {
+      x.set(target)
+      return
+    }
+    settleAnimationRef.current = animate(x, target, transition)
+  }, [reduceMotion, stopSettle, transition, x])
 
   const close = useCallback(() => {
     setOpen(false)
-    // A drag release or a previous row can still have a settle animation in
-    // flight. Stop it before starting from the live position; setting x first
-    // makes the controller and the drag value disagree and can leave a row
-    // visually parked between open and closed.
-    controls.stop()
-    controls.start({ x: 0, transition })
-  }, [controls, transition])
+    settle(0)
+  }, [settle])
 
   const openActions = useCallback((focusActions: boolean) => {
     if (disabled) return
     focusActionsOnOpenRef.current = focusActions
     if (!open) triggerHaptic(10)
     setOpen(true)
-    controls.stop()
-    controls.start({ x: -actionsWidth, transition })
-  }, [actionsWidth, controls, disabled, open, transition])
+    settle(-actionsWidth)
+  }, [actionsWidth, disabled, open, settle])
 
   useEffect(() => {
     if (!open || !focusActionsOnOpenRef.current) return
@@ -134,7 +165,10 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     if ((disabled || !isMobile) && open) close()
   }, [disabled, isMobile, open, close])
 
+  useEffect(() => () => stopSettle(), [stopSettle])
+
   const handleDragStart = () => {
+    stopSettle()
     setSwipeLocked(true)
   }
 
@@ -153,10 +187,12 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
       })
     }
 
-    const currentX = x.get()
-    const shouldOpen = currentX < -actionsWidth / 2 || info.velocity.x < -200
-
-    if (shouldOpen) {
+    const target = resolveSwipeTarget({
+      currentX: x.get(),
+      actionsWidth,
+      velocityX: info.velocity.x,
+    })
+    if (target < 0) {
       openActions(false)
     } else {
       close()
@@ -202,7 +238,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         className={cn('relative w-full overflow-hidden bg-card', className, contentClassName)}
         drag={disabled ? false : 'x'}
         dragConstraints={{ left: -actionsWidth, right: 0 }}
-        dragElastic={0.1}
+        dragElastic={0}
         // The explicit open/close spring is the only settle animation. Letting
         // Framer's default momentum continue after release can race that spring
         // on medium-width mouse layouts and strand the card between positions.
@@ -210,8 +246,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         dragDirectionLock
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        animate={controls}
-        style={{ touchAction: 'manipulation', x }}
+        style={{ touchAction: 'pan-y', x }}
         onClick={() => {
           if (suppressNextClick.current) return
           if (open) close()

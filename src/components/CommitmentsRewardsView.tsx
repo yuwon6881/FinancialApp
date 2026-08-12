@@ -222,15 +222,15 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
 
   return (
     <div className="space-y-5">
-      <header className="app-panel rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-6">
+      <header className="app-panel rounded-2xl border border-border/60 bg-card/92 p-3 sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-accent-ink">
               <CommitmentIcon className="size-5" aria-hidden />
             </div>
             <div className="min-w-0">
-              <h2 className="text-2xl font-bold tracking-tight text-foreground">Commitments &amp; Rewards</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Set money aside for commitments, then see what is free for rewards.</p>
+              <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Commitments &amp; Rewards</h2>
+              <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">Set money aside for commitments, then see what is free for rewards.</p>
             </div>
           </div>
           {onExplainWithAi && (

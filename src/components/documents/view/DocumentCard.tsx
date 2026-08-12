@@ -178,7 +178,7 @@ export function DocumentCard({
             <PreviewDocumentButton document={document} onPreview={onPreview} disabled={isBusy} />
           </div>
 
-          <div className="mt-3 flex flex-col items-stretch gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
+          <div className="mt-3 flex flex-col items-stretch gap-2 min-[360px]:flex-row min-[360px]:items-end min-[360px]:justify-between sm:gap-3">
             <div className="min-w-0 max-w-full">
               <AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />
               <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{amountCaption}</p>
@@ -240,15 +240,15 @@ export function DocumentCard({
             </div>
           )}
 
-          <details className="group/filing mt-3 rounded-lg border border-border/50 bg-muted/20">
-            <summary className="flex cursor-pointer select-none items-center justify-between gap-3 rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/50">
+          <details className="group/filing mt-3 border-t border-border/40">
+            <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-0 py-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
               <span>Filing details</span>
               <ChevronDown className="size-3.5 transition-transform duration-200 group-open/filing:rotate-180" aria-hidden="true" />
             </summary>
             {/* Four items in two columns. The same grid held three and always left an empty cell,
                 which is the hole that used to sit under "Uploaded"; keep-until was a stray line
                 below it. */}
-            <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border/50 px-3 py-2.5 text-[10px]">
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border/30 py-2.5 text-[10px]">
               <div>
                 <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Tax year</dt>
                 <dd className="mt-0.5 font-bold text-foreground tabular-nums">{document.taxYear}</dd>

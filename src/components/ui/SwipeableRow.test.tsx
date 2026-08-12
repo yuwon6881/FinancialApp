@@ -1,6 +1,25 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, beforeEach } from 'vitest'
-import { SwipeableRow } from './SwipeableRow'
+import { resolveSwipeTarget, SwipeableRow } from './SwipeableRow'
+
+describe('SwipeableRow swipe resolution', () => {
+  const actionsWidth = 132
+
+  it('opens immediately for a fast left swipe even before crossing half the drawer', () => {
+    expect(resolveSwipeTarget({ currentX: -18, actionsWidth, velocityX: -520 })).toBe(-actionsWidth)
+  })
+
+  it('closes immediately for a fast right swipe', () => {
+    expect(resolveSwipeTarget({ currentX: -120, actionsWidth, velocityX: 460 })).toBe(0)
+  })
+
+  it('uses the settled position for slow swipes and clamps overshoot', () => {
+    expect(resolveSwipeTarget({ currentX: -70, actionsWidth, velocityX: 0 })).toBe(-actionsWidth)
+    expect(resolveSwipeTarget({ currentX: -20, actionsWidth, velocityX: 0 })).toBe(0)
+    expect(resolveSwipeTarget({ currentX: -400, actionsWidth, velocityX: 0 })).toBe(-actionsWidth)
+    expect(resolveSwipeTarget({ currentX: 40, actionsWidth, velocityX: 0 })).toBe(0)
+  })
+})
 
 // The mobile branch layers an action drawer behind a sliding content surface. That
 // surface is the *only* thing hiding the drawer while the row is closed, so if it

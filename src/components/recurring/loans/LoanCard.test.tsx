@@ -64,4 +64,13 @@ describe('LoanCard', () => {
     expect(screen.getByText('No automatic payoff')).not.toBeNull()
     expect(screen.getAllByText('Final balance due now').length).toBeGreaterThan(0)
   })
+
+  it('keeps secondary loan details collapsed on mobile while preserving the desktop summary', () => {
+    const mobile = render(<LoanCard {...props(baseLoan)} isMobile />)
+    expect(screen.getByText('Loan details').closest('details')?.open).toBe(false)
+    mobile.unmount()
+
+    render(<LoanCard {...props(baseLoan)} isMobile={false} />)
+    expect(screen.getByText('Loan details').closest('details')?.open).toBe(true)
+  })
 })

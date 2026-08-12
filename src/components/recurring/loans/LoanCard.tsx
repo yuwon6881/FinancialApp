@@ -1,4 +1,4 @@
-import { MessageCircleQuestion, Pencil, Trash2 } from 'lucide-react'
+import { ChevronDown, MessageCircleQuestion, Pencil, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { fetchLoanSchedule } from '../../../lib/api/loans'
 import { SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
@@ -15,6 +15,7 @@ interface LoanCardProps {
   hideSensitive: boolean
   formatSensitive: (value: number) => ReactNode
   isSyncing: boolean
+  isMobile?: boolean
   onEdit: () => void
   onDelete: () => void
   onExplain: () => void
@@ -30,6 +31,7 @@ export function LoanCard({
   hideSensitive,
   formatSensitive,
   isSyncing,
+  isMobile = false,
   onEdit,
   onDelete,
   onExplain,
@@ -78,6 +80,7 @@ export function LoanCard({
     loan.termPeriods,
   ])
   const [isScheduleOpen, setIsScheduleOpen] = useState(false)
+  const [isLoanDetailsOpen, setIsLoanDetailsOpen] = useState(!isMobile)
   const [loadedSchedule, setLoadedSchedule] = useState<{ key: string; rows: LoanScheduleEntry[] } | null>(null)
   const [scheduleLoadingKey, setScheduleLoadingKey] = useState<string | null>(null)
   const [scheduleError, setScheduleError] = useState(false)
@@ -100,6 +103,10 @@ export function LoanCard({
     if (!isScheduleOpen || loan.isPendingSync || scheduleUnavailable || loadedSchedule?.key === scheduleKey || scheduleLoadingKey === scheduleKey) return
     void loadSchedule()
   }, [isScheduleOpen, loadSchedule, loadedSchedule?.key, loan.isPendingSync, scheduleKey, scheduleLoadingKey, scheduleUnavailable])
+
+  useEffect(() => {
+    setIsLoanDetailsOpen(!isMobile)
+  }, [isMobile])
 
   const scheduleRows = (loadedSchedule?.key === scheduleKey ? loadedSchedule.rows : loan.snapshot.futureSchedule)
     .map(payment => ({ ...payment, kind: 'Planned' as const }))
@@ -145,7 +152,7 @@ export function LoanCard({
           This loan cannot show a trustworthy balance or payment schedule because its bill cadence or payment history is incomplete. Choose a valid linked bill in Edit loan to recalculate it.
         </AlertBanner>
       ) : (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
           <Metric label="Still owed" value={formatSensitive(loan.snapshot.outstandingBalance)} />
           <Metric label="Next instalment" value={finalBalanceDueNow ? 'Final balance due now' : formatSensitive(loan.snapshot.scheduledPayment)} />
           <Metric label="Expected payoff" value={interestOnlyBalanceRemains ? 'No automatic payoff' : formatDate(loan.snapshot.payoffDate)} />
@@ -153,39 +160,45 @@ export function LoanCard({
         </div>
       )}
 
-      <div className="mt-4 grid gap-3 rounded-xl border border-border/50 bg-muted/20 p-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <div className="flex items-start gap-1.5">
-            <div>
-              <p className="text-muted-foreground">Interest method</p>
-              <p className="mt-1 font-semibold text-foreground">{loanInterestMethodCopy(loan.interestMethod).label}</p>
+      <details className="group/loan-details mt-3 rounded-xl border border-border/50 bg-muted/15 lg:mt-4 lg:bg-muted/20" open={isLoanDetailsOpen} onToggle={event => setIsLoanDetailsOpen(event.currentTarget.open)}>
+        <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-2.5 text-xs font-bold text-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50 lg:hidden">
+          <span>Loan details</span>
+          <ChevronDown className="size-3.5 text-muted-foreground transition-transform group-open/loan-details:rotate-180" aria-hidden />
+        </summary>
+        <div className="grid gap-3 border-t border-border/50 p-3 text-xs sm:grid-cols-2 lg:grid-cols-4 lg:border-t-0">
+          <div>
+            <div className="flex items-start gap-1.5">
+              <div>
+                <p className="text-muted-foreground">Interest method</p>
+                <p className="mt-1 font-semibold text-foreground">{loanInterestMethodCopy(loan.interestMethod).label}</p>
+              </div>
+              <InfoHint label="interest method" text={loanInterestMethodCopy(loan.interestMethod).hint} />
             </div>
-            <InfoHint label="interest method" text={loanInterestMethodCopy(loan.interestMethod).hint} />
+          </div>
+          <div>
+            <p className="text-muted-foreground">Interest rate</p>
+            <p className="mt-1 font-semibold text-foreground" aria-hidden={hideSensitive || undefined}>{hideSensitive ? SENSITIVE_AMOUNT_MASK : rateText}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Next instalment split</p>
+            {scheduleUnavailable ? (
+              <p className="mt-1 font-semibold text-muted-foreground">Unavailable</p>
+            ) : next ? (
+              <p className="mt-1 font-semibold text-foreground">
+                {formatSensitive(next.principal)} clears the debt · {formatSensitive(next.interest)} interest
+              </p>
+            ) : finalBalanceDueNow ? (
+              <p className="mt-1 font-semibold text-muted-foreground">Final balance due now</p>
+            ) : (
+              <p className="mt-1 font-semibold text-muted-foreground">Unavailable</p>
+            )}
+          </div>
+          <div className="flex items-start gap-1.5">
+            <p className="text-muted-foreground">Why this matters: the payoff date is calculated from the recorded bill history.</p>
+            <InfoHint label="loan payoff warning" text="A payment that does not cover that period's interest reduces none of the amount owed, so the payoff date is not promised." />
           </div>
         </div>
-        <div>
-          <p className="text-muted-foreground">Interest rate</p>
-          <p className="mt-1 font-semibold text-foreground" aria-hidden={hideSensitive || undefined}>{hideSensitive ? SENSITIVE_AMOUNT_MASK : rateText}</p>
-        </div>
-        <div>
-          <p className="text-muted-foreground">Next instalment split</p>
-          {scheduleUnavailable ? (
-            <p className="mt-1 font-semibold text-muted-foreground">Unavailable</p>
-          ) : next ? (
-            <p className="mt-1 font-semibold text-foreground">
-              {formatSensitive(next.principal)} clears the debt · {formatSensitive(next.interest)} interest
-            </p>
-          ) : finalBalanceDueNow ? (
-            <p className="mt-1 font-semibold text-muted-foreground">Final balance due now</p>
-          ) : (
-            <p className="mt-1 font-semibold text-muted-foreground">Unavailable</p>
-          )}
-        </div>
-        <div className="flex items-start gap-1.5">
-          <p className="text-muted-foreground">Why this matters: the payoff date is calculated from the recorded bill history.</p>
-          <InfoHint label="loan payoff warning" text="A payment that does not cover that period's interest reduces none of the amount owed, so the payoff date is not promised." />
-        </div>
-      </div>
+      </details>
 
       <details className="mt-4 rounded-xl border border-border/50 bg-background/40 p-3" onToggle={event => setIsScheduleOpen(event.currentTarget.open)}>
         <summary className="cursor-pointer select-none text-xs font-bold text-foreground hover:text-accent-ink transition-colors">
@@ -243,7 +256,7 @@ export function LoanCard({
 
 function Metric({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="rounded-xl border border-border/50 bg-background/40 p-3">
+    <div className="rounded-xl border border-border/50 bg-background/40 p-2.5 sm:p-3">
       <p className="text-[11px] font-semibold text-muted-foreground">{label}</p>
       <p className="mt-1 text-sm font-bold text-foreground">{value}</p>
     </div>

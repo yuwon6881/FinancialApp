@@ -15,6 +15,7 @@ import type { useCycleSummary } from './useCycleSummary'
 import type { useFinancialData } from './useFinancialData'
 import type { useInvestmentRefreshCoordinator } from './useInvestmentRefreshCoordinator'
 import type { usePushNotifications } from './usePushNotifications'
+import { shouldShowMobileFab } from './useFabMenu'
 import type { useInvestmentScanPolling } from '../lib/useInvestmentScanPolling'
 import type { useReceiptScanPolling } from '../lib/useReceiptScanPolling'
 import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
@@ -186,7 +187,7 @@ export function AuthenticatedView({
             used to have, while `clip` contains a rogue-width view without ever
             creating a scroll container. */}
         <main
-          className="pb-fab-safe relative mx-auto w-full min-w-0 max-w-[1440px] flex-1 overflow-x-clip px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+          className={`${shouldShowMobileFab(prefs.activeTab) ? 'pb-fab-safe' : 'pb-nav-safe'} relative mx-auto w-full min-w-0 max-w-[1440px] flex-1 overflow-x-clip px-4 py-6 sm:px-6 sm:py-8 lg:px-8`}
           aria-busy={prefs.sensitivePreferenceStatus === 'pending' || financial.loading}
         >
           <ErrorBoundary variant="inline" resetKey={prefs.activeTab}>
