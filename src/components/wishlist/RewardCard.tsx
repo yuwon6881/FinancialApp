@@ -15,6 +15,8 @@ interface RewardCardProps {
    * because committed money cannot buy a reward.
    */
   claimableBalance: number
+  /** Free rewards after reserving the active goals' outstanding share for this cycle. */
+  freeAfterGoalPace: number
   formatSensitive: (value: number) => React.ReactNode
   hideSensitive: boolean
   isSyncing: boolean
@@ -29,6 +31,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
   item,
   isFocused,
   claimableBalance,
+  freeAfterGoalPace,
   formatSensitive,
   hideSensitive,
   isSyncing,
@@ -43,6 +46,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
     ? Math.max(0, Math.min(100, (claimableBalance / item.price) * 100))
     : 0
   const canAfford = claimableBalance >= item.price
+  const goalPaceShortfall = Math.max(0, item.price - freeAfterGoalPace)
   const isBusy = isSyncing || isDeleting || item.isPendingSync === true
   const [showManage, setShowManage] = React.useState(false)
   // Same rule as SavingsGoalCard: a row on its way out must not keep offering Edit and Delete.
@@ -95,6 +99,12 @@ export const RewardCard: React.FC<RewardCardProps> = ({
           ? 'Ready to claim'
           : <>Need {formatSensitive(item.price - claimableBalance)} more</>}
       </p>
+
+      {canAfford && item.price > freeAfterGoalPace && (
+        <p className="text-xs font-medium text-muted-foreground">
+          Buying this leaves your goals <span className="font-bold text-amber-500">{formatSensitive(goalPaceShortfall)}</span> short this cycle.
+        </p>
+      )}
 
       {/* Management *replaces* the claim actions, exactly as it does on SavingsGoalCard. This row
           used to carry a permanently visible red Delete beside a text Edit — the loudest thing on

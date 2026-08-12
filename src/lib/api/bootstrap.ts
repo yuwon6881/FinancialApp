@@ -7,6 +7,7 @@ import type {
   Transaction,
   TransactionCategory,
   WishlistItem,
+  Loan,
 } from '../../types'
 import type {
   WireDashboardData,
@@ -15,6 +16,7 @@ import type {
   WireSavingsGoal,
   WireTransaction,
   WireWishlistItem,
+  WireLoan,
 } from '../apiTypes'
 import {
   deobfuscateAmount,
@@ -22,6 +24,7 @@ import {
   deobfuscateSavingsGoal,
   deobfuscateTransaction,
   deobfuscateWishlistItem,
+  deobfuscateLoan,
 } from './amounts'
 import { mapCategory, type WireTransactionCategory } from './categories'
 import { mapDashboardCore, mapDashboardInsights } from './financial'
@@ -37,6 +40,7 @@ export interface BootstrapPayload {
   categories: TransactionCategory[]
   wishlist: WishlistItem[]
   savingsGoals: SavingsGoal[]
+  loans: Loan[]
   autocomplete: AutocompleteSuggestion[]
   walletBalance: number
 }
@@ -52,6 +56,7 @@ interface WireBootstrapPayload {
   wishlist: WireWishlistItem[] | null
   // Absent from an older server that predates savings goals; treated as "none" rather than an error.
   savingsGoals: WireSavingsGoal[] | null
+  loans?: WireLoan[] | null
   autocomplete: AutocompleteSuggestion[] | null
   walletBalance: { totalBalance: string | number }
 }
@@ -93,6 +98,7 @@ export async function fetchBootstrap(
     categories: (data.categories || []).map(mapCategory),
     wishlist: (data.wishlist || []).map(deobfuscateWishlistItem),
     savingsGoals: (data.savingsGoals || []).map(deobfuscateSavingsGoal),
+    loans: (data.loans || []).map(deobfuscateLoan),
     autocomplete: data.autocomplete || [],
     walletBalance: deobfuscateAmount(data.walletBalance?.totalBalance),
   }

@@ -157,6 +157,7 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
       name: goal.name || '',
       targetAmount: goal.targetAmount || 0,
       earmarkedAmount: 0,
+      fundingBucket: goal.fundingBucket || 'Rewards',
       targetDate: goal.targetDate || '',
       priority: goal.priority || 'Medium',
       status: 'active',
@@ -223,13 +224,13 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     }
   }
 
-  const handleFundSavingsGoalsForCycle = async () => {
+  const handleFundSavingsGoalsForCycle = async (bucket: 'Essentials' | 'Rewards' = 'Rewards') => {
     if (!guardSensitive()) return
     const syncIds = ['savings-goals-fund', ...getActiveGoalIds()]
     beginDirectSync(syncIds)
     try {
       const { fundGoalsForCycle } = await import('../savingsGoalActions')
-      await fundGoalsForCycle(savingsGoalDependencies())
+      await fundGoalsForCycle(savingsGoalDependencies(), bucket)
     } finally {
       endDirectSync(syncIds)
     }

@@ -9,7 +9,7 @@ import {
   previewRequiredPerCycle,
   summarizePool,
 } from './savingsGoals'
-import { pendingRewardsAmount } from './freeRewards'
+import { pendingRecurringAmount, pendingRewardsAmount } from './freeRewards'
 
 // cycleDay 1 keeps cycles aligned to calendar months so the expectations read plainly. The
 // numbers below deliberately match SavingsGoalPacingTests.cs case for case — if one side changes,
@@ -213,6 +213,17 @@ describe('free Rewards balance', () => {
     expect(calculateFreeRewardsBalance(100, [pendingDelete], 150)).toBe(0)
   })
 
+  it('keeps an Essentials commitment out of the Rewards claim calculation', () => {
+    const rewardsGoal = newGoal({ id: 1, earmarkedAmount: 300, fundingBucket: 'Rewards' })
+    const essentialsGoal = newGoal({ id: 2, earmarkedAmount: 400, fundingBucket: 'Essentials' })
+
+    expect(calculateFreeRewardsBalance(1000, [rewardsGoal, essentialsGoal], 0)).toBe(700)
+    expect(pendingRecurringAmount([
+      { status: 'Pending', amount: 120, ledgerCategory: 'Essentials' },
+      { status: 'Pending', amount: 80, ledgerCategory: 'Rewards' },
+    ], 'Essentials')).toBe(120)
+  })
+
   // Matched the same way the server matches it. `category` is a ledger category, not a bucket, so
   // reading it as one held money aside that the server left free.
   it('matches a pending bill on its bucket only, case-insensitively', () => {
@@ -349,6 +360,26 @@ describe('summarizePool', () => {
     expect(summary.rewardsBalance).toBe(850)
     expect(summary.unassigned).toBe(550)
   })
+
+  it('summarizes only the selected funding bucket', () => {
+    const summary = summarizePool(
+      [
+        newGoal({ id: 1, earmarkedAmount: 300, fundingBucket: 'Rewards' }),
+        newGoal({ id: 2, earmarkedAmount: 400, fundingBucket: 'Essentials' }),
+      ],
+      1000,
+      0,
+      TODAY,
+      CYCLE_DAY,
+      0,
+      'Essentials',
+    )
+
+    expect(summary.fundingBucket).toBe('Essentials')
+    expect(summary.totalEarmarked).toBe(400)
+    expect(summary.unassigned).toBe(600)
+    expect(summary.activeGoals.map(goal => goal.id)).toEqual([2])
+  })
 })
 
 describe('getPaceStatus', () => {
@@ -384,4 +415,3 @@ describe('getPaceStatus', () => {
     expect(getPaceStatus(settled)).toBe('onPace')
   })
 })
-

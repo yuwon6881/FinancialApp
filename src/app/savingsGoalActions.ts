@@ -5,11 +5,11 @@
 // 1. Bundle: useFinancialData is on the eager critical path, and none of this is reachable until
 //    the user opens the (lazily-loaded) Rewards view and taps something. Keeping the bodies and
 //    their user-facing strings here keeps them out of the entry chunk.
-// 2. Correctness: every one of these needs the authoritative Rewards balance so the server can
+// 2. Correctness: every one of these needs the authoritative bucket balance so the server can
 //    enforce SUM(earmarked) <= balance. They are deliberately online-only rather than outbox ops,
 //    because a replayed op could apply against a pool that has since changed.
 
-import type { SavingsGoal, Transaction } from '../types'
+import type { SavingsGoal, SavingsGoalFundingBucket, Transaction } from '../types'
 import type { ToastAction } from '../components/ui/ToastViewport'
 import { getErrorMessage } from '../lib/errors'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
@@ -47,7 +47,7 @@ export async function contributeToGoal(
   amount: number,
 ): Promise<string | null> {
   if (!isOnline()) {
-    showOnlineOnlyMessage(deps, 'Moving money into a savings goal needs a live connection so the current Rewards balance can be checked.')
+    showOnlineOnlyMessage(deps, 'Moving money into a savings goal needs a live connection so the current bucket balance can be checked.')
     return null
   }
   const { contributeToSavingsGoal, fetchSavingsGoals } = await import('../lib/api/savingsGoals')
@@ -61,7 +61,7 @@ export async function contributeToGoal(
       recordName: deps.getGoalName(id),
       messageSuffix: amount > 0
         ? `${formatCurrencyVal(Math.abs(amount), deps.currency)} was moved into this goal.`
-        : `${formatCurrencyVal(Math.abs(amount), deps.currency)} was released back to free rewards.`,
+        : `${formatCurrencyVal(Math.abs(amount), deps.currency)} was released back to free ${bucketLabel(deps.getGoal?.(id))}.`,
     })
     deps.showToast(copy.message, copy.title, copy.tone)
     return null
@@ -74,9 +74,9 @@ export async function contributeToGoal(
   }
 }
 
-export async function fundGoalsForCycle(deps: SavingsGoalActionDeps): Promise<void> {
+export async function fundGoalsForCycle(deps: SavingsGoalActionDeps, bucket: SavingsGoalFundingBucket = 'Rewards'): Promise<void> {
   if (!isOnline()) {
-    showOnlineOnlyMessage(deps, 'Funding goals for a new cycle needs a live connection so the current Rewards balance can be checked.')
+    showOnlineOnlyMessage(deps, 'Funding goals for a new cycle needs a live connection so the current bucket balances can be checked.')
     return
   }
   const { fundSavingsGoalsForCycle } = await import('../lib/api/savingsGoals')
@@ -85,16 +85,18 @@ export async function fundGoalsForCycle(deps: SavingsGoalActionDeps): Promise<vo
   try {
     const result = await fundSavingsGoalsForCycle()
     deps.commitGoals(result.goals)
+    const bucketLabel = bucket === 'Essentials' ? 'Essentials' : 'Rewards'
+    const freeToSpend = bucket === 'Essentials' ? result.essentialsFreeToSpend : result.rewardsFreeToSpend
     const funded = result.totalGranted > 0
     if (funded) {
       const copy = buildMutationSuccessToast({
         entity: 'Savings Goals',
         action: 'Funded',
-        message: `Savings goals were funded for this cycle. ${formatCurrencyVal(result.totalGranted, deps.currency)} was set aside across your goals.`,
+        message: `Savings goals were funded for this cycle. ${formatCurrencyVal(result.totalGranted, deps.currency)} was set aside across your goals. ${formatCurrencyVal(freeToSpend, deps.currency)} remains free in ${bucketLabel}.`,
       })
       deps.showToast(copy.message, copy.title, copy.tone)
     } else {
-      deps.showToast('Your goals are already funded for this cycle.', 'Nothing to fund', 'info')
+      deps.showToast(`Your ${bucketLabel.toLowerCase()} goals are already funded for this cycle. ${formatCurrencyVal(freeToSpend, deps.currency)} remains free.`, 'Nothing to fund', 'info')
     }
   } catch (error: unknown) {
     deps.showToast(getErrorMessage(error), 'Could not fund your goals', 'error')
@@ -105,7 +107,7 @@ export async function fundGoalsForCycle(deps: SavingsGoalActionDeps): Promise<vo
 
 export async function completeGoal(deps: SavingsGoalActionDeps, id: number): Promise<void> {
   if (!isOnline()) {
-    showOnlineOnlyMessage(deps, 'Completing a savings goal needs a live connection so its Rewards transaction and rollback snapshot stay authoritative.')
+    showOnlineOnlyMessage(deps, 'Completing a savings goal needs a live connection so its linked ledger transaction and rollback snapshot stay authoritative.')
     return
   }
   const { completeSavingsGoal } = await import('../lib/api/savingsGoals')
@@ -138,7 +140,7 @@ export async function completeGoal(deps: SavingsGoalActionDeps, id: number): Pro
       entity: 'Savings Goal',
       action: result.goal.isRecurring ? 'Rolled Forward' : 'Completed',
       recordName: result.goal.name,
-      messageSuffix: `${spent} was spent from Rewards and recorded in your ledger.`,
+      messageSuffix: `${spent} was spent from ${bucketLabel(result.goal)} and recorded in your ledger.`,
     })
     deps.showToast(copy.message, copy.title, copy.tone, {
       label: 'Undo',
@@ -192,11 +194,15 @@ function createPendingCompletionTransaction(goal: SavingsGoal): Transaction {
     postedAt,
     description: `Completed commitment: ${goal.name}`,
     category: 'Other',
-    ledgerCategory: 'Rewards',
+    ledgerCategory: bucketLabel(goal),
     amount: -Math.abs(goal.earmarkedAmount),
     savingsGoalId: goal.id,
     isPendingSync: true,
   }
+}
+
+function bucketLabel(goal: SavingsGoal | undefined): 'Essentials' | 'Rewards' {
+  return goal?.fundingBucket === 'Essentials' ? 'Essentials' : 'Rewards'
 }
 
 /** Confirmation copy for deleting a goal. Deleting only releases the earmark; no money moves. */
@@ -204,8 +210,8 @@ export function describeDeleteGoal(goal: SavingsGoal | undefined, currency: stri
   return {
     title: 'Delete Savings Goal',
     message: goal && goal.earmarkedAmount > 0
-      ? `Delete "${goal.name}"? ${formatCurrencyVal(goal.earmarkedAmount, currency)} returns to free Rewards; no ledger money moves.`
-      : `Delete "${goal?.name || 'this savings goal'}"? This removes the commitment from your rewards pool.`,
+      ? `Delete "${goal.name}"? ${formatCurrencyVal(goal.earmarkedAmount, currency)} returns to free ${bucketLabel(goal)}; no ledger money moves.`
+      : `Delete "${goal?.name || 'this savings goal'}"? This removes the commitment from your ${bucketLabel(goal).toLowerCase()} pool.`,
     confirmText: 'Delete',
   }
 }
@@ -216,13 +222,13 @@ export function describeCompleteGoal(goal: SavingsGoal | undefined, currency: st
   if (goal?.isRecurring) {
     return {
       title: 'Complete This Round',
-      message: `Mark "${goal.name}" done? ${amount} is recorded in Rewards. The deadline moves forward ${goal.recurrenceMonths} month(s); deleting that entry restores this round.`,
+      message: `Mark "${goal.name}" done? ${amount} is recorded in ${bucketLabel(goal)}. The deadline moves forward ${goal.recurrenceMonths} month(s); deleting that entry restores this round.`,
       confirmText: 'Roll Forward',
     }
   }
   return {
     title: 'Complete Savings Goal',
-    message: `Mark "${goal?.name || 'this goal'}" done? ${amount} is recorded in Rewards. Deleting that ledger entry restores the commitment.`,
+    message: `Mark "${goal?.name || 'this goal'}" done? ${amount} is recorded in ${bucketLabel(goal)}. Deleting that ledger entry restores the commitment.`,
     confirmText: 'Complete',
   }
 }

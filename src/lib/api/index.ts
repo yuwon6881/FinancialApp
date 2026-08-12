@@ -13,6 +13,9 @@ export * from './investments'
 // './savingsGoals' is deliberately NOT re-exported here either, for the same reason: goals arrive
 // with the boot payload, and every other goal call is user-initiated (from the lazy Rewards view or
 // a queued sync), so keeping it out of this barrel keeps it off the eager critical path.
+// './loans' is deliberately NOT re-exported: loan cards and their full-history replay are only
+// needed by the lazy Recurring Payments section; bootstrap maps the payload at the boundary and
+// CRUD/sync callers import this module directly.
 //
 // './documents' is deliberately NOT re-exported here. This barrel is on the eager
 // critical path, and every vault consumer is lazy (the Documents view, the ledger

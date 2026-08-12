@@ -7,6 +7,7 @@ import type {
   Transaction,
   TransactionCategory,
   WishlistItem,
+  Loan,
 } from '../../types'
 
 export type LoadAllTuple = readonly [
@@ -19,6 +20,7 @@ export type LoadAllTuple = readonly [
   number | null,
   api.BootstrapPayload['insights'],
   SavingsGoal[] | null,
+  Loan[] | null,
 ]
 
 /**
@@ -42,6 +44,7 @@ export async function fetchBootstrapPayload(
       payload.walletBalance,
       payload.insights,
       Array.isArray(payload.savingsGoals) ? payload.savingsGoals : null,
+      Array.isArray(payload.loans) ? payload.loans : null,
     ] as const
   } catch (bootstrapError: unknown) {
     if (!hasHttpStatus(bootstrapError, 404)) throw bootstrapError

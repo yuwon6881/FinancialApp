@@ -1,11 +1,16 @@
 import type { BulkTransactionMutationResult } from './api/transactionBulk'
 import type { CategoryCleanupApplyResult } from './api/categories'
 import type { DeletedTransactionsSnapshot } from './api/investments'
-import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, PayEarlyResult, RecurringPayment, RecurringSettlementResult, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, Loan, PayEarlyResult, RecurringPayment, RecurringSettlementResult, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from './mutationToast'
 import { projectIncomeSplitRows, type IncomeAllocations } from './incomeSplitProjection'
 
-export type EntityKind = 'transaction' | 'recurringPayment' | 'recurringOccurrence' | 'wishlistItem' | 'savingsGoal' | 'category' | 'settings'
+// Loan balances are replayed from the full-history bootstrap snapshot, not from the cycle-scoped
+// transaction list projected below. Keep the projection helper adjacent to the outbox so all active
+// and recently-completed operations use the same replay boundary without growing this file with a
+// second feature-specific branch.
+
+export type EntityKind = 'transaction' | 'recurringPayment' | 'recurringOccurrence' | 'wishlistItem' | 'savingsGoal' | 'category' | 'settings' | 'loan'
   | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentCashFlow'
   | 'investmentPlan' | 'investmentAllocation'
   | 'investmentAllocationOrder' | 'taxReliefCategory'
@@ -50,11 +55,18 @@ export interface OutboxPayload {
   transactionIds?: unknown
   /** Attached vault documents this delete also removes, for the success toast's honesty clause. */
   deletedDocumentCount?: number
+  openingPrincipal?: number
+  trackingStartDate?: string
+  annualRatePercent?: number
+  termPeriods?: number
+  interestMethod?: string
+  recurringPaymentId?: string | null
 }
 export type DispatchResult =
   | Transaction
   | RecurringPayment
   | WishlistItem
+  | Loan
   | SavingsGoal
   | TransactionCategory
   | InvestmentAccount
@@ -150,6 +162,7 @@ const ENTITY_LABELS: Record<EntityKind, string> = {
   recurringOccurrence: 'Bill occurrence',
   wishlistItem: 'Wishlist item',
   savingsGoal: 'Savings goal',
+  loan: 'Loan',
   category: 'Category',
   settings: 'Settings'
   , investmentAccount: 'Investment account'
@@ -287,6 +300,7 @@ export function createFinalId(entity: EntityKind): string {
     : entity === 'recurringPayment' ? 'rec'
     : entity === 'category' ? 'cat'
     : entity === 'taxReliefCategory' ? 'relief'
+    : entity === 'loan' ? 'loan'
     : 'op'
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }
@@ -326,6 +340,10 @@ const OPTIMISTIC_LIST_ORDER_POLICIES: Partial<Record<EntityKind, OptimisticListO
     compare: (left, right) => (left.name ?? '').localeCompare(right.name ?? ''),
   },
   recurringPayment: {
+    compare: (left, right) =>
+      (left.name ?? '').localeCompare(right.name ?? '') || compareIds(left, right),
+  },
+  loan: {
     compare: (left, right) =>
       (left.name ?? '').localeCompare(right.name ?? '') || compareIds(left, right),
   },
@@ -1092,7 +1110,7 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
   return (
     typeof o.id === 'string' &&
     typeof o.entity === 'string' &&
-    ['transaction', 'recurringPayment', 'recurringOccurrence', 'wishlistItem', 'savingsGoal', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder', 'taxReliefCategory'].includes(o.entity as string) &&
+    ['transaction', 'recurringPayment', 'recurringOccurrence', 'wishlistItem', 'savingsGoal', 'category', 'settings', 'loan', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder', 'taxReliefCategory'].includes(o.entity as string) &&
     typeof o.type === 'string' &&
     ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase', 'reminder', 'payEarly', 'settle', 'cleanup', 'bulkDelete', 'bulkRestore'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&

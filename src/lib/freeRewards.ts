@@ -1,4 +1,5 @@
 import type { ActiveRecurringPayment, SavingsGoal } from '../types'
+import type { SavingsGoalFundingBucket } from '../types'
 
 /**
  * A goal that still holds a claim on the pool. A row queued for deletion has already released its
@@ -19,10 +20,25 @@ export function calculateFreeRewardsBalance(
   pendingRewards: number,
 ): number {
   const earmarked = goals.reduce(
-    (sum, goal) => isActiveGoal(goal) ? sum + goal.earmarkedAmount : sum,
+    (sum, goal) => isActiveGoal(goal) && (goal.fundingBucket ?? 'Rewards') === 'Rewards'
+      ? sum + goal.earmarkedAmount
+      : sum,
     0,
   )
   return Math.round(Math.max(0, rewardsBalance - pendingRewards - earmarked) * 100) / 100
+}
+
+export function pendingRecurringAmount(
+  payments: readonly Pick<ActiveRecurringPayment, 'status' | 'amount' | 'ledgerCategory'>[] | undefined,
+  fundingBucket: SavingsGoalFundingBucket,
+): number {
+  const total = (payments ?? []).reduce((sum, payment) => {
+    if (payment.status !== 'Pending' || payment.amount == null) return sum
+    return payment.ledgerCategory?.toLowerCase() === fundingBucket.toLowerCase()
+      ? sum + Math.abs(payment.amount)
+      : sum
+  }, 0)
+  return Math.round(total * 100) / 100
 }
 
 /**
@@ -41,9 +57,5 @@ export function calculateFreeRewardsBalance(
 export function pendingRewardsAmount(
   payments: readonly Pick<ActiveRecurringPayment, 'status' | 'amount' | 'ledgerCategory'>[] | undefined,
 ): number {
-  const total = (payments ?? []).reduce((sum, payment) => {
-    if (payment.status !== 'Pending' || payment.amount == null) return sum
-    return payment.ledgerCategory?.toLowerCase() === 'rewards' ? sum + Math.abs(payment.amount) : sum
-  }, 0)
-  return Math.round(total * 100) / 100
+  return pendingRecurringAmount(payments, 'Rewards')
 }

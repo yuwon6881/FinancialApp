@@ -3,10 +3,13 @@ import { AlertTriangle, CalendarClock, CheckCircle2, Coins, History, Loader2 } f
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import type { GoalPoolSummary } from '../../lib/savingsGoals'
+import type { SavingsGoalFundingBucket } from '../../types'
+import { getCategoryChartColor } from '../../lib/categoryColors'
 
 interface RewardsPoolBarProps {
   summary: GoalPoolSummary
-  /** The Rewards budget for this cycle — what the commitments are paced against. */
+  /** The existing bucket budget for this cycle — what its commitments are paced against. */
+  bucket?: SavingsGoalFundingBucket
   expectedInflow: number
   formatSensitive: (value: number) => React.ReactNode
   hideSensitive: boolean
@@ -19,12 +22,13 @@ interface RewardsPoolBarProps {
 /**
  * One stacked bar over one balance.
  *
- * The split *is* the explanation: commitments and rewards are not two pots, they are two claims on
- * the same Rewards money. Showing them as separate totals is what let the old page report a laptop
+ * The split *is* the explanation: commitments and spending are not two pots, they are two claims on
+ * the same bucket money. Showing them as separate totals is what let the old page report a laptop
  * and a watch as simultaneously affordable out of a balance that could only cover one.
  */
 export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   summary,
+  bucket: bucketProp = 'Rewards',
   expectedInflow,
   formatSensitive,
   hideSensitive,
@@ -33,8 +37,11 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   onFundCycle,
   onViewRewardsHistory,
 }) => {
+  const bucket = summary.fundingBucket ?? bucketProp
+  const bucketLabel = bucket === 'Essentials' ? 'Essentials' : 'Rewards'
+  const bucketColor = getCategoryChartColor(bucket)
   const {
-    rewardsBalance,
+    rewardsBalance: bucketBalance,
     totalEarmarked,
     unassigned,
     requiredPerCycleTotal,
@@ -44,14 +51,14 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   } = summary
 
   // Percentages drive only the bar widths; a zero or negative balance collapses to an empty track.
-  const committedPct = rewardsBalance > 0 ? Math.min(100, (totalEarmarked / rewardsBalance) * 100) : 0
+  const committedPct = bucketBalance > 0 ? Math.min(100, (totalEarmarked / bucketBalance) * 100) : 0
   const hasGoals = summary.activeGoals.length > 0
 
-  // Earmarks are bookkeeping on money that already exists, but nothing stops the Rewards balance
-  // from falling under them afterwards — a Rewards expense, a correction, a stability top-up. The
+  // Earmarks are bookkeeping on money that already exists, but nothing stops the bucket balance
+  // from falling under them afterwards — an expense, a correction, or a budget adjustment. The
   // free remainder floors at zero, so without saying this the page reports "Free to spend 0" and
   // goal cards that still claim money the pool no longer holds, with nothing connecting the two.
-  const overCommitted = Math.round((totalEarmarked - rewardsBalance) * 100) / 100
+  const overCommitted = Math.round((totalEarmarked - bucketBalance) * 100) / 100
 
   // This cycle's share, as its own meter. The pool bar above answers "how is the balance divided";
   // this answers "has this cycle's contribution actually been made" — two different questions that
@@ -75,11 +82,11 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   // button with the outstanding figure promised money the pool did not have and moved less.
   const fundableNow = Math.min(outstandingThisCycleTotal, unassigned)
   const fundTitle = isOffline
-    ? 'Funding needs a connection — it splits your real rewards balance'
+    ? `Funding needs a connection — it checks your real ${bucketLabel} balance`
     : hideSensitive
       ? 'Unhide balances to fund your goals'
       : unassigned <= 0
-        ? 'No free rewards left to set aside'
+        ? `No free ${bucketLabel.toLowerCase()} money left to set aside`
         : 'Set aside what your goals still need this cycle'
 
   return (
@@ -87,10 +94,10 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-            Rewards pool
+            {bucketLabel} pool
           </span>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-foreground">{formatSensitive(rewardsBalance)}</span>
+            <span className="text-2xl font-black text-foreground">{formatSensitive(bucketBalance)}</span>
             {expectedInflow > 0 && (
               <span className="text-xs font-semibold text-muted-foreground">
                 +{formatSensitive(expectedInflow)}/cycle
@@ -126,23 +133,23 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
       {/* The stacked track. Committed sits left so the free remainder reads as "what's left over",
           which is how the money actually behaves. */}
       <div
-        className="w-full h-2.5 rounded-full bg-pink-500/25 overflow-hidden"
+        className="w-full h-2.5 rounded-full bg-muted overflow-hidden"
         role="img"
         aria-label={hasGoals
-          ? `${committedPct.toFixed(0)}% of your rewards is committed to goals`
-          : 'No rewards committed to goals yet'}
+          ? `${committedPct.toFixed(0)}% of your ${bucketLabel.toLowerCase()} money is committed to goals`
+          : `No ${bucketLabel.toLowerCase()} money committed to goals yet`}
       >
-        <div className="h-full bg-pink-500 transition-all duration-500" style={{ width: `${committedPct}%` }} />
+        <div className="h-full transition-all duration-500" style={{ width: `${committedPct}%`, backgroundColor: bucketColor }} />
       </div>
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs font-semibold">
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-pink-500" aria-hidden />
+          <span className="size-2 rounded-full" style={{ backgroundColor: bucketColor }} aria-hidden />
           <span className="text-muted-foreground">Committed</span>
           <span className="text-foreground font-extrabold">{formatSensitive(totalEarmarked)}</span>
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-pink-500/30 ring-1 ring-pink-500/40" aria-hidden />
+          <span className="size-2 rounded-full ring-1" style={{ backgroundColor: bucketColor, opacity: 0.3 }} aria-hidden />
           <span className="text-muted-foreground">Free to spend</span>
           <span className="text-foreground font-extrabold">{formatSensitive(unassigned)}</span>
         </span>
@@ -156,7 +163,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
             <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               {cycleDone
                 ? <CheckCircle2 className="size-3 text-emerald-500" aria-hidden />
-                : <CalendarClock className="size-3 text-pink-500" aria-hidden />}
+                : <CalendarClock className="size-3" style={{ color: bucketColor }} aria-hidden />}
               This cycle
             </span>
             <span className="text-xs font-semibold text-muted-foreground">
@@ -175,8 +182,8 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
               : `${cyclePct.toFixed(0)}% of this cycle's commitments set aside`}
           >
             <div
-              className={`h-full rounded-full transition-all duration-500 ${cycleDone ? 'bg-emerald-500' : 'bg-pink-500'}`}
-              style={{ width: `${cyclePct}%` }}
+              className={`h-full rounded-full transition-all duration-500 ${cycleDone ? 'bg-emerald-500' : ''}`}
+              style={{ width: `${cyclePct}%`, ...(cycleDone ? {} : { backgroundColor: bucketColor }) }}
             />
           </div>
 
@@ -196,9 +203,9 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         <p className="flex items-start gap-2 text-xs font-semibold text-destructive">
           <AlertTriangle className="size-3.5 shrink-0 mt-px" />
           <span>
-            Your commitments claim {formatSensitive(overCommitted)} more than your rewards hold.
-            Something has been spent from Rewards since it was set aside — release money from a
-            commitment, or let this cycle's rewards refill the pool.
+            {bucket === 'Rewards'
+              ? <>Your commitments claim {formatSensitive(overCommitted)} more than your rewards hold. Something has been spent from Rewards since it was set aside — release money from a commitment, or let this cycle's rewards money refill the pool.</>
+              : <>Your commitments claim {formatSensitive(overCommitted)} more than your {bucketLabel.toLowerCase()} pool holds. Something has been spent from {bucketLabel} since it was set aside — release money from a commitment, or let this cycle's {bucketLabel.toLowerCase()} money refill the pool.</>}
           </span>
         </p>
       )}
@@ -210,8 +217,8 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
           <AlertTriangle className="size-3.5 shrink-0 mt-px" />
           <span>
             Your goals need {formatSensitive(summary.requiredPerCycleTotal)} a cycle —{' '}
-            {formatSensitive(paceShortfall)} above your rewards budget. Extend a deadline, lower a
-            target, or raise your Rewards share.
+            {formatSensitive(paceShortfall)} above your {bucketLabel.toLowerCase()} budget. Extend a deadline, lower a
+            target, or raise your {bucketLabel} share.
           </span>
         </p>
       ) : null}

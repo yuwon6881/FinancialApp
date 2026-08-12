@@ -75,6 +75,19 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     return deleteSavingsGoal(Number(op.targetId))
   },
 
+  'loan:add': async (op) => {
+    const { addLoan } = await import('./api/loans')
+    return addLoan({ ...(op.payload as Partial<import('../types').Loan>), id: op.targetId })
+  },
+  'loan:update': async (op) => {
+    const { updateLoan } = await import('./api/loans')
+    return updateLoan(op.targetId, withoutUndoSnapshot(op.payload) as unknown as import('../types').Loan)
+  },
+  'loan:delete': async (op) => {
+    const { deleteLoan } = await import('./api/loans')
+    return deleteLoan(op.targetId)
+  },
+
   'category:add': (op) => api.addCategory({ ...(op.payload as Partial<TransactionCategory>), id: op.targetId } as Omit<TransactionCategory, 'id'> & { id?: string }),
   'category:update': (op) => api.updateCategory(op.targetId, {
     cycleLimit: typeof op.payload?.cycleLimit === 'number' ? op.payload.cycleLimit : (op.payload?.cycleLimit === null ? null : undefined),

@@ -7,12 +7,15 @@ import { SmartAmountInput } from '../ui/SmartAmountInput'
 import { FormField } from '../ui/FormField'
 import { Button } from '../ui/Button'
 import { ModalActions } from '../ui/ModalActions'
+import { InfoHint } from '../ui/InfoHint'
+import type { SavingsGoalFundingBucket } from '../../types'
 
 interface SavingsGoalFormProps {
   mode: 'add' | 'edit'
   currency: string
   name: string
   target: string
+  fundingBucket: SavingsGoalFundingBucket
   date: string
   priority: string
   isRecurring: boolean
@@ -25,6 +28,7 @@ interface SavingsGoalFormProps {
   formatSensitive: (value: number) => ReactNode
   onNameChange: (value: string) => void
   onTargetChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onFundingBucketChange: (value: SavingsGoalFundingBucket) => void
   onDateChange: (value: string) => void
   onPriorityChange: (value: string) => void
   onRecurringChange: (value: boolean) => void
@@ -68,7 +72,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
           {!props.errors.target && props.releasedByLowerTarget > 0 && (
             <p className="text-[10px] text-amber-500 font-medium mt-1">
               That is below the {props.formatSensitive(props.releasedByLowerTarget)} more you have
-              already set aside. Saving returns the difference to your free rewards.
+              already set aside. Saving returns the difference to your free {props.fundingBucket.toLowerCase()} money.
             </p>
           )}
         </FormField>
@@ -83,6 +87,25 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
           <p className="text-[10px] text-muted-foreground font-medium mt-1">Funded first when money is short.</p>
         </FormField>
       </div>
+
+      <FormField label="Where should this money come from?">
+        <div className="flex items-center gap-1.5">
+          <CustomSelect
+            ariaLabel="Goal funding bucket"
+            value={props.fundingBucket}
+            onChange={value => props.onFundingBucketChange(value as SavingsGoalFundingBucket)}
+            options={[
+              { value: 'Essentials', label: 'From your everyday money (Essentials)' },
+              { value: 'Rewards', label: 'From your rewards money (Rewards)' },
+            ]}
+            className="w-full"
+          />
+          <InfoHint
+            label="goal funding bucket"
+            text="Essentials is the money your bills come out of. Rewards is the money you set aside for treats and wishlist items."
+          />
+        </div>
+      </FormField>
 
       <FormField label="Needed by" required error={props.errors.date}>
         <DatePicker

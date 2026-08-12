@@ -45,7 +45,7 @@ import { prefetchFingerprintAssertOptions } from './lib/fingerprintOptionsCache'
 import { readAppLocation, updateAppSearch } from './lib/appLocation'
 import { mutationBusyLabel } from './components/ui/rowSyncState'
 import type { AiInvocationContext } from './lib/api/ai'
-import { calculateFreeRewardsBalance, pendingRewardsAmount } from './lib/freeRewards'
+import { calculateFreeRewardsBalance, pendingRecurringAmount, pendingRewardsAmount } from './lib/freeRewards'
 
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched at the root level.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
@@ -372,6 +372,7 @@ function App() {
   const wishlistDashboardData = todayDashboardData || financial.optimisticDashboardData
   const isWishlistCycleStale = isCurrentCycleLoading || !todayDashboardData
   const wishlistPendingRewardsDeduction = pendingRewardsAmount(wishlistDashboardData?.activeRecurringPayments)
+  const wishlistPendingEssentialsDeduction = pendingRecurringAmount(wishlistDashboardData?.activeRecurringPayments, 'Essentials')
   const wishlistRewardsBalance = wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0
   const wishlistFreeRewardsBalance = calculateFreeRewardsBalance(
     wishlistRewardsBalance,
@@ -620,6 +621,7 @@ function App() {
           wishlistDashboardData={wishlistDashboardData}
           wishlistRewardsBalance={wishlistRewardsBalance}
           wishlistPendingRewardsDeduction={wishlistPendingRewardsDeduction}
+          wishlistPendingEssentialsDeduction={wishlistPendingEssentialsDeduction}
           isWishlistCycleStale={isWishlistCycleStale}
           currentPendingNotificationsCount={currentPendingNotifications.length}
           currentCycleMonth={currentCycleMonth}

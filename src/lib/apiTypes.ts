@@ -16,6 +16,9 @@ import type {
   StabilityRecovery,
   WishlistItem,
   SavingsGoal,
+  Loan,
+  LoanPaymentSplit,
+  LoanScheduleEntry,
 } from '../types'
 
 type WireAmount = string | number
@@ -74,6 +77,8 @@ export interface WireSavingsGoalFundingResult {
   goals?: WireSavingsGoal[]
   totalGranted: WireAmount
   freeToSpend: WireAmount
+  rewardsFreeToSpend?: WireAmount
+  essentialsFreeToSpend?: WireAmount
 }
 
 export interface WireSavingsGoalCompletionResult {
@@ -166,6 +171,36 @@ type WireStabilityRecovery = Omit<
   repaidTotal: WireAmount
   essentialsCommitted: WireAmount
   rewardsCommitted: WireAmount
+}
+
+export type WireLoanPaymentSplit = Omit<LoanPaymentSplit, 'payment' | 'interest' | 'principal' | 'balanceBefore' | 'balanceAfter' | 'surplus'> & {
+  payment: WireAmount
+  interest: WireAmount
+  principal: WireAmount
+  balanceBefore: WireAmount
+  balanceAfter: WireAmount
+  surplus: WireAmount
+}
+
+export type WireLoanScheduleEntry = Omit<LoanScheduleEntry, 'payment' | 'interest' | 'principal' | 'balanceAfter'> & {
+  payment: WireAmount
+  interest: WireAmount
+  principal: WireAmount
+  balanceAfter: WireAmount
+}
+
+export type WireLoan = Omit<Loan, 'openingPrincipal' | 'annualRatePercent' | 'snapshot'> & {
+  openingPrincipal: WireAmount
+  annualRatePercent: number | string
+  snapshot: Omit<Loan['snapshot'], 'outstandingBalance' | 'scheduledPayment' | 'totalScheduledInterest' | 'totalInterestPaid' | 'nextPayment' | 'payments' | 'futureSchedule'> & {
+    outstandingBalance: WireAmount
+    scheduledPayment: WireAmount
+    totalScheduledInterest: WireAmount
+    totalInterestPaid: WireAmount
+    nextPayment?: WireLoanScheduleEntry | null
+    payments: WireLoanPaymentSplit[]
+    futureSchedule: WireLoanScheduleEntry[]
+  }
 }
 
 type WireCategoryLimitProgress = Omit<

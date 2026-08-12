@@ -14,7 +14,7 @@ interface SavingsGoalContributeSheetProps {
   goal: SavingsGoal
   mode: ContributeMode
   currency: string
-  /** Free-to-spend rewards — the ceiling on a top-up. */
+  /** Free-to-spend bucket money — the ceiling on a top-up. */
   available: number
   /** What this goal needs this cycle, offered as a one-tap suggestion. */
   suggested: number
@@ -33,7 +33,7 @@ interface SavingsGoalContributeSheetProps {
  * per-cycle pacing covers the routine case; this is for windfalls and for raiding one goal to
  * cover another.
  *
- * No money leaves the ledger either way — this only changes which part of the Rewards pool is
+ * No money leaves the ledger either way — this only changes which part of the bucket pool is
  * spoken for.
  */
 export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProps> = ({
@@ -47,6 +47,8 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
   onConfirm,
 }) => {
   const isTopUp = mode === 'topUp'
+  const fundingBucket = goal.fundingBucket ?? 'Rewards'
+  const bucketLabel = fundingBucket.toLowerCase()
   // The most this move can be: free rewards (capped by what the goal still needs) for a top-up, or
   // everything the goal currently holds for a release. Both directions default to one cycle's
   // pace; releasing the entire commitment remains available by entering that amount explicitly.
@@ -72,7 +74,7 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
     }
     if (parsed > ceiling + 0.005) {
       setError(isTopUp
-        ? 'That is more than your free rewards can cover.'
+        ? `That is more than your free ${bucketLabel} money can cover.`
         : 'That is more than this goal is holding.')
       focusFirstInvalidField(event.currentTarget)
       return
@@ -113,8 +115,8 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
           error={error}
           hint={!error
             ? (isTopUp
-                ? <>Up to {formatSensitive(ceiling)} available from your free rewards.</>
-                : <>Up to {formatSensitive(ceiling)} can go back to your free rewards.</>)
+                ? <>Up to {formatSensitive(ceiling)} available from your free {bucketLabel} money.</>
+                : <>Up to {formatSensitive(ceiling)} can go back to your free {bucketLabel} money.</>)
             : undefined}
           hintClassName="text-[11px] font-medium"
         >
@@ -131,7 +133,7 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
         </FormField>
 
         <p className="text-[11px] text-muted-foreground font-medium">
-          This reserves Rewards without adding a ledger transaction.
+          This reserves {fundingBucket} money without adding a ledger transaction.
         </p>
 
         <ModalActions className="pt-2">

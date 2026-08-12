@@ -1,5 +1,5 @@
-import React from 'react'
-import type { RecurringPayment, RecurringReminderSettings, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
+import React, { Suspense } from 'react'
+import type { Loan, RecurringPayment, RecurringReminderSettings, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useIsMobile } from '../lib/useIsMobile'
 import { useAppContext } from '../contexts/AppContext'
@@ -9,6 +9,8 @@ import { RecurringPaymentFormSheet } from './recurring/RecurringPaymentFormSheet
 import { RecurringFilterBar } from './recurring/RecurringFilterBar'
 import { RecurringPaymentCards } from './recurring/RecurringPaymentCards'
 import { useRecurringPaymentsView } from './recurring/useRecurringPaymentsView'
+
+const LoansSection = React.lazy(() => import('./recurring/loans/LoansSection').then(module => ({ default: module.LoansSection })))
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
@@ -40,6 +42,10 @@ interface RecurringPaymentsViewProps {
   thisDevicePushEnabled?: boolean
   onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
   onRequestPayEarly?: (id: string) => void
+  loans?: Loan[]
+  onAddLoan?: (loan: Partial<Loan>) => void
+  onUpdateLoan?: (id: string, loan: Loan) => void
+  onRequestDeleteLoan?: (id: string) => void
 }
 
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
@@ -72,6 +78,10 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   thisDevicePushEnabled = true,
   onUpdateReminder,
   onRequestPayEarly,
+  loans = [],
+  onAddLoan = () => {},
+  onUpdateLoan = () => {},
+  onRequestDeleteLoan = () => {},
 }) => {
   const app = useAppContext()
   const hideSensitive = hideSensitiveProp ?? app.hideSensitive
@@ -132,6 +142,20 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         currency={currency}
         hideSensitive={hideSensitive}
       />
+
+      <Suspense fallback={<div className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5" aria-busy="true"><div className="h-5 w-24 animate-pulse rounded bg-muted" /></div>}>
+        <LoansSection
+          loans={loans}
+          payments={payments}
+          currency={currency}
+          hideSensitive={hideSensitive}
+          formatSensitive={view.formatSensitive}
+          activeSyncIds={activeSyncIds}
+          onAddLoan={onAddLoan}
+          onUpdateLoan={onUpdateLoan}
+          onRequestDeleteLoan={onRequestDeleteLoan}
+        />
+      </Suspense>
 
       {/* Add / Edit Subscription Modal (bottom sheet on mobile) */}
       <RecurringPaymentFormSheet

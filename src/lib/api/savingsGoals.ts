@@ -91,6 +91,8 @@ export interface SavingsGoalFundingResult {
   goals: SavingsGoal[]
   totalGranted: number
   freeToSpend: number
+  rewardsFreeToSpend: number
+  essentialsFreeToSpend: number
 }
 
 /**
@@ -108,6 +110,8 @@ export async function fundSavingsGoalsForCycle(): Promise<SavingsGoalFundingResu
     goals: (data.goals || []).map(deobfuscateSavingsGoal),
     totalGranted: deobfuscateAmount(data.totalGranted),
     freeToSpend: deobfuscateAmount(data.freeToSpend),
+    rewardsFreeToSpend: deobfuscateAmount(data.rewardsFreeToSpend ?? data.freeToSpend),
+    essentialsFreeToSpend: deobfuscateAmount(data.essentialsFreeToSpend),
   }
 }
 

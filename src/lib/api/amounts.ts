@@ -1,5 +1,5 @@
-import type { RecurringPayment, SavingsGoal, Transaction, WishlistItem } from '../../types'
-import type { WireRecurringPayment, WireSavingsGoal, WireTransaction, WireWishlistItem } from '../apiTypes'
+import type { Loan, LoanPaymentSplit, LoanScheduleEntry, RecurringPayment, SavingsGoal, Transaction, WishlistItem } from '../../types'
+import type { WireLoan, WireLoanPaymentSplit, WireLoanScheduleEntry, WireRecurringPayment, WireSavingsGoal, WireTransaction, WireWishlistItem } from '../apiTypes'
 
 const OBFUSCATION_KEY = 'FinancialAppObfuscationKey'
 
@@ -61,4 +61,51 @@ export function deobfuscateSavingsGoal(goal: WireSavingsGoal): SavingsGoal {
     // work on the 'YYYY-MM-DD' calendar date, so normalise once here at the boundary.
     targetDate: (goal.targetDate || '').slice(0, 10),
   }
+}
+
+function deobfuscateLoanPayment(payment: WireLoanPaymentSplit): LoanPaymentSplit {
+  return {
+    ...payment,
+    payment: deobfuscateAmount(payment.payment),
+    interest: deobfuscateAmount(payment.interest),
+    principal: deobfuscateAmount(payment.principal),
+    balanceBefore: deobfuscateAmount(payment.balanceBefore),
+    balanceAfter: deobfuscateAmount(payment.balanceAfter),
+    surplus: deobfuscateAmount(payment.surplus),
+  }
+}
+
+export function deobfuscateLoanSchedule(entry: WireLoanScheduleEntry): LoanScheduleEntry {
+  return {
+    ...entry,
+    payment: deobfuscateAmount(entry.payment),
+    interest: deobfuscateAmount(entry.interest),
+    principal: deobfuscateAmount(entry.principal),
+    balanceAfter: deobfuscateAmount(entry.balanceAfter),
+  }
+}
+
+export function deobfuscateLoan(loan: WireLoan): Loan {
+  const nextPayment = loan.snapshot.nextPayment
+  return {
+    ...loan,
+    openingPrincipal: deobfuscateAmount(loan.openingPrincipal),
+    annualRatePercent: deobfuscateLoanRate(loan.annualRatePercent),
+    snapshot: {
+      ...loan.snapshot,
+      outstandingBalance: deobfuscateAmount(loan.snapshot.outstandingBalance),
+      scheduledPayment: deobfuscateAmount(loan.snapshot.scheduledPayment),
+      totalScheduledInterest: deobfuscateAmount(loan.snapshot.totalScheduledInterest),
+      totalInterestPaid: deobfuscateAmount(loan.snapshot.totalInterestPaid),
+      nextPayment: nextPayment ? deobfuscateLoanSchedule(nextPayment) : nextPayment,
+      payments: (loan.snapshot.payments || []).map(deobfuscateLoanPayment),
+      futureSchedule: (loan.snapshot.futureSchedule || []).map(deobfuscateLoanSchedule),
+    },
+  }
+}
+
+function deobfuscateLoanRate(value: number | string): number {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+  const plain = Number(value)
+  return Number.isFinite(plain) ? plain : deobfuscateAmount(value)
 }

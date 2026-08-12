@@ -13,6 +13,7 @@ import type {
   AutocompleteSuggestion,
   PendingNotification,
   TransactionDocumentChanges,
+  Loan,
 } from '../types'
 import type { CategoryCleanupSuggestion } from '../lib/api'
 import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, setCachedCycleSnapshot } from '../lib/cache'
@@ -22,6 +23,7 @@ import { useStartupSync } from './useStartupSync'
 import { useOptimisticDashboard } from './useOptimisticDashboard'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
 import { createFinalId, projectFinancialSetting, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
+import { projectLoanStates } from '../lib/loanProjection'
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
@@ -33,6 +35,7 @@ import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import type { ConfirmModalData } from './useAppDialogs'
 import { fetchBootstrapPayload } from './financialData/bootstrap'
 import { createWishlistSavingsActions } from './financialData/wishlistSavingsActions'
+import { createLoanActions } from './financialData/loanActions'
 // Deliberately the deferred wrapper, not the picker itself: importing CategoryReplacementSelect
 // directly here pulled its CustomSelect -> AnchoredPopover chain onto the eager critical path. See
 // the comment in CategoryReplacementSelectLazy for the measurement.
@@ -106,6 +109,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const [walletBalance, setWalletBalance] = useState<number | null>(() => getCachedJSON<number | null>(CACHE_KEYS.walletBalance, null))
   const [wishlist, setWishlist] = useState<WishlistItem[]>(() => getCachedWishlist(CACHE_KEYS.wishlist))
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(() => getCachedJSON(CACHE_KEYS.savingsGoals, []))
+  const [loans, setLoans] = useState<Loan[]>(() => getCachedJSON(CACHE_KEYS.loans, []))
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<AutocompleteSuggestion[]>([])
 
   const [error, setError] = useState<string | null>(null)
@@ -364,6 +368,21 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         return
       }
 
+      // Loan terms are ledger-neutral. Their read model replays the full history returned by the
+      // endpoint, so a CRUD-only drain does not need to reload the dashboard or cycle slice.
+      const onlyLoanCrud = ops.length > 0 && ops.every(op =>
+        op.entity === 'loan' && (op.type === 'add' || op.type === 'update' || op.type === 'delete')
+      )
+      if (onlyLoanCrud) {
+        const { fetchLoans } = await import('../lib/api/loans')
+        const refreshedLoans = await fetchLoans()
+        setLoans(refreshedLoans)
+        setCachedJSON(CACHE_KEYS.loans, refreshedLoans)
+        setError(null)
+        isServerAwakeRef.current = true
+        return
+      }
+
       const onlyCategoryAdds = ops.length > 0 && ops.every(op =>
         op.entity === 'category' && op.type === 'add'
       )
@@ -429,7 +448,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       // otherwise be permanently unable to load.
       const bootstrapped = await fetchBootstrapPayload(month, year, ac.signal)
 
-      const [dbData, txs, recs, cats, wishes, autoSuggests, wallet, insights, goals] = bootstrapped ?? await (async () => {
+      const [dbData, txs, recs, cats, wishes, autoSuggests, wallet, insights, goals, loadedLoans] = bootstrapped ?? await (async () => {
         const dashboardPromise = api.fetchDashboard(month, year, ac.signal)
         const transactionsPromise = (month && year !== undefined)
           ? api.fetchTransactions(month, year, undefined, ac.signal)
@@ -456,6 +475,11 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
           import('../lib/api/savingsGoals').then(m => m.fetchSavingsGoals(ac.signal)).catch((goalsError: unknown) => {
             if (getErrorName(goalsError) === 'AbortError' || rethrowOnError) throw goalsError
             console.warn('Could not refresh savings goals; keeping the last known local copy.', goalsError)
+            return null
+          }),
+          import('../lib/api/loans').then(m => m.fetchLoans(ac.signal)).catch((loansError: unknown) => {
+            if (getErrorName(loansError) === 'AbortError' || rethrowOnError) throw loansError
+            console.warn('Could not refresh loans; keeping the last known local copy.', loansError)
             return null
           }),
         ] as const)
@@ -509,6 +533,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       if (Array.isArray(goals)) {
         setSavingsGoals(goals)
       }
+      if (Array.isArray(loadedLoans)) {
+        setLoans(loadedLoans)
+      }
       setAutocompleteSuggestions(autoSuggests)
       setError(null)
       isServerAwakeRef.current = true
@@ -522,6 +549,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       }
       if (Array.isArray(goals)) {
         setCachedJSON(CACHE_KEYS.savingsGoals, goals)
+      }
+      if (Array.isArray(loadedLoans)) {
+        setCachedJSON(CACHE_KEYS.loans, loadedLoans)
       }
       // This snapshot duplicates the two large payloads just written above. Let React paint
       // the fresh screen before serialising and rotating the offline cycle history.
@@ -684,6 +714,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setCategoriesList([])
     setWishlist([])
     setSavingsGoals([])
+    setLoans([])
     setDirectSyncIds([])
     setPendingLedgerTransactions([])
     setSelectedMonth('')
@@ -698,6 +729,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       CACHE_KEYS.categories,
       CACHE_KEYS.wishlist,
       CACHE_KEYS.savingsGoals,
+      CACHE_KEYS.loans,
       CACHE_KEYS.walletBalance,
       CACHE_KEYS.pendingTransactions,
       CACHE_KEYS.pendingOperations,
@@ -862,6 +894,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const allRecurringPayments = queuedRecurringPayments
   const allWishlist = useOptimisticList(wishlist, activeOps, 'wishlistItem')
   const allSavingsGoals = useOptimisticList(savingsGoals, activeOps, 'savingsGoal')
+  const queuedLoans = useOptimisticList(loans, activeOps, 'loan')
+  const allLoans = useMemo(() => projectLoanStates(queuedLoans, activeOps), [activeOps, queuedLoans])
   const allCategories = useOptimisticList(categoriesList, activeOps, 'category')
 
   const formatSensitive = useCallback((val: number) => {
@@ -1480,6 +1514,15 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     refreshAll: () => loadAll(selectedMonth || undefined, selectedYear || undefined, true, false, () => true),
   })
 
+  const loanActions = createLoanActions({
+    loans: allLoans,
+    guardSensitive,
+    enqueue,
+    mutateQueue,
+    snapshotForUndo,
+    setConfirmModalData,
+  })
+
   return {
     transactions,
     allTransactions,
@@ -1491,6 +1534,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     allWishlist,
     savingsGoals,
     allSavingsGoals,
+    loans,
+    allLoans,
     dashboardData,
     optimisticDashboardData,
     walletBalance,
@@ -1559,5 +1604,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     handlePayEarly,
     requestPayEarly,
     ...wishlistSavingsActions,
+    ...loanActions,
   }
 }

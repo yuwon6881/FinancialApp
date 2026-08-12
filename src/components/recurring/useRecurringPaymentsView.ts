@@ -8,13 +8,9 @@ import { financialDate } from '../../lib/financialDate'
 import { formatSensitiveAmount, formatCurrencyAmount } from './formatters'
 import { focusFirstInvalidField } from '../ui/formValidation'
 import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
+import { isRecurringLedgerCategory, type RecurringLedgerCategory } from '../../lib/ledgerCategories'
 
-const RECURRING_LEDGER_CATEGORIES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
-export type RecurringLedgerCategory = typeof RECURRING_LEDGER_CATEGORIES[number]
-
-function isRecurringLedgerCategory(value: string): value is RecurringLedgerCategory {
-  return (RECURRING_LEDGER_CATEGORIES as readonly string[]).includes(value)
-}
+export type { RecurringLedgerCategory } from '../../lib/ledgerCategories'
 
 // '' is the "not chosen yet" state of the add form's payment-mode select. There is deliberately no
 // default: guessing wrong here silently offers Pay Early on a direct debit, or hides it from a bill

@@ -7,6 +7,7 @@ import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { HorizontalRail } from '../ui/HorizontalRail'
 import { SavingsGoalCard } from './SavingsGoalCard'
+import { getCategoryBadgeClass } from '../../lib/categoryColors'
 
 interface CommitmentsSectionProps {
   pool: GoalPoolSummary
@@ -87,6 +88,9 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
         <CheckCircle2 className="size-3 shrink-0" /> Done
       </span>
       <span className="text-xs font-bold text-foreground truncate">{goal.name}</span>
+      <span className={`w-fit rounded-full border px-1.5 py-0.5 text-[9px] ${getCategoryBadgeClass(goal.fundingBucket ?? 'Rewards')}`}>
+        {goal.fundingBucket ?? 'Rewards'}
+      </span>
       <span className="text-[10px] font-semibold text-muted-foreground">
         {formatSensitive(goal.targetAmount)}
       </span>
@@ -115,7 +119,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
               </span>
             )}
           </h3>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">Money held back from your rewards for something specific.</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Money held back from an existing bucket for something specific.</p>
         </div>
         <Button variant="secondary" size="sm" className="shrink-0" onClick={onAddGoal} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a commitment' : undefined}>
           <Plus className="size-3" /> Add goal

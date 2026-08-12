@@ -315,6 +315,59 @@ export interface RecurringPayment {
   reminderLeadDays?: number
 }
 
+export type LoanInterestMethod = 'ReducingBalance' | 'Flat'
+
+export interface LoanPaymentSplit {
+  occurrenceDate: string
+  payment: number
+  interest: number
+  principal: number
+  balanceBefore: number
+  balanceAfter: number
+  surplus: number
+  paymentDidNotCoverInterest: boolean
+  transactionId?: string | null
+}
+
+export interface LoanScheduleEntry {
+  occurrenceDate: string
+  payment: number
+  interest: number
+  principal: number
+  balanceAfter: number
+}
+
+export interface LoanSnapshot {
+  outstandingBalance: number
+  scheduledPayment: number
+  totalScheduledInterest: number
+  totalInterestPaid: number
+  payoffDate?: string | null
+  lastOccurrenceDate?: string | null
+  nextPayment?: LoanScheduleEntry | null
+  payments: LoanPaymentSplit[]
+  futureSchedule: LoanScheduleEntry[]
+}
+
+export interface Loan {
+  id: string
+  name: string
+  recurringPaymentId: string
+  openingPrincipal: number
+  trackingStartDate: string
+  annualRatePercent: number
+  termPeriods: number
+  interestMethod: LoanInterestMethod
+  recurringPaymentExists?: boolean
+  recurringPaymentName?: string | null
+  recurringPaymentFrequency?: RecurringFrequency | null
+  recurringPaymentDueDate?: number | null
+  snapshot: LoanSnapshot
+  isPendingSync?: boolean
+  pendingSyncOperationId?: string
+  isPendingDelete?: boolean
+}
+
 /** The two notification kinds. Each is opted into separately, and per device. */
 export type PushChannel = 'billReminders' | 'categoryAlerts'
 
@@ -602,20 +655,22 @@ export interface WishlistItem {
 }
 
 export type SavingsGoalStatus = 'active' | 'completed'
+export type SavingsGoalFundingBucket = 'Essentials' | 'Rewards'
 
 /**
- * A dated savings commitment funded out of the SAME Rewards pool the wishlist draws from.
+ * A dated savings commitment funded out of an existing Essentials or Rewards pool.
  *
  * It is not a fifth budget bucket — the four ledger allocations are untouched. `earmarkedAmount`
- * is a *claim* on Rewards money that already exists, and the sum of all active claims can never
- * exceed the Rewards balance. What is left over after every claim is the free-to-spend remainder
- * that wishlist rewards are measured against (see `lib/savingsGoals.ts`).
+ * is a claim on money that already exists in `fundingBucket`; the sum of active claims in that
+ * bucket can never exceed its balance.
  */
 export interface SavingsGoal {
   id: number
   name: string
   targetAmount: number
   earmarkedAmount: number
+  /** Existing ledger bucket that holds this goal's earmark; older cached rows mean Rewards. */
+  fundingBucket?: SavingsGoalFundingBucket
   /** 'YYYY-MM-DD' — the date the money needs to be ready. Drives the required-per-cycle pace. */
   targetDate: string
   priority: string // High, Medium, Low

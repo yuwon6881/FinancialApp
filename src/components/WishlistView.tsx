@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import type { WishlistItem, SavingsGoal } from '../types'
+import type { WishlistItem, SavingsGoal, SavingsGoalFundingBucket } from '../types'
 import { BottomSheet } from './ui/BottomSheet'
 import { DatePicker } from './ui/DatePicker'
 import { FormField } from './ui/FormField'
@@ -31,6 +31,9 @@ interface WishlistViewProps {
   savingsGoals: SavingsGoal[]
   rewardsBalance: number
   pendingRewardsDeduction?: number
+  essentialsBalance?: number
+  pendingEssentialsDeduction?: number
+  essentialsTarget?: number
   rewardsTarget: number
   pastThreeMonthsRewardsAverage: number
   hasRewardsHistory: boolean
@@ -46,7 +49,7 @@ interface WishlistViewProps {
   onCompleteGoal: (id: number) => Promise<void> | void
   /** Resolves to the server's rejection message, or null when the move stuck. */
   onContributeToGoal: (id: number, amount: number) => Promise<string | null> | void
-  onFundGoalsForCycle: () => Promise<void> | void
+  onFundGoalsForCycle: (bucket?: SavingsGoalFundingBucket) => Promise<void> | void
   isOffline?: boolean
   formatSensitive?: (val: number) => React.ReactNode
   autoOpenAddModal?: boolean
@@ -85,6 +88,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   savingsGoals,
   rewardsBalance,
   pendingRewardsDeduction = 0,
+  essentialsBalance = 0,
+  pendingEssentialsDeduction = 0,
+  essentialsTarget = 0,
   rewardsTarget,
   pastThreeMonthsRewardsAverage,
   hasRewardsHistory,
@@ -206,18 +212,36 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   }, [hideSensitive])
 
   // --- The shared pool ------------------------------------------------------------------------
-  // One Rewards balance, two kinds of claim on it. Everything below is derived from this single
-  // summary so the pool bar, the goal cards and the wishlist progress cannot disagree about how
-  // the same money is divided.
+  // One balance per eligible bucket, with commitments claiming each bucket before spending can use
+  // it. Everything below is derived from these summaries so the pool bars, goal cards and wishlist
+  // progress cannot disagree about how the same money is divided.
   // Keyed on the local calendar day rather than memoised once on mount. This is an installed PWA
   // that is routinely left open across midnight, and a `today` frozen at mount kept reporting a
   // commitment as on pace into the day its deadline had already passed. `today` only ever resolves
   // a cycle and a calendar day downstream, so local midnight is the honest instant to hand it.
   const todayKey = new Date().toLocaleDateString('en-CA')
   const today = React.useMemo(() => new Date(`${todayKey}T00:00:00`), [todayKey])
-  const pool = useMemo(
-    () => summarizePool(savingsGoals, rewardsBalance, rewardsTarget, today, cycleDay, pendingRewardsDeduction),
+  const rewardsPool = useMemo(
+    () => summarizePool(savingsGoals, rewardsBalance, rewardsTarget, today, cycleDay, pendingRewardsDeduction, 'Rewards'),
     [savingsGoals, rewardsBalance, rewardsTarget, today, cycleDay, pendingRewardsDeduction],
+  )
+  const essentialsPool = useMemo(
+    () => summarizePool(savingsGoals, essentialsBalance, essentialsTarget, today, cycleDay, pendingEssentialsDeduction, 'Essentials'),
+    [savingsGoals, essentialsBalance, essentialsTarget, today, cycleDay, pendingEssentialsDeduction],
+  )
+  const commitmentsPool = useMemo(
+    () => ({
+      ...rewardsPool,
+      activeGoals: [...rewardsPool.activeGoals, ...essentialsPool.activeGoals],
+      totalEarmarked: rewardsPool.totalEarmarked + essentialsPool.totalEarmarked,
+      requiredPerCycleTotal: rewardsPool.requiredPerCycleTotal + essentialsPool.requiredPerCycleTotal,
+      fundedThisCycleTotal: rewardsPool.fundedThisCycleTotal + essentialsPool.fundedThisCycleTotal,
+      outstandingThisCycleTotal: rewardsPool.outstandingThisCycleTotal + essentialsPool.outstandingThisCycleTotal,
+      paceShortfall: rewardsPool.paceShortfall + essentialsPool.paceShortfall,
+      hasUnfinishedGoals: rewardsPool.hasUnfinishedGoals || essentialsPool.hasUnfinishedGoals,
+      paces: new Map([...rewardsPool.paces, ...essentialsPool.paces]),
+    }),
+    [rewardsPool, essentialsPool],
   )
 
   const completedGoals = useMemo(
@@ -242,7 +266,11 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   // Rewards are claimed against the FREE remainder, never the whole balance. This is the fix for
   // the page's central inaccuracy: measuring every wishlist item against `rewardsBalance` reported
   // several items as simultaneously affordable out of money that could only cover one.
-  const claimableBalance = pool.unassigned
+  const claimableBalance = rewardsPool.unassigned
+  // This is a warning threshold only. The server still measures affordability against `unassigned`
+  // and continues to allow the purchase; the extra figure makes the cycle-level trade-off visible
+  // at the last point of decision.
+  const freeAfterGoalPace = Math.round((claimableBalance - rewardsPool.outstandingThisCycleTotal) * 100) / 100
 
   // Rewards inflow net of what the commitments take first. This is what makes the projections
   // honest — and it is the moment the tradeoff becomes legible ("headphones are 4 months out
@@ -250,10 +278,10 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   // Prefer what actually landed over the last three cycles when there is history to go on; fall back
   // to the budgeted figure for a new user.
   const freeInflowPerCycle = useMemo(() => {
-    const budgeted = Math.max(0, rewardsTarget - pool.requiredPerCycleTotal)
+    const budgeted = Math.max(0, rewardsTarget - rewardsPool.requiredPerCycleTotal)
     if (!hasRewardsHistory) return budgeted
-    return Math.max(0, pastThreeMonthsRewardsAverage - pool.requiredPerCycleTotal)
-  }, [rewardsTarget, pastThreeMonthsRewardsAverage, hasRewardsHistory, pool.requiredPerCycleTotal])
+    return Math.max(0, pastThreeMonthsRewardsAverage - rewardsPool.requiredPerCycleTotal)
+  }, [rewardsTarget, pastThreeMonthsRewardsAverage, hasRewardsHistory, rewardsPool.requiredPerCycleTotal])
 
   const activeItem = useMemo(() => getActiveWishlistItem(wishlist), [wishlist])
 
@@ -330,24 +358,37 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             )}
           </header>
           <RewardsPoolBar
-            summary={pool}
+            summary={rewardsPool}
+            bucket="Rewards"
             expectedInflow={rewardsTarget}
             formatSensitive={formatSensitive}
             hideSensitive={hideSensitive}
             isOffline={isOffline}
             isFunding={isFunding}
-            onFundCycle={() => { void onFundGoalsForCycle() }}
+            onFundCycle={() => { void onFundGoalsForCycle('Rewards') }}
             onViewRewardsHistory={onNavigateToLedger
               ? () => onNavigateToLedger({ category: 'Rewards', showAllCycles: true })
               : undefined}
           />
+          {essentialsPool.activeGoals.length > 0 && (
+            <RewardsPoolBar
+              summary={essentialsPool}
+              bucket="Essentials"
+              expectedInflow={essentialsTarget}
+              formatSensitive={formatSensitive}
+              hideSensitive={hideSensitive}
+              isOffline={isOffline}
+              isFunding={isFunding}
+              onFundCycle={() => { void onFundGoalsForCycle('Essentials') }}
+            />
+          )}
         </>
       )}
 
       {/* Two rows over one pool. Each grows sideways rather than pushing the page down, so however
           many items exist the whole picture stays on one screen. */}
       <CommitmentsSection
-        pool={pool}
+        pool={commitmentsPool}
         completedGoals={completedGoals}
         formatSensitive={formatSensitive}
         hideSensitive={hideSensitive}
@@ -397,6 +438,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 item={item}
                 isFocused={activeItem?.id === item.id}
                 claimableBalance={claimableBalance}
+                freeAfterGoalPace={freeAfterGoalPace}
                 formatSensitive={formatSensitive}
                 hideSensitive={hideSensitive}
                 isSyncing={isItemSyncing(item.id)}
@@ -444,6 +486,12 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 className="w-full"
               />
             </FormField>
+
+            {purchasingItem.price <= claimableBalance && purchasingItem.price > freeAfterGoalPace && (
+              <p className="text-xs font-medium text-muted-foreground">
+                Buying this leaves your goals <span className="font-bold text-amber-500">{formatSensitive(Math.max(0, purchasingItem.price - freeAfterGoalPace))}</span> short this cycle.
+              </p>
+            )}
 
             <div className="flex gap-2 pt-4">
               <Button variant="ghost" className="flex-1" onClick={() => setPurchasingItem(null)}>
@@ -497,6 +545,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             currency={currency}
             name={goalForm.nameInput}
             target={goalForm.targetInput}
+            fundingBucket={goalForm.fundingBucketInput}
             date={goalForm.dateInput}
             priority={goalForm.priorityInput}
             isRecurring={goalForm.isRecurringInput}
@@ -507,6 +556,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             formatSensitive={formatSensitive}
             onNameChange={goalForm.setNameInput}
             onTargetChange={goalForm.handleTargetChange}
+            onFundingBucketChange={goalForm.setFundingBucketInput}
             onDateChange={goalForm.setDateInput}
             onPriorityChange={goalForm.setPriorityInput}
             onRecurringChange={goalForm.setIsRecurringInput}
@@ -530,6 +580,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             currency={currency}
             name={goalForm.nameInput}
             target={goalForm.targetInput}
+            fundingBucket={goalForm.fundingBucketInput}
             date={goalForm.dateInput}
             priority={goalForm.priorityInput}
             isRecurring={goalForm.isRecurringInput}
@@ -540,6 +591,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             formatSensitive={formatSensitive}
             onNameChange={goalForm.setNameInput}
             onTargetChange={goalForm.handleTargetChange}
+            onFundingBucketChange={goalForm.setFundingBucketInput}
             onDateChange={goalForm.setDateInput}
             onPriorityChange={goalForm.setPriorityInput}
             onRecurringChange={goalForm.setIsRecurringInput}
@@ -557,8 +609,12 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           goal={contributeTarget.goal}
           mode={contributeTarget.mode}
           currency={currency}
-          available={claimableBalance}
-          suggested={pool.paces.get(contributeTarget.goal.id)?.requiredPerCycle ?? 0}
+          available={(contributeTarget.goal.fundingBucket ?? 'Rewards') === 'Essentials'
+            ? essentialsPool.unassigned
+            : rewardsPool.unassigned}
+          suggested={(contributeTarget.goal.fundingBucket ?? 'Rewards') === 'Essentials'
+            ? essentialsPool.paces.get(contributeTarget.goal.id)?.requiredPerCycle ?? 0
+            : rewardsPool.paces.get(contributeTarget.goal.id)?.requiredPerCycle ?? 0}
           formatSensitive={formatSensitive}
           onClose={() => setContributeTarget(null)}
           onConfirm={async amount => {

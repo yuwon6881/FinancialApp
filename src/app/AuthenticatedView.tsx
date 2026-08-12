@@ -60,6 +60,7 @@ interface AuthenticatedViewProps {
   wishlistDashboardData: DashboardData | null
   wishlistRewardsBalance: number
   wishlistPendingRewardsDeduction: number
+  wishlistPendingEssentialsDeduction: number
   /** True while the Rewards figures on hand belong to a cycle other than the current one. */
   isWishlistCycleStale: boolean
   currentPendingNotificationsCount: number
@@ -96,6 +97,7 @@ export function AuthenticatedView({
   wishlistDashboardData,
   wishlistRewardsBalance,
   wishlistPendingRewardsDeduction,
+  wishlistPendingEssentialsDeduction,
   isWishlistCycleStale,
   currentPendingNotificationsCount,
   currentCycleMonth,
@@ -346,6 +348,10 @@ export function AuthenticatedView({
                       thisDevicePushEnabled={push.billRemindersEnabled}
                       onUpdateReminder={financial.handleUpdateReminder}
                       onRequestPayEarly={financial.requestPayEarly}
+                      loans={financial.allLoans}
+                      onAddLoan={financial.handleAddLoan}
+                      onUpdateLoan={financial.handleUpdateLoan}
+                      onRequestDeleteLoan={financial.requestDeleteLoan}
                       aiDraft={aiRouter.state.aiRecurringDraft}
                       aiEditDraft={aiRouter.state.aiRecurringEditDraft}
                       onAiDraftConsumed={() => aiRouter.dispatch({ aiRecurringDraft: null })}
@@ -441,6 +447,9 @@ export function AuthenticatedView({
                       savingsGoals={financial.allSavingsGoals}
                       rewardsBalance={wishlistRewardsBalance}
                       pendingRewardsDeduction={wishlistPendingRewardsDeduction}
+                      essentialsBalance={wishlistDashboardData?.categories?.find(c => c.name === 'Essentials')?.remaining ?? 0}
+                      pendingEssentialsDeduction={wishlistPendingEssentialsDeduction}
+                      essentialsTarget={wishlistDashboardData?.categories?.find(c => c.name === 'Essentials')?.target ?? 0}
                       rewardsTarget={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
                       pastThreeMonthsRewardsAverage={wishlistDashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
                       hasRewardsHistory={wishlistDashboardData?.stats?.hasRewardsHistory ?? false}

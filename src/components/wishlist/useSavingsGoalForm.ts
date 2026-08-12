@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
-import type { SavingsGoal } from '../../types'
+import type { SavingsGoal, SavingsGoalFundingBucket } from '../../types'
+import { isSavingsGoalFundingBucket } from '../../lib/ledgerCategories'
 import { maskCurrencyInput } from '../../lib/utils'
 import { useFormDraft } from '../../lib/useFormDraft'
 import { focusFirstInvalidField } from '../ui/formValidation'
@@ -34,6 +35,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [nameInput, setNameInput] = useState('')
   const [targetInput, setTargetInput] = useState('')
+  const [fundingBucketInput, setFundingBucketInput] = useState<SavingsGoalFundingBucket>('Rewards')
   const [dateInput, setDateInput] = useState(defaultTargetDate)
   const [priorityInput, setPriorityInput] = useState('Medium')
   const [isRecurringInput, setIsRecurringInput] = useState(false)
@@ -51,10 +53,13 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
     const lower = value.toLowerCase()
     return lower === 'high' ? 'High' : lower === 'low' ? 'Low' : 'Medium'
   }
+  const normalizeFundingBucket = (value: string): SavingsGoalFundingBucket =>
+    isSavingsGoalFundingBucket(value) ? value : 'Rewards'
 
   const resetFields = useCallback(() => {
     setNameInput('')
     setTargetInput('')
+    setFundingBucketInput('Rewards')
     setDateInput(defaultTargetDate())
     setPriorityInput('Medium')
     setIsRecurringInput(false)
@@ -74,6 +79,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
     setEditingGoal(goal)
     setNameInput(goal.name)
     setTargetInput(goal.targetAmount.toFixed(2))
+    setFundingBucketInput(normalizeFundingBucket(goal.fundingBucket ?? 'Rewards'))
     setDateInput(goal.targetDate)
     setPriorityInput(goal.priority)
     setIsRecurringInput(goal.isRecurring)
@@ -93,6 +99,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
     resetFields()
     setNameInput(readText(fields, 'name', ''))
     setTargetInput(readNumber(fields, 'targetAmount', ''))
+    setFundingBucketInput(normalizeFundingBucket(readText(fields, 'fundingBucket', 'Rewards')))
     setDateInput(readText(fields, 'targetDate', defaultTargetDate()))
     setPriorityInput(normalizePriority(readText(fields, 'priority', 'Medium')))
     setIsRecurringInput(readBoolean(fields, 'isRecurring', false))
@@ -112,6 +119,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
     setEditingGoal(goal)
     setNameInput(readText(changes, 'name', goal.name))
     setTargetInput(readNumber(changes, 'targetAmount', goal.targetAmount.toFixed(2)))
+    setFundingBucketInput(normalizeFundingBucket(readText(changes, 'fundingBucket', goal.fundingBucket ?? 'Rewards')))
     setDateInput(readText(changes, 'targetDate', goal.targetDate))
     setPriorityInput(normalizePriority(readText(changes, 'priority', goal.priority)))
     setIsRecurringInput(readBoolean(changes, 'isRecurring', goal.isRecurring))
@@ -133,6 +141,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
     nameInput,
     targetInput,
     dateInput,
+    fundingBucketInput,
     priorityInput,
     isRecurringInput,
     recurrenceMonthsInput,
@@ -145,6 +154,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
     draft => {
       setNameInput(draft.nameInput)
       setTargetInput(draft.targetInput)
+      setFundingBucketInput(draft.fundingBucketInput)
       setDateInput(draft.dateInput)
       setPriorityInput(draft.priorityInput)
       setIsRecurringInput(draft.isRecurringInput)
@@ -163,6 +173,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
       setEditingGoal(goal)
       setNameInput(draft.nameInput)
       setTargetInput(draft.targetInput)
+      setFundingBucketInput(draft.fundingBucketInput)
       setDateInput(draft.dateInput)
       setPriorityInput(draft.priorityInput)
       setIsRecurringInput(draft.isRecurringInput)
@@ -225,6 +236,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
     const goal: Partial<SavingsGoal> = {
       name: nameInput.trim(),
       targetAmount: valid.target,
+      fundingBucket: fundingBucketInput,
       targetDate: dateInput,
       priority: priorityInput,
       isRecurring: isRecurringInput,
@@ -247,6 +259,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
       ...editingGoal,
       name: nameInput.trim(),
       targetAmount: valid.target,
+      fundingBucket: fundingBucketInput,
       targetDate: dateInput,
       priority: priorityInput,
       isRecurring: isRecurringInput,
@@ -282,6 +295,8 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
     setNameInput,
     targetInput,
     handleTargetChange,
+    fundingBucketInput,
+    setFundingBucketInput,
     releasedByLowerTarget,
     dateInput,
     setDateInput,

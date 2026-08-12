@@ -8,6 +8,7 @@ import { parseGoalDate } from '../../lib/savingsGoals'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
+import { getCategoryBadgeClass, getCategoryChartColor } from '../../lib/categoryColors'
 
 interface SavingsGoalCardProps {
   goal: SavingsGoal
@@ -72,6 +73,8 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
     ? Math.max(0, Math.min(100, (goal.earmarkedAmount / goal.targetAmount) * 100))
     : 0
   const style = STATUS[status]
+  const fundingBucket = goal.fundingBucket ?? 'Rewards'
+  const bucketColor = getCategoryChartColor(fundingBucket)
   // Overfunding a goal by hand fills the meter rather than overflowing it.
   const cycleTarget = Math.max(pace.requiredPerCycle, pace.fundedThisCycle)
   const cyclePct = cycleTarget > 0 ? Math.min(100, (pace.fundedThisCycle / cycleTarget) * 100) : 100
@@ -102,8 +105,11 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
           )}
           <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={goal.isPendingSync} entityLabel="goal" />
         </div>
-        <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">
-          {formatDeadline(goal.targetDate)} · {describeHorizon(pace)}
+        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
+          <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${getCategoryBadgeClass(fundingBucket)}`}>
+            {fundingBucket}
+          </span>
+          <span>{formatDeadline(goal.targetDate)} · {describeHorizon(pace)}</span>
         </p>
       </div>
 
@@ -115,7 +121,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
           </span>
         </div>
         <div className="mt-1.5 w-full bg-muted rounded-full h-1.5 overflow-hidden">
-          <div className={`h-full ${style.bar} transition-all duration-500 rounded-full`} style={{ width: `${pct}%` }} />
+          <div className={`h-full ${style.bar} transition-all duration-500 rounded-full`} style={{ width: `${pct}%`, ...(status === 'onPace' || status === 'needsFunding' ? { backgroundColor: bucketColor } : {}) }} />
         </div>
       </div>
 
@@ -152,7 +158,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
           >
             <div
               className={`h-full rounded-full transition-all duration-500 ${cycleDone ? 'bg-emerald-500' : style.bar}`}
-              style={{ width: `${cyclePct}%` }}
+              style={{ width: `${cyclePct}%`, ...(!cycleDone ? { backgroundColor: bucketColor } : {}) }}
             />
           </div>
 
@@ -231,7 +237,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
                   onClick={() => onTopUp(goal)}
                   disabled={isBusy || hideSensitive || pace.isFunded}
                   aria-label={`Add money to ${goal.name}`}
-                  title={pace.isFunded ? 'This goal already has everything it needs' : 'Move free rewards into this goal'}
+                  title={pace.isFunded ? 'This goal already has everything it needs' : `Move free ${fundingBucket.toLowerCase()} money into this goal`}
                 >
                   <Plus className="size-3.5" />
                 </Button>
@@ -243,7 +249,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
                   onClick={() => onRelease(goal)}
                   disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
                   aria-label={`Release money from ${goal.name}`}
-                  title="Release money back to your free rewards"
+                  title={`Release money back to your free ${fundingBucket.toLowerCase()}`}
                 >
                   <Minus className="size-3.5" />
                 </Button>
@@ -256,7 +262,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
                 disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
                 aria-label={goal.isRecurring ? `Complete this cycle for ${goal.name}` : `Mark ${goal.name} done`}
                 title={goal.earmarkedAmount <= 0
-                  ? 'Set aside some rewards before marking this commitment done'
+                  ? `Set aside some ${fundingBucket.toLowerCase()} money before marking this commitment done`
                   : goal.isRecurring
                     ? 'Spend the saved amount and roll the deadline forward'
                     : 'Spend the saved amount and mark this commitment done'}

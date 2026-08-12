@@ -3,10 +3,10 @@
 // Any change here needs the matching change (and test) on the backend, or the pace the UI shows
 // will disagree with the pace the server actually funds.
 //
-// The governing idea: a goal is an *earmark* on the shared Rewards pool, not a fifth budget
+// The governing idea: a goal is an *earmark* on one eligible budget pool, not a fifth budget
 // bucket. One balance, N claims, and whatever is unclaimed is the free-to-spend remainder.
 
-import type { SavingsGoal } from '../types'
+import type { SavingsGoal, SavingsGoalFundingBucket } from '../types'
 import { getCycleYearAndMonthForDate } from './cycle'
 import { calculateFreeRewardsBalance, isActiveGoal } from './freeRewards'
 
@@ -173,7 +173,7 @@ export function previewRequiredPerCycle(
 }
 
 export interface GoalPoolSummary {
-  /** The Rewards balance after pending bills are held aside — one pool, shared by commitments and rewards alike. */
+  /** The selected bucket balance after pending bills are held aside — one pool, shared by commitments and spending alike. */
   rewardsBalance: number
   /** Sum of every active goal's claim on it. */
   totalEarmarked: number
@@ -194,7 +194,7 @@ export interface GoalPoolSummary {
    */
   outstandingThisCycleTotal: number
   /**
-   * How far this cycle's requirement outruns what can actually meet it — the expected Rewards
+   * How far this cycle's requirement outruns what can actually meet it — the expected bucket
    * inflow *plus the money already free in the pool*.
    *
    * The free balance has to be in there. Measured against the inflow alone, a user holding 5,000
@@ -210,10 +210,12 @@ export interface GoalPoolSummary {
   paces: Map<number, GoalPace>
   /** Cycle key the tallies above are measured against. */
   currentCycleKey: string
+  /** The existing budget bucket represented by this summary; omitted by older callers means Rewards. */
+  fundingBucket?: SavingsGoalFundingBucket
 }
 
 /**
- * The single source of truth for the numbers the Rewards page renders. Derived rather than
+ * The single source of truth for the numbers the commitments page renders. Derived rather than
  * fetched, so the pool bar, the goal cards and the wishlist progress can never disagree about how
  * the same balance is divided.
  */
@@ -224,8 +226,10 @@ export function summarizePool(
   today: Date,
   cycleDay: number,
   pendingRewards = 0,
+  fundingBucket: SavingsGoalFundingBucket = 'Rewards',
 ): GoalPoolSummary {
-  const activeGoals = orderForFunding(goals.filter(isActiveGoal))
+  const activeGoals = orderForFunding(goals.filter(goal =>
+    isActiveGoal(goal) && (goal.fundingBucket ?? 'Rewards') === fundingBucket))
   const currentCycleKey = cycleKeyFor(today, cycleDay)
   const paces = new Map<number, GoalPace>()
   let totalEarmarked = 0
@@ -245,7 +249,9 @@ export function summarizePool(
   }
 
   const availableRewards = toCents(Math.max(0, rewardsBalance - Math.max(0, pendingRewards)))
-  const freeRewards = calculateFreeRewardsBalance(rewardsBalance, activeGoals, pendingRewards)
+  const freeRewards = fundingBucket === 'Rewards'
+    ? calculateFreeRewardsBalance(rewardsBalance, activeGoals, pendingRewards)
+    : toCents(Math.max(0, availableRewards - totalEarmarked))
 
   return {
     rewardsBalance: availableRewards,
@@ -261,6 +267,7 @@ export function summarizePool(
     activeGoals,
     paces,
     currentCycleKey,
+    fundingBucket,
   }
 }
 
