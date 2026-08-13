@@ -155,7 +155,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
         })
       }
       openTransactionForm()
-    }
+    },
+    { restoreOnMount: false }
   )
 
   useEffect(() => {

@@ -349,7 +349,20 @@ function App() {
       nav.setAutoOpenLedgerTxType(null)
       nav.setAutoOpenReceiptSplit(false)
     }
-  }, [prefs.activeTab, nav.setAutoOpenLedgerAdd, nav.setAutoOpenLedgerTxType, nav.setAutoOpenReceiptSplit])
+    if (prefs.activeTab !== 'recurring') {
+      nav.setAutoOpenSubscriptionAdd(false)
+    }
+    if (prefs.activeTab !== 'wishlist') {
+      nav.setAutoOpenWishlistAdd(false)
+    }
+  }, [
+    prefs.activeTab,
+    nav.setAutoOpenLedgerAdd,
+    nav.setAutoOpenLedgerTxType,
+    nav.setAutoOpenReceiptSplit,
+    nav.setAutoOpenSubscriptionAdd,
+    nav.setAutoOpenWishlistAdd,
+  ])
 
   // Drop the subscription highlight (state + `?subscription=` param) whenever we
   // leave the Recurring tab. Without this, navigating away mid-highlight — before

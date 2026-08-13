@@ -1,4 +1,5 @@
-import { Clock, Edit2 } from 'lucide-react'
+import { ChevronDown, Clock, Edit2, Wallet } from 'lucide-react'
+import { useState } from 'react'
 import type { CategorySummary } from '../../types'
 import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { getCategoryDotClass } from '../../lib/categoryColors'
@@ -147,24 +148,48 @@ function AccountBreakdown({
   amountsMasked: boolean
   formatCurrency: (value: number) => string
 }) {
+  const [isOpen, setIsOpen] = useState(false)
   if (!category.accounts?.length) return null
+  const total = category.accounts.reduce((sum, account) => sum + account.remaining, 0)
+  const accountLabel = category.accounts.length === 1 ? 'account' : 'accounts'
+
   return (
-    <details className="w-full text-left text-[10px] sm:max-w-[230px]">
-      <summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
-        {category.accounts.length} {category.accounts.length === 1 ? 'account' : 'accounts'}
+    <details
+      className="group/account col-span-2 w-full text-left text-[10px] sm:max-w-[260px]"
+      open={isOpen}
+      onToggle={event => setIsOpen(event.currentTarget.open)}
+    >
+      <summary className="flex min-h-8 cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/20 px-2.5 py-1.5 font-semibold text-muted-foreground outline-hidden transition-colors hover:border-primary/30 hover:bg-muted/30 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <Wallet className="size-3.5 shrink-0 text-ledger-blue-400" aria-hidden="true" />
+          <span className="truncate">{category.accounts.length} {accountLabel}</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1 text-[9px] font-medium">
+          <span className="hidden sm:inline">View balances</span>
+          <ChevronDown className="size-3.5 transition-transform duration-200 group-open/account:rotate-180" aria-hidden="true" />
+        </span>
       </summary>
-      <div className="mt-1.5 space-y-1 rounded-lg border border-border/50 bg-muted/10 p-2">
-        {category.accounts.map(account => (
-          <div key={account.id} className="flex items-center justify-between gap-2">
-            <span className={`min-w-0 truncate ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}>
-              {account.name}{account.isArchived ? ' (Closed)' : ''}
-            </span>
-            <SensitiveAmount value={account.remaining} isMasked={amountsMasked} formatFn={formatCurrency} className="shrink-0 font-semibold" />
-          </div>
-        ))}
-        <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-1 font-bold text-foreground">
+      <div className="mt-1.5 overflow-hidden rounded-xl border border-border/60 bg-card/80 shadow-sm">
+        <div className="flex items-center justify-between gap-2 border-b border-border/50 bg-muted/15 px-2.5 py-2">
+          <span className="font-semibold text-foreground">Account balances</span>
+          <span className="text-[9px] text-muted-foreground">Current</span>
+        </div>
+        <div className="divide-y divide-border/40">
+          {category.accounts.map(account => (
+            <div key={account.id} className="flex items-center justify-between gap-3 px-2.5 py-2">
+              <div className="min-w-0 flex-1">
+                <span className={`block truncate font-medium ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}>
+                  {account.name}
+                </span>
+                {account.isArchived && <span className="mt-0.5 block text-[9px] text-muted-foreground">Closed account</span>}
+              </div>
+              <SensitiveAmount value={account.remaining} isMasked={amountsMasked} formatFn={formatCurrency} className="shrink-0 font-semibold text-foreground" />
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-between gap-2 border-t border-border/60 bg-muted/15 px-2.5 py-2 font-bold text-foreground">
           <span>Accounts total</span>
-          <SensitiveAmount value={category.accounts.reduce((sum, account) => sum + account.remaining, 0)} isMasked={amountsMasked} formatFn={formatCurrency} />
+          <SensitiveAmount value={total} isMasked={amountsMasked} formatFn={formatCurrency} />
         </div>
       </div>
     </details>

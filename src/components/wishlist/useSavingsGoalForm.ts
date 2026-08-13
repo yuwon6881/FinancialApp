@@ -161,6 +161,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
       setRecurrenceMonthsInput(draft.recurrenceMonthsInput)
       setMode('add')
     },
+    { restoreOnMount: false },
   )
   const { clearDraft: clearEditDraft } = useFormDraft(
     'savings-goal-edit',
@@ -181,6 +182,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
       options.onStartEditPending?.(String(goal.id))
       setMode('edit')
     },
+    { restoreOnMount: false },
   )
 
   const closeAdd = useCallback(() => {

@@ -34,6 +34,43 @@ export interface BucketSetupPendingReview {
   drafts: BucketSetupDraftAccount[]
 }
 
+export interface BucketSetupAccountSnapshot {
+  id: string
+  name: string
+  kind: LedgerAccountKind
+  isArchived: boolean
+  isDefault: boolean
+  remaining: number
+}
+
+export interface BucketSetupSessionSnapshot {
+  bucketTotal: number
+  accounts: ReadonlyArray<BucketSetupAccountSnapshot>
+}
+
+const roundMoney = (value: number) => Math.round(value * 100) / 100
+
+export function hasBucketAccountSetupChanged(
+  snapshot: BucketSetupSessionSnapshot | null,
+  bucketTotal: number,
+  accounts: ReadonlyArray<BucketSetupAccountSnapshot>,
+) {
+  if (!snapshot) return false
+  if (Math.abs(roundMoney(snapshot.bucketTotal) - roundMoney(bucketTotal)) >= ACCOUNT_RECONCILIATION_EPSILON) return true
+  if (snapshot.accounts.length !== accounts.length) return true
+
+  const currentById = new Map(accounts.map(account => [account.id, account]))
+  return snapshot.accounts.some(account => {
+    const current = currentById.get(account.id)
+    return !current
+      || current.name !== account.name
+      || current.kind !== account.kind
+      || current.isArchived !== account.isArchived
+      || current.isDefault !== account.isDefault
+      || Math.abs(roundMoney(current.remaining) - roundMoney(account.remaining)) >= ACCOUNT_RECONCILIATION_EPSILON
+  })
+}
+
 export const canReviewBucketAccountSetup = (
   preview: BucketAccountReconciliation | null,
   draftCount: number,
@@ -86,17 +123,30 @@ export function useBucketAccountSetupView({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [pending, setPending] = useState<BucketSetupPendingReview | null>(null)
   const initializationKeyRef = useRef<string | null>(null)
+  const sessionSnapshotRef = useRef<BucketSetupSessionSnapshot | null>(null)
   const initializationKey = isOpen && bucket ? JSON.stringify([bucket, initialDraft]) : null
 
   useEffect(() => {
     if (!initializationKey || !bucket) {
       initializationKeyRef.current = null
+      sessionSnapshotRef.current = null
       return
     }
     // Account balances can change while the confirmation is being applied. Only
     // reset the editor when a new setup session starts, not on every optimistic row update.
     if (initializationKeyRef.current === initializationKey) return
     initializationKeyRef.current = initializationKey
+    sessionSnapshotRef.current = {
+      bucketTotal: roundMoney(bucketTotal),
+      accounts: bucketAccounts.map(account => ({
+        id: account.id,
+        name: account.name,
+        kind: account.kind,
+        isArchived: account.isArchived,
+        isDefault: account.isDefault,
+        remaining: roundMoney(account.remaining),
+      })),
+    }
     const nextTargets = Object.fromEntries(bucketAccounts.map(account => [account.id, account.remaining.toFixed(2)]))
     const shouldCreateDefault = !hasLiveDefault && !initialDraft
     let nextDrafts = initialDraft
@@ -191,9 +241,11 @@ export function useBucketAccountSetupView({
   }, [bucket, bucketTotal, hasInvalidTarget, hasLiveDefault, parsedDraftTargets, parsedExistingTargets])
 
   // Keep Review clickable for an inconsistent starting snapshot. The review action owns the
-  // actionable refresh message; disabling the only forward action leaves the user stranded with
-  // unexplained totals, as happened when an optimistic salary temporarily over-counted accounts.
+  // actionable stale-session message; disabling the only forward action leaves the user stranded
+  // with unexplained totals. Initial bucket/account mismatches are valid review inputs because the
+  // preview can create the adjustment that brings them back into line.
   const canReview = canReviewBucketAccountSetup(preview, drafts.length)
+  const hasExternalChanges = hasBucketAccountSetupChanged(sessionSnapshotRef.current, bucketTotal, bucketAccounts)
 
   const prepareReview = () => {
     if (!bucket) return
@@ -220,14 +272,11 @@ export function useBucketAccountSetupView({
       nextErrors.form = 'Choose one new account as the default for this bucket.'
     }
     if (!preview) nextErrors.form = nextErrors.form ?? 'Enter a valid balance for every open account.'
-    if (preview && !preview.isCurrentTotalTally && hasLiveDefault) {
-      nextErrors.form = 'The current account rows do not match the bucket total. Refresh the page before changing this split.'
-    }
-    if (preview && !preview.isAdjustmentTally) {
-      nextErrors.form = 'The account split changed while this form was open. Refresh the page and try again.'
-    }
     if (preview && !preview.hasChanges && drafts.length === 0) {
       nextErrors.form = 'Change an account balance or add a new account before reviewing.'
+    }
+    if (hasExternalChanges) {
+      nextErrors.form = 'The bucket or account balances changed while this form was open. Close and reopen the setup before reviewing.'
     }
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0 || !preview) return
@@ -246,6 +295,7 @@ export function useBucketAccountSetupView({
     preview,
     pending,
     canReview,
+    hasExternalChanges,
     updateTarget,
     updateDraft,
     updateDraftTarget,

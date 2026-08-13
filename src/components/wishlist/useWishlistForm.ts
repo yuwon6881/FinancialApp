@@ -97,6 +97,7 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
       setIsActiveInput(draft.isActiveInput)
       setMode('add')
     },
+    { restoreOnMount: false },
   )
   const { clearDraft: clearEditDraft } = useFormDraft(
     'wishlist-edit',
@@ -114,6 +115,7 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
       options.onStartEditPending?.(String(item.id))
       setMode('edit')
     },
+    { restoreOnMount: false },
   )
 
   const closeAdd = useCallback(() => {

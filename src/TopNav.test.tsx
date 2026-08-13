@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import TopNav from './TopNav'
 
@@ -79,5 +79,29 @@ describe('TopNav mobile primary navigation', () => {
     expect(privacyStatus.className).toContain('pointer-events-none')
     expect(screen.getByText('Protecting your amounts')).toBeTruthy()
     expect(screen.getByText(/Checking privacy settings before anything is revealed/)).toBeTruthy()
+  })
+
+  it.each(['pending', 'resolved'] as const)('opens the account menu safely while privacy is %s', (sensitivePreferenceStatus) => {
+    render(
+      <TopNav
+        activeTab="dashboard"
+        onTabChange={vi.fn()}
+        hideSensitive
+        sensitivePreferenceStatus={sensitivePreferenceStatus}
+        onToggleHideSensitive={vi.fn()}
+        onRetrySensitivePreference={vi.fn()}
+        onLogout={vi.fn()}
+        username="Test User"
+        pendingNotifications={[]}
+        onOpenNotifications={vi.fn()}
+        darkMode={false}
+        onToggleDarkMode={vi.fn()}
+      />,
+    )
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Account menu' }), { button: 0 })
+
+    expect(screen.getByRole('menu')).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeTruthy()
   })
 })

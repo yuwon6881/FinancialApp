@@ -9,6 +9,13 @@ import {
   MenubarSeparator,
   MenubarTrigger,
 } from "@/components/ui/menubar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { 
   CalendarCheck2,
   Wallet, 
@@ -318,73 +325,71 @@ const TopNav: React.FC<TopNavProps> = ({
 
           {/* Profile/Account menu */}
           <div className="shrink-0 rounded-xl border border-border/60 bg-background">
-            <Menubar className="h-11 border-0 bg-transparent p-0">
-              <MenubarMenu>
-                <MenubarTrigger
-                  aria-label="Account menu"
-                  title="Account menu"
-                  className="size-11 rounded-xl p-2 cursor-pointer hover:bg-muted/50 active:scale-95"
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label="Account menu"
+                title="Account menu"
+                className="size-11 rounded-xl p-2 cursor-pointer hover:bg-muted/50 active:scale-95"
+              >
+                <div className="flex size-7 items-center justify-center rounded-full border border-blue-500/20 bg-linear-to-tr from-blue-500 to-sky-400 text-xs font-extrabold text-on-vivid">
+                  {getInitials(username)}
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="z-50 min-w-[180px] bg-card border border-border p-1 rounded-xl shadow-md">
+                <div className="px-2.5 py-2">
+                  <p className="text-xs font-bold text-foreground">{username || 'User'}</p>
+                  <p className="text-[10px] text-muted-foreground">Premium Account</p>
+                </div>
+
+                <DropdownMenuSeparator className="my-1 border-t border-border/30" />
+                  
+                <DropdownMenuItem
+                  onSelect={() => onTabChange('settings')}
+                  className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
                 >
-                  <div className="flex size-7 items-center justify-center rounded-full border border-blue-500/20 bg-linear-to-tr from-blue-500 to-sky-400 text-xs font-extrabold text-on-vivid">
-                    {getInitials(username)}
-                  </div>
-                </MenubarTrigger>
-                <MenubarContent className="z-50 min-w-[180px] bg-card border border-border p-1 rounded-xl shadow-md align-end">
-                  <div className="px-2.5 py-2">
-                    <p className="text-xs font-bold text-foreground">{username || 'User'}</p>
-                    <p className="text-[10px] text-muted-foreground">Premium Account</p>
-                  </div>
+                  <Settings className="size-3.5 text-blue-500" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
 
-                  <MenubarSeparator className="my-1 border-t border-border/30" />
-                  
-                  <MenubarItem
-                    onClick={() => onTabChange('settings')}
-                    className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
-                  >
-                    <Settings className="size-3.5 text-blue-500" />
-                    <span>Settings</span>
-                  </MenubarItem>
-
-                  <MenubarItem
-                    onClick={sensitivePreferenceStatus === 'resolved' ? onToggleHideSensitive : undefined}
-                    disabled={sensitivePreferenceStatus !== 'resolved'}
-                    className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground disabled:cursor-not-allowed sm:min-h-0"
-                  >
+                <DropdownMenuItem
+                  onSelect={sensitivePreferenceStatus === 'resolved' ? onToggleHideSensitive : undefined}
+                  disabled={sensitivePreferenceStatus !== 'resolved'}
+                  className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground disabled:cursor-not-allowed sm:min-h-0"
+                >
+                  {sensitivePreferenceStatus === 'pending'
+                    ? <Loader2 className="size-3.5 animate-spin text-blue-500" />
+                    : hideSensitive
+                      ? <Eye className="size-3.5 text-blue-500" />
+                      : <EyeOff className="size-3.5 text-blue-500" />}
+                  <span>
                     {sensitivePreferenceStatus === 'pending'
-                      ? <Loader2 className="size-3.5 animate-spin text-blue-500" />
-                      : hideSensitive
-                        ? <Eye className="size-3.5 text-blue-500" />
-                        : <EyeOff className="size-3.5 text-blue-500" />}
-                    <span>
-                      {sensitivePreferenceStatus === 'pending'
-                        ? 'Checking Privacy Settings'
-                        : sensitivePreferenceStatus === 'unavailable'
-                          ? 'Privacy Setting Unavailable'
-                          : hideSensitive ? 'Show Sensitive' : 'Hide Sensitive'}
-                    </span>
-                  </MenubarItem>
+                      ? 'Checking Privacy Settings'
+                      : sensitivePreferenceStatus === 'unavailable'
+                        ? 'Privacy Setting Unavailable'
+                        : hideSensitive ? 'Show Sensitive' : 'Hide Sensitive'}
+                  </span>
+                </DropdownMenuItem>
 
-                  <MenubarItem 
-                    onClick={onToggleDarkMode}
-                    className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
-                  >
-                    {darkMode ? <Sun className="size-3.5 text-blue-500" /> : <Moon className="size-3.5 text-blue-500" />}
-                    <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
-                  </MenubarItem>
+                <DropdownMenuItem
+                  onSelect={onToggleDarkMode}
+                  className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
+                >
+                  {darkMode ? <Sun className="size-3.5 text-blue-500" /> : <Moon className="size-3.5 text-blue-500" />}
+                  <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
+                </DropdownMenuItem>
 
 
 
-                  <MenubarSeparator className="my-1 border-t border-border/30" />
+                <DropdownMenuSeparator className="my-1 border-t border-border/30" />
                   
-                  <MenubarItem 
-                    onClick={onLogout}
-                    className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg text-orange-500 hover:bg-orange-500/10 outline-hidden cursor-pointer sm:min-h-0"
-                  >
-                    <LogOut className="size-3.5" /> Logout
-                  </MenubarItem>
-                </MenubarContent>
-              </MenubarMenu>
-            </Menubar>
+                <DropdownMenuItem
+                  onSelect={onLogout}
+                  className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg text-orange-500 hover:bg-orange-500/10 outline-hidden cursor-pointer sm:min-h-0"
+                >
+                  <LogOut className="size-3.5" /> Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           
         </div>
