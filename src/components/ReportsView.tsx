@@ -16,6 +16,7 @@ import { DoughnutChart } from './dashboard/DoughnutChart'
 import { CycleCalendar } from './dashboard/CycleCalendar'
 import { BalanceAdjustmentModals } from './dashboard/BalanceAdjustmentModals'
 import { CategoryLimitPerformance } from './dashboard/CategoryLimitPerformance'
+import { getCategoryLimitCardId } from './dashboard/types'
 import { SubscriptionsTimelineCard } from './dashboard/SubscriptionsTimelineCard'
 import { useHighlightedElement } from './ui/useHighlightedElement'
 
@@ -42,6 +43,8 @@ interface ReportsViewProps {
   onExplainWithAi?: (cycleKey: string) => void
   /** Section id arrived at from another tab; scrolled to and briefly highlighted. */
   highlightedSection?: string | null
+  /** Optional category card to highlight inside the arrived-at category-limits section. */
+  highlightedCategory?: string | null
   onClearHighlightedSection?: () => void
 }
 
@@ -62,10 +65,16 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   onViewCycleSummary,
   onExplainWithAi,
   highlightedSection = null,
+  highlightedCategory = null,
   onClearHighlightedSection,
 }) => {
   const { hideSensitive } = useAppPrefs()
-  useHighlightedElement(highlightedSection ? `report-section-${highlightedSection}` : null, onClearHighlightedSection)
+  const highlightTargetId = highlightedCategory
+    ? getCategoryLimitCardId(highlightedCategory)
+    : highlightedSection
+      ? `report-section-${highlightedSection}`
+      : null
+  useHighlightedElement(highlightTargetId, onClearHighlightedSection)
   const view = useDashboardView({
     dashboardData,
     wishlist,

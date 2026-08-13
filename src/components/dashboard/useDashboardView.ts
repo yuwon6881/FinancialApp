@@ -316,6 +316,7 @@ export function useDashboardView(options: UseDashboardViewOptions) {
         amount: account.diff,
         category: 'Adjustment',
         ledgerCategory: adjustingCategory.name,
+        excludeFromAutocomplete: true,
         accountId: account.id,
         date: dateStr,
       }))
@@ -324,6 +325,7 @@ export function useDashboardView(options: UseDashboardViewOptions) {
         amount: diff,
         category: 'Adjustment',
         ledgerCategory: adjustingCategory.name,
+        excludeFromAutocomplete: true,
         date: dateStr,
       }]
 

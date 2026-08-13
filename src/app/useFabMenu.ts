@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AppTab } from '../types'
 
-const MOBILE_FAB_HIDDEN_TABS: ReadonlySet<AppTab> = new Set(['drafts', 'wishlist', 'recurring', 'documents'])
-
-export const shouldShowMobileFab = (activeTab: AppTab) => !MOBILE_FAB_HIDDEN_TABS.has(activeTab)
+export const shouldShowMobileFab = (_activeTab: AppTab) => true
 
 export function useFabMenu(activeTab: AppTab) {
   const [isOpen, setIsOpen] = useState(false)

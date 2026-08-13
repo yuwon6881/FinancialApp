@@ -5,6 +5,7 @@ import type { DeletedTransactionsSnapshot } from './api/investments'
 import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, LedgerAccount, Loan, PayEarlyResult, RecurringPayment, RecurringSettlementResult, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from './mutationToast'
 import { projectIncomeSplitRows, type IncomeAllocations } from './incomeSplitProjection'
+import { buildAccountReconcileTransactions } from './accountReconcileTransactionProjection'
 
 // Loan balances are replayed from the full-history bootstrap snapshot, not from the cycle-scoped
 // transaction list projected below. Keep the projection helper adjacent to the outbox so all active
@@ -76,6 +77,9 @@ export interface OutboxPayload {
   isDefault?: boolean
   openingAmount?: number
   remaining?: number
+  interestEnabled?: boolean
+  interestRatePercent?: number
+  interestFrequency?: string
   reconciliation?: unknown
   undoReconciliation?: unknown
 }
@@ -617,6 +621,7 @@ export interface ApplyOpsOptions {
    * still projects itself; only its four generated siblings wait for the refresh.
    */
   incomeAllocations?: IncomeAllocations
+  ledgerAccounts?: ReadonlyArray<{ id: string; bucket: string }>
 }
 
 export function expandBulkTransactionProjection(ops: QueuedOp[]): QueuedOp[] {
@@ -671,7 +676,8 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           (op.entity === 'wishlistItem' && (op.type === 'purchase' || op.type === 'unpurchase' || op.type === 'delete')) ||
           (op.entity === 'recurringPayment' && op.type === 'payEarly') ||
           (op.entity === 'recurringOccurrence' && op.type === 'settle') ||
-          (op.entity === 'category' && (op.type === 'delete' || op.type === 'cleanup'))
+          (op.entity === 'category' && (op.type === 'delete' || op.type === 'cleanup')) ||
+          (op.entity === 'ledgerAccountReconcile' && op.type === 'add')
         )
       ]
     : entity === 'recurringPayment'
@@ -702,6 +708,25 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
 
   for (const op of effectiveOps) {
     const targetStr = String(op.targetId)
+
+    if (entity === 'transaction' && op.entity === 'ledgerAccountReconcile' && op.type === 'add') {
+      const reconciliation = op.payload?.reconciliation as {
+        bucket?: string
+        expectedBucketTotal?: number
+        targets?: Array<{ id?: string | null; expectedCurrent?: number; target?: number; isDefault?: boolean; isArchived?: boolean }>
+      } | undefined
+      const projectedRows = buildAccountReconcileTransactions({
+        operationId: op.targetId,
+        createdAt: op.createdAt,
+        ...reconciliation,
+      })
+      for (const row of projectedRows) {
+        if (!result.some(item => String(item.id) === String(row.id))) {
+          result = [{ ...row, isPendingSync: !op.isCompleted, pendingSyncOperationId: op.isCompleted ? undefined : op.id } as unknown as T, ...result]
+        }
+      }
+      continue
+    }
 
     if (entity === 'wishlistItem' && op.entity === 'transaction' && (op.type === 'add' || op.type === 'delete')) {
       const nestedSnapshot = op.payload?.undoSnapshot && typeof op.payload.undoSnapshot === 'object'
@@ -963,7 +988,13 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           : [newItem, ...result]
       }
       if (entity === 'transaction') {
-        result = projectIncomeSplitRows(result, targetStr, options?.incomeAllocations, splitRowState(op))
+        result = projectIncomeSplitRows(
+          result,
+          targetStr,
+          options?.incomeAllocations,
+          splitRowState(op),
+          new Map(options?.ledgerAccounts?.map(account => [account.id, account.bucket]) ?? []),
+        )
       }
     } else if (op.type === 'update') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
@@ -993,7 +1024,13 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
       if (entity === 'transaction') {
         // Editing a salary rewrites its bucket rows server-side, and editing income into an
         // expense removes them, so re-derive rather than leaving the old set beside the new row.
-        result = projectIncomeSplitRows(result, targetStr, options?.incomeAllocations, splitRowState(op))
+        result = projectIncomeSplitRows(
+          result,
+          targetStr,
+          options?.incomeAllocations,
+          splitRowState(op),
+          new Map(options?.ledgerAccounts?.map(account => [account.id, account.bucket]) ?? []),
+        )
       }
     } else if (op.type === 'delete') {
       if (entity === 'transaction' && op.entity === 'wishlistItem') {
@@ -1063,6 +1100,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         ledgerCategory: 'Rewards',
         amount: -Math.abs(Number(op.payload?.price || 0)),
         wishlistItemId: Number(op.targetId),
+        excludeFromAutocomplete: true,
         isPendingSync: !op.isCompleted
       } as unknown as T
 

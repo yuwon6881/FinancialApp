@@ -14,6 +14,7 @@ import { BucketAccountSetupSheet } from './BucketAccountSetupSheet'
 import type { BucketSetupPrefill } from './view/useBucketAccountSetupView'
 import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
 import { useAccountsView } from './view/useAccountsView'
+import { ACCOUNT_INTEREST_FREQUENCY_LABELS } from './accountOptions'
 
 interface AccountsSectionProps {
   accounts: LedgerAccount[]
@@ -53,6 +54,11 @@ const BUCKETS: ReadonlyArray<{ name: LedgerAccount['bucket']; description: strin
   { name: 'Stability', description: 'Your emergency cushion' },
   { name: 'Rewards', description: 'Plans and treats' },
 ]
+
+const formatInterestRate = (value: number) => new Intl.NumberFormat(undefined, {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 4,
+}).format(value)
 
 export function AccountsSection({
   accounts,
@@ -124,6 +130,9 @@ export function AccountsSection({
         kind: input.kind,
         target: openingAmount,
         isDefault: input.isDefault,
+        interestEnabled: input.interestEnabled,
+        interestRatePercent: input.interestRatePercent,
+        interestFrequency: input.interestFrequency,
       })
       closeForm()
       return
@@ -271,6 +280,10 @@ export function AccountsSection({
                       <span className={`rounded-md border px-1.5 py-0.5 font-semibold ${bucketClass}`}>{item.bucket}</span>
                       <span aria-hidden="true">·</span>
                       <span>{KIND_LABELS[item.kind]}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{item.interestEnabled
+                        ? `${formatInterestRate(item.interestRatePercent)}% per year · added ${ACCOUNT_INTEREST_FREQUENCY_LABELS[item.interestFrequency]}`
+                        : 'No interest'}</span>
                       {item.isArchived && <><span aria-hidden="true">·</span><span>Closed</span></>}
                     </div>
                   </div>

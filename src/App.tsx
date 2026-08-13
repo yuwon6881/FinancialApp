@@ -361,12 +361,12 @@ function App() {
     }
   }, [prefs.activeTab, nav.highlightedRecurringId, nav.clearHighlightedRecurring])
 
-  // Same reasoning for the Reports section focus (`?focus=`).
+  // Same reasoning for the Reports section/card focus (`?focus=` + optional `?focusCategory=`).
   useEffect(() => {
-    if (prefs.activeTab !== 'reports' && nav.highlightedReportSection) {
+    if (prefs.activeTab !== 'reports' && (nav.highlightedReportSection || nav.highlightedReportCategory)) {
       nav.clearHighlightedReportSection()
     }
-  }, [prefs.activeTab, nav.highlightedReportSection, nav.clearHighlightedReportSection])
+  }, [prefs.activeTab, nav.highlightedReportSection, nav.highlightedReportCategory, nav.clearHighlightedReportSection])
 
   useEffect(() => {
     if (nav.selectedMonth && nav.selectedYear) {

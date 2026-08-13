@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Banknote, Building2, CircleHelp, CreditCard, Info, Landmark, Wallet } from 'lucide-react'
+import { Banknote, Building2, CircleHelp, CreditCard, Info, Landmark, Percent, Wallet } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { Button } from '../../ui/Button'
@@ -8,11 +8,11 @@ import { CustomSelect } from '../../ui/CustomSelect'
 import { FormField } from '../../ui/FormField'
 import { Input } from '../../ui/Input'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
-import type { LedgerAccount, LedgerAccountKind } from '../../../types'
+import type { LedgerAccount, LedgerAccountInterestFrequency, LedgerAccountKind } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import { getCategoryBadgeClass } from '../../../lib/categoryColors'
 import { maskCurrencyInput } from '../../../lib/utils'
-import { ACCOUNT_BUCKET_OPTIONS, ACCOUNT_KIND_OPTIONS } from './accountOptions'
+import { ACCOUNT_BUCKET_OPTIONS, ACCOUNT_INTEREST_FREQUENCY_OPTIONS, ACCOUNT_KIND_OPTIONS } from './accountOptions'
 
 interface AccountFormSheetProps {
   isOpen: boolean
@@ -49,9 +49,13 @@ export function AccountFormSheet({
   const [bucket, setBucket] = useState<LedgerAccount['bucket']>(defaultBucket)
   const [kind, setKind] = useState<LedgerAccountKind>(defaultKind)
   const [openingAmount, setOpeningAmount] = useState('')
+  const [interestEnabled, setInterestEnabled] = useState(false)
+  const [interestRatePercent, setInterestRatePercent] = useState('')
+  const [interestFrequency, setInterestFrequency] = useState<LedgerAccountInterestFrequency>('Monthly')
   const [isDefault, setIsDefault] = useState(defaultIsDefault)
   const [isArchived, setIsArchived] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [interestError, setInterestError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   const hasOpenAccountInBucket = existingAccounts.some(item =>
@@ -64,11 +68,15 @@ export function AccountFormSheet({
     setBucket(account?.bucket ?? defaultBucket)
     setKind(account?.kind ?? defaultKind)
     setOpeningAmount('')
+    setInterestEnabled(account?.interestEnabled ?? false)
+    setInterestRatePercent(account?.interestEnabled ? String(account.interestRatePercent ?? '') : '')
+    setInterestFrequency(account?.interestFrequency ?? 'Monthly')
     setIsDefault(account?.isDefault ?? (!existingAccounts.some(item =>
       item.bucket === (account?.bucket ?? defaultBucket) && !item.isArchived,
     ) || defaultIsDefault))
     setIsArchived(account?.isArchived ?? false)
     setError(null)
+    setInterestError(null)
   }, [account, defaultBucket, defaultIsDefault, defaultKind, existingAccounts, isOpen])
 
   useEffect(() => {
@@ -87,7 +95,13 @@ export function AccountFormSheet({
       setError('Enter a valid starting amount.')
       return
     }
+    const parsedInterestRate = interestRatePercent.trim() ? Number(interestRatePercent) : 0
+    if (interestEnabled && (!Number.isFinite(parsedInterestRate) || parsedInterestRate <= 0 || parsedInterestRate > 100)) {
+      setInterestError('Enter an annual interest rate between 0.01% and 100%, or choose no interest.')
+      return
+    }
     setError(null)
+    setInterestError(null)
     setIsSaving(true)
     try {
       await onSave({
@@ -95,6 +109,9 @@ export function AccountFormSheet({
         bucket,
         kind,
         openingAmount: account ? undefined : parsedOpening,
+        interestEnabled,
+        interestRatePercent: interestEnabled ? Math.round(parsedInterestRate * 10000) / 10000 : 0,
+        interestFrequency,
         isDefault,
         isArchived,
       })
@@ -177,6 +194,41 @@ export function AccountFormSheet({
           <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
           One real-world account can have one row in each bucket if you track both portions separately.
         </p>
+
+        <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/10 p-4">
+          <label className="flex cursor-pointer items-start gap-3 text-sm font-semibold text-foreground">
+            <Checkbox checked={interestEnabled} onChange={event => setInterestEnabled(event.target.checked)} className="mt-0.5 size-5" />
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5"><Percent className="size-3.5 text-accent-ink" aria-hidden="true" />Earn interest on this account</span>
+              <span className="mt-1 block text-[11px] font-normal leading-relaxed text-muted-foreground">Interest is added as a ledger credit to this account and its {bucket} bucket. The rate is entered per year.</span>
+            </span>
+          </label>
+          {interestEnabled && (
+            <div className="grid grid-cols-1 gap-4 border-t border-border/40 pt-3 sm:grid-cols-2">
+              <FormField label="Annual interest rate (%)" required error={interestError ?? undefined} hint="For example, enter 5 for 5% per year. Interest is calculated from the account balance.">
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  min="0.01"
+                  max="100"
+                  step="0.0001"
+                  value={interestRatePercent}
+                  onChange={event => setInterestRatePercent(event.target.value)}
+                  placeholder="5"
+                />
+              </FormField>
+              <FormField label="Add interest" required hint="This controls how often the calculated interest is posted.">
+                <CustomSelect
+                  value={interestFrequency}
+                  onChange={setInterestFrequency}
+                  options={ACCOUNT_INTEREST_FREQUENCY_OPTIONS}
+                  ariaLabel="Interest posting frequency"
+                  className="w-full"
+                />
+              </FormField>
+            </div>
+          )}
+        </div>
 
         {!isEditing && (
           <div className="rounded-2xl border border-border/60 bg-background/40 p-4">

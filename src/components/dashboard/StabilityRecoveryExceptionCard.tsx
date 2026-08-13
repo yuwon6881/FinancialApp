@@ -62,27 +62,25 @@ export function StabilityRecoveryExceptionCard({
       initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       aria-labelledby="stability-recovery-exception"
-      className="app-panel rounded-2xl border border-amber-500/30 bg-amber-500/8 p-4 sm:p-6"
+      className="app-panel rounded-2xl border border-amber-500/30 bg-amber-500/8 p-5"
     >
-      <div className="flex flex-col gap-4">
-        <div className="space-y-3 min-w-0">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
-              <ShieldAlert className="size-5" />
-            </div>
-            <h3
-              id="stability-recovery-exception"
-              className="flex items-center gap-1.5 text-sm font-bold text-amber-700 dark:text-amber-300"
-            >
-              Your emergency fund is below where it was
-              <InfoHint
-                label="How putting money back is worked out"
-                text="Only money you mark as needing to go back creates this reminder. Your normal salary share does not count as putting it back; reaching your target clears it."
-              />
-            </h3>
-          </div>
+      <div className="flex items-start gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+          <ShieldAlert className="size-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3
+            id="stability-recovery-exception"
+            className="flex items-center gap-1.5 text-sm font-bold text-amber-700 dark:text-amber-300"
+          >
+            Your emergency fund is below where it was
+            <InfoHint
+              label="How putting money back is worked out"
+              text="Only money you mark as needing to go back creates this reminder. Your normal salary share does not count as putting it back; reaching your target clears it."
+            />
+          </h3>
 
-          <p className="text-xs leading-relaxed text-muted-foreground">
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             {aheadOfPace
               ? <>Nothing more is needed this cycle — you are ahead of the plan.{' '}</>
               : <>Put back {formatSensitive(recovery.outstandingThisCycle)} more this cycle.{' '}</>}
@@ -93,14 +91,14 @@ export function StabilityRecoveryExceptionCard({
                 : <>{formatSensitive(recovery.outstandingShortfall)} remains overall across {recovery.cyclesRemaining} cycles.</>}
           </p>
 
-          <div className="space-y-1.5 pt-1">
+          <div className="mt-3 space-y-1.5">
             <div className="grid gap-0.5 text-xs sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-2 sm:gap-y-1">
               <span className="font-semibold text-muted-foreground">Putting it back progress</span>
               <span className="font-semibold text-foreground tabular-nums sm:text-right">
                 <span className="font-extrabold text-amber-600 dark:text-amber-400">{percentRepaid}%</span> of {formatSensitive(recovery.markedTotal)} put back
               </span>
             </div>
-            <div className="h-2 w-full rounded-full bg-amber-500/20 overflow-hidden">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-amber-500/20">
               <div
                 className="h-full rounded-full bg-amber-500 transition-all duration-300"
                 style={{ width: `${Math.min(100, Math.max(0, percentRepaid))}%` }}
@@ -111,7 +109,7 @@ export function StabilityRecoveryExceptionCard({
           {/* The breakdown names the ledger obligation and its repayments. Keep it behind a
               disclosure because a healthy reader never needs it, and this panel already competes
               with two other exception cards for the top of the page. */}
-          <details className="group pt-1">
+          <details className="group mt-3">
             <summary className="flex cursor-pointer list-none items-center gap-1 text-[11px] font-bold text-amber-700 transition hover:underline dark:text-amber-300">
               <ChevronRight className="size-3 transition-transform group-open:rotate-90" aria-hidden="true" />
               Where this figure comes from

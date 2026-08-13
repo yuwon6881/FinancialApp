@@ -198,10 +198,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   const activeSuggestionEntries = useMemo(() => {
     if (state.transactionType === 'transfer') return []
     return autocompleteSuggestions.filter(s =>
-      s.txType === state.transactionType &&
-      !s.ledgerCategory.toLowerCase().startsWith('transfer:income->') &&
-      !s.description.toLowerCase().startsWith('purchased:') &&
-      !s.description.toLowerCase().endsWith('(wish list)')
+      s.txType === state.transactionType
     )
   }, [autocompleteSuggestions, state.transactionType])
 
@@ -388,7 +385,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     } else if (state.counterAccountId !== null) {
       dispatch({ type: 'SET_FIELD', field: 'counterAccountId', value: null })
     }
-    if (!bucket && state.transactionType !== 'transfer' && state.accountId !== null) {
+    if (!bucket && state.transactionType !== 'transfer' && state.ledgerCategory !== 'Income' && state.accountId !== null) {
       dispatch({ type: 'SET_FIELD', field: 'accountId', value: null })
     }
   }, [accounts, state.accountId, state.counterAccountId, state.ledgerCategory, state.transactionType, state.transferSource, state.transferTarget])

@@ -278,15 +278,22 @@ export interface Transaction {
   accountId?: string | null
   /** Destination account for an in-bucket AccountMove row. */
   counterAccountId?: string | null
+  /** Server-derived marker for structural rows that must not seed description autocomplete. */
+  excludeFromAutocomplete?: boolean
 }
 
 export type LedgerAccountKind = 'Bank' | 'EWallet' | 'Cash' | 'Card' | 'Other'
+
+export type LedgerAccountInterestFrequency = 'Daily' | 'Monthly' | 'Yearly'
 
 export interface LedgerAccount {
   id: string
   name: string
   bucket: 'Essentials' | 'Growth' | 'Stability' | 'Rewards'
   kind: LedgerAccountKind
+  interestEnabled: boolean
+  interestRatePercent: number
+  interestFrequency: LedgerAccountInterestFrequency
   isDefault: boolean
   isArchived: boolean
   remaining: number

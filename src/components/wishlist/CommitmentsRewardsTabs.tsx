@@ -30,7 +30,7 @@ export const CommitmentsRewardsTabs: React.FC<CommitmentsRewardsTabsProps> = ({
     { id: 'commitments', label: 'Commitments', count: commitmentsCount },
     { id: 'rewards', label: 'Rewards', count: rewardsCount },
   ]
-  const sections = activeTab === 'commitments' ? allSections : [allSections[1], allSections[0]]
+  const sections = allSections
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex: number | null = null

@@ -46,6 +46,13 @@ export function deobfuscateTransaction(transaction: WireTransaction): Transactio
 export function deobfuscateLedgerAccount(account: WireLedgerAccount): LedgerAccount {
   return {
     ...account,
+    interestEnabled: account.interestEnabled === true,
+    interestRatePercent: typeof account.interestRatePercent === 'number' && Number.isFinite(account.interestRatePercent)
+      ? account.interestRatePercent
+      : 0,
+    interestFrequency: account.interestFrequency === 'Daily' || account.interestFrequency === 'Yearly'
+      ? account.interestFrequency
+      : 'Monthly',
     remaining: deobfuscateAmount(account.remaining),
   }
 }

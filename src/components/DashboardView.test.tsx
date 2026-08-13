@@ -162,7 +162,7 @@ describe('DashboardView focused Today experience', () => {
     // The seeded Transport limit is on Watch.
     expect(screen.getByText('Transport is close to its budget')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'See categories' }))
-    expect(props.onNavigateToCategoryLimits).toHaveBeenCalledOnce()
+    expect(props.onNavigateToCategoryLimits).toHaveBeenCalledWith('Transport')
   })
 
   it('says nothing about categories when every tracked limit is on plan', () => {

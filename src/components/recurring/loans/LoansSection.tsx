@@ -3,7 +3,6 @@ import type { ReactNode } from 'react'
 import { Plus } from 'lucide-react'
 import type { Loan, RecurringPayment } from '../../../types'
 import { Button } from '../../ui/Button'
-import { InfoHint } from '../../ui/InfoHint'
 import { LoanCard } from './LoanCard'
 import { LoanFormSheet } from './LoanFormSheet'
 import { useLoansView } from './view/useLoansView'
@@ -68,15 +67,8 @@ export function LoansSection({
   }, [onLoad])
 
   return (
-    <section className="app-panel space-y-4 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/92 sm:p-5" aria-labelledby="loans-heading">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h2 id="loans-heading" className="text-base font-bold text-foreground">Loans</h2>
-            <InfoHint label="loans" text="A loan keeps the bill history it was created from. Its cadence is captured at creation, and deleting or restoring a payment changes the replay without adding a second ledger row." />
-          </div>
-          <p className="mt-0.5 text-xs text-muted-foreground">Track what is still owed without adding extra loan rows to your ledger.</p>
-        </div>
+    <section className="app-panel space-y-4 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/92 sm:p-5" aria-label="Loans list">
+      <div className="flex justify-end">
         <Button variant="primary" size="sm" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5" onClick={openAdd} aria-label="Add loan">
           <Plus className="size-3" aria-hidden /> <span className="hidden sm:inline">Add loan</span>
         </Button>

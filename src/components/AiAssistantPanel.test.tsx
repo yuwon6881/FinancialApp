@@ -639,6 +639,7 @@ describe('AiAssistantPanel', () => {
       expect(screen.getByText(/Cancelled before the AI answered/)).not.toBeNull()
     })
     expect(screen.getByText('Retry')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Start a new chat' })).not.toBeNull()
     expect(screen.getByLabelText('Send message')).not.toBeNull()
   })
 

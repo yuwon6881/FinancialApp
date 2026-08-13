@@ -38,7 +38,12 @@ function addDelta(
       .filter(account => account.isDefault && !account.isArchived)
       .map(account => [account.bucket.toLowerCase(), account.id]),
   )
-  const rows = [transaction, ...buildIncomeSplitRows(transaction, allocations)]
+  const incomeSplitRows = buildIncomeSplitRows(
+    transaction,
+    allocations,
+    new Map(accounts.map(account => [account.id, account.bucket])),
+  )
+  const rows = incomeSplitRows.length > 0 ? incomeSplitRows : [transaction]
   for (const row of rows) {
     for (const account of accounts) {
       const delta = accountAmount(row, account, accountsById, defaults)
@@ -153,6 +158,13 @@ function applyReconciliation(
         kind: target.kind === 'EWallet' || target.kind === 'Cash' || target.kind === 'Card' || target.kind === 'Other'
           ? target.kind
           : 'Bank',
+        interestEnabled: target.interestEnabled === true,
+        interestRatePercent: typeof target.interestRatePercent === 'number' && Number.isFinite(target.interestRatePercent)
+          ? target.interestRatePercent
+          : 0,
+        interestFrequency: target.interestFrequency === 'Daily' || target.interestFrequency === 'Yearly'
+          ? target.interestFrequency
+          : 'Monthly',
         isDefault: target.isDefault === true,
         isArchived: target.isArchived === true,
         remaining: 0,

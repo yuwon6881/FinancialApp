@@ -9,3 +9,5 @@ export interface NavigateToLedgerOptions {
   highlightedTxId?: string | null
   showAllCycles?: boolean
 }
+
+export const getCategoryLimitCardId = (category: string) => `report-category-limit-${encodeURIComponent(category)}`

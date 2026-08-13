@@ -52,7 +52,7 @@ describe('CommitmentsRewardsTabs', () => {
     expect(rewardsTab.getAttribute('tabindex')).toBe('-1')
   })
 
-  it('keeps the active view on the left', () => {
+  it('keeps the tab order stable when the selected view changes', () => {
     const { rerender } = render(
       <CommitmentsRewardsTabs
         activeTab="commitments"
@@ -73,7 +73,8 @@ describe('CommitmentsRewardsTabs', () => {
       />
     )
 
-    expect(screen.getAllByRole('tab')[0].textContent).toContain('Rewards')
+    expect(screen.getAllByRole('tab')[0].textContent).toContain('Commitments')
+    expect(screen.getAllByRole('tab')[1].textContent).toContain('Rewards')
   })
 
   it('calls onChange when clicking a tab', () => {

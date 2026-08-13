@@ -62,8 +62,8 @@ export function DraftStagingView({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const issuesById = useMemo(() => new Map(
-    draftTransactions.map(draft => [draft.id, getDraftTransactionIssues(draft, categories)]),
-  ), [categories, draftTransactions])
+    draftTransactions.map(draft => [draft.id, getDraftTransactionIssues(draft, categories, (editorProps.accounts?.length ?? 0) > 0)]),
+  ), [categories, draftTransactions, editorProps.accounts])
   const firstInvalidDraft = draftTransactions.find(draft => (issuesById.get(draft.id)?.length ?? 0) > 0)
   const invalidCount = draftTransactions.filter(draft => (issuesById.get(draft.id)?.length ?? 0) > 0).length
 

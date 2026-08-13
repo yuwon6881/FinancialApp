@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, CircleHelp, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, CircleHelp, Percent, Plus, Trash2 } from 'lucide-react'
 import type { LedgerAccount, LedgerAccountKind, Transaction } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
@@ -14,7 +14,7 @@ import { Input } from '../../ui/Input'
 import { ModalActions } from '../../ui/ModalActions'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
-import { ACCOUNT_KIND_OPTIONS } from './accountOptions'
+import { ACCOUNT_INTEREST_FREQUENCY_OPTIONS, ACCOUNT_KIND_OPTIONS } from './accountOptions'
 import {
   useBucketAccountSetupView,
   type BucketSetupDraftAccount,
@@ -61,9 +61,11 @@ function NewAccountRow({
   currency,
   error,
   targetError,
+  interestError,
   canChooseDefault,
   onChange,
   onTargetChange,
+  onInterestChange,
   onDefaultChange,
   onRemove,
 }: {
@@ -71,9 +73,11 @@ function NewAccountRow({
   currency: string
   error?: string
   targetError?: string
+  interestError?: string
   canChooseDefault: boolean
   onChange: (change: Partial<Omit<BucketSetupDraftAccount, 'id'>>) => void
   onTargetChange: (rawValue: string) => void
+  onInterestChange: (change: { enabled?: boolean; rate?: number; frequency?: BucketSetupDraftAccount['interestFrequency'] }) => void
   onDefaultChange: (checked: boolean) => void
   onRemove: () => void
 }) {
@@ -114,6 +118,40 @@ function NewAccountRow({
             placeholder="0.00"
           />
         </FormField>
+      </div>
+      <div className="space-y-3 rounded-xl border border-border/50 bg-background/30 p-3">
+        <label className="flex cursor-pointer items-start gap-2 text-[11px] font-semibold text-foreground">
+          <Checkbox checked={draft.interestEnabled} onChange={event => onInterestChange({ enabled: event.target.checked })} className="mt-0.5 size-5" />
+          <span className="min-w-0">
+            <span className="flex items-center gap-1.5"><Percent className="size-3.5 text-accent-ink" aria-hidden="true" />Earn interest on this account</span>
+            <span className="mt-0.5 block font-normal leading-relaxed text-muted-foreground">Enter the annual rate; interest is added to this account and bucket.</span>
+          </span>
+        </label>
+        {draft.interestEnabled && (
+          <div className="grid grid-cols-1 gap-3 border-t border-border/40 pt-3 sm:grid-cols-2">
+            <FormField label="Annual rate (%)" required error={interestError} hint="For example, 5 means 5% per year.">
+              <Input
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                max="100"
+                step="0.0001"
+                value={draft.interestRatePercent || ''}
+                onChange={event => onInterestChange({ rate: event.target.value ? Number(event.target.value) : 0 })}
+                placeholder="5"
+              />
+            </FormField>
+            <FormField label="Add interest" required hint="How often the calculated interest is posted.">
+              <CustomSelect
+                value={draft.interestFrequency}
+                onChange={value => onInterestChange({ frequency: value as BucketSetupDraftAccount['interestFrequency'] })}
+                options={ACCOUNT_INTEREST_FREQUENCY_OPTIONS}
+                ariaLabel={`${draft.name || 'New'} interest posting frequency`}
+                className="w-full"
+              />
+            </FormField>
+          </div>
+        )}
       </div>
       {canChooseDefault && (
         <label className="flex cursor-pointer items-start gap-2 text-[11px] font-semibold text-foreground">
@@ -159,13 +197,18 @@ export function BucketAccountSetupSheet({
           const draft = draftsById.get(line.id)
           const account = accounts.find(candidate => candidate.id === line.id)
           return {
-            id: line.isNew ? line.id : line.id,
+            id: line.id,
             name: line.name,
             kind: draft?.kind ?? account?.kind ?? 'Other',
             isDefault: draft?.isDefault ?? account?.isDefault ?? false,
             isArchived: line.isArchived,
             expectedCurrent: line.current,
             target: line.target,
+            ...(draft ? {
+              interestEnabled: draft.interestEnabled,
+              interestRatePercent: draft.interestRatePercent,
+              interestFrequency: draft.interestFrequency,
+            } : {}),
           }
         })
         const operationId = operationIdRef.current ?? `reconcile-${bucket.toLowerCase()}-${Date.now()}`
@@ -186,6 +229,9 @@ export function BucketAccountSetupSheet({
             openingAmount: 0,
             isDefault: draft.isDefault,
             isArchived: false,
+            interestEnabled: draft.interestEnabled,
+            interestRatePercent: draft.interestRatePercent,
+            interestFrequency: draft.interestFrequency,
           })
         }
         for (const account of pending.preview.accountAdjustments) {
@@ -194,6 +240,7 @@ export function BucketAccountSetupSheet({
             amount: account.diff,
             category: 'Adjustment',
             ledgerCategory: bucket,
+            excludeFromAutocomplete: true,
             accountId: account.id,
             date,
           })
@@ -306,9 +353,18 @@ export function BucketAccountSetupSheet({
                 currency={currency}
                 error={view.errors[draft.id]}
                 targetError={view.errors[`${draft.id}-target`]}
+                interestError={view.errors[`${draft.id}-interest`]}
                 canChooseDefault={!view.hasLiveDefault}
                 onChange={change => view.updateDraft(draft.id, change)}
                 onTargetChange={value => view.updateDraftTarget(draft.id, value)}
+                onInterestChange={change => view.updateDraft(draft.id, {
+                  ...(change.enabled === undefined ? {} : {
+                    interestEnabled: change.enabled,
+                    interestRatePercent: change.enabled ? draft.interestRatePercent : 0,
+                  }),
+                  ...(change.rate === undefined ? {} : { interestRatePercent: change.rate }),
+                  ...(change.frequency === undefined ? {} : { interestFrequency: change.frequency }),
+                })}
                 onDefaultChange={checked => view.updateDraftDefault(draft.id, checked)}
                 onRemove={() => view.removeDraft(draft.id)}
               />

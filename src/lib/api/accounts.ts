@@ -1,4 +1,4 @@
-import type { LedgerAccount, LedgerAccountKind } from '../../types'
+import type { LedgerAccount, LedgerAccountInterestFrequency, LedgerAccountKind } from '../../types'
 import type { WireLedgerAccount } from '../apiTypes'
 import { deobfuscateAmount, deobfuscateLedgerAccount, obfuscateAmount } from './amounts'
 import { invalidateCache, jsonBody, request, requestVoid } from './client'
@@ -11,6 +11,9 @@ export interface LedgerAccountMutation {
   isArchived?: boolean
   isDefault?: boolean
   openingAmount?: number
+  interestEnabled?: boolean
+  interestRatePercent?: number
+  interestFrequency?: LedgerAccountInterestFrequency
 }
 
 export interface LedgerAccountReconcileTarget {
@@ -22,6 +25,9 @@ export interface LedgerAccountReconcileTarget {
   isDefault: boolean
   expectedCurrent: number
   target: number
+  interestEnabled?: boolean
+  interestRatePercent?: number
+  interestFrequency?: LedgerAccountInterestFrequency
 }
 
 export interface LedgerAccountReconcileInput {
@@ -56,6 +62,9 @@ function toBody(account: LedgerAccountMutation) {
     isArchived: account.isArchived ?? false,
     isDefault: account.isDefault ?? false,
     openingAmount: obfuscateAmount(account.openingAmount ?? 0),
+    interestEnabled: account.interestEnabled ?? false,
+    interestRatePercent: account.interestRatePercent ?? 0,
+    interestFrequency: account.interestFrequency ?? 'Monthly',
   }
 }
 
@@ -113,6 +122,9 @@ export async function reconcileLedgerAccounts(input: LedgerAccountReconcileInput
         isDefault: target.isDefault,
         expectedCurrent: obfuscateAmount(target.expectedCurrent),
         target: obfuscateAmount(target.target),
+        interestEnabled: target.interestEnabled,
+        interestRatePercent: target.interestRatePercent,
+        interestFrequency: target.interestFrequency,
       })),
     }),
     errorMessage: 'Could not reconcile ledger accounts',

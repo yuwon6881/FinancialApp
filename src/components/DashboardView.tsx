@@ -39,8 +39,8 @@ interface DashboardViewProps {
   savingsGoals?: SavingsGoal[]
   isSwitchingCycle?: boolean
   investmentAllocation?: InvestmentAllocationOverview | null
-  /** Opens Reports focused on the category limit breakdown. Falls back to plain Reports. */
-  onNavigateToCategoryLimits?: () => void
+  /** Opens Reports focused on the category limit breakdown and, when supplied, its category card. */
+  onNavigateToCategoryLimits?: (category: string) => void
 }
 export const DashboardView: React.FC<DashboardViewProps> = ({
   dashboardData,
@@ -136,7 +136,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <CategoryWatchExceptionCard
         items={view.categoryLimitProgress}
         formatSensitive={view.formatSensitive}
-        onOpenCategoryLimits={() => (onNavigateToCategoryLimits ? onNavigateToCategoryLimits() : onNavigate('reports'))}
+        onOpenCategoryLimits={category => (onNavigateToCategoryLimits ? onNavigateToCategoryLimits(category) : onNavigate('reports'))}
       />
 
       <StabilityRecoveryExceptionCard

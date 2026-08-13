@@ -1,4 +1,4 @@
-import type { LedgerAccount } from '../../types'
+import type { LedgerAccount, LedgerAccountInterestFrequency } from '../../types'
 import { createFinalId, type OutboxPayload } from '../../lib/outbox'
 import { triggerHaptic } from '../../lib/haptics'
 import type { UseOutboxResult } from '../../lib/useOutbox'
@@ -22,6 +22,9 @@ export interface LedgerAccountInput {
   openingAmount?: number
   isArchived?: boolean
   isDefault?: boolean
+  interestEnabled?: boolean
+  interestRatePercent?: number
+  interestFrequency?: LedgerAccountInterestFrequency
 }
 
 export function createLedgerAccountActions(deps: LedgerAccountActionDependencies) {
@@ -48,6 +51,11 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
       isDefault: value.isDefault === true || (value.isDefault !== false && !hasDefault),
       openingAmount,
       remaining: openingAmount,
+      interestEnabled: value.interestEnabled === true,
+      interestRatePercent: value.interestEnabled === true
+        ? Math.round((value.interestRatePercent ?? 0) * 10000) / 10000
+        : 0,
+      interestFrequency: value.interestFrequency ?? 'Monthly',
     }
     mutateQueue(previous => enqueue(previous, 'ledgerAccount', 'add', id, payload))
   }
@@ -55,6 +63,20 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
   const handleUpdateAccount = (id: string, value: LedgerAccountInput) => {
     if (!guardSensitive()) return
     const previous = accounts.find(account => account.id === id)
+    if (previous && value.isArchived && !previous.isArchived) {
+      const hasOtherLiveAccount = accounts.some(account =>
+        account.id !== id && account.bucket === previous.bucket && !account.isArchived,
+      )
+      if (!hasOtherLiveAccount) {
+        setConfirmModalData({
+          title: 'Keep one account open',
+          message: 'Every bucket needs one open account. Add another before closing this one.',
+          confirmText: 'Close',
+          onConfirm: () => undefined,
+        })
+        return
+      }
+    }
     snapshotForUndo('ledgerAccount', id, previous)
     const hasOtherDefault = accounts.some(account =>
       account.id !== id
@@ -63,11 +85,18 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
       && !account.isArchived,
     )
     const isArchived = value.isArchived ?? false
+    const interestEnabled = value.interestEnabled ?? previous?.interestEnabled ?? false
+    const interestRatePercent = interestEnabled
+      ? Math.round((value.interestRatePercent ?? previous?.interestRatePercent ?? 0) * 10000) / 10000
+      : 0
     mutateQueue(queue => enqueue(queue, 'ledgerAccount', 'update', id, {
       ...value,
       name: value.name.trim(),
       isArchived,
       isDefault: !isArchived && (value.isDefault === true || !hasOtherDefault),
+      interestEnabled,
+      interestRatePercent,
+      interestFrequency: value.interestFrequency ?? previous?.interestFrequency ?? 'Monthly',
       undoSnapshot: previous,
     }))
   }

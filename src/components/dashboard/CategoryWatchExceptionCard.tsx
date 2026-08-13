@@ -7,7 +7,7 @@ import { Button } from '../ui/Button'
 interface CategoryWatchExceptionCardProps {
   items: CategoryLimitProgress[]
   formatSensitive: (value: number) => React.ReactNode
-  onOpenCategoryLimits: () => void
+  onOpenCategoryLimits: (category: string) => void
 }
 
 /**
@@ -62,7 +62,7 @@ export function CategoryWatchExceptionCard({
             </p>
           </div>
         </div>
-        <Button variant="ghost" onClick={onOpenCategoryLimits} className="w-full justify-center sm:w-auto">
+        <Button variant="ghost" onClick={() => onOpenCategoryLimits(worst.category)} className="w-full justify-center sm:w-auto">
           See categories
         </Button>
       </div>

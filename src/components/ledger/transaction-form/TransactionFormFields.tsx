@@ -186,6 +186,16 @@ export function TransactionFormFields({
       })),
     ]
   }, [accountBucket, accounts, state.accountId])
+  const incomeAccountOptions = React.useMemo(() => [
+    { value: '', label: 'Use each bucket default' },
+    ...accounts
+      .filter(account => !account.isArchived || account.id === state.accountId)
+      .map(account => ({
+        value: account.id,
+        label: `${account.name} (${account.bucket})${account.isArchived ? ' (Closed)' : ''}`,
+        disabled: account.isArchived,
+      })),
+  ], [accounts, state.accountId])
   const transferTargetOptions = React.useMemo(() => {
     const bucketAccounts = accounts.filter(account =>
       account.bucket === state.transferTarget && (!account.isArchived || account.id === state.counterAccountId),
@@ -544,6 +554,22 @@ export function TransactionFormFields({
               className="w-full"
             />
           </FormField>
+
+          {accountTrackingEnabled && state.ledgerCategory === 'Income' && (
+            <FormField
+              className="sm:col-span-2"
+              label="Which account received this?"
+              error={errors.accountId}
+            >
+              <CustomSelect
+                ariaLabel="Account that received this income"
+                value={state.accountId ?? ''}
+                onChange={value => onSetField('accountId', value || null)}
+                options={incomeAccountOptions}
+                className="w-full"
+              />
+            </FormField>
+          )}
 
           {accountTrackingEnabled && accountBucket && (
             <FormField

@@ -104,6 +104,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const deletingId = deletingIdProp ?? app.deletingId
   const isMobile = useIsMobile()
   const [activeTab, setActiveTab] = React.useState<RecurringTabId>('recurring')
+  const loanTotalOutstanding = hasLoadedLoans && loans.every(loan => loan.scheduleStatus !== 'Incomplete' && !loan.isRecalculating)
+    ? loans.reduce((total, loan) => total + Math.max(0, loan.snapshot.outstandingBalance), 0)
+    : null
 
   const view = useRecurringPaymentsView({
     payments,
@@ -133,9 +136,12 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
       {/* Header section with Stats */}
       <RecurringPaymentsHeader
+        activeView={activeTab}
         totalCommittedMonthly={view.totalCommittedMonthly}
         activeCount={view.activeCount}
         totalCount={payments.length}
+        loanTotalOutstanding={loanTotalOutstanding}
+        loanCount={loans.length}
         showAddForm={view.showAddForm}
         hideSensitive={hideSensitive}
         formatSensitive={view.formatSensitive}

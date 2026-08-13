@@ -27,11 +27,9 @@ describe('useFabMenu', () => {
     expect(result.current.isOpen).toBe(false)
   })
 
-  it('hides the mobile quick-add on surfaces with their own primary add actions', () => {
-    expect(shouldShowMobileFab('dashboard')).toBe(true)
-    expect(shouldShowMobileFab('wishlist')).toBe(false)
-    expect(shouldShowMobileFab('recurring')).toBe(false)
-    expect(shouldShowMobileFab('documents')).toBe(false)
-    expect(shouldShowMobileFab('ledger')).toBe(true)
+  it('shows the mobile quick-add on every authenticated surface', () => {
+    for (const tab of ['dashboard', 'reports', 'recurring', 'ledger', 'wishlist', 'drafts', 'settings', 'investments', 'documents'] as const) {
+      expect(shouldShowMobileFab(tab)).toBe(true)
+    }
   })
 })

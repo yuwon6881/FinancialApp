@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { LedgerAccount, LedgerAccountKind } from '../../../../types'
+import type { LedgerAccount, LedgerAccountInterestFrequency, LedgerAccountKind } from '../../../../types'
 import { createFinalId } from '../../../../lib/outbox'
 import { maskCurrencyInput } from '../../../../lib/utils'
 import {
@@ -13,6 +13,9 @@ export interface BucketSetupPrefill {
   kind: LedgerAccountKind
   target: number
   isDefault?: boolean
+  interestEnabled?: boolean
+  interestRatePercent?: number
+  interestFrequency?: LedgerAccountInterestFrequency
 }
 
 export interface BucketSetupDraftAccount {
@@ -21,12 +24,25 @@ export interface BucketSetupDraftAccount {
   kind: LedgerAccountKind
   target: string
   isDefault: boolean
+  interestEnabled: boolean
+  interestRatePercent: number
+  interestFrequency: LedgerAccountInterestFrequency
 }
 
 export interface BucketSetupPendingReview {
   preview: BucketAccountReconciliation
   drafts: BucketSetupDraftAccount[]
 }
+
+export const canReviewBucketAccountSetup = (
+  preview: BucketAccountReconciliation | null,
+  draftCount: number,
+) => Boolean(preview && (
+  preview.hasChanges
+  || draftCount > 0
+  || !preview.isCurrentTotalTally
+  || !preview.isAdjustmentTally
+))
 
 interface UseBucketAccountSetupViewOptions {
   isOpen: boolean
@@ -48,6 +64,9 @@ const createDraft = (prefill?: BucketSetupPrefill, isDefault = false): BucketSet
   kind: prefill?.kind ?? 'Bank',
   target: prefill ? (Math.round(prefill.target * 100) / 100).toFixed(2) : '0.00',
   isDefault: prefill?.isDefault === true || isDefault,
+  interestEnabled: prefill?.interestEnabled === true,
+  interestRatePercent: prefill?.interestEnabled === true ? prefill.interestRatePercent ?? 0 : 0,
+  interestFrequency: prefill?.interestFrequency ?? 'Monthly',
 })
 
 export function useBucketAccountSetupView({
@@ -171,12 +190,10 @@ export function useBucketAccountSetupView({
     })
   }, [bucket, bucketTotal, hasInvalidTarget, hasLiveDefault, parsedDraftTargets, parsedExistingTargets])
 
-  const canReview = Boolean(
-    preview
-    && (preview.hasChanges || drafts.length > 0)
-    && (preview.isCurrentTotalTally || !hasLiveDefault)
-    && preview.isAdjustmentTally,
-  )
+  // Keep Review clickable for an inconsistent starting snapshot. The review action owns the
+  // actionable refresh message; disabling the only forward action leaves the user stranded with
+  // unexplained totals, as happened when an optimistic salary temporarily over-counted accounts.
+  const canReview = canReviewBucketAccountSetup(preview, drafts.length)
 
   const prepareReview = () => {
     if (!bucket) return
@@ -188,6 +205,10 @@ export function useBucketAccountSetupView({
       else if (names.has(name.toLowerCase())) nextErrors[draft.id] = 'This account name is already in use.'
       else names.add(name.toLowerCase())
       if (Number.isNaN(parseAmount(draft.target))) nextErrors[`${draft.id}-target`] = 'Enter a valid balance.'
+      if (draft.interestEnabled && (!Number.isFinite(draft.interestRatePercent)
+          || draft.interestRatePercent <= 0 || draft.interestRatePercent > 100)) {
+        nextErrors[`${draft.id}-interest`] = 'Enter an annual interest rate between 0.01% and 100%, or choose no interest.'
+      }
     }
     for (const account of parsedExistingTargets) {
       if (!account.isArchived && Number.isNaN(account.target)) nextErrors[account.id] = 'Enter a valid balance.'

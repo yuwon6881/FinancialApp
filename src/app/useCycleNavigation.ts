@@ -69,6 +69,10 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     if (typeof window === 'undefined') return null
     return new URLSearchParams(window.location.search).get('focus')
   })
+  const [highlightedReportCategory, setHighlightedReportCategory] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    return new URLSearchParams(window.location.search).get('focusCategory')
+  })
 
   const selectPeriodSeqRef = useRef(0)
   const selectPeriodQueueRef = useRef<Promise<void>>(Promise.resolve())
@@ -190,15 +194,17 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   }, [])
 
   // Same arrival cue as a subscription jump, for the Reports sections the Today
-  // exception cards point at.
-  const handleNavigateToReportSection = useCallback((section: string) => {
+  // exception cards point at; category is optional when the destination is a card inside it.
+  const handleNavigateToReportSection = useCallback((section: string, category?: string | null) => {
     setHighlightedReportSection(section)
-    setActiveTab('reports', { search: { focus: section } })
+    setHighlightedReportCategory(category ?? null)
+    setActiveTab('reports', { search: { focus: section, focusCategory: category ?? null } })
   }, [setActiveTab])
 
   const clearHighlightedReportSection = useCallback(() => {
     setHighlightedReportSection(null)
-    updateAppSearch({ focus: null })
+    setHighlightedReportCategory(null)
+    updateAppSearch({ focus: null, focusCategory: null })
   }, [])
 
   // Receipt splitting is deliberately absent: it is not something to *open*, it
@@ -249,7 +255,9 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
       setLedgerCyclesRange(location.ledger.range)
       setHighlightedTxId(location.ledger.highlightedTxId)
       setHighlightedRecurringId(new URLSearchParams(window.location.search).get('subscription'))
-      setHighlightedReportSection(new URLSearchParams(window.location.search).get('focus'))
+      const reportSearch = new URLSearchParams(window.location.search)
+      setHighlightedReportSection(reportSearch.get('focus'))
+      setHighlightedReportCategory(reportSearch.get('focusCategory'))
 
       const period = selectedPeriodRef.current
       if (location.month && location.year && (location.month !== period.month || location.year !== period.year)) {
@@ -293,6 +301,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     highlightedRecurringId,
     setHighlightedRecurringId,
     highlightedReportSection,
+    highlightedReportCategory,
     handleNavigateToReportSection,
     clearHighlightedReportSection,
     ledgerIncomingSearch,

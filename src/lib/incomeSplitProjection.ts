@@ -67,8 +67,9 @@ function resolveExplicitRecoveryShares(
  * (an expense, a zero split, or a plain `Income` saved before any plan was loaded).
  */
 export function buildIncomeSplitRows(
-  transaction: Pick<Transaction, 'id' | 'date' | 'postedAt' | 'description' | 'ledgerCategory' | 'amount' | 'stabilityRecoveryTopUpAmount'>,
+  transaction: Pick<Transaction, 'id' | 'date' | 'postedAt' | 'description' | 'ledgerCategory' | 'amount' | 'accountId' | 'stabilityRecoveryTopUpAmount'>,
   allocations: IncomeAllocations | undefined,
+  accountBucketById?: ReadonlyMap<string, string>,
 ): Transaction[] {
   const shares = resolveIncomeSplitShares(transaction, allocations)?.map(share => share > 0 ? share : 0)
   const shareTotal = shares?.reduce((sum, share) => sum + share, 0) ?? 0
@@ -95,6 +96,10 @@ export function buildIncomeSplitRows(
     category: 'Transfer',
     ledgerCategory: `Transfer:Income->${bucket}`,
     amount: cents[index] / 100,
+    excludeFromAutocomplete: true,
+    accountId: transaction.accountId && accountBucketById?.get(transaction.accountId) === bucket
+      ? transaction.accountId
+      : undefined,
   }])
 }
 
@@ -110,11 +115,12 @@ export function projectIncomeSplitRows<T extends { id: string | number }>(
   parentId: string,
   allocations: IncomeAllocations | undefined,
   rowState: Partial<Transaction>,
+  accountBucketById?: ReadonlyMap<string, string>,
 ): T[] {
   const rest = list.filter(item => !String(item.id).startsWith(`${parentId}-split-`))
   const parent = rest.find(item => String(item.id) === parentId) as (T & Transaction) | undefined
   if (!parent) return rest
 
-  const rows = buildIncomeSplitRows(parent, allocations)
+  const rows = buildIncomeSplitRows(parent, allocations, accountBucketById)
   return rows.length === 0 ? rest : [...rest, ...rows.map(row => ({ ...row, ...rowState }) as unknown as T)]
 }

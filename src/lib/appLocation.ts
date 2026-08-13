@@ -157,9 +157,12 @@ export const navigateToAppTab = (tab: AppTab, options: AppNavigationOptions = {}
   const params = new URLSearchParams(window.location.search)
   if (tab !== 'ledger') LEDGER_PARAM_KEYS.forEach(key => params.delete(key))
   if (tab !== 'recurring') params.delete('subscription')
-  // `focus` scrolls Reports to one section. Deliberately not named `section`, which
-  // Settings already owns for its own deep links and must survive this navigation.
-  if (tab !== 'reports') params.delete('focus')
+  // `focus` scrolls Reports to one section and `focusCategory` can target a card inside it.
+  // Deliberately not named `section`, which Settings already owns for its own deep links.
+  if (tab !== 'reports') {
+    params.delete('focus')
+    params.delete('focusCategory')
+  }
   if (tab === 'ledger' && options.search) {
     LEDGER_PARAM_KEYS.forEach(key => params.delete(key))
   }

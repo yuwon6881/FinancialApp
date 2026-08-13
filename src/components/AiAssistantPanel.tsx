@@ -173,7 +173,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
       }
       headerActions={
         <>
-          {hasConversation && (
+          {(hasConversation || messages.length > 0) && (
             <Button variant="unstyled"
               type="button"
               onClick={() => void handleNewChat()}

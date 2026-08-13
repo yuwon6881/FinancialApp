@@ -197,6 +197,7 @@ function createPendingCompletionTransaction(goal: SavingsGoal): Transaction {
     ledgerCategory: bucketLabel(goal),
     amount: -Math.abs(goal.earmarkedAmount),
     savingsGoalId: goal.id,
+    excludeFromAutocomplete: true,
     isPendingSync: true,
   }
 }

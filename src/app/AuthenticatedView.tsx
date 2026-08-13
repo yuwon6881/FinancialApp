@@ -215,7 +215,7 @@ export function AuthenticatedView({
                       savingsGoals={financial.allSavingsGoals}
                       isSwitchingCycle={isCurrentCycleLoading || !todayDashboardData}
                       investmentAllocation={investmentAllocation}
-                      onNavigateToCategoryLimits={() => nav.handleNavigateToReportSection('category-limits')}
+                      onNavigateToCategoryLimits={category => nav.handleNavigateToReportSection('category-limits', category)}
                     />
                   )}
 
@@ -233,6 +233,7 @@ export function AuthenticatedView({
                       onAddBalanceAdjustment={financial.handleAddBalanceAdjustment}
                       isSwitchingCycle={nav.isSwitchingCycle}
                       highlightedSection={nav.highlightedReportSection}
+                      highlightedCategory={nav.highlightedReportCategory}
                       onClearHighlightedSection={nav.clearHighlightedReportSection}
                       onViewCycleSummary={cycleSummary.openManual}
                       onExplainWithAi={cycleKey => onExplainWithAi({

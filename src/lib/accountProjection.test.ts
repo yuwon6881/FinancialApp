@@ -5,11 +5,11 @@ import { projectAccountBalances } from './accountProjection'
 
 const accounts: LedgerAccount[] = [
   {
-    id: 'essentials', name: 'Essentials bank', bucket: 'Essentials', kind: 'Bank', isDefault: true,
+    id: 'essentials', name: 'Essentials bank', bucket: 'Essentials', kind: 'Bank', interestEnabled: false, interestRatePercent: 0, interestFrequency: 'Monthly', isDefault: true,
     isArchived: false, remaining: 100, createdAt: '2026-01-01', updatedAt: '2026-01-01',
   },
   {
-    id: 'rewards', name: 'Rewards wallet', bucket: 'Rewards', kind: 'EWallet', isDefault: true,
+    id: 'rewards', name: 'Rewards wallet', bucket: 'Rewards', kind: 'EWallet', interestEnabled: false, interestRatePercent: 0, interestFrequency: 'Monthly', isDefault: true,
     isArchived: false, remaining: 0, createdAt: '2026-01-01', updatedAt: '2026-01-01',
   },
 ]
@@ -57,6 +57,19 @@ describe('projectAccountBalances', () => {
       stabilityAlloc: 0,
       rewardsAlloc: 0.5,
     })
+
+    expect(result.find(account => account.id === 'essentials')?.remaining).toBe(150)
+    expect(result.find(account => account.id === 'rewards')?.remaining).toBe(50)
+  })
+
+  it('does not count an IncomeSplit proposal parent as well as its generated children', () => {
+    const result = projectAccountBalances(accounts, [op({
+      targetId: 'salary',
+      payload: {
+        id: 'salary', amount: 100, ledgerCategory: 'IncomeSplit:0.5,0,0,0.5', category: 'Salary',
+        description: 'Salary', date: '2026-08-01', accountId: 'essentials',
+      },
+    })])
 
     expect(result.find(account => account.id === 'essentials')?.remaining).toBe(150)
     expect(result.find(account => account.id === 'rewards')?.remaining).toBe(50)

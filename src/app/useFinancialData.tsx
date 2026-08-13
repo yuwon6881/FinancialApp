@@ -396,7 +396,12 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         op.entity === 'ledgerAccount' && (op.type === 'add' || op.type === 'update' || op.type === 'delete'))
       const accountOpeningChanges = ops.some(op =>
         op.entity === 'ledgerAccount' && op.type === 'add' && Number(op.payload?.openingAmount ?? 0) !== 0)
-      if (onlyLedgerAccountCrud && !accountOpeningChanges) {
+      const accountInterestChanges = ops.some(op =>
+        op.entity === 'ledgerAccount'
+        && (op.payload?.interestEnabled !== undefined
+          || op.payload?.interestRatePercent !== undefined
+          || op.payload?.interestFrequency !== undefined))
+      if (onlyLedgerAccountCrud && !accountOpeningChanges && !accountInterestChanges) {
         const { fetchLedgerAccounts } = await import('../lib/api/accounts')
         const refreshedAccounts = await fetchLedgerAccounts()
         setAccounts(refreshedAccounts)
@@ -887,7 +892,10 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     optimisticDashboardData?.setting?.stabilityAlloc,
     optimisticDashboardData?.setting?.rewardsAlloc,
   ])
-  const queuedTransactions = useOptimisticList(transactions, activeOps, 'transaction', incomeSplitOptions)
+  const queuedTransactions = useOptimisticList(transactions, activeOps, 'transaction', {
+    ...incomeSplitOptions,
+    ledgerAccounts: accounts,
+  })
   const allTransactions = useMemo(() => {
     // Direct server actions can create a ledger row before the next bootstrap response arrives.
     // Keep that row in the same collection consumed by LedgerView so changing tabs immediately
@@ -1255,7 +1263,11 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     if (!guardSensitive()) return
     const finalId = createFinalId('transaction')
     void triggerHaptic(20)
-    mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, { ...newTx, id: finalId }))
+    mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, {
+      ...newTx,
+      id: finalId,
+      excludeFromAutocomplete: true,
+    }))
   }
 
   const handleUpdateDraftTransaction = async (
@@ -1302,7 +1314,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     if (draftTransactions.length === 0) return
     const drafts = draftTransactions
     const { getDraftTransactionIssues } = await import('../lib/draftTransactionValidation')
-    const invalidDraft = drafts.find(draft => getDraftTransactionIssues(draft, allCategories).length > 0)
+    const invalidDraft = drafts.find(draft => getDraftTransactionIssues(draft, allCategories, allAccounts.length > 0).length > 0)
     if (invalidDraft) {
       showToast(
         `Review “${invalidDraft.description || 'transaction'}” before adding this batch to the Ledger.`,

@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowRight, CheckCircle2, Gauge, SlidersHorizontal, Tren
 import type { CategoryLimitProgress, AppTab } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { InfoHint } from '../ui/InfoHint'
-import type { NavigateToLedgerOptions } from './types'
+import { getCategoryLimitCardId, type NavigateToLedgerOptions } from './types'
 
 interface CategoryLimitPerformanceProps {
   items: CategoryLimitProgress[]
@@ -104,6 +104,7 @@ export function CategoryLimitPerformance({
           return (
             <button
               key={item.category}
+              id={getCategoryLimitCardId(item.category)}
               type="button"
               onClick={() => onNavigateToLedger?.({ category: item.category })}
               disabled={!onNavigateToLedger}

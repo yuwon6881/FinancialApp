@@ -5,6 +5,7 @@ import { CustomSelect } from '../ui/CustomSelect'
 import { BottomSheet } from '../ui/BottomSheet'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
 import { getCategoryDotClass, getCategoryFilterClass } from '../../lib/categoryColors'
+import { ChevronDown } from 'lucide-react'
 
 interface RecurringFilterBarProps {
   isMobile: boolean
@@ -43,10 +44,33 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
     { value: 'due-date', label: 'Sort by: Next Due Date' },
   ],
 }) => {
+  const filterContainerRef = React.useRef<HTMLDivElement>(null)
+  const filterPopoverRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    if (!isFilterDropdownOpen || isMobile) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (
+        filterContainerRef.current?.contains(target)
+        || filterPopoverRef.current?.contains(target)
+      ) {
+        return
+      }
+
+      setIsFilterDropdownOpen(false)
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isFilterDropdownOpen, isMobile, setIsFilterDropdownOpen])
+
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs select-none">
       {/* Category Multi-select dropdown */}
       <div
+        ref={filterContainerRef}
         className="relative recurring-filter-dropdown w-full sm:w-auto"
         onKeyDown={event => {
           if (!isMobile && isFilterDropdownOpen && event.key === 'Escape') {
@@ -71,11 +95,15 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
                 : `${selectedCategories.length} category filter${selectedCategories.length > 1 ? 's' : ''} active`}
             </span>
           </span>
-          <span className="text-[9px] text-muted-foreground">{'▼'}</span>
+          <ChevronDown
+            aria-hidden="true"
+            className={`size-3.5 text-muted-foreground/80 transition duration-200 ${isFilterDropdownOpen ? 'rotate-180' : ''}`}
+          />
         </Button>
 
         {/* Desktop Filter Popover */}
         <AnchoredPopover
+          ref={filterPopoverRef}
           open={isFilterDropdownOpen && !isMobile}
           anchorRef={filterButtonRef}
           align="left"
