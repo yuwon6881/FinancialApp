@@ -255,6 +255,7 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
         <div id="commitments-rewards-panel-commitments" role="tabpanel" aria-labelledby="commitments-rewards-tab-commitments" className="space-y-5">
           <RewardsPoolBar
             summary={rewardsPool}
+            activeView="commitments"
             bucket="Rewards"
             expectedInflow={rewardsTarget}
             formatSensitive={formatSensitive}
@@ -286,6 +287,7 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
         <div id="commitments-rewards-panel-rewards" role="tabpanel" aria-labelledby="commitments-rewards-tab-rewards" className="space-y-5">
           <RewardsPoolBar
             summary={rewardsPool}
+            activeView="rewards"
             bucket="Rewards"
             expectedInflow={rewardsTarget}
             formatSensitive={formatSensitive}
@@ -332,6 +334,7 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
         goalPacePreview={goalPacePreview}
         currency={currency}
         hideSensitive={hideSensitive}
+        sensitivePreferenceStatus={app.sensitivePreferenceStatus}
         todayKey={todayKey}
         formatSensitive={formatSensitive}
         onContributeToGoal={onContributeToGoal}

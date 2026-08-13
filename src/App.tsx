@@ -44,6 +44,7 @@ import { readAppLocation, updateAppSearch } from './lib/appLocation'
 import { mutationBusyLabel } from './components/ui/rowSyncState'
 import type { AiInvocationContext } from './lib/api/ai'
 import { calculateFreeRewardsBalance, pendingRecurringAmount, pendingRewardsAmount } from './lib/freeRewards'
+import { canOpenBlankMutationForm } from './lib/quickAddAvailability'
 
 const RuntimeBackgroundBridges = lazy(() => import('./app/RuntimeBackgroundBridges').then(module => ({ default: module.RuntimeBackgroundBridges })))
 const enableRuntimeBackgroundBridges = import.meta.env.MODE !== 'test'
@@ -84,15 +85,31 @@ const AppOverlaysFallback = ({
   visible,
   onToggle,
   onAskAi,
+  onPostTransaction,
+  postTransactionDisabled,
 }: {
   isOpen: boolean
   visible: boolean
   onToggle: () => void
   onAskAi: () => void
+  onPostTransaction: () => void
+  postTransactionDisabled: boolean
 }) => (
   <>
     {visible && isOpen && (
       <div role="menu" aria-label="Quick actions">
+        <Button
+          variant="secondary"
+          type="button"
+          role="menuitem"
+          onClick={onPostTransaction}
+          disabled={postTransactionDisabled}
+          title={postTransactionDisabled ? 'Reveal sensitive data to make financial changes' : 'Post Transaction'}
+          className="fixed right-8 z-40 flex items-center gap-2.5 cursor-pointer"
+          style={{ bottom: 'calc(216px + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <span>Post Transaction</span>
+        </Button>
         <Button
           variant="secondary"
           type="button"
@@ -138,10 +155,14 @@ function App() {
   const [hasShownModalThisSession, setHasShownModalThisSession] = useState(false)
 
   const guardSensitive = useCallback(() => {
+    if (prefs.sensitivePreferenceStatus === 'pending') {
+      dialogs.showToast('Finishing security check before making changes.', 'Security check pending', 'warning')
+      return false
+    }
     if (!prefs.hideSensitive) return true
     dialogs.showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning')
     return false
-  }, [prefs.hideSensitive, dialogs.showToast])
+  }, [dialogs.showToast, prefs.hideSensitive, prefs.sensitivePreferenceStatus])
 
   // 3. Session
   const session = useAppSession({
@@ -682,6 +703,11 @@ function App() {
             setIsAiOpen(true)
             fabMenu.close()
           }}
+          onPostTransaction={() => {
+            nav.handleQuickAction('transaction')
+            fabMenu.close()
+          }}
+          postTransactionDisabled={!canOpenBlankMutationForm(prefs.hideSensitive, prefs.sensitivePreferenceStatus)}
         />}>
           <AppOverlays
             dialogs={dialogs}

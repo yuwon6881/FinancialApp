@@ -76,39 +76,103 @@ export function projectAccountBalances(
   baseTransactions: ReadonlyArray<Transaction> = [],
   incomeAllocations?: IncomeAllocations,
 ): LedgerAccount[] {
-  const balances = new Map(accounts.map(account => [account.id, account.remaining]))
+  // Reconciliation is intentionally replayed in the same chronological stream as ledger
+  // mutations. A target is a final balance at the point the user confirmed the setup; applying
+  // it in a separate pass would either double-count an earlier queued transaction or overwrite a
+  // later one.
+  const projectedAccounts = accounts.map(account => ({ ...account }))
+  const balances = new Map(projectedAccounts.map(account => [account.id, account.remaining]))
   const operations = activeOps
-    .filter(operation => operation.entity === 'transaction')
+    .filter(operation => operation.entity === 'transaction' || operation.entity === 'ledgerAccountReconcile')
     .sort((left, right) => left.createdAt - right.createdAt)
 
   for (const operation of operations) {
+    if (operation.entity === 'ledgerAccountReconcile') {
+      if (operation.type !== 'add') continue
+      applyReconciliation(operation, projectedAccounts, balances)
+      continue
+    }
     if (operation.type === 'add') {
       const transaction = currentTransaction(operation)
-      if (transaction) addDelta(balances, transaction, accounts, incomeAllocations, 1)
+      if (transaction) addDelta(balances, transaction, projectedAccounts, incomeAllocations, 1)
       continue
     }
     if (operation.type === 'update') {
       for (const previous of snapshotTransactions(operation, baseTransactions))
-        addDelta(balances, previous, accounts, incomeAllocations, -1)
+        addDelta(balances, previous, projectedAccounts, incomeAllocations, -1)
       const next = currentTransaction(operation)
-      if (next) addDelta(balances, next, accounts, incomeAllocations, 1)
+      if (next) addDelta(balances, next, projectedAccounts, incomeAllocations, 1)
       continue
     }
     if (operation.type === 'delete' || operation.type === 'bulkDelete') {
       for (const previous of snapshotTransactions(operation, baseTransactions))
-        addDelta(balances, previous, accounts, incomeAllocations, -1)
+        addDelta(balances, previous, projectedAccounts, incomeAllocations, -1)
       continue
     }
     if (operation.type === 'bulkRestore') {
       for (const restored of snapshotTransactions(operation, baseTransactions))
-        addDelta(balances, restored, accounts, incomeAllocations, 1)
+        addDelta(balances, restored, projectedAccounts, incomeAllocations, 1)
     }
   }
 
-  return accounts.map(account => ({
+  return projectedAccounts.map(account => ({
     ...account,
     remaining: Math.round((balances.get(account.id) ?? account.remaining) * 100) / 100,
   }))
+}
+
+function applyReconciliation(
+  operation: QueuedOp,
+  accounts: LedgerAccount[],
+  balances: Map<string, number>,
+): void {
+  const raw = operation.payload?.reconciliation
+  if (!raw || typeof raw !== 'object') return
+  const reconciliation = raw as {
+    bucket?: unknown
+    targets?: unknown
+  }
+  if (typeof reconciliation.bucket !== 'string' || !Array.isArray(reconciliation.targets)) return
+
+  for (const rawTarget of reconciliation.targets) {
+    if (!rawTarget || typeof rawTarget !== 'object') continue
+    const target = rawTarget as Record<string, unknown>
+    const id = typeof target.id === 'string' && target.id.trim() ? target.id.trim() : null
+    const name = typeof target.name === 'string' ? target.name : ''
+    const targetBalance = typeof target.target === 'number' && Number.isFinite(target.target)
+      ? Math.round(target.target * 100) / 100
+      : null
+    if (!id || targetBalance === null || !name) continue
+
+    let account = accounts.find(candidate => candidate.id === id)
+    if (!account) {
+      account = {
+        id,
+        name,
+        bucket: reconciliation.bucket as LedgerAccount['bucket'],
+        kind: target.kind === 'EWallet' || target.kind === 'Cash' || target.kind === 'Card' || target.kind === 'Other'
+          ? target.kind
+          : 'Bank',
+        isDefault: target.isDefault === true,
+        isArchived: target.isArchived === true,
+        remaining: 0,
+        createdAt: new Date(operation.createdAt).toISOString(),
+        updatedAt: new Date(operation.createdAt).toISOString(),
+      }
+      accounts.push(account)
+    } else {
+      account.name = name
+      account.kind = target.kind === 'EWallet' || target.kind === 'Cash' || target.kind === 'Card' || target.kind === 'Other'
+        ? target.kind
+        : 'Bank'
+      account.isDefault = target.isDefault === true
+      account.isArchived = target.isArchived === true
+    }
+
+    balances.set(id, targetBalance)
+    account.isPendingSync = true
+    account.pendingSyncOperationId = operation.id
+  }
 }
 
 /**

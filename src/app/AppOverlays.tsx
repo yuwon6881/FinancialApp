@@ -10,6 +10,7 @@ import type { useAppSession } from './useAppSession'
 import type { useCycleNavigation } from './useCycleNavigation'
 import type { useCycleSummary } from './useCycleSummary'
 import { shouldShowMobileFab } from './useFabMenu'
+import { canOpenBlankMutationForm } from '../lib/quickAddAvailability'
 import type { useFabMenu } from './useFabMenu'
 import type { useFinancialData } from './useFinancialData'
 
@@ -75,8 +76,8 @@ export function AppOverlays({
   const showMobileFab = shouldShowMobileFab(prefs.activeTab)
 
   useEffect(() => {
-    if (prefs.hideSensitive) fabMenu.close()
-  }, [prefs.hideSensitive, fabMenu.close])
+    if (prefs.hideSensitive && prefs.sensitivePreferenceStatus !== 'pending') fabMenu.close()
+  }, [prefs.hideSensitive, prefs.sensitivePreferenceStatus, fabMenu.close])
 
   useEffect(() => {
     if (!fabMenu.isOpen || !showMobileFab) return
@@ -266,8 +267,12 @@ export function AppOverlays({
                     data-fab-action
                     variants={fabActionVariants}
                     whileTap={reduceMotion ? undefined : { scale: 0.92 }}
-                    disabled={prefs.hideSensitive && key !== 'ai'}
-                    title={prefs.hideSensitive && key !== 'ai' ? 'Reveal sensitive data to make financial changes' : label}
+                    disabled={key !== 'ai' && !canOpenBlankMutationForm(prefs.hideSensitive, prefs.sensitivePreferenceStatus)}
+                    title={key !== 'ai' && prefs.hideSensitive && prefs.sensitivePreferenceStatus === 'pending'
+                      ? 'Finishing security check…'
+                      : key !== 'ai' && prefs.hideSensitive
+                        ? 'Reveal sensitive data to make financial changes'
+                        : label}
                     onClick={() => {
                       if (key === 'ai') {
                         setIsAiOpen(true)

@@ -5,6 +5,7 @@ import { useAutoOpenModal } from '../../lib/useAutoOpenModal'
 import { useFormDraft } from '../../lib/useFormDraft'
 import { focusFirstInvalidField } from '../ui/formValidation'
 import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
+import { canOpenBlankMutationForm } from '../../lib/quickAddAvailability'
 
 interface UseWishlistFormOptions {
   wishlist: WishlistItem[]
@@ -31,7 +32,7 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
   const [isActiveInput, setIsActiveInput] = useState(false)
   const showAddModal = mode === 'add'
   const showEditModal = mode === 'edit'
-  const canOpenWhilePrivacyPending = options.sensitivePreferenceStatus === 'pending'
+  const canOpenWhilePrivacyPending = canOpenBlankMutationForm(options.hideSensitive, options.sensitivePreferenceStatus)
 
   const applyAiFields = useCallback((fields: Record<string, unknown>) => {
     const text = (key: string) => typeof fields[key] === 'string' && (fields[key] as string).trim()
@@ -60,7 +61,7 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
   }, [])
 
   const openAdd = useCallback(() => {
-    if (options.hideSensitive && !canOpenWhilePrivacyPending) return
+    if (!canOpenWhilePrivacyPending) return
     resetFields()
     setEditingItem(null)
     setIsActiveInput(options.wishlist.every(item => item.isPurchased))
@@ -68,7 +69,7 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
   }, [options.hideSensitive, canOpenWhilePrivacyPending, options.wishlist, resetFields])
 
   const openEdit = useCallback((item: WishlistItem) => {
-    if (options.hideSensitive) return
+    if (options.hideSensitive || options.sensitivePreferenceStatus === 'pending') return
     setEditingItem(item)
     setNameInput(item.name)
     setPriceInput(item.price.toFixed(2))
@@ -142,7 +143,7 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
 
   const saveAdd = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (options.hideSensitive) return
+    if (options.hideSensitive || options.sensitivePreferenceStatus === 'pending') return
     const price = validate()
     if (price == null) {
       focusFirstInvalidField(event.currentTarget)
@@ -155,7 +156,7 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
 
   const saveEdit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (options.hideSensitive) return
+    if (options.hideSensitive || options.sensitivePreferenceStatus === 'pending') return
     if (!editingItem) return
     const price = validate()
     if (price == null) {

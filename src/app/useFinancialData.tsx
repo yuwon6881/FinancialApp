@@ -16,7 +16,7 @@ import type {
   LedgerAccount,
 } from '../types'
 import type { CategoryCleanupSuggestion } from '../lib/api'
-import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, setCachedCycleSnapshot } from '../lib/cache'
+import { CACHE_KEYS, ensureAccountTrackingCacheVersion, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, setCachedCycleSnapshot } from '../lib/cache'
 import { useOptimisticList } from '../lib/useOptimisticList'
 import { useOutbox } from '../lib/useOutbox'
 import { useStartupSync } from './useStartupSync'
@@ -79,6 +79,10 @@ const createLocalId = (prefix: string, separator = '_') => {
 }
 
 export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernameRef' | 'setIsSwitchingCycle'>) {
+  useState(() => {
+    ensureAccountTrackingCacheVersion()
+    return true
+  })
   const {
     token,
     username,
@@ -931,9 +935,26 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       (dashboardData?.categories ?? []).flatMap(category =>
         (category.accounts ?? []).map(account => [account.id, account] as const)),
     )
+    const pendingReconciliationBalances = new Map<string, number>()
+    for (const operation of [...activeOps]
+      .filter(candidate => candidate.entity === 'ledgerAccountReconcile' && candidate.type === 'add')
+      .sort((left, right) => left.createdAt - right.createdAt)) {
+      const reconciliation = operation.payload?.reconciliation
+      if (!reconciliation || typeof reconciliation !== 'object') continue
+      const targets = (reconciliation as { targets?: unknown }).targets
+      if (!Array.isArray(targets)) continue
+      for (const target of targets) {
+        if (!target || typeof target !== 'object') continue
+        const value = target as { id?: unknown; target?: unknown }
+        if (typeof value.id !== 'string' || typeof value.target !== 'number' || !Number.isFinite(value.target)) continue
+        pendingReconciliationBalances.set(value.id, value.target)
+      }
+    }
     const snapshotAccounts = allAccounts.map(account => ({
       ...account,
-      remaining: accountSnapshots.get(account.id)?.remaining ?? account.remaining,
+      remaining: pendingReconciliationBalances.get(account.id)
+        ?? accountSnapshots.get(account.id)?.remaining
+        ?? account.remaining,
     }))
     const projectedAccounts = projectAccountBalancesFromTransactions(
       snapshotAccounts,

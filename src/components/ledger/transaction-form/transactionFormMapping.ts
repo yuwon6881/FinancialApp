@@ -67,6 +67,8 @@ export function mapFormToTransaction(
       ? state.stabilityReloadIntent
       : undefined,
     accountId: state.accountId || undefined,
-    counterAccountId: state.ledgerCategory === 'AccountMove' ? state.counterAccountId || undefined : undefined,
+    counterAccountId: state.transactionType === 'transfer' || state.ledgerCategory === 'AccountMove'
+      ? state.counterAccountId || undefined
+      : undefined,
   }
 }

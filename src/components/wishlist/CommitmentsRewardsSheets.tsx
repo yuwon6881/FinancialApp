@@ -10,6 +10,7 @@ import { SavingsGoalForm } from './SavingsGoalForm'
 import { WishlistItemForm } from './WishlistItemForm'
 import type { useSavingsGoalForm } from './useSavingsGoalForm'
 import type { useWishlistForm } from './useWishlistForm'
+import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
 
 interface Props {
   purchasingItem: WishlistItem | null
@@ -28,6 +29,7 @@ interface Props {
   goalPacePreview: number
   currency: string
   hideSensitive: boolean
+  sensitivePreferenceStatus?: SensitivePreferenceStatus
   todayKey: string
   formatSensitive: (value: number) => ReactNode
   onContributeToGoal: (id: number, amount: number) => Promise<string | null> | void
@@ -63,7 +65,7 @@ export function CommitmentsRewardsSheets(props: Props) {
 
       {itemForm.showAddModal && (
         <BottomSheet isOpen title="Add Reward" onClose={itemForm.closeAddModal} maxWidthClassName="max-w-md">
-          <WishlistItemForm mode="add" currency={props.currency} name={itemForm.nameInput} price={itemForm.priceInput} priority={itemForm.priorityInput} isActive={itemForm.isActiveInput} errors={itemForm.errors} onNameChange={itemForm.setNameInput} onPriceChange={itemForm.handlePriceChange} onPriorityChange={itemForm.setPriorityInput} onActiveChange={itemForm.setIsActiveInput} onClearError={field => itemForm.setErrors(previous => ({ ...previous, [field]: '' }))} onCancel={itemForm.closeAddModal} onSubmit={itemForm.handleSaveAdd} />
+          <WishlistItemForm mode="add" mutationBlocked={props.hideSensitive || props.sensitivePreferenceStatus === 'pending'} securityPending={props.sensitivePreferenceStatus === 'pending'} currency={props.currency} name={itemForm.nameInput} price={itemForm.priceInput} priority={itemForm.priorityInput} isActive={itemForm.isActiveInput} errors={itemForm.errors} onNameChange={itemForm.setNameInput} onPriceChange={itemForm.handlePriceChange} onPriorityChange={itemForm.setPriorityInput} onActiveChange={itemForm.setIsActiveInput} onClearError={field => itemForm.setErrors(previous => ({ ...previous, [field]: '' }))} onCancel={itemForm.closeAddModal} onSubmit={itemForm.handleSaveAdd} />
         </BottomSheet>
       )}
 
@@ -98,7 +100,7 @@ export function CommitmentsRewardsSheets(props: Props) {
 
       {itemForm.showEditModal && itemForm.editingItem && (
         <BottomSheet isOpen title="Edit Reward" onClose={itemForm.closeEditModal} maxWidthClassName="max-w-md">
-          <WishlistItemForm mode="edit" currency={props.currency} name={itemForm.nameInput} price={itemForm.priceInput} priority={itemForm.priorityInput} isActive={itemForm.isActiveInput} errors={itemForm.errors} onNameChange={itemForm.setNameInput} onPriceChange={itemForm.handlePriceChange} onPriorityChange={itemForm.setPriorityInput} onActiveChange={itemForm.setIsActiveInput} onClearError={field => itemForm.setErrors(previous => ({ ...previous, [field]: '' }))} onCancel={itemForm.closeEditModal} onSubmit={itemForm.handleSaveEdit} />
+          <WishlistItemForm mode="edit" mutationBlocked={props.hideSensitive || props.sensitivePreferenceStatus === 'pending'} securityPending={props.sensitivePreferenceStatus === 'pending'} currency={props.currency} name={itemForm.nameInput} price={itemForm.priceInput} priority={itemForm.priorityInput} isActive={itemForm.isActiveInput} errors={itemForm.errors} onNameChange={itemForm.setNameInput} onPriceChange={itemForm.handlePriceChange} onPriorityChange={itemForm.setPriorityInput} onActiveChange={itemForm.setIsActiveInput} onClearError={field => itemForm.setErrors(previous => ({ ...previous, [field]: '' }))} onCancel={itemForm.closeEditModal} onSubmit={itemForm.handleSaveEdit} />
         </BottomSheet>
       )}
     </>

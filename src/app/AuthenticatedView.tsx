@@ -263,6 +263,7 @@ export function AuthenticatedView({
                       onUpdateAccount={financial.handleUpdateAccount}
                       onRequestDeleteAccount={financial.requestDeleteAccount}
                       onAddBalanceAdjustment={financial.handleAddBalanceAdjustment}
+                      onReconcileAccounts={financial.handleReconcileAccounts}
                       notifyOnLoginEnabled={prefs.notifyOnLogin}
                       onToggleNotifyOnLogin={(checked) => {
                         const previous = prefs.notifyOnLogin

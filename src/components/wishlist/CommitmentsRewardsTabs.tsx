@@ -26,10 +26,11 @@ export const CommitmentsRewardsTabs: React.FC<CommitmentsRewardsTabsProps> = ({
   const reduceMotion = useReducedMotion()
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
 
-  const sections: SectionOption[] = [
+  const allSections: SectionOption[] = [
     { id: 'commitments', label: 'Commitments', count: commitmentsCount },
     { id: 'rewards', label: 'Rewards', count: rewardsCount },
   ]
+  const sections = activeTab === 'commitments' ? allSections : [allSections[1], allSections[0]]
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex: number | null = null

@@ -1,4 +1,5 @@
 import type { BulkTransactionMutationResult } from './api/transactionBulk'
+import type { LedgerAccountReconcileResult } from './api/accounts'
 import type { CategoryCleanupApplyResult } from './api/categories'
 import type { DeletedTransactionsSnapshot } from './api/investments'
 import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, LedgerAccount, Loan, PayEarlyResult, RecurringPayment, RecurringSettlementResult, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
@@ -14,7 +15,7 @@ export type EntityKind = 'transaction' | 'recurringPayment' | 'recurringOccurren
   | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentCashFlow'
   | 'investmentPlan' | 'investmentAllocation'
   | 'investmentAllocationOrder' | 'taxReliefCategory'
-  | 'ledgerAccount'
+  | 'ledgerAccount' | 'ledgerAccountReconcile'
 export type OpType = 'add' | 'update' | 'delete' | 'restore' | 'toggle' | 'purchase' | 'unpurchase'
   | 'reminder' | 'payEarly' | 'settle' | 'cleanup' | 'bulkDelete' | 'bulkRestore'
 export interface OutboxPayload {
@@ -75,6 +76,8 @@ export interface OutboxPayload {
   isDefault?: boolean
   openingAmount?: number
   remaining?: number
+  reconciliation?: unknown
+  undoReconciliation?: unknown
 }
 export type DispatchResult =
   | Transaction
@@ -95,6 +98,7 @@ export type DispatchResult =
   | CategoryCleanupApplyResult
   | PayEarlyResult
   | RecurringSettlementResult
+  | LedgerAccountReconcileResult
   | { id: string }
   | { item: WishlistItem; transaction: Transaction; id?: undefined }
   | void
@@ -189,6 +193,7 @@ export const ENTITY_LABELS: Record<EntityKind, string> = {
   investmentAllocationOrder: 'Investment classification order',
   taxReliefCategory: 'Tax relief category',
   ledgerAccount: 'Account',
+  ledgerAccountReconcile: 'Account reconciliation',
 }
 
 /** Kept beside the validator's persisted-op shape so registration tests can detect drift. */
@@ -202,6 +207,7 @@ export const WELL_FORMED_ENTITY_KINDS: readonly EntityKind[] = [
   'settings',
   'loan',
   'ledgerAccount',
+  'ledgerAccountReconcile',
   'investmentAccount',
   'investmentInstrument',
   'investmentActivity',
@@ -339,6 +345,7 @@ export function createFinalId(entity: EntityKind): string {
     : entity === 'taxReliefCategory' ? 'relief'
     : entity === 'loan' ? 'loan'
     : entity === 'ledgerAccount' ? 'acct'
+    : entity === 'ledgerAccountReconcile' ? 'reconcile'
     : 'op'
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }

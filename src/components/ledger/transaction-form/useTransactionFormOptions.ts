@@ -5,6 +5,7 @@ import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
 export interface UseTransactionFormOptions {
   categories: TransactionCategory[]
   accounts?: LedgerAccount[]
+  accountsLoading?: boolean
   currency: string
   hideSensitive: boolean
   sensitivePreferenceStatus?: SensitivePreferenceStatus

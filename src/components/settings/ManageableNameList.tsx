@@ -30,6 +30,8 @@ interface ManageableNameListProps<T extends ManageableNameItem> {
   /** Allows a feature to give its rows a little more room without replacing the list primitive. */
   itemClassName?: string | ((item: T) => string)
   listClassName?: string
+  /** Lets dense feature rows move their action cluster below the content on narrow phones. */
+  stackActionsOnMobile?: boolean
   disabled?: boolean
   isLoading?: boolean
   onAdd: (name: string) => Promise<void> | void
@@ -54,6 +56,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
   emptyState,
   itemClassName,
   listClassName,
+  stackActionsOnMobile = false,
   disabled = false,
   isLoading = false,
   onAdd,
@@ -209,15 +212,17 @@ export function ManageableNameList<T extends ManageableNameItem>({
         ) : filtered.map(item => (
           <div
             key={item.id}
-            className={`flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-background px-2.5 py-2 text-xs ${
+            className={`flex justify-between gap-2 rounded-lg border border-border/50 bg-background px-2.5 py-2 text-xs ${
+              stackActionsOnMobile ? 'flex-col items-stretch sm:flex-row sm:items-center' : 'items-center'
+            } ${
               typeof itemClassName === 'function' ? itemClassName(item) : itemClassName ?? ''
             }`}
           >
-            <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               {renderName ? renderName(item) : <span className="truncate font-semibold">{item.name}</span>}
               {renderMeta?.(item)}
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className={`flex shrink-0 items-center gap-2 ${stackActionsOnMobile ? 'self-end sm:self-auto' : ''}`}>
               {renderStatus?.(item)}
               {onEdit && (
                 <Button variant="unstyled"

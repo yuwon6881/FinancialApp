@@ -232,6 +232,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         paymentMode={view.paymentMode}
         categories={categories}
         currency={currency}
+        mutationBlocked={hideSensitive || app.sensitivePreferenceStatus === 'pending'}
+        securityPending={app.sensitivePreferenceStatus === 'pending'}
         firstInputRef={view.firstInputRef}
         onNameChange={view.handleNameChange}
         onAmountChange={view.handleAmountFieldChange}

@@ -29,6 +29,7 @@ const ReceiptSplitSheet = lazy(() =>
 export interface TransactionFormSheetProps {
   categories: TransactionCategory[]
   accounts?: LedgerAccount[]
+  accountsLoading?: boolean
   currency: string
   hideSensitive: boolean
   sensitivePreferenceStatus?: SensitivePreferenceStatus
@@ -104,6 +105,9 @@ export interface TransactionFormSheetRef {
 export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, TransactionFormSheetProps>((props, ref) => {
   const app = useAppContext()
   const form = useTransactionForm(props)
+  const accountsLoading = props.accountsLoading ?? (props.accounts === undefined || props.accounts.length === 0)
+  const securityPending = props.sensitivePreferenceStatus === 'pending'
+  const saveDisabled = props.hideSensitive || securityPending || accountsLoading
   const [isReceiptSplitOpen, setIsReceiptSplitOpen] = useState(false)
   const setReceiptSplitOpen = useCallback((open: boolean) => {
     setIsReceiptSplitOpen(open)
@@ -146,6 +150,16 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
       title={title}
     >
       <form noValidate onSubmit={form.handleSubmit} className="space-y-5">
+        {securityPending && (
+          <p className="rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground" role="status">
+            Finishing security check… You can fill this form in, but saving is temporarily disabled.
+          </p>
+        )}
+        {accountsLoading && !props.hideSensitive && (
+          <p className="rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground" role="status">
+            Loading accounts… This form will be ready to save when account data arrives.
+          </p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ReceiptScanPicker
             isScanning={form.scanner.isScanning}
@@ -233,6 +247,11 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           </Button>
           <Button
             type="submit"
+            disabled={saveDisabled}
+            title={securityPending
+              ? 'Finishing security check…'
+              : props.hideSensitive ? 'Reveal sensitive data before saving'
+                : accountsLoading ? 'Loading accounts…' : undefined}
             className="rounded-xl py-2.5 shadow-lg shadow-primary/10"
           >
             {form.state.mode === 'edit' ? 'Save Changes' : form.state.mode === 'draft' ? 'Save Draft' : 'Add Transaction'}

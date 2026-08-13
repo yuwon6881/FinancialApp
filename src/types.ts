@@ -274,13 +274,13 @@ export interface Transaction {
   // Set when this transaction consumed a savings commitment. Deleting this row restores the
   // commitment while it is still the latest untouched completion.
   savingsGoalId?: number | null
-  /** The account that receives this row's bucket leg, when it is explicitly placed. */
+  /** The account that receives this row's bucket leg. Older clients may omit it on the wire. */
   accountId?: string | null
   /** Destination account for an in-bucket AccountMove row. */
   counterAccountId?: string | null
 }
 
-export type LedgerAccountKind = 'Bank' | 'EWallet' | 'Cash' | 'Card'
+export type LedgerAccountKind = 'Bank' | 'EWallet' | 'Cash' | 'Card' | 'Other'
 
 export interface LedgerAccount {
   id: string

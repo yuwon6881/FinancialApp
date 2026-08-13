@@ -10,6 +10,7 @@ export function validateTransactionForm(state: {
   transferTarget?: string
   accountId?: string | null
   counterAccountId?: string | null
+  accountTrackingEnabled?: boolean
   stabilityReloadIntent?: string
 }) {
   const errors: Record<string, string> = {}
@@ -27,6 +28,16 @@ export function validateTransactionForm(state: {
   }
   if (state.transactionType === 'transfer' && state.transferSource === state.transferTarget) {
     errors.transferTarget = 'Choose a different target category.'
+  }
+  if (state.accountTrackingEnabled) {
+    if (state.ledgerCategory && ['Essentials', 'Growth', 'Stability', 'Rewards'].includes(state.ledgerCategory)
+      && !state.accountId) {
+      errors.accountId = 'Choose the account that holds this bucket money.'
+    }
+    if (state.transactionType === 'transfer') {
+      if (!state.accountId) errors.accountId = 'Choose the account sending the money.'
+      if (!state.counterAccountId) errors.counterAccountId = 'Choose the account receiving the money.'
+    }
   }
   if (state.ledgerCategory === 'AccountMove') {
     if (!state.accountId) errors.accountId = 'Choose the account money is leaving.'

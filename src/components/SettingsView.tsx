@@ -31,6 +31,7 @@ import { Button } from './ui/Button'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { SettingsTabs, type SettingsTabId } from './settings/SettingsTabs'
 import type { LedgerAccountInput } from '../app/financialData/accountActions'
+import type { LedgerAccountReconcileInput } from '../lib/api/accounts'
 const AccountsSection = React.lazy(() => import('./settings/accounts/AccountsSection').then(m => ({ default: m.AccountsSection })))
 
 interface SettingsViewProps {
@@ -61,6 +62,7 @@ interface SettingsViewProps {
   onUpdateAccount?: (id: string, input: LedgerAccountInput) => Promise<void> | void
   onRequestDeleteAccount?: (id: string) => void
   onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
+  onReconcileAccounts?: (input: LedgerAccountReconcileInput) => Promise<void> | void
   notifyOnLoginEnabled?: boolean
   onToggleNotifyOnLogin?: (checked: boolean) => void
   activeSyncId?: string | null
@@ -798,6 +800,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             onUpdateAccount={(id, input) => props.onUpdateAccount?.(id, input)}
             onRequestDeleteAccount={id => props.onRequestDeleteAccount?.(id)}
             onAddBalanceAdjustment={transaction => props.onAddBalanceAdjustment?.(transaction)}
+            onReconcileAccounts={input => props.onReconcileAccounts?.(input)}
           />
         </React.Suspense>
       )}

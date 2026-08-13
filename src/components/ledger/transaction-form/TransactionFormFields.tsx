@@ -170,22 +170,36 @@ export function TransactionFormFields({
     ? state.transferSource
     : (['Essentials', 'Growth', 'Stability', 'Rewards'].includes(state.ledgerCategory) ? state.ledgerCategory : null)
   const isTransfer = String(state.transactionType) === 'transfer'
+  const accountTrackingEnabled = accounts.length > 0
   const accountOptions = React.useMemo(() => {
     if (!accountBucket) return []
     const bucketAccounts = accounts.filter(account =>
       account.bucket === accountBucket && (!account.isArchived || account.id === state.accountId),
     )
-    if (bucketAccounts.length === 0) return []
+    const defaultAccount = bucketAccounts.find(account => account.isDefault && !account.isArchived)
     return [
-      { value: '', label: `Use ${accountBucket} default` },
-      { value: '__untracked__', label: 'Leave this transaction untracked' },
-      ...bucketAccounts.map(account => ({
+      { value: defaultAccount?.id ?? '', label: defaultAccount ? `Use ${defaultAccount.name} (default)` : `Choose ${accountBucket} account` },
+      ...bucketAccounts.filter(account => account.id !== defaultAccount?.id).map(account => ({
         value: account.id,
         label: `${account.name}${account.isArchived ? ' (Closed)' : ''}${account.isDefault ? ' · Default' : ''}`,
         disabled: account.isArchived,
       })),
     ]
   }, [accountBucket, accounts, state.accountId])
+  const transferTargetOptions = React.useMemo(() => {
+    const bucketAccounts = accounts.filter(account =>
+      account.bucket === state.transferTarget && (!account.isArchived || account.id === state.counterAccountId),
+    )
+    const defaultAccount = bucketAccounts.find(account => account.isDefault && !account.isArchived)
+    return [
+      { value: defaultAccount?.id ?? '', label: defaultAccount ? `Use ${defaultAccount.name} (default)` : `Choose ${state.transferTarget} account` },
+      ...bucketAccounts.filter(account => account.id !== defaultAccount?.id).map(account => ({
+        value: account.id,
+        label: `${account.name}${account.isArchived ? ' (Closed)' : ''}${account.isDefault ? ' · Default' : ''}`,
+        disabled: account.isArchived,
+      })),
+    ]
+  }, [accounts, state.counterAccountId, state.transferTarget])
 
   return (
     <>
@@ -445,17 +459,35 @@ export function TransactionFormFields({
             />
           </FormField>
 
-          {accountOptions.length > 0 && (
+          {accountTrackingEnabled && (
             <FormField
               className="sm:col-span-2"
               label="Source account"
-              hint="Optional. This places the source side in one attached account; the target side follows its bucket default."
+              required
+              error={errors.accountId}
             >
               <CustomSelect
                 ariaLabel="Transfer source account"
-                value={state.accountId ?? '__untracked__'}
-                onChange={value => onSetField('accountId', value === '__untracked__' ? null : value)}
+                value={state.accountId ?? ''}
+                onChange={value => onSetField('accountId', value || null)}
                 options={accountOptions}
+                className="w-full"
+              />
+            </FormField>
+          )}
+
+          {accountTrackingEnabled && (
+            <FormField
+              className="sm:col-span-2"
+              label="Destination account"
+              required
+              error={errors.counterAccountId}
+            >
+              <CustomSelect
+                ariaLabel="Transfer destination account"
+                value={state.counterAccountId ?? ''}
+                onChange={value => onSetField('counterAccountId', value || null)}
+                options={transferTargetOptions.filter(option => option.value !== state.accountId)}
                 className="w-full"
               />
             </FormField>
@@ -513,15 +545,16 @@ export function TransactionFormFields({
             />
           </FormField>
 
-          {accountOptions.length > 0 && (
+          {accountTrackingEnabled && accountBucket && (
             <FormField
               label={isTransfer ? 'Source account' : 'Account'}
-              hint="Optional. If you leave this untracked, the bucket total still works as before."
+              required
+              error={errors.accountId}
             >
               <CustomSelect
                 ariaLabel={isTransfer ? 'Source account' : 'Account'}
-                value={state.accountId ?? '__untracked__'}
-                onChange={value => onSetField('accountId', value === '__untracked__' ? null : value)}
+                value={state.accountId ?? ''}
+                onChange={value => onSetField('accountId', value || null)}
                 options={accountOptions}
                 className="w-full"
               />

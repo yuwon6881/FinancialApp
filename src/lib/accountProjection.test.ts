@@ -74,4 +74,32 @@ describe('projectAccountBalances', () => {
     expect(result.find(account => account.id === 'essentials')?.remaining).toBe(60)
     expect(result.find(account => account.id === 'cash')?.remaining).toBe(40)
   })
+
+  it('projects an atomic reconciliation onto existing and new account rows', () => {
+    const result = projectAccountBalances(accounts, [op({
+      entity: 'ledgerAccountReconcile',
+      targetId: 'reconcile-1',
+      payload: {
+        reconciliation: {
+          operationId: 'reconcile-1',
+          bucket: 'Essentials',
+          expectedBucketTotal: 100,
+          targets: [
+            { id: 'essentials', name: 'Essentials bank', kind: 'Bank', isDefault: true, isArchived: false, expectedCurrent: 100, target: 60 },
+            { id: 'cash-new', name: 'Cash jar', kind: 'Cash', isDefault: false, isArchived: false, expectedCurrent: 0, target: 40 },
+          ],
+        },
+      },
+    })])
+
+    expect(result.find(account => account.id === 'essentials')?.remaining).toBe(60)
+    expect(result.find(account => account.id === 'cash-new')).toMatchObject({
+      name: 'Cash jar',
+      bucket: 'Essentials',
+      kind: 'Cash',
+      remaining: 40,
+      isPendingSync: true,
+      pendingSyncOperationId: 'op-1',
+    })
+  })
 })

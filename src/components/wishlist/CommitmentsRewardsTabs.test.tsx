@@ -52,6 +52,30 @@ describe('CommitmentsRewardsTabs', () => {
     expect(rewardsTab.getAttribute('tabindex')).toBe('-1')
   })
 
+  it('keeps the active view on the left', () => {
+    const { rerender } = render(
+      <CommitmentsRewardsTabs
+        activeTab="commitments"
+        onChange={() => undefined}
+        commitmentsCount={2}
+        rewardsCount={4}
+      />
+    )
+
+    expect(screen.getAllByRole('tab')[0].textContent).toContain('Commitments')
+
+    rerender(
+      <CommitmentsRewardsTabs
+        activeTab="rewards"
+        onChange={() => undefined}
+        commitmentsCount={2}
+        rewardsCount={4}
+      />
+    )
+
+    expect(screen.getAllByRole('tab')[0].textContent).toContain('Rewards')
+  })
+
   it('calls onChange when clicking a tab', () => {
     const handleChange = vi.fn()
     render(

@@ -67,6 +67,16 @@ export function buildUndoAction(
       return action('recurringPayment', 'delete', String(op.targetId), op.payload)
     case 'ledgerAccount:add':
       return action('ledgerAccount', 'delete', String(op.targetId), op.payload)
+    case 'ledgerAccountReconcile:add': {
+      const undo = op.payload?.undoReconciliation
+      return undo && typeof undo === 'object'
+        ? action('ledgerAccountReconcile', 'add', createFinalId('ledgerAccountReconcile'), {
+            name: `Undo ${op.payload?.name || 'account reconciliation'}`,
+            description: 'Undo account reconciliation',
+            reconciliation: undo,
+          })
+        : undefined
+    }
     case 'recurringOccurrence:settle': {
       const transaction = result && typeof result === 'object' && 'transaction' in result
         ? result.transaction

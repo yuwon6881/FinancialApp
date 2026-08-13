@@ -9,6 +9,7 @@ import { getCategoryChartColor } from '../../lib/categoryColors'
 
 interface RewardsPoolBarProps {
   summary: GoalPoolSummary
+  activeView?: 'commitments' | 'rewards'
   /** The existing bucket budget for this cycle — what its commitments are paced against. */
   bucket?: SavingsGoalFundingBucket
   expectedInflow: number
@@ -29,6 +30,7 @@ interface RewardsPoolBarProps {
  */
 export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   summary,
+  activeView = 'commitments',
   bucket: bucketProp = 'Rewards',
   expectedInflow,
   formatSensitive,
@@ -40,7 +42,8 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
 }) => {
   const bucket = summary.fundingBucket ?? bucketProp
   const bucketLabel = bucket === 'Essentials' ? 'Essentials' : 'Rewards'
-  const bucketColor = getCategoryChartColor(bucket)
+  const committedColor = getCategoryChartColor(bucket)
+  const freeColor = bucket === 'Rewards' ? 'var(--color-sky-500)' : 'var(--color-amber-500)'
   const {
     rewardsBalance: bucketBalance,
     totalEarmarked,
@@ -131,29 +134,51 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         </div>
       </div>
 
-      {/* The stacked track. Committed sits left so the free remainder reads as "what's left over",
-          which is how the money actually behaves. */}
+      {/* The selected view leads the bar, matching the tab order above. Both claims use a full,
+          distinct Ayu color so the split never depends on a low-contrast opacity difference. */}
       <div
-        className="w-full h-2.5 rounded-full bg-muted overflow-hidden"
+        className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted"
         role="img"
         aria-label={hasGoals
           ? `${committedPct.toFixed(0)}% of your ${bucketLabel.toLowerCase()} money is set aside for commitments`
           : `No ${bucketLabel.toLowerCase()} money set aside for commitments yet`}
       >
-        <div className="h-full transition-all duration-500" style={{ width: `${committedPct}%`, backgroundColor: bucketColor }} />
+        {(activeView === 'commitments'
+          ? [
+              { key: 'committed', width: committedPct, color: committedColor },
+              { key: 'free', width: 100 - committedPct, color: freeColor },
+            ]
+          : [
+              { key: 'free', width: 100 - committedPct, color: freeColor },
+              { key: 'committed', width: committedPct, color: committedColor },
+            ]
+        ).map(segment => (
+          <div
+            key={segment.key}
+            data-pool-segment={segment.key}
+            className="h-full transition-[width] duration-500"
+            style={{ width: `${segment.width}%`, backgroundColor: segment.color }}
+          />
+        ))}
       </div>
 
       <div className="grid max-w-2xl grid-cols-2 gap-3 text-xs font-semibold">
-        <span className="flex min-w-0 items-center gap-1.5 rounded-lg bg-muted/20 px-2.5 py-2">
-          <span className="size-2 rounded-full" style={{ backgroundColor: bucketColor }} aria-hidden />
-          <span className="min-w-0 truncate text-muted-foreground">Committed</span>
-          <span className="ml-auto shrink-0 text-foreground font-extrabold">{formatSensitive(totalEarmarked)}</span>
-        </span>
-        <span className="flex min-w-0 items-center gap-1.5 rounded-lg bg-muted/20 px-2.5 py-2">
-          <span className="size-2 rounded-full ring-1" style={{ backgroundColor: bucketColor, opacity: 0.3 }} aria-hidden />
-          <span className="min-w-0 truncate text-muted-foreground">Free to spend</span>
-          <span className="ml-auto shrink-0 text-foreground font-extrabold">{formatSensitive(unassigned)}</span>
-        </span>
+        {(activeView === 'commitments'
+          ? [
+              { key: 'committed', label: 'Committed', amount: totalEarmarked, color: committedColor },
+              { key: 'free', label: 'Free to spend', amount: unassigned, color: freeColor },
+            ]
+          : [
+              { key: 'free', label: 'Free to spend', amount: unassigned, color: freeColor },
+              { key: 'committed', label: 'Committed', amount: totalEarmarked, color: committedColor },
+            ]
+        ).map(item => (
+          <span key={item.key} className="flex min-w-0 items-center gap-1.5 rounded-lg bg-muted/20 px-2.5 py-2">
+            <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} aria-hidden />
+            <span className="min-w-0 truncate text-muted-foreground">{item.label}</span>
+            <span className="ml-auto shrink-0 font-extrabold text-foreground">{formatSensitive(item.amount)}</span>
+          </span>
+        ))}
       </div>
 
       {/* This cycle's share gets its own inset panel rather than a caption, so "the balance is
@@ -164,7 +189,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
             <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               {cycleDone
                 ? <CheckCircle2 className="size-3 text-emerald-500" aria-hidden />
-                : <CalendarClock className="size-3" style={{ color: bucketColor }} aria-hidden />}
+                : <CalendarClock className="size-3" style={{ color: committedColor }} aria-hidden />}
               This cycle
             </span>
             <span className="text-xs font-semibold text-muted-foreground">
@@ -184,7 +209,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
           >
             <div
               className={`h-full rounded-full transition-all duration-500 ${cycleDone ? 'bg-emerald-500' : ''}`}
-              style={{ width: `${cyclePct}%`, ...(cycleDone ? {} : { backgroundColor: bucketColor }) }}
+              style={{ width: `${cyclePct}%`, ...(cycleDone ? {} : { backgroundColor: committedColor }) }}
             />
           </div>
 

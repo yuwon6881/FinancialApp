@@ -3,6 +3,7 @@ import type { RecurringPayment, RecurringFrequency, RecurringPaymentMode, Transa
 import { maskCurrencyInput } from '../../lib/utils'
 import { useSyncStatus } from '../../lib/useOptimisticList'
 import { useAutoOpenModal } from '../../lib/useAutoOpenModal'
+import { canOpenBlankMutationForm } from '../../lib/quickAddAvailability'
 import { computeOccurrenceOnOrAfter, hasBillingEnded, normalizeRecurringFrequency } from '../../lib/recurringPayments'
 import { financialDate } from '../../lib/financialDate'
 import { formatSensitiveAmount, formatCurrencyAmount } from './formatters'
@@ -239,7 +240,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
   // tab-switch/mount frame (which made the slide occasionally skip). See
   // lib/useAutoOpenModal.
   useAutoOpenModal(autoOpenAddForm, () => {
-    if (!hideSensitive || sensitivePreferenceStatus === 'pending') setShowAddForm(true)
+    if (canOpenBlankMutationForm(hideSensitive, sensitivePreferenceStatus)) setShowAddForm(true)
   }, onResetAutoOpen)
 
 
@@ -259,7 +260,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (hideSensitive) return
+    if (hideSensitive || sensitivePreferenceStatus === 'pending') return
 
     const newErrors: Record<string, string> = {}
     if (!name.trim()) {
@@ -358,7 +359,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
 
   // Header "New Subscription"/"Cancel" toggle
   const toggleAddForm = () => {
-    if (hideSensitive) return
+    if (!canOpenBlankMutationForm(hideSensitive, sensitivePreferenceStatus)) return
     if (showAddForm) {
       handleCancelForm()
     } else {

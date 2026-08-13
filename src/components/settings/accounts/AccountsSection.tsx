@@ -12,6 +12,7 @@ import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { AccountFormSheet } from './AccountFormSheet'
 import { BucketAccountSetupSheet } from './BucketAccountSetupSheet'
 import type { BucketSetupPrefill } from './view/useBucketAccountSetupView'
+import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
 import { useAccountsView } from './view/useAccountsView'
 
 interface AccountsSectionProps {
@@ -27,6 +28,7 @@ interface AccountsSectionProps {
   onUpdateAccount: (id: string, input: LedgerAccountInput) => Promise<void> | void
   onRequestDeleteAccount: (id: string) => void
   onAddBalanceAdjustment: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
+  onReconcileAccounts?: (input: LedgerAccountReconcileInput) => Promise<void> | void
 }
 
 const KIND_LABELS: Record<LedgerAccount['kind'], string> = {
@@ -34,6 +36,7 @@ const KIND_LABELS: Record<LedgerAccount['kind'], string> = {
   EWallet: 'E-wallet',
   Cash: 'Cash',
   Card: 'Card',
+  Other: 'Other',
 }
 
 const KIND_ICONS: Record<LedgerAccount['kind'], LucideIcon> = {
@@ -41,6 +44,7 @@ const KIND_ICONS: Record<LedgerAccount['kind'], LucideIcon> = {
   EWallet: Wallet,
   Cash: Banknote,
   Card: CreditCard,
+  Other: CircleHelp,
 }
 
 const BUCKETS: ReadonlyArray<{ name: LedgerAccount['bucket']; description: string }> = [
@@ -63,6 +67,7 @@ export function AccountsSection({
   onUpdateAccount,
   onRequestDeleteAccount,
   onAddBalanceAdjustment,
+  onReconcileAccounts,
 }: AccountsSectionProps) {
   const { rows, isSyncing, isDeleting } = useAccountsView({ accounts, activeSyncId, activeSyncIds, deletingId })
   const [editingAccount, setEditingAccount] = useState<LedgerAccount | null>(null)
@@ -156,7 +161,7 @@ export function AccountsSection({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
           {bucketSummaries.map(bucket => (
             <div key={bucket.name} className={`min-w-0 rounded-xl border bg-background/40 p-3 ${bucket.count > 0 ? 'border-border/60' : 'border-dashed border-border/50'}`}>
               <div className="flex min-w-0 items-center justify-between gap-2">
@@ -230,6 +235,7 @@ export function AccountsSection({
             onDelete={item => onRequestDeleteAccount(item.id)}
             disabled={disabled || hideSensitive}
             listClassName="max-h-[30rem] space-y-2"
+            stackActionsOnMobile
             itemClassName={item => item.isArchived ? 'border-dashed opacity-75' : 'border-border/60 bg-card/70'}
             emptyState={(
               <div className="rounded-2xl border border-dashed border-border/70 bg-muted/10 px-5 py-8 text-center">
@@ -250,7 +256,7 @@ export function AccountsSection({
               const AccountIcon = KIND_ICONS[item.kind]
               const bucketClass = getCategoryBadgeClass(item.bucket)
               return (
-                <div className="flex min-w-0 items-center gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   <div className={`grid size-9 shrink-0 place-items-center rounded-xl border ${bucketClass}`} aria-hidden="true">
                     <AccountIcon className="size-4" />
                   </div>
@@ -320,6 +326,7 @@ export function AccountsSection({
         }}
         onAddAccount={onAddAccount}
         onAddBalanceAdjustment={onAddBalanceAdjustment}
+        onReconcileAccounts={onReconcileAccounts}
       />
     </>
   )

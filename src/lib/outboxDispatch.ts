@@ -100,6 +100,10 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     const { deleteLedgerAccount } = await import('./api/accounts')
     return deleteLedgerAccount(op.targetId)
   },
+  'ledgerAccountReconcile:add': async (op) => {
+    const { reconcileLedgerAccounts } = await import('./api/accounts')
+    return reconcileLedgerAccounts(op.payload?.reconciliation as import('./api/accounts').LedgerAccountReconcileInput)
+  },
 
   'category:add': (op) => api.addCategory({ ...(op.payload as Partial<TransactionCategory>), id: op.targetId } as Omit<TransactionCategory, 'id'> & { id?: string }),
   'category:update': (op) => api.updateCategory(op.targetId, {

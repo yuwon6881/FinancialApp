@@ -31,6 +31,7 @@ const KIND_ICONS: Record<LedgerAccountKind, LucideIcon> = {
   EWallet: Wallet,
   Cash: Banknote,
   Card: CreditCard,
+  Other: CircleHelp,
 }
 
 export function AccountFormSheet({

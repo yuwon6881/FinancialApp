@@ -17,12 +17,14 @@ import type { TransactionDocumentsFieldRef } from './TransactionDocumentsField'
 import { focusFirstInvalidField } from '../../ui/formValidation'
 import type { ReceiptScanResult } from '../../../lib/api'
 import { getErrorMessage } from '../../../lib/errors'
+import { canOpenBlankMutationForm } from '../../../lib/quickAddAvailability'
 import type { UseTransactionFormOptions } from './useTransactionFormOptions'
 export type { UseTransactionFormOptions } from './useTransactionFormOptions'
 export function useTransactionForm(options: UseTransactionFormOptions) {
   const {
     categories,
     accounts = [],
+    accountsLoading = accounts.length === 0,
     essentialsAlloc,
     growthAlloc,
     stabilityAlloc,
@@ -365,18 +367,31 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   }, [state.transactionType, state.transferSource, state.transferTarget, state.editingId])
 
   useEffect(() => {
-    if (state.mode !== 'create' || state.accountId === null) return
+    if (state.ledgerCategory === 'AccountMove' || accounts.length === 0) return
     const bucket = state.transactionType === 'transfer'
       ? state.transferSource
       : (['Essentials', 'Growth', 'Stability', 'Rewards'].includes(state.ledgerCategory) ? state.ledgerCategory : null)
-    if (!bucket) return
-    const selected = state.accountId ? accounts.find(account => account.id === state.accountId) : undefined
-    if (selected && selected.bucket === bucket) return
-    const defaultId = accounts.find(account => account.bucket === bucket && account.isDefault && !account.isArchived)?.id ?? ''
-    if (state.accountId !== defaultId) {
-      dispatch({ type: 'SET_FIELD', field: 'accountId', value: defaultId })
+    if (bucket) {
+      const selected = state.accountId ? accounts.find(account => account.id === state.accountId) : undefined
+      const defaultId = accounts.find(account => account.bucket === bucket && account.isDefault && !account.isArchived)?.id ?? ''
+      if ((!selected || selected.bucket !== bucket) && state.accountId !== defaultId) {
+        dispatch({ type: 'SET_FIELD', field: 'accountId', value: defaultId })
+      }
     }
-  }, [accounts, state.accountId, state.ledgerCategory, state.mode, state.transactionType, state.transferSource])
+    if (state.transactionType === 'transfer') {
+      const selectedTarget = state.counterAccountId ? accounts.find(account => account.id === state.counterAccountId) : undefined
+      const targetDefaultId = accounts.find(account => account.bucket === state.transferTarget && account.isDefault && !account.isArchived)?.id ?? ''
+      const nextTargetId = targetDefaultId || null
+      if ((!selectedTarget || selectedTarget.bucket !== state.transferTarget) && state.counterAccountId !== nextTargetId) {
+        dispatch({ type: 'SET_FIELD', field: 'counterAccountId', value: nextTargetId })
+      }
+    } else if (state.counterAccountId !== null) {
+      dispatch({ type: 'SET_FIELD', field: 'counterAccountId', value: null })
+    }
+    if (!bucket && state.transactionType !== 'transfer' && state.accountId !== null) {
+      dispatch({ type: 'SET_FIELD', field: 'accountId', value: null })
+    }
+  }, [accounts, state.accountId, state.counterAccountId, state.ledgerCategory, state.transactionType, state.transferSource, state.transferTarget])
 
   useEffect(() => {
     if (categories.length > 0 && !state.category) {
@@ -388,7 +403,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     // The app is safe-by-default while the server preference is still resolving. Allow the
     // blank FAB editor to mount during that short window, but leave every save path behind
     // the existing sensitive-mode guard until the preference is known.
-    if (hideSensitive && sensitivePreferenceStatus !== 'pending') return
+    if (!canOpenBlankMutationForm(hideSensitive, sensitivePreferenceStatus)) return
     setExistingDocuments([])
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
     setDocumentFieldRevision(revision => revision + 1)
@@ -494,8 +509,31 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     }
   }
 
+  useEffect(() => {
+    if (!hideSensitive || sensitivePreferenceStatus === 'pending' || !state.showAddForm) return
+    // A blank quick-add sheet may be useful while the preference is still pending, but it must
+    // not remain open as soon as the server confirms sensitive mode. Existing edit/draft flows
+    // keep their normal lifecycle; their save guard still prevents a mutation.
+    if (state.mode === 'create') handleCloseForm()
+  }, [handleCloseForm, hideSensitive, sensitivePreferenceStatus, state.mode, state.showAddForm])
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (hideSensitive || sensitivePreferenceStatus === 'pending') {
+      dispatch({
+        type: 'SET_ERRORS',
+        errors: {
+          submit: sensitivePreferenceStatus === 'pending'
+            ? 'Finishing security check…'
+            : 'Reveal sensitive data before saving financial changes.',
+        },
+      })
+      return
+    }
+    if (accountsLoading) {
+      dispatch({ type: 'SET_ERRORS', errors: { submit: 'Loading accounts… Please wait a moment before saving.' } })
+      return
+    }
     const validationErrors = validateTransactionForm({
       description: state.description,
       amount: state.amount,
@@ -507,6 +545,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       accountId: state.accountId,
       counterAccountId: state.counterAccountId,
       stabilityReloadIntent: state.stabilityReloadIntent,
+      accountTrackingEnabled: accounts.length > 0,
     })
 
     if (Object.keys(validationErrors).length > 0) {

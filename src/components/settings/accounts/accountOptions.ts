@@ -12,6 +12,7 @@ export const ACCOUNT_KIND_OPTIONS: Array<{ value: LedgerAccountKind; label: stri
   { value: 'EWallet', label: 'E-wallet' },
   { value: 'Cash', label: 'Cash' },
   { value: 'Card', label: 'Card' },
+  { value: 'Other', label: 'Other' },
 ]
 
 export const ACCOUNT_KIND_LABELS: Record<LedgerAccountKind, string> = {
@@ -19,4 +20,5 @@ export const ACCOUNT_KIND_LABELS: Record<LedgerAccountKind, string> = {
   EWallet: 'E-wallet',
   Cash: 'Cash',
   Card: 'Card',
+  Other: 'Other',
 }

@@ -3,6 +3,7 @@ import { createFinalId, type OutboxPayload } from '../../lib/outbox'
 import { triggerHaptic } from '../../lib/haptics'
 import type { UseOutboxResult } from '../../lib/useOutbox'
 import type { AppDialogs } from '../useAppDialogs'
+import type { LedgerAccountReconcileInput } from '../../lib/api/accounts'
 
 interface LedgerAccountActionDependencies {
   accounts: LedgerAccount[]
@@ -93,10 +94,43 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
     })
   }
 
+  const handleReconcileAccounts = (input: LedgerAccountReconcileInput) => {
+    if (!guardSensitive()) return
+    const undoTargets = input.targets.map(target => {
+      const account = target.id ? accounts.find(candidate => candidate.id === target.id) : undefined
+      return account
+        ? {
+            ...target,
+            expectedCurrent: account.remaining,
+            target: account.remaining,
+            isArchived: account.isArchived,
+            isDefault: account.isDefault,
+          }
+        : {
+            ...target,
+            expectedCurrent: target.target,
+            target: 0,
+            isArchived: true,
+            isDefault: false,
+          }
+    })
+    mutateQueue(queue => enqueue(queue, 'ledgerAccountReconcile', 'add', input.operationId, {
+      name: `${input.bucket} account reconciliation`,
+      description: `Reconcile ${input.bucket} account balances`,
+      reconciliation: input,
+      undoReconciliation: {
+        ...input,
+        operationId: `${input.operationId}-undo`,
+        targets: undoTargets,
+      },
+    }))
+  }
+
   return {
     handleAddAccount,
     handleUpdateAccount,
     handleDeleteAccount,
     requestDeleteAccount,
+    handleReconcileAccounts,
   }
 }

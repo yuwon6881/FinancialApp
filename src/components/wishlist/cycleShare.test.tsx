@@ -68,9 +68,23 @@ const reward: WishlistItem = {
 }
 
 function renderBar(over: Partial<GoalPoolSummary> = {}) {
-  render(
+  return render(
     <RewardsPoolBar
       summary={summary(over)}
+      expectedInflow={379.2}
+      formatSensitive={money}
+      hideSensitive={false}
+      isOffline={false}
+      onFundCycle={() => undefined}
+    />,
+  )
+}
+
+function renderRewardsBar(over: Partial<GoalPoolSummary> = {}) {
+  return render(
+    <RewardsPoolBar
+      summary={summary(over)}
+      activeView="rewards"
       expectedInflow={379.2}
       formatSensitive={money}
       hideSensitive={false}
@@ -120,6 +134,19 @@ function renderRewardCard(freeAfterGoalPace = 100, claimableBalance = 100) {
 }
 
 describe('RewardsPoolBar cycle share', () => {
+  it('uses distinct full-color segments and leads with the active view', () => {
+    const { container, unmount } = renderBar()
+    const commitmentsOrder = [...container.querySelectorAll('[data-pool-segment]')]
+      .map(segment => segment.getAttribute('data-pool-segment'))
+    expect(commitmentsOrder).toEqual(['committed', 'free'])
+    unmount()
+
+    const rewardsRender = renderRewardsBar()
+    const rewardsSegments = [...rewardsRender.container.querySelectorAll<HTMLElement>('[data-pool-segment]')]
+    expect(rewardsSegments.map(segment => segment.dataset.poolSegment)).toEqual(['free', 'committed'])
+    expect(rewardsSegments[0].style.backgroundColor).not.toBe(rewardsSegments[1].style.backgroundColor)
+  })
+
   it('shows funded against required, and a full meter, once the cycle is paced', () => {
     renderBar()
     expect(screen.getByText('This cycle')).toBeTruthy()

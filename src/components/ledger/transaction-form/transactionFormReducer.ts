@@ -15,7 +15,7 @@ export interface TransactionFormState {
   ledgerCategory: SelectableLedgerCategory
   transferSource: TransferBucket
   transferTarget: TransferBucket
-  /** Empty means use the bucket default; null deliberately leaves the row untracked. */
+  /** The selected account for the bucket leg; empty/null means the form is still waiting for a default. */
   accountId: string | null
   /** Destination account for an in-bucket AccountMove row. */
   counterAccountId: string | null

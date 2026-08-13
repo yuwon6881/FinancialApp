@@ -22,12 +22,20 @@ interface WishlistItemFormProps {
   onClearError: (field: string) => void
   onCancel: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  mutationBlocked?: boolean
+  securityPending?: boolean
 }
 
 export function WishlistItemForm(props: WishlistItemFormProps) {
   const isAdd = props.mode === 'add'
+  const mutationBlocked = props.mutationBlocked ?? false
   return (
     <form noValidate onSubmit={props.onSubmit} className="space-y-4 text-xs font-semibold">
+      {props.securityPending && mutationBlocked && (
+        <p className="rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground" role="status">
+          Finishing security check… You can fill this form in, but saving is temporarily disabled.
+        </p>
+      )}
       <FormField label="Reward name" required error={props.errors.name}>
         <Input
           type="text"
@@ -83,6 +91,8 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
         </Button>
         <Button
           type="submit"
+          disabled={mutationBlocked}
+          title={props.securityPending && mutationBlocked ? 'Finishing security check…' : mutationBlocked ? 'Reveal sensitive data before saving' : undefined}
           className="rounded-xl py-2.5 shadow-lg shadow-primary/25"
         >
           {isAdd ? 'Add Reward' : 'Save Changes'}

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { AlertTriangle, CheckCircle2, CircleHelp, Plus, Trash2 } from 'lucide-react'
 import type { LedgerAccount, LedgerAccountKind, Transaction } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
+import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
 import { formatCurrencyVal } from '../../../lib/utils'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { Button } from '../../ui/Button'
@@ -32,6 +33,7 @@ interface BucketAccountSetupSheetProps {
   onClose: () => void
   onAddAccount: (input: LedgerAccountInput) => Promise<void> | void
   onAddBalanceAdjustment: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
+  onReconcileAccounts?: (input: LedgerAccountReconcileInput) => Promise<void> | void
 }
 
 const localDateString = () => {
@@ -138,10 +140,12 @@ export function BucketAccountSetupSheet({
   onClose,
   onAddAccount,
   onAddBalanceAdjustment,
+  onReconcileAccounts,
 }: BucketAccountSetupSheetProps) {
   const view = useBucketAccountSetupView({ isOpen, bucket, accounts, bucketTotal, initialDraft })
   const isBusy = disabled || hideSensitive
   const [isApplying, setIsApplying] = useState(false)
+  const operationIdRef = useRef<string | null>(null)
 
   const handleConfirm = async () => {
     if (!view.pending || !bucket) return
@@ -149,28 +153,54 @@ export function BucketAccountSetupSheet({
     const date = localDateString()
     setIsApplying(true)
     try {
-      for (const draft of pending.drafts) {
-        await onAddAccount({
-          id: draft.id,
-          name: draft.name,
+      if (onReconcileAccounts) {
+        const draftsById = new Map(pending.drafts.map(draft => [draft.id, draft]))
+        const targets = pending.preview.lines.map(line => {
+          const draft = draftsById.get(line.id)
+          const account = accounts.find(candidate => candidate.id === line.id)
+          return {
+            id: line.isNew ? line.id : line.id,
+            name: line.name,
+            kind: draft?.kind ?? account?.kind ?? 'Other',
+            isDefault: draft?.isDefault ?? account?.isDefault ?? false,
+            isArchived: line.isArchived,
+            expectedCurrent: line.current,
+            target: line.target,
+          }
+        })
+        const operationId = operationIdRef.current ?? `reconcile-${bucket.toLowerCase()}-${Date.now()}`
+        operationIdRef.current = operationId
+        await onReconcileAccounts({
+          operationId,
           bucket,
-          kind: draft.kind,
-          openingAmount: 0,
-          isDefault: draft.isDefault,
-          isArchived: false,
+          expectedBucketTotal: pending.preview.bucketTotal,
+          targets,
         })
-      }
-      for (const account of pending.preview.accountAdjustments) {
-        await onAddBalanceAdjustment({
-          description: `Account balance alignment - ${account.name}`,
-          amount: account.diff,
-          category: 'Adjustment',
-          ledgerCategory: bucket,
-          accountId: account.id,
-          date,
-        })
+      } else {
+        for (const draft of pending.drafts) {
+          await onAddAccount({
+            id: draft.id,
+            name: draft.name,
+            bucket,
+            kind: draft.kind,
+            openingAmount: 0,
+            isDefault: draft.isDefault,
+            isArchived: false,
+          })
+        }
+        for (const account of pending.preview.accountAdjustments) {
+          await onAddBalanceAdjustment({
+            description: `Account balance alignment - ${account.name}`,
+            amount: account.diff,
+            category: 'Adjustment',
+            ledgerCategory: bucket,
+            accountId: account.id,
+            date,
+          })
+        }
       }
       view.clearPending()
+      operationIdRef.current = null
       onClose()
     } finally {
       setIsApplying(false)

@@ -23,6 +23,8 @@ export const CACHE_KEYS = {
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const CACHE_TIMESTAMP_SUFFIX = ':cached_at'
 const CYCLE_SNAPSHOTS_KEY = 'cached_cycle_snapshots'
+const ACCOUNT_TRACKING_CACHE_VERSION_KEY = 'financial_account_tracking_cache_version'
+const ACCOUNT_TRACKING_CACHE_VERSION = '2'
 const DISPOSABLE_CACHE_KEYS = new Set<string>([
   CACHE_KEYS.dashboardData,
   CACHE_KEYS.transactions,
@@ -45,6 +47,19 @@ const LEGACY_VAULT_DOCUMENT_TYPES_CACHE_KEYS = [
 function removeCachedKey(key: string): void {
   localStorage.removeItem(key)
   localStorage.removeItem(`${key}${CACHE_TIMESTAMP_SUFFIX}`)
+}
+
+/** Drop snapshots written before every bucket leg had a persisted account placement. */
+export function ensureAccountTrackingCacheVersion(): void {
+  try {
+    if (localStorage.getItem(ACCOUNT_TRACKING_CACHE_VERSION_KEY) === ACCOUNT_TRACKING_CACHE_VERSION) return
+    for (const key of [CACHE_KEYS.dashboardData, CACHE_KEYS.transactions, CACHE_KEYS.accounts, CYCLE_SNAPSHOTS_KEY]) {
+      removeCachedKey(key)
+    }
+    localStorage.setItem(ACCOUNT_TRACKING_CACHE_VERSION_KEY, ACCOUNT_TRACKING_CACHE_VERSION)
+  } catch {
+    // Storage may be unavailable; the bootstrap response remains authoritative.
+  }
 }
 
 /** Remove state written by the retired Vault Type feature before it can be rendered again. */
