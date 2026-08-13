@@ -93,7 +93,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     }
     return true
   })
-  const [usageTransactions, setUsageTransactions] = useState<{ category: string }[] | null>(null)
+  const [usageCounts, setUsageCounts] = useState<Map<string, number> | null>(null)
   const [usageError, setUsageError] = useState<string | null>(null)
   const [cleanupSuggestions, setCleanupSuggestions] = useState<CategoryCleanupSuggestion[]>([])
   const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false)
@@ -104,21 +104,16 @@ export function useSettingsView(options: UseSettingsViewOptions) {
 
   useEffect(() => {
     let cancelled = false
-    setUsageTransactions(null)
+    setUsageCounts(null)
     setUsageError(null)
     const { year: activeYear, monthIndex: activeMonthIdx } = getCurrentCycleYearAndMonth(activeSettings.cycleDay)
 
     const startDate = getStartOfNCyclesAgo(activeYear, activeMonthIdx, activeSettings.cycleDay, USAGE_LOOKBACK_CYCLES)
     const endDate = getCycleRangeDates(activeYear, activeMonthIdx, activeSettings.cycleDay).end
 
-    api.fetchPagedTransactions({
-      page: 1,
-      pageSize: 500,
-      startDate: formatDateForApi(startDate),
-      endDate: formatDateForApi(endDate)
-    })
+    api.fetchCategoryUsage(formatDateForApi(startDate), formatDateForApi(endDate))
       .then(result => {
-        if (!cancelled) setUsageTransactions(result.items.filter(t => !t.isPendingDelete))
+        if (!cancelled) setUsageCounts(new Map(result.map(item => [item.categoryKey, item.count])))
       })
       .catch(() => {
         if (!cancelled) setUsageError('Could not load category usage.')
@@ -300,28 +295,27 @@ export function useSettingsView(options: UseSettingsViewOptions) {
   })
 
   const categoryUsage = useMemo(() => {
-    if (!usageTransactions) return null
+    if (!usageCounts) return null
 
     const countByName = new Map<string, number>()
     for (const cat of visibleCategories) {
       countByName.set(cat.name.trim().toLowerCase(), 0)
     }
 
-    for (const tx of usageTransactions) {
-      const key = tx.category.trim().toLowerCase()
-      if (countByName.has(key)) countByName.set(key, countByName.get(key)! + 1)
+    for (const [key, count] of usageCounts) {
+      if (countByName.has(key)) countByName.set(key, count)
     }
 
     return visibleCategories
       .map(cat => ({ category: cat, count: countByName.get(cat.name.trim().toLowerCase())! }))
       .sort((a, b) => a.count - b.count)
-  }, [usageTransactions, visibleCategories])
+  }, [usageCounts, visibleCategories])
 
   const unusedCategoryCount = categoryUsage ? categoryUsage.filter(c => c.count === 0).length : 0
   const rarelyUsedCategoryCount = categoryUsage
     ? categoryUsage.filter(c => c.count > 0 && c.count <= RARELY_USED_MAX_COUNT).length
     : 0
-  const isLoadingUsage = usageTransactions === null && usageError === null
+  const isLoadingUsage = usageCounts === null && usageError === null
 
   return {
     activeSettings,

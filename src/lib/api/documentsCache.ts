@@ -8,6 +8,8 @@ import type { DocumentSort } from '../documentOrdering'
 export const DOCUMENT_CACHE_KEYS = {
   constraints: 'documents:constraints',
   retention: 'documents:retention',
+  overviewPrefix: 'documents:overview:',
+  overview: (taxYear?: number) => `documents:overview:${taxYear ?? 'latest'}`,
   listPrefix: 'documents:list:',
   reliefCategoriesPrefix: 'documents:relief-categories:',
   reliefCategories: (taxYear: number) => `documents:relief-categories:${taxYear}`,
@@ -46,11 +48,19 @@ export function documentListCacheKey(
 export function invalidateDocumentDerivedData(): void {
   invalidateCachePrefix(DOCUMENT_CACHE_KEYS.listPrefix)
   invalidateCachePrefix(DOCUMENT_CACHE_KEYS.summaryPrefix)
-  invalidateCachePrefix(DOCUMENT_CACHE_KEYS.reliefCategoriesPrefix)
+  invalidateCachePrefix(DOCUMENT_CACHE_KEYS.overviewPrefix)
   invalidateCacheKey(DOCUMENT_CACHE_KEYS.usage)
   invalidateCacheKey(DOCUMENT_CACHE_KEYS.years)
   invalidateCacheKey(DOCUMENT_CACHE_KEYS.retention)
-  invalidateRevalidationPrefix('/documents')
+  for (const prefix of ['/documents?', '/documents/overview', '/documents/summary', '/documents/usage', '/documents/years', '/documents/retention']) {
+    invalidateRevalidationPrefix(prefix)
+  }
+}
+
+export function invalidateDocumentReliefCategoryData(): void {
+  invalidateDocumentDerivedData()
+  invalidateCachePrefix(DOCUMENT_CACHE_KEYS.reliefCategoriesPrefix)
+  invalidateRevalidationPrefix('/documents/relief-categories')
 }
 
 export function invalidateAllDocumentCaches(): void {

@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import * as api from '../lib/api'
 import { getCachedDashboardPeriod, getCachedCycleSnapshot } from '../lib/cache'
-import type { AppTab } from '../types'
+import type { AppTab, DashboardData, Transaction } from '../types'
 import type { TransactionLinkFilter } from '../lib/transactionFilters'
 import {
   ledgerRouteSearch,
@@ -16,8 +16,8 @@ export interface UseCycleNavigationOptions {
   loadAll: (month?: string, year?: number, isBackground?: boolean, shouldCommit?: () => boolean) => void | Promise<void>
   handleLogout: () => void | Promise<void>
   markSessionLocked: () => void
-  setDashboardData: (data: any) => void
-  setTransactions: (txs: any) => void
+  setDashboardData: (data: DashboardData) => void
+  setTransactions: (transactions: Transaction[]) => void
   setActiveTab: (tab: AppTab, navigationOptions?: AppNavigationOptions) => void
   setLedgerCyclesRange: (range: LedgerRouteRange) => void
   showAlert?: (message: string, title?: string) => void

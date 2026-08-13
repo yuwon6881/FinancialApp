@@ -11,6 +11,7 @@ import { EMPTY_RETENTION_REVIEW } from '../lib/documentRetention'
 
 const api = vi.hoisted(() => ({
   listDocuments: vi.fn(),
+  getDocumentOverview: vi.fn(),
   getDocumentUsage: vi.fn(),
   getAvailableDocumentYears: vi.fn(),
   getDocumentRetentionReview: vi.fn(),
@@ -79,6 +80,14 @@ describe('DocumentsView', () => {
       { id: 'lifestyle', name: 'Lifestyle', limit: 2500 },
       { id: 'medical', name: 'Medical', limit: 8000 },
     ])
+    api.getDocumentOverview.mockImplementation(async (taxYear?: number) => ({
+      usage: await api.getDocumentUsage(),
+      availableYears: await api.getAvailableDocumentYears(),
+      retention: await api.getDocumentRetentionReview(),
+      selectedTaxYear: taxYear ?? 2026,
+      summary: await api.getTaxYearReliefSummary(taxYear ?? 2026),
+      reliefCategories: await api.getTaxReliefCategories(taxYear ?? 2026),
+    }))
     api.deleteDocument.mockResolvedValue(undefined)
   })
 
@@ -144,13 +153,13 @@ describe('DocumentsView', () => {
     render(<DocumentsView />)
     await waitFor(() => expect(screen.getAllByText('tax.pdf').length).toBeGreaterThan(0))
 
-    const summaryCallsBefore = api.getTaxYearReliefSummary.mock.calls.length
+    const overviewCallsBefore = api.getDocumentOverview.mock.calls.length
 
     fireEvent.click(screen.getAllByLabelText(/^Delete tax\.pdf$/i)[0])
     fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
 
     await waitFor(() => expect(api.deleteDocument).toHaveBeenCalledWith(1))
     await waitFor(() =>
-      expect(api.getTaxYearReliefSummary.mock.calls.length).toBeGreaterThan(summaryCallsBefore))
+      expect(api.getDocumentOverview.mock.calls.length).toBeGreaterThan(overviewCallsBefore))
   })
 })

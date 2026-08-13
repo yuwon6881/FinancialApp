@@ -143,7 +143,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         <div className="h-full transition-all duration-500" style={{ width: `${committedPct}%`, backgroundColor: bucketColor }} />
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
+      <div className="grid max-w-2xl grid-cols-2 gap-3 text-xs font-semibold">
         <span className="flex min-w-0 items-center gap-1.5 rounded-lg bg-muted/20 px-2.5 py-2">
           <span className="size-2 rounded-full" style={{ backgroundColor: bucketColor }} aria-hidden />
           <span className="min-w-0 truncate text-muted-foreground">Committed</span>

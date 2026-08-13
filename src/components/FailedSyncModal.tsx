@@ -22,6 +22,7 @@ const ENTITY_LABELS: Record<string, string> = {
   investmentCashFlow: 'Cash movement',
   investmentPlan: 'Investment plan',
   investmentAllocation: 'Investment classification',
+  ledgerAccount: 'Account',
 }
 
 const TYPE_LABELS: Record<string, string> = {

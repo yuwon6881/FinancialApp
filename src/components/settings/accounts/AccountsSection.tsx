@@ -1,9 +1,12 @@
-import { useState } from 'react'
-import { Info, LockKeyhole } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Banknote, Building2, CircleHelp, CreditCard, Info, Landmark, Plus, Wallet } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import type { LedgerAccount } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import { formatCurrencyVal } from '../../../lib/utils'
+import { getCategoryBadgeClass } from '../../../lib/categoryColors'
 import { ManageableNameList } from '../ManageableNameList'
+import { Button } from '../../ui/Button'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { AccountFormSheet } from './AccountFormSheet'
@@ -29,6 +32,20 @@ const KIND_LABELS: Record<LedgerAccount['kind'], string> = {
   Card: 'Card',
 }
 
+const KIND_ICONS: Record<LedgerAccount['kind'], LucideIcon> = {
+  Bank: Landmark,
+  EWallet: Wallet,
+  Cash: Banknote,
+  Card: CreditCard,
+}
+
+const BUCKETS: ReadonlyArray<{ name: LedgerAccount['bucket']; description: string }> = [
+  { name: 'Essentials', description: 'Everyday spending' },
+  { name: 'Growth', description: 'Money sent to investments' },
+  { name: 'Stability', description: 'Your emergency cushion' },
+  { name: 'Rewards', description: 'Plans and treats' },
+]
+
 export function AccountsSection({
   accounts,
   currency,
@@ -44,6 +61,16 @@ export function AccountsSection({
   const { rows, isSyncing, isDeleting } = useAccountsView({ accounts, activeSyncId, activeSyncIds, deletingId })
   const [editingAccount, setEditingAccount] = useState<LedgerAccount | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const bucketSummaries = useMemo(() => BUCKETS.map(bucket => {
+    const openRows = rows.filter(item => item.bucket === bucket.name && !item.isArchived)
+    return {
+      ...bucket,
+      count: openRows.length,
+      balance: openRows.reduce((total, item) => total + item.remaining, 0),
+    }
+  }), [rows])
+  const openAccountCount = rows.filter(item => !item.isArchived).length
+  const archivedAccountCount = rows.length - openAccountCount
 
   const openAdd = () => {
     if (disabled) return
@@ -64,66 +91,150 @@ export function AccountsSection({
 
   return (
     <>
-      <section id="settings-panel-accounts" role="tabpanel" aria-labelledby="settings-tab-accounts" className="app-panel space-y-5 animate-in fade-in duration-200">
-        <div className="flex items-start gap-3 border-b border-border/40 pb-4">
-          <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-accent-ink">
-            <LockKeyhole className="size-4" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold text-foreground">Accounts attached to buckets</h3>
-            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
-              Keep the same four bucket totals, while showing which real-world accounts make up each one.
-            </p>
+      <section id="settings-panel-accounts" role="tabpanel" aria-labelledby="settings-tab-accounts" className="app-panel space-y-6 rounded-2xl border border-border/60 bg-card/92 p-4 animate-in fade-in duration-200 sm:p-5">
+        <div className="flex flex-col gap-4 border-b border-border/40 pb-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-2xl border border-accent-ink/20 bg-accent/50 text-accent-ink">
+              <Building2 className="size-5" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base font-bold text-foreground">Accounts</h3>
+                <span className="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Optional</span>
+              </div>
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+                Connect the places where your money lives to the four budget buckets, so each balance is easier to understand.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold text-muted-foreground">
+                <span className="rounded-lg border border-border/60 bg-background/50 px-2 py-1">
+                  {openAccountCount} open {openAccountCount === 1 ? 'account' : 'accounts'}
+                </span>
+                {archivedAccountCount > 0 && (
+                  <span className="rounded-lg border border-border/60 bg-background/50 px-2 py-1">
+                    {archivedAccountCount} closed
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-start gap-2 rounded-xl border border-border/60 bg-muted/15 p-3 text-[11px] leading-relaxed text-muted-foreground">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {bucketSummaries.map(bucket => (
+            <div key={bucket.name} className={`min-w-0 rounded-xl border bg-background/40 p-3 ${bucket.count > 0 ? 'border-border/60' : 'border-dashed border-border/50'}`}>
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <span className={`min-w-0 truncate rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${getCategoryBadgeClass(bucket.name)}`}>
+                  {bucket.name}
+                </span>
+                <span className="shrink-0 text-[9px] font-semibold text-muted-foreground">
+                  {bucket.count ? `${bucket.count} ${bucket.count === 1 ? 'row' : 'rows'}` : 'Empty'}
+                </span>
+              </div>
+              {bucket.count > 0 ? (
+                <SensitiveAmount
+                  value={bucket.balance}
+                  isMasked={hideSensitive}
+                  formatFn={value => formatCurrencyVal(value, currency)}
+                  className="mt-3 block truncate text-sm font-extrabold text-foreground"
+                />
+              ) : (
+                <p className="mt-3 text-xs font-semibold text-muted-foreground">No account row yet</p>
+              )}
+              <p className="mt-1 truncate text-[10px] text-muted-foreground">{bucket.description}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-start gap-2 rounded-xl border border-accent-ink/20 bg-accent/30 p-3.5 text-xs leading-relaxed text-muted-foreground">
           <Info className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
           <p>
-            Accounts are optional. With no accounts in a bucket, the app keeps using the bucket total exactly as before. If one physical account holds money in two buckets, add one row for each bucket so the amounts stay clear.
+            Add one row for each bucket a physical account supports. If you do not add an account to a bucket, that bucket continues to use its total exactly as before.
           </p>
         </div>
 
-        <ManageableNameList
-          items={rows}
-          itemLabel="Account"
-          addPlaceholder="Account name"
-          onAddClick={openAdd}
-          onAdd={() => undefined}
-          onEdit={openEdit}
-          onDelete={item => onRequestDeleteAccount(item.id)}
-          disabled={disabled || hideSensitive}
-          renderName={item => (
-            <div className="min-w-0">
-              <p className={`truncate font-semibold ${item.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
-                {item.name}
-              </p>
-              <p className="truncate text-[10px] text-muted-foreground">
-                {item.bucket} · {KIND_LABELS[item.kind]}{item.isDefault ? ' · Default' : ''}{item.isArchived ? ' · Closed' : ''}
-              </p>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
+            <div>
+              <h4 className="text-sm font-bold text-foreground">Account rows</h4>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Each row is one account-to-bucket connection.</p>
             </div>
-          )}
-          renderMeta={item => (
-            <SensitiveAmount
-              value={item.remaining}
-              isMasked={hideSensitive}
-              formatFn={value => formatCurrencyVal(value, currency)}
-              className={`shrink-0 text-xs font-bold ${item.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}
-            />
-          )}
-          renderStatus={item => (
-            <RowSyncStatus
-              isDeleting={isDeleting(item.id)}
-              isSyncing={isSyncing(item.id)}
-              isPending={item.isPendingSync}
-              entityLabel="account"
-            />
-          )}
-        />
+            {rows.length > 0 && <span className="text-[10px] font-semibold text-muted-foreground">{rows.length} total {rows.length === 1 ? 'row' : 'rows'}</span>}
+          </div>
 
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Account balances are derived from the bucket ledger. Starting amounts are ordinary adjustments, and positive starting money in Stability naturally pays down an emergency-fund reload before it becomes free balance.
-        </p>
+          <ManageableNameList
+            items={rows}
+            itemLabel="Account"
+            addPlaceholder="Account name"
+            onAddClick={openAdd}
+            onAdd={() => undefined}
+            onEdit={openEdit}
+            onDelete={item => onRequestDeleteAccount(item.id)}
+            disabled={disabled || hideSensitive}
+            listClassName="max-h-[30rem] space-y-2"
+            itemClassName={item => item.isArchived ? 'border-dashed opacity-75' : 'border-border/60 bg-card/70'}
+            emptyState={(
+              <div className="rounded-2xl border border-dashed border-border/70 bg-muted/10 px-5 py-8 text-center">
+                <div className="mx-auto grid size-11 place-items-center rounded-2xl border border-accent-ink/20 bg-accent/40 text-accent-ink">
+                  <Wallet className="size-5" aria-hidden="true" />
+                </div>
+                <h5 className="mt-3 text-sm font-bold text-foreground">No accounts added yet</h5>
+                <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
+                  Add your first bank, wallet, cash, or card account to see how a bucket balance is split between real-world places.
+                </p>
+                <Button type="button" className="mt-4 h-11" onClick={openAdd} disabled={disabled || hideSensitive}>
+                  <Plus className="size-3.5" aria-hidden="true" />
+                  Add your first account
+                </Button>
+              </div>
+            )}
+            renderName={item => {
+              const AccountIcon = KIND_ICONS[item.kind]
+              const bucketClass = getCategoryBadgeClass(item.bucket)
+              return (
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className={`grid size-9 shrink-0 place-items-center rounded-xl border ${bucketClass}`} aria-hidden="true">
+                    <AccountIcon className="size-4" />
+                  </div>
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      <p className={`truncate font-semibold ${item.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
+                        {item.name}
+                      </p>
+                      {item.isDefault && <span className="rounded-full border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-accent-ink">Default</span>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <span className={`rounded-md border px-1.5 py-0.5 font-semibold ${bucketClass}`}>{item.bucket}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{KIND_LABELS[item.kind]}</span>
+                      {item.isArchived && <><span aria-hidden="true">·</span><span>Closed</span></>}
+                    </div>
+                  </div>
+                </div>
+              )
+            }}
+            renderMeta={item => (
+              <SensitiveAmount
+                value={item.remaining}
+                isMasked={hideSensitive}
+                formatFn={value => formatCurrencyVal(value, currency)}
+                className={`shrink-0 text-xs font-bold ${item.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}
+              />
+            )}
+            renderStatus={item => (
+              <RowSyncStatus
+                isDeleting={isDeleting(item.id)}
+                isSyncing={isSyncing(item.id)}
+                isPending={item.isPendingSync}
+                entityLabel="account"
+              />
+            )}
+          />
+        </div>
+
+        <div className="flex items-start gap-2 rounded-xl border border-border/50 bg-muted/10 p-3 text-[11px] leading-relaxed text-muted-foreground">
+          <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
+          <p><span className="font-semibold text-foreground">Balances stay ledger-based.</span> Starting amounts are ordinary adjustments, and positive starting money in Stability naturally pays down an emergency-fund reload before it becomes free balance.</p>
+        </div>
       </section>
 
       <AccountFormSheet

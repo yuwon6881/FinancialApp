@@ -102,6 +102,19 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                 <span className="text-xs text-muted-foreground">{normalizeRecurringFrequency(rp.frequency) === 'Annually' ? '/yr' : '/mo'}</span>
               </div>
 
+              {rp.linkedLoanId && (
+                <div className="mt-4 flex items-start gap-3 rounded-xl border border-accent-ink/25 bg-accent/25 p-3">
+                  <div className="grid size-8 shrink-0 place-items-center rounded-lg border border-accent-ink/25 bg-accent/50 text-accent-ink">
+                    <Link2 className="size-4" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-accent-ink">Linked to loan</p>
+                    <p className="mt-0.5 truncate text-sm font-bold text-foreground">{rp.linkedLoanName || 'Loan'}</p>
+                    <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">This bill is the payment schedule for the loan.</p>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-6 space-y-2 border-t border-border/30 pt-4 text-xs">
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                   <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
@@ -111,16 +124,6 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                     {rp.startDate}
                   </span>
                 </div>
-                {rp.linkedLoanId && (
-                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                    <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-                      <Link2 className="size-3.5" /> Linked to loan
-                    </span>
-                    <span className="min-w-0 max-w-full break-words text-right font-semibold text-foreground">
-                      {rp.linkedLoanName || 'Loan'}
-                    </span>
-                  </div>
-                )}
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                   <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                     <Repeat className="size-3.5" /> Recurs
@@ -177,6 +180,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                     variant="ghost"
                     onClick={() => onRequestPayEarly?.(rp.id)}
                     disabled={isBusy || hideSensitive}
+                    aria-label={`Pay Early for ${rp.name}`}
                     title={hideSensitive ? 'Unhide balances to pay early' : 'Pay this subscription now'}
                   >
                     <FastForward className="size-3.5 shrink-0" /> <span className="max-[420px]:hidden">Pay Early</span>
@@ -187,6 +191,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                     variant="ghost"
                     onClick={() => onEditPayment(rp)}
                     disabled={isBusy || hideSensitive}
+                    aria-label={`Edit ${rp.name}`}
                     title={hideSensitive ? 'Unhide balances to edit' : 'Edit subscription'}
                   >
                     <Edit className="size-3.5 shrink-0" /> <span className="max-[420px]:hidden">Edit</span>
@@ -195,6 +200,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                     variant="danger"
                     onClick={() => { if (!hideSensitive) onDeletePayment(rp.id) }}
                     disabled={isBusy || hideSensitive || Boolean(rp.linkedLoanId)}
+                    aria-label={`Delete ${rp.name}`}
                     title={hideSensitive
                       ? 'Unhide balances to edit'
                       : rp.linkedLoanId
@@ -212,11 +218,20 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
       </AnimatePresence>
 
       {payments.length === 0 && (
-        <div className="p-12 text-center border border-dashed border-border rounded-2xl md:col-span-3 text-muted-foreground text-sm">
-          {totalCount > 0
-            ? 'No subscriptions match your filter criteria.'
-            : 'You don\'t have any subscription added yet. Click "New Subscription" above to create one.'
-          }
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex min-h-28 items-center gap-3 rounded-2xl border border-dashed border-border p-4 text-left text-sm text-muted-foreground md:col-span-3 sm:min-h-36 sm:flex-col sm:justify-center sm:gap-3 sm:p-12 sm:text-center"
+        >
+          <span className="grid size-10 shrink-0 place-items-center rounded-2xl border border-border/60 bg-muted/35 text-accent-ink sm:size-11">
+            <Repeat className="size-5" aria-hidden="true" />
+          </span>
+          <p className="min-w-0 max-w-md leading-relaxed">
+            {totalCount > 0
+              ? 'No subscriptions match your filter criteria.'
+              : 'You don\'t have any subscriptions yet. Click “New Subscription” above to create one.'
+            }
+          </p>
         </div>
       )}
     </m.div>

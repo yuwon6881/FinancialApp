@@ -129,6 +129,12 @@ function isServiceWakeFailure(status: number | undefined): boolean {
   return status === 502 || status === 503 || status === 504
 }
 
+function retryMessage(status: number | undefined): string {
+  return status !== undefined && status >= 500 && status < 600
+    ? 'Sync pending: Server error; retrying...'
+    : 'Sync pending: Server is offline or waking up...'
+}
+
 function mergeCompletedOps(
   retainedOps: ReadonlyArray<QueuedOp>,
   successfulOps: ReadonlyArray<SuccessfulSyncOp>,
@@ -207,6 +213,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           deps.emitFailureToast(nextOp, err)
           deps.mutateQueue(prev => prev.filter(item => item.id !== nextOp.id))
           deps.addFailedOp({ ...nextOp, lastError: getErrorMessage(err, String(err)) })
+          deps.setError(null)
           deps.setActiveSyncOpId?.(null)
           continue
         }
@@ -334,6 +341,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           deps.emitFailureToast(nextOp, err)
           deps.mutateQueue(prev => prev.filter(item => item.id !== nextOp.id))
           deps.addFailedOp({ ...nextOp, retryCount: (nextOp.retryCount || 0) + 1, lastError: getErrorMessage(err, String(err)) })
+          deps.setError(null)
           continue
         } else {
           const updatedRetryCount = (nextOp.retryCount || 0) + 1
@@ -341,6 +349,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
             deps.emitFailureToast(nextOp, err)
             deps.mutateQueue(prev => prev.filter(item => item.id !== nextOp.id))
             deps.addFailedOp({ ...nextOp, retryCount: updatedRetryCount, lastError: getErrorMessage(err, String(err)) })
+            deps.setError(null)
             continue
           } else {
             // Bump retry on this op by id (not index 0) so a concurrently
@@ -348,7 +357,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
             deps.mutateQueue(prev => prev.map(item =>
               item.id === nextOp.id ? { ...item, retryCount: updatedRetryCount } : item
             ))
-            deps.setError('Sync pending: Server is offline or waking up...')
+            deps.setError(retryMessage(status))
             deps.setBackoff(deps.now() + SERVER_WAKE_BACKOFF_MS)
             break
           }

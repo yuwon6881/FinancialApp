@@ -28,7 +28,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
   const pullRef = useRef(0)
   const refreshingRef = useRef(false)
   const onRefreshRef = useRef(onRefresh)
-  const drag = useRef({ startY: 0, pulling: false, active: false })
+  const drag = useRef({ startX: 0, startY: 0, pulling: false, active: false })
 
   useEffect(() => {
     onRefreshRef.current = onRefresh
@@ -47,7 +47,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
     if (!isMobile || disabled) return
 
     const onStart = (e: TouchEvent) => {
-      const target = e.target as HTMLElement | null
+      const target = e.target instanceof HTMLElement ? e.target : null
       if (
         refreshingRef.current ||
         e.touches.length !== 1 ||
@@ -57,13 +57,18 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
         drag.current.active = false
         return
       }
-      drag.current = { startY: e.touches[0].clientY, pulling: false, active: true }
+      drag.current = {
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        pulling: false,
+        active: true,
+      }
     }
 
     const onMove = (e: TouchEvent) => {
       const s = drag.current
       if (!s.active || refreshingRef.current) return
-      const target = e.target as HTMLElement | null
+      const target = e.target instanceof HTMLElement ? e.target : null
       if (target?.closest('[data-no-pull-refresh], .no-pull-refresh, .overflow-y-auto')) {
         s.active = false
         s.pulling = false
@@ -76,7 +81,16 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
         if (pullRef.current) resetPullState()
         return
       }
+      const dx = e.touches[0].clientX - s.startX
       const dy = e.touches[0].clientY - s.startY
+      // SwipeableRow and this listener both observe the same touch stream. Decide
+      // the dominant axis before tracking a pull so a quick diagonal row swipe
+      // cannot schedule an app-wide re-render on every move event.
+      if (!s.pulling && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) >= 8) {
+        s.active = false
+        s.pulling = false
+        return
+      }
       if (dy <= 0) {
         if (s.pulling) resetPullState()
         return

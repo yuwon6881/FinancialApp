@@ -37,6 +37,39 @@ test('production routes do not create viewport horizontal overflow', async ({ pa
       `${dimensions.route} is ${dimensions.pageWidth - dimensions.viewportWidth}px wider than its viewport`,
     ).toBeLessThanOrEqual(dimensions.viewportWidth + 1)
   }
+
+  if (test.info().project.name.startsWith('mobile')) {
+    await page.goto('/settings?section=accounts', { waitUntil: 'domcontentloaded' })
+    const panel = page.getByRole('tabpanel', { name: 'Accounts' })
+    const toolbar = panel.locator('div.flex.flex-nowrap.items-center.gap-2').first()
+    const toolbarAdd = toolbar.getByRole('button', { name: 'Add' })
+    const firstAccountAdd = panel.getByRole('button', { name: 'Add your first account' })
+
+    await expect(panel).toBeVisible()
+    await expect(toolbarAdd).toBeVisible()
+    await expect(firstAccountAdd).toBeVisible()
+
+    const geometry = await panel.evaluate(element => {
+      const toolbarElement = element.querySelector('div.flex.flex-nowrap.items-center.gap-2')
+      if (!toolbarElement) throw new Error('Accounts toolbar was not rendered')
+      const panelBounds = element.getBoundingClientRect()
+      const toolbarBounds = toolbarElement.getBoundingClientRect()
+      return {
+        viewportWidth: document.documentElement.clientWidth,
+        pageWidth: document.documentElement.scrollWidth,
+        toolbarLeft: toolbarBounds.left,
+        toolbarRight: toolbarBounds.right,
+        panelLeft: panelBounds.left,
+        panelRight: panelBounds.right,
+      }
+    })
+    const firstAccountAddHeight = await firstAccountAdd.evaluate(element => element.getBoundingClientRect().height)
+
+    expect(geometry.pageWidth).toBeLessThanOrEqual(geometry.viewportWidth + 1)
+    expect(geometry.toolbarLeft).toBeGreaterThanOrEqual(geometry.panelLeft)
+    expect(geometry.toolbarRight).toBeLessThanOrEqual(geometry.panelRight)
+    expect(firstAccountAddHeight).toBeGreaterThanOrEqual(44)
+  }
 })
 
 test('saved theme is applied before the PWA application bundle runs', async ({ page }) => {

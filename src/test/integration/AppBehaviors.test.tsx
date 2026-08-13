@@ -296,7 +296,7 @@ describe('App behaviors', () => {
     }, { timeout: 5000 })
 
     fireEvent.click(await screen.findByRole('button', { name: 'Open Menu' }))
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Ask AI' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Ask AI' }, { timeout: 5000 }))
 
     // The panel is lazy behind a null fallback, so this waits on a real dynamic import
     // rather than a render; the default 1s is not enough for its chunk here.

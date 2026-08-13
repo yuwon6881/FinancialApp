@@ -12,6 +12,7 @@ import {
   DOCUMENT_CACHE_TTL,
   documentListCacheKey,
   invalidateDocumentDerivedData,
+  invalidateDocumentReliefCategoryData,
 } from './documentsCache'
 import { downloadCsvBlob } from '../csvExport'
 import type { DocumentSort } from '../documentOrdering'
@@ -60,6 +61,23 @@ export interface BulkDocumentCategoryUpdateResult {
   id: number
   updated: boolean
   message?: string | null
+}
+
+export interface DocumentOverview {
+  usage: DocumentVaultUsage
+  availableYears: number[]
+  retention: DocumentRetentionReview
+  selectedTaxYear: number | null
+  summary: TaxYearReliefSummary | null
+  reliefCategories: TaxReliefCategoryDefinition[]
+}
+
+export function getDocumentOverview(taxYear?: number): Promise<DocumentOverview> {
+  const query = taxYear === undefined ? '' : `?taxYear=${taxYear}`
+  return cachedGet(DOCUMENT_CACHE_KEYS.overview(taxYear), () => request<DocumentOverview>(`/documents/overview${query}`, {
+    method: 'GET',
+    errorMessage: 'Failed to load document overview',
+  }), { staleTime: DOCUMENT_CACHE_TTL.derived })
 }
 
 export async function uploadDocuments(
@@ -200,7 +218,7 @@ export async function addTaxReliefCategory(
     body: JSON.stringify(input),
     errorMessage: 'Failed to add tax relief category',
   })
-  invalidateDocumentDerivedData()
+  invalidateDocumentReliefCategoryData()
   return result
 }
 
@@ -218,7 +236,7 @@ export async function updateTaxReliefCategory(
       errorMessage: 'Failed to update tax relief category',
     },
   )
-  invalidateDocumentDerivedData()
+  invalidateDocumentReliefCategoryData()
   return result
 }
 
@@ -230,7 +248,7 @@ export async function deleteTaxReliefCategory(taxYear: number, categoryId: strin
       errorMessage: 'Failed to delete tax relief category',
     },
   )
-  invalidateDocumentDerivedData()
+  invalidateDocumentReliefCategoryData()
 }
 
 export function getTaxYearReliefSummary(taxYear: number): Promise<TaxYearReliefSummary> {

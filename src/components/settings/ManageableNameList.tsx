@@ -25,6 +25,11 @@ interface ManageableNameListProps<T extends ManageableNameItem> {
    * above the list, which is what made three unrelated control clusters out of one toolbar.
    */
   filterSlot?: ReactNode
+  /** Optional feature-specific empty state shown when there is no active search. */
+  emptyState?: ReactNode
+  /** Allows a feature to give its rows a little more room without replacing the list primitive. */
+  itemClassName?: string | ((item: T) => string)
+  listClassName?: string
   disabled?: boolean
   isLoading?: boolean
   onAdd: (name: string) => Promise<void> | void
@@ -46,6 +51,9 @@ export function ManageableNameList<T extends ManageableNameItem>({
   addFormDescription,
   addFormFields,
   filterSlot,
+  emptyState,
+  itemClassName,
+  listClassName,
   disabled = false,
   isLoading = false,
   onAdd,
@@ -186,18 +194,25 @@ export function ManageableNameList<T extends ManageableNameItem>({
         </CollapsibleBody>
       </div>}
 
-      <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1" aria-busy={isLoading}>
+      <div className={`space-y-1.5 overflow-y-auto pr-1 ${listClassName ?? 'max-h-72'}`} aria-busy={isLoading}>
         {isLoading ? (
           <div role="status" className="flex min-h-24 items-center justify-center gap-2 text-xs font-semibold text-muted-foreground">
             <Loader2 className="size-4 animate-spin text-blue-500" />
             Loading…
           </div>
         ) : filtered.length === 0 ? (
-          <p className="py-6 text-center text-[11px] text-muted-foreground">
-            {search ? `No ${pluralItemLabel} match your search.` : `No ${pluralItemLabel} yet.`}
-          </p>
+          search || !emptyState ? (
+            <p className="py-6 text-center text-[11px] text-muted-foreground">
+              {search ? `No ${pluralItemLabel} match your search.` : `No ${pluralItemLabel} yet.`}
+            </p>
+          ) : emptyState
         ) : filtered.map(item => (
-          <div key={item.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-background px-2.5 py-2 text-xs">
+          <div
+            key={item.id}
+            className={`flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-background px-2.5 py-2 text-xs ${
+              typeof itemClassName === 'function' ? itemClassName(item) : itemClassName ?? ''
+            }`}
+          >
             <div className="flex min-w-0 items-center gap-2">
               {renderName ? renderName(item) : <span className="truncate font-semibold">{item.name}</span>}
               {renderMeta?.(item)}

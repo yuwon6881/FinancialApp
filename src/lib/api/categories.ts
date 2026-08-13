@@ -44,6 +44,18 @@ export interface CategoryCleanupApplyResult {
   undoActions: CategoryCleanupAction[]
 }
 
+export interface TransactionCategoryUsage {
+  categoryKey: string
+  count: number
+}
+
+export function fetchCategoryUsage(startDate: string, endDate: string): Promise<TransactionCategoryUsage[]> {
+  const params = new URLSearchParams({ startDate, endDate })
+  return request<TransactionCategoryUsage[]>(`/categories/usage?${params.toString()}`, {
+    errorMessage: 'Failed to load category usage',
+  })
+}
+
 export async function suggestTransactionCategories(params: {
   description: string
   txType: 'inflow' | 'outflow'

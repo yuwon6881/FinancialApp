@@ -341,6 +341,21 @@ describe('drainQueue — error taxonomy', () => {
     spy.mockRestore()
   })
 
+  it('describes an HTTP 500 as a server error while retrying', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const failure = Object.assign(new Error('Internal Server Error'), { status: 500 })
+    const h = makeHarness(
+      { resolveDispatch: () => async () => { throw failure }, now: () => 1_000_000 },
+      [op({ id: 'server-error', retryCount: 0 })],
+    )
+
+    await drainQueue(h.deps)
+
+    expect(h.queue).toHaveLength(1)
+    expect(h.errors.at(-1)).toBe('Sync pending: Server error; retrying...')
+    spy.mockRestore()
+  })
+
   it.each([
     new TypeError('Failed to fetch'),
     Object.assign(new Error('Native request failed'), { status: 0 }),
@@ -391,6 +406,7 @@ describe('drainQueue — error taxonomy', () => {
     expect(h.queue).toEqual([])
     expect(h.failedOps).toHaveLength(1)
     expect(h.failedOps[0].retryCount).toBe(MAX_RETRIES)
+    expect(h.errors.at(-1)).toBeNull()
     spy.mockRestore()
   })
 

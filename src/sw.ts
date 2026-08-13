@@ -52,11 +52,9 @@ registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html'), {
   denylist: [/^\/api(?:\/|$)/],
 }))
 
-// Same-origin static assets that the precache manifest does not cover — chiefly the
-// hashed lazy-view chunks, which are fetched on demand and so are not in the manifest.
-// Stale-while-revalidate serves the cached copy instantly and refreshes in the background;
-// safe here because every filename is content-hashed, so a stale entry is never *wrong*,
-// only superseded.
+// The install precache includes emitted JS/CSS so every route works offline immediately.
+// This route is the fallback for assets from a newer deployment or otherwise absent from the
+// active worker's manifest. Content-hashed filenames make stale-while-revalidate safe.
 registerRoute(
   ({ request, url, sameOrigin }) =>
     sameOrigin

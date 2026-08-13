@@ -109,6 +109,19 @@ describe('documents API', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
+  it('keeps relief-category reference data cached after an ordinary document mutation', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(okJson([{ id: 'lifestyle', name: 'Lifestyle', limit: 100 }]))
+      .mockResolvedValueOnce({ ...okJson(undefined), status: 204 })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await getTaxReliefCategories(2026)
+    await deleteDocument(4)
+    await getTaxReliefCategories(2026)
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('uploads multipart data without setting a content-type header', async () => {
     const fetchMock = vi.fn().mockResolvedValue(okJson({ id: 1 }))
     vi.stubGlobal('fetch', fetchMock)
@@ -283,4 +296,3 @@ describe('documents API', () => {
     })
   })
 })
-

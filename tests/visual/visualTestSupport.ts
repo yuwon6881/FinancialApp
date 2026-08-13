@@ -201,6 +201,25 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
     if (options.failDocuments && pathname.includes('/documents')) {
       return fulfill(route, { message: 'Vault temporarily unavailable.' }, 503)
     }
+    if (pathname.endsWith('/documents/overview')) {
+      const documents = options.documents ?? []
+      return fulfill(route, {
+        usage: {
+          totalBytes: documents.reduce((total, document) => total + document.sizeBytes, 0),
+          documentCount: documents.length,
+        },
+        availableYears: [2026],
+        retention: { taxYears: [], noticeWindowDays: 180, keepYears: 7 },
+        selectedTaxYear: 2026,
+        summary: {
+          taxYear: 2026,
+          confirmedTotal: 0,
+          possibleTotal: 0,
+          categories: [],
+        },
+        reliefCategories: options.reliefCategories ?? [],
+      })
+    }
     if (pathname.endsWith('/documents/usage')) {
       const documents = options.documents ?? []
       return fulfill(route, {

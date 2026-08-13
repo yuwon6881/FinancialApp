@@ -1,7 +1,7 @@
 import { Button } from './components/ui/Button'
 import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import TopNav from "./TopNav.tsx"
-import { type AppTab } from './types'
+import { type AppTab, type InvestmentAllocationOverview } from './types'
 import * as api from './lib/api'
 import { Loader2 } from 'lucide-react'
 
@@ -12,9 +12,6 @@ import { ToastViewport } from './components/ui/ToastViewport'
 import { Skeleton } from './components/ui/Skeleton'
 import type { PageSkeletonVariant } from './components/ui/CycleSkeleton'
 import { useVisualViewportVars } from './lib/useVisualViewportVars'
-import { useReceiptScanPolling } from './lib/useReceiptScanPolling'
-import { useReceiptSplitPolling } from './lib/useReceiptSplitPolling'
-import { useInvestmentScanPolling } from './lib/useInvestmentScanPolling'
 import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
 const LockScreen = lazy(() => import('./components/LockScreen').then(m => ({ default: m.LockScreen })))
 const PwaLaunchGate = lazy(() => import('./app/PwaLaunchGate').then(m => ({ default: m.PwaLaunchGate })))
@@ -33,8 +30,8 @@ import { useCycleNavigation } from './app/useCycleNavigation'
 import { useAiActionRouter } from './app/useAiActionRouter'
 import { useAppDialogs } from './app/useAppDialogs'
 import { useCycleSummary } from './app/useCycleSummary'
-import { usePushNotifications } from './app/usePushNotifications'
-import { useInvestmentRefreshCoordinator } from './app/useInvestmentRefreshCoordinator'
+import type { UsePushNotificationsResult } from './app/usePushNotifications'
+import type { ScanPollingResults } from './app/RuntimeBackgroundBridges'
 import { useAiEntryPoint } from './app/useAiEntryPoint'
 import { shouldShowMobileFab, useFabMenu } from './app/useFabMenu'
 import { useCurrentCycleDashboard } from './app/useCurrentCycleDashboard'
@@ -47,6 +44,30 @@ import { readAppLocation, updateAppSearch } from './lib/appLocation'
 import { mutationBusyLabel } from './components/ui/rowSyncState'
 import type { AiInvocationContext } from './lib/api/ai'
 import { calculateFreeRewardsBalance, pendingRecurringAmount, pendingRewardsAmount } from './lib/freeRewards'
+
+const RuntimeBackgroundBridges = lazy(() => import('./app/RuntimeBackgroundBridges').then(module => ({ default: module.RuntimeBackgroundBridges })))
+const enableRuntimeBackgroundBridges = import.meta.env.MODE !== 'test'
+
+const EMPTY_PUSH: UsePushNotificationsResult = {
+  supported: true,
+  loading: true,
+  busy: false,
+  busyAction: null,
+  billRemindersEnabled: false,
+  categoryAlertsEnabled: false,
+  otherDevicesBillReminders: false,
+  otherDevicesCategoryAlerts: false,
+  enrolmentRevision: 0,
+  guidance: null,
+  setChannelEnabled: async () => false,
+  refresh: async () => null,
+}
+
+const EMPTY_SCANS: ScanPollingResults = {
+  receiptScan: { activeReceiptScanDraft: null, failedScanJob: null, receiptScanJobIds: [], handleReceiptScanStarted: () => undefined, clearReceiptScanJob: async () => undefined },
+  receiptSplit: { activeReceiptSplitDraft: null, failedReceiptSplitJob: null, receiptSplitJobIds: [], handleReceiptSplitStarted: () => undefined, clearReceiptSplitJob: async () => undefined },
+  investmentScan: { activeInvestmentScanDraft: null, failedInvestmentScanJob: null, investmentScanJobIds: [], handleInvestmentScanStarted: () => undefined, clearInvestmentScanJob: async () => undefined },
+}
 
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched at the root level.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
@@ -71,15 +92,18 @@ const AppOverlaysFallback = ({
 }) => (
   <>
     {visible && isOpen && (
-      <Button
-        variant="secondary"
-        type="button"
-        onClick={onAskAi}
-        className="fixed right-8 z-40 flex items-center gap-2.5 cursor-pointer"
-        style={{ bottom: 'calc(164px + env(safe-area-inset-bottom, 0px))' }}
-      >
-        <span>Ask AI</span>
-      </Button>
+      <div role="menu" aria-label="Quick actions">
+        <Button
+          variant="secondary"
+          type="button"
+          role="menuitem"
+          onClick={onAskAi}
+          className="fixed right-8 z-40 flex items-center gap-2.5 cursor-pointer"
+          style={{ bottom: 'calc(164px + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <span>Ask AI</span>
+        </Button>
+      </div>
     )}
     {visible && (
       <Button
@@ -135,13 +159,7 @@ function App() {
 
   const openSensitivePrompt = useCallback(() => session.setShowPasswordPrompt(true), [session.setShowPasswordPrompt])
 
-  const push = usePushNotifications(
-    !!session.token && !session.isLocked,
-    dialogs.showToast,
-    // Scopes this browser's opt-in record, so a shared machine cannot re-register one account
-    // against the notification kinds another account chose.
-    session.username,
-  )
+  const [push, setPush] = useState<UsePushNotificationsResult>(EMPTY_PUSH)
 
   // 4. Cycle Navigation
   const persistSelectedPeriodRef = useRef<(month: string, year: number) => void | Promise<void>>(api.selectPeriod)
@@ -191,10 +209,7 @@ function App() {
     }))
   }
 
-  const investmentAllocation = useInvestmentRefreshCoordinator(
-    Boolean(session.token) && !session.isLocked,
-    financial.isOffline,
-  )
+  const [investmentAllocation, setInvestmentAllocation] = useState<InvestmentAllocationOverview | null>(null)
 
   const [isLedgerAddOpen, setIsLedgerAddOpen] = useState(false)
   const isLedgerAddOpenRef = useRef(isLedgerAddOpen)
@@ -216,29 +231,8 @@ function App() {
   const activeTabRef = useRef(prefs.activeTab)
 
   // 6. Receipt scanning
-  const receiptScan = useReceiptScanPolling({
-    token: session.token,
-    activeTabRef,
-    isLedgerAddOpenRef,
-    setActiveTab: prefs.setActiveTab,
-    setAutoOpenLedgerAdd: nav.setAutoOpenLedgerAdd,
-    showToast: dialogs.showToast,
-  })
-  const receiptSplit = useReceiptSplitPolling({
-    token: session.token,
-    isReceiptSplitOpenRef,
-    setActiveTab: prefs.setActiveTab,
-    setAutoOpenReceiptSplit: nav.setAutoOpenReceiptSplit,
-    showToast: dialogs.showToast,
-  })
-  const investmentScan = useInvestmentScanPolling({
-    token: session.token,
-    activeTabRef,
-    isInvestmentAddOpenRef,
-    setActiveTab: prefs.setActiveTab,
-    setAutoOpenInvestmentAdd,
-    showToast: dialogs.showToast,
-  })
+  const [scans, setScans] = useState<ScanPollingResults>(EMPTY_SCANS)
+  const { receiptScan, receiptSplit, investmentScan } = scans
   // 7. AI action router
   const rewardsBalanceRef = useRef(0)
   const aiRouter = useAiActionRouter({
@@ -559,6 +553,26 @@ function App() {
   return (
     <AppProvider value={appContextValue}>
       <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-primary/25 selection:text-foreground">
+        {enableRuntimeBackgroundBridges && <Suspense fallback={null}>
+          <RuntimeBackgroundBridges
+            account={session.username}
+            token={session.token}
+            urgentPush={prefs.activeTab === 'settings'}
+            isOffline={financial.isOffline}
+            activeTabRef={activeTabRef}
+            isLedgerAddOpenRef={isLedgerAddOpenRef}
+            isReceiptSplitOpenRef={isReceiptSplitOpenRef}
+            isInvestmentAddOpenRef={isInvestmentAddOpenRef}
+            setActiveTab={prefs.setActiveTab}
+            setAutoOpenLedgerAdd={nav.setAutoOpenLedgerAdd}
+            setAutoOpenReceiptSplit={nav.setAutoOpenReceiptSplit}
+            setAutoOpenInvestmentAdd={setAutoOpenInvestmentAdd}
+            showToast={dialogs.showToast}
+            onPushChange={setPush}
+            onScansChange={setScans}
+            onInvestmentAllocationChange={setInvestmentAllocation}
+          />
+        </Suspense>}
         <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
 
         <TopNav

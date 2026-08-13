@@ -7,26 +7,10 @@ import { prefersReducedMotion } from '../../lib/motionPreference'
 import { triggerHaptic } from '../../lib/haptics'
 import { setSwipeLocked } from '../../lib/swipeLock'
 import { Button } from './Button'
+import { resolveSwipeTarget } from './swipeableRowMath'
 
 // Module-level registry so only a single row is ever open at a time.
 let closeActiveRow: (() => void) | null = null
-
-export function resolveSwipeTarget({
-  currentX,
-  actionsWidth,
-  velocityX,
-  velocityThreshold = 200,
-}: {
-  currentX: number
-  actionsWidth: number
-  velocityX: number
-  velocityThreshold?: number
-}): number {
-  const boundedX = Math.max(-actionsWidth, Math.min(0, currentX))
-  if (velocityX <= -velocityThreshold) return -actionsWidth
-  if (velocityX >= velocityThreshold) return 0
-  return boundedX < -actionsWidth / 2 ? -actionsWidth : 0
-}
 
 interface SwipeableRowProps {
   children: React.ReactNode
@@ -165,7 +149,10 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     if ((disabled || !isMobile) && open) close()
   }, [disabled, isMobile, open, close])
 
-  useEffect(() => () => stopSettle(), [stopSettle])
+  useEffect(() => () => {
+    setSwipeLocked(false)
+    stopSettle()
+  }, [stopSettle])
 
   const handleDragStart = () => {
     stopSettle()
@@ -198,6 +185,11 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
       close()
     }
   }
+
+  const handleDragCancel = useCallback(() => {
+    setSwipeLocked(false)
+    close()
+  }, [close])
 
   // Desktop: keep actions inline at the trailing edge.
   if (!isMobile) {
@@ -246,7 +238,8 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         dragDirectionLock
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        style={{ touchAction: 'pan-y', x }}
+        onPointerCancel={handleDragCancel}
+        style={{ touchAction: 'pan-y', willChange: 'transform', x }}
         onClick={() => {
           if (suppressNextClick.current) return
           if (open) close()

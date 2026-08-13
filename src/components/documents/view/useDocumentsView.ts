@@ -34,6 +34,7 @@ export function useDocumentsView() {
   const requestIdRef = useRef(0)
   const taxInsightsRequestIdRef = useRef(0)
   const queryKeyRef = useRef<string | null>(null)
+  const overviewYearRef = useRef<number | undefined>(undefined)
 
   const loadDocuments = useCallback(async (isRefresh = false) => {
     const requestId = ++requestIdRef.current
@@ -61,55 +62,38 @@ export function useDocumentsView() {
     }
   }, [page, pageSize, taxYear, selectedReliefCategories, sortOrder])
 
-  const loadUsage = useCallback(async () => {
-    try {
-      const res = await api.getDocumentUsage()
-      setUsage(res)
-    } catch (err) {
-      console.error('Failed to load document usage:', err)
-    }
-  }, [])
-
-  const loadAvailableYears = useCallback(async () => {
-    try {
-      const years = await api.getAvailableDocumentYears()
-      setAvailableYears(years)
-      setTaxYear(current => current === undefined ? years[0] : !years.includes(current) ? years[0] : current)
-    } catch (err) {
-      console.error('Failed to load document years:', err)
-    } finally {
-      setHasLoadedYears(true)
-    }
-  }, [])
-
-  const loadTaxInsights = useCallback(async () => {
+  const loadOverview = useCallback(async (requestedTaxYear?: number, initialize = false) => {
     const requestId = ++taxInsightsRequestIdRef.current
-    const selectedYear = taxYear ?? availableYears[0]
-    const categoryYears = taxYear === undefined ? availableYears : selectedYear === undefined ? [] : [selectedYear]
     setIsTaxInsightsLoading(true)
     try {
-      const [retention, yearSummary, categoryResults] = await Promise.all([
-        api.getDocumentRetentionReview(),
-        selectedYear ? api.getTaxYearReliefSummary(selectedYear).catch(() => null) : Promise.resolve(null),
-        Promise.all(categoryYears.map(async year => [year, await api.getTaxReliefCategories(year).catch(() => [])] as const)),
-      ])
+      const overview = await api.getDocumentOverview(requestedTaxYear)
       if (requestId !== taxInsightsRequestIdRef.current) return
-      const categoriesByYear = Object.fromEntries(categoryResults) as Record<number, TaxReliefCategoryDefinition[]>
-      setRetentionReview(retention)
-      setSummary(yearSummary)
-      setReliefCategories(selectedYear === undefined ? [] : categoriesByYear[selectedYear] ?? [])
-      setReliefCategoriesByTaxYear(categoriesByYear)
+      overviewYearRef.current = initialize ? overview.selectedTaxYear ?? undefined : requestedTaxYear
+      setUsage(overview.usage)
+      setAvailableYears(overview.availableYears)
+      if (!initialize && requestedTaxYear !== undefined && !overview.availableYears.includes(requestedTaxYear)) {
+        setTaxYear(overview.availableYears[0])
+      }
+      setRetentionReview(overview.retention)
+      setSummary(overview.summary)
+      setReliefCategories(overview.reliefCategories)
+      setReliefCategoriesByTaxYear(overview.selectedTaxYear === null
+        ? {}
+        : { [overview.selectedTaxYear]: overview.reliefCategories })
+      if (initialize) setTaxYear(overview.selectedTaxYear ?? undefined)
     } catch (err) {
-      console.error('Failed to load tax insights:', err)
+      console.error('Failed to load document overview:', err)
     } finally {
-      if (requestId === taxInsightsRequestIdRef.current) setIsTaxInsightsLoading(false)
+      if (requestId === taxInsightsRequestIdRef.current) {
+        setIsTaxInsightsLoading(false)
+        setHasLoadedYears(true)
+      }
     }
-  }, [taxYear, availableYears])
+  }, [])
 
   useEffect(() => {
-    loadUsage()
-    loadAvailableYears()
-  }, [loadUsage, loadAvailableYears])
+    void loadOverview(undefined, true)
+  }, [loadOverview])
 
   useEffect(() => {
     if (!hasLoadedYears) return
@@ -131,8 +115,9 @@ export function useDocumentsView() {
   }, [hasLoadedYears, page, pageSize, taxYear, selectedReliefCategories, sortOrder, loadDocuments])
 
   useEffect(() => {
-    void loadTaxInsights()
-  }, [loadTaxInsights])
+    if (!hasLoadedYears || overviewYearRef.current === taxYear) return
+    void loadOverview(taxYear)
+  }, [hasLoadedYears, loadOverview, taxYear])
 
   useEffect(() => {
     setSelectedReliefCategories([])
@@ -159,12 +144,7 @@ export function useDocumentsView() {
       const nextPage = clampDocumentPage(nextTotalCount, page, pageSize)
       if (nextPage !== page) setPage(nextPage)
       else if (nextTotalCount > 0) await loadDocuments()
-      void loadUsage()
-      void loadAvailableYears()
-      // The deleted document's amount was counted in the relief summary and its year in the
-      // retention notice, so both are wrong until this runs. `bulkDelete` has always refreshed
-      // them; deleting one document left the tracker claiming money from a file that is now gone.
-      void loadTaxInsights()
+      void loadOverview(taxYear)
     } catch (err) {
       console.error('Failed to delete document:', err)
       throw err
@@ -197,10 +177,10 @@ export function useDocumentsView() {
       : document))
     await Promise.all([
       selectedReliefCategories.length === 0 ? Promise.resolve() : loadDocuments(),
-      loadTaxInsights(),
+      loadOverview(taxYear),
     ])
     return results
-  }, [loadDocuments, loadTaxInsights, selectedReliefCategories])
+  }, [loadDocuments, loadOverview, selectedReliefCategories, taxYear])
 
   const bulkDelete = async (ids: number[]) => {
     const results = await api.bulkDeleteDocuments(ids)
@@ -211,7 +191,7 @@ export function useDocumentsView() {
     const nextPage = clampDocumentPage(nextTotalCount, page, pageSize)
     if (nextPage !== page) setPage(nextPage)
     else if (nextTotalCount > 0) await loadDocuments()
-    await Promise.all([loadUsage(), loadAvailableYears(), loadTaxInsights()])
+    await loadOverview(taxYear)
     return results
   }
 
@@ -241,9 +221,7 @@ export function useDocumentsView() {
     sortOrder,
     setSortOrder,
     loadDocuments,
-    loadUsage,
-    loadAvailableYears,
-    loadTaxInsights,
+    loadOverview,
     deleteDocument,
     updateDocumentMetadata,
     bulkUpdateDocumentCategories,

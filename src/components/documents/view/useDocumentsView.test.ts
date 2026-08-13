@@ -5,6 +5,7 @@ import { EMPTY_RETENTION_REVIEW } from '../../../lib/documentRetention'
 
 const api = vi.hoisted(() => ({
   listDocuments: vi.fn(),
+  getDocumentOverview: vi.fn(),
   getDocumentUsage: vi.fn(),
   getAvailableDocumentYears: vi.fn(),
   getDocumentRetentionReview: vi.fn(),
@@ -53,6 +54,14 @@ describe('useDocumentsView', () => {
       categories: [],
     })
     api.getTaxReliefCategories.mockResolvedValue([])
+    api.getDocumentOverview.mockImplementation(async (taxYear?: number) => ({
+      usage: await api.getDocumentUsage(),
+      availableYears: await api.getAvailableDocumentYears(),
+      retention: await api.getDocumentRetentionReview(),
+      selectedTaxYear: taxYear ?? 2026,
+      summary: await api.getTaxYearReliefSummary(taxYear ?? 2026),
+      reliefCategories: await api.getTaxReliefCategories(taxYear ?? 2026),
+    }))
     api.addTaxReliefCategory.mockResolvedValue({ id: 'category', name: 'Category', limit: 100 })
     api.updateTaxReliefCategory.mockResolvedValue({ id: 'category', name: 'Category', limit: 100 })
     api.deleteTaxReliefCategory.mockResolvedValue(undefined)
@@ -100,8 +109,7 @@ describe('useDocumentsView', () => {
     const { result } = renderHook(() => useDocumentsView())
     await waitFor(() => expect(result.current.documents).toEqual([document]))
 
-    const summaryCallsBefore = api.getTaxYearReliefSummary.mock.calls.length
-    const retentionCallsBefore = api.getDocumentRetentionReview.mock.calls.length
+    const overviewCallsBefore = api.getDocumentOverview.mock.calls.length
 
     await act(async () => {
       await result.current.deleteDocument(1)
@@ -111,8 +119,7 @@ describe('useDocumentsView', () => {
     // retention notice. Only bulk delete used to refresh them, so deleting one document left the
     // tracker claiming money from a file that no longer existed.
     await waitFor(() => {
-      expect(api.getTaxYearReliefSummary.mock.calls.length).toBeGreaterThan(summaryCallsBefore)
-      expect(api.getDocumentRetentionReview.mock.calls.length).toBeGreaterThan(retentionCallsBefore)
+      expect(api.getDocumentOverview.mock.calls.length).toBeGreaterThan(overviewCallsBefore)
     })
   })
 

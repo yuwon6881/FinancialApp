@@ -31,6 +31,44 @@ test('representative dashboard', async ({ page }) => {
   await expect(page).toHaveScreenshot('dashboard.png', { fullPage: true })
 })
 
+test('accounts settings panel uses the complete card shell', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page)
+  await page.goto('/settings?section=accounts', { waitUntil: 'domcontentloaded' })
+
+  const panel = page.getByRole('tabpanel', { name: 'Accounts' })
+  await expect(panel).toBeVisible()
+  await expect(page.getByText('No accounts added yet')).toBeVisible()
+  await waitForStableLayout(page)
+
+  const shell = await panel.evaluate(element => {
+    const style = getComputedStyle(element)
+    const bounds = element.getBoundingClientRect()
+    return {
+      backgroundColor: style.backgroundColor,
+      borderTopWidth: Number.parseFloat(style.borderTopWidth),
+      borderTopLeftRadius: Number.parseFloat(style.borderTopLeftRadius),
+      paddingLeft: Number.parseFloat(style.paddingLeft),
+      paddingRight: Number.parseFloat(style.paddingRight),
+      left: bounds.left,
+      right: bounds.right,
+      viewportWidth: document.documentElement.clientWidth,
+      pageWidth: document.documentElement.scrollWidth,
+    }
+  })
+
+  expect(shell.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+  expect(shell.borderTopWidth).toBeGreaterThan(0)
+  expect(shell.borderTopLeftRadius).toBeGreaterThan(0)
+  expect(shell.paddingLeft).toBeGreaterThanOrEqual(16)
+  expect(shell.paddingRight).toBeGreaterThanOrEqual(16)
+  expect(shell.left).toBeGreaterThanOrEqual(0)
+  expect(shell.right).toBeLessThanOrEqual(shell.viewportWidth)
+  expect(shell.pageWidth).toBeLessThanOrEqual(shell.viewportWidth + 1)
+
+  await expect(page).toHaveScreenshot('settings-accounts.png', { fullPage: true })
+})
+
 test('desktop top-bar icon actions stay compact', async ({ page }) => {
   test.skip(!test.info().project.name.startsWith('desktop'), 'Desktop navigation uses compact pointer targets.')
 

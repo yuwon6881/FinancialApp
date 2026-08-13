@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, beforeEach } from 'vitest'
-import { resolveSwipeTarget, SwipeableRow } from './SwipeableRow'
+import { SwipeableRow } from './SwipeableRow'
+import { resolveSwipeTarget } from './swipeableRowMath'
 
 describe('SwipeableRow swipe resolution', () => {
   const actionsWidth = 132

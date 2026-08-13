@@ -165,7 +165,7 @@ describe('RecurringPaymentCards loan links', () => {
 
     expect(screen.getByText('Linked to loan')).toBeTruthy()
     expect(screen.getByText('Home loan')).toBeTruthy()
-    const deleteButton = screen.getByRole('button', { name: 'Delete' }) as HTMLButtonElement
+    const deleteButton = screen.getByRole('button', { name: 'Delete Netflix' }) as HTMLButtonElement
     expect(deleteButton.disabled).toBe(true)
     expect(deleteButton.title).toContain('Home loan')
     fireEvent.click(deleteButton)

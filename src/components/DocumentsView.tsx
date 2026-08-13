@@ -51,9 +51,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     setPageSize,
     totalCount,
     loadDocuments,
-    loadUsage,
-    loadAvailableYears,
-    loadTaxInsights,
+    loadOverview,
     deleteDocument,
     updateDocumentMetadata,
     bulkUpdateDocumentCategories,
@@ -115,8 +113,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     )
     if (newlyCompleted.length === 0) return
     newlyCompleted.forEach(operation => refreshedCategoryOpsRef.current.add(operation.id))
-    void loadTaxInsights()
-  }, [loadTaxInsights, taxReliefOperations])
+    void loadOverview(taxYear)
+  }, [loadOverview, taxReliefOperations, taxYear])
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
   const visibleIds = documents.map(document => document.id)
@@ -380,7 +378,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 addDocumentIds(setSyncingDocumentIds, [id])
                 try {
                   await updateDocumentMetadata(id, updates)
-                  void loadTaxInsights()
+                  void loadOverview(taxYear)
                 } finally {
                   removeDocumentIds(setSyncingDocumentIds, [id])
                 }
@@ -408,9 +406,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         initialTaxYear={taxYear}
         onSuccess={() => {
           void loadDocuments(true)
-          void loadUsage()
-          void loadAvailableYears()
-          void loadTaxInsights()
+          void loadOverview(taxYear)
         }}
         currency={currency}
       />

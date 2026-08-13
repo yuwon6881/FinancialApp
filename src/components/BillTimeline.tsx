@@ -4,10 +4,10 @@ import { Calendar, CheckCircle2, AlertCircle, Ban, List, ChevronDown, ChevronUp 
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryDotClass } from '../lib/categoryColors'
 import { ordinalSuffix } from '../lib/cycleLabels'
+import { BILL_TIMELINE_MONTHS, buildBillTimelineModel, type BillTimelineNode } from '../lib/billTimeline'
 import { BottomSheet } from './ui/BottomSheet'
 import { Card } from './ui/Card'
 import { SensitiveMask } from './ui/SensitiveAmount'
-import { getCycleRangeDates } from '../lib/cycle'
 import { Button } from './ui/Button'
 
 interface BillTimelineProps {
@@ -23,14 +23,6 @@ interface BillTimelineProps {
   title?: string
 }
 
-interface TimelineNode {
-  dueDate: string
-  percent: number
-  bills: ActiveRecurringPayment[]
-}
-
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
 export const BillTimeline: React.FC<BillTimelineProps> = ({
   activeRecurringPayments,
   allPayments,
@@ -45,279 +37,33 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [selectedBill, setSelectedBill] = useState<ActiveRecurringPayment | null>(null)
-  const [selectedNode, setSelectedNode] = useState<TimelineNode | null>(null)
+  const [selectedNode, setSelectedNode] = useState<BillTimelineNode | null>(null)
 
-  const { monthIndex, year, cycleStart, cycleEnd } = React.useMemo(() => {
-    const selectedIndex = MONTH_NAMES.indexOf(selectedMonth)
-    const baseMonthIndex = selectedIndex !== -1 ? selectedIndex : new Date().getMonth()
-    const baseYear = selectedYear > 0 ? selectedYear : new Date().getFullYear()
-    const totalMonths = baseMonthIndex + cycleOffset
-    const effectiveMonthIndex = (totalMonths % 12 + 12) % 12
-    const effectiveYear = baseYear + Math.floor(totalMonths / 12)
-    const range = getCycleRangeDates(effectiveYear, effectiveMonthIndex + 1, cycleDay)
-    return {
-      monthIndex: effectiveMonthIndex,
-      year: effectiveYear,
-      cycleStart: range.start,
-      cycleEnd: range.end,
-    }
-  }, [selectedMonth, selectedYear, cycleOffset, cycleDay])
+  const {
+    startTime,
+    endTime,
+    durationMs,
+    startLabel,
+    endLabel,
+    processedPayments,
+    cycleTotal,
+    timelineNodes,
+  } = React.useMemo(() => buildBillTimelineModel({
+    activeRecurringPayments,
+    allPayments,
+    transactions,
+    selectedMonth,
+    selectedYear,
+    cycleDay,
+    cycleOffset,
+  }), [activeRecurringPayments, allPayments, transactions, selectedMonth, selectedYear, cycleDay, cycleOffset])
 
   const displayTitle = title || (cycleOffset === 1 ? 'Upcoming Next Cycle Subscriptions' : 'Subscriptions Billing Timeline')
+  const formatCurrency = (value: number) => formatCurrencyVal(value, currency)
+  const formatSensitive = (value: number) =>
+    hideSensitive ? <SensitiveMask /> : <span>{formatCurrency(value)}</span>
 
-  const startTime = cycleStart.getTime()
-  const endTime = cycleEnd.getTime()
-  const durationMs = endTime - startTime
-
-  // Format date labels
-  const startMonthStr = MONTH_NAMES[cycleStart.getMonth()]
-  const endMonthStr = MONTH_NAMES[cycleEnd.getMonth()]
-  const startLabel = `${startMonthStr} ${cycleStart.getDate()}${ordinalSuffix(cycleStart.getDate())}`
-  const endLabel = `${endMonthStr} ${cycleEnd.getDate()}${ordinalSuffix(cycleEnd.getDate())}`
-
-  const formatCurrency = (val: number) => {
-    return formatCurrencyVal(val, currency)
-  }
-
-  const formatSensitive = (val: number) => {
-    return hideSensitive ? <SensitiveMask /> : <span>{formatCurrency(val)}</span>
-  }
-
-  // Calculate payments for this cycle
-  const processedPayments = React.useMemo(() => {
-    const formatIso = (d: Date) => {
-      const y = d.getFullYear()
-      const m = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      return `${y}-${m}-${day}`
-    }
-
-    // Transaction dates are compared as plain strings below. That only works if every date is
-    // in the exact yyyy-MM-dd shape the app itself writes -- a hand-inserted or imported row in
-    // any other shape (e.g. a datetime with a time part, or a different date order) silently
-    // fails the comparison instead of erroring, so normalize defensively before comparing.
-    const toIsoDate = (raw: string | null | undefined): string => {
-      if (!raw) return ''
-      if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10)
-      const parsed = new Date(raw)
-      return Number.isNaN(parsed.getTime()) ? raw : formatIso(parsed)
-    }
-
-    const startIso = formatIso(cycleStart)
-    const endIso = formatIso(cycleEnd)
-    const isInCycle = (rawDate: string | null | undefined) => {
-      const iso = toIsoDate(rawDate)
-      return Boolean(iso) && iso >= startIso && iso <= endIso
-    }
-
-    const rawList: ActiveRecurringPayment[] = cycleOffset === 0 
-      ? activeRecurringPayments 
-      : (() => {
-          // These two sources use different shapes for the due date: RecurringPayment.dueDate is
-          // a day-of-month number, while ActiveRecurringPayment.dueDate is a full ISO date string
-          // (day-of-month lives in its separate `dueDay` field instead). Track which one we're
-          // reading from so the two are never confused for each other.
-          const usingAllPayments = Boolean(allPayments && allPayments.length > 0)
-          const sourcePayments: (RecurringPayment | ActiveRecurringPayment)[] = usingAllPayments
-            ? allPayments!.filter(p => p.active !== false)
-            : activeRecurringPayments
-
-          const list: ActiveRecurringPayment[] = []
-
-          sourcePayments.forEach(p => {
-            const pStart = usingAllPayments ? ((p as RecurringPayment).startDate || '') : ''
-            const pEnd = usingAllPayments ? ((p as RecurringPayment).endDate || '') : ''
-
-            if (pStart && pStart > endIso) return
-            if (pEnd && pEnd < startIso) return
-
-            if (usingAllPayments) {
-              const freq = (p as RecurringPayment).frequency
-              if (freq === 'Annually') {
-                if (pStart) {
-                  const startMonthStr = pStart.split('-')[1]
-                  if (startMonthStr) {
-                    const startMonth = parseInt(startMonthStr, 10)
-                    if (startMonth !== monthIndex + 1) return
-                  }
-                }
-              }
-            }
-
-            const dayNum = usingAllPayments
-              ? (p as RecurringPayment).dueDate
-              : ((p as ActiveRecurringPayment).dueDay || parseInt(((p as ActiveRecurringPayment).dueDate || '').split('-')[2], 10) || 1)
-            const daysInTargetMonth = new Date(year, monthIndex + 1, 0).getDate()
-            const clampedDay = Math.min(dayNum, daysInTargetMonth)
-
-            const moStr = String(monthIndex + 1).padStart(2, '0')
-            const dStr = String(clampedDay).padStart(2, '0')
-            const upcomingDueDate = `${year}-${moStr}-${dStr}`
-
-            list.push({
-              id: `${p.id}-upcoming-${year}-${monthIndex}`,
-              recurringPaymentId: p.id,
-              name: p.name,
-              amount: p.amount,
-              category: p.category,
-              ledgerCategory: p.ledgerCategory,
-              dueDate: upcomingDueDate,
-              dueDay: clampedDay,
-              isPaid: false,
-              isDiscarded: false,
-              status: 'Pending' as const
-            })
-          })
-
-          return list
-        })()
-
-    const isDiscardedTx = (t: Transaction) => String(t.ledgerCategory || '').toLowerCase() === 'discarded'
-
-    // The current-cycle API row is an occurrence snapshot: its status is derived server-side from
-    // the exact RecurringOccurrenceDate, so it outranks every client-side transaction heuristic.
-    // Fuzzy matching remains only for legacy cached rows that predate the status field. Future-cycle
-    // rows are synthesized locally and may only be settled by the explicit pay-early link below.
-    const matchedTxIds = new Set<string>()
-    // recurringPaymentIds already represented by a rawList entry this cycle -- the historical
-    // fallback below must never add a second entry for one of these, regardless of whether its
-    // own transaction lookup happens to find a match (a manually-entered or oddly-formatted
-    // transaction date can silently fail that string comparison and produce a false duplicate).
-    const rawListRpIds = new Set(rawList.map(p => p.recurringPaymentId).filter(Boolean))
-
-    const mappedList = rawList.map(p => {
-      // Server-reported Discarded status is the authoritative signal — a pay-early
-      // transaction recorded TODAY (which is in the current cycle's date range) must
-      // NOT override a bill that the server has already confirmed as Discarded. We
-      // guard this BEFORE the transaction lookup so the match can never flip the status.
-      const isServerDiscarded = p.isDiscarded || p.status === 'Discarded'
-      if (isServerDiscarded) {
-        return { ...p, isPaid: false, isDiscarded: true, status: 'Discarded' as const }
-      }
-
-      const hasAuthoritativeStatus = cycleOffset === 0 && (
-        p.status === 'Pending' || p.status === 'Paid' || p.status === 'Discarded'
-      )
-      const isServerPaid = hasAuthoritativeStatus && p.status === 'Paid'
-
-      const matchingTx = !hasAuthoritativeStatus ? (transactions || []).find(t => {
-        if (t.recurringPaymentId === p.recurringPaymentId &&
-          t.recurringOccurrenceDate && t.recurringOccurrenceDate === p.dueDate) return true
-        if (!isInCycle(t.date)) return false
-        // A pay-early transaction for the *next* cycle will share the same
-        // recurringPaymentId but its date will be the early-payment date (today),
-        // which happens to fall in the current cycle range. Exclude it from matching
-        // against the current cycle's bill by skipping non-discarded transactions
-        // whose date is after the bill's own due date when the server already knows
-        // the current cycle state (i.e. server hasn't marked it Paid yet).
-        if (!isServerPaid && t.recurringPaymentId && t.recurringPaymentId === p.recurringPaymentId) {
-          // Only accept the transaction as a same-cycle payment if its date is
-          // on or before the bill's due date, OR if the transaction itself is a
-          // discard marker (which is always current-cycle).
-          const txDateIso = toIsoDate(t.date)
-          const billDueDateIso = toIsoDate(p.dueDate)
-          const isDiscardTx = isDiscardedTx(t)
-          if (!isDiscardTx && billDueDateIso && txDateIso > billDueDateIso) return false
-        }
-        if (t.recurringPaymentId) return t.recurringPaymentId === p.recurringPaymentId
-
-        const descLower = (t.description || '').toLowerCase().trim()
-        const catLower = (t.category || '').toLowerCase().trim()
-        const pNameLower = p.name.toLowerCase().trim()
-
-        const nameMatch = descLower === pNameLower || (pNameLower.length > 2 && descLower.includes(pNameLower)) || (descLower.length > 2 && pNameLower.includes(descLower))
-        const categoryMatch = catLower !== '' && catLower === pNameLower
-
-        return nameMatch || categoryMatch
-      }) : undefined
-
-      if (matchingTx) matchedTxIds.add(String(matchingTx.id))
-
-      // A matching transaction can be a real payment or a discard marker — they must
-      // not collapse into the same "Paid" status.
-      const matchedIsDiscarded = matchingTx ? isDiscardedTx(matchingTx) : false
-      if (matchedIsDiscarded) {
-        return { ...p, isPaid: false, isDiscarded: true, status: 'Discarded' as const }
-      }
-
-      if (isServerPaid || matchingTx) {
-        return {
-          ...p,
-          isPaid: true,
-          status: 'Paid' as const,
-          paidDate: p.paidDate || (matchingTx ? matchingTx.date : null)
-        }
-      }
-
-      return p
-    })
-
-    // Historical synthesis fallback: a subscription deleted after being paid/discarded no longer
-    // appears in activeRecurringPayments for that past cycle, so recover it here from the Ledger
-    // via the recurringPaymentId link on the transaction itself. Gated on the recurringPaymentId
-    // not already being present in rawList (rather than on the per-transaction match above
-    // succeeding) so a still-active subscription can never get a duplicate entry here.
-    const historicalExtraList: ActiveRecurringPayment[] = []
-    ;(transactions || []).forEach(t => {
-      if (!isInCycle(t.date)) return
-      if (matchedTxIds.has(String(t.id))) return
-      if (!t.recurringPaymentId) return
-      if (rawListRpIds.has(t.recurringPaymentId)) return
-
-      const isDiscarded = isDiscardedTx(t)
-      const parts = t.date.split('-')
-      const txDay = parts.length === 3 ? (parseInt(parts[2], 10) || 1) : 1
-      historicalExtraList.push({
-        id: `hist-tx-${t.id}`,
-        recurringPaymentId: t.recurringPaymentId,
-        name: t.description || 'Subscription',
-        amount: Math.abs(t.amount),
-        category: t.category || 'Subscriptions',
-        ledgerCategory: t.ledgerCategory || t.category || 'Subscriptions',
-        dueDate: t.date,
-        dueDay: txDay,
-        isPaid: !isDiscarded,
-        isDiscarded,
-        paidDate: isDiscarded ? null : t.date,
-        status: isDiscarded ? 'Discarded' as const : 'Paid' as const
-      })
-    })
-
-    return [...mappedList, ...historicalExtraList]
-  }, [activeRecurringPayments, allPayments, transactions, cycleOffset, year, monthIndex, cycleStart, cycleEnd])
-
-  const cycleTotal = React.useMemo(() => {
-    return processedPayments.reduce((acc, p) => acc + (p.amount == null ? 0 : Math.abs(p.amount)), 0)
-  }, [processedPayments])
-
-  // Group bills by due date to prevent overlapping nodes on the timeline
-  const uniqueDatesMap: { [dateStr: string]: ActiveRecurringPayment[] } = {}
-  processedPayments.forEach(p => {
-    if (!uniqueDatesMap[p.dueDate]) {
-      uniqueDatesMap[p.dueDate] = []
-    }
-    uniqueDatesMap[p.dueDate].push(p)
-  })
-
-  const sortedDates = Object.keys(uniqueDatesMap).sort()
-
-  const timelineNodes: (TimelineNode & { isTop: boolean; level: 'short' | 'long' })[] = sortedDates.map((dueDateStr, idx) => {
-    const d = new Date(dueDateStr)
-    const t = d.getTime()
-    let percent = 0
-    if (durationMs > 0) {
-      percent = Math.max(0, Math.min(100, ((t - startTime) / durationMs) * 100))
-    }
-    return {
-      dueDate: dueDateStr,
-      percent,
-      bills: uniqueDatesMap[dueDateStr],
-      isTop: idx % 2 === 0,
-      level: 'short'
-    }
-  })
-
-  const handleNodeClick = (node: TimelineNode) => {
+  const handleNodeClick = (node: BillTimelineNode) => {
     if (node.bills.length === 1) {
       setSelectedBill(node.bills[0])
     } else {
@@ -409,7 +155,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             else if (!anyPending) dotColor = 'bg-green-500'
 
             const d = new Date(node.dueDate)
-            const dateLabel = `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}${ordinalSuffix(d.getDate())}`
+            const dateLabel = `${BILL_TIMELINE_MONTHS[d.getMonth()]} ${d.getDate()}${ordinalSuffix(d.getDate())}`
             const nameLabel = node.bills.length === 1
               ? node.bills[0].name
               : node.bills.length === 2
@@ -432,7 +178,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               >
                 <span className={`size-2.5 rounded-full shrink-0 ${dotColor}`} />
                 <div className="flex flex-col items-center justify-center shrink-0 w-10">
-                  <span className="text-[9px] text-muted-foreground font-bold uppercase leading-none">{MONTH_NAMES[d.getMonth()]}</span>
+                  <span className="text-[9px] text-muted-foreground font-bold uppercase leading-none">{BILL_TIMELINE_MONTHS[d.getMonth()]}</span>
                   <span className="text-lg font-black text-foreground leading-tight">{d.getDate()}</span>
                 </div>
                 <div className="min-w-0 flex-1">

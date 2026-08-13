@@ -86,6 +86,7 @@ if (!fs.existsSync(distAssetsPath)) {
 // switch is drawn from it.
 // 195.5: raised from 191.75 (measured 194.68) for stability recovery projections and cycle navigation state.
 const CRITICAL_PATH_LIMIT_KB = 195.5
+const PRECACHE_RAW_LIMIT_KB = 3 * 1024
 
 function criticalPathChunks(files) {
   const entry = files.find(f => /^index-.*\.js$/.test(f))
@@ -147,6 +148,25 @@ if (!criticalChunks) {
   )
   if (!passed) failed = true
 }
+
+const precacheExtensions = new Set(['.js', '.css', '.html', '.ico', '.png', '.svg'])
+function walkFiles(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const fullPath = path.join(directory, entry.name)
+    return entry.isDirectory() ? walkFiles(fullPath) : [fullPath]
+  })
+}
+const precacheFiles = walkFiles(path.join(process.cwd(), 'dist')).filter(filePath => {
+  const name = path.basename(filePath)
+  return precacheExtensions.has(path.extname(name)) || /^inter-latin-opsz-normal-.*\.woff2$/.test(name)
+})
+const precacheRawKb = precacheFiles.reduce((sum, filePath) => sum + fs.statSync(filePath).size, 0) / 1024
+const precachePassed = precacheRawKb <= PRECACHE_RAW_LIMIT_KB
+console.log(
+  `${precachePassed ? '[PASS]' : '[FAIL]'} PWA precache raw size (${precacheFiles.length} files): ` +
+  `${precacheRawKb.toFixed(2)} kB (limit: ${PRECACHE_RAW_LIMIT_KB} kB)`
+)
+if (!precachePassed) failed = true
 
 if (failed) {
   console.error('\nError: One or more bundle budgets exceeded!')
