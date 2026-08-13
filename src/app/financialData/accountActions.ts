@@ -14,6 +14,7 @@ interface LedgerAccountActionDependencies {
 }
 
 export interface LedgerAccountInput {
+  id?: string
   name: string
   bucket: LedgerAccount['bucket']
   kind: LedgerAccount['kind']
@@ -34,7 +35,7 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
 
   const handleAddAccount = (value: LedgerAccountInput) => {
     if (!guardSensitive()) return
-    const id = createFinalId('ledgerAccount')
+    const id = value.id ?? createFinalId('ledgerAccount')
     const openingAmount = Number.isFinite(value.openingAmount) ? Math.round((value.openingAmount ?? 0) * 100) / 100 : 0
     const hasDefault = accounts.some(account => account.bucket === value.bucket && account.isDefault && !account.isArchived)
     const payload: OutboxPayload = {
@@ -43,7 +44,7 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
       bucket: value.bucket,
       kind: value.kind,
       isArchived: false,
-      isDefault: value.isDefault === true || !hasDefault,
+      isDefault: value.isDefault === true || (value.isDefault !== false && !hasDefault),
       openingAmount,
       remaining: openingAmount,
     }

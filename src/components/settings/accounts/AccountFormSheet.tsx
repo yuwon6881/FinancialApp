@@ -131,7 +131,7 @@ export function AccountFormSheet({
           <div className="min-w-0">
             <p className="text-xs font-bold text-foreground">{isEditing ? 'Update this account connection' : 'Give this account a clear name'}</p>
             <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              {isEditing ? 'Changes affect this bucket row only; your ledger history stays intact.' : 'Use a name you will recognise when choosing an account for new activity.'}
+              {isEditing ? 'Changes affect this bucket row only; your ledger history stays intact.' : 'Use a name you will recognise when choosing an account for new activity. A starting amount is reviewed against the bucket before it is recorded.'}
             </p>
           </div>
         </div>
@@ -183,11 +183,11 @@ export function AccountFormSheet({
               <Banknote className="size-4 text-accent-ink" aria-hidden="true" />
               <p className="text-xs font-bold text-foreground">Starting balance</p>
             </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Optional. Use this when the account already holds money today.</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Optional. Use this when the account already holds money today; the next step will show whether the bucket total needs to change.</p>
             <FormField
               label={`Starting amount (${currency})`}
               className="mt-3"
-              hint="Recorded as an ordinary adjustment. A positive Stability amount also pays down any emergency-fund reload due."
+              hint="Entered from right to left like ledger amounts. Any ordinary adjustment is shown for confirmation first."
             >
               <SmartAmountInput
                 value={openingAmount}

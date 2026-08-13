@@ -2,7 +2,7 @@ import { Input } from './ui/Input'
 import { RangeInput } from './ui/RangeInput'
 import React from 'react'
 import { Save, Settings, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from 'lucide-react'
-import type { DashboardData, LedgerAccount, PushChannel, TransactionCategory, CategoryFlowType } from '../types'
+import type { CategoryFlowType, DashboardData, LedgerAccount, PushChannel, Transaction, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { CurrencySelect } from './ui/CurrencySelect'
 import { RowSyncStatus } from './ui/RowSyncBadge'
@@ -60,6 +60,7 @@ interface SettingsViewProps {
   onAddAccount?: (input: LedgerAccountInput) => Promise<void> | void
   onUpdateAccount?: (id: string, input: LedgerAccountInput) => Promise<void> | void
   onRequestDeleteAccount?: (id: string) => void
+  onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
   notifyOnLoginEnabled?: boolean
   onToggleNotifyOnLogin?: (checked: boolean) => void
   activeSyncId?: string | null
@@ -786,6 +787,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         <React.Suspense fallback={<div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}>
           <AccountsSection
             accounts={props.accounts ?? []}
+            categoryTotals={props.dashboardData?.categories}
             currency={view.activeSettings.currency || 'USD'}
             hideSensitive={hideSensitive}
             activeSyncId={activeSyncId}
@@ -795,6 +797,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             onAddAccount={input => props.onAddAccount?.(input)}
             onUpdateAccount={(id, input) => props.onUpdateAccount?.(id, input)}
             onRequestDeleteAccount={id => props.onRequestDeleteAccount?.(id)}
+            onAddBalanceAdjustment={transaction => props.onAddBalanceAdjustment?.(transaction)}
           />
         </React.Suspense>
       )}
