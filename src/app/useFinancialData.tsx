@@ -16,7 +16,7 @@ import type {
   LedgerAccount,
 } from '../types'
 import type { CategoryCleanupSuggestion } from '../lib/api'
-import { CACHE_KEYS, ensureAccountTrackingCacheVersion, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, setCachedCycleSnapshot } from '../lib/cache'
+import { CACHE_KEYS, ensureAccountTrackingCacheVersion, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, setCachedCycleSnapshot } from '../lib/cache'
 import { useOptimisticList } from '../lib/useOptimisticList'
 import { useOutbox } from '../lib/useOutbox'
 import { useStartupSync } from './useStartupSync'
@@ -79,6 +79,10 @@ const createLocalId = (prefix: string, separator = '_') => {
 }
 
 export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernameRef' | 'setIsSwitchingCycle'>) {
+  // Read the dashboard before invalidating account-dependent caches. The migration must remove
+  // unsafe persisted projections, but an already available snapshot can still keep the shell
+  // useful while the authoritative bootstrap response is in flight.
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedJSON(CACHE_KEYS.dashboardData, null))
   useState(() => {
     ensureAccountTrackingCacheVersion()
     return true
@@ -113,7 +117,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const [transactions, setTransactions] = useState<Transaction[]>(() => getCachedTransactions(CACHE_KEYS.transactions))
   const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => getCachedJSON(CACHE_KEYS.recurringPayments, []))
   const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => getCachedJSON(CACHE_KEYS.categories, []))
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedJSON(CACHE_KEYS.dashboardData, null))
   const [walletBalance, setWalletBalance] = useState<number | null>(() => getCachedJSON<number | null>(CACHE_KEYS.walletBalance, null))
   const [wishlist, setWishlist] = useState<WishlistItem[]>(() => getCachedWishlist(CACHE_KEYS.wishlist))
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(() => getCachedJSON(CACHE_KEYS.savingsGoals, []))
@@ -122,7 +125,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<AutocompleteSuggestion[]>([])
 
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState<boolean>(() => !hasCachedKey(CACHE_KEYS.dashboardData))
+  const [loading, setLoading] = useState<boolean>(() => dashboardData === null)
   const [isOffline, setIsOffline] = useState<boolean>(() => typeof navigator !== 'undefined' ? !navigator.onLine : false)
 
   const isServerAwakeRef = useRef<boolean>(false)

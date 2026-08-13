@@ -1,7 +1,7 @@
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { ErrorBoundary } from './ErrorBoundary'
+import { ErrorBoundary, isChunkLoadError } from './ErrorBoundary'
 
 // A one-off crash (a race, a transient fetch failure): the remount renders fine,
 // so "Try again" recovers and no escalation copy appears.
@@ -56,5 +56,15 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     )
     expect(screen.getByText('persistent crash')).toBeTruthy()
+  })
+
+  it.each([
+    ['Failed to fetch dynamically imported module: /assets/SettingsView.js', true],
+    ['Importing a module script failed', true],
+    ['Load failed', true],
+    ['Maximum update depth exceeded', false],
+  ] as const)('classifies mobile and desktop chunk errors without treating app crashes as chunks', (message, expected) => {
+    const error = message === 'Load failed' ? new TypeError(message) : new Error(message)
+    expect(isChunkLoadError(error)).toBe(expected)
   })
 })

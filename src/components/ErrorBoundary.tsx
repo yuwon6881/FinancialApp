@@ -26,6 +26,16 @@ interface ErrorBoundaryState {
   failedRetries: number
 }
 
+/** Browser wording varies for a missing or stale dynamic-import chunk, especially on mobile. */
+export function isChunkLoadError(error: Error): boolean {
+  const message = `${error.name} ${error.message}`.toLowerCase()
+  return message.includes('dynamically imported module')
+    || message.includes('module script failed')
+    || message.includes('chunkloaderror')
+    || message.includes('loading chunk')
+    || message === 'typeerror load failed'
+}
+
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   private static readonly chunkReloadKey = 'chunk-load-reload-attempted'
   state: ErrorBoundaryState = { error: null, attempt: 0, retrying: false, failedRetries: 0 }
@@ -60,11 +70,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
 
     // Automatically recover from Vite chunk load errors when a new version is deployed.
-    if (
-      error.message &&
-      (error.message.includes('Failed to fetch dynamically imported module') ||
-       error.message.includes('Importing a module script failed'))
-    ) {
+    if (isChunkLoadError(error)) {
       if (sessionStorage.getItem(ErrorBoundary.chunkReloadKey) !== '1') {
         sessionStorage.setItem(ErrorBoundary.chunkReloadKey, '1')
         console.warn('Chunk load error detected, triggering one hard reload...')
