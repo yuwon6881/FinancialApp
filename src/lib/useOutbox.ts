@@ -84,6 +84,9 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   const recentlyCompletedOpsRef = useRef(recentlyCompletedOps)
   const editingPendingIdRef = useRef(editingPendingId)
   const syncBackoffUntilRef = useRef(syncBackoffUntil)
+  // Consecutive retryable failures, driving the escalating wait. A ref, not state: nothing
+  // renders from it, and it must survive the re-renders each backoff change causes.
+  const backoffAttemptRef = useRef(0)
   const isSyncingRef = useRef(false)
   const activeSyncOpIdRef = useRef<string | null>(null)
   const nextToastAtRef = useRef(0)
@@ -178,6 +181,8 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
       getRecentlyCompleted: () => recentlyCompletedOpsRef.current,
       getEditingPendingId: () => editingPendingIdRef.current,
       getBackoffUntil: () => syncBackoffUntilRef.current,
+      getBackoffAttempt: () => backoffAttemptRef.current,
+      setBackoffAttempt: attempt => { backoffAttemptRef.current = attempt },
       getLastUnlockedTime: () => current.lastUnlockedTimeRef.current,
       isSyncing: () => isSyncingRef.current,
       mutateQueue,
@@ -269,6 +274,9 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
     const handleOnline = () => {
       syncBackoffUntilRef.current = 0
       setSyncBackoffUntil(0)
+      // Connectivity returning is new information, so the escalated wait built up while
+      // offline must not be charged to the first attempt after it.
+      backoffAttemptRef.current = 0
       processQueueRef.current()
     }
     window.addEventListener('online', handleOnline)
@@ -297,6 +305,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
     setDeletingId(null)
     syncBackoffUntilRef.current = 0
     setSyncBackoffUntil(0)
+    backoffAttemptRef.current = 0
     undoSnapshotsRef.current.clear()
   }, [mutateQueue, setEditingPendingId])
   const activeOps = useMemo(() => [...pendingOps, ...recentlyCompletedOps], [pendingOps, recentlyCompletedOps])

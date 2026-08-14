@@ -25,6 +25,16 @@ export function getStatus(err: unknown): number | undefined {
   return typeof err.status === 'number' && Number.isFinite(err.status) ? err.status : undefined
 }
 
+/**
+ * The wait an `ApiError` carried from the server's `Retry-After`. Non-finite or
+ * negative values are ignored so a malformed header cannot pin a retry open.
+ */
+export function getRetryAfterMs(err: unknown): number | undefined {
+  if (!err || typeof err !== 'object' || !('retryAfterMs' in err)) return undefined
+  const value = err.retryAfterMs
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined
+}
+
 export function hasHttpStatus(err: unknown, expected: number): boolean {
   const status = getStatus(err)
   if (status !== undefined) return status === expected

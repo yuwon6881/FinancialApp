@@ -988,6 +988,13 @@ html {
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         letter-spacing: -0.011em;
+        /* Caret browsing can place a blinking insertion caret in ordinary copy,
+           making cards and labels look editable. Hide that document caret while
+           leaving every genuine editing surface with its normal caret below. */
+        caret-color: transparent;
+    }
+    :is(input, textarea, [contenteditable]:not([contenteditable="false"])) {
+        caret-color: auto;
     }
     /* Financial figures: perfectly aligned tabular lining numerals so columns
        never jitter when values change or animate. Applies to every currency/

@@ -3,11 +3,28 @@ import { hasWebSessionFlag, tokenStore, usesCookieAuth } from '../auth'
 
 export class ApiError extends Error {
   status: number
-  constructor(message: string, status: number) {
+  /**
+   * The server's own `Retry-After`, in milliseconds, when it sent one. The outbox
+   * honours it instead of its own backoff curve: a 429 or a 503 that names a wait
+   * is the only party that knows when the next attempt can succeed.
+   */
+  retryAfterMs?: number
+  constructor(message: string, status: number, retryAfterMs?: number) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.retryAfterMs = retryAfterMs
   }
+}
+
+/** `Retry-After` is either delta-seconds or an HTTP date; both resolve to a wait in ms. */
+export function parseRetryAfter(header: string | null, now = Date.now()): number | undefined {
+  if (!header) return undefined
+  const trimmed = header.trim()
+  if (/^\d+$/.test(trimmed)) return Number(trimmed) * 1000
+  const at = Date.parse(trimmed)
+  if (Number.isNaN(at)) return undefined
+  return Math.max(0, at - now)
 }
 
 const getApiBaseUrl = (): string => {
@@ -189,7 +206,11 @@ export async function throwApiError(
 ): Promise<never> {
   const body = await response.json().catch(() => ({})) as Record<string, unknown>
   const message = body[messageField]
-  throw new ApiError(typeof message === 'string' && message ? message : fallbackMessage, response.status)
+  throw new ApiError(
+    typeof message === 'string' && message ? message : fallbackMessage,
+    response.status,
+    parseRetryAfter(response.headers.get('Retry-After')),
+  )
 }
 
 interface RequestOptions extends RequestInit {

@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  computeBackoffMs,
   drainQueue,
   MAX_RETRIES,
   AUTH_RACE_BACKOFF_MS,
+  MAX_SYNC_BACKOFF_MS,
   SERVER_WAKE_BACKOFF_MS,
   type DrainQueueDeps,
   type SuccessfulSyncOp,
@@ -33,6 +35,7 @@ interface Harness {
   errors: (string | null)[]
   refreshArgs: SuccessfulSyncOp[][]
   syncing: { value: boolean }
+  backoffAttempt: { value: number }
 }
 
 function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: QueuedOp[] = []): Harness {
@@ -45,6 +48,7 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
   const errors: (string | null)[] = []
   const refreshArgs: SuccessfulSyncOp[][] = []
   const syncing = { value: false }
+  const backoffAttempt = { value: 0 }
   let backoffUntil = 0
   const calls: Record<string, number> = {
     refresh: 0, onSettled: 0, reTrigger: 0, onAuthError: 0, onLockError: 0, emitFailureToast: 0,
@@ -60,6 +64,9 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
     getRecentlyCompleted: () => recentlyCompleted,
     getEditingPendingId: () => null,
     getBackoffUntil: () => backoffUntil,
+    getBackoffAttempt: () => backoffAttempt.value,
+    setBackoffAttempt: attempt => { backoffAttempt.value = attempt },
+    random: () => 0.5, // centre of the jitter band, so waits are exact in tests
     getLastUnlockedTime: () => 0,
     isSyncing: () => syncing.value,
     mutateQueue: (updater) => {
@@ -110,8 +117,33 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
     errors,
     refreshArgs,
     syncing,
+    backoffAttempt,
   }
 }
+
+describe('computeBackoffMs', () => {
+  it('keeps the first wait at the base so an ordinary cold start is covered promptly', () => {
+    expect(computeBackoffMs(0, undefined, () => 0.5)).toBe(SERVER_WAKE_BACKOFF_MS)
+  })
+
+  it('doubles each consecutive failure and stops at the ceiling', () => {
+    expect(computeBackoffMs(1, undefined, () => 0.5)).toBe(SERVER_WAKE_BACKOFF_MS * 2)
+    expect(computeBackoffMs(2, undefined, () => 0.5)).toBe(SERVER_WAKE_BACKOFF_MS * 4)
+    expect(computeBackoffMs(20, undefined, () => 0.5)).toBe(MAX_SYNC_BACKOFF_MS)
+  })
+
+  it('spreads the wait either side of the curve so clients do not retry in lockstep', () => {
+    expect(computeBackoffMs(3, undefined, () => 0)).toBe(MAX_SYNC_BACKOFF_MS * 0.75)
+    expect(computeBackoffMs(1, undefined, () => 0)).toBe(SERVER_WAKE_BACKOFF_MS * 2 * 0.75)
+    expect(computeBackoffMs(2, undefined, () => 1)).toBe(SERVER_WAKE_BACKOFF_MS * 4 * 1.25)
+  })
+
+  it('prefers the server Retry-After, clamped at both ends', () => {
+    expect(computeBackoffMs(0, 40_000, () => 0.5)).toBe(40_000)
+    expect(computeBackoffMs(5, 0, () => 0.5)).toBe(1000)
+    expect(computeBackoffMs(0, 9_999_999, () => 0.5)).toBe(MAX_SYNC_BACKOFF_MS)
+  })
+})
 
 describe('drainQueue — guards', () => {
   it('does nothing without a token', async () => {
@@ -421,6 +453,88 @@ describe('drainQueue — error taxonomy', () => {
     expect(h.failedOps.map(o => o.id)).toEqual(['a', 'b'])
     expect(h.failedOps[0].retryCount).toBe(MAX_RETRIES)
     expect(h.queue).toHaveLength(0)
+    spy.mockRestore()
+  })
+
+  it('escalates the wait across consecutive retryable failures and resets it on success', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const failure = Object.assign(new Error('Internal Server Error'), { status: 500 })
+    const dispatch = vi.fn(async (): Promise<DispatchResult> => { throw failure })
+    const h = makeHarness(
+      // The real backoff timer clears the deadline between attempts; pin it open here so
+      // each drain reaches dispatch and the escalation itself is what is under test.
+      { resolveDispatch: () => dispatch, now: () => 1_000_000, getBackoffUntil: () => 0 },
+      [op({ id: 'server-error' })],
+    )
+
+    await drainQueue(h.deps)
+    await drainQueue(h.deps)
+    await drainQueue(h.deps)
+
+    expect(h.backoffSetTo).toEqual([
+      1_000_000 + SERVER_WAKE_BACKOFF_MS,
+      1_000_000 + SERVER_WAKE_BACKOFF_MS * 2,
+      1_000_000 + SERVER_WAKE_BACKOFF_MS * 4,
+    ])
+
+    dispatch.mockResolvedValueOnce(undefined)
+    await drainQueue(h.deps)
+    expect(h.backoffAttempt.value).toBe(0)
+    spy.mockRestore()
+  })
+
+  it('retries a 429 without consuming the op retry budget and honours Retry-After', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const failure = Object.assign(new Error('Too Many Requests'), { status: 429, retryAfterMs: 40_000 })
+    const h = makeHarness(
+      { resolveDispatch: () => async () => { throw failure }, now: () => 1_000_000 },
+      [op({ id: 'busy', retryCount: MAX_RETRIES - 1 })],
+    )
+
+    await drainQueue(h.deps)
+
+    expect(h.queue).toHaveLength(1)
+    expect(h.queue[0].retryCount).toBe(MAX_RETRIES - 1)
+    expect(h.failedOps).toEqual([])
+    expect(h.backoffSetTo).toEqual([1_040_000])
+    expect(h.errors.at(-1)).toBe('Sync pending: Server is busy; retrying...')
+    spy.mockRestore()
+  })
+
+  it.each([408, 425])('retries a %s instead of discarding it as permanent', async status => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const failure = Object.assign(new Error(`HTTP ${status}`), { status })
+    const h = makeHarness(
+      { resolveDispatch: () => async () => { throw failure }, now: () => 1_000_000 },
+      [op({ id: 'timeout', retryCount: 0 })],
+    )
+
+    await drainQueue(h.deps)
+
+    expect(h.queue).toHaveLength(1)
+    expect(h.queue[0].retryCount).toBe(1)
+    expect(h.failedOps).toEqual([])
+    spy.mockRestore()
+  })
+
+  it('escalates the post-sync refresh retry rather than re-reading a failing server flat', async () => {
+    const h = makeHarness(
+      {
+        now: () => 1_000_000,
+        getBackoffUntil: () => 0,
+        refresh: async () => { throw Object.assign(new Error('Internal Server Error'), { status: 500 }) },
+      },
+      [op({ id: 'a' }), op({ id: 'b' })],
+    )
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await drainQueue(h.deps)
+    // Both ops synced (attempts cleared), then the refresh failed once.
+    expect(h.backoffSetTo).toEqual([1_000_000 + SERVER_WAKE_BACKOFF_MS])
+
+    await drainQueue(h.deps)
+    expect(h.backoffSetTo.at(-1)).toBe(1_000_000 + SERVER_WAKE_BACKOFF_MS * 2)
+    expect(h.recentlyCompleted).toHaveLength(2) // projection preserved for a later reconcile
     spy.mockRestore()
   })
 
