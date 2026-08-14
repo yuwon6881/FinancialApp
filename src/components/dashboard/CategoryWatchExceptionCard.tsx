@@ -42,11 +42,11 @@ export function CategoryWatchExceptionCard({
       className={`app-panel rounded-2xl border p-5 ${anyExceeded ? 'border-orange-500/30 bg-orange-500/8' : 'border-amber-500/30 bg-amber-500/8'}`}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
           <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${anyExceeded ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'}`}>
             {anyExceeded ? <AlertTriangle className="size-5" /> : <Gauge className="size-5" />}
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <h3 id="category-watch-exception" className={`text-sm font-bold ${anyExceeded ? 'text-orange-700 dark:text-orange-300' : 'text-amber-700 dark:text-amber-300'}`}>
               {anyExceeded
                 ? `${worst.category} is over its budget`
@@ -62,7 +62,7 @@ export function CategoryWatchExceptionCard({
             </p>
           </div>
         </div>
-        <Button variant="ghost" onClick={() => onOpenCategoryLimits(worst.category)} className="w-full justify-center sm:w-auto">
+        <Button variant="ghost" onClick={() => onOpenCategoryLimits(worst.category)} className="w-full justify-center sm:w-auto shrink-0">
           See categories
         </Button>
       </div>

@@ -19,6 +19,7 @@ const bill = (id: string, name: string): RecurringPayment => ({
   frequency: 'Monthly',
   category: 'Bills',
   ledgerCategory: 'Essentials',
+  accountId: 'acct-essentials',
   dueDate: id === 'bill-a' ? 1 : 15,
   startDate: id === 'bill-a' ? '2026-01-01' : '2026-01-15',
   nextDueDate: '2026-09-01',

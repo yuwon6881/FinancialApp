@@ -556,6 +556,46 @@ describe('drainQueue — error taxonomy', () => {
     spy.mockRestore()
   })
 
+  // A missing or archived account is the one terminal 4xx the user can actually fix, so it must
+  // reach the account review sheet rather than the generic "this change could not be saved".
+  it('tags a ledger-account refusal for account review with the buckets it named', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const err = new Error('Choose an open account in the Rewards bucket.') as Error & {
+      status?: number
+      code?: string
+      missingBuckets?: string[]
+    }
+    err.status = 400
+    err.code = 'ledger_account_invalid'
+    err.missingBuckets = ['Rewards']
+    const h = makeHarness(
+      { resolveDispatch: () => async (): Promise<DispatchResult> => { throw err } },
+      [op({ id: 'a', retryCount: 0 })],
+    )
+
+    await drainQueue(h.deps)
+
+    expect(h.failedOps).toHaveLength(1)
+    expect(h.failedOps[0].needsAccountReview).toBe(true)
+    expect(h.failedOps[0].needsAccountReviewBuckets).toEqual(['Rewards'])
+    spy.mockRestore()
+  })
+
+  it('leaves an ordinary 400 untagged so it keeps the plain terminal-failure copy', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const err = new Error('Bad Request') as Error & { status?: number }
+    err.status = 400
+    const h = makeHarness(
+      { resolveDispatch: () => async (): Promise<DispatchResult> => { throw err } },
+      [op({ id: 'a', retryCount: 0 })],
+    )
+
+    await drainQueue(h.deps)
+
+    expect(h.failedOps[0].needsAccountReview).toBeUndefined()
+    spy.mockRestore()
+  })
+
   it.each(['delete', 'unpurchase'] as const)('treats a replayed %s 404 as success', async type => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const err = new Error('Not Found') as Error & { status?: number }

@@ -147,7 +147,7 @@ describe('transactionFormReducer stabilityTopUpAccepted', () => {
     expect(state.splitAccountIds.Growth).toBe('acc-growth-2')
   })
 
-  it('initializes splitAccountIds on OPEN_CREATE when defaults provided', () => {
+  it('starts a new transaction without implicit account placements', () => {
     const state = transactionFormReducer(
       getInitialState('2026-07-09', 'Other'),
       {
@@ -155,21 +155,16 @@ describe('transactionFormReducer stabilityTopUpAccepted', () => {
         payload: {
           defaultCategory: 'Other',
           todayDate: '2026-07-09',
-          defaultSplitAccountIds: {
-            Essentials: 'acc-ess-1',
-            Growth: 'acc-gro-1',
-            Stability: 'acc-sta-1',
-            Rewards: 'acc-rew-1',
-          },
         },
       },
     )
 
     expect(state.splitAccountIds).toEqual({
-      Essentials: 'acc-ess-1',
-      Growth: 'acc-gro-1',
-      Stability: 'acc-sta-1',
-      Rewards: 'acc-rew-1',
+      Essentials: '',
+      Growth: '',
+      Stability: '',
+      Rewards: '',
     })
+    expect(state.accountId).toBe('')
   })
 })

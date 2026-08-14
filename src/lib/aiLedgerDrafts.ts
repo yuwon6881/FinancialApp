@@ -1,4 +1,4 @@
-import type { Transaction, TransactionCategory } from '../types'
+import type { LedgerAccount, Transaction, TransactionCategory } from '../types'
 import { capitalizeWords } from './utils'
 
 // Transfer legs move between allocation buckets, so Income is never a valid leg.
@@ -21,10 +21,28 @@ function localIsoDate(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
 
+/**
+ * The account a drafted bucket leg lands in, using the same rule the transaction form applies: a
+ * bucket holding exactly one open account preselects it, and one holding several leaves the choice
+ * to the person reviewing the draft. The assistant is never told which accounts exist, so guessing
+ * between two would put money somewhere nobody chose; leaving it undefined instead surfaces the
+ * required field in the draft editor, which is the gate every other writer goes through.
+ */
+function soleLiveAccountId(
+  accounts: LedgerAccount[],
+  bucket: string | undefined,
+): string | undefined {
+  if (!bucket) return undefined
+  const live = accounts.filter(account =>
+    account.bucket.toLowerCase() === bucket.toLowerCase() && !account.isArchived)
+  return live.length === 1 ? live[0].id : undefined
+}
+
 /** Convert a validated AI ledger-add payload into local staging records. */
 export function buildAiLedgerDraftTransactions(
   payload: Record<string, unknown>,
   categories: TransactionCategory[],
+  accounts: LedgerAccount[] = [],
   defaultDate = localIsoDate(),
 ): Omit<Transaction, 'id'>[] {
   const rawRecords = Array.isArray(payload.transactions) ? payload.transactions : [payload]
@@ -35,7 +53,7 @@ export function buildAiLedgerDraftTransactions(
   const categoriesByName = new Map(normalNames.map(name => [name.toLowerCase(), name]))
   const fallbackCategory = categoriesByName.get('other') ?? normalNames[0] ?? ''
 
-  return rawRecords.flatMap(raw => {
+  return rawRecords.flatMap((raw): Omit<Transaction, 'id'>[] => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return []
     const fields = raw as Record<string, unknown>
     const rawDescription = text(fields, 'description')
@@ -63,10 +81,36 @@ export function buildAiLedgerDraftTransactions(
       const source = LEDGERS.find(candidate => candidate.toLowerCase() === text(fields, 'transferSource')?.toLowerCase())
       const target = LEDGERS.find(candidate => candidate.toLowerCase() === text(fields, 'transferTarget')?.toLowerCase())
       if (!source || !target || source === target) return []
-      return [{ description, amount: magnitude, category: 'Transfer', ledgerCategory: `Transfer:${source}->${target}`, date, isPendingSync: true }]
+      return [{
+        description,
+        amount: magnitude,
+        category: 'Transfer',
+        ledgerCategory: `Transfer:${source}->${target}`,
+        date,
+        accountId: soleLiveAccountId(accounts, source),
+        counterAccountId: soleLiveAccountId(accounts, target),
+        isPendingSync: true,
+      }]
     }
 
     if (!category) return []
-    return [{ description, amount: txType === 'inflow' ? magnitude : -magnitude, category, ledgerCategory: ledger, date, isPendingSync: true }]
+    // An Income row is split four ways by the server, so it names a receiving account per bucket
+    // rather than one for itself -- the same shape the manual form produces.
+    const placement = ledger === 'Income'
+      ? {
+          splitAccountIds: Object.fromEntries(LEDGERS
+            .map(bucket => [bucket, soleLiveAccountId(accounts, bucket)])
+            .filter((entry): entry is [string, string] => typeof entry[1] === 'string')),
+        }
+      : { accountId: soleLiveAccountId(accounts, ledger) }
+    return [{
+      description,
+      amount: txType === 'inflow' ? magnitude : -magnitude,
+      category,
+      ledgerCategory: ledger,
+      date,
+      ...placement,
+      isPendingSync: true,
+    }]
   })
 }

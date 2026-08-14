@@ -10,7 +10,7 @@ export function validateTransactionForm(state: {
   transferTarget?: string
   accountId?: string | null
   counterAccountId?: string | null
-  accountTrackingEnabled?: boolean
+  splitAccountIds?: Partial<Record<'Essentials' | 'Growth' | 'Stability' | 'Rewards', string>>
   stabilityReloadIntent?: string
 }) {
   const errors: Record<string, string> = {}
@@ -28,24 +28,23 @@ export function validateTransactionForm(state: {
   }
   if (state.transactionType === 'transfer') {
     if (state.transferSource === state.transferTarget) {
-      if (!state.accountTrackingEnabled) {
-        errors.transferTarget = 'Choose a different target category.'
-      } else {
-        if (!state.accountId) errors.accountId = 'Choose the account sending the money.'
-        if (!state.counterAccountId) errors.counterAccountId = 'Choose the account receiving the money.'
-        if (state.accountId && state.counterAccountId && state.accountId === state.counterAccountId) {
-          errors.counterAccountId = 'Choose two different accounts.'
-        }
+      if (!state.accountId) errors.accountId = 'Choose the account sending the money.'
+      if (!state.counterAccountId) errors.counterAccountId = 'Choose the account receiving the money.'
+      if (state.accountId && state.counterAccountId && state.accountId === state.counterAccountId) {
+        errors.counterAccountId = 'Choose two different accounts.'
       }
-    } else if (state.accountTrackingEnabled) {
+    } else {
       if (!state.accountId) errors.accountId = 'Choose the account sending the money.'
       if (!state.counterAccountId) errors.counterAccountId = 'Choose the account receiving the money.'
     }
   }
-  if (state.accountTrackingEnabled) {
-    if (state.ledgerCategory && ['Essentials', 'Growth', 'Stability', 'Rewards'].includes(state.ledgerCategory)
-      && !state.accountId) {
-      errors.accountId = 'Choose the account that holds this bucket money.'
+  if (state.ledgerCategory && ['Essentials', 'Growth', 'Stability', 'Rewards'].includes(state.ledgerCategory)
+    && !state.accountId) {
+    errors.accountId = 'Choose the account that holds this bucket money.'
+  }
+  if (state.ledgerCategory === 'Income') {
+    for (const bucket of ['Essentials', 'Growth', 'Stability', 'Rewards'] as const) {
+      if (!state.splitAccountIds?.[bucket]) errors[`splitAccountIds.${bucket}`] = `Choose the ${bucket} receiving account.`
     }
   }
   if (state.ledgerCategory === 'AccountMove') {

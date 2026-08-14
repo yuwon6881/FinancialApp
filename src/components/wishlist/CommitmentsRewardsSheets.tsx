@@ -1,9 +1,10 @@
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import type { GoalPoolSummary } from '../../lib/savingsGoals'
-import type { SavingsGoal, WishlistItem } from '../../types'
+import type { LedgerAccount, SavingsGoal, WishlistItem } from '../../types'
 import { BottomSheet } from '../ui/BottomSheet'
 import { DatePicker } from '../ui/DatePicker'
 import { FormField } from '../ui/FormField'
+import { CustomSelect } from '../ui/CustomSelect'
 import { Button } from '../ui/Button'
 import { SavingsGoalContributeSheet, type ContributeMode } from './SavingsGoalContributeSheet'
 import { SavingsGoalForm } from './SavingsGoalForm'
@@ -18,6 +19,15 @@ interface Props {
   purchaseDateInput: string
   setPurchaseDateInput: Dispatch<SetStateAction<string>>
   onConfirmPurchase: () => void
+  purchaseAccountId: string
+  setPurchaseAccountId: (value: string) => void
+  purchaseError: string
+  completingGoal: SavingsGoal | null
+  setCompletingGoal: Dispatch<SetStateAction<SavingsGoal | null>>
+  completionAccountId: string
+  setCompletionAccountId: (value: string) => void
+  accounts: LedgerAccount[]
+  onConfirmCompletion: () => void
   wishlistForm: ReturnType<typeof useWishlistForm>
   goalForm: ReturnType<typeof useSavingsGoalForm>
   contributeTarget: { goal: SavingsGoal; mode: ContributeMode } | null
@@ -50,6 +60,21 @@ export function CommitmentsRewardsSheets(props: Props) {
             <FormField label="Purchased date" hint="Use this date for the ledger entry.">
               <DatePicker value={props.purchaseDateInput} onChange={props.setPurchaseDateInput} max={props.todayKey} className="w-full" />
             </FormField>
+            <FormField label="Paid from account" required error={props.purchaseError}>
+              <CustomSelect
+                ariaLabel="Paid from account"
+                value={props.purchaseAccountId}
+                onChange={props.setPurchaseAccountId}
+                invalid={Boolean(props.purchaseError)}
+                options={[
+                  { value: '', label: 'Choose a Rewards account', disabled: true },
+                  ...props.accounts
+                    .filter(account => account.bucket === 'Rewards' && !account.isArchived)
+                    .map(account => ({ value: account.id, label: account.name })),
+                ]}
+                className="w-full"
+              />
+            </FormField>
             {props.purchasingItem.price <= props.claimableBalance && props.purchasingItem.price > props.freeAfterGoalPace && (
               <p className="text-xs font-medium text-muted-foreground">
                 Buying this leaves your commitments <span className="font-bold text-amber-500">{props.formatSensitive(Math.max(0, props.purchasingItem.price - props.freeAfterGoalPace))}</span> short this cycle.
@@ -58,6 +83,36 @@ export function CommitmentsRewardsSheets(props: Props) {
             <div className="flex gap-2 pt-4">
               <Button variant="ghost" className="flex-1" onClick={() => props.setPurchasingItem(null)}>Cancel</Button>
               <Button variant="primary" className="flex-1 font-bold" onClick={props.onConfirmPurchase} disabled={props.hideSensitive}>Claim &amp; Log to Ledger</Button>
+            </div>
+          </div>
+        </BottomSheet>
+      )}
+
+      {props.completingGoal && (
+        <BottomSheet isOpen title="Complete Commitment" onClose={() => props.setCompletingGoal(null)} maxWidthClassName="max-w-md">
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Record <span className="font-semibold text-foreground">{props.completingGoal.name}</span> in its bucket ledger account.
+            </p>
+            <FormField label="Account" required>
+              <CustomSelect
+                ariaLabel="Commitment completion account"
+                value={props.completionAccountId}
+                onChange={props.setCompletionAccountId}
+                options={[
+                  { value: '', label: 'Choose an account', disabled: true },
+                  ...props.accounts
+                    .filter(account => account.bucket === (props.completingGoal?.fundingBucket ?? 'Rewards') && !account.isArchived)
+                    .map(account => ({ value: account.id, label: account.name })),
+                ]}
+                className="w-full"
+              />
+            </FormField>
+            <div className="flex gap-2 pt-2">
+              <Button variant="ghost" className="flex-1" onClick={() => props.setCompletingGoal(null)}>Cancel</Button>
+              <Button variant="primary" className="flex-1 font-bold" onClick={props.onConfirmCompletion} disabled={props.hideSensitive || !props.completionAccountId}>
+                Complete &amp; Log to Ledger
+              </Button>
             </div>
           </div>
         </BottomSheet>

@@ -108,7 +108,7 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     })
   }
 
-  const handlePurchaseWishlistItem = (id: number, customDate?: string) => {
+  const handlePurchaseWishlistItem = (id: number, customDate?: string, accountId?: string) => {
     if (!guardSensitive()) return
     const item = allWishlist.find(wish => String(wish.id) === String(id))
     const now = new Date()
@@ -121,6 +121,7 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
       date,
       postedAt,
       purchaseTransactionId,
+      accountId,
     } : undefined))
   }
 
@@ -236,23 +237,23 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     }
   }
 
-  const handleCompleteSavingsGoal = async (id: number) => {
+  const handleCompleteSavingsGoal = async (id: number, accountId?: string) => {
     if (!guardSensitive()) return
     beginDirectSync([id])
     try {
       const { completeGoal } = await import('../savingsGoalActions')
-      await completeGoal(savingsGoalDependencies(), id)
+      await completeGoal(savingsGoalDependencies(), id, accountId)
     } finally {
       endDirectSync([id])
     }
   }
 
-  const requestCompleteSavingsGoal = async (id: number) => {
+  const requestCompleteSavingsGoal = async (id: number, accountId?: string) => {
     if (!guardSensitive()) return
     const { describeCompleteGoal } = await import('../savingsGoalActions')
     setConfirmModalData({
       ...describeCompleteGoal(savingsGoals.find(goal => goal.id === id), currency),
-      onConfirm: () => { void handleCompleteSavingsGoal(id) },
+      onConfirm: () => { void handleCompleteSavingsGoal(id, accountId) },
     })
   }
 

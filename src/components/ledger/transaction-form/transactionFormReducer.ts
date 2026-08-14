@@ -18,7 +18,7 @@ export interface TransactionFormState {
   ledgerCategory: SelectableLedgerCategory
   transferSource: TransferBucket
   transferTarget: TransferBucket
-  /** The selected account for the bucket leg; empty/null means the form is still waiting for a default. */
+  /** The selected account for the bucket leg; empty/null means the user must choose one. */
   accountId: string | null
   /** Destination account for an in-bucket AccountMove row. */
   counterAccountId: string | null
@@ -44,7 +44,7 @@ export interface TransactionFormState {
 }
 
 export type TransactionFormAction =
-  | { type: 'OPEN_CREATE'; payload?: { defaultCategory: string; todayDate: string; defaultAccountId?: string; defaultSplitAccountIds?: Partial<Record<TransferBucket, string>> } }
+  | { type: 'OPEN_CREATE'; payload?: { defaultCategory: string; todayDate: string } }
   | { type: 'OPEN_EDIT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; accountId?: string | null; counterAccountId?: string | null; splitAccountIds?: Record<string, string> | null; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
   | { type: 'OPEN_DRAFT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; accountId?: string | null; counterAccountId?: string | null; splitAccountIds?: Record<string, string> | null; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
   | { type: 'SET_FIELD'; field: keyof TransactionFormState; value: any }
@@ -103,13 +103,13 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         ledgerCategory: 'Essentials',
         transferSource: 'Essentials',
         transferTarget: 'Rewards',
-        accountId: action.payload?.defaultAccountId ?? '',
+        accountId: '',
         counterAccountId: null,
         splitAccountIds: {
-          Essentials: action.payload?.defaultSplitAccountIds?.Essentials ?? '',
-          Growth: action.payload?.defaultSplitAccountIds?.Growth ?? '',
-          Stability: action.payload?.defaultSplitAccountIds?.Stability ?? '',
-          Rewards: action.payload?.defaultSplitAccountIds?.Rewards ?? '',
+          Essentials: '',
+          Growth: '',
+          Stability: '',
+          Rewards: '',
         },
         date: action.payload?.todayDate ?? state.date,
         category: action.payload?.defaultCategory ?? state.category,

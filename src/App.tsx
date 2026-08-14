@@ -8,6 +8,7 @@ import { Loader2, X, Zap } from 'lucide-react'
 // Every view is code-split so the initial bundle only ships the shell. Each
 // chunk loads on demand behind an instant blank-shell fallback (no flash).
 const LoginView = lazy(() => import('./components/LoginView').then(m => ({ default: m.LoginView })))
+const AccountCoverageGate = lazy(() => import('./components/AccountCoverageGate').then(m => ({ default: m.AccountCoverageGate })))
 import { ToastViewport } from './components/ui/ToastViewport'
 import { Skeleton } from './components/ui/Skeleton'
 import type { PageSkeletonVariant } from './components/ui/CycleSkeleton'
@@ -45,6 +46,7 @@ import { mutationBusyLabel } from './components/ui/rowSyncState'
 import type { AiInvocationContext } from './lib/api/ai'
 import { calculateFreeRewardsBalance, pendingRecurringAmount, pendingRewardsAmount } from './lib/freeRewards'
 import { canOpenBlankMutationForm } from './lib/quickAddAvailability'
+import { hasCompleteAccountCoverage } from './lib/ledgerAccountCoverage'
 
 const RuntimeBackgroundBridges = lazy(() => import('./app/RuntimeBackgroundBridges').then(module => ({ default: module.RuntimeBackgroundBridges })))
 const enableRuntimeBackgroundBridges = import.meta.env.MODE !== 'test'
@@ -300,6 +302,7 @@ function App() {
     requestDeletePayment: financial.requestDeletePayment,
     requestDeleteWishlistItem: financial.requestDeleteWishlistItem,
     allCategories: financial.allCategories,
+    allLedgerAccounts: financial.allAccounts,
     handleStageDraftTransactions: financial.handleStageDraftTransactions,
   })
 
@@ -602,6 +605,26 @@ function App() {
             />
           </div>
         </AppProvider>
+      </LaunchReady>
+    )
+  }
+
+  if (!hasCompleteAccountCoverage(financial.allAccounts)) {
+    return (
+      <LaunchReady>
+        <Suspense fallback={<ViewFallback />}>
+          <AccountCoverageGate
+            accounts={financial.allAccounts}
+            currency={financial.optimisticDashboardData?.setting?.currency || 'USD'}
+            loading={financial.loading}
+            error={financial.error}
+            hideSensitive={prefs.hideSensitive}
+            formatSensitive={financial.formatSensitive}
+            onAddAccount={financial.handleAddAccount}
+            onUpdateAccount={financial.handleUpdateAccount}
+            onRetry={() => financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)}
+          />
+        </Suspense>
       </LaunchReady>
     )
   }

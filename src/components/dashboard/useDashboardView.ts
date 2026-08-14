@@ -115,6 +115,7 @@ export function useDashboardView(options: UseDashboardViewOptions) {
     projectedEssentialsEndingBalance: 0,
   }
   const categoryLimitProgress = dashboardData?.categoryLimitProgress || []
+  const recurringAccountShortfalls = dashboardData?.recurringAccountShortfalls || []
   const areBalanceAmountsMasked = hideSensitive || hideBalanceAmounts
 
   const pendingDeductionsByCategory = useMemo(() => {
@@ -193,34 +194,42 @@ export function useDashboardView(options: UseDashboardViewOptions) {
   const isAdjustmentUnchanged = useMemo(() => {
     if (!adjustingCategory) return false
     if (adjustingCategory.accounts?.length) {
-      return adjustingCategory.accounts.every(account => account.isArchived || (() => {
-        const target = parseFloat(accountBalanceInputs[account.id] ?? '')
-        return !Number.isNaN(target) && Math.abs(target - account.remaining) < 0.005
-      })())
+      return adjustingCategory.accounts.every(account => {
+        if (account.isArchived) return true
+        const raw = accountBalanceInputs[account.id]
+        if (raw === undefined || raw === '') return true
+        const val = parseFloat(raw)
+        return !Number.isNaN(val) && Math.abs(val - account.remaining) < 0.005
+      })
     }
-    const targetVal = parseFloat(newBalanceInput)
-    return !isNaN(targetVal) && Math.abs(targetVal - adjustingCategory.remaining) < 0.005
-  }, [accountBalanceInputs, adjustingCategory, newBalanceInput])
+    const val = parseFloat(newBalanceInput)
+    return !Number.isNaN(val) && Math.abs(val - adjustingCategory.remaining) < 0.005
+  }, [adjustingCategory, newBalanceInput, accountBalanceInputs])
 
-  // The signed ledger entry the current input would produce, for the live preview.
   const adjustmentPreviewDiff = useMemo(() => {
-    if (!adjustingCategory) return null
+    if (!adjustingCategory) return 0
     if (adjustingCategory.accounts?.length) {
       return adjustingCategory.accounts.reduce((sum, account) => {
-        const target = parseFloat(accountBalanceInputs[account.id] ?? '')
-        return Number.isNaN(target) ? sum : sum + target - account.remaining
+        if (account.isArchived) return sum
+        const raw = accountBalanceInputs[account.id]
+        const val = raw !== undefined && raw !== '' ? parseFloat(raw) : account.remaining
+        return sum + (Number.isNaN(val) ? 0 : val - account.remaining)
       }, 0)
     }
-    const parsed = parseFloat(newBalanceInput)
-    if (isNaN(parsed)) return null
-    return parsed - adjustingCategory.remaining
-  }, [accountBalanceInputs, adjustingCategory, newBalanceInput])
+    const targetVal = parseFloat(newBalanceInput)
+    return Number.isNaN(targetVal) ? 0 : targetVal - adjustingCategory.remaining
+  }, [adjustingCategory, newBalanceInput, accountBalanceInputs])
 
   const openBalanceAdjustment = (category: CategorySummary) => {
-    if (hideSensitive) return
     setAdjustingCategory(category)
     setNewBalanceInput(category.remaining.toFixed(2))
-    setAccountBalanceInputs(Object.fromEntries((category.accounts ?? []).map(account => [account.id, account.remaining.toFixed(2)])))
+    const initialAccountInputs: Record<string, string> = {}
+    if (category.accounts?.length) {
+      for (const account of category.accounts) {
+        initialAccountInputs[account.id] = account.remaining.toFixed(2)
+      }
+    }
+    setAccountBalanceInputs(initialAccountInputs)
     setAdjustmentDescription('Balance Adjustment')
     setBalanceErrors({})
   }
@@ -229,31 +238,40 @@ export function useDashboardView(options: UseDashboardViewOptions) {
     setAdjustingCategory(null)
     setNewBalanceInput('')
     setAccountBalanceInputs({})
-    setAdjustmentDescription('')
     setBalanceErrors({})
   }
 
-  const handleBalanceInputChange = (rawValue: string) => {
-    const val = maskCurrencyInput(rawValue, newBalanceInput)
-    setNewBalanceInput(val)
+  const handleBalanceInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewBalanceInput(maskCurrencyInput(e.target.value, newBalanceInput))
     if (balanceErrors.balance) {
-      setBalanceErrors(prev => ({ ...prev, balance: '' }))
+      setBalanceErrors(prev => {
+        const next = { ...prev }
+        delete next.balance
+        return next
+      })
     }
   }
 
-  const handleAccountBalanceInputChange = (accountId: string, rawValue: string) => {
-    const current = accountBalanceInputs[accountId] ?? ''
-    const val = maskCurrencyInput(rawValue, current)
-    setAccountBalanceInputs(previous => ({ ...previous, [accountId]: val }))
+  const handleAccountBalanceInputChange = (accountId: string, value: string) => {
+    const masked = maskCurrencyInput(value, accountBalanceInputs[accountId] ?? '')
+    setAccountBalanceInputs(prev => ({ ...prev, [accountId]: masked }))
     if (balanceErrors[accountId]) {
-      setBalanceErrors(previous => ({ ...previous, [accountId]: '' }))
+      setBalanceErrors(prev => {
+        const next = { ...prev }
+        delete next[accountId]
+        return next
+      })
     }
   }
 
-  const handleDescriptionChange = (value: string) => {
-    setAdjustmentDescription(value)
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAdjustmentDescription(e.target.value)
     if (balanceErrors.description) {
-      setBalanceErrors(prev => ({ ...prev, description: '' }))
+      setBalanceErrors(prev => {
+        const next = { ...prev }
+        delete next.description
+        return next
+      })
     }
   }
 
@@ -361,6 +379,7 @@ export function useDashboardView(options: UseDashboardViewOptions) {
     activeRecurring,
     todayPlanInsights,
     categoryLimitProgress,
+    recurringAccountShortfalls,
     areBalanceAmountsMasked,
     pendingDeductionsByCategory,
     activeWishlistItem,

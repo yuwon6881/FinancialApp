@@ -16,6 +16,16 @@ vi.mock('./ui/DatePicker', () => ({
   ),
 }))
 
+// Placement is explicit: every bucket needs one open account, with no default to fall back on.
+const accounts = ['Essentials', 'Growth', 'Stability', 'Rewards'].map(bucket => ({
+  id: `acct-${bucket.toLowerCase()}`,
+  name: `${bucket} balance`,
+  bucket,
+  kind: 'Other',
+  remaining: 0,
+  isArchived: false,
+})) as React.ComponentProps<typeof RecurringPaymentsView>['accounts']
+
 describe('RecurringPaymentsView form', () => {
   beforeAll(() => {
     globalThis.ResizeObserver = class {
@@ -30,6 +40,7 @@ describe('RecurringPaymentsView form', () => {
     render(
       <RecurringPaymentsView
         payments={[]}
+        accounts={accounts}
         activeRecurringPayments={[]}
         selectedMonth="Jul"
         selectedYear={2026}
@@ -50,6 +61,9 @@ describe('RecurringPaymentsView form', () => {
     fireEvent.click(screen.getByRole('option', { name: 'Annually' }))
     fireEvent.click(screen.getByRole('combobox', { name: /How it's paid/ }))
     fireEvent.click(screen.getByRole('option', { name: 'Manual payment' }))
+    // Placement is explicit, so the bill has to name the account that pays it.
+    fireEvent.click(screen.getByRole('combobox', { name: /Paid from account/ }))
+    fireEvent.click(screen.getByRole('option', { name: /Essentials balance/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
 
     expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({
@@ -71,6 +85,7 @@ describe('RecurringPaymentsView form', () => {
       }}>
         <RecurringPaymentsView
           payments={[]}
+          accounts={accounts}
           activeRecurringPayments={[]}
           selectedMonth="Jul"
           selectedYear={2026}

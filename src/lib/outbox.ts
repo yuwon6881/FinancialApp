@@ -71,10 +71,10 @@ export interface OutboxPayload {
   scheduleStatus?: string
   accountId?: string | null
   counterAccountId?: string | null
+  splitAccountIds?: Record<string, string> | null
   bucket?: string
   kind?: string
   isArchived?: boolean
-  isDefault?: boolean
   openingAmount?: number
   remaining?: number
   interestEnabled?: boolean
@@ -123,6 +123,9 @@ export interface QueuedOp {
   isUndo?: boolean
   /** Message from the last failed dispatch attempt, set only once an op is moved to failedOps. */
   lastError?: string
+  /** The cutover could not safely infer a live account placement for this operation. */
+  needsAccountReview?: boolean
+  needsAccountReviewBuckets?: string[]
 }
 
 /**
@@ -667,7 +670,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
   options?: ApplyOpsOptions
 ): T[] {
   let result = baseList.map(item => ({ ...item }))
-  const projectionOps = expandBulkTransactionProjection(ops)
+  const projectionOps = expandBulkTransactionProjection(ops).filter(op => !op.needsAccountReview)
   const entityOps = projectionOps.filter(op => op.entity === entity)
   const unorderedOps = entity === 'transaction'
     ? [
@@ -713,7 +716,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
       const reconciliation = op.payload?.reconciliation as {
         bucket?: string
         expectedBucketTotal?: number
-        targets?: Array<{ id?: string | null; expectedCurrent?: number; target?: number; isDefault?: boolean; isArchived?: boolean }>
+        targets?: Array<{ id?: string | null; expectedCurrent?: number; target?: number; isArchived?: boolean }>
       } | undefined
       const projectedRows = buildAccountReconcileTransactions({
         operationId: op.targetId,
@@ -993,7 +996,6 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           targetStr,
           options?.incomeAllocations,
           splitRowState(op),
-          new Map(options?.ledgerAccounts?.map(account => [account.id, account.bucket]) ?? []),
         )
       }
     } else if (op.type === 'update') {
@@ -1029,7 +1031,6 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           targetStr,
           options?.incomeAllocations,
           splitRowState(op),
-          new Map(options?.ledgerAccounts?.map(account => [account.id, account.bucket]) ?? []),
         )
       }
     } else if (op.type === 'delete') {
@@ -1099,6 +1100,11 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         category: 'Other',
         ledgerCategory: 'Rewards',
         amount: -Math.abs(Number(op.payload?.price || 0)),
+        // The claim's Rewards account, mirroring what WishlistService writes. Without it this row
+        // is a bucket leg belonging to no account, so the projected account balance under-counts
+        // until the post-sync refresh lands and then jumps -- and the accounts drift detector
+        // reports a genuine-looking mismatch for the whole window.
+        accountId: typeof op.payload?.accountId === 'string' ? op.payload.accountId : undefined,
         wishlistItemId: Number(op.targetId),
         excludeFromAutocomplete: true,
         isPendingSync: !op.isCompleted

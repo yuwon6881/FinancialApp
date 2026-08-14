@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { getStatus, hasHttpStatus, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from './errors'
+import {
+  getMissingBuckets,
+  getStatus,
+  hasHttpStatus,
+  isAuthError,
+  isLedgerAccountRefusal,
+  isLockError,
+  JUST_LOGGED_IN_WINDOW_MS,
+} from './errors'
 
 class ApiErrorLike extends Error {
   status: number
@@ -9,6 +17,28 @@ class ApiErrorLike extends Error {
     this.status = status
   }
 }
+
+describe('ledger account refusals', () => {
+  // A 400 is normally terminal and unactionable, so the outbox has to tell a refusal the user can
+  // fix from one they cannot. Both codes collapse to one question because both are answered by
+  // choosing an open account in the bucket.
+  it('recognises both account codes and nothing else', () => {
+    expect(isLedgerAccountRefusal({ status: 400, code: 'ledger_account_required' })).toBe(true)
+    expect(isLedgerAccountRefusal({ status: 400, code: 'ledger_account_invalid' })).toBe(true)
+    expect(isLedgerAccountRefusal({ status: 400, code: 'something_else' })).toBe(false)
+    expect(isLedgerAccountRefusal({ status: 400 })).toBe(false)
+    expect(isLedgerAccountRefusal(new Error('boom'))).toBe(false)
+    expect(isLedgerAccountRefusal(null)).toBe(false)
+  })
+
+  it('reads the named buckets and treats an empty or malformed list as none', () => {
+    expect(getMissingBuckets({ missingBuckets: ['Rewards', 'Growth'] })).toEqual(['Rewards', 'Growth'])
+    expect(getMissingBuckets({ missingBuckets: ['Rewards', 7, ''] })).toEqual(['Rewards'])
+    expect(getMissingBuckets({ missingBuckets: [] })).toBeUndefined()
+    expect(getMissingBuckets({ missingBuckets: 'Rewards' })).toBeUndefined()
+    expect(getMissingBuckets({})).toBeUndefined()
+  })
+})
 
 describe('error status classification', () => {
   it('reads a numeric status off an error-like object', () => {

@@ -134,6 +134,12 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
         pendingCommitted: deobfuscateAmount(progress.pendingCommitted),
         projectedSpend: deobfuscateAmount(progress.projectedSpend),
       })),
+      recurringAccountShortfalls: (data.recurringAccountShortfalls || []).map(shortfall => ({
+        ...shortfall,
+        amount: deobfuscateAmount(shortfall.amount),
+        accountBalance: deobfuscateAmount(shortfall.accountBalance),
+        shortfall: deobfuscateAmount(shortfall.shortfall),
+      })),
       ...(data.cycleSummaryInsights && {
         cycleSummaryInsights: {
           largestExpenseDescription: data.cycleSummaryInsights.largestExpenseDescription,

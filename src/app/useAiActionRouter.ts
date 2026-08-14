@@ -4,7 +4,7 @@ import type { AiUiAction } from '../lib/api/ai'
 // are only reachable once the (already lazy) Ask AI panel returns actions, so keeping them off the
 // eager critical path costs nothing at runtime. The type import is erased at build time.
 import type { AiNavigationTarget } from '../lib/aiActions'
-import type { RecurringReminderSettings, Transaction, TransactionCategory } from '../types'
+import type { LedgerAccount, RecurringReminderSettings, Transaction, TransactionCategory } from '../types'
 
 export interface AiActionRouterState {
   aiLedgerEditDraft: { nonce: number; id: string; changes: Record<string, unknown> } | null
@@ -68,6 +68,7 @@ export interface UseAiActionRouterOptions {
   requestDeletePayment: (id: string) => void
   requestDeleteWishlistItem: (id: number) => void
   allCategories: TransactionCategory[]
+  allLedgerAccounts: LedgerAccount[]
   handleStageDraftTransactions: (drafts: Omit<Transaction, 'id'>[]) => void
 }
 

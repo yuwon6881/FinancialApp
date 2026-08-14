@@ -111,7 +111,7 @@ export function LoanCard({
     .map(payment => ({ ...payment, kind: 'Planned' as const }))
 
   return (
-    <article id={`loan-card-${loan.id}`} className="rounded-2xl border border-border/60 bg-card/85 p-4 shadow-sm sm:p-5">
+    <article id={`loan-card-${loan.id}`} className="rounded-2xl border border-border/60 bg-card/85 p-4 shadow-sm sm:p-5 transition-all duration-300">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -254,13 +254,15 @@ export function LoanCard({
         <Button
           variant="secondary"
           size="sm"
+          type="button"
           aria-label={`Explain ${loan.name} with Ask AI`}
           title={hideSensitive ? 'Unhide balances to explain this loan' : 'Explain this loan with Ask AI'}
           onClick={onExplain}
           disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}
+          className="shrink-0"
         >
-          <Sparkles className="size-3.5 text-accent-ink" aria-hidden="true" />
-          <span>Ask AI</span>
+          <Sparkles className="size-3.5" aria-hidden="true" />
+          <span>Explain this loan</span>
         </Button>
         <div className="flex items-center gap-2">
           <Button

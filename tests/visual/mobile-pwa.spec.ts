@@ -43,11 +43,9 @@ test('production routes do not create viewport horizontal overflow', async ({ pa
     const panel = page.getByRole('tabpanel', { name: 'Accounts' })
     const toolbar = panel.locator('div.flex.flex-nowrap.items-center.gap-2').first()
     const toolbarAdd = toolbar.getByRole('button', { name: 'Add' })
-    const firstAccountAdd = panel.getByRole('button', { name: 'Add an account row' })
 
     await expect(panel).toBeVisible()
     await expect(toolbarAdd).toBeVisible()
-    await expect(firstAccountAdd).toBeVisible()
 
     const geometry = await panel.evaluate(element => {
       const toolbarElement = element.querySelector('div.flex.flex-nowrap.items-center.gap-2')
@@ -63,11 +61,9 @@ test('production routes do not create viewport horizontal overflow', async ({ pa
         panelRight: panelBounds.right,
       }
     })
-    const firstAccountAddHeight = await firstAccountAdd.evaluate(element => element.getBoundingClientRect().height)
     expect(geometry.pageWidth).toBeLessThanOrEqual(geometry.viewportWidth + 1)
     expect(geometry.toolbarLeft).toBeGreaterThanOrEqual(geometry.panelLeft)
     expect(geometry.toolbarRight).toBeLessThanOrEqual(geometry.panelRight)
-    expect(firstAccountAddHeight).toBeGreaterThanOrEqual(44)
   }
 })
 

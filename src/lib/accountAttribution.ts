@@ -8,7 +8,6 @@ export function accountAmount(
   transaction: Pick<Transaction, 'amount' | 'ledgerCategory' | 'accountId' | 'counterAccountId'>,
   account: Pick<LedgerAccount, 'id' | 'bucket'>,
   accountsById: ReadonlyMap<string, Pick<LedgerAccount, 'id' | 'bucket'>>,
-  defaultAccountIdByBucket: ReadonlyMap<string, string>,
 ): number {
   if (transaction.ledgerCategory.toLowerCase() === 'accountmove') {
     if (transaction.accountId === account.id) return -Math.abs(transaction.amount)
@@ -21,8 +20,7 @@ export function accountAmount(
   const explicit = [transaction.accountId, transaction.counterAccountId]
     .map(id => id ? accountsById.get(id) : undefined)
     .find(candidate => candidate?.bucket.toLowerCase() === account.bucket.toLowerCase())
-  const placement = explicit?.id ?? defaultAccountIdByBucket.get(account.bucket.toLowerCase())
-  return placement === account.id ? leg : 0
+  return explicit?.id === account.id ? leg : 0
 }
 
 export function getAccountBalances(
@@ -30,15 +28,10 @@ export function getAccountBalances(
   accounts: ReadonlyArray<LedgerAccount>,
 ): Map<string, number> {
   const accountsById = new Map(accounts.map(account => [account.id, account]))
-  const defaults = new Map(
-    accounts
-      .filter(account => account.isDefault && !account.isArchived)
-      .map(account => [account.bucket.toLowerCase(), account.id]),
-  )
   return new Map(accounts.map(account => [
     account.id,
     Math.round(transactions.reduce(
-      (total, transaction) => total + accountAmount(transaction, account, accountsById, defaults),
+      (total, transaction) => total + accountAmount(transaction, account, accountsById),
       0,
     ) * 100) / 100,
   ]))

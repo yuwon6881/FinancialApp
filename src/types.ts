@@ -274,7 +274,7 @@ export interface Transaction {
   // Set when this transaction consumed a savings commitment. Deleting this row restores the
   // commitment while it is still the latest untouched completion.
   savingsGoalId?: number | null
-  /** The account that receives this row's bucket leg. Older clients may omit it on the wire. */
+  /** The account that receives this row's bucket leg. */
   accountId?: string | null
   /** Destination account for an in-bucket AccountMove row. */
   counterAccountId?: string | null
@@ -296,7 +296,6 @@ export interface LedgerAccount {
   interestEnabled: boolean
   interestRatePercent: number
   interestFrequency: LedgerAccountInterestFrequency
-  isDefault: boolean
   isArchived: boolean
   remaining: number
   createdAt: string
@@ -325,6 +324,7 @@ export interface RecurringPayment {
   frequency: RecurringFrequency
   category: string
   ledgerCategory: string
+  accountId: string
   nextDueDate: string | null
   dueDate: number // Day of month (1-31)
   startDate: string // Date (yyyy-MM-dd)
@@ -535,6 +535,12 @@ export interface PendingNotification {
   amount: number
   category: string
   ledgerCategory: string
+  /**
+   * The account frozen onto this occurrence when it was materialised, so confirming settles it
+   * where it was scheduled rather than wherever the bill points now. Absent on occurrences
+   * materialised before the account cutover; callers fall back to the parent payment.
+   */
+  accountId?: string | null
   billingDate: string
   year: number
   month: number
@@ -567,6 +573,20 @@ export interface DashboardData {
   // Optional for the same reason todayPlanInsights is: a cached payload written before this
   // shipped must still parse.
   stabilityRecovery?: StabilityRecovery
+  recurringAccountShortfalls?: RecurringAccountShortfall[]
+}
+
+export interface RecurringAccountShortfall {
+  recurringPaymentId: string
+  name: string
+  amount: number
+  dueDate: string
+  dueDay?: number
+  offsetDays: number
+  accountId: string
+  accountName: string
+  accountBalance: number
+  shortfall: number
 }
 
 export interface StabilityRecoveryDraw {

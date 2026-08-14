@@ -118,9 +118,10 @@ export async function fundSavingsGoalsForCycle(
   }
 }
 
-export async function completeSavingsGoal(id: number) {
+export async function completeSavingsGoal(id: number, accountId?: string) {
   const data = await request<WireSavingsGoalCompletionResult>(`/savings-goals/${id}/complete`, {
     method: 'POST',
+    ...jsonBody({ accountId }),
     errorMessage: 'Failed to complete savings goal',
   })
   invalidateCache()

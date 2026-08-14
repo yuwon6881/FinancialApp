@@ -15,6 +15,15 @@ const mobilePwaGateMocks = vi.hoisted(() => ({
   verify: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
 }))
 
+const testAccounts = ['Essentials', 'Growth', 'Stability', 'Rewards'].map(bucket => ({
+  id: `acct-${bucket.toLowerCase()}`,
+  name: `${bucket} balance`,
+  bucket,
+  kind: 'Other',
+  remaining: 0,
+  isArchived: false,
+}))
+
 vi.mock('@/lib/mobilePwaDeviceGateEligibility', async () => {
   const actual = await vi.importActual('@/lib/mobilePwaDeviceGateEligibility') as object
   return {
@@ -78,6 +87,16 @@ vi.mock('@/lib/api', async () => {
       categories: [],
       wishlist: [],
       autocomplete: [],
+      // Every bucket needs one open account or the coverage gate holds the app closed: placement
+      // is explicit now, with no default to fall back on.
+      accounts: ['Essentials', 'Growth', 'Stability', 'Rewards'].map(bucket => ({
+        id: `acct-${bucket.toLowerCase()}`,
+        name: `${bucket} balance`,
+        bucket,
+        kind: 'Other',
+        remaining: 0,
+        isArchived: false,
+      })),
       walletBalance: 1000,
     })),
     fetchTransactions: vi.fn().mockResolvedValue([]),
@@ -157,6 +176,7 @@ describe('App behaviors', () => {
   beforeEach(() => {
     window.history.replaceState({}, '', '/dashboard')
     localStorage.clear()
+    localStorage.setItem('financial_account_tracking_cache_version', '3')
     sessionStorage.clear()
     vi.clearAllMocks()
     mobilePwaGateMocks.credentialId = null
@@ -260,6 +280,7 @@ describe('App behaviors', () => {
       pendingNotifications: [],
     }))
     localStorage.setItem('cached_wishlist', JSON.stringify(cachedWishlist))
+    localStorage.setItem('cached_ledger_accounts', JSON.stringify(testAccounts))
     // The boot request carries the wishlist now, so a transient failure is a failure of the
     // whole refresh rather than of one slice. The guarantee under test is unchanged and is
     // what the user actually sees: a failed refresh must never blank out cached data.
@@ -327,6 +348,7 @@ describe('App behaviors', () => {
       categories: [],
       pendingNotifications: []
     }))
+    localStorage.setItem('cached_ledger_accounts', JSON.stringify(testAccounts))
 
     // Hold the boot request open so the cached dashboard is what renders first.
     let resolveDashboard!: (value: any) => void
@@ -361,6 +383,7 @@ describe('App behaviors', () => {
       categories: [],
       wishlist: [],
       autocomplete: [],
+      accounts: testAccounts,
       walletBalance: 1000,
     })
 

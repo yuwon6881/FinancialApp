@@ -33,6 +33,7 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'recurringPayment:payEarly': (op) => api.payRecurringPaymentEarly(
     op.targetId,
     typeof op.payload?.occurrenceDate === 'string' ? op.payload.occurrenceDate : '',
+    typeof op.payload?.accountId === 'string' ? op.payload.accountId : undefined,
     op.id,
   ),
   'recurringOccurrence:settle': (op) => api.settleRecurringOccurrence(
@@ -40,6 +41,7 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     typeof op.payload?.occurrenceDate === 'string' ? op.payload.occurrenceDate : '',
     op.payload?.status === 'Discarded' ? 'Discarded' : 'Paid',
     typeof op.payload?.paidDate === 'string' ? op.payload.paidDate : undefined,
+    typeof op.payload?.accountId === 'string' ? op.payload.accountId : undefined,
     op.id,
     op.payload?.optimisticTransaction && typeof op.payload.optimisticTransaction === 'object' && 'id' in op.payload.optimisticTransaction
       ? String(op.payload.optimisticTransaction.id)
@@ -57,6 +59,7 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     typeof op.payload?.date === 'string' ? op.payload.date : undefined,
     typeof op.payload?.purchaseTransactionId === 'string' ? op.payload.purchaseTransactionId : undefined,
     typeof op.payload?.postedAt === 'string' ? op.payload.postedAt : undefined,
+    typeof op.payload?.accountId === 'string' ? op.payload.accountId : undefined,
   ),
   'wishlistItem:unpurchase': (op) => api.unpurchaseWishlistItem(Number(op.targetId)),
 

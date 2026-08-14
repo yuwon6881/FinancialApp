@@ -14,11 +14,11 @@ const draft: Transaction = {
 }
 
 describe('getDraftTransactionIssues', () => {
-  it('requires account placement when account tracking is enabled', () => {
-    expect(getDraftTransactionIssues(draft, categories, true)).toContain(
+  it('requires account placement for every bucket transaction', () => {
+    expect(getDraftTransactionIssues(draft, categories)).toContain(
       'Choose the account that holds this bucket money.',
     )
-    expect(getDraftTransactionIssues(draft, categories, false)).not.toContain(
+    expect(getDraftTransactionIssues({ ...draft, accountId: 'acct-essentials' }, categories)).not.toContain(
       'Choose the account that holds this bucket money.',
     )
   })

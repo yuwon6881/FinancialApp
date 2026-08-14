@@ -35,6 +35,7 @@ function makeDeps(overrides: Partial<AiActionsDeps> = {}): AiActionsDeps {
     handleSelectPeriod: vi.fn(),
     handleNavigateToLedger: vi.fn(),
     nextNonce: () => ++nonce,
+    ledgerAccounts: [],
     transactionCategories: [
       { id: 'food', name: 'Food' },
       { id: 'transport', name: 'Transport' },

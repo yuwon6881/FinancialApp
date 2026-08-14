@@ -9,7 +9,6 @@ export interface LedgerAccountMutation {
   bucket: LedgerAccount['bucket']
   kind: LedgerAccountKind
   isArchived?: boolean
-  isDefault?: boolean
   openingAmount?: number
   interestEnabled?: boolean
   interestRatePercent?: number
@@ -22,7 +21,6 @@ export interface LedgerAccountReconcileTarget {
   bucket?: LedgerAccount['bucket']
   kind: LedgerAccountKind
   isArchived: boolean
-  isDefault: boolean
   expectedCurrent: number
   target: number
   interestEnabled?: boolean
@@ -34,6 +32,7 @@ export interface LedgerAccountReconcileInput {
   operationId: string
   bucket: LedgerAccount['bucket']
   expectedBucketTotal: number
+  adjustmentAccountId?: string | null
   targets: LedgerAccountReconcileTarget[]
 }
 
@@ -60,7 +59,6 @@ function toBody(account: LedgerAccountMutation) {
     bucket: account.bucket,
     kind: account.kind,
     isArchived: account.isArchived ?? false,
-    isDefault: account.isDefault ?? false,
     openingAmount: obfuscateAmount(account.openingAmount ?? 0),
     interestEnabled: account.interestEnabled ?? false,
     interestRatePercent: account.interestRatePercent ?? 0,
@@ -114,12 +112,12 @@ export async function reconcileLedgerAccounts(input: LedgerAccountReconcileInput
       operationId: input.operationId,
       bucket: input.bucket,
       expectedBucketTotal: obfuscateAmount(input.expectedBucketTotal),
+      adjustmentAccountId: input.adjustmentAccountId ?? null,
       targets: input.targets.map(target => ({
         id: target.id,
         name: target.name,
         kind: target.kind,
         isArchived: target.isArchived,
-        isDefault: target.isDefault,
         expectedCurrent: obfuscateAmount(target.expectedCurrent),
         target: obfuscateAmount(target.target),
         interestEnabled: target.interestEnabled,

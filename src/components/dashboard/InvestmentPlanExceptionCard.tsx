@@ -38,11 +38,11 @@ export function InvestmentPlanExceptionCard({
       className="app-panel rounded-2xl border border-amber-500/30 bg-amber-500/8 p-5"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
             {incomplete ? <PieChart className="size-5" /> : <AlertTriangle className="size-5" />}
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <h3 id="investment-plan-exception" className="text-sm font-bold text-amber-700 dark:text-amber-300">
               {incomplete ? 'Investment plan needs setup' : 'Investment allocation needs attention'}
             </h3>
@@ -53,7 +53,7 @@ export function InvestmentPlanExceptionCard({
             </p>
           </div>
         </div>
-        <Button variant="ghost" onClick={open} className="w-full justify-center sm:w-auto">
+        <Button variant="ghost" onClick={open} className="w-full justify-center sm:w-auto shrink-0">
           {incomplete ? 'Finish setup' : 'Review plan'}
         </Button>
       </div>

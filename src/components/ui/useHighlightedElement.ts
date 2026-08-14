@@ -16,23 +16,43 @@ export function useHighlightedElement(elementId: string | null, onClear?: () => 
   useEffect(() => {
     if (!elementId) return
     let clearTimer: ReturnType<typeof setTimeout> | undefined
-    const timer = setTimeout(() => {
+    let pollInterval: ReturnType<typeof setInterval> | undefined
+    let applied = false
+    const startTime = Date.now()
+
+    const tryHighlight = () => {
       const el = document.getElementById(elementId)
       if (el) {
+        applied = true
+        if (pollInterval) clearInterval(pollInterval)
         el.scrollIntoView({ behavior: motionSafeScrollBehavior(), block: 'center' })
         el.classList.add(...HIGHLIGHT_CLASSES)
         clearTimer = setTimeout(() => {
           el.classList.remove(...HIGHLIGHT_CLASSES)
           onClear?.()
         }, 2600)
-      } else {
-        onClear?.()
+        return true
       }
-    }, 350)
+      // If element not rendered after 3.5s, stop polling and clear
+      if (Date.now() - startTime > 3500) {
+        if (pollInterval) clearInterval(pollInterval)
+        onClear?.()
+        return true
+      }
+      return false
+    }
+
+    // Attempt immediately, otherwise poll every 100ms
+    if (!tryHighlight()) {
+      pollInterval = setInterval(tryHighlight, 100)
+    }
+
     return () => {
-      clearTimeout(timer)
+      if (pollInterval) clearInterval(pollInterval)
       if (clearTimer) clearTimeout(clearTimer)
-      document.getElementById(elementId)?.classList.remove(...HIGHLIGHT_CLASSES)
+      if (applied) {
+        document.getElementById(elementId)?.classList.remove(...HIGHLIGHT_CLASSES)
+      }
     }
   }, [elementId, onClear])
 }

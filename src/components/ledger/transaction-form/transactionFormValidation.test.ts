@@ -8,6 +8,8 @@ const validForm = {
   transactionType: 'transfer',
   transferSource: 'Rewards',
   transferTarget: 'Growth',
+  accountId: 'acc-rewards-1',
+  counterAccountId: 'acc-growth-1',
 }
 
 describe('validateTransactionForm', () => {
@@ -15,9 +17,9 @@ describe('validateTransactionForm', () => {
     expect(validateTransactionForm(validForm)).toEqual({})
   })
 
-  it('rejects a transfer to the same bucket when account tracking is not enabled', () => {
-    expect(validateTransactionForm({ ...validForm, transferTarget: 'Rewards' })).toMatchObject({
-      transferTarget: 'Choose a different target category.',
+  it('requires distinct accounts for a same-bucket transfer', () => {
+    expect(validateTransactionForm({ ...validForm, transferTarget: 'Rewards', counterAccountId: 'acc-rewards-1' })).toMatchObject({
+      counterAccountId: 'Choose two different accounts.',
     })
   })
 
@@ -25,7 +27,6 @@ describe('validateTransactionForm', () => {
     expect(validateTransactionForm({
       ...validForm,
       transferTarget: 'Rewards',
-      accountTrackingEnabled: true,
       accountId: 'acc-rewards-1',
       counterAccountId: 'acc-rewards-2',
     })).toEqual({})
@@ -35,7 +36,6 @@ describe('validateTransactionForm', () => {
     expect(validateTransactionForm({
       ...validForm,
       transferTarget: 'Rewards',
-      accountTrackingEnabled: true,
       accountId: 'acc-rewards-1',
       counterAccountId: 'acc-rewards-1',
     })).toMatchObject({
@@ -52,6 +52,7 @@ describe('validateTransactionForm', () => {
       ledgerCategory: 'Stability',
       transferSource: 'Essentials',
       transferTarget: 'Rewards',
+      accountId: 'acc-stability-1',
       stabilityReloadIntent: 'Unanswered',
     })).toMatchObject({
       stabilityReloadIntent: 'Choose whether you will put this money back.',
@@ -67,6 +68,8 @@ describe('validateTransactionForm', () => {
       ledgerCategory: 'Essentials',
       transferSource: 'Stability',
       transferTarget: 'Rewards',
+      accountId: 'acc-essentials-1',
+      counterAccountId: 'acc-rewards-1',
     }
     expect(validateTransactionForm({ ...base, stabilityReloadIntent: 'Required' })).toEqual({})
     expect(validateTransactionForm({ ...base, stabilityReloadIntent: 'NotRequired' })).toEqual({})

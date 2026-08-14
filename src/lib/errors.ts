@@ -35,6 +35,34 @@ export function getRetryAfterMs(err: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined
 }
 
+/**
+ * The server's machine-readable refusal code, when it sent one. Read structurally rather than by
+ * `instanceof ApiError` so the outbox's injected fakes and a replayed/serialized error answer too.
+ */
+export function getErrorCode(err: unknown): string | undefined {
+  if (!err || typeof err !== 'object' || !('code' in err)) return undefined
+  return typeof err.code === 'string' && err.code ? err.code : undefined
+}
+
+/**
+ * Whether a refusal is "this row needs a live account named" rather than an ordinary rejection.
+ * Both codes are actionable by the same fix, which is why they collapse to one question here: a
+ * required account and an invalid one are answered by choosing an open account in the bucket.
+ */
+export function isLedgerAccountRefusal(err: unknown): boolean {
+  const code = getErrorCode(err)
+  return code === 'ledger_account_required' || code === 'ledger_account_invalid'
+}
+
+/** The buckets a `ledger_account_*` refusal named, so the fix can say which are missing. */
+export function getMissingBuckets(err: unknown): string[] | undefined {
+  if (!err || typeof err !== 'object' || !('missingBuckets' in err)) return undefined
+  const value = err.missingBuckets
+  if (!Array.isArray(value)) return undefined
+  const buckets = value.filter((bucket): bucket is string => typeof bucket === 'string' && bucket !== '')
+  return buckets.length > 0 ? buckets : undefined
+}
+
 export function hasHttpStatus(err: unknown, expected: number): boolean {
   const status = getStatus(err)
   if (status !== undefined) return status === expected

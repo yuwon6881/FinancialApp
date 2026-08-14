@@ -5,11 +5,11 @@ import { projectAccountBalances } from './accountProjection'
 
 const accounts: LedgerAccount[] = [
   {
-    id: 'essentials', name: 'Essentials bank', bucket: 'Essentials', kind: 'Bank', interestEnabled: false, interestRatePercent: 0, interestFrequency: 'Monthly', isDefault: true,
+    id: 'essentials', name: 'Essentials bank', bucket: 'Essentials', kind: 'Bank', interestEnabled: false, interestRatePercent: 0, interestFrequency: 'Monthly',
     isArchived: false, remaining: 100, createdAt: '2026-01-01', updatedAt: '2026-01-01',
   },
   {
-    id: 'rewards', name: 'Rewards wallet', bucket: 'Rewards', kind: 'EWallet', interestEnabled: false, interestRatePercent: 0, interestFrequency: 'Monthly', isDefault: true,
+    id: 'rewards', name: 'Rewards wallet', bucket: 'Rewards', kind: 'EWallet', interestEnabled: false, interestRatePercent: 0, interestFrequency: 'Monthly',
     isArchived: false, remaining: 0, createdAt: '2026-01-01', updatedAt: '2026-01-01',
   },
 ]
@@ -49,7 +49,7 @@ describe('projectAccountBalances', () => {
       targetId: 'salary',
       payload: {
         id: 'salary', amount: 100, ledgerCategory: 'Income', category: 'Salary',
-        description: 'Salary', date: '2026-08-01', accountId: 'essentials',
+        description: 'Salary', date: '2026-08-01', splitAccountIds: { Essentials: 'essentials', Growth: '', Stability: '', Rewards: 'rewards' },
       },
     })], [], {
       essentialsAlloc: 0.5,
@@ -67,7 +67,7 @@ describe('projectAccountBalances', () => {
       targetId: 'salary',
       payload: {
         id: 'salary', amount: 100, ledgerCategory: 'IncomeSplit:0.5,0,0,0.5', category: 'Salary',
-        description: 'Salary', date: '2026-08-01', accountId: 'essentials',
+        description: 'Salary', date: '2026-08-01', splitAccountIds: { Essentials: 'essentials', Growth: '', Stability: '', Rewards: 'rewards' },
       },
     })])
 
@@ -78,7 +78,7 @@ describe('projectAccountBalances', () => {
   it('handles an in-bucket AccountMove as a zero bucket delta', () => {
     const result = projectAccountBalances([
       { ...accounts[0], remaining: 100 },
-      { ...accounts[0], id: 'cash', name: 'Cash', isDefault: false, remaining: 0 },
+      { ...accounts[0], id: 'cash', name: 'Cash', remaining: 0 },
     ], [op({ targetId: 'move', payload: {
       id: 'move', amount: 40, ledgerCategory: 'AccountMove', category: 'Transfer',
       description: 'Move', date: '2026-08-01', accountId: 'essentials', counterAccountId: 'cash',
@@ -98,8 +98,8 @@ describe('projectAccountBalances', () => {
           bucket: 'Essentials',
           expectedBucketTotal: 100,
           targets: [
-            { id: 'essentials', name: 'Essentials bank', kind: 'Bank', isDefault: true, isArchived: false, expectedCurrent: 100, target: 60 },
-            { id: 'cash-new', name: 'Cash jar', kind: 'Cash', isDefault: false, isArchived: false, expectedCurrent: 0, target: 40 },
+            { id: 'essentials', name: 'Essentials bank', kind: 'Bank', isArchived: false, expectedCurrent: 100, target: 60 },
+            { id: 'cash-new', name: 'Cash jar', kind: 'Cash', isArchived: false, expectedCurrent: 0, target: 40 },
           ],
         },
       },

@@ -1,7 +1,7 @@
 import { Input } from '../ui/Input'
 import React from 'react'
 import { Edit, Plus } from 'lucide-react'
-import type { RecurringFrequency, RecurringPayment, TransactionCategory } from '../../types'
+import type { LedgerAccount, RecurringFrequency, RecurringPayment, TransactionCategory } from '../../types'
 import { allowsCategoryFlow } from '../../lib/categoryFlow'
 import { RECURRING_PAYMENT_MODE_LABELS } from '../../lib/recurringPayments'
 import { getCurrencySymbol } from '../../lib/utils'
@@ -22,6 +22,8 @@ interface RecurringPaymentFormSheetProps {
   amount: string
   category: string
   ledgerCategory: RecurringLedgerCategory
+  accountId: string
+  accounts: LedgerAccount[]
   frequency: RecurringFrequency
   startDateInput: string
   endDateInput: string
@@ -35,6 +37,7 @@ interface RecurringPaymentFormSheetProps {
   onAmountChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   onCategoryChange: (value: string) => void
   onLedgerCategoryChange: (value: RecurringLedgerCategory) => void
+  onAccountIdChange: (value: string) => void
   onFrequencyChange: (value: RecurringFrequency) => void
   onStartDateChange: (value: string) => void
   onEndDateChange: (value: string) => void
@@ -52,6 +55,8 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
   amount,
   category,
   ledgerCategory,
+  accountId,
+  accounts,
   frequency,
   startDateInput,
   endDateInput,
@@ -65,6 +70,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
   onAmountChange,
   onCategoryChange,
   onLedgerCategoryChange,
+  onAccountIdChange,
   onFrequencyChange,
   onStartDateChange,
   onEndDateChange,
@@ -195,6 +201,22 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
               { value: 'Growth', label: 'Growth' },
               { value: 'Stability', label: 'Stability' },
               { value: 'Rewards', label: 'Rewards' }
+            ]}
+            className="w-full"
+          />
+        </FormField>
+
+        <FormField label="Paid from account" required error={errors.accountId}>
+          <CustomSelect
+            ariaLabel="Paid from account"
+            value={accountId}
+            onChange={onAccountIdChange}
+            invalid={Boolean(errors.accountId)}
+            options={[
+              { value: '', label: 'Choose an account', disabled: true },
+              ...accounts
+                .filter(account => account.bucket === ledgerCategory && !account.isArchived)
+                .map(account => ({ value: account.id, label: `${account.name} · ${account.bucket}` })),
             ]}
             className="w-full"
           />

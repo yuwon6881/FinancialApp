@@ -47,6 +47,7 @@ const linkedPayment: RecurringPayment = {
   frequency: 'Monthly',
   category: 'Bills',
   ledgerCategory: 'Essentials',
+  accountId: 'acct-essentials',
   nextDueDate: '2026-01-01',
   dueDate: 1,
   startDate: '2026-01-01',

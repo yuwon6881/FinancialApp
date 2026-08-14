@@ -178,9 +178,9 @@ describe('DISPATCH idempotency wiring', () => {
   it('passes the outbox operation id as the pay-early idempotency key', async () => {
     await DISPATCH['recurringPayment:payEarly'](makeOp({
       id: 'op-pay-early', entity: 'recurringPayment', type: 'payEarly', targetId: 'rp-1',
-      payload: { occurrenceDate: '2026-08-01' },
+      payload: { occurrenceDate: '2026-08-01', accountId: 'acct-essentials' },
     }))
-    expect(api.payRecurringPaymentEarly).toHaveBeenCalledWith('rp-1', '2026-08-01', 'op-pay-early')
+    expect(api.payRecurringPaymentEarly).toHaveBeenCalledWith('rp-1', '2026-08-01', 'acct-essentials', 'op-pay-early')
   })
 
   it('dispatches category cleanup actions through the shared outbox', async () => {
@@ -364,6 +364,7 @@ describe('bulk transaction projection', () => {
         occurrenceDate: '2026-08-01',
         status: 'Paid',
         paidDate: '2026-07-30',
+        accountId: 'acct-essentials',
         optimisticTransaction: { id: 'tx-client', postedAt: '2026-07-30T12:00:00.000Z' },
       },
     }))
@@ -372,6 +373,7 @@ describe('bulk transaction projection', () => {
       '2026-08-01',
       'Paid',
       '2026-07-30',
+      'acct-essentials',
       'op-settle',
       'tx-client',
       '2026-07-30T12:00:00.000Z',
@@ -826,6 +828,33 @@ describe('applyOpsToList', () => {
     const result = applyOpsToList(base, ops, 'wishlistItem')
     expect(result.find(item => item.id === '1')).toMatchObject({ isPurchased: true, isActive: false, purchasedAt: '2026-03-01T00:00:00.000Z', purchaseTransactionId: 'tx-1' })
     expect(result.find(item => item.id === '2')).toMatchObject({ isActive: true })
+  })
+
+  // The projected claim row is a Rewards bucket leg, so it has to name the same account
+  // WishlistService writes. Without it the projected account balance under-counts until the
+  // post-sync refresh lands and then jumps, and the accounts drift detector reports a
+  // genuine-looking mismatch for the whole window.
+  it('projects the claim transaction into the account the claim named', () => {
+    const ops = [makeOp({
+      entity: 'wishlistItem',
+      type: 'purchase',
+      targetId: '1',
+      payload: {
+        name: 'Headphones',
+        price: 120,
+        date: '2026-03-01',
+        postedAt: '2026-03-01T00:00:00.000Z',
+        purchaseTransactionId: 'tx-1',
+        accountId: 'rew-1',
+      },
+    })]
+    const result = applyOpsToList([] as TestItem[], ops, 'transaction')
+    expect(result[0]).toMatchObject({
+      description: 'Purchased: Headphones (Wish List)',
+      ledgerCategory: 'Rewards',
+      amount: -120,
+      accountId: 'rew-1',
+    })
   })
 
   it('marks a purchased item unpurchased for an unpurchase op', () => {

@@ -62,10 +62,10 @@ export async function updateRecurringPaymentReminder(id: string, settings: Recur
   invalidateCache()
 }
 
-export async function payRecurringPaymentEarly(id: string, occurrenceDate: string, clientKey?: string): Promise<PayEarlyResult> {
+export async function payRecurringPaymentEarly(id: string, occurrenceDate: string, accountId?: string, clientKey?: string): Promise<PayEarlyResult> {
   const data = await request<WirePayEarlyResult>(`/recurring-payments/${id}/pay-early`, {
     method: 'POST',
-    ...jsonBody({ occurrenceDate, ...(clientKey ? { clientKey } : {}) }),
+    ...jsonBody({ occurrenceDate, accountId, ...(clientKey ? { clientKey } : {}) }),
     errorMessage: 'Failed to pay this subscription early',
   })
   invalidateCache()
@@ -81,6 +81,7 @@ export async function settleRecurringOccurrence(
   occurrenceDate: string,
   status: 'Paid' | 'Discarded',
   paidDate?: string,
+  accountId?: string,
   clientKey?: string,
   transactionId?: string,
   postedAt?: string,
@@ -89,7 +90,7 @@ export async function settleRecurringOccurrence(
     `/recurring-payments/${id}/occurrences/${occurrenceDate}/settle`,
     {
       method: 'POST',
-      ...jsonBody({ status, paidDate, clientKey, transactionId, postedAt }),
+      ...jsonBody({ status, paidDate, accountId, clientKey, transactionId, postedAt }),
       errorMessage: status === 'Paid' ? 'Failed to confirm this bill' : 'Failed to discard this bill',
     },
   )

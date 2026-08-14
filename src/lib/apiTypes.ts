@@ -238,6 +238,7 @@ export type WireDashboardData = Omit<
   | 'todayPlanInsights'
   | 'categoryLimitProgress'
   | 'stabilityRecovery'
+  | 'recurringAccountShortfalls'
 > & {
   setting: WireDashboardSetting
   categories: WireCategorySummary[]
@@ -252,6 +253,7 @@ export type WireDashboardData = Omit<
   categoryLimitProgress?: WireCategoryLimitProgress[]
   cycleSummaryInsights?: WireCycleSummaryInsights
   stabilityRecovery?: WireStabilityRecovery
+  recurringAccountShortfalls?: WireRecurringAccountShortfall[]
 }
 
 // The expensive historical aggregates split out of /dashboard into /dashboard/insights (see
@@ -264,6 +266,19 @@ export interface WireDashboardInsights {
   pastThreeMonthsRewardsAverage: WireAmount
   hasRewardsHistory: boolean
   availableYears: number[]
+}
+
+export interface WireRecurringAccountShortfall {
+  recurringPaymentId: string
+  name: string
+  amount: WireAmount
+  dueDate: string
+  dueDay?: number
+  offsetDays: number
+  accountId: string
+  accountName: string
+  accountBalance: WireAmount
+  shortfall: WireAmount
 }
 
 export interface WirePagedTransactionResult {

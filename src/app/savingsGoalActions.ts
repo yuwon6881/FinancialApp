@@ -105,7 +105,7 @@ export async function fundGoalsForCycle(deps: SavingsGoalActionDeps, bucket: Sav
   }
 }
 
-export async function completeGoal(deps: SavingsGoalActionDeps, id: number): Promise<void> {
+export async function completeGoal(deps: SavingsGoalActionDeps, id: number, accountId?: string): Promise<void> {
   if (!isOnline()) {
     showOnlineOnlyMessage(deps, 'Completing a savings goal needs a live connection so its linked ledger transaction and rollback snapshot stay authoritative.')
     return
@@ -117,7 +117,7 @@ export async function completeGoal(deps: SavingsGoalActionDeps, id: number): Pro
   deps.beginDirectSync?.(syncIds)
   if (pendingTransaction) deps.addPendingLedgerTransaction?.(pendingTransaction)
   try {
-    const result = await completeSavingsGoal(id)
+    const result = await completeSavingsGoal(id, accountId)
     if (pendingTransaction) {
       deps.replacePendingLedgerTransaction?.(pendingTransaction.id, result.transaction)
     }

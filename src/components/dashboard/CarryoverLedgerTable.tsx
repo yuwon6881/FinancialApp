@@ -50,7 +50,7 @@ export function CarryoverLedgerTable({
       {!isMobile && (
       <div className="overflow-x-auto">
         <div className="min-w-[800px] text-xs space-y-1">
-          <div className="grid grid-cols-[1.8fr_1fr_1.5fr_2fr_2fr_2fr] items-center gap-4 border-b border-border/50 text-muted-foreground font-semibold pb-2.5 px-4 mb-2">
+          <div className="grid grid-cols-[2.2fr_1fr_1.4fr_1.4fr_1.7fr_2.1fr] items-center gap-4 border-b border-border/50 text-muted-foreground font-semibold pb-2.5 px-4 mb-2">
             <div>Category</div><div>Plan Target</div><div className="text-right">Income Added</div>
             <div className="text-right">Carried Over</div><div className="text-right">Net Change</div>
             <div className="text-right">Remaining Balance</div>
@@ -59,10 +59,23 @@ export function CarryoverLedgerTable({
             const pending = pendingDeductionsByCategory[category.name] ?? 0
             const hasAccounts = Boolean(category.accounts?.length)
             return (
-              <div key={category.name} className="grid grid-cols-[1.8fr_1fr_1.5fr_2fr_2fr_2fr] items-center gap-4 py-3 px-4 rounded-xl border border-transparent hover:bg-muted/10 transition">
-                <div className="flex items-center gap-2 font-bold text-foreground">
-                  <span className={`size-2.5 rounded-full ${getCategoryDotClass(category.name)}`} />
-                  <span>{category.name}</span>
+              <div key={category.name} className="grid grid-cols-[2.2fr_1fr_1.4fr_1.4fr_1.7fr_2.1fr] items-center gap-4 py-3 px-4 rounded-xl border border-transparent hover:bg-muted/10 transition">
+                <div className="flex items-center gap-2 font-bold text-foreground min-w-0">
+                  <span className={`size-2.5 rounded-full shrink-0 ${getCategoryDotClass(category.name)}`} />
+                  <span className="truncate">{category.name}</span>
+                  {hasAccounts && (
+                    <Button
+                      variant="unstyled"
+                      type="button"
+                      onClick={() => setSelectedCategory(category)}
+                      className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-muted/20 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:border-primary/30 hover:bg-muted/40 hover:text-foreground transition cursor-pointer select-none shrink-0"
+                      title={`View ${category.accounts!.length} ${category.accounts!.length === 1 ? 'account' : 'accounts'} in ${category.name}`}
+                      aria-label={`View account breakdown for ${category.name}`}
+                    >
+                      <Wallet className="size-3 text-ledger-blue-400 shrink-0" aria-hidden="true" />
+                      <span>{category.accounts!.length} {category.accounts!.length === 1 ? 'account' : 'accounts'}</span>
+                    </Button>
+                  )}
                 </div>
                 <div className="text-muted-foreground font-medium">{(category.allocation * 100).toFixed(0)}%</div>
                 <div className="text-right font-medium text-foreground">{amount(category.incomeAllocated ?? category.target)}</div>
@@ -72,24 +85,11 @@ export function CarryoverLedgerTable({
                   {pending > 0 && <div className="text-[10px] text-yellow-500 font-normal flex items-center justify-end gap-1 mt-0.5"><Clock className="size-3" />Pending: -{amount(pending)}</div>}
                 </div>
                 <div className="flex items-center justify-end gap-2 text-right">
-                  <div className="flex min-w-[96px] flex-col items-end gap-0.5">
+                  <div className="flex min-w-[96px] flex-col items-end">
                     <div className={`font-bold ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
                       <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                     </div>
-                    {pending > 0 && <div className={`text-[10px] font-semibold ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</div>}
-                    {hasAccounts && (
-                      <Button
-                        variant="unstyled"
-                        type="button"
-                        onClick={() => setSelectedCategory(category)}
-                        className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-muted/20 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:border-primary/30 hover:bg-muted/40 hover:text-foreground transition cursor-pointer select-none"
-                        title={`View ${category.accounts!.length} ${category.accounts!.length === 1 ? 'account' : 'accounts'} in ${category.name}`}
-                        aria-label={`View account breakdown for ${category.name}`}
-                      >
-                        <Wallet className="size-3 text-ledger-blue-400 shrink-0" aria-hidden="true" />
-                        <span>{category.accounts!.length} {category.accounts!.length === 1 ? 'account' : 'accounts'}</span>
-                      </Button>
-                    )}
+                    {pending > 0 && <div className={`text-[10px] font-semibold mt-0.5 ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</div>}
                   </div>
                   {adjustButton(category)}
                 </div>
@@ -173,8 +173,8 @@ export function CarryoverLedgerTable({
           isOpen={Boolean(selectedCategory)}
           onClose={() => setSelectedCategory(null)}
           title={
-            <div className="flex items-center gap-2">
-              <span className={`size-2.5 rounded-full ${getCategoryDotClass(selectedCategory.name)}`} />
+            <div className="flex items-center gap-2.5">
+              <span className={`size-3 rounded-full ${getCategoryDotClass(selectedCategory.name)} shadow-xs`} />
               <span className="text-base font-bold text-foreground">{selectedCategory.name} Account Balances</span>
             </div>
           }
@@ -188,30 +188,41 @@ export function CarryoverLedgerTable({
           }
         >
           <div className="space-y-3 pt-2">
-            <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs">
-              <div className="flex items-center justify-between gap-2 border-b border-border/50 bg-muted/20 px-3.5 py-2.5 text-xs">
-                <span className="font-bold text-foreground">Account</span>
-                <span className="font-bold text-muted-foreground">Current balance</span>
+            <div className="overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-xs">
+              <div className="flex items-center justify-between gap-2 border-b border-border/50 bg-muted/35 px-4 py-2.5 text-xs">
+                <span className="font-semibold text-muted-foreground">Account</span>
+                <span className="font-semibold text-muted-foreground">Current balance</span>
               </div>
-              <div className="divide-y divide-border/40">
+              <div className="divide-y divide-border/30">
                 {selectedCategory.accounts?.map(account => (
-                  <div key={account.id} className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-xs">
-                    <div className="min-w-0 flex-1">
-                      <span className={`block truncate font-semibold ${account.isArchived ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                        {account.name}
-                      </span>
-                      {account.isArchived && <span className="mt-0.5 block text-[10px] text-muted-foreground">Closed account</span>}
+                  <div key={account.id} className="flex items-center justify-between gap-3 px-4 py-3 text-xs hover:bg-muted/15 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="grid size-7 shrink-0 place-items-center rounded-lg border border-border/50 bg-muted/50 text-muted-foreground">
+                        <Wallet className="size-3.5" aria-hidden="true" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className={`block truncate font-bold ${account.isArchived ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                          {account.name}
+                        </span>
+                        {account.isArchived && <span className="mt-0.5 block text-[10px] text-muted-foreground">Closed account</span>}
+                      </div>
                     </div>
-                    <SensitiveAmount value={account.remaining} isMasked={amountsMasked} formatFn={formatCurrency} className="shrink-0 font-bold text-foreground" />
+                    <SensitiveAmount
+                      value={account.remaining}
+                      isMasked={amountsMasked}
+                      formatFn={formatCurrency}
+                      className={`shrink-0 font-bold ${account.remaining < 0 ? 'text-orange-500 dark:text-orange-400' : 'text-foreground'}`}
+                    />
                   </div>
                 ))}
               </div>
-              <div className="flex items-center justify-between gap-2 border-t border-border/60 bg-muted/20 px-3.5 py-2.5 text-xs font-bold text-foreground">
-                <span>Total accounts balance</span>
+              <div className="flex items-center justify-between gap-2 border-t border-border/60 bg-muted/40 px-4 py-3 text-xs font-bold">
+                <span className="text-foreground">Total accounts balance</span>
                 <SensitiveAmount
                   value={selectedCategory.accounts?.reduce((sum, a) => sum + a.remaining, 0) ?? 0}
                   isMasked={amountsMasked}
                   formatFn={formatCurrency}
+                  className="shrink-0 text-sm font-bold text-foreground"
                 />
               </div>
             </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import type { RecurringPayment, RecurringFrequency, RecurringPaymentMode, TransactionCategory } from '../../types'
+import type { LedgerAccount, RecurringPayment, RecurringFrequency, RecurringPaymentMode, TransactionCategory } from '../../types'
 import { maskCurrencyInput } from '../../lib/utils'
 import { useSyncStatus } from '../../lib/useOptimisticList'
 import { useAutoOpenModal } from '../../lib/useAutoOpenModal'
@@ -30,6 +30,7 @@ function nextDate(date: string): string {
 
 export interface UseRecurringPaymentsViewOptions {
   payments: RecurringPayment[]
+  accounts: LedgerAccount[]
   categories: TransactionCategory[]
   hideSensitive: boolean
   sensitivePreferenceStatus?: SensitivePreferenceStatus
@@ -50,6 +51,7 @@ export interface UseRecurringPaymentsViewOptions {
 export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOptions) {
   const {
     payments,
+    accounts,
     categories,
     hideSensitive,
     sensitivePreferenceStatus,
@@ -84,6 +86,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
   const [startDateInput, setStartDateInput] = useState('')
   const [endDateInput, setEndDateInput] = useState('')
   const [paymentMode, setPaymentMode] = useState<RecurringPaymentModeSelection>('')
+  const [accountId, setAccountId] = useState('')
 
   const firstInputRef = React.useRef<HTMLInputElement>(null)
 
@@ -137,6 +140,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     setStartDateInput('')
     setEndDateInput('')
     setPaymentMode('')
+    setAccountId('')
     applyAiRecurringFields(aiDraft.fields)
     setShowAddForm(true)
     onAiDraftConsumed?.()
@@ -154,6 +158,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     setStartDateInput('')
     setEndDateInput('')
     setPaymentMode('')
+    setAccountId('')
     setErrors({})
   }, [hideSensitive, sensitivePreferenceStatus, categories])
 
@@ -176,6 +181,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     setStartDateInput(payment.startDate)
     setEndDateInput(payment.endDate || '')
     setPaymentMode(payment.paymentMode)
+    setAccountId(payment.accountId)
     setEditingPayment(payment)
     applyAiRecurringFields(aiEditDraft.changes)
     setShowAddForm(true)
@@ -278,6 +284,10 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     if (!paymentMode) {
       newErrors.paymentMode = 'Choose whether this bill is auto deducted or paid manually.'
     }
+    const matchingAccounts = accounts.filter(account => account.bucket === ledgerCategory && !account.isArchived)
+    if (!accountId || !matchingAccounts.some(account => account.id === accountId)) {
+      newErrors.accountId = 'Choose the account this bill is paid from.'
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
@@ -313,7 +323,8 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
       startDate: startDateInput,
       endDate: endDateInput || undefined,
       // Narrowed by the validation above: an empty selection never reaches here.
-      paymentMode
+      paymentMode,
+      accountId,
     }
 
     if (editingPayment) {
@@ -338,6 +349,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     setFrequency('Monthly')
     setCategory(categories.length > 0 ? categories[0].name : '')
     setPaymentMode('')
+    setAccountId('')
     setEditingPayment(null)
     setShowAddForm(false)
     setErrors({})
@@ -352,6 +364,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     setFrequency('Monthly')
     setCategory(categories.length > 0 ? categories[0].name : '')
     setPaymentMode('')
+    setAccountId('')
     setEditingPayment(null)
     setShowAddForm(false)
     setErrors({})
@@ -378,6 +391,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     setStartDateInput(rp.startDate)
     setEndDateInput(rp.endDate || '')
     setPaymentMode(rp.paymentMode)
+    setAccountId(rp.accountId)
     setEditingPayment(rp)
     setShowAddForm(true)
   }
@@ -402,6 +416,13 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     if (errors.paymentMode) {
       setErrors(prev => ({ ...prev, paymentMode: '' }))
     }
+  }
+
+  const handleLedgerCategoryChange = (value: RecurringLedgerCategory) => {
+    setLedgerCategory(value)
+    const matching = accounts.filter(account => account.bucket === value && !account.isArchived)
+    setAccountId(matching.length === 1 ? matching[0].id : '')
+    if (errors.accountId) setErrors(previous => ({ ...previous, accountId: '' }))
   }
 
   const handleStartDateChange = (value: string) => {
@@ -433,6 +454,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     amount,
     category,
     ledgerCategory,
+    accountId,
     frequency,
     startDateInput,
     endDateInput,
@@ -448,7 +470,8 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     handleStartDateChange,
     handlePaymentModeChange,
     setCategory,
-    setLedgerCategory,
+    setLedgerCategory: handleLedgerCategoryChange,
+    setAccountId,
     setFrequency,
     setEndDateInput,
     // filter & sort

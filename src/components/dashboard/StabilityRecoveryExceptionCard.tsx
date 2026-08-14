@@ -90,95 +90,95 @@ export function StabilityRecoveryExceptionCard({
                 ? <>This is the final planned cycle; {formatSensitive(recovery.outstandingShortfall)} remains overall.</>
                 : <>{formatSensitive(recovery.outstandingShortfall)} remains overall across {recovery.cyclesRemaining} cycles.</>}
           </p>
-
-          <div className="mt-3 space-y-1.5">
-            <div className="grid gap-0.5 text-xs sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-2 sm:gap-y-1">
-              <span className="font-semibold text-muted-foreground">Putting it back progress</span>
-              <span className="font-semibold text-foreground tabular-nums sm:text-right">
-                <span className="font-extrabold text-amber-600 dark:text-amber-400">{percentRepaid}%</span> of {formatSensitive(recovery.markedTotal)} put back
-              </span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-amber-500/20">
-              <div
-                className="h-full rounded-full bg-amber-500 transition-all duration-300"
-                style={{ width: `${Math.min(100, Math.max(0, percentRepaid))}%` }}
-              />
-            </div>
-          </div>
-
-          {/* The breakdown names the ledger obligation and its repayments. Keep it behind a
-              disclosure because a healthy reader never needs it, and this panel already competes
-              with two other exception cards for the top of the page. */}
-          <details className="group mt-3">
-            <summary className="flex cursor-pointer list-none items-center gap-1 text-[11px] font-bold text-amber-700 transition hover:underline dark:text-amber-300">
-              <ChevronRight className="size-3 transition-transform group-open:rotate-90" aria-hidden="true" />
-              Where this figure comes from
-            </summary>
-            <div className="mt-2 space-y-2 rounded-xl border border-amber-500/20 bg-card/60 p-3">
-              <dl className="space-y-1.5 text-[11px] sm:text-xs">
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
-                  <dt className="min-w-0 leading-snug text-muted-foreground">You marked as needing to go back</dt>
-                  <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.markedTotal)}</dd>
-                </div>
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
-                  <dt className="min-w-0 leading-snug text-muted-foreground">Put back so far</dt>
-                  <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.repaidTotal)}</dd>
-                </div>
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
-                  <dt className="min-w-0 leading-snug text-muted-foreground">In it now</dt>
-                  <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.currentBalance)}</dd>
-                </div>
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 border-t border-border/40 pt-1.5">
-                  <dt className="font-semibold text-foreground">Still short</dt>
-                  <dd className="text-right font-extrabold tabular-nums text-amber-600 dark:text-amber-400">
-                    {formatSensitive(recovery.outstandingShortfall)}
-                  </dd>
-                </div>
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
-                  <dt className="min-w-0 leading-snug text-muted-foreground">
-                    <span className="sm:hidden">Back this cycle ({recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'})</span>
-                    <span className="hidden sm:inline">
-                      Spread over {recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'}, already back this cycle
-                    </span>
-                  </dt>
-                  <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.toppedUpThisCycle)}</dd>
-                </div>
-              </dl>
-
-              {canShowMovements ? (
-                <>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    type="button"
-                    className="w-full justify-center"
-                    onClick={() => onNavigateToLedger?.({
-                      category: 'Stability',
-                      startDate: recovery.recoveryFromDate,
-                      endDate: new Date().toLocaleDateString('en-CA'),
-                      showAllCycles: true,
-                      range: 'yearly',
-                    })}
-                  >
-                    See every movement since then
-                  </Button>
-                  {/* Said plainly rather than left to be discovered: the ledger totals it lands on
-                      are per page, and the window can run to more rows than one page holds. */}
-                  <p className="text-[10px] leading-snug text-muted-foreground">
-                    Opens your ledger on emergency-fund movements from when your fund was last full.
-                    A long window may span more than one page.
-                  </p>
-                </>
-              ) : (
-                <p className="text-[10px] leading-relaxed text-muted-foreground">
-                  Your fund has not yet closed a cycle at its highest point, so there is no window of
-                  movements to list.
-                </p>
-              )}
-            </div>
-          </details>
         </div>
       </div>
+
+      <div className="mt-3 space-y-1.5">
+        <div className="grid gap-0.5 text-xs sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-2 sm:gap-y-1">
+          <span className="font-semibold text-muted-foreground">Putting it back progress</span>
+          <span className="font-semibold text-foreground tabular-nums sm:text-right">
+            <span className="font-extrabold text-amber-600 dark:text-amber-400">{percentRepaid}%</span> of {formatSensitive(recovery.markedTotal)} put back
+          </span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-amber-500/20">
+          <div
+            className="h-full rounded-full bg-amber-500 transition-all duration-300"
+            style={{ width: `${Math.min(100, Math.max(0, percentRepaid))}%` }}
+          />
+        </div>
+      </div>
+
+      {/* The breakdown names the ledger obligation and its repayments. Keep it behind a
+          disclosure because a healthy reader never needs it, and this panel already competes
+          with two other exception cards for the top of the page. */}
+      <details className="group mt-3">
+        <summary className="flex cursor-pointer list-none items-center gap-1 text-[11px] font-bold text-amber-700 transition hover:underline dark:text-amber-300">
+          <ChevronRight className="size-3 transition-transform group-open:rotate-90" aria-hidden="true" />
+          Where this figure comes from
+        </summary>
+        <div className="mt-2 space-y-2 rounded-xl border border-amber-500/20 bg-card/60 p-3">
+          <dl className="space-y-1.5 text-[11px] sm:text-xs">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
+              <dt className="min-w-0 leading-snug text-muted-foreground">You marked as needing to go back</dt>
+              <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.markedTotal)}</dd>
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
+              <dt className="min-w-0 leading-snug text-muted-foreground">Put back so far</dt>
+              <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.repaidTotal)}</dd>
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
+              <dt className="min-w-0 leading-snug text-muted-foreground">In it now</dt>
+              <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.currentBalance)}</dd>
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 border-t border-border/40 pt-1.5">
+              <dt className="font-semibold text-foreground">Still short</dt>
+              <dd className="text-right font-extrabold tabular-nums text-amber-600 dark:text-amber-400">
+                {formatSensitive(recovery.outstandingShortfall)}
+              </dd>
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
+              <dt className="min-w-0 leading-snug text-muted-foreground">
+                <span className="sm:hidden">Back this cycle ({recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'})</span>
+                <span className="hidden sm:inline">
+                  Spread over {recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'}, already back this cycle
+                </span>
+              </dt>
+              <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.toppedUpThisCycle)}</dd>
+            </div>
+          </dl>
+
+          {canShowMovements ? (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                className="w-full justify-center"
+                onClick={() => onNavigateToLedger?.({
+                  category: 'Stability',
+                  startDate: recovery.recoveryFromDate,
+                  endDate: new Date().toLocaleDateString('en-CA'),
+                  showAllCycles: true,
+                  range: 'yearly',
+                })}
+              >
+                See every movement since then
+              </Button>
+              {/* Said plainly rather than left to be discovered: the ledger totals it lands on
+                  are per page, and the window can run to more rows than one page holds. */}
+              <p className="text-[10px] leading-snug text-muted-foreground">
+                Opens your ledger on emergency-fund movements from when your fund was last full.
+                A long window may span more than one page.
+              </p>
+            </>
+          ) : (
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Your fund has not yet closed a cycle at its highest point, so there is no window of
+              movements to list.
+            </p>
+          )}
+        </div>
+      </details>
     </m.section>
   )
 }

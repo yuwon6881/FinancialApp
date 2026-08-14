@@ -68,9 +68,9 @@ export function mapFormToTransaction(
     stabilityReloadIntent: isStabilityReloadFormDrawdown(state)
       ? state.stabilityReloadIntent
       : undefined,
-    accountId: isIncome
-      ? (state.splitAccountIds.Essentials || undefined)
-      : (state.accountId || undefined),
+    // The income parent is a bucket-level source record. Its generated children carry the
+    // four explicit receiving-account placements instead.
+    accountId: isIncome ? undefined : (state.accountId || undefined),
     counterAccountId: state.transactionType === 'transfer' || state.ledgerCategory === 'AccountMove'
       ? state.counterAccountId || undefined
       : undefined,

@@ -10,6 +10,7 @@ const draft: Transaction = {
   date: '2026-07-13',
   category: 'Transport',
   ledgerCategory: 'Essentials',
+  accountId: 'acct-essentials',
   stabilityReloadIntent: 'NotRequired',
   isPendingSync: true,
 }

@@ -131,7 +131,6 @@ export function AccountsSection({
         name: input.name,
         kind: input.kind,
         target: openingAmount,
-        isDefault: input.isDefault,
         interestEnabled: input.interestEnabled,
         interestRatePercent: input.interestRatePercent,
         interestFrequency: input.interestFrequency,
@@ -153,7 +152,7 @@ export function AccountsSection({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-base font-bold text-foreground">Accounts</h3>
-                <span className="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Optional</span>
+                 <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent-ink">Required coverage</span>
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Connect where your money lives to the four budget buckets.
@@ -196,7 +195,7 @@ export function AccountsSection({
                 type="button"
                 variant={bucket.count > 0 ? 'outline' : 'secondary'}
                 size="sm"
-                className="mt-3 w-full justify-center"
+                className="mt-3 min-h-11 w-full justify-center"
                 onClick={() => openSetup(bucket.name)}
                 disabled={disabled || hideSensitive}
               >
@@ -262,7 +261,6 @@ export function AccountsSection({
                       <p className={`truncate font-semibold ${item.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
                         {item.name}
                       </p>
-                      {item.isDefault && <span className="rounded-full border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-accent-ink">Default</span>}
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
                       <span className={`rounded-md border px-1.5 py-0.5 font-semibold ${bucketClass}`}>{item.bucket}</span>
@@ -308,9 +306,7 @@ export function AccountsSection({
       <AccountFormSheet
         isOpen={isFormOpen}
         account={editingAccount}
-        existingAccounts={rows}
         currency={currency}
-        defaultIsDefault={editingAccount?.isDefault ?? false}
         onClose={closeForm}
         onSave={handleFormSave}
       />

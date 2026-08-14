@@ -21,7 +21,6 @@ export interface LedgerAccountInput {
   kind: LedgerAccount['kind']
   openingAmount?: number
   isArchived?: boolean
-  isDefault?: boolean
   interestEnabled?: boolean
   interestRatePercent?: number
   interestFrequency?: LedgerAccountInterestFrequency
@@ -41,14 +40,12 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
     if (!guardSensitive()) return
     const id = value.id ?? createFinalId('ledgerAccount')
     const openingAmount = Number.isFinite(value.openingAmount) ? Math.round((value.openingAmount ?? 0) * 100) / 100 : 0
-    const hasDefault = accounts.some(account => account.bucket === value.bucket && account.isDefault && !account.isArchived)
     const payload: OutboxPayload = {
       id,
       name: value.name.trim(),
       bucket: value.bucket,
       kind: value.kind,
       isArchived: false,
-      isDefault: value.isDefault === true || (value.isDefault !== false && !hasDefault),
       openingAmount,
       remaining: openingAmount,
       interestEnabled: value.interestEnabled === true,
@@ -78,12 +75,6 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
       }
     }
     snapshotForUndo('ledgerAccount', id, previous)
-    const hasOtherDefault = accounts.some(account =>
-      account.id !== id
-      && account.bucket === value.bucket
-      && account.isDefault
-      && !account.isArchived,
-    )
     const isArchived = value.isArchived ?? false
     const interestEnabled = value.interestEnabled ?? previous?.interestEnabled ?? false
     const interestRatePercent = interestEnabled
@@ -93,7 +84,6 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
       ...value,
       name: value.name.trim(),
       isArchived,
-      isDefault: !isArchived && (value.isDefault === true || !hasOtherDefault),
       interestEnabled,
       interestRatePercent,
       interestFrequency: value.interestFrequency ?? previous?.interestFrequency ?? 'Monthly',
@@ -133,14 +123,12 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
             expectedCurrent: account.remaining,
             target: account.remaining,
             isArchived: account.isArchived,
-            isDefault: account.isDefault,
           }
         : {
             ...target,
             expectedCurrent: target.target,
             target: 0,
             isArchived: true,
-            isDefault: false,
           }
     })
     mutateQueue(queue => enqueue(queue, 'ledgerAccountReconcile', 'add', input.operationId, {

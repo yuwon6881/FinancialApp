@@ -287,7 +287,6 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.queryByText('$3,210.55')).toBeNull()
     expect(screen.getAllByText(SENSITIVE_AMOUNT_MASK).length).toBeGreaterThan(2)
   })
-
   it('toggles device-only balance visibility', () => {
     const props = makeProps({ hideBalanceAmounts: true })
     render(<DashboardView {...props} />)
@@ -298,5 +297,44 @@ describe('DashboardView focused Today experience', () => {
   it('renders a skeleton while switching cycles', () => {
     render(<DashboardView {...makeProps({ isSwitchingCycle: true })} />)
     expect(screen.queryByText('Today')).toBeNull()
+  })
+
+  it('renders recurring account shortfall exception card when shortfalls exist', () => {
+    const onNavigateToTransfer = vi.fn()
+    const onNavigateToRecurring = vi.fn()
+    const customData: DashboardData = {
+      ...dashboardData,
+      recurringAccountShortfalls: [
+        {
+          recurringPaymentId: 'rec-rent',
+          name: 'House Rent',
+          amount: 1500,
+          dueDate: '2026-07-29',
+          dueDay: 29,
+          offsetDays: 1,
+          accountId: 'acc-main',
+          accountName: 'Main Checking',
+          accountBalance: 400,
+          shortfall: 1100,
+        },
+      ],
+    }
+
+    render(
+      <DashboardView
+        {...makeProps({
+          dashboardData: customData,
+          onNavigateToTransfer,
+          onNavigateToRecurring,
+        })}
+      />
+    )
+
+    expect(screen.getByText('House Rent auto-deduct shortfall')).toBeTruthy()
+    expect(screen.getByText('Due tomorrow')).toBeTruthy()
+
+    const transferBtn = screen.getByRole('button', { name: /Transfer money/i })
+    fireEvent.click(transferBtn)
+    expect(onNavigateToTransfer).toHaveBeenCalledTimes(1)
   })
 })

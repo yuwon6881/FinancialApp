@@ -12,7 +12,6 @@ export interface BucketSetupPrefill {
   name: string
   kind: LedgerAccountKind
   target: number
-  isDefault?: boolean
   interestEnabled?: boolean
   interestRatePercent?: number
   interestFrequency?: LedgerAccountInterestFrequency
@@ -23,7 +22,6 @@ export interface BucketSetupDraftAccount {
   name: string
   kind: LedgerAccountKind
   target: string
-  isDefault: boolean
   interestEnabled: boolean
   interestRatePercent: number
   interestFrequency: LedgerAccountInterestFrequency
@@ -32,6 +30,7 @@ export interface BucketSetupDraftAccount {
 export interface BucketSetupPendingReview {
   preview: BucketAccountReconciliation
   drafts: BucketSetupDraftAccount[]
+  adjustmentAccountId: string | null
 }
 
 export interface BucketSetupAccountSnapshot {
@@ -39,7 +38,6 @@ export interface BucketSetupAccountSnapshot {
   name: string
   kind: LedgerAccountKind
   isArchived: boolean
-  isDefault: boolean
   remaining: number
 }
 
@@ -58,7 +56,6 @@ export function hasBucketAccountSetupChanged(
   if (!snapshot) return false
   if (Math.abs(roundMoney(snapshot.bucketTotal) - roundMoney(bucketTotal)) >= ACCOUNT_RECONCILIATION_EPSILON) return true
   if (snapshot.accounts.length !== accounts.length) return true
-
   const currentById = new Map(accounts.map(account => [account.id, account]))
   return snapshot.accounts.some(account => {
     const current = currentById.get(account.id)
@@ -66,7 +63,6 @@ export function hasBucketAccountSetupChanged(
       || current.name !== account.name
       || current.kind !== account.kind
       || current.isArchived !== account.isArchived
-      || current.isDefault !== account.isDefault
       || Math.abs(roundMoney(current.remaining) - roundMoney(account.remaining)) >= ACCOUNT_RECONCILIATION_EPSILON
   })
 }
@@ -95,12 +91,11 @@ const parseAmount = (value: string) => {
   return Number.isFinite(parsed) ? parsed : Number.NaN
 }
 
-const createDraft = (prefill?: BucketSetupPrefill, isDefault = false): BucketSetupDraftAccount => ({
+const createDraft = (prefill?: BucketSetupPrefill): BucketSetupDraftAccount => ({
   id: createFinalId('ledgerAccount'),
   name: prefill?.name ?? '',
   kind: prefill?.kind ?? 'Bank',
   target: prefill ? (Math.round(prefill.target * 100) / 100).toFixed(2) : '0.00',
-  isDefault: prefill?.isDefault === true || isDefault,
   interestEnabled: prefill?.interestEnabled === true,
   interestRatePercent: prefill?.interestEnabled === true ? prefill.interestRatePercent ?? 0 : 0,
   interestFrequency: prefill?.interestFrequency ?? 'Monthly',
@@ -117,9 +112,9 @@ export function useBucketAccountSetupView({
     () => bucket ? accounts.filter(account => account.bucket === bucket) : [],
     [accounts, bucket],
   )
-  const hasLiveDefault = bucketAccounts.some(account => !account.isArchived && account.isDefault)
   const [targetInputs, setTargetInputs] = useState<Record<string, string>>({})
   const [drafts, setDrafts] = useState<BucketSetupDraftAccount[]>([])
+  const [adjustmentAccountId, setAdjustmentAccountId] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [pending, setPending] = useState<BucketSetupPendingReview | null>(null)
   const initializationKeyRef = useRef<string | null>(null)
@@ -132,8 +127,6 @@ export function useBucketAccountSetupView({
       sessionSnapshotRef.current = null
       return
     }
-    // Account balances can change while the confirmation is being applied. Only
-    // reset the editor when a new setup session starts, not on every optimistic row update.
     if (initializationKeyRef.current === initializationKey) return
     initializationKeyRef.current = initializationKey
     sessionSnapshotRef.current = {
@@ -143,32 +136,18 @@ export function useBucketAccountSetupView({
         name: account.name,
         kind: account.kind,
         isArchived: account.isArchived,
-        isDefault: account.isDefault,
         remaining: roundMoney(account.remaining),
       })),
     }
-    const nextTargets = Object.fromEntries(bucketAccounts.map(account => [account.id, account.remaining.toFixed(2)]))
-    const shouldCreateDefault = !hasLiveDefault && !initialDraft
-    let nextDrafts = initialDraft
-      ? [createDraft({ ...initialDraft, isDefault: initialDraft.isDefault === true && !hasLiveDefault })]
-      : shouldCreateDefault
-        ? [createDraft(undefined, true)]
-        : []
-    if (shouldCreateDefault) {
-      const unassignedBalance = Math.round((bucketTotal - bucketAccounts.reduce((sum, account) => sum + account.remaining, 0)) * 100) / 100
-      nextDrafts = nextDrafts.map(draft => ({ ...draft, target: unassignedBalance.toFixed(2) }))
-    }
-    setTargetInputs(nextTargets)
-    setDrafts(nextDrafts)
+    setTargetInputs(Object.fromEntries(bucketAccounts.map(account => [account.id, account.remaining.toFixed(2)])))
+    setDrafts(initialDraft ? [createDraft(initialDraft)] : [])
+    setAdjustmentAccountId(null)
     setErrors({})
     setPending(null)
-  }, [bucket, bucketAccounts, bucketTotal, hasLiveDefault, initialDraft, initializationKey])
+  }, [bucket, bucketAccounts, bucketTotal, initialDraft, initializationKey])
 
   const updateTarget = (id: string, rawValue: string) => {
-    setTargetInputs(previous => ({
-      ...previous,
-      [id]: maskCurrencyInput(rawValue, previous[id] ?? ''),
-    }))
+    setTargetInputs(previous => ({ ...previous, [id]: maskCurrencyInput(rawValue, previous[id] ?? '') }))
     setErrors(previous => ({ ...previous, [id]: '' }))
   }
 
@@ -184,29 +163,11 @@ export function useBucketAccountSetupView({
     setErrors(previous => ({ ...previous, [id]: '' }))
   }
 
-  const updateDraftDefault = (id: string, checked: boolean) => {
-    setDrafts(previous => previous.map(draft => ({
-      ...draft,
-      isDefault: checked ? draft.id === id : draft.id === id ? false : draft.isDefault,
-    })))
-    setErrors(previous => ({ ...previous, form: '' }))
-  }
-
-  const addDraft = () => {
-    setDrafts(previous => [
-      ...previous,
-      createDraft(undefined, !hasLiveDefault && !previous.some(draft => draft.isDefault)),
-    ])
-  }
+  const addDraft = () => setDrafts(previous => [...previous, createDraft()])
 
   const removeDraft = (id: string) => {
-    setDrafts(previous => {
-      const next = previous.filter(draft => draft.id !== id)
-      if (!hasLiveDefault && next.length > 0 && !next.some(draft => draft.isDefault)) {
-        next[0] = { ...next[0], isDefault: true }
-      }
-      return next
-    })
+    setDrafts(previous => previous.filter(draft => draft.id !== id))
+    if (adjustmentAccountId === id) setAdjustmentAccountId(null)
     setErrors(previous => ({ ...previous, [id]: '', form: '' }))
   }
 
@@ -215,9 +176,11 @@ export function useBucketAccountSetupView({
     target: account.isArchived ? account.remaining : parseAmount(targetInputs[account.id] ?? ''),
   })), [bucketAccounts, targetInputs])
   const parsedDraftTargets = useMemo(() => drafts.map(draft => ({ ...draft, targetValue: parseAmount(draft.target) })), [drafts])
-  const hasInvalidTarget = useMemo(() => parsedExistingTargets.some(account => !account.isArchived && Number.isNaN(account.target))
-    || parsedDraftTargets.some(draft => Number.isNaN(draft.targetValue)), [parsedDraftTargets, parsedExistingTargets])
-
+  const hasInvalidTarget = useMemo(
+    () => parsedExistingTargets.some(account => !account.isArchived && Number.isNaN(account.target))
+      || parsedDraftTargets.some(draft => Number.isNaN(draft.targetValue)),
+    [parsedDraftTargets, parsedExistingTargets],
+  )
   const preview = useMemo<BucketAccountReconciliation | null>(() => {
     if (!bucket || hasInvalidTarget) return null
     return calculateBucketAccountReconciliation({
@@ -234,22 +197,31 @@ export function useBucketAccountSetupView({
         id: draft.id,
         name: draft.name.trim(),
         target: draft.targetValue,
-        isDefault: draft.isDefault,
       })),
-      hasLiveDefault,
     })
-  }, [bucket, bucketTotal, hasInvalidTarget, hasLiveDefault, parsedDraftTargets, parsedExistingTargets])
+  }, [bucket, bucketTotal, hasInvalidTarget, parsedDraftTargets, parsedExistingTargets])
 
-  // Keep Review clickable for an inconsistent starting snapshot. The review action owns the
-  // actionable stale-session message; disabling the only forward action leaves the user stranded
-  // with unexplained totals. Initial bucket/account mismatches are valid review inputs because the
-  // preview can create the adjustment that brings them back into line.
+  const adjustmentOptions = useMemo(() => [
+    ...bucketAccounts.filter(account => !account.isArchived).map(account => ({ value: account.id, label: account.name })),
+    ...drafts.filter(draft => draft.name.trim()).map(draft => ({ value: draft.id, label: `${draft.name.trim()} (new)` })),
+  ], [bucketAccounts, drafts])
+
+  useEffect(() => {
+    if (!preview || Math.abs(preview.bucketDifference) < ACCOUNT_RECONCILIATION_EPSILON) {
+      setAdjustmentAccountId(null)
+      return
+    }
+    const validIds = new Set(adjustmentOptions.map(option => option.value))
+    if (adjustmentAccountId && validIds.has(adjustmentAccountId)) return
+    setAdjustmentAccountId(adjustmentOptions.length === 1 ? adjustmentOptions[0].value : null)
+  }, [adjustmentAccountId, adjustmentOptions, preview])
+
   const canReview = canReviewBucketAccountSetup(preview, drafts.length)
 
   const prepareReview = () => {
-    if (!bucket) return
-    const hasExternalChanges = hasBucketAccountSetupChanged(sessionSnapshotRef.current, bucketTotal, bucketAccounts)
+    if (!bucket || !preview) return
     const nextErrors: Record<string, string> = {}
+    const hasExternalChanges = hasBucketAccountSetupChanged(sessionSnapshotRef.current, bucketTotal, bucketAccounts)
     const names = new Set(bucketAccounts.map(account => account.name.trim().toLowerCase()))
     for (const draft of drafts) {
       const name = draft.name.trim()
@@ -268,10 +240,10 @@ export function useBucketAccountSetupView({
     if (!bucketAccounts.some(account => !account.isArchived) && drafts.length === 0) {
       nextErrors.form = 'Add at least one open account to this bucket.'
     }
-    if (!hasLiveDefault && !drafts.some(draft => draft.isDefault)) {
-      nextErrors.form = 'Choose one new account as the default for this bucket.'
+    if (Math.abs(preview.bucketDifference) >= ACCOUNT_RECONCILIATION_EPSILON
+        && (!adjustmentAccountId || !adjustmentOptions.some(option => option.value === adjustmentAccountId))) {
+      nextErrors.form = 'Choose the open account that should receive the bucket-total correction.'
     }
-    if (!preview) nextErrors.form = nextErrors.form ?? 'Enter a valid balance for every open account.'
     if (preview && !preview.hasChanges && drafts.length === 0) {
       nextErrors.form = 'Change an account balance or add a new account before reviewing.'
     }
@@ -279,30 +251,20 @@ export function useBucketAccountSetupView({
       nextErrors.form = 'The bucket or account balances changed while this form was open. Close and reopen the setup before reviewing.'
     }
     setErrors(nextErrors)
-    if (Object.keys(nextErrors).length > 0 || !preview) return
+    if (Object.keys(nextErrors).length > 0) return
     setPending({
       preview,
       drafts: drafts.map(draft => ({ ...draft, name: draft.name.trim() })),
+      adjustmentAccountId,
     })
   }
 
-  // A new row may take over as the bucket's default even when one already exists, and the sheet
-  // says so before it happens. Without this the only way to move the default off the account the
-  // account-tracking migration created was to add a row, save, then delete that account from the
-  // list -- a three-step detour through a screen that refuses to remove a bucket's last open
-  // account. The old default keeps its balance and history; only the marker moves.
-  const liveDefaultAccount = bucketAccounts.find(account => !account.isArchived && account.isDefault) ?? null
-  const promotedDraft = drafts.find(draft => draft.isDefault) ?? null
-  const defaultMovesFrom = liveDefaultAccount && promotedDraft ? liveDefaultAccount : null
-
   return {
     bucketAccounts,
-    hasLiveDefault,
-    liveDefaultAccount,
-    promotedDraftId: promotedDraft?.id ?? null,
-    defaultMovesFrom,
     targetInputs,
     drafts,
+    adjustmentAccountId,
+    adjustmentOptions,
     errors,
     preview,
     pending,
@@ -310,7 +272,7 @@ export function useBucketAccountSetupView({
     updateTarget,
     updateDraft,
     updateDraftTarget,
-    updateDraftDefault,
+    setAdjustmentAccountId,
     addDraft,
     removeDraft,
     prepareReview,

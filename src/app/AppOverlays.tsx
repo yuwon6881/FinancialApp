@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react'
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
 import { CreditCard, Sparkles, Wallet } from 'lucide-react'
 import { RewardIcon } from '../components/semanticIcons'
@@ -16,6 +16,7 @@ import type { useFinancialData } from './useFinancialData'
 
 const PendingSubscriptionsModal = lazy(() => import('../components/PendingSubscriptionsModal').then(module => ({ default: module.PendingSubscriptionsModal })))
 const FailedSyncModal = lazy(() => import('../components/FailedSyncModal').then(module => ({ default: module.FailedSyncModal })))
+const AccountPlacementReviewSheet = lazy(() => import('../components/AccountPlacementReviewSheet').then(module => ({ default: module.AccountPlacementReviewSheet })))
 const PasswordPromptModal = lazy(() => import('../components/PasswordPromptModal').then(module => ({ default: module.PasswordPromptModal })))
 const LockScreen = lazy(() => import('../components/LockScreen').then(module => ({ default: module.LockScreen })))
 const CycleSummaryModal = lazy(() => import('../components/CycleSummaryModal').then(module => ({ default: module.CycleSummaryModal })))
@@ -74,6 +75,7 @@ export function AppOverlays({
 }: AppOverlaysProps) {
   const reduceMotion = useReducedMotion()
   const fabActionsRef = useRef<HTMLDivElement>(null)
+  const [isAccountReviewOpen, setIsAccountReviewOpen] = useState(false)
   const showMobileFab = shouldShowMobileFab(prefs.activeTab)
 
   useEffect(() => {
@@ -159,6 +161,22 @@ export function AppOverlays({
         onClose={() => dialogs.setShowFailedOpsModal(false)}
         onDiscard={financial.discardFailedOp}
         onDiscardAll={financial.discardAllFailedOps}
+        onOpenAccountReview={() => {
+          dialogs.setShowFailedOpsModal(false)
+          setIsAccountReviewOpen(true)
+        }}
+      />
+
+      <AccountPlacementReviewSheet
+        isOpen={isAccountReviewOpen}
+        failedOps={financial.failedOps}
+        accounts={financial.allAccounts}
+        recurringPayments={financial.allRecurringPayments}
+        onClose={() => setIsAccountReviewOpen(false)}
+        onResolve={(operation, selections) => {
+          financial.resolveAccountPlacementOps(operation, selections)
+          setIsAccountReviewOpen(false)
+        }}
       />
 
       <PasswordPromptModal

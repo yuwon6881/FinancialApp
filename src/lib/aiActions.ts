@@ -11,7 +11,7 @@ import type { AiUiAction } from './api/ai'
 import { fetchTransactionById } from './api/transactions'
 import { capitalizeWords } from './utils'
 import { dispatchAiRecurringSettingAction } from './aiRecurringActions'
-import type { PendingNotification, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { LedgerAccount, PendingNotification, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
 import type {
   AiActionRouterPatch,
   UseAiActionRouterOptions,
@@ -97,6 +97,7 @@ export function dispatchAiActionsForApp(
     handleNavigateToLedger: options.handleNavigateToLedger,
     nextNonce,
     transactionCategories: options.allCategories,
+    ledgerAccounts: options.allLedgerAccounts,
     stageAiLedgerDrafts: options.handleStageDraftTransactions,
     setAiRecurringDraft: value => dispatch({ aiRecurringDraft: value }),
     setAiWishlistDraft: value => dispatch({ aiWishlistDraft: value }),
@@ -164,6 +165,8 @@ export interface AiActionsDeps {
   }) => void
   nextNonce: () => number
   transactionCategories: TransactionCategory[]
+  /** Drafted rows preselect a bucket's sole open account; see `buildAiLedgerDraftTransactions`. */
+  ledgerAccounts: LedgerAccount[]
   stageAiLedgerDrafts: (drafts: Omit<Transaction, 'id'>[]) => void
   setAiRecurringDraft: (v: NonceDraft) => void
   setAiWishlistDraft: (v: NonceDraft) => void
@@ -240,7 +243,11 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
     }
     const { buildAiLedgerDraftTransactions } = await import('./aiLedgerDrafts')
     const drafts = selectedActions.flatMap(action =>
-      buildAiLedgerDraftTransactions((action.payload || {}) as Record<string, unknown>, deps.transactionCategories)
+      buildAiLedgerDraftTransactions(
+        (action.payload || {}) as Record<string, unknown>,
+        deps.transactionCategories,
+        deps.ledgerAccounts,
+      )
     )
     if (drafts.length === 0) {
       deps.showToast('No valid ledger transactions were found in the AI response.', 'Drafts not created', 'warning')
@@ -326,7 +333,7 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
       }
     } else if (action.type === 'openAddLedgerDraft') {
       const { buildAiLedgerDraftTransactions } = await import('./aiLedgerDrafts')
-      const drafts = buildAiLedgerDraftTransactions(payload, deps.transactionCategories)
+      const drafts = buildAiLedgerDraftTransactions(payload, deps.transactionCategories, deps.ledgerAccounts)
       if (drafts.length === 0) {
         deps.showToast('No valid ledger transactions were found in the AI response.', 'Drafts not created', 'warning')
         continue

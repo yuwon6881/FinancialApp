@@ -227,6 +227,12 @@ export function AuthenticatedView({
                       isSwitchingCycle={isCurrentCycleLoading || !todayDashboardData}
                       investmentAllocation={investmentAllocation}
                       onNavigateToCategoryLimits={category => nav.handleNavigateToReportSection('category-limits', category)}
+                      onNavigateToTransfer={() => {
+                        prefs.setActiveTab('ledger')
+                        nav.setAutoOpenLedgerAdd(true)
+                        nav.setAutoOpenLedgerTxType('transfer')
+                      }}
+                      onNavigateToRecurring={nav.handleNavigateToRecurring}
                     />
                   )}
 
@@ -348,6 +354,7 @@ export function AuthenticatedView({
                   {prefs.activeTab === 'recurring' && (
                     <RecurringPaymentsView 
                       payments={financial.allRecurringPayments}
+                      accounts={financial.allAccounts}
                       activeRecurringPayments={financial.optimisticDashboardData?.activeRecurringPayments || []}
                       transactions={financial.allTransactions}
                       selectedMonth={nav.selectedMonth}
@@ -469,6 +476,7 @@ export function AuthenticatedView({
                     <CommitmentsRewardsView
                       wishlist={financial.allWishlist}
                       savingsGoals={financial.allSavingsGoals}
+                      accounts={financial.allAccounts}
                       rewardsBalance={wishlistRewardsBalance}
                       pendingRewardsDeduction={wishlistPendingRewardsDeduction}
                       essentialsBalance={wishlistDashboardData?.categories?.find(c => c.name === 'Essentials')?.remaining ?? 0}

@@ -18,9 +18,11 @@ import type { ToastAction } from '../components/ui/ToastViewport'
 import {
   getErrorMessage,
   getErrorName,
+  getMissingBuckets,
   getRetryAfterMs,
   getStatus,
   isAuthError,
+  isLedgerAccountRefusal,
   isLockError,
   JUST_LOGGED_IN_WINDOW_MS,
 } from './errors'
@@ -149,6 +151,18 @@ export interface DrainQueueDeps {
   refresh: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => Promise<void>
   onSettled: () => void
   reTrigger: () => void
+}
+
+/**
+ * A missing or stale account is the one terminal failure the user can actually fix, so it must not
+ * land in `failedOps` wearing the generic "this change could not be saved" copy. Tagging it here
+ * routes it to the same account review sheet the one-shot placement migration uses, which is how
+ * an op queued offline against an account that has since been archived becomes actionable instead
+ * of a dead row the user can only discard.
+ */
+function accountReviewFlags(err: unknown): Partial<QueuedOp> {
+  if (!isLedgerAccountRefusal(err)) return {}
+  return { needsAccountReview: true, needsAccountReviewBuckets: getMissingBuckets(err) }
 }
 
 function isNetworkFailure(err: unknown, online: boolean): boolean {
@@ -409,7 +423,12 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           // Move the op to failedOps immediately and continue the queue.
           deps.emitFailureToast(nextOp, err)
           deps.mutateQueue(prev => prev.filter(item => item.id !== nextOp.id))
-          deps.addFailedOp({ ...nextOp, retryCount: (nextOp.retryCount || 0) + 1, lastError: getErrorMessage(err, String(err)) })
+          deps.addFailedOp({
+            ...nextOp,
+            retryCount: (nextOp.retryCount || 0) + 1,
+            lastError: getErrorMessage(err, String(err)),
+            ...accountReviewFlags(err),
+          })
           deps.setError(null)
           continue
         } else {
@@ -417,7 +436,12 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           if (updatedRetryCount >= MAX_RETRIES) {
             deps.emitFailureToast(nextOp, err)
             deps.mutateQueue(prev => prev.filter(item => item.id !== nextOp.id))
-            deps.addFailedOp({ ...nextOp, retryCount: updatedRetryCount, lastError: getErrorMessage(err, String(err)) })
+            deps.addFailedOp({
+              ...nextOp,
+              retryCount: updatedRetryCount,
+              lastError: getErrorMessage(err, String(err)),
+              ...accountReviewFlags(err),
+            })
             deps.setError(null)
             continue
           } else {

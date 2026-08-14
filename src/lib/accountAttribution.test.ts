@@ -10,7 +10,6 @@ const account = (id: string, bucket: LedgerAccount['bucket'], overrides: Partial
   interestEnabled: false,
   interestRatePercent: 0,
   interestFrequency: 'Monthly',
-  isDefault: false,
   isArchived: false,
   remaining: 0,
   createdAt: '2026-08-01T00:00:00Z',
@@ -19,9 +18,9 @@ const account = (id: string, bucket: LedgerAccount['bucket'], overrides: Partial
 })
 
 const accounts = [
-  account('essentials-default', 'Essentials', { isDefault: true }),
+  account('essentials-main', 'Essentials'),
   account('essentials-closed', 'Essentials', { isArchived: true }),
-  account('rewards-default', 'Rewards', { isDefault: true }),
+  account('rewards-main', 'Rewards'),
 ]
 
 describe('accountAttribution', () => {
@@ -31,16 +30,17 @@ describe('accountAttribution', () => {
     ], accounts)
 
     expect(balances.get('essentials-closed')).toBe(-80)
-    expect(balances.get('essentials-default')).toBe(0)
+    expect(balances.get('essentials-main')).toBe(0)
   })
 
   it('uses the bucket leg rather than the salary amount for a split', () => {
     const balances = getAccountBalances([
-      { amount: 1000, ledgerCategory: 'IncomeSplit:50,25,15,10' },
+      { amount: 500, ledgerCategory: 'Transfer:Income->Essentials', accountId: 'essentials-main' },
+      { amount: 100, ledgerCategory: 'Transfer:Income->Rewards', accountId: 'rewards-main' },
     ], accounts)
 
-    expect(balances.get('essentials-default')).toBe(500)
-    expect(balances.get('rewards-default')).toBe(100)
+    expect(balances.get('essentials-main')).toBe(500)
+    expect(balances.get('rewards-main')).toBe(100)
   })
 
   it('binds each side of a cross-bucket transfer by account placement', () => {
@@ -48,21 +48,21 @@ describe('accountAttribution', () => {
       {
         amount: 120,
         ledgerCategory: 'Transfer:Essentials->Rewards',
-        accountId: 'essentials-default',
-        counterAccountId: 'rewards-default',
+        accountId: 'essentials-main',
+        counterAccountId: 'rewards-main',
       },
     ], accounts)
 
-    expect(balances.get('essentials-default')).toBe(-120)
-    expect(balances.get('rewards-default')).toBe(120)
+    expect(balances.get('essentials-main')).toBe(-120)
+    expect(balances.get('rewards-main')).toBe(120)
   })
 
-  it('falls back to the live bucket default when no account is attached', () => {
+  it('leaves an unplaced legacy row out of account balances', () => {
     const balances = getAccountBalances([
       { amount: -25, ledgerCategory: 'Essentials' },
     ], accounts)
 
-    expect(balances.get('essentials-default')).toBe(-25)
+    expect(balances.get('essentials-main')).toBe(0)
     expect(balances.get('essentials-closed')).toBe(0)
   })
 
@@ -70,12 +70,12 @@ describe('accountAttribution', () => {
     const move = {
       amount: 40,
       ledgerCategory: 'AccountMove',
-      accountId: 'essentials-default',
+      accountId: 'essentials-main',
       counterAccountId: 'essentials-closed',
     }
 
-    expect(accountAmount(move, accounts[0], new Map(accounts.map(item => [item.id, item])), new Map())).toBe(-40)
-    expect(accountAmount(move, accounts[1], new Map(accounts.map(item => [item.id, item])), new Map())).toBe(40)
-    expect(getAccountBalances([move], accounts).get('rewards-default')).toBe(0)
+    expect(accountAmount(move, accounts[0], new Map(accounts.map(item => [item.id, item])))).toBe(-40)
+    expect(accountAmount(move, accounts[1], new Map(accounts.map(item => [item.id, item])))).toBe(40)
+    expect(getAccountBalances([move], accounts).get('rewards-main')).toBe(0)
   })
 })

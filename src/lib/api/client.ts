@@ -9,11 +9,28 @@ export class ApiError extends Error {
    * is the only party that knows when the next attempt can succeed.
    */
   retryAfterMs?: number
-  constructor(message: string, status: number, retryAfterMs?: number) {
+  /**
+   * The server's machine-readable reason, when it sent one (`ledger_account_required`,
+   * `ledger_account_invalid`). A 4xx is normally terminal and unactionable, but a refusal the user
+   * can fix has to be told apart from one they cannot — the outbox turns this into the account
+   * review path instead of the generic "this change could not be saved".
+   */
+  code?: string
+  /** The buckets the refusal names, so the fix can say which accounts are missing. */
+  missingBuckets?: string[]
+  constructor(
+    message: string,
+    status: number,
+    retryAfterMs?: number,
+    code?: string,
+    missingBuckets?: string[],
+  ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.retryAfterMs = retryAfterMs
+    this.code = code
+    this.missingBuckets = missingBuckets
   }
 }
 
@@ -210,6 +227,10 @@ export async function throwApiError(
     typeof message === 'string' && message ? message : fallbackMessage,
     response.status,
     parseRetryAfter(response.headers.get('Retry-After')),
+    typeof body.code === 'string' ? body.code : undefined,
+    Array.isArray(body.missingBuckets)
+      ? body.missingBuckets.filter((bucket): bucket is string => typeof bucket === 'string')
+      : undefined,
   )
 }
 

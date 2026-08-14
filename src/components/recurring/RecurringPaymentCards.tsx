@@ -94,13 +94,13 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                         variant="unstyled"
                         type="button"
                         onClick={() => onNavigateToLoan?.(rp.linkedLoanId!)}
-                        className="inline-flex items-center gap-1 rounded border border-accent-ink/25 bg-accent/30 hover:bg-accent/50 text-accent-ink px-1.5 py-0.5 text-[10px] font-bold transition cursor-pointer"
+                        className="inline-flex items-center gap-1 rounded border border-accent-ink/25 bg-accent/30 hover:bg-accent/50 text-accent-ink px-1.5 py-0.5 text-[10px] font-semibold leading-tight transition cursor-pointer"
                         title={`View linked loan: ${rp.linkedLoanName || 'Loan'}`}
                         aria-label={`View linked loan: ${rp.linkedLoanName || 'Loan'}`}
                       >
-                        <Link2 className="size-3 shrink-0" aria-hidden="true" />
+                        <Link2 className="size-2.5 shrink-0" aria-hidden="true" />
                         <span className="truncate max-w-[140px]">Linked to {rp.linkedLoanName || 'Loan'}</span>
-                        <ChevronRight className="size-3 shrink-0 opacity-70" aria-hidden="true" />
+                        <ChevronRight className="size-2.5 shrink-0 opacity-70" aria-hidden="true" />
                       </Button>
                     )}
                   </div>

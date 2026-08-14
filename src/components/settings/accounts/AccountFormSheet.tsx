@@ -17,10 +17,8 @@ import { ACCOUNT_BUCKET_OPTIONS, ACCOUNT_INTEREST_FREQUENCY_OPTIONS, ACCOUNT_KIN
 interface AccountFormSheetProps {
   isOpen: boolean
   account: LedgerAccount | null
-  existingAccounts?: LedgerAccount[]
   defaultBucket?: LedgerAccount['bucket']
   defaultKind?: LedgerAccountKind
-  defaultIsDefault?: boolean
   currency: string
   onClose: () => void
   onSave: (input: LedgerAccountInput) => Promise<void> | void
@@ -37,10 +35,8 @@ const KIND_ICONS: Record<LedgerAccountKind, LucideIcon> = {
 export function AccountFormSheet({
   isOpen,
   account,
-  existingAccounts = [],
   defaultBucket = 'Essentials',
   defaultKind = 'Bank',
-  defaultIsDefault = false,
   currency,
   onClose,
   onSave,
@@ -52,15 +48,10 @@ export function AccountFormSheet({
   const [interestEnabled, setInterestEnabled] = useState(false)
   const [interestRatePercent, setInterestRatePercent] = useState('')
   const [interestFrequency, setInterestFrequency] = useState<LedgerAccountInterestFrequency>('Monthly')
-  const [isDefault, setIsDefault] = useState(defaultIsDefault)
   const [isArchived, setIsArchived] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [interestError, setInterestError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-
-  const hasOpenAccountInBucket = existingAccounts.some(item =>
-    item.bucket === bucket && !item.isArchived && item.id !== account?.id,
-  )
 
   useEffect(() => {
     if (!isOpen) return
@@ -71,17 +62,10 @@ export function AccountFormSheet({
     setInterestEnabled(account?.interestEnabled ?? false)
     setInterestRatePercent(account?.interestEnabled ? String(account.interestRatePercent ?? '') : '')
     setInterestFrequency(account?.interestFrequency ?? 'Monthly')
-    setIsDefault(account?.isDefault ?? (!existingAccounts.some(item =>
-      item.bucket === (account?.bucket ?? defaultBucket) && !item.isArchived,
-    ) || defaultIsDefault))
     setIsArchived(account?.isArchived ?? false)
     setError(null)
     setInterestError(null)
-  }, [account, defaultBucket, defaultIsDefault, defaultKind, existingAccounts, isOpen])
-
-  useEffect(() => {
-    if (isOpen && !account && !hasOpenAccountInBucket) setIsDefault(true)
-  }, [account, hasOpenAccountInBucket, isOpen])
+  }, [account, defaultBucket, defaultKind, isOpen])
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -112,7 +96,6 @@ export function AccountFormSheet({
         interestEnabled,
         interestRatePercent: interestEnabled ? Math.round(parsedInterestRate * 10000) / 10000 : 0,
         interestFrequency,
-        isDefault,
         isArchived,
       })
       onClose()
@@ -252,16 +235,6 @@ export function AccountFormSheet({
         )}
 
         <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/10 p-3.5 sm:p-4">
-          <label className="flex cursor-pointer items-start gap-3 text-sm font-semibold text-foreground">
-            <Checkbox checked={isDefault} onChange={event => setIsDefault(event.target.checked)} className="mt-0.5 size-5" />
-            <span className="min-w-0">
-              <span className="block">Default for {bucket}</span>
-              <span className="mt-0.5 block text-[11px] font-normal leading-relaxed text-muted-foreground">New activity in {bucket} defaults to this account.</span>
-            </span>
-          </label>
-          {!account && hasOpenAccountInBucket && isDefault && (
-            <p className="rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1.5 text-[11px] leading-relaxed text-accent-ink">Replaces the current default for {bucket}.</p>
-          )}
           {isEditing && (
             <label className="flex cursor-pointer items-start gap-3 border-t border-border/40 pt-3 text-sm font-semibold text-foreground">
               <Checkbox checked={isArchived} onChange={event => setIsArchived(event.target.checked)} className="mt-0.5 size-5" />

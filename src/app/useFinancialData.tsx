@@ -14,6 +14,7 @@ import type {
   PendingNotification,
   TransactionDocumentChanges,
   LedgerAccount,
+  FinancialSetting,
 } from '../types'
 import type { CategoryCleanupSuggestion } from '../lib/api'
 import { CACHE_KEYS, ensureAccountTrackingCacheVersion, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, setCachedCycleSnapshot } from '../lib/cache'
@@ -22,10 +23,11 @@ import { useOutbox } from '../lib/useOutbox'
 import { useStartupSync } from './useStartupSync'
 import { useOptimisticDashboard } from './useOptimisticDashboard'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
-import { createFinalId, projectFinancialSetting, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
+import { createFinalId, projectFinancialSetting, sanitizeQueuedOps, type OutboxPayload, type QueuedOp } from '../lib/outbox'
 import { projectLoanStates } from '../lib/loanProjection'
 import { loanEndDate } from '../lib/loanTermSchedule'
 import { projectAccountBalances, projectAccountBalancesFromTransactions } from '../lib/accountProjection'
+import type { AccountPlacementSelections } from '../lib/accountPlacementMigration'
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
@@ -77,6 +79,22 @@ export interface UseFinancialDataOptions {
 const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
 }
+
+const PERSISTED_SETTING_KEYS = [
+  'targetStabilityFund',
+  'selectedMonth',
+  'selectedYear',
+  'essentialsAlloc',
+  'growthAlloc',
+  'stabilityAlloc',
+  'rewardsAlloc',
+  'cycleDay',
+  'darkMode',
+  'hideSensitive',
+  'stabilityOverflowRedirect',
+  'currency',
+  'lastSummaryCycleSeen',
+] as const satisfies ReadonlyArray<keyof FinancialSetting>
 
 export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernameRef' | 'setIsSwitchingCycle'>) {
   // Read the dashboard before invalidating account-dependent caches. The migration must remove
@@ -135,6 +153,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   // same value. Queue state alone is insufficient here: a fast settings write can leave
   // the outbox before an older, slower bootstrap response commits.
   const unconfirmedSettingWritesRef = useRef(new Map<string, unknown>())
+  const accountPlacementMigrationSignatureRef = useRef('')
 
   const [draftTransactions, setDraftTransactions] = useState<Transaction[]>(() => {
     try {
@@ -245,6 +264,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     getPendingOps,
     getActiveOps,
     getFailedOps,
+    mutateFailedOps,
     reset: resetOutbox,
   } = useOutbox({
     token: isLocked ? null : token,
@@ -440,6 +460,20 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       }
     },
   })
+
+  useEffect(() => {
+    if (!token) return
+    // Bootstrap and outbox replay run concurrently. Seed the same protection
+    // used by in-session setting edits from persisted operations so a successful
+    // replay cannot let an older server snapshot overwrite the local cache.
+    for (const operation of pendingOps) {
+      if (operation.entity !== 'settings' || operation.type !== 'update' || !operation.payload) continue
+      for (const key of PERSISTED_SETTING_KEYS) {
+        const value = operation.payload[key]
+        if (value !== undefined) unconfirmedSettingWritesRef.current.set(key, value)
+      }
+    }
+  }, [pendingOps, token])
 
   const activeQueueOperationIds = useMemo(() => outboxActiveSyncId
     ? activeOps
@@ -1025,6 +1059,39 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       }
     })
   }, [activeOps, allLoans, loanData.hasLoadedFromServer, queuedRecurringPayments])
+
+  useEffect(() => {
+    if (!token) return
+    const signature = `${token}:${allAccounts.map(account => `${account.id}:${account.bucket}:${account.isArchived}:${account.isPendingSync === true}`).sort().join('|')}`
+    if (signature === accountPlacementMigrationSignatureRef.current) return
+    accountPlacementMigrationSignatureRef.current = signature
+    let cancelled = false
+    void import('../lib/accountPlacementMigration').then(({ migrateAccountPlacementOperations }) => {
+      if (cancelled) return
+      const result = migrateAccountPlacementOperations(getPendingOps(), getFailedOps(), allAccounts, allRecurringPayments)
+      if (!result.changed) return
+      mutateQueue(() => result.pendingOps)
+      mutateFailedOps(() => result.failedOps)
+      if (result.reviewCount > 0) {
+        showToast(
+          `${result.reviewCount} offline change${result.reviewCount === 1 ? '' : 's'} need an account before syncing. Review the failed sync items after setup.`,
+          'Account placement needed',
+          'warning',
+        )
+      }
+    })
+    return () => { cancelled = true }
+  }, [allAccounts, allRecurringPayments, getFailedOps, getPendingOps, mutateFailedOps, mutateQueue, showToast, token])
+
+  const resolveAccountPlacementOps = useCallback((operation: QueuedOp, selections: AccountPlacementSelections) => {
+    void import('../lib/accountPlacementMigration').then(({ resolveAccountPlacementOperation }) => {
+      const resolved = resolveAccountPlacementOperation(operation, selections)
+      mutateFailedOps(previous => previous.filter(item => item.id !== operation.id))
+      mutateQueue(previous => previous.some(item => item.id === resolved.id) ? previous : [...previous, resolved])
+      void processQueue()
+    })
+  }, [mutateFailedOps, mutateQueue, processQueue])
+
   const allCategories = useOptimisticList(categoriesList, activeOps, 'category')
 
   const formatSensitive = useCallback((val: number) => {
@@ -1096,7 +1163,16 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const handleMarkSummarySeen = (cycleKey: string) => {
     unconfirmedSettingWritesRef.current.set('lastSummaryCycleSeen', cycleKey)
     const patchSetting = (data: DashboardData | null) =>
-      data ? { ...data, setting: { ...data.setting, lastSummaryCycleSeen: cycleKey } } : data
+      data
+        ? {
+            ...data,
+            setting: {
+              ...data.setting,
+              ...Object.fromEntries(unconfirmedSettingWritesRef.current),
+              lastSummaryCycleSeen: cycleKey,
+            },
+          }
+        : data
     setDashboardData(prev => {
       const next = patchSetting(prev)
       if (next) setCachedJSON(CACHE_KEYS.dashboardData, next)
@@ -1317,7 +1393,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     if (draftTransactions.length === 0) return
     const drafts = draftTransactions
     const { getDraftTransactionIssues } = await import('../lib/draftTransactionValidation')
-    const invalidDraft = drafts.find(draft => getDraftTransactionIssues(draft, allCategories, allAccounts.length > 0).length > 0)
+    const invalidDraft = drafts.find(draft => getDraftTransactionIssues(draft, allCategories).length > 0)
     if (invalidDraft) {
       showToast(
         `Review “${invalidDraft.description || 'transaction'}” before adding this batch to the Ledger.`,
@@ -1443,12 +1519,17 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     const transactionId = createFinalId('transaction')
     const postedAt = new Date().toISOString()
     const payment = allRecurringPayments.find(item => item.id === noti.recurringPaymentId)
+    // The occurrence's own frozen account wins over the schedule's current one: re-pointing a bill
+    // moves its future occurrences, not one already waiting to be confirmed. The server resolves it
+    // the same way, so the two agree; only a legacy occurrence with no snapshot falls back.
+    const settlementAccountId = noti.accountId ?? payment?.accountId
     mutateQueue(prev => enqueue(prev, 'recurringOccurrence', 'settle', noti.id, {
       name: noti.name,
       recurringPaymentId: noti.recurringPaymentId,
       occurrenceDate: noti.billingDate,
       status: 'Paid',
       paidDate,
+      accountId: settlementAccountId,
       optimisticNextOccurrenceDate: payment ? computeNextOccurrenceDate(payment) ?? undefined : undefined,
       optimisticTransaction: {
       id: transactionId,
@@ -1458,6 +1539,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       amount: -Math.abs(noti.amount),
       category: noti.category,
       ledgerCategory: noti.ledgerCategory,
+      accountId: settlementAccountId,
       recurringPaymentId: noti.recurringPaymentId,
       recurringOccurrenceDate: noti.billingDate,
       isPendingSync: true,
@@ -1589,6 +1671,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       category: payment.category,
       ledgerCategory: payment.ledgerCategory,
       amount: -Math.abs(payment.amount),
+      accountId: payment.accountId,
       recurringPaymentId: payment.id,
       recurringOccurrenceDate: occurrenceDate,
       isPendingSync: true,
@@ -1599,6 +1682,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       occurrenceDate,
       status: 'Paid',
       paidDate: financialDate(),
+      accountId: payment.accountId,
       optimisticNextOccurrenceDate: computeNextOccurrenceDate(payment) ?? undefined,
       optimisticTransaction: pendingTransaction,
     }))
@@ -1730,6 +1814,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     processQueue,
     discardFailedOp,
     discardAllFailedOps,
+    resolveAccountPlacementOps,
     setTransactions,
     setDashboardData,
     loadAll,

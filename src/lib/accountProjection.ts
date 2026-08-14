@@ -9,6 +9,10 @@ function asTransaction(value: unknown, fallbackId?: string): Transaction | null 
   const raw = value as Record<string, unknown>
   if (typeof (raw.id ?? fallbackId) !== 'string') return null
   if (typeof raw.ledgerCategory !== 'string' || typeof raw.amount !== 'number') return null
+  const splitAccountIds = raw.splitAccountIds && typeof raw.splitAccountIds === 'object'
+    ? Object.fromEntries(Object.entries(raw.splitAccountIds as Record<string, unknown>)
+      .filter(([, accountId]) => typeof accountId === 'string')) as Record<string, string>
+    : undefined
   return {
     id: String(raw.id ?? fallbackId),
     date: typeof raw.date === 'string' ? raw.date : '',
@@ -19,6 +23,7 @@ function asTransaction(value: unknown, fallbackId?: string): Transaction | null 
     amount: raw.amount,
     accountId: typeof raw.accountId === 'string' ? raw.accountId : null,
     counterAccountId: typeof raw.counterAccountId === 'string' ? raw.counterAccountId : null,
+    splitAccountIds,
     stabilityRecoveryTopUpAmount: typeof raw.stabilityRecoveryTopUpAmount === 'number'
       ? raw.stabilityRecoveryTopUpAmount
       : null,
@@ -33,20 +38,14 @@ function addDelta(
   direction: 1 | -1,
 ) {
   const accountsById = new Map(accounts.map(account => [account.id, account]))
-  const defaults = new Map(
-    accounts
-      .filter(account => account.isDefault && !account.isArchived)
-      .map(account => [account.bucket.toLowerCase(), account.id]),
-  )
   const incomeSplitRows = buildIncomeSplitRows(
     transaction,
     allocations,
-    new Map(accounts.map(account => [account.id, account.bucket])),
   )
   const rows = incomeSplitRows.length > 0 ? incomeSplitRows : [transaction]
   for (const row of rows) {
     for (const account of accounts) {
-      const delta = accountAmount(row, account, accountsById, defaults)
+      const delta = accountAmount(row, account, accountsById)
       balances.set(account.id, (balances.get(account.id) ?? 0) + direction * delta)
     }
   }
@@ -165,7 +164,6 @@ function applyReconciliation(
         interestFrequency: target.interestFrequency === 'Daily' || target.interestFrequency === 'Yearly'
           ? target.interestFrequency
           : 'Monthly',
-        isDefault: target.isDefault === true,
         isArchived: target.isArchived === true,
         remaining: 0,
         createdAt: new Date(operation.createdAt).toISOString(),
@@ -177,7 +175,6 @@ function applyReconciliation(
       account.kind = target.kind === 'EWallet' || target.kind === 'Cash' || target.kind === 'Card' || target.kind === 'Other'
         ? target.kind
         : 'Bank'
-      account.isDefault = target.isDefault === true
       account.isArchived = target.isArchived === true
     }
 

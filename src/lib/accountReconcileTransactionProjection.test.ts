@@ -8,9 +8,10 @@ describe('buildAccountReconcileTransactions', () => {
       createdAt: Date.parse('2026-08-13T00:00:00Z'),
       bucket: 'Essentials',
       expectedBucketTotal: 100,
+      adjustmentAccountId: 'main',
       targets: [
-        { id: 'main', expectedCurrent: 100, target: 80, isDefault: true, isArchived: false },
-        { id: 'cash', expectedCurrent: 0, target: 30, isDefault: false, isArchived: false },
+        { id: 'main', expectedCurrent: 100, target: 80, isArchived: false },
+        { id: 'cash', expectedCurrent: 0, target: 30, isArchived: false },
       ],
     })
 

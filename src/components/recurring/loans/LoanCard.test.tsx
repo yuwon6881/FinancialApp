@@ -80,7 +80,7 @@ describe('LoanCard', () => {
     const onExplain = vi.fn()
     render(<LoanCard {...props(baseLoan)} onEdit={onEdit} onDelete={onDelete} onExplain={onExplain} />)
 
-    expect(screen.getByText('Ask AI')).not.toBeNull()
+    expect(screen.getByText('Explain this loan')).not.toBeNull()
     expect(screen.getByText('Edit')).not.toBeNull()
     expect(screen.getByText('Delete')).not.toBeNull()
   })

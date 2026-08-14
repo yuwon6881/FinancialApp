@@ -69,6 +69,12 @@ export function LoansSection({
   useHighlightedElement(highlightedLoanId ? `loan-card-${highlightedLoanId}` : null, onClearHighlightedLoan)
 
   useEffect(() => {
+    if (highlightedLoanId && view.selectedCategories.length > 0) {
+      view.clearCategories()
+    }
+  }, [highlightedLoanId, view])
+
+  useEffect(() => {
     void onLoad().catch(() => undefined)
   }, [onLoad])
 

@@ -8,6 +8,7 @@ interface FailedSyncModalProps {
   onClose: () => void
   onDiscard: (id: string) => void
   onDiscardAll: () => void
+  onOpenAccountReview?: () => void
 }
 
 const ENTITY_LABELS: Record<string, string> = {
@@ -77,11 +78,14 @@ function getPayloadEntries(op: QueuedOp): Array<[string, unknown]> {
   })
 }
 
-export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDiscardAll }: FailedSyncModalProps) {
+export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDiscardAll, onOpenAccountReview }: FailedSyncModalProps) {
   if (failedOps.length === 0) return null
 
   const hasImmediateFailures = failedOps.some(op => op.retryCount < 5)
-  const failureSummary = hasImmediateFailures
+  const hasAccountReviews = failedOps.some(op => op.needsAccountReview)
+  const failureSummary = hasAccountReviews
+    ? 'Some offline changes need an explicit live account before they can be sent. Review the account setup first; the original operation and its attachments are preserved.'
+    : hasImmediateFailures
     ? 'These changes were not saved and were removed from the sync queue. Permanent errors stop immediately; temporary failures retry up to five times. Discard this notice or re-enter the changes.'
     : 'These changes were not saved after five sync attempts and were removed from the queue. Discard this notice or re-enter them.'
 
@@ -152,6 +156,11 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
               <div className="text-[10px] text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-2.5 py-1.5 break-words">
                 {op.lastError}
               </div>
+            )}
+            {op.needsAccountReview && onOpenAccountReview && (
+              <Button variant="outline" size="sm" onClick={onOpenAccountReview}>
+                Review account setup
+              </Button>
             )}
             <div className="flex justify-end">
               <Button

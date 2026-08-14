@@ -25,6 +25,7 @@ import { useSettingsView } from './settings/view/useSettingsView'
 import { CategoryLimitsCard } from './settings/CategoryLimitsCard'
 import { ManageableNameList } from './settings/ManageableNameList'
 import { CategoryFlowFilter } from './settings/CategoryFlowFilter'
+import { AccountsSkeleton } from './settings/accounts/AccountsSkeleton'
 import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
 import { FormField } from './ui/FormField'
 import { Button } from './ui/Button'
@@ -786,7 +787,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       )}
 
       {activeTab === 'accounts' && (
-        <React.Suspense fallback={<div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}>
+        <React.Suspense fallback={<AccountsSkeleton />}>
           <AccountsSection
             accounts={props.accounts ?? []}
             currency={view.activeSettings.currency || 'USD'}

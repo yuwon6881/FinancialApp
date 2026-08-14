@@ -10,6 +10,7 @@ const payment = (id: string, ledgerCategory: RecurringPayment['ledgerCategory'])
   frequency: 'Monthly',
   category: 'Bills',
   ledgerCategory,
+  accountId: 'acct-' + ledgerCategory.toLowerCase(),
   dueDate: 1,
   startDate: '2026-01-01',
   nextDueDate: '2026-09-01',

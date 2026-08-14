@@ -33,6 +33,7 @@ describe('buildBillTimelineModel', () => {
       amount: -120,
       category: 'Utilities',
       ledgerCategory: 'Essentials',
+      accountId: 'acct-essentials',
     }
 
     const result = buildBillTimelineModel({ ...baseOptions, transactions: [transaction] })
@@ -49,6 +50,7 @@ describe('buildBillTimelineModel', () => {
       amount: -120,
       category: 'Utilities',
       ledgerCategory: 'Essentials',
+      accountId: 'acct-essentials',
     }
 
     const result = buildBillTimelineModel({ ...baseOptions, activeRecurringPayments: [legacy], transactions: [transaction] })
@@ -63,6 +65,7 @@ describe('buildBillTimelineModel', () => {
       amount: 600,
       category: 'Insurance',
       ledgerCategory: 'Essentials',
+      accountId: 'acct-essentials',
       frequency: 'Annually',
       nextDueDate: '2026-09-30',
       dueDate: 31,

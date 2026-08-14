@@ -9,7 +9,6 @@ const parseTransfer = (ledgerCategory: string) => {
 export function getDraftTransactionIssues(
   draft: Transaction,
   categories: TransactionCategory[],
-  accountTrackingEnabled = false,
 ): string[] {
   const isAccountMove = draft.ledgerCategory.toLowerCase() === 'accountmove'
   const isTransfer = draft.ledgerCategory.startsWith('Transfer:') || isAccountMove
@@ -25,8 +24,8 @@ export function getDraftTransactionIssues(
     transferTarget: transfer.target,
     accountId: draft.accountId,
     counterAccountId: draft.counterAccountId,
+    splitAccountIds: draft.splitAccountIds ?? undefined,
     stabilityReloadIntent: draft.stabilityReloadIntent,
-    accountTrackingEnabled,
   })
 
   if (!isTransfer) {

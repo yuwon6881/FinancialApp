@@ -15,7 +15,6 @@ export interface NewReconciliationAccountInput {
   id: string
   name: string
   target: number
-  isDefault: boolean
 }
 
 export interface AccountReconciliationLine extends ReconciliationAccountInput {
@@ -29,7 +28,6 @@ export interface BucketAccountReconciliation {
   targetAccountTotal: number
   bucketDifference: number
   accountAdjustmentTotal: number
-  unassignedBalance: number
   lines: AccountReconciliationLine[]
   accountAdjustments: AccountReconciliationLine[]
   isCurrentTotalTally: boolean
@@ -41,23 +39,16 @@ const roundMoney = (value: number) => Math.round(value * 100) / 100
 
 /**
  * Builds the account split before any account rows or adjustment transactions are queued.
- * When a bucket has no live default, its unassigned balance will fall through to the new
- * default row after creation; modelling that here prevents the setup flow from double-counting
- * the existing bucket value.
+ * New rows start at zero. Any difference between explicit account totals and the bucket total is
+ * corrected through the account selected by the setup review, never through an implicit account.
  */
 export function calculateBucketAccountReconciliation(input: {
   bucket: LedgerAccount['bucket']
   bucketTotal: number
   existingAccounts: ReadonlyArray<ReconciliationAccountInput>
   newAccounts: ReadonlyArray<NewReconciliationAccountInput>
-  hasLiveDefault: boolean
 }): BucketAccountReconciliation {
   const bucketTotal = roundMoney(input.bucketTotal)
-  const existingTotal = roundMoney(input.existingAccounts.reduce((sum, account) => sum + account.current, 0))
-  const unassignedBalance = roundMoney(bucketTotal - existingTotal)
-  const newDefaultId = input.hasLiveDefault
-    ? undefined
-    : input.newAccounts.find(account => account.isDefault)?.id
 
   const existingLines = input.existingAccounts.map(account => ({
     ...account,
@@ -65,18 +56,15 @@ export function calculateBucketAccountReconciliation(input: {
     target: account.isArchived ? roundMoney(account.current) : roundMoney(account.target),
     diff: roundMoney((account.isArchived ? account.current : account.target) - account.current),
   }))
-  const newLines = input.newAccounts.map(account => {
-    const current = account.id === newDefaultId ? unassignedBalance : 0
-    return {
+  const newLines = input.newAccounts.map(account => ({
       id: account.id,
       name: account.name,
-      current,
+      current: 0,
       target: roundMoney(account.target),
       isArchived: false,
       isNew: true,
-      diff: roundMoney(account.target - current),
-    }
-  })
+      diff: roundMoney(account.target),
+    }))
   const lines = [...existingLines, ...newLines]
   const currentAccountTotal = roundMoney(lines.reduce((sum, account) => sum + account.current, 0))
   const targetAccountTotal = roundMoney(lines.reduce((sum, account) => sum + account.target, 0))
@@ -93,7 +81,6 @@ export function calculateBucketAccountReconciliation(input: {
     targetAccountTotal,
     bucketDifference,
     accountAdjustmentTotal,
-    unassignedBalance,
     lines,
     accountAdjustments,
     isCurrentTotalTally: Math.abs(currentAccountTotal - bucketTotal) < ACCOUNT_RECONCILIATION_EPSILON,

@@ -1,5 +1,5 @@
 import React from 'react'
-import type { WishlistItem, SavingsGoal, SavingsGoalFundingBucket } from '../types'
+import type { LedgerAccount, WishlistItem, SavingsGoal, SavingsGoalFundingBucket } from '../types'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useSyncStatus } from '../lib/useOptimisticList'
 import { Button } from './ui/Button'
@@ -32,11 +32,12 @@ interface CommitmentsRewardsViewProps {
   onAddItem: (item: Partial<WishlistItem>) => Promise<void> | void
   onUpdateItem: (id: number, item: WishlistItem) => Promise<void> | void
   onDeleteItem: (id: number) => Promise<void> | void
-  onPurchaseItem: (id: number, customDate?: string) => Promise<void> | void
+  accounts: LedgerAccount[]
+  onPurchaseItem: (id: number, customDate?: string, accountId?: string) => Promise<void> | void
   onAddGoal: (goal: Partial<SavingsGoal>) => Promise<void> | void
   onUpdateGoal: (id: number, goal: SavingsGoal) => Promise<void> | void
   onDeleteGoal: (id: number) => Promise<void> | void
-  onCompleteGoal: (id: number) => Promise<void> | void
+  onCompleteGoal: (id: number, accountId?: string) => Promise<void> | void
   /** Resolves to the server's rejection message, or null when the move stuck. */
   onContributeToGoal: (id: number, amount: number) => Promise<string | null> | void
   onFundGoalsForCycle: (bucket?: SavingsGoalFundingBucket) => Promise<void> | void
@@ -90,6 +91,7 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
   onUpdateItem,
   onDeleteItem,
   onPurchaseItem,
+  accounts,
   onAddGoal,
   onUpdateGoal,
   onDeleteGoal,
@@ -130,19 +132,46 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
 
   const [purchasingItem, setPurchasingItem] = React.useState<WishlistItem | null>(null)
   const [purchaseDateInput, setPurchaseDateInput] = React.useState<string>(new Date().toLocaleDateString('en-CA'))
+  const [purchaseAccountId, setPurchaseAccountId] = React.useState('')
+  const [purchaseError, setPurchaseError] = React.useState('')
+  const [completingGoal, setCompletingGoal] = React.useState<SavingsGoal | null>(null)
+  const [completionAccountId, setCompletionAccountId] = React.useState('')
   const [activeTab, setActiveTab] = React.useState<CommitmentsRewardsTabId>('commitments')
 
   const handleOpenClaimModal = (item: WishlistItem) => {
     if (hideSensitive) return
     setPurchaseDateInput(new Date().toLocaleDateString('en-CA'))
+    const rewardAccounts = accounts.filter(account => account.bucket === 'Rewards' && !account.isArchived)
+    setPurchaseAccountId(rewardAccounts.length === 1 ? rewardAccounts[0].id : '')
+    setPurchaseError('')
     setPurchasingItem(item)
   }
 
   const handleConfirmPurchase = () => {
     if (hideSensitive) return
     if (!purchasingItem) return
-    void onPurchaseItem(purchasingItem.id, purchaseDateInput)
+    if (!purchaseAccountId) {
+      setPurchaseError('Choose the Rewards account that will record this purchase.')
+      return
+    }
+    void onPurchaseItem(purchasingItem.id, purchaseDateInput, purchaseAccountId)
     setPurchasingItem(null)
+  }
+
+  const handleRequestCompleteGoal = (id: number) => {
+    if (hideSensitive) return
+    const goal = savingsGoals.find(item => item.id === id)
+    if (!goal) return
+    const bucket = goal.fundingBucket ?? 'Rewards'
+    const matching = accounts.filter(account => account.bucket === bucket && !account.isArchived)
+    setCompletionAccountId(matching.length === 1 ? matching[0].id : '')
+    setCompletingGoal(goal)
+  }
+
+  const handleConfirmCompletion = () => {
+    if (!completingGoal || !completionAccountId) return
+    void onCompleteGoal(completingGoal.id, completionAccountId)
+    setCompletingGoal(null)
   }
 
   const wishlistForm = useWishlistForm({
@@ -278,7 +307,7 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
             onAddGoal={goalForm.handleOpenAddModal}
             onEditGoal={goalForm.handleOpenEditModal}
             onDeleteGoal={onDeleteGoal}
-            onCompleteGoal={onCompleteGoal}
+            onCompleteGoal={handleRequestCompleteGoal}
             onTopUp={target => setContributeTarget({ goal: target, mode: 'topUp' })}
             onRelease={target => setContributeTarget({ goal: target, mode: 'release' })}
           />
@@ -323,6 +352,18 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
         purchaseDateInput={purchaseDateInput}
         setPurchaseDateInput={setPurchaseDateInput}
         onConfirmPurchase={handleConfirmPurchase}
+        purchaseAccountId={purchaseAccountId}
+        setPurchaseAccountId={value => {
+          setPurchaseAccountId(value)
+          setPurchaseError('')
+        }}
+        purchaseError={purchaseError}
+        completingGoal={completingGoal}
+        setCompletingGoal={setCompletingGoal}
+        completionAccountId={completionAccountId}
+        setCompletionAccountId={setCompletionAccountId}
+        accounts={accounts}
+        onConfirmCompletion={handleConfirmCompletion}
         wishlistForm={wishlistForm}
         goalForm={goalForm}
         contributeTarget={contributeTarget}

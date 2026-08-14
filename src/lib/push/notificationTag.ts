@@ -7,6 +7,8 @@ export interface RecurringNotificationData {
   kind?: 'recurring-payment'
   recurringPaymentId: string
   occurrenceDate: string
+  shortfall?: string
+  accountName?: string
 }
 
 export interface CategoryLimitNotificationData {

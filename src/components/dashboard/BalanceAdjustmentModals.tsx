@@ -20,9 +20,9 @@ interface BalanceAdjustmentModalsProps {
   isAdjustmentUnchanged: boolean
   adjustmentPreviewDiff: number | null
   formatSensitive: (val: number) => React.ReactNode
-  onBalanceInputChange: (rawValue: string) => void
+  onBalanceInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onAccountBalanceInputChange: (accountId: string, rawValue: string) => void
-  onDescriptionChange: (value: string) => void
+  onDescriptionChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onClose: () => void
   onReview: () => void
   onCancelPending: () => void
@@ -122,7 +122,7 @@ export const BalanceAdjustmentModals: React.FC<BalanceAdjustmentModalsProps> = (
                     type="text"
                     placeholder="0.00"
                     value={newBalanceInput}
-                    onChange={e => onBalanceInputChange(e.target.value)}
+                    onChange={onBalanceInputChange}
                   />
                 </FormField>
               </>
@@ -134,7 +134,7 @@ export const BalanceAdjustmentModals: React.FC<BalanceAdjustmentModalsProps> = (
                 required
                 placeholder="e.g. Ledger alignment"
                 value={adjustmentDescription}
-                onChange={e => onDescriptionChange(e.target.value)}
+                onChange={onDescriptionChange}
               />
             </FormField>
 

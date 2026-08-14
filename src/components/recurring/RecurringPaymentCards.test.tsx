@@ -12,6 +12,7 @@ const basePayment: RecurringPayment = {
   frequency: 'Monthly',
   category: 'Entertainment',
   ledgerCategory: 'Essentials',
+  accountId: 'acct-essentials',
   nextDueDate: '2099-01-20',
   dueDate: 20,
   startDate: '2026-01-20',

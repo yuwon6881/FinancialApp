@@ -38,7 +38,7 @@ test('accounts settings panel uses the complete card shell', async ({ page }) =>
 
   const panel = page.getByRole('tabpanel', { name: 'Accounts' })
   await expect(panel).toBeVisible()
-  await expect(page.getByText('No accounts added yet')).toBeVisible()
+  await expect(page.getByText('Everyday bank')).toBeVisible()
   await waitForStableLayout(page)
 
   const shell = await panel.evaluate(element => {

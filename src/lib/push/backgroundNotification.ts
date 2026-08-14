@@ -48,6 +48,8 @@ export function buildBackgroundNotification(message: BackgroundMessageLike): Bui
       kind: 'recurring-payment',
       recurringPaymentId: raw.recurringPaymentId,
       occurrenceDate: raw.occurrenceDate,
+      ...(raw.shortfall ? { shortfall: raw.shortfall } : {}),
+      ...(raw.accountName ? { accountName: raw.accountName } : {}),
     }
   }
   if (!isPushNotificationData(notificationData)) return null

@@ -41,49 +41,51 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
   return (
     <section
       aria-labelledby="vault-retention-notice-heading"
-      className="app-panel rounded-2xl border border-amber-500/30 bg-amber-500/8 p-4"
+      className="app-panel rounded-2xl border border-amber-500/30 bg-amber-500/8 p-5"
     >
       <div className="flex items-start gap-3">
-        <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="size-5" aria-hidden="true" />
+        </div>
         <div className="min-w-0 flex-1">
           <h3 id="vault-retention-notice-heading" className="text-sm font-bold text-amber-700 dark:text-amber-300">
             {retentionNoticeHeading(groups)}
           </h3>
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Tax records are worth keeping for {review.keepYears} years after their tax year ends.
           </p>
-
-          <ul className="mt-2 space-y-1">
-            {inline.map(year => <RetentionYearRow key={year.taxYear} year={year} />)}
-          </ul>
-          {rest.length > 0 && (
-            <details className="mt-1">
-              <summary className="cursor-pointer text-[11px] font-semibold text-amber-700 dark:text-amber-300">
-                Show all {ordered.length} years
-              </summary>
-              <ul className="mt-1 space-y-1">
-                {rest.map(year => <RetentionYearRow key={year.taxYear} year={year} />)}
-              </ul>
-            </details>
-          )}
-
-          <p className="mt-2 text-[11px] font-semibold text-muted-foreground">
-            Nothing is ever deleted for you. Delete them yourself once you are sure you no longer need them.
-          </p>
-
-          {onOpenVault && (
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={onOpenVault}
-              className="mt-2 bg-card text-xs"
-            >
-              Review in the Vault
-            </Button>
-          )}
         </div>
       </div>
+
+      <ul className="mt-3 space-y-1">
+        {inline.map(year => <RetentionYearRow key={year.taxYear} year={year} />)}
+      </ul>
+      {rest.length > 0 && (
+        <details className="mt-1">
+          <summary className="cursor-pointer text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+            Show all {ordered.length} years
+          </summary>
+          <ul className="mt-1 space-y-1">
+            {rest.map(year => <RetentionYearRow key={year.taxYear} year={year} />)}
+          </ul>
+        </details>
+      )}
+
+      <p className="mt-2 text-[11px] font-semibold text-muted-foreground">
+        Nothing is ever deleted for you. Delete them yourself once you are sure you no longer need them.
+      </p>
+
+      {onOpenVault && (
+        <Button
+          variant="outline"
+          size="sm"
+          type="button"
+          onClick={onOpenVault}
+          className="mt-3 bg-card text-xs"
+        >
+          Review in the Vault
+        </Button>
+      )}
     </section>
   )
 }

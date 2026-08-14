@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import type { Loan, RecurringPayment, RecurringReminderSettings, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
+import type { LedgerAccount, Loan, RecurringPayment, RecurringReminderSettings, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useIsMobile } from '../lib/useIsMobile'
 import { useAppContext } from '../contexts/AppContext'
@@ -16,6 +16,7 @@ const LoansSection = React.lazy(() => import('./recurring/loans/LoansSection').t
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
+  accounts: LedgerAccount[]
   activeRecurringPayments: ActiveRecurringPayment[]
   transactions?: Transaction[]
   selectedMonth: string
@@ -56,6 +57,7 @@ interface RecurringPaymentsViewProps {
 
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   payments,
+  accounts,
   activeRecurringPayments,
   transactions = [],
   selectedMonth,
@@ -111,6 +113,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
   const view = useRecurringPaymentsView({
     payments,
+    accounts,
     categories,
     hideSensitive,
     sensitivePreferenceStatus: app.sensitivePreferenceStatus,
@@ -239,6 +242,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         amount={view.amount}
         category={view.category}
         ledgerCategory={view.ledgerCategory}
+        accountId={view.accountId}
+        accounts={accounts}
         frequency={view.frequency}
         startDateInput={view.startDateInput}
         endDateInput={view.endDateInput}
@@ -252,6 +257,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         onAmountChange={view.handleAmountFieldChange}
         onCategoryChange={view.setCategory}
         onLedgerCategoryChange={view.setLedgerCategory}
+        onAccountIdChange={view.setAccountId}
         onFrequencyChange={view.setFrequency}
         onStartDateChange={view.handleStartDateChange}
         onEndDateChange={view.setEndDateInput}

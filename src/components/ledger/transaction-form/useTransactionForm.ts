@@ -58,6 +58,15 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     sensitivePreferenceStatus,
   } = options
   const accounts = accountsInput ?? []
+  const deriveIncomeSplitAccountIds = useCallback((transaction: Transaction) => {
+    if (transaction.ledgerCategory !== 'Income') return transaction.splitAccountIds
+    const derived: Partial<Record<TransferBucket, string>> = {}
+    for (const bucket of ['Essentials', 'Growth', 'Stability', 'Rewards'] as const) {
+      const split = transactions.find(candidate => candidate.id === `${transaction.id}-split-${bucket}`)
+      if (split?.accountId) derived[bucket] = split.accountId
+    }
+    return derived
+  }, [transactions])
 
   const defaultCategory = categories.length > 0 ? categories[0].name : ''
   const todayDate = getTodayDateString()
@@ -131,6 +140,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       transferTarget: state.transferTarget,
       accountId: state.accountId,
       counterAccountId: state.counterAccountId,
+      splitAccountIds: state.splitAccountIds,
       date: state.date
     },
     (draft) => {
@@ -274,7 +284,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
           : (isAccountMove ? (moveBucket as TransferBucket) : undefined),
         accountId: t.accountId,
         counterAccountId: t.counterAccountId,
-        splitAccountIds: t.splitAccountIds,
+        splitAccountIds: deriveIncomeSplitAccountIds(t),
         stabilityRecoveryTopUpAmount: t.stabilityRecoveryTopUpAmount,
         stabilityReloadIntent: t.stabilityReloadIntent,
       }
@@ -291,7 +301,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       .then(setExistingDocuments)
       .catch(() => onShowAlert?.('Attached documents could not be loaded.', 'Document Vault'))
     openTransactionForm()
-  }, [accounts, hideSensitive, suggestions, onStartEditPending, onShowAlert, openTransactionForm])
+  }, [accounts, deriveIncomeSplitAccountIds, hideSensitive, suggestions, onStartEditPending, onShowAlert, openTransactionForm])
 
   const handleStartDraft = useCallback(async (draft: Transaction) => {
     if (hideSensitive) return
@@ -325,7 +335,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
           : (isAccountMove ? (moveBucket as TransferBucket) : undefined),
         accountId: draft.accountId,
         counterAccountId: draft.counterAccountId,
-        splitAccountIds: draft.splitAccountIds,
+         splitAccountIds: deriveIncomeSplitAccountIds(draft),
         stabilityRecoveryTopUpAmount: draft.stabilityRecoveryTopUpAmount,
         stabilityReloadIntent: draft.stabilityReloadIntent,
       },
@@ -334,7 +344,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     autocompletedDescriptionRef.current = null
     suggestions.clearSuggestions()
     openTransactionForm()
-  }, [accounts, hideSensitive, onLoadDraftDocumentChanges, openTransactionForm, suggestions])
+  }, [accounts, deriveIncomeSplitAccountIds, hideSensitive, onLoadDraftDocumentChanges, openTransactionForm, suggestions])
 
   useEffect(() => {
     if (!aiEditDraft) return
@@ -400,9 +410,12 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       : (['Essentials', 'Growth', 'Stability', 'Rewards'].includes(state.ledgerCategory) ? state.ledgerCategory : null)
     if (bucket) {
       const selected = state.accountId ? accounts.find(account => account.id === state.accountId) : undefined
-      const defaultId = accounts.find(account => account.bucket === bucket && account.isDefault && !account.isArchived)?.id ?? ''
-      if ((!selected || selected.bucket !== bucket) && state.accountId !== defaultId) {
-        dispatch({ type: 'SET_FIELD', field: 'accountId', value: defaultId })
+      const live = accounts.filter(account => account.bucket === bucket && !account.isArchived)
+      const nextId = selected?.bucket === bucket && !selected.isArchived
+        ? selected.id
+        : live.length === 1 ? live[0].id : ''
+      if (state.accountId !== nextId) {
+        dispatch({ type: 'SET_FIELD', field: 'accountId', value: nextId })
       }
     }
     if (state.transactionType === 'transfer') {
@@ -417,9 +430,11 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
           }
         }
       } else {
-        const targetDefaultId = accounts.find(account => account.bucket === state.transferTarget && account.isDefault && !account.isArchived)?.id ?? ''
-        const nextTargetId = targetDefaultId || null
-        if ((!selectedTarget || selectedTarget.bucket !== state.transferTarget) && state.counterAccountId !== nextTargetId) {
+        const liveTarget = accounts.filter(account => account.bucket === state.transferTarget && !account.isArchived)
+        const nextTargetId = selectedTarget?.bucket === state.transferTarget && !selectedTarget.isArchived
+          ? selectedTarget.id
+          : liveTarget.length === 1 ? liveTarget[0].id : ''
+        if (state.counterAccountId !== nextTargetId) {
           dispatch({ type: 'SET_FIELD', field: 'counterAccountId', value: nextTargetId })
         }
       }
@@ -435,12 +450,13 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     if (accounts.length === 0) return
     const buckets: TransferBucket[] = ['Essentials', 'Growth', 'Stability', 'Rewards']
     for (const bucket of buckets) {
-      if (!state.splitAccountIds[bucket]) {
-        const defaultAccount = accounts.find(account => account.bucket === bucket && account.isDefault && !account.isArchived)
-          ?? accounts.find(account => account.bucket === bucket && !account.isArchived)
-        if (defaultAccount) {
-          dispatch({ type: 'SET_SPLIT_ACCOUNT', bucket, accountId: defaultAccount.id })
-        }
+      const selected = accounts.find(account => account.id === state.splitAccountIds[bucket])
+      const live = accounts.filter(account => account.bucket === bucket && !account.isArchived)
+      const nextId = selected?.bucket === bucket && !selected.isArchived
+        ? selected.id
+        : live.length === 1 ? live[0].id : ''
+      if (state.splitAccountIds[bucket] !== nextId) {
+        dispatch({ type: 'SET_SPLIT_ACCOUNT', bucket, accountId: nextId })
       }
     }
   }, [accounts, state.splitAccountIds])
@@ -460,18 +476,12 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
     setDocumentFieldRevision(revision => revision + 1)
     documentsFieldRef.current?.reset()
-    const defaultSplitAccountIds: Partial<Record<TransferBucket, string>> = {}
-    for (const b of ['Essentials', 'Growth', 'Stability', 'Rewards'] as const) {
-      const acc = accounts.find(a => a.bucket === b && a.isDefault && !a.isArchived) ?? accounts.find(a => a.bucket === b && !a.isArchived)
-      if (acc) defaultSplitAccountIds[b] = acc.id
-    }
     dispatch({
       type: 'OPEN_CREATE',
       payload: {
         defaultCategory,
         todayDate,
-        defaultAccountId: accounts.find(account => account.bucket === 'Essentials' && account.isDefault && !account.isArchived)?.id,
-        defaultSplitAccountIds,
+        // New postings start unplaced; the sole-live-account effect selects only an unambiguous account.
       },
     })
     const targetTxType = initialTxType || autoOpenTxType
@@ -492,18 +502,11 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
     setDocumentFieldRevision(revision => revision + 1)
     documentsFieldRef.current?.reset()
-    const defaultSplitAccountIds: Partial<Record<TransferBucket, string>> = {}
-    for (const b of ['Essentials', 'Growth', 'Stability', 'Rewards'] as const) {
-      const acc = accounts.find(a => a.bucket === b && a.isDefault && !a.isArchived) ?? accounts.find(a => a.bucket === b && !a.isArchived)
-      if (acc) defaultSplitAccountIds[b] = acc.id
-    }
     dispatch({
       type: 'OPEN_CREATE',
       payload: {
         defaultCategory,
         todayDate,
-        defaultAccountId: accounts.find(account => account.bucket === 'Essentials' && account.isDefault && !account.isArchived)?.id,
-        defaultSplitAccountIds,
       },
     })
     dispatch({
@@ -609,7 +612,6 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       accountId: state.accountId,
       counterAccountId: state.counterAccountId,
       stabilityReloadIntent: state.stabilityReloadIntent,
-      accountTrackingEnabled: accounts.length > 0,
     })
 
     if (Object.keys(validationErrors).length > 0) {

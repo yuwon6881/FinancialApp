@@ -11,6 +11,7 @@ import { Button } from './ui/Button'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
 import { InvestmentPlanExceptionCard } from './dashboard/InvestmentPlanExceptionCard'
 import { StabilityRecoveryExceptionCard } from './dashboard/StabilityRecoveryExceptionCard'
+import { RecurringAccountShortfallCard } from './dashboard/RecurringAccountShortfallCard'
 import { getDocumentRetentionReview } from '../lib/api/documents'
 import { EMPTY_RETENTION_REVIEW } from '../lib/documentRetention'
 import { VaultRetentionNotice } from './documents/VaultRetentionNotice'
@@ -41,7 +42,10 @@ interface DashboardViewProps {
   investmentAllocation?: InvestmentAllocationOverview | null
   /** Opens Reports focused on the category limit breakdown and, when supplied, its category card. */
   onNavigateToCategoryLimits?: (category: string) => void
+  onNavigateToTransfer?: () => void
+  onNavigateToRecurring?: (recurringId: string) => void
 }
+
 export const DashboardView: React.FC<DashboardViewProps> = ({
   dashboardData,
   onNavigate,
@@ -57,6 +61,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   isSwitchingCycle = false,
   investmentAllocation = null,
   onNavigateToCategoryLimits,
+  onNavigateToTransfer,
+  onNavigateToRecurring,
 }) => {
   const [retentionReview, setRetentionReview] = React.useState<DocumentRetentionReview>(EMPTY_RETENTION_REVIEW)
   React.useEffect(() => {
@@ -109,11 +115,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {pendingNotificationCount > 0 && (
         <section aria-labelledby="attention-heading" className="app-panel rounded-2xl border border-amber-500/25 bg-amber-500/8 p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/12 text-amber-600 dark:text-amber-400">
                 <AlertCircle className="size-5" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <h3 id="attention-heading" className="text-sm font-bold text-amber-600 dark:text-amber-400">
                   {pendingNotificationCount} bill{pendingNotificationCount === 1 ? '' : 's'} need review
                 </h3>
@@ -122,7 +128,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </p>
               </div>
             </div>
-            <Button variant="primary" onClick={onOpenNotifications} className="w-full justify-center sm:w-auto">
+            <Button variant="primary" onClick={onOpenNotifications} className="w-full justify-center sm:w-auto shrink-0">
               Review bills
             </Button>
           </div>
@@ -143,6 +149,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         recovery={dashboardData?.stabilityRecovery}
         formatSensitive={view.formatSensitive}
         onNavigateToLedger={onNavigateToLedger}
+      />
+
+      <RecurringAccountShortfallCard
+        shortfalls={view.recurringAccountShortfalls}
+        formatSensitive={view.formatSensitive}
+        onTransferMoney={onNavigateToTransfer}
+        onNavigateToRecurring={onNavigateToRecurring ?? (() => onNavigate?.('recurring'))}
       />
 
       {/* Today-focused metric cards: cycle progress, safe-to-spend, and the active wish goal */}

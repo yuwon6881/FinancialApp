@@ -32,6 +32,7 @@ const payments: RecurringPayment[] = [
     frequency: 'Monthly',
     category: 'Entertainment',
     ledgerCategory: 'Rewards',
+    accountId: 'acct-rewards',
     nextDueDate: '2026-07-15',
     dueDate: 15,
     startDate: '2026-07-15',
@@ -45,6 +46,7 @@ const payments: RecurringPayment[] = [
     frequency: 'Annually',
     category: 'Other',
     ledgerCategory: 'Essentials',
+    accountId: 'acct-essentials',
     nextDueDate: '2026-01-01',
     dueDate: 1,
     startDate: '2026-01-01',
@@ -59,6 +61,7 @@ const payments: RecurringPayment[] = [
     frequency: 'Monthly',
     category: 'Other',
     ledgerCategory: 'Growth',
+    accountId: 'acct-growth',
     nextDueDate: '2026-03-03',
     dueDate: 3,
     startDate: '2026-03-03',
@@ -72,6 +75,7 @@ const payments: RecurringPayment[] = [
     frequency: 'Monthly',
     category: 'Software',
     ledgerCategory: 'Stability',
+    accountId: 'acct-stability',
     nextDueDate: '2026-07-22',
     dueDate: 22,
     startDate: '2026-07-22',
@@ -80,8 +84,19 @@ const payments: RecurringPayment[] = [
   },
 ]
 
+// Every bucket needs one open account: placement is explicit, with no default to fall back on.
+const accounts = ['Essentials', 'Growth', 'Stability', 'Rewards'].map(bucket => ({
+  id: `acct-${bucket.toLowerCase()}`,
+  name: `${bucket} balance`,
+  bucket,
+  kind: 'Other',
+  remaining: 0,
+  isArchived: false,
+})) as React.ComponentProps<typeof RecurringPaymentsView>['accounts']
+
 const makeProps = (overrides: Partial<React.ComponentProps<typeof RecurringPaymentsView>> = {}) => ({
   payments,
+  accounts,
   activeRecurringPayments: [],
   transactions: [],
   selectedMonth: 'Jul',
@@ -112,6 +127,12 @@ const getToggleButton = (card: HTMLElement): HTMLElement => {
 const choosePaymentMode = (label: 'Auto deduct' | 'Manual payment') => {
   fireEvent.click(screen.getByRole('combobox', { name: /How it's paid/ }))
   fireEvent.click(screen.getByRole('option', { name: label }))
+}
+
+// Placement is explicit and has no default, so every saved bill must name the account paying it.
+const chooseAccount = (bucket = 'Essentials') => {
+  fireEvent.click(screen.getByRole('combobox', { name: /Paid from account/ }))
+  fireEvent.click(screen.getByRole('option', { name: new RegExp(`${bucket} balance`) }))
 }
 
 describe('RecurringPaymentsView characterization', () => {
@@ -233,6 +254,7 @@ describe('RecurringPaymentsView characterization', () => {
         frequency: 'Monthly',
         category: 'Entertainment',
         ledgerCategory: 'Rewards',
+        accountId: 'acct-rewards',
         dueDate: 15,
         startDate: '2026-07-15',
         active: true,
@@ -244,6 +266,9 @@ describe('RecurringPaymentsView characterization', () => {
       const legacy = [{ ...payments[0], ledgerCategory: 'LegacyBucket' }]
       render(<RecurringPaymentsView {...makeProps({ payments: legacy, onUpdatePayment })} />)
       fireEvent.click(within(getCard('Netflix')).getByRole('button', { name: /Edit/ }))
+      // The legacy bucket normalizes to Essentials, so its old account no longer fits and the
+      // bill has to be re-placed before it can be saved.
+      chooseAccount()
       fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
       expect(onUpdatePayment).toHaveBeenCalledWith('rp-1', expect.objectContaining({ ledgerCategory: 'Essentials' }))
     })
@@ -286,6 +311,7 @@ describe('RecurringPaymentsView characterization', () => {
       expect(onAddPayment).not.toHaveBeenCalled()
 
       choosePaymentMode('Auto deduct')
+      chooseAccount()
       expect(screen.queryByText('Choose whether this bill is auto deducted or paid manually.')).toBeNull()
       fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
 
@@ -300,6 +326,7 @@ describe('RecurringPaymentsView characterization', () => {
       fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '900.00' } })
       fireEvent.change(screen.getAllByLabelText('billing date')[0], { target: { value: '2026-07-05' } })
       choosePaymentMode('Manual payment')
+      chooseAccount()
       fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
 
       expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({ paymentMode: 'Manual' }))
@@ -329,6 +356,7 @@ describe('RecurringPaymentsView characterization', () => {
       fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '42.50' } })
       fireEvent.change(screen.getAllByLabelText('billing date')[0], { target: { value: '2026-07-31' } })
       choosePaymentMode('Manual payment')
+      chooseAccount()
       fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
 
       expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({
@@ -484,12 +512,15 @@ describe('RecurringPaymentsView characterization', () => {
       expect(screen.getByText('Choose whether this bill is auto deducted or paid manually.')).toBeTruthy()
 
       choosePaymentMode('Manual payment')
+      // The draft is a Rewards bill, so only Rewards accounts are offered to pay it.
+      chooseAccount('Rewards')
       fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
       expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({
         name: 'Disney+',
         amount: -12.5,
         frequency: 'Annually',
         ledgerCategory: 'Rewards',
+        accountId: 'acct-rewards',
         startDate: '2026-08-01',
         dueDate: 1,
         active: true,
@@ -506,6 +537,7 @@ describe('RecurringPaymentsView characterization', () => {
         />,
       )
 
+      chooseAccount()
       fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
       expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({ paymentMode: 'AutoDeduct' }))
     })

@@ -2,16 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { calculateBucketAccountReconciliation } from './accountReconciliation'
 
 describe('calculateBucketAccountReconciliation', () => {
-  it('moves an existing empty-bucket balance between newly added accounts without changing the bucket', () => {
+  it('moves an existing bucket balance between explicit accounts without changing the bucket', () => {
     const result = calculateBucketAccountReconciliation({
       bucket: 'Essentials',
       bucketTotal: 100,
-      existingAccounts: [],
-      newAccounts: [
-        { id: 'a', name: 'Main bank', target: 60, isDefault: true },
-        { id: 'b', name: 'Cash', target: 40, isDefault: false },
-      ],
-      hasLiveDefault: false,
+      existingAccounts: [{ id: 'a', name: 'Main bank', current: 100, target: 60, isArchived: false }],
+      newAccounts: [{ id: 'b', name: 'Cash', target: 40 }],
     })
 
     expect(result.currentAccountTotal).toBe(100)
@@ -25,13 +21,12 @@ describe('calculateBucketAccountReconciliation', () => {
     expect(result.isAdjustmentTally).toBe(true)
   })
 
-  it('requires a bucket adjustment when the requested account total differs', () => {
+  it('requires an explicit account for a bucket-total correction', () => {
     const result = calculateBucketAccountReconciliation({
       bucket: 'Rewards',
       bucketTotal: 100,
       existingAccounts: [{ id: 'a', name: 'Wallet', current: 100, target: 130, isArchived: false }],
       newAccounts: [],
-      hasLiveDefault: true,
     })
 
     expect(result.bucketDifference).toBe(30)
@@ -39,30 +34,17 @@ describe('calculateBucketAccountReconciliation', () => {
     expect(result.accountAdjustments[0]).toMatchObject({ id: 'a', diff: 30 })
   })
 
-  it('gives a new default account only the unassigned part when closed history remains', () => {
+  it('keeps archived history fixed and flags account/bucket drift', () => {
     const result = calculateBucketAccountReconciliation({
       bucket: 'Stability',
       bucketTotal: 100,
       existingAccounts: [{ id: 'closed', name: 'Old bank', current: 30, target: 0, isArchived: true }],
-      newAccounts: [{ id: 'new', name: 'New bank', target: 70, isDefault: true }],
-      hasLiveDefault: false,
+      newAccounts: [{ id: 'new', name: 'New bank', target: 20 }],
     })
 
-    expect(result.unassignedBalance).toBe(70)
-    expect(result.currentAccountTotal).toBe(100)
-    expect(result.accountAdjustments).toHaveLength(0)
-    expect(result.isCurrentTotalTally).toBe(true)
-  })
-
-  it('flags an existing account partition that does not currently match its bucket', () => {
-    const result = calculateBucketAccountReconciliation({
-      bucket: 'Growth',
-      bucketTotal: 100,
-      existingAccounts: [{ id: 'a', name: 'Broker', current: 80, target: 80, isArchived: false }],
-      newAccounts: [{ id: 'b', name: 'Cash', target: 20, isDefault: false }],
-      hasLiveDefault: true,
-    })
-
+    expect(result.lines[0]).toMatchObject({ id: 'closed', current: 30, target: 30, diff: 0 })
+    expect(result.currentAccountTotal).toBe(30)
+    expect(result.targetAccountTotal).toBe(50)
     expect(result.isCurrentTotalTally).toBe(false)
     expect(result.isAdjustmentTally).toBe(false)
   })

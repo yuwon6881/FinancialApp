@@ -95,6 +95,20 @@ const dashboard = {
   categoryLimitProgress: [],
 }
 
+const accounts = ['Essentials', 'Growth', 'Stability', 'Rewards'].map((bucket, index) => ({
+  id: `account-visual-${bucket.toLowerCase()}`,
+  name: ['Everyday bank', 'Investment account', 'Emergency fund', 'Fun money'][index],
+  bucket,
+  kind: 'Bank',
+  interestEnabled: false,
+  interestRatePercent: 0,
+  interestFrequency: 'Monthly',
+  isArchived: false,
+  remaining: 0,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+}))
+
 const bootstrap = {
   month: 'Jul',
   year: 2026,
@@ -116,6 +130,7 @@ const bootstrap = {
   wishlist: [] as WishlistItem[],
   savingsGoals: [],
   autocomplete: [],
+  accounts,
   walletBalance: { totalBalance: 12_480.25 },
 }
 

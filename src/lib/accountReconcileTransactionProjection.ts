@@ -4,7 +4,6 @@ interface ReconcileTarget {
   id?: string | null
   expectedCurrent?: number
   target?: number
-  isDefault?: boolean
   isArchived?: boolean
 }
 
@@ -13,6 +12,7 @@ export function buildAccountReconcileTransactions(input: {
   createdAt: number
   bucket?: string
   expectedBucketTotal?: number
+  adjustmentAccountId?: string | null
   targets?: ReconcileTarget[]
 }): Transaction[] {
   if (!input.bucket || !Array.isArray(input.targets)) return []
@@ -20,19 +20,21 @@ export function buildAccountReconcileTransactions(input: {
   const targetTotal = input.targets.reduce(
     (sum, target) => sum + (typeof target.target === 'number' ? target.target : 0), 0)
   const delta = Math.round((targetTotal - (input.expectedBucketTotal ?? 0)) * 100) / 100
-  const defaultTarget = input.targets.find(target => target.id && target.isDefault && !target.isArchived)
   const rows: Transaction[] = []
-  if (delta !== 0 && defaultTarget?.id) {
+  const adjustmentAccountId = input.adjustmentAccountId?.trim()
+  if (delta !== 0 && adjustmentAccountId) {
     rows.push({
       id: `reconcile-${input.operationId}-adjustment`, date: postedAt.slice(0, 10), postedAt,
       description: `Account balance adjustment - ${input.bucket}`, category: 'Adjustment',
-      ledgerCategory: input.bucket, amount: delta, excludeFromAutocomplete: true, accountId: defaultTarget.id,
+      ledgerCategory: input.bucket, amount: delta, excludeFromAutocomplete: true, accountId: adjustmentAccountId,
     })
   }
 
   const working = new Map(input.targets.flatMap(target => target.id
     ? [[target.id, target.expectedCurrent ?? 0] as const] : []))
-  if (delta !== 0 && defaultTarget?.id) working.set(defaultTarget.id, (working.get(defaultTarget.id) ?? 0) + delta)
+  if (delta !== 0 && adjustmentAccountId) {
+    working.set(adjustmentAccountId, (working.get(adjustmentAccountId) ?? 0) + delta)
+  }
   const differences = input.targets.flatMap(target => target.id && typeof target.target === 'number'
     ? [{ id: target.id, difference: Math.round((target.target - (working.get(target.id) ?? 0)) * 100) / 100 }]
     : []).filter(item => item.difference !== 0)

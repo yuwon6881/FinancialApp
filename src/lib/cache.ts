@@ -24,7 +24,7 @@ const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const CACHE_TIMESTAMP_SUFFIX = ':cached_at'
 const CYCLE_SNAPSHOTS_KEY = 'cached_cycle_snapshots'
 const ACCOUNT_TRACKING_CACHE_VERSION_KEY = 'financial_account_tracking_cache_version'
-const ACCOUNT_TRACKING_CACHE_VERSION = '2'
+const ACCOUNT_TRACKING_CACHE_VERSION = '3'
 const DISPOSABLE_CACHE_KEYS = new Set<string>([
   CACHE_KEYS.dashboardData,
   CACHE_KEYS.transactions,

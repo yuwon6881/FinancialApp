@@ -173,19 +173,16 @@ export function TransactionFormFields({
   const accountBucket = state.transactionType === 'transfer'
     ? state.transferSource
     : (['Essentials', 'Growth', 'Stability', 'Rewards'].includes(state.ledgerCategory) ? state.ledgerCategory : null)
-  const isTransfer = String(state.transactionType) === 'transfer'
-  const accountTrackingEnabled = accounts.length > 0
   const accountOptions = React.useMemo(() => {
     if (!accountBucket) return []
     const bucketAccounts = accounts.filter(account =>
       account.bucket === accountBucket && (!account.isArchived || account.id === state.accountId),
     )
-    const defaultAccount = bucketAccounts.find(account => account.isDefault && !account.isArchived)
     return [
-      { value: defaultAccount?.id ?? '', label: defaultAccount ? `Use ${defaultAccount.name} (default)` : `Choose ${accountBucket} account` },
-      ...bucketAccounts.filter(account => account.id !== defaultAccount?.id).map(account => ({
+      { value: '', label: `Choose ${accountBucket} account`, disabled: false },
+      ...bucketAccounts.map(account => ({
         value: account.id,
-        label: `${account.name}${account.isArchived ? ' (Closed)' : ''}${account.isDefault ? ' · Default' : ''}`,
+        label: `${account.name}${account.isArchived ? ' (Closed)' : ''}`,
         disabled: account.isArchived,
       })),
     ]
@@ -194,12 +191,11 @@ export function TransactionFormFields({
     const bucketAccounts = accounts.filter(account =>
       account.bucket === state.transferTarget && (!account.isArchived || account.id === state.counterAccountId),
     )
-    const defaultAccount = bucketAccounts.find(account => account.isDefault && !account.isArchived)
     return [
-      { value: defaultAccount?.id ?? '', label: defaultAccount ? `Use ${defaultAccount.name} (default)` : `Choose ${state.transferTarget} account` },
-      ...bucketAccounts.filter(account => account.id !== defaultAccount?.id).map(account => ({
+      { value: '', label: `Choose ${state.transferTarget} account`, disabled: false },
+      ...bucketAccounts.map(account => ({
         value: account.id,
-        label: `${account.name}${account.isArchived ? ' (Closed)' : ''}${account.isDefault ? ' · Default' : ''}`,
+        label: `${account.name}${account.isArchived ? ' (Closed)' : ''}`,
         disabled: account.isArchived,
       })),
     ]
@@ -475,22 +471,37 @@ export function TransactionFormFields({
             />
           </FormField>
 
-          {accountTrackingEnabled && (
-            <FormField
-              className="sm:col-span-2"
-              label="Destination account"
-              required
-              error={errors.counterAccountId}
-            >
-              <CustomSelect
-                ariaLabel="Transfer destination account"
-                value={state.counterAccountId ?? ''}
-                onChange={value => onSetField('counterAccountId', value || null)}
-                options={transferTargetOptions}
-                className="w-full"
-              />
-            </FormField>
-          )}
+          {/*
+            Both legs name their account. The source picker used to live only in the
+            ordinary-transaction branch below, so a transfer could never set it — which was
+            invisible while every bucket had one account and the preselect filled it in, and
+            became an unsubmittable form the moment a bucket had two.
+          */}
+          <FormField label="Source account" required error={errors.accountId}>
+            <CustomSelect
+              ariaLabel="Transfer source account"
+              value={state.accountId ?? ''}
+              onChange={value => onSetField('accountId', value || null)}
+              options={accountOptions.map(option => ({
+                ...option,
+                disabled: option.disabled || (option.value !== '' && option.value === state.counterAccountId),
+              }))}
+              className="w-full"
+            />
+          </FormField>
+
+          <FormField label="Destination account" required error={errors.counterAccountId}>
+            <CustomSelect
+              ariaLabel="Transfer destination account"
+              value={state.counterAccountId ?? ''}
+              onChange={value => onSetField('counterAccountId', value || null)}
+              options={transferTargetOptions.map(option => ({
+                ...option,
+                disabled: option.disabled || (option.value !== '' && option.value === state.accountId),
+              }))}
+              className="w-full"
+            />
+          </FormField>
 
           <FormField label="Posting date" className="sm:col-span-2" required error={errors.date}>
             <DatePicker
@@ -544,28 +555,25 @@ export function TransactionFormFields({
             />
           </FormField>
 
-          {accountTrackingEnabled && state.ledgerCategory === 'Income' && (
+          {state.ledgerCategory === 'Income' && (
             <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/15 p-3.5 sm:col-span-2">
               <div className="space-y-0.5">
                 <p className="text-xs font-semibold text-foreground">Receiving accounts per bucket</p>
                 <p className="text-[11px] text-muted-foreground">
-                  Choose which account receives each bucket&apos;s share. Defaults to each bucket&apos;s primary account.
+                  Choose which account receives each bucket&apos;s share.
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 {(['Essentials', 'Growth', 'Stability', 'Rewards'] as const).map(bucket => {
                   const bucketAccounts = accounts.filter(account => account.bucket === bucket && !account.isArchived)
-                  const defaultAccount = bucketAccounts.find(account => account.isDefault) ?? bucketAccounts[0]
-                  const currentSelectedId = state.splitAccountIds?.[bucket] || defaultAccount?.id || ''
-                  const options = bucketAccounts.length > 0
-                    ? bucketAccounts.map(account => ({
-                        value: account.id,
-                        label: `${account.name}${account.isDefault ? ' (Default)' : ''}`,
-                      }))
-                    : [{ value: '', label: `No open accounts in ${bucket}`, disabled: true }]
+                  const currentSelectedId = state.splitAccountIds?.[bucket] || ''
+                  const options = [
+                    { value: '', label: `Choose ${bucket} account` },
+                    ...bucketAccounts.map(account => ({ value: account.id, label: account.name })),
+                  ]
 
                   return (
-                    <FormField key={bucket} label={`${bucket} account`}>
+                    <FormField key={bucket} label={`${bucket} account`} required error={!currentSelectedId ? errors[`splitAccountIds.${bucket}`] : undefined}>
                       <CustomSelect
                         ariaLabel={`${bucket} receiving account`}
                         value={currentSelectedId}
@@ -580,14 +588,14 @@ export function TransactionFormFields({
             </div>
           )}
 
-          {accountTrackingEnabled && accountBucket && (
+          {accountBucket && (
             <FormField
-              label={isTransfer ? 'Source account' : 'Account'}
+              label="Account"
               required
               error={errors.accountId}
             >
               <CustomSelect
-                ariaLabel={isTransfer ? 'Source account' : 'Account'}
+                ariaLabel="Account"
                 value={state.accountId ?? ''}
                 onChange={value => onSetField('accountId', value || null)}
                 options={accountOptions}
