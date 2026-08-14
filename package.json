@@ -13,6 +13,8 @@
     "check:design-system": "node scripts/check-design-system.mjs",
     "deadcode": "knip --include files,dependencies,devDependencies",
     "typecheck:strict": "tsc -p tsconfig.strict.json",
+    "test:fast": "vitest run --pool=threads --maxWorkers=4",
+    "test:one": "vitest run --pool=threads --maxWorkers=1 --no-file-parallelism --reporter=dot",
     "preview": "vite preview",
     "test": "vitest run",
     "test:visual": "node ./node_modules/@playwright/test/cli.js test",

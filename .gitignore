@@ -12,6 +12,8 @@ dist
 dist-ssr
 playwright-report
 test-results
+\.vitest-results.json
+coverage
 *.local
 
 # ANALYZE=1 npm run build output (rollup-plugin-visualizer)
