@@ -3,8 +3,10 @@ import type { Transaction } from '../types'
 const normalized = (value: string | null | undefined) => value?.toLowerCase()
 
 export function isReportTransfer(transaction: Pick<Transaction, 'category' | 'ledgerCategory'>): boolean {
+  const ledgerCategory = normalized(transaction.ledgerCategory)
   return normalized(transaction.category) === 'transfer' ||
-    normalized(transaction.ledgerCategory)?.startsWith('transfer:') === true
+    ledgerCategory === 'accountmove' ||
+    ledgerCategory?.startsWith('transfer:') === true
 }
 
 export function isBalanceAdjustment(transaction: Pick<Transaction, 'category'>): boolean {
