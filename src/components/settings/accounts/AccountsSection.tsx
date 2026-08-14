@@ -31,7 +31,6 @@ interface AccountsSectionProps {
   onAddBalanceAdjustment: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
   onReconcileAccounts?: (input: LedgerAccountReconcileInput) => Promise<void> | void
 }
-
 const KIND_LABELS: Record<LedgerAccount['kind'], string> = {
   Bank: 'Bank account',
   EWallet: 'E-wallet',
@@ -51,7 +50,7 @@ const KIND_ICONS: Record<LedgerAccount['kind'], LucideIcon> = {
 const BUCKETS: ReadonlyArray<{ name: LedgerAccount['bucket']; description: string }> = [
   { name: 'Essentials', description: 'Everyday spending' },
   { name: 'Growth', description: 'Money sent to investments' },
-  { name: 'Stability', description: 'Your emergency cushion' },
+  { name: 'Stability', description: 'Emergency cushion' },
   { name: 'Rewards', description: 'Plans and treats' },
 ]
 
@@ -143,8 +142,8 @@ export function AccountsSection({
   return (
     <>
       <section id="settings-panel-accounts" role="tabpanel" aria-labelledby="settings-tab-accounts" className="app-panel space-y-6 rounded-2xl border border-border/60 bg-card/92 p-4 animate-in fade-in duration-200 sm:p-5">
-        <div className="flex flex-col gap-4 border-b border-border/40 pb-5 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
+        <div className="flex flex-col gap-3 border-b border-border/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="grid size-10 shrink-0 place-items-center rounded-2xl border border-accent-ink/20 bg-accent/50 text-accent-ink">
               <Building2 className="size-5" aria-hidden="true" />
             </div>
@@ -153,26 +152,26 @@ export function AccountsSection({
                 <h3 className="text-base font-bold text-foreground">Accounts</h3>
                 <span className="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Optional</span>
               </div>
-              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-                Connect the places where your money lives to the four budget buckets, so each balance is easier to understand.
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Connect where your money lives to the four budget buckets.
               </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold text-muted-foreground">
-                <span className="rounded-lg border border-border/60 bg-background/50 px-2 py-1">
-                  {openAccountCount} open {openAccountCount === 1 ? 'account' : 'accounts'}
-                </span>
-                {archivedAccountCount > 0 && (
-                  <span className="rounded-lg border border-border/60 bg-background/50 px-2 py-1">
-                    {archivedAccountCount} closed
-                  </span>
-                )}
-              </div>
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold text-muted-foreground">
+            <span className="rounded-lg border border-border/60 bg-background/50 px-2.5 py-1">
+              {openAccountCount} open {openAccountCount === 1 ? 'account' : 'accounts'}
+            </span>
+            {archivedAccountCount > 0 && (
+              <span className="rounded-lg border border-border/60 bg-background/50 px-2.5 py-1">
+                {archivedAccountCount} closed
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
           {bucketSummaries.map(bucket => (
-            <div key={bucket.name} className={`min-w-0 rounded-xl border bg-background/40 p-3 ${bucket.count > 0 ? 'border-border/60' : 'border-dashed border-border/50'}`}>
+            <div key={bucket.name} className={`min-w-0 rounded-xl border bg-background/40 p-3 sm:p-3.5 ${bucket.count > 0 ? 'border-border/60' : 'border-dashed border-border/50'}`}>
               <div className="flex min-w-0 items-center justify-between gap-2">
                 <span className={`min-w-0 truncate rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${getCategoryBadgeClass(bucket.name)}`}>
                   {bucket.name}
@@ -185,9 +184,9 @@ export function AccountsSection({
                 value={bucket.balance}
                 isMasked={hideSensitive}
                 formatFn={value => formatCurrencyVal(value, currency)}
-                className="mt-3 block truncate text-sm font-extrabold text-foreground"
+                className="mt-3 block truncate text-sm font-extrabold text-foreground sm:text-base"
               />
-              <p className="mt-1 truncate text-[10px] text-muted-foreground">Bucket total · {bucket.description}</p>
+              <p className="mt-0.5 truncate text-[10px] text-muted-foreground">Bucket total · {bucket.description}</p>
               {bucket.count > 0 && (
                 <div className="mt-2 flex items-center justify-between gap-2 text-[10px]">
                   <span className="text-muted-foreground">Accounts total</span>
@@ -201,7 +200,7 @@ export function AccountsSection({
               )}
               {Math.abs(bucket.accountTotal - bucket.balance) >= 0.005 && (
                 <p className="mt-2 rounded-lg border border-accent-ink/20 bg-accent/15 px-2 py-1 text-[10px] font-semibold leading-relaxed text-accent-ink">
-                  Account rows need review
+                  Needs review
                 </p>
               )}
               <Button
@@ -218,10 +217,10 @@ export function AccountsSection({
           ))}
         </div>
 
-        <div className="flex items-start gap-2 rounded-xl border border-accent-ink/20 bg-accent/30 p-3.5 text-xs leading-relaxed text-muted-foreground">
+        <div className="flex items-start gap-2.5 rounded-xl border border-accent-ink/20 bg-accent/25 p-3.5 text-xs leading-relaxed text-muted-foreground">
           <Info className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
           <p>
-            Adding an account row does not change a bucket total by itself. Use <span className="font-semibold text-foreground">Set up accounts</span> on a bucket card to assign the current amount across several accounts; any mismatch is shown for confirmation before ledger adjustments are recorded.
+            Adding accounts does not alter bucket totals directly. Use <span className="font-semibold text-foreground">Set up accounts</span> on a bucket card to allocate the balance across accounts with confirmed adjustments.
           </p>
         </div>
 
@@ -229,7 +228,7 @@ export function AccountsSection({
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
             <div>
               <h4 className="text-sm font-bold text-foreground">Account rows</h4>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">Each row is one account-to-bucket connection.</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Each row connects one place to a budget bucket.</p>
             </div>
             {rows.length > 0 && <span className="text-[10px] font-semibold text-muted-foreground">{rows.length} total {rows.length === 1 ? 'row' : 'rows'}</span>}
           </div>
@@ -247,15 +246,15 @@ export function AccountsSection({
             stackActionsOnMobile
             itemClassName={item => item.isArchived ? 'border-dashed opacity-75' : 'border-border/60 bg-card/70'}
             emptyState={(
-              <div className="rounded-2xl border border-dashed border-border/70 bg-muted/10 px-5 py-8 text-center">
+              <div className="rounded-2xl border border-dashed border-border/70 bg-card/40 px-5 py-8 text-center">
                 <div className="mx-auto grid size-11 place-items-center rounded-2xl border border-accent-ink/20 bg-accent/40 text-accent-ink">
                   <Wallet className="size-5" aria-hidden="true" />
                 </div>
                 <h5 className="mt-3 text-sm font-bold text-foreground">No accounts added yet</h5>
                 <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
-                  Add your first bank, wallet, cash, or card account to see how a bucket balance is split between real-world places.
+                  Add bank, wallet, cash, or card rows to see where your bucket money lives.
                 </p>
-                <Button type="button" className="mt-4 h-11" onClick={openAdd} disabled={disabled || hideSensitive}>
+                <Button type="button" className="mt-4 !min-h-11" onClick={openAdd} disabled={disabled || hideSensitive}>
                   <Plus className="size-3.5" aria-hidden="true" />
                   Add an account row
                 </Button>
@@ -269,7 +268,7 @@ export function AccountsSection({
                   <div className={`grid size-9 shrink-0 place-items-center rounded-xl border ${bucketClass}`} aria-hidden="true">
                     <AccountIcon className="size-4" />
                   </div>
-                  <div className="min-w-0 space-y-1">
+                  <div className="min-w-0 space-y-0.5">
                     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                       <p className={`truncate font-semibold ${item.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
                         {item.name}
@@ -280,10 +279,12 @@ export function AccountsSection({
                       <span className={`rounded-md border px-1.5 py-0.5 font-semibold ${bucketClass}`}>{item.bucket}</span>
                       <span aria-hidden="true">·</span>
                       <span>{KIND_LABELS[item.kind]}</span>
-                      <span aria-hidden="true">·</span>
-                      <span>{item.interestEnabled
-                        ? `${formatInterestRate(item.interestRatePercent)}% per year · added ${ACCOUNT_INTEREST_FREQUENCY_LABELS[item.interestFrequency]}`
-                        : 'No interest'}</span>
+                      {item.interestEnabled && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span>{formatInterestRate(item.interestRatePercent)}% / yr ({ACCOUNT_INTEREST_FREQUENCY_LABELS[item.interestFrequency]})</span>
+                        </>
+                      )}
                       {item.isArchived && <><span aria-hidden="true">·</span><span>Closed</span></>}
                     </div>
                   </div>
@@ -309,9 +310,9 @@ export function AccountsSection({
           />
         </div>
 
-        <div className="flex items-start gap-2 rounded-xl border border-border/50 bg-muted/10 p-3 text-[11px] leading-relaxed text-muted-foreground">
+        <div className="flex items-start gap-2.5 rounded-xl border border-border/50 bg-muted/10 p-3 text-[11px] leading-relaxed text-muted-foreground">
           <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-          <p><span className="font-semibold text-foreground">Balances stay ledger-based.</span> Starting amounts are reviewed against the bucket total first, and positive money in Stability naturally pays down an emergency-fund reload before it becomes free balance.</p>
+          <p><span className="font-semibold text-foreground">Balances are ledger-tracked.</span> Starting amounts are reviewed against bucket totals, and Stability credits automatically satisfy emergency reloads.</p>
         </div>
       </section>
 

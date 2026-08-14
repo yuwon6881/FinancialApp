@@ -37,7 +37,9 @@ export function mapFormToTransaction(
     finalAmount = Math.abs(parsedAmount)
   } else if (state.transactionType === 'transfer') {
     finalAmount = Math.abs(parsedAmount)
-    finalLedgerCategory = `Transfer:${state.transferSource}->${state.transferTarget}`
+    finalLedgerCategory = state.transferSource === state.transferTarget
+      ? 'AccountMove'
+      : `Transfer:${state.transferSource}->${state.transferTarget}`
   }
 
   const isIncome = state.transactionType === 'inflow' && state.ledgerCategory === 'Income'
@@ -66,9 +68,12 @@ export function mapFormToTransaction(
     stabilityReloadIntent: isStabilityReloadFormDrawdown(state)
       ? state.stabilityReloadIntent
       : undefined,
-    accountId: state.accountId || undefined,
+    accountId: isIncome
+      ? (state.splitAccountIds.Essentials || undefined)
+      : (state.accountId || undefined),
     counterAccountId: state.transactionType === 'transfer' || state.ledgerCategory === 'AccountMove'
       ? state.counterAccountId || undefined
       : undefined,
+    splitAccountIds: isIncome ? state.splitAccountIds : undefined,
   }
 }

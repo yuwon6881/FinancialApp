@@ -129,7 +129,7 @@ export function AccountFormSheet({
     <BottomSheet
       isOpen={isOpen}
       title={isEditing ? 'Edit account' : 'Add account'}
-      description="Keep one row for each real-world place where money lives. Each row belongs to one budget bucket."
+      description="Connect where money lives to a budget bucket."
       onClose={onClose}
       maxWidthClassName="max-w-xl"
       footer={(
@@ -141,15 +141,15 @@ export function AccountFormSheet({
         </div>
       )}
     >
-      <form id="ledger-account-form" noValidate onSubmit={submit} className="space-y-5">
+      <form id="ledger-account-form" noValidate onSubmit={submit} className="space-y-4">
         <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/15 p-3.5">
           <div className={`grid size-10 shrink-0 place-items-center rounded-xl border ${bucketBadgeClass}`} aria-hidden="true">
             <AccountIcon className="size-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-foreground">{isEditing ? 'Update this account connection' : 'Give this account a clear name'}</p>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              {isEditing ? 'Changes affect this bucket row only; your ledger history stays intact.' : 'Use a name you will recognise when choosing an account for new activity. A starting amount is reviewed against the bucket before it is recorded.'}
+            <p className="text-xs font-bold text-foreground">{isEditing ? 'Update account row' : 'Account connection'}</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+              {isEditing ? 'Changes affect this row only; ledger history stays intact.' : 'Name this account and choose its budget bucket.'}
             </p>
           </div>
         </div>
@@ -159,7 +159,7 @@ export function AccountFormSheet({
           Account details
         </div>
 
-        <FormField label="Account name" required error={error ?? undefined} hint="For example, Main bank account or Wallet cash.">
+        <FormField label="Account name" required error={error ?? undefined} hint="e.g. Main bank account or Cash wallet">
           <Input
             value={name}
             onChange={event => setName(event.target.value)}
@@ -169,7 +169,7 @@ export function AccountFormSheet({
           />
         </FormField>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4">
           <FormField label="Bucket" required>
             <CustomSelect
               value={bucket}
@@ -195,17 +195,17 @@ export function AccountFormSheet({
           One real-world account can have one row in each bucket if you track both portions separately.
         </p>
 
-        <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/10 p-4">
+        <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/10 p-3.5 sm:p-4">
           <label className="flex cursor-pointer items-start gap-3 text-sm font-semibold text-foreground">
             <Checkbox checked={interestEnabled} onChange={event => setInterestEnabled(event.target.checked)} className="mt-0.5 size-5" />
             <span className="min-w-0">
               <span className="flex items-center gap-1.5"><Percent className="size-3.5 text-accent-ink" aria-hidden="true" />Earn interest on this account</span>
-              <span className="mt-1 block text-[11px] font-normal leading-relaxed text-muted-foreground">Interest is added as a ledger credit to this account and its {bucket} bucket. The rate is entered per year.</span>
+              <span className="mt-0.5 block text-[11px] font-normal leading-relaxed text-muted-foreground">Interest is added as a ledger credit to this account and {bucket}.</span>
             </span>
           </label>
           {interestEnabled && (
-            <div className="grid grid-cols-1 gap-4 border-t border-border/40 pt-3 sm:grid-cols-2">
-              <FormField label="Annual interest rate (%)" required error={interestError ?? undefined} hint="For example, enter 5 for 5% per year. Interest is calculated from the account balance.">
+            <div className="grid grid-cols-1 gap-3.5 border-t border-border/40 pt-3 sm:grid-cols-2 sm:gap-4">
+              <FormField label="Annual interest rate (%)" required error={interestError ?? undefined} hint="e.g. 5 for 5% per year.">
                 <Input
                   type="number"
                   inputMode="decimal"
@@ -217,7 +217,7 @@ export function AccountFormSheet({
                   placeholder="5"
                 />
               </FormField>
-              <FormField label="Add interest" required hint="This controls how often the calculated interest is posted.">
+              <FormField label="Add interest" required hint="Posting frequency">
                 <CustomSelect
                   value={interestFrequency}
                   onChange={setInterestFrequency}
@@ -231,16 +231,16 @@ export function AccountFormSheet({
         </div>
 
         {!isEditing && (
-          <div className="rounded-2xl border border-border/60 bg-background/40 p-4">
+          <div className="rounded-2xl border border-border/60 bg-background/40 p-3.5 sm:p-4">
             <div className="flex items-center gap-2">
               <Banknote className="size-4 text-accent-ink" aria-hidden="true" />
               <p className="text-xs font-bold text-foreground">Starting balance</p>
             </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Optional. Use this when the account already holds money today; the next step will show whether the bucket total needs to change.</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">Optional. If this account holds funds today, balances are confirmed against the bucket total.</p>
             <FormField
               label={`Starting amount (${currency})`}
               className="mt-3"
-              hint="Entered from right to left like ledger amounts. Any ordinary adjustment is shown for confirmation first."
+              hint="Entered like ledger amounts. Any required adjustment is confirmed first."
             >
               <SmartAmountInput
                 value={openingAmount}
@@ -251,31 +251,31 @@ export function AccountFormSheet({
           </div>
         )}
 
-        <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/10 p-4">
+        <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/10 p-3.5 sm:p-4">
           <label className="flex cursor-pointer items-start gap-3 text-sm font-semibold text-foreground">
             <Checkbox checked={isDefault} onChange={event => setIsDefault(event.target.checked)} className="mt-0.5 size-5" />
             <span className="min-w-0">
-              <span className="block">Use as the default for {bucket}</span>
-              <span className="mt-1 block text-[11px] font-normal leading-relaxed text-muted-foreground">New bucket activity uses this account when no account is selected.</span>
+              <span className="block">Default for {bucket}</span>
+              <span className="mt-0.5 block text-[11px] font-normal leading-relaxed text-muted-foreground">New activity in {bucket} defaults to this account.</span>
             </span>
           </label>
           {!account && hasOpenAccountInBucket && isDefault && (
-            <p className="rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-2 text-[11px] leading-relaxed text-accent-ink">Saving this as default will replace the current default for {bucket}.</p>
+            <p className="rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1.5 text-[11px] leading-relaxed text-accent-ink">Replaces the current default for {bucket}.</p>
           )}
           {isEditing && (
             <label className="flex cursor-pointer items-start gap-3 border-t border-border/40 pt-3 text-sm font-semibold text-foreground">
               <Checkbox checked={isArchived} onChange={event => setIsArchived(event.target.checked)} className="mt-0.5 size-5" />
               <span className="min-w-0">
-                <span className="block">Mark this account as closed</span>
-                <span className="mt-1 block text-[11px] font-normal leading-relaxed text-muted-foreground">Closed accounts stay visible for history but are no longer offered for new activity.</span>
+                <span className="block">Mark account as closed</span>
+                <span className="mt-0.5 block text-[11px] font-normal leading-relaxed text-muted-foreground">Closed accounts stay in history but are hidden from new entries.</span>
               </span>
             </label>
           )}
         </div>
 
-        <div className="flex items-start gap-2 rounded-xl border border-border/50 bg-muted/10 p-3 text-[11px] leading-relaxed text-muted-foreground">
+        <div className="flex items-start gap-2.5 rounded-xl border border-border/50 bg-muted/10 p-3 text-[11px] leading-relaxed text-muted-foreground">
           <Info className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-          <p><span className="font-semibold text-foreground">Growth is kept separate.</span> Money sent to investments is not added to your available cash here; investment deposits and withdrawals remain the source of truth.</p>
+          <p><span className="font-semibold text-foreground">Growth is kept separate.</span> Investment deposits and withdrawals remain the source of truth.</p>
         </div>
       </form>
     </BottomSheet>

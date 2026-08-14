@@ -2,6 +2,21 @@ import type { AutocompleteSuggestion, LedgerAccount, StabilityRecovery, Transact
 import type { ReceiptScanResult } from '../../../lib/api'
 import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
 
+export interface StabilityTopUpContext {
+  recovery: StabilityRecovery
+  cycleYear: number
+  cycleMonthIndex: number
+  cycleDay: number
+  essentialsAlloc: number
+  growthAlloc: number
+  stabilityAlloc: number
+  rewardsAlloc: number
+  essentialsBalance: number
+  growthBalance: number
+  rewardsBalance: number
+  stabilityOverflowRedirect: string
+}
+
 export interface UseTransactionFormOptions {
   categories: TransactionCategory[]
   accounts?: LedgerAccount[]
@@ -15,13 +30,11 @@ export interface UseTransactionFormOptions {
   growthAlloc: number
   stabilityAlloc: number
   rewardsAlloc: number
+  cycleDay: number
   stabilityBalance: number
   stabilityTarget: number
   stabilityOverflowRedirect: string
-  stabilityRecovery?: StabilityRecovery
-  essentialsBalance?: number
-  growthBalance?: number
-  rewardsBalance?: number
+  stabilityTopUpContext?: StabilityTopUpContext
   onAddTransaction: (transaction: Omit<Transaction, 'id'>, documentChanges?: TransactionDocumentChanges) => Promise<string | void> | string | void
   onUpdateTransaction?: (id: string, transaction: Omit<Transaction, 'id'>, documentChanges?: TransactionDocumentChanges) => Promise<void> | void
   onUpdateDraftTransaction?: (id: string, transaction: Omit<Transaction, 'id'>, documentChanges: TransactionDocumentChanges) => Promise<void> | void

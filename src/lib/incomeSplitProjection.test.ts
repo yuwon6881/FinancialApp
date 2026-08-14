@@ -102,4 +102,24 @@ describe('buildIncomeSplitRows', () => {
 
     expect(buildIncomeSplitRows({ ...income, amount: -40, ledgerCategory: 'Essentials' }, allocations)).toEqual([])
   })
+
+  it('assigns splitAccountIds to generated split child rows per bucket', () => {
+    const rows = buildIncomeSplitRows(
+      {
+        ...income,
+        splitAccountIds: {
+          Essentials: 'acc-essentials-custom',
+          Growth: 'acc-growth-custom',
+          Stability: 'acc-stability-custom',
+          Rewards: 'acc-rewards-custom',
+        },
+      },
+      allocations,
+    )
+
+    expect(rows.find(r => r.id === 'tx-1-split-Essentials')?.accountId).toBe('acc-essentials-custom')
+    expect(rows.find(r => r.id === 'tx-1-split-Growth')?.accountId).toBe('acc-growth-custom')
+    expect(rows.find(r => r.id === 'tx-1-split-Stability')?.accountId).toBe('acc-stability-custom')
+    expect(rows.find(r => r.id === 'tx-1-split-Rewards')?.accountId).toBe('acc-rewards-custom')
+  })
 })

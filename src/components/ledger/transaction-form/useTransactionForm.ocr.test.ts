@@ -23,6 +23,7 @@ function createOptions(overrides: Partial<UseTransactionFormOptions> = {}): UseT
     growthAlloc: 0.25,
     stabilityAlloc: 0.15,
     rewardsAlloc: 0.1,
+    cycleDay: 28,
     stabilityBalance: 0,
     stabilityTarget: 10_000,
     stabilityOverflowRedirect: 'Rewards',

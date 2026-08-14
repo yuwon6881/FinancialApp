@@ -15,9 +15,31 @@ describe('validateTransactionForm', () => {
     expect(validateTransactionForm(validForm)).toEqual({})
   })
 
-  it('rejects a transfer to the same bucket', () => {
+  it('rejects a transfer to the same bucket when account tracking is not enabled', () => {
     expect(validateTransactionForm({ ...validForm, transferTarget: 'Rewards' })).toMatchObject({
       transferTarget: 'Choose a different target category.',
+    })
+  })
+
+  it('accepts a transfer in the same bucket when distinct accounts are selected', () => {
+    expect(validateTransactionForm({
+      ...validForm,
+      transferTarget: 'Rewards',
+      accountTrackingEnabled: true,
+      accountId: 'acc-rewards-1',
+      counterAccountId: 'acc-rewards-2',
+    })).toEqual({})
+  })
+
+  it('rejects a transfer in the same bucket when the same account is selected for both legs', () => {
+    expect(validateTransactionForm({
+      ...validForm,
+      transferTarget: 'Rewards',
+      accountTrackingEnabled: true,
+      accountId: 'acc-rewards-1',
+      counterAccountId: 'acc-rewards-1',
+    })).toMatchObject({
+      counterAccountId: 'Choose two different accounts.',
     })
   })
 

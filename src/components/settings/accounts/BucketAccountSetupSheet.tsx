@@ -268,7 +268,7 @@ export function BucketAccountSetupSheet({
       <BottomSheet
         isOpen={isOpen && !view.pending}
         title={bucket ? `Set up ${bucket} accounts` : 'Set up accounts'}
-        description="Choose the accounts in this bucket and set the amount each one holds today. The bucket total will only change after you confirm it."
+        description="Assign the amount held by each account today. Bucket totals only change upon confirmation."
         onClose={onClose}
         maxWidthClassName="max-w-2xl"
         footer={(
@@ -280,7 +280,7 @@ export function BucketAccountSetupSheet({
           </ModalActions>
         )}
       >
-        <div className="space-y-5">
+        <div className="space-y-4">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div className="rounded-xl border border-border/60 bg-muted/15 p-3">
               <span className="block text-[10px] font-semibold text-muted-foreground">Current bucket total</span>
@@ -305,13 +305,13 @@ export function BucketAccountSetupSheet({
             </div>
           )}
 
-          <div className="flex items-start gap-2 rounded-xl border border-accent-ink/20 bg-accent/15 p-3 text-[11px] leading-relaxed text-muted-foreground">
+          <div className="flex items-start gap-2.5 rounded-xl border border-accent-ink/20 bg-accent/15 p-3 text-[11px] leading-relaxed text-muted-foreground">
             <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-            <p>Enter the amount each open account holds today. If those amounts do not add up to the bucket total, the next screen will show the exact bucket adjustment and ask you to confirm it.</p>
+            <p>Enter current balances for each account. Any difference from the bucket total is confirmed as a ledger adjustment.</p>
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-end justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               <div>
                 <h4 className="text-sm font-bold text-foreground">Accounts in {bucket}</h4>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">Closed accounts remain in the total and cannot be changed here.</p>
@@ -323,7 +323,7 @@ export function BucketAccountSetupSheet({
             </div>
 
             {view.bucketAccounts.map(account => (
-              <div key={account.id} className="grid grid-cols-[minmax(0,1fr)_minmax(8rem,12rem)] items-center gap-3 rounded-2xl border border-border/60 bg-card/70 p-3">
+              <div key={account.id} className="grid grid-cols-1 items-center gap-2.5 rounded-2xl border border-border/60 bg-card/70 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,12rem)] sm:gap-3">
                 <div className="min-w-0">
                   <p className={`truncate text-xs font-semibold ${account.isArchived ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
                     {account.name}
@@ -371,7 +371,7 @@ export function BucketAccountSetupSheet({
             ))}
 
             {view.bucketAccounts.length === 0 && view.drafts.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-border/70 bg-muted/10 px-4 py-6 text-center text-xs text-muted-foreground">
+              <div className="rounded-2xl border border-dashed border-border/70 bg-card/40 px-4 py-6 text-center text-xs text-muted-foreground">
                 Add at least one account row to start this bucket split.
               </div>
             )}

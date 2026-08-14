@@ -23,19 +23,17 @@ export type { UseTransactionFormOptions } from './useTransactionFormOptions'
 export function useTransactionForm(options: UseTransactionFormOptions) {
   const {
     categories,
-    accounts = [],
-    accountsLoading = accounts.length === 0,
+    accounts: accountsInput,
+    accountsLoading = accountsInput === undefined,
     essentialsAlloc,
     growthAlloc,
     stabilityAlloc,
     rewardsAlloc,
+    cycleDay,
     stabilityBalance,
     stabilityTarget,
     stabilityOverflowRedirect,
-    stabilityRecovery,
-    essentialsBalance = 0,
-    growthBalance = 0,
-    rewardsBalance = 0,
+    stabilityTopUpContext,
     onAddTransaction,
     onUpdateTransaction,
     onUpdateDraftTransaction,
@@ -59,6 +57,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     hideSensitive,
     sensitivePreferenceStatus,
   } = options
+  const accounts = accountsInput ?? []
 
   const defaultCategory = categories.length > 0 ? categories[0].name : ''
   const todayDate = getTodayDateString()
@@ -98,18 +97,24 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
    * whatever is typed is clamped to what this pay packet can move — the field can hold an
    * over-max value while being edited, and that must never reach the ledger.
    */
-  const { resolveAcceptedTopUp, topUpBuckets, topUpOffer } = useStabilityTopUpOffer({
+  const {
+    resolveAcceptedTopUp,
+    topUpBuckets,
+    topUpOffer,
+    isRecoveryCycleDate,
+    savedTopUpMovedAcrossCycles,
+  } = useStabilityTopUpOffer({
     state,
     transactions,
-    stabilityRecovery,
-    essentialsAlloc,
-    growthAlloc,
-    stabilityAlloc,
-    rewardsAlloc,
-    essentialsBalance,
-    growthBalance,
-    rewardsBalance,
+    cycleDay,
+    stabilityTopUpContext,
   })
+
+  useEffect(() => {
+    if (state.mode !== 'create' || !state.stabilityTopUpAccepted || topUpOffer) return
+    dispatch({ type: 'SET_FIELD', field: 'stabilityTopUpAccepted', value: false })
+    dispatch({ type: 'SET_FIELD', field: 'stabilityTopUpAmount', value: '' })
+  }, [state.mode, state.stabilityTopUpAccepted, topUpOffer])
 
   const { clearDraft: clearFormDraft } = useFormDraft(
     'ledger-tx-form',
@@ -246,6 +251,11 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     if (hideSensitive) return
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
     setDocumentFieldRevision(revision => revision + 1)
+    const isTransfer = t.ledgerCategory.startsWith('Transfer:')
+    const isAccountMove = t.ledgerCategory.toLowerCase() === 'accountmove'
+    const moveBucket = isAccountMove
+      ? (accounts.find(a => a.id === t.accountId)?.bucket ?? accounts.find(a => a.id === t.counterAccountId)?.bucket ?? 'Essentials')
+      : undefined
     dispatch({
       type: 'OPEN_EDIT',
       payload: {
@@ -254,12 +264,17 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
         amount: Math.abs(t.amount).toFixed(2),
         date: t.date,
         category: t.category,
-        ledgerCategory: t.ledgerCategory.startsWith('Transfer:') ? 'Essentials' : t.ledgerCategory,
-        txType: t.ledgerCategory.startsWith('Transfer:') ? 'transfer' : (t.amount < 0 ? 'outflow' : 'inflow'),
-        transferSource: t.ledgerCategory.startsWith('Transfer:') ? (t.ledgerCategory.substring(9).split('->')[0].trim() as TransferBucket) : undefined,
-        transferTarget: t.ledgerCategory.startsWith('Transfer:') ? (t.ledgerCategory.substring(9).split('->')[1].trim() as TransferBucket) : undefined,
+        ledgerCategory: isTransfer ? 'Essentials' : t.ledgerCategory,
+        txType: isTransfer || isAccountMove ? 'transfer' : (t.amount < 0 ? 'outflow' : 'inflow'),
+        transferSource: isTransfer
+          ? (t.ledgerCategory.substring(9).split('->')[0].trim() as TransferBucket)
+          : (isAccountMove ? (moveBucket as TransferBucket) : undefined),
+        transferTarget: isTransfer
+          ? (t.ledgerCategory.substring(9).split('->')[1].trim() as TransferBucket)
+          : (isAccountMove ? (moveBucket as TransferBucket) : undefined),
         accountId: t.accountId,
         counterAccountId: t.counterAccountId,
+        splitAccountIds: t.splitAccountIds,
         stabilityRecoveryTopUpAmount: t.stabilityRecoveryTopUpAmount,
         stabilityReloadIntent: t.stabilityReloadIntent,
       }
@@ -276,7 +291,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       .then(setExistingDocuments)
       .catch(() => onShowAlert?.('Attached documents could not be loaded.', 'Document Vault'))
     openTransactionForm()
-  }, [hideSensitive, suggestions, onStartEditPending, onShowAlert, openTransactionForm])
+  }, [accounts, hideSensitive, suggestions, onStartEditPending, onShowAlert, openTransactionForm])
 
   const handleStartDraft = useCallback(async (draft: Transaction) => {
     if (hideSensitive) return
@@ -287,6 +302,11 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     setExistingDocuments([])
     setInitialDocumentChanges(changes)
     setDocumentFieldRevision(revision => revision + 1)
+    const isTransfer = draft.ledgerCategory.startsWith('Transfer:')
+    const isAccountMove = draft.ledgerCategory.toLowerCase() === 'accountmove'
+    const moveBucket = isAccountMove
+      ? (accounts.find(a => a.id === draft.accountId)?.bucket ?? accounts.find(a => a.id === draft.counterAccountId)?.bucket ?? 'Essentials')
+      : undefined
     dispatch({
       type: 'OPEN_DRAFT',
       payload: {
@@ -296,11 +316,16 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
         date: draft.date,
         category: draft.category,
         ledgerCategory: draft.ledgerCategory.startsWith('Transfer:') ? 'Essentials' : draft.ledgerCategory,
-        txType: draft.ledgerCategory.startsWith('Transfer:') ? 'transfer' : (draft.amount < 0 ? 'outflow' : 'inflow'),
-        transferSource: draft.ledgerCategory.startsWith('Transfer:') ? (draft.ledgerCategory.substring(9).split('->')[0].trim() as TransferBucket) : undefined,
-        transferTarget: draft.ledgerCategory.startsWith('Transfer:') ? (draft.ledgerCategory.substring(9).split('->')[1].trim() as TransferBucket) : undefined,
+        txType: isTransfer || isAccountMove ? 'transfer' : (draft.amount < 0 ? 'outflow' : 'inflow'),
+        transferSource: isTransfer
+          ? (draft.ledgerCategory.substring(9).split('->')[0].trim() as TransferBucket)
+          : (isAccountMove ? (moveBucket as TransferBucket) : undefined),
+        transferTarget: isTransfer
+          ? (draft.ledgerCategory.substring(9).split('->')[1].trim() as TransferBucket)
+          : (isAccountMove ? (moveBucket as TransferBucket) : undefined),
         accountId: draft.accountId,
         counterAccountId: draft.counterAccountId,
+        splitAccountIds: draft.splitAccountIds,
         stabilityRecoveryTopUpAmount: draft.stabilityRecoveryTopUpAmount,
         stabilityReloadIntent: draft.stabilityReloadIntent,
       },
@@ -309,7 +334,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     autocompletedDescriptionRef.current = null
     suggestions.clearSuggestions()
     openTransactionForm()
-  }, [hideSensitive, onLoadDraftDocumentChanges, openTransactionForm, suggestions])
+  }, [accounts, hideSensitive, onLoadDraftDocumentChanges, openTransactionForm, suggestions])
 
   useEffect(() => {
     if (!aiEditDraft) return
@@ -360,7 +385,11 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   // Transfer text generator side effects
   useEffect(() => {
     if (state.transactionType === 'transfer' && !state.editingId) {
-      dispatch({ type: 'SET_FIELD', field: 'description', value: `Transfer from ${state.transferSource} to ${state.transferTarget}` })
+      if (state.transferSource === state.transferTarget) {
+        dispatch({ type: 'SET_FIELD', field: 'description', value: `Transfer within ${state.transferSource}` })
+      } else {
+        dispatch({ type: 'SET_FIELD', field: 'description', value: `Transfer from ${state.transferSource} to ${state.transferTarget}` })
+      }
     }
   }, [state.transactionType, state.transferSource, state.transferTarget, state.editingId])
 
@@ -377,11 +406,22 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       }
     }
     if (state.transactionType === 'transfer') {
+      const isSameBucket = state.transferSource === state.transferTarget
       const selectedTarget = state.counterAccountId ? accounts.find(account => account.id === state.counterAccountId) : undefined
-      const targetDefaultId = accounts.find(account => account.bucket === state.transferTarget && account.isDefault && !account.isArchived)?.id ?? ''
-      const nextTargetId = targetDefaultId || null
-      if ((!selectedTarget || selectedTarget.bucket !== state.transferTarget) && state.counterAccountId !== nextTargetId) {
-        dispatch({ type: 'SET_FIELD', field: 'counterAccountId', value: nextTargetId })
+      if (isSameBucket) {
+        const otherAccounts = accounts.filter(account => account.bucket === state.transferTarget && !account.isArchived && account.id !== state.accountId)
+        if (!selectedTarget || selectedTarget.bucket !== state.transferTarget || selectedTarget.id === state.accountId) {
+          const nextTargetId = otherAccounts.length === 1 ? otherAccounts[0].id : null
+          if (state.counterAccountId !== nextTargetId) {
+            dispatch({ type: 'SET_FIELD', field: 'counterAccountId', value: nextTargetId })
+          }
+        }
+      } else {
+        const targetDefaultId = accounts.find(account => account.bucket === state.transferTarget && account.isDefault && !account.isArchived)?.id ?? ''
+        const nextTargetId = targetDefaultId || null
+        if ((!selectedTarget || selectedTarget.bucket !== state.transferTarget) && state.counterAccountId !== nextTargetId) {
+          dispatch({ type: 'SET_FIELD', field: 'counterAccountId', value: nextTargetId })
+        }
       }
     } else if (state.counterAccountId !== null) {
       dispatch({ type: 'SET_FIELD', field: 'counterAccountId', value: null })
@@ -390,6 +430,20 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       dispatch({ type: 'SET_FIELD', field: 'accountId', value: null })
     }
   }, [accounts, state.accountId, state.counterAccountId, state.ledgerCategory, state.transactionType, state.transferSource, state.transferTarget])
+
+  useEffect(() => {
+    if (accounts.length === 0) return
+    const buckets: TransferBucket[] = ['Essentials', 'Growth', 'Stability', 'Rewards']
+    for (const bucket of buckets) {
+      if (!state.splitAccountIds[bucket]) {
+        const defaultAccount = accounts.find(account => account.bucket === bucket && account.isDefault && !account.isArchived)
+          ?? accounts.find(account => account.bucket === bucket && !account.isArchived)
+        if (defaultAccount) {
+          dispatch({ type: 'SET_SPLIT_ACCOUNT', bucket, accountId: defaultAccount.id })
+        }
+      }
+    }
+  }, [accounts, state.splitAccountIds])
 
   useEffect(() => {
     if (categories.length > 0 && !state.category) {
@@ -406,12 +460,18 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
     setDocumentFieldRevision(revision => revision + 1)
     documentsFieldRef.current?.reset()
+    const defaultSplitAccountIds: Partial<Record<TransferBucket, string>> = {}
+    for (const b of ['Essentials', 'Growth', 'Stability', 'Rewards'] as const) {
+      const acc = accounts.find(a => a.bucket === b && a.isDefault && !a.isArchived) ?? accounts.find(a => a.bucket === b && !a.isArchived)
+      if (acc) defaultSplitAccountIds[b] = acc.id
+    }
     dispatch({
       type: 'OPEN_CREATE',
       payload: {
         defaultCategory,
         todayDate,
         defaultAccountId: accounts.find(account => account.bucket === 'Essentials' && account.isDefault && !account.isArchived)?.id,
+        defaultSplitAccountIds,
       },
     })
     const targetTxType = initialTxType || autoOpenTxType
@@ -432,12 +492,18 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
     setDocumentFieldRevision(revision => revision + 1)
     documentsFieldRef.current?.reset()
+    const defaultSplitAccountIds: Partial<Record<TransferBucket, string>> = {}
+    for (const b of ['Essentials', 'Growth', 'Stability', 'Rewards'] as const) {
+      const acc = accounts.find(a => a.bucket === b && a.isDefault && !a.isArchived) ?? accounts.find(a => a.bucket === b && !a.isArchived)
+      if (acc) defaultSplitAccountIds[b] = acc.id
+    }
     dispatch({
       type: 'OPEN_CREATE',
       payload: {
         defaultCategory,
         todayDate,
         defaultAccountId: accounts.find(account => account.bucket === 'Essentials' && account.isDefault && !account.isArchived)?.id,
+        defaultSplitAccountIds,
       },
     })
     dispatch({
@@ -554,6 +620,16 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
 
     if (state.stabilityTopUpAccepted) {
       const chosenTopUp = resolveAcceptedTopUp()
+      if (savedTopUpMovedAcrossCycles) {
+        dispatch({
+          type: 'SET_ERRORS',
+          errors: {
+            stabilityTopUpAmount: 'Remove this reimbursement before moving the salary to another cycle.',
+          },
+        })
+        focusFirstInvalidField(e.currentTarget)
+        return
+      }
       if (!topUpOffer || !Number.isFinite(chosenTopUp) || chosenTopUp <= 0 || chosenTopUp > topUpOffer.maxTopUp) {
         dispatch({
           type: 'SET_ERRORS',
@@ -576,13 +652,15 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     }
 
     const mapped = mapFormToTransaction(state, {
-      essentialsAlloc,
-      growthAlloc,
-      stabilityAlloc,
-      rewardsAlloc,
-      stabilityBalance,
-      stabilityTarget,
-      stabilityOverflowRedirect,
+      essentialsAlloc: isRecoveryCycleDate ? stabilityTopUpContext!.essentialsAlloc : essentialsAlloc,
+      growthAlloc: isRecoveryCycleDate ? stabilityTopUpContext!.growthAlloc : growthAlloc,
+      stabilityAlloc: isRecoveryCycleDate ? stabilityTopUpContext!.stabilityAlloc : stabilityAlloc,
+      rewardsAlloc: isRecoveryCycleDate ? stabilityTopUpContext!.rewardsAlloc : rewardsAlloc,
+      stabilityBalance: isRecoveryCycleDate ? stabilityTopUpContext!.recovery.currentBalance : stabilityBalance,
+      stabilityTarget: isRecoveryCycleDate ? stabilityTopUpContext!.recovery.target : stabilityTarget,
+      stabilityOverflowRedirect: isRecoveryCycleDate
+        ? stabilityTopUpContext!.stabilityOverflowRedirect
+        : stabilityOverflowRedirect,
       recoveryTopUp: resolveAcceptedTopUp(),
     })
 
@@ -635,5 +713,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     existingDocuments,
     topUpOffer,
     topUpBuckets,
+    stabilityTopUpError: savedTopUpMovedAcrossCycles
+      ? 'Remove this reimbursement before moving the salary to another cycle.'
+      : undefined,
   }
 }

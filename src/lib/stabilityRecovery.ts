@@ -614,8 +614,6 @@ export function proposeTopUp(
 ): RecoveryOffer | null {
   if (!isRecoveryActive(recovery)) return null
   if (!Number.isFinite(incomeAmount) || incomeAmount <= 0) return null
-  if (recovery.outstandingThisCycle <= 0) return null
-
   const contributing = buckets.filter(bucket => bucket.alloc > 0)
   const allocTotal = contributing.reduce((sum, bucket) => sum + bucket.alloc, 0)
   if (allocTotal <= 0) return null
@@ -631,7 +629,7 @@ export function proposeTopUp(
   if (recovery.target > 0 && roomAfterNormal <= 0) return null
   const reloadCapacity = Math.min(recovery.outstandingShortfall, affordable, roomAfterNormal)
   if (reloadCapacity <= 0) return null
-  const requestedTopUp = Math.min(recovery.outstandingThisCycle, reloadCapacity)
+  const requestedTopUp = Math.min(Math.max(0, recovery.outstandingThisCycle), reloadCapacity)
 
   // The largest amount that still leaves every bucket its committed money.
   let safeCap = affordable
@@ -657,6 +655,7 @@ export function proposeTopUp(
   // being cleared at once. The spread exists for exactly that case; a 70 dip does not need it.
   const trivialRemainder = incomeAmount * stabilityAlloc
   const wholeShortfallFits =
+    requestedTopUp > 0 &&
     reloadCapacity === recovery.outstandingShortfall &&
     reloadCapacity <= safeCap && reloadCapacity <= trivialRemainder
   const proposedTopUp = wholeShortfallFits

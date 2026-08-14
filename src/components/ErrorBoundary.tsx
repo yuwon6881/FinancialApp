@@ -1,6 +1,7 @@
 import { Component, Fragment, type ErrorInfo, type ReactNode } from 'react'
 import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react'
 import { CACHE_KEYS } from '../lib/cache'
+import { isChunkLoadError } from '../lib/chunkLoadError'
 import { Button } from './ui/Button'
 
 interface ErrorBoundaryProps {
@@ -24,16 +25,6 @@ interface ErrorBoundaryState {
   retrying: boolean
   /** Consecutive resets that crashed again before the subtree could mount. */
   failedRetries: number
-}
-
-/** Browser wording varies for a missing or stale dynamic-import chunk, especially on mobile. */
-export function isChunkLoadError(error: Error): boolean {
-  const message = `${error.name} ${error.message}`.toLowerCase()
-  return message.includes('dynamically imported module')
-    || message.includes('module script failed')
-    || message.includes('chunkloaderror')
-    || message.includes('loading chunk')
-    || message === 'typeerror load failed'
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -122,7 +113,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         }
       >
         <div className="mx-auto flex max-w-sm flex-col items-center gap-4">
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-500 border border-orange-500/20">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive border border-destructive/20">
             <AlertTriangle className="size-6" />
           </div>
           <div className="space-y-1.5 text-center">

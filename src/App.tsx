@@ -1,9 +1,9 @@
 import { Button } from './components/ui/Button'
-import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense, type RefObject } from 'react'
 import TopNav from "./TopNav.tsx"
 import { type AppTab, type InvestmentAllocationOverview } from './types'
 import * as api from './lib/api'
-import { Loader2 } from 'lucide-react'
+import { Loader2, X, Zap } from 'lucide-react'
 
 // Every view is code-split so the initial bundle only ships the shell. Each
 // chunk loads on demand behind an instant blank-shell fallback (no flash).
@@ -83,14 +83,12 @@ const AppOverlays = lazy(() => import('./app/AppOverlays').then(module => ({ def
 const AppOverlaysFallback = ({
   isOpen,
   visible,
-  onToggle,
   onAskAi,
   onPostTransaction,
   postTransactionDisabled,
 }: {
   isOpen: boolean
   visible: boolean
-  onToggle: () => void
   onAskAi: () => void
   onPostTransaction: () => void
   postTransactionDisabled: boolean
@@ -122,20 +120,42 @@ const AppOverlaysFallback = ({
         </Button>
       </div>
     )}
-    {visible && (
-      <Button
-        variant="unstyled"
-        type="button"
-        aria-label={isOpen ? 'Close Menu' : 'Open Menu'}
-        title={isOpen ? 'Close Menu' : 'Open Menu'}
-        onClick={onToggle}
-        className="fixed right-6 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/25 cursor-pointer lg:hidden"
-        style={{ bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}
-      >
-        <Loader2 className="size-6 opacity-0" aria-hidden="true" />
-      </Button>
-    )}
   </>
+)
+
+const MobileFabTrigger = ({
+  isOpen,
+  visible,
+  onToggle,
+  triggerRef,
+}: {
+  isOpen: boolean
+  visible: boolean
+  onToggle: () => void
+  triggerRef: RefObject<HTMLButtonElement | null>
+}) => visible ? (
+  <Button
+    ref={triggerRef}
+    variant="unstyled"
+    type="button"
+    aria-label={isOpen ? 'Close Menu' : 'Open Menu'}
+    title={isOpen ? 'Close Menu' : 'Open Menu'}
+    onClick={onToggle}
+    className="fixed right-6 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/25 cursor-pointer lg:hidden"
+    style={{ bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}
+    aria-expanded={isOpen}
+    aria-controls="mobile-fab-actions"
+  >
+    {isOpen ? <X className="size-6" /> : <Zap className="size-6" />}
+  </Button>
+) : null
+
+const AppFooter = () => (
+  <footer className="border-t border-border/40 py-6 pb-24 md:pb-6 bg-background/45 backdrop-blur select-none">
+    <div className="mx-auto w-full max-w-[1440px] px-4 text-center text-xs text-muted-foreground sm:px-6 lg:px-8">
+      &copy; {new Date().getFullYear()} FinancialApp. All rights reserved.
+    </div>
+  </footer>
 )
 
 // Skeleton placeholder for tab navigation to prevent empty squares in the main content area.
@@ -223,15 +243,16 @@ function App() {
     hasShownModalThisSession,
     setShowLoginModal: dialogs.setShowLoginModal,
   })
-  persistSelectedPeriodRef.current = (month, year) => {
-    financial.mutateQueue(previous => financial.enqueue(previous, 'settings', 'update', 'selectedPeriod', {
-      selectedMonth: month,
-      selectedYear: year,
-    }))
-  }
+  useEffect(() => {
+    persistSelectedPeriodRef.current = (month, year) => {
+      financial.mutateQueue(previous => financial.enqueue(previous, 'settings', 'update', 'selectedPeriod', {
+        selectedMonth: month,
+        selectedYear: year,
+      }))
+    }
+  }, [financial])
 
   const [investmentAllocation, setInvestmentAllocation] = useState<InvestmentAllocationOverview | null>(null)
-
   const [isLedgerAddOpen, setIsLedgerAddOpen] = useState(false)
   const isLedgerAddOpenRef = useRef(isLedgerAddOpen)
   useEffect(() => {
@@ -310,6 +331,7 @@ function App() {
     setIsAiOpen(true)
   }, [aiEntryPoint.launch])
   const fabMenu = useFabMenu(prefs.activeTab)
+  const fabTriggerRef = useRef<HTMLButtonElement>(null)
 
   // Apply the destination the AI action router settled on. Keyed on the intent's nonce, so this
   // fires once per assistant turn even when the turn ends on the tab the user is already looking
@@ -708,10 +730,18 @@ function App() {
           onExplainWithAi={launchAiExplanation}
         />
 
-        <Suspense fallback={<AppOverlaysFallback
+        <AppFooter />
+
+        <MobileFabTrigger
           isOpen={fabMenu.isOpen}
           visible={shouldShowMobileFab(prefs.activeTab)}
           onToggle={fabMenu.toggle}
+          triggerRef={fabTriggerRef}
+        />
+
+        <Suspense fallback={<AppOverlaysFallback
+          isOpen={fabMenu.isOpen}
+          visible={shouldShowMobileFab(prefs.activeTab)}
           onAskAi={() => {
             setIsAiOpen(true)
             fabMenu.close()
@@ -730,6 +760,7 @@ function App() {
             nav={nav}
             cycleSummary={cycleSummary}
             fabMenu={fabMenu}
+            fabTriggerRef={fabTriggerRef}
             todayDashboardData={todayDashboardData}
             currentPendingNotifications={currentPendingNotifications}
             setIsAiOpen={setIsAiOpen}

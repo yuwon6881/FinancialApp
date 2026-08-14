@@ -4,10 +4,13 @@ export type TransactionType = 'inflow' | 'outflow' | 'transfer'
 export type TransferBucket = 'Essentials' | 'Growth' | 'Stability' | 'Rewards'
 export type SelectableLedgerCategory = 'Income' | TransferBucket | 'AccountMove'
 
+
 export interface TransactionFormState {
   showAddForm: boolean
   mode: 'create' | 'edit' | 'draft'
   editingId: string | null
+  /** Original posting date for edit/draft cycle-change validation. */
+  originalDate: string | null
   description: string
   amount: string
   transactionType: TransactionType
@@ -19,6 +22,8 @@ export interface TransactionFormState {
   accountId: string | null
   /** Destination account for an in-bucket AccountMove row. */
   counterAccountId: string | null
+  /** Destination accounts per bucket for income allocation splits. */
+  splitAccountIds: Record<TransferBucket, string>
   date: string
   /**
    * Whether the user opted this salary into putting money back into the emergency fund.
@@ -39,10 +44,11 @@ export interface TransactionFormState {
 }
 
 export type TransactionFormAction =
-  | { type: 'OPEN_CREATE'; payload?: { defaultCategory: string; todayDate: string; defaultAccountId?: string } }
-  | { type: 'OPEN_EDIT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; accountId?: string | null; counterAccountId?: string | null; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
-  | { type: 'OPEN_DRAFT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; accountId?: string | null; counterAccountId?: string | null; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
+  | { type: 'OPEN_CREATE'; payload?: { defaultCategory: string; todayDate: string; defaultAccountId?: string; defaultSplitAccountIds?: Partial<Record<TransferBucket, string>> } }
+  | { type: 'OPEN_EDIT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; accountId?: string | null; counterAccountId?: string | null; splitAccountIds?: Record<string, string> | null; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
+  | { type: 'OPEN_DRAFT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; accountId?: string | null; counterAccountId?: string | null; splitAccountIds?: Record<string, string> | null; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
   | { type: 'SET_FIELD'; field: keyof TransactionFormState; value: any }
+  | { type: 'SET_SPLIT_ACCOUNT'; bucket: TransferBucket; accountId: string }
   | { type: 'APPLY_RECEIPT'; payload: { description?: string; amount?: string | number | null; date?: string | null; txType?: TransactionType; ledgerCategory?: SelectableLedgerCategory; category?: string }; todayDate: string }
   | { type: 'APPLY_AI_DRAFT'; payload: Record<string, any>; todayDate: string }
   | { type: 'RESET'; todayDate: string; defaultCategory: string }
@@ -53,6 +59,7 @@ export const getInitialState = (todayDate: string, defaultCategory: string): Tra
   showAddForm: false,
   mode: 'create',
   editingId: null,
+  originalDate: null,
   description: '',
   amount: '',
   transactionType: 'outflow',
@@ -62,6 +69,12 @@ export const getInitialState = (todayDate: string, defaultCategory: string): Tra
   transferTarget: 'Rewards',
   accountId: '',
   counterAccountId: null,
+  splitAccountIds: {
+    Essentials: '',
+    Growth: '',
+    Stability: '',
+    Rewards: '',
+  },
   date: todayDate,
   stabilityTopUpAccepted: false,
   stabilityTopUpAmount: '',
@@ -83,6 +96,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         showAddForm: true,
         mode: 'create',
         editingId: null,
+        originalDate: null,
         description: '',
         amount: '',
         transactionType: 'outflow',
@@ -91,6 +105,12 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         transferTarget: 'Rewards',
         accountId: action.payload?.defaultAccountId ?? '',
         counterAccountId: null,
+        splitAccountIds: {
+          Essentials: action.payload?.defaultSplitAccountIds?.Essentials ?? '',
+          Growth: action.payload?.defaultSplitAccountIds?.Growth ?? '',
+          Stability: action.payload?.defaultSplitAccountIds?.Stability ?? '',
+          Rewards: action.payload?.defaultSplitAccountIds?.Rewards ?? '',
+        },
         date: action.payload?.todayDate ?? state.date,
         category: action.payload?.defaultCategory ?? state.category,
         stabilityTopUpAccepted: false,
@@ -105,6 +125,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         showAddForm: true,
         mode: action.type === 'OPEN_DRAFT' ? 'draft' : 'edit',
         editingId: action.payload.id,
+        originalDate: action.payload.date,
         description: action.payload.description,
         amount: action.payload.amount,
         date: action.payload.date,
@@ -115,6 +136,12 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         transferTarget: action.payload.transferTarget ?? state.transferTarget,
         accountId: action.payload.accountId ?? null,
         counterAccountId: action.payload.counterAccountId ?? null,
+        splitAccountIds: {
+          Essentials: action.payload.splitAccountIds?.Essentials ?? state.splitAccountIds.Essentials,
+          Growth: action.payload.splitAccountIds?.Growth ?? state.splitAccountIds.Growth,
+          Stability: action.payload.splitAccountIds?.Stability ?? state.splitAccountIds.Stability,
+          Rewards: action.payload.splitAccountIds?.Rewards ?? state.splitAccountIds.Rewards,
+        },
         stabilityTopUpAccepted: (action.payload.stabilityRecoveryTopUpAmount ?? 0) > 0,
         stabilityTopUpAmount: (action.payload.stabilityRecoveryTopUpAmount ?? 0) > 0
           ? action.payload.stabilityRecoveryTopUpAmount!.toFixed(2)
@@ -127,6 +154,14 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         ...state,
         [action.field]: action.value,
         errors: { ...state.errors, [action.field]: '' }, // clear error when typing
+      }
+    case 'SET_SPLIT_ACCOUNT':
+      return {
+        ...state,
+        splitAccountIds: {
+          ...state.splitAccountIds,
+          [action.bucket]: action.accountId,
+        },
       }
     case 'APPLY_RECEIPT': {
       const { description, amount, date, txType, ledgerCategory, category } = action.payload

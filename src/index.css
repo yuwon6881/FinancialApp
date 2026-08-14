@@ -498,6 +498,11 @@
     background-clip: padding-box;
 }
 
+button, [role="button"] {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
 /* Bottom padding for any scroll container that sits under the floating action
    button. The FAB is fixed at 96px + safe-area above the viewport bottom and is
    56px tall, so a container padded to 96px still leaves its last row *behind*

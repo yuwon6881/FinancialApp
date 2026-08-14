@@ -14,7 +14,6 @@ import type {
   TransactionCategory,
   AutocompleteSuggestion,
   TransactionDocumentChanges,
-  StabilityRecovery,
   LedgerAccount,
 } from '../../types'
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../../lib/useReceiptSplitPolling'
@@ -22,6 +21,7 @@ import type { ReceiptScanResult } from '../../lib/api'
 import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
 import { Button } from '../ui/Button'
 import { ModalActions } from '../ui/ModalActions'
+import type { StabilityTopUpContext } from './transaction-form/useTransactionFormOptions'
 
 const ReceiptSplitSheet = lazy(() =>
   import('./ReceiptSplitSheet').then(module => ({ default: module.ReceiptSplitSheet })))
@@ -39,14 +39,12 @@ export interface TransactionFormSheetProps {
   growthAlloc: number
   stabilityAlloc: number
   rewardsAlloc: number
+  cycleDay: number
   stabilityBalance: number
   stabilityTarget: number
   stabilityOverflowRedirect: string
-  /** Absent when the selected cycle is not the current one — a backdated salary gets no offer. */
-  stabilityRecovery?: StabilityRecovery
-  essentialsBalance?: number
-  growthBalance?: number
-  rewardsBalance?: number
+  /** Current-cycle balances and recovery state; eligibility follows the transaction posting date. */
+  stabilityTopUpContext?: StabilityTopUpContext
   onAddTransaction: (
     transaction: Omit<Transaction, 'id'>,
     documentChanges?: TransactionDocumentChanges,
@@ -105,7 +103,7 @@ export interface TransactionFormSheetRef {
 export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, TransactionFormSheetProps>((props, ref) => {
   const app = useAppContext()
   const form = useTransactionForm(props)
-  const accountsLoading = props.accountsLoading ?? (props.accounts === undefined || props.accounts.length === 0)
+  const accountsLoading = props.accountsLoading ?? props.accounts === undefined
   const securityPending = props.sensitivePreferenceStatus === 'pending'
   const saveDisabled = props.hideSensitive || securityPending || accountsLoading
   const [isReceiptSplitOpen, setIsReceiptSplitOpen] = useState(false)
@@ -200,6 +198,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             accounts={props.accounts}
             errors={form.state.errors}
             onSetField={(field: any, val: any) => form.dispatch({ type: 'SET_FIELD', field, value: val })}
+            onSetSplitAccountId={(bucket, accountId) => form.dispatch({ type: 'SET_SPLIT_ACCOUNT', bucket, accountId })}
             onSelectSuggestion={form.handleSelectSuggestion}
             onSuggestNotes={() => form.suggestions.requestNoteSuggestions(form.state.description.trim())}
             onSuggestCategory={async () => {
@@ -213,8 +212,9 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             suggestions={form.suggestions}
             topUpOffer={form.topUpOffer}
             topUpBuckets={form.topUpBuckets}
+            stabilityTopUpError={form.stabilityTopUpError}
             hideSensitive={props.hideSensitive}
-            stabilityAlloc={props.stabilityAlloc}
+            stabilityAlloc={props.stabilityTopUpContext?.stabilityAlloc ?? props.stabilityAlloc}
           />
 
           {form.state.transactionType === 'outflow' && (

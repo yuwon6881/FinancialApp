@@ -1,38 +1,60 @@
 import { useMemo } from 'react'
-import type { StabilityRecovery, Transaction } from '../../../types'
+import type { Transaction } from '../../../types'
 import { bucketAmount } from '../../../lib/bucketAttribution'
 import { drawsFor, projectStabilityRecovery, proposeTopUp } from '../../../lib/stabilityRecovery'
+import { getCycleYearAndMonthForDate } from '../../../lib/cycle'
 import type { TransactionFormState } from './transactionFormReducer'
+import type { StabilityTopUpContext } from './useTransactionFormOptions'
 
 interface UseStabilityTopUpOfferOptions {
   state: TransactionFormState
   transactions: Transaction[]
-  stabilityRecovery?: StabilityRecovery
-  essentialsAlloc: number
-  growthAlloc: number
-  stabilityAlloc: number
-  rewardsAlloc: number
-  essentialsBalance: number
-  growthBalance: number
-  rewardsBalance: number
+  cycleDay: number
+  stabilityTopUpContext?: StabilityTopUpContext
+}
+
+function cycleForDate(value: string, cycleDay: number) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) return null
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  if (Number.isNaN(date.getTime())) return null
+  return getCycleYearAndMonthForDate(date, cycleDay)
+}
+
+export function isDateInStabilityTopUpCycle(value: string, context: StabilityTopUpContext | undefined) {
+  if (!context) return false
+  const cycle = cycleForDate(value, context.cycleDay)
+  return cycle?.year === context.cycleYear && cycle.monthIndex === context.cycleMonthIndex
+}
+
+export function hasSavedTopUpCycleMismatch(
+  state: TransactionFormState,
+  cycleDay: number,
+) {
+  if (!state.originalDate || !state.stabilityTopUpAccepted || Number(state.stabilityTopUpAmount) <= 0) {
+    return false
+  }
+  const original = cycleForDate(state.originalDate, cycleDay)
+  const next = cycleForDate(state.date, cycleDay)
+  return Boolean(original && next && (original.year !== next.year || original.monthIndex !== next.monthIndex))
 }
 
 export function useStabilityTopUpOffer(options: UseStabilityTopUpOfferOptions) {
-  const { state, transactions, stabilityRecovery, essentialsAlloc, growthAlloc, stabilityAlloc,
-    rewardsAlloc, essentialsBalance, growthBalance, rewardsBalance } = options
+  const { state, transactions, cycleDay, stabilityTopUpContext } = options
+  const isRecoveryCycleDate = isDateInStabilityTopUpCycle(state.date, stabilityTopUpContext)
 
   const topUpBuckets = useMemo(() => [
-    { bucket: 'Essentials', alloc: essentialsAlloc, balance: essentialsBalance, committed: stabilityRecovery?.essentialsCommitted ?? 0 },
-    { bucket: 'Growth', alloc: growthAlloc, balance: growthBalance, committed: 0 },
-    { bucket: 'Rewards', alloc: rewardsAlloc, balance: rewardsBalance, committed: stabilityRecovery?.rewardsCommitted ?? 0 },
-  ], [essentialsAlloc, growthAlloc, rewardsAlloc, essentialsBalance, growthBalance, rewardsBalance, stabilityRecovery])
+    { bucket: 'Essentials', alloc: stabilityTopUpContext?.essentialsAlloc ?? 0, balance: stabilityTopUpContext?.essentialsBalance ?? 0, committed: stabilityTopUpContext?.recovery.essentialsCommitted ?? 0 },
+    { bucket: 'Growth', alloc: stabilityTopUpContext?.growthAlloc ?? 0, balance: stabilityTopUpContext?.growthBalance ?? 0, committed: 0 },
+    { bucket: 'Rewards', alloc: stabilityTopUpContext?.rewardsAlloc ?? 0, balance: stabilityTopUpContext?.rewardsBalance ?? 0, committed: stabilityTopUpContext?.recovery.rewardsCommitted ?? 0 },
+  ], [stabilityTopUpContext])
 
   const topUpOffer = useMemo(() => {
     if (state.transactionType !== 'inflow' || state.ledgerCategory !== 'Income') return null
     const amount = parseFloat(state.amount)
     if (!Number.isFinite(amount) || amount <= 0) return null
 
-    let recoveryForOffer = stabilityRecovery
+    let recoveryForOffer = isRecoveryCycleDate ? stabilityTopUpContext?.recovery : undefined
     let bucketsForOffer = topUpBuckets
     const original = state.editingId
       ? transactions.find(transaction => String(transaction.id) === String(state.editingId))
@@ -41,7 +63,10 @@ export function useStabilityTopUpOffer(options: UseStabilityTopUpOfferOptions) {
       original.ledgerCategory.toLowerCase() === 'income' ||
       original.ledgerCategory.toLowerCase().startsWith('incomesplit:')
     ))
-    if (recoveryForOffer && original && originalIsIncome) {
+    const originalIsRecoveryCycleDate = original
+      ? isDateInStabilityTopUpCycle(original.date, stabilityTopUpContext)
+      : false
+    if (recoveryForOffer && original && originalIsIncome && originalIsRecoveryCycleDate) {
       bucketsForOffer = topUpBuckets.map(bucket => {
         const child = transactions.find(transaction => transaction.id === `${original.id}-split-${bucket.bucket}`)
         return child ? { ...bucket, balance: bucket.balance - child.amount } : bucket
@@ -57,12 +82,17 @@ export function useStabilityTopUpOffer(options: UseStabilityTopUpOfferOptions) {
         recovery: recoveryForOffer,
         baseTransactions: transactions,
         projectedTransactions: withoutOriginal,
-        stabilityAlloc,
+        stabilityAlloc: stabilityTopUpContext?.stabilityAlloc ?? 0,
         projectedBalance: recoveryForOffer.currentBalance - originalStabilityContribution,
       })
     }
 
-    const liveOffer = proposeTopUp(recoveryForOffer, Math.abs(amount), bucketsForOffer, stabilityAlloc)
+    const liveOffer = proposeTopUp(
+      recoveryForOffer,
+      Math.abs(amount),
+      bucketsForOffer,
+      stabilityTopUpContext?.stabilityAlloc ?? 0,
+    )
     if (liveOffer) return liveOffer
 
     const saved = (state.mode === 'edit' || state.mode === 'draft') && state.stabilityTopUpAccepted
@@ -77,7 +107,7 @@ export function useStabilityTopUpOffer(options: UseStabilityTopUpOfferOptions) {
       isReduced: false,
       draws: drawsFor(saved, bucketsForOffer),
     }
-  }, [stabilityAlloc, state, stabilityRecovery, topUpBuckets, transactions])
+  }, [isRecoveryCycleDate, state, stabilityTopUpContext, topUpBuckets, transactions])
 
   const resolveAcceptedTopUp = () => {
     if (!state.stabilityTopUpAccepted || !topUpOffer) return 0
@@ -85,5 +115,11 @@ export function useStabilityTopUpOffer(options: UseStabilityTopUpOfferOptions) {
     return state.stabilityTopUpAmount.trim() === '' ? topUpOffer.proposedTopUp : typed
   }
 
-  return { resolveAcceptedTopUp, topUpBuckets, topUpOffer }
+  return {
+    resolveAcceptedTopUp,
+    topUpBuckets,
+    topUpOffer,
+    isRecoveryCycleDate,
+    savedTopUpMovedAcrossCycles: hasSavedTopUpCycleMismatch(state, cycleDay),
+  }
 }

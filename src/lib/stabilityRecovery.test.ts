@@ -219,11 +219,24 @@ describe('proposeTopUp', () => {
     expect(Math.abs(total - offer.proposedTopUp)).toBeLessThan(0.005)
   })
 
-  it('offers nothing when there is no recovery, no income, or the cycle is settled', () => {
+  it('offers nothing when there is no recovery or income', () => {
     expect(proposeTopUp(undefined, 1000, buckets())).toBeNull()
     expect(proposeTopUp(recovery({ isActive: false }), 1000, buckets())).toBeNull()
     expect(proposeTopUp(recovery(), 0, buckets())).toBeNull()
-    expect(proposeTopUp(recovery({ outstandingThisCycle: 0 }), 1000, buckets())).toBeNull()
+  })
+
+  it('keeps an optional amount available after this cycle\'s pace is covered', () => {
+    const offer = proposeTopUp(
+      recovery({ outstandingShortfall: 600, outstandingThisCycle: 0, toppedUpThisCycle: 1000 }),
+      1000,
+      buckets(),
+      0.15,
+    )!
+
+    expect(offer.proposedTopUp).toBe(0)
+    expect(offer.maxTopUp).toBe(600)
+    expect(offer.safeCap).toBe(600)
+    expect(offer.draws).toEqual([])
   })
 })
 

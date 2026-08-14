@@ -6,7 +6,6 @@ import type {
   LedgerAccount,
   AutocompleteSuggestion,
   TransactionDocumentChanges,
-  StabilityRecovery,
   CategorySummary,
 } from '../types'
 import type { PagedTransactionResult, ReceiptScanResult } from '../lib/api'
@@ -33,6 +32,7 @@ import { LedgerToolbar } from './ledger/view/LedgerToolbar'
 import { LedgerPendingReviews } from './ledger/LedgerPendingReviews'
 import { LedgerBalanceReconciliation } from './ledger/LedgerBalanceReconciliation'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
+import type { StabilityTopUpContext } from './ledger/transaction-form/useTransactionFormOptions'
 
 const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
 const LedgerExportModal = React.lazy(() =>
@@ -92,11 +92,8 @@ interface LedgerViewProps {
   stabilityAlloc?: number
   rewardsAlloc?: number
   stabilityOverflowRedirect?: string
-  /** Absent when the selected cycle is not the current one — a backdated salary gets no offer. */
-  stabilityRecovery?: StabilityRecovery
-  essentialsBalance?: number
-  growthBalance?: number
-  rewardsBalance?: number
+  /** Current-cycle balances and recovery state; the form matches these against its posting date. */
+  stabilityTopUpContext?: StabilityTopUpContext
   onFetchPagedTransactions?: (params: any) => Promise<PagedTransactionResult>
   onFetchTransactionById?: (id: string) => Promise<Transaction>
   onExportTransactions?: (params: any) => Promise<{ blob: Blob; filename: string }>
@@ -362,13 +359,11 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         growthAlloc={props.growthAlloc ?? 0.25}
         stabilityAlloc={props.stabilityAlloc ?? 0.15}
         rewardsAlloc={props.rewardsAlloc ?? 0.1}
+        cycleDay={props.cycleDay}
         stabilityBalance={props.stabilityBalance ?? 0}
         stabilityTarget={props.stabilityTarget ?? 10000}
         stabilityOverflowRedirect={props.stabilityOverflowRedirect || ''}
-        stabilityRecovery={props.stabilityRecovery}
-        essentialsBalance={props.essentialsBalance ?? 0}
-        growthBalance={props.growthBalance ?? 0}
-        rewardsBalance={props.rewardsBalance ?? 0}
+        stabilityTopUpContext={props.stabilityTopUpContext}
         onAddTransaction={props.onAddTransaction}
         onUpdateTransaction={props.onUpdateTransaction}
         onStartEditPending={props.onStartEditPending}

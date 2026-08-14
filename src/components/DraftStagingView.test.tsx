@@ -21,6 +21,7 @@ const editorProps = {
   growthAlloc: 0.25,
   stabilityAlloc: 0.15,
   rewardsAlloc: 0.1,
+  cycleDay: 28,
   stabilityBalance: 1000,
   stabilityTarget: 10000,
   stabilityOverflowRedirect: '',

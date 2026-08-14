@@ -154,18 +154,19 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
     <BottomSheet
       isOpen={isOpen}
       title={editingLoan ? 'Edit loan' : 'Add a loan'}
+      description="Link a recurring bill and set terms to project repayment progress and interest."
       onClose={onClose}
       maxWidthClassName="max-w-xl"
       footer={(
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
           <Button variant="primary" type="submit" form="loan-form">{editingLoan ? 'Save changes' : 'Add loan'}</Button>
         </div>
       )}
     >
       <form id="loan-form" onSubmit={handleSubmit} noValidate className="space-y-4">
-        {error && <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
-        <div className="grid gap-4 sm:grid-cols-2">
+        {error && <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs font-semibold text-destructive">{error}</p>}
+        <div className="grid gap-3.5 sm:grid-cols-2 sm:gap-4">
           <FormField label="Loan name" required>
             <Input value={name} onChange={event => setName(event.target.value)} placeholder="Car loan" autoComplete="off" className="w-full" />
           </FormField>
@@ -239,9 +240,10 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
           <CustomSelect value={interestMethod} onChange={setInterestMethod} options={LOAN_INTEREST_METHOD_OPTIONS} ariaLabel="Interest method" className="w-full" />
         </FormField>
         {preview !== null && (
-          <p className="rounded-xl border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
-            Estimated payment: <strong className="text-foreground">{preview.toFixed(2)}</strong>
-          </p>
+          <div className="flex items-center justify-between rounded-xl border border-accent-ink/20 bg-accent/15 px-3.5 py-2.5 text-xs text-foreground">
+            <span className="font-semibold text-muted-foreground">Estimated payment:</span>
+            <span className="font-extrabold text-accent-ink">{preview.toFixed(2)}</span>
+          </div>
         )}
       </form>
     </BottomSheet>

@@ -245,10 +245,10 @@ export function useBucketAccountSetupView({
   // with unexplained totals. Initial bucket/account mismatches are valid review inputs because the
   // preview can create the adjustment that brings them back into line.
   const canReview = canReviewBucketAccountSetup(preview, drafts.length)
-  const hasExternalChanges = hasBucketAccountSetupChanged(sessionSnapshotRef.current, bucketTotal, bucketAccounts)
 
   const prepareReview = () => {
     if (!bucket) return
+    const hasExternalChanges = hasBucketAccountSetupChanged(sessionSnapshotRef.current, bucketTotal, bucketAccounts)
     const nextErrors: Record<string, string> = {}
     const names = new Set(bucketAccounts.map(account => account.name.trim().toLowerCase()))
     for (const draft of drafts) {
@@ -295,7 +295,6 @@ export function useBucketAccountSetupView({
     preview,
     pending,
     canReview,
-    hasExternalChanges,
     updateTarget,
     updateDraft,
     updateDraftTarget,

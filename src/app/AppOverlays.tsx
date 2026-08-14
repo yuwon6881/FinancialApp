@@ -1,6 +1,6 @@
-import { lazy, Suspense, useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
+import { lazy, Suspense, useEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from 'react'
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
-import { CreditCard, Sparkles, Wallet, X, Zap } from 'lucide-react'
+import { CreditCard, Sparkles, Wallet } from 'lucide-react'
 import { RewardIcon } from '../components/semanticIcons'
 import type { DashboardData, PendingNotification } from '../types'
 import { MONTH_NAMES } from '../lib/cycle'
@@ -53,6 +53,7 @@ interface AppOverlaysProps {
   nav: ReturnType<typeof useCycleNavigation>
   cycleSummary: ReturnType<typeof useCycleSummary>
   fabMenu: ReturnType<typeof useFabMenu>
+  fabTriggerRef: RefObject<HTMLButtonElement | null>
   todayDashboardData: DashboardData | null
   currentPendingNotifications: PendingNotification[]
   setIsAiOpen: Dispatch<SetStateAction<boolean>>
@@ -66,18 +67,14 @@ export function AppOverlays({
   nav,
   cycleSummary,
   fabMenu,
+  fabTriggerRef,
   todayDashboardData,
   currentPendingNotifications,
   setIsAiOpen,
 }: AppOverlaysProps) {
   const reduceMotion = useReducedMotion()
   const fabActionsRef = useRef<HTMLDivElement>(null)
-  const fabTriggerRef = useRef<HTMLButtonElement>(null)
   const showMobileFab = shouldShowMobileFab(prefs.activeTab)
-
-  useEffect(() => {
-    if (prefs.hideSensitive && prefs.sensitivePreferenceStatus !== 'pending') fabMenu.close()
-  }, [prefs.hideSensitive, prefs.sensitivePreferenceStatus, fabMenu.close])
 
   useEffect(() => {
     if (!fabMenu.isOpen || !showMobileFab) return
@@ -186,12 +183,6 @@ export function AppOverlays({
         onSignOut={session.handleLogout}
       />
 
-      <footer className="border-t border-border/40 py-6 pb-24 md:pb-6 bg-background/45 backdrop-blur select-none">
-        <div className="mx-auto w-full max-w-[1440px] px-4 text-center text-xs text-muted-foreground sm:px-6 lg:px-8">
-          &copy; {new Date().getFullYear()} FinancialApp. All rights reserved.
-        </div>
-      </footer>
-
       {dialogs.customAlert && (
         <Suspense fallback={null}>
           <CustomAlertModal
@@ -293,26 +284,6 @@ export function AppOverlays({
               </m.div>
             )}
           </AnimatePresence>
-          {showMobileFab && <m.button
-            ref={fabTriggerRef}
-            type="button"
-            whileTap={reduceMotion ? undefined : { scale: 0.92 }}
-            onClick={fabMenu.toggle}
-            className="fixed right-6 z-40 flex size-14 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/25 lg:hidden"
-            style={{
-              bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))'
-            }}
-            title={fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
-            aria-label={fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
-            aria-expanded={fabMenu.isOpen}
-            aria-controls="mobile-fab-actions"
-          >
-            {fabMenu.isOpen ? (
-              <X className="size-6" />
-            ) : (
-              <Zap className="size-6" />
-            )}
-          </m.button>}
         </>
       )}
     </>

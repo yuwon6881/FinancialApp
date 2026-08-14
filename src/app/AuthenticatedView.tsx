@@ -128,12 +128,23 @@ export function AuthenticatedView({
     handleReceiptSplitStarted,
     clearReceiptSplitJob,
   } = receiptSplit
-  // Compared on month AND year, unlike useCurrentCycleDashboard's own month-only check: an
-  // emergency-fund offer attached to a same-month cycle a year back would draw from balances that
-  // have nothing to do with it.
-  const isSelectedCycleCurrent =
-    financial.optimisticDashboardData?.setting?.selectedMonth === currentCycleMonth &&
-    financial.optimisticDashboardData?.setting?.selectedYear === currentCycleYear
+  const currentCycleMonthIndex = MONTH_NAMES.indexOf(currentCycleMonth) + 1
+  const stabilityTopUpContext = todayDashboardData?.stabilityRecovery && currentCycleMonthIndex > 0
+    ? {
+        recovery: todayDashboardData.stabilityRecovery,
+        cycleYear: currentCycleYear,
+        cycleMonthIndex: currentCycleMonthIndex,
+        cycleDay: todayDashboardData.setting.cycleDay,
+        essentialsAlloc: todayDashboardData.setting.essentialsAlloc,
+        growthAlloc: todayDashboardData.setting.growthAlloc,
+        stabilityAlloc: todayDashboardData.setting.stabilityAlloc,
+        rewardsAlloc: todayDashboardData.setting.rewardsAlloc,
+        essentialsBalance: todayDashboardData.categories.find(category => category.name === 'Essentials')?.remaining ?? 0,
+        growthBalance: todayDashboardData.categories.find(category => category.name === 'Growth')?.remaining ?? 0,
+        rewardsBalance: todayDashboardData.categories.find(category => category.name === 'Rewards')?.remaining ?? 0,
+        stabilityOverflowRedirect: todayDashboardData.setting.stabilityOverflowRedirect || '',
+      }
+    : undefined
 
   const {
     activeInvestmentScanDraft,
@@ -426,13 +437,7 @@ export function AuthenticatedView({
                       stabilityAlloc={financial.optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15}
                       rewardsAlloc={financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1}
                       stabilityOverflowRedirect={financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect}
-                      // Only offered while the selected cycle IS the current one. Browsing a past
-                      // cycle would otherwise compute an offer from today's figures and attach it
-                      // to a backdated salary.
-                      stabilityRecovery={isSelectedCycleCurrent ? financial.optimisticDashboardData?.stabilityRecovery : undefined}
-                      essentialsBalance={financial.optimisticDashboardData?.categories?.find(c => c.name === 'Essentials')?.remaining ?? 0}
-                      growthBalance={financial.optimisticDashboardData?.categories?.find(c => c.name === 'Growth')?.remaining ?? 0}
-                      rewardsBalance={financial.optimisticDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0}
+                      stabilityTopUpContext={stabilityTopUpContext}
                       onFetchPagedTransactions={apiClient.fetchPagedTransactions}
                       onFetchTransactionById={apiClient.fetchTransactionById}
                       onExportTransactions={apiClient.exportTransactionsCsv}
@@ -534,13 +539,11 @@ export function AuthenticatedView({
                         growthAlloc: financial.optimisticDashboardData?.setting?.growthAlloc ?? 0.25,
                         stabilityAlloc: financial.optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15,
                         rewardsAlloc: financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1,
+                        cycleDay: financial.optimisticDashboardData?.setting?.cycleDay || 28,
                         stabilityBalance: financial.optimisticDashboardData?.categories?.find(c => c.name === 'Stability')?.remaining ?? 0,
                         stabilityTarget: financial.optimisticDashboardData?.setting?.targetStabilityFund ?? 10000,
                         stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect || '',
-                        stabilityRecovery: isSelectedCycleCurrent ? financial.optimisticDashboardData?.stabilityRecovery : undefined,
-                        essentialsBalance: financial.optimisticDashboardData?.categories?.find(c => c.name === 'Essentials')?.remaining ?? 0,
-                        growthBalance: financial.optimisticDashboardData?.categories?.find(c => c.name === 'Growth')?.remaining ?? 0,
-                        rewardsBalance: financial.optimisticDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0,
+                        stabilityTopUpContext,
                         onAddFormOpenChange: setIsLedgerAddOpen,
                         receiptScanDraft: activeReceiptScanDraft,
                         onReceiptScanStarted: handleReceiptScanStarted,

@@ -73,11 +73,17 @@ export function StabilityTopUpOffer({
         </label>
       </div>
 
-      {!accepted && (
+      {!accepted && offer.proposedTopUp > 0 && (
         <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
           {offer.proposedTopUp >= offer.maxTopUp
             ? <>Suggested: {money(offer.proposedTopUp)}, which clears what is left.</>
             : <>Suggested: {money(offer.proposedTopUp)} of the {money(offer.maxTopUp)} still to go.</>}
+        </p>
+      )}
+
+      {!accepted && offer.proposedTopUp <= 0 && (
+        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+          This cycleâ€™s planned amount is covered. You can still choose to put back more.
         </p>
       )}
 
@@ -91,7 +97,7 @@ export function StabilityTopUpOffer({
               id={amountId}
               inputMode="decimal"
               value={amount}
-              placeholder={offer.proposedTopUp.toFixed(2)}
+              placeholder={offer.proposedTopUp > 0 ? offer.proposedTopUp.toFixed(2) : 'Enter an amount'}
               invalid={invalid}
               onChange={event => onAmountChange(maskCurrencyInput(event.target.value, amount))}
               className="w-full"

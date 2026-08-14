@@ -26,17 +26,26 @@ export function validateTransactionForm(state: {
   if (!state.date) {
     errors.date = 'Posting date is required.'
   }
-  if (state.transactionType === 'transfer' && state.transferSource === state.transferTarget) {
-    errors.transferTarget = 'Choose a different target category.'
+  if (state.transactionType === 'transfer') {
+    if (state.transferSource === state.transferTarget) {
+      if (!state.accountTrackingEnabled) {
+        errors.transferTarget = 'Choose a different target category.'
+      } else {
+        if (!state.accountId) errors.accountId = 'Choose the account sending the money.'
+        if (!state.counterAccountId) errors.counterAccountId = 'Choose the account receiving the money.'
+        if (state.accountId && state.counterAccountId && state.accountId === state.counterAccountId) {
+          errors.counterAccountId = 'Choose two different accounts.'
+        }
+      }
+    } else if (state.accountTrackingEnabled) {
+      if (!state.accountId) errors.accountId = 'Choose the account sending the money.'
+      if (!state.counterAccountId) errors.counterAccountId = 'Choose the account receiving the money.'
+    }
   }
   if (state.accountTrackingEnabled) {
     if (state.ledgerCategory && ['Essentials', 'Growth', 'Stability', 'Rewards'].includes(state.ledgerCategory)
       && !state.accountId) {
       errors.accountId = 'Choose the account that holds this bucket money.'
-    }
-    if (state.transactionType === 'transfer') {
-      if (!state.accountId) errors.accountId = 'Choose the account sending the money.'
-      if (!state.counterAccountId) errors.counterAccountId = 'Choose the account receiving the money.'
     }
   }
   if (state.ledgerCategory === 'AccountMove') {

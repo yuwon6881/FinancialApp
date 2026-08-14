@@ -278,6 +278,8 @@ export interface Transaction {
   accountId?: string | null
   /** Destination account for an in-bucket AccountMove row. */
   counterAccountId?: string | null
+  /** Destination accounts per bucket for an Income split transaction. */
+  splitAccountIds?: Record<string, string> | null
   /** Server-derived marker for structural rows that must not seed description autocomplete. */
   excludeFromAutocomplete?: boolean
 }

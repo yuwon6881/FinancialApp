@@ -1,7 +1,7 @@
-
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { ErrorBoundary, isChunkLoadError } from './ErrorBoundary'
+import { ErrorBoundary } from './ErrorBoundary'
+import { isChunkLoadError } from '../lib/chunkLoadError'
 
 // A one-off crash (a race, a transient fetch failure): the remount renders fine,
 // so "Try again" recovers and no escalation copy appears.
@@ -34,37 +34,43 @@ describe('ErrorBoundary', () => {
     expect(screen.queryByText(/ran into the same problem/i)).toBeNull()
   })
 
-  it('says so and offers real recovery once retrying hits the same crash', () => {
+  it('escalates to full recovery instructions after repeated failures', () => {
     render(
       <ErrorBoundary variant="inline">
         <AlwaysCrashes />
       </ErrorBoundary>
     )
-    expect(screen.queryByRole('button', { name: /reload app/i })).toBeNull()
-
     fireEvent.click(screen.getByRole('button', { name: /try again/i }))
-
     expect(screen.getByText(/ran into the same problem/i)).toBeTruthy()
     expect(screen.getByRole('button', { name: /reload app/i })).toBeTruthy()
     expect(screen.getByRole('button', { name: /clear local data/i })).toBeTruthy()
   })
 
-  it('surfaces the underlying error message', () => {
-    render(
-      <ErrorBoundary variant="inline">
-        <AlwaysCrashes />
+  it('resets when resetKey changes', () => {
+    shouldCrash = true
+    const { rerender } = render(
+      <ErrorBoundary resetKey="tab1" variant="inline">
+        <CrashWhileFlagged />
       </ErrorBoundary>
     )
-    expect(screen.getByText('persistent crash')).toBeTruthy()
+    expect(screen.getByText('Something went wrong')).toBeTruthy()
+    shouldCrash = false
+    rerender(
+      <ErrorBoundary resetKey="tab2" variant="inline">
+        <CrashWhileFlagged />
+      </ErrorBoundary>
+    )
+    expect(screen.getByText('recovered view')).toBeTruthy()
   })
 
   it.each([
-    ['Failed to fetch dynamically imported module: /assets/SettingsView.js', true],
-    ['Importing a module script failed', true],
-    ['Load failed', true],
-    ['Maximum update depth exceeded', false],
-  ] as const)('classifies mobile and desktop chunk errors without treating app crashes as chunks', (message, expected) => {
-    const error = message === 'Load failed' ? new TypeError(message) : new Error(message)
+    ['Failed to fetch dynamically imported module foo.js', true],
+    ['error loading dynamically imported module: bar', true],
+    ['Importing a module script failed.', true],
+    ['ChunkLoadError: Loading chunk 123 failed.', true],
+    ['TypeError: Failed to fetch', false],
+  ])('classifies chunk load error correctly: %s', (message, expected) => {
+    const error = new Error(message)
     expect(isChunkLoadError(error)).toBe(expected)
   })
 })

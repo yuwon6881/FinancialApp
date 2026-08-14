@@ -1285,10 +1285,10 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     void triggerHaptic(15)
   }
 
-  const loadDraftTransactionDocumentChanges = async (id: string) => {
+  const loadDraftTransactionDocumentChanges = useCallback(async (id: string) => {
     const { loadDraftTransactionDocumentChanges } = await import('../lib/draftTransactionDocuments')
     return loadDraftTransactionDocumentChanges(username, id)
-  }
+  }, [username])
 
   const handleDeleteDraftTransaction = (id: string) => {
     if (!guardSensitive()) return

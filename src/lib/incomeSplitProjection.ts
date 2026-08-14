@@ -67,7 +67,7 @@ function resolveExplicitRecoveryShares(
  * (an expense, a zero split, or a plain `Income` saved before any plan was loaded).
  */
 export function buildIncomeSplitRows(
-  transaction: Pick<Transaction, 'id' | 'date' | 'postedAt' | 'description' | 'ledgerCategory' | 'amount' | 'accountId' | 'stabilityRecoveryTopUpAmount'>,
+  transaction: Pick<Transaction, 'id' | 'date' | 'postedAt' | 'description' | 'ledgerCategory' | 'amount' | 'accountId' | 'stabilityRecoveryTopUpAmount' | 'splitAccountIds'>,
   allocations: IncomeAllocations | undefined,
   accountBucketById?: ReadonlyMap<string, string>,
 ): Transaction[] {
@@ -97,9 +97,10 @@ export function buildIncomeSplitRows(
     ledgerCategory: `Transfer:Income->${bucket}`,
     amount: cents[index] / 100,
     excludeFromAutocomplete: true,
-    accountId: transaction.accountId && accountBucketById?.get(transaction.accountId) === bucket
-      ? transaction.accountId
-      : undefined,
+    accountId: transaction.splitAccountIds?.[bucket]
+      ?? (transaction.accountId && accountBucketById?.get(transaction.accountId) === bucket
+        ? transaction.accountId
+        : undefined),
   }])
 }
 

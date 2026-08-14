@@ -49,6 +49,7 @@ describe('transactionFormReducer stabilityTopUpAccepted', () => {
 
     expect(next.stabilityTopUpAccepted).toBe(true)
     expect(next.stabilityTopUpAmount).toBe('250.00')
+    expect(next.originalDate).toBe('2026-07-09')
   })
 
   it.each(['OPEN_EDIT', 'OPEN_DRAFT'] as const)('normalizes an encoded income row for %s', type => {
@@ -131,5 +132,44 @@ describe('transactionFormReducer stabilityTopUpAccepted', () => {
     )
 
     expect(state.amount).toBe('42.50')
+  })
+
+  it('updates per-bucket split account on SET_SPLIT_ACCOUNT', () => {
+    const state = transactionFormReducer(
+      getInitialState('2026-07-09', 'Other'),
+      {
+        type: 'SET_SPLIT_ACCOUNT',
+        bucket: 'Growth',
+        accountId: 'acc-growth-2',
+      },
+    )
+
+    expect(state.splitAccountIds.Growth).toBe('acc-growth-2')
+  })
+
+  it('initializes splitAccountIds on OPEN_CREATE when defaults provided', () => {
+    const state = transactionFormReducer(
+      getInitialState('2026-07-09', 'Other'),
+      {
+        type: 'OPEN_CREATE',
+        payload: {
+          defaultCategory: 'Other',
+          todayDate: '2026-07-09',
+          defaultSplitAccountIds: {
+            Essentials: 'acc-ess-1',
+            Growth: 'acc-gro-1',
+            Stability: 'acc-sta-1',
+            Rewards: 'acc-rew-1',
+          },
+        },
+      },
+    )
+
+    expect(state.splitAccountIds).toEqual({
+      Essentials: 'acc-ess-1',
+      Growth: 'acc-gro-1',
+      Stability: 'acc-sta-1',
+      Rewards: 'acc-rew-1',
+    })
   })
 })

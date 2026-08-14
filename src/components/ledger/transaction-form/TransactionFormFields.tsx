@@ -28,6 +28,7 @@ interface TransactionFormFieldsProps {
   accounts?: LedgerAccount[]
   errors: Record<string, string>
   onSetField: (field: keyof TransactionFormState, value: any) => void
+  onSetSplitAccountId?: (bucket: TransferBucket, accountId: string) => void
   onSelectSuggestion: (s: any) => void
   onSuggestNotes: () => Promise<void>
   onSuggestCategory: () => Promise<void>
@@ -48,6 +49,7 @@ interface TransactionFormFieldsProps {
   /** Null unless this is income with an amount and the emergency fund is genuinely short. */
   topUpOffer?: RecoveryOffer | null
   topUpBuckets?: RecoveryBucketState[]
+  stabilityTopUpError?: string
   hideSensitive?: boolean
   stabilityAlloc?: number
 }
@@ -62,6 +64,7 @@ export function TransactionFormFields({
   accounts = [],
   errors,
   onSetField,
+  onSetSplitAccountId,
   onSelectSuggestion,
   onSuggestNotes,
   onSuggestCategory,
@@ -70,6 +73,7 @@ export function TransactionFormFields({
   suggestions,
   topUpOffer = null,
   topUpBuckets = [],
+  stabilityTopUpError,
   hideSensitive = false,
   stabilityAlloc = 0,
 }: TransactionFormFieldsProps) {
@@ -186,16 +190,6 @@ export function TransactionFormFields({
       })),
     ]
   }, [accountBucket, accounts, state.accountId])
-  const incomeAccountOptions = React.useMemo(() => [
-    { value: '', label: 'Use each bucket default' },
-    ...accounts
-      .filter(account => !account.isArchived || account.id === state.accountId)
-      .map(account => ({
-        value: account.id,
-        label: `${account.name} (${account.bucket})${account.isArchived ? ' (Closed)' : ''}`,
-        disabled: account.isArchived,
-      })),
-  ], [accounts, state.accountId])
   const transferTargetOptions = React.useMemo(() => {
     const bucketAccounts = accounts.filter(account =>
       account.bucket === state.transferTarget && (!account.isArchived || account.id === state.counterAccountId),
@@ -405,34 +399,46 @@ export function TransactionFormFields({
 
       {isAccountMove ? (
         <>
-          <div className="space-y-1 rounded-xl border border-border/60 bg-muted/15 p-3 sm:col-span-2">
-            <p className="text-xs font-semibold text-foreground">Move money between accounts</p>
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              This keeps the bucket total unchanged. Both accounts must belong to the same bucket.
-            </p>
-          </div>
-          <FormField label="Source account" required error={errors.accountId}>
+          <FormField
+            label="From account"
+            required
+            error={errors.accountId}
+          >
             <CustomSelect
-              ariaLabel="Account move source"
+              ariaLabel="Source account"
               value={state.accountId ?? ''}
               onChange={value => onSetField('accountId', value || null)}
-              options={[{ value: '', label: 'Choose source account' }, ...accountMoveOptions]}
+              options={accountMoveOptions.map(option => ({
+                ...option,
+                disabled: option.disabled || option.value === state.counterAccountId,
+              }))}
               className="w-full"
             />
           </FormField>
-          <FormField label="Destination account" required error={errors.counterAccountId}>
+
+          <FormField
+            label="To account"
+            required
+            error={errors.counterAccountId}
+          >
             <CustomSelect
-              ariaLabel="Account move destination"
+              ariaLabel="Destination account"
               value={state.counterAccountId ?? ''}
               onChange={value => onSetField('counterAccountId', value || null)}
-              options={[{ value: '', label: 'Choose destination account' }, ...accountMoveOptions.filter(option => option.value !== state.accountId)]}
+              options={accountMoveOptions.map(option => ({
+                ...option,
+                disabled: option.disabled || option.value === state.accountId,
+              }))}
               className="w-full"
             />
           </FormField>
+
           <FormField label="Posting date" className="sm:col-span-2" required error={errors.date}>
             <DatePicker
               value={state.date}
-              onChange={value => onSetField('date', value)}
+              onChange={value => {
+                onSetField('date', value)
+              }}
               className="w-full"
             />
           </FormField>
@@ -464,27 +470,10 @@ export function TransactionFormFields({
                 { value: 'Growth', label: 'Growth' },
                 { value: 'Stability', label: 'Stability' },
                 { value: 'Rewards', label: 'Rewards' }
-              ].filter(option => option.value !== state.transferSource)}
+              ]}
               className="w-full"
             />
           </FormField>
-
-          {accountTrackingEnabled && (
-            <FormField
-              className="sm:col-span-2"
-              label="Source account"
-              required
-              error={errors.accountId}
-            >
-              <CustomSelect
-                ariaLabel="Transfer source account"
-                value={state.accountId ?? ''}
-                onChange={value => onSetField('accountId', value || null)}
-                options={accountOptions}
-                className="w-full"
-              />
-            </FormField>
-          )}
 
           {accountTrackingEnabled && (
             <FormField
@@ -497,7 +486,7 @@ export function TransactionFormFields({
                 ariaLabel="Transfer destination account"
                 value={state.counterAccountId ?? ''}
                 onChange={value => onSetField('counterAccountId', value || null)}
-                options={transferTargetOptions.filter(option => option.value !== state.accountId)}
+                options={transferTargetOptions}
                 className="w-full"
               />
             </FormField>
@@ -556,19 +545,39 @@ export function TransactionFormFields({
           </FormField>
 
           {accountTrackingEnabled && state.ledgerCategory === 'Income' && (
-            <FormField
-              className="sm:col-span-2"
-              label="Which account received this?"
-              error={errors.accountId}
-            >
-              <CustomSelect
-                ariaLabel="Account that received this income"
-                value={state.accountId ?? ''}
-                onChange={value => onSetField('accountId', value || null)}
-                options={incomeAccountOptions}
-                className="w-full"
-              />
-            </FormField>
+            <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/15 p-3.5 sm:col-span-2">
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold text-foreground">Receiving accounts per bucket</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Choose which account receives each bucket&apos;s share. Defaults to each bucket&apos;s primary account.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {(['Essentials', 'Growth', 'Stability', 'Rewards'] as const).map(bucket => {
+                  const bucketAccounts = accounts.filter(account => account.bucket === bucket && !account.isArchived)
+                  const defaultAccount = bucketAccounts.find(account => account.isDefault) ?? bucketAccounts[0]
+                  const currentSelectedId = state.splitAccountIds?.[bucket] || defaultAccount?.id || ''
+                  const options = bucketAccounts.length > 0
+                    ? bucketAccounts.map(account => ({
+                        value: account.id,
+                        label: `${account.name}${account.isDefault ? ' (Default)' : ''}`,
+                      }))
+                    : [{ value: '', label: `No open accounts in ${bucket}`, disabled: true }]
+
+                  return (
+                    <FormField key={bucket} label={`${bucket} account`}>
+                      <CustomSelect
+                        ariaLabel={`${bucket} receiving account`}
+                        value={currentSelectedId}
+                        onChange={value => onSetSplitAccountId?.(bucket, value)}
+                        options={options}
+                        className="w-full"
+                      />
+                    </FormField>
+                  )
+                })}
+              </div>
+            </div>
           )}
 
           {accountTrackingEnabled && accountBucket && (
@@ -607,7 +616,7 @@ export function TransactionFormFields({
             currency={currency}
             hideSensitive={hideSensitive}
             stabilityAlloc={stabilityAlloc}
-            error={errors.stabilityTopUpAmount}
+            error={errors.stabilityTopUpAmount || stabilityTopUpError}
           />
         </>
       )}
