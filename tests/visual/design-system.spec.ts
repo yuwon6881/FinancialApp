@@ -214,3 +214,34 @@ test('rewards rail responds to a desktop mouse wheel and releases page scrolling
   await page.mouse.wheel(0, 240)
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(pageOffsetBeforeEdgeWheel)
 })
+
+// The account dropdown and the quick-add menu are the app's only Radix consumers, so they are
+// the only surfaces that mount Radix's FocusScope. radix-ui 1.4.3 composed that scope's container
+// ref with an inline arrow, so `useComposedRefs`'s `useCallback` deps changed on every render;
+// React 19 re-attaches a ref whose identity changed by calling it with `null` and then the node,
+// and each of those is a real `setContainer` update, so opening the menu started a self-sustaining
+// detach/attach loop and tripped React's nested-update ceiling (#185) before the menu could paint.
+// jsdom cannot see it -- TopNav.test.tsx opens the same menu happily -- so the guard has to run in
+// a real browser. It asserts on console/page errors rather than pixels: a downgrade or a similar
+// unstable-ref regression in any menu primitive would surface here first.
+for (const trigger of ['Account menu', 'Quick Add']) {
+  test(`${trigger} opens without a React update loop`, async ({ page }) => {
+    // Quick Add is a desktop-rail action (`hidden lg:block`); the account menu is on every width.
+    test.skip(trigger === 'Quick Add' && !test.info().project.name.startsWith('desktop'),
+      'Quick Add is only rendered from the lg breakpoint upward.')
+    const failures: string[] = []
+    page.on('console', message => { if (message.type() === 'error') failures.push(message.text()) })
+    page.on('pageerror', error => failures.push(`pageerror: ${error.message}`))
+
+    await establishSession(page)
+    await mockApi(page)
+    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
+
+    await page.getByRole('button', { name: trigger }).click()
+    await expect(page.getByRole('menu')).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: trigger === 'Quick Add' ? 'Post Transaction' : 'Settings' })).toBeVisible()
+
+    expect(failures.join('\n')).not.toMatch(/Maximum update depth|React error #185/)
+  })
+}

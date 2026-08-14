@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Banknote, Building2, CircleHelp, CreditCard, Info, Landmark, Plus, Wallet } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { CategorySummary, LedgerAccount, Transaction } from '../../../types'
+import type { LedgerAccount, Transaction } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import { formatCurrencyVal } from '../../../lib/utils'
 import { getCategoryBadgeClass } from '../../../lib/categoryColors'
@@ -18,7 +18,6 @@ import { ACCOUNT_INTEREST_FREQUENCY_LABELS } from './accountOptions'
 
 interface AccountsSectionProps {
   accounts: LedgerAccount[]
-  categoryTotals?: CategorySummary[]
   currency: string
   hideSensitive: boolean
   activeSyncId?: string | null
@@ -61,7 +60,6 @@ const formatInterestRate = (value: number) => new Intl.NumberFormat(undefined, {
 
 export function AccountsSection({
   accounts,
-  categoryTotals,
   currency,
   hideSensitive,
   activeSyncId,
@@ -79,18 +77,23 @@ export function AccountsSection({
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [setupBucket, setSetupBucket] = useState<LedgerAccount['bucket'] | null>(null)
   const [setupPrefill, setSetupPrefill] = useState<BucketSetupPrefill | null>(null)
+  // A bucket's total is the sum of its accounts' balances and nothing else. It used to be read
+  // from the dashboard's `categories[].remaining` instead, which is the *selected cycle's* closing
+  // figure while every account balance here is current -- so browsing any other cycle (or holding a
+  // transaction dated past this cycle's end) made the two disagree, painted a permanent "Needs
+  // review" chip, and then failed the reconcile with `409 The bucket changed while this setup was
+  // open`, because the server checks `expectedBucketTotal` against the same account sum it derives
+  // its adjustment from. Both sides now measure the one quantity, at the same instant.
   const bucketSummaries = useMemo(() => BUCKETS.map(bucket => {
     const bucketRows = rows.filter(item => item.bucket === bucket.name)
     const openRows = bucketRows.filter(item => !item.isArchived)
-    const bucketTotal = categoryTotals?.find(category => category.name === bucket.name)?.remaining
     return {
       ...bucket,
       count: openRows.length,
-      balance: bucketTotal ?? bucketRows.reduce((total, item) => total + item.remaining, 0),
-      accountTotal: bucketRows.reduce((total, item) => total + item.remaining, 0),
+      balance: bucketRows.reduce((total, item) => total + item.remaining, 0),
       accountRows: bucketRows,
     }
-  }), [categoryTotals, rows])
+  }), [rows])
   const openAccountCount = rows.filter(item => !item.isArchived).length
   const archivedAccountCount = rows.length - openAccountCount
 
@@ -186,23 +189,9 @@ export function AccountsSection({
                 formatFn={value => formatCurrencyVal(value, currency)}
                 className="mt-3 block truncate text-sm font-extrabold text-foreground sm:text-base"
               />
-              <p className="mt-0.5 truncate text-[10px] text-muted-foreground">Bucket total · {bucket.description}</p>
-              {bucket.count > 0 && (
-                <div className="mt-2 flex items-center justify-between gap-2 text-[10px]">
-                  <span className="text-muted-foreground">Accounts total</span>
-                  <SensitiveAmount
-                    value={bucket.accountTotal}
-                    isMasked={hideSensitive}
-                    formatFn={value => formatCurrencyVal(value, currency)}
-                    className="truncate font-semibold text-foreground"
-                  />
-                </div>
-              )}
-              {Math.abs(bucket.accountTotal - bucket.balance) >= 0.005 && (
-                <p className="mt-2 rounded-lg border border-accent-ink/20 bg-accent/15 px-2 py-1 text-[10px] font-semibold leading-relaxed text-accent-ink">
-                  Needs review
-                </p>
-              )}
+              <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
+                {bucket.count > 0 ? 'Total across its accounts' : 'Bucket total'} · {bucket.description}
+              </p>
               <Button
                 type="button"
                 variant={bucket.count > 0 ? 'outline' : 'secondary'}

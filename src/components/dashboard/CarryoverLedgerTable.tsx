@@ -1,4 +1,4 @@
-import { ChevronDown, Clock, Edit2, Wallet } from 'lucide-react'
+import { Clock, Edit2, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import type { CategorySummary } from '../../types'
 import { SensitiveAmount } from '../ui/SensitiveAmount'
@@ -6,6 +6,7 @@ import { getCategoryDotClass } from '../../lib/categoryColors'
 import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { Button } from '../ui/Button'
+import { BottomSheet } from '../ui/BottomSheet'
 
 interface CarryoverLedgerTableProps {
   categories: CategorySummary[]
@@ -24,9 +25,8 @@ export function CarryoverLedgerTable({
   formatCurrency,
   onAdjust,
 }: CarryoverLedgerTableProps) {
-  // Render one layout, not both. Previously the wide grid and the mobile card list
-  // were both built for every category and one was CSS-hidden.
   const isMobile = useIsMobile()
+  const [selectedCategory, setSelectedCategory] = useState<CategorySummary | null>(null)
   const amount = (value: number) => amountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(value)
 
   const adjustButton = (category: CategorySummary) => (
@@ -57,10 +57,12 @@ export function CarryoverLedgerTable({
           </div>
           {categories.map(category => {
             const pending = pendingDeductionsByCategory[category.name] ?? 0
+            const hasAccounts = Boolean(category.accounts?.length)
             return (
               <div key={category.name} className="grid grid-cols-[1.8fr_1fr_1.5fr_2fr_2fr_2fr] items-center gap-4 py-3 px-4 rounded-xl border border-transparent hover:bg-muted/10 transition">
                 <div className="flex items-center gap-2 font-bold text-foreground">
-                  <span className={`size-2.5 rounded-full ${getCategoryDotClass(category.name)}`} />{category.name}
+                  <span className={`size-2.5 rounded-full ${getCategoryDotClass(category.name)}`} />
+                  <span>{category.name}</span>
                 </div>
                 <div className="text-muted-foreground font-medium">{(category.allocation * 100).toFixed(0)}%</div>
                 <div className="text-right font-medium text-foreground">{amount(category.incomeAllocated ?? category.target)}</div>
@@ -69,13 +71,25 @@ export function CarryoverLedgerTable({
                   <div><SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} /></div>
                   {pending > 0 && <div className="text-[10px] text-yellow-500 font-normal flex items-center justify-end gap-1 mt-0.5"><Clock className="size-3" />Pending: -{amount(pending)}</div>}
                 </div>
-                <div className="flex items-center justify-end gap-1.5 text-right">
-                  <div className="flex min-w-[96px] flex-col items-end gap-1">
+                <div className="flex items-center justify-end gap-2 text-right">
+                  <div className="flex min-w-[96px] flex-col items-end gap-0.5">
                     <div className={`font-bold ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
                       <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                     </div>
                     {pending > 0 && <div className={`text-[10px] font-semibold ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</div>}
-                    <AccountBreakdown category={category} amountsMasked={amountsMasked} formatCurrency={formatCurrency} />
+                    {hasAccounts && (
+                      <Button
+                        variant="unstyled"
+                        type="button"
+                        onClick={() => setSelectedCategory(category)}
+                        className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-muted/20 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:border-primary/30 hover:bg-muted/40 hover:text-foreground transition cursor-pointer select-none"
+                        title={`View ${category.accounts!.length} ${category.accounts!.length === 1 ? 'account' : 'accounts'} in ${category.name}`}
+                        aria-label={`View account breakdown for ${category.name}`}
+                      >
+                        <Wallet className="size-3 text-ledger-blue-400 shrink-0" aria-hidden="true" />
+                        <span>{category.accounts!.length} {category.accounts!.length === 1 ? 'account' : 'accounts'}</span>
+                      </Button>
+                    )}
                   </div>
                   {adjustButton(category)}
                 </div>
@@ -90,11 +104,30 @@ export function CarryoverLedgerTable({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {categories.map(category => {
           const pending = pendingDeductionsByCategory[category.name] ?? 0
+          const hasAccounts = Boolean(category.accounts?.length)
           return (
             <div key={category.name} className="p-4 rounded-xl border border-border bg-background/50 space-y-3 shadow-xs transition">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 font-bold text-sm"><span className={`size-2.5 rounded-full ${getCategoryDotClass(category.name)}`} />{category.name}</div>
-                <span className="text-[10px] font-semibold bg-muted px-2 py-0.5 rounded-md text-muted-foreground">Target: {(category.allocation * 100).toFixed(0)}%</span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 font-bold text-sm">
+                  <span className={`size-2.5 rounded-full ${getCategoryDotClass(category.name)}`} />
+                  <span>{category.name}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {hasAccounts && (
+                    <Button
+                      variant="unstyled"
+                      type="button"
+                      onClick={() => setSelectedCategory(category)}
+                      className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:text-foreground transition cursor-pointer select-none"
+                      title={`View ${category.accounts!.length} ${category.accounts!.length === 1 ? 'account' : 'accounts'}`}
+                      aria-label={`View account breakdown for ${category.name}`}
+                    >
+                      <Wallet className="size-3 text-ledger-blue-400 shrink-0" aria-hidden="true" />
+                      <span>{category.accounts!.length}</span>
+                    </Button>
+                  )}
+                  <span className="text-[10px] font-semibold bg-muted px-2 py-0.5 rounded-md text-muted-foreground">Target: {(category.allocation * 100).toFixed(0)}%</span>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
                 <Metric label="Income Added" value={amount(category.incomeAllocated ?? category.target)} />
@@ -118,7 +151,7 @@ export function CarryoverLedgerTable({
                     {adjustButton(category)}
                   </div>
                 </div>
-                    {pending > 0 && (
+                {pending > 0 && (
                   <>
                     <div className="col-start-1">
                       <span className="text-[10px] font-semibold text-yellow-500 block truncate">Pending: -{amount(pending)}</span>
@@ -126,73 +159,66 @@ export function CarryoverLedgerTable({
                     <div className="col-start-2">
                       <span className={`text-[10px] font-semibold block truncate ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</span>
                     </div>
-                      </>
-                    )}
-                    <AccountBreakdown category={category} amountsMasked={amountsMasked} formatCurrency={formatCurrency} />
-                  </div>
+                  </>
+                )}
+              </div>
             </div>
           )
         })}
       </div>
       )}
-    </div>
-  )
-}
 
-function AccountBreakdown({
-  category,
-  amountsMasked,
-  formatCurrency,
-}: {
-  category: CategorySummary
-  amountsMasked: boolean
-  formatCurrency: (value: number) => string
-}) {
-  const [isOpen, setIsOpen] = useState(false)
-  if (!category.accounts?.length) return null
-  const total = category.accounts.reduce((sum, account) => sum + account.remaining, 0)
-  const accountLabel = category.accounts.length === 1 ? 'account' : 'accounts'
-
-  return (
-    <details
-      className="group/account col-span-2 w-full text-left text-[10px] sm:max-w-[260px]"
-      open={isOpen}
-      onToggle={event => setIsOpen(event.currentTarget.open)}
-    >
-      <summary className="flex min-h-8 cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/20 px-2.5 py-1.5 font-semibold text-muted-foreground outline-hidden transition-colors hover:border-primary/30 hover:bg-muted/30 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <Wallet className="size-3.5 shrink-0 text-ledger-blue-400" aria-hidden="true" />
-          <span className="truncate">{category.accounts.length} {accountLabel}</span>
-        </span>
-        <span className="flex shrink-0 items-center gap-1 text-[9px] font-medium">
-          <span className="hidden sm:inline">View balances</span>
-          <ChevronDown className="size-3.5 transition-transform duration-200 group-open/account:rotate-180" aria-hidden="true" />
-        </span>
-      </summary>
-      <div className="mt-1.5 overflow-hidden rounded-xl border border-border/60 bg-card/80 shadow-sm">
-        <div className="flex items-center justify-between gap-2 border-b border-border/50 bg-muted/15 px-2.5 py-2">
-          <span className="font-semibold text-foreground">Account balances</span>
-          <span className="text-[9px] text-muted-foreground">Current</span>
-        </div>
-        <div className="divide-y divide-border/40">
-          {category.accounts.map(account => (
-            <div key={account.id} className="flex items-center justify-between gap-3 px-2.5 py-2">
-              <div className="min-w-0 flex-1">
-                <span className={`block truncate font-medium ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}>
-                  {account.name}
-                </span>
-                {account.isArchived && <span className="mt-0.5 block text-[9px] text-muted-foreground">Closed account</span>}
-              </div>
-              <SensitiveAmount value={account.remaining} isMasked={amountsMasked} formatFn={formatCurrency} className="shrink-0 font-semibold text-foreground" />
+      {selectedCategory && (
+        <BottomSheet
+          isOpen={Boolean(selectedCategory)}
+          onClose={() => setSelectedCategory(null)}
+          title={
+            <div className="flex items-center gap-2">
+              <span className={`size-2.5 rounded-full ${getCategoryDotClass(selectedCategory.name)}`} />
+              <span className="text-base font-bold text-foreground">{selectedCategory.name} Account Balances</span>
             </div>
-          ))}
-        </div>
-        <div className="flex items-center justify-between gap-2 border-t border-border/60 bg-muted/15 px-2.5 py-2 font-bold text-foreground">
-          <span>Accounts total</span>
-          <SensitiveAmount value={total} isMasked={amountsMasked} formatFn={formatCurrency} />
-        </div>
-      </div>
-    </details>
+          }
+          description={`Accounts contributing to the ${selectedCategory.name} ledger balance.`}
+          footer={
+            <div className="flex justify-end">
+              <Button variant="secondary" size="sm" onClick={() => setSelectedCategory(null)}>
+                Close
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-3 pt-2">
+            <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs">
+              <div className="flex items-center justify-between gap-2 border-b border-border/50 bg-muted/20 px-3.5 py-2.5 text-xs">
+                <span className="font-bold text-foreground">Account</span>
+                <span className="font-bold text-muted-foreground">Current balance</span>
+              </div>
+              <div className="divide-y divide-border/40">
+                {selectedCategory.accounts?.map(account => (
+                  <div key={account.id} className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-xs">
+                    <div className="min-w-0 flex-1">
+                      <span className={`block truncate font-semibold ${account.isArchived ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                        {account.name}
+                      </span>
+                      {account.isArchived && <span className="mt-0.5 block text-[10px] text-muted-foreground">Closed account</span>}
+                    </div>
+                    <SensitiveAmount value={account.remaining} isMasked={amountsMasked} formatFn={formatCurrency} className="shrink-0 font-bold text-foreground" />
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between gap-2 border-t border-border/60 bg-muted/20 px-3.5 py-2.5 text-xs font-bold text-foreground">
+                <span>Total accounts balance</span>
+                <SensitiveAmount
+                  value={selectedCategory.accounts?.reduce((sum, a) => sum + a.remaining, 0) ?? 0}
+                  isMasked={amountsMasked}
+                  formatFn={formatCurrency}
+                />
+              </div>
+            </div>
+          </div>
+        </BottomSheet>
+      )}
+    </div>
   )
 }
 

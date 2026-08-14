@@ -104,6 +104,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const deletingId = deletingIdProp ?? app.deletingId
   const isMobile = useIsMobile()
   const [activeTab, setActiveTab] = React.useState<RecurringTabId>('recurring')
+  const [highlightedLoanId, setHighlightedLoanId] = React.useState<string | null>(null)
   const loanTotalOutstanding = hasLoadedLoans && loans.every(loan => loan.scheduleStatus !== 'Incomplete' && !loan.isRecalculating)
     ? loans.reduce((total, loan) => total + Math.max(0, loan.snapshot.outstandingBalance), 0)
     : null
@@ -200,6 +201,10 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             thisDevicePushEnabled={thisDevicePushEnabled}
             onUpdateReminder={onUpdateReminder}
             onRequestPayEarly={onRequestPayEarly}
+            onNavigateToLoan={(loanId) => {
+              setActiveTab('loans')
+              setHighlightedLoanId(loanId)
+            }}
           />
         </>
       )}
@@ -219,6 +224,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             loadStatus={loanLoadStatus}
             onLoad={onLoadLoans}
             onExplain={onExplainLoan}
+            highlightedLoanId={highlightedLoanId}
+            onClearHighlightedLoan={() => setHighlightedLoanId(null)}
           />
         </Suspense>
       )}

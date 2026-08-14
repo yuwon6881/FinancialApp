@@ -106,6 +106,32 @@ describe('useBucketAccountSetupView review flow', () => {
     expect(result.current.pending?.preview.bucketDifference).toBe(0)
   })
 
+  it('lets a new row take the default over from the account the migration created', async () => {
+    const { result } = renderHook(() => useBucketAccountSetupView({
+      isOpen: true,
+      bucket: 'Stability',
+      accounts: [ledgerAccount(100)],
+      bucketTotal: 100,
+    }))
+
+    await waitFor(() => expect(result.current.targetInputs.main).toBe('100.00'))
+    expect(result.current.hasLiveDefault).toBe(true)
+    // Nothing is promoted until the user asks for it, so an ordinary added row leaves the
+    // existing default alone and says nothing about moving it.
+    act(() => result.current.addDraft())
+    expect(result.current.defaultMovesFrom).toBeNull()
+
+    const draftId = result.current.drafts[0].id
+    act(() => result.current.updateDraftDefault(draftId, true))
+
+    expect(result.current.promotedDraftId).toBe(draftId)
+    expect(result.current.defaultMovesFrom?.name).toBe('Main account')
+
+    act(() => result.current.updateDraftDefault(draftId, false))
+    expect(result.current.promotedDraftId).toBeNull()
+    expect(result.current.defaultMovesFrom).toBeNull()
+  })
+
   it('still blocks a review when the live account changed during editing', async () => {
     const { result, rerender } = renderHook(
       ({ remaining }: { remaining: number }) => useBucketAccountSetupView({

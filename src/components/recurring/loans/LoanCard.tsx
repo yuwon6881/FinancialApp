@@ -1,4 +1,4 @@
-import { ChevronDown, MessageCircleQuestion, Pencil, Trash2 } from 'lucide-react'
+import { ChevronDown, Edit, Sparkles, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { fetchLoanSchedule } from '../../../lib/api/loans'
 import { SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
@@ -111,7 +111,7 @@ export function LoanCard({
     .map(payment => ({ ...payment, kind: 'Planned' as const }))
 
   return (
-    <article className="rounded-2xl border border-border/60 bg-card/85 p-4 shadow-sm sm:p-5">
+    <article id={`loan-card-${loan.id}`} className="rounded-2xl border border-border/60 bg-card/85 p-4 shadow-sm sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -128,17 +128,6 @@ export function LoanCard({
               ? `Linked bill: ${loan.recurringPaymentName || 'Recurring bill'}`
               : 'Bill removed · original history preserved'}
           </p>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" aria-label={`Explain ${loan.name}`} title={hideSensitive ? 'Unhide balances to explain this loan' : 'Explain this loan'} onClick={onExplain} disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}>
-            <MessageCircleQuestion className="size-4" aria-hidden="true" />
-          </Button>
-          <Button variant="ghost" size="icon" aria-label={`Edit ${loan.name}`} title={hideSensitive ? 'Unhide balances to edit' : 'Edit loan'} onClick={onEdit} disabled={hideSensitive}>
-            <Pencil className="size-4" aria-hidden="true" />
-          </Button>
-          <Button variant="destructiveGhost" size="icon" aria-label={`Delete ${loan.name}`} title={hideSensitive ? 'Unhide balances to delete' : 'Delete loan'} onClick={onDelete} disabled={hideSensitive}>
-            <Trash2 className="size-4" aria-hidden="true" />
-          </Button>
         </div>
       </div>
 
@@ -260,6 +249,44 @@ export function LoanCard({
         </div>
         <p className="mt-2.5 text-[11px] text-muted-foreground">Amounts in {currency}. Schedule follows original bill cadence.</p>
       </details>
+
+      <div className="mt-4 flex items-center justify-between border-t border-border/30 pt-4 gap-2">
+        <Button
+          variant="secondary"
+          size="sm"
+          aria-label={`Explain ${loan.name} with Ask AI`}
+          title={hideSensitive ? 'Unhide balances to explain this loan' : 'Explain this loan with Ask AI'}
+          onClick={onExplain}
+          disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}
+        >
+          <Sparkles className="size-3.5 text-accent-ink" aria-hidden="true" />
+          <span>Ask AI</span>
+        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={`Edit ${loan.name}`}
+            title={hideSensitive ? 'Unhide balances to edit' : 'Edit loan'}
+            onClick={onEdit}
+            disabled={hideSensitive}
+          >
+            <Edit className="size-3.5 shrink-0" aria-hidden="true" />
+            <span>Edit</span>
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            aria-label={`Delete ${loan.name}`}
+            title={hideSensitive ? 'Unhide balances to delete' : 'Delete loan'}
+            onClick={onDelete}
+            disabled={hideSensitive}
+          >
+            <Trash2 className="size-3.5 shrink-0" aria-hidden="true" />
+            <span>Delete</span>
+          </Button>
+        </div>
+      </div>
     </article>
   )
 }

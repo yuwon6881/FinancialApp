@@ -789,7 +789,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         <React.Suspense fallback={<div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}>
           <AccountsSection
             accounts={props.accounts ?? []}
-            categoryTotals={props.dashboardData?.categories}
             currency={view.activeSettings.currency || 'USD'}
             hideSensitive={hideSensitive}
             activeSyncId={activeSyncId}

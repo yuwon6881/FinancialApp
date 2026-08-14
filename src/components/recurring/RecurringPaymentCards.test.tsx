@@ -157,14 +157,17 @@ describe('RecurringPaymentCards payment mode', () => {
 describe('RecurringPaymentCards loan links', () => {
   it('identifies the linked loan and keeps delete visible but disabled', () => {
     const onDeletePayment = vi.fn()
+    const onNavigateToLoan = vi.fn()
     renderCards([{
       ...basePayment,
       linkedLoanId: 'loan-home',
       linkedLoanName: 'Home loan',
-    }], { onDeletePayment })
+    }], { onDeletePayment, onNavigateToLoan })
 
-    expect(screen.getByText('Linked to loan')).toBeTruthy()
-    expect(screen.getByText('Home loan')).toBeTruthy()
+    expect(screen.getByText('Linked to Home loan')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'View linked loan: Home loan' }))
+    expect(onNavigateToLoan).toHaveBeenCalledWith('loan-home')
+
     const deleteButton = screen.getByRole('button', { name: 'Delete Netflix' }) as HTMLButtonElement
     expect(deleteButton.disabled).toBe(true)
     expect(deleteButton.title).toContain('Home loan')

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, CircleHelp, Percent, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, CircleHelp, Info, Percent, Plus, Trash2 } from 'lucide-react'
 import type { LedgerAccount, LedgerAccountKind, Transaction } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
@@ -62,7 +62,7 @@ function NewAccountRow({
   error,
   targetError,
   interestError,
-  canChooseDefault,
+  currentDefaultName,
   onChange,
   onTargetChange,
   onInterestChange,
@@ -74,7 +74,7 @@ function NewAccountRow({
   error?: string
   targetError?: string
   interestError?: string
-  canChooseDefault: boolean
+  currentDefaultName: string | null
   onChange: (change: Partial<Omit<BucketSetupDraftAccount, 'id'>>) => void
   onTargetChange: (rawValue: string) => void
   onInterestChange: (change: { enabled?: boolean; rate?: number; frequency?: BucketSetupDraftAccount['interestFrequency'] }) => void
@@ -153,15 +153,17 @@ function NewAccountRow({
           </div>
         )}
       </div>
-      {canChooseDefault && (
-        <label className="flex cursor-pointer items-start gap-2 text-[11px] font-semibold text-foreground">
-          <Checkbox checked={draft.isDefault} onChange={event => onDefaultChange(event.target.checked)} className="mt-0.5 size-5" />
-          <span>
-            Use as the default for this bucket
-            <span className="mt-0.5 block font-normal leading-relaxed text-muted-foreground">Unassigned bucket history will appear here after setup.</span>
+      <label className="flex cursor-pointer items-start gap-2 text-[11px] font-semibold text-foreground">
+        <Checkbox checked={draft.isDefault} onChange={event => onDefaultChange(event.target.checked)} className="mt-0.5 size-5" />
+        <span>
+          Use as the default for this bucket
+          <span className="mt-0.5 block font-normal leading-relaxed text-muted-foreground">
+            {currentDefaultName
+              ? `Takes over from ${currentDefaultName}, which keeps its balance and history.`
+              : 'Unassigned bucket history will appear here after setup.'}
           </span>
-        </label>
-      )}
+        </span>
+      </label>
     </div>
   )
 }
@@ -193,6 +195,10 @@ export function BucketAccountSetupSheet({
     try {
       if (onReconcileAccounts) {
         const draftsById = new Map(pending.drafts.map(draft => [draft.id, draft]))
+        // Exactly one row may carry the default marker. When a new row takes it over, the existing
+        // default has to be sent as `false` rather than left true and settled by the order the
+        // server happens to walk the targets in.
+        const promotedDraftId = pending.drafts.find(draft => draft.isDefault)?.id ?? null
         const targets = pending.preview.lines.map(line => {
           const draft = draftsById.get(line.id)
           const account = accounts.find(candidate => candidate.id === line.id)
@@ -200,7 +206,9 @@ export function BucketAccountSetupSheet({
             id: line.id,
             name: line.name,
             kind: draft?.kind ?? account?.kind ?? 'Other',
-            isDefault: draft?.isDefault ?? account?.isDefault ?? false,
+            isDefault: promotedDraftId
+              ? line.id === promotedDraftId
+              : draft?.isDefault ?? account?.isDefault ?? false,
             isArchived: line.isArchived,
             expectedCurrent: line.current,
             target: line.target,
@@ -307,8 +315,24 @@ export function BucketAccountSetupSheet({
 
           <div className="flex items-start gap-2.5 rounded-xl border border-accent-ink/20 bg-accent/15 p-3 text-[11px] leading-relaxed text-muted-foreground">
             <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-            <p>Enter current balances for each account. Any difference from the bucket total is confirmed as a ledger adjustment.</p>
+            <p>
+              Enter the amount each account holds today. <strong className="font-semibold text-foreground">This bucket
+              will be worth the sum of these balances</strong> — any difference from its total right now is confirmed
+              as one ledger adjustment before anything is saved.
+            </p>
           </div>
+
+          {view.defaultMovesFrom && (
+            <div className="flex items-start gap-2.5 rounded-xl border border-accent-ink/20 bg-accent/15 p-3 text-[11px] leading-relaxed text-muted-foreground" role="status">
+              <Info className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
+              <p>
+                <strong className="font-semibold text-foreground">{view.defaultMovesFrom.name} will stop being the
+                default account</strong> for {bucket} when you save, because a new row is taking that over. It keeps
+                its balance and its history, so there is nothing to delete afterwards — close it later from the
+                accounts list if you no longer use it.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
@@ -329,7 +353,11 @@ export function BucketAccountSetupSheet({
                     {account.name}
                   </p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
-                    {account.isArchived ? 'Closed account · kept for history' : account.isDefault ? 'Default account' : 'Open account'}
+                    {account.isArchived
+                      ? 'Closed account · kept for history'
+                      : account.isDefault
+                        ? view.promotedDraftId ? 'Default account · moving to the new row' : 'Default account'
+                        : 'Open account'}
                   </p>
                 </div>
                 {account.isArchived ? (
@@ -354,7 +382,7 @@ export function BucketAccountSetupSheet({
                 error={view.errors[draft.id]}
                 targetError={view.errors[`${draft.id}-target`]}
                 interestError={view.errors[`${draft.id}-interest`]}
-                canChooseDefault={!view.hasLiveDefault}
+                currentDefaultName={view.liveDefaultAccount?.name ?? null}
                 onChange={change => view.updateDraft(draft.id, change)}
                 onTargetChange={value => view.updateDraftTarget(draft.id, value)}
                 onInterestChange={change => view.updateDraft(draft.id, {
@@ -418,6 +446,12 @@ export function BucketAccountSetupSheet({
                   <div key={account.id} className="flex items-center justify-between gap-3 text-[11px]"><span className="truncate">{account.name}</span><SignedAmount value={account.diff} currency={currency} hideSensitive={hideSensitive} /></div>
                 ))}
               </div>
+            )}
+            {view.defaultMovesFrom && (
+              <p className="text-[10px] text-muted-foreground">
+                {view.defaultMovesFrom.name} stops being the default account for {bucket}. Its balance and history stay
+                exactly as they are.
+              </p>
             )}
             <p className="text-[10px] text-muted-foreground">This records ordinary ledger adjustments for the account rows. You can review them later in the Ledger.</p>
           </div>

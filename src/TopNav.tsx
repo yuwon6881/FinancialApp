@@ -1,14 +1,6 @@
 import { Button } from './components/ui/Button'
 import React from 'react'
 import {
-  Menubar,
-  MenubarContent,
-  MenubarGroup,
-  MenubarItem,
-  MenubarMenu,
-  MenubarTrigger,
-} from "@/components/ui/menubar"
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -286,40 +278,37 @@ const TopNav: React.FC<TopNavProps> = ({
             </Button>
           </div>
 
-          {/* Quick Actions Menubar (Shadcn UI) */}
+          {/* Quick Actions menu. A single isolated menu, so it uses DropdownMenu like the account
+              menu rather than a Menubar root: a Menubar exists to give a *row* of sibling menus one
+              roving focus group, and standing one menu inside it bought nothing while costing the
+              menubar and roving-focus primitives on the eager critical path. */}
           <div className="hidden lg:block border border-border/60 rounded-xl bg-background shrink-0">
-            <Menubar className="border-0 h-9 px-1 bg-transparent">
-              
-              {/* Add menu */}
-              <MenubarMenu>
-                <MenubarTrigger className="px-2 py-1 sm:px-2.5 text-xs font-semibold hover:bg-muted/50 rounded-lg cursor-pointer flex items-center gap-1 whitespace-nowrap">
-                  <Plus className="size-3.5 text-blue-500" />
-                  <span className="hidden xl:inline">Quick Add</span>
-                </MenubarTrigger>
-                <MenubarContent className="z-50 min-w-[160px] bg-card border border-border p-1 rounded-xl shadow-md">
-                  <MenubarGroup>
-                    <MenubarItem 
-                      onClick={() => onQuickAction?.('transaction')}
-                      className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer"
-                    >
-                      Post Transaction <Plus className="size-3 text-blue-500" />
-                    </MenubarItem>
-                    <MenubarItem 
-                      onClick={() => onQuickAction?.('subscription')}
-                      className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer"
-                    >
-                      New Subscription <Plus className="size-3 text-violet-500" />
-                    </MenubarItem>
-                    <MenubarItem 
-                      onClick={() => onQuickAction?.('wishlist')}
-                      className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer"
-                    >
-                      Add Reward <RewardIcon className="size-3 text-pink-500" aria-hidden />
-                    </MenubarItem>
-                  </MenubarGroup>
-                </MenubarContent>
-              </MenubarMenu>
-            </Menubar>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="h-9 px-2 py-1 sm:px-2.5 text-xs font-semibold hover:bg-muted/50 rounded-lg cursor-pointer flex items-center gap-1 whitespace-nowrap">
+                <Plus className="size-3.5 text-blue-500" />
+                <span className="hidden xl:inline">Quick Add</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="z-50 min-w-[160px] bg-card border border-border p-1 rounded-xl shadow-md">
+                <DropdownMenuItem
+                  onSelect={() => onQuickAction?.('transaction')}
+                  className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
+                >
+                  Post Transaction <Plus className="size-3 text-blue-500" />
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => onQuickAction?.('subscription')}
+                  className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
+                >
+                  New Subscription <Plus className="size-3 text-violet-500" />
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => onQuickAction?.('wishlist')}
+                  className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
+                >
+                  Add Reward <RewardIcon className="size-3 text-pink-500" aria-hidden />
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Profile/Account menu */}

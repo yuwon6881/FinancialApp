@@ -73,4 +73,15 @@ describe('LoanCard', () => {
     render(<LoanCard {...props(baseLoan)} isMobile={false} />)
     expect(screen.getByText('Loan details').closest('details')?.open).toBe(true)
   })
+
+  it('renders Ask AI, Edit, and Delete action buttons', () => {
+    const onEdit = vi.fn()
+    const onDelete = vi.fn()
+    const onExplain = vi.fn()
+    render(<LoanCard {...props(baseLoan)} onEdit={onEdit} onDelete={onDelete} onExplain={onExplain} />)
+
+    expect(screen.getByText('Ask AI')).not.toBeNull()
+    expect(screen.getByText('Edit')).not.toBeNull()
+    expect(screen.getByText('Delete')).not.toBeNull()
+  })
 })

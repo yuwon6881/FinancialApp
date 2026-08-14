@@ -286,9 +286,21 @@ export function useBucketAccountSetupView({
     })
   }
 
+  // A new row may take over as the bucket's default even when one already exists, and the sheet
+  // says so before it happens. Without this the only way to move the default off the account the
+  // account-tracking migration created was to add a row, save, then delete that account from the
+  // list -- a three-step detour through a screen that refuses to remove a bucket's last open
+  // account. The old default keeps its balance and history; only the marker moves.
+  const liveDefaultAccount = bucketAccounts.find(account => !account.isArchived && account.isDefault) ?? null
+  const promotedDraft = drafts.find(draft => draft.isDefault) ?? null
+  const defaultMovesFrom = liveDefaultAccount && promotedDraft ? liveDefaultAccount : null
+
   return {
     bucketAccounts,
     hasLiveDefault,
+    liveDefaultAccount,
+    promotedDraftId: promotedDraft?.id ?? null,
+    defaultMovesFrom,
     targetInputs,
     drafts,
     errors,

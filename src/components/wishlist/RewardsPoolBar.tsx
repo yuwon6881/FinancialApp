@@ -43,7 +43,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   const bucket = summary.fundingBucket ?? bucketProp
   const bucketLabel = bucket === 'Essentials' ? 'Essentials' : 'Rewards'
   const committedColor = getCategoryChartColor(bucket)
-  const freeColor = bucket === 'Rewards' ? 'var(--color-sky-500)' : 'var(--color-amber-500)'
+  const freeColor = bucket === 'Rewards' ? 'var(--color-amber-500)' : 'var(--color-emerald-500)'
   const {
     rewardsBalance: bucketBalance,
     totalEarmarked,
@@ -173,7 +173,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
               { key: 'committed', label: 'Committed', amount: totalEarmarked, color: committedColor },
             ]
         ).map(item => (
-          <span key={item.key} className="flex min-w-0 items-center gap-1.5 rounded-lg bg-muted/20 px-2.5 py-2">
+          <span key={item.key} className="flex min-w-0 items-center gap-1.5 rounded-lg border border-border/60 bg-muted/35 px-2.5 py-2">
             <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} aria-hidden />
             <span className="min-w-0 truncate text-muted-foreground">{item.label}</span>
             <span className="ml-auto shrink-0 font-extrabold text-foreground">{formatSensitive(item.amount)}</span>

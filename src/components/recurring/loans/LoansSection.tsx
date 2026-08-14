@@ -9,6 +9,7 @@ import { useLoansView } from './view/useLoansView'
 import { RecurringFilterBar } from '../RecurringFilterBar'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import type { LoanLoadStatus } from '../../../app/financialData/useLoanData'
+import { useHighlightedElement } from '../../ui/useHighlightedElement'
 
 interface LoansSectionProps {
   loans: Loan[]
@@ -23,6 +24,8 @@ interface LoansSectionProps {
   loadStatus: LoanLoadStatus
   onLoad: () => Promise<Loan[]>
   onExplain: (loan: Loan) => void
+  highlightedLoanId?: string | null
+  onClearHighlightedLoan?: () => void
 }
 export function LoansSection({
   loans,
@@ -37,6 +40,8 @@ export function LoansSection({
   loadStatus,
   onLoad,
   onExplain,
+  highlightedLoanId = null,
+  onClearHighlightedLoan,
 }: LoansSectionProps) {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null)
@@ -60,6 +65,8 @@ export function LoansSection({
 
   const isMobile = useIsMobile()
   const view = useLoansView(loans, payments, activeSyncIds)
+
+  useHighlightedElement(highlightedLoanId ? `loan-card-${highlightedLoanId}` : null, onClearHighlightedLoan)
 
   useEffect(() => {
     void onLoad().catch(() => undefined)

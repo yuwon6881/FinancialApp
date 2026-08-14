@@ -1,6 +1,6 @@
 import React from 'react'
 import { m, AnimatePresence } from 'framer-motion'
-import { Calendar, CreditCard, Edit, FastForward, Link2, Repeat, Trash2, Wallet } from 'lucide-react'
+import { Calendar, ChevronRight, CreditCard, Edit, FastForward, Link2, Repeat, Trash2, Wallet } from 'lucide-react'
 import type { RecurringPayment, RecurringReminderSettings } from '../../types'
 import { listContainerVariants, listItemVariants, listItemExit } from '../../lib/animations'
 import { isEligibleForPayEarly, normalizeRecurringFrequency, RECURRING_PAYMENT_MODE_LABELS } from '../../lib/recurringPayments'
@@ -28,6 +28,7 @@ interface RecurringPaymentCardsProps {
   thisDevicePushEnabled?: boolean
   onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
   onRequestPayEarly?: (id: string) => void
+  onNavigateToLoan?: (loanId: string) => void
 }
 
 // Subscriptions Cards Grid
@@ -47,6 +48,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
   thisDevicePushEnabled,
   onUpdateReminder,
   onRequestPayEarly,
+  onNavigateToLoan,
 }) => {
   // When navigated here from the dashboard subscription card, scroll the target
   // card into view and apply a highlight ring that fades out on its own.
@@ -83,9 +85,25 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                     )}
                     <RowSyncStatus isDeleting={isPaymentDeleting(rp.id)} isSyncing={isPaymentSyncing(rp.id)} isPending={rp.isPendingSync} entityLabel="subscription" />
                   </h3>
-                  <span className={`inline-block mt-1 text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
-                    {rp.category}
-                  </span>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <span className={`inline-block text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
+                      {rp.category}
+                    </span>
+                    {rp.linkedLoanId && (
+                      <Button
+                        variant="unstyled"
+                        type="button"
+                        onClick={() => onNavigateToLoan?.(rp.linkedLoanId!)}
+                        className="inline-flex items-center gap-1 rounded border border-accent-ink/25 bg-accent/30 hover:bg-accent/50 text-accent-ink px-1.5 py-0.5 text-[10px] font-bold transition cursor-pointer"
+                        title={`View linked loan: ${rp.linkedLoanName || 'Loan'}`}
+                        aria-label={`View linked loan: ${rp.linkedLoanName || 'Loan'}`}
+                      >
+                        <Link2 className="size-3 shrink-0" aria-hidden="true" />
+                        <span className="truncate max-w-[140px]">Linked to {rp.linkedLoanName || 'Loan'}</span>
+                        <ChevronRight className="size-3 shrink-0 opacity-70" aria-hidden="true" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Status Toggle Button */}
@@ -101,19 +119,6 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                 <span className="text-2xl font-extrabold text-foreground">{formatSensitive(Math.abs(rp.amount))}</span>
                 <span className="text-xs text-muted-foreground">{normalizeRecurringFrequency(rp.frequency) === 'Annually' ? '/yr' : '/mo'}</span>
               </div>
-
-              {rp.linkedLoanId && (
-                <div className="mt-4 flex items-start gap-3 rounded-xl border border-accent-ink/25 bg-accent/25 p-3">
-                  <div className="grid size-8 shrink-0 place-items-center rounded-lg border border-accent-ink/25 bg-accent/50 text-accent-ink">
-                    <Link2 className="size-4" aria-hidden="true" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-accent-ink">Linked to loan</p>
-                    <p className="mt-0.5 truncate text-sm font-bold text-foreground">{rp.linkedLoanName || 'Loan'}</p>
-                    <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">This bill is the payment schedule for the loan.</p>
-                  </div>
-                </div>
-              )}
 
               <div className="mt-6 space-y-2 border-t border-border/30 pt-4 text-xs">
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">

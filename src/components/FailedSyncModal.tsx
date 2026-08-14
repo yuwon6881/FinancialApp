@@ -33,6 +33,7 @@ const TYPE_LABELS: Record<string, string> = {
   purchase: 'Purchase',
   restore: 'Restore',
   unpurchase: 'Undo purchase',
+  reconcile: 'Reconcile',
 }
 
 function describeOp(op: QueuedOp): string {
@@ -46,16 +47,32 @@ function formatFieldName(key: string): string {
 function formatFieldValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—'
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  if (typeof value === 'number') return String(value)
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '—'
+    return value.map(item => typeof item === 'object' && item !== null ? formatFieldValue(item) : String(item)).join(', ')
+  }
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>
+    if ('bucket' in obj && 'targets' in obj) {
+      const targetCount = Array.isArray(obj.targets) ? obj.targets.length : 0
+      return `${obj.bucket} (${targetCount} ${targetCount === 1 ? 'account' : 'accounts'})`
+    }
+    const entries = Object.entries(obj).filter(([k]) => !k.endsWith('Id') && k !== 'id' && !k.startsWith('undo'))
+    if (entries.length === 0) return '—'
+    return entries.map(([k, v]) => `${formatFieldName(k)}: ${formatFieldValue(v)}`).join(' · ')
+  }
   return String(value)
 }
 
-// The queued payload already holds exactly what was being sent to the server,
-// so showing it is free -- no extra data threading needed.
+// The queued payload holds what was sent to the server.
+// Internal snapshots and identifiers are filtered out so plain language is displayed.
 function getPayloadEntries(op: QueuedOp): Array<[string, unknown]> {
   if (!op.payload || typeof op.payload !== 'object') return []
   return Object.entries(op.payload).filter(([key]) => {
-    if (key === 'id' || key === 'isPendingSync') return false
-    if (key.endsWith('Id') || key === 'undoSnapshot') return false
+    if (key === 'id' || key === 'isPendingSync' || key === 'syncVersion') return false
+    if (key.endsWith('Id') || key === 'undoSnapshot' || key.toLowerCase().startsWith('undo')) return false
     return true
   })
 }
@@ -81,15 +98,17 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
       }
       footer={
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-          <Button variant="unstyled"
+          <Button
+            variant="secondary"
             onClick={onDiscardAll}
-            className="w-full sm:w-auto px-4 py-2 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-xl transition cursor-pointer text-center cursor-pointer"
+            className="w-full sm:w-auto"
           >
             Discard All
           </Button>
-          <Button variant="unstyled"
+          <Button
+            variant="primary"
             onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2 bg-foreground text-background font-bold text-xs rounded-xl hover:bg-foreground/90 transition shadow-sm cursor-pointer text-center cursor-pointer"
+            className="w-full sm:w-auto"
           >
             Close
           </Button>
@@ -120,7 +139,7 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
               </div>
             </div>
             {getPayloadEntries(op).length > 0 && (
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] bg-muted/40 border border-border/30 rounded-lg px-2.5 py-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 text-[10px] bg-muted/40 border border-border/30 rounded-lg px-2.5 py-2">
                 {getPayloadEntries(op).map(([key, value]) => (
                   <div key={key} className="min-w-0">
                     <span className="text-muted-foreground font-semibold">{formatFieldName(key)}: </span>
@@ -130,14 +149,15 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
               </div>
             )}
             {op.lastError && (
-              <div className="text-[10px] text-destructive/90 bg-destructive/5 border border-destructive/10 rounded-lg px-2.5 py-1.5 break-words">
+              <div className="text-[10px] text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-2.5 py-1.5 break-words">
                 {op.lastError}
               </div>
             )}
             <div className="flex justify-end">
-              <Button variant="unstyled"
+              <Button
+                variant="danger"
+                size="sm"
                 onClick={() => onDiscard(op.id)}
-                className="px-3 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-lg transition duration-150 cursor-pointer border border-slate-500/10"
               >
                 Discard
               </Button>

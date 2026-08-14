@@ -19,7 +19,12 @@ const budgets = [
   // that collapsed LazyMotion's split point (see vite.config.ts). Its cost is covered by
   // the critical-path budget below, which is the number that actually matters — the
   // feature bundle is now fetched after mount rather than before first paint.
-  { name: 'vendor-radix-*.js', pattern: /^vendor-radix-.*\.js$/, limitKb: 28.0 },
+  // 29: radix-ui 1.6.7 is ~1 kB gzip larger than 1.4.3, and that upgrade is not optional --
+  // 1.4.3's FocusScope composed its container ref with an inline arrow, so opening any Radix
+  // menu tripped React 19's nested-update ceiling (#185) and crashed the shell. Converting the
+  // one-menu Menubar to DropdownMenu paid most of it back; the critical-path budget below, which
+  // is the number that actually matters for cold launch, still has headroom. Measured 28.01.
+  { name: 'vendor-radix-*.js', pattern: /^vendor-radix-.*\.js$/, limitKb: 29.0 },
   // 35.5: the transfer-volume summary, addressable ledger filters, and shared
   // sorting controls, plus the shared-receipt scan picker that moved into the
   // transaction form (the split *editor* is still a lazy chunk of its own). Raised

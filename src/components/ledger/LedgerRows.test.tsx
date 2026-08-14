@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { Transaction } from '../../types'
+import type { LedgerAccount, Transaction } from '../../types'
 import { DesktopLedgerRow } from './LedgerRows'
 
 const transaction = (
@@ -56,5 +56,43 @@ describe('LedgerRows emergency-fund intent chip', () => {
     )
 
     expect(screen.getByText(label)).toBeTruthy()
+  })
+})
+
+describe('MobileLedgerRow layout', () => {
+  it('renders description with truncation and places account information in the metadata row', async () => {
+    const { MobileLedgerRow } = await import('./LedgerRows')
+    const tx: Transaction = {
+      ...transaction('NotRequired'),
+      description: 'Nasi Lemak Ayam Goreng Sambal Extra with Teh Tarik',
+      accountId: 'acc-1',
+    }
+    const accounts: LedgerAccount[] = [{
+      id: 'acc-1',
+      name: 'Maybank Main',
+      bucket: 'Stability',
+      remaining: 1000,
+      isArchived: false,
+      kind: 'Bank',
+      interestFrequency: 'Monthly',
+      interestEnabled: false,
+      interestRatePercent: 0,
+      isDefault: true,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }]
+
+    render(
+      <MobileLedgerRow
+        {...props(tx)}
+        accounts={accounts}
+        hint={false}
+      />,
+    )
+
+    const descEl = screen.getByText(tx.description)
+    expect(descEl.classList.contains('truncate')).toBe(true)
+    expect(screen.getByText('Account: Maybank Main')).toBeTruthy()
+    expect(screen.getByText('Spent for good')).toBeTruthy()
   })
 })
