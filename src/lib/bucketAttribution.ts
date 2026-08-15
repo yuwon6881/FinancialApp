@@ -37,8 +37,9 @@ export function bucketAmount(transaction: AttributableTransaction, bucket: strin
   }
 
   if (ledgerCategory.toLowerCase().startsWith('transfer:')) {
-    const [source, destination] = ledgerCategory.slice('Transfer:'.length).split('->')
-    if (destination === undefined) return 0
+    const parts = ledgerCategory.slice('Transfer:'.length).split('->')
+    if (parts.length !== 2) return 0
+    const [source, destination] = parts
     if (source.trim().toLowerCase() === target) return -Math.abs(transaction.amount)
     if (destination.trim().toLowerCase() === target) return Math.abs(transaction.amount)
   }

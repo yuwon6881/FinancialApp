@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { LedgerAccount, Transaction } from '../types'
-import type { QueuedOp } from './outbox'
+import type { OutboxPayload, QueuedOp } from './outbox'
 import { projectAccountBalances } from './accountProjection'
 
 const accounts: LedgerAccount[] = [
@@ -114,5 +114,120 @@ describe('projectAccountBalances', () => {
       isPendingSync: true,
       pendingSyncOperationId: 'op-1',
     })
+  })
+
+  it('projects reconciliation interest settings onto an existing account', () => {
+    const result = projectAccountBalances(accounts, [op({
+      entity: 'ledgerAccountReconcile',
+      targetId: 'reconcile-interest',
+      payload: {
+        reconciliation: {
+          operationId: 'reconcile-interest',
+          bucket: 'Essentials',
+          expectedBucketTotal: 100,
+          targets: [{
+            id: 'essentials',
+            name: 'Main account',
+            kind: 'Bank',
+            isArchived: false,
+            expectedCurrent: 100,
+            target: 100,
+            interestEnabled: true,
+            interestRatePercent: 4.25,
+            interestFrequency: 'Yearly',
+          }],
+        },
+      },
+    })])
+
+    expect(result.find(account => account.id === 'essentials')).toMatchObject({
+      remaining: 100,
+      interestEnabled: true,
+      interestRatePercent: 4.25,
+      interestFrequency: 'Yearly',
+    })
+  })
+
+  it('preserves a failed queued reconciliation projection', () => {
+    const result = projectAccountBalances(accounts, [op({
+      id: 'failed-reconcile-op',
+      entity: 'ledgerAccountReconcile',
+      targetId: 'reconcile-failed',
+      retryCount: 5,
+      lastError: 'Account reconciliation could not be saved.',
+      payload: {
+        reconciliation: {
+          operationId: 'reconcile-failed',
+          bucket: 'Essentials',
+          expectedBucketTotal: 100,
+          targets: [
+            { id: 'essentials', name: 'Essentials bank', kind: 'Bank', isArchived: false, expectedCurrent: 100, target: 60 },
+            { id: 'cash-new', name: 'Cash jar', kind: 'Cash', isArchived: false, expectedCurrent: 0, target: 40 },
+          ],
+        },
+      },
+    })])
+
+    expect(result.find(account => account.id === 'essentials')?.remaining).toBe(60)
+    expect(result.find(account => account.id === 'cash-new')?.remaining).toBe(40)
+  })
+
+  it('projects a queued bucket transfer across two accounts', () => {
+    const result = projectAccountBalances(accounts, [op({
+      targetId: 'tx-transfer-queued',
+      payload: {
+        id: 'tx-transfer-queued',
+        amount: 30,
+        ledgerCategory: 'Transfer:Essentials->Rewards',
+        category: 'Transfer',
+        description: 'Move to rewards',
+        date: '2026-08-15',
+        accountId: 'essentials',
+        counterAccountId: 'rewards',
+      },
+    })])
+
+    expect(result.find(account => account.id === 'essentials')?.remaining).toBe(70)
+    expect(result.find(account => account.id === 'rewards')?.remaining).toBe(30)
+  })
+
+  it('projects a queued reconciliation with an archived account', () => {
+    const result = projectAccountBalances(accounts, [op({
+      entity: 'ledgerAccountReconcile',
+      targetId: 'reconcile-archive',
+      payload: {
+        reconciliation: {
+          operationId: 'reconcile-archive',
+          bucket: 'Essentials',
+          expectedBucketTotal: 100,
+          targets: [
+            { id: 'essentials', name: 'Essentials bank', kind: 'Bank', isArchived: true, expectedCurrent: 100, target: 0 },
+            { id: 'essentials-2', name: 'New Essentials', kind: 'Bank', isArchived: false, expectedCurrent: 0, target: 100 },
+          ],
+        },
+      },
+    })])
+
+    expect(result.find(account => account.id === 'essentials')).toMatchObject({
+      remaining: 0,
+      isArchived: true,
+    })
+    expect(result.find(account => account.id === 'essentials-2')).toMatchObject({
+      remaining: 100,
+      isArchived: false,
+    })
+  })
+
+  it('projects a failed transaction op while it remains queued in outbox', () => {
+    const result = projectAccountBalances(accounts, [op({
+      id: 'failed-tx-op',
+      entity: 'transaction',
+      targetId: 'tx-failed',
+      retryCount: 2,
+      lastError: 'Network error',
+      payload: baseTransaction({ id: 'tx-failed', amount: -40 }) as unknown as OutboxPayload,
+    })])
+
+    expect(result.find(account => account.id === 'essentials')?.remaining).toBe(60)
   })
 })

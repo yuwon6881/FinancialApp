@@ -146,14 +146,22 @@ export function computeIncomeLedgerCategory(input: IncomeSplitInput): string {
     }
   }
 
-  // Rounded to 4dp — the wire precision — then the drift pushed onto the largest share, so the
+  // Rounded to 6dp on fractions (4dp on percentage wire format) — matching
+  // IncomeSplitPlanner.Normalize — then the drift pushed onto the largest share, so the
   // four percentages always sum to exactly 100 and no cent is invented or lost.
-  const shares = [ess, gro, sta, rew].map(share => Math.round(Math.max(0, share) * 10000) / 10000)
+  const total = ess + gro + sta + rew
+  const shares = [ess, gro, sta, rew].map(share => Math.round((Math.max(0, share) / total) * 1000000) / 1000000)
   let largest = 0
   for (let i = 1; i < shares.length; i += 1) {
     if (shares[i] > shares[largest]) largest = i
   }
-  shares[largest] += 1 - shares.reduce((sum, share) => sum + share, 0)
+  const drift = Math.round((1 - shares.reduce((sum, share) => sum + share, 0)) * 1000000) / 1000000
+  shares[largest] = Math.round((shares[largest] + drift) * 1000000) / 1000000
 
-  return `IncomeSplit:${shares.map(share => (share * 100).toFixed(4)).join(',')}`
+  const formatShare = (share: number) => {
+    const pct = Math.round(share * 1000000) / 10000
+    return String(pct)
+  }
+
+  return `IncomeSplit:${shares.map(formatShare).join(',')}`
 }

@@ -37,7 +37,8 @@ const cssTreeDataDir = path.join(cacheRoot, 'lib', 'jsdom', 'data')
 const cssTreePatchFile = path.join(cssTreeDataDir, 'patch.json')
 const cssTreePackageFile = path.join(cacheRoot, 'lib', 'jsdom', 'package.json')
 
-const jsdomVersion = require('jsdom/package.json').version
+const jsdomPkgPath = path.join(projectRoot, 'node_modules', 'jsdom', 'package.json')
+const jsdomVersion = JSON.parse(readFileSync(jsdomPkgPath, 'utf8')).version
 
 if (
   existsSync(outFile)

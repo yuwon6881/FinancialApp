@@ -12,7 +12,7 @@ dist
 dist-ssr
 playwright-report
 test-results
-\.vitest-results.json
+.vitest-results.json
 coverage
 *.local
 

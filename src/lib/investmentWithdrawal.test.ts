@@ -104,6 +104,19 @@ describe('planWithdrawal', () => {
     expect(plan.estimatedRealisedProfitLoss).toBeUndefined()
   })
 
+  it('marks the unpriced basket itself unknown while preserving known baskets', () => {
+    const partial = planWithdrawal(1000, 0, [
+      balanced[0],
+      { ...balanced[1], unrealisedProfitLoss: undefined },
+      balanced[2],
+    ])!
+
+    expect(partial.sleeves[0].estimatedRealisedProfitLoss).toBe(60)
+    expect(partial.sleeves[1].estimatedRealisedProfitLoss).toBeUndefined()
+    expect(partial.sleeves[2].estimatedRealisedProfitLoss).toBe(2)
+    expect(partial.estimatedRealisedProfitLoss).toBeUndefined()
+  })
+
   it('does not let a loss-making basket dodge a sale it is overweight for', () => {
     // The overweight basket is the one sitting on a loss. The target mix still decides.
     const losing: WithdrawalSleeveInput[] = [

@@ -72,4 +72,11 @@ describe('outbox registry contracts', () => {
       expect(SERVER_ASSIGNED_ID_ENTITIES.has(entity), `${entity} ids are client-authored`).toBe(false)
     }
   })
+
+  it('does not accept a queue record whose entity or operation has no registry contract', () => {
+    expect(sanitizeQueuedOps([
+      validOp('transaction', 'not-a-real-operation' as OpType),
+      validOp('not-a-real-entity' as EntityKind, 'add'),
+    ])).toEqual([])
+  })
 })

@@ -241,6 +241,28 @@ describe('proposeTopUp', () => {
 })
 
 describe('stability reload projection', () => {
+  it('rolls the three-cycle pace at the next cycle boundary', () => {
+    const projected = projectStabilityRecovery({
+      recovery: recovery({
+        lastDrawdownCycleKey: '2026-07',
+        markedTotal: 300,
+        outstandingShortfall: 300,
+        currentBalance: 7000,
+        openingOutstanding: 300,
+        toppedUpThisCycle: 0,
+      }),
+      baseTransactions: [],
+      projectedTransactions: [],
+      stabilityAlloc: 0.15,
+      projectedBalance: 7000,
+      currentCycleKey: '2026-08',
+    })
+
+    expect(projected.cyclesRemaining).toBe(2)
+    expect(projected.requiredThisCycle).toBe(150)
+    expect(projected.outstandingThisCycle).toBe(150)
+  })
+
   it('uses the authoritative opening queue when deleting an inflow that preceded the drawdown', () => {
     const transfer = transaction({
       id: 'transfer', date: '2026-06-01', amount: 900,

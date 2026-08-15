@@ -146,10 +146,9 @@ function handleApiResponse(response: Response, url: string): Response {
 
 async function getHeadersAsync(additionalHeaders: HeadersInit = {}): Promise<HeadersInit> {
   const token = await tokenStore.getToken()
-  return {
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...additionalHeaders,
-  }
+  const headers = new Headers(additionalHeaders)
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  return headers
 }
 
 function apiUrl(path: string): string {

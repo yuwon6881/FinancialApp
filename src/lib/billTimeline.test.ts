@@ -80,6 +80,38 @@ describe('buildBillTimelineModel', () => {
     expect(result.processedPayments[0]).toMatchObject({ name: 'Insurance', dueDate: '2026-09-30', status: 'Pending' })
   })
 
+  it('synthesizes an annual day-31 occurrence across the year boundary', () => {
+    const annual: RecurringPayment = {
+      id: 'annual-year-boundary',
+      name: 'Annual cover',
+      amount: 600,
+      category: 'Insurance',
+      ledgerCategory: 'Essentials',
+      accountId: 'acct-essentials',
+      frequency: 'Annually',
+      nextDueDate: '2026-01-31',
+      dueDate: 31,
+      startDate: '2026-01-01',
+      active: true,
+      paymentMode: 'Manual',
+    }
+
+    const result = buildBillTimelineModel({
+      ...baseOptions,
+      selectedMonth: 'Dec',
+      allPayments: [annual],
+      cycleOffset: 1,
+    })
+
+    expect(result.processedPayments).toHaveLength(1)
+    expect(result.processedPayments[0]).toMatchObject({
+      name: 'Annual cover',
+      dueDate: '2027-01-31',
+      dueDay: 31,
+      status: 'Pending',
+    })
+  })
+
   it('groups bills sharing a due date and totals absolute amounts', () => {
     const second = { ...pendingPayment, id: 'occurrence-2', recurringPaymentId: 'bill-2', amount: 80 }
 

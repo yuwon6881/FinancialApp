@@ -10,6 +10,7 @@ import { ExpirationPlugin } from 'workbox-expiration'
 import { buildBackgroundNotification, buildPushNotificationUrl } from './lib/push/backgroundNotification'
 import { getFirebaseConfig } from './lib/push/firebaseConfig'
 import { isPushNotificationData } from './lib/push/notificationTag'
+import { cacheWillUpdate } from './swCachePolicy'
 
 declare let self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<unknown> }
 
@@ -70,13 +71,7 @@ registerRoute(
       // every later load re-served HTML for a module and failed strict MIME checking with
       // "Expected a JavaScript-or-Wasm module script", with no network request left to recover.
       // Returning null here declines the write and lets the failure stay transient.
-      {
-        cacheWillUpdate: async ({ response }) => {
-          const contentType = response.headers.get('content-type') ?? ''
-          if (contentType.includes('text/html')) return null
-          return response.status === 200 ? response : null
-        },
-      },
+      { cacheWillUpdate },
       // Bounded so superseded hashed chunks cannot accumulate indefinitely on a device.
       new ExpirationPlugin({ maxEntries: 80, maxAgeSeconds: 30 * 24 * 60 * 60, purgeOnQuotaError: true }),
     ],

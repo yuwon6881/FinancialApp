@@ -147,28 +147,21 @@ function applyReconciliation(
       ? Math.round(target.target * 100) / 100
       : null
     if (!id || targetBalance === null || !name) continue
-
     let account = accounts.find(candidate => candidate.id === id)
     if (!account) {
       account = {
+        ...target,
         id,
         name,
         bucket: reconciliation.bucket as LedgerAccount['bucket'],
         kind: target.kind === 'EWallet' || target.kind === 'Cash' || target.kind === 'Card' || target.kind === 'Other'
           ? target.kind
           : 'Bank',
-        interestEnabled: target.interestEnabled === true,
-        interestRatePercent: typeof target.interestRatePercent === 'number' && Number.isFinite(target.interestRatePercent)
-          ? target.interestRatePercent
-          : 0,
-        interestFrequency: target.interestFrequency === 'Daily' || target.interestFrequency === 'Yearly'
-          ? target.interestFrequency
-          : 'Monthly',
         isArchived: target.isArchived === true,
         remaining: 0,
         createdAt: new Date(operation.createdAt).toISOString(),
         updatedAt: new Date(operation.createdAt).toISOString(),
-      }
+      } as unknown as LedgerAccount
       accounts.push(account)
     } else {
       account.name = name
@@ -176,6 +169,15 @@ function applyReconciliation(
         ? target.kind
         : 'Bank'
       account.isArchived = target.isArchived === true
+      // Current reconciliation targets carry normalized account settings. Keep legacy queued
+      // payloads without interest fields from clearing the existing settings.
+      if ('interestEnabled' in target) {
+        Object.assign(account, {
+          interestEnabled: target.interestEnabled === true,
+          interestRatePercent: target.interestRatePercent,
+          interestFrequency: target.interestFrequency,
+        })
+      }
     }
 
     balances.set(id, targetBalance)

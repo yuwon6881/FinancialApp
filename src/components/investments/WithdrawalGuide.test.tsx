@@ -121,4 +121,22 @@ describe('WithdrawalGuide', () => {
     expect(screen.getByRole('button', { name: /Plan a withdrawal/ })).toHaveProperty('disabled', true)
     expect(screen.getByText('There is nothing to withdraw yet.')).toBeTruthy()
   })
+
+  it('keeps a basket sale visible but omits its gain copy when its price is unknown', () => {
+    const unknownConstituents = new Map(constituents)
+    unknownConstituents.set('InternationalExUS', [holding('vxus', 3000)])
+    render(
+      <WithdrawalGuide
+        allocation={allocation}
+        constituentsBySleeve={unknownConstituents}
+        money={money}
+        colors={colors}
+      />,
+    )
+    open()
+    enterAmount('1000')
+
+    expect(screen.getByText('RM 600.00')).toBeTruthy()
+    expect(screen.queryByText(/About RM 15.00 loss/)).toBeNull()
+  })
 })

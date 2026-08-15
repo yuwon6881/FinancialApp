@@ -29,3 +29,11 @@ export const isReportableInflow = (
 export const isReportableOutflow = (
   transaction: Pick<Transaction, 'amount' | 'category' | 'ledgerCategory'>,
 ) => transaction.amount < 0 && isReportableCashMovement(transaction)
+
+export function isReportableIncome(
+  transaction: Pick<Transaction, 'amount' | 'category' | 'ledgerCategory'>,
+): boolean {
+  const ledgerCategory = normalized(transaction.ledgerCategory)
+  const isIncomeLedgerCategory = ledgerCategory === 'income' || ledgerCategory?.startsWith('incomesplit:') === true
+  return transaction.amount > 0 && isIncomeLedgerCategory && isReportableCashMovement(transaction)
+}

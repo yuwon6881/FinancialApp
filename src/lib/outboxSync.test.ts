@@ -373,6 +373,43 @@ describe('drainQueue — error taxonomy', () => {
     spy.mockRestore()
   })
 
+  it('re-resolves the dispatch registry on retry without changing the queued operation identity', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const registry: Record<string, (queuedOp: QueuedOp) => Promise<DispatchResult>> = {}
+    const dispatch = vi.fn(async (queuedOp: QueuedOp): Promise<DispatchResult> => {
+      if (queuedOp.retryCount === 0) {
+        throw Object.assign(new Error('Internal Server Error'), { status: 500 })
+      }
+      return undefined
+    })
+    registry['transaction:add'] = dispatch
+    const resolved: string[] = []
+    const h = makeHarness({
+      resolveDispatch: queuedOp => {
+        const key = `${queuedOp.entity}:${queuedOp.type}`
+        resolved.push(key)
+        return registry[key]
+      },
+      now: () => 1_000_000,
+      getBackoffUntil: () => 0,
+    }, [op({ id: 'retry-me', entity: 'transaction', type: 'add', retryCount: 0 })])
+
+    await drainQueue(h.deps)
+
+    expect(h.queue).toEqual([expect.objectContaining({ id: 'retry-me', retryCount: 1 })])
+    expect(resolved).toEqual(['transaction:add'])
+
+    await drainQueue(h.deps)
+
+    expect(resolved).toEqual(['transaction:add', 'transaction:add'])
+    expect(dispatch.mock.calls.map(([queuedOp]) => [queuedOp.id, queuedOp.retryCount])).toEqual([
+      ['retry-me', 0],
+      ['retry-me', 1],
+    ])
+    expect(h.queue).toEqual([])
+    spy.mockRestore()
+  })
+
   it('describes an HTTP 500 as a server error while retrying', async () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const failure = Object.assign(new Error('Internal Server Error'), { status: 500 })

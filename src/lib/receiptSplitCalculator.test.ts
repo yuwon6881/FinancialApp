@@ -117,4 +117,37 @@ describe('calculateReceiptShare', () => {
     expect(result.invalidSelectedItemIndexes).toEqual([0])
     expect(result.hasMismatch).toBe(true)
   })
+
+  it('keeps a zeroed line in the full receipt base for flat charges', () => {
+    const input = receipt({
+      items: [
+        { name: 'Mine', quantity: 1, unitPrice: 16, lineTotal: 16, confidence: 1 },
+        { name: 'Not mine', quantity: 1, unitPrice: 4, lineTotal: 4, confidence: 1 },
+      ],
+      total: 23.2,
+    })
+
+    const result = calculateReceiptShare(input, [0, 1])
+
+    expect(result.itemSubtotal).toBe(4)
+    expect(result.total).toBe(4.64)
+    expect(result.receiptComputedTotal).toBe(23.2)
+  })
+
+  it('removes a deleted line from the proration base', () => {
+    const input = receipt({
+      items: [{ name: 'Mine', quantity: 1, unitPrice: 4, lineTotal: 4, confidence: 1 }],
+      subtotal: 4,
+      total: 4.4,
+      charges: [
+        { label: 'Flat service charge', kind: 'service', operation: 'add', basis: 'subtotal', amount: 0.4, ratePercent: null, sequence: 0, eligibleItemIndexes: [], confidence: 1 },
+      ],
+    })
+
+    const result = calculateReceiptShare(input, [1])
+
+    expect(result.total).toBe(4.4)
+    expect(result.receiptComputedTotal).toBe(4.4)
+    expect(result.hasMismatch).toBe(false)
+  })
 })

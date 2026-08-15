@@ -77,6 +77,7 @@ describe('InvestmentPlanPanel guidance', () => {
 
     expect(screen.getByText('What to do next')).toBeTruthy()
     expect(screen.getByText(/Assign VTI/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Plan a withdrawal/ })).toBeNull()
   })
 })
 
