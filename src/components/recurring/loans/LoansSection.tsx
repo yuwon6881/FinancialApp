@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { m, useReducedMotion } from 'framer-motion'
 import { Landmark, Plus, RefreshCw } from 'lucide-react'
 import type { Loan, RecurringPayment } from '../../../types'
 import { Button } from '../../ui/Button'
@@ -10,6 +11,7 @@ import { RecurringFilterBar } from '../RecurringFilterBar'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import type { LoanLoadStatus } from '../../../app/financialData/useLoanData'
 import { useHighlightedElement } from '../../ui/useHighlightedElement'
+import { listContainerVariants, listItemVariants } from '../../../lib/animations'
 
 interface LoansSectionProps {
   loans: Loan[]
@@ -63,6 +65,7 @@ export function LoansSection({
     }
   }
 
+  const reduceMotion = useReducedMotion()
   const isMobile = useIsMobile()
   const view = useLoansView(loans, payments, activeSyncIds)
 
@@ -142,22 +145,28 @@ export function LoansSection({
           No loans match the selected filters.
         </div>
       ) : (
-        <div className="space-y-4">
+        <m.div
+          initial={reduceMotion ? false : 'hidden'}
+          animate="show"
+          variants={listContainerVariants}
+          className="space-y-4"
+        >
           {view.filteredAndSortedLoans.map(loan => (
-            <LoanCard
-              key={loan.id}
-              loan={loan}
-              currency={currency}
-              hideSensitive={hideSensitive}
-              formatSensitive={formatSensitive}
-              isSyncing={view.activeSyncIdSet.has(loan.id)}
-              isMobile={isMobile}
-              onEdit={() => openEdit(loan)}
-              onDelete={() => onRequestDeleteLoan(loan.id)}
-              onExplain={() => onExplain(loan)}
-            />
+            <m.div key={loan.id} variants={listItemVariants}>
+              <LoanCard
+                loan={loan}
+                currency={currency}
+                hideSensitive={hideSensitive}
+                formatSensitive={formatSensitive}
+                isSyncing={view.activeSyncIdSet.has(loan.id)}
+                isMobile={isMobile}
+                onEdit={() => openEdit(loan)}
+                onDelete={() => onRequestDeleteLoan(loan.id)}
+                onExplain={() => onExplain(loan)}
+              />
+            </m.div>
           ))}
-        </div>
+        </m.div>
       )}
 
       <LoanFormSheet
