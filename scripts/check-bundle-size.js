@@ -90,7 +90,15 @@ if (!fs.existsSync(distAssetsPath)) {
 // lists as registered but whose browser permission was revoked must be unsubscribed before any
 // switch is drawn from it.
 // 195.5: raised from 191.75 (measured 194.68) for stability recovery projections and cycle navigation state.
-const CRITICAL_PATH_LIMIT_KB = 195.5
+// 197.0: raised from 195.5 (measured 195.47 locally, 195.52 in CI). The same eight chunks -- nothing
+// lazy was dragged eager -- and the growth is spread across five eager lib modules the verification
+// work corrected: api/client, accountProjection, bucketAttribution, incomeSplit and
+// transactionReportSemantics. **The headroom is the point of this raise, not the growth.** At 195.5
+// the budget sat 0.03 kB *under* the measured size, so the same commit passed locally and failed in
+// CI purely on a gzip implementation difference between the two Node builds. A budget whose margin is
+// smaller than that variance tests the build machine, not the bundle. Keep roughly 1.5 kB of slack
+// here when raising, and raise for a measured cause -- never to clear a red build.
+const CRITICAL_PATH_LIMIT_KB = 197.0
 const PRECACHE_RAW_LIMIT_KB = 3 * 1024
 
 function criticalPathChunks(files) {
