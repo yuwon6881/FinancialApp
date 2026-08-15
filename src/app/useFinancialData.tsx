@@ -1062,7 +1062,10 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   useEffect(() => {
     if (!token) return
-    const signature = `${token}:${allAccounts.map(account => `${account.id}:${account.bucket}:${account.isArchived}:${account.isPendingSync === true}`).sort().join('|')}`
+    // Deliberately keyed on account identity only. isPendingSync is derived from the live queue, so
+    // including it re-ran the migration on every enqueue/fail transition rather than when the set of
+    // accounts actually changed -- which is the only thing that can unblock a placement.
+    const signature = `${token}:${allAccounts.map(account => `${account.id}:${account.bucket}:${account.isArchived}`).sort().join('|')}`
     if (signature === accountPlacementMigrationSignatureRef.current) return
     accountPlacementMigrationSignatureRef.current = signature
     let cancelled = false

@@ -139,4 +139,28 @@ describe('migrateAccountPlacementOperations', () => {
     })
     expect(result.pendingOps[0].lastError).toBeUndefined()
   })
+
+  it('leaves a server-refused operation in failedOps even when its placement is already valid', () => {
+    const refused = op({
+      id: 'reconcile-op',
+      entity: 'ledgerAccountReconcile',
+      type: 'add',
+      targetId: 'reconcile-1',
+      payload: {
+        reconciliation: {
+          bucket: 'Essentials',
+          adjustmentAccountId: 'essentials-1',
+          expectedBucketTotal: 100,
+          targets: [{ id: 'essentials-1', expectedCurrent: 100, target: 250 }],
+        },
+      },
+      lastError: 'Choose a live default account before reconciling.',
+    })
+
+    const result = migrateAccountPlacementOperations([], [refused], [account('essentials-1', 'Essentials')])
+
+    expect(result.changed).toBe(false)
+    expect(result.pendingOps).toEqual([])
+    expect(result.failedOps).toEqual([refused])
+  })
 })

@@ -310,6 +310,11 @@ export function migrateAccountPlacementOperations(
 
   for (let index = nextFailed.length - 1; index >= 0; index -= 1) {
     const op = nextFailed[index]
+    // Only ops this migration itself blocked may go back to the queue. Every other failed op is
+    // there because the *server* refused it, and a refusal is not fixed by re-checking placement:
+    // requeueing one dispatched it again, it failed again, and the round trip flipped the accounts'
+    // isPendingSync -- which this effect's own signature reads -- so the pair spun indefinitely.
+    if (!op.needsAccountReview) continue
     const migrated = migrateOne(op, accountMap, recurringById)
     if (migrated.resolved) {
       nextFailed.splice(index, 1)
