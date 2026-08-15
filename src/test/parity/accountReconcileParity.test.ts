@@ -10,7 +10,6 @@ interface ReconcileCase {
     createdAt: number
     bucket: string
     expectedBucketTotal: number
-    adjustmentAccountId: string | null
     targets: Array<{
       id: string
       name: string
@@ -27,6 +26,7 @@ interface ReconcileCase {
     amount: number
     accountId: string | null
     counterAccountId: string | null
+    isAccountBalanceAdjustment?: boolean
   }>
 }
 
@@ -46,6 +46,9 @@ describe('account reconcile parity', () => {
         expect(actual[i].accountId).toBe(expected[i].accountId)
         if (expected[i].counterAccountId !== undefined) {
           expect(actual[i].counterAccountId ?? null).toBe(expected[i].counterAccountId)
+        }
+        if (expected[i].isAccountBalanceAdjustment !== undefined) {
+          expect(actual[i].isAccountBalanceAdjustment).toBe(expected[i].isAccountBalanceAdjustment)
         }
       }
     })

@@ -148,6 +148,25 @@ describe('projectAccountBalances', () => {
     })
   })
 
+  it('preserves an existing account kind when a dashboard correction omits it', () => {
+    const result = projectAccountBalances([
+      { ...accounts[0], kind: 'Cash', remaining: 100 },
+    ], [op({
+      entity: 'ledgerAccountReconcile',
+      targetId: 'reconcile-kind',
+      payload: {
+        reconciliation: {
+          operationId: 'reconcile-kind',
+          bucket: 'Essentials',
+          expectedBucketTotal: 100,
+          targets: [{ id: 'essentials', name: 'Essentials bank', isArchived: false, expectedCurrent: 100, target: 125 }],
+        },
+      },
+    })])
+
+    expect(result.find(account => account.id === 'essentials')).toMatchObject({ kind: 'Cash', remaining: 125 })
+  })
+
   it('preserves a failed queued reconciliation projection', () => {
     const result = projectAccountBalances(accounts, [op({
       id: 'failed-reconcile-op',

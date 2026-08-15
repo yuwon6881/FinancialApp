@@ -3,10 +3,13 @@ import type {
   ActiveRecurringPayment,
   CategorySummary,
   DashboardData,
+  LedgerAccount,
   SavingsGoal,
   Transaction,
   WishlistItem,
 } from '../../types'
+import type { LedgerAccountReconcileInput } from '../../lib/api/accounts'
+import { createFinalId } from '../../lib/outbox'
 import { maskCurrencyInput } from '../../lib/utils'
 import { getActiveWishlistItem } from '../../lib/wishlist'
 import { calculateFreeRewardsBalance } from '../../lib/freeRewards'
@@ -22,6 +25,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 export interface PendingBalanceAdjustment {
   transaction?: Omit<Transaction, 'id'>
   transactions: Array<Omit<Transaction, 'id'>>
+  reconciliation?: LedgerAccountReconcileInput
   accountAdjustments: Array<{ id: string; name: string; current: number; target: number; diff: number }>
   categoryName: string
   currentBalance: number
@@ -36,6 +40,7 @@ export interface UseDashboardViewOptions {
   hideSensitive: boolean
   hideBalanceAmounts: boolean
   onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
+  onReconcileAccounts?: (input: LedgerAccountReconcileInput) => Promise<void> | void
 }
 
 export function useDashboardView(options: UseDashboardViewOptions) {
@@ -46,6 +51,7 @@ export function useDashboardView(options: UseDashboardViewOptions) {
     hideSensitive,
     hideBalanceAmounts,
     onAddBalanceAdjustment,
+    onReconcileAccounts,
   } = options
 
   // Active wishlist item for dashboard progress display
@@ -313,11 +319,18 @@ export function useDashboardView(options: UseDashboardViewOptions) {
       target: account.target,
       diff: account.target - account.remaining,
     })).filter(account => Math.abs(account.diff) >= 0.005)
+    const currentAccountTotal = accounts.length
+      ? accountTargets.reduce((sum, account) => sum + account.remaining, 0)
+      : adjustingCategory.remaining
     const targetVal = accounts.length
       ? accountTargets.reduce((sum, account) => sum + (account.isArchived ? account.remaining : account.target), 0)
       : parseFloat(newBalanceInput)
-    const diff = targetVal - adjustingCategory.remaining
-    if (Math.abs(diff) < 0.005) {
+    const diff = targetVal - currentAccountTotal
+    if (accounts.length > 0 && accountAdjustments.length === 0) {
+      setAdjustingCategory(null)
+      return
+    }
+    if (accounts.length === 0 && Math.abs(diff) < 0.005) {
       setAdjustingCategory(null)
       return
     }
@@ -335,6 +348,8 @@ export function useDashboardView(options: UseDashboardViewOptions) {
         category: 'Adjustment',
         ledgerCategory: adjustingCategory.name,
         excludeFromAutocomplete: true,
+        isAccountBalanceAdjustment: true,
+        stabilityReloadIntent: adjustingCategory.name === 'Stability' ? 'NotRequired' as const : undefined,
         accountId: account.id,
         date: dateStr,
       }))
@@ -347,12 +362,31 @@ export function useDashboardView(options: UseDashboardViewOptions) {
         date: dateStr,
       }]
 
+    const isLedgerBucket = (['Essentials', 'Growth', 'Stability', 'Rewards'] as const)
+      .includes(adjustingCategory.name as LedgerAccount['bucket'])
+    const reconciliation = accounts.length > 0 && isLedgerBucket
+      ? {
+          operationId: createFinalId('ledgerAccountReconcile'),
+          bucket: adjustingCategory.name as LedgerAccount['bucket'],
+          expectedBucketTotal: currentAccountTotal,
+          description: adjustmentDescription.trim() || 'Balance Adjustment',
+          targets: accountTargets.map(account => ({
+            id: account.id,
+            name: account.name,
+            isArchived: account.isArchived === true,
+            expectedCurrent: account.remaining,
+            target: account.isArchived ? account.remaining : account.target,
+          })),
+        }
+      : undefined
+
     setPendingBalanceAdjustment({
       transaction: accounts.length ? undefined : transactions[0],
       transactions,
+      reconciliation,
       accountAdjustments,
       categoryName: adjustingCategory.name,
-      currentBalance: adjustingCategory.remaining,
+      currentBalance: currentAccountTotal,
       targetBalance: targetVal,
       diff
     })
@@ -364,6 +398,10 @@ export function useDashboardView(options: UseDashboardViewOptions) {
   const confirmBalanceAdjustment = () => {
     if (!pendingBalanceAdjustment) return
     setPendingBalanceAdjustment(null)
+    if (pendingBalanceAdjustment.reconciliation) {
+      void onReconcileAccounts?.(pendingBalanceAdjustment.reconciliation)
+      return
+    }
     for (const transaction of pendingBalanceAdjustment.transactions) {
       void onAddBalanceAdjustment?.(transaction)
     }

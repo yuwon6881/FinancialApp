@@ -41,29 +41,30 @@ test('production routes do not create viewport horizontal overflow', async ({ pa
   if (test.info().project.name.startsWith('mobile')) {
     await page.goto('/settings?section=accounts', { waitUntil: 'domcontentloaded' })
     const panel = page.getByRole('tabpanel', { name: 'Accounts' })
-    const toolbar = panel.locator('div.flex.flex-nowrap.items-center.gap-2').first()
-    const toolbarAdd = toolbar.getByRole('button', { name: 'Add' })
+    const searchInput = panel.getByRole('searchbox', { name: 'Filter accounts' })
+    const firstAddButton = panel.getByRole('button', { name: 'Add account' }).first()
 
     await expect(panel).toBeVisible()
-    await expect(toolbarAdd).toBeVisible()
+    await expect(searchInput).toBeVisible()
+    await expect(firstAddButton).toBeVisible()
 
     const geometry = await panel.evaluate(element => {
-      const toolbarElement = element.querySelector('div.flex.flex-nowrap.items-center.gap-2')
-      if (!toolbarElement) throw new Error('Accounts toolbar was not rendered')
+      const searchElement = element.querySelector('input[type="search"]')
+      if (!searchElement) throw new Error('Accounts search was not rendered')
       const panelBounds = element.getBoundingClientRect()
-      const toolbarBounds = toolbarElement.getBoundingClientRect()
+      const searchBounds = searchElement.getBoundingClientRect()
       return {
         viewportWidth: document.documentElement.clientWidth,
         pageWidth: document.documentElement.scrollWidth,
-        toolbarLeft: toolbarBounds.left,
-        toolbarRight: toolbarBounds.right,
+        searchLeft: searchBounds.left,
+        searchRight: searchBounds.right,
         panelLeft: panelBounds.left,
         panelRight: panelBounds.right,
       }
     })
     expect(geometry.pageWidth).toBeLessThanOrEqual(geometry.viewportWidth + 1)
-    expect(geometry.toolbarLeft).toBeGreaterThanOrEqual(geometry.panelLeft)
-    expect(geometry.toolbarRight).toBeLessThanOrEqual(geometry.panelRight)
+    expect(geometry.searchLeft).toBeGreaterThanOrEqual(geometry.panelLeft)
+    expect(geometry.searchRight).toBeLessThanOrEqual(geometry.panelRight)
   }
 })
 

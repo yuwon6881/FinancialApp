@@ -102,7 +102,7 @@ describe('useBucketAccountSetupView review flow', () => {
     expect(result.current.pending?.preview.bucketDifference).toBe(0)
   })
 
-  it('lets a new row receive an explicit bucket-total correction', async () => {
+  it('lets a new row receive a balance correction without an account selector', async () => {
     const { result } = renderHook(() => useBucketAccountSetupView({
       isOpen: true,
       bucket: 'Stability',
@@ -115,10 +115,10 @@ describe('useBucketAccountSetupView review flow', () => {
     const draftId = result.current.drafts[0].id
     act(() => result.current.updateDraft(draftId, { name: 'Cash jar' }))
     act(() => result.current.updateDraftTarget(draftId, '100.00'))
-    act(() => result.current.setAdjustmentAccountId('main'))
     act(() => result.current.prepareReview())
 
-    expect(result.current.pending?.adjustmentAccountId).toBe('main')
+    expect(result.current.pending).not.toBeNull()
+    expect(result.current.pending).not.toHaveProperty('adjustmentAccountId')
   })
 
   it('still blocks a review when the live account changed during editing', async () => {

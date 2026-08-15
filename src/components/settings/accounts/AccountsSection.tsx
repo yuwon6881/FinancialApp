@@ -1,20 +1,23 @@
-import { useMemo, useState } from 'react'
-import { Banknote, Building2, CircleHelp, CreditCard, Info, Landmark, Plus, Wallet } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-import type { LedgerAccount, Transaction } from '../../../types'
+import { useRef, useState } from 'react'
+import { Building2, CircleHelp } from 'lucide-react'
+import type { LedgerAccount } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
-import { formatCurrencyVal } from '../../../lib/utils'
-import { getCategoryBadgeClass } from '../../../lib/categoryColors'
-import { ManageableNameList } from '../ManageableNameList'
-import { Button } from '../../ui/Button'
-import { RowSyncStatus } from '../../ui/RowSyncBadge'
-import { SensitiveAmount } from '../../ui/SensitiveAmount'
-import { AccountFormSheet } from './AccountFormSheet'
-import { BucketAccountSetupSheet } from './BucketAccountSetupSheet'
-import type { BucketSetupPrefill } from './view/useBucketAccountSetupView'
 import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
+import { formatCurrencyVal } from '../../../lib/utils'
+import { CustomConfirmModal } from '../../ui/CustomConfirmModal'
+import { Input } from '../../ui/Input'
+import { SensitiveAmount } from '../../ui/SensitiveAmount'
+import { buildSingleAccountCorrection } from '../../../lib/accountBalanceCorrection'
+import { hasCompleteAccountCoverage } from '../../../lib/ledgerAccountCoverage'
+import { AccountFormSheet, type AccountFormSaveInput } from './AccountFormSheet'
+import { BucketAccountGroup } from './BucketAccountGroup'
+import { BucketAccountSetupSheet } from './BucketAccountSetupSheet'
+import {
+  hasBucketAccountSetupChanged,
+  type BucketSetupPrefill,
+  type BucketSetupSessionSnapshot,
+} from './view/useBucketAccountSetupView'
 import { useAccountsView } from './view/useAccountsView'
-import { ACCOUNT_INTEREST_FREQUENCY_LABELS } from './accountOptions'
 
 interface AccountsSectionProps {
   accounts: LedgerAccount[]
@@ -27,36 +30,32 @@ interface AccountsSectionProps {
   onAddAccount: (input: LedgerAccountInput) => Promise<void> | void
   onUpdateAccount: (id: string, input: LedgerAccountInput) => Promise<void> | void
   onRequestDeleteAccount: (id: string) => void
-  onAddBalanceAdjustment: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
-  onReconcileAccounts?: (input: LedgerAccountReconcileInput) => Promise<void> | void
-}
-const KIND_LABELS: Record<LedgerAccount['kind'], string> = {
-  Bank: 'Bank account',
-  EWallet: 'E-wallet',
-  Cash: 'Cash',
-  Card: 'Card',
-  Other: 'Other',
+  onReconcileAccounts: (input: LedgerAccountReconcileInput) => Promise<void> | void
 }
 
-const KIND_ICONS: Record<LedgerAccount['kind'], LucideIcon> = {
-  Bank: Landmark,
-  EWallet: Wallet,
-  Cash: Banknote,
-  Card: CreditCard,
-  Other: CircleHelp,
+interface PendingBalanceCorrection {
+  correction: LedgerAccountReconcileInput
+  account: LedgerAccount
+  targetBalance: number
+  bucketTotal: number
 }
 
-const BUCKETS: ReadonlyArray<{ name: LedgerAccount['bucket']; description: string }> = [
-  { name: 'Essentials', description: 'Everyday spending' },
-  { name: 'Growth', description: 'Money sent to investments' },
-  { name: 'Stability', description: 'Emergency cushion' },
-  { name: 'Rewards', description: 'Plans and treats' },
-]
+const roundMoney = (value: number) => Math.round(value * 100) / 100
 
-const formatInterestRate = (value: number) => new Intl.NumberFormat(undefined, {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 4,
-}).format(value)
+function SignedAmount({ value, currency, hideSensitive }: { value: number; currency: string; hideSensitive: boolean }) {
+  if (Math.abs(value) < 0.005) return <span className="text-muted-foreground">No change</span>
+  return (
+    <span className={value > 0 ? 'text-accent-ink font-bold' : 'text-destructive font-bold'}>
+      {value > 0 ? '+' : '−'}
+      <SensitiveAmount
+        value={Math.abs(value)}
+        isMasked={hideSensitive}
+        formatFn={amount => formatCurrencyVal(amount, currency)}
+        className="font-bold"
+      />
+    </span>
+  )
+}
 
 export function AccountsSection({
   accounts,
@@ -69,43 +68,59 @@ export function AccountsSection({
   onAddAccount,
   onUpdateAccount,
   onRequestDeleteAccount,
-  onAddBalanceAdjustment,
   onReconcileAccounts,
 }: AccountsSectionProps) {
-  const { rows, isSyncing, isDeleting } = useAccountsView({ accounts, activeSyncId, activeSyncIds, deletingId })
+  const [searchQuery, setSearchQuery] = useState('')
+  const {
+    rows,
+    bucketGroups,
+    openAccountCount,
+    archivedAccountCount,
+    isSyncing,
+    isDeleting,
+  } = useAccountsView({
+    accounts,
+    activeSyncId,
+    activeSyncIds,
+    deletingId,
+    searchQuery,
+  })
+  // Coverage must use the complete account set, not the search-filtered rows; filtering one
+  // bucket must not make a fully configured account setup look incomplete.
+  const hasCoverage = hasCompleteAccountCoverage(accounts)
+
   const [editingAccount, setEditingAccount] = useState<LedgerAccount | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [formDefaultBucket, setFormDefaultBucket] = useState<LedgerAccount['bucket']>('Essentials')
   const [setupBucket, setSetupBucket] = useState<LedgerAccount['bucket'] | null>(null)
   const [setupPrefill, setSetupPrefill] = useState<BucketSetupPrefill | null>(null)
-  // A bucket's total is the sum of its accounts' balances and nothing else. It used to be read
-  // from the dashboard's `categories[].remaining` instead, which is the *selected cycle's* closing
-  // figure while every account balance here is current -- so browsing any other cycle (or holding a
-  // transaction dated past this cycle's end) made the two disagree, painted a permanent "Needs
-  // review" chip, and then failed the reconcile with `409 The bucket changed while this setup was
-  // open`, because the server checks `expectedBucketTotal` against the same account sum it derives
-  // its adjustment from. Both sides now measure the one quantity, at the same instant.
-  const bucketSummaries = useMemo(() => BUCKETS.map(bucket => {
-    const bucketRows = rows.filter(item => item.bucket === bucket.name)
-    const openRows = bucketRows.filter(item => !item.isArchived)
-    return {
-      ...bucket,
-      count: openRows.length,
-      balance: bucketRows.reduce((total, item) => total + item.remaining, 0),
-      accountRows: bucketRows,
-    }
-  }), [rows])
-  const openAccountCount = rows.filter(item => !item.isArchived).length
-  const archivedAccountCount = rows.length - openAccountCount
+  const [pendingBalanceCorrection, setPendingBalanceCorrection] = useState<PendingBalanceCorrection | null>(null)
+  const [isApplyingCorrection, setIsApplyingCorrection] = useState(false)
 
-  const openAdd = () => {
+  const editSessionSnapshotRef = useRef<BucketSetupSessionSnapshot | null>(null)
+
+  const openAdd = (bucket: LedgerAccount['bucket'] = 'Essentials') => {
     if (disabled) return
     setEditingAccount(null)
+    setFormDefaultBucket(bucket)
     setIsFormOpen(true)
   }
 
   const openEdit = (account: LedgerAccount) => {
     if (disabled) return
+    const group = bucketGroups.find(g => g.bucket === account.bucket)
+    editSessionSnapshotRef.current = {
+      bucketTotal: roundMoney(group?.balance ?? 0),
+      accounts: (group?.allBucketAccounts ?? []).map(item => ({
+        id: item.id,
+        name: item.name,
+        kind: item.kind,
+        isArchived: item.isArchived,
+        remaining: roundMoney(item.remaining),
+      })),
+    }
     setEditingAccount(account)
+    setFormDefaultBucket(account.bucket)
     setIsFormOpen(true)
   }
 
@@ -118,13 +133,53 @@ export function AccountsSection({
   const closeForm = () => {
     setIsFormOpen(false)
     setEditingAccount(null)
+    editSessionSnapshotRef.current = null
   }
 
-  const handleFormSave = async (input: LedgerAccountInput) => {
+  const handleFormSave = async (input: AccountFormSaveInput) => {
     if (editingAccount) {
+      if (input.targetBalance !== undefined && Math.abs(input.targetBalance - editingAccount.remaining) >= 0.005) {
+        const group = bucketGroups.find(g => g.bucket === editingAccount.bucket)
+        const currentBucketTotal = group?.balance ?? 0
+        const currentBucketAccounts = group?.allBucketAccounts ?? []
+
+        const hasExternalChanges = hasBucketAccountSetupChanged(
+          editSessionSnapshotRef.current,
+          currentBucketTotal,
+          currentBucketAccounts,
+        )
+        if (hasExternalChanges) {
+          alert('The bucket or account balances changed while this form was open. Close and reopen the form before saving.')
+          return
+        }
+
+        const correction = buildSingleAccountCorrection({
+          account: editingAccount,
+          bucketAccounts: currentBucketAccounts,
+          nextBalance: input.targetBalance,
+          nextName: input.name,
+          nextKind: input.kind,
+          isArchived: input.isArchived,
+          interestEnabled: input.interestEnabled,
+          interestRatePercent: input.interestRatePercent,
+          interestFrequency: input.interestFrequency,
+        })
+
+        if (correction) {
+          setPendingBalanceCorrection({
+            correction,
+            account: editingAccount,
+            targetBalance: input.targetBalance,
+            bucketTotal: currentBucketTotal,
+          })
+          return
+        }
+      }
+
       await onUpdateAccount(editingAccount.id, input)
       return
     }
+
     const openingAmount = Number(input.openingAmount ?? 0)
     if (Number.isFinite(openingAmount) && Math.abs(openingAmount) >= 0.005) {
       openSetup(input.bucket, {
@@ -141,9 +196,31 @@ export function AccountsSection({
     await onAddAccount({ ...input, openingAmount: 0 })
   }
 
+  const handleConfirmBalanceCorrection = async () => {
+    if (!pendingBalanceCorrection) return
+    setIsApplyingCorrection(true)
+    try {
+      await onReconcileAccounts(pendingBalanceCorrection.correction)
+      setPendingBalanceCorrection(null)
+      closeForm()
+    } finally {
+      setIsApplyingCorrection(false)
+    }
+  }
+
+  const activeGroup = editingAccount
+    ? bucketGroups.find(g => g.bucket === editingAccount.bucket)
+    : bucketGroups.find(g => g.bucket === formDefaultBucket)
+
   return (
     <>
-      <section id="settings-panel-accounts" role="tabpanel" aria-labelledby="settings-tab-accounts" className="app-panel space-y-6 rounded-2xl border border-border/60 bg-card/92 p-4 animate-in fade-in duration-200 sm:p-5">
+      <section
+        id="settings-panel-accounts"
+        role="tabpanel"
+        aria-labelledby="settings-tab-accounts"
+        className="app-panel space-y-6 rounded-2xl border border-border/60 bg-card/92 p-4 animate-in fade-in duration-200 sm:p-5"
+      >
+        {/* Panel Header */}
         <div className="flex flex-col gap-3 border-b border-border/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <div className="grid size-10 shrink-0 place-items-center rounded-2xl border border-accent-ink/20 bg-accent/50 text-accent-ink">
@@ -152,7 +229,9 @@ export function AccountsSection({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-base font-bold text-foreground">Accounts</h3>
-                 <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent-ink">Required coverage</span>
+                <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${hasCoverage ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500' : 'border-primary/25 bg-primary/10 text-accent-ink'}`}>
+                  {hasCoverage ? 'Coverage complete' : 'Setup required'}
+                </span>
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Connect where your money lives to the four budget buckets.
@@ -171,150 +250,72 @@ export function AccountsSection({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-          {bucketSummaries.map(bucket => (
-            <div key={bucket.name} className={`min-w-0 rounded-xl border bg-background/40 p-3 sm:p-3.5 ${bucket.count > 0 ? 'border-border/60' : 'border-dashed border-border/50'}`}>
-              <div className="flex min-w-0 items-center justify-between gap-2">
-                <span className={`min-w-0 truncate rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${getCategoryBadgeClass(bucket.name)}`}>
-                  {bucket.name}
-                </span>
-                <span className="shrink-0 text-[9px] font-semibold text-muted-foreground">
-                  {bucket.count ? `${bucket.count} ${bucket.count === 1 ? 'row' : 'rows'}` : 'Empty'}
-                </span>
-              </div>
-              <SensitiveAmount
-                value={bucket.balance}
-                isMasked={hideSensitive}
-                formatFn={value => formatCurrencyVal(value, currency)}
-                className="mt-3 block truncate text-sm font-extrabold text-foreground sm:text-base"
-              />
-              <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
-                {bucket.count > 0 ? 'Total across its accounts' : 'Bucket total'} · {bucket.description}
-              </p>
-              <Button
-                type="button"
-                variant={bucket.count > 0 ? 'outline' : 'secondary'}
-                size="sm"
-                className="mt-3 min-h-11 w-full justify-center"
-                onClick={() => openSetup(bucket.name)}
-                disabled={disabled || hideSensitive}
-              >
-                {bucket.count > 0 ? 'Review split' : 'Set up accounts'}
-              </Button>
-            </div>
+        {/* Search filter input */}
+        {rows.length > 0 && (
+          <div className="max-w-sm">
+            <Input
+              type="search"
+              value={searchQuery}
+              onChange={event => setSearchQuery(event.target.value)}
+              placeholder="Filter accounts by name or type…"
+              aria-label="Filter accounts"
+              autoComplete="off"
+            />
+          </div>
+        )}
+
+        {/* 4 BucketAccountGroup cards */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {bucketGroups.map(group => (
+            <BucketAccountGroup
+              key={group.bucket}
+              bucket={group.bucket}
+              description={group.description}
+              accounts={group.accounts}
+              allBucketAccounts={group.allBucketAccounts}
+              currency={currency}
+              hideSensitive={hideSensitive}
+              disabled={disabled}
+              isDeleting={isDeleting}
+              isSyncing={isSyncing}
+              onAdd={openAdd}
+              onEdit={openEdit}
+              onDelete={onRequestDeleteAccount}
+              onMoveMoney={openSetup}
+              searchQuery={searchQuery}
+            />
           ))}
         </div>
 
-        <div className="flex items-start gap-2.5 rounded-xl border border-accent-ink/20 bg-accent/25 p-3.5 text-xs leading-relaxed text-muted-foreground">
-          <Info className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-          <p>
-            Adding accounts does not alter bucket totals directly. Use <span className="font-semibold text-foreground">Set up accounts</span> on a bucket card to allocate the balance across accounts with confirmed adjustments.
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
-            <div>
-              <h4 className="text-sm font-bold text-foreground">Account rows</h4>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">Each row connects one place to a budget bucket.</p>
-            </div>
-            {rows.length > 0 && <span className="text-[10px] font-semibold text-muted-foreground">{rows.length} total {rows.length === 1 ? 'row' : 'rows'}</span>}
-          </div>
-
-          <ManageableNameList
-            items={rows}
-            itemLabel="Account"
-            addPlaceholder="Account name"
-            onAddClick={openAdd}
-            onAdd={() => undefined}
-            onEdit={openEdit}
-            onDelete={item => onRequestDeleteAccount(item.id)}
-            disabled={disabled || hideSensitive}
-            listClassName="max-h-[30rem] space-y-2"
-            stackActionsOnMobile
-            itemClassName={item => item.isArchived ? 'border-dashed opacity-75' : 'border-border/60 bg-card/70'}
-            emptyState={(
-              <div className="rounded-2xl border border-dashed border-border/70 bg-card/40 px-5 py-8 text-center">
-                <div className="mx-auto grid size-11 place-items-center rounded-2xl border border-accent-ink/20 bg-accent/40 text-accent-ink">
-                  <Wallet className="size-5" aria-hidden="true" />
-                </div>
-                <h5 className="mt-3 text-sm font-bold text-foreground">No accounts added yet</h5>
-                <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
-                  Add bank, wallet, cash, or card rows to see where your bucket money lives.
-                </p>
-                <Button type="button" className="mt-4 !min-h-11" onClick={openAdd} disabled={disabled || hideSensitive}>
-                  <Plus className="size-3.5" aria-hidden="true" />
-                  Add an account row
-                </Button>
-              </div>
-            )}
-            renderName={item => {
-              const AccountIcon = KIND_ICONS[item.kind]
-              const bucketClass = getCategoryBadgeClass(item.bucket)
-              return (
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className={`grid size-9 shrink-0 place-items-center rounded-xl border ${bucketClass}`} aria-hidden="true">
-                    <AccountIcon className="size-4" />
-                  </div>
-                  <div className="min-w-0 space-y-0.5">
-                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                      <p className={`truncate font-semibold ${item.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
-                        {item.name}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
-                      <span className={`rounded-md border px-1.5 py-0.5 font-semibold ${bucketClass}`}>{item.bucket}</span>
-                      <span aria-hidden="true">·</span>
-                      <span>{KIND_LABELS[item.kind]}</span>
-                      {item.interestEnabled && (
-                        <>
-                          <span aria-hidden="true">·</span>
-                          <span>{formatInterestRate(item.interestRatePercent)}% / yr ({ACCOUNT_INTEREST_FREQUENCY_LABELS[item.interestFrequency]})</span>
-                        </>
-                      )}
-                      {item.isArchived && <><span aria-hidden="true">·</span><span>Closed</span></>}
-                    </div>
-                  </div>
-                </div>
-              )
-            }}
-            renderMeta={item => (
-              <SensitiveAmount
-                value={item.remaining}
-                isMasked={hideSensitive}
-                formatFn={value => formatCurrencyVal(value, currency)}
-                className={`shrink-0 text-xs font-bold ${item.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}
-              />
-            )}
-            renderStatus={item => (
-              <RowSyncStatus
-                isDeleting={isDeleting(item.id)}
-                isSyncing={isSyncing(item.id)}
-                isPending={item.isPendingSync}
-                entityLabel="account"
-              />
-            )}
-          />
-        </div>
-
+        {/* Footer info callout */}
         <div className="flex items-start gap-2.5 rounded-xl border border-border/50 bg-muted/10 p-3 text-[11px] leading-relaxed text-muted-foreground">
           <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-          <p><span className="font-semibold text-foreground">Balances are ledger-tracked.</span> Starting amounts are reviewed against bucket totals, and Stability credits automatically satisfy emergency reloads.</p>
+          <p>
+            <span className="font-semibold text-foreground">Balances are ledger-tracked.</span> Starting amounts are reviewed against bucket totals, and Stability credits automatically satisfy emergency reloads.
+          </p>
         </div>
       </section>
 
+      {/* Account form sheet */}
       <AccountFormSheet
-        isOpen={isFormOpen}
+        isOpen={isFormOpen && !pendingBalanceCorrection}
         account={editingAccount}
+        bucketAccounts={activeGroup?.allBucketAccounts}
+        bucketTotal={activeGroup?.balance}
+        defaultBucket={formDefaultBucket}
         currency={currency}
         onClose={closeForm}
         onSave={handleFormSave}
       />
+
+      {/* Setup / Update balances sheet */}
       <BucketAccountSetupSheet
         isOpen={setupBucket !== null}
         bucket={setupBucket}
-        accounts={rows}
-        bucketTotal={bucketSummaries.find(summary => summary.name === setupBucket)?.balance ?? 0}
+        // Reconciliation must include every account in the bucket; the search result is only for
+        // display and must never turn a filtered edit into a partial bucket snapshot.
+        accounts={bucketGroups.find(group => group.bucket === setupBucket)?.allBucketAccounts ?? []}
+        bucketTotal={bucketGroups.find(group => group.bucket === setupBucket)?.balance ?? 0}
         currency={currency}
         hideSensitive={hideSensitive}
         disabled={disabled}
@@ -323,9 +324,50 @@ export function AccountsSection({
           setSetupBucket(null)
           setSetupPrefill(null)
         }}
-        onAddAccount={onAddAccount}
-        onAddBalanceAdjustment={onAddBalanceAdjustment}
         onReconcileAccounts={onReconcileAccounts}
+      />
+
+      {/* Single-account balance correction confirmation modal */}
+      <CustomConfirmModal
+        isOpen={Boolean(pendingBalanceCorrection)}
+        title="Confirm balance correction"
+        confirmText="Apply balance correction"
+        cancelText="Go back"
+        variant="primary"
+        message={pendingBalanceCorrection && (
+          <div className="space-y-3">
+            <p>
+              The balance for <span className="font-semibold text-foreground">{pendingBalanceCorrection.account.name}</span> will be corrected from <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.account.remaining, currency)}</span> to <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.targetBalance, currency)}</span>.
+            </p>
+            <div className="space-y-1.5 rounded-xl border border-border/60 bg-muted/30 p-3 text-xs">
+              <div className="flex items-center justify-between gap-3">
+                <span>Current {pendingBalanceCorrection.account.bucket} total</span>
+                <span className="font-bold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.bucketTotal, currency)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span>New {pendingBalanceCorrection.account.bucket} total</span>
+                <span className="font-bold text-foreground">
+                  {formatCurrencyVal(pendingBalanceCorrection.bucketTotal + (pendingBalanceCorrection.targetBalance - pendingBalanceCorrection.account.remaining), currency)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-1.5">
+                <span>Adjustment</span>
+                <SignedAmount
+                  value={pendingBalanceCorrection.targetBalance - pendingBalanceCorrection.account.remaining}
+                  currency={currency}
+                  hideSensitive={hideSensitive}
+                />
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              This records the correction on this account; a real transfer remains a separate Ledger transfer.
+            </p>
+          </div>
+        )}
+        onCancel={() => setPendingBalanceCorrection(null)}
+        onConfirm={() => { void handleConfirmBalanceCorrection() }}
+        isConfirming={isApplyingCorrection}
+        confirmingText="Applying..."
       />
     </>
   )

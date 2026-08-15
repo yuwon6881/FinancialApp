@@ -160,14 +160,24 @@ describe('accounts API contract', () => {
         ],
         transactions: [
           {
-            id: 'reconcile-op-1-move-0',
+            id: 'reconcile-op-1-adjustment-0',
             date: '2026-08-15T00:00:00.000Z',
-            description: 'Move between accounts',
-            category: 'Transfer',
-            ledgerCategory: 'AccountMove',
-            amount: obfuscateAmount(40),
+            description: 'Account balance adjustment - Bank',
+            category: 'Adjustment',
+            ledgerCategory: 'Essentials',
+            amount: obfuscateAmount(-40),
             accountId: 'acct-1',
-            counterAccountId: 'acct-2',
+            isAccountBalanceAdjustment: true,
+          },
+          {
+            id: 'reconcile-op-1-adjustment-1',
+            date: '2026-08-15T00:00:00.000Z',
+            description: 'Account balance adjustment - Cash',
+            category: 'Adjustment',
+            ledgerCategory: 'Essentials',
+            amount: obfuscateAmount(40),
+            accountId: 'acct-2',
+            isAccountBalanceAdjustment: true,
           },
         ],
       }),
@@ -178,7 +188,6 @@ describe('accounts API contract', () => {
       operationId: 'op-1',
       bucket: 'Essentials',
       expectedBucketTotal: 100,
-      adjustmentAccountId: null,
       targets: [
         { id: 'acct-1', name: 'Bank', kind: 'Bank', isArchived: false, expectedCurrent: 100, target: 60 },
         { id: 'acct-2', name: 'Cash', kind: 'Cash', isArchived: false, expectedCurrent: 0, target: 40 },
@@ -186,9 +195,11 @@ describe('accounts API contract', () => {
     })
 
     expect(result.accounts).toHaveLength(2)
-    expect(result.transactions).toHaveLength(1)
-    expect(result.transactions[0].amount).toBe(40)
-    expect(result.transactions[0].ledgerCategory).toBe('AccountMove')
+    expect(result.transactions).toHaveLength(2)
+    expect(result.transactions[0].amount).toBe(-40)
+    expect(result.transactions[0].ledgerCategory).toBe('Essentials')
+    expect(result.transactions[0].isAccountBalanceAdjustment).toBe(true)
+    expect(result.transactions[1].amount).toBe(40)
   })
 
   it('maps 409 conflict errors onto ApiError', async () => {

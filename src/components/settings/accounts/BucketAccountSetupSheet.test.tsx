@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { LedgerAccount } from '../../../types'
 import { BucketAccountSetupSheet } from './BucketAccountSetupSheet'
 
@@ -38,15 +38,13 @@ describe('BucketAccountSetupSheet', () => {
         currency="MYR"
         hideSensitive={false}
         onClose={vi.fn()}
-        onAddAccount={vi.fn()}
-        onAddBalanceAdjustment={vi.fn()}
         onReconcileAccounts={vi.fn()}
       />,
     )
 
-    expect(screen.getByText('Set up Essentials accounts')).toBeDefined()
+    expect(screen.getByText('Update your Essentials account balances')).toBeDefined()
     expect(screen.getByText('Main Checking')).toBeDefined()
-    expect(screen.getByRole('button', { name: 'Review setup' })).toBeDefined()
+    expect(screen.getByRole('button', { name: 'Review changes' })).toBeDefined()
   })
 
   it('allows adding a new account draft and triggers review modal upon valid input', async () => {
@@ -60,8 +58,6 @@ describe('BucketAccountSetupSheet', () => {
         currency="MYR"
         hideSensitive={false}
         onClose={vi.fn()}
-        onAddAccount={vi.fn()}
-        onAddBalanceAdjustment={vi.fn()}
         onReconcileAccounts={onReconcileAccounts}
       />,
     )
@@ -80,7 +76,7 @@ describe('BucketAccountSetupSheet', () => {
     const targetInput = screen.getByLabelText(/Current balance \(MYR\)/i)
     fireEvent.change(targetInput, { target: { value: '4000' } })
 
-    const reviewBtn = screen.getByRole('button', { name: 'Review setup' }) as HTMLButtonElement
+    const reviewBtn = screen.getByRole('button', { name: 'Review changes' }) as HTMLButtonElement
     expect(reviewBtn.disabled).toBe(false)
     fireEvent.click(reviewBtn)
 
@@ -90,15 +86,15 @@ describe('BucketAccountSetupSheet', () => {
     const confirmBtn = screen.getByRole('button', { name: 'Apply account setup' })
     fireEvent.click(confirmBtn)
 
-    expect(onReconcileAccounts).toHaveBeenCalledWith(
+    await waitFor(() => expect(onReconcileAccounts).toHaveBeenCalledWith(
       expect.objectContaining({
-        bucket: 'Essentials',
-        expectedBucketTotal: 100,
-        targets: expect.arrayContaining([
-          expect.objectContaining({ id: 'acct-essentials-1', target: 60 }),
-          expect.objectContaining({ name: 'Cash jar', target: 40 }),
-        ]),
-      }),
-    )
+          bucket: 'Essentials',
+          expectedBucketTotal: 100,
+          targets: expect.arrayContaining([
+            expect.objectContaining({ id: 'acct-essentials-1', target: 60 }),
+            expect.objectContaining({ name: 'Cash jar', target: 40 }),
+          ]),
+        }),
+      ))
   })
 })

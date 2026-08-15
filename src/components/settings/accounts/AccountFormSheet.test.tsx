@@ -17,6 +17,13 @@ const mockAccount: LedgerAccount = {
   updatedAt: '2026-08-01T00:00:00.000Z',
 }
 
+const mockArchivedAccount: LedgerAccount = {
+  ...mockAccount,
+  id: 'acct-2',
+  name: 'Closed Checking',
+  isArchived: true,
+}
+
 describe('AccountFormSheet', () => {
   it('validates required name field before submitting', () => {
     const onSave = vi.fn()
@@ -69,6 +76,7 @@ describe('AccountFormSheet', () => {
       bucket: 'Stability',
       kind: 'Bank',
       openingAmount: 0,
+      targetBalance: undefined,
       interestEnabled: true,
       interestRatePercent: 4.25,
       interestFrequency: 'Monthly',
@@ -76,7 +84,7 @@ describe('AccountFormSheet', () => {
     })
   })
 
-  it('populates fields when editing an existing account and allows archiving', async () => {
+  it('populates fields when editing an existing account and allows archiving with unchanged balance', async () => {
     const onSave = vi.fn()
     const onClose = vi.fn()
     render(
@@ -90,6 +98,7 @@ describe('AccountFormSheet', () => {
     )
 
     expect(screen.getByDisplayValue('Checking')).toBeDefined()
+    expect(screen.getByText('Balance unchanged')).toBeDefined()
 
     const archiveCheckbox = screen.getByLabelText(/Mark account as closed/i)
     fireEvent.click(archiveCheckbox)
@@ -103,10 +112,58 @@ describe('AccountFormSheet', () => {
       bucket: 'Essentials',
       kind: 'Bank',
       openingAmount: undefined,
+      targetBalance: undefined,
       interestEnabled: false,
       interestRatePercent: 0,
       interestFrequency: 'Monthly',
       isArchived: true,
     })
+  })
+
+  it('locks bucket select and closed checkbox when balance is changed in edit mode', async () => {
+    const onSave = vi.fn()
+    const onClose = vi.fn()
+    render(
+      <AccountFormSheet
+        isOpen={true}
+        account={mockAccount}
+        bucketAccounts={[mockAccount]}
+        bucketTotal={150}
+        currency="MYR"
+        onClose={onClose}
+        onSave={onSave}
+      />,
+    )
+
+    const balanceInput = screen.getByLabelText(/Balance today \(MYR\)/i)
+    fireEvent.change(balanceInput, { target: { value: '25000' } }) // 250.00
+
+    expect(screen.getByText(/Was .*150\.00 · Essentials total becomes .*250\.00/i)).toBeDefined()
+    expect(screen.getByText('Move this account to another bucket on its own, then correct the balance.')).toBeDefined()
+    expect(screen.getByText('Closed accounts cannot change balance. Save the balance correction first.')).toBeDefined()
+
+    const saveBtn = screen.getByRole('button', { name: 'Save changes' })
+    fireEvent.click(saveBtn)
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      targetBalance: 250,
+    }))
+  })
+
+  it('disables balance input and shows reopen hint for an archived account', () => {
+    render(
+      <AccountFormSheet
+        isOpen={true}
+        account={mockArchivedAccount}
+        currency="MYR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    )
+
+    const balanceInput = screen.getByLabelText(/Balance today \(MYR\)/i) as HTMLInputElement
+    expect(balanceInput.disabled).toBe(true)
+    expect(screen.getByText('Reopen this account to correct its balance.')).toBeDefined()
   })
 })

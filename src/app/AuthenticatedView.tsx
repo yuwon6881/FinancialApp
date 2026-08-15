@@ -248,6 +248,7 @@ export function AuthenticatedView({
                       onNavigateToRecurring={nav.handleNavigateToRecurring}
                       onNavigateToLedger={nav.handleNavigateToLedger}
                       onAddBalanceAdjustment={financial.handleAddBalanceAdjustment}
+                      onReconcileAccounts={financial.handleReconcileAccounts}
                       isSwitchingCycle={nav.isSwitchingCycle}
                       highlightedSection={nav.highlightedReportSection}
                       highlightedCategory={nav.highlightedReportCategory}
@@ -280,7 +281,6 @@ export function AuthenticatedView({
                       onAddAccount={financial.handleAddAccount}
                       onUpdateAccount={financial.handleUpdateAccount}
                       onRequestDeleteAccount={financial.requestDeleteAccount}
-                      onAddBalanceAdjustment={financial.handleAddBalanceAdjustment}
                       onReconcileAccounts={financial.handleReconcileAccounts}
                       notifyOnLoginEnabled={prefs.notifyOnLogin}
                       onToggleNotifyOnLogin={(checked) => {

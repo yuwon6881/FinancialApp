@@ -19,7 +19,7 @@ export interface LedgerAccountReconcileTarget {
   id?: string | null
   name: string
   bucket?: LedgerAccount['bucket']
-  kind: LedgerAccountKind
+  kind?: LedgerAccountKind
   isArchived: boolean
   expectedCurrent: number
   target: number
@@ -32,6 +32,8 @@ export interface LedgerAccountReconcileInput {
   operationId: string
   bucket: LedgerAccount['bucket']
   expectedBucketTotal: number
+  description?: string
+  /** Accepted for compatibility with queued pre-change operations; new callers omit it. */
   adjustmentAccountId?: string | null
   targets: LedgerAccountReconcileTarget[]
 }
@@ -45,6 +47,8 @@ export interface LedgerAccountReconcileTransaction {
   amount: number
   accountId?: string | null
   counterAccountId?: string | null
+  isAccountBalanceAdjustment?: boolean
+  stabilityReloadIntent?: string | null
 }
 
 export interface LedgerAccountReconcileResult {
@@ -112,6 +116,7 @@ export async function reconcileLedgerAccounts(input: LedgerAccountReconcileInput
       operationId: input.operationId,
       bucket: input.bucket,
       expectedBucketTotal: obfuscateAmount(input.expectedBucketTotal),
+      description: input.description,
       adjustmentAccountId: input.adjustmentAccountId ?? null,
       targets: input.targets.map(target => ({
         id: target.id,

@@ -53,8 +53,8 @@ const isIncomeLedgerCategory = (ledgerCategory: string | null | undefined) => {
 }
 
 /** Whether an actual ledger row reduced Stability and therefore carries the tri-state answer. */
-export function isStabilityReloadDrawdown(transaction: Pick<Transaction, 'amount' | 'ledgerCategory'>) {
-  return bucketAmount(transaction, 'Stability') < 0
+export function isStabilityReloadDrawdown(transaction: Pick<Transaction, 'amount' | 'ledgerCategory' | 'isAccountBalanceAdjustment'>) {
+  return transaction.isAccountBalanceAdjustment !== true && bucketAmount(transaction, 'Stability') < 0
 }
 
 /** Whether the form's current shape is a Stability drawdown that still needs an answer. */
@@ -103,12 +103,15 @@ function describeReloadMovement(
     date: transaction.date,
     postedAt: transaction.postedAt,
     change,
-    repayment: change > 0
+    repayment: transaction.isAccountBalanceAdjustment
+      ? 0
+      : change > 0
       ? isIncomeLedgerCategory(transaction.ledgerCategory) && transaction.stabilityRecoveryTopUpAmount != null
         ? Math.max(0, transaction.stabilityRecoveryTopUpAmount)
         : Math.max(0, change - normalSalaryShare)
       : 0,
-    marked: change < 0 && normalizeReloadIntent(transaction.stabilityReloadIntent) !== 'NotRequired',
+    marked: transaction.isAccountBalanceAdjustment !== true
+      && change < 0 && normalizeReloadIntent(transaction.stabilityReloadIntent) !== 'NotRequired',
   }
 }
 

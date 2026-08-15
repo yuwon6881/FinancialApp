@@ -2,6 +2,7 @@ import { Button } from './ui/Button'
 import React from 'react'
 import { BarChart3, ChartNoAxesCombined, ChevronRight, Sparkles, TrendingUp } from 'lucide-react'
 import type { AppTab, DashboardData, SavingsGoal, Transaction, WishlistItem } from '../types'
+import type { LedgerAccountReconcileInput } from '../lib/api/accounts'
 import { useAppPrefs } from '../contexts/AppContext'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
 import { getCycleProgress } from '../lib/cycle'
@@ -38,6 +39,7 @@ interface ReportsViewProps {
     showAllCycles?: boolean
   }) => void
   onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
+  onReconcileAccounts?: (input: LedgerAccountReconcileInput) => Promise<void> | void
   isSwitchingCycle?: boolean
   onViewCycleSummary?: (monthIndex: number, year: number) => void
   onExplainWithAi?: (cycleKey: string) => void
@@ -61,6 +63,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   onNavigateToRecurring,
   onNavigateToLedger,
   onAddBalanceAdjustment,
+  onReconcileAccounts,
   isSwitchingCycle = false,
   onViewCycleSummary,
   onExplainWithAi,
@@ -82,6 +85,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     hideSensitive,
     hideBalanceAmounts,
     onAddBalanceAdjustment,
+    onReconcileAccounts,
   })
 
   // The end-of-cycle summary only makes sense for a cycle that has actually closed. Offer the

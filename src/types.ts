@@ -282,6 +282,8 @@ export interface Transaction {
   splitAccountIds?: Record<string, string> | null
   /** Server-derived marker for structural rows that must not seed description autocomplete. */
   excludeFromAutocomplete?: boolean
+  /** Server-derived marker for account balance/opening corrections, not real Stability movement. */
+  isAccountBalanceAdjustment?: boolean
 }
 
 export type LedgerAccountKind = 'Bank' | 'EWallet' | 'Cash' | 'Card' | 'Other'

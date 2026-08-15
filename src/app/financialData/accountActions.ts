@@ -119,10 +119,16 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
       const account = target.id ? accounts.find(candidate => candidate.id === target.id) : undefined
       return account
         ? {
-            ...target,
-            expectedCurrent: account.remaining,
+            id: account.id,
+            name: account.name,
+            bucket: account.bucket,
+            kind: account.kind,
+            expectedCurrent: target.target,
             target: account.remaining,
             isArchived: account.isArchived,
+            interestEnabled: account.interestEnabled,
+            interestRatePercent: account.interestRatePercent,
+            interestFrequency: account.interestFrequency,
           }
         : {
             ...target,

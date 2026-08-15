@@ -27,6 +27,10 @@ function asTransaction(value: unknown, fallbackId?: string): Transaction | null 
     stabilityRecoveryTopUpAmount: typeof raw.stabilityRecoveryTopUpAmount === 'number'
       ? raw.stabilityRecoveryTopUpAmount
       : null,
+    stabilityReloadIntent: raw.stabilityReloadIntent === 'Required' || raw.stabilityReloadIntent === 'NotRequired'
+      ? raw.stabilityReloadIntent
+      : undefined,
+    isAccountBalanceAdjustment: raw.isAccountBalanceAdjustment === true,
   }
 }
 
@@ -147,6 +151,9 @@ function applyReconciliation(
       ? Math.round(target.target * 100) / 100
       : null
     if (!id || targetBalance === null || !name) continue
+    const normalizedKind = target.kind === 'EWallet' || target.kind === 'Cash' || target.kind === 'Card' || target.kind === 'Other' || target.kind === 'Bank'
+      ? target.kind
+      : undefined
     let account = accounts.find(candidate => candidate.id === id)
     if (!account) {
       account = {
@@ -154,9 +161,7 @@ function applyReconciliation(
         id,
         name,
         bucket: reconciliation.bucket as LedgerAccount['bucket'],
-        kind: target.kind === 'EWallet' || target.kind === 'Cash' || target.kind === 'Card' || target.kind === 'Other'
-          ? target.kind
-          : 'Bank',
+        kind: normalizedKind ?? 'Bank',
         isArchived: target.isArchived === true,
         remaining: 0,
         createdAt: new Date(operation.createdAt).toISOString(),
@@ -165,9 +170,7 @@ function applyReconciliation(
       accounts.push(account)
     } else {
       account.name = name
-      account.kind = target.kind === 'EWallet' || target.kind === 'Cash' || target.kind === 'Card' || target.kind === 'Other'
-        ? target.kind
-        : 'Bank'
+      if (normalizedKind) account.kind = normalizedKind
       account.isArchived = target.isArchived === true
       // Current reconciliation targets carry normalized account settings. Keep legacy queued
       // payloads without interest fields from clearing the existing settings.

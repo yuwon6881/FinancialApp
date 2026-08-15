@@ -34,3 +34,10 @@ export const ACCOUNT_INTEREST_FREQUENCY_LABELS: Record<LedgerAccountInterestFreq
   Monthly: 'monthly',
   Yearly: 'yearly',
 }
+
+export const BUCKET_DEFINITIONS: ReadonlyArray<{ name: LedgerAccount['bucket']; description: string }> = [
+  { name: 'Essentials', description: 'Everyday spending' },
+  { name: 'Growth', description: 'Money sent to investments' },
+  { name: 'Stability', description: 'Emergency cushion' },
+  { name: 'Rewards', description: 'Plans and treats' },
+]

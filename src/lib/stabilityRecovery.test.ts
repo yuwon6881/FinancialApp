@@ -409,6 +409,13 @@ describe('stability reload projection', () => {
     expect(summarizeStabilityReload([salary, child, transfer, adjustment], 0.15).repaidAmount).toBe(650)
   })
 
+  it('does not treat account balance corrections as put-back money', () => {
+    const correction = transaction({
+      id: 'balance-correction', amount: 50, isAccountBalanceAdjustment: true,
+    })
+    expect(summarizeStabilityReload([correction], 0.15)).toEqual({ markedAmount: 0, repaidAmount: 0 })
+  })
+
   it('uses a saved salary reimbursement when the plan allocation later changes', () => {
     const salary = transaction({
       id: 'salary', amount: 4000, ledgerCategory: 'Income', stabilityRecoveryTopUpAmount: 30,

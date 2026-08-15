@@ -40,7 +40,7 @@ const roundMoney = (value: number) => Math.round(value * 100) / 100
 /**
  * Builds the account split before any account rows or adjustment transactions are queued.
  * New rows start at zero. Any difference between explicit account totals and the bucket total is
- * corrected through the account selected by the setup review, never through an implicit account.
+ * recorded as the net of the per-account corrections; no posting account is inferred.
  */
 export function calculateBucketAccountReconciliation(input: {
   bucket: LedgerAccount['bucket']

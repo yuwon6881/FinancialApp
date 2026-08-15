@@ -30,7 +30,6 @@ export interface BucketSetupDraftAccount {
 export interface BucketSetupPendingReview {
   preview: BucketAccountReconciliation
   drafts: BucketSetupDraftAccount[]
-  adjustmentAccountId: string | null
 }
 
 export interface BucketSetupAccountSnapshot {
@@ -114,7 +113,6 @@ export function useBucketAccountSetupView({
   )
   const [targetInputs, setTargetInputs] = useState<Record<string, string>>({})
   const [drafts, setDrafts] = useState<BucketSetupDraftAccount[]>([])
-  const [adjustmentAccountId, setAdjustmentAccountId] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [pending, setPending] = useState<BucketSetupPendingReview | null>(null)
   const initializationKeyRef = useRef<string | null>(null)
@@ -141,7 +139,6 @@ export function useBucketAccountSetupView({
     }
     setTargetInputs(Object.fromEntries(bucketAccounts.map(account => [account.id, account.remaining.toFixed(2)])))
     setDrafts(initialDraft ? [createDraft(initialDraft)] : [])
-    setAdjustmentAccountId(null)
     setErrors({})
     setPending(null)
   }, [bucket, bucketAccounts, bucketTotal, initialDraft, initializationKey])
@@ -167,7 +164,6 @@ export function useBucketAccountSetupView({
 
   const removeDraft = (id: string) => {
     setDrafts(previous => previous.filter(draft => draft.id !== id))
-    if (adjustmentAccountId === id) setAdjustmentAccountId(null)
     setErrors(previous => ({ ...previous, [id]: '', form: '' }))
   }
 
@@ -201,21 +197,6 @@ export function useBucketAccountSetupView({
     })
   }, [bucket, bucketTotal, hasInvalidTarget, parsedDraftTargets, parsedExistingTargets])
 
-  const adjustmentOptions = useMemo(() => [
-    ...bucketAccounts.filter(account => !account.isArchived).map(account => ({ value: account.id, label: account.name })),
-    ...drafts.filter(draft => draft.name.trim()).map(draft => ({ value: draft.id, label: `${draft.name.trim()} (new)` })),
-  ], [bucketAccounts, drafts])
-
-  useEffect(() => {
-    if (!preview || Math.abs(preview.bucketDifference) < ACCOUNT_RECONCILIATION_EPSILON) {
-      setAdjustmentAccountId(null)
-      return
-    }
-    const validIds = new Set(adjustmentOptions.map(option => option.value))
-    if (adjustmentAccountId && validIds.has(adjustmentAccountId)) return
-    setAdjustmentAccountId(adjustmentOptions.length === 1 ? adjustmentOptions[0].value : null)
-  }, [adjustmentAccountId, adjustmentOptions, preview])
-
   const canReview = canReviewBucketAccountSetup(preview, drafts.length)
 
   const prepareReview = () => {
@@ -240,10 +221,6 @@ export function useBucketAccountSetupView({
     if (!bucketAccounts.some(account => !account.isArchived) && drafts.length === 0) {
       nextErrors.form = 'Add at least one open account to this bucket.'
     }
-    if (Math.abs(preview.bucketDifference) >= ACCOUNT_RECONCILIATION_EPSILON
-        && (!adjustmentAccountId || !adjustmentOptions.some(option => option.value === adjustmentAccountId))) {
-      nextErrors.form = 'Choose the open account that should receive the bucket-total correction.'
-    }
     if (preview && !preview.hasChanges && drafts.length === 0) {
       nextErrors.form = 'Change an account balance or add a new account before reviewing.'
     }
@@ -255,7 +232,6 @@ export function useBucketAccountSetupView({
     setPending({
       preview,
       drafts: drafts.map(draft => ({ ...draft, name: draft.name.trim() })),
-      adjustmentAccountId,
     })
   }
 
@@ -263,8 +239,6 @@ export function useBucketAccountSetupView({
     bucketAccounts,
     targetInputs,
     drafts,
-    adjustmentAccountId,
-    adjustmentOptions,
     errors,
     preview,
     pending,
@@ -272,7 +246,6 @@ export function useBucketAccountSetupView({
     updateTarget,
     updateDraft,
     updateDraftTarget,
-    setAdjustmentAccountId,
     addDraft,
     removeDraft,
     prepareReview,
