@@ -64,6 +64,17 @@ describe('DraftStagingView', () => {
     expect((screen.getByRole('radio', { name: /outflow/i }) as HTMLButtonElement).disabled).toBe(false)
   })
 
+  it('keeps the draft card opaque while its swipe actions sit behind it', async () => {
+    window.innerWidth = 500
+    renderView()
+
+    await waitFor(() => {
+      const surface = document.querySelector('[data-swipe-content]')
+      expect(surface?.className).toContain('bg-card')
+      expect(surface?.className).not.toContain('bg-card/92')
+    })
+  })
+
   it('routes an incomplete Stability drawdown to review instead of syncing', async () => {
     const onSyncDraftBatch = vi.fn()
     renderView({

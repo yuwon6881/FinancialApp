@@ -141,7 +141,7 @@ export function DraftStagingView({
             <SwipeableRow
               key={draft.id}
               hint={index === 0}
-              className="rounded-2xl border border-border/60 bg-card/92 shadow-[var(--app-shadow-soft)] transition-colors hover:border-primary/35"
+              className="rounded-2xl border border-border/60 bg-card shadow-[var(--app-shadow-soft)] transition-colors hover:border-primary/35"
               contentClassName="p-4"
               actionsWidth={128}
               actions={<>
