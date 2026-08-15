@@ -10,7 +10,9 @@ import {
 describe('utils', () => {
   describe('cn', () => {
     it('merges class names and handles conditional classes cleanly', () => {
-      expect(cn('px-2 py-1', true && 'bg-card', false && 'hidden')).toBe('px-2 py-1 bg-card')
+      const isCardActive: boolean = true
+      const isHidden: boolean = false
+      expect(cn('px-2 py-1', isCardActive && 'bg-card', isHidden && 'hidden')).toBe('px-2 py-1 bg-card')
       expect(cn('p-4', 'p-2')).toBe('p-2')
     })
   })
