@@ -112,9 +112,9 @@ describe('AccountPlacementReviewSheet', () => {
     expect(screen.getByText('Supermarket')).toBeDefined()
     expect(screen.getByText('Essentials account')).toBeDefined()
 
-    // Select account from dropdown
     const select = screen.getByRole('combobox', { name: 'Essentials account' })
-    fireEvent.change(select, { target: { value: 'acct-essentials' } })
+    fireEvent.click(select)
+    fireEvent.click(screen.getByRole('option', { name: 'Main Checking (Essentials)' }))
 
     const requeueBtn = screen.getByRole('button', { name: 'Requeue this change' }) as HTMLButtonElement
     expect(requeueBtn.disabled).toBe(false)
@@ -163,10 +163,12 @@ describe('AccountPlacementReviewSheet', () => {
     const requeueBtn = screen.getByRole('button', { name: 'Requeue this change' }) as HTMLButtonElement
     expect(requeueBtn.disabled).toBe(true)
 
-    fireEvent.change(sourceSelect, { target: { value: 'acct-essentials' } })
+    fireEvent.click(sourceSelect)
+    fireEvent.click(screen.getByRole('option', { name: 'Main Checking (Essentials)' }))
     expect(requeueBtn.disabled).toBe(true)
 
-    fireEvent.change(destSelect, { target: { value: 'acct-rewards' } })
+    fireEvent.click(destSelect)
+    fireEvent.click(screen.getByRole('option', { name: 'Treats Wallet (Rewards)' }))
     expect(requeueBtn.disabled).toBe(false)
 
     fireEvent.click(requeueBtn)

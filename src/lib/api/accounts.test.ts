@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './client'
+import { deobfuscateAmount, obfuscateAmount } from './amounts'
 import {
   addLedgerAccount,
   deleteLedgerAccount,
@@ -26,7 +27,7 @@ describe('accounts API contract', () => {
           bucket: 'Essentials',
           kind: 'Bank',
           isArchived: false,
-          remaining: '100',
+          remaining: obfuscateAmount(100),
           createdAt: '2026-08-01T00:00:00.000Z',
           updatedAt: '2026-08-01T00:00:00.000Z',
         },
@@ -56,7 +57,7 @@ describe('accounts API contract', () => {
         interestEnabled: true,
         interestRatePercent: 4.5,
         interestFrequency: 'Monthly',
-        remaining: '500',
+        remaining: obfuscateAmount(500),
         createdAt: '2026-08-15T00:00:00.000Z',
         updatedAt: '2026-08-15T00:00:00.000Z',
       }),
@@ -80,6 +81,7 @@ describe('accounts API contract', () => {
     const body = JSON.parse(String(requestOptions.body))
     expect(body.name).toBe('New Savings')
     expect(body.bucket).toBe('Stability')
+    expect(deobfuscateAmount(body.openingAmount)).toBe(500)
     expect(body.interestEnabled).toBe(true)
     expect(body.interestRatePercent).toBe(4.5)
   })
@@ -95,7 +97,7 @@ describe('accounts API contract', () => {
         bucket: 'Growth',
         kind: 'Other',
         isArchived: true,
-        remaining: '0',
+        remaining: obfuscateAmount(0),
         createdAt: '2026-08-01T00:00:00.000Z',
         updatedAt: '2026-08-15T00:00:00.000Z',
       }),
@@ -141,7 +143,7 @@ describe('accounts API contract', () => {
             bucket: 'Essentials',
             kind: 'Bank',
             isArchived: false,
-            remaining: '60',
+            remaining: obfuscateAmount(60),
             createdAt: '2026-08-01T00:00:00.000Z',
             updatedAt: '2026-08-15T00:00:00.000Z',
           },
@@ -151,7 +153,7 @@ describe('accounts API contract', () => {
             bucket: 'Essentials',
             kind: 'Cash',
             isArchived: false,
-            remaining: '40',
+            remaining: obfuscateAmount(40),
             createdAt: '2026-08-15T00:00:00.000Z',
             updatedAt: '2026-08-15T00:00:00.000Z',
           },
@@ -163,7 +165,7 @@ describe('accounts API contract', () => {
             description: 'Move between accounts',
             category: 'Transfer',
             ledgerCategory: 'AccountMove',
-            amount: '40',
+            amount: obfuscateAmount(40),
             accountId: 'acct-1',
             counterAccountId: 'acct-2',
           },

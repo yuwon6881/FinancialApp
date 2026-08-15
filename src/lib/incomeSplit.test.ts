@@ -51,7 +51,7 @@ describe('computeIncomeLedgerCategory with a recovery top-up', () => {
     // 40 on top of the usual 200 -> 24% of a 1,000 salary; the 40 comes out of the 800 the other
     // three were due, so each gives up a twentieth of its share.
     expect(computeIncomeLedgerCategory({ ...base, recoveryTopUp: 40 }))
-      .toBe('IncomeSplit:47.5000,19.0000,24.0000,9.5000')
+      .toBe('IncomeSplit:47.5,19,24,9.5')
   })
 
   it('draws the top-up from the other three in proportion', () => {
@@ -91,32 +91,32 @@ describe('computeIncomeLedgerCategory', () => {
     // stability full -> its 20% splits evenly to Growth (+10) and Rewards (+10).
     expect(
       computeIncomeLedgerCategory({ ...base, stabilityBalance: 10000 })
-    ).toBe('IncomeSplit:50.0000,30.0000,0.0000,20.0000')
+    ).toBe('IncomeSplit:50,30,0,20')
   })
 
   it('splits the stability share when the deposit crosses the cap mid-way', () => {
     // Only $100 of headroom left; $100/$1000 = 10% stays in stability, 10% redirects.
     expect(
       computeIncomeLedgerCategory({ ...base, stabilityBalance: 9900 })
-    ).toBe('IncomeSplit:50.0000,25.0000,10.0000,15.0000')
+    ).toBe('IncomeSplit:50,25,10,15')
   })
 
   it('honors a Growth-100% overflow redirect', () => {
     expect(
       computeIncomeLedgerCategory({ ...base, stabilityBalance: 10000, stabilityOverflowRedirect: 'Growth 100%' })
-    ).toBe('IncomeSplit:50.0000,40.0000,0.0000,10.0000')
+    ).toBe('IncomeSplit:50,40,0,10')
   })
 
   it('honors a Rewards-100% overflow redirect', () => {
     expect(
       computeIncomeLedgerCategory({ ...base, stabilityBalance: 10000, stabilityOverflowRedirect: 'Rewards 100%' })
-    ).toBe('IncomeSplit:50.0000,20.0000,0.0000,30.0000')
+    ).toBe('IncomeSplit:50,20,0,30')
   })
 
   it('honors an Essentials-100% overflow redirect', () => {
     expect(
       computeIncomeLedgerCategory({ ...base, stabilityBalance: 10000, stabilityOverflowRedirect: 'Essentials 100%' })
-    ).toBe('IncomeSplit:70.0000,20.0000,0.0000,10.0000')
+    ).toBe('IncomeSplit:70,20,0,10')
   })
 
   it('treats a balance exactly at target as capped', () => {

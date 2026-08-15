@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { LedgerAccount } from '../../../types'
 import { AccountFormSheet } from './AccountFormSheet'
 
@@ -37,15 +37,16 @@ describe('AccountFormSheet', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('submits valid new account with interest settings enabled', () => {
+  it('submits valid new account with interest settings enabled', async () => {
     const onSave = vi.fn()
+    const onClose = vi.fn()
     render(
       <AccountFormSheet
         isOpen={true}
         account={null}
         defaultBucket="Stability"
         currency="MYR"
-        onClose={vi.fn()}
+        onClose={onClose}
         onSave={onSave}
       />,
     )
@@ -62,6 +63,7 @@ describe('AccountFormSheet', () => {
     const saveBtn = screen.getByRole('button', { name: 'Add account' })
     fireEvent.click(saveBtn)
 
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
     expect(onSave).toHaveBeenCalledWith({
       name: 'High Yield Savings',
       bucket: 'Stability',
@@ -74,14 +76,15 @@ describe('AccountFormSheet', () => {
     })
   })
 
-  it('populates fields when editing an existing account and allows archiving', () => {
+  it('populates fields when editing an existing account and allows archiving', async () => {
     const onSave = vi.fn()
+    const onClose = vi.fn()
     render(
       <AccountFormSheet
         isOpen={true}
         account={mockAccount}
         currency="MYR"
-        onClose={vi.fn()}
+        onClose={onClose}
         onSave={onSave}
       />,
     )
@@ -94,6 +97,7 @@ describe('AccountFormSheet', () => {
     const saveBtn = screen.getByRole('button', { name: 'Save changes' })
     fireEvent.click(saveBtn)
 
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
     expect(onSave).toHaveBeenCalledWith({
       name: 'Checking',
       bucket: 'Essentials',

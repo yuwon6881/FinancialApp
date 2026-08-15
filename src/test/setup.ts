@@ -58,6 +58,21 @@ if (!window.matchMedia) {
   })
 }
 
+// jsdom does not implement ResizeObserver. Responsive controls use it only to
+// measure their rendered width, so unit tests need a no-op browser-compatible
+// observer unless a test supplies a behavior-specific implementation.
+if (!globalThis.ResizeObserver) {
+  Object.defineProperty(globalThis, 'ResizeObserver', {
+    configurable: true,
+    writable: true,
+    value: class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  })
+}
+
 beforeEach(() => {
   resetBackend()
   localStorage.clear()
