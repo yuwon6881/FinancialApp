@@ -161,7 +161,6 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
   const editBlocked = split || transaction.savingsGoalId != null
   const reloadDrawdown = isStabilityReloadDrawdown(transaction)
   const formatted = formatCurrencyVal(outflow ? Math.abs(transaction.amount) : transaction.amount, props.currency)
-  const hasMetadataRow = Boolean(transaction.accountId || reloadDrawdown || props.isDeleting || props.isSyncing || transaction.isPendingSync)
 
   return (
     <div className="cv-row list-row-enter" style={staggerStyle(props.index)}>
@@ -174,7 +173,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         actions={<><Button variant="unstyled" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button><Button variant="unstyled" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
       >
         <div className={`h-0.5 w-full ${transfer ? 'bg-blue-500/60' : outflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'}`} />
-        <div className="p-4 space-y-2.5">
+        <div className="p-4 space-y-3">
           {props.isSelecting && <div className="flex items-center justify-between gap-2">
             <label className="inline-flex items-center gap-2 text-[10px] font-semibold text-muted-foreground">
               <Checkbox
@@ -192,39 +191,10 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
             </label>
           </div>}
 
-          {/* Line 1: Date & Category */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="shrink-0 text-[10px] text-muted-foreground font-mono">{transaction.date}</span>
-            <span title={transaction.category} className={`min-w-0 max-w-[65%] truncate px-2 py-0.5 text-right text-[10px] font-semibold rounded-full border ${getCategoryBadgeClass(transaction.category)}`}>
-              {transaction.category}
-            </span>
-          </div>
-
-          {/* Line 2: Description (truncated with dots) & Amount */}
-          <div className="flex items-baseline justify-between gap-3">
-            <h4 className="min-w-0 flex-1 truncate text-sm font-bold text-foreground" title={transaction.description}>
-              {transaction.description}
-            </h4>
-            <span className={`shrink-0 text-right text-sm font-bold ${transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>
-              {props.hideSensitive ? <SensitiveMask /> : <>{transfer ? '' : outflow ? '-' : '+'}{formatted}</>}
-            </span>
-          </div>
-
-          {/* Line 3: Account info and status chips on dedicated newline */}
-          {hasMetadataRow && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-              <AccountChip transaction={transaction} accounts={props.accounts} />
-              {reloadDrawdown && <ReloadIntentChip intent={transaction.stabilityReloadIntent} status={transaction.stabilityReloadStatus} />}
-              <RowSyncStatus isDeleting={props.isDeleting} isSyncing={props.isSyncing} isPending={transaction.isPendingSync} entityLabel="transaction" />
-            </div>
-          )}
-
-          {/* Line 4: Ledger category footer */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/30">
-            <span className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-              Ledger:<LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact />
-            </span>
-          </div>
+          <div className="flex items-center justify-between gap-2"><span className="shrink-0 text-[10px] text-muted-foreground font-mono">{transaction.date}</span><span title={transaction.category} className={`min-w-0 max-w-[65%] truncate px-2 py-0.5 text-right text-[10px] font-semibold rounded-full border ${getCategoryBadgeClass(transaction.category)}`}>{transaction.category}</span></div>
+          <div className="flex items-center justify-between gap-3"><div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"><h4 className="min-w-0 truncate text-sm font-bold" title={transaction.description}>{transaction.description}</h4><AccountChip transaction={transaction} accounts={props.accounts} /><RowSyncStatus isDeleting={props.isDeleting} isSyncing={props.isSyncing} isPending={transaction.isPendingSync} entityLabel="transaction" /></div><span className={`max-w-[45%] shrink-0 break-words text-right text-sm font-bold ${transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>{props.hideSensitive ? <SensitiveMask /> : <>{transfer ? '' : outflow ? '-' : '+'}{formatted}</>}</span></div>
+          {reloadDrawdown && <div className="flex"><ReloadIntentChip intent={transaction.stabilityReloadIntent} status={transaction.stabilityReloadStatus} /></div>}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/30"><span className="text-[10px] text-muted-foreground flex items-center gap-1.5">Ledger:<LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact /></span></div>
         </div>
       </SwipeableRow>
     </div>
