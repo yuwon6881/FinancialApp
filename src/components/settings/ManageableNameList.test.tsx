@@ -101,4 +101,22 @@ describe('ManageableNameList', () => {
     expect(screen.getByTestId('flow-filter')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Add' }).className).toContain('whitespace-nowrap')
   })
+
+  it('keeps app-managed rows visible without mutation actions', () => {
+    render(
+      <ManageableNameList
+        items={[items[0]]}
+        itemLabel="Category"
+        addPlaceholder="New Category Name"
+        isItemReadOnly={() => true}
+        onAdd={vi.fn()}
+        onDelete={vi.fn()}
+        onEdit={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Delete Receipt' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Edit Receipt' })).toBeNull()
+    expect(screen.getByRole('img', { name: 'Receipt is managed by FinancialApp' })).toBeTruthy()
+  })
 })

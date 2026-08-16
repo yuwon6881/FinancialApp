@@ -2,7 +2,7 @@ import React from 'react'
 import { ChevronDown, ChevronUp, Gauge, Save } from 'lucide-react'
 import type { TransactionCategory } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
-import { isSpendingGuideCategory } from '../../lib/categoryFlow'
+import { isSpendingGuideCategory, isSystemCategoryName } from '../../lib/categoryFlow'
 import { getCurrencySymbol } from '../../lib/utils'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
@@ -33,7 +33,7 @@ export function CategoryLimitsCard({
   onUpdate,
 }: CategoryLimitsCardProps) {
   const spendingCategories = React.useMemo(
-    () => categories.filter(isSpendingGuideCategory),
+    () => categories.filter(category => !isSystemCategoryName(category.name) && isSpendingGuideCategory(category)),
     [categories],
   )
   const [drafts, setDrafts] = React.useState<Record<string, string | null>>({})

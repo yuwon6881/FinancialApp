@@ -54,20 +54,16 @@ const ReloadIntentChip = ({
   intent: Transaction['stabilityReloadIntent']
   status: Transaction['stabilityReloadStatus']
 }) => {
-  const settled = status === 'NotRequired' || status === 'Complete'
-  const partial = status === 'PartlyRepaid'
+  const settled = status === 'NotRequired' || status === 'Complete' || (status == null && intent === 'NotRequired')
+  const label = stabilityReloadStatusLabel(status, intent)
+  const isPending = !settled
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${
-        settled
-          ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'
-          : partial
-            ? 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-            : 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-      }`}
+      title={`Stability recovery status: ${label}`}
+      className={`inline-flex max-w-full shrink-0 items-center gap-1 text-[10px] font-medium whitespace-nowrap ${isPending ? 'text-accent-ink' : 'text-muted-foreground'}`}
     >
-      <span className={`size-1.5 rounded-full ${settled ? 'bg-emerald-500' : 'bg-amber-500'}`} aria-hidden="true" />
-      {stabilityReloadStatusLabel(status, intent)}
+      <span className={`size-1.5 shrink-0 rounded-full ${isPending ? 'bg-accent-ink' : 'bg-muted-foreground/60'}`} aria-hidden="true" />
+      <span className="truncate">{label}</span>
     </span>
   )
 }
@@ -78,15 +74,11 @@ function AccountChip({ transaction, accounts }: { transaction: Transaction; acco
   if (!account) return null
   return (
     <span
-      className={`inline-flex max-w-[14rem] shrink-0 items-center gap-1 truncate rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
-        account.isArchived
-          ? 'border-border/50 bg-muted/30 text-muted-foreground'
-          : 'border-border/50 bg-muted/20 text-muted-foreground'
-      }`}
       title={`Account: ${account.name}${account.isArchived ? ' (Closed)' : ''}`}
+      className={`inline-flex min-w-0 max-w-[14rem] shrink items-center gap-1 text-[10px] font-medium text-muted-foreground/90 ${account.isArchived ? 'opacity-70' : ''}`}
     >
       <Wallet className="size-2.5 shrink-0 text-accent-ink" aria-hidden="true" />
-      <span className="truncate">{account.name}{account.isArchived ? ' (Closed)' : ''}</span>
+      <span className="min-w-0 truncate"><span className="sr-only">Account: </span>{account.name}{account.isArchived ? ' (Closed)' : ''}</span>
     </span>
   )
 }

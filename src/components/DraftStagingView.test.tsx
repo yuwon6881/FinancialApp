@@ -75,7 +75,7 @@ describe('DraftStagingView', () => {
     })
   })
 
-  it('keeps long draft wording in the left lane beside the amount', async () => {
+  it('keeps long draft wording in the left lane and the category on its own row', async () => {
     window.innerWidth = 500
     renderView({
       draftTransactions: [{
@@ -88,8 +88,10 @@ describe('DraftStagingView', () => {
     await waitFor(() => {
       const surface = document.querySelector('[data-swipe-content]')
       expect(surface?.firstElementChild?.className).toContain('grid-cols-[minmax(0,1fr)_auto]')
+      expect(surface?.firstElementChild?.className).toContain('items-center')
       expect(surface?.firstElementChild?.querySelector('span.text-orange-500')?.className).toContain('max-w-[45%]')
       expect(screen.getByText('Household essentials and school supplies').className).toContain('truncate')
+      expect(screen.getByText('Household essentials and school supplies').parentElement).not.toBe(screen.getByText('2026-07-13').parentElement)
     })
   })
 

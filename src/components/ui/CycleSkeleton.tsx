@@ -209,18 +209,22 @@ const ListRowSkeleton: React.FC = () => (
   </div>
 )
 
-/** A draft-row placeholder matching DraftStagingView's two-column mobile card. */
+/** A draft-row placeholder matching DraftStagingView's centered amount and separate category row. */
 const DraftRowSkeleton: React.FC = () => (
-  <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 rounded-2xl border border-border/60 bg-card p-4 shadow-xs">
-    <div className="min-w-0 space-y-2">
+  <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 rounded-2xl border border-border/60 bg-card p-4 shadow-xs">
+    <div className="min-w-0 space-y-1.5">
       <Skeleton className="h-4 w-40 max-w-full" />
-      <div className="flex flex-wrap items-center gap-1.5 pr-10 lg:pr-0">
+      <div className="flex flex-wrap items-center gap-1.5">
         <Skeleton className="h-4 w-20 rounded-md" />
+        <Skeleton className="h-4 w-20" />
         <Skeleton className="h-5 w-16 rounded-full" />
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
         <Skeleton className="h-5 w-24 rounded-md" />
+        <Skeleton className="h-4 w-16" />
       </div>
     </div>
-    <Skeleton className="h-4 w-16 max-w-full" />
+    <Skeleton className="h-4 w-16 max-w-full self-center" />
   </div>
 )
 

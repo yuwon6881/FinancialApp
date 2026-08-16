@@ -290,10 +290,10 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     }
   }
 
-  const visibleCategories = categoriesList.filter(cat => {
-    const lower = cat.name.toLowerCase()
-    return !isSystemCategoryName(lower)
-  })
+  // Keep app-managed categories visible so their ledger meaning is discoverable, but expose the
+  // editable subset separately for cleanup targets and spending guides.
+  const visibleCategories = categoriesList
+  const editableCategories = categoriesList.filter(category => !isSystemCategoryName(category.name))
 
   const categoryUsage = useMemo(() => {
     if (!usageCounts) return null
@@ -367,6 +367,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     handleAiCleanupReview,
     handleApplyCleanupSuggestion,
     visibleCategories,
+    editableCategories,
     categoryUsage,
     unusedCategoryCount,
     rarelyUsedCategoryCount,

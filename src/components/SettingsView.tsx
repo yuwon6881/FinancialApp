@@ -559,7 +559,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                       <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                         {view.cleanupSuggestions.map(suggestion => {
                           const confidence = Math.round(Math.max(0, Math.min(1, suggestion.confidence)) * 100)
-                          const consolidateOptions = view.visibleCategories.filter(cat =>
+                          const consolidateOptions = view.editableCategories.filter(cat =>
                             !suggestion.categories.some(name => name.toLowerCase() === cat.name.toLowerCase())
                           )
                           const consolidateTarget = view.consolidateTargets[suggestion.id] || ''
@@ -706,41 +706,61 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   filterSlot={flowControl}
                   disabled={hideSensitive}
                   isLoading={isCategoryListLoading}
+                  isItemReadOnly={item => isSystemCategoryName(item.name)}
                   validateName={name => isSystemCategoryName(name) ? 'Name is a reserved word.' : null}
                   onAdd={name => props.onAddCategory({ name, type: 'both' })}
                   onDelete={item => view.handleDeleteCategory(item.id)}
                   renderName={item => {
                     const activeType = flowTypeDrafts[item.id] || item.type || 'both'
                     const isDraftChanged = flowTypeDrafts[item.id] != null && flowTypeDrafts[item.id] !== (item.type || 'both')
+                    const isSystemCategory = isSystemCategoryName(item.name)
                     return (
                       <div className="flex items-center gap-2">
                         <span className={`inline-flex shrink-0 items-center rounded border px-2 py-0.5 font-semibold ${getCategoryBadgeClass(item.name)}`}>
                           {item.name}
                         </span>
-                        <Button variant="unstyled"
-                          type="button"
-                          disabled={hideSensitive}
-                          onClick={() => {
-                            const current = flowTypeDrafts[item.id] || item.type || 'both'
-                            const next: CategoryFlowType = current === 'both' ? 'inflow' : current === 'inflow' ? 'outflow' : 'both'
-                            setFlowTypeDrafts(prev => ({ ...prev, [item.id]: next }))
-                          }}
-                          aria-label={`Change ${item.name} flow. Currently ${activeType === 'inflow' ? 'money in' : activeType === 'outflow' ? 'money out' : 'money in and out'}.`}
-                          title="Click to toggle flow restriction (Both → Inflow → Outflow)"
-                          className={`inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition hover:scale-105 active:scale-95 disabled:opacity-50 sm:min-h-8 ${
-                            activeType === 'inflow'
-                              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                              : activeType === 'outflow'
-                                ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                                : 'border-border/60 bg-muted/40 text-muted-foreground'
-                          } ${isDraftChanged ? 'ring-2 ring-blue-500/50' : ''}`}
-                        >
-                          {activeType === 'inflow' && <ArrowDownLeft className="size-2.5" />}
-                          {activeType === 'outflow' && <ArrowUpRight className="size-2.5" />}
-                          {activeType === 'both' && <ArrowLeftRight className="size-2.5" />}
-                          <span className="capitalize">{activeType}</span>
-                          {isDraftChanged && <span className="size-1.5 rounded-full bg-blue-500 inline-block" title="Unsaved change" />}
-                        </Button>
+                        {isSystemCategory ? (
+                          <span
+                            role="img"
+                            aria-label={`${item.name} is managed by FinancialApp; flow is ${activeType === 'inflow' ? 'money in' : activeType === 'outflow' ? 'money out' : 'money in and out'}`}
+                            title="Managed category; its flow cannot be changed."
+                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                              activeType === 'inflow'
+                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : activeType === 'outflow'
+                                  ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                  : 'border-border/60 bg-muted/40 text-muted-foreground'
+                            }`}
+                          >
+                            <Lock className="size-2.5" aria-hidden="true" />
+                            <span className="capitalize">{activeType}</span>
+                          </span>
+                        ) : (
+                          <Button variant="unstyled"
+                            type="button"
+                            disabled={hideSensitive}
+                            onClick={() => {
+                              const current = flowTypeDrafts[item.id] || item.type || 'both'
+                              const next: CategoryFlowType = current === 'both' ? 'inflow' : current === 'inflow' ? 'outflow' : 'both'
+                              setFlowTypeDrafts(prev => ({ ...prev, [item.id]: next }))
+                            }}
+                            aria-label={`Change ${item.name} flow. Currently ${activeType === 'inflow' ? 'money in' : activeType === 'outflow' ? 'money out' : 'money in and out'}.`}
+                            title="Click to toggle flow restriction (Both → Inflow → Outflow)"
+                            className={`inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition hover:scale-105 active:scale-95 disabled:opacity-50 sm:min-h-8 ${
+                              activeType === 'inflow'
+                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : activeType === 'outflow'
+                                  ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                  : 'border-border/60 bg-muted/40 text-muted-foreground'
+                            } ${isDraftChanged ? 'ring-2 ring-blue-500/50' : ''}`}
+                          >
+                            {activeType === 'inflow' && <ArrowDownLeft className="size-2.5" />}
+                            {activeType === 'outflow' && <ArrowUpRight className="size-2.5" />}
+                            {activeType === 'both' && <ArrowLeftRight className="size-2.5" />}
+                            <span className="capitalize">{activeType}</span>
+                            {isDraftChanged && <span className="size-1.5 rounded-full bg-blue-500 inline-block" title="Unsaved change" />}
+                          </Button>
+                        )}
                       </div>
                     )
                   }}
@@ -776,7 +796,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
 
           <div className="order-1 lg:order-2">
             <CategoryLimitsCard
-              categories={view.visibleCategories}
+              categories={view.editableCategories}
               currency={view.activeSettings.currency || 'USD'}
               hideSensitive={hideSensitive}
               activeSyncId={activeSyncId}

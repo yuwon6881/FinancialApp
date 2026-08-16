@@ -161,22 +161,33 @@ export function DraftStagingView({
                 </Button>
               </>}
             >
-              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 cursor-pointer" onClick={() => openDraft(draft)}>
+              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 cursor-pointer" onClick={() => openDraft(draft)}>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-foreground">{draft.description}</p>
-                  <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 pr-10 text-[10px] text-muted-foreground lg:pr-0">
-                    {issues.length > 0 && (
-                      <span className="max-w-full truncate rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400" title={issues.join(' ')}>
-                        Needs review
-                      </span>
+                  <div className="mt-1 min-w-0 space-y-1.5 pr-10 text-[10px] text-muted-foreground lg:pr-0">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      {issues.length > 0 && (
+                        <span className="max-w-full truncate rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400" title={issues.join(' ')}>
+                          Needs review
+                        </span>
+                      )}
+                      <span className="shrink-0">{draft.date}</span>
+                      <LedgerAllocationBadge ledgerCategory={draft.ledgerCategory} transactionId={draft.id} compact />
+                    </div>
+                    {!isTransfer && (
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <span className={`min-w-0 max-w-full truncate rounded-md border px-1.5 py-0.5 font-semibold ${getCategoryBadgeClass(draft.category)}`} title={draft.category}>{draft.category}</span>
+                        {documentCount > 0 && <span className="min-w-0 max-w-full truncate" title={`${documentCount} document${documentCount === 1 ? '' : 's'}`}>{documentCount} document{documentCount === 1 ? '' : 's'}</span>}
+                      </div>
                     )}
-                    <span className="shrink-0">{draft.date}</span>
-                    <LedgerAllocationBadge ledgerCategory={draft.ledgerCategory} transactionId={draft.id} compact />
-                    {!isTransfer && <span className={`min-w-0 max-w-full truncate rounded-md border px-1.5 py-0.5 font-semibold ${getCategoryBadgeClass(draft.category)}`} title={draft.category}>{draft.category}</span>}
-                    {documentCount > 0 && <span className="min-w-0 max-w-full truncate" title={`${documentCount} document${documentCount === 1 ? '' : 's'}`}>{documentCount} document{documentCount === 1 ? '' : 's'}</span>}
+                    {isTransfer && documentCount > 0 && (
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <span className="min-w-0 max-w-full truncate" title={`${documentCount} document${documentCount === 1 ? '' : 's'}`}>{documentCount} document{documentCount === 1 ? '' : 's'}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <span className={`max-w-[45%] shrink-0 whitespace-nowrap pt-0.5 text-right text-sm font-extrabold tabular-nums ${amountClass}`}>
+                <span className={`max-w-[45%] shrink-0 self-center whitespace-nowrap text-right text-sm font-extrabold tabular-nums ${amountClass}`}>
                   {hideSensitive ? <SensitiveMask /> : <>{amountPrefix}{formatCurrencyVal(Math.abs(draft.amount), currency)}</>}
                 </span>
               </div>

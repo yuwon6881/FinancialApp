@@ -1,7 +1,7 @@
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
-import { Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
+import { Loader2, Lock, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
@@ -32,6 +32,8 @@ interface ManageableNameListProps<T extends ManageableNameItem> {
   listClassName?: string
   /** Lets dense feature rows move their action cluster below the content on narrow phones. */
   stackActionsOnMobile?: boolean
+  /** Keeps app-managed rows visible for context without offering user mutations. */
+  isItemReadOnly?: (item: T) => boolean
   disabled?: boolean
   isLoading?: boolean
   onAdd: (name: string) => Promise<void> | void
@@ -57,6 +59,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
   itemClassName,
   listClassName,
   stackActionsOnMobile = false,
+  isItemReadOnly,
   disabled = false,
   isLoading = false,
   onAdd,
@@ -209,51 +212,65 @@ export function ManageableNameList<T extends ManageableNameItem>({
               {search ? `No ${pluralItemLabel} match your search.` : `No ${pluralItemLabel} yet.`}
             </p>
           ) : emptyState
-        ) : filtered.map(item => (
-          <div
-            key={item.id}
-            className={`flex justify-between gap-2 rounded-lg border border-border/50 bg-background px-2.5 py-2 text-xs ${
-              stackActionsOnMobile ? 'flex-col items-stretch sm:flex-row sm:items-center' : 'items-center'
-            } ${
-              typeof itemClassName === 'function' ? itemClassName(item) : itemClassName ?? ''
-            }`}
-          >
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              {renderName ? renderName(item) : <span className="truncate font-semibold">{item.name}</span>}
-              {renderMeta?.(item)}
+        ) : filtered.map(item => {
+          const itemReadOnly = isItemReadOnly?.(item) ?? false
+          return (
+            <div
+              key={item.id}
+              className={`flex justify-between gap-2 rounded-lg border border-border/50 bg-background px-2.5 py-2 text-xs ${
+                stackActionsOnMobile ? 'flex-col items-stretch sm:flex-row sm:items-center' : 'items-center'
+              } ${
+                typeof itemClassName === 'function' ? itemClassName(item) : itemClassName ?? ''
+              }`}
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                {renderName ? renderName(item) : <span className="truncate font-semibold">{item.name}</span>}
+                {renderMeta?.(item)}
+              </div>
+              <div className={`flex shrink-0 items-center gap-2 ${stackActionsOnMobile ? 'self-end sm:self-auto' : ''}`}>
+                {renderStatus?.(item)}
+                {onEdit && !itemReadOnly && (
+                  <Button variant="unstyled"
+                    type="button"
+                    disabled={disabled || busyId !== null}
+                    onClick={() => onEdit(item)}
+                    aria-label={`Edit ${item.name}`}
+                    className="inline-grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 sm:size-8"
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                )}
+                {itemReadOnly ? (
+                  <span
+                    role="img"
+                    aria-label={`${item.name} is managed by FinancialApp`}
+                    title={`${item.name} is managed by FinancialApp`}
+                    className="inline-grid size-8 shrink-0 place-items-center text-muted-foreground/70"
+                  >
+                    <Lock className="size-3.5" aria-hidden="true" />
+                  </span>
+                ) : (
+                  <Button variant="unstyled"
+                    type="button"
+                    disabled={disabled || busyId !== null}
+                    onClick={async () => {
+                      setBusyId(item.id)
+                      try {
+                        await onDelete(item)
+                      } finally {
+                        setBusyId(null)
+                      }
+                    }}
+                    aria-label={`Delete ${item.name}`}
+                    className="inline-grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50 sm:size-8"
+                  >
+                    {busyId === item.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className={`flex shrink-0 items-center gap-2 ${stackActionsOnMobile ? 'self-end sm:self-auto' : ''}`}>
-              {renderStatus?.(item)}
-              {onEdit && (
-                <Button variant="unstyled"
-                  type="button"
-                  disabled={disabled || busyId !== null}
-                  onClick={() => onEdit(item)}
-                  aria-label={`Edit ${item.name}`}
-                  className="inline-grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 sm:size-8"
-                >
-                  <Pencil className="size-3.5" />
-                </Button>
-              )}
-              <Button variant="unstyled"
-                type="button"
-                disabled={disabled || busyId !== null}
-                onClick={async () => {
-                  setBusyId(item.id)
-                  try {
-                    await onDelete(item)
-                  } finally {
-                    setBusyId(null)
-                  }
-                }}
-                aria-label={`Delete ${item.name}`}
-                className="inline-grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50 sm:size-8"
-              >
-                {busyId === item.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
-              </Button>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
