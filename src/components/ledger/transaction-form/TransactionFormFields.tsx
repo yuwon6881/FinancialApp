@@ -1,12 +1,12 @@
 import { Input } from '../../ui/Input'
 import React, { useRef, useEffect } from 'react'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles, Loader2, AlertTriangle } from 'lucide-react'
 import { PerimeterBeam } from '../../ui/PerimeterBeam'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { DatePicker } from '../../ui/DatePicker'
 import { AnchoredPopover } from '../../ui/AnchoredPopover'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
-import { maskCurrencyInput } from '../../../lib/utils'
+import { maskCurrencyInput, formatCurrencyVal } from '../../../lib/utils'
 import type { TransactionFormState, TransferBucket, SelectableLedgerCategory } from './transactionFormReducer'
 import type { LedgerAccount } from '../../../types'
 import { FormField } from '../../ui/FormField'
@@ -17,6 +17,7 @@ import { StabilityTopUpOffer } from './StabilityTopUpOffer'
 import type { RecoveryBucketState, RecoveryOffer } from '../../../lib/stabilityRecovery'
 import { isStabilityReloadFormDrawdown } from '../../../lib/stabilityRecovery'
 import { isSelectableTransactionCategory } from '../../../lib/categoryFlow'
+import type { BucketOutflowWarning } from '../../../lib/transactionBucketWarnings'
 
 interface TransactionFormFieldsProps {
   state: TransactionFormState
@@ -50,6 +51,7 @@ interface TransactionFormFieldsProps {
   topUpOffer?: RecoveryOffer | null
   topUpBuckets?: RecoveryBucketState[]
   stabilityTopUpError?: string
+  bucketOutflowWarning?: BucketOutflowWarning | null
   hideSensitive?: boolean
   stabilityAlloc?: number
 }
@@ -74,6 +76,7 @@ export function TransactionFormFields({
   topUpOffer = null,
   topUpBuckets = [],
   stabilityTopUpError,
+  bucketOutflowWarning = null,
   hideSensitive = false,
   stabilityAlloc = 0,
 }: TransactionFormFieldsProps) {
@@ -627,6 +630,24 @@ export function TransactionFormFields({
             error={errors.stabilityTopUpAmount || stabilityTopUpError}
           />
         </>
+      )}
+
+      {bucketOutflowWarning && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs sm:col-span-2"
+        >
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" aria-hidden="true" />
+          <div className="space-y-0.5 min-w-0 flex-1">
+            <p className="font-bold text-amber-600 dark:text-amber-400">
+              {bucketOutflowWarning.message}
+            </p>
+            <p className="text-muted-foreground">
+              Shortfall of <span className="font-semibold text-foreground">{formatCurrencyVal(bucketOutflowWarning.shortfall, currency)}</span>. You can still save this transaction to keep your records accurate.
+            </p>
+          </div>
+        </div>
       )}
 
       {isStabilityReloadFormDrawdown(state) && (

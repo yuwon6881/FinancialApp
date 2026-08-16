@@ -20,7 +20,7 @@ function account(bucket: LedgerAccount['bucket'], overrides: Partial<LedgerAccou
 }
 
 describe('hasCompleteAccountCoverage', () => {
-  it('requires one confirmed open account in every bucket', () => {
+  it('requires one open account in every bucket', () => {
     const accounts = [
       account('Essentials'),
       account('Growth'),
@@ -31,6 +31,6 @@ describe('hasCompleteAccountCoverage', () => {
     expect(hasCompleteAccountCoverage(accounts)).toBe(true)
     expect(hasCompleteAccountCoverage(accounts.slice(0, 3))).toBe(false)
     expect(hasCompleteAccountCoverage(accounts.map(row => row.bucket === 'Rewards' ? { ...row, isArchived: true } : row))).toBe(false)
-    expect(hasCompleteAccountCoverage(accounts.map(row => row.bucket === 'Rewards' ? { ...row, isPendingSync: true } : row))).toBe(false)
+    expect(hasCompleteAccountCoverage(accounts.map(row => row.bucket === 'Rewards' ? { ...row, isPendingSync: true } : row))).toBe(true)
   })
 })

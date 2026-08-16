@@ -1,12 +1,14 @@
 import { Button } from './ui/Button'
 import React, { useState, useCallback, useRef } from 'react'
 import type {
+  ActiveRecurringPayment,
   Transaction,
   TransactionCategory,
   LedgerAccount,
   AutocompleteSuggestion,
   TransactionDocumentChanges,
   CategorySummary,
+  SavingsGoal,
 } from '../types'
 import type { PagedTransactionResult, ReceiptScanResult } from '../lib/api'
 import { CycleSkeleton } from './ui/CycleSkeleton'
@@ -81,6 +83,8 @@ interface LedgerViewProps {
   cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
   onRouteStateChange?: (state: Omit<LedgerRouteState, 'highlightedTxId'>) => void
   ledgerSummaries?: CategorySummary[]
+  savingsGoals?: SavingsGoal[]
+  activeRecurringPayments?: ActiveRecurringPayment[]
   currency?: string
   autoOpenAddForm?: boolean
   autoOpenTxType?: 'inflow' | 'outflow' | 'transfer' | null
@@ -364,6 +368,9 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         stabilityTarget={props.stabilityTarget ?? 10000}
         stabilityOverflowRedirect={props.stabilityOverflowRedirect || ''}
         stabilityTopUpContext={props.stabilityTopUpContext}
+        savingsGoals={props.savingsGoals}
+        activeRecurringPayments={props.activeRecurringPayments}
+        ledgerSummaries={props.ledgerSummaries}
         onAddTransaction={props.onAddTransaction}
         onUpdateTransaction={props.onUpdateTransaction}
         onStartEditPending={props.onStartEditPending}

@@ -430,6 +430,8 @@ export function AuthenticatedView({
                       cyclesRange={prefs.ledgerCyclesRange}
                       onRouteStateChange={nav.syncLedgerRouteState}
                       ledgerSummaries={financial.optimisticDashboardData?.categories}
+                      savingsGoals={financial.allSavingsGoals}
+                      activeRecurringPayments={financial.optimisticDashboardData?.activeRecurringPayments}
                       autoOpenAddForm={nav.autoOpenLedgerAdd}
                       autoOpenTxType={nav.autoOpenLedgerTxType}
                       onResetAutoOpen={() => {

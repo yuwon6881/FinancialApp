@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Banknote, Building2, CircleHelp, CreditCard, Info, Landmark, Percent, Wallet } from 'lucide-react'
+import {
+  Archive,
+  Banknote,
+  CircleHelp,
+  CreditCard,
+  Info,
+  Landmark,
+  Percent,
+  Wallet,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { Button } from '../../ui/Button'
@@ -17,7 +26,6 @@ import { ACCOUNT_BUCKET_OPTIONS, ACCOUNT_INTEREST_FREQUENCY_OPTIONS, ACCOUNT_KIN
 export interface AccountFormSaveInput extends LedgerAccountInput {
   targetBalance?: number
 }
-
 interface AccountFormSheetProps {
   isOpen: boolean
   account: LedgerAccount | null
@@ -160,12 +168,20 @@ export function AccountFormSheet({
       )}
     >
       <form id="ledger-account-form" noValidate onSubmit={submit} className="space-y-4">
-        <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/15 p-3.5">
+        {/* Header summary banner */}
+        <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/15 p-3.5">
           <div className={`grid size-10 shrink-0 place-items-center rounded-xl border ${bucketBadgeClass}`} aria-hidden="true">
             <AccountIcon className="size-5" />
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-foreground">{isEditing ? 'Update this account' : 'Account connection'}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-bold text-foreground">{isEditing ? 'Update this account' : 'Account connection'}</p>
+              {isEditing && isArchived && (
+                <span className="rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Closed
+                </span>
+              )}
+            </div>
             <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
               {isEditing
                 ? 'Changes affect this account only. Past transactions stay as they are.'
@@ -174,64 +190,54 @@ export function AccountFormSheet({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 border-b border-border/40 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-          <Building2 className="size-3.5 text-accent-ink" aria-hidden="true" />
-          Account details
-        </div>
-
-        <FormField label="Account name" required error={error ?? undefined} hint="e.g. Main bank account or Cash wallet">
-          <Input
-            value={name}
-            onChange={event => setName(event.target.value)}
-            maxLength={200}
-            autoComplete="off"
-            placeholder="Name this account"
-          />
-        </FormField>
-
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4">
-          <FormField
-            label="Bucket"
-            required
-            hint={isBalanceDirty ? 'Move this account to another bucket on its own, then correct the balance.' : undefined}
-          >
-            <CustomSelect
-              value={bucket}
-              onChange={setBucket}
-              options={ACCOUNT_BUCKET_OPTIONS}
-              ariaLabel="Account bucket"
-              disabled={isBalanceDirty}
-              className="w-full"
+        {/* Core fields */}
+        <div className="space-y-3.5">
+          <FormField label="Account name" required error={error ?? undefined} hint="e.g. Main bank account or Cash wallet">
+            <Input
+              value={name}
+              onChange={event => setName(event.target.value)}
+              maxLength={200}
+              autoComplete="off"
+              placeholder="Name this account"
             />
           </FormField>
-          <FormField label="Account type" required>
-            <CustomSelect
-              value={kind}
-              onChange={setKind}
-              options={ACCOUNT_KIND_OPTIONS}
-              ariaLabel="Account type"
-              className="w-full"
-            />
-          </FormField>
-        </div>
 
-        <p className="-mt-1 flex items-start gap-2 text-[11px] leading-relaxed text-muted-foreground">
-          <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-          One real account can appear once in each bucket if you track its money separately.
-        </p>
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4">
+            <FormField
+              label="Bucket"
+              required
+              hint={isBalanceDirty ? 'Move this account to another bucket on its own, then correct the balance.' : undefined}
+            >
+              <CustomSelect
+                value={bucket}
+                onChange={setBucket}
+                options={ACCOUNT_BUCKET_OPTIONS}
+                ariaLabel="Account bucket"
+                disabled={isBalanceDirty}
+                className="w-full"
+              />
+            </FormField>
+            <FormField label="Account type" required>
+              <CustomSelect
+                value={kind}
+                onChange={setKind}
+                options={ACCOUNT_KIND_OPTIONS}
+                ariaLabel="Account type"
+                className="w-full"
+              />
+            </FormField>
+          </div>
 
-        {/* Balance Block */}
-        {!isEditing ? (
-          <div className="rounded-2xl border border-border/60 bg-background/40 p-3.5 sm:p-4">
-            <div className="flex items-center gap-2">
-              <Banknote className="size-4 text-accent-ink" aria-hidden="true" />
-              <p className="text-xs font-bold text-foreground">Balance today</p>
-            </div>
-            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">Optional. If this account holds funds today, balances are confirmed against the bucket total.</p>
+          <p className="-mt-1 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+            <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
+            <span>One real account can appear once in each bucket if you track its money separately.</span>
+          </p>
+
+          {/* Balance Field */}
+          {!isEditing ? (
             <FormField
               label={`Balance today (${currency})`}
-              className="mt-3"
-              hint="Entered like ledger amounts. Any required adjustment is confirmed first."
+              hint="Optional. If this account holds funds today, balances are confirmed against the bucket total."
             >
               <SmartAmountInput
                 value={openingAmount}
@@ -239,99 +245,171 @@ export function AccountFormSheet({
                 placeholder="0.00"
               />
             </FormField>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-border/60 bg-background/40 p-3.5 sm:p-4">
-            <div className="flex items-center gap-2">
-              <Banknote className="size-4 text-accent-ink" aria-hidden="true" />
-              <p className="text-xs font-bold text-foreground">Account balance</p>
-            </div>
-            <FormField
-              label={`Balance today (${currency})`}
-              className="mt-3"
-              error={balanceError ?? undefined}
-              hint={account?.isArchived ? 'Reopen this account to correct its balance.' : undefined}
-            >
-              <SmartAmountInput
-                value={balanceAmount}
-                onChange={event => setBalanceAmount(maskCurrencyInput(event.target.value, balanceAmount))}
-                placeholder="0.00"
-                disabled={account?.isArchived}
-              />
-            </FormField>
-            {account && !account.isArchived && (
-              <div className="mt-2 text-[11px]">
-                {!isBalanceDirty ? (
-                  <span className="text-muted-foreground">Balance unchanged</span>
-                ) : (
-                  <span className="font-medium text-foreground">
-                    Was {formatCurrencyVal(account.remaining, currency)} · {bucket} total becomes {formatCurrencyVal(nextBucketTotal, currency)}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/10 p-3.5 sm:p-4">
-          <label className="flex cursor-pointer items-start gap-3 text-sm font-semibold text-foreground">
-            <Checkbox checked={interestEnabled} onChange={event => setInterestEnabled(event.target.checked)} className="mt-0.5 size-5" />
-            <span className="min-w-0">
-              <span className="flex items-center gap-1.5"><Percent className="size-3.5 text-accent-ink" aria-hidden="true" />Earn interest on this account</span>
-              <span className="mt-0.5 block text-[11px] font-normal leading-relaxed text-muted-foreground">Interest is added as a ledger credit to this account and {bucket}.</span>
-            </span>
-          </label>
-          {interestEnabled && (
-            <div className="grid grid-cols-1 gap-3.5 border-t border-border/40 pt-3 sm:grid-cols-2 sm:gap-4">
-              <FormField label="Annual interest rate (%)" required error={interestError ?? undefined} hint="e.g. 5 for 5% per year.">
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  min="0.01"
-                  max="100"
-                  step="0.0001"
-                  value={interestRatePercent}
-                  onChange={event => setInterestRatePercent(event.target.value)}
-                  placeholder="5"
+          ) : (
+            <div className="space-y-1.5">
+              <FormField
+                label={`Balance today (${currency})`}
+                error={balanceError ?? undefined}
+                hint={account?.isArchived ? 'Reopen this account to correct its balance.' : undefined}
+              >
+                <SmartAmountInput
+                  value={balanceAmount}
+                  onChange={event => setBalanceAmount(maskCurrencyInput(event.target.value, balanceAmount))}
+                  placeholder="0.00"
+                  disabled={account?.isArchived}
                 />
               </FormField>
-              <FormField label="Add interest" required hint="Posting frequency">
-                <CustomSelect
-                  value={interestFrequency}
-                  onChange={setInterestFrequency}
-                  options={ACCOUNT_INTEREST_FREQUENCY_OPTIONS}
-                  ariaLabel="Interest posting frequency"
-                  className="w-full"
-                />
-              </FormField>
+              {account && !account.isArchived && (
+                <div className="px-0.5 text-[11px]">
+                  {!isBalanceDirty ? (
+                    <span className="text-muted-foreground">Balance unchanged</span>
+                  ) : (
+                    <span className="font-medium text-accent-ink">
+                      Was {formatCurrencyVal(account.remaining, currency)} · {bucket} total becomes {formatCurrencyVal(nextBucketTotal, currency)}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {isEditing && (
-          <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/10 p-3.5 sm:p-4">
-            <label className={`flex items-start gap-3 text-sm font-semibold ${isBalanceDirty ? 'opacity-60 cursor-not-allowed text-muted-foreground' : 'cursor-pointer text-foreground'}`}>
+        {/* Options Section: Interest & Lifecycle Status */}
+        <div className="space-y-3 pt-1">
+          {/* Interest Toggle & Configuration Card */}
+          <div
+            className={`rounded-2xl border transition duration-150 ${
+              interestEnabled
+                ? 'border-border/80 bg-card/90 shadow-sm'
+                : 'border-border/60 bg-muted/10 hover:bg-muted/15'
+            }`}
+          >
+            <label className="flex cursor-pointer items-center justify-between gap-3 p-3.5">
+              <div className="flex min-w-0 items-center gap-3">
+                <div
+                  className={`grid size-8 shrink-0 place-items-center rounded-xl border transition duration-150 ${
+                    interestEnabled
+                      ? 'border-accent-ink/40 bg-accent/20 text-accent-ink'
+                      : 'border-border/60 bg-muted/30 text-muted-foreground'
+                  }`}
+                  aria-hidden="true"
+                >
+                  <Percent className="size-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="block text-xs font-semibold text-foreground sm:text-sm">
+                    Earn interest on this account
+                  </span>
+                  <span className="block text-[11px] leading-snug text-muted-foreground">
+                    Interest is added as a ledger credit to this account and {bucket}.
+                  </span>
+                </div>
+              </div>
               <Checkbox
-                checked={isArchived}
-                onChange={event => setIsArchived(event.target.checked)}
-                disabled={isBalanceDirty}
-                className="mt-0.5 size-5"
+                checked={interestEnabled}
+                onChange={event => setInterestEnabled(event.target.checked)}
+                className="size-4.5"
+                aria-label="Earn interest on this account"
               />
-              <span className="min-w-0">
-                <span className="block">Mark account as closed</span>
-                <span className="mt-0.5 block text-[11px] font-normal leading-relaxed text-muted-foreground">
-                  {isBalanceDirty
-                    ? 'Closed accounts cannot change balance. Save the balance correction first.'
-                    : 'Closed accounts stay in history but are hidden from new entries.'}
-                </span>
-              </span>
             </label>
-          </div>
-        )}
 
-        <div className="flex items-start gap-2.5 rounded-xl border border-border/50 bg-muted/10 p-3 text-[11px] leading-relaxed text-muted-foreground">
-          <Info className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-          <p><span className="font-semibold text-foreground">Growth is kept separate.</span> Investment deposits and withdrawals remain the source of truth.</p>
+            {interestEnabled && (
+              <div className="border-t border-border/40 bg-background/50 p-3.5 sm:p-4">
+                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4">
+                  <FormField
+                    label="Annual interest rate (%)"
+                    required
+                    error={interestError ?? undefined}
+                    hint="e.g. 5 for 5% per year."
+                  >
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min="0.01"
+                      max="100"
+                      step="0.0001"
+                      value={interestRatePercent}
+                      onChange={event => setInterestRatePercent(event.target.value)}
+                      placeholder="5"
+                    />
+                  </FormField>
+                  <FormField label="Add interest" required hint="Posting frequency">
+                    <CustomSelect
+                      value={interestFrequency}
+                      onChange={setInterestFrequency}
+                      options={ACCOUNT_INTEREST_FREQUENCY_OPTIONS}
+                      ariaLabel="Interest posting frequency"
+                      className="w-full"
+                    />
+                  </FormField>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Account Status / Archive Card */}
+          {isEditing && (
+            <div
+              className={`rounded-2xl border transition duration-150 ${
+                isArchived
+                  ? 'border-border/80 bg-muted/20'
+                  : 'border-border/60 bg-muted/10 hover:bg-muted/15'
+              }`}
+            >
+              <label
+                className={`flex items-center justify-between gap-3 p-3.5 ${
+                  isBalanceDirty
+                    ? 'cursor-not-allowed opacity-60'
+                    : 'cursor-pointer'
+                }`}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className={`grid size-8 shrink-0 place-items-center rounded-xl border transition duration-150 ${
+                      isArchived
+                        ? 'border-border bg-muted/60 text-foreground'
+                        : 'border-border/60 bg-muted/30 text-muted-foreground'
+                    }`}
+                    aria-hidden="true"
+                  >
+                    <Archive className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-foreground sm:text-sm">
+                        Mark account as closed
+                      </span>
+                      {isArchived && (
+                        <span className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                          Archived
+                        </span>
+                      )}
+                    </div>
+                    <span className="block text-[11px] leading-snug text-muted-foreground">
+                      {isBalanceDirty
+                        ? 'Closed accounts cannot change balance. Save the balance correction first.'
+                        : 'Closed accounts stay in history but are hidden from new entries.'}
+                    </span>
+                  </div>
+                </div>
+                <Checkbox
+                  checked={isArchived}
+                  onChange={event => setIsArchived(event.target.checked)}
+                  disabled={isBalanceDirty}
+                  className="size-4.5"
+                  aria-label="Mark account as closed"
+                />
+              </label>
+            </div>
+          )}
+        </div>
+
+        {/* Growth Note Callout */}
+        <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/10 px-3 py-2 text-[11px] text-muted-foreground">
+          <Info className="size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
+          <p>
+            <span className="font-semibold text-foreground">Growth is kept separate.</span> Investment deposits and withdrawals remain the source of truth.
+          </p>
         </div>
       </form>
     </BottomSheet>

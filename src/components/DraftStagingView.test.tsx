@@ -75,6 +75,24 @@ describe('DraftStagingView', () => {
     })
   })
 
+  it('keeps long draft wording in the left lane beside the amount', async () => {
+    window.innerWidth = 500
+    renderView({
+      draftTransactions: [{
+        ...draft,
+        description: 'Monthly household essentials and school supplies',
+        category: 'Household essentials and school supplies',
+      }],
+    })
+
+    await waitFor(() => {
+      const surface = document.querySelector('[data-swipe-content]')
+      expect(surface?.firstElementChild?.className).toContain('grid-cols-[minmax(0,1fr)_auto]')
+      expect(surface?.firstElementChild?.querySelector('span.text-orange-500')?.className).toContain('max-w-[45%]')
+      expect(screen.getByText('Household essentials and school supplies').className).toContain('truncate')
+    })
+  })
+
   it('routes an incomplete Stability drawdown to review instead of syncing', async () => {
     const onSyncDraftBatch = vi.fn()
     renderView({

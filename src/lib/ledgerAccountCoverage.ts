@@ -7,10 +7,8 @@ export const LEDGER_ACCOUNT_BUCKETS: ReadonlyArray<{ name: LedgerAccount['bucket
   { name: 'Rewards', description: 'Plans and treats' },
 ]
 
-function hasConfirmedLiveAccount(accounts: LedgerAccount[], bucket: LedgerAccount['bucket']): boolean {
-  return accounts.some(account => account.bucket === bucket && !account.isArchived && !account.isPendingSync)
-}
-
 export function hasCompleteAccountCoverage(accounts: LedgerAccount[]): boolean {
-  return LEDGER_ACCOUNT_BUCKETS.every(bucket => hasConfirmedLiveAccount(accounts, bucket.name))
+  return LEDGER_ACCOUNT_BUCKETS.every(bucket =>
+    accounts.some(account => account.bucket === bucket.name && !account.isArchived)
+  )
 }

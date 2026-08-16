@@ -32,7 +32,7 @@ describe('ledgerAccountCoverage', () => {
     ])
   })
 
-  it('returns true only when every bucket has at least one confirmed, unarchived, non-pending account', () => {
+  it('returns true only when every bucket has at least one unarchived account', () => {
     const full = [
       makeAccount('Essentials'),
       makeAccount('Growth'),
@@ -64,7 +64,7 @@ describe('ledgerAccountCoverage', () => {
     expect(hasCompleteAccountCoverage(archivedStability)).toBe(false)
   })
 
-  it('returns false if a bucket only has pending sync accounts', () => {
+  it('returns true when a bucket has an optimistic pending sync unarchived account', () => {
     const pendingGrowth = [
       makeAccount('Essentials'),
       makeAccount('Growth', { isPendingSync: true }),
@@ -72,10 +72,10 @@ describe('ledgerAccountCoverage', () => {
       makeAccount('Rewards'),
     ]
 
-    expect(hasCompleteAccountCoverage(pendingGrowth)).toBe(false)
+    expect(hasCompleteAccountCoverage(pendingGrowth)).toBe(true)
   })
 
-  it('returns true if a bucket has an archived account alongside an open confirmed account', () => {
+  it('returns true if a bucket has an archived account alongside an open account', () => {
     const multipleAccounts = [
       makeAccount('Essentials'),
       makeAccount('Growth'),

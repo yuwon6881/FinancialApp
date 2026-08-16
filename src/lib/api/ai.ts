@@ -72,6 +72,7 @@ export interface AiConversationState {
   lastInvestmentInstrumentId?: string | null
   lastReportCycleKey?: string | null
   lastLoanId?: string | null
+  lastLedgerAccountId?: string | null
 }
 
 export type AiInvocationPreset = 'report-review' | 'investment-explain' | 'rewards-plan' | 'loan-explain'
@@ -155,7 +156,7 @@ function normalizeAiConversationState(value: unknown): AiConversationState | nul
     'lastResolvedCycle', 'lastCategory', 'lastLedgerCategory', 'lastTransactionType',
     'lastExactDate', 'lastRecurringReference', 'lastRecurringStatus', 'lastWishlistStatus',
     'lastRewardsTopic', 'lastInvestmentTopic', 'lastInvestmentRange', 'lastInvestmentInstrumentId',
-    'lastReportCycleKey', 'lastLoanId',
+    'lastReportCycleKey', 'lastLoanId', 'lastLedgerAccountId',
   ] as const) {
     if (Object.prototype.hasOwnProperty.call(candidate, key)) state[key] = text(key)
   }

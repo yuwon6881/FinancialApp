@@ -46,15 +46,17 @@ describe('SwipeableRow closed-state opacity', () => {
   )
 
   it('keeps the sliding surface opaque so the drawer stays hidden until swiped', () => {
-    renderRow()
+    renderRow('bg-card/92')
     const surface = document.querySelector('[data-swipe-content]')
     expect(surface).not.toBeNull()
     expect(surface?.className).toContain('bg-card')
+    expect(surface?.className).not.toContain('bg-card/92')
   })
 
   it('stacks the sliding surface above the drawer', () => {
     renderRow()
-    expect(document.querySelector('[data-swipe-content]')?.className).toContain('relative')
+    expect(document.querySelector('[data-swipe-content]')?.className).toContain('z-10')
+    expect(screen.getByText('Delete').closest('[role="group"]')?.className).toContain('z-0')
   })
 
   it('applies contentClassName on mobile, not just on the desktop branch', () => {

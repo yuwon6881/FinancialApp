@@ -38,6 +38,17 @@ function soleLiveAccountId(
   return live.length === 1 ? live[0].id : undefined
 }
 
+function explicitLiveAccountId(
+  accounts: LedgerAccount[],
+  rawId: string | undefined,
+  bucket: string | undefined,
+): string | undefined {
+  if (!rawId || !bucket) return undefined
+  const match = accounts.find(account =>
+    account.id === rawId && !account.isArchived && account.bucket.toLowerCase() === bucket.toLowerCase())
+  return match?.id
+}
+
 /** Convert a validated AI ledger-add payload into local staging records. */
 export function buildAiLedgerDraftTransactions(
   payload: Record<string, unknown>,
@@ -87,8 +98,10 @@ export function buildAiLedgerDraftTransactions(
         category: 'Transfer',
         ledgerCategory: `Transfer:${source}->${target}`,
         date,
-        accountId: soleLiveAccountId(accounts, source),
-        counterAccountId: soleLiveAccountId(accounts, target),
+        accountId: explicitLiveAccountId(accounts, text(fields, 'accountId') ?? undefined, source)
+          ?? soleLiveAccountId(accounts, source),
+        counterAccountId: explicitLiveAccountId(accounts, text(fields, 'counterAccountId') ?? undefined, target)
+          ?? soleLiveAccountId(accounts, target),
         isPendingSync: true,
       }]
     }
@@ -102,7 +115,10 @@ export function buildAiLedgerDraftTransactions(
             .map(bucket => [bucket, soleLiveAccountId(accounts, bucket)])
             .filter((entry): entry is [string, string] => typeof entry[1] === 'string')),
         }
-      : { accountId: soleLiveAccountId(accounts, ledger) }
+      : {
+          accountId: explicitLiveAccountId(accounts, text(fields, 'accountId') ?? undefined, ledger)
+            ?? soleLiveAccountId(accounts, ledger),
+        }
     return [{
       description,
       amount: txType === 'inflow' ? magnitude : -magnitude,

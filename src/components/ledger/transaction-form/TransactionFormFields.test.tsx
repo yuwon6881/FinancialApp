@@ -125,4 +125,60 @@ describe('TransactionFormFields', () => {
     fireEvent.click(screen.getByRole('option', { name: 'Bills' }))
     expect(onSetField).toHaveBeenCalledWith('accountId', 'ess-2')
   })
+
+  it('renders the bucket outflow advisory warning banner when present', () => {
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+
+    render(
+      <TransactionFormFields
+        state={{
+          ...getInitialState('2026-08-01', 'Rent'),
+          showAddForm: true,
+          amount: '800.00',
+          transactionType: 'outflow',
+          ledgerCategory: 'Essentials',
+        }}
+        firstInputRef={React.createRef<HTMLInputElement>()}
+        descriptionRef={{ current: 'Rent' }}
+        autocompletedDescriptionRef={{ current: null }}
+        currency="MYR"
+        categories={[{ id: 'rent', name: 'Rent' }]}
+        accounts={[{ id: 'acc-1', name: 'Main', bucket: 'Essentials', isArchived: false }] as never}
+        errors={{}}
+        bucketOutflowWarning={{
+          bucket: 'Essentials',
+          shortfall: 250,
+          message: 'This amount leaves your Essentials bucket short of covering upcoming bills this cycle.',
+        }}
+        onSetField={vi.fn()}
+        onSelectSuggestion={vi.fn()}
+        onSuggestNotes={vi.fn()}
+        onSuggestCategory={vi.fn()}
+        filteredSuggestions={[]}
+        quickSuggestionEntries={[]}
+        suggestions={{
+          categorySuggestions: [],
+          isSuggestingCategory: false,
+          categorySuggestionUnavailable: false,
+          isSuggestingNote: false,
+          noteSuggestions: [],
+          showNoteSuggestions: false,
+          noteSuggestionUnavailable: false,
+          setShowNoteSuggestions: vi.fn(),
+          setNoteSuggestions: vi.fn(),
+          setIsSuggestingNote: vi.fn(),
+        }}
+      />,
+    )
+
+    const alert = screen.getByRole('alert')
+    expect(alert).toBeTruthy()
+    expect(alert.textContent).toContain('short of covering upcoming bills this cycle')
+    expect(alert.textContent).toContain('250.00')
+    expect(alert.textContent).toContain('You can still save this transaction')
+  })
 })

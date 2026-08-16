@@ -91,7 +91,7 @@ describe('MobileLedgerRow layout', () => {
 
     const descEl = screen.getByText(tx.description)
     expect(descEl.classList.contains('truncate')).toBe(true)
-    expect(screen.getByText('Account: Maybank Main')).toBeTruthy()
+    expect(screen.getByText('Maybank Main')).toBeTruthy()
     expect(screen.getByText('Spent for good')).toBeTruthy()
   })
 })

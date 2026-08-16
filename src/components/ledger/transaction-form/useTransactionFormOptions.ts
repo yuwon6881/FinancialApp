@@ -1,4 +1,14 @@
-import type { AutocompleteSuggestion, LedgerAccount, StabilityRecovery, Transaction, TransactionCategory, TransactionDocumentChanges } from '../../../types'
+import type {
+  ActiveRecurringPayment,
+  AutocompleteSuggestion,
+  CategorySummary,
+  LedgerAccount,
+  SavingsGoal,
+  StabilityRecovery,
+  Transaction,
+  TransactionCategory,
+  TransactionDocumentChanges,
+} from '../../../types'
 import type { ReceiptScanResult } from '../../../lib/api'
 import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
 
@@ -35,6 +45,9 @@ export interface UseTransactionFormOptions {
   stabilityTarget: number
   stabilityOverflowRedirect: string
   stabilityTopUpContext?: StabilityTopUpContext
+  savingsGoals?: SavingsGoal[]
+  activeRecurringPayments?: ActiveRecurringPayment[]
+  ledgerSummaries?: CategorySummary[]
   onAddTransaction: (transaction: Omit<Transaction, 'id'>, documentChanges?: TransactionDocumentChanges) => Promise<string | void> | string | void
   onUpdateTransaction?: (id: string, transaction: Omit<Transaction, 'id'>, documentChanges?: TransactionDocumentChanges) => Promise<void> | void
   onUpdateDraftTransaction?: (id: string, transaction: Omit<Transaction, 'id'>, documentChanges: TransactionDocumentChanges) => Promise<void> | void

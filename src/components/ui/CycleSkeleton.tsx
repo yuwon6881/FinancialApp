@@ -209,6 +209,21 @@ const ListRowSkeleton: React.FC = () => (
   </div>
 )
 
+/** A draft-row placeholder matching DraftStagingView's two-column mobile card. */
+const DraftRowSkeleton: React.FC = () => (
+  <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 rounded-2xl border border-border/60 bg-card p-4 shadow-xs">
+    <div className="min-w-0 space-y-2">
+      <Skeleton className="h-4 w-40 max-w-full" />
+      <div className="flex flex-wrap items-center gap-1.5 pr-10 lg:pr-0">
+        <Skeleton className="h-4 w-20 rounded-md" />
+        <Skeleton className="h-5 w-16 rounded-full" />
+        <Skeleton className="h-5 w-24 rounded-md" />
+      </div>
+    </div>
+    <Skeleton className="h-4 w-16 max-w-full" />
+  </div>
+)
+
 /**
  * Layout-specific skeletons shared by initial loading, lazy page transitions,
  * and cycle refreshes. Keeping them here prevents placeholders from drifting
@@ -439,7 +454,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
         </div>
       </div>
       <div className="space-y-3">
-        {[1, 2, 3, 4].map(i => <ListRowSkeleton key={i} />)}
+        {[1, 2, 3, 4].map(i => <DraftRowSkeleton key={i} />)}
       </div>
       <Skeleton className="h-11 w-full rounded-2xl" />
       <div className="rounded-2xl border border-border/70 bg-card/95 p-3 shadow-xs"><Skeleton className="h-11 w-full rounded-xl" /></div>

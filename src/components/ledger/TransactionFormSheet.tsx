@@ -10,11 +10,14 @@ import { TransactionDocumentsField } from './transaction-form/TransactionDocumen
 import { useReceiptSplitScan } from './transaction-form/useReceiptSplitScan'
 import type { TransactionType } from './transaction-form/transactionFormReducer'
 import type {
+  ActiveRecurringPayment,
+  CategorySummary,
   Transaction,
   TransactionCategory,
   AutocompleteSuggestion,
   TransactionDocumentChanges,
   LedgerAccount,
+  SavingsGoal,
 } from '../../types'
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../../lib/useReceiptSplitPolling'
 import type { ReceiptScanResult } from '../../lib/api'
@@ -45,6 +48,9 @@ export interface TransactionFormSheetProps {
   stabilityOverflowRedirect: string
   /** Current-cycle balances and recovery state; eligibility follows the transaction posting date. */
   stabilityTopUpContext?: StabilityTopUpContext
+  savingsGoals?: SavingsGoal[]
+  activeRecurringPayments?: ActiveRecurringPayment[]
+  ledgerSummaries?: CategorySummary[]
   onAddTransaction: (
     transaction: Omit<Transaction, 'id'>,
     documentChanges?: TransactionDocumentChanges,
@@ -213,6 +219,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             topUpOffer={form.topUpOffer}
             topUpBuckets={form.topUpBuckets}
             stabilityTopUpError={form.stabilityTopUpError}
+            bucketOutflowWarning={form.bucketOutflowWarning}
             hideSensitive={props.hideSensitive}
             stabilityAlloc={props.stabilityTopUpContext?.stabilityAlloc ?? props.stabilityAlloc}
           />

@@ -211,7 +211,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         id={actionsId}
         role="group"
         aria-label="Row actions"
-        className="absolute inset-y-0 right-0 flex items-stretch [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]"
+        className="absolute inset-y-0 right-0 z-0 flex items-stretch [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]"
         style={{ width: actionsWidth }}
         inert={!open}
         onClickCapture={closeForAction}
@@ -227,7 +227,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
           opaque: it is what hides the drawer while the row is closed. */}
       <m.div
         data-swipe-content
-        className={cn('relative w-full overflow-hidden bg-card', className, contentClassName)}
+        className={cn('relative z-10 w-full overflow-hidden', className, contentClassName, 'bg-card')}
         drag={disabled ? false : 'x'}
         dragConstraints={{ left: -actionsWidth, right: 0 }}
         dragElastic={0}

@@ -8,7 +8,6 @@ import { CustomConfirmModal } from '../../ui/CustomConfirmModal'
 import { Input } from '../../ui/Input'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { buildSingleAccountCorrection } from '../../../lib/accountBalanceCorrection'
-import { hasCompleteAccountCoverage } from '../../../lib/ledgerAccountCoverage'
 import { AccountFormSheet, type AccountFormSaveInput } from './AccountFormSheet'
 import { BucketAccountGroup } from './BucketAccountGroup'
 import { BucketAccountSetupSheet } from './BucketAccountSetupSheet'
@@ -85,9 +84,6 @@ export function AccountsSection({
     deletingId,
     searchQuery,
   })
-  // Coverage must use the complete account set, not the search-filtered rows; filtering one
-  // bucket must not make a fully configured account setup look incomplete.
-  const hasCoverage = hasCompleteAccountCoverage(accounts)
 
   const [editingAccount, setEditingAccount] = useState<LedgerAccount | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -227,12 +223,7 @@ export function AccountsSection({
               <Building2 className="size-5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-base font-bold text-foreground">Accounts</h3>
-                <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${hasCoverage ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500' : 'border-primary/25 bg-primary/10 text-accent-ink'}`}>
-                  {hasCoverage ? 'Coverage complete' : 'Setup required'}
-                </span>
-              </div>
+              <h3 className="text-base font-bold text-foreground">Accounts</h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Connect where your money lives to the four budget buckets.
               </p>

@@ -42,6 +42,16 @@ describe('buildAiLedgerDraftTransactions account placement', () => {
     expect(resolved.accountId).toBe('ess-1')
   })
 
+  it('honors an explicit reviewed account id when the bucket is ambiguous', () => {
+    const [draft] = buildAiLedgerDraftTransactions(
+      { description: 'lunch', amount: 12, txType: 'outflow', ledgerCategory: 'essentials', ledgerCategorySpecified: true, accountId: 'ess-2' },
+      categories,
+      [account('ess-1', 'Essentials'), account('ess-2', 'Essentials')],
+      '2026-08-01',
+    )
+    expect(draft.accountId).toBe('ess-2')
+  })
+
   it('names both legs of a transfer from their own buckets', () => {
     const [draft] = buildAiLedgerDraftTransactions(
       { description: 'move', amount: 50, txType: 'transfer', transferSource: 'essentials', transferTarget: 'rewards' },
