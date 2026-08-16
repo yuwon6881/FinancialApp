@@ -64,9 +64,6 @@ export interface TransactionQuery {
   maxAmount?: number
   recurringFilter?: TransactionLinkFilter
   wishlistFilter?: TransactionLinkFilter
-  /** Legacy wire-contract aliases; new callers should use the three-state filters. */
-  recurringOnly?: boolean
-  wishlistOnly?: boolean
   sort?: TransactionSort
 }
 
@@ -81,13 +78,9 @@ function appendTransactionQuery(params: URLSearchParams, query: TransactionQuery
   if (query.maxAmount !== undefined) params.append('maxAmount', query.maxAmount.toString())
   if (query.recurringFilter && query.recurringFilter !== 'all') {
     params.append('recurringFilter', query.recurringFilter)
-  } else if (query.recurringOnly) {
-    params.append('recurringOnly', 'true')
   }
   if (query.wishlistFilter && query.wishlistFilter !== 'all') {
     params.append('wishlistFilter', query.wishlistFilter)
-  } else if (query.wishlistOnly) {
-    params.append('wishlistOnly', 'true')
   }
   if (query.sort) params.append('sort', query.sort)
 }

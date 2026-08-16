@@ -15,13 +15,69 @@ export function projectLoanStates(
 ): Loan[] {
   const orderedOps = expandBulkTransactionProjection(ops)
     .sort((left, right) => left.createdAt - right.createdAt)
+  const recurringPaymentsById = new Map(recurringPayments.map(payment => [payment.id, payment]))
+  const opsByLoanId = new Map<string, QueuedOp[]>()
+  const opsByPaymentId = new Map<string, QueuedOp[]>()
+  const addIndexed = (index: Map<string, QueuedOp[]>, key: string | undefined, op: QueuedOp) => {
+    if (!key) return
+    const entries = index.get(key)
+    if (entries) entries.push(op)
+    else index.set(key, [op])
+  }
 
-  return loans.map(loan => projectLoan(loan, orderedOps, recurringPayments))
+  for (const op of orderedOps) {
+    if (op.entity === 'loan') {
+      addIndexed(opsByLoanId, op.targetId, op)
+      continue
+    }
+    if (op.entity === 'recurringPayment') {
+      addIndexed(opsByPaymentId, op.targetId, op)
+      continue
+    }
+    if (op.entity === 'recurringOccurrence' && op.type === 'settle') {
+      addIndexed(
+        opsByPaymentId,
+        typeof op.payload?.recurringPaymentId === 'string' ? op.payload.recurringPaymentId : undefined,
+        op,
+      )
+      continue
+    }
+    if (op.entity !== 'transaction' || !['add', 'update', 'delete'].includes(op.type)) continue
+    const before = getTransactionBefore(op)
+    const after = getTransactionAfter(op, before)
+    const paymentIds = new Set<string>()
+    if (typeof before?.recurringPaymentId === 'string') paymentIds.add(before.recurringPaymentId)
+    if (typeof after?.recurringPaymentId === 'string') paymentIds.add(after.recurringPaymentId)
+    for (const paymentId of paymentIds) addIndexed(opsByPaymentId, paymentId, op)
+  }
+
+  return loans.map(loan => projectLoan(
+    loan,
+    opsByLoanId.get(loan.id) ?? [],
+    opsByPaymentId,
+    recurringPaymentsById,
+  ))
 }
 
-function projectLoan(loan: Loan, ops: QueuedOp[], recurringPayments: RecurringPayment[]): Loan {
+function projectLoan(
+  loan: Loan,
+  loanOps: QueuedOp[],
+  opsByPaymentId: ReadonlyMap<string, QueuedOp[]>,
+  recurringPaymentsById: ReadonlyMap<string, RecurringPayment>,
+): Loan {
   const projectedLoan = { ...loan }
-  const linkedPayment = recurringPayments.find(payment => payment.id === loan.recurringPaymentId)
+  const paymentIds = new Set<string>()
+  if (loan.recurringPaymentId) paymentIds.add(loan.recurringPaymentId)
+  for (const op of loanOps) {
+    if (typeof op.payload?.recurringPaymentId === 'string') paymentIds.add(op.payload.recurringPaymentId)
+  }
+  const ops = [
+    ...loanOps,
+    ...[...paymentIds].flatMap(paymentId => opsByPaymentId.get(paymentId) ?? []),
+  ].sort((left, right) => left.createdAt - right.createdAt)
+  const linkedPayment = loan.recurringPaymentId
+    ? recurringPaymentsById.get(loan.recurringPaymentId)
+    : undefined
   const inputs: LoanPaymentInput[] = loan.snapshot.payments.map(payment => ({
     occurrenceDate: payment.occurrenceDate,
     postedAt: '',
@@ -44,7 +100,7 @@ function projectLoan(loan: Loan, ops: QueuedOp[], recurringPayments: RecurringPa
     }
 
     if (op.entity === 'loan' && op.targetId === loan.id) {
-      applyLoanOp(projectedLoan, op, recurringPayments)
+      applyLoanOp(projectedLoan, op, recurringPaymentsById)
       if (!op.isCompleted) {
         hadPendingEffect = true
         firstPendingEffectId ??= op.id
@@ -124,7 +180,11 @@ function applyRecurringPaymentOp(loan: Loan, op: QueuedOp) {
   }
 }
 
-function applyLoanOp(loan: Loan, op: QueuedOp, recurringPayments: RecurringPayment[]) {
+function applyLoanOp(
+  loan: Loan,
+  op: QueuedOp,
+  recurringPaymentsById: ReadonlyMap<string, RecurringPayment>,
+) {
   if (op.type === 'delete') return
   if (op.type !== 'add' && op.type !== 'update') return
   const payload = op.payload
@@ -152,7 +212,9 @@ function applyLoanOp(loan: Loan, op: QueuedOp, recurringPayments: RecurringPayme
   if (payload?.scheduleStatus === 'Complete' || payload?.scheduleStatus === 'Incomplete') {
     loan.scheduleStatus = payload.scheduleStatus
   }
-  const linkedPayment = recurringPayments.find(payment => payment.id === loan.recurringPaymentId)
+  const linkedPayment = loan.recurringPaymentId
+    ? recurringPaymentsById.get(loan.recurringPaymentId)
+    : undefined
   if (linkedPayment && loan.recurringPaymentId !== previousPaymentId) {
     loan.recurringPaymentExists = true
     loan.recurringPaymentName = linkedPayment.name

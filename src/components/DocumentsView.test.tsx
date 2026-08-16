@@ -12,10 +12,6 @@ import { EMPTY_RETENTION_REVIEW } from '../lib/documentRetention'
 const api = vi.hoisted(() => ({
   listDocuments: vi.fn(),
   getDocumentOverview: vi.fn(),
-  getDocumentUsage: vi.fn(),
-  getAvailableDocumentYears: vi.fn(),
-  getDocumentRetentionReview: vi.fn(),
-  getTaxYearReliefSummary: vi.fn(),
   getTaxReliefCategories: vi.fn(),
   bulkUpdateDocumentCategories: vi.fn(),
   bulkDeleteDocuments: vi.fn(),
@@ -54,6 +50,24 @@ const document: VaultDocument = {
   amountExtractionMessage: null,
 }
 
+const documentOverview = {
+  usage: { totalBytes: 12, documentCount: 1, quotaBytes: 1000 },
+  availableYears: [2026],
+  retention: EMPTY_RETENTION_REVIEW,
+  selectedTaxYear: 2026,
+  summary: {
+    taxYear: 2026,
+    confirmedAmount: 0,
+    pendingReviewAmount: 0,
+    documentCount: 1,
+    categories: [],
+  },
+  reliefCategories: [
+    { id: 'lifestyle', name: 'Lifestyle', limit: 2500 },
+    { id: 'medical', name: 'Medical', limit: 8000 },
+  ],
+}
+
 describe('DocumentsView', () => {
   beforeAll(() => {
     globalThis.ResizeObserver = class {
@@ -66,28 +80,11 @@ describe('DocumentsView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     api.listDocuments.mockResolvedValue({ items: [document], totalCount: 1 })
-    api.getDocumentUsage.mockResolvedValue({ totalBytes: 12, documentCount: 1, quotaBytes: 1000 })
-    api.getAvailableDocumentYears.mockResolvedValue([2026])
-    api.getDocumentRetentionReview.mockResolvedValue(EMPTY_RETENTION_REVIEW)
-    api.getTaxYearReliefSummary.mockResolvedValue({
-      taxYear: 2026,
-      confirmedAmount: 0,
-      pendingReviewAmount: 0,
-      documentCount: 1,
-      categories: [],
-    })
     api.getTaxReliefCategories.mockResolvedValue([
       { id: 'lifestyle', name: 'Lifestyle', limit: 2500 },
       { id: 'medical', name: 'Medical', limit: 8000 },
     ])
-    api.getDocumentOverview.mockImplementation(async (taxYear?: number) => ({
-      usage: await api.getDocumentUsage(),
-      availableYears: await api.getAvailableDocumentYears(),
-      retention: await api.getDocumentRetentionReview(),
-      selectedTaxYear: taxYear ?? 2026,
-      summary: await api.getTaxYearReliefSummary(taxYear ?? 2026),
-      reliefCategories: await api.getTaxReliefCategories(taxYear ?? 2026),
-    }))
+    api.getDocumentOverview.mockResolvedValue(documentOverview)
     api.deleteDocument.mockResolvedValue(undefined)
   })
 
@@ -116,13 +113,13 @@ describe('DocumentsView', () => {
   })
 
   it('warns before the keep-until date and keeps the manual-only promise', async () => {
-    api.getDocumentRetentionReview.mockResolvedValue({
+    api.getDocumentOverview.mockResolvedValue({ ...documentOverview, retention: {
       taxYears: [
         { taxYear: 2019, documentCount: 3, totalBytes: 1_400_000, keepUntil: '2026-12-31', daysUntilKeepUntil: 150 },
       ],
       noticeWindowDays: 180,
       keepYears: 7,
-    })
+    } })
 
     render(<DocumentsView />)
 

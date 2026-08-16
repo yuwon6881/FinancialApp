@@ -33,10 +33,6 @@ export interface TransactionFilterCriteria {
   recurringFilter?: TransactionLinkFilter
   /** Whether wishlist-linked transactions are included, excluded, or shown alone. */
   wishlistFilter?: TransactionLinkFilter
-  /** Legacy alias for callers that only know the positive filter. */
-  recurringOnly?: boolean
-  /** Legacy alias for callers that only know the positive filter. */
-  wishlistOnly?: boolean
 }
 
 /**
@@ -54,10 +50,6 @@ export function splitFilterSelections(filters: string[]): { buckets: string[]; c
 /** Whether a transaction is income (plain Income bucket or an IncomeSplit). */
 export function isIncomeLedgerCategory(ledgerCategory: string | null | undefined): boolean {
   return ledgerCategory === 'Income' || (ledgerCategory || '').startsWith('IncomeSplit:')
-}
-
-function resolveLinkFilter(filter: TransactionLinkFilter | undefined, only: boolean | undefined): TransactionLinkFilter {
-  return filter ?? (only ? 'only' : 'all')
 }
 
 function matchesLinkFilter(hasLink: boolean, filter: TransactionLinkFilter): boolean {
@@ -84,8 +76,6 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
     maxAmount,
     recurringFilter,
     wishlistFilter,
-    recurringOnly,
-    wishlistOnly,
   } = criteria
 
   if (startDate && t.date < startDate) return false
@@ -95,8 +85,8 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
   if (minAmount !== undefined && absoluteAmount < minAmount) return false
   if (maxAmount !== undefined && absoluteAmount > maxAmount) return false
 
-  if (!matchesLinkFilter(Boolean(t.recurringPaymentId), resolveLinkFilter(recurringFilter, recurringOnly))) return false
-  if (!matchesLinkFilter(t.wishlistItemId != null, resolveLinkFilter(wishlistFilter, wishlistOnly))) return false
+  if (!matchesLinkFilter(Boolean(t.recurringPaymentId), recurringFilter ?? 'all')) return false
+  if (!matchesLinkFilter(t.wishlistItemId != null, wishlistFilter ?? 'all')) return false
 
   if (search) {
     const q = search.toLowerCase()

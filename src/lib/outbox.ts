@@ -670,6 +670,20 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
   options?: ApplyOpsOptions
 ): T[] {
   let result = baseList.map(item => ({ ...item }))
+  // The replay can touch the same server-generated list row many times. Keep a small id index
+  // for exact lookups; structural changes validate and repair a stale entry lazily, so list
+  // ordering and all existing projection semantics remain unchanged.
+  const resultIndexes = new Map<string, number>()
+  result.forEach((item, index) => resultIndexes.set(String(item.id), index))
+  const findResultIndex = (id: string | number) => {
+    const key = String(id)
+    const cached = resultIndexes.get(key)
+    if (cached !== undefined && String(result[cached]?.id) === key) return cached
+    const index = result.findIndex(item => String(item.id) === key)
+    if (index >= 0) resultIndexes.set(key, index)
+    else resultIndexes.delete(key)
+    return index
+  }
   const projectionOps = expandBulkTransactionProjection(ops).filter(op => !op.needsAccountReview)
   const entityOps = projectionOps.filter(op => op.entity === entity)
   const unorderedOps = entity === 'transaction'
@@ -724,7 +738,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         ...reconciliation,
       })
       for (const row of projectedRows) {
-        if (!result.some(item => String(item.id) === String(row.id))) {
+        if (findResultIndex(row.id) < 0) {
           result = [{ ...row, isPendingSync: !op.isCompleted, pendingSyncOperationId: op.isCompleted ? undefined : op.id } as unknown as T, ...result]
         }
       }
@@ -738,7 +752,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
       const rawWishlistItemId = op.payload?.wishlistItemId ?? nestedSnapshot?.wishlistItemId
       const wishlistItemId = rawWishlistItemId == null ? '' : String(rawWishlistItemId)
       const existingIndex = wishlistItemId
-        ? result.findIndex(item => String(item.id) === wishlistItemId)
+        ? findResultIndex(wishlistItemId)
         : -1
       if (existingIndex >= 0) {
         result[existingIndex] = op.type === 'delete'
@@ -769,7 +783,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         : op.payload as Record<string, unknown> | undefined
       const paymentId = typeof snapshot?.recurringPaymentId === 'string' ? snapshot.recurringPaymentId : ''
       const occurrenceDate = typeof snapshot?.recurringOccurrenceDate === 'string' ? snapshot.recurringOccurrenceDate : ''
-      const existingIndex = paymentId ? result.findIndex(item => String(item.id) === paymentId) : -1
+      const existingIndex = paymentId ? findResultIndex(paymentId) : -1
       if (existingIndex >= 0 && occurrenceDate) {
         result[existingIndex] = {
           ...result[existingIndex],
@@ -782,7 +796,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
     }
 
     if (op.entity === 'recurringPayment' && op.type === 'reminder' && entity === 'recurringPayment') {
-      const existingIndex = result.findIndex(item => String(item.id) === targetStr)
+      const existingIndex = findResultIndex(targetStr)
       if (existingIndex >= 0) {
         result[existingIndex] = {
           ...result[existingIndex],
@@ -798,7 +812,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
 
     if (op.entity === 'recurringPayment' && op.type === 'payEarly') {
       if (entity === 'recurringPayment') {
-        const existingIndex = result.findIndex(item => String(item.id) === targetStr)
+        const existingIndex = findResultIndex(targetStr)
         if (existingIndex >= 0) {
           const nextDate = op.isCompleted
             ? (typeof op.payload?.nextOccurrenceDate === 'string'
@@ -825,11 +839,12 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           const occurrenceDate = typeof transaction.recurringOccurrenceDate === 'string'
             ? transaction.recurringOccurrenceDate
             : typeof op.payload?.occurrenceDate === 'string' ? op.payload.occurrenceDate : undefined
-          const existingIndex = result.findIndex(item =>
-            (transactionId && String(item.id) === transactionId) ||
+          const existingIndex = transactionId
+            ? findResultIndex(transactionId)
+            : result.findIndex(item =>
             (String((item as T & { recurringPaymentId?: string | null }).recurringPaymentId) === recurringPaymentId &&
               occurrenceDate != null && (item as T & { recurringOccurrenceDate?: string | null }).recurringOccurrenceDate === occurrenceDate)
-          )
+            )
           const projected = {
             ...transaction,
             ...(transactionId ? { id: transactionId } : {}),
@@ -847,7 +862,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
     if (op.entity === 'recurringOccurrence' && op.type === 'settle') {
       if (entity === 'recurringPayment') {
         const paymentId = typeof op.payload?.recurringPaymentId === 'string' ? op.payload.recurringPaymentId : ''
-        const existingIndex = result.findIndex(item => String(item.id) === paymentId)
+        const existingIndex = findResultIndex(paymentId)
         if (existingIndex >= 0) {
           const nextDate = op.isCompleted
             ? op.payload?.nextOccurrenceDate
@@ -864,7 +879,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         if (rawTransaction && typeof rawTransaction === 'object') {
           const transaction = rawTransaction as Record<string, unknown>
           const transactionId = typeof transaction.id === 'string' ? transaction.id : `tx-${op.id}`
-          const existingIndex = result.findIndex(item => String(item.id) === transactionId)
+          const existingIndex = findResultIndex(transactionId)
           const projected = {
             ...transaction,
             id: transactionId,
@@ -982,7 +997,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         isPendingSync: !op.isCompleted
       } as T
 
-      const existingIndex = result.findIndex(item => String(item.id) === targetStr)
+      const existingIndex = findResultIndex(targetStr)
       if (existingIndex >= 0) {
         result[existingIndex] = newItem
       } else {
@@ -999,7 +1014,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         )
       }
     } else if (op.type === 'update') {
-      const existingIndex = result.findIndex(item => String(item.id) === targetStr)
+      const existingIndex = findResultIndex(targetStr)
       if (existingIndex >= 0) {
         if (entity === 'wishlistItem' && op.payload && op.payload.isActive === true) {
           result = result.map((item, idx) => {
@@ -1073,7 +1088,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         }
       }
     } else if (op.type === 'toggle') {
-      const existingIndex = result.findIndex(item => String(item.id) === targetStr)
+      const existingIndex = findResultIndex(targetStr)
       if (existingIndex >= 0) {
         const item = result[existingIndex] as T & { active?: boolean }
         // Prefer the absolute desired state captured at click time; only fall back to a
@@ -1110,7 +1125,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         isPendingSync: !op.isCompleted
       } as unknown as T
 
-      const existingIndex = result.findIndex(item => String(item.id) === String(syntheticId))
+      const existingIndex = findResultIndex(String(syntheticId))
       if (existingIndex >= 0) {
         result[existingIndex] = {
           ...result[existingIndex],
@@ -1135,7 +1150,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         }
       }
     } else if (op.type === 'purchase') {
-      const existingIndex = result.findIndex(item => String(item.id) === targetStr)
+      const existingIndex = findResultIndex(targetStr)
       if (existingIndex >= 0) {
         const item = result[existingIndex] as T & { isPurchased?: boolean; purchasedAt?: string; purchaseTransactionId?: string | null }
         result[existingIndex] = {
@@ -1156,7 +1171,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         }))
       }
     } else if (op.type === 'unpurchase') {
-      const existingIndex = result.findIndex(item => String(item.id) === targetStr)
+      const existingIndex = findResultIndex(targetStr)
       if (existingIndex >= 0) {
         const item = result[existingIndex] as T & { isPurchased?: boolean; purchasedAt?: string; purchaseTransactionId?: string | null }
         result[existingIndex] = {
@@ -1187,7 +1202,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           isPendingDelete: false,
           isPendingSync: !op.isCompleted,
         } as unknown as T
-        const existingIndex = result.findIndex(item => String(item.id) === snapshotId)
+        const existingIndex = findResultIndex(snapshotId)
         if (existingIndex >= 0) result[existingIndex] = restored
         else result = [restored, ...result]
       }

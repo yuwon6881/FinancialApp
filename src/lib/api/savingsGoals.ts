@@ -1,5 +1,5 @@
 import type { SavingsGoal, SavingsGoalFundingBucket } from '../../types'
-import type { WireSavingsGoal, WireSavingsGoalCompletionResult, WireSavingsGoalFundingResult, WireSavingsGoalPool } from '../apiTypes'
+import type { WireSavingsGoal, WireSavingsGoalCompletionResult, WireSavingsGoalFundingResult } from '../apiTypes'
 import { deobfuscateAmount, deobfuscateSavingsGoal, deobfuscateTransaction, obfuscateAmount } from './amounts'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
@@ -10,33 +10,6 @@ export function fetchSavingsGoals(signal?: AbortSignal): Promise<SavingsGoal[]> 
     })
     return (data || []).map(deobfuscateSavingsGoal)
   }, { signal, staleTime: 120_000 })
-}
-
-export interface SavingsGoalPool {
-  rewardsBalance: number
-  totalEarmarked: number
-  unassigned: number
-  requiredPerCycleTotal: number
-  currentCycleKey: string
-}
-
-/**
- * The server's own view of how the Rewards pool divides. The page derives the same numbers locally
- * (so they stay correct while offline and reflect queued ops), but this is the authority the
- * earmark invariant is actually enforced against.
- */
-export async function fetchSavingsGoalPool(signal?: AbortSignal): Promise<SavingsGoalPool> {
-  const data = await request<WireSavingsGoalPool>('/savings-goals/pool', {
-    signal,
-    errorMessage: 'Failed to fetch the rewards pool summary',
-  })
-  return {
-    rewardsBalance: deobfuscateAmount(data.rewardsBalance),
-    totalEarmarked: deobfuscateAmount(data.totalEarmarked),
-    unassigned: deobfuscateAmount(data.unassigned),
-    requiredPerCycleTotal: deobfuscateAmount(data.requiredPerCycleTotal),
-    currentCycleKey: data.currentCycleKey ?? '',
-  }
 }
 
 function toMutationBody(goal: Partial<SavingsGoal>) {

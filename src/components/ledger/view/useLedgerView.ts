@@ -29,9 +29,6 @@ export interface UseLedgerViewOptions {
   incomingMaxAmount?: string | null | undefined
   incomingRecurringFilter?: TransactionLinkFilter | undefined
   incomingWishlistFilter?: TransactionLinkFilter | undefined
-  /** Legacy navigation aliases; true maps to the new `only` mode. */
-  incomingRecurringOnly?: boolean | undefined
-  incomingWishlistOnly?: boolean | undefined
   incomingTxType?: 'inflow' | 'outflow' | 'transfer' | null | undefined
   highlightedTxId?: string | null | undefined
   onClearIncomingFilters?: () => void
@@ -111,8 +108,6 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     incomingMaxAmount,
     incomingRecurringFilter,
     incomingWishlistFilter,
-    incomingRecurringOnly,
-    incomingWishlistOnly,
     incomingTxType,
     highlightedTxId,
     onClearIncomingFilters,
@@ -139,8 +134,8 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const initialFilters = incomingFilters ?? (incomingCategory ? [incomingCategory] : [])
   const initialStartDate = incomingStartDate ?? incomingDate ?? ''
   const initialEndDate = incomingEndDate ?? incomingDate ?? ''
-  const initialRecurringFilter: TransactionLinkFilter = incomingRecurringFilter ?? (incomingRecurringOnly ? 'only' : 'all')
-  const initialWishlistFilter: TransactionLinkFilter = incomingWishlistFilter ?? (incomingWishlistOnly ? 'only' : 'all')
+  const initialRecurringFilter: TransactionLinkFilter = incomingRecurringFilter ?? 'all'
+  const initialWishlistFilter: TransactionLinkFilter = incomingWishlistFilter ?? 'all'
   const [searchTerm, setSearchTerm] = useState(incomingSearch || '')
   const [selectedFilters, setSelectedFilters] = useState<string[]>(initialFilters)
   const [selectedStartDate, setSelectedStartDate] = useState(initialStartDate)
@@ -352,8 +347,8 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       const initialEndDate = incomingEndDate ?? incomingDate ?? ''
       const initialMinAmount = incomingMinAmount || ''
       const initialMaxAmount = incomingMaxAmount || ''
-      const initialRecurringFilter = incomingRecurringFilter ?? (incomingRecurringOnly ? 'only' : 'all')
-      const initialWishlistFilter = incomingWishlistFilter ?? (incomingWishlistOnly ? 'only' : 'all')
+      const initialRecurringFilter = incomingRecurringFilter ?? 'all'
+      const initialWishlistFilter = incomingWishlistFilter ?? 'all'
 
       setPendingSearchTerm(initialSearch)
       setPendingFilters(initialFilters)
@@ -397,7 +392,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       setServerResult(null)
       isInitialFetchDone.current = false
     }
-  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingFilters, incomingTxType, incomingSearch, incomingDate, incomingStartDate, incomingEndDate, incomingMinAmount, incomingMaxAmount, incomingRecurringFilter, incomingWishlistFilter, incomingRecurringOnly, incomingWishlistOnly, sortOrder])
+  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingFilters, incomingTxType, incomingSearch, incomingDate, incomingStartDate, incomingEndDate, incomingMinAmount, incomingMaxAmount, incomingRecurringFilter, incomingWishlistFilter, sortOrder])
 
   // Re-fetch when page changes in server mode
   useEffect(() => {
@@ -496,12 +491,12 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   }, [incomingMinAmount, incomingMaxAmount])
 
   useEffect(() => {
-    setSelectedRecurringFilter(incomingRecurringFilter ?? (incomingRecurringOnly ? 'only' : 'all'))
-  }, [incomingRecurringFilter, incomingRecurringOnly])
+    setSelectedRecurringFilter(incomingRecurringFilter ?? 'all')
+  }, [incomingRecurringFilter])
 
   useEffect(() => {
-    setSelectedWishlistFilter(incomingWishlistFilter ?? (incomingWishlistOnly ? 'only' : 'all'))
-  }, [incomingWishlistFilter, incomingWishlistOnly])
+    setSelectedWishlistFilter(incomingWishlistFilter ?? 'all')
+  }, [incomingWishlistFilter])
 
   useEffect(() => {
     setSelectedTxTypeFilter(incomingTxType || null)

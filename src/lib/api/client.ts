@@ -268,10 +268,6 @@ function rememberRevalidation(key: string, etag: string, payload: unknown) {
   revalidationStore.set(key, { etag, payload })
 }
 
-export function clearRevalidationStore() {
-  revalidationStore.clear()
-}
-
 export function invalidateCacheKey(key: string): void {
   cacheStore.delete(key)
 }

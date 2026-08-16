@@ -111,8 +111,8 @@ describe('matchesTransactionFilters', () => {
   })
 
   it('filters recurring transactions by their recurring payment link', () => {
-    expect(matchesTransactionFilters(tx({ recurringPaymentId: 'rent' }), { recurringOnly: true })).toBe(true)
-    expect(matchesTransactionFilters(tx({ recurringPaymentId: null }), { recurringOnly: true })).toBe(false)
+    expect(matchesTransactionFilters(tx({ recurringPaymentId: 'rent' }), { recurringFilter: 'only' })).toBe(true)
+    expect(matchesTransactionFilters(tx({ recurringPaymentId: null }), { recurringFilter: 'only' })).toBe(false)
   })
 
   it('supports all three recurring relationship modes', () => {
@@ -127,8 +127,8 @@ describe('matchesTransactionFilters', () => {
   })
 
   it('filters wishlist purchases by their wishlist item link', () => {
-    expect(matchesTransactionFilters(tx({ wishlistItemId: 7 }), { wishlistOnly: true })).toBe(true)
-    expect(matchesTransactionFilters(tx({ wishlistItemId: null }), { wishlistOnly: true })).toBe(false)
+    expect(matchesTransactionFilters(tx({ wishlistItemId: 7 }), { wishlistFilter: 'only' })).toBe(true)
+    expect(matchesTransactionFilters(tx({ wishlistItemId: null }), { wishlistFilter: 'only' })).toBe(false)
   })
 
   it('supports all three wishlist relationship modes', () => {

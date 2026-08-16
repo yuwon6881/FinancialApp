@@ -65,15 +65,6 @@ export type WireSavingsGoal = Omit<SavingsGoal, 'targetAmount' | 'earmarkedAmoun
   cycleFundedAmount: WireAmount
 }
 
-export interface WireSavingsGoalPool {
-  rewardsBalance: WireAmount
-  totalEarmarked: WireAmount
-  unassigned: WireAmount
-  requiredPerCycleTotal: WireAmount
-  outstandingThisCycleTotal: WireAmount
-  currentCycleKey?: string
-}
-
 export interface WireSavingsGoalFundingResult {
   goals?: WireSavingsGoal[]
   totalGranted: WireAmount

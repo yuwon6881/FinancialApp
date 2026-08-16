@@ -251,13 +251,6 @@ export async function deleteTaxReliefCategory(taxYear: number, categoryId: strin
   invalidateDocumentReliefCategoryData()
 }
 
-export function getTaxYearReliefSummary(taxYear: number): Promise<TaxYearReliefSummary> {
-  return cachedGet(DOCUMENT_CACHE_KEYS.summary(taxYear), () => request<TaxYearReliefSummary>(`/documents/summary/${taxYear}`, {
-    method: 'GET',
-    errorMessage: 'Failed to load tax relief summary',
-  }), { staleTime: DOCUMENT_CACHE_TTL.derived })
-}
-
 export function getDocumentRetentionReview(): Promise<DocumentRetentionReview> {
   return cachedGet(DOCUMENT_CACHE_KEYS.retention, () => request<DocumentRetentionReview>('/documents/retention', {
     method: 'GET',
@@ -306,20 +299,6 @@ export async function deleteDocument(id: number): Promise<void> {
     errorMessage: 'Failed to delete document',
   })
   invalidateDocumentDerivedData()
-}
-
-export async function getDocumentUsage(): Promise<DocumentVaultUsage> {
-  return cachedGet(DOCUMENT_CACHE_KEYS.usage, () => request<DocumentVaultUsage>('/documents/usage', {
-    method: 'GET',
-    errorMessage: 'Failed to get document usage',
-  }), { staleTime: DOCUMENT_CACHE_TTL.derived })
-}
-
-export function getAvailableDocumentYears(): Promise<number[]> {
-  return cachedGet(DOCUMENT_CACHE_KEYS.years, () => request<number[]>('/documents/years', {
-    method: 'GET',
-    errorMessage: 'Failed to load document years',
-  }), { staleTime: DOCUMENT_CACHE_TTL.derived })
 }
 
 export async function downloadDocument(id: number, fileName: string): Promise<void> {

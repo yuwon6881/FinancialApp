@@ -149,10 +149,6 @@ export async function updateCategory(id: string, updates: { cycleLimit?: number 
   return mapCategory(result)
 }
 
-export async function updateCategoryCycleLimit(id: string, cycleLimit: number | null): Promise<TransactionCategory> {
-  return updateCategory(id, { cycleLimit })
-}
-
 export async function deleteCategory(id: string, replacementCategoryId?: string): Promise<void> {
   const query = replacementCategoryId
     ? `?replacementCategoryId=${encodeURIComponent(replacementCategoryId)}`

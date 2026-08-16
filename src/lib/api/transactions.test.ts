@@ -7,7 +7,7 @@ describe('fetchPagedTransactions', () => {
     vi.restoreAllMocks()
   })
 
-  it('sends the wishlist-only filter for all-cycle paging', async () => {
+  it('sends the wishlist-only relationship filter for all-cycle paging', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -16,10 +16,10 @@ describe('fetchPagedTransactions', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    await fetchPagedTransactions({ page: 1, pageSize: 10, wishlistOnly: true, sort: 'amount-desc' })
+    await fetchPagedTransactions({ page: 1, pageSize: 10, wishlistFilter: 'only', sort: 'amount-desc' })
 
     const url = new URL(String(fetchMock.mock.calls[0][0]))
-    expect(url.searchParams.get('wishlistOnly')).toBe('true')
+    expect(url.searchParams.get('wishlistFilter')).toBe('only')
     expect(url.searchParams.get('sort')).toBe('amount-desc')
     expect(url.searchParams.get('all')).toBe('true')
   })
@@ -43,7 +43,5 @@ describe('fetchPagedTransactions', () => {
     const url = new URL(String(fetchMock.mock.calls[0][0]))
     expect(url.searchParams.get('recurringFilter')).toBe('exclude')
     expect(url.searchParams.get('wishlistFilter')).toBe('only')
-    expect(url.searchParams.get('recurringOnly')).toBeNull()
-    expect(url.searchParams.get('wishlistOnly')).toBeNull()
   })
 })

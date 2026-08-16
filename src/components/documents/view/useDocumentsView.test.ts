@@ -6,10 +6,6 @@ import { EMPTY_RETENTION_REVIEW } from '../../../lib/documentRetention'
 const api = vi.hoisted(() => ({
   listDocuments: vi.fn(),
   getDocumentOverview: vi.fn(),
-  getDocumentUsage: vi.fn(),
-  getAvailableDocumentYears: vi.fn(),
-  getDocumentRetentionReview: vi.fn(),
-  getTaxYearReliefSummary: vi.fn(),
   getTaxReliefCategories: vi.fn(),
   addTaxReliefCategory: vi.fn(),
   updateTaxReliefCategory: vi.fn(),
@@ -39,29 +35,27 @@ const document = {
   amountExtractionMessage: null,
 }
 
+const documentOverview = {
+  usage: { totalBytes: 12, documentCount: 1 },
+  availableYears: [2026, 2025],
+  retention: EMPTY_RETENTION_REVIEW,
+  selectedTaxYear: 2026,
+  summary: {
+    taxYear: 2026,
+    confirmedAmount: 0,
+    pendingReviewAmount: 0,
+    documentCount: 1,
+    categories: [],
+  },
+  reliefCategories: [],
+}
+
 describe('useDocumentsView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     api.listDocuments.mockResolvedValue({ items: [document], totalCount: 1 })
-    api.getDocumentUsage.mockResolvedValue({ totalBytes: 12, documentCount: 1 })
-    api.getAvailableDocumentYears.mockResolvedValue([2026, 2025])
-    api.getDocumentRetentionReview.mockResolvedValue(EMPTY_RETENTION_REVIEW)
-    api.getTaxYearReliefSummary.mockResolvedValue({
-      taxYear: 2026,
-      confirmedAmount: 0,
-      pendingReviewAmount: 0,
-      documentCount: 1,
-      categories: [],
-    })
     api.getTaxReliefCategories.mockResolvedValue([])
-    api.getDocumentOverview.mockImplementation(async (taxYear?: number) => ({
-      usage: await api.getDocumentUsage(),
-      availableYears: await api.getAvailableDocumentYears(),
-      retention: await api.getDocumentRetentionReview(),
-      selectedTaxYear: taxYear ?? 2026,
-      summary: await api.getTaxYearReliefSummary(taxYear ?? 2026),
-      reliefCategories: await api.getTaxReliefCategories(taxYear ?? 2026),
-    }))
+    api.getDocumentOverview.mockResolvedValue(documentOverview)
     api.addTaxReliefCategory.mockResolvedValue({ id: 'category', name: 'Category', limit: 100 })
     api.updateTaxReliefCategory.mockResolvedValue({ id: 'category', name: 'Category', limit: 100 })
     api.deleteTaxReliefCategory.mockResolvedValue(undefined)
@@ -77,7 +71,7 @@ describe('useDocumentsView', () => {
     expect(result.current.isInitialLoading).toBe(false)
     expect(result.current.usage).toEqual({ totalBytes: 12, documentCount: 1 })
 
-    api.getDocumentUsage.mockResolvedValue({ totalBytes: 0, documentCount: 0 })
+    api.getDocumentOverview.mockResolvedValue({ ...documentOverview, usage: { totalBytes: 0, documentCount: 0 } })
     await act(async () => {
       await result.current.deleteDocument(1)
     })

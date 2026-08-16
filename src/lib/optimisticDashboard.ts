@@ -117,9 +117,23 @@ export function computeOptimisticDashboard(
     .filter(transaction => !transaction.isPendingDelete)
   const baseCycleTransactions = transactions.filter(inSelectedCycle)
   const projectedCycleTransactions = projectedTransactions.filter(inSelectedCycle)
-  const bucketTransactions = (items: Transaction[]) => items.filter(transaction =>
-    !transaction.ledgerCategory.toLowerCase().startsWith('incomesplit:') ||
-    !items.some(candidate => String(candidate.id).startsWith(`${transaction.id}-split-`)))
+  const bucketTransactions = (items: Transaction[]) => {
+    // Generated income rows used to ask the whole list whether each parent had a split child.
+    // The dashboard is already replaying a large list here, so make that relationship a single
+    // pass instead of an O(n²) nested scan.
+    const splitParentIds = new Set(
+      items
+        .map(item => {
+          const id = String(item.id)
+          const marker = id.indexOf('-split-')
+          return marker > 0 ? id.slice(0, marker) : null
+        })
+        .filter((id): id is string => id !== null),
+    )
+    return items.filter(transaction =>
+      !transaction.ledgerCategory.toLowerCase().startsWith('incomesplit:') ||
+      !splitParentIds.has(String(transaction.id)))
+  }
   const baseBucketTransactions = bucketTransactions(baseCycleTransactions)
   const projectedBucketTransactions = bucketTransactions(projectedCycleTransactions)
   const buckets = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
@@ -228,6 +242,7 @@ export function computeOptimisticDashboard(
   }
 
   const pendingBills = data.activeRecurringPayments.filter(payment => payment.status === 'Pending')
+  const categoryCollator = new Intl.Collator(undefined, { sensitivity: 'accent' })
   const totalDays = data.cycleSummaryInsights.cycleLengthDays
   const todayKey = dateKey(new Date())
   const elapsedDays = todayKey < selectedStart
@@ -239,13 +254,13 @@ export function computeOptimisticDashboard(
   data.categoryLimitProgress = (data.categoryLimitProgress ?? []).map(limit => {
     const categoryTransactions = projectedCycleTransactions.filter(transaction =>
       isReportableOutflow(transaction) &&
-      transaction.category.localeCompare(limit.category, undefined, { sensitivity: 'accent' }) === 0)
+      categoryCollator.compare(transaction.category, limit.category) === 0)
     const spent = categoryTransactions.reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0)
     const recurringSpent = categoryTransactions.filter(transaction => transaction.recurringPaymentId)
       .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0)
     const nonRecurringSpent = spent - recurringSpent
     const pendingCommitted = pendingBills
-      .filter(payment => payment.category.localeCompare(limit.category, undefined, { sensitivity: 'accent' }) === 0)
+      .filter(payment => categoryCollator.compare(payment.category, limit.category) === 0)
       .reduce((sum, payment) => sum + Math.abs(payment.amount ?? 0), 0)
     const projectedSpend = isEnded
       ? spent

@@ -45,15 +45,6 @@ export function loanInterestMethodCopy(method: LoanInterestMethod) {
   return LOAN_INTEREST_METHOD_COPY[method]
 }
 
-export function loanInterestMethodLabel(method: LoanInterestMethod) {
-  return loanInterestMethodCopy(method).label
-}
-
-export const LOAN_RATE_BASIS_LABELS: Record<LoanRateBasis, string> = {
-  Yearly: 'a year',
-  Monthly: 'a month',
-}
-
 export const LOAN_RATE_BASIS_OPTIONS = [
   { value: 'Yearly' as const, label: 'per year' },
   { value: 'Monthly' as const, label: 'per month' },

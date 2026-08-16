@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode, TdHTMLAttributes, ThHTMLAttributes } from 'react'
+import type { HTMLAttributes, ReactNode, ThHTMLAttributes } from 'react'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Button } from './Button'
@@ -60,14 +60,6 @@ export function DataTableHeaderCell({ children, className, ...props }: ThHTMLAtt
     <th scope="col" className={cn('p-4', className)} {...props}>
       {children}
     </th>
-  )
-}
-
-export function DataTableCell({ children, className, ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
-  return (
-    <td className={cn('p-4', className)} {...props}>
-      {children}
-    </td>
   )
 }
 

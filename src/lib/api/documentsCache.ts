@@ -13,10 +13,6 @@ export const DOCUMENT_CACHE_KEYS = {
   listPrefix: 'documents:list:',
   reliefCategoriesPrefix: 'documents:relief-categories:',
   reliefCategories: (taxYear: number) => `documents:relief-categories:${taxYear}`,
-  summaryPrefix: 'documents:summary:',
-  summary: (taxYear: number) => `documents:summary:${taxYear}`,
-  usage: 'documents:usage',
-  years: 'documents:years',
 } as const
 
 export const DOCUMENT_CACHE_TTL = {
@@ -47,12 +43,9 @@ export function documentListCacheKey(
 
 export function invalidateDocumentDerivedData(): void {
   invalidateCachePrefix(DOCUMENT_CACHE_KEYS.listPrefix)
-  invalidateCachePrefix(DOCUMENT_CACHE_KEYS.summaryPrefix)
   invalidateCachePrefix(DOCUMENT_CACHE_KEYS.overviewPrefix)
-  invalidateCacheKey(DOCUMENT_CACHE_KEYS.usage)
-  invalidateCacheKey(DOCUMENT_CACHE_KEYS.years)
   invalidateCacheKey(DOCUMENT_CACHE_KEYS.retention)
-  for (const prefix of ['/documents?', '/documents/overview', '/documents/summary', '/documents/usage', '/documents/years', '/documents/retention']) {
+  for (const prefix of ['/documents?', '/documents/overview', '/documents/retention']) {
     invalidateRevalidationPrefix(prefix)
   }
 }

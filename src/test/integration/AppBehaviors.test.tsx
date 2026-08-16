@@ -115,7 +115,6 @@ vi.mock('@/lib/api', async () => {
     }),
     selectPeriod: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue({ success: true }),
-    pingServer: vi.fn().mockResolvedValue({ status: 'healthy' }),
     updateHideSensitive: apiMocks.updateHideSensitive,
     updateSummarySeen: apiMocks.updateSummarySeen,
     fetchInvestmentAllocation: vi.fn().mockResolvedValue({
@@ -253,8 +252,6 @@ describe('App behaviors', () => {
     await waitFor(() => {
       expect(screen.getByTestId('app-loading-skeleton')).toBeDefined()
     })
-    expect(api.pingServer).not.toHaveBeenCalled()
-
     await waitFor(() => {
       expect(api.fetchBootstrap).toHaveBeenCalled()
       expect(screen.getByTestId('dashboard-view')).toBeDefined()

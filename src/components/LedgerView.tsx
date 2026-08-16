@@ -71,9 +71,6 @@ interface LedgerViewProps {
   incomingMaxAmount?: string | null
   incomingRecurringFilter?: TransactionLinkFilter
   incomingWishlistFilter?: TransactionLinkFilter
-  /** Legacy navigation aliases; true maps to the new `only` mode. */
-  incomingRecurringOnly?: boolean
-  incomingWishlistOnly?: boolean
   incomingTxType?: 'inflow' | 'outflow' | 'transfer' | null
   highlightedTxId?: string | null
   onClearIncomingFilters?: () => void

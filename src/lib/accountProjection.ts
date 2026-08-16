@@ -38,10 +38,10 @@ function addDelta(
   balances: Map<string, number>,
   transaction: Transaction,
   accounts: ReadonlyArray<LedgerAccount>,
+  accountsById: ReadonlyMap<string, LedgerAccount>,
   allocations: IncomeAllocations | undefined,
   direction: 1 | -1,
 ) {
-  const accountsById = new Map(accounts.map(account => [account.id, account]))
   const incomeSplitRows = buildIncomeSplitRows(
     transaction,
     allocations,
@@ -89,6 +89,7 @@ export function projectAccountBalances(
   // it in a separate pass would either double-count an earlier queued transaction or overwrite a
   // later one.
   const projectedAccounts = accounts.map(account => ({ ...account }))
+  const accountsById = new Map(projectedAccounts.map(account => [account.id, account]))
   const balances = new Map(projectedAccounts.map(account => [account.id, account.remaining]))
   const operations = activeOps
     .filter(operation => operation.entity === 'transaction' || operation.entity === 'ledgerAccountReconcile')
@@ -97,29 +98,29 @@ export function projectAccountBalances(
   for (const operation of operations) {
     if (operation.entity === 'ledgerAccountReconcile') {
       if (operation.type !== 'add') continue
-      applyReconciliation(operation, projectedAccounts, balances)
+      applyReconciliation(operation, projectedAccounts, accountsById, balances)
       continue
     }
     if (operation.type === 'add') {
       const transaction = currentTransaction(operation)
-      if (transaction) addDelta(balances, transaction, projectedAccounts, incomeAllocations, 1)
+      if (transaction) addDelta(balances, transaction, projectedAccounts, accountsById, incomeAllocations, 1)
       continue
     }
     if (operation.type === 'update') {
       for (const previous of snapshotTransactions(operation, baseTransactions))
-        addDelta(balances, previous, projectedAccounts, incomeAllocations, -1)
+        addDelta(balances, previous, projectedAccounts, accountsById, incomeAllocations, -1)
       const next = currentTransaction(operation)
-      if (next) addDelta(balances, next, projectedAccounts, incomeAllocations, 1)
+      if (next) addDelta(balances, next, projectedAccounts, accountsById, incomeAllocations, 1)
       continue
     }
     if (operation.type === 'delete' || operation.type === 'bulkDelete') {
       for (const previous of snapshotTransactions(operation, baseTransactions))
-        addDelta(balances, previous, projectedAccounts, incomeAllocations, -1)
+        addDelta(balances, previous, projectedAccounts, accountsById, incomeAllocations, -1)
       continue
     }
     if (operation.type === 'bulkRestore') {
       for (const restored of snapshotTransactions(operation, baseTransactions))
-        addDelta(balances, restored, projectedAccounts, incomeAllocations, 1)
+        addDelta(balances, restored, projectedAccounts, accountsById, incomeAllocations, 1)
     }
   }
 
@@ -132,6 +133,7 @@ export function projectAccountBalances(
 function applyReconciliation(
   operation: QueuedOp,
   accounts: LedgerAccount[],
+  accountsById: Map<string, LedgerAccount>,
   balances: Map<string, number>,
 ): void {
   const raw = operation.payload?.reconciliation
@@ -168,6 +170,7 @@ function applyReconciliation(
         updatedAt: new Date(operation.createdAt).toISOString(),
       } as unknown as LedgerAccount
       accounts.push(account)
+      accountsById.set(id, account)
     } else {
       account.name = name
       if (normalizedKind) account.kind = normalizedKind

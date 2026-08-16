@@ -13,8 +13,6 @@ export interface DatePickerProps {
   className?: string
   align?: 'left' | 'right'
   invalid?: boolean
-  /** @deprecated Use invalid; retained for existing callers during migration. */
-  error?: boolean
   placeholder?: string
   id?: string
   min?: string
@@ -85,7 +83,6 @@ export function DatePicker({
   className,
   align = 'left',
   invalid = false,
-  error = false,
   placeholder = 'Select date',
   id,
   min,
@@ -121,7 +118,7 @@ export function DatePicker({
   const accessibleProps = useFormFieldControlProps({
     id,
     'aria-describedby': ariaDescribedBy,
-    'aria-invalid': invalid || error || undefined,
+    'aria-invalid': invalid || undefined,
     'aria-required': required || undefined,
   })
   const isInvalid = accessibleProps['aria-invalid'] === true

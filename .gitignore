@@ -19,6 +19,19 @@ coverage
 # ANALYZE=1 npm run build output (rollup-plugin-visualizer)
 stats.html
 
+# Local audit scratch artifacts
+172px
+clip
+min-w-0
+api_calls*.txt
+patch.diff
+search.js
+search2.cjs
+search3.cjs
+baseline-bundle-report.json
+AYU_LIGHT_PLAN.md
+scratch/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -272,12 +272,3 @@ export function niceCeiling(value: number) {
   const factor = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10
   return factor * magnitude
 }
-
-export function niceStep(maximum: number, divisions = 100) {
-  const raw = maximum / divisions
-  if (!Number.isFinite(raw) || raw <= 0) return 1
-  const magnitude = 10 ** Math.floor(Math.log10(raw))
-  const normalized = raw / magnitude
-  const factor = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10
-  return factor * magnitude
-}
