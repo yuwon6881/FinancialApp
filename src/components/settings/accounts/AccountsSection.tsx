@@ -11,6 +11,7 @@ import { buildSingleAccountCorrection } from '../../../lib/accountBalanceCorrect
 import { AccountFormSheet, type AccountFormSaveInput } from './AccountFormSheet'
 import { BucketAccountGroup } from './BucketAccountGroup'
 import { BucketAccountSetupSheet } from './BucketAccountSetupSheet'
+import { useHighlightedElement } from '../../ui/useHighlightedElement'
 import {
   hasBucketAccountSetupChanged,
   type BucketSetupPrefill,
@@ -26,6 +27,8 @@ interface AccountsSectionProps {
   activeSyncIds?: ReadonlyArray<string>
   deletingId?: string | null
   disabled?: boolean
+  highlightedAccountId?: string | null
+  onClearHighlightedAccount?: () => void
   onAddAccount: (input: LedgerAccountInput) => Promise<void> | void
   onUpdateAccount: (id: string, input: LedgerAccountInput) => Promise<void> | void
   onRequestDeleteAccount: (id: string) => void
@@ -64,6 +67,8 @@ export function AccountsSection({
   activeSyncIds,
   deletingId,
   disabled = false,
+  highlightedAccountId,
+  onClearHighlightedAccount,
   onAddAccount,
   onUpdateAccount,
   onRequestDeleteAccount,
@@ -84,6 +89,18 @@ export function AccountsSection({
     deletingId,
     searchQuery,
   })
+
+  const matchingBucket = highlightedAccountId
+    ? bucketGroups.find(g => g.bucket.toLowerCase() === highlightedAccountId.toLowerCase())
+    : null
+  const highlightTargetId = highlightedAccountId
+    ? (matchingBucket
+        ? `bucket-account-group-${matchingBucket.bucket}`
+        : accounts.some(a => a.id === highlightedAccountId)
+          ? `account-row-${highlightedAccountId}`
+          : 'settings-panel-accounts')
+    : null
+  useHighlightedElement(highlightTargetId, onClearHighlightedAccount)
 
   const [editingAccount, setEditingAccount] = useState<LedgerAccount | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)

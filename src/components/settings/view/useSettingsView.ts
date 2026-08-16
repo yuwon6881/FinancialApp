@@ -290,10 +290,10 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     }
   }
 
-  // Keep app-managed categories visible so their ledger meaning is discoverable, but expose the
-  // editable subset separately for cleanup targets and spending guides.
-  const visibleCategories = categoriesList
+  // Only show categories that the user can change and manage; system mandatory categories
+  // (Transfer, Interest, Adjustment) are app-managed and hidden from the categories list.
   const editableCategories = categoriesList.filter(category => !isSystemCategoryName(category.name))
+  const visibleCategories = editableCategories
 
   const categoryUsage = useMemo(() => {
     if (!usageCounts) return null

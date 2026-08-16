@@ -254,8 +254,8 @@ const TopNav: React.FC<TopNavProps> = ({
             title="Commitments and Rewards"
             className={`flex items-center justify-center rounded-xl border transition duration-150 cursor-pointer active:scale-95 ${
               activeTab === 'wishlist'
-                ? 'border-pink-500/30 bg-pink-500/12 text-pink-600 dark:text-pink-400'
-                : 'border-pink-500/10 bg-pink-500/5 text-pink-500/80 hover:border-pink-500/20 hover:bg-pink-500/10 hover:text-pink-500'
+                ? 'border-primary/40 bg-primary/20 text-accent-ink shadow-sm'
+                : 'border-primary/20 bg-primary/10 text-accent-ink hover:border-primary/30 hover:bg-primary/15'
             }`}
           >
             <CommitmentIcon className="size-4" aria-hidden />

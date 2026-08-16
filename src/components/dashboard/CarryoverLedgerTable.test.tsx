@@ -33,6 +33,7 @@ const mockCategories: CategorySummary[] = [
 
 describe('CarryoverLedgerTable', () => {
   it('renders categories and opens the account breakdown modal on click', () => {
+    const onNavigateToAccounts = vi.fn()
     render(
       <CarryoverLedgerTable
         categories={mockCategories}
@@ -40,12 +41,15 @@ describe('CarryoverLedgerTable', () => {
         amountsMasked={false}
         hideSensitive={false}
         formatCurrency={(val) => `RM ${val.toFixed(2)}`}
-        onAdjust={vi.fn()}
+        onNavigateToAccounts={onNavigateToAccounts}
       />
     )
 
     expect(screen.getByText('Carryover Rolling Ledgers')).toBeTruthy()
     expect(screen.getByText('2 accounts')).toBeTruthy()
+
+    // No row edit/adjust button for Remaining Balance
+    expect(screen.queryByTitle('Adjust balance')).toBeNull()
 
     // Click the 2 accounts badge
     fireEvent.click(screen.getByText('2 accounts'))
@@ -55,5 +59,15 @@ describe('CarryoverLedgerTable', () => {
     expect(screen.getByText('Maybank')).toBeTruthy()
     expect(screen.getByText('Cash Wallet')).toBeTruthy()
     expect(screen.getByText('Total accounts balance')).toBeTruthy()
+
+    // Clicking account Edit navigates to accounts section with account id
+    const editButtons = screen.getAllByRole('button', { name: /Edit Maybank in Settings/i })
+    fireEvent.click(editButtons[0])
+    expect(onNavigateToAccounts).toHaveBeenCalledWith('acc-1')
+
+    // Reopen modal and click footer button
+    fireEvent.click(screen.getByText('2 accounts'))
+    fireEvent.click(screen.getByRole('button', { name: /Manage Essentials in Settings/i }))
+    expect(onNavigateToAccounts).toHaveBeenCalledWith('Essentials')
   })
 })

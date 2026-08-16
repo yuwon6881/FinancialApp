@@ -13,14 +13,8 @@ import type { ToastTone } from './ui/ToastViewport'
 import { ToggleButton } from './ui/ToggleButton'
 import { NotificationsCard } from './settings/NotificationsCard'
 import type { PushBusyAction } from '../app/usePushNotifications'
-const TwoFactorSection = React.lazy(() => import('./TwoFactorSection').then(m => ({ default: m.TwoFactorSection })))
-const ChangePasswordSection = React.lazy(() => import('./ChangePasswordSection').then(m => ({ default: m.ChangePasswordSection })))
 import { CollapsibleBody } from './ui/CollapsibleBody'
 import { useAppContext } from '../contexts/AppContext'
-const ActiveDevicesSection = React.lazy(() => import('./settings/ActiveDevicesSection').then(m => ({ default: m.ActiveDevicesSection })))
-const FingerprintSection = React.lazy(() => import('./settings/FingerprintSection').then(m => ({ default: m.FingerprintSection })))
-const InvestmentPlanSection = React.lazy(() => import('./settings/InvestmentPlanSection').then(m => ({ default: m.InvestmentPlanSection })))
-
 import { useSettingsView } from './settings/view/useSettingsView'
 import { CategoryLimitsCard } from './settings/CategoryLimitsCard'
 import { ManageableNameList } from './settings/ManageableNameList'
@@ -34,6 +28,12 @@ import { SensitiveMask } from './ui/SensitiveAmount'
 import { SettingsTabs, type SettingsTabId } from './settings/SettingsTabs'
 import type { LedgerAccountInput } from '../app/financialData/accountActions'
 import type { LedgerAccountReconcileInput } from '../lib/api/accounts'
+
+const TwoFactorSection = React.lazy(() => import('./TwoFactorSection').then(m => ({ default: m.TwoFactorSection })))
+const ChangePasswordSection = React.lazy(() => import('./ChangePasswordSection').then(m => ({ default: m.ChangePasswordSection })))
+const ActiveDevicesSection = React.lazy(() => import('./settings/ActiveDevicesSection').then(m => ({ default: m.ActiveDevicesSection })))
+const FingerprintSection = React.lazy(() => import('./settings/FingerprintSection').then(m => ({ default: m.FingerprintSection })))
+const InvestmentPlanSection = React.lazy(() => import('./settings/InvestmentPlanSection').then(m => ({ default: m.InvestmentPlanSection })))
 const AccountsSection = React.lazy(() => import('./settings/accounts/AccountsSection').then(m => ({ default: m.AccountsSection })))
 
 interface SettingsViewProps {
@@ -60,6 +60,8 @@ interface SettingsViewProps {
   onDeleteCategory: (id: string) => void | Promise<void>
   onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
   accounts?: LedgerAccount[]
+  highlightedAccountId?: string | null
+  onClearHighlightedAccount?: () => void
   onAddAccount?: (input: LedgerAccountInput) => Promise<void> | void
   onUpdateAccount?: (id: string, input: LedgerAccountInput) => Promise<void> | void
   onRequestDeleteAccount?: (id: string) => void
@@ -130,7 +132,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     onToast,
   })
 
-
   const [flowTypeDrafts, setFlowTypeDrafts] = React.useState<Record<string, CategoryFlowType>>({})
   const [isSavingFlowTypes, setIsSavingFlowTypes] = React.useState(false)
 
@@ -157,6 +158,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     [props.categoriesList])
 
   const [activeTab, setActiveTab] = React.useState<SettingsTabId>(() => {
+    if (props.highlightedAccountId) return 'accounts'
     if (typeof window !== 'undefined') {
       const search = window.location.search
       const hash = window.location.hash
@@ -168,7 +170,12 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     }
     return 'financial-model'
   })
+
   React.useEffect(() => {
+    if (props.highlightedAccountId) {
+      setActiveTab('accounts')
+      return
+    }
     if (typeof window !== 'undefined') {
       const search = window.location.search
       const hash = window.location.hash
@@ -184,16 +191,16 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             const rect = el.getBoundingClientRect()
             if (rect.top > window.innerHeight || rect.top < 0) {
               el.scrollIntoView({ behavior: 'auto', block: 'start' })
-        }
+            }
+          }
+        })
         return
       }
       if (search.includes('account') || hash.includes('account')) {
         setActiveTab('accounts')
       }
-        })
-      }
     }
-  }, [])
+  }, [props.highlightedAccountId])
 
   // Category rows for the list. When usage stats are available they are already sorted
   // least-used-first (so removal candidates surface at the top); otherwise fall back to the
@@ -787,7 +794,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 )}
                 {view.usageError && (
                   <p className="text-[10px] font-medium text-destructive px-0.5">{view.usageError}</p>
-                )}
+                              )}
 
 
               </div>
@@ -817,6 +824,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             activeSyncIds={activeSyncIds}
             deletingId={deletingId}
             disabled={hideSensitive}
+            highlightedAccountId={props.highlightedAccountId}
+            onClearHighlightedAccount={props.onClearHighlightedAccount}
             onAddAccount={input => props.onAddAccount?.(input)}
             onUpdateAccount={(id, input) => props.onUpdateAccount?.(id, input)}
             onRequestDeleteAccount={id => props.onRequestDeleteAccount?.(id)}

@@ -46,6 +46,7 @@ export function BucketAccountGroup({
 
   return (
     <div
+      id={`bucket-account-group-${bucket}`}
       className={`flex flex-col justify-between rounded-2xl border bg-background/40 p-4 sm:p-5 transition duration-150 ${
         hasAnyAccounts ? 'border-border/60' : 'border-dashed border-border/70'
       }`}

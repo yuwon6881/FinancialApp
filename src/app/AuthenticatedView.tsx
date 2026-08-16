@@ -246,6 +246,7 @@ export function AuthenticatedView({
                       onSelectPeriod={nav.handleSelectPeriod}
                       onNavigate={prefs.setActiveTab}
                       onNavigateToRecurring={nav.handleNavigateToRecurring}
+                      onNavigateToAccounts={nav.handleNavigateToAccounts}
                       onNavigateToLedger={nav.handleNavigateToLedger}
                       onAddBalanceAdjustment={financial.handleAddBalanceAdjustment}
                       onReconcileAccounts={financial.handleReconcileAccounts}
@@ -278,6 +279,8 @@ export function AuthenticatedView({
                       onDeleteCategory={financial.requestDeleteCategory}
                       onApplyCategoryCleanupSuggestion={financial.handleApplyCategoryCleanupSuggestion}
                       accounts={financial.allAccounts}
+                      highlightedAccountId={nav.highlightedAccountId}
+                      onClearHighlightedAccount={nav.clearHighlightedAccount}
                       onAddAccount={financial.handleAddAccount}
                       onUpdateAccount={financial.handleUpdateAccount}
                       onRequestDeleteAccount={financial.requestDeleteAccount}

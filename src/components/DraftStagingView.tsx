@@ -161,7 +161,7 @@ export function DraftStagingView({
                 </Button>
               </>}
             >
-              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 cursor-pointer" onClick={() => openDraft(draft)}>
+              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-foreground">{draft.description}</p>
                   <div className="mt-1 min-w-0 space-y-1.5 pr-10 text-[10px] text-muted-foreground lg:pr-0">

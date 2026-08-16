@@ -406,6 +406,13 @@ function App() {
     }
   }, [prefs.activeTab, nav.highlightedReportSection, nav.highlightedReportCategory, nav.clearHighlightedReportSection])
 
+  // Same reasoning for Settings accounts focus (`?account=`).
+  useEffect(() => {
+    if (prefs.activeTab !== 'settings' && nav.highlightedAccountId) {
+      nav.clearHighlightedAccount()
+    }
+  }, [prefs.activeTab, nav.highlightedAccountId, nav.clearHighlightedAccount])
+
   useEffect(() => {
     if (nav.selectedMonth && nav.selectedYear) {
       updateAppSearch({ month: nav.selectedMonth, year: nav.selectedYear })

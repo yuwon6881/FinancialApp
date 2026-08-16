@@ -46,6 +46,7 @@ export function AccountRow({
 
   return (
     <div
+      id={`account-row-${account.id}`}
       className={`flex flex-col gap-2 rounded-xl border p-3 transition duration-150 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${
         account.isArchived ? 'border-dashed border-border/70 bg-card/40 opacity-75' : 'border-border/60 bg-card/70'
       }`}

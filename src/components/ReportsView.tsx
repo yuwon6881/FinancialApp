@@ -30,6 +30,7 @@ interface ReportsViewProps {
   onSelectPeriod: (month: string, year: number) => void
   onNavigate?: (tab: AppTab) => void
   onNavigateToRecurring?: (recurringPaymentId: string) => void
+  onNavigateToAccounts?: (target?: string | null) => void
   onNavigateToLedger?: (options: {
     category?: string | null
     date?: string | null
@@ -61,6 +62,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   onSelectPeriod,
   onNavigate = () => undefined,
   onNavigateToRecurring,
+  onNavigateToAccounts,
   onNavigateToLedger,
   onAddBalanceAdjustment,
   onReconcileAccounts,
@@ -164,6 +166,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         hideSensitive={hideSensitive}
         formatCurrency={view.formatCurrency}
         onAdjust={view.openBalanceAdjustment}
+        onNavigateToAccounts={onNavigateToAccounts}
       />
 
       <FinancialPlanMetrics

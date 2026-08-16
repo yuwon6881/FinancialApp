@@ -73,6 +73,10 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     if (typeof window === 'undefined') return null
     return new URLSearchParams(window.location.search).get('focusCategory')
   })
+  const [highlightedAccountId, setHighlightedAccountId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    return new URLSearchParams(window.location.search).get('account')
+  })
 
   const selectPeriodSeqRef = useRef(0)
   const selectPeriodQueueRef = useRef<Promise<void>>(Promise.resolve())
@@ -207,6 +211,17 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     updateAppSearch({ focus: null, focusCategory: null })
   }, [])
 
+  const handleNavigateToAccounts = useCallback((targetIdOrBucket?: string | null) => {
+    const target = targetIdOrBucket || '1'
+    setHighlightedAccountId(target)
+    setActiveTab('settings', { search: { account: target } })
+  }, [setActiveTab])
+
+  const clearHighlightedAccount = useCallback(() => {
+    setHighlightedAccountId(null)
+    updateAppSearch({ account: null })
+  }, [])
+
   // Receipt splitting is deliberately absent: it is not something to *open*, it
   // starts from the transaction form's scan picker. setAutoOpenReceiptSplit still
   // exists for the poller, which re-opens the editor for a background scan.
@@ -304,6 +319,10 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     highlightedReportCategory,
     handleNavigateToReportSection,
     clearHighlightedReportSection,
+    highlightedAccountId,
+    setHighlightedAccountId,
+    handleNavigateToAccounts,
+    clearHighlightedAccount,
     ledgerIncomingSearch,
     handleSelectPeriod,
     handleNavigateToLedger,
