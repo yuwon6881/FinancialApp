@@ -34,7 +34,7 @@ export function SettingsTabs({ activeTab, onChange }: SettingsTabsProps) {
   }
 
   return (
-    <div role="tablist" aria-label="Settings sections" className="grid grid-cols-2 gap-x-3 gap-y-3.5 border-b border-border/30 pb-1 select-none sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-3">
+    <div role="tablist" aria-label="Settings sections" className="w-full min-w-0 grid grid-cols-2 gap-x-3 gap-y-3.5 border-b border-border/30 pb-1 select-none sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-3">
       {SETTINGS_TABS.map(([id, label], index) => (
         <Button
           variant="unstyled"

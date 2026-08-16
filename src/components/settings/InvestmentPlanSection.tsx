@@ -62,7 +62,7 @@ function ClassificationRow({
       layout="position"
       transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 38 }}
       whileDrag={reduceMotion ? undefined : { scale: 1.015, boxShadow: 'var(--app-shadow)' }}
-      className="flex flex-col gap-2.5 rounded-xl border border-border/50 bg-card/60 p-3 shadow-2xs transition-colors hover:border-border/80 sm:flex-row sm:items-center sm:gap-3"
+      className="flex flex-col gap-2.5 rounded-xl border border-border/50 bg-card/60 p-3 shadow-2xs transition-colors hover:border-border/80 sm:flex-row sm:items-center sm:gap-3 w-full min-w-0 overflow-hidden"
     >
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <Button
@@ -82,14 +82,14 @@ function ClassificationRow({
           <GripVertical className="size-4" />
         </Button>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
             <strong className="block truncate text-xs font-bold text-foreground">{value.symbol}</strong>
             <RowSyncStatus isSyncing={isSyncing} isPending={isPending} entityLabel="classification" />
           </div>
           <span className="block truncate text-[11px] text-muted-foreground">{value.name}</span>
         </div>
       </div>
-      <div className="w-full sm:w-[190px] shrink-0">
+      <div className="w-full sm:w-[190px] shrink-0 min-w-0">
         <CustomSelect
           ariaLabel={`Classify ${value.symbol}`}
           value={value.sleeve ?? ''}
@@ -334,36 +334,41 @@ export function InvestmentPlanSection() {
   }
 
   return (
-    <div id="settings-panel-investment-plan" role="tabpanel" aria-labelledby="settings-tab-investment-plan" className="grid gap-6 lg:grid-cols-2 animate-in fade-in duration-200">
-      <section className="rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-2 border-b border-border/40 pb-4">
-          <div className="flex items-start gap-3">
+    <div id="settings-panel-investment-plan" role="tabpanel" aria-labelledby="settings-tab-investment-plan" className="w-full min-w-0 grid grid-cols-1 gap-6 lg:grid-cols-2 items-start animate-in fade-in duration-200">
+      <section className="w-full min-w-0 rounded-2xl border border-border/60 bg-card p-4 sm:p-6 shadow-xs">
+        <div className="flex items-start justify-between gap-3 border-b border-border/40 pb-4 min-w-0 w-full">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
             <div className="rounded-xl bg-violet-500/10 p-2 text-violet-500 shrink-0"><SlidersHorizontal className="size-4" /></div>
-            <div>
-              <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">Portfolio targets <RowSyncStatus isSyncing={planSyncing} isPending={planPending} entityLabel="investment plan" /></h3>
-              <p className="mt-1 text-[11px] text-muted-foreground">Changing one sleeve automatically redistributes the other two.</p>
+            <div className="min-w-0 flex-1">
+              <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold text-foreground">
+                Portfolio targets <RowSyncStatus isSyncing={planSyncing} isPending={planPending} entityLabel="investment plan" />
+              </h3>
+              <p className="mt-1 text-[11px] text-muted-foreground break-words">Changing one sleeve automatically redistributes the other two.</p>
             </div>
           </div>
           <Button variant="unstyled"
             type="button"
             onClick={() => setGlobalTargetLock(!globalTargetLock)}
             disabled={hideSensitive}
-            className="mt-1 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer sm:min-h-8"
+            className="mt-0.5 inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
           >
             {globalTargetLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
             {globalTargetLock ? 'Locked' : 'Unlocked'}
           </Button>
         </div>
-        <div className="mt-5 space-y-5">
+        <div className="mt-5 space-y-5 w-full min-w-0">
           {([
             ['US Equity', 'usEquityTarget', 'accent-blue-500'],
             ['International ex-US', 'internationalExUsTarget', 'accent-amber-500'],
             ['Bonds', 'bondsTarget', 'accent-emerald-500'],
           ] as const).map(([label, key, accentClass]) => (
-            <label key={key} className="space-y-2 block">
-              <div className="flex justify-between items-center text-[11px] font-bold">
-                <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="unstyled" size="icon" type="button" aria-label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 sm:size-8" disabled={hideSensitive || (lockedSleeve !== null && lockedSleeve !== key)} title={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
-                <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{plan[key]}%</span>
+            <label key={key} className="space-y-2 block w-full min-w-0">
+              <div className="flex justify-between items-center text-[11px] font-bold min-w-0 w-full gap-2">
+                <span className="text-muted-foreground flex items-center gap-1.5 min-w-0">
+                  <span className="uppercase tracking-wider truncate">{label}</span>
+                  <Button variant="unstyled" size="icon" type="button" aria-label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" disabled={hideSensitive || (lockedSleeve !== null && lockedSleeve !== key)} title={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button>
+                </span>
+                <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md shrink-0">{plan[key]}%</span>
               </div>
               <RangeInput
                 aria-label={`${label} target`}
@@ -377,34 +382,34 @@ export function InvestmentPlanSection() {
               />
             </label>
           ))}
-          <div className="rounded-xl bg-muted/30 px-3 py-2 text-xs font-bold text-foreground">Total: {total}%</div>
-          <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-            <p className="flex items-start gap-2 text-[10px] leading-relaxed text-muted-foreground">
+          <div className="rounded-xl bg-muted/30 px-3 py-2 text-xs font-bold text-foreground w-full">Total: {total}%</div>
+          <div className="rounded-xl border border-border/50 bg-muted/20 p-3 w-full min-w-0">
+            <p className="flex items-start gap-2 text-[10px] leading-relaxed text-muted-foreground min-w-0">
               <Info className="mt-0.5 size-3.5 shrink-0 text-blue-500" />
-              Drift is the gap between a basket’s actual share and its target. 62% vs 66% is 4 points off.
+              <span className="min-w-0 break-words">Drift is the gap between a basket’s actual share and its target. 62% vs 66% is 4 points off.</span>
             </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 w-full min-w-0">
               <FormField
                 label="Watch when off by"
                 hint="Shows an early warning; guidance may use new money to correct it."
-                className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3"
+                className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 w-full min-w-0"
                 labelClassName="text-xs text-foreground"
-                hintClassName="text-[9px]"
+                hintClassName="text-[9px] break-words"
               >
-                <span className="relative block">
-                  <Input type="number" min="1" max="99" step="1" disabled={hideSensitive} value={plan.watchDrift} onChange={event => setPlan(value => ({ ...value, watchDrift: Number(event.target.value) }))} className="pr-8" />
+                <span className="relative block w-full min-w-0">
+                  <Input type="number" min="1" max="99" step="1" disabled={hideSensitive} value={plan.watchDrift} onChange={event => setPlan(value => ({ ...value, watchDrift: Number(event.target.value) }))} className="w-full pr-8" />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">pp</span>
                 </span>
               </FormField>
               <FormField
                 label="Alert when off by"
                 hint="Marks a larger mismatch that may eventually require rebalancing."
-                className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-3"
+                className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-3 w-full min-w-0"
                 labelClassName="text-xs text-foreground"
-                hintClassName="text-[9px]"
+                hintClassName="text-[9px] break-words"
               >
-                <span className="relative block">
-                  <Input type="number" min="2" max="100" step="1" disabled={hideSensitive} value={plan.alertDrift} onChange={event => setPlan(value => ({ ...value, alertDrift: Number(event.target.value) }))} className="pr-8" />
+                <span className="relative block w-full min-w-0">
+                  <Input type="number" min="2" max="100" step="1" disabled={hideSensitive} value={plan.alertDrift} onChange={event => setPlan(value => ({ ...value, alertDrift: Number(event.target.value) }))} className="w-full pr-8" />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">pp</span>
                 </span>
               </FormField>
@@ -415,14 +420,18 @@ export function InvestmentPlanSection() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
-        <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">Investment classification <RowSyncStatus isSyncing={orderSyncing} isPending={orderPending} entityLabel="classification order" /></h3>
-        <p className="mt-1 text-[11px] text-muted-foreground">Every open holding needs a basket. Drag a grip, or focus it and press Up or Down, to change the order.</p>
+      <section className="w-full min-w-0 rounded-2xl border border-border/60 bg-card p-4 sm:p-6 shadow-xs">
+        <div className="min-w-0">
+          <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold text-foreground">
+            Investment classification <RowSyncStatus isSyncing={orderSyncing} isPending={orderPending} entityLabel="classification order" />
+          </h3>
+          <p className="mt-1 text-[11px] text-muted-foreground break-words">Every open holding needs a basket. Drag a grip, or focus it and press Up or Down, to change the order.</p>
+        </div>
         <Reorder.Group
           axis="y"
           values={orderedAssignments}
           onReorder={reorderAssignments}
-          className="mt-4 space-y-2.5 max-h-[380px] overflow-y-auto pr-1"
+          className="mt-4 space-y-2.5 max-h-[380px] overflow-y-auto pr-1 w-full min-w-0"
         >
           {orderedAssignments.map((value, index) => (
             <ClassificationRow
