@@ -24,6 +24,7 @@ import {
   BarChart3,
   Loader2,
   ShieldAlert,
+  TrendingUp,
 } from 'lucide-react'
 import { CommitmentIcon, RewardIcon } from './components/semanticIcons'
 import { triggerHaptic } from './lib/haptics'
@@ -237,7 +238,7 @@ const TopNav: React.FC<TopNavProps> = ({
           <Button variant="unstyled"
             type="button"
             onClick={onAskAI}
-            className="hidden lg:flex items-center justify-center gap-1.5 px-2.5 lg:px-3 py-1.5 bg-blue-500/8 hover:bg-blue-500/14 border border-blue-500/20 hover:border-blue-500/35 text-blue-600 dark:text-blue-400 rounded-xl select-none shrink-0 transition-all duration-150 cursor-pointer cursor-pointer"
+            className="hidden md:flex items-center justify-center gap-1.5 px-2.5 lg:px-3 py-1.5 bg-blue-500/8 hover:bg-blue-500/14 border border-blue-500/20 hover:border-blue-500/35 text-blue-600 dark:text-blue-400 rounded-xl select-none shrink-0 transition-all duration-150 cursor-pointer"
             title="ASK AI"
             aria-label="ASK AI"
           >
@@ -282,7 +283,7 @@ const TopNav: React.FC<TopNavProps> = ({
               menu rather than a Menubar root: a Menubar exists to give a *row* of sibling menus one
               roving focus group, and standing one menu inside it bought nothing while costing the
               menubar and roving-focus primitives on the eager critical path. */}
-          <div className="hidden lg:block border border-border/60 rounded-xl bg-background shrink-0">
+          <div className="hidden md:block border border-border/60 rounded-xl bg-background shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger className="h-9 px-2 py-1 sm:px-2.5 text-xs font-semibold hover:bg-muted/50 rounded-lg cursor-pointer flex items-center gap-1 whitespace-nowrap">
                 <Plus className="size-3.5 text-blue-500" />
@@ -331,6 +332,14 @@ const TopNav: React.FC<TopNavProps> = ({
 
                 <DropdownMenuSeparator className="my-1 border-t border-border/30" />
                   
+                <DropdownMenuItem
+                  onSelect={() => onTabChange('investments')}
+                  className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
+                >
+                  <TrendingUp className="size-3.5 text-violet-500" />
+                  <span>Investments</span>
+                </DropdownMenuItem>
+
                 <DropdownMenuItem
                   onSelect={() => onTabChange('settings')}
                   className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"

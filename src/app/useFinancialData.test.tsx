@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useFinancialData } from './useFinancialData'
+import { queuedTransactionDeleteCoversTarget, useFinancialData } from './useFinancialData'
 import * as api from '../lib/api'
 import type { RecurringPayment } from '../types'
 
@@ -131,6 +131,22 @@ describe('useFinancialData', () => {
     vi.restoreAllMocks()
   })
 
+  it('recognizes both single and bulk queued transaction deletes before document upload', () => {
+    expect(queuedTransactionDeleteCoversTarget({ entity: 'transaction', type: 'delete', targetId: 'tx-1' }, 'tx-1')).toBe(true)
+    expect(queuedTransactionDeleteCoversTarget({
+      entity: 'transaction',
+      type: 'bulkDelete',
+      targetId: 'bulk-1',
+      payload: { transactionIds: ['tx-1', 'tx-2'] },
+    }, 'tx-2')).toBe(true)
+    expect(queuedTransactionDeleteCoversTarget({
+      entity: 'transaction',
+      type: 'bulkDelete',
+      targetId: 'bulk-1',
+      payload: { transactionIds: ['tx-1'] },
+    }, 'tx-2')).toBe(false)
+  })
+
   it('blocks financial mutation handlers at execution time in sensitive mode', async () => {
     mockHappyApi()
     const guardSensitive = vi.fn(() => false)
@@ -155,11 +171,9 @@ describe('useFinancialData', () => {
 
   it('starts with bootstrap directly and does not restart startup when the outbox queue changes', async () => {
     mockHappyApi()
-    const ping = vi.spyOn(api, 'pingServer')
 
     const { result } = renderFinancialData()
     await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalledTimes(1))
-    expect(ping).not.toHaveBeenCalled()
 
     act(() => {
       result.current.mutateQueue(prev => [...prev])
@@ -170,7 +184,6 @@ describe('useFinancialData', () => {
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)) })
 
     expect(api.fetchBootstrap).toHaveBeenCalledTimes(1)
-    expect(ping).not.toHaveBeenCalled()
   })
 
   it('does not let a late startup response roll back a newly selected theme', async () => {
@@ -178,7 +191,6 @@ describe('useFinancialData', () => {
     vi.spyOn(api, 'fetchBootstrap').mockReturnValue(new Promise(resolve => {
       resolveBootstrap = resolve
     }) as any)
-    vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
     vi.spyOn(api, 'updateDarkMode').mockReturnValue(new Promise(() => undefined) as any)
 
     const { result, setDarkMode } = renderFinancialData()
@@ -213,7 +225,6 @@ describe('useFinancialData', () => {
     vi.spyOn(api, 'fetchBootstrap').mockReturnValue(new Promise(resolve => {
       resolveBootstrap = resolve
     }) as any)
-    vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
     vi.spyOn(api, 'updateDarkMode').mockResolvedValue(undefined as any)
 
     const { result, setDarkMode } = renderFinancialData()
@@ -250,7 +261,6 @@ describe('useFinancialData', () => {
     vi.spyOn(api, 'fetchBootstrap').mockReturnValue(new Promise(resolve => {
       resolveBootstrap = resolve
     }) as any)
-    vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
     vi.spyOn(api, 'updateSettings').mockResolvedValue(dashboard.setting as any)
 
     const { result } = renderFinancialData()
@@ -291,7 +301,6 @@ describe('useFinancialData', () => {
 
   it('logs out on a status-coded 401 that has no "401" in its message', async () => {
     mockHappyApi()
-    vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
     vi.spyOn(api, 'fetchBootstrap').mockRejectedValue(new ApiErrorLike('Request failed', 401))
 
     renderFinancialData()
@@ -302,7 +311,6 @@ describe('useFinancialData', () => {
 
   it('locks the session on a status-coded 423 that has no "423" in its message', async () => {
     mockHappyApi()
-    vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
     vi.spyOn(api, 'fetchBootstrap').mockRejectedValue(new ApiErrorLike('Request failed', 423))
 
     renderFinancialData()
@@ -313,7 +321,6 @@ describe('useFinancialData', () => {
 
   it('queues reminder updates and projects them while offline', async () => {
     mockHappyApi()
-    vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
     const updateReminder = vi.spyOn(api, 'updateRecurringPaymentReminder').mockResolvedValue(undefined)
 
     const originalOnline = navigator.onLine
@@ -343,7 +350,6 @@ describe('useFinancialData', () => {
 
   it('queues pay-early with an optimistic ledger row while offline', async () => {
     mockHappyApi()
-    vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
     const settleOccurrence = vi.spyOn(api, 'settleRecurringOccurrence').mockResolvedValue({
       occurrence: {} as never,
       transaction: { id: 'tx-server', date: '2026-08-02', description: 'Streaming', category: 'Entertainment', ledgerCategory: 'Needs', amount: -50, recurringPaymentId: 'rp-1', recurringOccurrenceDate: '2026-08-01' },

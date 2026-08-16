@@ -145,6 +145,11 @@ export function BucketAccountSetupSheet({
             name: line.name,
             kind: draft?.kind ?? account?.kind ?? 'Other',
             isArchived: line.isArchived,
+            ...(account ? {
+              expectedName: account.name,
+              expectedKind: account.kind,
+              expectedIsArchived: account.isArchived,
+            } : {}),
             expectedCurrent: line.current,
             target: line.target,
             ...(draft ? {

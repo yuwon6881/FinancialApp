@@ -509,8 +509,7 @@ function App() {
     operations: financial.activeOps,
     queueMutation: (entity, type, targetId, payload, isUndo) => {
       if (!guardSensitive()) return false
-      financial.mutateQueue(previous => financial.enqueue(previous, entity, type, targetId, payload, isUndo))
-      return true
+      return financial.queueMutation(entity, type, targetId, payload, isUndo)
     },
   }), [
     prefs.hideSensitive,
@@ -523,8 +522,7 @@ function App() {
     financial.isBackgroundSyncing,
     financial.pendingOps.length,
     financial.activeOps,
-    financial.mutateQueue,
-    financial.enqueue,
+    financial.queueMutation,
     financial.isOffline,
     financial.formatSensitive,
     dialogs.showToast,

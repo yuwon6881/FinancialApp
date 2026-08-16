@@ -2,6 +2,7 @@ import type { LedgerAccount, Transaction } from '../types'
 import type { IncomeAllocations } from './incomeSplitProjection'
 import { buildIncomeSplitRows } from './incomeSplitProjection'
 import { accountAmount, getAccountBalances } from './accountAttribution'
+import { roundMoney } from './money'
 import type { QueuedOp } from './outbox'
 
 function asTransaction(value: unknown, fallbackId?: string): Transaction | null {
@@ -126,7 +127,7 @@ export function projectAccountBalances(
 
   return projectedAccounts.map(account => ({
     ...account,
-    remaining: Math.round((balances.get(account.id) ?? account.remaining) * 100) / 100,
+    remaining: roundMoney(balances.get(account.id) ?? account.remaining),
   }))
 }
 
@@ -150,7 +151,7 @@ function applyReconciliation(
     const id = typeof target.id === 'string' && target.id.trim() ? target.id.trim() : null
     const name = typeof target.name === 'string' ? target.name : ''
     const targetBalance = typeof target.target === 'number' && Number.isFinite(target.target)
-      ? Math.round(target.target * 100) / 100
+      ? roundMoney(target.target)
       : null
     if (!id || targetBalance === null || !name) continue
     const normalizedKind = target.kind === 'EWallet' || target.kind === 'Cash' || target.kind === 'Card' || target.kind === 'Other' || target.kind === 'Bank'
@@ -206,8 +207,8 @@ export function projectAccountBalancesFromTransactions(
   const projectedEffects = getAccountBalances(projectedTransactions, snapshot)
   return snapshot.map(account => ({
     ...account,
-    remaining: Math.round((account.remaining
+    remaining: roundMoney(account.remaining
       + (projectedEffects.get(account.id) ?? 0)
-      - (baseEffects.get(account.id) ?? 0)) * 100) / 100,
+      - (baseEffects.get(account.id) ?? 0)),
   }))
 }

@@ -2,7 +2,7 @@ import { Input } from './ui/Input'
 import { RangeInput } from './ui/RangeInput'
 import React from 'react'
 import { Save, Settings, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from 'lucide-react'
-import type { CategoryFlowType, DashboardData, LedgerAccount, PushChannel, TransactionCategory } from '../types'
+import type { CategoryFlowType, DashboardData, LedgerAccount, PushChannel, RecurringPayment, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { CurrencySelect } from './ui/CurrencySelect'
 import { RowSyncStatus } from './ui/RowSyncBadge'
@@ -60,6 +60,7 @@ interface SettingsViewProps {
   onDeleteCategory: (id: string) => void | Promise<void>
   onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
   accounts?: LedgerAccount[]
+  recurringPayments?: RecurringPayment[]
   highlightedAccountId?: string | null
   onClearHighlightedAccount?: () => void
   onAddAccount?: (input: LedgerAccountInput) => Promise<void> | void
@@ -818,6 +819,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         <React.Suspense fallback={<AccountsSkeleton />}>
           <AccountsSection
             accounts={props.accounts ?? []}
+            recurringPayments={props.recurringPayments}
             currency={view.activeSettings.currency || 'USD'}
             hideSensitive={hideSensitive}
             activeSyncId={activeSyncId}

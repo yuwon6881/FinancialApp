@@ -1,8 +1,8 @@
 import type { LedgerAccount, LedgerAccountInterestFrequency, LedgerAccountKind } from '../types'
 import type { LedgerAccountReconcileInput, LedgerAccountReconcileTarget } from './api/accounts'
 import { ACCOUNT_RECONCILIATION_EPSILON } from './accountReconciliation'
-
-const roundMoney = (value: number) => Math.round(value * 100) / 100
+import { roundMoney } from './money'
+import { sanitizeReconciliationOperationId } from './reconciliationOperationId'
 
 export interface SingleAccountCorrectionInput {
   account: LedgerAccount
@@ -46,6 +46,9 @@ export function buildSingleAccountCorrection(input: SingleAccountCorrectionInput
         bucket: account.bucket,
         kind: account.kind,
         isArchived: account.isArchived,
+        expectedName: account.name,
+        expectedKind: account.kind,
+        expectedIsArchived: account.isArchived,
         expectedCurrent: roundMoney(account.remaining),
         target: roundMoney(account.remaining),
         interestEnabled: account.interestEnabled,
@@ -61,6 +64,9 @@ export function buildSingleAccountCorrection(input: SingleAccountCorrectionInput
       bucket: account.bucket,
       kind: input.nextKind ?? account.kind,
       isArchived: input.isArchived ?? account.isArchived,
+      expectedName: account.name,
+      expectedKind: account.kind,
+      expectedIsArchived: account.isArchived,
       expectedCurrent: currentRemaining,
       target: targetRemaining,
       interestEnabled,
@@ -71,7 +77,9 @@ export function buildSingleAccountCorrection(input: SingleAccountCorrectionInput
 
   const expectedBucketTotal = roundMoney(targets.reduce((sum, target) => sum + target.expectedCurrent, 0))
   const cleanId = input.account.id.replace(/[^A-Za-z0-9_-]/g, '_')
-  const opId = input.operationId ?? `balance-${cleanId}-${Date.now()}`.slice(0, 80)
+  const opId = sanitizeReconciliationOperationId(
+    input.operationId ?? 'balance-' + cleanId + '-' + Date.now(),
+  )
 
   return {
     operationId: opId,

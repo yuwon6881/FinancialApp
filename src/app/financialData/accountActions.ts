@@ -4,6 +4,8 @@ import { triggerHaptic } from '../../lib/haptics'
 import type { UseOutboxResult } from '../../lib/useOutbox'
 import type { AppDialogs } from '../useAppDialogs'
 import type { LedgerAccountReconcileInput } from '../../lib/api/accounts'
+import { roundMoney } from '../../lib/money'
+import { sanitizeReconciliationOperationId } from '../../lib/reconciliationOperationId'
 
 interface LedgerAccountActionDependencies {
   accounts: LedgerAccount[]
@@ -39,7 +41,7 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
   const handleAddAccount = (value: LedgerAccountInput) => {
     if (!guardSensitive()) return
     const id = value.id ?? createFinalId('ledgerAccount')
-    const openingAmount = Number.isFinite(value.openingAmount) ? Math.round((value.openingAmount ?? 0) * 100) / 100 : 0
+    const openingAmount = Number.isFinite(value.openingAmount) ? roundMoney(value.openingAmount ?? 0) : 0
     const payload: OutboxPayload = {
       id,
       name: value.name.trim(),
@@ -126,6 +128,9 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
             expectedCurrent: target.target,
             target: account.remaining,
             isArchived: account.isArchived,
+            expectedName: target.name,
+            expectedKind: target.kind,
+            expectedIsArchived: target.isArchived,
             interestEnabled: account.interestEnabled,
             interestRatePercent: account.interestRatePercent,
             interestFrequency: account.interestFrequency,
@@ -135,6 +140,9 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
             expectedCurrent: target.target,
             target: 0,
             isArchived: true,
+            expectedName: target.name,
+            expectedKind: target.kind,
+            expectedIsArchived: target.isArchived,
           }
     })
     mutateQueue(queue => enqueue(queue, 'ledgerAccountReconcile', 'add', input.operationId, {
@@ -143,7 +151,7 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
       reconciliation: input,
       undoReconciliation: {
         ...input,
-        operationId: `${input.operationId}-undo`,
+        operationId: sanitizeReconciliationOperationId(`${input.operationId}-undo`),
         targets: undoTargets,
       },
     }))

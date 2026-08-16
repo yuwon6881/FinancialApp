@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import type { LedgerAccount } from '../../../../types'
+import type { LedgerAccount, RecurringPayment } from '../../../../types'
+import { buildAccountBillRosters, type AccountBillRoster } from '../../../../lib/accountBillRoster'
 import { useSyncStatus } from '../../../../lib/useOptimisticList'
 import { BUCKET_DEFINITIONS } from '../accountOptions'
 
@@ -15,6 +16,7 @@ export interface BucketGroupSummary {
 
 export interface UseAccountsViewOptions {
   accounts: LedgerAccount[]
+  recurringPayments?: readonly RecurringPayment[]
   activeSyncId?: string | null
   activeSyncIds?: ReadonlyArray<string>
   deletingId?: string | null
@@ -23,6 +25,7 @@ export interface UseAccountsViewOptions {
 
 export function useAccountsView({
   accounts,
+  recurringPayments,
   activeSyncId,
   activeSyncIds,
   deletingId,
@@ -43,6 +46,11 @@ export function useAccountsView({
       || account.kind.toLowerCase().includes(normalizedQuery),
     )
   }, [normalizedQuery, rows])
+
+  const billRosters = useMemo<Map<string, AccountBillRoster>>(
+    () => buildAccountBillRosters(recurringPayments ?? [], undefined, accounts.map(account => account.id)),
+    [recurringPayments, accounts],
+  )
 
   const bucketGroups = useMemo<BucketGroupSummary[]>(() => {
     return BUCKET_DEFINITIONS.map(bucketDef => {
@@ -76,6 +84,7 @@ export function useAccountsView({
   return {
     rows,
     filteredRows,
+    billRosters,
     bucketGroups,
     openAccountCount,
     archivedAccountCount,

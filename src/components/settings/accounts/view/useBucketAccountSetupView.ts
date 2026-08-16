@@ -7,6 +7,7 @@ import {
   calculateBucketAccountReconciliation,
   type BucketAccountReconciliation,
 } from '../../../../lib/accountReconciliation'
+import { roundMoney } from '../../../../lib/money'
 
 export interface BucketSetupPrefill {
   name: string
@@ -44,8 +45,6 @@ export interface BucketSetupSessionSnapshot {
   bucketTotal: number
   accounts: ReadonlyArray<BucketSetupAccountSnapshot>
 }
-
-const roundMoney = (value: number) => Math.round(value * 100) / 100
 
 export function hasBucketAccountSetupChanged(
   snapshot: BucketSetupSessionSnapshot | null,
@@ -94,7 +93,7 @@ const createDraft = (prefill?: BucketSetupPrefill): BucketSetupDraftAccount => (
   id: createFinalId('ledgerAccount'),
   name: prefill?.name ?? '',
   kind: prefill?.kind ?? 'Bank',
-  target: prefill ? (Math.round(prefill.target * 100) / 100).toFixed(2) : '0.00',
+  target: prefill ? roundMoney(prefill.target).toFixed(2) : '0.00',
   interestEnabled: prefill?.interestEnabled === true,
   interestRatePercent: prefill?.interestEnabled === true ? prefill.interestRatePercent ?? 0 : 0,
   interestFrequency: prefill?.interestFrequency ?? 'Monthly',
@@ -185,6 +184,7 @@ export function useBucketAccountSetupView({
       existingAccounts: parsedExistingTargets.map(account => ({
         id: account.id,
         name: account.name,
+        kind: account.kind,
         current: account.remaining,
         target: account.target,
         isArchived: account.isArchived,

@@ -1,4 +1,6 @@
 import type { Transaction } from '../types'
+import { roundMoney } from './money'
+import { sanitizeReconciliationOperationId } from './reconciliationOperationId'
 
 interface ReconcileTarget {
   id?: string | null
@@ -22,10 +24,10 @@ export function buildAccountReconcileTransactions(input: {
   let adjustmentIndex = 0
   for (const target of input.targets) {
     if (!target.id || typeof target.target !== 'number') continue
-    const difference = Math.round((target.target - (target.expectedCurrent ?? 0)) * 100) / 100
+    const difference = roundMoney(target.target - (target.expectedCurrent ?? 0))
     if (difference === 0) continue
     rows.push({
-      id: `reconcile-${input.operationId}-adjustment-${adjustmentIndex++}`,
+      id: 'reconcile-' + sanitizeReconciliationOperationId(input.operationId) + '-adjustment-' + adjustmentIndex++,
       date: postedAt.slice(0, 10), postedAt,
       description: `${input.description?.trim() || 'Account balance adjustment'} - ${target.name || target.id}`,
       category: 'Adjustment', ledgerCategory: input.bucket, amount: difference,

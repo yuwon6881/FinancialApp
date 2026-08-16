@@ -23,7 +23,7 @@ import { useOutbox } from '../lib/useOutbox'
 import { useStartupSync } from './useStartupSync'
 import { useOptimisticDashboard } from './useOptimisticDashboard'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
-import { createFinalId, projectFinancialSetting, sanitizeQueuedOps, type OutboxPayload, type QueuedOp } from '../lib/outbox'
+import { createFinalId, projectFinancialSetting, sanitizeQueuedOps, type EntityKind, type OpType, type OutboxPayload, type QueuedOp } from '../lib/outbox'
 import { projectLoanStates } from '../lib/loanProjection'
 import { loanEndDate } from '../lib/loanTermSchedule'
 import { projectAccountBalances, projectAccountBalancesFromTransactions } from '../lib/accountProjection'
@@ -75,6 +75,17 @@ export interface UseFinancialDataOptions {
   setHasShownModalThisSession: (value: boolean) => void
   hasShownModalThisSession: boolean
   setShowLoginModal: (value: boolean) => void
+}
+
+export function queuedTransactionDeleteCoversTarget(
+  pending: Pick<QueuedOp, 'entity' | 'type' | 'targetId' | 'payload'>,
+  targetId: string,
+): boolean {
+  if (pending.entity !== 'transaction') return false
+  if (pending.type === 'delete') return pending.targetId === targetId
+  if (pending.type !== 'bulkDelete') return false
+  const transactionIds = pending.payload?.transactionIds
+  return Array.isArray(transactionIds) && transactionIds.some(id => String(id) === targetId)
 }
 
 const createLocalId = (prefix: string, separator = '_') => {
@@ -306,9 +317,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         // An Undo tapped on the add's own success toast queues the delete while this refresh is
         // still running, so uploading here would attach files to a row that is about to go and
         // leave them orphaned in the vault with the user believing they undid the whole thing.
-        if (getPendingOps().some(pending => pending.entity === 'transaction'
-          && pending.type === 'delete'
-          && pending.targetId === op.targetId)) {
+        if (getPendingOps().some(pending => queuedTransactionDeleteCoversTarget(pending, op.targetId))) {
           pendingTransactionDocumentsRef.current.delete(op.targetId)
           continue
         }
@@ -461,6 +470,25 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       }
     },
   })
+
+  const queueMutation = useCallback((
+    entity: EntityKind,
+    type: OpType,
+    targetId: string,
+    payload?: OutboxPayload,
+    isUndo?: boolean,
+  ) => {
+    if (entity === 'transaction' && type === 'bulkDelete') {
+      const transactionIds = payload?.transactionIds
+      if (Array.isArray(transactionIds)) {
+        for (const transactionId of transactionIds) {
+          if (typeof transactionId === 'string') pendingTransactionDocumentsRef.current.delete(transactionId)
+        }
+      }
+    }
+    mutateQueue(previous => enqueue(previous, entity, type, targetId, payload, isUndo))
+    return true
+  }, [enqueue, mutateQueue])
 
   useEffect(() => {
     if (!token) return
@@ -981,26 +1009,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       (dashboardData?.categories ?? []).flatMap(category =>
         (category.accounts ?? []).map(account => [account.id, account] as const)),
     )
-    const pendingReconciliationBalances = new Map<string, number>()
-    for (const operation of [...activeOps]
-      .filter(candidate => candidate.entity === 'ledgerAccountReconcile' && candidate.type === 'add')
-      .sort((left, right) => left.createdAt - right.createdAt)) {
-      const reconciliation = operation.payload?.reconciliation
-      if (!reconciliation || typeof reconciliation !== 'object') continue
-      const targets = (reconciliation as { targets?: unknown }).targets
-      if (!Array.isArray(targets)) continue
-      for (const target of targets) {
-        if (!target || typeof target !== 'object') continue
-        const value = target as { id?: unknown; target?: unknown }
-        if (typeof value.id !== 'string' || typeof value.target !== 'number' || !Number.isFinite(value.target)) continue
-        pendingReconciliationBalances.set(value.id, value.target)
-      }
-    }
     const snapshotAccounts = allAccounts.map(account => ({
       ...account,
-      remaining: pendingReconciliationBalances.get(account.id)
-        ?? accountSnapshots.get(account.id)?.remaining
-        ?? account.remaining,
+      remaining: accountSnapshots.get(account.id)?.remaining ?? account.remaining,
     }))
     const projectedAccounts = projectAccountBalancesFromTransactions(
       snapshotAccounts,
@@ -1814,6 +1825,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     failedOps,
     activeOps,
     enqueue,
+    queueMutation,
     mutateQueue,
     snapshotForUndo,
     processQueue,

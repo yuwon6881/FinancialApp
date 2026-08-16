@@ -26,6 +26,9 @@ export interface LedgerAccountReconcileTarget {
   interestEnabled?: boolean
   interestRatePercent?: number
   interestFrequency?: LedgerAccountInterestFrequency
+  expectedName?: string
+  expectedKind?: LedgerAccountKind
+  expectedIsArchived?: boolean
 }
 
 export interface LedgerAccountReconcileInput {
@@ -128,6 +131,9 @@ export async function reconcileLedgerAccounts(input: LedgerAccountReconcileInput
         interestEnabled: target.interestEnabled,
         interestRatePercent: target.interestRatePercent,
         interestFrequency: target.interestFrequency,
+        expectedName: target.expectedName,
+        expectedKind: target.expectedKind,
+        expectedIsArchived: target.expectedIsArchived,
       })),
     }),
     errorMessage: 'Could not reconcile ledger accounts',

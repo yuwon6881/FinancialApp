@@ -1,10 +1,12 @@
 import type { LedgerAccount } from '../types'
+import { roundMoney } from './money'
 
 export const ACCOUNT_RECONCILIATION_EPSILON = 0.005
 
 export interface ReconciliationAccountInput {
   id: string
   name: string
+  kind?: LedgerAccount['kind']
   current: number
   target: number
   isArchived: boolean
@@ -34,8 +36,6 @@ export interface BucketAccountReconciliation {
   isAdjustmentTally: boolean
   hasChanges: boolean
 }
-
-const roundMoney = (value: number) => Math.round(value * 100) / 100
 
 /**
  * Builds the account split before any account rows or adjustment transactions are queued.

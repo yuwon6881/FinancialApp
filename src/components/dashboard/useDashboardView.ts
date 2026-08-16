@@ -373,7 +373,11 @@ export function useDashboardView(options: UseDashboardViewOptions) {
           targets: accountTargets.map(account => ({
             id: account.id,
             name: account.name,
+            kind: account.kind,
             isArchived: account.isArchived === true,
+            expectedName: account.name,
+            expectedKind: account.kind,
+            expectedIsArchived: account.isArchived === true,
             expectedCurrent: account.remaining,
             target: account.isArchived ? account.remaining : account.target,
           })),

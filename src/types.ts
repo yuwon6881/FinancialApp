@@ -492,6 +492,7 @@ export interface CategorySummary {
   accounts?: Array<{
     id: string
     name: string
+    kind?: LedgerAccountKind
     remaining: number
     isArchived?: boolean
   }>

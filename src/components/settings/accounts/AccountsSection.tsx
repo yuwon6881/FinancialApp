@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
 import { Building2, CircleHelp } from 'lucide-react'
-import type { LedgerAccount } from '../../../types'
+import type { LedgerAccount, RecurringPayment } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
 import { formatCurrencyVal } from '../../../lib/utils'
+import { roundMoney } from '../../../lib/money'
 import { CustomConfirmModal } from '../../ui/CustomConfirmModal'
 import { Input } from '../../ui/Input'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
@@ -21,6 +22,7 @@ import { useAccountsView } from './view/useAccountsView'
 
 interface AccountsSectionProps {
   accounts: LedgerAccount[]
+  recurringPayments?: readonly RecurringPayment[]
   currency: string
   hideSensitive: boolean
   activeSyncId?: string | null
@@ -33,6 +35,7 @@ interface AccountsSectionProps {
   onUpdateAccount: (id: string, input: LedgerAccountInput) => Promise<void> | void
   onRequestDeleteAccount: (id: string) => void
   onReconcileAccounts: (input: LedgerAccountReconcileInput) => Promise<void> | void
+  onNavigateToRecurring?: (recurringId: string) => void
 }
 
 interface PendingBalanceCorrection {
@@ -41,8 +44,6 @@ interface PendingBalanceCorrection {
   targetBalance: number
   bucketTotal: number
 }
-
-const roundMoney = (value: number) => Math.round(value * 100) / 100
 
 function SignedAmount({ value, currency, hideSensitive }: { value: number; currency: string; hideSensitive: boolean }) {
   if (Math.abs(value) < 0.005) return <span className="text-muted-foreground">No change</span>
@@ -61,6 +62,7 @@ function SignedAmount({ value, currency, hideSensitive }: { value: number; curre
 
 export function AccountsSection({
   accounts,
+  recurringPayments,
   currency,
   hideSensitive,
   activeSyncId,
@@ -73,10 +75,12 @@ export function AccountsSection({
   onUpdateAccount,
   onRequestDeleteAccount,
   onReconcileAccounts,
+  onNavigateToRecurring,
 }: AccountsSectionProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const {
     rows,
+    billRosters,
     bucketGroups,
     openAccountCount,
     archivedAccountCount,
@@ -84,6 +88,7 @@ export function AccountsSection({
     isDeleting,
   } = useAccountsView({
     accounts,
+    recurringPayments,
     activeSyncId,
     activeSyncIds,
     deletingId,
@@ -286,10 +291,12 @@ export function AccountsSection({
               disabled={disabled}
               isDeleting={isDeleting}
               isSyncing={isSyncing}
+              billRosters={billRosters}
               onAdd={openAdd}
               onEdit={openEdit}
               onDelete={onRequestDeleteAccount}
               onMoveMoney={openSetup}
+              onNavigateToRecurring={onNavigateToRecurring}
               searchQuery={searchQuery}
             />
           ))}

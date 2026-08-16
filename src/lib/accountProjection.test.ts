@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { LedgerAccount, Transaction } from '../types'
 import type { OutboxPayload, QueuedOp } from './outbox'
-import { projectAccountBalances } from './accountProjection'
+import { projectAccountBalances, projectAccountBalancesFromTransactions } from './accountProjection'
 
 const accounts: LedgerAccount[] = [
   {
@@ -28,6 +28,22 @@ describe('projectAccountBalances', () => {
     const result = projectAccountBalances(accounts, [op({ payload: baseTransaction({ id: 'tx-new', amount: -15 }) as unknown as Record<string, unknown>, targetId: 'tx-new' })])
 
     expect(result.find(account => account.id === 'essentials')?.remaining).toBe(85)
+  })
+
+  it('applies a queued reconciliation row once to the dashboard snapshot', () => {
+    const result = projectAccountBalancesFromTransactions(
+      accounts,
+      [],
+      [baseTransaction({
+        id: 'reconcile-op-adjustment-0',
+        description: 'Account balance adjustment',
+        category: 'Adjustment',
+        amount: 50,
+        isAccountBalanceAdjustment: true,
+      })],
+    )
+
+    expect(result.find(account => account.id === 'essentials')?.remaining).toBe(150)
   })
 
   it('replaces the base effect for an update and removes it for a delete', () => {

@@ -1,4 +1,7 @@
 import type { Loan, LoanPaymentSplit, LoanScheduleEntry } from '../types'
+import { roundMoney } from './money'
+
+export { roundMoney } from './money'
 
 export interface LoanPaymentInput {
   occurrenceDate: string
@@ -23,9 +26,6 @@ export interface LoanReplayResult {
 export const periodsPerYear = (frequency?: string | null) =>
   frequency?.toLowerCase() === 'annually' ? 1 : 12
 
-export const roundMoney = (value: number) =>
-  Math.sign(value) * Math.round((Math.abs(value) + Number.EPSILON) * 100) / 100
-
 export const annualRate = (annualRatePercent: number) => annualRatePercent / 100
 
 export function totalScheduledInterest(loan: Pick<Loan, 'openingPrincipal' | 'annualRatePercent' | 'termPeriods' | 'interestMethod'>, frequency?: string | null): number {
@@ -49,8 +49,9 @@ export function scheduledPayment(loan: Pick<Loan, 'openingPrincipal' | 'annualRa
     return roundMoney(loan.openingPrincipal * ratePerPeriod)
   }
   if (ratePerPeriod === 0) return roundMoney(loan.openingPrincipal / term)
-  const power = Math.pow(1 + ratePerPeriod, term)
-  return roundMoney(loan.openingPrincipal * ratePerPeriod / (1 - 1 / power))
+  let inversePower = 1
+  for (let period = 0; period < term; period += 1) inversePower /= 1 + ratePerPeriod
+  return roundMoney(loan.openingPrincipal * ratePerPeriod / (1 - inversePower))
 }
 
 export function applyPayment(

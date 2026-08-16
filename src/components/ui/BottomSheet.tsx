@@ -5,6 +5,7 @@ import { useDialog } from '../../lib/useDialog'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
 import { Z_LAYERS } from '../../lib/zLayers'
+import { motionSafeScrollBehavior } from '../../lib/motionPreference'
 
 interface BottomSheetProps {
   isOpen: boolean
@@ -255,6 +256,23 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       el.removeEventListener('touchend', reset)
       el.removeEventListener('touchcancel', reset)
     }
+  }, [isOpen])
+
+  // When mobile virtual keyboards open, ensure the focused input is scrolled into view
+  useEffect(() => {
+    const el = panelRef.current
+    if (!isOpen || !el) return
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null
+      if (!target || !['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
+      window.setTimeout(() => {
+        if (!target.isConnected) return
+        if (typeof target.scrollIntoView !== 'function') return
+        target.scrollIntoView({ block: 'nearest', behavior: motionSafeScrollBehavior() })
+      }, 120)
+    }
+    el.addEventListener('focusin', handleFocusIn)
+    return () => el.removeEventListener('focusin', handleFocusIn)
   }, [isOpen])
 
   return createPortal(

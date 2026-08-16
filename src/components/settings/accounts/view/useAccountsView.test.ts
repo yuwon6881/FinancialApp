@@ -68,4 +68,34 @@ describe('useAccountsView', () => {
     expect(essentials!.allBucketAccounts).toHaveLength(2)
     expect(essentials!.balance).toBe(2500) // Total balance remains true to all accounts
   })
+
+  it('builds bill rosters map when recurringPayments are supplied', () => {
+    const accounts: LedgerAccount[] = [
+      makeAccount({ id: 'acc-1', name: 'Checking' }),
+      makeAccount({ id: 'acc-2', name: 'Savings' }),
+    ]
+    const recurringPayments = [
+      {
+        id: 'bill-1',
+        name: 'Electric Bill',
+        amount: 200,
+        frequency: 'Monthly' as const,
+        category: 'Utilities',
+        ledgerCategory: 'Essentials',
+        accountId: 'acc-1',
+        nextDueDate: '2026-08-25',
+        dueDate: 25,
+        startDate: '2026-01-01',
+        active: true,
+        paymentMode: 'AutoDeduct' as const,
+      },
+    ]
+
+    const { result } = renderHook(() => useAccountsView({ accounts, recurringPayments }))
+
+    expect(result.current.billRosters).toBeDefined()
+    expect(result.current.billRosters.get('acc-1')?.active).toHaveLength(1)
+    expect(result.current.billRosters.get('acc-1')?.monthlyTotal).toBe(200)
+    expect(result.current.billRosters.get('acc-2')?.active).toHaveLength(0)
+  })
 })

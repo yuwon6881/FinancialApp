@@ -3,6 +3,7 @@
 
 import type { LedgerAccount, Transaction } from '../types'
 import { bucketAmount } from './bucketAttribution'
+import { roundMoney } from './money'
 
 export function accountAmount(
   transaction: Pick<Transaction, 'amount' | 'ledgerCategory' | 'accountId' | 'counterAccountId'>,
@@ -10,9 +11,9 @@ export function accountAmount(
   accountsById: ReadonlyMap<string, Pick<LedgerAccount, 'id' | 'bucket'>>,
 ): number {
   if (transaction.ledgerCategory.toLowerCase() === 'accountmove') {
-    if (transaction.accountId === account.id) return -Math.abs(transaction.amount)
-    if (transaction.counterAccountId === account.id) return Math.abs(transaction.amount)
-    return 0
+    const source = transaction.accountId === account.id ? -Math.abs(transaction.amount) : 0
+    const destination = transaction.counterAccountId === account.id ? Math.abs(transaction.amount) : 0
+    return source + destination
   }
 
   const leg = bucketAmount(transaction, account.bucket)
@@ -30,7 +31,7 @@ export function getAccountBalances(
   const accountsById = new Map(accounts.map(account => [account.id, account]))
   return new Map(accounts.map(account => [
     account.id,
-    Math.round(transactions.reduce(
+    roundMoney(transactions.reduce(
       (total, transaction) => total + accountAmount(transaction, account, accountsById),
       0,
     ) * 100) / 100,

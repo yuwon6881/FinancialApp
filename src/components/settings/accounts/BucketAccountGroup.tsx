@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react'
 import type { LedgerAccount } from '../../../types'
+import type { AccountBillRoster as AccountBillRosterType } from '../../../lib/accountBillRoster'
 import { formatCurrencyVal } from '../../../lib/utils'
 import { getCategoryBadgeClass } from '../../../lib/categoryColors'
 import { Button } from '../../ui/Button'
@@ -16,10 +17,12 @@ export interface BucketAccountGroupProps {
   disabled?: boolean
   isDeleting: (id: string) => boolean
   isSyncing: (id: string) => boolean
+  billRosters?: Map<string, AccountBillRosterType>
   onAdd: (bucket: LedgerAccount['bucket']) => void
   onEdit: (account: LedgerAccount) => void
   onDelete: (id: string) => void
   onMoveMoney: (bucket: LedgerAccount['bucket']) => void
+  onNavigateToRecurring?: (recurringId: string) => void
   searchQuery?: string
 }
 
@@ -33,10 +36,12 @@ export function BucketAccountGroup({
   disabled = false,
   isDeleting,
   isSyncing,
+  billRosters,
   onAdd,
   onEdit,
   onDelete,
   onMoveMoney,
+  onNavigateToRecurring,
   searchQuery,
 }: BucketAccountGroupProps) {
   const bucketBadgeClass = getCategoryBadgeClass(bucket)
@@ -115,8 +120,10 @@ export function BucketAccountGroup({
                 disabled={disabled}
                 isDeleting={isDeleting(account.id)}
                 isSyncing={isSyncing(account.id)}
+                roster={billRosters?.get(account.id)}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onNavigateToRecurring={onNavigateToRecurring}
               />
             ))}
           </div>

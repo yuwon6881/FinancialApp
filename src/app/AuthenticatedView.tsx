@@ -279,6 +279,7 @@ export function AuthenticatedView({
                       onDeleteCategory={financial.requestDeleteCategory}
                       onApplyCategoryCleanupSuggestion={financial.handleApplyCategoryCleanupSuggestion}
                       accounts={financial.allAccounts}
+                      recurringPayments={financial.allRecurringPayments}
                       highlightedAccountId={nav.highlightedAccountId}
                       onClearHighlightedAccount={nav.clearHighlightedAccount}
                       onAddAccount={financial.handleAddAccount}
