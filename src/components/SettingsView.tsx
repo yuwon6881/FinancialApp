@@ -25,6 +25,7 @@ import { useSettingsView } from './settings/view/useSettingsView'
 import { CategoryLimitsCard } from './settings/CategoryLimitsCard'
 import { ManageableNameList } from './settings/ManageableNameList'
 import { CategoryFlowFilter } from './settings/CategoryFlowFilter'
+import { isSystemCategoryName } from '../lib/categoryFlow'
 import { AccountsSkeleton } from './settings/accounts/AccountsSkeleton'
 import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
 import { FormField } from './ui/FormField'
@@ -141,6 +142,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
 
   const changedFlowTypeCategories = React.useMemo(() => {
     return (props.categoriesList || []).filter((c: TransactionCategory) => {
+      if (isSystemCategoryName(c.name)) return false
       const draft = flowTypeDrafts[c.id]
       const current = c.type || 'both'
       return draft != null && draft !== current
@@ -704,7 +706,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   filterSlot={flowControl}
                   disabled={hideSensitive}
                   isLoading={isCategoryListLoading}
-                  validateName={name => ['transfer', 'adjustment'].includes(name.toLowerCase()) ? 'Name is a reserved word.' : null}
+                  validateName={name => isSystemCategoryName(name) ? 'Name is a reserved word.' : null}
                   onAdd={name => props.onAddCategory({ name, type: 'both' })}
                   onDelete={item => view.handleDeleteCategory(item.id)}
                   renderName={item => {

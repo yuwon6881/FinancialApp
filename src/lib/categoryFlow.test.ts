@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   allowsCategoryFlow,
   isSelectableTransactionCategory,
+  isSystemCategoryName,
   isSpendingGuideCategory,
   normalizeCategoryFlowType,
 } from './categoryFlow'
@@ -30,6 +31,14 @@ describe('category flow rules', () => {
   it('keeps reserved categories out of ordinary transaction category lists', () => {
     expect(isSelectableTransactionCategory({ name: 'Transfer', type: 'both' }, 'inflow')).toBe(false)
     expect(isSelectableTransactionCategory({ name: ' adjustment ', type: 'both' }, 'outflow')).toBe(false)
+    expect(isSelectableTransactionCategory({ name: 'Interest', type: 'inflow' }, 'inflow')).toBe(false)
     expect(isSelectableTransactionCategory({ name: 'Salary', type: 'inflow' }, 'inflow')).toBe(true)
+  })
+
+  it('recognizes all app-owned category names', () => {
+    expect(isSystemCategoryName('Transfer')).toBe(true)
+    expect(isSystemCategoryName(' adjustment ')).toBe(true)
+    expect(isSystemCategoryName('INTEREST')).toBe(true)
+    expect(isSystemCategoryName('Food')).toBe(false)
   })
 })

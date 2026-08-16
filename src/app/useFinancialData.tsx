@@ -31,6 +31,7 @@ import type { AccountPlacementSelections } from '../lib/accountPlacementMigratio
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
+import { isSystemCategoryName } from '../lib/categoryFlow'
 import { buildUndoSuccessToast } from '../lib/mutationToast'
 import { computeNextOccurrenceDate, computeOccurrenceOnOrAfter } from '../lib/recurringPayments'
 import { financialDate } from '../lib/financialDate'
@@ -1193,6 +1194,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const updateCatMeta = (id: string, patch: { cycleLimit?: number | null; type?: CategoryFlowType }) => {
     if (!guardSensitive()) return
     const category = allCategories.find(cat => String(cat.id) === String(id))
+    if (!category || isSystemCategoryName(category.name)) return
     snapshotForUndo('category', String(id), category)
     mutateQueue(prev => enqueue(prev, 'category', 'update', id, {
       name: category?.name,
@@ -1209,6 +1211,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const handleDeleteCategory = (id: string, replacementCategoryId?: string) => {
     if (!guardSensitive()) return
     const category = allCategories.find(cat => String(cat.id) === String(id))
+    if (!category || isSystemCategoryName(category.name)) return
     const replacementCategory = replacementCategoryId
       ? allCategories.find(cat => String(cat.id) === String(replacementCategoryId))
       : undefined
@@ -1224,10 +1227,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const requestDeleteCategory = async (id: string) => {
     if (!guardSensitive()) return
     const category = categoriesList.find(cat => cat.id === id)
-    if (!category) return
+    if (!category || isSystemCategoryName(category.name)) return
     const replacementOptions = categoriesList.filter(cat => {
-      const lower = cat.name.toLowerCase()
-      return cat.id !== id && lower !== 'transfer' && lower !== 'adjustment' && !cat.isPendingDelete
+      return cat.id !== id && !isSystemCategoryName(cat.name) && !cat.isPendingDelete
     })
     let transactionCount = 0
     let usageLookupFailed = false

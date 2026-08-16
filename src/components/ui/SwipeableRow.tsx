@@ -5,12 +5,14 @@ import { cn } from '../../lib/utils'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { prefersReducedMotion } from '../../lib/motionPreference'
 import { triggerHaptic } from '../../lib/haptics'
-import { setSwipeLocked } from '../../lib/swipeLock'
+import {
+  clearSwipeRowCloser,
+  closeOpenSwipeableRow,
+  registerSwipeRowCloser,
+  setSwipeLocked,
+} from '../../lib/swipeLock'
 import { Button } from './Button'
 import { resolveSwipeTarget } from './swipeableRowMath'
-
-// Module-level registry so only a single row is ever open at a time.
-let closeActiveRow: (() => void) | null = null
 
 interface SwipeableRowProps {
   children: React.ReactNode
@@ -134,13 +136,13 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   // Keep only one row open at a time across the whole app.
   useEffect(() => {
     if (open) {
-      if (closeActiveRow && closeActiveRow !== close) closeActiveRow()
-      closeActiveRow = close
-    } else if (closeActiveRow === close) {
-      closeActiveRow = null
+      closeOpenSwipeableRow()
+      registerSwipeRowCloser(close)
+    } else {
+      clearSwipeRowCloser(close)
     }
     return () => {
-      if (closeActiveRow === close) closeActiveRow = null
+      clearSwipeRowCloser(close)
     }
   }, [open, close])
 
@@ -204,7 +206,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   }
 
   return (
-    <div id={id} className="relative w-full overflow-hidden rounded-2xl bg-card">
+    <div id={id} className="relative isolate w-full overflow-hidden rounded-2xl bg-card">
       {/* Action drawer sitting behind the content */}
       <div
         ref={actionDrawerRef}
@@ -227,7 +229,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
           opaque: it is what hides the drawer while the row is closed. */}
       <m.div
         data-swipe-content
-        className={cn('relative z-10 w-full overflow-hidden', className, contentClassName, 'bg-card')}
+        className={cn('relative z-10 isolate w-full overflow-hidden', className, contentClassName, 'bg-card')}
         drag={disabled ? false : 'x'}
         dragConstraints={{ left: -actionsWidth, right: 0 }}
         dragElastic={0}
@@ -239,7 +241,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onPointerCancel={handleDragCancel}
-        style={{ touchAction: 'pan-y', willChange: 'transform', x }}
+        style={{ touchAction: 'pan-y', willChange: 'transform', x, backgroundColor: 'var(--card)' }}
         onClick={() => {
           if (suppressNextClick.current) return
           if (open) close()

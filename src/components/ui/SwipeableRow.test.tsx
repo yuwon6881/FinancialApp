@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, beforeEach } from 'vitest'
 import { SwipeableRow } from './SwipeableRow'
 import { resolveSwipeTarget } from './swipeableRowMath'
+import { closeOpenSwipeableRow } from '../../lib/swipeLock'
 
 describe('SwipeableRow swipe resolution', () => {
   const actionsWidth = 132
@@ -51,6 +52,7 @@ describe('SwipeableRow closed-state opacity', () => {
     expect(surface).not.toBeNull()
     expect(surface?.className).toContain('bg-card')
     expect(surface?.className).not.toContain('bg-card/92')
+    expect((surface as HTMLElement | null)?.style.backgroundColor).toBe('var(--card)')
   })
 
   it('stacks the sliding surface above the drawer', () => {
@@ -107,6 +109,18 @@ describe('SwipeableRow closed-state opacity', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
 
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Show row actions' })))
+    expect(screen.getByText('Delete').closest('[inert]')).not.toBeNull()
+  })
+
+  it('closes an open row before a global refresh gesture moves the page', async () => {
+    renderRow()
+    const disclosure = screen.getByRole('button', { name: 'Show row actions' })
+    fireEvent.click(disclosure)
+    await waitFor(() => expect(disclosure.getAttribute('aria-expanded')).toBe('true'))
+
+    act(() => closeOpenSwipeableRow())
+
+    await waitFor(() => expect(disclosure.getAttribute('aria-expanded')).toBe('false'))
     expect(screen.getByText('Delete').closest('[inert]')).not.toBeNull()
   })
 })

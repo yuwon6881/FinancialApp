@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useIsMobile } from '../../lib/useIsMobile'
-import { isSwipeLocked } from '../../lib/swipeLock'
+import { closeOpenSwipeableRow, isSwipeLocked } from '../../lib/swipeLock'
 
 interface PullToRefreshProps {
   /** Called when the user pulls past the threshold. May return a promise; the spinner shows until it settles. */
@@ -116,6 +116,10 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
       const wasPulling = s.pulling
       s.pulling = false
       if (wasPulling && pullRef.current >= THRESHOLD && !refreshingRef.current) {
+        // Do not refresh over a partially translated card. Closing the active
+        // row first keeps the refresh indicator from making its drawer appear
+        // to push the page horizontally.
+        closeOpenSwipeableRow()
         refreshingRef.current = true
         setRefreshing(true)
         setPullBoth(THRESHOLD)

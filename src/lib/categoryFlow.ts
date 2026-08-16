@@ -19,6 +19,12 @@ export function allowsCategoryFlow(
   return normalizedType === 'both' || normalizedType === transactionType
 }
 
+/** Names owned by the app itself; people cannot create, edit, delete, or select them. */
+export function isSystemCategoryName(name: string | null | undefined): boolean {
+  const normalizedName = name?.trim().toLowerCase()
+  return normalizedName === 'transfer' || normalizedName === 'adjustment' || normalizedName === 'interest'
+}
+
 interface SelectableTransactionCategory {
   name?: string | null
   type?: string | null
@@ -31,7 +37,7 @@ export function isSelectableTransactionCategory(
 ): boolean {
   const normalizedName = category.name?.trim().toLowerCase()
   if (!normalizedName || category.isPendingDelete) return false
-  if (normalizedName === 'transfer' || normalizedName === 'adjustment') return false
+  if (isSystemCategoryName(normalizedName)) return false
   return !transactionType || allowsCategoryFlow(category.type, transactionType)
 }
 

@@ -1,5 +1,6 @@
 import type { LedgerAccount, Transaction, TransactionCategory } from '../types'
 import { capitalizeWords } from './utils'
+import { isSystemCategoryName } from './categoryFlow'
 
 // Transfer legs move between allocation buckets, so Income is never a valid leg.
 const LEDGERS = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
@@ -60,7 +61,7 @@ export function buildAiLedgerDraftTransactions(
   const normalNames = categories
     .filter(category => !category.isPendingDelete)
     .map(category => category.name.trim())
-    .filter(name => !!name && !['transfer', 'adjustment'].includes(name.toLowerCase()))
+    .filter(name => !!name && !isSystemCategoryName(name))
   const categoriesByName = new Map(normalNames.map(name => [name.toLowerCase(), name]))
   const fallbackCategory = categoriesByName.get('other') ?? normalNames[0] ?? ''
 

@@ -7,6 +7,7 @@ import type { CategoryCleanupSuggestion } from '../../../lib/api'
 import { getErrorMessage } from '../../../lib/errors'
 import { focusFirstInvalidField } from '../../ui/formValidation'
 import { useSyncStatus } from '../../../lib/useOptimisticList'
+import { isSystemCategoryName } from '../../../lib/categoryFlow'
 
 export interface UseSettingsViewOptions {
   dashboardData: DashboardData | null
@@ -217,7 +218,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     if (!trimmed) return
 
     const lower = trimmed.toLowerCase()
-    if (lower === 'transfer' || lower === 'adjustment') return
+    if (isSystemCategoryName(lower)) return
     if (categoriesList.some(c => c.name.trim().toLowerCase() === lower)) return
 
     onAddCategory({ name: trimmed })
@@ -233,7 +234,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
 
   const isCatReserved = useMemo(() => {
     const lower = trimmedCatName.toLowerCase()
-    return lower === 'transfer' || lower === 'adjustment'
+    return isSystemCategoryName(lower)
   }, [trimmedCatName])
 
   const isCatValid = !isCatEmpty && !isCatDuplicate && !isCatReserved && !hideSensitive
@@ -291,7 +292,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
 
   const visibleCategories = categoriesList.filter(cat => {
     const lower = cat.name.toLowerCase()
-    return lower !== 'transfer' && lower !== 'adjustment'
+    return !isSystemCategoryName(lower)
   })
 
   const categoryUsage = useMemo(() => {
