@@ -139,8 +139,14 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
   }
 
   const handleRegenerateRecoveryCodes = async (password: string) => {
-    const { recoveryCodes: codes } = await api.regenerateRecoveryCodes(password)
-    setRecoveryCodes(codes)
+    try {
+      const { recoveryCodes: codes } = await api.regenerateRecoveryCodes(password)
+      setRecoveryCodes(codes)
+    } catch (err: unknown) {
+      onToast?.(getErrorMessage(err, 'Recovery codes could not be regenerated. Please try again.'), 'Regeneration failed', 'error')
+      // Re-throw so the modal (PasswordEntryModal) can also handle the error state if needed
+      throw err
+    }
   }
 
   return (

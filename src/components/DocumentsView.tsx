@@ -25,6 +25,10 @@ interface DocumentsViewProps {
 }
 
 export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
+  const { showToast, guardSensitive } = useAppUi()
+  const { currency, hideSensitive } = useAppPrefs()
+  const { operations = [], activeSyncIds = [], deletingId, queueMutation } = useAppSync()
+
   const {
     documents,
     usage,
@@ -56,11 +60,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     updateDocumentMetadata,
     bulkUpdateDocumentCategories,
     bulkDelete,
-  } = useDocumentsView()
+  } = useDocumentsView(showToast)
 
-  const { showToast, guardSensitive } = useAppUi()
-  const { currency, hideSensitive } = useAppPrefs()
-  const { operations = [], activeSyncIds = [], deletingId, queueMutation } = useAppSync()
   const [isUploadSheetOpen, setIsUploadSheetOpen] = useState(false)
   const [docToDelete, setDocToDelete] = useState<number | null>(null)
   const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null)

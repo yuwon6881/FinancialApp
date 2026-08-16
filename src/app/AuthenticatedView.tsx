@@ -318,7 +318,18 @@ export function AuthenticatedView({
                         // only. Every toast says "this device", because that is the whole scope of
                         // what just changed -- other devices are never touched from here.
                         void (async () => {
-                          if (!await push.setChannelEnabled(channel, checked)) return
+                          const succeeded = await push.setChannelEnabled(channel, checked)
+                          if (!succeeded) {
+                            const isBills = channel === 'billReminders'
+                            dialogs.showToast(
+                              checked
+                                ? `${isBills ? 'Bill reminders' : 'Spending alerts'} could not be turned on for this device. Check your browser notification permission and try again.`
+                                : `${isBills ? 'Bill reminders' : 'Spending alerts'} could not be turned off. Please try again.`,
+                              'Notification setting not saved',
+                              'error',
+                            )
+                            return
+                          }
                           const isBills = channel === 'billReminders'
                           const copy = buildMutationSuccessToast({
                             entity: isBills ? 'Bill reminders' : 'Spending alerts',

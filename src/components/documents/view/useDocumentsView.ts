@@ -10,7 +10,7 @@ function clampDocumentPage(totalCount: number, page: number, pageSize: number): 
   return Math.max(1, Math.min(page, Math.ceil(totalCount / pageSize)))
 }
 
-export function useDocumentsView() {
+export function useDocumentsView(showToast?: (message: string, title?: string, tone?: 'success' | 'error' | 'info' | 'warning') => void) {
   const [documents, setDocuments] = useState<VaultDocument[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [usage, setUsage] = useState<DocumentVaultUsage | null>(null)
@@ -160,6 +160,7 @@ export function useDocumentsView() {
     try {
       const updated = await api.updateDocument(id, updates)
       setDocuments(docs => docs.map(d => d.id === id ? updated : d))
+      showToast?.('Document updated.', 'Saved', 'success')
     } catch (err) {
       console.error('Failed to update document metadata:', err)
       throw err

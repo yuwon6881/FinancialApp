@@ -203,9 +203,9 @@ test('draft attachments survive a reload before the batch is added', async ({ pa
   if (await showActions.first().isVisible()) {
     await showActions.first().click()
     await expect(page.getByRole('button', { name: 'Hide row actions' }).first()).toBeVisible()
-    await page.waitForTimeout(250)
   }
-  await page.getByRole('button', { name: 'Edit Weekend market' }).first().click({ force: true })
+  await expect(page.getByRole('button', { name: 'Edit Weekend market' }).first()).toBeVisible({ timeout: 5_000 })
+  await page.getByRole('button', { name: 'Edit Weekend market' }).first().click()
   const dialog = page.getByRole('dialog', { name: 'Edit Draft' })
   await expect(dialog).toBeVisible({ timeout: 15_000 })
   await dialog.locator('input[type="file"][multiple]').setInputFiles({
@@ -225,6 +225,7 @@ test('draft attachments survive a reload before the batch is added', async ({ pa
     await reloadShowActions.click()
     await expect(page.getByRole('button', { name: 'Hide row actions' }).first()).toBeVisible()
   }
+  await expect(page.getByRole('button', { name: 'Edit Weekend market' }).first()).toBeVisible({ timeout: 5_000 })
   await page.getByRole('button', { name: 'Edit Weekend market' }).first().click()
   await expect(page.getByRole('dialog', { name: 'Edit Draft' }).getByText('weekend-market.pdf')).toBeVisible()
 })

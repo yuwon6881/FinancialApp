@@ -63,7 +63,30 @@ export async function contributeToGoal(
         ? `${formatCurrencyVal(Math.abs(amount), deps.currency)} was moved into this goal.`
         : `${formatCurrencyVal(Math.abs(amount), deps.currency)} was released back to free ${bucketLabel(deps.getGoal?.(id))}.`,
     })
-    deps.showToast(copy.message, copy.title, copy.tone)
+    const undoAmount = -amount
+    deps.showToast(copy.message, copy.title, copy.tone, {
+      label: 'Undo',
+      onAction: () => {
+        if (!isOnline()) {
+          showOnlineOnlyMessage(deps, 'Undoing this move needs a live connection.')
+          return
+        }
+        deps.beginDirectSync?.([id])
+        void (async () => {
+          try {
+            const { contributeToSavingsGoal, fetchSavingsGoals } = await import('../lib/api/savingsGoals')
+            await contributeToSavingsGoal(id, undoAmount)
+            deps.commitGoals(await fetchSavingsGoals())
+            const undoCopy = buildUndoSuccessToast(deps.getGoalName(id) ?? 'goal', 'savings goal')
+            deps.showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
+          } catch (err: unknown) {
+            deps.showToast(getErrorMessage(err, 'Could not undo the move.'), 'Undo failed', 'error')
+          } finally {
+            deps.endDirectSync?.([id])
+          }
+        })()
+      },
+    })
     return null
   } catch (error: unknown) {
     // The likeliest failure is the server rejecting an over-commit against a balance the client
@@ -94,6 +117,7 @@ export async function fundGoalsForCycle(deps: SavingsGoalActionDeps, bucket: Sav
         action: 'Funded',
         message: `${bucketLabel} commitments were funded for this cycle. ${formatCurrencyVal(result.totalGranted, deps.currency)} was set aside. ${formatCurrencyVal(freeToSpend, deps.currency)} remains free in ${bucketLabel}.`,
       })
+      // No undo added because unfundSavingsGoalsForCycle does not exist in the API
       deps.showToast(copy.message, copy.title, copy.tone)
     } else {
       deps.showToast(`Your ${bucketLabel.toLowerCase()} goals are already funded for this cycle. ${formatCurrencyVal(freeToSpend, deps.currency)} remains free.`, 'Nothing to fund', 'info')
