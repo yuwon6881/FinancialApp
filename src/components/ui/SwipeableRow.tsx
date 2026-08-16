@@ -52,7 +52,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   const transition = useMemo(
     () => (reduceMotion
       ? { duration: 0 }
-      : { type: 'spring' as const, stiffness: 420, damping: 36, mass: 0.8 }),
+      : { type: 'spring' as const, stiffness: 500, damping: 40, mass: 1 }),
     [reduceMotion],
   )
 
@@ -62,29 +62,22 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     x.stop()
   }, [x])
 
-  const settle = useCallback((target: number, initialVelocity?: number) => {
+  const settle = useCallback((target: number) => {
     stopSettle()
-    if (reduceMotion) {
-      x.set(target)
-      return
-    }
-    settleAnimationRef.current = animate(x, target, {
-      ...transition,
-      velocity: initialVelocity,
-    })
-  }, [reduceMotion, stopSettle, transition, x])
+    settleAnimationRef.current = animate(x, target, transition)
+  }, [stopSettle, transition, x])
 
-  const close = useCallback((initialVelocity?: number) => {
+  const close = useCallback(() => {
     setOpen(false)
-    settle(0, initialVelocity)
+    settle(0)
   }, [settle])
 
-  const openActions = useCallback((focusActions: boolean, initialVelocity?: number) => {
+  const openActions = useCallback((focusActions: boolean) => {
     if (disabled) return
     focusActionsOnOpenRef.current = focusActions
     if (!open) triggerHaptic(10)
     setOpen(true)
-    settle(-actionsWidth, initialVelocity)
+    settle(-actionsWidth)
   }, [actionsWidth, disabled, open, settle])
 
   useEffect(() => {
@@ -185,9 +178,9 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
       velocityX: info.velocity.x,
     })
     if (target < 0) {
-      openActions(false, info.velocity.x)
+      openActions(false)
     } else {
-      close(info.velocity.x)
+      close()
     }
   }
 
@@ -235,7 +228,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         className={cn('relative z-10 isolate w-full overflow-hidden', className, contentClassName, 'bg-card')}
         drag={disabled ? false : 'x'}
         dragConstraints={{ left: -actionsWidth, right: 0 }}
-        dragElastic={{ left: 0.1, right: 0.04 }}
+        dragElastic={0}
         // The explicit open/close spring is the only settle animation. Letting
         // Framer's default momentum continue after release can race that spring
         // on medium-width mouse layouts and strand the card between positions.

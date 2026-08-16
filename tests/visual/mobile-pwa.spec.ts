@@ -199,6 +199,7 @@ test('draft attachments survive a reload before the batch is added', async ({ pa
   await page.goto('/drafts', { waitUntil: 'domcontentloaded' })
   await waitForStableLayout(page)
 
+  await expect(page.getByText('Weekend market')).toBeVisible({ timeout: 15_000 })
   const showActions = page.getByRole('button', { name: 'Show row actions' })
   if (await showActions.first().isVisible()) {
     await showActions.first().click()
@@ -220,6 +221,7 @@ test('draft attachments survive a reload before the batch is added', async ({ pa
 
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByText('1 document')).toBeVisible()
+  await expect(page.getByText('Weekend market')).toBeVisible({ timeout: 15_000 })
   const reloadShowActions = page.getByRole('button', { name: 'Show row actions' }).first()
   if (await reloadShowActions.isVisible()) {
     await reloadShowActions.click()

@@ -212,7 +212,40 @@ export function LoanCard({
             <Button variant="ghost" size="sm" onClick={() => void loadSchedule()} disabled={scheduleLoadingKey === scheduleKey}>Retry</Button>
           </div>
         )}
-        <div className="mt-3 max-h-72 overflow-x-auto overflow-y-auto rounded-lg border border-border/40 bg-card/60">
+        {/* Mobile schedule: compact, full-width cards with no horizontal scrolling */}
+        <div className="mt-3 max-h-72 overflow-y-auto space-y-2 sm:hidden pr-0.5">
+          {[...actualRows, ...scheduleRows].map((row, index) => (
+            <div
+              key={`${row.occurrenceDate}-${row.kind}-${index}`}
+              className="rounded-lg border border-border/40 bg-card/60 p-2.5 text-xs transition-colors hover:bg-muted/20"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-semibold text-foreground">{formatDate(row.occurrenceDate)}</span>
+                  <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-bold ${
+                    row.kind === 'Paid'
+                      ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                      : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {row.kind === 'Paid' ? 'Recorded' : 'Planned'}
+                  </span>
+                </div>
+                <span className="font-bold text-foreground tabular-nums">{formatSensitive(row.payment)}</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-border/25 pt-1.5 text-[10px] text-muted-foreground">
+                <div className="flex items-center gap-2 truncate">
+                  <span>Interest: <strong className="font-semibold text-muted-foreground">{formatSensitive(row.interest)}</strong></span>
+                  <span>·</span>
+                  <span>Clears: <strong className="font-semibold text-foreground">{formatSensitive(row.principal)}</strong></span>
+                </div>
+                <span className="shrink-0 font-medium text-foreground">Owed: <strong className="font-semibold text-foreground">{formatSensitive(row.balanceAfter)}</strong></span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop schedule: tabular view */}
+        <div className="mt-3 hidden max-h-72 overflow-x-auto overflow-y-auto rounded-lg border border-border/40 bg-card/60 sm:block">
           <table className="w-full min-w-[580px] text-left text-xs">
             <caption className="sr-only">Payment history and planned schedule for {loan.name}</caption>
             <thead className="sticky top-0 z-10 border-b border-border/40 bg-card text-[11px] text-muted-foreground shadow-2xs">

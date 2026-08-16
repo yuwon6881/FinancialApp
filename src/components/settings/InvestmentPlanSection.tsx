@@ -62,41 +62,48 @@ function ClassificationRow({
       layout="position"
       transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 38 }}
       whileDrag={reduceMotion ? undefined : { scale: 1.015, boxShadow: 'var(--app-shadow)' }}
-      className="grid touch-pan-y gap-2 rounded-xl border border-border/50 bg-muted/20 p-3 sm:grid-cols-[auto_minmax(0,1fr)_190px] sm:items-center"
+      className="flex flex-col gap-2.5 rounded-xl border border-border/50 bg-card/60 p-3 shadow-2xs transition-colors hover:border-border/80 sm:flex-row sm:items-center sm:gap-3"
     >
-      <Button variant="unstyled"
-        type="button"
-        aria-label={`Reorder ${value.symbol}. Position ${position} of ${count}. Use Up or Down arrow keys.`}
-        aria-keyshortcuts="ArrowUp ArrowDown"
-        onPointerDown={event => controls.start(event)}
-        onKeyDown={event => {
-          if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
-          event.preventDefault()
-          onMove(event.key === 'ArrowUp' ? -1 : 1)
-        }}
-        disabled={isBusy}
-        className="row-start-1 inline-flex size-11 touch-none cursor-grab items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground active:cursor-grabbing sm:row-auto sm:size-8"
-      >
-        <GripVertical className="size-4" />
-      </Button>
-      <div className="min-w-0">
-        <strong className="block truncate text-xs text-foreground">{value.symbol}</strong>
-        <RowSyncStatus isSyncing={isSyncing} isPending={isPending} entityLabel="classification" />
-        <span className="block truncate text-[10px] text-muted-foreground">{value.name}</span>
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <Button
+          variant="unstyled"
+          type="button"
+          aria-label={`Reorder ${value.symbol}. Position ${position} of ${count}. Use Up or Down arrow keys.`}
+          aria-keyshortcuts="ArrowUp ArrowDown"
+          onPointerDown={event => controls.start(event)}
+          onKeyDown={event => {
+            if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+            event.preventDefault()
+            onMove(event.key === 'ArrowUp' ? -1 : 1)
+          }}
+          disabled={isBusy}
+          className="inline-flex size-8 shrink-0 touch-none cursor-grab items-center justify-center rounded-lg text-muted-foreground/70 transition hover:bg-muted/40 hover:text-foreground active:cursor-grabbing"
+        >
+          <GripVertical className="size-4" />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <strong className="block truncate text-xs font-bold text-foreground">{value.symbol}</strong>
+            <RowSyncStatus isSyncing={isSyncing} isPending={isPending} entityLabel="classification" />
+          </div>
+          <span className="block truncate text-[11px] text-muted-foreground">{value.name}</span>
+        </div>
       </div>
-      <CustomSelect
-        ariaLabel={`Classify ${value.symbol}`}
-        value={value.sleeve ?? ''}
-        onChange={next => classify(value.instrumentId, String(next) === '' ? undefined : String(next) as InvestmentAllocationSleeve)}
-        disabled={isBusy}
-        options={[
-          { value: '', label: 'Unassigned' },
-          { value: 'USEquity', label: 'US Equity' },
-          { value: 'InternationalExUS', label: 'International ex-US' },
-          { value: 'Bonds', label: 'Bonds' },
-        ]}
-        className="col-span-2 w-full sm:col-span-1"
-      />
+      <div className="w-full sm:w-[190px] shrink-0">
+        <CustomSelect
+          ariaLabel={`Classify ${value.symbol}`}
+          value={value.sleeve ?? ''}
+          onChange={next => classify(value.instrumentId, String(next) === '' ? undefined : String(next) as InvestmentAllocationSleeve)}
+          disabled={isBusy}
+          options={[
+            { value: '', label: 'Unassigned' },
+            { value: 'USEquity', label: 'US Equity' },
+            { value: 'InternationalExUS', label: 'International ex-US' },
+            { value: 'Bonds', label: 'Bonds' },
+          ]}
+          className="w-full"
+        />
+      </div>
     </Reorder.Item>
   )
 }
@@ -315,9 +322,9 @@ export function InvestmentPlanSection() {
 
   useEffect(() => {
     if (!hideSensitive) return
-    const projected = projectQueuedChanges(cachedOverview())
-    setOverview(projected)
-    setPlan(projected?.plan ?? defaults)
+    const projectQueued = projectQueuedChanges(cachedOverview())
+    setOverview(projectQueued)
+    setPlan(projectQueued?.plan ?? defaults)
     setLockedSleeve(null)
     setGlobalTargetLock(true)
   }, [hideSensitive])
@@ -415,7 +422,7 @@ export function InvestmentPlanSection() {
           axis="y"
           values={orderedAssignments}
           onReorder={reorderAssignments}
-          className="mt-4 space-y-3 max-h-[300px] overflow-y-auto pr-2"
+          className="mt-4 space-y-2.5 max-h-[380px] overflow-y-auto pr-1"
         >
           {orderedAssignments.map((value, index) => (
             <ClassificationRow

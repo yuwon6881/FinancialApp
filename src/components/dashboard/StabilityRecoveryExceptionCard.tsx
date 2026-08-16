@@ -64,65 +64,65 @@ export function StabilityRecoveryExceptionCard({
       aria-labelledby="stability-recovery-exception"
       className="app-panel rounded-2xl border border-amber-500/30 bg-card/92 p-4 sm:p-5 shadow-xs relative overflow-hidden"
     >
-      <div className="flex items-start justify-between gap-2.5">
-        <div className="flex items-start gap-3 min-w-0 flex-1">
-          <div className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 mt-0.5">
-            <ShieldAlert className="size-4.5 sm:size-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <h3
-                id="stability-recovery-exception"
-                className="text-sm font-bold text-amber-700 dark:text-amber-300"
-              >
-                Your emergency fund is below where it was
-              </h3>
-              <InfoHint
-                label="How putting money back is worked out"
-                text="Only money you mark as needing to go back creates this reminder. Your normal salary share does not count as putting it back; reaching your target clears it."
-              />
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-2.5">
+          <div className="flex items-start gap-2.5 min-w-0 flex-1">
+            <div className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 mt-0.5">
+              <ShieldAlert className="size-4.5 sm:size-5" />
             </div>
-
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              {aheadOfPace
-                ? <>Nothing more is needed this cycle — you are ahead of the plan.{' '}</>
-                : <>Put back {formatSensitive(recovery.outstandingThisCycle)} more this cycle.{' '}</>}
-              {recovery.isOverdue
-                ? <>{formatSensitive(recovery.outstandingShortfall)} remains overall and the plan is overdue.</>
-                : isFinalCycle
-                  ? <>This is the final planned cycle; {formatSensitive(recovery.outstandingShortfall)} remains overall.</>
-                  : <>{formatSensitive(recovery.outstandingShortfall)} remains overall across {recovery.cyclesRemaining} cycles.</>}
-            </p>
+            <h3
+              id="stability-recovery-exception"
+              className="text-sm font-bold leading-snug text-amber-700 dark:text-amber-300"
+            >
+              Your emergency fund is below where it was{' '}
+              <span className="inline-flex align-middle ml-0.5">
+                <InfoHint
+                  label="How putting money back is worked out"
+                  text="Only money you mark as needing to go back creates this reminder. Your normal salary share does not count as putting it back; reaching your target clears it."
+                />
+              </span>
+            </h3>
           </div>
+
+          {aheadOfPace ? (
+            <span className="shrink-0 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+              Ahead of plan
+            </span>
+          ) : recovery.isOverdue ? (
+            <span className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive">
+              Plan overdue
+            </span>
+          ) : isFinalCycle ? (
+            <span className="shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+              Final cycle
+            </span>
+          ) : null}
         </div>
 
-        {aheadOfPace ? (
-          <span className="shrink-0 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-            Ahead of plan
-          </span>
-        ) : recovery.isOverdue ? (
-          <span className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive">
-            Plan overdue
-          </span>
-        ) : isFinalCycle ? (
-          <span className="shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
-            Final cycle
-          </span>
-        ) : null}
-      </div>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          {aheadOfPace
+            ? <>Nothing more is needed this cycle — you are ahead of the plan.{' '}</>
+            : <>Put back {formatSensitive(recovery.outstandingThisCycle)} more this cycle.{' '}</>}
+          {recovery.isOverdue
+            ? <>{formatSensitive(recovery.outstandingShortfall)} remains overall and the plan is overdue.</>
+            : isFinalCycle
+              ? <>This is the final planned cycle; {formatSensitive(recovery.outstandingShortfall)} remains overall.</>
+              : <>{formatSensitive(recovery.outstandingShortfall)} remains overall across {recovery.cyclesRemaining} cycles.</>}
+        </p>
 
-      <div className="mt-3.5 space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-3.5">
-        <div className="grid gap-0.5 text-xs sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-2 sm:gap-y-1">
-          <span className="font-semibold text-muted-foreground">Putting it back progress</span>
-          <span className="font-semibold text-foreground tabular-nums sm:text-right">
-            <span className="font-extrabold text-amber-600 dark:text-amber-400">{percentRepaid}%</span> of {formatSensitive(recovery.markedTotal)} put back
-          </span>
-        </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-muted/60 border border-border/40">
-          <div
-            className="h-full rounded-full bg-amber-500 transition-all duration-300"
-            style={{ width: `${Math.min(100, Math.max(0, percentRepaid))}%` }}
-          />
+        <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-3.5">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="font-semibold text-muted-foreground">Putting it back progress</span>
+            <span className="font-semibold text-foreground tabular-nums text-right">
+              <span className="font-extrabold text-amber-600 dark:text-amber-400">{percentRepaid}%</span> of {formatSensitive(recovery.markedTotal)} put back
+            </span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-muted/70 border border-border/40">
+            <div
+              className="h-full rounded-full bg-amber-500 transition-all duration-300"
+              style={{ width: `${Math.min(100, Math.max(0, percentRepaid))}%` }}
+            />
+          </div>
         </div>
       </div>
 
