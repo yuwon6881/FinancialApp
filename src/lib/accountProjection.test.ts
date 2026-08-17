@@ -5,11 +5,11 @@ import { projectAccountBalances, projectAccountBalancesFromTransactions } from '
 
 const accounts: LedgerAccount[] = [
   {
-    id: 'essentials', name: 'Essentials bank', bucket: 'Essentials', kind: 'Bank', interestEnabled: false, interestRatePercent: 0, interestFrequency: 'Monthly',
+    id: 'essentials', name: 'Essentials bank', bucket: 'Essentials', kind: 'Bank',
     isArchived: false, remaining: 100, createdAt: '2026-01-01', updatedAt: '2026-01-01',
   },
   {
-    id: 'rewards', name: 'Rewards wallet', bucket: 'Rewards', kind: 'EWallet', interestEnabled: false, interestRatePercent: 0, interestFrequency: 'Monthly',
+    id: 'rewards', name: 'Rewards wallet', bucket: 'Rewards', kind: 'EWallet',
     isArchived: false, remaining: 0, createdAt: '2026-01-01', updatedAt: '2026-01-01',
   },
 ]
@@ -148,9 +148,6 @@ describe('projectAccountBalances', () => {
             isArchived: false,
             expectedCurrent: 100,
             target: 100,
-            interestEnabled: true,
-            interestRatePercent: 4.25,
-            interestFrequency: 'Yearly',
           }],
         },
       },
@@ -158,9 +155,6 @@ describe('projectAccountBalances', () => {
 
     expect(result.find(account => account.id === 'essentials')).toMatchObject({
       remaining: 100,
-      interestEnabled: true,
-      interestRatePercent: 4.25,
-      interestFrequency: 'Yearly',
     })
   })
 

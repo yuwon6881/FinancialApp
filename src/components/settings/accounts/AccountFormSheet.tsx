@@ -6,7 +6,6 @@ import {
   CreditCard,
   Info,
   Landmark,
-  Percent,
   Wallet,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -17,11 +16,11 @@ import { CustomSelect } from '../../ui/CustomSelect'
 import { FormField } from '../../ui/FormField'
 import { Input } from '../../ui/Input'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
-import type { LedgerAccount, LedgerAccountInterestFrequency, LedgerAccountKind } from '../../../types'
+import type { LedgerAccount, LedgerAccountKind } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import { getCategoryBadgeClass } from '../../../lib/categoryColors'
 import { formatCurrencyVal, maskCurrencyInput } from '../../../lib/utils'
-import { ACCOUNT_BUCKET_OPTIONS, ACCOUNT_INTEREST_FREQUENCY_OPTIONS, ACCOUNT_KIND_OPTIONS } from './accountOptions'
+import { ACCOUNT_BUCKET_OPTIONS, ACCOUNT_KIND_OPTIONS } from './accountOptions'
 
 export interface AccountFormSaveInput extends LedgerAccountInput {
   targetBalance?: number
@@ -62,12 +61,8 @@ export function AccountFormSheet({
   const [kind, setKind] = useState<LedgerAccountKind>(defaultKind)
   const [openingAmount, setOpeningAmount] = useState('')
   const [balanceAmount, setBalanceAmount] = useState('')
-  const [interestEnabled, setInterestEnabled] = useState(false)
-  const [interestRatePercent, setInterestRatePercent] = useState('')
-  const [interestFrequency, setInterestFrequency] = useState<LedgerAccountInterestFrequency>('Monthly')
   const [isArchived, setIsArchived] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [interestError, setInterestError] = useState<string | null>(null)
   const [balanceError, setBalanceError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -80,12 +75,8 @@ export function AccountFormSheet({
     setKind(account?.kind ?? defaultKind)
     setOpeningAmount('')
     setBalanceAmount(account ? account.remaining.toFixed(2) : '')
-    setInterestEnabled(account?.interestEnabled ?? false)
-    setInterestRatePercent(account?.interestEnabled ? String(account.interestRatePercent ?? '') : '')
-    setInterestFrequency(account?.interestFrequency ?? 'Monthly')
     setIsArchived(account?.isArchived ?? false)
     setError(null)
-    setInterestError(null)
     setBalanceError(null)
   }, [account, defaultBucket, defaultKind, isOpen])
 
@@ -120,14 +111,7 @@ export function AccountFormSheet({
       return
     }
 
-    const parsedInterestRate = interestRatePercent.trim() ? Number(interestRatePercent) : 0
-    if (interestEnabled && (!Number.isFinite(parsedInterestRate) || parsedInterestRate <= 0 || parsedInterestRate > 100)) {
-      setInterestError('Enter an annual interest rate between 0.01% and 100%, or choose no interest.')
-      return
-    }
-
     setError(null)
-    setInterestError(null)
     setBalanceError(null)
     setIsSaving(true)
     try {
@@ -137,9 +121,6 @@ export function AccountFormSheet({
         kind,
         openingAmount: isEditing ? undefined : parsedOpening,
         targetBalance: isEditing && isBalanceDirty ? parsedBalance : undefined,
-        interestEnabled,
-        interestRatePercent: interestEnabled ? Math.round(parsedInterestRate * 10000) / 10000 : 0,
-        interestFrequency,
         isArchived,
       })
       onClose()
@@ -274,79 +255,8 @@ export function AccountFormSheet({
           )}
         </div>
 
-        {/* Options Section: Interest & Lifecycle Status */}
+        {/* Options Section: Lifecycle Status */}
         <div className="space-y-3 pt-1">
-          {/* Interest Toggle & Configuration Card */}
-          <div
-            className={`rounded-2xl border transition duration-150 ${
-              interestEnabled
-                ? 'border-border/80 bg-card/90 shadow-sm'
-                : 'border-border/60 bg-muted/10 hover:bg-muted/15'
-            }`}
-          >
-            <label className="flex cursor-pointer items-center justify-between gap-3 p-3.5">
-              <div className="flex min-w-0 items-center gap-3">
-                <div
-                  className={`grid size-8 shrink-0 place-items-center rounded-xl border transition duration-150 ${
-                    interestEnabled
-                      ? 'border-accent-ink/40 bg-accent/20 text-accent-ink'
-                      : 'border-border/60 bg-muted/30 text-muted-foreground'
-                  }`}
-                  aria-hidden="true"
-                >
-                  <Percent className="size-4" />
-                </div>
-                <div className="min-w-0">
-                  <span className="block text-xs font-semibold text-foreground sm:text-sm">
-                    Earn interest on this account
-                  </span>
-                  <span className="block text-[11px] leading-snug text-muted-foreground">
-                    Interest is added as a ledger credit to this account and {bucket}.
-                  </span>
-                </div>
-              </div>
-              <Checkbox
-                checked={interestEnabled}
-                onChange={event => setInterestEnabled(event.target.checked)}
-                className="size-4.5"
-                aria-label="Earn interest on this account"
-              />
-            </label>
-
-            {interestEnabled && (
-              <div className="border-t border-border/40 bg-background/50 p-3.5 sm:p-4">
-                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4">
-                  <FormField
-                    label="Annual interest rate (%)"
-                    required
-                    error={interestError ?? undefined}
-                    hint="e.g. 5 for 5% per year."
-                  >
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      min="0.01"
-                      max="100"
-                      step="0.0001"
-                      value={interestRatePercent}
-                      onChange={event => setInterestRatePercent(event.target.value)}
-                      placeholder="5"
-                    />
-                  </FormField>
-                  <FormField label="Add interest" required hint="Posting frequency">
-                    <CustomSelect
-                      value={interestFrequency}
-                      onChange={setInterestFrequency}
-                      options={ACCOUNT_INTEREST_FREQUENCY_OPTIONS}
-                      ariaLabel="Interest posting frequency"
-                      className="w-full"
-                    />
-                  </FormField>
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* Account Status / Archive Card */}
           {isEditing && (
             <div

@@ -67,6 +67,7 @@ interface SettingsViewProps {
   onUpdateAccount?: (id: string, input: LedgerAccountInput) => Promise<void> | void
   onRequestDeleteAccount?: (id: string) => void
   onReconcileAccounts?: (input: LedgerAccountReconcileInput) => Promise<void> | void
+  onRecordInterest?: (account: LedgerAccount) => void
   notifyOnLoginEnabled?: boolean
   onToggleNotifyOnLogin?: (checked: boolean) => void
   activeSyncId?: string | null
@@ -832,6 +833,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             onUpdateAccount={(id, input) => props.onUpdateAccount?.(id, input)}
             onRequestDeleteAccount={id => props.onRequestDeleteAccount?.(id)}
             onReconcileAccounts={input => props.onReconcileAccounts?.(input)}
+            onRecordInterest={props.onRecordInterest}
           />
         </React.Suspense>
       )}

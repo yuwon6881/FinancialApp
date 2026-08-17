@@ -77,9 +77,6 @@ export interface OutboxPayload {
   isArchived?: boolean
   openingAmount?: number
   remaining?: number
-  interestEnabled?: boolean
-  interestRatePercent?: number
-  interestFrequency?: string
   reconciliation?: unknown
   undoReconciliation?: unknown
 }

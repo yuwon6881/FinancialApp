@@ -429,12 +429,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         op.entity === 'ledgerAccount' && (op.type === 'add' || op.type === 'update' || op.type === 'delete'))
       const accountOpeningChanges = ops.some(op =>
         op.entity === 'ledgerAccount' && op.type === 'add' && Number(op.payload?.openingAmount ?? 0) !== 0)
-      const accountInterestChanges = ops.some(op =>
-        op.entity === 'ledgerAccount'
-        && (op.payload?.interestEnabled !== undefined
-          || op.payload?.interestRatePercent !== undefined
-          || op.payload?.interestFrequency !== undefined))
-      if (onlyLedgerAccountCrud && !accountOpeningChanges && !accountInterestChanges) {
+      if (onlyLedgerAccountCrud && !accountOpeningChanges) {
         const { fetchLedgerAccounts } = await import('../lib/api/accounts')
         const refreshedAccounts = await fetchLedgerAccounts()
         setAccounts(refreshedAccounts)

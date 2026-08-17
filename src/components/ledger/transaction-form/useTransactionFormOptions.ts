@@ -11,6 +11,7 @@ import type {
 } from '../../../types'
 import type { ReceiptScanResult } from '../../../lib/api'
 import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
+import type { LedgerAddPrefill } from '../../../app/useCycleNavigation'
 
 export interface StabilityTopUpContext {
   recovery: StabilityRecovery
@@ -56,6 +57,7 @@ export interface UseTransactionFormOptions {
   onAddFormOpenChange?: (open: boolean) => void
   autoOpenAddForm?: boolean
   autoOpenTxType?: 'inflow' | 'outflow' | 'transfer' | null
+  autoOpenPrefill?: LedgerAddPrefill | null
   onResetAutoOpen?: () => void
   receiptScanDraft?: { jobId: string; result: ReceiptScanResult } | null
   onReceiptScanStarted?: (scanId: string) => void

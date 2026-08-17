@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { LedgerAccount, LedgerAccountInterestFrequency, LedgerAccountKind } from '../../../../types'
+import type { LedgerAccount, LedgerAccountKind } from '../../../../types'
 import { createFinalId } from '../../../../lib/outbox'
 import { maskCurrencyInput } from '../../../../lib/utils'
 import {
@@ -13,9 +13,6 @@ export interface BucketSetupPrefill {
   name: string
   kind: LedgerAccountKind
   target: number
-  interestEnabled?: boolean
-  interestRatePercent?: number
-  interestFrequency?: LedgerAccountInterestFrequency
 }
 
 export interface BucketSetupDraftAccount {
@@ -23,9 +20,6 @@ export interface BucketSetupDraftAccount {
   name: string
   kind: LedgerAccountKind
   target: string
-  interestEnabled: boolean
-  interestRatePercent: number
-  interestFrequency: LedgerAccountInterestFrequency
 }
 
 export interface BucketSetupPendingReview {
@@ -94,9 +88,6 @@ const createDraft = (prefill?: BucketSetupPrefill): BucketSetupDraftAccount => (
   name: prefill?.name ?? '',
   kind: prefill?.kind ?? 'Bank',
   target: prefill ? roundMoney(prefill.target).toFixed(2) : '0.00',
-  interestEnabled: prefill?.interestEnabled === true,
-  interestRatePercent: prefill?.interestEnabled === true ? prefill.interestRatePercent ?? 0 : 0,
-  interestFrequency: prefill?.interestFrequency ?? 'Monthly',
 })
 
 export function useBucketAccountSetupView({
@@ -210,10 +201,6 @@ export function useBucketAccountSetupView({
       else if (names.has(name.toLowerCase())) nextErrors[draft.id] = 'This account name is already in use.'
       else names.add(name.toLowerCase())
       if (Number.isNaN(parseAmount(draft.target))) nextErrors[`${draft.id}-target`] = 'Enter a valid balance.'
-      if (draft.interestEnabled && (!Number.isFinite(draft.interestRatePercent)
-          || draft.interestRatePercent <= 0 || draft.interestRatePercent > 100)) {
-        nextErrors[`${draft.id}-interest`] = 'Enter an annual interest rate between 0.01% and 100%, or choose no interest.'
-      }
     }
     for (const account of parsedExistingTargets) {
       if (!account.isArchived && Number.isNaN(account.target)) nextErrors[account.id] = 'Enter a valid balance.'

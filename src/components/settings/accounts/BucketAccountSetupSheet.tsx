@@ -1,11 +1,10 @@
 import { useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, CircleHelp, Percent, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, CircleHelp, Plus, Trash2 } from 'lucide-react'
 import type { LedgerAccount, LedgerAccountKind } from '../../../types'
 import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
 import { formatCurrencyVal } from '../../../lib/utils'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { Button } from '../../ui/Button'
-import { Checkbox } from '../../ui/Checkbox'
 import { CustomConfirmModal } from '../../ui/CustomConfirmModal'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { FormField } from '../../ui/FormField'
@@ -13,7 +12,7 @@ import { Input } from '../../ui/Input'
 import { ModalActions } from '../../ui/ModalActions'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
-import { ACCOUNT_INTEREST_FREQUENCY_OPTIONS, ACCOUNT_KIND_OPTIONS } from './accountOptions'
+import { ACCOUNT_KIND_OPTIONS } from './accountOptions'
 import {
   useBucketAccountSetupView,
   type BucketSetupDraftAccount,
@@ -53,20 +52,16 @@ function NewAccountRow({
   currency,
   error,
   targetError,
-  interestError,
   onChange,
   onTargetChange,
-  onInterestChange,
   onRemove,
 }: {
   draft: BucketSetupDraftAccount
   currency: string
   error?: string
   targetError?: string
-  interestError?: string
   onChange: (change: Partial<Omit<BucketSetupDraftAccount, 'id'>>) => void
   onTargetChange: (rawValue: string) => void
-  onInterestChange: (change: { enabled?: boolean; rate?: number; frequency?: BucketSetupDraftAccount['interestFrequency'] }) => void
   onRemove: () => void
 }) {
   return (
@@ -90,25 +85,6 @@ function NewAccountRow({
         <FormField label={`Current balance (${currency})`} required error={targetError}>
           <SmartAmountInput value={draft.target} onChange={event => onTargetChange(event.target.value)} placeholder="0.00" />
         </FormField>
-      </div>
-      <div className="space-y-3 rounded-xl border border-border/50 bg-background/30 p-3">
-        <label className="flex cursor-pointer items-start gap-2 text-[11px] font-semibold text-foreground">
-          <Checkbox checked={draft.interestEnabled} onChange={event => onInterestChange({ enabled: event.target.checked })} className="mt-0.5 size-5" />
-          <span className="min-w-0">
-            <span className="flex items-center gap-1.5"><Percent className="size-3.5 text-accent-ink" aria-hidden="true" />Earn interest on this account</span>
-            <span className="mt-0.5 block font-normal leading-relaxed text-muted-foreground">Interest is posted to this account and bucket.</span>
-          </span>
-        </label>
-        {draft.interestEnabled && (
-          <div className="grid grid-cols-1 gap-3 border-t border-border/40 pt-3 sm:grid-cols-2">
-            <FormField label="Annual rate (%)" required error={interestError}>
-              <Input type="number" inputMode="decimal" min="0.01" max="100" step="0.0001" value={draft.interestRatePercent || ''} onChange={event => onInterestChange({ rate: event.target.value ? Number(event.target.value) : 0 })} placeholder="5" />
-            </FormField>
-            <FormField label="Add interest" required>
-              <CustomSelect value={draft.interestFrequency} onChange={value => onInterestChange({ frequency: value as BucketSetupDraftAccount['interestFrequency'] })} options={ACCOUNT_INTEREST_FREQUENCY_OPTIONS} ariaLabel={`${draft.name || 'New'} interest posting frequency`} className="w-full" />
-            </FormField>
-          </div>
-        )}
       </div>
     </div>
   )
@@ -152,11 +128,6 @@ export function BucketAccountSetupSheet({
             } : {}),
             expectedCurrent: line.current,
             target: line.target,
-            ...(draft ? {
-              interestEnabled: draft.interestEnabled,
-              interestRatePercent: draft.interestRatePercent,
-              interestFrequency: draft.interestFrequency,
-            } : {}),
           }
         })
         const operationId = operationIdRef.current ?? `reconcile-${bucket.toLowerCase()}-${Date.now()}`
@@ -198,7 +169,7 @@ export function BucketAccountSetupSheet({
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3"><div><h4 className="text-sm font-bold text-foreground">Accounts in {bucket}</h4><p className="mt-0.5 text-[11px] text-muted-foreground">Closed accounts stay visible for history.</p></div><Button variant="outline" size="sm" type="button" onClick={view.addDraft} disabled={isBusy}><Plus className="size-3.5" aria-hidden="true" />Add account</Button></div>
             {view.bucketAccounts.map(account => <div key={account.id} className="grid grid-cols-1 items-center gap-2.5 rounded-2xl border border-border/60 bg-card/70 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,12rem)] sm:gap-3"><div className="min-w-0"><p className={`truncate text-xs font-semibold ${account.isArchived ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{account.name}</p><p className="mt-0.5 text-[10px] text-muted-foreground">{account.isArchived ? 'Closed account · kept for history' : 'Open account'}</p></div>{account.isArchived ? <div className="text-right text-xs">{formatAmount(account.remaining)}</div> : <FormField label={`Current balance for ${account.name}`} error={view.errors[account.id]}><SmartAmountInput value={view.targetInputs[account.id] ?? ''} onChange={event => view.updateTarget(account.id, event.target.value)} placeholder="0.00" /></FormField>}</div>)}
-            {view.drafts.map(draft => <NewAccountRow key={draft.id} draft={draft} currency={currency} error={view.errors[draft.id]} targetError={view.errors[`${draft.id}-target`]} interestError={view.errors[`${draft.id}-interest`]} onChange={change => view.updateDraft(draft.id, change)} onTargetChange={value => view.updateDraftTarget(draft.id, value)} onInterestChange={change => view.updateDraft(draft.id, { ...(change.enabled === undefined ? {} : { interestEnabled: change.enabled, interestRatePercent: change.enabled ? draft.interestRatePercent : 0 }), ...(change.rate === undefined ? {} : { interestRatePercent: change.rate }), ...(change.frequency === undefined ? {} : { interestFrequency: change.frequency }) })} onRemove={() => view.removeDraft(draft.id)} />)}
+            {view.drafts.map(draft => <NewAccountRow key={draft.id} draft={draft} currency={currency} error={view.errors[draft.id]} targetError={view.errors[`${draft.id}-target`]} onChange={change => view.updateDraft(draft.id, change)} onTargetChange={value => view.updateDraftTarget(draft.id, value)} onRemove={() => view.removeDraft(draft.id)} />)}
             {view.bucketAccounts.length === 0 && view.drafts.length === 0 && <div className="rounded-2xl border border-dashed border-border/70 bg-card/40 px-4 py-6 text-center text-xs text-muted-foreground">Add at least one account row to start this bucket.</div>}
           </div>
           {view.preview && view.preview.accountAdjustments.length > 0 && <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/15 p-3.5"><div className="flex items-center gap-2 text-xs font-bold text-foreground"><CheckCircle2 className="size-4 text-accent-ink" aria-hidden="true" />Planned balance changes</div>{view.preview.accountAdjustments.map(account => <div key={account.id} className="flex items-center justify-between gap-3 text-[11px]"><span className="min-w-0 truncate">{account.name}</span><SignedAmount value={account.diff} currency={currency} hideSensitive={hideSensitive} /></div>)}</div>}

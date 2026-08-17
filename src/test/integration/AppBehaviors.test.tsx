@@ -4,6 +4,7 @@ import App from '@/App'
 import * as api from '@/lib/api'
 import * as auth from '@/lib/auth'
 import { getCurrentCycleYearAndMonth, MONTH_NAMES } from '@/lib/cycle'
+import { ACCOUNT_TRACKING_CACHE_VERSION, ACCOUNT_TRACKING_CACHE_VERSION_KEY } from '@/lib/cache'
 
 const apiMocks = vi.hoisted(() => ({
   updateHideSensitive: vi.fn().mockResolvedValue(undefined),
@@ -175,7 +176,9 @@ describe('App behaviors', () => {
   beforeEach(() => {
     window.history.replaceState({}, '', '/dashboard')
     localStorage.clear()
-    localStorage.setItem('financial_account_tracking_cache_version', '3')
+    // Read the current version rather than a literal: these tests seed a dashboard cache and
+    // assert it renders, so a stale version here silently evicts the very fixture under test.
+    localStorage.setItem(ACCOUNT_TRACKING_CACHE_VERSION_KEY, ACCOUNT_TRACKING_CACHE_VERSION)
     sessionStorage.clear()
     vi.clearAllMocks()
     mobilePwaGateMocks.credentialId = null

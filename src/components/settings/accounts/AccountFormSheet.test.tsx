@@ -9,9 +9,6 @@ const mockAccount: LedgerAccount = {
   bucket: 'Essentials',
   kind: 'Bank',
   isArchived: false,
-  interestEnabled: false,
-  interestRatePercent: 0,
-  interestFrequency: 'Monthly',
   remaining: 150,
   createdAt: '2026-08-01T00:00:00.000Z',
   updatedAt: '2026-08-01T00:00:00.000Z',
@@ -44,7 +41,7 @@ describe('AccountFormSheet', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('submits valid new account with interest settings enabled', async () => {
+  it('submits a valid new account', async () => {
     const onSave = vi.fn()
     const onClose = vi.fn()
     render(
@@ -61,12 +58,6 @@ describe('AccountFormSheet', () => {
     const nameInput = screen.getByPlaceholderText('Name this account')
     fireEvent.change(nameInput, { target: { value: 'High Yield Savings' } })
 
-    const interestCheckbox = screen.getByLabelText(/Earn interest on this account/i)
-    fireEvent.click(interestCheckbox)
-
-    const rateInput = screen.getByPlaceholderText('5')
-    fireEvent.change(rateInput, { target: { value: '4.25' } })
-
     const saveBtn = screen.getByRole('button', { name: 'Add account' })
     fireEvent.click(saveBtn)
 
@@ -77,9 +68,6 @@ describe('AccountFormSheet', () => {
       kind: 'Bank',
       openingAmount: 0,
       targetBalance: undefined,
-      interestEnabled: true,
-      interestRatePercent: 4.25,
-      interestFrequency: 'Monthly',
       isArchived: false,
     })
   })
@@ -113,9 +101,6 @@ describe('AccountFormSheet', () => {
       kind: 'Bank',
       openingAmount: undefined,
       targetBalance: undefined,
-      interestEnabled: false,
-      interestRatePercent: 0,
-      interestFrequency: 'Monthly',
       isArchived: true,
     })
   })

@@ -8,9 +8,6 @@ const makeAccount = (partial: Partial<LedgerAccount>): LedgerAccount => ({
   bucket: 'Essentials',
   kind: 'Bank',
   remaining: 1000,
-  interestEnabled: false,
-  interestRatePercent: 0,
-  interestFrequency: 'Monthly',
   isArchived: false,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
@@ -39,9 +36,6 @@ describe('buildSingleAccountCorrection', () => {
       nextBalance: 2000,
       nextName: 'Renamed Checking',
       nextKind: 'EWallet',
-      interestEnabled: true,
-      interestRatePercent: 3.5,
-      interestFrequency: 'Yearly',
     })
 
     expect(result).not.toBeNull()
@@ -63,9 +57,6 @@ describe('buildSingleAccountCorrection', () => {
       expectedIsArchived: false,
       expectedCurrent: 1500,
       target: 2000,
-      interestEnabled: true,
-      interestRatePercent: 3.5,
-      interestFrequency: 'Yearly',
     })
 
     const target2 = result!.targets.find(t => t.id === 'acc-2')
@@ -80,9 +71,6 @@ describe('buildSingleAccountCorrection', () => {
       expectedIsArchived: false,
       expectedCurrent: 200,
       target: 200,
-      interestEnabled: false,
-      interestRatePercent: 0,
-      interestFrequency: 'Monthly',
     })
 
     const target3 = result!.targets.find(t => t.id === 'acc-3')
@@ -97,9 +85,6 @@ describe('buildSingleAccountCorrection', () => {
       expectedIsArchived: true,
       expectedCurrent: 50,
       target: 50,
-      interestEnabled: false,
-      interestRatePercent: 0,
-      interestFrequency: 'Monthly',
     })
   })
 

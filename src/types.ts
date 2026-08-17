@@ -288,16 +288,11 @@ export interface Transaction {
 
 export type LedgerAccountKind = 'Bank' | 'EWallet' | 'Cash' | 'Card' | 'Other'
 
-export type LedgerAccountInterestFrequency = 'Daily' | 'Monthly' | 'Yearly'
-
 export interface LedgerAccount {
   id: string
   name: string
   bucket: 'Essentials' | 'Growth' | 'Stability' | 'Rewards'
   kind: LedgerAccountKind
-  interestEnabled: boolean
-  interestRatePercent: number
-  interestFrequency: LedgerAccountInterestFrequency
   isArchived: boolean
   remaining: number
   createdAt: string

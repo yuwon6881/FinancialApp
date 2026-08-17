@@ -372,6 +372,7 @@ function App() {
     if (prefs.activeTab !== 'ledger') {
       nav.setAutoOpenLedgerAdd(false)
       nav.setAutoOpenLedgerTxType(null)
+      nav.setAutoOpenLedgerPrefill(null)
       nav.setAutoOpenReceiptSplit(false)
     }
     if (prefs.activeTab !== 'recurring') {

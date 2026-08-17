@@ -54,9 +54,6 @@ describe('accounts API contract', () => {
         bucket: 'Stability',
         kind: 'Bank',
         isArchived: false,
-        interestEnabled: true,
-        interestRatePercent: 4.5,
-        interestFrequency: 'Monthly',
         remaining: obfuscateAmount(500),
         createdAt: '2026-08-15T00:00:00.000Z',
         updatedAt: '2026-08-15T00:00:00.000Z',
@@ -69,9 +66,6 @@ describe('accounts API contract', () => {
       bucket: 'Stability',
       kind: 'Bank',
       openingAmount: 500,
-      interestEnabled: true,
-      interestRatePercent: 4.5,
-      interestFrequency: 'Monthly',
     })
 
     expect(account.id).toBe('acct-new')
@@ -82,8 +76,6 @@ describe('accounts API contract', () => {
     expect(body.name).toBe('New Savings')
     expect(body.bucket).toBe('Stability')
     expect(deobfuscateAmount(body.openingAmount)).toBe(500)
-    expect(body.interestEnabled).toBe(true)
-    expect(body.interestRatePercent).toBe(4.5)
   })
 
   it('updateLedgerAccount encodes url and body', async () => {

@@ -1,4 +1,4 @@
-import type { LedgerAccount, LedgerAccountInterestFrequency } from '../../types'
+import type { LedgerAccount } from '../../types'
 import { createFinalId, type OutboxPayload } from '../../lib/outbox'
 import { triggerHaptic } from '../../lib/haptics'
 import type { UseOutboxResult } from '../../lib/useOutbox'
@@ -23,9 +23,6 @@ export interface LedgerAccountInput {
   kind: LedgerAccount['kind']
   openingAmount?: number
   isArchived?: boolean
-  interestEnabled?: boolean
-  interestRatePercent?: number
-  interestFrequency?: LedgerAccountInterestFrequency
 }
 
 export function createLedgerAccountActions(deps: LedgerAccountActionDependencies) {
@@ -50,11 +47,6 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
       isArchived: false,
       openingAmount,
       remaining: openingAmount,
-      interestEnabled: value.interestEnabled === true,
-      interestRatePercent: value.interestEnabled === true
-        ? Math.round((value.interestRatePercent ?? 0) * 10000) / 10000
-        : 0,
-      interestFrequency: value.interestFrequency ?? 'Monthly',
     }
     mutateQueue(previous => enqueue(previous, 'ledgerAccount', 'add', id, payload))
   }
@@ -78,17 +70,10 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
     }
     snapshotForUndo('ledgerAccount', id, previous)
     const isArchived = value.isArchived ?? false
-    const interestEnabled = value.interestEnabled ?? previous?.interestEnabled ?? false
-    const interestRatePercent = interestEnabled
-      ? Math.round((value.interestRatePercent ?? previous?.interestRatePercent ?? 0) * 10000) / 10000
-      : 0
     mutateQueue(queue => enqueue(queue, 'ledgerAccount', 'update', id, {
       ...value,
       name: value.name.trim(),
       isArchived,
-      interestEnabled,
-      interestRatePercent,
-      interestFrequency: value.interestFrequency ?? previous?.interestFrequency ?? 'Monthly',
       undoSnapshot: previous,
     }))
   }
@@ -131,9 +116,6 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
             expectedName: target.name,
             expectedKind: target.kind,
             expectedIsArchived: target.isArchived,
-            interestEnabled: account.interestEnabled,
-            interestRatePercent: account.interestRatePercent,
-            interestFrequency: account.interestFrequency,
           }
         : {
             ...target,

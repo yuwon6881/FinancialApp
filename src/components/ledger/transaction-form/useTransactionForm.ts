@@ -43,6 +43,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     onAddFormOpenChange,
     autoOpenAddForm,
     autoOpenTxType,
+    autoOpenPrefill,
     onResetAutoOpen,
     receiptScanDraft,
     onReceiptScanStarted,
@@ -491,9 +492,27 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     }
     descriptionRef.current = ''
     autocompletedDescriptionRef.current = null
+    // A caller that already knows where this money landed (Settings' "Record interest") fills
+    // the placement in; the amount is deliberately left blank, since only the bank knows it.
+    // This runs *after* the description reset above, which would otherwise clear the ref again.
+    if (autoOpenPrefill) {
+      if (autoOpenPrefill.category) {
+        dispatch({ type: 'SET_FIELD', field: 'category', value: autoOpenPrefill.category })
+      }
+      if (autoOpenPrefill.ledgerCategory) {
+        dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: autoOpenPrefill.ledgerCategory })
+      }
+      if (autoOpenPrefill.accountId) {
+        dispatch({ type: 'SET_FIELD', field: 'accountId', value: autoOpenPrefill.accountId })
+      }
+      if (autoOpenPrefill.description) {
+        dispatch({ type: 'SET_FIELD', field: 'description', value: autoOpenPrefill.description })
+        descriptionRef.current = autoOpenPrefill.description
+      }
+    }
     suggestions.clearSuggestions()
     openTransactionForm()
-  }, [accounts, hideSensitive, sensitivePreferenceStatus, defaultCategory, todayDate, autoOpenTxType, suggestions, openTransactionForm])
+  }, [accounts, hideSensitive, sensitivePreferenceStatus, defaultCategory, todayDate, autoOpenTxType, autoOpenPrefill, suggestions, openTransactionForm])
 
   useAutoOpenModal(autoOpenAddForm, () => openFresh(autoOpenTxType || undefined), onResetAutoOpen)
 

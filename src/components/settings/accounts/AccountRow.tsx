@@ -7,7 +7,7 @@ import { Button } from '../../ui/Button'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { AccountBillRoster } from './AccountBillRoster'
-import { ACCOUNT_INTEREST_FREQUENCY_LABELS, ACCOUNT_KIND_LABELS } from './accountOptions'
+import { ACCOUNT_KIND_LABELS } from './accountOptions'
 
 export interface AccountRowProps {
   account: LedgerAccount
@@ -19,6 +19,7 @@ export interface AccountRowProps {
   roster?: AccountBillRosterType
   onEdit: (account: LedgerAccount) => void
   onDelete: (id: string) => void
+  onRecordInterest?: (account: LedgerAccount) => void
   onNavigateToRecurring?: (recurringId: string) => void
 }
 
@@ -30,11 +31,6 @@ const KIND_ICONS: Record<LedgerAccountKind, LucideIcon> = {
   Other: CircleHelp,
 }
 
-const formatInterestRate = (value: number) => new Intl.NumberFormat(undefined, {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 4,
-}).format(value)
-
 export function AccountRow({
   account,
   currency,
@@ -45,6 +41,7 @@ export function AccountRow({
   roster,
   onEdit,
   onDelete,
+  onRecordInterest,
   onNavigateToRecurring,
 }: AccountRowProps) {
   const AccountIcon = KIND_ICONS[account.kind] ?? CircleHelp
@@ -68,12 +65,6 @@ export function AccountRow({
             </p>
             <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
               <span>{ACCOUNT_KIND_LABELS[account.kind] ?? account.kind}</span>
-              {account.interestEnabled && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span>{formatInterestRate(account.interestRatePercent)}% / yr ({ACCOUNT_INTEREST_FREQUENCY_LABELS[account.interestFrequency]})</span>
-                </>
-              )}
               {account.isArchived && (
                 <>
                   <span aria-hidden="true">·</span>
@@ -84,8 +75,8 @@ export function AccountRow({
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 sm:justify-end">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:flex-nowrap sm:justify-end">
+          <div className="flex shrink-0 items-center gap-2">
             <SensitiveAmount
               value={account.remaining}
               isMasked={hideSensitive}
@@ -100,7 +91,24 @@ export function AccountRow({
             />
           </div>
 
-          <div className="flex items-center gap-1.5">
+          {/* A third text action does not fit beside Edit and Delete at 390px. Every child here is
+              `shrink-0` — allowed to shrink, the button squeezed its label into "Record / interest"
+              across two lines rather than letting the row wrap. The row wraps instead, so the
+              actions drop below the balance intact on a phone and stay inline from `sm` up. */}
+          <div className="flex shrink-0 items-center gap-1.5">
+            {onRecordInterest && !account.isArchived && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onRecordInterest(account)}
+                disabled={disabled || isDeleting}
+                aria-label={`Record interest paid into ${account.name}`}
+                className="whitespace-nowrap"
+              >
+                Record interest
+              </Button>
+            )}
             <Button
               type="button"
               variant="ghost"

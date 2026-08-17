@@ -1,4 +1,4 @@
-import type { LedgerAccount, LedgerAccountInterestFrequency, LedgerAccountKind } from '../../../types'
+import type { LedgerAccount, LedgerAccountKind } from '../../../types'
 
 export const ACCOUNT_BUCKET_OPTIONS: Array<{ value: LedgerAccount['bucket']; label: string }> = [
   { value: 'Essentials', label: 'Essentials' },
@@ -21,18 +21,6 @@ export const ACCOUNT_KIND_LABELS: Record<LedgerAccountKind, string> = {
   Cash: 'Cash',
   Card: 'Card',
   Other: 'Other',
-}
-
-export const ACCOUNT_INTEREST_FREQUENCY_OPTIONS: Array<{ value: LedgerAccountInterestFrequency; label: string }> = [
-  { value: 'Daily', label: 'Daily' },
-  { value: 'Monthly', label: 'Monthly' },
-  { value: 'Yearly', label: 'Yearly' },
-]
-
-export const ACCOUNT_INTEREST_FREQUENCY_LABELS: Record<LedgerAccountInterestFrequency, string> = {
-  Daily: 'daily',
-  Monthly: 'monthly',
-  Yearly: 'yearly',
 }
 
 export const BUCKET_DEFINITIONS: ReadonlyArray<{ name: LedgerAccount['bucket']; description: string }> = [

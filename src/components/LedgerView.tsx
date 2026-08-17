@@ -11,6 +11,7 @@ import type {
   SavingsGoal,
 } from '../types'
 import type { PagedTransactionResult, ReceiptScanResult } from '../lib/api'
+import type { LedgerAddPrefill } from '../app/useCycleNavigation'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useAppContext } from '../contexts/AppContext'
 import { DeleteTransactionModal, EditDisabledModal } from './ledger/LedgerDeleteModals'
@@ -85,6 +86,7 @@ interface LedgerViewProps {
   currency?: string
   autoOpenAddForm?: boolean
   autoOpenTxType?: 'inflow' | 'outflow' | 'transfer' | null
+  autoOpenPrefill?: LedgerAddPrefill | null
   onResetAutoOpen?: () => void
   stabilityBalance?: number
   stabilityTarget?: number
@@ -374,6 +376,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onAddFormOpenChange={handleAddFormOpenChange}
         autoOpenAddForm={props.autoOpenAddForm}
         autoOpenTxType={props.autoOpenTxType}
+        autoOpenPrefill={props.autoOpenPrefill}
         onResetAutoOpen={props.onResetAutoOpen}
         receiptScanDraft={props.receiptScanDraft}
         onReceiptScanStarted={props.onReceiptScanStarted}

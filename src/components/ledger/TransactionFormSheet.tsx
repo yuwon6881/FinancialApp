@@ -1,5 +1,6 @@
 import { forwardRef, lazy, Suspense, useCallback, useEffect, useImperativeHandle, useState } from 'react'
 import { useAppContext } from '../../contexts/AppContext'
+import type { LedgerAddPrefill } from '../../app/useCycleNavigation'
 import { BottomSheet } from '../ui/BottomSheet'
 import { ReceiptScanPicker } from './transaction-form/ReceiptScanPicker'
 import { ReceiptScanStatus } from './transaction-form/ReceiptScanStatus'
@@ -70,6 +71,7 @@ export interface TransactionFormSheetProps {
   onAddFormOpenChange?: (open: boolean) => void
   autoOpenAddForm?: boolean
   autoOpenTxType?: 'inflow' | 'outflow' | 'transfer' | null
+  autoOpenPrefill?: LedgerAddPrefill | null
   onResetAutoOpen?: () => void
   receiptScanDraft?: { jobId: string; result: ReceiptScanResult } | null
   onReceiptScanStarted?: (scanId: string) => void

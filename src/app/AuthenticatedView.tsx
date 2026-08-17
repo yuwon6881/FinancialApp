@@ -286,6 +286,17 @@ export function AuthenticatedView({
                       onUpdateAccount={financial.handleUpdateAccount}
                       onRequestDeleteAccount={financial.requestDeleteAccount}
                       onReconcileAccounts={financial.handleReconcileAccounts}
+                      onRecordInterest={account => {
+                        prefs.setActiveTab('ledger')
+                        nav.setAutoOpenLedgerAdd(true)
+                        nav.setAutoOpenLedgerTxType('inflow')
+                        nav.setAutoOpenLedgerPrefill({
+                          category: 'Interest',
+                          ledgerCategory: account.bucket,
+                          accountId: account.id,
+                          description: `Interest earned - ${account.name}`,
+                        })
+                      }}
                       notifyOnLoginEnabled={prefs.notifyOnLogin}
                       onToggleNotifyOnLogin={(checked) => {
                         const previous = prefs.notifyOnLogin
@@ -449,9 +460,11 @@ export function AuthenticatedView({
                       activeRecurringPayments={financial.optimisticDashboardData?.activeRecurringPayments}
                       autoOpenAddForm={nav.autoOpenLedgerAdd}
                       autoOpenTxType={nav.autoOpenLedgerTxType}
+                      autoOpenPrefill={nav.autoOpenLedgerPrefill}
                       onResetAutoOpen={() => {
                         nav.setAutoOpenLedgerAdd(false)
                         nav.setAutoOpenLedgerTxType(null)
+                        nav.setAutoOpenLedgerPrefill(null)
                       }}
                       stabilityBalance={financial.optimisticDashboardData?.categories?.find(c => c.name === 'Stability')?.remaining ?? 0}
                       isSwitchingCycle={nav.isSwitchingCycle}

@@ -176,15 +176,6 @@ function applyReconciliation(
       account.name = name
       if (normalizedKind) account.kind = normalizedKind
       account.isArchived = target.isArchived === true
-      // Current reconciliation targets carry normalized account settings. Keep legacy queued
-      // payloads without interest fields from clearing the existing settings.
-      if ('interestEnabled' in target) {
-        Object.assign(account, {
-          interestEnabled: target.interestEnabled === true,
-          interestRatePercent: target.interestRatePercent,
-          interestFrequency: target.interestFrequency,
-        })
-      }
     }
 
     balances.set(id, targetBalance)

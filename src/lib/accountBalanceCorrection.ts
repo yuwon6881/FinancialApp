@@ -1,4 +1,4 @@
-import type { LedgerAccount, LedgerAccountInterestFrequency, LedgerAccountKind } from '../types'
+import type { LedgerAccount, LedgerAccountKind } from '../types'
 import type { LedgerAccountReconcileInput, LedgerAccountReconcileTarget } from './api/accounts'
 import { ACCOUNT_RECONCILIATION_EPSILON } from './accountReconciliation'
 import { roundMoney } from './money'
@@ -11,9 +11,6 @@ export interface SingleAccountCorrectionInput {
   nextName?: string
   nextKind?: LedgerAccountKind
   isArchived?: boolean
-  interestEnabled?: boolean
-  interestRatePercent?: number
-  interestFrequency?: LedgerAccountInterestFrequency
   operationId?: string
 }
 
@@ -51,13 +48,9 @@ export function buildSingleAccountCorrection(input: SingleAccountCorrectionInput
         expectedIsArchived: account.isArchived,
         expectedCurrent: roundMoney(account.remaining),
         target: roundMoney(account.remaining),
-        interestEnabled: account.interestEnabled,
-        interestRatePercent: account.interestRatePercent,
-        interestFrequency: account.interestFrequency,
       }
     }
 
-    const interestEnabled = input.interestEnabled ?? account.interestEnabled
     return {
       id: account.id,
       name: input.nextName?.trim() || account.name,
@@ -69,9 +62,6 @@ export function buildSingleAccountCorrection(input: SingleAccountCorrectionInput
       expectedIsArchived: account.isArchived,
       expectedCurrent: currentRemaining,
       target: targetRemaining,
-      interestEnabled,
-      interestRatePercent: interestEnabled ? (input.interestRatePercent ?? account.interestRatePercent ?? 0) : 0,
-      interestFrequency: input.interestFrequency ?? account.interestFrequency ?? 'Monthly',
     }
   })
 
