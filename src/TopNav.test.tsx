@@ -56,6 +56,32 @@ describe('TopNav mobile primary navigation', () => {
     expect(screen.getByText('Syncing…')).toBeTruthy()
   })
 
+  it('keeps the draft shortcut ahead of transient refresh text on phone screens', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
+    render(
+      <TopNav
+        activeTab="dashboard"
+        onTabChange={vi.fn()}
+        hideSensitive
+        sensitivePreferenceStatus="resolved"
+        onToggleHideSensitive={vi.fn()}
+        onRetrySensitivePreference={vi.fn()}
+        onLogout={vi.fn()}
+        username="Test User"
+        pendingNotifications={[]}
+        onOpenNotifications={vi.fn()}
+        darkMode={false}
+        onToggleDarkMode={vi.fn()}
+        isSyncing
+        draftCount={1}
+      />,
+    )
+
+    const draftShortcut = screen.getByRole('button', { name: '1 Draft' })
+    const refreshStatus = screen.getByText('Syncing…')
+    expect(draftShortcut.compareDocumentPosition(refreshStatus) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('renders privacy resolution as a floating overlay that does not take layout space', () => {
     render(
       <TopNav

@@ -30,6 +30,7 @@ import { CommitmentIcon, RewardIcon } from './components/semanticIcons'
 import { triggerHaptic } from './lib/haptics'
 import { AppLogo } from './components/ui/AppLogo'
 import { mutationBusyLabel } from './components/ui/rowSyncState'
+import { useIsMobile } from './lib/useIsMobile'
 import type { AppTab, PendingNotification } from './types'
 import type { SensitivePreferenceStatus } from './app/useAppPreferences'
 
@@ -79,6 +80,7 @@ const TopNav: React.FC<TopNavProps> = ({
   onOpenFailedOps
 }) => {
   const hasAlerts = pendingNotifications.length > 0
+  const isPhone = useIsMobile(640)
 
   const getInitials = (name: string) => {
     if (!name) return 'U'
@@ -143,6 +145,18 @@ const TopNav: React.FC<TopNavProps> = ({
     }
   ]
 
+  const draftStatus = draftCount > 0 ? (
+    <Button variant="unstyled"
+      type="button"
+      onClick={() => onTabChange('drafts')}
+      className="ml-2.5 flex items-center gap-1 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-[10px] font-bold text-amber-500 cursor-pointer select-none shrink-0 hover:bg-amber-500/25 transition duration-150 animate-in fade-in zoom-in-95"
+      title="Draft transactions waiting to be synced to the server"
+    >
+      <FileText className="size-3" />
+      <span>{draftCount} Draft{draftCount > 1 ? 's' : ''}</span>
+    </Button>
+  ) : null
+
   return (
     <>
       <header
@@ -169,6 +183,10 @@ const TopNav: React.FC<TopNavProps> = ({
               FinancialApp
             </span>
           </Button>
+          {/* On phones, keep the actionable draft count anchored beside the logo. Transient
+              refresh/offline text may then clip at the edge of the left lane instead of
+              shifting the draft into the fixed actions on the right. */}
+          {isPhone && draftStatus}
           {isOffline ? (
             <div
               className="ml-2.5 flex items-center gap-1.5 px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-[10px] font-bold text-amber-500 select-none shrink-0"
@@ -194,17 +212,7 @@ const TopNav: React.FC<TopNavProps> = ({
               <span>{failedOpsCount} failed</span>
             </Button>
           )}
-          {draftCount > 0 && (
-            <Button variant="unstyled"
-              type="button"
-              onClick={() => onTabChange('drafts')}
-              className="ml-2.5 flex items-center gap-1 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-[10px] font-bold text-amber-500 cursor-pointer select-none shrink-0 hover:bg-amber-500/25 transition duration-150 animate-in fade-in zoom-in-95"
-              title="Draft transactions waiting to be synced to the server"
-            >
-              <FileText className="size-3" />
-              <span>{draftCount} Draft{draftCount > 1 ? 's' : ''}</span>
-            </Button>
-          )}
+          {!isPhone && draftStatus}
         </div>
 
         {/* Navigation Tabs - Centered mathematically on desktop, flex-safe on medium screens */}
