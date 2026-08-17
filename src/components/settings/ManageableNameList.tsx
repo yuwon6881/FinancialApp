@@ -200,7 +200,14 @@ export function ManageableNameList<T extends ManageableNameItem>({
         </CollapsibleBody>
       </div>}
 
-      <div className={`space-y-1.5 overflow-y-auto pr-1 ${listClassName ?? 'max-h-72'}`} aria-busy={isLoading}>
+      {/* overscroll-contain, not just overflow-y-auto: without it the browser latches the wheel
+          to this container and then pauses before handing the scroll to the page at each end,
+          which reads as the list lagging a beat behind the wheel. Containing it also stops the
+          page moving under the cursor while the list still has room. */}
+      <div
+        className={`space-y-1.5 overflow-y-auto overscroll-contain pr-1 ${listClassName ?? 'max-h-72'}`}
+        aria-busy={isLoading}
+      >
         {isLoading ? (
           <div role="status" className="flex min-h-24 items-center justify-center gap-2 text-xs font-semibold text-muted-foreground">
             <Loader2 className="size-4 animate-spin text-blue-500" />

@@ -46,6 +46,24 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
   useEffect(() => {
     if (!isMobile || disabled) return
 
+    // The pull needs preventDefault, so its touchmove listener cannot be passive -- and a
+    // non-passive touchmove standing permanently on window makes the browser wait for JS before
+    // committing *any* scroll frame, including inside unrelated scroll containers, which is felt
+    // as a small lag on every scroll in the app. So it is attached only for the gestures
+    // `onStart` judged eligible, and torn down the moment the gesture ends or disqualifies
+    // itself. Ordinary scrolling therefore runs with no non-passive listener attached at all.
+    let moveAttached = false
+    const attachMove = () => {
+      if (moveAttached) return
+      window.addEventListener('touchmove', onMove, { passive: false })
+      moveAttached = true
+    }
+    const detachMove = () => {
+      if (!moveAttached) return
+      window.removeEventListener('touchmove', onMove)
+      moveAttached = false
+    }
+
     const onStart = (e: TouchEvent) => {
       const target = e.target instanceof HTMLElement ? e.target : null
       if (
@@ -63,6 +81,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
         pulling: false,
         active: true,
       }
+      attachMove()
     }
 
     const onMove = (e: TouchEvent) => {
@@ -72,12 +91,14 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
       if (target?.closest('[data-no-pull-refresh], .no-pull-refresh, .overflow-y-auto')) {
         s.active = false
         s.pulling = false
+        detachMove()
         if (pullRef.current) resetPullState()
         return
       }
       if (isSwipeLocked()) {
         s.active = false
         s.pulling = false
+        detachMove()
         if (pullRef.current) resetPullState()
         return
       }
@@ -89,6 +110,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
       if (!s.pulling && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) >= 8) {
         s.active = false
         s.pulling = false
+        detachMove()
         return
       }
       if (dy <= 0) {
@@ -98,6 +120,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
       if (!s.pulling && window.scrollY > 0) {
         s.active = false
         s.pulling = false
+        detachMove()
         if (pullRef.current) resetPullState()
         return
       }
@@ -111,6 +134,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
     const onEnd = async () => {
       const s = drag.current
       setDragging(false)
+      detachMove()
       if (!s.active) return
       s.active = false
       const wasPulling = s.pulling
@@ -136,12 +160,11 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
     }
 
     window.addEventListener('touchstart', onStart, { passive: true })
-    window.addEventListener('touchmove', onMove, { passive: false })
     document.addEventListener('touchend', onEnd, { passive: true })
     document.addEventListener('touchcancel', onEnd, { passive: true })
     return () => {
       window.removeEventListener('touchstart', onStart)
-      window.removeEventListener('touchmove', onMove)
+      detachMove()
       document.removeEventListener('touchend', onEnd)
       document.removeEventListener('touchcancel', onEnd)
     }
