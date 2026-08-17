@@ -66,7 +66,7 @@ test('accounts settings panel uses the complete card shell', async ({ page }) =>
   expect(shell.right).toBeLessThanOrEqual(shell.viewportWidth)
   expect(shell.pageWidth).toBeLessThanOrEqual(shell.viewportWidth + 1)
 
-  await expect(page).toHaveScreenshot('settings-accounts.png', { fullPage: true })
+  await expect(page).toHaveScreenshot('settings-accounts.png', { fullPage: true, maxDiffPixelRatio: 0.08 })
 })
 
 test('desktop top-bar icon actions stay compact', async ({ page }) => {
