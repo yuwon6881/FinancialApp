@@ -81,6 +81,7 @@ const TopNav: React.FC<TopNavProps> = ({
 }) => {
   const hasAlerts = pendingNotifications.length > 0
   const isPhone = useIsMobile(640)
+  const syncStatusLabel = syncLabel || mutationBusyLabel('syncing')
 
   const getInitials = (name: string) => {
     if (!name) return 'U'
@@ -189,16 +190,25 @@ const TopNav: React.FC<TopNavProps> = ({
           {isPhone && draftStatus}
           {isOffline ? (
             <div
-              className="ml-2.5 flex items-center gap-1.5 px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-[10px] font-bold text-amber-500 select-none shrink-0"
+              aria-label="Offline"
+              className={isPhone
+                ? 'ml-1.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-500'
+                : 'ml-2.5 flex shrink-0 items-center gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-500 select-none'}
               title="No network connection — showing cached data, changes will sync once you're back online"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-              Offline
+              {!isPhone && 'Offline'}
             </div>
-          ) : (isSyncing || syncLabel) && (
-            <div className="ml-2.5 flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-md text-[10px] font-bold text-blue-500 animate-pulse select-none shrink-0">
+          ) : (isSyncing || syncLabel) && (!isPhone || syncStatusLabel !== 'Refreshing') && (
+            <div
+              aria-label={syncStatusLabel}
+              title={syncStatusLabel}
+              className={isPhone
+                ? 'ml-1.5 flex size-5 shrink-0 animate-pulse items-center justify-center rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-500'
+                : 'ml-2.5 flex shrink-0 animate-pulse items-center gap-1.5 rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-500 select-none'}
+            >
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-              {syncLabel || mutationBusyLabel('syncing')}
+              {!isPhone && syncStatusLabel}
             </div>
           )}
           {failedOpsCount > 0 && (

@@ -34,29 +34,7 @@ describe('TopNav mobile primary navigation', () => {
     expect(screen.getByRole('button', { name: 'Commitments and Rewards' })).toBeTruthy()
   })
 
-  it('shows global synchronization feedback in the top-left brand area', () => {
-    render(
-      <TopNav
-        activeTab="dashboard"
-        onTabChange={vi.fn()}
-        hideSensitive
-        sensitivePreferenceStatus="resolved"
-        onToggleHideSensitive={vi.fn()}
-        onRetrySensitivePreference={vi.fn()}
-        onLogout={vi.fn()}
-        username="Test User"
-        pendingNotifications={[]}
-        onOpenNotifications={vi.fn()}
-        darkMode={false}
-        onToggleDarkMode={vi.fn()}
-        isSyncing
-      />,
-    )
-
-    expect(screen.getByText('Syncing…')).toBeTruthy()
-  })
-
-  it('keeps the draft shortcut ahead of transient refresh text on phone screens', () => {
+  it('shows compact accessible synchronization feedback in the phone header', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
     render(
       <TopNav
@@ -73,13 +51,62 @@ describe('TopNav mobile primary navigation', () => {
         darkMode={false}
         onToggleDarkMode={vi.fn()}
         isSyncing
+      />,
+    )
+
+    expect(screen.getByLabelText('Syncing…')).toBeTruthy()
+    expect(screen.queryByText('Syncing…')).toBeNull()
+  })
+
+  it('uses the pull indicator as the single refresh label when a phone has drafts', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
+    render(
+      <TopNav
+        activeTab="dashboard"
+        onTabChange={vi.fn()}
+        hideSensitive
+        sensitivePreferenceStatus="resolved"
+        onToggleHideSensitive={vi.fn()}
+        onRetrySensitivePreference={vi.fn()}
+        onLogout={vi.fn()}
+        username="Test User"
+        pendingNotifications={[]}
+        onOpenNotifications={vi.fn()}
+        darkMode={false}
+        onToggleDarkMode={vi.fn()}
+        isSyncing
+        syncLabel="Refreshing"
         draftCount={1}
       />,
     )
 
-    const draftShortcut = screen.getByRole('button', { name: '1 Draft' })
-    const refreshStatus = screen.getByText('Syncing…')
-    expect(draftShortcut.compareDocumentPosition(refreshStatus) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByRole('button', { name: '1 Draft' })).toBeTruthy()
+    expect(screen.queryByText('Refreshing')).toBeNull()
+  })
+
+  it('keeps the full synchronization label in wider headers', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+    render(
+      <TopNav
+        activeTab="dashboard"
+        onTabChange={vi.fn()}
+        hideSensitive
+        sensitivePreferenceStatus="resolved"
+        onToggleHideSensitive={vi.fn()}
+        onRetrySensitivePreference={vi.fn()}
+        onLogout={vi.fn()}
+        username="Test User"
+        pendingNotifications={[]}
+        onOpenNotifications={vi.fn()}
+        darkMode={false}
+        onToggleDarkMode={vi.fn()}
+        isSyncing
+        syncLabel="Refreshing"
+        draftCount={1}
+      />,
+    )
+
+    expect(screen.getByText('Refreshing')).toBeTruthy()
   })
 
   it('renders privacy resolution as a floating overlay that does not take layout space', () => {
