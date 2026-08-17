@@ -492,8 +492,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     }
     descriptionRef.current = ''
     autocompletedDescriptionRef.current = null
-    // A caller that already knows where this money landed (Settings' "Record interest") fills
-    // the placement in; the amount is deliberately left blank, since only the bank knows it.
+    // A caller that already knows where this money landed fills the placement in;
+    // the amount is deliberately left blank, since only the user knows it.
     // This runs *after* the description reset above, which would otherwise clear the ref again.
     if (autoOpenPrefill) {
       if (autoOpenPrefill.category) {

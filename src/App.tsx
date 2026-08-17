@@ -143,7 +143,7 @@ const MobileFabTrigger = ({
     aria-label={isOpen ? 'Close Menu' : 'Open Menu'}
     title={isOpen ? 'Close Menu' : 'Open Menu'}
     onClick={onToggle}
-    className="fixed right-6 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/25 cursor-pointer lg:hidden"
+    className="fixed right-6 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/25 cursor-pointer md:hidden"
     style={{ bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}
     aria-expanded={isOpen}
     aria-controls="mobile-fab-actions"
@@ -420,6 +420,18 @@ function App() {
     }
   }, [nav.selectedMonth, nav.selectedYear])
 
+  // Global Command Palette shortcut (Cmd+K / Ctrl+K)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault()
+        dialogs.setShowCommandPalette(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [dialogs.setShowCommandPalette])
+
   const {
     currentCycleMonth,
     currentCyclePeriod,
@@ -665,6 +677,7 @@ function App() {
           onTabChange={prefs.setActiveTab}
           onQuickAction={nav.handleQuickAction}
           onAskAI={() => setIsAiOpen(true)}
+          onOpenCommandPalette={() => dialogs.setShowCommandPalette(true)}
           hideSensitive={prefs.hideSensitive}
           sensitivePreferenceStatus={prefs.sensitivePreferenceStatus}
           onToggleHideSensitive={handleToggleHideSensitive}

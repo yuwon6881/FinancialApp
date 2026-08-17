@@ -35,7 +35,6 @@ interface AccountsSectionProps {
   onUpdateAccount: (id: string, input: LedgerAccountInput) => Promise<void> | void
   onRequestDeleteAccount: (id: string) => void
   onReconcileAccounts: (input: LedgerAccountReconcileInput) => Promise<void> | void
-  onRecordInterest?: (account: LedgerAccount) => void
   onNavigateToRecurring?: (recurringId: string) => void
 }
 
@@ -76,7 +75,6 @@ export function AccountsSection({
   onUpdateAccount,
   onRequestDeleteAccount,
   onReconcileAccounts,
-  onRecordInterest,
   onNavigateToRecurring,
 }: AccountsSectionProps) {
   const [searchQuery, setSearchQuery] = useState('')
@@ -292,7 +290,6 @@ export function AccountsSection({
               onEdit={openEdit}
               onDelete={onRequestDeleteAccount}
               onMoveMoney={openSetup}
-              onRecordInterest={onRecordInterest}
               onNavigateToRecurring={onNavigateToRecurring}
               searchQuery={searchQuery}
             />

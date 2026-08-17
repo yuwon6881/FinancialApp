@@ -22,6 +22,7 @@ const LockScreen = lazy(() => import('../components/LockScreen').then(module => 
 const CycleSummaryModal = lazy(() => import('../components/CycleSummaryModal').then(module => ({ default: module.CycleSummaryModal })))
 const CustomAlertModal = lazy(() => import('../components/ui/CustomAlertModal').then(module => ({ default: module.CustomAlertModal })))
 const CustomConfirmModal = lazy(() => import('../components/ui/CustomConfirmModal').then(module => ({ default: module.CustomConfirmModal })))
+const CommandPalette = lazy(() => import('../components/CommandPalette').then(module => ({ default: module.CommandPalette })))
 
 const fabMenuVariants = {
   hidden: {
@@ -142,15 +143,15 @@ export function AppOverlays({
           cycleDay={cycleSummary.cycleDay}
           variant={cycleSummary.variant}
           onViewLedger={() => {
-            const month = MONTH_NAMES[cycleSummary.target!.monthIndex - 1]
-            const year = cycleSummary.target!.year
+            const target = cycleSummary.target
             cycleSummary.onClose()
-            nav.handleNavigateToLedger({
-              targetMonth: month,
-              targetYear: year,
-              range: 'monthly',
-              showAllCycles: false,
-            })
+            if (target) {
+              const monthName = MONTH_NAMES[target.monthIndex - 1]
+              if (monthName) {
+                nav.handleSelectPeriod(monthName, target.year)
+                prefs.setActiveTab('ledger')
+              }
+            }
           }}
         />
       )}
@@ -233,6 +234,33 @@ export function AppOverlays({
         </Suspense>
       )}
 
+      {dialogs.showCommandPalette && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            isOpen={dialogs.showCommandPalette}
+            onClose={() => dialogs.setShowCommandPalette(false)}
+            onNavigate={(tab) => {
+              prefs.setActiveTab(tab)
+              dialogs.setShowCommandPalette(false)
+            }}
+            onQuickAction={nav.handleQuickAction}
+            onAskAi={() => setIsAiOpen(true)}
+            darkMode={prefs.darkMode}
+            onToggleDarkMode={() => prefs.setDarkMode(!prefs.darkMode)}
+            hideSensitive={prefs.hideSensitive}
+            onToggleHideSensitive={() => {
+              if (prefs.hideSensitive) {
+                session.setShowPasswordPrompt(true)
+              } else {
+                prefs.setHideSensitive(true)
+                financial.handleUpdateHideSensitivePreference(true)
+              }
+            }}
+            sensitivePreferenceStatus={prefs.sensitivePreferenceStatus}
+          />
+        </Suspense>
+      )}
+
       {session.token && (
         <>
           <AnimatePresence>
@@ -242,7 +270,7 @@ export function AppOverlays({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: reduceMotion ? 0 : 0.25 }}
-                className="lg:hidden fixed inset-0 z-30 bg-background/45 backdrop-blur-sm cursor-pointer"
+                className="md:hidden fixed inset-0 z-30 bg-background/45 backdrop-blur-sm cursor-pointer"
                 onClick={closeFabAndRestoreFocus}
                 aria-hidden="true"
               />
@@ -260,7 +288,7 @@ export function AppOverlays({
                 initial={reduceMotion ? false : 'hidden'}
                 animate="visible"
                 exit="hidden"
-                className="lg:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
+                className="md:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
                 style={{ bottom: 'calc(164px + env(safe-area-inset-bottom, 0px))' }}
               >
                 {([
@@ -293,9 +321,6 @@ export function AppOverlays({
                     className="flex items-center gap-2.5 group cursor-pointer"
                   >
                     <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs">{label}</span>
-                    {/* Ayu's 500 steps are bright tints on a near-black surface, so a white
-                        glyph on them is close to invisible; the dark surface colour is the
-                        readable pairing there. Light mode keeps white on its darker fills. */}
                     <span className={`size-11 rounded-full ${color} text-on-vivid flex items-center justify-center shadow-lg`}><Icon className="size-5" /></span>
                   </m.button>
                 ))}

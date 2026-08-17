@@ -286,17 +286,6 @@ export function AuthenticatedView({
                       onUpdateAccount={financial.handleUpdateAccount}
                       onRequestDeleteAccount={financial.requestDeleteAccount}
                       onReconcileAccounts={financial.handleReconcileAccounts}
-                      onRecordInterest={account => {
-                        prefs.setActiveTab('ledger')
-                        nav.setAutoOpenLedgerAdd(true)
-                        nav.setAutoOpenLedgerTxType('inflow')
-                        nav.setAutoOpenLedgerPrefill({
-                          category: 'Interest',
-                          ledgerCategory: account.bucket,
-                          accountId: account.id,
-                          description: `Interest earned - ${account.name}`,
-                        })
-                      }}
                       notifyOnLoginEnabled={prefs.notifyOnLogin}
                       onToggleNotifyOnLogin={(checked) => {
                         const previous = prefs.notifyOnLogin

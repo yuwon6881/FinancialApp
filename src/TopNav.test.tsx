@@ -157,4 +157,29 @@ describe('TopNav mobile primary navigation', () => {
     expect(screen.getByRole('menu')).toBeTruthy()
     expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeTruthy()
   })
+
+  it('triggers onOpenCommandPalette when clicking the Command Palette button', () => {
+    const onOpenCommandPalette = vi.fn()
+    render(
+      <TopNav
+        activeTab="dashboard"
+        onTabChange={vi.fn()}
+        onOpenCommandPalette={onOpenCommandPalette}
+        hideSensitive={false}
+        sensitivePreferenceStatus="resolved"
+        onToggleHideSensitive={vi.fn()}
+        onRetrySensitivePreference={vi.fn()}
+        onLogout={vi.fn()}
+        username="Test User"
+        pendingNotifications={[]}
+        onOpenNotifications={vi.fn()}
+        darkMode={false}
+        onToggleDarkMode={vi.fn()}
+      />,
+    )
+
+    const cmdButton = screen.getByRole('button', { name: 'Command Palette' })
+    fireEvent.click(cmdButton)
+    expect(onOpenCommandPalette).toHaveBeenCalled()
+  })
 })

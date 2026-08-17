@@ -21,7 +21,6 @@ export interface BucketAccountGroupProps {
   onAdd: (bucket: LedgerAccount['bucket']) => void
   onEdit: (account: LedgerAccount) => void
   onDelete: (id: string) => void
-  onRecordInterest?: (account: LedgerAccount) => void
   onMoveMoney: (bucket: LedgerAccount['bucket']) => void
   onNavigateToRecurring?: (recurringId: string) => void
   searchQuery?: string
@@ -41,7 +40,6 @@ export function BucketAccountGroup({
   onAdd,
   onEdit,
   onDelete,
-  onRecordInterest,
   onMoveMoney,
   onNavigateToRecurring,
   searchQuery,
@@ -125,7 +123,6 @@ export function BucketAccountGroup({
                 roster={billRosters?.get(account.id)}
                 onEdit={onEdit}
                 onDelete={onDelete}
-                onRecordInterest={onRecordInterest}
                 onNavigateToRecurring={onNavigateToRecurring}
               />
             ))}

@@ -19,7 +19,6 @@ export interface AccountRowProps {
   roster?: AccountBillRosterType
   onEdit: (account: LedgerAccount) => void
   onDelete: (id: string) => void
-  onRecordInterest?: (account: LedgerAccount) => void
   onNavigateToRecurring?: (recurringId: string) => void
 }
 
@@ -41,7 +40,6 @@ export function AccountRow({
   roster,
   onEdit,
   onDelete,
-  onRecordInterest,
   onNavigateToRecurring,
 }: AccountRowProps) {
   const AccountIcon = KIND_ICONS[account.kind] ?? CircleHelp
@@ -91,24 +89,7 @@ export function AccountRow({
             />
           </div>
 
-          {/* A third text action does not fit beside Edit and Delete at 390px. Every child here is
-              `shrink-0` — allowed to shrink, the button squeezed its label into "Record / interest"
-              across two lines rather than letting the row wrap. The row wraps instead, so the
-              actions drop below the balance intact on a phone and stay inline from `sm` up. */}
           <div className="flex shrink-0 items-center gap-1.5">
-            {onRecordInterest && !account.isArchived && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => onRecordInterest(account)}
-                disabled={disabled || isDeleting}
-                aria-label={`Record interest paid into ${account.name}`}
-                className="whitespace-nowrap"
-              >
-                Record interest
-              </Button>
-            )}
             <Button
               type="button"
               variant="ghost"

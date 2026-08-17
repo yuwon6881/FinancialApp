@@ -65,9 +65,9 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   }, [])
   const [autoOpenLedgerAdd, setAutoOpenLedgerAdd] = useState(false)
   const [autoOpenLedgerTxType, setAutoOpenLedgerTxType] = useState<'inflow' | 'outflow' | 'transfer' | null>(null)
-  // A blank add form opened from somewhere that already knows where the money landed — today
-  // only Settings' "Record interest". Like the tx-type flag it is a one-shot intent, cleared by
-  // the same reset the auto-open uses, so returning to Ledger later opens an ordinary form.
+  // A blank add form opened from somewhere that already knows where the money landed.
+  // Like the tx-type flag it is a one-shot intent, cleared by the same reset the auto-open uses,
+  // so returning to Ledger later opens an ordinary form.
   const [autoOpenLedgerPrefill, setAutoOpenLedgerPrefill] = useState<LedgerAddPrefill | null>(null)
   const [autoOpenReceiptSplit, setAutoOpenReceiptSplit] = useState(false)
   const [autoOpenSubscriptionAdd, setAutoOpenSubscriptionAdd] = useState(false)

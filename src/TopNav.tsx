@@ -25,6 +25,7 @@ import {
   Loader2,
   ShieldAlert,
   TrendingUp,
+  Command,
 } from 'lucide-react'
 import { CommitmentIcon, RewardIcon } from './components/semanticIcons'
 import { triggerHaptic } from './lib/haptics'
@@ -39,6 +40,7 @@ interface TopNavProps {
   onTabChange: (tab: AppTab) => void
   onQuickAction?: (action: 'transaction' | 'subscription' | 'wishlist') => void
   onAskAI?: () => void
+  onOpenCommandPalette?: () => void
   hideSensitive: boolean
   sensitivePreferenceStatus: SensitivePreferenceStatus
   onToggleHideSensitive: () => void
@@ -62,6 +64,7 @@ const TopNav: React.FC<TopNavProps> = ({
   onTabChange,
   onQuickAction,
   onAskAI,
+  onOpenCommandPalette,
   hideSensitive,
   sensitivePreferenceStatus,
   onToggleHideSensitive,
@@ -168,9 +171,6 @@ const TopNav: React.FC<TopNavProps> = ({
         <div className="relative mx-auto flex h-16 w-full max-w-[1440px] items-center px-4 sm:px-6 lg:px-8">
         
         {/* Left Side (Logo and Brand) */}
-        {/* min-w-0 (not min-w-max): the status badges below are shrink-0, so a
-            max-content floor here would push the whole header past a phone
-            viewport and make the page scroll sideways. */}
         <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden z-10">
           <Button
             variant="unstyled"
@@ -184,9 +184,6 @@ const TopNav: React.FC<TopNavProps> = ({
               FinancialApp
             </span>
           </Button>
-          {/* On phones, keep the actionable draft count anchored beside the logo. Transient
-              refresh/offline text may then clip at the edge of the left lane instead of
-              shifting the draft into the fixed actions on the right. */}
           {isPhone && draftStatus}
           {isOffline ? (
             <div
@@ -226,7 +223,7 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         {/* Navigation Tabs - Centered mathematically on desktop, flex-safe on medium screens */}
-        <div className="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center shrink-0 z-20 w-max">
+        <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center shrink-0 z-20 w-max">
           <nav className="flex items-center gap-1 bg-card/72 p-1.5 rounded-xl border border-border/50 shadow-sm select-none">
             {navItems.map(({ tab, label, Icon, activeClass, iconClass, dotClass }) => {
               const isActive = activeTab === tab
@@ -251,8 +248,21 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         {/* Right Side Widgets & Actions */}
-        <div className="flex flex-1 shrink-0 items-center justify-end gap-1.5 sm:gap-3 lg:gap-4 z-10">
+        <div className="flex flex-1 shrink-0 items-center justify-end gap-1.5 sm:gap-2.5 lg:gap-3 z-10">
           
+          {onOpenCommandPalette && (
+            <Button variant="unstyled"
+              type="button"
+              size="icon"
+              onClick={onOpenCommandPalette}
+              aria-label="Command Palette"
+              title="Command Palette (Cmd+K / Ctrl+K)"
+              className="flex items-center justify-center rounded-xl border border-border/60 bg-background text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/50 transition duration-150 cursor-pointer active:scale-95"
+            >
+              <Command className="size-4" />
+            </Button>
+          )}
+
           <Button variant="unstyled"
             type="button"
             onClick={onAskAI}
@@ -297,10 +307,7 @@ const TopNav: React.FC<TopNavProps> = ({
             </Button>
           </div>
 
-          {/* Quick Actions menu. A single isolated menu, so it uses DropdownMenu like the account
-              menu rather than a Menubar root: a Menubar exists to give a *row* of sibling menus one
-              roving focus group, and standing one menu inside it bought nothing while costing the
-              menubar and roving-focus primitives on the eager critical path. */}
+          {/* Quick Actions menu */}
           <div className="hidden md:block border border-border/60 rounded-xl bg-background shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger className="h-9 px-2 py-1 sm:px-2.5 text-xs font-semibold hover:bg-muted/50 rounded-lg cursor-pointer flex items-center gap-1 whitespace-nowrap">
@@ -350,6 +357,19 @@ const TopNav: React.FC<TopNavProps> = ({
 
                 <DropdownMenuSeparator className="my-1 border-t border-border/30" />
                   
+                {onOpenCommandPalette && (
+                  <DropdownMenuItem
+                    onSelect={onOpenCommandPalette}
+                    className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Command className="size-3.5 text-blue-500" />
+                      <span>Commands</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground font-mono">⌘K</span>
+                  </DropdownMenuItem>
+                )}
+
                 <DropdownMenuItem
                   onSelect={() => onTabChange('investments')}
                   className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
@@ -392,8 +412,6 @@ const TopNav: React.FC<TopNavProps> = ({
                   {darkMode ? <Sun className="size-3.5 text-blue-500" /> : <Moon className="size-3.5 text-blue-500" />}
                   <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
                 </DropdownMenuItem>
-
-
 
                 <DropdownMenuSeparator className="my-1 border-t border-border/30" />
                   
@@ -440,7 +458,7 @@ const TopNav: React.FC<TopNavProps> = ({
                   <Button variant="unstyled"
                     type="button"
                     onClick={onRetrySensitivePreference}
-                    className="ml-2 shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition cursor-pointer self-center cursor-pointer"
+                    className="ml-2 shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition cursor-pointer self-center"
                   >
                     Retry
                   </Button>
@@ -453,7 +471,7 @@ const TopNav: React.FC<TopNavProps> = ({
 
     {/* Mobile Navigation bar (Sticky Bottom Nav) */}
     <div
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[var(--app-shadow-nav-up)] transform-gpu"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[var(--app-shadow-nav-up)] transform-gpu"
       style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px', willChange: 'transform' }}
     >
       <nav aria-label="Primary" className="grid grid-cols-5 w-full max-w-md md:max-w-none px-2 md:px-8 mx-auto justify-items-center">

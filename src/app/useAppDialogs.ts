@@ -24,6 +24,8 @@ export interface AppDialogs {
   setShowFailedOpsModal: (value: boolean) => void
   showLoginModal: boolean
   setShowLoginModal: (value: boolean) => void
+  showCommandPalette: boolean
+  setShowCommandPalette: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 export function useAppDialogs(): AppDialogs {
@@ -33,6 +35,7 @@ export function useAppDialogs(): AppDialogs {
 
   const [showFailedOpsModal, setShowFailedOpsModal] = useState<boolean>(false)
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false)
+  const [showCommandPalette, setShowCommandPalette] = useState<boolean>(false)
 
   const showToast = useCallback((message: string, title = 'Notification', tone: ToastTone = 'info', action?: ToastAction) => {
     const id = Date.now().toString(36) + Math.random().toString(36).substring(2, 7)
@@ -61,5 +64,7 @@ export function useAppDialogs(): AppDialogs {
     setShowFailedOpsModal,
     showLoginModal,
     setShowLoginModal,
+    showCommandPalette,
+    setShowCommandPalette,
   }
 }
