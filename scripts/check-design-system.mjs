@@ -61,6 +61,15 @@ const RAW_BUTTON_BASELINE = {
   'src/components/settings/ManageableNameList.tsx': 3,
 }
 
+// A <label> forwards its activation to the first *labelable* descendant, and `button` is
+// labelable. So a button standing ahead of the real control inside a label silently steals every
+// click on the label's whole box -- that is how clicking a slider's name or its percentage badge
+// came to toggle the lock button beside it. Allowed only where a labelable control (an input)
+// precedes the button, which is the trailing clear-search affordance pattern.
+const LABEL_WRAPPED_BUTTON_EXCEPTIONS = new Set([
+  'src/components/settings/ManageableNameList.tsx',
+])
+
 const THEME_EXCEPTIONS = new Map([
   ['src/App.tsx', ['#0b0e14', '#fcfcfc']],
   ['src/lib/nativeUi.ts', ['#0b0e14', '#fcfcfc']],
@@ -127,6 +136,16 @@ for (const file of allSourceFiles(SRC)) {
         report(file, sourceFile, node, 'Submit forms must use noValidate and application validation.')
       }
       if (tag === 'button') rawButtonCount += 1
+
+      if ((tag === 'button' || tag === 'Button') && !LABEL_WRAPPED_BUTTON_EXCEPTIONS.has(fileName)) {
+        for (let parent = node.parent; parent; parent = parent.parent) {
+          const isLabelElement = (ts.isJsxElement(parent) && jsxTagName(parent.openingElement) === 'label')
+          if (!isLabelElement) continue
+          report(file, sourceFile, node,
+            'A <button> inside <label> becomes the label\'s activation target, so clicks anywhere in the label toggle it. Use a <div> and give the real control an aria-label.')
+          break
+        }
+      }
     }
 
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {

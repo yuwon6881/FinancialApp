@@ -362,7 +362,12 @@ export function InvestmentPlanSection() {
             ['International ex-US', 'internationalExUsTarget', 'accent-amber-500'],
             ['Bonds', 'bondsTarget', 'accent-emerald-500'],
           ] as const).map(([label, key, accentClass]) => (
-            <label key={key} className="space-y-2 block w-full min-w-0">
+            // A div, not a label. `<button>` is a labelable element, so a <label> wrapping this
+            // row took the *lock button* as its labelled control (first labelable descendant, ahead
+            // of the slider) and forwarded every click in the row to it -- clicking the basket
+            // name, the empty gap, or the percentage badge silently toggled the lock. The slider
+            // carries its own aria-label, so the label element was contributing nothing anyway.
+            <div key={key} className="space-y-2 block w-full min-w-0">
               <div className="flex justify-between items-center text-[11px] font-bold min-w-0 w-full gap-2">
                 <span className="text-muted-foreground flex items-center gap-1.5 min-w-0">
                   <span className="uppercase tracking-wider truncate">{label}</span>
@@ -380,7 +385,7 @@ export function InvestmentPlanSection() {
                 onChange={event => changeTarget(key, Number(event.target.value))}
                 className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`}
               />
-            </label>
+            </div>
           ))}
           <div className="rounded-xl bg-muted/30 px-3 py-2 text-xs font-bold text-foreground w-full">Total: {total}%</div>
           <div className="rounded-xl border border-border/50 bg-muted/20 p-3 w-full min-w-0">

@@ -333,13 +333,17 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   ['Stability', view.stabilityAllocInput, 'stability', 'accent-purple-500'],
                   ['Rewards', view.rewardsAllocInput, 'rewards', 'accent-amber-500'],
                 ] as const).map(([label, value, key, accentClass]) => (
-                  <label key={label} className="space-y-2 block">
+                  // A div, not a label: `<button>` is labelable, so the wrapping <label> claimed
+                  // the lock button as its control and forwarded clicks anywhere in the row to it,
+                  // toggling the lock from the bucket name or the percentage badge. The slider gets
+                  // an explicit aria-label, which is what the label was wrongly assumed to provide.
+                  <div key={label} className="space-y-2 block">
                     <div className="flex justify-between items-center text-[11px] font-bold">
                       <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="ghost" size="icon" type="button" onClick={() => view.toggleLock(key)} disabled={hideSensitive} className="size-11 text-muted-foreground hover:text-foreground hover:bg-muted sm:size-8" title={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
                       <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
                     </div>
-                    <RangeInput  min="0" max="100" step="5" disabled={hideSensitive || view.globalAllocLock || view.lockedAllocations.includes(key)} value={value} onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))} className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`} />
-                  </label>
+                    <RangeInput aria-label={`${label} allocation percentage`} min="0" max="100" step="5" disabled={hideSensitive || view.globalAllocLock || view.lockedAllocations.includes(key)} value={value} onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))} className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`} />
+                  </div>
                 ))}
               </div>
               {view.errors.allocationSum && (
@@ -564,7 +568,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     )}
 
                     {!view.isReviewingCleanup && view.cleanupSuggestions.length > 0 && (
-                      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      <div className="space-y-2 max-h-72 overflow-y-auto overscroll-contain pr-1">
                         {view.cleanupSuggestions.map(suggestion => {
                           const confidence = Math.round(Math.max(0, Math.min(1, suggestion.confidence)) * 100)
                           const consolidateOptions = view.editableCategories.filter(cat =>
