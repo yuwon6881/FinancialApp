@@ -25,7 +25,7 @@ import {
   Loader2,
   ShieldAlert,
   TrendingUp,
-  Command,
+  Search as SearchIcon,
 } from 'lucide-react'
 import { CommitmentIcon, RewardIcon } from './components/semanticIcons'
 import { triggerHaptic } from './lib/haptics'
@@ -40,7 +40,7 @@ interface TopNavProps {
   onTabChange: (tab: AppTab) => void
   onQuickAction?: (action: 'transaction' | 'subscription' | 'wishlist') => void
   onAskAI?: () => void
-  onOpenCommandPalette?: () => void
+  onOpenSearch?: () => void
   hideSensitive: boolean
   sensitivePreferenceStatus: SensitivePreferenceStatus
   onToggleHideSensitive: () => void
@@ -64,7 +64,7 @@ const TopNav: React.FC<TopNavProps> = ({
   onTabChange,
   onQuickAction,
   onAskAI,
-  onOpenCommandPalette,
+  onOpenSearch,
   hideSensitive,
   sensitivePreferenceStatus,
   onToggleHideSensitive,
@@ -171,6 +171,9 @@ const TopNav: React.FC<TopNavProps> = ({
         <div className="relative mx-auto flex h-16 w-full max-w-[1440px] items-center px-4 sm:px-6 lg:px-8">
         
         {/* Left Side (Logo and Brand) */}
+        {/* min-w-0 (not min-w-max): the status badges below are shrink-0, so a
+            max-content floor here would push the whole header past a phone
+            viewport and make the page scroll sideways. */}
         <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden z-10">
           <Button
             variant="unstyled"
@@ -184,6 +187,9 @@ const TopNav: React.FC<TopNavProps> = ({
               FinancialApp
             </span>
           </Button>
+          {/* On phones, keep the actionable draft count anchored beside the logo. Transient
+              refresh/offline text may then clip at the edge of the left lane instead of
+              shifting the draft into the fixed actions on the right. */}
           {isPhone && draftStatus}
           {isOffline ? (
             <div
@@ -250,16 +256,20 @@ const TopNav: React.FC<TopNavProps> = ({
         {/* Right Side Widgets & Actions */}
         <div className="flex flex-1 shrink-0 items-center justify-end gap-1.5 sm:gap-2.5 lg:gap-3 z-10">
           
-          {onOpenCommandPalette && (
+          {/* A magnifier labelled Search, not a ⌘ glyph: ⌘ is the macOS Command key, which does
+              not exist on the Windows, Android and PWA targets this app ships to, and it reads as
+              nothing at all to someone who has not met the convention. Phones reach search from
+              the FAB menu instead, so this stays md+ and off the tight phone header lane. */}
+          {onOpenSearch && (
             <Button variant="unstyled"
               type="button"
-              size="icon"
-              onClick={onOpenCommandPalette}
-              aria-label="Command Palette"
-              title="Command Palette (Cmd+K / Ctrl+K)"
-              className="flex items-center justify-center rounded-xl border border-border/60 bg-background text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/50 transition duration-150 cursor-pointer active:scale-95"
+              onClick={onOpenSearch}
+              aria-label="Search your records"
+              title="Search (Ctrl+K)"
+              className="hidden md:flex items-center justify-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-xl border border-border/60 bg-background text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/50 transition duration-150 cursor-pointer active:scale-95 shrink-0"
             >
-              <Command className="size-4" />
+              <SearchIcon className="size-3.5" aria-hidden />
+              <span className="hidden xl:inline text-xs font-semibold">Search</span>
             </Button>
           )}
 
@@ -307,7 +317,10 @@ const TopNav: React.FC<TopNavProps> = ({
             </Button>
           </div>
 
-          {/* Quick Actions menu */}
+          {/* Quick Actions menu. A single isolated menu, so it uses DropdownMenu like the account
+              menu rather than a Menubar root: a Menubar exists to give a *row* of sibling menus one
+              roving focus group, and standing one menu inside it bought nothing while costing the
+              menubar and roving-focus primitives on the eager critical path. */}
           <div className="hidden md:block border border-border/60 rounded-xl bg-background shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger className="h-9 px-2 py-1 sm:px-2.5 text-xs font-semibold hover:bg-muted/50 rounded-lg cursor-pointer flex items-center gap-1 whitespace-nowrap">
@@ -350,25 +363,14 @@ const TopNav: React.FC<TopNavProps> = ({
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="z-50 min-w-[180px] bg-card border border-border p-1 rounded-xl shadow-md">
+                {/* Signed-in identity only. This carried a "Premium Account" line, which no part
+                    of the app can substantiate -- there are no tiers, plans or entitlements here,
+                    so it was decoration that read as a factual claim about the account. */}
                 <div className="px-2.5 py-2">
                   <p className="text-xs font-bold text-foreground">{username || 'User'}</p>
-                  <p className="text-[10px] text-muted-foreground">Premium Account</p>
                 </div>
 
                 <DropdownMenuSeparator className="my-1 border-t border-border/30" />
-                  
-                {onOpenCommandPalette && (
-                  <DropdownMenuItem
-                    onSelect={onOpenCommandPalette}
-                    className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Command className="size-3.5 text-blue-500" />
-                      <span>Commands</span>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground font-mono">⌘K</span>
-                  </DropdownMenuItem>
-                )}
 
                 <DropdownMenuItem
                   onSelect={() => onTabChange('investments')}

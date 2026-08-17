@@ -420,17 +420,32 @@ function App() {
     }
   }, [nav.selectedMonth, nav.selectedYear])
 
-  // Global Command Palette shortcut (Cmd+K / Ctrl+K)
+  // Global search shortcut (Cmd+K / Ctrl+K).
+  //
+  // Three guards, each for a failure this had: it must not steal the keystroke while the user is
+  // typing (the transaction form and the AI composer both use Ctrl+K-adjacent muscle memory, and
+  // Firefox binds Ctrl+K to its own search bar), it must not open on top of another overlay, and
+  // it opens rather than toggles -- a toggle fired while search was already open behind a
+  // password prompt closed it invisibly.
   useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
-        e.preventDefault()
-        dialogs.setShowCommandPalette(prev => !prev)
-      }
+    const isTypingTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false
+      if (target.isContentEditable) return true
+      const tag = target.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+    }
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return
+      if (event.defaultPrevented || isTypingTarget(event.target)) return
+      // This effect is registered above the unauthenticated/locked early returns, so it would
+      // otherwise latch the overlay open on the login screen and reveal it on the next sign-in.
+      if (!session.token || session.isLocked || dialogs.showSearch) return
+      event.preventDefault()
+      dialogs.setShowSearch(true)
     }
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [dialogs.setShowCommandPalette])
+  }, [dialogs.showSearch, dialogs.setShowSearch, session.token, session.isLocked])
 
   const {
     currentCycleMonth,
@@ -677,7 +692,7 @@ function App() {
           onTabChange={prefs.setActiveTab}
           onQuickAction={nav.handleQuickAction}
           onAskAI={() => setIsAiOpen(true)}
-          onOpenCommandPalette={() => dialogs.setShowCommandPalette(true)}
+          onOpenSearch={() => dialogs.setShowSearch(true)}
           hideSensitive={prefs.hideSensitive}
           sensitivePreferenceStatus={prefs.sensitivePreferenceStatus}
           onToggleHideSensitive={handleToggleHideSensitive}

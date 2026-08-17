@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react'
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
-import { CreditCard, Sparkles, Wallet } from 'lucide-react'
+import { CreditCard, Search, Sparkles, Wallet } from 'lucide-react'
 import { RewardIcon } from '../components/semanticIcons'
 import type { DashboardData, PendingNotification } from '../types'
 import { MONTH_NAMES } from '../lib/cycle'
@@ -22,7 +22,7 @@ const LockScreen = lazy(() => import('../components/LockScreen').then(module => 
 const CycleSummaryModal = lazy(() => import('../components/CycleSummaryModal').then(module => ({ default: module.CycleSummaryModal })))
 const CustomAlertModal = lazy(() => import('../components/ui/CustomAlertModal').then(module => ({ default: module.CustomAlertModal })))
 const CustomConfirmModal = lazy(() => import('../components/ui/CustomConfirmModal').then(module => ({ default: module.CustomConfirmModal })))
-const CommandPalette = lazy(() => import('../components/CommandPalette').then(module => ({ default: module.CommandPalette })))
+const GlobalSearch = lazy(() => import('../components/search/GlobalSearch').then(module => ({ default: module.GlobalSearch })))
 
 const fabMenuVariants = {
   hidden: {
@@ -142,16 +142,22 @@ export function AppOverlays({
           year={cycleSummary.target.year}
           cycleDay={cycleSummary.cycleDay}
           variant={cycleSummary.variant}
+          // Enters the Ledger through handleNavigateToLedger, not setActiveTab: it resets the
+          // range and all-cycles state along with the period, and makes selecting the
+          // already-active cycle a no-op. A bare setActiveTab left whatever range the user had
+          // last applied in place, so a monthly summary could open a yearly all-cycles ledger.
           onViewLedger={() => {
             const target = cycleSummary.target
+            if (!target) return
+            const monthName = MONTH_NAMES[target.monthIndex - 1]
+            if (!monthName) return
             cycleSummary.onClose()
-            if (target) {
-              const monthName = MONTH_NAMES[target.monthIndex - 1]
-              if (monthName) {
-                nav.handleSelectPeriod(monthName, target.year)
-                prefs.setActiveTab('ledger')
-              }
-            }
+            nav.handleNavigateToLedger({
+              targetMonth: monthName,
+              targetYear: target.year,
+              range: 'monthly',
+              showAllCycles: false,
+            })
           }}
         />
       )}
@@ -234,29 +240,41 @@ export function AppOverlays({
         </Suspense>
       )}
 
-      {dialogs.showCommandPalette && (
+      {dialogs.showSearch && (
         <Suspense fallback={null}>
-          <CommandPalette
-            isOpen={dialogs.showCommandPalette}
-            onClose={() => dialogs.setShowCommandPalette(false)}
-            onNavigate={(tab) => {
-              prefs.setActiveTab(tab)
-              dialogs.setShowCommandPalette(false)
+          <GlobalSearch
+            isOpen={dialogs.showSearch}
+            onClose={() => dialogs.setShowSearch(false)}
+            // Every list here is already in memory, so searching costs no request. Loans are the
+            // one lazy slice: they are searchable once the Loans tab has been opened, and absent
+            // rather than fetched, so opening search never spends a round trip.
+            data={{
+              transactions: financial.transactions,
+              accounts: financial.allAccounts,
+              recurringPayments: financial.allRecurringPayments,
+              loans: financial.allLoans,
+              savingsGoals: financial.allSavingsGoals,
+              wishlist: financial.allWishlist,
             }}
-            onQuickAction={nav.handleQuickAction}
-            onAskAi={() => setIsAiOpen(true)}
-            darkMode={prefs.darkMode}
-            onToggleDarkMode={() => prefs.setDarkMode(!prefs.darkMode)}
-            hideSensitive={prefs.hideSensitive}
-            onToggleHideSensitive={() => {
-              if (prefs.hideSensitive) {
-                session.setShowPasswordPrompt(true)
+            onOpenResult={result => {
+              const { target } = result
+              if (target.to === 'transaction') {
+                nav.handleNavigateToLedger({ highlightedTxId: target.transactionId })
+              } else if (target.to === 'account') {
+                nav.handleNavigateToAccounts(target.accountId)
+              } else if (target.to === 'bill') {
+                nav.handleNavigateToRecurring(target.recurringPaymentId)
+              } else if (target.to === 'loans') {
+                prefs.setActiveTab('recurring')
               } else {
-                prefs.setHideSensitive(true)
-                financial.handleUpdateHideSensitivePreference(true)
+                prefs.setActiveTab('wishlist')
               }
             }}
-            sensitivePreferenceStatus={prefs.sensitivePreferenceStatus}
+            onSearchAllCycles={query => {
+              nav.handleNavigateToLedger({ search: query, showAllCycles: true, range: 'yearly' })
+            }}
+            formatAmount={financial.formatSensitive}
+            maskAmounts={prefs.hideSensitive}
           />
         </Suspense>
       )}
@@ -291,12 +309,20 @@ export function AppOverlays({
                 className="md:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
                 style={{ bottom: 'calc(164px + env(safe-area-inset-bottom, 0px))' }}
               >
+                {/* Search lives here rather than in the phone header: the header's right lane is
+                    already the app's tightest space, and unlike the quick-add actions search is a
+                    read, so it is never blocked by sensitive mode. */}
                 {([
                   { key: 'wishlist' as const, label: 'Add Reward', Icon: RewardIcon, color: 'bg-pink-500' },
                   { key: 'subscription' as const, label: 'New Subscription', Icon: CreditCard, color: 'bg-violet-500' },
                   { key: 'transaction' as const, label: 'Post Transaction', Icon: Wallet, color: 'bg-emerald-500' },
                   { key: 'ai' as const, label: 'Ask AI', Icon: Sparkles, color: 'bg-indigo-500' },
-                ]).map(({ key, label, Icon, color }) => (
+                  { key: 'search' as const, label: 'Search', Icon: Search, color: 'bg-sky-500' },
+                ]).map(({ key, label, Icon, color }) => {
+                  // Ask AI and Search are reads; only the three quick-add actions open a blank
+                  // mutation form and are therefore gated by sensitive mode.
+                  const isMutation = key !== 'ai' && key !== 'search'
+                  return (
                   <m.button
                     key={key}
                     type="button"
@@ -304,15 +330,17 @@ export function AppOverlays({
                     data-fab-action
                     variants={fabActionVariants}
                     whileTap={reduceMotion ? undefined : { scale: 0.92 }}
-                    disabled={key !== 'ai' && !canOpenBlankMutationForm(prefs.hideSensitive, prefs.sensitivePreferenceStatus)}
-                    title={key !== 'ai' && prefs.hideSensitive && prefs.sensitivePreferenceStatus === 'pending'
+                    disabled={isMutation && !canOpenBlankMutationForm(prefs.hideSensitive, prefs.sensitivePreferenceStatus)}
+                    title={isMutation && prefs.hideSensitive && prefs.sensitivePreferenceStatus === 'pending'
                       ? 'Finishing security check…'
-                      : key !== 'ai' && prefs.hideSensitive
+                      : isMutation && prefs.hideSensitive
                         ? 'Reveal sensitive data to make financial changes'
                         : label}
                     onClick={() => {
                       if (key === 'ai') {
                         setIsAiOpen(true)
+                      } else if (key === 'search') {
+                        dialogs.setShowSearch(true)
                       } else {
                         nav.handleQuickAction(key)
                       }
@@ -321,9 +349,13 @@ export function AppOverlays({
                     className="flex items-center gap-2.5 group cursor-pointer"
                   >
                     <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs">{label}</span>
+                    {/* Ayu's 500 steps are bright tints on a near-black surface, so a white
+                        glyph on them is close to invisible; the dark surface colour is the
+                        readable pairing there. Light mode keeps white on its darker fills. */}
                     <span className={`size-11 rounded-full ${color} text-on-vivid flex items-center justify-center shadow-lg`}><Icon className="size-5" /></span>
                   </m.button>
-                ))}
+                  )
+                })}
               </m.div>
             )}
           </AnimatePresence>

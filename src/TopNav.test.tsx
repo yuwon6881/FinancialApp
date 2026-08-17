@@ -158,13 +158,13 @@ describe('TopNav mobile primary navigation', () => {
     expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeTruthy()
   })
 
-  it('triggers onOpenCommandPalette when clicking the Command Palette button', () => {
-    const onOpenCommandPalette = vi.fn()
+  it('triggers onOpenSearch from the header search button', () => {
+    const onOpenSearch = vi.fn()
     render(
       <TopNav
         activeTab="dashboard"
         onTabChange={vi.fn()}
-        onOpenCommandPalette={onOpenCommandPalette}
+        onOpenSearch={onOpenSearch}
         hideSensitive={false}
         sensitivePreferenceStatus="resolved"
         onToggleHideSensitive={vi.fn()}
@@ -178,8 +178,31 @@ describe('TopNav mobile primary navigation', () => {
       />,
     )
 
-    const cmdButton = screen.getByRole('button', { name: 'Command Palette' })
-    fireEvent.click(cmdButton)
-    expect(onOpenCommandPalette).toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Search your records' }))
+    expect(onOpenSearch).toHaveBeenCalled()
+  })
+
+  it('states only the signed-in name in the account menu, with no unsubstantiated tier', () => {
+    render(
+      <TopNav
+        activeTab="dashboard"
+        onTabChange={vi.fn()}
+        hideSensitive={false}
+        sensitivePreferenceStatus="resolved"
+        onToggleHideSensitive={vi.fn()}
+        onRetrySensitivePreference={vi.fn()}
+        onLogout={vi.fn()}
+        username="Test User"
+        pendingNotifications={[]}
+        onOpenNotifications={vi.fn()}
+        darkMode={false}
+        onToggleDarkMode={vi.fn()}
+      />,
+    )
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Account menu' }), { button: 0 })
+    expect(screen.getByText('Test User')).toBeTruthy()
+    expect(screen.queryByText('Premium Account')).toBeNull()
+    expect(screen.queryByRole('menuitem', { name: /commands/i })).toBeNull()
   })
 })
