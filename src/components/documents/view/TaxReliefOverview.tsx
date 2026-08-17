@@ -334,18 +334,35 @@ export function TaxReliefOverview({
                   // w-full resolves against the rail's own visible width, so one card
                   // fills the viewport exactly rather than the 80vw that left a
                   // permanently clipped card beside it.
+                  // Status and selection are given separate visual channels, because they are
+                  // independent facts that can both be true. Reaching the limit owns the border
+                  // and fill (emerald, as everywhere else in the app); filtering by this category
+                  // owns the ring plus an explicit "Filtering" chip. Sharing one channel meant a
+                  // selected card and a full card were both just "a tinted card with a coloured
+                  // border", and selecting a full one replaced its emerald with primary, so the
+                  // limit-reached signal vanished at the moment the user drilled into it.
                   className={`group flex min-h-32 w-full sm:w-[22rem] shrink-0 cursor-pointer snap-start flex-col gap-3 rounded-2xl border p-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
-                    selected
-                      ? 'border-primary/70 bg-primary/10 ring-1 ring-primary/25 shadow-md shadow-primary/5'
-                      : full
-                        ? 'border-emerald-500/30 bg-emerald-500/8 hover:border-emerald-500/60 hover:bg-emerald-500/12 hover:shadow-md hover:shadow-emerald-500/5'
-                        : 'border-border/60 bg-card hover:border-primary/45 hover:bg-muted/60 hover:shadow-md hover:shadow-primary/5'
+                    full
+                      ? 'border-emerald-500/45 bg-emerald-500/10 hover:border-emerald-500/70 hover:bg-emerald-500/14'
+                      : 'border-border/60 bg-card hover:border-primary/45 hover:bg-muted/60'
+                  } ${
+                    selected ? 'ring-2 ring-primary/80 shadow-md shadow-primary/10' : 'hover:shadow-md hover:shadow-primary/5'
                   }`}
                 >
                   <div className="flex min-w-0 items-start justify-between gap-2">
                     <p className="min-w-0 truncate text-sm font-bold text-foreground" title={category.name}>{category.name}</p>
-                    <span className={`shrink-0 transition ${selected ? 'text-accent-ink' : full ? 'text-emerald-500' : 'text-muted-foreground/30 group-hover:text-accent-ink'}`}>
-                      {selected ? <Filter className="size-3.5" aria-hidden="true" /> : full ? <CheckCircle2 className="size-3.5" aria-label="Relief limit reached" /> : <Filter className="size-3.5" aria-hidden="true" />}
+                    {/* The chip carries the filter state in words as well as colour, so the two
+                        states are separable without relying on hue discrimination. */}
+                    <span className="flex shrink-0 items-center gap-1.5 transition">
+                      {selected && (
+                        <span className="flex items-center gap-1 rounded-md border border-primary/40 bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold text-accent-ink">
+                          <Filter className="size-2.5" aria-hidden="true" />
+                          Filtering
+                        </span>
+                      )}
+                      {full
+                        ? <CheckCircle2 className="size-3.5 text-emerald-500" aria-label="Relief limit reached" />
+                        : !selected && <Filter className="size-3.5 text-muted-foreground/30 transition group-hover:text-accent-ink" aria-hidden="true" />}
                     </span>
                   </div>
                   <div>

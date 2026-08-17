@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import type { AccountBillRoster as AccountBillRosterType, AccountBillSummary } from '../../../lib/accountBillRoster'
-import { formatBillDueDate } from '../../../lib/accountBillRoster'
+import { formatBillDueDate, isBillDueSoon } from '../../../lib/accountBillRoster'
 import { hasBillingEnded, RECURRING_PAYMENT_MODE_LABELS } from '../../../lib/recurringPayments'
 import { formatCurrencyVal } from '../../../lib/utils'
+import { getCategoryBadgeClass } from '../../../lib/categoryColors'
 import { navigateToAppTab } from '../../../lib/appLocation'
 import { Button } from '../../ui/Button'
 import { InfoHint } from '../../ui/InfoHint'
@@ -32,6 +33,7 @@ function BillItemRow({
   const { payment, nextDueDate } = summary
   const dueFormatted = formatBillDueDate(nextDueDate)
   const isEnded = hasBillingEnded(payment)
+  const isDueSoon = !isPaused && isBillDueSoon(nextDueDate)
   const modeLabel = RECURRING_PAYMENT_MODE_LABELS[payment.paymentMode] ?? payment.paymentMode
 
   return (
@@ -45,6 +47,12 @@ function BillItemRow({
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="truncate text-xs font-semibold text-foreground">
             {payment.name}
+          </span>
+          {/* The bill's own spending category, in the colour it already carries in the Ledger and
+              the charts. This list was previously entirely grey, so a dozen bills read as one
+              undifferentiated block and nothing said what kind of spending each one was. */}
+          <span className={`rounded border px-1.5 py-0.2 text-[9px] font-semibold ${getCategoryBadgeClass(payment.category)}`}>
+            {payment.category}
           </span>
           {payment.frequency === 'Annually' && (
             <span className="rounded border border-border/60 bg-muted/40 px-1.5 py-0.2 text-[9px] font-medium text-muted-foreground">
@@ -64,11 +72,19 @@ function BillItemRow({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
-          <span>{modeLabel}</span>
+          {/* Auto-deduct is the one mode the bank moves on its own, and the only one that can
+              overdraw this account without the user acting, so it is the mode worth a colour. */}
+          <span className={payment.paymentMode === 'AutoDeduct' && !isPaused ? 'font-semibold text-blue-500' : ''}>
+            {modeLabel}
+          </span>
           {dueFormatted && (
             <>
               <span aria-hidden="true">·</span>
-              <span>Next {dueFormatted}</span>
+              {/* Amber is the app's needs-attention colour, so it is spent only on a bill that is
+                  actually near, not on every date in the list. */}
+              <span className={isDueSoon ? 'font-semibold text-amber-600 dark:text-amber-400' : ''}>
+                Next {dueFormatted}
+              </span>
             </>
           )}
         </div>

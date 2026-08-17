@@ -27,6 +27,29 @@ export function formatBillDueDate(dateStr: string | null | undefined): string | 
   return `${day} ${SHORT_MONTHS[month - 1]}`
 }
 
+/** How near a due date has to be before the roster marks it as needing attention. */
+export const BILL_DUE_SOON_DAYS = 7
+
+/**
+ * Whether a bill's next due date is near enough to be worth the needs-attention colour.
+ *
+ * Compared date-only, in local time, so a bill due today counts and one that has already slipped
+ * past still counts -- an overdue bill needs attention more than a nearby one, not less. Takes the
+ * reference day explicitly so the rule is testable without freezing the clock.
+ */
+export function isBillDueSoon(
+  dateStr: string | null | undefined,
+  today: Date = new Date(),
+): boolean {
+  if (!dateStr) return false
+  const [year, month, day] = dateStr.split('-').map(Number)
+  if (!year || !month || !day) return false
+  const due = new Date(year, month - 1, day)
+  const reference = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const days = Math.round((due.getTime() - reference.getTime()) / 86_400_000)
+  return days <= BILL_DUE_SOON_DAYS
+}
+
 export function createEmptyAccountBillRoster(accountId: string): AccountBillRoster {
   return {
     accountId,

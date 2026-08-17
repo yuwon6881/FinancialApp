@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RecurringPayment } from '../types'
-import { buildAccountBillRosters, createEmptyAccountBillRoster, formatBillDueDate } from './accountBillRoster'
+import { BILL_DUE_SOON_DAYS, buildAccountBillRosters, createEmptyAccountBillRoster, formatBillDueDate, isBillDueSoon } from './accountBillRoster'
 
 const makePayment = (overrides: Partial<RecurringPayment> = {}): RecurringPayment => ({
   id: 'sub-1',
@@ -154,5 +154,35 @@ describe('buildAccountBillRosters', () => {
     expect(roster).toBeDefined()
     expect(roster?.active).toHaveLength(1)
     expect(roster?.active[0].payment.name).toBe('Gym Membership')
+  })
+})
+
+describe('isBillDueSoon', () => {
+  const today = new Date(2026, 7, 17) // 17 Aug 2026, local time
+
+  it('is false with no date', () => {
+    expect(isBillDueSoon(null, today)).toBe(false)
+    expect(isBillDueSoon(undefined, today)).toBe(false)
+    expect(isBillDueSoon('not-a-date', today)).toBe(false)
+  })
+
+  it('counts today and the whole window', () => {
+    expect(isBillDueSoon('2026-08-17', today)).toBe(true)
+    expect(isBillDueSoon('2026-08-24', today)).toBe(true)
+    expect(BILL_DUE_SOON_DAYS).toBe(7)
+  })
+
+  it('excludes a date past the window', () => {
+    expect(isBillDueSoon('2026-08-25', today)).toBe(false)
+  })
+
+  it('still counts an overdue bill, which needs attention more, not less', () => {
+    expect(isBillDueSoon('2026-08-01', today)).toBe(true)
+  })
+
+  it('ignores the time of day on the reference date', () => {
+    const lateInTheDay = new Date(2026, 7, 17, 23, 59, 59)
+    expect(isBillDueSoon('2026-08-24', lateInTheDay)).toBe(true)
+    expect(isBillDueSoon('2026-08-25', lateInTheDay)).toBe(false)
   })
 })
