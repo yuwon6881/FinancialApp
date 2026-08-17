@@ -228,9 +228,9 @@ const TopNav: React.FC<TopNavProps> = ({
           {!isPhone && draftStatus}
         </div>
 
-        {/* Navigation Tabs - Centered mathematically on desktop, flex-safe on medium screens */}
-        <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center shrink-0 z-20 w-max">
-          <nav className="flex items-center gap-1 bg-card/72 p-1.5 rounded-xl border border-border/50 shadow-sm select-none">
+        {/* Navigation Tabs - flow beside the actions on medium screens, centered mathematically on desktop */}
+        <div className="hidden min-w-0 flex-1 items-center justify-center md:flex lg:absolute lg:left-1/2 lg:top-1/2 lg:z-20 lg:w-max lg:-translate-x-1/2 lg:-translate-y-1/2 lg:flex-none">
+          <nav className="flex min-w-0 max-w-full items-center gap-0.5 rounded-xl border border-border/50 bg-card/72 p-1 shadow-sm select-none lg:gap-1 lg:p-1.5">
             {navItems.map(({ tab, label, Icon, activeClass, iconClass, dotClass }) => {
               const isActive = activeTab === tab
               return (
@@ -238,7 +238,7 @@ const TopNav: React.FC<TopNavProps> = ({
                   key={tab}
                   onClick={() => onTabChange(tab)}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`relative flex items-center gap-1 md:gap-1.5 px-2 lg:px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all duration-200 cursor-pointer ${
+                  className={`relative flex min-w-0 items-center gap-1 px-1.5 py-1.5 text-xs font-semibold rounded-lg border transition-all duration-200 cursor-pointer lg:gap-1.5 lg:px-3 ${
                     isActive
                       ? `${activeClass} font-bold shadow-sm scale-[1.02]`
                       : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/45'
@@ -254,7 +254,7 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         {/* Right Side Widgets & Actions */}
-        <div className="flex flex-1 shrink-0 items-center justify-end gap-1.5 sm:gap-2.5 lg:gap-3 z-10">
+        <div className="flex shrink-0 items-center justify-end gap-1.5 z-10 sm:gap-2.5 lg:flex-1 lg:gap-3">
           
           {/* A magnifier labelled Search, not a ⌘ glyph: ⌘ is the macOS Command key, which does
               not exist on the Windows, Android and PWA targets this app ships to, and it reads as
@@ -266,7 +266,7 @@ const TopNav: React.FC<TopNavProps> = ({
               onClick={onOpenSearch}
               aria-label="Search your records"
               title="Search (Ctrl+K)"
-              className="hidden md:flex items-center justify-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-xl border border-border/60 bg-background text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/50 transition duration-150 cursor-pointer active:scale-95 shrink-0"
+              className="hidden size-9 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background px-0 py-0 text-muted-foreground hover:border-primary/40 hover:bg-muted/50 hover:text-foreground transition duration-150 cursor-pointer active:scale-95 lg:h-auto lg:w-auto lg:gap-1.5 lg:px-3 lg:py-1.5"
             >
               <SearchIcon className="size-3.5" aria-hidden />
               <span className="hidden xl:inline text-xs font-semibold">Search</span>
@@ -276,7 +276,7 @@ const TopNav: React.FC<TopNavProps> = ({
           <Button variant="unstyled"
             type="button"
             onClick={onAskAI}
-            className="hidden md:flex items-center justify-center gap-1.5 px-2.5 lg:px-3 py-1.5 bg-blue-500/8 hover:bg-blue-500/14 border border-blue-500/20 hover:border-blue-500/35 text-blue-600 dark:text-blue-400 rounded-xl select-none shrink-0 transition-all duration-150 cursor-pointer"
+            className="hidden size-9 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/8 px-0 py-0 text-blue-600 hover:border-blue-500/35 hover:bg-blue-500/14 dark:text-blue-400 select-none transition-all duration-150 cursor-pointer lg:h-auto lg:w-auto lg:gap-1.5 lg:px-3 lg:py-1.5"
             title="ASK AI"
             aria-label="ASK AI"
           >
@@ -356,7 +356,7 @@ const TopNav: React.FC<TopNavProps> = ({
               <DropdownMenuTrigger
                 aria-label="Account menu"
                 title="Account menu"
-                className="size-11 rounded-xl p-2 cursor-pointer hover:bg-muted/50 active:scale-95"
+                className="size-11 rounded-xl p-2 cursor-pointer hover:bg-muted/50 active:scale-95 sm:size-9 lg:size-11"
               >
                 <div className="flex size-7 items-center justify-center rounded-full border border-blue-500/20 bg-linear-to-tr from-blue-500 to-sky-400 text-xs font-extrabold text-on-vivid">
                   {getInitials(username)}

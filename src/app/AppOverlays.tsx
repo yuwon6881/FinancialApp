@@ -76,8 +76,22 @@ export function AppOverlays({
 }: AppOverlaysProps) {
   const reduceMotion = useReducedMotion()
   const fabActionsRef = useRef<HTMLDivElement>(null)
+  const searchLoanLoadAttemptedRef = useRef(false)
   const [isAccountReviewOpen, setIsAccountReviewOpen] = useState(false)
   const showMobileFab = shouldShowMobileFab(prefs.activeTab)
+
+  useEffect(() => {
+    if (!dialogs.showSearch) {
+      searchLoanLoadAttemptedRef.current = false
+      return
+    }
+    if (searchLoanLoadAttemptedRef.current || financial.hasLoadedLoans || financial.loanLoadStatus === 'loading') return
+    // Loans are still lazy for normal startup, but search must be complete even when the Loans tab
+    // has not been opened first. Reuse the existing loader and let its request dedupe with the
+    // Loans section if the user opens that tab while search is visible.
+    searchLoanLoadAttemptedRef.current = true
+    void financial.loadLoans().catch(() => undefined)
+  }, [dialogs.showSearch, financial.hasLoadedLoans, financial.loadLoans, financial.loanLoadStatus])
 
   useEffect(() => {
     if (!fabMenu.isOpen || !showMobileFab) return
@@ -245,9 +259,6 @@ export function AppOverlays({
           <GlobalSearch
             isOpen={dialogs.showSearch}
             onClose={() => dialogs.setShowSearch(false)}
-            // Every list here is already in memory, so searching costs no request. Loans are the
-            // one lazy slice: they are searchable once the Loans tab has been opened, and absent
-            // rather than fetched, so opening search never spends a round trip.
             data={{
               transactions: financial.transactions,
               accounts: financial.allAccounts,
@@ -275,6 +286,7 @@ export function AppOverlays({
             }}
             formatAmount={financial.formatSensitive}
             maskAmounts={prefs.hideSensitive}
+            isLoadingLoans={financial.loanLoadStatus === 'loading' && financial.allLoans.length === 0}
           />
         </Suspense>
       )}

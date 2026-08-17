@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { LedgerAccount, RecurringPayment, SavingsGoal, Transaction, WishlistItem } from '../../types'
+import type { LedgerAccount, Loan, RecurringPayment, SavingsGoal, Transaction, WishlistItem } from '../../types'
 import { RESULTS_PER_KIND, buildSearchResults, groupSearchResults } from './searchSources'
 
 const transaction = (overrides: Partial<Transaction> = {}): Transaction => ({
@@ -39,6 +39,27 @@ const bill = (overrides: Partial<RecurringPayment> = {}): RecurringPayment => ({
   paymentMode: 'Manual',
   ...overrides,
 } as RecurringPayment)
+
+const loan = (overrides: Partial<Loan> = {}): Loan => ({
+  id: 'loan-1',
+  name: 'Education loan',
+  recurringPaymentId: 'rp-ptptn',
+  recurringPaymentName: 'PTPTN',
+  openingPrincipal: 12000,
+  trackingStartDate: '2026-01-01',
+  annualRatePercent: 1.5,
+  termPeriods: 120,
+  interestMethod: 'ReducingBalance',
+  snapshot: {
+    outstandingBalance: 12000,
+    scheduledPayment: 120,
+    totalScheduledInterest: 300,
+    totalInterestPaid: 0,
+    payments: [],
+    futureSchedule: [],
+  },
+  ...overrides,
+})
 
 const goal = (overrides: Partial<SavingsGoal> = {}): SavingsGoal => ({
   id: 1,
@@ -103,6 +124,13 @@ describe('buildSearchResults', () => {
     expect(closed.subtitle).toBe('Essentials · Closed')
     const [paused] = buildSearchResults({ recurringPayments: [bill({ active: false })] }, 'netflix')
     expect(paused.subtitle).toBe('Entertainment · Paused')
+  })
+
+  it('finds a loan through its linked bill name', () => {
+    const [found] = buildSearchResults({ loans: [loan()] }, 'ptptn')
+    expect(found.kind).toBe('loan')
+    expect(found.title).toBe('Education loan')
+    expect(found.subtitle).toBe('Paid by PTPTN')
   })
 
   it('sends a bill to its own highlight but a commitment only to its page', () => {

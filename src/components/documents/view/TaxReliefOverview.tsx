@@ -337,16 +337,14 @@ export function TaxReliefOverview({
                   // Status and selection are given separate visual channels, because they are
                   // independent facts that can both be true. Reaching the limit owns the border
                   // and fill (emerald, as everywhere else in the app); filtering by this category
-                  // owns the ring plus an explicit "Filtering" chip. Sharing one channel meant a
-                  // selected card and a full card were both just "a tinted card with a coloured
-                  // border", and selecting a full one replaced its emerald with primary, so the
-                  // limit-reached signal vanished at the moment the user drilled into it.
+                  // owns an inset ring plus an explicit "Filtering" chip. The ring stays inside
+                  // the card so the horizontal rail cannot clip its top edge.
                   className={`group flex min-h-32 w-full sm:w-[22rem] shrink-0 cursor-pointer snap-start flex-col gap-3 rounded-2xl border p-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
                     full
                       ? 'border-emerald-500/45 bg-emerald-500/10 hover:border-emerald-500/70 hover:bg-emerald-500/14'
                       : 'border-border/60 bg-card hover:border-primary/45 hover:bg-muted/60'
                   } ${
-                    selected ? 'ring-2 ring-primary/80 shadow-md shadow-primary/10' : 'hover:shadow-md hover:shadow-primary/5'
+                    selected ? 'ring-2 ring-inset ring-primary/80 shadow-md shadow-primary/10' : 'hover:shadow-md hover:shadow-primary/5'
                   }`}
                 >
                   <div className="flex min-w-0 items-start justify-between gap-2">

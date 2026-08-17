@@ -18,6 +18,8 @@ export interface GlobalSearchProps {
    * but stop being matchable, so a query cannot confirm a figure the mask is withholding.
    */
   maskAmounts: boolean
+  /** The lazy loan list is being fetched because search was opened before the Loans tab. */
+  isLoadingLoans?: boolean
 }
 
 export function GlobalSearch({
@@ -28,6 +30,7 @@ export function GlobalSearch({
   onSearchAllCycles,
   formatAmount,
   maskAmounts,
+  isLoadingLoans = false,
 }: GlobalSearchProps) {
   // Destructured rather than kept as one `search` object: the hook returns element refs beside
   // its render values, so reading them off one `search` object made `react-hooks/refs` treat
@@ -89,7 +92,7 @@ export function GlobalSearch({
             role="combobox"
             value={query}
             onChange={event => updateQuery(event.target.value)}
-            placeholder="Search transactions, accounts, bills…"
+            placeholder="Search transactions, accounts, bills, loans…"
             aria-label="Search your records"
             aria-expanded
             aria-autocomplete="list"
@@ -122,7 +125,9 @@ export function GlobalSearch({
         >
           {!hasQuery ? (
             <p className="px-3 py-8 text-center text-xs text-muted-foreground">
-              Start typing to find a transaction, account, bill, loan, commitment, or reward.
+              {isLoadingLoans
+                ? 'Loading loan records…'
+                : 'Start typing to find a transaction, account, bill, loan, commitment, or reward.'}
             </p>
           ) : (
             <>
@@ -152,7 +157,7 @@ export function GlobalSearch({
 
               {results.length === 0 && (
                 <p className="px-3 pb-1 pt-6 text-center text-xs text-muted-foreground">
-                  Nothing in this cycle matches “{trimmedQuery}”.
+                  {isLoadingLoans ? 'Loading loan records…' : <>Nothing in this cycle matches “{trimmedQuery}”.</>}
                 </p>
               )}
 
@@ -195,7 +200,7 @@ export function GlobalSearch({
             <span><kbd className="font-bold">esc</kbd> Close</span>
           </span>
           <span aria-live="polite" aria-atomic="true" className="font-semibold text-foreground/75">
-            {hasQuery ? `${results.length} found in this cycle` : 'Search'}
+            {isLoadingLoans ? 'Loading loans…' : hasQuery ? `${results.length} found in this cycle` : 'Search'}
           </span>
         </div>
       </div>

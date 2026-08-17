@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react'
 import type { LedgerAccount } from '../../../types'
 import type { AccountBillRoster as AccountBillRosterType } from '../../../lib/accountBillRoster'
 import { formatCurrencyVal } from '../../../lib/utils'
-import { getCategoryBadgeClass, getCategoryDotClass } from '../../../lib/categoryColors'
+import { getCategoryBadgeClass } from '../../../lib/categoryColors'
 import { Button } from '../../ui/Button'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { AccountRow } from './AccountRow'
@@ -45,7 +45,6 @@ export function BucketAccountGroup({
   searchQuery,
 }: BucketAccountGroupProps) {
   const bucketBadgeClass = getCategoryBadgeClass(bucket)
-  const bucketDotClass = getCategoryDotClass(bucket)
   const openCount = allBucketAccounts.filter(account => !account.isArchived).length
   const totalBalance = allBucketAccounts.reduce((sum, account) => sum + account.remaining, 0)
   const hasAnyAccounts = allBucketAccounts.length > 0
@@ -53,18 +52,10 @@ export function BucketAccountGroup({
   return (
     <div
       id={`bucket-account-group-${bucket}`}
-      // The four bucket cards used to be identical grey panels distinguished only by a small
-      // badge, so telling Essentials from Rewards meant reading rather than looking. The accent
-      // rail below carries each bucket's own ledger colour -- the same one its rows already use
-      // everywhere else -- so the grouping is visible before any text is read.
       className={`relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-background/40 p-4 sm:p-5 transition duration-150 ${
         hasAnyAccounts ? 'border-border/60' : 'border-dashed border-border/70'
       }`}
     >
-      <span
-        aria-hidden="true"
-        className={`absolute inset-y-0 left-0 w-1 ${bucketDotClass} ${hasAnyAccounts ? 'opacity-70' : 'opacity-30'}`}
-      />
       <div className="space-y-4">
         {/* Bucket header */}
         <div className="flex flex-col gap-2 border-b border-border/30 pb-3 sm:flex-row sm:items-center sm:justify-between">

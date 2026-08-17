@@ -1,10 +1,9 @@
 /**
- * Turns already-loaded records into ranked search results.
+ * Turns the records supplied by the app into ranked search results.
  *
- * Every input here is data the app has in memory anyway, so searching costs no request and no
- * market-data quota and can answer while the user types. Nothing in this module fetches, and
- * nothing renders -- a result carries a `target` describing *where* it goes, and the overlay
- * maps that onto the existing navigation helpers.
+ * Nothing in this module fetches, and nothing renders. The overlay owns the one lazy loan load
+ * needed to make search complete before handing data here; a result carries a `target` describing
+ * where it goes, and the overlay maps that onto the existing navigation helpers.
  */
 
 import type {

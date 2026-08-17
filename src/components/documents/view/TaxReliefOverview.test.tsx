@@ -152,6 +152,30 @@ describe('TaxReliefOverview category deletion', () => {
 })
 
 describe('TaxReliefOverview sync status', () => {
+  it('keeps the filtering ring inside a limit-reached card', () => {
+    const summary = summaryWithDocuments(0)
+    summary.categories[0].confirmedAmount = 1000
+
+    render(
+      <TaxReliefOverview
+        summary={summary}
+        categories={[category]}
+        taxYear={CURRENT_YEAR}
+        currency="MYR"
+        isLoading={false}
+        selectedReliefCategories={['education']}
+        onToggleReliefCategory={vi.fn()}
+        onAddCategory={vi.fn(async () => undefined)}
+        onUpdateCategory={vi.fn(async () => undefined)}
+        onDeleteCategory={vi.fn(async () => undefined)}
+      />,
+    )
+
+    const card = screen.getByRole('button', { name: 'Remove Education from the documents filter' })
+    expect(card.className).toContain('ring-inset')
+    expect(screen.getByText('Limit reached')).toBeTruthy()
+  })
+
   it('shows the shared action wording for queued category mutations', () => {
     render(
       <TaxReliefOverview
