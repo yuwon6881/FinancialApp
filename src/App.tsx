@@ -365,59 +365,53 @@ function App() {
     }
   }, [prefs.activeTab, financial.draftTransactions, prefs.setActiveTab])
 
-  // Ledger filter state is durable for the session; its modal-opening intents
-  // are not. A lazy Ledger route may be left before consuming a one-shot request.
+  // Tab exit cleanup: drop modal-opening intents and deep-link highlights only when leaving the tab.
   useEffect(() => {
-    activeTabRef.current = prefs.activeTab
-    if (prefs.activeTab !== 'ledger') {
-      nav.setAutoOpenLedgerAdd(false)
-      nav.setAutoOpenLedgerTxType(null)
-      nav.setAutoOpenLedgerPrefill(null)
-      nav.setAutoOpenReceiptSplit(false)
-    }
-    if (prefs.activeTab !== 'recurring') {
-      nav.setAutoOpenSubscriptionAdd(false)
-    }
-    if (prefs.activeTab !== 'wishlist') {
-      nav.setAutoOpenWishlistAdd(false)
+    const prevTab = activeTabRef.current
+    if (prevTab !== prefs.activeTab) {
+      if (prevTab === 'ledger') {
+        nav.setAutoOpenLedgerAdd(false)
+        nav.setAutoOpenLedgerTxType(null)
+        nav.setAutoOpenLedgerPrefill(null)
+        nav.setAutoOpenReceiptSplit(false)
+        if (nav.highlightedTxId) nav.clearHighlightedTx()
+      }
+      if (prevTab === 'recurring') {
+        nav.setAutoOpenSubscriptionAdd(false)
+        if (nav.highlightedRecurringId) nav.clearHighlightedRecurring()
+        if (nav.highlightedLoanId) nav.clearHighlightedLoan()
+      }
+      if (prevTab === 'wishlist') {
+        nav.setAutoOpenWishlistAdd(false)
+      }
+      if (prevTab === 'reports') {
+        if (nav.highlightedReportSection || nav.highlightedReportCategory) nav.clearHighlightedReportSection()
+      }
+      if (prevTab === 'settings') {
+        if (nav.highlightedAccountId) nav.clearHighlightedAccount()
+      }
+      activeTabRef.current = prefs.activeTab
     }
   }, [
     prefs.activeTab,
     nav.setAutoOpenLedgerAdd,
     nav.setAutoOpenLedgerTxType,
+    nav.setAutoOpenLedgerPrefill,
     nav.setAutoOpenReceiptSplit,
     nav.setAutoOpenSubscriptionAdd,
     nav.setAutoOpenWishlistAdd,
+    nav.highlightedTxId,
+    nav.clearHighlightedTx,
+    nav.highlightedRecurringId,
+    nav.clearHighlightedRecurring,
+    nav.highlightedLoanId,
+    nav.clearHighlightedLoan,
+    nav.highlightedReportSection,
+    nav.highlightedReportCategory,
+    nav.clearHighlightedReportSection,
+    nav.highlightedAccountId,
+    nav.clearHighlightedAccount,
   ])
-
-  // Drop the subscription and loan highlights (state + params) whenever we leave the Recurring tab.
-  useEffect(() => {
-    if (prefs.activeTab !== 'recurring') {
-      if (nav.highlightedRecurringId) nav.clearHighlightedRecurring()
-      if (nav.highlightedLoanId) nav.clearHighlightedLoan()
-    }
-  }, [prefs.activeTab, nav.highlightedRecurringId, nav.clearHighlightedRecurring, nav.highlightedLoanId, nav.clearHighlightedLoan])
-
-  // Same reasoning for Ledger transaction highlight (`?tx=`).
-  useEffect(() => {
-    if (prefs.activeTab !== 'ledger' && nav.highlightedTxId) {
-      nav.clearHighlightedTx()
-    }
-  }, [prefs.activeTab, nav.highlightedTxId, nav.clearHighlightedTx])
-
-  // Same reasoning for the Reports section/card focus (`?focus=` + optional `?focusCategory=`).
-  useEffect(() => {
-    if (prefs.activeTab !== 'reports' && (nav.highlightedReportSection || nav.highlightedReportCategory)) {
-      nav.clearHighlightedReportSection()
-    }
-  }, [prefs.activeTab, nav.highlightedReportSection, nav.highlightedReportCategory, nav.clearHighlightedReportSection])
-
-  // Same reasoning for Settings accounts focus (`?account=`).
-  useEffect(() => {
-    if (prefs.activeTab !== 'settings' && nav.highlightedAccountId) {
-      nav.clearHighlightedAccount()
-    }
-  }, [prefs.activeTab, nav.highlightedAccountId, nav.clearHighlightedAccount])
 
   useEffect(() => {
     if (nav.selectedMonth && nav.selectedYear) {

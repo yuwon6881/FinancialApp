@@ -174,7 +174,7 @@ const TopNav: React.FC<TopNavProps> = ({
         {/* min-w-0 (not min-w-max): the status badges below are shrink-0, so a
             max-content floor here would push the whole header past a phone
             viewport and make the page scroll sideways. */}
-        <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden z-10">
+        <div className="flex min-w-0 shrink-0 items-center justify-start overflow-hidden z-10 xl:flex-1">
           <Button
             variant="unstyled"
             type="button"
@@ -228,8 +228,8 @@ const TopNav: React.FC<TopNavProps> = ({
           {!isPhone && draftStatus}
         </div>
 
-        {/* Navigation Tabs - flow beside the actions on medium screens, centered mathematically on desktop */}
-        <div className="hidden min-w-0 flex-1 items-center justify-center md:flex lg:absolute lg:left-1/2 lg:top-1/2 lg:z-20 lg:w-max lg:-translate-x-1/2 lg:-translate-y-1/2 lg:flex-none">
+        {/* Navigation Tabs - flow beside the actions on medium/tablet screens, centered mathematically on wide desktop */}
+        <div className="hidden min-w-0 flex-1 items-center justify-center md:flex xl:absolute xl:left-1/2 xl:top-1/2 xl:z-20 xl:w-max xl:-translate-x-1/2 xl:-translate-y-1/2 xl:flex-none">
           <nav className="flex min-w-0 max-w-full items-center gap-0.5 rounded-xl border border-border/50 bg-card/72 p-1 shadow-sm select-none lg:gap-1 lg:p-1.5">
             {navItems.map(({ tab, label, Icon, activeClass, iconClass, dotClass }) => {
               const isActive = activeTab === tab
@@ -254,7 +254,7 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         {/* Right Side Widgets & Actions */}
-        <div className="flex shrink-0 items-center justify-end gap-1.5 z-10 sm:gap-2.5 lg:flex-1 lg:gap-3">
+        <div className="flex shrink-0 items-center justify-end gap-1.5 z-10 sm:gap-2.5 xl:flex-1 xl:gap-3">
           
           {/* A magnifier labelled Search, not a ⌘ glyph: ⌘ is the macOS Command key, which does
               not exist on the Windows, Android and PWA targets this app ships to, and it reads as
@@ -266,7 +266,7 @@ const TopNav: React.FC<TopNavProps> = ({
               onClick={onOpenSearch}
               aria-label="Search your records"
               title="Search (Ctrl+K)"
-              className="hidden md:flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background px-0 py-0 text-muted-foreground hover:border-primary/40 hover:bg-muted/50 hover:text-foreground transition duration-150 cursor-pointer active:scale-95 lg:h-auto lg:w-auto lg:gap-1.5 lg:px-3 lg:py-1.5"
+              className="hidden md:flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background text-muted-foreground hover:border-primary/40 hover:bg-muted/50 hover:text-foreground transition duration-150 cursor-pointer active:scale-95 xl:h-9 xl:w-auto xl:gap-1.5 xl:px-3"
             >
               <SearchIcon className="size-3.5" aria-hidden />
               <span className="hidden xl:inline text-xs font-semibold">Search</span>
@@ -276,7 +276,7 @@ const TopNav: React.FC<TopNavProps> = ({
           <Button variant="unstyled"
             type="button"
             onClick={onAskAI}
-            className="hidden md:flex size-9 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/8 px-0 py-0 text-blue-600 hover:border-blue-500/35 hover:bg-blue-500/14 dark:text-blue-400 select-none transition-all duration-150 cursor-pointer lg:h-auto lg:w-auto lg:gap-1.5 lg:px-3 lg:py-1.5"
+            className="hidden md:flex size-9 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/8 text-blue-600 hover:border-blue-500/35 hover:bg-blue-500/14 dark:text-blue-400 select-none transition-all duration-150 cursor-pointer active:scale-95 xl:h-9 xl:w-auto xl:gap-1.5 xl:px-3"
             title="ASK AI"
             aria-label="ASK AI"
           >
@@ -356,7 +356,7 @@ const TopNav: React.FC<TopNavProps> = ({
               <DropdownMenuTrigger
                 aria-label="Account menu"
                 title="Account menu"
-                className="size-11 rounded-xl p-2 cursor-pointer hover:bg-muted/50 active:scale-95 sm:size-9 lg:size-11"
+                className="size-11 rounded-xl p-2 cursor-pointer hover:bg-muted/50 active:scale-95 sm:size-9"
               >
                 <div className="flex size-7 items-center justify-center rounded-full border border-blue-500/20 bg-linear-to-tr from-blue-500 to-sky-400 text-xs font-extrabold text-on-vivid">
                   {getInitials(username)}

@@ -779,67 +779,74 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     }
   }, [serverResult, showAllCycles, currentPage, pageSize])
 
-  // Handle highlighted transaction page selection and arrival cue. The target may be on a later
+  // Page selection for highlighted transaction (if target is on a different page)
+  useEffect(() => {
+    if (!highlightedTxId) return
+    const index = filteredTransactions.findIndex(t => t.id === highlightedTxId)
+    if (index !== -1) {
+      const targetPage = Math.floor(index / pageSize) + 1
+      if (currentPage !== targetPage) {
+        setCurrentPage(targetPage)
+      }
+    }
+  }, [highlightedTxId, filteredTransactions, pageSize, currentPage])
+
+  // Handle highlighted transaction arrival cue. The target may be on a later
   // page, and the keyed list remounts after that page changes, so keep looking until its actual
   // desktop row or mobile card exists instead of relying on one fixed post-render delay.
-  const lastHighlightedTxIdRef = useRef<string | null>(null)
   const onClearHighlightedTxRef = useRef(onClearHighlightedTx)
   useEffect(() => {
     onClearHighlightedTxRef.current = onClearHighlightedTx
   })
 
   useEffect(() => {
-    if (!highlightedTxId) {
-      lastHighlightedTxIdRef.current = null
-      return
-    }
-    if (lastHighlightedTxIdRef.current === highlightedTxId) return
-
-    const index = filteredTransactions.findIndex(t => t.id === highlightedTxId)
-    if (index === -1) return
-
-    lastHighlightedTxIdRef.current = highlightedTxId
-
-    const targetPage = Math.floor(index / pageSize) + 1
-    if (currentPage !== targetPage) setCurrentPage(targetPage)
+    if (!highlightedTxId) return
 
     let clearTimer: ReturnType<typeof setTimeout> | undefined
     let pollTimer: ReturnType<typeof setInterval> | null = null
+    let applied = false
     const startedAt = Date.now()
 
     const tryHighlight = () => {
       const rowEl = getLedgerTransactionRowElement(highlightedTxId, isMobile)
-      if (!rowEl) {
-        if (Date.now() - startedAt > 3500) {
-          if (pollTimer) clearInterval(pollTimer)
+      if (rowEl) {
+        applied = true
+        if (pollTimer) {
+          clearInterval(pollTimer)
           pollTimer = null
-          onClearHighlightedTxRef.current?.()
         }
-        return
+        scrollLedgerTransactionRowIntoView(rowEl)
+        rowEl.classList.add('ledger-transaction-highlight')
+        clearTimer = setTimeout(() => {
+          rowEl.classList.remove('ledger-transaction-highlight')
+          onClearHighlightedTxRef.current?.()
+        }, 3600)
+        return true
       }
-
-      if (pollTimer) clearInterval(pollTimer)
-      pollTimer = null
-      scrollLedgerTransactionRowIntoView(rowEl)
-      rowEl.classList.add('ledger-transaction-highlight')
-      clearTimer = setTimeout(() => {
-        rowEl.classList.remove('ledger-transaction-highlight')
+      if (Date.now() - startedAt > 3500) {
+        if (pollTimer) {
+          clearInterval(pollTimer)
+          pollTimer = null
+        }
         onClearHighlightedTxRef.current?.()
-      }, 3600)
+        return true
+      }
+      return false
     }
 
-    tryHighlight()
-    if (!clearTimer) {
+    if (!tryHighlight()) {
       pollTimer = setInterval(tryHighlight, 50)
     }
 
     return () => {
       if (pollTimer) clearInterval(pollTimer)
       if (clearTimer) clearTimeout(clearTimer)
-      const rowEl = getLedgerTransactionRowElement(highlightedTxId, isMobile)
-      rowEl?.classList.remove('ledger-transaction-highlight')
+      if (applied) {
+        const rowEl = getLedgerTransactionRowElement(highlightedTxId, isMobile)
+        rowEl?.classList.remove('ledger-transaction-highlight')
+      }
     }
-  }, [highlightedTxId, filteredTransactions, pageSize, currentPage, isMobile])
+  }, [highlightedTxId, isMobile])
 
   const handleDeleteClickRef = useRef(handleDeleteClick)
   useEffect(() => {
