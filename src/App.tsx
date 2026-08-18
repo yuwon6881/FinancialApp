@@ -390,15 +390,20 @@ function App() {
     nav.setAutoOpenWishlistAdd,
   ])
 
-  // Drop the subscription highlight (state + `?subscription=` param) whenever we
-  // leave the Recurring tab. Without this, navigating away mid-highlight — before
-  // the card's fade-out fires onClearHighlight — leaves the id set, so every later
-  // visit to Recurring re-scrolls and re-highlights the last-clicked subscription.
+  // Drop the subscription and loan highlights (state + params) whenever we leave the Recurring tab.
   useEffect(() => {
-    if (prefs.activeTab !== 'recurring' && nav.highlightedRecurringId) {
-      nav.clearHighlightedRecurring()
+    if (prefs.activeTab !== 'recurring') {
+      if (nav.highlightedRecurringId) nav.clearHighlightedRecurring()
+      if (nav.highlightedLoanId) nav.clearHighlightedLoan()
     }
-  }, [prefs.activeTab, nav.highlightedRecurringId, nav.clearHighlightedRecurring])
+  }, [prefs.activeTab, nav.highlightedRecurringId, nav.clearHighlightedRecurring, nav.highlightedLoanId, nav.clearHighlightedLoan])
+
+  // Same reasoning for Ledger transaction highlight (`?tx=`).
+  useEffect(() => {
+    if (prefs.activeTab !== 'ledger' && nav.highlightedTxId) {
+      nav.clearHighlightedTx()
+    }
+  }, [prefs.activeTab, nav.highlightedTxId, nav.clearHighlightedTx])
 
   // Same reasoning for the Reports section/card focus (`?focus=` + optional `?focusCategory=`).
   useEffect(() => {

@@ -266,7 +266,7 @@ const TopNav: React.FC<TopNavProps> = ({
               onClick={onOpenSearch}
               aria-label="Search your records"
               title="Search (Ctrl+K)"
-              className="hidden size-9 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background px-0 py-0 text-muted-foreground hover:border-primary/40 hover:bg-muted/50 hover:text-foreground transition duration-150 cursor-pointer active:scale-95 lg:h-auto lg:w-auto lg:gap-1.5 lg:px-3 lg:py-1.5"
+              className="hidden md:flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background px-0 py-0 text-muted-foreground hover:border-primary/40 hover:bg-muted/50 hover:text-foreground transition duration-150 cursor-pointer active:scale-95 lg:h-auto lg:w-auto lg:gap-1.5 lg:px-3 lg:py-1.5"
             >
               <SearchIcon className="size-3.5" aria-hidden />
               <span className="hidden xl:inline text-xs font-semibold">Search</span>
@@ -276,7 +276,7 @@ const TopNav: React.FC<TopNavProps> = ({
           <Button variant="unstyled"
             type="button"
             onClick={onAskAI}
-            className="hidden size-9 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/8 px-0 py-0 text-blue-600 hover:border-blue-500/35 hover:bg-blue-500/14 dark:text-blue-400 select-none transition-all duration-150 cursor-pointer lg:h-auto lg:w-auto lg:gap-1.5 lg:px-3 lg:py-1.5"
+            className="hidden md:flex size-9 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/8 px-0 py-0 text-blue-600 hover:border-blue-500/35 hover:bg-blue-500/14 dark:text-blue-400 select-none transition-all duration-150 cursor-pointer lg:h-auto lg:w-auto lg:gap-1.5 lg:px-3 lg:py-1.5"
             title="ASK AI"
             aria-label="ASK AI"
           >

@@ -385,6 +385,8 @@ export function AuthenticatedView({
                       isSwitchingCycle={nav.isSwitchingCycle}
                       highlightedRecurringId={nav.highlightedRecurringId}
                       onClearHighlightedRecurring={nav.clearHighlightedRecurring}
+                      highlightedLoanId={nav.highlightedLoanId}
+                      onClearHighlightedLoan={nav.clearHighlightedLoan}
                       globalPushEnabled={push.billRemindersEnabled || push.otherDevicesBillReminders}
                       thisDevicePushEnabled={push.billRemindersEnabled}
                       onUpdateReminder={financial.handleUpdateReminder}

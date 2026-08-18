@@ -133,9 +133,11 @@ describe('buildSearchResults', () => {
     expect(found.subtitle).toBe('Paid by PTPTN')
   })
 
-  it('sends a bill to its own highlight but a commitment only to its page', () => {
+  it('sends a bill and a loan to their own highlight but a commitment only to its page', () => {
     const [foundBill] = buildSearchResults({ recurringPayments: [bill()] }, 'netflix')
     expect(foundBill.target).toEqual({ to: 'bill', recurringPaymentId: 'rp-1' })
+    const [foundLoan] = buildSearchResults({ loans: [loan()] }, 'education')
+    expect(foundLoan.target).toEqual({ to: 'loan', loanId: 'loan-1' })
     const [foundGoal] = buildSearchResults({ savingsGoals: [goal()] }, 'car')
     expect(foundGoal.target).toEqual({ to: 'commitments' })
   })

@@ -28,7 +28,7 @@ export type SearchTarget =
   | { to: 'transaction'; transactionId: string }
   | { to: 'account'; accountId: string }
   | { to: 'bill'; recurringPaymentId: string }
-  | { to: 'loans' }
+  | { to: 'loan'; loanId: string }
   | { to: 'commitments' }
   | { to: 'rewards' }
 
@@ -197,7 +197,7 @@ export const buildSearchResults = (
       title: loan.name,
       subtitle: loan.recurringPaymentName ? `Paid by ${loan.recurringPaymentName}` : 'Loan',
       amount: loan.openingPrincipal,
-      target: { to: 'loans' as const },
+      target: { to: 'loan' as const, loanId: loan.id },
     },
   }))
 

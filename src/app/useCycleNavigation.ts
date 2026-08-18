@@ -77,6 +77,10 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     if (typeof window === 'undefined') return null
     return new URLSearchParams(window.location.search).get('subscription')
   })
+  const [highlightedLoanId, setHighlightedLoanId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    return new URLSearchParams(window.location.search).get('loan')
+  })
   const [highlightedReportSection, setHighlightedReportSection] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null
     return new URLSearchParams(window.location.search).get('focus')
@@ -201,12 +205,24 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
 
   const handleNavigateToRecurring = useCallback((recurringPaymentId: string) => {
     setHighlightedRecurringId(recurringPaymentId)
-    setActiveTab('recurring', { search: { subscription: recurringPaymentId } })
+    setHighlightedLoanId(null)
+    setActiveTab('recurring', { search: { subscription: recurringPaymentId, loan: null } })
   }, [setActiveTab])
 
   const clearHighlightedRecurring = useCallback(() => {
     setHighlightedRecurringId(null)
     updateAppSearch({ subscription: null })
+  }, [])
+
+  const handleNavigateToLoan = useCallback((loanId: string) => {
+    setHighlightedLoanId(loanId)
+    setHighlightedRecurringId(null)
+    setActiveTab('recurring', { search: { loan: loanId, subscription: null } })
+  }, [setActiveTab])
+
+  const clearHighlightedLoan = useCallback(() => {
+    setHighlightedLoanId(null)
+    updateAppSearch({ loan: null })
   }, [])
 
   // Same arrival cue as a subscription jump, for the Reports sections the Today
@@ -282,6 +298,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
       setLedgerCyclesRange(location.ledger.range)
       setHighlightedTxId(location.ledger.highlightedTxId)
       setHighlightedRecurringId(new URLSearchParams(window.location.search).get('subscription'))
+      setHighlightedLoanId(new URLSearchParams(window.location.search).get('loan'))
       const reportSearch = new URLSearchParams(window.location.search)
       setHighlightedReportSection(reportSearch.get('focus'))
       setHighlightedReportCategory(reportSearch.get('focusCategory'))
@@ -329,6 +346,8 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setHighlightedTxId,
     highlightedRecurringId,
     setHighlightedRecurringId,
+    highlightedLoanId,
+    setHighlightedLoanId,
     highlightedReportSection,
     highlightedReportCategory,
     handleNavigateToReportSection,
@@ -342,6 +361,8 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     handleNavigateToLedger,
     handleNavigateToRecurring,
     clearHighlightedRecurring,
+    handleNavigateToLoan,
+    clearHighlightedLoan,
     handleQuickAction,
     syncLedgerRouteState,
     clearIncomingFilters,

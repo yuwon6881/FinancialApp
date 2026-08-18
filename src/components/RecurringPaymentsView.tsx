@@ -34,6 +34,8 @@ interface RecurringPaymentsViewProps {
   isSwitchingCycle?: boolean
   highlightedRecurringId?: string | null
   onClearHighlightedRecurring?: () => void
+  highlightedLoanId?: string | null
+  onClearHighlightedLoan?: () => void
   activeSyncId?: string | null
   activeSyncIds?: string[]
   deletingId?: string | null
@@ -75,6 +77,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   isSwitchingCycle = false,
   highlightedRecurringId = null,
   onClearHighlightedRecurring,
+  highlightedLoanId: highlightedLoanIdProp = null,
+  onClearHighlightedLoan: onClearHighlightedLoanProp,
   activeSyncId: activeSyncIdProp,
   activeSyncIds: activeSyncIdsProp,
   deletingId: deletingIdProp,
@@ -106,10 +110,13 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const deletingId = deletingIdProp ?? app.deletingId
   const isMobile = useIsMobile()
   const [activeTab, setActiveTab] = React.useState<RecurringTabId>('recurring')
-  const [highlightedLoanId, setHighlightedLoanId] = React.useState<string | null>(null)
+  const [internalHighlightedLoanId, setInternalHighlightedLoanId] = React.useState<string | null>(null)
+  const currentHighlightedLoanId = highlightedLoanIdProp || internalHighlightedLoanId
+
   const handleClearHighlightedLoan = React.useCallback(() => {
-    setHighlightedLoanId(null)
-  }, [])
+    setInternalHighlightedLoanId(null)
+    onClearHighlightedLoanProp?.()
+  }, [onClearHighlightedLoanProp])
 
   React.useEffect(() => {
     if (highlightedRecurringId) {
@@ -118,10 +125,16 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   }, [highlightedRecurringId])
 
   React.useEffect(() => {
-    if (activeTab !== 'loans' && highlightedLoanId) {
-      setHighlightedLoanId(null)
+    if (currentHighlightedLoanId) {
+      setActiveTab('loans')
     }
-  }, [activeTab, highlightedLoanId])
+  }, [currentHighlightedLoanId])
+
+  React.useEffect(() => {
+    if (activeTab !== 'loans' && currentHighlightedLoanId) {
+      handleClearHighlightedLoan()
+    }
+  }, [activeTab, currentHighlightedLoanId, handleClearHighlightedLoan])
 
   const loanTotalOutstanding = hasLoadedLoans && loans.every(loan => loan.scheduleStatus !== 'Incomplete' && !loan.isRecalculating)
     ? loans.reduce((total, loan) => total + Math.max(0, loan.snapshot.outstandingBalance), 0)
@@ -222,7 +235,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             onRequestPayEarly={onRequestPayEarly}
             onNavigateToLoan={(loanId) => {
               setActiveTab('loans')
-              setHighlightedLoanId(loanId)
+              setInternalHighlightedLoanId(loanId)
             }}
           />
         </>
@@ -243,7 +256,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             loadStatus={loanLoadStatus}
             onLoad={onLoadLoans}
             onExplain={onExplainLoan}
-            highlightedLoanId={highlightedLoanId}
+            highlightedLoanId={currentHighlightedLoanId}
             onClearHighlightedLoan={handleClearHighlightedLoan}
           />
         </Suspense>

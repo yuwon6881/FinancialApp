@@ -275,8 +275,8 @@ export function AppOverlays({
                 nav.handleNavigateToAccounts(target.accountId)
               } else if (target.to === 'bill') {
                 nav.handleNavigateToRecurring(target.recurringPaymentId)
-              } else if (target.to === 'loans') {
-                prefs.setActiveTab('recurring')
+              } else if (target.to === 'loan') {
+                nav.handleNavigateToLoan(target.loanId)
               } else {
                 prefs.setActiveTab('wishlist')
               }

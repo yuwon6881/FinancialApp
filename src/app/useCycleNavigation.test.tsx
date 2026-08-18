@@ -147,4 +147,27 @@ describe('useCycleNavigation', () => {
     expect(result.current.ledgerShowAllCycles).toBe(true)
     expect(setLedgerCyclesRange).toHaveBeenLastCalledWith('yearly')
   })
+
+  it('navigates to recurring loans tab with highlighted loan id', async () => {
+    const setActiveTab = vi.fn()
+    const { result } = renderHook(() => useCycleNavigation({
+      loadAll: vi.fn(),
+      handleLogout: vi.fn(),
+      markSessionLocked: vi.fn(),
+      setDashboardData: vi.fn(),
+      setTransactions: vi.fn(),
+      setActiveTab,
+      setLedgerCyclesRange: vi.fn(),
+    }))
+
+    act(() => result.current.handleNavigateToLoan('loan-123'))
+
+    expect(setActiveTab).toHaveBeenCalledWith('recurring', expect.objectContaining({
+      search: { loan: 'loan-123', subscription: null },
+    }))
+    expect(result.current.highlightedLoanId).toBe('loan-123')
+
+    act(() => result.current.clearHighlightedLoan())
+    expect(result.current.highlightedLoanId).toBeNull()
+  })
 })
