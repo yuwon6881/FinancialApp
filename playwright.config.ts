@@ -21,7 +21,14 @@ export default defineConfig({
     toHaveScreenshot: {
       animations: 'disabled',
       caret: 'hide',
-      maxDiffPixelRatio: 0.01,
+      // Baselines carry no platform suffix, so one PNG is compared against both the Windows
+      // workstation render and the Linux CI render. Inter is self-hosted, so the glyphs are
+      // identical, but Chromium rasterises them through DirectWrite on Windows and FreeType on
+      // Linux, so every glyph edge lands a shade differently. That floor scales with how much text
+      // a page holds: the two densest mobile routes (Recurring, Vault) measured ~1.2% and so failed
+      // CI at the old 1% cap for rendering nobody had changed. 2% keeps that noise inside the
+      // tolerance while staying far below any real layout move, which shifts whole rows.
+      maxDiffPixelRatio: 0.02,
     },
   },
   use: {

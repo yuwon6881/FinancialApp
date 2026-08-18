@@ -34,5 +34,15 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Visual regression
         run: npm run test:visual
+      # Baselines are generated on Windows and verified here on Linux, so a failure is only
+      # diagnosable with the actual/diff PNGs this run produced.
+      - name: Upload visual regression diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-visual-diffs
+          path: test-results
+          retention-days: 7
+          if-no-files-found: ignore
       - name: Knip Check
         run: npm run deadcode

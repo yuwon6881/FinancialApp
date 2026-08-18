@@ -11,6 +11,8 @@ import type { useCycleNavigation } from './useCycleNavigation'
 import type { useCycleSummary } from './useCycleSummary'
 import { shouldShowMobileFab } from './useFabMenu'
 import { canOpenBlankMutationForm } from '../lib/quickAddAvailability'
+import { GlobalSearchLoading } from '../components/search/GlobalSearchLoading'
+import { loadGlobalSearch, preloadGlobalSearch } from '../components/search/globalSearchPreload'
 import type { useFabMenu } from './useFabMenu'
 import type { useFinancialData } from './useFinancialData'
 
@@ -22,7 +24,7 @@ const LockScreen = lazy(() => import('../components/LockScreen').then(module => 
 const CycleSummaryModal = lazy(() => import('../components/CycleSummaryModal').then(module => ({ default: module.CycleSummaryModal })))
 const CustomAlertModal = lazy(() => import('../components/ui/CustomAlertModal').then(module => ({ default: module.CustomAlertModal })))
 const CustomConfirmModal = lazy(() => import('../components/ui/CustomConfirmModal').then(module => ({ default: module.CustomConfirmModal })))
-const GlobalSearch = lazy(() => import('../components/search/GlobalSearch').then(module => ({ default: module.GlobalSearch })))
+const GlobalSearch = lazy(() => loadGlobalSearch().then(module => ({ default: module.GlobalSearch })))
 
 const fabMenuVariants = {
   hidden: {
@@ -79,6 +81,18 @@ export function AppOverlays({
   const searchLoanLoadAttemptedRef = useRef(false)
   const [isAccountReviewOpen, setIsAccountReviewOpen] = useState(false)
   const showMobileFab = shouldShowMobileFab(prefs.activeTab)
+
+  // Warm the search module once the app is otherwise idle. AppOverlays itself only mounts after
+  // launch, so this costs the cold start nothing and leaves the first Ctrl+K / trigger press with
+  // nothing left to fetch.
+  useEffect(() => {
+    const idle = window.requestIdleCallback?.(() => preloadGlobalSearch())
+    if (idle === undefined) {
+      const timer = window.setTimeout(preloadGlobalSearch, 2_000)
+      return () => window.clearTimeout(timer)
+    }
+    return () => window.cancelIdleCallback?.(idle)
+  }, [])
 
   useEffect(() => {
     if (!dialogs.showSearch) {
@@ -255,7 +269,7 @@ export function AppOverlays({
       )}
 
       {dialogs.showSearch && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<GlobalSearchLoading />}>
           <GlobalSearch
             isOpen={dialogs.showSearch}
             onClose={() => dialogs.setShowSearch(false)}
