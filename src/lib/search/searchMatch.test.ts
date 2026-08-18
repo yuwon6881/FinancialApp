@@ -66,3 +66,17 @@ describe('scoreSearchFields', () => {
     expect(twice).toBe(once)
   })
 })
+
+describe('accent folding', () => {
+  it('finds an accented name from the plain spelling people can type, and the reverse', () => {
+    expect(normalizeSearchText('Café Rio')).toBe('cafe rio')
+    expect(scoreSearchFields([{ kind: 'title', value: 'Café Rio' }], tokenizeQuery('cafe'))).not.toBeNull()
+    expect(scoreSearchFields([{ kind: 'title', value: 'Cafe Rio' }], tokenizeQuery('café'))).not.toBeNull()
+  })
+
+  it('scores a plain ASCII title exactly as it did before folding', () => {
+    expect(scoreSearchFields([{ kind: 'title', value: 'Coffee beans' }], tokenizeQuery('coffee')))
+      .toBe(scoreSearchFields([{ kind: 'title', value: 'Coffee beans' }], tokenizeQuery('coffee')))
+    expect(scoreSearchFields([{ kind: 'title', value: 'Coffee' }], tokenizeQuery('tea'))).toBeNull()
+  })
+})

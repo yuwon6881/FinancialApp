@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { buildSearchResults, groupSearchResults, type SearchResult, type SearchSourceData } from '../../lib/search/searchSources'
+import { buildSearchResults, groupSearchResults, visibleSearchResults, type SearchResult, type SearchSourceData } from '../../lib/search/searchSources'
 
 export interface UseGlobalSearchOptions {
   isOpen: boolean
@@ -29,11 +29,15 @@ export function useGlobalSearch({
   // of dropping focus to the document body.
   const restoreFocusRef = useRef<HTMLElement | null>(null)
 
-  const results = useMemo(
+  const matched = useMemo(
     () => buildSearchResults(data, query, { includeAmounts }),
     [data, query, includeAmounts],
   )
-  const groups = useMemo(() => groupSearchResults(results), [results])
+  const groups = useMemo(() => groupSearchResults(matched), [matched])
+  // The per-kind cap is applied by grouping, so the rendered rows -- not every match -- are what
+  // keyboard selection and the footer count read from.
+  const results = useMemo(() => visibleSearchResults(groups), [groups])
+  const totalMatched = matched.length
 
   const trimmedQuery = query.trim()
   const canSearchAllCycles = trimmedQuery.length > 0
@@ -64,6 +68,23 @@ export function useGlobalSearch({
     if (restoreTo?.isConnected) restoreTo.focus({ preventScroll: true })
   }, [onClose])
 
+  /**
+   * Escape is bound to the document, not to the panel, because the panel's own handler only sees
+   * a key pressed while focus is already inside it — and focus arrives a frame after mount, so an
+   * Escape pressed the instant search opened did nothing at all. A modal has to close on Escape
+   * whatever has focus.
+   */
+  useEffect(() => {
+    if (!isOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      event.preventDefault()
+      close()
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [isOpen, close])
+
   // Keep the active row addressable after the list shrinks under a longer query.
   useEffect(() => {
     setActiveIndex(current => (current >= selectable.length ? Math.max(0, selectable.length - 1) : current))
@@ -86,11 +107,8 @@ export function useGlobalSearch({
   }, [selectable, onSearchAllCycles, onOpenResult, trimmedQuery, close])
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      close()
-      return
-    }
+    // Escape is deliberately absent here: the document listener above owns it, so it works
+    // before focus has reached the panel too. Handling it in both places closed twice.
     if (event.key === 'Tab') {
       // A modal must not leak focus to the page behind it. The panel holds few focusables and
       // arrow keys already drive the list, so the trap simply keeps focus on the input.
@@ -123,7 +141,7 @@ export function useGlobalSearch({
       event.preventDefault()
       openIndex(activeIndex)
     }
-  }, [selectable.length, activeIndex, openIndex, close])
+  }, [selectable.length, activeIndex, openIndex])
 
   const updateQuery = useCallback((value: string) => {
     setQuery(value)
@@ -143,6 +161,7 @@ export function useGlobalSearch({
     updateQuery,
     results,
     groups,
+    totalMatched,
     activeIndex,
     setActiveIndex,
     selectableCount: selectable.length,

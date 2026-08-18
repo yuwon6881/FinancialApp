@@ -58,6 +58,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
     return (
       <SavingsGoalCard
         key={goal.id}
+        elementId={`commitment-card-${goal.id}`}
         goal={goal}
         pace={pace}
         status={getPaceStatus(pace)}
@@ -80,6 +81,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
   const completedChips = completedGoals.map(goal => (
     <div
       key={goal.id}
+      id={`commitment-card-${goal.id}`}
       className={`flex flex-col justify-center gap-1 rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4 ${
         isSolo ? 'w-full lg:max-w-xl' : 'snap-start shrink-0 w-36 sm:w-40'
       }`}

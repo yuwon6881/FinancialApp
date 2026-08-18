@@ -274,7 +274,11 @@ export function AppOverlays({
             isOpen={dialogs.showSearch}
             onClose={() => dialogs.setShowSearch(false)}
             data={{
-              transactions: financial.transactions,
+              // The optimistic projection, like every other source here. Reading the raw cycle
+              // array meant a transaction added offline was invisible to search while the Ledger
+              // showed it, and one queued for deletion was still offered and clickable.
+              transactions: financial.allTransactions,
+              draftTransactions: financial.draftTransactions,
               accounts: financial.allAccounts,
               recurringPayments: financial.allRecurringPayments,
               loans: financial.allLoans,
@@ -291,8 +295,12 @@ export function AppOverlays({
                 nav.handleNavigateToRecurring(target.recurringPaymentId)
               } else if (target.to === 'loan') {
                 nav.handleNavigateToLoan(target.loanId)
+              } else if (target.to === 'commitment') {
+                nav.handleNavigateToCommitment(target.savingsGoalId)
+              } else if (target.to === 'reward') {
+                nav.handleNavigateToReward(target.wishlistItemId)
               } else {
-                prefs.setActiveTab('wishlist')
+                nav.handleNavigateToDraft(target.draftId)
               }
             }}
             onSearchAllCycles={query => {
@@ -301,6 +309,11 @@ export function AppOverlays({
             formatAmount={financial.formatSensitive}
             maskAmounts={prefs.hideSensitive}
             isLoadingLoans={financial.loanLoadStatus === 'loading' && financial.allLoans.length === 0}
+            didLoansFailToLoad={financial.loanLoadStatus === 'error'}
+            onRetryLoans={() => {
+              searchLoanLoadAttemptedRef.current = false
+              void financial.loadLoans().catch(() => undefined)
+            }}
           />
         </Suspense>
       )}

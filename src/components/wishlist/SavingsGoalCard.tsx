@@ -23,6 +23,8 @@ interface SavingsGoalCardProps {
    * `80vw` is a scroll affordance, and with nothing to scroll to it reads as a clipped card instead.
    */
   fullWidth?: boolean
+  /** DOM id the shared highlight helper scrolls to when search jumps to this commitment. */
+  elementId?: string
   onEdit: (goal: SavingsGoal) => void
   onDelete: (id: number) => void
   onComplete: (id: number) => void
@@ -62,6 +64,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
   isSyncing,
   isDeleting,
   fullWidth = false,
+  elementId,
   onEdit,
   onDelete,
   onComplete,
@@ -89,6 +92,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
 
   return (
     <Card
+      id={elementId}
       className={`flex flex-col gap-3 p-4 transition-colors duration-300 ${
         fullWidth ? 'w-full lg:max-w-xl' : 'snap-start shrink-0 w-[calc(100vw-3.5rem)] sm:w-[22rem]'
       } ${status === 'overdue' ? 'border-destructive/40' : 'border-border/60'}`}

@@ -33,12 +33,25 @@ const HIT_STRENGTH = {
   substring: 1,
 } as const
 
+/**
+ * Accents are folded as well as case, so "cafe rio" finds "Café Rio". The fold is applied to the
+ * haystack and the query alike, so it can only ever add matches an accent was hiding — a plain
+ * ASCII name scores exactly as it did before. Merchant names carry accents that phone keyboards
+ * do not offer, which made the record impossible to find by typing what is on the receipt.
+ */
 export const normalizeSearchText = (value: string): string =>
-  value.toLowerCase().replace(/\s+/g, ' ').trim()
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 
 /**
  * Tokens are ANDed, because a two-word query is a narrowing intent: someone typing
- * "coffee jan" wants the rows matching both, not every row matching either.
+ * "coffee jan" wants the rows matching both, not every row matching either. The month and year
+ * behind that example are contributed as fields by `searchSources`, which owns every domain
+ * decision; this module stays date-agnostic.
  */
 export const tokenizeQuery = (query: string): string[] => {
   const normalized = normalizeSearchText(query)

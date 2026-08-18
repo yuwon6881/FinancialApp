@@ -55,6 +55,7 @@ export function RewardsSection(props: RewardsSectionProps) {
           {props.items.map(item => (
             <RewardCard
               key={item.id}
+              elementId={`reward-card-${item.id}`}
               item={item}
               isFocused={props.activeItem?.id === item.id}
               claimableBalance={props.claimableBalance}

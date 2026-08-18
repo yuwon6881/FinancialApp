@@ -4,6 +4,7 @@ import type { Transaction, TransactionCategory, TransactionDocumentChanges } fro
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { getDraftTransactionIssues } from '../lib/draftTransactionValidation'
+import { useHighlightedElement } from './ui/useHighlightedElement'
 import { LedgerAllocationBadge } from './ledger/LedgerAllocationBadge'
 import {
   TransactionFormSheet,
@@ -40,10 +41,15 @@ interface DraftStagingViewProps {
   onCancel: () => void
   onAddAnother?: () => void
   editorProps: EditorProps
+  /** Search jumped to this draft; the row is scrolled to and flashed like any other jump. */
+  highlightedDraftId?: string | null
+  onClearHighlightedDraft?: () => void
 }
 
 export function DraftStagingView({
   draftTransactions,
+  highlightedDraftId = null,
+  onClearHighlightedDraft,
   onUpdateDraftTransaction,
   onLoadDraftDocumentChanges,
   onDeleteDraftTransaction,
@@ -80,6 +86,8 @@ export function DraftStagingView({
     })
     return () => { active = false }
   }, [attachmentRevision, draftTransactions, onLoadDraftDocumentChanges])
+
+  useHighlightedElement(highlightedDraftId ? `draft-row-${highlightedDraftId}` : null, onClearHighlightedDraft)
 
   const openDraft = (draft: Transaction) => {
     void formRef.current?.handleStartDraft(draft).catch(() => setDocumentLoadError(
@@ -140,6 +148,7 @@ export function DraftStagingView({
           return (
             <SwipeableRow
               key={draft.id}
+              id={`draft-row-${draft.id}`}
               hint={index === 0}
               className="rounded-2xl border border-border/60 bg-card shadow-[var(--app-shadow-soft)] transition-colors hover:border-primary/35"
               contentClassName="p-4"

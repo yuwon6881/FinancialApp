@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, createEvent, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { GlobalSearch, type GlobalSearchProps } from './GlobalSearch'
 import type { LedgerAccount, Transaction } from '../../types'
@@ -39,7 +39,7 @@ const setup = (overrides: Partial<GlobalSearchProps> = {}) => {
 }
 
 const type = (value: string) =>
-  fireEvent.change(screen.getByRole('combobox', { name: 'Search your records' }), { target: { value } })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Search query' }), { target: { value } })
 
 describe('GlobalSearch', () => {
   it('prompts instead of listing every record before a query is typed', () => {
@@ -70,7 +70,7 @@ describe('GlobalSearch', () => {
   it('moves the active option with the arrow keys and reports it to assistive tech', () => {
     setup()
     type('coffee')
-    const input = screen.getByRole('combobox', { name: 'Search your records' })
+    const input = screen.getByRole('combobox', { name: 'Search query' })
     const first = input.getAttribute('aria-activedescendant')
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowDown' })
     expect(input.getAttribute('aria-activedescendant')).not.toBe(first)
@@ -109,5 +109,110 @@ describe('GlobalSearch', () => {
   it('renders nothing at all when closed', () => {
     setup({ isOpen: false })
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('keeps a masked amount neutral, so the colour cannot disclose the sign the mask withholds', () => {
+    setup({ maskAmounts: true, formatAmount: () => '......' })
+    type('coffee')
+    const masked = screen.getAllByText('......')[0]
+    expect(masked.className).not.toContain('text-orange-500')
+
+    cleanup()
+    setup({ maskAmounts: false })
+    type('coffee')
+    expect(screen.getByText('RM12.50').className).toContain('text-orange-500')
+  })
+
+  it('says how many matches the per-kind cap is not showing', () => {
+    const many = Array.from({ length: 10 }, (_, index) => ({
+      ...transaction,
+      id: `tx-${index}`,
+      description: `Coffee ${index}`,
+    }))
+    setup({ data: { transactions: many } })
+    type('coffee')
+    expect(screen.getByText(/\+4 more/)).toBeTruthy()
+    expect(screen.getByText('10 found in this cycle')).toBeTruthy()
+    // Informational, not an option: arrowing onto it would give Enter nothing to open.
+    expect(screen.getAllByRole('option')).toHaveLength(7)
+  })
+
+  it('says loans could not be loaded rather than letting it read as "no loans matched"', () => {
+    const onRetryLoans = vi.fn()
+    setup({ didLoansFailToLoad: true, onRetryLoans })
+    type('coffee')
+    expect(screen.getByText(/loans could not be loaded/i)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(onRetryLoans).toHaveBeenCalled()
+  })
+
+  it('labels a record that is still waiting to be saved', () => {
+    setup({ data: { accounts: [{ ...account, isPendingSync: true }] } })
+    type('coffee')
+    expect(screen.getByTitle('Pending sync (offline)')).toBeTruthy()
+  })
+
+  it('returns focus to whatever opened it', () => {
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    trigger.focus()
+    const props = setup()
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Search' }), { key: 'Escape' })
+    expect(props.onClose).toHaveBeenCalled()
+    expect(document.activeElement).toBe(trigger)
+    trigger.remove()
+  })
+
+  it('closes on Escape even before focus has reached the panel', () => {
+    const props = setup()
+    // Focus lands a frame after mount, so a panel-scoped handler would miss this entirely.
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    expect(props.onClose).toHaveBeenCalled()
+  })
+
+  it('keeps Tab inside the panel instead of leaking focus to the page behind it', () => {
+    setup()
+    const input = screen.getByRole('combobox', { name: 'Search query' })
+    const event = createEvent.keyDown(screen.getByRole('dialog', { name: 'Search' }), { key: 'Tab' })
+    fireEvent(screen.getByRole('dialog', { name: 'Search' }), event)
+    expect(event.defaultPrevented).toBe(true)
+    expect(document.activeElement).toBe(input)
+  })
+
+  it('jumps to the first and last row with Home and End', () => {
+    setup()
+    type('coffee')
+    const dialog = screen.getByRole('dialog', { name: 'Search' })
+    const input = screen.getByRole('combobox', { name: 'Search query' })
+    fireEvent.keyDown(dialog, { key: 'End' })
+    const last = input.getAttribute('aria-activedescendant')
+    fireEvent.keyDown(dialog, { key: 'Home' })
+    expect(input.getAttribute('aria-activedescendant')).toBe('global-search-option-0')
+    expect(last).not.toBe('global-search-option-0')
+  })
+
+  it('does not close when a drag that started inside the panel releases on the backdrop', () => {
+    const props = setup()
+    const dialog = screen.getByRole('dialog', { name: 'Search' })
+    const backdrop = dialog.parentElement!
+    fireEvent.mouseDown(dialog)
+    fireEvent.click(backdrop)
+    expect(props.onClose).not.toHaveBeenCalled()
+
+    fireEvent.mouseDown(backdrop)
+    fireEvent.click(backdrop)
+    expect(props.onClose).toHaveBeenCalled()
+  })
+
+  it('keeps the active row addressable when a longer query shrinks the list', () => {
+    setup()
+    type('coffee')
+    const dialog = screen.getByRole('dialog', { name: 'Search' })
+    const input = screen.getByRole('combobox', { name: 'Search query' })
+    fireEvent.keyDown(dialog, { key: 'End' })
+    type('coffee beans')
+    const active = input.getAttribute('aria-activedescendant')!
+    const options = screen.getAllByRole('option').map(option => option.id)
+    expect(options).toContain(active)
   })
 })

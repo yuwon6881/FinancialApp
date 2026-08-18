@@ -16,21 +16,22 @@ import type {
 } from '../../types'
 import { scoreSearchFields, tokenizeQuery, type SearchField } from './searchMatch'
 
-export type SearchResultKind = 'transaction' | 'account' | 'bill' | 'loan' | 'commitment' | 'reward'
+export type SearchResultKind = 'transaction' | 'draft' | 'account' | 'bill' | 'loan' | 'commitment' | 'reward'
 
 /**
- * Where a result goes. Only jumps the app already supports are represented: transactions,
- * accounts and bills each have an existing highlight helper, while loans, commitments and
- * rewards have no per-row deep link and land on their page. Inventing a highlight for those
- * would mean adding ids and scroll targets to three more views for no search-specific reason.
+ * Where a result goes. Every kind now lands on its own row rather than its page: commitments,
+ * rewards and drafts each gained a highlight id for this, so arriving from search looks the
+ * same everywhere -- the shared ring from `useHighlightedElement`. Landing on a page and
+ * leaving the user to find the record themselves is what this replaced.
  */
 export type SearchTarget =
   | { to: 'transaction'; transactionId: string }
+  | { to: 'draft'; draftId: string }
   | { to: 'account'; accountId: string }
   | { to: 'bill'; recurringPaymentId: string }
   | { to: 'loan'; loanId: string }
-  | { to: 'commitments' }
-  | { to: 'rewards' }
+  | { to: 'commitment'; savingsGoalId: string }
+  | { to: 'reward'; wishlistItemId: string }
 
 export interface SearchResult {
   /** Unique across kinds, so the overlay can key rows without colliding ids from two stores. */
@@ -42,6 +43,12 @@ export interface SearchResult {
   amount?: number
   /** Extra right-hand context (a date, a due day, a bucket) that is never an amount. */
   meta?: string
+  /**
+   * The record exists but its write has not reached the server yet. Rendered through the shared
+   * `RowSyncBadge` contract, never a hand-written word: a record created offline is real and
+   * must be findable, and saying so is what stops it reading as already filed.
+   */
+  isPendingSync?: boolean
   target: SearchTarget
   score: number
 }
@@ -56,6 +63,8 @@ export interface SearchOptions {
 
 export interface SearchSourceData {
   transactions?: readonly Transaction[]
+  /** Local-only rows from the Draft Transactions queue; they have never reached the server. */
+  draftTransactions?: readonly Transaction[]
   accounts?: readonly LedgerAccount[]
   recurringPayments?: readonly RecurringPayment[]
   loans?: readonly Loan[]
@@ -81,14 +90,45 @@ const amountFields = (amount: number | null | undefined): SearchField[] => {
 }
 
 /**
- * A discarded or generated row is structural rather than something the user filed, so it is not
- * a search destination. This mirrors the spirit of `ExcludeFromAutocomplete` without reaching
- * for the server flag, which cached rows may predate.
+ * A generated or structural row is not something the user filed, so it is not a search
+ * destination: the four `[Split: Essentials] Salary` children beside a salary, balance
+ * adjustments, transfer legs and completion rows all carry a server-derived marker saying so.
+ * A row carrying neither flag stays searchable — cached rows predate them, and sniffing
+ * `[Split:` out of the description would duplicate server logic and drift from it.
  */
 const isSearchableTransaction = (transaction: Transaction): boolean => {
-  if (transaction.isPendingDelete) return false
+  if (transaction.excludeFromAutocomplete) return false
+  if (transaction.isAccountBalanceAdjustment) return false
   if (!transaction.description?.trim()) return false
   return true
+}
+
+/**
+ * One rule for every kind, including transactions: a record queued for deletion is on its way
+ * out, and offering a jump to a row that is about to vanish is worse than not offering it. Its
+ * sibling state is the opposite — `isPendingSync` keeps the record, and labels it.
+ */
+const isPendingDelete = (record: { isPendingDelete?: boolean }): boolean => record.isPendingDelete === true
+
+/**
+ * Month and year, so the AND-ed tokens in "coffee jan" can actually narrow by when something
+ * happened. The full month name is contributed rather than `MONTH_NAMES`' abbreviation because
+ * a full name prefix-matches both "jan" and "january", while the abbreviation matches neither
+ * of the longer spellings people type.
+ */
+const MONTH_SEARCH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+] as const
+
+const dateFields = (isoDate: string | null | undefined): SearchField[] => {
+  if (!isoDate) return []
+  const [year, month] = isoDate.split('-')
+  const monthName = MONTH_SEARCH_NAMES[Number(month) - 1]
+  return [
+    ...(monthName ? [{ kind: 'keyword' as const, value: monthName }] : []),
+    ...(year && /^\d{4}$/.test(year) ? [{ kind: 'keyword' as const, value: year }] : []),
+  ]
 }
 
 const bucketOf = (ledgerCategory: string | null | undefined): string => {
@@ -97,10 +137,12 @@ const bucketOf = (ledgerCategory: string | null | undefined): string => {
   return bucket ?? ''
 }
 
+/**
+ * Ranks but no longer caps. The cap belongs to grouping, which is the only place that can also
+ * report what it dropped — slicing here is what made "20 matches" render as a silent "6 found".
+ */
 const rank = (results: SearchResult[]): SearchResult[] =>
-  results
-    .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
-    .slice(0, RESULTS_PER_KIND)
+  results.sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
 
 const collect = <T,>(
   items: readonly T[] | undefined,
@@ -130,12 +172,13 @@ export const buildSearchResults = (
   const amounts = options.includeAmounts ? amountFields : () => []
 
   const transactions = collect(data.transactions, tokens, transaction => {
-    if (!isSearchableTransaction(transaction)) return null
+    if (isPendingDelete(transaction) || !isSearchableTransaction(transaction)) return null
     return {
       fields: [
         ...field('title', transaction.description),
         ...field('keyword', transaction.category),
         ...field('keyword', bucketOf(transaction.ledgerCategory)),
+        ...dateFields(transaction.date),
         ...amounts(transaction.amount),
       ],
       result: {
@@ -145,12 +188,39 @@ export const buildSearchResults = (
         subtitle: transaction.category,
         amount: transaction.amount,
         meta: transaction.date,
+        isPendingSync: transaction.isPendingSync,
         target: { to: 'transaction' as const, transactionId: transaction.id },
       },
     }
   })
 
-  const accounts = collect(data.accounts, tokens, account => ({
+  // Drafts never reached the server, so they exist only in this browser — exactly the records
+  // people lose track of, and the ones a cycle-scoped ledger search cannot surface.
+  const drafts = collect(data.draftTransactions, tokens, draft => {
+    if (!draft.description?.trim()) return null
+    return {
+      fields: [
+        ...field('title', draft.description),
+        ...field('keyword', draft.category),
+        ...field('keyword', bucketOf(draft.ledgerCategory)),
+        ...dateFields(draft.date),
+        ...amounts(draft.amount),
+      ],
+      result: {
+        id: `draft:${draft.id}`,
+        kind: 'draft' as const,
+        title: draft.description,
+        // Category first, state second — the same shape as `Rewards · Claimed` and
+        // `Everyday · Closed`, which is also what lets the tile take its category colour.
+        subtitle: draft.category ? `${draft.category} · Not added yet` : 'Not added yet',
+        amount: draft.amount,
+        meta: draft.date,
+        target: { to: 'draft' as const, draftId: String(draft.id) },
+      },
+    }
+  })
+
+  const accounts = collect(data.accounts, tokens, account => isPendingDelete(account) ? null : ({
     fields: [
       ...field('title', account.name),
       ...field('keyword', account.bucket),
@@ -163,15 +233,17 @@ export const buildSearchResults = (
       title: account.name,
       subtitle: account.isArchived ? `${account.bucket} · Closed` : account.bucket,
       amount: account.remaining,
+      isPendingSync: account.isPendingSync,
       target: { to: 'account' as const, accountId: account.id },
     },
   }))
 
-  const bills = collect(data.recurringPayments, tokens, payment => ({
+  const bills = collect(data.recurringPayments, tokens, payment => isPendingDelete(payment) ? null : ({
     fields: [
       ...field('title', payment.name),
       ...field('keyword', payment.category),
       ...field('keyword', bucketOf(payment.ledgerCategory)),
+      ...dateFields(payment.nextDueDate),
       ...amounts(payment.amount),
     ],
     result: {
@@ -181,11 +253,12 @@ export const buildSearchResults = (
       subtitle: payment.active ? payment.category : `${payment.category} · Paused`,
       amount: payment.amount,
       meta: payment.nextDueDate ?? undefined,
+      isPendingSync: payment.isPendingSync,
       target: { to: 'bill' as const, recurringPaymentId: payment.id },
     },
   }))
 
-  const loans = collect(data.loans, tokens, loan => ({
+  const loans = collect(data.loans, tokens, loan => isPendingDelete(loan) ? null : ({
     fields: [
       ...field('title', loan.name),
       ...field('keyword', loan.recurringPaymentName),
@@ -197,14 +270,16 @@ export const buildSearchResults = (
       title: loan.name,
       subtitle: loan.recurringPaymentName ? `Paid by ${loan.recurringPaymentName}` : 'Loan',
       amount: loan.openingPrincipal,
+      isPendingSync: loan.isPendingSync,
       target: { to: 'loan' as const, loanId: loan.id },
     },
   }))
 
-  const commitments = collect(data.savingsGoals, tokens, goal => ({
+  const commitments = collect(data.savingsGoals, tokens, goal => isPendingDelete(goal) ? null : ({
     fields: [
       ...field('title', goal.name),
       ...field('keyword', goal.fundingBucket ?? 'Rewards'),
+      ...dateFields(goal.targetDate),
       ...amounts(goal.targetAmount),
     ],
     result: {
@@ -214,11 +289,12 @@ export const buildSearchResults = (
       subtitle: goal.status === 'completed' ? 'Commitment · Done' : 'Commitment',
       amount: goal.targetAmount,
       meta: goal.targetDate,
-      target: { to: 'commitments' as const },
+      isPendingSync: goal.isPendingSync,
+      target: { to: 'commitment' as const, savingsGoalId: String(goal.id) },
     },
   }))
 
-  const rewards = collect(data.wishlist, tokens, item => ({
+  const rewards = collect(data.wishlist, tokens, item => isPendingDelete(item) ? null : ({
     fields: [
       ...field('title', item.name),
       ...field('keyword', item.priority),
@@ -230,16 +306,18 @@ export const buildSearchResults = (
       title: item.name,
       subtitle: item.isPurchased ? 'Reward · Claimed' : 'Reward',
       amount: item.price,
-      target: { to: 'rewards' as const },
+      isPendingSync: item.isPendingSync,
+      target: { to: 'reward' as const, wishlistItemId: String(item.id) },
     },
   }))
 
-  return [...transactions, ...accounts, ...bills, ...loans, ...commitments, ...rewards]
+  return [...transactions, ...drafts, ...accounts, ...bills, ...loans, ...commitments, ...rewards]
 }
 
 /** Display order of the result groups, most-searched-for first. */
 export const SEARCH_GROUP_ORDER: readonly SearchResultKind[] = [
   'transaction',
+  'draft',
   'account',
   'bill',
   'loan',
@@ -250,6 +328,7 @@ export const SEARCH_GROUP_ORDER: readonly SearchResultKind[] = [
 /** Plain-language group headings. No jargon: "Bills", not "Recurring payment entities". */
 export const SEARCH_GROUP_LABELS: Record<SearchResultKind, string> = {
   transaction: 'Transactions in this cycle',
+  draft: 'Drafts waiting to be added',
   account: 'Accounts',
   bill: 'Bills & subscriptions',
   loan: 'Loans',
@@ -260,15 +339,36 @@ export const SEARCH_GROUP_LABELS: Record<SearchResultKind, string> = {
 export interface SearchGroup {
   kind: SearchResultKind
   label: string
+  /** Capped at `RESULTS_PER_KIND`; these are exactly the rows the overlay renders. */
   results: SearchResult[]
+  /** How many matched before the cap, so a truncated group can say what it is not showing. */
+  totalMatched: number
 }
 
-/** Groups ranked results for display while preserving each group's internal ranking. */
+/**
+ * Groups ranked results for display, applies the per-kind cap, and reports what the cap dropped.
+ *
+ * The cap lives here rather than in `rank` because this is the only place that still knows the
+ * full count: capping earlier discarded it silently, so twenty matching transactions rendered as
+ * six rows under the words "6 found" and nothing said the other fourteen existed.
+ */
 export const groupSearchResults = (results: readonly SearchResult[]): SearchGroup[] =>
   SEARCH_GROUP_ORDER
-    .map(kind => ({
-      kind,
-      label: SEARCH_GROUP_LABELS[kind],
-      results: results.filter(result => result.kind === kind),
-    }))
+    .map(kind => {
+      const matched = results.filter(result => result.kind === kind)
+      return {
+        kind,
+        label: SEARCH_GROUP_LABELS[kind],
+        results: matched.slice(0, RESULTS_PER_KIND),
+        totalMatched: matched.length,
+      }
+    })
     .filter(group => group.results.length > 0)
+
+/**
+ * The rows the overlay will actually render, in group order. Keyboard selection walks this, so
+ * it must be the capped set — arrowing onto a row that grouping dropped would move the active
+ * option to something nobody can see.
+ */
+export const visibleSearchResults = (groups: readonly SearchGroup[]): SearchResult[] =>
+  groups.flatMap(group => group.results)

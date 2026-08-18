@@ -527,6 +527,10 @@ export function AuthenticatedView({
                       // wrong affordability, and a Set aside button acting on other numbers than
                       // the ones on screen.
                       isSwitchingCycle={nav.isSwitchingCycle || isWishlistCycleStale}
+                      highlightedCommitmentId={nav.highlightedCommitmentId}
+                      highlightedRewardId={nav.highlightedRewardId}
+                      onClearHighlightedCommitment={nav.clearHighlightedCommitment}
+                      onClearHighlightedReward={nav.clearHighlightedReward}
                       onStartEditPending={financial.setEditingPendingId}
                       aiDraft={aiRouter.state.aiWishlistDraft}
                       aiEditDraft={aiRouter.state.aiWishlistEditDraft}
@@ -548,6 +552,8 @@ export function AuthenticatedView({
                   {prefs.activeTab === 'drafts' && financial.draftTransactions.length > 0 && (
                     <DraftStagingView 
                       draftTransactions={financial.draftTransactions}
+                      highlightedDraftId={nav.highlightedDraftId}
+                      onClearHighlightedDraft={nav.clearHighlightedDraft}
                       categories={financial.allCategories}
                       onUpdateDraftTransaction={financial.handleUpdateDraftTransaction}
                       onLoadDraftDocumentChanges={financial.loadDraftTransactionDocumentChanges}

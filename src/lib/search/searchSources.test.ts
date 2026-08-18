@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { LedgerAccount, Loan, RecurringPayment, SavingsGoal, Transaction, WishlistItem } from '../../types'
-import { RESULTS_PER_KIND, buildSearchResults, groupSearchResults } from './searchSources'
+import { RESULTS_PER_KIND, buildSearchResults, groupSearchResults, visibleSearchResults } from './searchSources'
 
 const transaction = (overrides: Partial<Transaction> = {}): Transaction => ({
   id: 'tx-1',
@@ -133,13 +133,69 @@ describe('buildSearchResults', () => {
     expect(found.subtitle).toBe('Paid by PTPTN')
   })
 
-  it('sends a bill and a loan to their own highlight but a commitment only to its page', () => {
+  it('sends every kind to its own row, so no result lands on a page and leaves the user searching again', () => {
     const [foundBill] = buildSearchResults({ recurringPayments: [bill()] }, 'netflix')
     expect(foundBill.target).toEqual({ to: 'bill', recurringPaymentId: 'rp-1' })
     const [foundLoan] = buildSearchResults({ loans: [loan()] }, 'education')
     expect(foundLoan.target).toEqual({ to: 'loan', loanId: 'loan-1' })
     const [foundGoal] = buildSearchResults({ savingsGoals: [goal()] }, 'car')
-    expect(foundGoal.target).toEqual({ to: 'commitments' })
+    expect(foundGoal.target).toEqual({ to: 'commitment', savingsGoalId: '1' })
+    const [foundReward] = buildSearchResults({ wishlist: [reward()] }, 'headphones')
+    expect(foundReward.target).toEqual({ to: 'reward', wishlistItemId: '1' })
+    const [foundDraft] = buildSearchResults(
+      { draftTransactions: [transaction({ id: 'draft-1', description: 'Weekend market' })] },
+      'market',
+    )
+    expect(foundDraft.kind).toBe('draft')
+    expect(foundDraft.target).toEqual({ to: 'draft', draftId: 'draft-1' })
+  })
+
+  it('excludes the generated rows the server marks structural, and keeps a legacy row with no marker', () => {
+    const generated = transaction({
+      id: 'tx-split',
+      description: '[Split: Essentials] Salary',
+      excludeFromAutocomplete: true,
+    })
+    const adjustment = transaction({
+      id: 'tx-adj',
+      description: 'Salary adjustment',
+      isAccountBalanceAdjustment: true,
+    })
+    const legacy = transaction({ id: 'tx-legacy', description: 'Salary' })
+    const results = buildSearchResults(
+      { transactions: [generated, adjustment, legacy] },
+      'salary',
+    )
+    expect(results.map(result => result.id)).toEqual(['transaction:tx-legacy'])
+  })
+
+  it('drops a record queued for deletion and labels one still waiting to be saved', () => {
+    const deleted = buildSearchResults({
+      transactions: [transaction({ isPendingDelete: true })],
+      accounts: [account({ isPendingDelete: true })],
+      recurringPayments: [bill({ isPendingDelete: true })],
+      loans: [loan({ isPendingDelete: true })],
+      savingsGoals: [goal({ isPendingDelete: true })],
+      wishlist: [reward({ isPendingDelete: true })],
+    }, 'e')
+    expect(deleted).toEqual([])
+
+    const [pendingAccount] = buildSearchResults(
+      { accounts: [account({ isPendingSync: true })] },
+      'maybank',
+    )
+    expect(pendingAccount.isPendingSync).toBe(true)
+  })
+
+  it('narrows by when something happened, which is what an ANDed two-word query promised', () => {
+    const august = transaction({ id: 'tx-aug', date: '2026-08-04', description: 'Coffee beans' })
+    const january = transaction({ id: 'tx-jan', date: '2026-01-04', description: 'Coffee beans' })
+    const source = { transactions: [august, january] }
+
+    expect(buildSearchResults(source, 'coffee jan').map(result => result.id)).toEqual(['transaction:tx-jan'])
+    expect(buildSearchResults(source, 'coffee january').map(result => result.id)).toEqual(['transaction:tx-jan'])
+    expect(buildSearchResults(source, 'coffee 2026')).toHaveLength(2)
+    expect(buildSearchResults(source, 'coffee march')).toEqual([])
   })
 
   it('searches every record kind from one query', () => {
@@ -155,10 +211,10 @@ describe('buildSearchResults', () => {
     )
   })
 
-  it('caps each kind so a one-letter query stays scannable', () => {
+  it('reports every match, and leaves the cap to grouping so the count cannot understate it', () => {
     const many = Array.from({ length: RESULTS_PER_KIND + 4 }, (_, index) =>
       transaction({ id: `tx-${index}`, description: `Coffee ${index}` }))
-    expect(buildSearchResults({ transactions: many }, 'coffee')).toHaveLength(RESULTS_PER_KIND)
+    expect(buildSearchResults({ transactions: many }, 'coffee')).toHaveLength(RESULTS_PER_KIND + 4)
   })
 
   it('ranks a stronger match first', () => {
@@ -185,5 +241,25 @@ describe('groupSearchResults', () => {
     }, 'car'))
     expect(groups.map(group => group.kind)).toEqual(['transaction', 'reward'])
     expect(groups[0].label).toBe('Transactions in this cycle')
+  })
+
+  it('caps a group but still says how many matched, so nothing is dropped silently', () => {
+    const many = Array.from({ length: RESULTS_PER_KIND + 4 }, (_, index) =>
+      transaction({ id: `tx-${index}`, description: `Coffee ${index}` }))
+    const [group] = groupSearchResults(buildSearchResults({ transactions: many }, 'coffee'))
+    expect(group.results).toHaveLength(RESULTS_PER_KIND)
+    expect(group.totalMatched).toBe(RESULTS_PER_KIND + 4)
+  })
+
+  it('reports no phantom extras when everything fits', () => {
+    const [group] = groupSearchResults(buildSearchResults({ transactions: [transaction()] }, 'coffee'))
+    expect(group.totalMatched).toBe(group.results.length)
+  })
+
+  it('offers exactly the rendered rows for keyboard selection', () => {
+    const many = Array.from({ length: RESULTS_PER_KIND + 4 }, (_, index) =>
+      transaction({ id: `tx-${index}`, description: `Coffee ${index}` }))
+    const groups = groupSearchResults(buildSearchResults({ transactions: many }, 'coffee'))
+    expect(visibleSearchResults(groups)).toHaveLength(RESULTS_PER_KIND)
   })
 })

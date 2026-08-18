@@ -517,6 +517,27 @@ button, [role="button"] {
     padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
 }
 
+/* Chrome hit-tests the clipped corner of border-radius, so a click a pixel or two
+   into the corner of a small rounded control lands on whatever sits behind it —
+   while :hover and active:scale-95 still fire on the way in, which reads as a
+   button that responded and then did nothing. This overlay is a plain rectangle on
+   the control's own border box, so a corner click lands on it and reaches the
+   button. It paints nothing, and inset:0 never leaves the button's own footprint,
+   so it cannot reach into the lane gap or a neighbouring control.
+
+   Scoped to the header rather than added as a class per control: every action up
+   there is a small rounded control with the same dead corners, and one rule costs
+   the eager bundle nothing, while six class names cost it real bytes. */
+.glass-nav button {
+    position: relative;
+}
+
+.glass-nav button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+}
+
 /* Full-screen states render under installed-PWA system chrome because the
    document opts into viewport-fit=cover. Keep their authored breathing room
    and add the device safe area instead of making each screen repeat four

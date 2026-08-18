@@ -187,6 +187,34 @@ const TopNav: React.FC<TopNavProps> = ({
               FinancialApp
             </span>
           </Button>
+
+          {/* Field-shaped, button-behaved — the shape is what says "type here to find a record";
+              a bare magnifier says nothing, which is why it read as one more command icon among
+              five. It sits in this lane rather than the right one for two reasons: from xl the
+              tab rail leaves the flow (xl:absolute) so the room is here, and the right lane is
+              the app's tightest space, which is the crowding this moved away from. It stays a
+              36px chip below xl, where the rail is still inline and there is no room to spend.
+              No ⌘ glyph: that is the macOS Command key, absent from the Windows, Android and PWA
+              targets this ships to. Phones reach search from the FAB menu, so it starts at md. */}
+          {onOpenSearch && (
+            <Button
+              variant="unstyled"
+              type="button"
+              onClick={onOpenSearch}
+              aria-label="Search your records"
+              title="Search (Ctrl+K)"
+              className="ml-2 hidden size-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-border/60 bg-background text-muted-foreground transition duration-150 cursor-pointer active:scale-95 hover:border-primary/40 hover:bg-muted/50 hover:text-foreground md:flex xl:ml-3 xl:w-52 xl:justify-start xl:px-3"
+            >
+              <SearchIcon className="size-3.5 shrink-0" aria-hidden />
+              <span className="hidden truncate text-xs font-medium xl:inline">Search records…</span>
+              <span
+                aria-hidden
+                className="ml-auto hidden shrink-0 rounded-md border border-border/50 bg-muted/50 px-1.5 py-0.5 text-[10px] font-bold xl:inline"
+              >
+                Ctrl K
+              </span>
+            </Button>
+          )}
           {/* On phones, keep the actionable draft count anchored beside the logo. Transient
               refresh/offline text may then clip at the edge of the left lane instead of
               shifting the draft into the fixed actions on the right. */}
@@ -256,23 +284,7 @@ const TopNav: React.FC<TopNavProps> = ({
         {/* Right Side Widgets & Actions */}
         <div className="flex shrink-0 items-center justify-end gap-1.5 z-10 sm:gap-2.5 ml-auto md:ml-0 xl:flex-1 xl:gap-3">
           
-          {/* A magnifier labelled Search, not a ⌘ glyph: ⌘ is the macOS Command key, which does
-              not exist on the Windows, Android and PWA targets this app ships to, and it reads as
-              nothing at all to someone who has not met the convention. Phones reach search from
-              the FAB menu instead, so this stays md+ and off the tight phone header lane. */}
-          {onOpenSearch && (
-            <Button variant="unstyled"
-              type="button"
-              onClick={onOpenSearch}
-              aria-label="Search your records"
-              title="Search (Ctrl+K)"
-              className="hidden md:flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background text-muted-foreground hover:border-primary/40 hover:bg-muted/50 hover:text-foreground transition duration-150 cursor-pointer active:scale-95 xl:h-9 xl:w-auto xl:gap-1.5 xl:px-3"
-            >
-              <SearchIcon className="size-3.5" aria-hidden />
-              <span className="hidden xl:inline text-xs font-semibold">Search</span>
-            </Button>
-          )}
-
+          
           <Button variant="unstyled"
             type="button"
             onClick={onAskAI}

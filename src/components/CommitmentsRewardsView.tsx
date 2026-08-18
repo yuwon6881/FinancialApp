@@ -6,6 +6,7 @@ import { Button } from './ui/Button'
 import { useAppContext } from '../contexts/AppContext'
 import { useWishlistForm } from './wishlist/useWishlistForm'
 import { useSavingsGoalForm } from './wishlist/useSavingsGoalForm'
+import { useHighlightedElement } from './ui/useHighlightedElement'
 import { CommitmentsSection } from './wishlist/CommitmentsSection'
 import { RewardsPoolBar } from './wishlist/RewardsPoolBar'
 import type { ContributeMode } from './wishlist/SavingsGoalContributeSheet'
@@ -60,6 +61,11 @@ interface CommitmentsRewardsViewProps {
   activeSyncIds?: string[]
   deletingId?: string | null
   isSwitchingCycle?: boolean
+  /** Search jumped to one of these records; the page opens the matching list and flashes it. */
+  highlightedCommitmentId?: string | null
+  highlightedRewardId?: string | null
+  onClearHighlightedCommitment?: () => void
+  onClearHighlightedReward?: () => void
   // Signals to the parent's drain loop which item is being edited, so the
   // corresponding queued op isn't dispatched while the edit modal is open.
   onStartEditPending?: (id: string | null) => void
@@ -108,6 +114,10 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
   activeSyncIds: activeSyncIdsProp,
   deletingId: deletingIdProp,
   isSwitchingCycle = false,
+  highlightedCommitmentId = null,
+  highlightedRewardId = null,
+  onClearHighlightedCommitment,
+  onClearHighlightedReward,
   onStartEditPending,
   aiDraft = null,
   aiEditDraft = null,
@@ -137,6 +147,23 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
   const [completingGoal, setCompletingGoal] = React.useState<SavingsGoal | null>(null)
   const [completionAccountId, setCompletionAccountId] = React.useState('')
   const [activeTab, setActiveTab] = React.useState<CommitmentsRewardsTabId>('commitments')
+
+  // A reward hit has to open the Rewards list before the highlight can find its row, the same
+  // way a loan hit opens the Loans tab. Only an arriving highlight moves the tab; switching by
+  // hand afterwards is left alone.
+  React.useEffect(() => {
+    if (highlightedRewardId) setActiveTab('rewards')
+    else if (highlightedCommitmentId) setActiveTab('commitments')
+  }, [highlightedCommitmentId, highlightedRewardId])
+
+  useHighlightedElement(
+    highlightedCommitmentId ? `commitment-card-${highlightedCommitmentId}` : null,
+    onClearHighlightedCommitment,
+  )
+  useHighlightedElement(
+    highlightedRewardId ? `reward-card-${highlightedRewardId}` : null,
+    onClearHighlightedReward,
+  )
 
   const handleOpenClaimModal = (item: WishlistItem) => {
     if (hideSensitive) return

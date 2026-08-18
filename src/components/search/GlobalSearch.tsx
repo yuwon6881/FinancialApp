@@ -21,6 +21,12 @@ export interface GlobalSearchProps {
   maskAmounts: boolean
   /** The lazy loan list is being fetched because search was opened before the Loans tab. */
   isLoadingLoans?: boolean
+  /**
+   * The loan fetch failed. Without this the Loans group is simply absent, which reads exactly
+   * like "no loans matched" — a confidently wrong answer to a question search never asked.
+   */
+  didLoansFailToLoad?: boolean
+  onRetryLoans?: () => void
 }
 
 export function GlobalSearch({
@@ -32,6 +38,8 @@ export function GlobalSearch({
   formatAmount,
   maskAmounts,
   isLoadingLoans = false,
+  didLoansFailToLoad = false,
+  onRetryLoans,
 }: GlobalSearchProps) {
   // Destructured rather than kept as one `search` object: the hook returns element refs beside
   // its render values, so reading them off one `search` object made `react-hooks/refs` treat
@@ -41,6 +49,7 @@ export function GlobalSearch({
     updateQuery,
     results,
     groups,
+    totalMatched,
     activeIndex,
     setActiveIndex,
     selectableCount,
@@ -104,7 +113,9 @@ export function GlobalSearch({
             value={query}
             onChange={event => updateQuery(event.target.value)}
             placeholder="Search transactions, accounts, bills, loans…"
-            aria-label="Search your records"
+            // Named for what it is, not for what the trigger does: the header control keeps
+            // "Search your records", and two controls answering to one name is a maze.
+            aria-label="Search query"
             aria-expanded
             aria-autocomplete="list"
             aria-controls="global-search-results"
@@ -138,7 +149,7 @@ export function GlobalSearch({
             <p className="px-3 py-8 text-center text-xs text-muted-foreground">
               {isLoadingLoans
                 ? 'Loading loan records…'
-                : 'Start typing to find a transaction, account, bill, loan, commitment, or reward.'}
+                : 'Start typing to find a transaction, draft, account, bill, loan, commitment, or reward.'}
             </p>
           ) : (
             <>
@@ -157,18 +168,38 @@ export function GlobalSearch({
                           id={optionId(index)}
                           isActive={index === activeIndex}
                           amountText={typeof result.amount === 'number' ? formatAmount(result.amount) : null}
+                          maskAmounts={maskAmounts}
                           onActivate={() => openIndex(index)}
                           onHover={() => setActiveIndex(index)}
                         />
                       )
                     })}
                   </div>
+                  {group.totalMatched > group.results.length && (
+                    // Says what the per-kind cap dropped. Deliberately not a selectable option:
+                    // it is a fact about the list, and arrowing onto it would give Enter nothing
+                    // to open.
+                    <p className="px-3 pt-1 text-[11px] text-muted-foreground">
+                      +{group.totalMatched - group.results.length} more — keep typing to narrow this down
+                    </p>
+                  )}
                 </div>
               ))}
 
               {results.length === 0 && (
                 <p className="px-3 pb-1 pt-6 text-center text-xs text-muted-foreground">
                   {isLoadingLoans ? 'Loading loan records…' : <>Nothing in this cycle matches “{trimmedQuery}”.</>}
+                </p>
+              )}
+
+              {didLoansFailToLoad && (
+                <p className="mx-3 mt-2 flex items-center justify-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-500">
+                  <span>Your loans could not be loaded, so none were searched.</span>
+                  {onRetryLoans && (
+                    <Button variant="unstyled" onClick={onRetryLoans} className="font-bold underline underline-offset-2 cursor-pointer">
+                      Try again
+                    </Button>
+                  )}
                 </p>
               )}
 
@@ -211,7 +242,13 @@ export function GlobalSearch({
             <span><kbd className="font-bold">esc</kbd> Close</span>
           </span>
           <span aria-live="polite" aria-atomic="true" className="font-semibold text-foreground/75">
-            {isLoadingLoans ? 'Loading loans…' : hasQuery ? `${results.length} found in this cycle` : 'Search'}
+            {isLoadingLoans
+              ? 'Loading loans…'
+              : hasQuery
+                // The true match count, not the rendered one: the per-kind cap used to make
+                // twenty matches report themselves as six.
+                ? `${totalMatched} found in this cycle`
+                : 'Search'}
           </span>
         </div>
       </div>

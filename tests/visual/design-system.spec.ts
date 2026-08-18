@@ -92,6 +92,39 @@ test('desktop top-bar icon actions stay compact', async ({ page }) => {
   ])
 })
 
+test('every corner of a header action is clickable, not just its rounded middle', async ({ page }) => {
+  test.skip(!test.info().project.name.startsWith('desktop'), 'Pointer-precision behaviour.')
+
+  await establishSession(page)
+  await mockApi(page)
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
+  await waitForStableLayout(page)
+
+  // Chrome hit-tests through border-radius, so the corners of a rounded control belong to
+  // whatever is behind it — while :hover and active:scale-95 still fire, which is why this
+  // read as a button that responded and did nothing. jsdom has no hit-testing and cannot see
+  // it, so the guard has to be a real browser. The header's own ::after rectangle is the fix.
+  const trigger = page.getByRole('button', { name: 'Search your records' })
+  const box = (await trigger.boundingBox())!
+  const corners = [
+    [1.5, 1.5],
+    [box.width - 1.5, 1.5],
+    [1.5, box.height - 1.5],
+    [box.width - 1.5, box.height - 1.5],
+  ] as const
+
+  for (const [dx, dy] of corners) {
+    await page.mouse.click(box.x + dx, box.y + dy)
+    await expect(
+      page.getByRole('dialog', { name: 'Search' }),
+      `clicking (${dx}, ${dy}) inside the trigger must open search`,
+    ).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'Search' })).toBeHidden()
+  }
+})
+
 test('mixed input select date form sheet', async ({ page }) => {
   await establishSession(page)
   await mockApi(page)

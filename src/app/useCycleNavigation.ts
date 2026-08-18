@@ -93,6 +93,18 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     if (typeof window === 'undefined') return null
     return new URLSearchParams(window.location.search).get('account')
   })
+  const [highlightedCommitmentId, setHighlightedCommitmentId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    return new URLSearchParams(window.location.search).get('commitment')
+  })
+  const [highlightedRewardId, setHighlightedRewardId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    return new URLSearchParams(window.location.search).get('reward')
+  })
+  const [highlightedDraftId, setHighlightedDraftId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    return new URLSearchParams(window.location.search).get('draft')
+  })
 
   const selectPeriodSeqRef = useRef(0)
   const selectPeriodQueueRef = useRef<Promise<void>>(Promise.resolve())
@@ -245,6 +257,42 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setActiveTab('settings', { search: { account: target } })
   }, [setActiveTab])
 
+  // Commitments, rewards and drafts arrive the same way a bill or a loan does. Search used to
+  // drop the user on the page and leave them to find the row themselves, which for a long
+  // rewards list is barely different from not having jumped at all. The two commitments/rewards
+  // ids clear each other because the page shows one of the two lists at a time.
+  const handleNavigateToCommitment = useCallback((savingsGoalId: string) => {
+    setHighlightedCommitmentId(savingsGoalId)
+    setHighlightedRewardId(null)
+    setActiveTab('wishlist', { search: { commitment: savingsGoalId, reward: null } })
+  }, [setActiveTab])
+
+  const clearHighlightedCommitment = useCallback(() => {
+    setHighlightedCommitmentId(null)
+    updateAppSearch({ commitment: null })
+  }, [])
+
+  const handleNavigateToReward = useCallback((wishlistItemId: string) => {
+    setHighlightedRewardId(wishlistItemId)
+    setHighlightedCommitmentId(null)
+    setActiveTab('wishlist', { search: { reward: wishlistItemId, commitment: null } })
+  }, [setActiveTab])
+
+  const clearHighlightedReward = useCallback(() => {
+    setHighlightedRewardId(null)
+    updateAppSearch({ reward: null })
+  }, [])
+
+  const handleNavigateToDraft = useCallback((draftId: string) => {
+    setHighlightedDraftId(draftId)
+    setActiveTab('drafts', { search: { draft: draftId } })
+  }, [setActiveTab])
+
+  const clearHighlightedDraft = useCallback(() => {
+    setHighlightedDraftId(null)
+    updateAppSearch({ draft: null })
+  }, [])
+
   const clearHighlightedAccount = useCallback(() => {
     setHighlightedAccountId(null)
     updateAppSearch({ account: null })
@@ -347,6 +395,9 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     highlightedRecurringId,
     setHighlightedRecurringId,
     highlightedLoanId,
+    highlightedCommitmentId,
+    highlightedRewardId,
+    highlightedDraftId,
     setHighlightedLoanId,
     highlightedReportSection,
     highlightedReportCategory,
@@ -363,6 +414,12 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     clearHighlightedRecurring,
     handleNavigateToLoan,
     clearHighlightedLoan,
+    handleNavigateToCommitment,
+    clearHighlightedCommitment,
+    handleNavigateToReward,
+    clearHighlightedReward,
+    handleNavigateToDraft,
+    clearHighlightedDraft,
     handleQuickAction,
     syncLedgerRouteState,
     clearIncomingFilters,

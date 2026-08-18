@@ -98,7 +98,15 @@ if (!fs.existsSync(distAssetsPath)) {
 // CI purely on a gzip implementation difference between the two Node builds. A budget whose margin is
 // smaller than that variance tests the build machine, not the bundle. Keep roughly 1.5 kB of slack
 // here when raising, and raise for a measured cause -- never to clear a red build.
-const CRITICAL_PATH_LIMIT_KB = 197.0
+// 198.5: raised from 197.0 (measured 196.97). Still the same eight chunks -- nothing lazy became
+// eager. The growth is the header search trigger in TopNav, which is eager by nature: it changed
+// from a 36px icon chip into a field-shaped control carrying a placeholder and a Ctrl K hint,
+// because the icon read as one more command glyph and nothing on screen said the app could find a
+// record. The corner hit-area fix that came with it costs no JS at all -- it is one CSS rule on
+// the header, not a class per button, which is what kept this raise to 1.5 kB. Note the measured
+// 196.97 already sat 0.03 kB under the old limit, which is the same sub-variance margin the 197.0
+// note below warns about; this restores the ~1.5 kB of slack that rule asks for.
+const CRITICAL_PATH_LIMIT_KB = 198.5
 const PRECACHE_RAW_LIMIT_KB = 3 * 1024
 
 function criticalPathChunks(files) {
