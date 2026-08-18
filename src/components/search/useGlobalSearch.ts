@@ -61,11 +61,15 @@ export function useGlobalSearch({
     return () => window.cancelAnimationFrame(frame)
   }, [isOpen])
 
-  const close = useCallback(() => {
+  const close = useCallback((shouldRestoreFocus = true) => {
     onClose()
     const restoreTo = restoreFocusRef.current
     restoreFocusRef.current = null
-    if (restoreTo?.isConnected) restoreTo.focus({ preventScroll: true })
+    if (shouldRestoreFocus && restoreTo?.isConnected) {
+      restoreTo.focus({ preventScroll: true })
+    } else {
+      restoreTo?.blur?.()
+    }
   }, [onClose])
 
   /**
@@ -103,7 +107,7 @@ export function useGlobalSearch({
     } else {
       onOpenResult(target)
     }
-    close()
+    close(false)
   }, [selectable, onSearchAllCycles, onOpenResult, trimmedQuery, close])
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {

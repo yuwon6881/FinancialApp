@@ -32,6 +32,25 @@ export interface UseCycleNavigationOptions {
   persistPeriod?: (month: string, year: number) => void | Promise<void>
 }
 
+const areStringArraysEqual = (a: readonly string[] = [], b: readonly string[] = []): boolean =>
+  a.length === b.length && a.every((val, i) => val === b[i])
+
+const areLedgerStatesEqual = (
+  a: Omit<LedgerRouteState, 'highlightedTxId'>,
+  b: Omit<LedgerRouteState, 'highlightedTxId'>,
+): boolean =>
+  areStringArraysEqual(a.filters, b.filters) &&
+  a.search === b.search &&
+  a.startDate === b.startDate &&
+  a.endDate === b.endDate &&
+  a.minAmount === b.minAmount &&
+  a.maxAmount === b.maxAmount &&
+  a.recurringFilter === b.recurringFilter &&
+  a.wishlistFilter === b.wishlistFilter &&
+  a.txType === b.txType &&
+  a.showAllCycles === b.showAllCycles &&
+  a.range === b.range
+
 export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const { loadAll, handleLogout, markSessionLocked, setDashboardData, setTransactions, setActiveTab, setLedgerCyclesRange, showAlert, persistPeriod = api.selectPeriod } = options
 
@@ -331,7 +350,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   }, [])
 
   const syncLedgerRouteState = useCallback((state: Omit<LedgerRouteState, 'highlightedTxId'>) => {
-    setLedgerRouteState(state)
+    setLedgerRouteState(current => (areLedgerStatesEqual(current, state) ? current : state))
     setLedgerCyclesRange(state.range)
   }, [setLedgerCyclesRange])
 

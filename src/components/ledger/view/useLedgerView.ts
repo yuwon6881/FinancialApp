@@ -148,7 +148,15 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(() => {
+    if (highlightedTxId) {
+      const index = transactions.findIndex(t => t.id === highlightedTxId)
+      if (index !== -1) {
+        return Math.floor(index / 10) + 1
+      }
+    }
+    return 1
+  })
   const [pageSize, setPageSize] = useState(10)
   const [sortOrder, setSortOrder] = useState<TransactionSort>('date-desc')
 
@@ -221,7 +229,9 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setAppliedRecurringFilter(initialRecurringFilter)
     setAppliedWishlistFilter(initialWishlistFilter)
     setAppliedTxTypeFilter(incomingTxType || null)
-    setCurrentPage(1)
+    if (!highlightedTxId) {
+      setCurrentPage(1)
+    }
   }
 
   // Delete transaction state
@@ -467,40 +477,15 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   }, [deletingTxId, showAllCycles, currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, pageSize, onFetchPagedTransactions, runServerFetch, sortOrder])
 
   // Reset back to page 1 when search inputs or active filters are updated (client-side mode only)
+  const isFilterResetMountRef = useRef(true)
   useEffect(() => {
-    if (!showAllCycles) setCurrentPage(1)
-  }, [searchTerm, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringFilter, selectedWishlistFilter, selectedTxTypeFilter, showAllCycles])
+    if (isFilterResetMountRef.current) {
+      isFilterResetMountRef.current = false
+      return
+    }
+    if (!showAllCycles && !highlightedTxId) setCurrentPage(1)
+  }, [searchTerm, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringFilter, selectedWishlistFilter, selectedTxTypeFilter, showAllCycles, highlightedTxId])
 
-  // Synchronize incoming filters from props
-  useEffect(() => {
-    setSelectedFilters(incomingFilters ?? (incomingCategory ? [incomingCategory] : []))
-  }, [incomingCategory, incomingFilters])
-
-  useEffect(() => {
-    setSearchTerm(incomingSearch || '')
-  }, [incomingSearch])
-
-  useEffect(() => {
-    setSelectedStartDate(incomingStartDate ?? incomingDate ?? '')
-    setSelectedEndDate(incomingEndDate ?? incomingDate ?? '')
-  }, [incomingDate, incomingStartDate, incomingEndDate])
-
-  useEffect(() => {
-    setSelectedMinAmount(incomingMinAmount || '')
-    setSelectedMaxAmount(incomingMaxAmount || '')
-  }, [incomingMinAmount, incomingMaxAmount])
-
-  useEffect(() => {
-    setSelectedRecurringFilter(incomingRecurringFilter ?? 'all')
-  }, [incomingRecurringFilter])
-
-  useEffect(() => {
-    setSelectedWishlistFilter(incomingWishlistFilter ?? 'all')
-  }, [incomingWishlistFilter])
-
-  useEffect(() => {
-    setSelectedTxTypeFilter(incomingTxType || null)
-  }, [incomingTxType])
 
   // Keep the visible ledger state addressable. Typing and local filter changes
   // replace the current history entry; explicit cross-view navigation still
@@ -785,11 +770,9 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     const index = filteredTransactions.findIndex(t => t.id === highlightedTxId)
     if (index !== -1) {
       const targetPage = Math.floor(index / pageSize) + 1
-      if (currentPage !== targetPage) {
-        setCurrentPage(targetPage)
-      }
+      setCurrentPage(prev => (prev !== targetPage ? targetPage : prev))
     }
-  }, [highlightedTxId, filteredTransactions, pageSize, currentPage])
+  }, [highlightedTxId, filteredTransactions, pageSize])
 
   // Handle highlighted transaction arrival cue. The target may be on a later
   // page, and the keyed list remounts after that page changes, so keep looking until its actual
@@ -846,7 +829,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         rowEl?.classList.remove('ledger-transaction-highlight')
       }
     }
-  }, [highlightedTxId, isMobile])
+  }, [highlightedTxId, isMobile, currentPage])
 
   const handleDeleteClickRef = useRef(handleDeleteClick)
   useEffect(() => {
