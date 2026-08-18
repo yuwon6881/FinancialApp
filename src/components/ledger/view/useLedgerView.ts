@@ -477,14 +477,24 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   }, [deletingTxId, showAllCycles, currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, pageSize, onFetchPagedTransactions, runServerFetch, sortOrder])
 
   // Reset back to page 1 when search inputs or active filters are updated (client-side mode only)
-  const isFilterResetMountRef = useRef(true)
+  const prevFilterSignatureRef = useRef<string | null>(null)
   useEffect(() => {
-    if (isFilterResetMountRef.current) {
-      isFilterResetMountRef.current = false
+    const currentSignature = JSON.stringify([
+      searchTerm, selectedFilters, selectedStartDate, selectedEndDate,
+      selectedMinAmount, selectedMaxAmount, selectedRecurringFilter,
+      selectedWishlistFilter, selectedTxTypeFilter, showAllCycles,
+    ])
+    if (prevFilterSignatureRef.current === null) {
+      prevFilterSignatureRef.current = currentSignature
       return
     }
-    if (!showAllCycles && !highlightedTxId) setCurrentPage(1)
-  }, [searchTerm, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringFilter, selectedWishlistFilter, selectedTxTypeFilter, showAllCycles, highlightedTxId])
+    if (prevFilterSignatureRef.current !== currentSignature) {
+      prevFilterSignatureRef.current = currentSignature
+      if (!showAllCycles) {
+        setCurrentPage(1)
+      }
+    }
+  }, [searchTerm, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringFilter, selectedWishlistFilter, selectedTxTypeFilter, showAllCycles])
 
 
   // Keep the visible ledger state addressable. Typing and local filter changes

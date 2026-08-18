@@ -94,4 +94,55 @@ describe('useLedgerView highlighted transaction navigation', () => {
 
     document.body.removeChild(rowEl)
   })
+
+  it('retains the current page when highlightedTxId clears and only resets to page 1 on filter changes', () => {
+    const transactions = generateTransactions(25)
+    const targetId = 'tx-15'
+    const onClearHighlightedTx = vi.fn()
+
+    const { result, rerender } = renderHook(
+      ({ highlightId, search }: { highlightId: string | null; search?: string }) =>
+        useLedgerView({
+          transactions,
+          categories: [],
+          selectedMonth: 'Aug',
+          selectedYear: 2026,
+          cycleDay: 28,
+          isMobile: false,
+          highlightedTxId: highlightId,
+          incomingSearch: search,
+          onClearHighlightedTx,
+          showAllCycles: false,
+          onClearAllCycles: vi.fn(),
+          onDeleteTransaction: vi.fn(),
+          hideSensitive: false,
+          formRef: { current: null },
+        }),
+      {
+        initialProps: { highlightId: targetId as string | null, search: '' },
+      }
+    )
+
+    expect(result.current.currentPage).toBe(2)
+
+    // Simulate timer expiring and highlightedTxId clearing to null
+    act(() => {
+      vi.advanceTimersByTime(3600)
+    })
+    expect(onClearHighlightedTx).toHaveBeenCalled()
+
+    // Rerender with highlightedTxId = null
+    rerender({ highlightId: null, search: '' })
+
+    // MUST remain on page 2, not reset to page 1!
+    expect(result.current.currentPage).toBe(2)
+
+    // Now simulate user actively typing a search filter
+    act(() => {
+      result.current.setSearchTerm('Transaction 1')
+    })
+
+    // Now it should reset to page 1
+    expect(result.current.currentPage).toBe(1)
+  })
 })
