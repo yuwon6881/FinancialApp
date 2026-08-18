@@ -1,3 +1,4 @@
+import React, { useRef } from 'react'
 import { Layers, Search, X } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -63,6 +64,8 @@ export function GlobalSearch({
     onSearchAllCycles,
   })
 
+  const backdropMouseDownRef = useRef(false)
+
   if (!isOpen) return null
 
   const hasQuery = trimmedQuery.length > 0
@@ -71,7 +74,15 @@ export function GlobalSearch({
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 p-3 pt-12 backdrop-blur-md sm:pt-20 animate-in fade-in duration-150"
-      onClick={close}
+      onMouseDown={(e: React.MouseEvent) => {
+        backdropMouseDownRef.current = e.target === e.currentTarget
+      }}
+      onClick={(e: React.MouseEvent) => {
+        if (e.target === e.currentTarget && backdropMouseDownRef.current) {
+          close()
+        }
+        backdropMouseDownRef.current = false
+      }}
       onKeyDown={handleKeyDown}
     >
       <div

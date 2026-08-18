@@ -174,7 +174,7 @@ const TopNav: React.FC<TopNavProps> = ({
         {/* min-w-0 (not min-w-max): the status badges below are shrink-0, so a
             max-content floor here would push the whole header past a phone
             viewport and make the page scroll sideways. */}
-        <div className="flex min-w-0 shrink-0 items-center justify-start overflow-hidden z-10 xl:flex-1">
+        <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden z-10 md:flex-initial md:shrink-0 xl:flex-1">
           <Button
             variant="unstyled"
             type="button"
@@ -254,7 +254,7 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         {/* Right Side Widgets & Actions */}
-        <div className="flex shrink-0 items-center justify-end gap-1.5 z-10 sm:gap-2.5 xl:flex-1 xl:gap-3">
+        <div className="flex shrink-0 items-center justify-end gap-1.5 z-10 sm:gap-2.5 ml-auto md:ml-0 xl:flex-1 xl:gap-3">
           
           {/* A magnifier labelled Search, not a ⌘ glyph: ⌘ is the macOS Command key, which does
               not exist on the Windows, Android and PWA targets this app ships to, and it reads as
@@ -351,14 +351,14 @@ const TopNav: React.FC<TopNavProps> = ({
           </div>
 
           {/* Profile/Account menu */}
-          <div className="shrink-0 rounded-xl border border-border/60 bg-background">
+          <div className="shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger
                 aria-label="Account menu"
                 title="Account menu"
-                className="size-11 rounded-xl p-2 cursor-pointer hover:bg-muted/50 active:scale-95 sm:size-9"
+                className="flex size-11 items-center justify-center rounded-xl border border-border/60 bg-background p-0 cursor-pointer hover:bg-muted/50 active:scale-95 sm:size-9 transition duration-150"
               >
-                <div className="flex size-7 items-center justify-center rounded-full border border-blue-500/20 bg-linear-to-tr from-blue-500 to-sky-400 text-xs font-extrabold text-on-vivid">
+                <div className="flex size-7 items-center justify-center rounded-full border border-blue-500/20 bg-linear-to-tr from-blue-500 to-sky-400 text-[11px] font-extrabold text-on-vivid">
                   {getInitials(username)}
                 </div>
               </DropdownMenuTrigger>
