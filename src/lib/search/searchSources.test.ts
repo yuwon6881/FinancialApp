@@ -126,6 +126,14 @@ describe('buildSearchResults', () => {
     expect(paused.subtitle).toBe('Entertainment · Paused')
   })
 
+  it('labels a bill whose schedule has ended even when its active flag remains set', () => {
+    const [ended] = buildSearchResults({
+      recurringPayments: [bill({ active: true, endDate: '2000-01-01' })],
+    }, 'netflix')
+
+    expect(ended.subtitle).toBe('Entertainment · Ended')
+  })
+
   it('finds a loan through its linked bill name', () => {
     const [found] = buildSearchResults({ loans: [loan()] }, 'ptptn')
     expect(found.kind).toBe('loan')

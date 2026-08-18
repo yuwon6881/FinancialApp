@@ -15,6 +15,7 @@ import type {
   WishlistItem,
 } from '../../types'
 import { scoreSearchFields, tokenizeQuery, type SearchField } from './searchMatch'
+import { hasBillingEnded } from '../recurringPayments'
 
 export type SearchResultKind = 'transaction' | 'draft' | 'account' | 'bill' | 'loan' | 'commitment' | 'reward'
 
@@ -250,7 +251,9 @@ export const buildSearchResults = (
       id: `bill:${payment.id}`,
       kind: 'bill' as const,
       title: payment.name,
-      subtitle: payment.active ? payment.category : `${payment.category} · Paused`,
+      subtitle: hasBillingEnded(payment)
+        ? `${payment.category} · Ended`
+        : payment.active ? payment.category : `${payment.category} · Paused`,
       amount: payment.amount,
       meta: payment.nextDueDate ?? undefined,
       isPendingSync: payment.isPendingSync,

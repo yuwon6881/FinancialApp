@@ -3,7 +3,7 @@ import { m, AnimatePresence } from 'framer-motion'
 import { Calendar, ChevronRight, CreditCard, Edit, FastForward, Link2, Repeat, Trash2, Wallet } from 'lucide-react'
 import type { RecurringPayment, RecurringReminderSettings } from '../../types'
 import { listContainerVariants, listItemVariants, listItemExit } from '../../lib/animations'
-import { isEligibleForPayEarly, normalizeRecurringFrequency, RECURRING_PAYMENT_MODE_LABELS } from '../../lib/recurringPayments'
+import { hasBillingEnded, isEligibleForPayEarly, normalizeRecurringFrequency, RECURRING_PAYMENT_MODE_LABELS } from '../../lib/recurringPayments'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { Button } from '../ui/Button'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
@@ -63,6 +63,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
       <AnimatePresence>
       {payments.map(rp => {
         const isBusy = isPaymentDeleting(rp.id) || isPaymentSyncing(rp.id) || rp.isPendingSync
+        const isEnded = hasBillingEnded(rp)
         return (
           <m.div
             key={rp.id}
@@ -70,7 +71,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
             variants={listItemVariants}
             exit={listItemExit}
             className={`p-6 rounded-2xl bg-card border transition-all duration-300 flex flex-col ${
-              rp.active
+              rp.active && !isEnded
                 ? 'border-border/60 hover:border-blue-500/30 shadow-xs'
                 : 'border-dashed border-border/60 opacity-60'
             }`}
@@ -80,8 +81,10 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                 <div className="min-w-0 flex-1">
                   <h3 className="flex min-w-0 flex-wrap items-center gap-1.5 text-base font-bold text-foreground">
                     <span className="min-w-0 break-words">{rp.name}</span>
-                    {!rp.active && (
-                      <span className="text-[9px] font-semibold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Paused</span>
+                    {(!rp.active || isEnded) && (
+                      <span className="text-[9px] font-semibold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                        {isEnded ? 'Ended' : 'Paused'}
+                      </span>
                     )}
                     <RowSyncStatus isDeleting={isPaymentDeleting(rp.id)} isSyncing={isPaymentSyncing(rp.id)} isPending={rp.isPendingSync} entityLabel="subscription" />
                   </h3>
@@ -174,7 +177,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                 payment={rp}
                 globalPushEnabled={globalPushEnabled}
                 thisDevicePushEnabled={thisDevicePushEnabled}
-                disabled={isBusy || hideSensitive}
+                disabled={isBusy || hideSensitive || isEnded}
                 isSyncing={isPaymentSyncing(rp.id)}
                 onUpdateReminder={onUpdateReminder}
               />

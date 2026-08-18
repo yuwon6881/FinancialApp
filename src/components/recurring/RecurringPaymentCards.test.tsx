@@ -104,6 +104,19 @@ describe('RecurringPaymentCards reminder controls', () => {
     renderCards([basePayment], { globalPushEnabled: false })
     expect(screen.queryByText(RECURRING_PAUSED_LABEL)).toBeNull()
   })
+
+  it('renders an ended payment as ended and disables its reminder controls', () => {
+    const ended: RecurringPayment = {
+      ...basePayment,
+      endDate: '2000-01-01',
+      reminderEnabled: true,
+    }
+    renderCards([ended])
+
+    expect(screen.getByText('Ended')).toBeTruthy()
+    expect((screen.getByRole('switch', { name: 'Turn off payment reminder for Netflix' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(document.getElementById('recur-card-rp-1')!.className).toContain('border-dashed')
+  })
 })
 
 describe('RecurringPaymentCards pay early', () => {

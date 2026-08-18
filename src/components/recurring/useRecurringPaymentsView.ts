@@ -262,7 +262,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     .filter(p => p.active && !hasBillingEnded(p))
     .reduce((acc, p) => acc + Math.abs(p.amount) / (normalizeRecurringFrequency(p.frequency) === 'Annually' ? 12 : 1), 0)
 
-  const activeCount = payments.filter(p => p.active).length
+  const activeCount = payments.filter(p => p.active && !hasBillingEnded(p)).length
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
