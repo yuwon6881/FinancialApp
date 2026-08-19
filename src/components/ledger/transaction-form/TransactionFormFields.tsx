@@ -375,12 +375,13 @@ export function TransactionFormFields({
       </div>
 
       <FormField
+        className="sm:col-span-2"
         label={`Amount (${getCurrencySymbol(currency)})`}
         required
         error={errors.amount}
       >
         <div className="relative flex items-center">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-xs font-semibold text-muted-foreground pointer-events-none select-none leading-none">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-sm font-semibold text-muted-foreground pointer-events-none select-none leading-none">
             {getCurrencySymbol(currency)}
           </span>
           <SmartAmountInput
@@ -390,21 +391,11 @@ export function TransactionFormFields({
             onChange={e => {
               onSetField('amount', maskCurrencyInput(e.target.value, state.amount))
             }}
-            className={`w-full pr-3.5 ${
+            className={`w-full h-10 pr-3.5 ${
               getCurrencySymbol(currency).length > 2 ? 'pl-12' : getCurrencySymbol(currency).length > 1 ? 'pl-10' : 'pl-8'
             }`}
           />
         </div>
-      </FormField>
-
-      <FormField label="Posting date" required error={errors.date}>
-        <DatePicker
-          value={state.date}
-          onChange={value => {
-            onSetField('date', value)
-          }}
-          className="w-full"
-        />
       </FormField>
 
       {isAccountMove ? (
@@ -456,6 +447,16 @@ export function TransactionFormFields({
                 ...option,
                 disabled: option.disabled || option.value === state.accountId,
               }))}
+              className="w-full"
+            />
+          </FormField>
+
+          <FormField label="Posting date" className="sm:col-span-2" required error={errors.date}>
+            <DatePicker
+              value={state.date}
+              onChange={value => {
+                onSetField('date', value)
+              }}
               className="w-full"
             />
           </FormField>
@@ -536,11 +537,21 @@ export function TransactionFormFields({
               className="w-full"
             />
           </FormField>
+
+          <FormField label="Posting date" className="sm:col-span-2" required error={errors.date}>
+            <DatePicker
+              value={state.date}
+              onChange={value => {
+                onSetField('date', value)
+              }}
+              className="w-full"
+            />
+          </FormField>
         </>
       ) : (
         <>
           <FormField
-            className="relative"
+            className="relative sm:col-span-2"
             required
             error={errors.category}
             label="Category"
@@ -614,7 +625,6 @@ export function TransactionFormFields({
 
           {accountBucket && (
             <FormField
-              className="sm:col-span-2"
               label="Account"
               required
               error={errors.accountId}
@@ -628,6 +638,16 @@ export function TransactionFormFields({
               />
             </FormField>
           )}
+
+          <FormField label="Posting date" required error={errors.date}>
+            <DatePicker
+              value={state.date}
+              onChange={value => {
+                onSetField('date', value)
+              }}
+              className="w-full"
+            />
+          </FormField>
 
           <StabilityTopUpOffer
             offer={topUpOffer}
