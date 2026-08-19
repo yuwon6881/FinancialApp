@@ -379,7 +379,7 @@ export function TransactionFormFields({
         error={errors.amount}
       >
         <div className="relative flex items-center">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-sm font-semibold text-muted-foreground pointer-events-none select-none leading-none">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-xs font-semibold text-muted-foreground pointer-events-none select-none leading-none">
             {getCurrencySymbol(currency)}
           </span>
           <SmartAmountInput
@@ -389,7 +389,7 @@ export function TransactionFormFields({
             onChange={e => {
               onSetField('amount', maskCurrencyInput(e.target.value, state.amount))
             }}
-            className={`w-full h-10 pr-3.5 ${
+            className={`w-full pr-3.5 ${
               getCurrencySymbol(currency).length > 2 ? 'pl-12' : getCurrencySymbol(currency).length > 1 ? 'pl-10' : 'pl-8'
             }`}
           />
@@ -404,7 +404,6 @@ export function TransactionFormFields({
             error={errors.accountId}
           >
             <CustomSelect
-              ariaLabel="Source account"
               value={state.accountId ?? ''}
               onChange={value => onSetField('accountId', value || null)}
               options={accountMoveOptions.map(option => ({
@@ -421,7 +420,6 @@ export function TransactionFormFields({
             error={errors.counterAccountId}
           >
             <CustomSelect
-              ariaLabel="Destination account"
               value={state.counterAccountId ?? ''}
               onChange={value => onSetField('counterAccountId', value || null)}
               options={accountMoveOptions.map(option => ({
@@ -482,7 +480,6 @@ export function TransactionFormFields({
           */}
           <FormField label="Source account" required error={errors.accountId}>
             <CustomSelect
-              ariaLabel="Transfer source account"
               value={state.accountId ?? ''}
               onChange={value => onSetField('accountId', value || null)}
               options={accountOptions.map(option => ({
@@ -495,7 +492,6 @@ export function TransactionFormFields({
 
           <FormField label="Destination account" required error={errors.counterAccountId}>
             <CustomSelect
-              ariaLabel="Transfer destination account"
               value={state.counterAccountId ?? ''}
               onChange={value => onSetField('counterAccountId', value || null)}
               options={transferTargetOptions.map(option => ({
@@ -703,7 +699,7 @@ export function TransactionFormFields({
             })}
           </div>
           {errors.stabilityReloadIntent && (
-            <p id="stability-reload-intent-error" className="text-xs text-destructive">
+            <p id="stability-reload-intent-error" role="alert" className="text-xs text-destructive">
               {errors.stabilityReloadIntent}
             </p>
           )}

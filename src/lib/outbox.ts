@@ -19,6 +19,7 @@ export type EntityKind = 'transaction' | 'recurringPayment' | 'recurringOccurren
   | 'ledgerAccount' | 'ledgerAccountReconcile'
 export type OpType = 'add' | 'update' | 'delete' | 'restore' | 'toggle' | 'purchase' | 'unpurchase'
   | 'reminder' | 'payEarly' | 'settle' | 'cleanup' | 'bulkDelete' | 'bulkRestore'
+  | 'advanceRepayment' | 'fullSettlement' | 'undoRepayment'
 export interface OutboxPayload {
   [key: string]: unknown
   id?: string | number
@@ -100,6 +101,7 @@ export type DispatchResult =
   | PayEarlyResult
   | RecurringSettlementResult
   | LedgerAccountReconcileResult
+  | import('../types').LoanRepaymentActionResult
   | { id: string }
   | { item: WishlistItem; transaction: Transaction; id?: undefined }
   | void
@@ -577,7 +579,15 @@ export function enqueue(
   }
 
   if (type === 'settle') {
-    if (queue.some(op => op.entity === entity && op.targetId === targetId && op.type === 'settle')) return queue
+    // Same occurrence AND same amount is a duplicate submit; same occurrence for a different amount
+    // is a second part payment and has to queue on its own. A full settlement (no amount) still
+    // collapses against another full settlement, as it always did.
+    const settleAmount = typeof payload?.amount === 'number' ? payload.amount : undefined
+    const duplicate = queue.some(op => op.entity === entity
+      && op.targetId === targetIdStr
+      && op.type === 'settle'
+      && (typeof op.payload?.amount === 'number' ? op.payload.amount : undefined) === settleAmount)
+    if (duplicate) return queue
     return [...queue, newOp]
   }
 
@@ -1218,7 +1228,7 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
     typeof o.entity === 'string' &&
     WELL_FORMED_ENTITY_KINDS.includes(o.entity as EntityKind) &&
     typeof o.type === 'string' &&
-    ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase', 'reminder', 'payEarly', 'settle', 'cleanup', 'bulkDelete', 'bulkRestore'].includes(o.type as string) &&
+    ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase', 'reminder', 'payEarly', 'settle', 'cleanup', 'bulkDelete', 'bulkRestore', 'advanceRepayment', 'fullSettlement', 'undoRepayment'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&
     typeof o.createdAt === 'number' &&
     typeof o.retryCount === 'number'

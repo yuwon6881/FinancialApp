@@ -55,6 +55,9 @@ interface RecurringPaymentsViewProps {
   hasLoadedLoans?: boolean
   onLoadLoans?: () => Promise<Loan[]>
   onExplainLoan?: (loan: Loan) => void
+  onAdvanceRepayment?: (id: string, cycles: number, accountId?: string) => Promise<void>
+  onFullSettlement?: (id: string, quoteAmount: number, accountId?: string) => Promise<void>
+  onUndoRepayment?: (actionId: string, loanId?: string) => Promise<void>
 }
 
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
@@ -98,6 +101,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   hasLoadedLoans = false,
   onLoadLoans = async () => [],
   onExplainLoan = () => {},
+  onAdvanceRepayment,
+  onFullSettlement,
+  onUndoRepayment,
 }) => {
   const app = useAppContext()
   const hideSensitive = hideSensitiveProp ?? app.hideSensitive
@@ -248,6 +254,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           <LoansSection
             loans={loans}
             payments={payments}
+            accounts={accounts}
             currency={currency}
             hideSensitive={hideSensitive}
             formatSensitive={view.formatSensitive}
@@ -258,6 +265,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             loadStatus={loanLoadStatus}
             onLoad={onLoadLoans}
             onExplain={onExplainLoan}
+            onAdvanceRepayment={onAdvanceRepayment}
+            onFullSettlement={onFullSettlement}
+            onUndoRepayment={onUndoRepayment}
             highlightedLoanId={currentHighlightedLoanId}
             onClearHighlightedLoan={handleClearHighlightedLoan}
           />

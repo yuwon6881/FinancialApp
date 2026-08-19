@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { DashboardData, Transaction, WishlistItem } from '../types'
+import type { DashboardData, Loan, Transaction, WishlistItem } from '../types'
 import { buildCycleSummary, formatRate, formatRateChange } from '../lib/cycleSummary'
 
 function dashboard(overrides: Partial<DashboardData> = {}): DashboardData {
@@ -79,6 +79,69 @@ describe('buildCycleSummary', () => {
       ['Stability', 0],
       ['Rewards', 25],
     ])
+  })
+
+  it('keeps the account-level closing balances behind each ledger bucket', () => {
+    const data = dashboard({
+      categories: dashboard().categories.map(category => category.name === 'Essentials'
+        ? {
+            ...category,
+            accounts: [
+              { id: 'cash', name: 'Cash', kind: 'Cash', remaining: 75 },
+              { id: 'bank', name: 'Main bank', kind: 'Bank', remaining: 300 },
+            ],
+          }
+        : category),
+    })
+
+    const essentials = buildCycleSummary(data, null, [], 2026, 7, 1).envelopes[0]
+
+    expect(essentials.accounts.map(account => [account.name, account.remaining])).toEqual([
+      ['Main bank', 300],
+      ['Cash', 75],
+    ])
+  })
+
+  it('includes partial and payoff bill states in the cycle totals', () => {
+    const summary = buildCycleSummary(dashboard({
+      activeRecurringPayments: [
+        { id: 'paid', recurringPaymentId: 'paid', name: 'Paid', amount: 100, paidAmount: 100, remainingAmount: 0, category: 'Bills', ledgerCategory: 'Essentials', dueDate: '2026-07-05', isPaid: true, isDiscarded: false, status: 'Paid' },
+        { id: 'part', recurringPaymentId: 'part', name: 'Part', amount: 120, paidAmount: 40, remainingAmount: 80, category: 'Bills', ledgerCategory: 'Essentials', dueDate: '2026-07-10', isPaid: false, isDiscarded: false, status: 'PartiallyPaid' },
+        { id: 'open', recurringPaymentId: 'open', name: 'Open', amount: 60, paidAmount: 0, remainingAmount: 60, category: 'Bills', ledgerCategory: 'Essentials', dueDate: '2026-07-15', isPaid: false, isDiscarded: false, status: 'Pending' },
+        { id: 'settled', recurringPaymentId: 'settled', name: 'Settled loan', amount: 200, paidAmount: 0, remainingAmount: 0, category: 'Loan', ledgerCategory: 'Essentials', dueDate: '2026-07-20', isPaid: true, isDiscarded: false, status: 'SettledByLoanPayoff' },
+      ],
+    }), null, [], 2026, 7, 1)
+
+    expect(summary.paidTotal).toBe(140)
+    expect(summary.partPaidCount).toBe(1)
+    expect(summary.paidOffBillsCount).toBe(1)
+    expect(summary.outstandingCount).toBe(2)
+    expect(summary.outstandingTotal).toBe(140)
+  })
+
+  it('summarizes loan payments, advance repayments, and a payoff from linked ledger rows', () => {
+    const loan = {
+      id: 'loan-1',
+      name: 'Car loan',
+      recurringPaymentId: 'car-bill',
+      snapshot: {
+        payments: [{ transactionId: 'advance', balanceAfter: 0 }],
+      },
+    } as Loan
+    const transactions = [
+      { id: 'regular', date: '2026-07-05', description: 'Car loan', category: 'Loan', ledgerCategory: 'Essentials', amount: -100, recurringPaymentId: 'car-bill', recurringOccurrenceDate: '2026-07-05' },
+      { id: 'advance', date: '2026-07-10', description: 'Car loan advance', category: 'Loan', ledgerCategory: 'Essentials', amount: -200, recurringPaymentId: 'car-bill', recurringOccurrenceDate: '2026-08-05' },
+      { id: 'other-bill', date: '2026-07-12', description: 'Phone', category: 'Bills', ledgerCategory: 'Essentials', amount: -50, recurringPaymentId: 'phone-bill', recurringOccurrenceDate: '2026-07-12' },
+    ] as Transaction[]
+
+    const summary = buildCycleSummary(dashboard(), null, [], 2026, 7, 1, transactions, [loan])
+
+    expect(summary.loanPaymentTotal).toBe(300)
+    expect(summary.loanPaymentCount).toBe(2)
+    expect(summary.loanPaidAheadCount).toBe(1)
+    expect(summary.loanPaidAheadTotal).toBe(200)
+    expect(summary.loansPaidOffCount).toBe(1)
+    expect(summary.loanActivity[0]).toMatchObject({ name: 'Car loan', total: 300, paidAheadCount: 1, paidOffThisCycle: true })
   })
 
   it('shows up to eight categories in Where it went', () => {

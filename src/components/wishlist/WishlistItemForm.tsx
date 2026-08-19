@@ -78,7 +78,6 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
           id={`wishlist-active-${props.mode}`}
           checked={props.isActive}
           onChange={event => props.onActiveChange(event.target.checked)}
-          className="size-3.5 border-border rounded focus:ring-ring"
         />
         <label htmlFor={`wishlist-active-${props.mode}`} className="text-muted-foreground font-medium cursor-pointer">
           Focus on this reward first

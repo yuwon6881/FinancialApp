@@ -4,6 +4,7 @@ import { Calendar, CheckCircle2, AlertCircle, Ban, List, ChevronDown, ChevronUp 
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryDotClass } from '../lib/categoryColors'
 import { ordinalSuffix } from '../lib/cycleLabels'
+import { getOccurrenceStatusLabel } from './recurring/formatters'
 import { BILL_TIMELINE_MONTHS, buildBillTimelineModel, type BillTimelineNode } from '../lib/billTimeline'
 import { BottomSheet } from './ui/BottomSheet'
 import { Card } from './ui/Card'
@@ -145,14 +146,16 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
       {timelineNodes.length > 0 && (
         <div className="sm:hidden space-y-2">
           {timelineNodes.map((node) => {
-            const allPaid = node.bills.every(b => b.status === 'Paid')
+            const allPaid = node.bills.every(b => b.status === 'Paid' || b.status === 'SettledByLoanPayoff')
+            const anyPartiallyPaid = node.bills.some(b => b.status === 'PartiallyPaid')
             const anyPending = node.bills.some(b => b.status === 'Pending')
             const allDiscarded = node.bills.every(b => b.status === 'Discarded')
 
             let dotColor = 'bg-amber-500'
-            if (allPaid) dotColor = 'bg-green-500'
+            if (allPaid) dotColor = 'bg-emerald-500'
+            else if (anyPartiallyPaid) dotColor = 'bg-blue-500'
             else if (allDiscarded) dotColor = 'bg-slate-400'
-            else if (!anyPending) dotColor = 'bg-green-500'
+            else if (!anyPending) dotColor = 'bg-emerald-500'
 
             const d = new Date(node.dueDate)
             const dateLabel = `${BILL_TIMELINE_MONTHS[d.getMonth()]} ${d.getDate()}${ordinalSuffix(d.getDate())}`
@@ -162,12 +165,20 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                 ? `${node.bills[0].name} & ${node.bills[1].name}`
                 : `${node.bills.length} bills`
             const total = node.bills.reduce((s, b) => s + (b.amount == null ? 0 : Math.abs(b.amount)), 0)
-            const statusLabel = anyPending ? 'Pending' : allDiscarded ? 'Discarded' : 'Paid'
+            const statusLabel = anyPartiallyPaid
+              ? 'Part paid'
+              : anyPending
+                ? 'Pending'
+                : allDiscarded
+                  ? 'Discarded'
+                  : 'Paid'
             const statusStyle = statusLabel === 'Paid'
-              ? 'text-green-500 bg-green-500/10'
-              : statusLabel === 'Discarded'
-                ? 'text-slate-400 bg-slate-500/10'
-                : 'text-amber-500 bg-amber-500/10'
+              ? 'text-emerald-500 bg-emerald-500/10'
+              : statusLabel === 'Part paid'
+                ? 'text-blue-500 bg-blue-500/10'
+                : statusLabel === 'Discarded'
+                  ? 'text-slate-400 bg-slate-500/10'
+                  : 'text-amber-500 bg-amber-500/10'
 
             return (
               <Button variant="unstyled"
@@ -219,18 +230,21 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             {/* Render grouped timeline nodes */}
             {timelineNodes.map((node) => {
               // Determine status based on all bills in the node
-              const allPaid = node.bills.every(b => b.status === 'Paid')
+              const allPaid = node.bills.every(b => b.status === 'Paid' || b.status === 'SettledByLoanPayoff')
+              const anyPartiallyPaid = node.bills.some(b => b.status === 'PartiallyPaid')
               const anyPending = node.bills.some(b => b.status === 'Pending')
               const allDiscarded = node.bills.every(b => b.status === 'Discarded')
 
               let dotColor = 'bg-amber-500 ring-amber-500/20' // Pending
               if (allPaid) {
-                dotColor = 'bg-green-500 ring-green-500/20'
+                dotColor = 'bg-emerald-500 ring-emerald-500/20'
+              } else if (anyPartiallyPaid) {
+                dotColor = 'bg-blue-500 ring-blue-500/20'
               } else if (allDiscarded) {
                 dotColor = 'bg-slate-400 ring-slate-400/20'
               } else if (!anyPending) {
                 // Mixed state, but none pending (e.g. Paid & Discarded)
-                dotColor = 'bg-green-500 ring-green-500/20'
+                dotColor = 'bg-emerald-500 ring-emerald-500/20'
               }
 
               const formattedDueDay = new Date(node.dueDate).getDate()
@@ -258,50 +272,51 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   style={{ left: `${node.percent}%` }}
                   className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group z-10 hover:z-50 focus-within:z-50"
                 >
-                  {/* Node trigger dot — small visual, large touch target via padding/negative margin */}
+                  {/* Subtle vertical indicator line attached directly to the dot */}
+                  <div
+                    style={{ height: connectorHeight }}
+                    className={`absolute bottom-full left-1/2 -translate-x-1/2 w-0.5 bg-border group-hover:bg-blue-500 transition-colors pointer-events-none ${
+                      node.level === 'long' ? 'opacity-80' : 'opacity-40'
+                    }`}
+                  />
+
+                  {/* Date and Name tags — staggered above the node */}
+                  <div
+                    style={{ bottom: `calc(100% + ${connectorHeight} + 2px)` }}
+                    className={`absolute flex flex-col pointer-events-none group-hover:scale-105 transition-transform ${alignClasses}`}
+                  >
+                    <span className="text-[10px] font-black text-foreground tracking-tight whitespace-nowrap bg-background/80 px-1 py-0.5 rounded shadow-2xs">
+                      {BILL_TIMELINE_MONTHS[new Date(node.dueDate).getMonth()]} {formattedDueDay}
+                    </span>
+                    <span className="text-[9px] font-medium text-muted-foreground truncate max-w-[80px] text-center">
+                      {labelText}
+                    </span>
+                  </div>
+
+                  {/* Interactive Dot Node */}
                   <Button variant="unstyled"
                     type="button"
                     onClick={() => handleNodeClick(node)}
-                    aria-label={`${node.bills.length} item${node.bills.length === 1 ? '' : 's'} due on ${node.dueDate}`}
-                    className="-m-3.5 flex size-11 items-center justify-center cursor-pointer group/dot"
-                    title={`${node.bills.length} item(s) due: ${node.dueDate}`}
+                    aria-label={`View subscriptions due on ${node.dueDate}`}
+                    className={`relative z-20 size-4 sm:size-4.5 rounded-full ${dotColor} ring-4 transition-all duration-200 transform group-hover:scale-125 focus-visible:scale-125 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 cursor-pointer flex items-center justify-center p-0`}
                   >
-                    <span className={`size-4 rounded-full border-2 border-card ${dotColor} group-hover/dot:scale-125 group-focus/dot:scale-125 group-active/dot:scale-95 transition duration-150 shadow-md flex items-center justify-center`}>
-                      {/* The dot fills are bright gold/green tints in dark mode, so the
-                          count reads in the surface colour rather than white. */}
-                      {node.bills.length > 1 && (
-                        <span className="text-[8px] text-on-vivid font-extrabold leading-none">{node.bills.length}</span>
-                      )}
-                    </span>
+                    <span className="sr-only">Due {node.dueDate}: {labelText}</span>
+                    {node.bills.length > 1 && (
+                      <span className="pointer-events-none select-none text-[8px] font-black leading-none text-on-vivid">
+                        {node.bills.length}
+                      </span>
+                    )}
                   </Button>
 
-                  {/* Alternating & Staggered Labels */}
-                  <div 
-                    className={`absolute flex flex-col ${alignClasses} ${
-                      node.isTop ? 'bottom-full' : 'top-full'
-                    }`}
+                  {/* Amount tag — below the dot node */}
+                  <div
+                    className={`absolute top-full mt-2 flex flex-col pointer-events-none ${alignClasses}`}
                   >
-                    {/* Small line connector */}
-                    <div 
-                      className={`w-[1px] bg-border/80 ${
-                        node.isTop ? 'order-last' : 'order-first'
-                      } ${
-                        node.percent < 3 ? 'ml-1.5' : node.percent > 97 ? 'mr-1.5' : ''
-                      }`}
-                      style={{ height: connectorHeight }}
-                    />
-                    
-                    {/* Info Badge - clickable directly */}
-                    <Button variant="unstyled"
-                      type="button"
-                      onClick={() => handleNodeClick(node)}
-                      className={`min-h-8 px-2 py-0.75 rounded-md text-[9px] font-bold text-foreground border border-border bg-card whitespace-nowrap shadow-xs flex items-center gap-1 hover:bg-muted/80 cursor-pointer pointer-events-auto transition ${
-                        allDiscarded ? 'line-through opacity-60 text-muted-foreground' : ''
-                      }`}
-                    >
-                      <span className="truncate max-w-[120px]">{labelText}</span>
-                      <span className="text-muted-foreground font-semibold">({formattedDueDay})</span>
-                    </Button>
+                    <span className="text-[10px] font-bold text-foreground whitespace-nowrap bg-muted/40 px-1.5 py-0.5 rounded-md border border-border/20">
+                      {formatSensitive(
+                        node.bills.reduce((sum, b) => sum + (b.amount == null ? 0 : Math.abs(b.amount)), 0)
+                      )}
+                    </span>
                   </div>
                 </div>
               )
@@ -310,43 +325,38 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         </div>
       </div>
 
-      {timelineNodes.length === 0 && (
-        <div className="text-xs text-muted-foreground text-center py-6">
-          No active subscriptions scheduled for this cycle.
-        </div>
-      )}
-
-      {/* Multiple Bills Selector Modal */}
+      {/* Multiple Bills Selection Bottom Sheet */}
       {selectedNode && (
         <BottomSheet
           isOpen={!!selectedNode}
           onClose={() => setSelectedNode(null)}
-          maxWidthClassName="max-w-sm"
+          maxWidthClassName="max-w-md"
           title={
             <div className="flex items-center gap-2">
               <List className="size-4 text-blue-500" />
-              <span className="text-sm font-bold">Bills Due on {selectedNode.dueDate}</span>
+              <span>Subscriptions on {selectedNode.dueDate}</span>
             </div>
           }
         >
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {selectedNode.bills.map(bill => {
-              const isPaid = bill.status === 'Paid'
-              const isDiscarded = bill.status === 'Discarded'
-              
-              let statusStyle = 'text-amber-500 bg-amber-500/10'
-              if (isPaid) statusStyle = 'text-green-500 bg-green-500/10'
-              if (isDiscarded) statusStyle = 'text-slate-400 bg-slate-500/10 line-through'
+          <div className="space-y-2 mt-2">
+            {selectedNode.bills.map((bill) => {
+              const statusStyle = bill.status === 'Paid' || bill.status === 'SettledByLoanPayoff'
+                ? 'text-emerald-500 bg-emerald-500/10'
+                : bill.status === 'PartiallyPaid'
+                  ? 'text-blue-500 bg-blue-500/10'
+                  : bill.status === 'Discarded'
+                    ? 'text-slate-400 bg-slate-500/10'
+                    : 'text-amber-500 bg-amber-500/10'
 
               return (
                 <Button variant="unstyled"
                   key={bill.id}
                   type="button"
                   onClick={() => {
-                    setSelectedBill(bill)
                     setSelectedNode(null)
+                    setSelectedBill(bill)
                   }}
-                  className="w-full p-3 rounded-xl border border-border/60 bg-muted/10 hover:bg-muted/30 transition flex items-center justify-between text-left cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 rounded-xl border border-border/60 bg-muted/20 hover:bg-muted/40 transition text-left cursor-pointer"
                 >
                   <div>
                     <div className="text-xs font-bold text-foreground">{bill.name}</div>
@@ -363,7 +373,9 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   </div>
                   <div className="text-right flex flex-col items-end gap-1 font-semibold">
                     <span className="text-xs font-extrabold text-foreground">{bill.amount == null ? 'Unavailable' : formatSensitive(Math.abs(bill.amount))}</span>
-                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>{bill.status}</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>
+                      {getOccurrenceStatusLabel(bill.status)}
+                    </span>
                   </div>
                 </Button>
               )
@@ -381,13 +393,15 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
           title={
             <div className="flex items-center gap-2">
               <span className={`p-1.5 rounded-lg ${
-                selectedBill.status === 'Paid' 
-                  ? 'bg-green-500/10 text-green-500' 
-                  : selectedBill.status === 'Discarded' 
-                    ? 'bg-slate-500/10 text-slate-400' 
-                    : 'bg-amber-500/10 text-amber-500'
+                selectedBill.status === 'Paid' || selectedBill.status === 'SettledByLoanPayoff'
+                  ? 'bg-emerald-500/10 text-emerald-500'
+                  : selectedBill.status === 'PartiallyPaid'
+                    ? 'bg-blue-500/10 text-blue-500'
+                    : selectedBill.status === 'Discarded'
+                      ? 'bg-slate-500/10 text-slate-400'
+                      : 'bg-amber-500/10 text-amber-500'
               }`}>
-                {selectedBill.status === 'Paid' ? (
+                {selectedBill.status === 'Paid' || selectedBill.status === 'SettledByLoanPayoff' ? (
                   <CheckCircle2 className="size-4" />
                 ) : selectedBill.status === 'Discarded' ? (
                   <Ban className="size-4" />
@@ -411,12 +425,20 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                 <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-1">Status</span>
                 <div className="flex items-center min-h-[22px]">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold leading-none ${
-                    selectedBill.status === 'Paid' 
-                      ? 'bg-green-500/10 text-green-500' 
-                      : selectedBill.status === 'Discarded' 
-                        ? 'bg-slate-500/10 text-slate-400 line-through' 
-                        : 'bg-amber-500/10 text-amber-500'
-                  }`}>{selectedBill.status}</span>
+                    selectedBill.status === 'Paid' || selectedBill.status === 'SettledByLoanPayoff'
+                      ? 'bg-emerald-500/10 text-emerald-500'
+                      : selectedBill.status === 'PartiallyPaid'
+                        ? 'bg-blue-500/10 text-blue-500'
+                        : selectedBill.status === 'Discarded'
+                          ? 'bg-slate-500/10 text-slate-400 line-through'
+                          : 'bg-amber-500/10 text-amber-500'
+                  }`}>
+                    {selectedBill.status === 'PartiallyPaid'
+                      ? 'Part paid'
+                      : selectedBill.status === 'SettledByLoanPayoff'
+                        ? 'Paid off'
+                        : selectedBill.status}
+                  </span>
                 </div>
               </div>
               <div className="flex flex-col justify-between pt-2.5 border-t border-border/30">
@@ -440,8 +462,21 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               </div>
             </div>
 
+            {selectedBill.status === 'PartiallyPaid' && (
+              <div className="grid grid-cols-2 gap-2 bg-blue-500/10 border border-blue-500/20 p-2.5 rounded-xl text-xs">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Paid so far</span>
+                  <span className="font-extrabold text-foreground">{formatSensitive(selectedBill.paidAmount ?? 0)}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Still to pay</span>
+                  <span className="font-extrabold text-blue-600 dark:text-blue-400">{formatSensitive(selectedBill.remainingAmount ?? 0)}</span>
+                </div>
+              </div>
+            )}
+
             {selectedBill.paidDate && (
-              <div className="bg-green-500/10 border border-green-500/20 p-2.5 rounded-xl text-green-600 dark:text-green-400 text-xs flex items-center justify-between">
+              <div className="bg-emerald-500/10 border border-emerald-500/20 p-2.5 rounded-xl text-emerald-600 dark:text-emerald-400 text-xs flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider">Paid On</span>
                 <span className="font-extrabold">{selectedBill.paidDate}</span>
               </div>

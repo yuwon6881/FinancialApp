@@ -38,7 +38,7 @@ export function CustomSelect<T extends string | number>({
   className = '',
   align = 'left',
   direction = 'down',
-  ariaLabel = 'Select an option',
+  ariaLabel,
   id,
   disabled = false,
   invalid = false,
@@ -61,6 +61,11 @@ export function CustomSelect<T extends string | number>({
     'aria-invalid': invalid || undefined,
     'aria-required': required || undefined,
   })
+  // An explicit ariaLabel is a deliberate per-instance name and outranks the inherited FormField
+  // label; without one the field falls back to that label, and only then to the generic default.
+  const hasExplicitLabel = ariaLabel !== undefined
+  const inheritedLabelledBy = hasExplicitLabel ? undefined : accessibleProps['aria-labelledby']
+  const resolvedAriaLabel = ariaLabel ?? (inheritedLabelledBy ? undefined : 'Select an option')
   const isInvalid = accessibleProps['aria-invalid'] === true
     || accessibleProps['aria-invalid'] === 'true'
 
@@ -182,8 +187,8 @@ export function CustomSelect<T extends string | number>({
         onBlur={onBlur}
         disabled={disabled}
         role="combobox"
-        aria-label={ariaLabel}
-        aria-labelledby={accessibleProps['aria-labelledby']}
+        aria-label={resolvedAriaLabel}
+        aria-labelledby={inheritedLabelledBy}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={listboxId}

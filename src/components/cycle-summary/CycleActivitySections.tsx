@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Receipt } from 'lucide-react'
+import { FastForward, Landmark, Receipt } from 'lucide-react'
 import { RewardIcon } from '../semanticIcons'
 import type { buildCycleSummary } from '../../lib/cycleSummary'
 
@@ -14,32 +14,88 @@ export function CycleActivitySections({
 }) {
   return (
     <>
+      {summary.loanActivity.length > 0 && (
+        <Section title="Loan progress">
+          <div className="space-y-3 rounded-xl border border-border/50 bg-muted/20 p-3.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Landmark className="size-3.5 shrink-0 text-blue-500" aria-hidden />
+                  <span className="text-xs font-bold text-foreground">Paid toward loans</span>
+                </div>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                  {summary.loanPaymentCount} ledger {summary.loanPaymentCount === 1 ? 'payment' : 'payments'} across {summary.loanActivity.length} {summary.loanActivity.length === 1 ? 'loan' : 'loans'}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <span className="block text-xs font-extrabold text-foreground">{formatSensitive(summary.loanPaymentTotal)}</span>
+                <span className="block text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Total paid</span>
+              </div>
+            </div>
+
+            {(summary.loanPaidAheadCount > 0 || summary.loansPaidOffCount > 0) && (
+              <div className="flex flex-wrap gap-1.5 border-t border-border/40 pt-2">
+                {summary.loanPaidAheadCount > 0 && (
+                  <StatusPill tone="blue">
+                    <FastForward className="size-3" aria-hidden />
+                    {summary.loanPaidAheadCount} paid ahead ({formatSensitive(summary.loanPaidAheadTotal)})
+                  </StatusPill>
+                )}
+                {summary.loansPaidOffCount > 0 && (
+                  <StatusPill tone="emerald">{summary.loansPaidOffCount} paid off</StatusPill>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              {summary.loanActivity.map(loan => (
+                <div key={loan.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-background/50 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-[11px] font-bold text-foreground">{loan.name}</p>
+                    <p className="mt-0.5 text-[9px] text-muted-foreground">
+                      {loan.paymentCount} {loan.paymentCount === 1 ? 'payment' : 'payments'}
+                      {loan.paidAheadCount > 0 ? ` · ${loan.paidAheadCount} ahead of schedule` : ''}
+                      {loan.paidOffThisCycle ? ' · Paid off' : ''}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-[11px] font-bold text-foreground">{formatSensitive(loan.total)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Section>
+      )}
+
       {summary.billsCount > 0 && (
         <Section title="Bills">
-          <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5 space-y-3">
+          <div className="space-y-3 rounded-xl border border-border/50 bg-muted/20 p-3.5">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <Receipt className="size-3.5 shrink-0 text-amber-500" />
                   <span className="text-xs font-bold text-foreground">
-                    {summary.pendingCount === 0 ? 'All bills settled' : `${summary.paidBillsCount} of ${summary.billsCount} paid`}
+                    {summary.outstandingCount === 0
+                      ? 'No bills left open'
+                      : `${summary.outstandingCount} ${summary.outstandingCount === 1 ? 'bill' : 'bills'} still open`}
                   </span>
                 </div>
-                <p className="mt-0.5 text-[10px] text-muted-foreground truncate">
-                  {summary.pendingCount === 0
-                    ? `Completed ${summary.paidBillsCount} subscription bill${summary.paidBillsCount === 1 ? '' : 's'}`
-                    : `${summary.pendingCount} bill${summary.pendingCount === 1 ? '' : 's'} pending (${formatSensitive(summary.pendingTotal)})`}
+                <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
+                  {summary.outstandingCount === 0
+                    ? `${summary.clearedBillsCount} cleared${summary.discardedCount > 0 ? ` · ${summary.discardedCount} skipped` : ''}`
+                    : `${formatSensitive(summary.outstandingTotal)} left to pay across open bills`}
                 </p>
               </div>
-              <div className="text-right shrink-0">
-                <span className="text-xs font-extrabold text-foreground block">{formatSensitive(summary.paidTotal)}</span>
-                <span className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground block">Total paid</span>
+              <div className="shrink-0 text-right">
+                <span className="block text-xs font-extrabold text-foreground">{formatSensitive(summary.paidTotal)}</span>
+                <span className="block text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Recorded paid</span>
               </div>
             </div>
-            <div className="pt-2 border-t border-border/40 flex flex-wrap items-center justify-between gap-2 text-[11px]">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <StatusPill tone="emerald">{summary.paidBillsCount} Paid ({formatSensitive(summary.paidTotal)})</StatusPill>
-                {summary.pendingCount > 0 && <StatusPill tone="amber">{summary.pendingCount} Pending ({formatSensitive(summary.pendingTotal)})</StatusPill>}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-2 text-[11px]">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {summary.paidBillsCount > 0 && <StatusPill tone="emerald">{summary.paidBillsCount} Paid</StatusPill>}
+                {summary.partPaidCount > 0 && <StatusPill tone="blue">{summary.partPaidCount} Part paid</StatusPill>}
+                {summary.outstandingCount - summary.partPaidCount > 0 && <StatusPill tone="amber">{summary.outstandingCount - summary.partPaidCount} Pending</StatusPill>}
+                {summary.paidOffBillsCount > 0 && <StatusPill tone="emerald">{summary.paidOffBillsCount} Paid off</StatusPill>}
                 {summary.discardedCount > 0 && <StatusPill tone="muted">{summary.discardedCount} Skipped</StatusPill>}
               </div>
             </div>
@@ -87,11 +143,21 @@ export function Section({ title, icon, children }: { title: string; icon?: React
   return <section><h3 className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{icon}{title}</h3>{children}</section>
 }
 
-function StatusPill({ tone, children }: { tone: 'emerald' | 'amber' | 'muted'; children: ReactNode }) {
+function StatusPill({ tone, children }: { tone: 'emerald' | 'amber' | 'blue' | 'muted'; children: ReactNode }) {
   const classes = tone === 'emerald'
     ? 'bg-emerald-500/10 text-emerald-500'
-    : tone === 'amber' ? 'bg-amber-500/10 text-amber-500' : 'bg-muted text-muted-foreground'
-  const dot = tone === 'emerald' ? 'bg-emerald-500' : tone === 'amber' ? 'bg-amber-500' : 'bg-muted-foreground'
+    : tone === 'amber'
+      ? 'bg-amber-500/10 text-amber-500'
+      : tone === 'blue'
+        ? 'bg-blue-500/10 text-blue-500'
+        : 'bg-muted text-muted-foreground'
+  const dot = tone === 'emerald'
+    ? 'bg-emerald-500'
+    : tone === 'amber'
+      ? 'bg-amber-500'
+      : tone === 'blue'
+        ? 'bg-blue-500'
+        : 'bg-muted-foreground'
   return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold text-[10px] ${classes}`}><span className={`w-1.5 h-1.5 rounded-full ${dot}`} />{children}</span>
 }
 

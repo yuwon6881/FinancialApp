@@ -9,6 +9,7 @@ import { BottomSheet } from '../ui/BottomSheet'
 import { DatePicker } from '../ui/DatePicker'
 import { Button } from '../ui/Button'
 import { FormField } from '../ui/FormField'
+import { ModalActions } from '../ui/ModalActions'
 import { ReceiptSplitItemRow } from './ReceiptSplitItemRow'
 import type { TransactionPrefillDraft } from './TransactionFormSheet'
 
@@ -170,8 +171,8 @@ export function ReceiptSplitSheet({
       title="Split Receipt"
       maxWidthClassName="max-w-3xl"
       footer={receipt ? (
-        <div className="flex gap-3">
-          <Button variant="outline" type="button" onClick={closeAndClear} className="flex-1 rounded-xl py-2.5">
+        <ModalActions>
+          <Button variant="outline" type="button" onClick={closeAndClear} className="rounded-xl py-2.5">
             Cancel
           </Button>
           <Button
@@ -179,11 +180,11 @@ export function ReceiptSplitSheet({
             type="button"
             disabled={!canUse}
             onClick={useResult}
-            className="flex-1 rounded-xl py-2.5"
+            className="rounded-xl py-2.5 shadow-md"
           >
             Use This Amount
           </Button>
-        </div>
+        </ModalActions>
       ) : undefined}
     >
       {receipt && calculation && (

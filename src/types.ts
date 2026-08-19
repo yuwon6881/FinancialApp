@@ -399,11 +399,34 @@ export interface Loan {
   scheduleDueDay?: number | null
   scheduleStartDate?: string | null
   scheduleStatus?: LoanScheduleStatus
+  /** Present only while a full settlement stands; it is the handle needed to undo that payoff. */
+  settlementActionId?: string
   snapshot: LoanSnapshot
   isPendingSync?: boolean
   pendingSyncOperationId?: string
   isPendingDelete?: boolean
   isRecalculating?: boolean
+}
+
+export interface LoanRepaymentPreviewCycle {
+  occurrenceDate: string
+  payment: number
+  interest: number
+  principal: number
+  balanceAfter: number
+}
+
+export interface LoanRepaymentPreviewResult {
+  cyclesCount: number
+  totalAmount: number
+  occurrences: LoanRepaymentPreviewCycle[]
+}
+
+export interface LoanRepaymentActionResult {
+  actionId: string
+  kind: 'AdvanceCycles' | 'FullSettlement'
+  loan: Loan
+  transactions: Transaction[]
 }
 
 /** The two notification kinds. Each is opted into separately, and per device. */
@@ -510,13 +533,16 @@ export interface ActiveRecurringPayment {
   recurringPaymentId: string
   name: string
   amount: number | null
+  scheduledAmount?: number | null
+  paidAmount?: number
+  remainingAmount?: number
   category: string
   ledgerCategory: string
   dueDate: string
   dueDay?: number
   isPaid: boolean
   isDiscarded: boolean
-  status: "Pending" | "Paid" | "Discarded"
+  status: "Pending" | "PartiallyPaid" | "Paid" | "Discarded" | "SettledByLoanPayoff"
   paidDate?: string | null
 }
 

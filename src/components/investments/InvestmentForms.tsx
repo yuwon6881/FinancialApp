@@ -29,6 +29,7 @@ import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
 import { FormField } from '../ui/FormField'
 import { Input } from '../ui/Input'
+import { ModalActions } from '../ui/ModalActions'
 import { focusFirstInvalidField } from '../ui/formValidation'
 import { ReceiptScanPicker } from '../ledger/transaction-form/ReceiptScanPicker'
 import { ReceiptScanStatus } from '../ledger/transaction-form/ReceiptScanStatus'
@@ -67,7 +68,6 @@ const Field = ({ label, hint, error, className = '', required, children }: {
     error={error}
     required={required}
     className={className}
-    labelClassName="h-4 truncate leading-4"
     hintClassName="text-[10px] font-normal"
   >
     {children}
@@ -81,10 +81,10 @@ const number = (value: number, digits = 4) =>
   new Intl.NumberFormat(undefined, { maximumFractionDigits: digits }).format(value)
 
 const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean; onCancel: () => void; submitLabel: string; disabled?: boolean }) => (
-  <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
-    <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
-    <Button type="submit" disabled={busy || disabled}>{busy && <Loader2 className="size-4 animate-spin" />} {submitLabel}</Button>
-  </div>
+  <ModalActions className="border-t border-border/40 pt-4">
+    <Button type="button" variant="outline" onClick={onCancel} className="rounded-xl">Cancel</Button>
+    <Button type="submit" disabled={busy || disabled} className="rounded-xl shadow-md">{busy && <Loader2 className="size-4 animate-spin" />} {submitLabel}</Button>
+  </ModalActions>
 )
 
 export const AccountForm = ({ appCurrency, existingAccounts = [], busy, onCancel, onSave }: { appCurrency?: string; existingAccounts?: { name: string }[]; busy: boolean; onCancel: () => void; onSave: (value: api.AccountMutation) => Promise<boolean> }) => {
@@ -385,12 +385,12 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
     <Field label="Account" plain><CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
     <Field label="Investment" plain><CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: `${i.symbol} · ${i.name}` }))} ariaLabel="Investment" className="w-full" /></Field>
     <Field label="Trade date" plain><DatePicker value={tradeDate} onChange={setTradeDate} max={today()} className="w-full" /></Field>
-    {needsUnits && <Field label="Units" error={errors.units} hint={type === 'Sell' ? `${number(heldUnits, 8)} units held` : undefined}><Input type="number" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value); setErrors(prev => ({ ...prev, units: '', form: '' })) }} /></Field>}
-    {trade && <Field label={`Unit price (${selectedInstrument?.currency})`} error={errors.unitPrice}><Input type="number" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value); setErrors(prev => ({ ...prev, unitPrice: '', form: '' })) }} /></Field>}
-    <Field required={type === 'Dividend'} label={`${type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`} error={errors.cashAmount} hint={['Buy', 'FeeTax'].includes(type) && selectedInstrument ? `${money(Math.max(heldCash, 0), selectedInstrument.currency)} cash available` : undefined}><Input type="number" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} /></Field>
+    {needsUnits && <Field label="Units" error={errors.units} hint={type === 'Sell' ? `${number(heldUnits, 8)} units held` : undefined}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value); setErrors(prev => ({ ...prev, units: '', form: '' })) }} /></Field>}
+    {trade && <Field label={`Unit price (${selectedInstrument?.currency})`} error={errors.unitPrice}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value); setErrors(prev => ({ ...prev, unitPrice: '', form: '' })) }} /></Field>}
+    <Field required={type === 'Dividend'} label={`${type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`} error={errors.cashAmount} hint={['Buy', 'FeeTax'].includes(type) && selectedInstrument ? `${money(Math.max(heldCash, 0), selectedInstrument.currency)} cash available` : undefined}><Input type="number" inputMode="decimal" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} /></Field>
     {type !== 'FeeTax' && <>
-      <Field label={`Fees${feesLabelSuffix}`}><Input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} /></Field>
-      <Field label={`Taxes${feesLabelSuffix}`}><Input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} /></Field>
+      <Field label={`Fees${feesLabelSuffix}`}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} /></Field>
+      <Field label={`Taxes${feesLabelSuffix}`}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} /></Field>
     </>}
     </div>
     {trade && <p className="text-[10px] text-muted-foreground">Fill any two of units, unit price, and gross amount — the third is worked out for you.</p>}
@@ -577,14 +577,14 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
       <Field label="Cash movement type" plain><CustomSelect value={type} onChange={v => setType(v as 'Deposit' | 'Withdrawal' | 'Conversion')} options={[{ value: 'Deposit', label: 'Deposit (cash in)' }, { value: 'Withdrawal', label: 'Withdrawal (cash out)' }, { value: 'Conversion', label: 'Convert currency' }]} ariaLabel="Cash movement type" className="w-full" /></Field>
       {type === 'Conversion' ? (
         <>
-          <Field label="From amount" required error={errors.amount} hint={`${money(Math.max(heldCash, 0), currency.toUpperCase())} available`}><Input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
+          <Field label="From amount" required error={errors.amount} hint={`${money(Math.max(heldCash, 0), currency.toUpperCase())} available`}><Input type="number" inputMode="decimal" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
           <Field label="From currency" required error={errors.currency}><CurrencySelect value={currency} onChange={value => { setCurrency(value); setErrors(previous => ({ ...previous, currency: '' })) }} className="w-full" ariaLabel="From currency" /></Field>
-          <Field label="To amount" required error={errors.toAmount}><Input type="number" min="0.0000000001" step="0.0000000001" value={toAmount} onChange={event => { setToAmount(event.target.value); setErrors(prev => ({ ...prev, toAmount: '' })) }} /></Field>
+          <Field label="To amount" required error={errors.toAmount}><Input type="number" inputMode="decimal" min="0.0000000001" step="0.0000000001" value={toAmount} onChange={event => { setToAmount(event.target.value); setErrors(prev => ({ ...prev, toAmount: '' })) }} /></Field>
           <Field label="To currency" required error={errors.toCurrency} plain><CurrencySelect value={toCurrency} onChange={value => { setToCurrency(value); setErrors(prev => ({ ...prev, toCurrency: '' })) }} className="w-full" ariaLabel="To currency" /></Field>
         </>
       ) : (
         <>
-          <Field label={`Amount (${currency})`} required error={errors.amount} hint={type === 'Withdrawal' ? `${money(Math.max(heldCash, 0), currency.toUpperCase())} available` : undefined}><Input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
+          <Field label={`Amount (${currency})`} required error={errors.amount} hint={type === 'Withdrawal' ? `${money(Math.max(heldCash, 0), currency.toUpperCase())} available` : undefined}><Input type="number" inputMode="decimal" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
           <Field label="Currency" required error={errors.currency}><CurrencySelect value={currency} onChange={value => { setCurrency(value); setErrors(previous => ({ ...previous, currency: '' })) }} className="w-full" ariaLabel="Cash currency" /></Field>
         </>
       )}

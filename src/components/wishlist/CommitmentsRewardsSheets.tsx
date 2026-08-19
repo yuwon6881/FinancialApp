@@ -6,6 +6,7 @@ import { DatePicker } from '../ui/DatePicker'
 import { FormField } from '../ui/FormField'
 import { CustomSelect } from '../ui/CustomSelect'
 import { Button } from '../ui/Button'
+import { ModalActions } from '../ui/ModalActions'
 import { SavingsGoalContributeSheet, type ContributeMode } from './SavingsGoalContributeSheet'
 import { SavingsGoalForm } from './SavingsGoalForm'
 import { WishlistItemForm } from './WishlistItemForm'
@@ -80,10 +81,10 @@ export function CommitmentsRewardsSheets(props: Props) {
                 Buying this leaves your commitments <span className="font-bold text-amber-500">{props.formatSensitive(Math.max(0, props.purchasingItem.price - props.freeAfterGoalPace))}</span> short this cycle.
               </p>
             )}
-            <div className="flex gap-2 pt-4">
-              <Button variant="ghost" className="flex-1" onClick={() => props.setPurchasingItem(null)}>Cancel</Button>
-              <Button variant="primary" className="flex-1 font-bold" onClick={props.onConfirmPurchase} disabled={props.hideSensitive}>Claim &amp; Log to Ledger</Button>
-            </div>
+            <ModalActions className="pt-4">
+              <Button variant="outline" className="rounded-xl" onClick={() => props.setPurchasingItem(null)}>Cancel</Button>
+              <Button variant="primary" className="rounded-xl font-bold shadow-md" onClick={props.onConfirmPurchase} disabled={props.hideSensitive}>Claim &amp; Log to Ledger</Button>
+            </ModalActions>
           </div>
         </BottomSheet>
       )}
@@ -108,12 +109,12 @@ export function CommitmentsRewardsSheets(props: Props) {
                 className="w-full"
               />
             </FormField>
-            <div className="flex gap-2 pt-2">
-              <Button variant="ghost" className="flex-1" onClick={() => props.setCompletingGoal(null)}>Cancel</Button>
-              <Button variant="primary" className="flex-1 font-bold" onClick={props.onConfirmCompletion} disabled={props.hideSensitive || !props.completionAccountId}>
+            <ModalActions className="pt-2">
+              <Button variant="outline" className="rounded-xl" onClick={() => props.setCompletingGoal(null)}>Cancel</Button>
+              <Button variant="primary" className="rounded-xl font-bold shadow-md" onClick={props.onConfirmCompletion} disabled={props.hideSensitive || !props.completionAccountId}>
                 Complete &amp; Log to Ledger
               </Button>
-            </div>
+            </ModalActions>
           </div>
         </BottomSheet>
       )}

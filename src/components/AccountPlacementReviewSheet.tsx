@@ -6,6 +6,8 @@ import type { AccountPlacementSelections } from '../lib/accountPlacementMigratio
 import { BottomSheet } from './ui/BottomSheet'
 import { Button } from './ui/Button'
 import { CustomSelect } from './ui/CustomSelect'
+import { FormField } from './ui/FormField'
+import { ModalActions } from './ui/ModalActions'
 
 const BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
 type Bucket = typeof BUCKETS[number]
@@ -116,9 +118,11 @@ export function AccountPlacementReviewSheet({
       title="Review offline account placement"
       description="Choose the live account for each affected bucket. The original operation, date, identity and attachments stay unchanged."
       footer={(
-        <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto sm:ml-auto">
-          Close
-        </Button>
+        <ModalActions>
+          <Button type="button" variant="outline" onClick={onClose} className="rounded-xl">
+            Close
+          </Button>
+        </ModalActions>
       )}
     >
       {operations.length === 0 ? (
@@ -153,8 +157,7 @@ export function AccountPlacementReviewSheet({
                         .filter(account => !field.bucket || account.bucket === field.bucket)
                         .map(account => ({ value: account.id, label: `${account.name} (${account.bucket})` }))
                       return (
-                        <label key={field.key} className="space-y-1.5 text-xs font-semibold text-foreground">
-                          <span>{field.label}</span>
+                        <FormField key={field.key} label={field.label} required>
                           <CustomSelect
                             value={operationSelections[field.key] ?? ''}
                             onChange={value => setSelections(current => ({
@@ -166,7 +169,7 @@ export function AccountPlacementReviewSheet({
                             required
                             className="w-full"
                           />
-                        </label>
+                        </FormField>
                       )
                     })}
                   </div>

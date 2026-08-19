@@ -15,6 +15,7 @@ import { Checkbox } from '../../ui/Checkbox'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { FormField } from '../../ui/FormField'
 import { Input } from '../../ui/Input'
+import { ModalActions } from '../../ui/ModalActions'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
 import type { LedgerAccount, LedgerAccountKind } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
@@ -63,6 +64,7 @@ export function AccountFormSheet({
   const [balanceAmount, setBalanceAmount] = useState('')
   const [isArchived, setIsArchived] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [openingError, setOpeningError] = useState<string | null>(null)
   const [balanceError, setBalanceError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -77,6 +79,7 @@ export function AccountFormSheet({
     setBalanceAmount(account ? account.remaining.toFixed(2) : '')
     setIsArchived(account?.isArchived ?? false)
     setError(null)
+    setOpeningError(null)
     setBalanceError(null)
   }, [account, defaultBucket, defaultKind, isOpen])
 
@@ -102,7 +105,7 @@ export function AccountFormSheet({
 
     const parsedOpening = openingAmount.trim() ? Number(openingAmount) : 0
     if (!isEditing && !Number.isFinite(parsedOpening)) {
-      setError('Enter a valid starting amount.')
+      setOpeningError('Enter a valid starting amount.')
       return
     }
 
@@ -112,6 +115,7 @@ export function AccountFormSheet({
     }
 
     setError(null)
+    setOpeningError(null)
     setBalanceError(null)
     setIsSaving(true)
     try {
@@ -140,12 +144,12 @@ export function AccountFormSheet({
       onClose={onClose}
       maxWidthClassName="max-w-xl"
       footer={(
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" type="button" onClick={onClose} disabled={isSaving}>Cancel</Button>
-          <Button variant="primary" type="submit" form="ledger-account-form" disabled={isSaving}>
+        <ModalActions>
+          <Button variant="outline" type="button" onClick={onClose} disabled={isSaving} className="rounded-xl">Cancel</Button>
+          <Button variant="primary" type="submit" form="ledger-account-form" disabled={isSaving} className="rounded-xl shadow-md">
             {isSaving ? 'Saving…' : isEditing ? 'Save changes' : 'Add account'}
           </Button>
-        </div>
+        </ModalActions>
       )}
     >
       <form id="ledger-account-form" noValidate onSubmit={submit} className="space-y-4">
@@ -218,6 +222,7 @@ export function AccountFormSheet({
           {!isEditing ? (
             <FormField
               label={`Balance today (${currency})`}
+              error={openingError ?? undefined}
               hint="Optional. If this account holds funds today, balances are confirmed against the bucket total."
             >
               <SmartAmountInput
@@ -306,7 +311,6 @@ export function AccountFormSheet({
                   checked={isArchived}
                   onChange={event => setIsArchived(event.target.checked)}
                   disabled={isBalanceDirty}
-                  className="size-4.5"
                   aria-label="Mark account as closed"
                 />
               </label>

@@ -38,19 +38,38 @@ interface DocumentListProps {
   onNavigateToTransaction?: (transactionId: string) => Promise<void> | void
   /** Drops every selection, so leaving selection mode leaves nothing selected behind it. */
   onClearSelection?: () => void
+  isFiltered?: boolean
 }
 
-export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds, toggleSelected, onToggleSelectAll, allVisibleSelected, someVisibleSelected, isDownloadingSelected, onDownloadSelected, onDeleteSelected, isDeletingSelected = false, currency, syncingDocumentIds = new Set<number>(), deletingDocumentIds = new Set<number>(), updateDocument, reliefCategoriesByTaxYear, pendingReliefCategories, onReliefCategoryChange, onNavigateToTransaction, onClearSelection }: DocumentListProps) {
+export function DocumentList({
+  documents,
+  isLoading,
+  setDocToDelete,
+  selectedIds,
+  toggleSelected,
+  onToggleSelectAll,
+  allVisibleSelected,
+  someVisibleSelected,
+  isDownloadingSelected,
+  onDownloadSelected,
+  onDeleteSelected,
+  isDeletingSelected = false,
+  currency,
+  syncingDocumentIds = new Set<number>(),
+  deletingDocumentIds = new Set<number>(),
+  updateDocument,
+  reliefCategoriesByTaxYear,
+  pendingReliefCategories,
+  onReliefCategoryChange,
+  onNavigateToTransaction,
+  onClearSelection,
+  isFiltered = false,
+}: DocumentListProps) {
   const { showToast } = useAppUi()
   const { hideSensitive } = useAppPrefs()
   const [previewDocument, setPreviewDocument] = useState<VaultDocument | null>(null)
   const [openingTransactionId, setOpeningTransactionId] = useState<string | null>(null)
   const hasSelection = selectedIds.size > 0
-
-  // Bulk download and delete are the rare visit; reading the list is the common one. The toolbar
-  // used to stand permanently at min-h-14 with an empty action slot reserved beside it, and every
-  // row carried a checkbox, for a mode most visits never enter. An existing selection forces the
-  // mode on so a selection can never be live with no way to see or clear it.
   const [selectionRequested, setSelectionRequested] = useState(false)
   const isSelecting = selectionRequested || hasSelection
   const leaveSelectionMode = () => {
@@ -67,6 +86,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
       await onNavigateToTransaction(transactionId)
     } finally {
       setOpeningTransactionId(current => current === transactionId ? null : current)
+
     }
   }
   const onOpenLinkedTransaction = onNavigateToTransaction
@@ -129,145 +149,145 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
         </p>
       )}
       <div data-testid="document-results">
-      <div className="space-y-3 lg:hidden">
-        {isLoading && documents.length === 0 ? (
-          Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="rounded-xl border border-border/50 bg-muted/20 p-3">
-              <div className="flex items-center gap-2.5">
-                <Skeleton className="size-9 shrink-0 rounded-lg" />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              </div>
-              <Skeleton className="mt-3 h-12 w-full" />
-            </div>
-          ))
-        ) : documents.length === 0 ? (
-          <div className="rounded-xl border border-border/40">
-            <EmptyState />
-          </div>
-        ) : documents.map(document => (
-          <DocumentCard
-            key={document.id}
-            document={document}
-            isSelected={selectedIds.has(document.id)}
-            isSyncing={syncingDocumentIds.has(document.id)}
-            isDeleting={deletingDocumentIds.has(document.id)}
-            isSelecting={isSelecting}
-            reliefCategories={reliefCategoriesByTaxYear[document.taxYear] ?? []}
-            pendingReliefCategory={pendingReliefCategories.get(document.id)}
-            openingTransactionId={openingTransactionId}
-            currency={currency}
-            toggleSelected={toggleSelected}
-            setDocToDelete={setDocToDelete}
-            downloadFailed={downloadFailed}
-            onPreview={setPreviewDocument}
-            onReliefCategoryChange={onReliefCategoryChange}
-            onOpenLinkedTransaction={onOpenLinkedTransaction}
-            updateDocument={updateDocument}
-          />
-        ))}
-      </div>
-
-      <div className="hidden w-full lg:block">
-        <DataTable>
-        <DataTableHeader className="text-[10px] uppercase tracking-wider">
-            {isSelecting && <DataTableHeaderCell className="w-8 font-bold"><span className="sr-only">Select</span></DataTableHeaderCell>}
-            <DataTableHeaderCell className="font-bold">Document</DataTableHeaderCell>
-            <DataTableHeaderCell className="font-bold">Tax relief</DataTableHeaderCell>
-            <DataTableHeaderCell className="font-bold">Tax Year</DataTableHeaderCell>
-            <DataTableHeaderCell className="font-bold">Size</DataTableHeaderCell>
-            <DataTableHeaderCell className="font-bold">Amount</DataTableHeaderCell>
-            <DataTableHeaderCell className="font-bold">Uploaded</DataTableHeaderCell>
-            <DataTableHeaderCell className="text-right font-bold">Actions</DataTableHeaderCell>
-        </DataTableHeader>
-        <DataTableBody>
+        <div className="space-y-3 lg:hidden">
           {isLoading && documents.length === 0 ? (
-            Array.from({ length: 5 }).map((_, index) => (
-              <tr key={index}>
-                {isSelecting && <td className="px-3 py-3"><Skeleton className="size-4" /></td>}
-                <td className="px-3 py-3"><Skeleton className="h-4 w-56" /></td>
-                <td className="px-3 py-3"><Skeleton className="h-4 w-12" /></td>
-                <td className="px-3 py-3"><Skeleton className="h-4 w-14" /></td>
-                <td className="px-3 py-3"><Skeleton className="h-4 w-20" /></td>
-                <td className="px-3 py-3"><Skeleton className="h-4 w-24" /></td>
-                <td className="px-3 py-3"><Skeleton className="ml-auto h-7 w-16" /></td>
-                <td className="px-3 py-3"><Skeleton className="ml-auto h-7 w-16" /></td>
-              </tr>
+            Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                <div className="flex items-center gap-2.5">
+                  <Skeleton className="size-9 shrink-0 rounded-lg" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                </div>
+                <Skeleton className="mt-3 h-12 w-full" />
+              </div>
             ))
           ) : documents.length === 0 ? (
-            <tr><td colSpan={isSelecting ? 8 : 7}><EmptyState /></td></tr>
-          ) : documents.map(document => {
-            const documentReliefCategories = reliefCategoriesByTaxYear[document.taxYear] ?? []
-            const isDeleting = deletingDocumentIds.has(document.id)
-            const isSyncing = syncingDocumentIds.has(document.id)
-            const isBusy = isDeleting || isSyncing
-            const pendingCategory = pendingReliefCategories.get(document.id)
-            const reliefId = pendingCategory ?? document.reliefCategory ?? ''
-            const isReliefDraftChanged = pendingCategory !== undefined && pendingCategory !== (document.reliefCategory ?? '')
-            return (
-              <tr key={document.id} className="transition-colors hover:bg-muted/40" aria-busy={isBusy}>
-                {isSelecting && <td className="px-3 py-2.5"><Checkbox disabled={hideSensitive || isBusy} checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 accent-primary" /></td>}
-                <td className="px-3 py-2.5">
-                  <div className="flex items-center gap-2.5">
-                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">
-                      <DocumentTypeIcon contentType={document.contentType} className="size-4" />
-                    </span>
-                    <div className="min-w-0 max-w-[22rem]">
-                      <div className="flex items-center gap-1.5">
-                        <p className="truncate font-bold text-foreground" title={document.originalFileName}>
-                          {document.originalFileName}
-                        </p>
-                        <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} entityLabel="document" />
-                        <LinkedTransactionButton
-                          document={document}
-                          openingTransactionId={openingTransactionId}
-                          onOpen={onOpenLinkedTransaction}
-                        />
+            <div className="rounded-xl border border-border/40">
+              <EmptyState isFiltered={isFiltered} />
+            </div>
+          ) : documents.map(document => (
+            <DocumentCard
+              key={document.id}
+              document={document}
+              isSelected={selectedIds.has(document.id)}
+              isSyncing={syncingDocumentIds.has(document.id)}
+              isDeleting={deletingDocumentIds.has(document.id)}
+              isSelecting={isSelecting}
+              reliefCategories={reliefCategoriesByTaxYear[document.taxYear] ?? []}
+              pendingReliefCategory={pendingReliefCategories.get(document.id)}
+              openingTransactionId={openingTransactionId}
+              currency={currency}
+              toggleSelected={toggleSelected}
+              setDocToDelete={setDocToDelete}
+              downloadFailed={downloadFailed}
+              onPreview={setPreviewDocument}
+              onReliefCategoryChange={onReliefCategoryChange}
+              onOpenLinkedTransaction={onOpenLinkedTransaction}
+              updateDocument={updateDocument}
+            />
+          ))}
+        </div>
+
+        <div className="hidden w-full lg:block">
+          <DataTable>
+            <DataTableHeader className="text-[10px] uppercase tracking-wider">
+              {isSelecting && <DataTableHeaderCell className="w-8 font-bold"><span className="sr-only">Select</span></DataTableHeaderCell>}
+              <DataTableHeaderCell className="font-bold">Document</DataTableHeaderCell>
+              <DataTableHeaderCell className="font-bold">Tax relief</DataTableHeaderCell>
+              <DataTableHeaderCell className="font-bold">Tax Year</DataTableHeaderCell>
+              <DataTableHeaderCell className="font-bold">Size</DataTableHeaderCell>
+              <DataTableHeaderCell className="font-bold">Amount</DataTableHeaderCell>
+              <DataTableHeaderCell className="font-bold">Uploaded</DataTableHeaderCell>
+              <DataTableHeaderCell className="text-right font-bold">Actions</DataTableHeaderCell>
+            </DataTableHeader>
+            <DataTableBody>
+              {isLoading && documents.length === 0 ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <tr key={index}>
+                    {isSelecting && <td className="px-3 py-3"><Skeleton className="size-4" /></td>}
+                    <td className="px-3 py-3"><Skeleton className="h-4 w-56" /></td>
+                    <td className="px-3 py-3"><Skeleton className="h-4 w-12" /></td>
+                    <td className="px-3 py-3"><Skeleton className="h-4 w-14" /></td>
+                    <td className="px-3 py-3"><Skeleton className="h-4 w-20" /></td>
+                    <td className="px-3 py-3"><Skeleton className="h-4 w-24" /></td>
+                    <td className="px-3 py-3"><Skeleton className="ml-auto h-7 w-16" /></td>
+                    <td className="px-3 py-3"><Skeleton className="ml-auto h-7 w-16" /></td>
+                  </tr>
+                ))
+              ) : documents.length === 0 ? (
+                <tr><td colSpan={isSelecting ? 8 : 7}><EmptyState isFiltered={isFiltered} /></td></tr>
+              ) : documents.map(document => {
+                const documentReliefCategories = reliefCategoriesByTaxYear[document.taxYear] ?? []
+                const isDeleting = deletingDocumentIds.has(document.id)
+                const isSyncing = syncingDocumentIds.has(document.id)
+                const isBusy = isDeleting || isSyncing
+                const pendingCategory = pendingReliefCategories.get(document.id)
+                const reliefId = pendingCategory ?? document.reliefCategory ?? ''
+                const isReliefDraftChanged = pendingCategory !== undefined && pendingCategory !== (document.reliefCategory ?? '')
+                return (
+                  <tr key={document.id} className="transition-colors hover:bg-muted/40" aria-busy={isBusy}>
+                    {isSelecting && <td className="px-3 py-2.5"><Checkbox disabled={hideSensitive || isBusy} checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 accent-primary" /></td>}
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">
+                          <DocumentTypeIcon contentType={document.contentType} className="size-4" />
+                        </span>
+                        <div className="min-w-0 max-w-[22rem]">
+                          <div className="flex items-center gap-1.5">
+                            <p className="truncate font-bold text-foreground" title={document.originalFileName}>
+                              {document.originalFileName}
+                            </p>
+                            <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} entityLabel="document" />
+                            <LinkedTransactionButton
+                              document={document}
+                              openingTransactionId={openingTransactionId}
+                              onOpen={onOpenLinkedTransaction}
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-3 py-2.5">
-                  <div className="flex items-center gap-1.5">
-                    <CustomSelect
-                      disabled={hideSensitive || isBusy}
-                      value={reliefId}
-                      onChange={value => onReliefCategoryChange(document.id, String(value))}
-                      options={[
-                        ...(reliefId ? [] : [{ value: '', label: 'Choose tax relief category', disabled: true }]),
-                        ...documentReliefCategories.map(category => ({ value: category.id, label: category.name })),
-                      ]}
-                      ariaLabel={`Tax relief category for ${document.originalFileName}`}
-                      className={`w-40 max-w-40 ${isReliefDraftChanged ? 'rounded-lg ring-2 ring-blue-500/50' : ''}`}
-                    />
-                    {isReliefDraftChanged && <span className="inline-block size-1.5 shrink-0 rounded-full bg-blue-500" title="Unsaved change" />}
-                  </div>
-                </td>
-                <td className="px-3 py-2.5 font-bold text-foreground tabular-nums">{document.taxYear}</td>
-                <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{formatBytes(document.sizeBytes)}</td>
-                 <td className="px-3 py-2.5"><AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />{document.amountStatus === 'NeedsReview' && <p className="mt-0.5 text-[10px] text-amber-600">AI · review</p>}</td>
-                <td className="px-3 py-2.5 text-muted-foreground">
-                  <div className="whitespace-nowrap">{formatDate(document.uploadedAt)}</div>
-                  <div className="whitespace-nowrap text-[10px]">Keep until {formatDate(document.retentionUntil)}</div>
-                </td>
-                <td className="px-3 py-2.5">
-                  <DocumentActions
-                    document={document}
-                    setDocToDelete={setDocToDelete}
-                    downloadFailed={downloadFailed}
-                    onPreview={setPreviewDocument}
-                    disabled={isBusy}
-                  />
-                </td>
-              </tr>
-            )
-          })}
-        </DataTableBody>
-      </DataTable>
-      </div>
-      <DocumentPreviewSheet document={previewDocument} onClose={() => setPreviewDocument(null)} />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-1.5">
+                        <CustomSelect
+                          disabled={hideSensitive || isBusy}
+                          value={reliefId}
+                          onChange={value => onReliefCategoryChange(document.id, String(value))}
+                          options={[
+                            ...(reliefId ? [] : [{ value: '', label: 'Choose tax relief category', disabled: true }]),
+                            ...documentReliefCategories.map(category => ({ value: category.id, label: category.name })),
+                          ]}
+                          ariaLabel={`Tax relief category for ${document.originalFileName}`}
+                          className={`w-40 max-w-40 ${isReliefDraftChanged ? 'rounded-lg ring-2 ring-blue-500/50' : ''}`}
+                        />
+                        {isReliefDraftChanged && <span className="inline-block size-1.5 shrink-0 rounded-full bg-blue-500" title="Unsaved change" />}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 font-bold text-foreground tabular-nums">{document.taxYear}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{formatBytes(document.sizeBytes)}</td>
+                    <td className="px-3 py-2.5"><AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />{document.amountStatus === 'NeedsReview' && <p className="mt-0.5 text-[10px] text-amber-600">AI · review</p>}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">
+                      <div className="whitespace-nowrap">{formatDate(document.uploadedAt)}</div>
+                      <div className="whitespace-nowrap text-[10px]">Keep until {formatDate(document.retentionUntil)}</div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <DocumentActions
+                        document={document}
+                        setDocToDelete={setDocToDelete}
+                        downloadFailed={downloadFailed}
+                        onPreview={setPreviewDocument}
+                        disabled={isBusy}
+                      />
+                    </td>
+                  </tr>
+                )
+              })}
+            </DataTableBody>
+          </DataTable>
+        </div>
+        <DocumentPreviewSheet document={previewDocument} onClose={() => setPreviewDocument(null)} />
       </div>
     </>
   )

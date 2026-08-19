@@ -166,6 +166,7 @@ export function AppOverlays({
           loadError={cycleSummary.loadError}
           wishlist={financial.allWishlist}
           transactions={cycleSummary.transactions}
+          loans={financial.allLoans}
           monthIndex={cycleSummary.target.monthIndex}
           year={cycleSummary.target.year}
           cycleDay={cycleSummary.cycleDay}

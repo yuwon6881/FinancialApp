@@ -106,7 +106,7 @@ describe('AccountPlacementReviewSheet', () => {
     expect(screen.getByText('Supermarket')).toBeDefined()
     expect(screen.getByText('Essentials account')).toBeDefined()
 
-    const select = screen.getByRole('combobox', { name: 'Essentials account' })
+    const select = screen.getByRole('combobox', { name: /^Essentials account/ })
     fireEvent.click(select)
     fireEvent.click(screen.getByRole('option', { name: 'Main Checking (Essentials)' }))
 
@@ -151,8 +151,8 @@ describe('AccountPlacementReviewSheet', () => {
     expect(screen.getByText('Essentials source account')).toBeDefined()
     expect(screen.getByText('Rewards destination account')).toBeDefined()
 
-    const sourceSelect = screen.getByRole('combobox', { name: 'Essentials source account' })
-    const destSelect = screen.getByRole('combobox', { name: 'Rewards destination account' })
+    const sourceSelect = screen.getByRole('combobox', { name: /^Essentials source account/ })
+    const destSelect = screen.getByRole('combobox', { name: /^Rewards destination account/ })
 
     const requeueBtn = screen.getByRole('button', { name: 'Requeue this change' }) as HTMLButtonElement
     expect(requeueBtn.disabled).toBe(true)

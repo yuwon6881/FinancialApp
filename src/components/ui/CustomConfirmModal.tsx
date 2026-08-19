@@ -33,8 +33,8 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
 }) => {
   const isPrimary = variant === 'primary'
   const Icon = isPrimary ? Info : AlertCircle
-  const colorClass = isPrimary ? 'text-blue-500' : 'text-orange-500'
-  const bgClass = isPrimary ? 'bg-blue-500/10' : 'bg-orange-500/10'
+  const colorClass = isPrimary ? 'text-accent-ink' : 'text-destructive'
+  const bgClass = isPrimary ? 'bg-primary/10' : 'bg-destructive/10'
   return (
     <BottomSheet
       isOpen={isOpen}

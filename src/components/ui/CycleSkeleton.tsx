@@ -336,18 +336,16 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
         {fullPage && <WishlistHeaderSkeleton />}
         <RewardsPoolSkeleton />
         {fullPage && (
-          <>
-            <div className="flex items-center justify-between gap-3 py-1">
-              <div className="flex gap-1.5 rounded-xl bg-muted/40 p-1">
-                <Skeleton className="h-8 w-16 rounded-lg" />
-                <Skeleton className="h-8 w-28 rounded-lg" />
-                <Skeleton className="h-8 w-24 rounded-lg" />
-              </div>
+          <div className="flex items-center justify-between gap-3 py-1">
+            <div className="flex gap-1.5 rounded-xl bg-muted/40 p-1">
+              <Skeleton className="h-8 w-16 rounded-lg" />
+              <Skeleton className="h-8 w-28 rounded-lg" />
+              <Skeleton className="h-8 w-24 rounded-lg" />
             </div>
-            <HorizontalRailSkeleton kind="commitments" />
-            <HorizontalRailSkeleton kind="rewards" />
-          </>
+          </div>
         )}
+        <HorizontalRailSkeleton kind="commitments" />
+        <HorizontalRailSkeleton kind="rewards" />
       </div>
     )
   }

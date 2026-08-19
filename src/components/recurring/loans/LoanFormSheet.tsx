@@ -22,6 +22,7 @@ import { CustomSelect } from '../../ui/CustomSelect'
 import { DatePicker } from '../../ui/DatePicker'
 import { FormField } from '../../ui/FormField'
 import { Input } from '../../ui/Input'
+import { ModalActions } from '../../ui/ModalActions'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
 
 interface LoanFormSheetProps {
@@ -158,10 +159,10 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
       onClose={onClose}
       maxWidthClassName="max-w-xl"
       footer={(
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" type="submit" form="loan-form">{editingLoan ? 'Save changes' : 'Add loan'}</Button>
-        </div>
+        <ModalActions>
+          <Button variant="outline" type="button" onClick={onClose} className="rounded-xl">Cancel</Button>
+          <Button variant="primary" type="submit" form="loan-form" className="rounded-xl shadow-md">{editingLoan ? 'Save changes' : 'Add loan'}</Button>
+        </ModalActions>
       )}
     >
       <form id="loan-form" onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -194,7 +195,9 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
             <div className="flex min-w-0 gap-2">
               <div className="relative min-w-0 flex-1">
                 <Input
+                  id="loan-rate-entry"
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   max={rateBasis === 'Monthly' ? '8.3333' : '100'}
                   step={rateBasis === 'Monthly' ? '0.0001' : '0.01'}
@@ -206,6 +209,7 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
                 <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground/80">%</span>
               </div>
               <CustomSelect
+                id="loan-rate-basis"
                 value={rateBasis}
                 onChange={handleRateBasisChange}
                 options={LOAN_RATE_BASIS_OPTIONS}
@@ -217,7 +221,9 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
           <FormField label="Loan length" required>
             <div className="flex min-w-0 gap-2">
               <Input
+                id="loan-term-length"
                 type="number"
+                inputMode="numeric"
                 min={termUnit === 'Years' ? 1 / 12 : 1}
                 max={termUnit === 'Years' ? (previewFrequency === 'Annually' ? 360 : 30) : (previewFrequency === 'Annually' ? 4320 : 360)}
                 step={termUnit === 'Years' && previewFrequency === 'Monthly' ? 1 / 12 : 1}
@@ -227,6 +233,7 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
                 className="w-full"
               />
               <CustomSelect
+                id="loan-term-unit"
                 value={termUnit}
                 onChange={handleTermUnitChange}
                 options={[{ value: 'Years' as const, label: 'years' }, { value: 'Months' as const, label: 'months' }]}

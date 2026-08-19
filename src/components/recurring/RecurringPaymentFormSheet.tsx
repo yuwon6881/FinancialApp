@@ -180,15 +180,17 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
           />
         </FormField>
 
-        <FormField label="Recurring start date" required error={errors.startDate}>
+        <FormField
+          label="Recurring start date"
+          required
+          error={errors.startDate}
+          hint="Bills recur on this day each month or year."
+        >
           <DatePicker
             value={startDateInput}
             onChange={onStartDateChange}
             className="w-full"
           />
-          <p className="text-[10px] leading-relaxed text-muted-foreground">
-            Bills recur on this day each month or year.
-          </p>
         </FormField>
 
         <FormField label="Ledger category">

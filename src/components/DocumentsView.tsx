@@ -326,6 +326,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               <DocumentList
               documents={documents}
               isLoading={isLoading}
+              isFiltered={taxYear !== undefined || selectedReliefCategories.length > 0}
               setDocToDelete={setDocToDelete}
               selectedIds={selectedIds}
               toggleSelected={id => setSelectedIds(current => {

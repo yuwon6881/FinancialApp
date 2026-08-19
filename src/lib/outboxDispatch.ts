@@ -49,6 +49,7 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     op.payload?.optimisticTransaction && typeof op.payload.optimisticTransaction === 'object' && 'postedAt' in op.payload.optimisticTransaction
       ? String(op.payload.optimisticTransaction.postedAt)
       : undefined,
+    typeof op.payload?.amount === 'number' ? op.payload.amount : undefined,
   ),
 
   'wishlistItem:add': (op) => api.addWishlistItem(op.payload as Partial<WishlistItem>, op.id),
@@ -89,6 +90,30 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'loan:delete': async (op) => {
     const { deleteLoan } = await import('./api/loans')
     return deleteLoan(op.targetId)
+  },
+  'loan:advanceRepayment': async (op) => {
+    const { advanceCyclesRepayment } = await import('./api/loans')
+    return advanceCyclesRepayment(
+      op.targetId,
+      typeof op.payload?.cycles === 'number' ? op.payload.cycles : 1,
+      typeof op.payload?.accountId === 'string' ? op.payload.accountId : undefined,
+      op.id,
+      typeof op.payload?.postedAt === 'string' ? op.payload.postedAt : undefined,
+    )
+  },
+  'loan:fullSettlement': async (op) => {
+    const { fullSettlementRepayment } = await import('./api/loans')
+    return fullSettlementRepayment(
+      op.targetId,
+      typeof op.payload?.amount === 'number' ? op.payload.amount : 0,
+      typeof op.payload?.accountId === 'string' ? op.payload.accountId : undefined,
+      op.id,
+      typeof op.payload?.postedAt === 'string' ? op.payload.postedAt : undefined,
+    )
+  },
+  'loan:undoRepayment': async (op) => {
+    const { undoRepaymentAction } = await import('./api/loans')
+    return undoRepaymentAction(op.targetId)
   },
 
   'ledgerAccount:add': async (op) => {

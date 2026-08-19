@@ -1,4 +1,5 @@
 import { Button } from './ui/Button'
+import { ModalActions } from './ui/ModalActions'
 import type { QueuedOp } from '../lib/outbox'
 import { BottomSheet } from './ui/BottomSheet'
 
@@ -101,22 +102,22 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
         </div>
       }
       footer={
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <ModalActions>
           <Button
             variant="secondary"
             onClick={onDiscardAll}
-            className="w-full sm:w-auto"
+            className="rounded-xl"
           >
             Discard All
           </Button>
           <Button
             variant="primary"
             onClick={onClose}
-            className="w-full sm:w-auto"
+            className="rounded-xl shadow-md"
           >
             Close
           </Button>
-        </div>
+        </ModalActions>
       }
     >
       <div className="text-xs text-muted-foreground">

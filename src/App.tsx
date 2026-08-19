@@ -485,6 +485,13 @@ function App() {
     selectedTransactions: financial.allTransactions,
     onMarkSummarySeen: financial.handleMarkSummarySeen,
   })
+  useEffect(() => {
+    if (!cycleSummary.isOpen || !session.token) return
+    if (financial.loanLoadStatus !== 'idle' && financial.loanLoadStatus !== 'cached') return
+    void financial.loadLoans().catch(error => {
+      console.warn('Could not load loans for the cycle summary', error)
+    })
+  }, [cycleSummary.isOpen, financial.loadLoans, financial.loanLoadStatus, session.token])
 
   const handleToggleHideSensitive = async () => {
     if (prefs.sensitivePreferenceStatus !== 'resolved') return

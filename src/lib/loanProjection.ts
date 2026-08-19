@@ -27,7 +27,13 @@ export function projectLoanStates(
 
   for (const op of orderedOps) {
     if (op.entity === 'loan') {
-      addIndexed(opsByLoanId, op.targetId, op)
+      // undoRepayment's targetId is a repayment-action id, so it is indexed by the loan id its
+      // payload carries; every other loan op targets the loan directly.
+      addIndexed(
+        opsByLoanId,
+        op.type === 'undoRepayment' && typeof op.payload?.loanId === 'string' ? op.payload.loanId : op.targetId,
+        op,
+      )
       continue
     }
     if (op.entity === 'recurringPayment') {
@@ -86,6 +92,7 @@ function projectLoan(
   }))
   let hadPendingEffect = false
   let firstPendingEffectId: string | undefined
+  let settledByPayoff = false
 
   applyPaymentMetadata(projectedLoan, linkedPayment)
 
@@ -99,8 +106,36 @@ function projectLoan(
       continue
     }
 
+    if (op.entity === 'loan' && op.type === 'undoRepayment') {
+      // The server re-derives the whole schedule, which no client replay can anticipate, so this only
+      // reports that the loan is mid-change until the post-sync refresh lands.
+      if (!op.isCompleted) {
+        hadPendingEffect = true
+        firstPendingEffectId ??= op.id
+      }
+      continue
+    }
+
     if (op.entity === 'loan' && op.targetId === loan.id) {
-      applyLoanOp(projectedLoan, op, recurringPaymentsById)
+      if (op.type === 'fullSettlement') {
+        settledByPayoff = true
+      } else if (op.type === 'advanceRepayment') {
+        // The server writes one transaction per cycle at the scheduled amount, tagged to that
+        // instalment's occurrence date. Adding those as replay inputs means the shared engine works
+        // out the split and the resulting balance exactly as the server's replay will.
+        const cycles = typeof op.payload?.cycles === 'number' ? op.payload.cycles : 0
+        for (const entry of loan.snapshot.futureSchedule.slice(0, Math.max(0, cycles))) {
+          if (hasInput(inputs, entry.occurrenceDate, undefined)) continue
+          inputs.push({
+            occurrenceDate: entry.occurrenceDate,
+            postedAt: new Date(op.createdAt).toISOString(),
+            amount: entry.payment,
+            transactionId: `${op.id}-advance-${entry.occurrenceDate}`,
+          })
+        }
+      } else {
+        applyLoanOp(projectedLoan, op, recurringPaymentsById)
+      }
       if (!op.isCompleted) {
         hadPendingEffect = true
         firstPendingEffectId ??= op.id
@@ -143,7 +178,14 @@ function projectLoan(
     }
   }
 
-  const snapshot = replayLoan(projectedLoan, undefined, inputs)
+  const replayed = replayLoan(projectedLoan, undefined, inputs)
+  // Applied after the replay: a payoff is not a scheduled payment, so no replay of recorded
+  // instalments can produce it. The bill stops with the loan, so the card must also stop advertising
+  // a next due date.
+  const snapshot = settledByPayoff
+    ? { ...replayed, outstandingBalance: 0, nextPayment: null, futureSchedule: [] }
+    : replayed
+  if (settledByPayoff) projectedLoan.recurringPaymentExists = false
   return {
     ...projectedLoan,
     snapshot,
@@ -186,6 +228,9 @@ function applyLoanOp(
   recurringPaymentsById: ReadonlyMap<string, RecurringPayment>,
 ) {
   if (op.type === 'delete') return
+  // Repayments are handled in projectLoan: they need the replay inputs, or to run after the replay.
+  // undoRepayment targets a repayment action id rather than a loan id, so it never matches here at
+  // all; its effect arrives with the post-sync refresh.
   if (op.type !== 'add' && op.type !== 'update') return
   const payload = op.payload
   const previousPaymentId = loan.recurringPaymentId

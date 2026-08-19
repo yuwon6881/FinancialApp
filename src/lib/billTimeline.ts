@@ -126,8 +126,12 @@ function applyOccurrenceStatuses(
     }
 
     const hasAuthoritativeStatus = cycleOffset === 0 &&
-      (payment.status === 'Pending' || payment.status === 'Paid' || payment.status === 'Discarded')
-    const isServerPaid = hasAuthoritativeStatus && payment.status === 'Paid'
+      (payment.status === 'Pending' || payment.status === 'PartiallyPaid' || payment.status === 'Paid' || payment.status === 'SettledByLoanPayoff')
+    const isServerPaid = hasAuthoritativeStatus && (payment.status === 'Paid' || payment.status === 'SettledByLoanPayoff')
+    const isPartiallyPaid = hasAuthoritativeStatus && payment.status === 'PartiallyPaid'
+    if (isPartiallyPaid) {
+      return { ...payment, isPaid: false, status: 'PartiallyPaid' as const }
+    }
     const matchingTransaction = hasAuthoritativeStatus ? undefined : transactions.find(transaction => {
       if (transaction.recurringPaymentId === payment.recurringPaymentId &&
           transaction.recurringOccurrenceDate === payment.dueDate) return true
@@ -156,7 +160,7 @@ function applyOccurrenceStatuses(
       return {
         ...payment,
         isPaid: true,
-        status: 'Paid' as const,
+        status: payment.status === 'SettledByLoanPayoff' ? 'SettledByLoanPayoff' as const : 'Paid' as const,
         paidDate: payment.paidDate || matchingTransaction?.date || null,
       }
     }

@@ -410,6 +410,9 @@ export function AuthenticatedView({
                       onAddLoan={financial.handleAddLoan}
                       onUpdateLoan={financial.handleUpdateLoan}
                       onRequestDeleteLoan={financial.requestDeleteLoan}
+                      onAdvanceRepayment={financial.handleAdvanceRepayment}
+                      onFullSettlement={financial.handleFullSettlement}
+                      onUndoRepayment={financial.handleUndoRepayment}
                       loanLoadStatus={financial.loanLoadStatus}
                       hasLoadedLoans={financial.hasLoadedLoans}
                       onLoadLoans={financial.loadLoans}

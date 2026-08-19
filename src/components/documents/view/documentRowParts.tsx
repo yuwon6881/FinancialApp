@@ -27,11 +27,6 @@ export type UpdateDocumentFn = (
   },
 ) => Promise<void>
 
-/**
- * The file-type glyph, as a component rather than an `iconFor(contentType)` lookup: picking the
- * component in a render body and rendering it as `<Icon />` reads to React (and to
- * react-hooks/static-components) as a component declared during render.
- */
 export function DocumentTypeIcon({ contentType, className }: { contentType: string; className?: string }) {
   if (contentType.startsWith('image/')) return <FileImage className={className} aria-hidden="true" />
   if (contentType === 'application/pdf') return <FileText className={className} aria-hidden="true" />
@@ -39,13 +34,17 @@ export function DocumentTypeIcon({ contentType, className }: { contentType: stri
   return <FileArchive className={className} aria-hidden="true" />
 }
 
-export function EmptyState() {
+export function EmptyState({ isFiltered = false }: { isFiltered?: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
       <FileArchive className="mb-3 size-10 text-muted-foreground/30" aria-hidden="true" />
-      <p className="text-xs font-bold text-foreground">No documents yet</p>
+      <p className="text-xs font-bold text-foreground">
+        {isFiltered ? 'No documents match your filters' : 'No documents yet'}
+      </p>
       <p className="mt-1 text-xs text-muted-foreground">
-        Upload receipts, invoices or statements to keep them for your tax records.
+        {isFiltered
+          ? 'Try adjusting your tax year or category filters above.'
+          : 'Upload receipts, invoices or statements to keep them for your tax records.'}
       </p>
     </div>
   )
@@ -54,10 +53,6 @@ export function EmptyState() {
 export function AmountReview({ document, updateDocument, currency, disabled = false }: { document: VaultDocument; updateDocument: UpdateDocumentFn; currency?: string; disabled?: boolean }) {
   const { currency: appCurrency, hideSensitive } = useAppPrefs()
   const activeCurrency = currency ?? appCurrency
-  // Never seeded from `NeedsReview`. Doing so opened one live input per suggested row, so a batch scan
-  // landed on a page of ten simultaneous editors, none of them cancellable. The suggestion is shown on
-  // the closed control and called out by the row's caption; confirming it is a deliberate two taps,
-  // which is the right price for a write that goes straight to the server.
   const [editing, setEditing] = useState(false)
   const needsReview = document.amountStatus === 'NeedsReview'
   const [value, setValue] = useState(document.amount?.toFixed(2) ?? '')

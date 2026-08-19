@@ -29,13 +29,17 @@ export function calculateFreeRewardsBalance(
 }
 
 export function pendingRecurringAmount(
-  payments: readonly Pick<ActiveRecurringPayment, 'status' | 'amount' | 'ledgerCategory'>[] | undefined,
+  payments: readonly Pick<ActiveRecurringPayment, 'status' | 'amount' | 'remainingAmount' | 'ledgerCategory'>[] | undefined,
   fundingBucket: SavingsGoalFundingBucket,
 ): number {
   const total = (payments ?? []).reduce((sum, payment) => {
-    if (payment.status !== 'Pending' || payment.amount == null) return sum
+    if (payment.status !== 'Pending' && payment.status !== 'PartiallyPaid') return sum
+    // remainingAmount when the server sent one, else amount — which the API already narrows to the
+    // still-owed figure for a part-paid row, so the two agree.
+    const outstanding = payment.remainingAmount ?? payment.amount
+    if (outstanding == null) return sum
     return payment.ledgerCategory?.toLowerCase() === fundingBucket.toLowerCase()
-      ? sum + Math.abs(payment.amount)
+      ? sum + Math.abs(outstanding)
       : sum
   }, 0)
   return Math.round(total * 100) / 100

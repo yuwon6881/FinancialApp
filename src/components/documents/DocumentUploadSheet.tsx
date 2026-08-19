@@ -12,6 +12,7 @@ import { useAppUi } from '../../contexts/AppContext'
 import { formatCurrencyVal } from '../../lib/utils'
 import type { DocumentVaultConstraints, TaxReliefCategoryDefinition } from '../../types'
 import { FormField } from '../ui/FormField'
+import { ModalActions } from '../ui/ModalActions'
 import { mapServerErrorToField, type ServerFieldRule } from '../../lib/formErrors'
 import { revealFirstFieldError } from '../ui/formValidation'
 
@@ -24,7 +25,6 @@ interface Props {
   currency: string
 }
 
-const LABEL_CLASS = 'text-[10px] font-bold uppercase tracking-wider text-muted-foreground'
 const FALLBACK_CONSTRAINTS: DocumentVaultConstraints = { maxDocumentBytes: 20 * 1024 * 1024, maxBulkDocuments: 10, maxTotalBytesPerUser: 2 * 1024 * 1024 * 1024 }
 const TAX_YEAR_LOOKBACK = 7
 const formatMb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(2)} MB`
@@ -172,15 +172,15 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} maxWidthClassName="max-w-2xl"
       title={<span className="flex items-center gap-2"><UploadCloud className="size-4" />Upload tax documents</span>}
-      footer={<div className="flex justify-end gap-3">
-        <Button variant="outline" type="button" onClick={onClose} className="rounded-xl px-4 py-2">{results ? 'Done' : 'Cancel'}</Button>
+      footer={<ModalActions>
+        <Button variant="outline" type="button" onClick={onClose} className="rounded-xl px-4">{results ? 'Done' : 'Cancel'}</Button>
         {/* Deliberately not disabled on missing files/category: an inert button
             explains nothing, while submitting surfaces the reason on the field. */}
         {!results && <Button type="button" onClick={upload} disabled={isPreparing || isUploading}
-          className="rounded-xl px-5 py-2">
+          className="rounded-xl px-5 shadow-md">
           {isPreparing ? 'Preparing…' : isUploading ? 'Uploading and reading amounts…' : `Upload ${files.length || ''}`}
         </Button>}
-      </div>}>
+      </ModalActions>}>
       <div className="space-y-4" ref={sheetBodyRef}>
         {results ? (
           <div className="space-y-3" role="status">
@@ -195,17 +195,15 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
             </div>)}
           </div>
         ) : <>
-          <div>
-            <span className={LABEL_CLASS}>Documents</span>
+          <FormField label="Documents" required error={validationErrors.files}>
             <Button variant="unstyled" type="button" onClick={() => inputRef.current?.click()} className="mt-1.5 flex w-full flex-col items-center rounded-xl border-2 border-dashed border-border px-4 py-7 hover:bg-muted/40 cursor-pointer">
               <UploadCloud className="mb-2 size-8 text-muted-foreground/60" /><span className="text-xs font-bold text-foreground">Choose one or multiple files</span>
               <span className="mt-1 text-[10px] text-muted-foreground">Up to {constraints.maxBulkDocuments} files · {formatMb(constraints.maxDocumentBytes)} each</span>
             </Button>
-             <Input ref={inputRef} type="file" multiple={!defaultTransactionId} className="hidden"
-               accept="image/*,.pdf,application/pdf,.xml,application/xml,.json,application/json"
-               onChange={event => void chooseFiles(Array.from(event.target.files ?? []))} />
-             {validationErrors.files && <p role="alert" className="mt-1.5 text-[10px] font-semibold text-destructive">{validationErrors.files}</p>}
-           </div>
+            <Input ref={inputRef} type="file" multiple={!defaultTransactionId} className="hidden"
+              accept="image/*,.pdf,application/pdf,.xml,application/xml,.json,application/json"
+              onChange={event => void chooseFiles(Array.from(event.target.files ?? []))} />
+          </FormField>
           {files.length > 0 && <div className="max-h-40 space-y-1.5 overflow-y-auto">
             {files.map((file, index) => {
               const tooLarge = file.size > constraints.maxDocumentBytes

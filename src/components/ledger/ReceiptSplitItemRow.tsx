@@ -111,6 +111,7 @@ export function ReceiptSplitItemRow({
                 <Input
                   aria-label={`Item ${index + 1} price`}
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="0.01"
                   value={inputNumber(unitPrice)}

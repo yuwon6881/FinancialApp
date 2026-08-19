@@ -201,7 +201,7 @@ describe('RecurringPaymentsView characterization', () => {
 
     it('shows the teaching empty state when there are no payments at all', () => {
       render(<RecurringPaymentsView {...makeProps({ payments: [] })} />)
-      expect(screen.getByText(/You don't have any subscriptions yet/)).toBeTruthy()
+      expect(screen.getByText(/Add a recurring bill, loan, or subscription/)).toBeTruthy()
     })
   })
 

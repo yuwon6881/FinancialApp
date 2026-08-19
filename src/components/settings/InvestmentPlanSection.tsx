@@ -402,7 +402,7 @@ export function InvestmentPlanSection() {
                 hintClassName="text-[9px] break-words"
               >
                 <span className="relative block w-full min-w-0">
-                  <Input type="number" min="1" max="99" step="1" disabled={hideSensitive} value={plan.watchDrift} onChange={event => setPlan(value => ({ ...value, watchDrift: Number(event.target.value) }))} className="w-full pr-8" />
+                  <Input type="number" inputMode="numeric" min="1" max="99" step="1" disabled={hideSensitive} value={plan.watchDrift} onChange={event => setPlan(value => ({ ...value, watchDrift: Number(event.target.value) }))} className="w-full pr-8" />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">pp</span>
                 </span>
               </FormField>
@@ -414,7 +414,7 @@ export function InvestmentPlanSection() {
                 hintClassName="text-[9px] break-words"
               >
                 <span className="relative block w-full min-w-0">
-                  <Input type="number" min="2" max="100" step="1" disabled={hideSensitive} value={plan.alertDrift} onChange={event => setPlan(value => ({ ...value, alertDrift: Number(event.target.value) }))} className="w-full pr-8" />
+                  <Input type="number" inputMode="numeric" min="2" max="100" step="1" disabled={hideSensitive} value={plan.alertDrift} onChange={event => setPlan(value => ({ ...value, alertDrift: Number(event.target.value) }))} className="w-full pr-8" />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">pp</span>
                 </span>
               </FormField>

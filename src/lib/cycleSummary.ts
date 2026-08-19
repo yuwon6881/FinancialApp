@@ -1,8 +1,11 @@
-import type { DashboardData, Transaction, WishlistItem } from '../types'
+import type { DashboardData, Loan, Transaction, WishlistItem } from '../types'
 import { getCycleRangeDates } from './cycle'
+import { isReportableOutflow } from './transactionReportSemantics'
 
 const ENVELOPES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
 const EPSILON = 0.005
+
+const localDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
 export function formatRate(value: number): string {
   return `${Math.round(value * 100)}%`
@@ -22,6 +25,7 @@ export function buildCycleSummary(
   monthIndex: number,
   cycleDay: number,
   transactions?: Transaction[],
+  loans: Loan[] = [],
 ) {
   const income = data.stats.monthlyIncome
   const inflow = data.stats.monthlyInflow
@@ -34,6 +38,8 @@ export function buildCycleSummary(
       spent: category?.spent ?? Math.max(0, -(category?.netChange ?? 0)),
       remaining: category?.remaining ?? 0,
       overspent: (category?.remaining ?? 0) < -EPSILON,
+      accounts: [...(category?.accounts ?? [])]
+        .sort((left, right) => Math.abs(right.remaining) - Math.abs(left.remaining) || left.name.localeCompare(right.name)),
     }
   })
 
@@ -44,8 +50,11 @@ export function buildCycleSummary(
   const topMax = topCategories.reduce((max, category) => Math.max(max, category.amount), 0)
   const bills = data.activeRecurringPayments || []
   const paidBills = bills.filter(bill => bill.status === 'Paid')
+  const partPaidBills = bills.filter(bill => bill.status === 'PartiallyPaid')
+  const paidOffBills = bills.filter(bill => bill.status === 'SettledByLoanPayoff')
+  const pendingBills = bills.filter(bill => bill.status === 'Pending')
+  const discardedBills = bills.filter(bill => bill.status === 'Discarded')
   const { start, end } = getCycleRangeDates(year, monthIndex, cycleDay)
-  const localDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   const startKey = localDateKey(start)
   const endKey = localDateKey(end)
   const purchasedThisCycle = wishlist.flatMap(item => {
@@ -57,6 +66,50 @@ export function buildCycleSummary(
     if (!/^\d{4}-\d{2}-\d{2}$/.test(purchaseDateKey) || purchaseDateKey < startKey || purchaseDateKey > endKey) return []
     return [{ ...item, price: linkedTx ? Math.abs(linkedTx.amount) : item.price }]
   })
+
+  const loansByPaymentId = new Map(
+    loans
+      .filter(loan => !loan.isPendingDelete)
+      .map(loan => [loan.recurringPaymentId, loan] as const),
+  )
+  const loanActivityById = new Map<string, {
+    id: string
+    name: string
+    total: number
+    paymentCount: number
+    paidAheadCount: number
+    paidAheadTotal: number
+    paidOffThisCycle: boolean
+  }>()
+  for (const transaction of transactions ?? []) {
+    if (!transaction.recurringPaymentId || !isReportableOutflow(transaction)) continue
+    const loan = loansByPaymentId.get(transaction.recurringPaymentId)
+    if (!loan) continue
+    const amount = Math.abs(transaction.amount)
+    const postedDate = transaction.date.slice(0, 10)
+    const occurrenceDate = transaction.recurringOccurrenceDate?.slice(0, 10)
+    const paidAhead = Boolean(occurrenceDate && postedDate && occurrenceDate > postedDate)
+    const matchingReplay = loan.snapshot.payments.find(payment => String(payment.transactionId) === String(transaction.id))
+    const current = loanActivityById.get(loan.id) ?? {
+      id: loan.id,
+      name: loan.name,
+      total: 0,
+      paymentCount: 0,
+      paidAheadCount: 0,
+      paidAheadTotal: 0,
+      paidOffThisCycle: false,
+    }
+    current.total += amount
+    current.paymentCount += 1
+    if (paidAhead) {
+      current.paidAheadCount += 1
+      current.paidAheadTotal += amount
+    }
+    current.paidOffThisCycle ||= matchingReplay != null && matchingReplay.balanceAfter <= EPSILON
+    loanActivityById.set(loan.id, current)
+  }
+  const loanActivity = [...loanActivityById.values()]
+    .sort((left, right) => right.total - left.total || left.name.localeCompare(right.name))
 
   const previousExpenses = previousData?.stats.monthlyExpenses ?? null
   const previousInflow = previousData?.stats.monthlyInflow ?? null
@@ -89,7 +142,7 @@ export function buildCycleSummary(
   const growthNow = data.categories.find(category => category.name === 'Growth')?.remaining ?? null
   const growthBefore = previousData?.categories.find(category => category.name === 'Growth')?.remaining ?? null
   const growthDelta = growthNow === null || growthBefore === null ? null : growthNow - growthBefore
-  const hasActivity = inflow > EPSILON || expenses > EPSILON || paidBills.length > 0 || purchasedThisCycle.length > 0
+  const hasActivity = inflow > EPSILON || expenses > EPSILON || bills.length > 0 || purchasedThisCycle.length > 0
   const previousHasActivity = previousData != null && (
     (previousInflow ?? 0) > EPSILON || (previousExpenses ?? 0) > EPSILON ||
     (previousData.monthlyCategoryBreakdown || []).length > 0
@@ -123,11 +176,26 @@ export function buildCycleSummary(
     topCategories,
     topMax,
     paidBillsCount: paidBills.length,
-    paidTotal: paidBills.reduce((sum, bill) => sum + (bill.amount == null ? 0 : Math.abs(bill.amount)), 0),
-    pendingCount: bills.filter(bill => bill.status === 'Pending').length,
-    pendingTotal: bills.filter(bill => bill.status === 'Pending').reduce((sum, bill) => sum + (bill.amount == null ? 0 : Math.abs(bill.amount)), 0),
-    discardedCount: bills.filter(bill => bill.status === 'Discarded').length,
+    paidTotal: [...paidBills, ...partPaidBills, ...paidOffBills].reduce(
+      (sum, bill) => sum + Math.abs(bill.paidAmount ?? (bill.status === 'Paid' ? bill.amount ?? 0 : 0)),
+      0,
+    ),
+    partPaidCount: partPaidBills.length,
+    paidOffBillsCount: paidOffBills.length,
+    clearedBillsCount: paidBills.length + paidOffBills.length,
+    outstandingCount: pendingBills.length + partPaidBills.length,
+    outstandingTotal: [...pendingBills, ...partPaidBills].reduce(
+      (sum, bill) => sum + Math.abs(bill.remainingAmount ?? bill.amount ?? 0),
+      0,
+    ),
+    discardedCount: discardedBills.length,
     billsCount: bills.length,
+    loanActivity,
+    loanPaymentCount: loanActivity.reduce((sum, loan) => sum + loan.paymentCount, 0),
+    loanPaymentTotal: loanActivity.reduce((sum, loan) => sum + loan.total, 0),
+    loanPaidAheadCount: loanActivity.reduce((sum, loan) => sum + loan.paidAheadCount, 0),
+    loanPaidAheadTotal: loanActivity.reduce((sum, loan) => sum + loan.paidAheadTotal, 0),
+    loansPaidOffCount: loanActivity.filter(loan => loan.paidOffThisCycle).length,
     purchasedThisCycle,
     purchasedTotal: purchasedThisCycle.reduce((sum, item) => sum + item.price, 0),
     cycleLabel: data.cycleLabel,

@@ -19,6 +19,8 @@ interface LoanCardProps {
   onEdit: () => void
   onDelete: () => void
   onExplain: () => void
+  onRepay?: () => void
+  onUndoSettlement?: () => void
 }
 const formatDate = (value?: string | null) => value
   ? new Date(`${value}T12:00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
@@ -34,6 +36,8 @@ export function LoanCard({
   onEdit,
   onDelete,
   onExplain,
+  onRepay,
+  onUndoSettlement,
 }: LoanCardProps) {
   const scheduleUnavailable = loan.isRecalculating === true || loan.scheduleStatus === 'Incomplete' || !loan.scheduleFrequency || !loan.scheduleDueDay || !loan.scheduleStartDate
   const next = loan.snapshot.nextPayment
@@ -283,20 +287,48 @@ export function LoanCard({
         <p className="mt-2.5 text-[11px] text-muted-foreground">Amounts in {currency}. Schedule follows original bill cadence.</p>
       </details>
 
-      <div className="mt-4 flex items-center justify-between border-t border-border/30 pt-4 gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          type="button"
-          aria-label={`Explain ${loan.name} with Ask AI`}
-          title={hideSensitive ? 'Unhide balances to explain this loan' : 'Explain this loan with Ask AI'}
-          onClick={onExplain}
-          disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}
-          className="shrink-0"
-        >
-          <Sparkles className="size-3.5" aria-hidden="true" />
-          <span>Explain this loan</span>
-        </Button>
+      <div className="mt-4 flex flex-wrap items-center justify-between border-t border-border/30 pt-4 gap-2">
+        <div className="flex items-center gap-2">
+          {loan.settlementActionId && onUndoSettlement && (
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              aria-label={`Undo the full settlement of ${loan.name}`}
+              title={hideSensitive ? 'Unhide balances to undo this settlement' : 'Reopen this loan and restore its recurring bill'}
+              onClick={onUndoSettlement}
+              disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}
+            >
+              <span>Undo settlement</span>
+            </Button>
+          )}
+          {loan.snapshot.outstandingBalance > 0 && !scheduleUnavailable && onRepay && (
+            <Button
+              variant="primary"
+              size="sm"
+              type="button"
+              aria-label={`Make repayment for ${loan.name}`}
+              title={hideSensitive ? 'Unhide balances to repay' : 'Pay instalments in advance or record full settlement'}
+              onClick={onRepay}
+              disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}
+            >
+              <span>Repay loan</span>
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            size="sm"
+            type="button"
+            aria-label={`Explain ${loan.name} with Ask AI`}
+            title={hideSensitive ? 'Unhide balances to explain this loan' : 'Explain this loan with Ask AI'}
+            onClick={onExplain}
+            disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}
+            className="shrink-0"
+          >
+            <Sparkles className="size-3.5" aria-hidden="true" />
+            <span>Explain this loan</span>
+          </Button>
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"

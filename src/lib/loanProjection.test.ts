@@ -55,6 +55,64 @@ const linkedPayment: RecurringPayment = {
   paymentMode: 'Manual',
 }
 
+describe('loan repayment projection', () => {
+  const withSchedule = (): Loan => {
+    const base = loan()
+    return {
+      ...base,
+      snapshot: {
+        ...base.snapshot,
+        futureSchedule: [
+          { occurrenceDate: '2026-01-01', payment: 100, interest: 0, principal: 100, balanceAfter: 900 },
+          { occurrenceDate: '2026-02-01', payment: 100, interest: 0, principal: 100, balanceAfter: 800 },
+          { occurrenceDate: '2026-03-01', payment: 100, interest: 0, principal: 100, balanceAfter: 700 },
+        ],
+      },
+    }
+  }
+
+  it('consumes the paid instalments for a queued advance repayment', () => {
+    const [projected] = projectLoanStates(
+      [withSchedule()],
+      [op({ id: 'op-adv', entity: 'loan', type: 'advanceRepayment', targetId: 'loan-test', payload: { cycles: 2 } })],
+    )
+
+    expect(projected.snapshot.outstandingBalance).toBe(800)
+    expect(projected.snapshot.futureSchedule[0]?.occurrenceDate).toBe('2026-03-01')
+    expect(projected.isPendingSync).toBe(true)
+  })
+
+  it('shows a queued full settlement as paid off with no instalments left', () => {
+    const [projected] = projectLoanStates(
+      [withSchedule()],
+      [op({ id: 'op-settle', entity: 'loan', type: 'fullSettlement', targetId: 'loan-test', payload: { amount: 950 } })],
+    )
+
+    expect(projected.snapshot.outstandingBalance).toBe(0)
+    expect(projected.snapshot.futureSchedule).toHaveLength(0)
+    expect(projected.snapshot.nextPayment).toBeNull()
+    // The bill stops with the payoff, so the card must not keep advertising a next due date.
+    expect(projected.recurringPaymentExists).toBe(false)
+    expect(projected.isPendingSync).toBe(true)
+  })
+
+  it('marks the loan syncing for a queued undo, which targets the action id not the loan', () => {
+    const [projected] = projectLoanStates(
+      [withSchedule()],
+      [op({
+        id: 'op-undo',
+        entity: 'loan',
+        type: 'undoRepayment',
+        targetId: 'repay-abc',
+        payload: { loanId: 'loan-test' },
+      })],
+    )
+
+    expect(projected.isPendingSync).toBe(true)
+    expect(projected.pendingSyncOperationId).toBe('op-undo')
+  })
+})
+
 describe('projectLoanStates', () => {
   it('projects a pending settle immediately', () => {
     const projected = projectLoanStates([loan()], [op({ payload: {

@@ -62,6 +62,8 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
     if (result !== null) publishValue(result.toFixed(2))
   }
 
+
+
   const appendOperator = (operator: string) => {
     const current = inputRef.current?.value ?? ''
     if (!current) return
@@ -122,7 +124,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
           <Button variant="unstyled"
             type="button"
             onMouseDown={event => { event.preventDefault(); evaluate() }}
-            className="bg-blue-500/10 px-2.5 py-1.5 text-xs font-bold text-blue-600 hover:bg-blue-500/20"
+            className="bg-primary/10 px-2.5 py-1.5 text-xs font-bold text-accent-ink hover:bg-primary/20"
           >
             =
           </Button>

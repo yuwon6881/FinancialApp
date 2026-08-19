@@ -1,5 +1,5 @@
-import type { LedgerAccount, Loan, LoanPaymentSplit, LoanScheduleEntry, RecurringPayment, SavingsGoal, Transaction, WishlistItem } from '../../types'
-import type { WireLedgerAccount, WireLoan, WireLoanPaymentSplit, WireLoanScheduleEntry, WireRecurringPayment, WireSavingsGoal, WireTransaction, WireWishlistItem } from '../apiTypes'
+import type { LedgerAccount, Loan, LoanPaymentSplit, LoanScheduleEntry, LoanRepaymentPreviewResult, LoanRepaymentActionResult, RecurringPayment, SavingsGoal, Transaction, WishlistItem } from '../../types'
+import type { WireLedgerAccount, WireLoan, WireLoanPaymentSplit, WireLoanScheduleEntry, WireLoanRepaymentPreviewResult, WireLoanRepaymentActionResult, WireRecurringPayment, WireSavingsGoal, WireTransaction, WireWishlistItem } from '../apiTypes'
 
 const OBFUSCATION_KEY = 'FinancialAppObfuscationKey'
 
@@ -108,6 +108,29 @@ export function deobfuscateLoan(loan: WireLoan): Loan {
       payments: (loan.snapshot.payments || []).map(deobfuscateLoanPayment),
       futureSchedule: (loan.snapshot.futureSchedule || []).map(deobfuscateLoanSchedule),
     },
+  }
+}
+
+export function deobfuscateLoanRepaymentPreview(preview: WireLoanRepaymentPreviewResult): LoanRepaymentPreviewResult {
+  return {
+    cyclesCount: preview.cyclesCount,
+    totalAmount: deobfuscateAmount(preview.totalAmount),
+    occurrences: (preview.occurrences || []).map(o => ({
+      occurrenceDate: o.occurrenceDate,
+      payment: deobfuscateAmount(o.payment),
+      interest: deobfuscateAmount(o.interest),
+      principal: deobfuscateAmount(o.principal),
+      balanceAfter: deobfuscateAmount(o.balanceAfter),
+    })),
+  }
+}
+
+export function deobfuscateLoanRepaymentAction(result: WireLoanRepaymentActionResult): LoanRepaymentActionResult {
+  return {
+    actionId: result.actionId,
+    kind: result.kind,
+    loan: deobfuscateLoan(result.loan),
+    transactions: (result.transactions || []).map(deobfuscateTransaction),
   }
 }
 

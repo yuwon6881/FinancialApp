@@ -85,12 +85,21 @@ export async function settleRecurringOccurrence(
   clientKey?: string,
   transactionId?: string,
   postedAt?: string,
+  amount?: number,
 ): Promise<RecurringSettlementResult> {
   const data = await request<WireRecurringSettlementResult>(
     `/recurring-payments/${id}/occurrences/${occurrenceDate}/settle`,
     {
       method: 'POST',
-      ...jsonBody({ status, paidDate, accountId, clientKey, transactionId, postedAt }),
+      ...jsonBody({
+        status,
+        paidDate,
+        accountId,
+        clientKey,
+        transactionId,
+        postedAt,
+        amount: amount != null ? obfuscateAmount(amount) : undefined,
+      }),
       errorMessage: status === 'Paid' ? 'Failed to confirm this bill' : 'Failed to discard this bill',
     },
   )

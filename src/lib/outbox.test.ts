@@ -377,6 +377,7 @@ describe('bulk transaction projection', () => {
       'op-settle',
       'tx-client',
       '2026-07-30T12:00:00.000Z',
+      undefined,
     )
   })
 
@@ -1066,6 +1067,14 @@ describe('applyOpsToList', () => {
     }
     const queued = enqueue([], 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', payload)
     expect(enqueue(queued, 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', payload)).toHaveLength(1)
+
+    // An occurrence can take more than one payment now, so two part payments for the same bill have
+    // to queue separately. Collapsing on the target alone silently dropped the second and the money
+    // was never recorded; a repeat of the same amount is still treated as a double-submit.
+    const partA = enqueue([], 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', { ...payload, amount: 20 })
+    const partB = enqueue(partA, 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', { ...payload, amount: 30 })
+    expect(partB).toHaveLength(2)
+    expect(enqueue(partB, 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', { ...payload, amount: 30 })).toHaveLength(2)
 
     const recurring = applyOpsToList([{ id: 'rp-1', nextDueDate: '2026-08-10' }], queued, 'recurringPayment')
     const transactions = applyOpsToList([], queued, 'transaction')

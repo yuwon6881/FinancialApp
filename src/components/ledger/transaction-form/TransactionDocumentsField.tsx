@@ -10,6 +10,7 @@ import { getTaxReliefCategories } from '../../../lib/api/documents'
 import { formatCurrencyVal } from '../../../lib/utils'
 import { Input } from '../../ui/Input'
 import { CustomSelect } from '../../ui/CustomSelect'
+import { FormField } from '../../ui/FormField'
 
 interface PendingDocument extends PendingVaultDocument {
   previewUrl: string | null
@@ -250,24 +251,22 @@ export const TransactionDocumentsField = React.forwardRef<
               <X className="size-3.5" />
             </button>
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:items-end">
-            <label className="min-w-0 space-y-1">
-              <span className={LABEL_CLASS}>Tax relief category <span className="text-destructive">*</span></span>
-              <CustomSelect
-                value={document.reliefCategory}
-                ariaLabel={`Tax relief category for ${document.file.name}`}
-                onChange={value => updatePending(index, { reliefCategory: String(value) })}
-                options={categoryOptions}
-                className="w-full"
-                disabled={!categoriesLoaded || reliefCategories.length === 0}
-                required
-                invalid={!document.reliefCategory}
-              />
-            </label>
-          </div>
-          {!document.reliefCategory && (
-            <p className="text-[10px] font-semibold text-destructive">Choose a tax relief category before saving this transaction.</p>
-          )}
+          <FormField
+            label="Tax relief category"
+            required
+            error={!document.reliefCategory ? 'Choose a tax relief category before saving this transaction.' : undefined}
+          >
+            <CustomSelect
+              value={document.reliefCategory}
+              ariaLabel={`Tax relief category for ${document.file.name}`}
+              onChange={value => updatePending(index, { reliefCategory: String(value) })}
+              options={categoryOptions}
+              className="w-full"
+              disabled={!categoriesLoaded || reliefCategories.length === 0}
+              required
+              invalid={!document.reliefCategory}
+            />
+          </FormField>
         </div>
       ))}
 

@@ -271,7 +271,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             >
               <Input
                 type="text"
-                inputMode="text"
+                inputMode="numeric"
                 autoFocus
                 disabled={twoFactorLoading}
                 placeholder="123456"

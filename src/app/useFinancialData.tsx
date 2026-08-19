@@ -1525,7 +1525,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     if (id === editingPendingId) setEditingPendingId(null)
   }
 
-  const handleConfirmSubscription = (noti: PendingNotification, paidDate: string) => {
+  const handleConfirmSubscription = (noti: PendingNotification, paidDate: string, amount?: number) => {
     if (!guardSensitive()) return
     const transactionId = createFinalId('transaction')
     const postedAt = new Date().toISOString()
@@ -1534,26 +1534,28 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     // moves its future occurrences, not one already waiting to be confirmed. The server resolves it
     // the same way, so the two agree; only a legacy occurrence with no snapshot falls back.
     const settlementAccountId = noti.accountId ?? payment?.accountId
+    const settleAmount = (amount != null && amount > 0) ? amount : noti.amount
     mutateQueue(prev => enqueue(prev, 'recurringOccurrence', 'settle', noti.id, {
       name: noti.name,
       recurringPaymentId: noti.recurringPaymentId,
       occurrenceDate: noti.billingDate,
+      amount: (amount != null && amount > 0) ? amount : undefined,
       status: 'Paid',
       paidDate,
       accountId: settlementAccountId,
       optimisticNextOccurrenceDate: payment ? computeNextOccurrenceDate(payment) ?? undefined : undefined,
       optimisticTransaction: {
-      id: transactionId,
-      date: paidDate,
-      postedAt,
-      description: noti.name,
-      amount: -Math.abs(noti.amount),
-      category: noti.category,
-      ledgerCategory: noti.ledgerCategory,
-      accountId: settlementAccountId,
-      recurringPaymentId: noti.recurringPaymentId,
-      recurringOccurrenceDate: noti.billingDate,
-      isPendingSync: true,
+        id: transactionId,
+        date: paidDate,
+        postedAt,
+        description: noti.name,
+        amount: -Math.abs(settleAmount),
+        category: noti.category,
+        ledgerCategory: noti.ledgerCategory,
+        accountId: settlementAccountId,
+        recurringPaymentId: noti.recurringPaymentId,
+        recurringOccurrenceDate: noti.billingDate,
+        isPendingSync: true,
       },
     }))
   }

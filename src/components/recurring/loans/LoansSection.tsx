@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { m, useReducedMotion } from 'framer-motion'
 import { Landmark, Plus, RefreshCw } from 'lucide-react'
-import type { Loan, RecurringPayment } from '../../../types'
+import type { LedgerAccount, Loan, RecurringPayment } from '../../../types'
 import { Button } from '../../ui/Button'
 import { LoanCard } from './LoanCard'
 import { LoanFormSheet } from './LoanFormSheet'
+import { LoanRepaymentSheet } from '../LoanRepaymentSheet'
 import { useLoansView } from './view/useLoansView'
 import { RecurringFilterBar } from '../RecurringFilterBar'
 import { useIsMobile } from '../../../lib/useIsMobile'
@@ -16,6 +17,7 @@ import { listContainerVariants, listItemVariants } from '../../../lib/animations
 interface LoansSectionProps {
   loans: Loan[]
   payments: RecurringPayment[]
+  accounts?: LedgerAccount[]
   currency: string
   hideSensitive: boolean
   formatSensitive: (value: number) => ReactNode
@@ -26,12 +28,16 @@ interface LoansSectionProps {
   loadStatus: LoanLoadStatus
   onLoad: () => Promise<Loan[]>
   onExplain: (loan: Loan) => void
+  onAdvanceRepayment?: (id: string, cycles: number, accountId?: string) => Promise<void>
+  onFullSettlement?: (id: string, quoteAmount: number, accountId?: string) => Promise<void>
+  onUndoRepayment?: (actionId: string, loanId?: string) => Promise<void>
   highlightedLoanId?: string | null
   onClearHighlightedLoan?: () => void
 }
 export function LoansSection({
   loans,
   payments,
+  accounts = [],
   currency,
   hideSensitive,
   formatSensitive,
@@ -42,11 +48,15 @@ export function LoansSection({
   loadStatus,
   onLoad,
   onExplain,
+  onAdvanceRepayment,
+  onFullSettlement,
+  onUndoRepayment,
   highlightedLoanId = null,
   onClearHighlightedLoan,
 }: LoansSectionProps) {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null)
+  const [repayingLoan, setRepayingLoan] = useState<Loan | null>(null)
 
   const openAdd = () => {
     setEditingLoan(null)
@@ -163,6 +173,10 @@ export function LoansSection({
                 onEdit={() => openEdit(loan)}
                 onDelete={() => onRequestDeleteLoan(loan.id)}
                 onExplain={() => onExplain(loan)}
+                onRepay={() => setRepayingLoan(loan)}
+                onUndoSettlement={loan.settlementActionId && onUndoRepayment
+                  ? () => { void onUndoRepayment(loan.settlementActionId!, loan.id) }
+                  : undefined}
               />
             </m.div>
           ))}
@@ -176,6 +190,17 @@ export function LoansSection({
         linkedPaymentIds={view.linkedPaymentIds}
         onClose={closeForm}
         onSave={handleSave}
+      />
+
+      <LoanRepaymentSheet
+        isOpen={Boolean(repayingLoan)}
+        loan={repayingLoan}
+        payment={repayingLoan ? payments.find(p => p.id === repayingLoan.recurringPaymentId) : null}
+        accounts={accounts}
+        currency={currency}
+        onClose={() => setRepayingLoan(null)}
+        onAdvanceRepayment={onAdvanceRepayment ?? (async () => {})}
+        onFullSettlement={onFullSettlement ?? (async () => {})}
       />
     </section>
   )

@@ -49,3 +49,18 @@ export const formatSensitiveAmount = (
     ? <SensitiveMask />
     : <span className="transition-[filter] duration-200">{formatCurrencyAmount(val, currency)}</span>
 }
+
+export function getOccurrenceStatusLabel(status: string): string {
+  switch (status) {
+    case 'PartiallyPaid':
+      return 'Part paid'
+    case 'SettledByLoanPayoff':
+      return 'Paid off'
+    case 'Paid':
+      return 'Paid'
+    case 'Discarded':
+      return 'Discarded'
+    default:
+      return 'Pending'
+  }
+}

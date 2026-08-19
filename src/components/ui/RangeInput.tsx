@@ -19,7 +19,7 @@ export const RangeInput = forwardRef<HTMLInputElement, RangeInputProps>(
         type="range"
         {...accessibleProps}
         className={cn(
-          'h-2 w-full cursor-pointer appearance-none rounded-full bg-border accent-primary',
+          'h-2 w-full cursor-pointer appearance-none rounded-full bg-border accent-primary py-2 -my-2 touch-none',
           'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring',
           'disabled:cursor-not-allowed disabled:opacity-50',
           className,

@@ -223,22 +223,44 @@ export function computeOptimisticDashboard(
     const occurrenceDate = typeof operation.payload?.occurrenceDate === 'string'
       ? operation.payload.occurrenceDate
       : ''
-    const status = operation.payload?.status === 'Discarded' ? 'Discarded' : 'Paid'
     const index = data.activeRecurringPayments.findIndex(payment =>
       payment.recurringPaymentId === paymentId && payment.dueDate === occurrenceDate)
-    if (index >= 0) {
+    const existing = index >= 0 ? data.activeRecurringPayments[index] : undefined
+    // An explicit amount that does not cover what is left is a part payment, and the server will
+    // answer PartiallyPaid. Projecting Paid there showed the bill as settled for as long as the
+    // queue held, then visibly undid itself on the next refresh.
+    const requestedAmount = typeof operation.payload?.amount === 'number' ? operation.payload.amount : undefined
+    const scheduled = Math.abs(existing?.scheduledAmount ?? existing?.amount ?? 0)
+    const alreadyPaid = existing?.paidAmount ?? 0
+    const coversRemainder = requestedAmount == null
+      || scheduled <= 0
+      || alreadyPaid + requestedAmount >= scheduled - 0.005
+    const status = operation.payload?.status === 'Discarded'
+      ? 'Discarded'
+      : coversRemainder ? 'Paid' : 'PartiallyPaid'
+
+    if (index >= 0 && existing) {
+      const paidAmount = status === 'PartiallyPaid' ? alreadyPaid + (requestedAmount ?? 0) : existing.paidAmount
       data.activeRecurringPayments[index] = {
-        ...data.activeRecurringPayments[index],
+        ...existing,
         status,
         isPaid: status === 'Paid',
         isDiscarded: status === 'Discarded',
+        paidAmount,
+        // The server sends the still-owed figure as the row's amount while a bill is part paid, so
+        // the projection has to narrow it the same way or committed-money totals disagree.
+        remainingAmount: status === 'PartiallyPaid' ? Math.max(0, scheduled - (paidAmount ?? 0)) : existing.remainingAmount,
+        amount: status === 'PartiallyPaid' ? Math.max(0, scheduled - (paidAmount ?? 0)) : existing.amount,
         paidDate: status === 'Paid' && typeof operation.payload?.paidDate === 'string'
           ? operation.payload.paidDate
           : null,
       }
     }
-    data.pendingNotifications = data.pendingNotifications.filter(notification =>
-      notification.recurringPaymentId !== paymentId || notification.billingDate !== occurrenceDate)
+    // A part-paid bill still needs reviewing, so its prompt stays.
+    if (status !== 'PartiallyPaid') {
+      data.pendingNotifications = data.pendingNotifications.filter(notification =>
+        notification.recurringPaymentId !== paymentId || notification.billingDate !== occurrenceDate)
+    }
   }
 
   const pendingBills = data.activeRecurringPayments.filter(payment => payment.status === 'Pending')

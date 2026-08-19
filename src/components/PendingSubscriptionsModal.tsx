@@ -5,6 +5,7 @@ import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { BottomSheet } from './ui/BottomSheet'
 import { ToggleButton } from './ui/ToggleButton'
 import { DatePicker } from './ui/DatePicker'
+import { SmartAmountInput } from './ui/SmartAmountInput'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { Button } from './ui/Button'
 import { BellRing, CheckCircle2, Loader2 } from 'lucide-react'
@@ -18,7 +19,7 @@ interface PendingSubscriptionsModalProps {
   showOnLoginChecked: boolean
   onToggleShowOnLogin: (checked: boolean) => void
   onClose: () => void
-  onConfirmSubscription: (noti: PendingNotification, paidDate: string) => void
+  onConfirmSubscription: (noti: PendingNotification, paidDate: string, amount?: number) => void
   onDiscardSubscription: (noti: PendingNotification) => void
   onRemoveSubscription: (recurringPaymentId: string) => void
 }
@@ -36,7 +37,20 @@ export function PendingSubscriptionsModal({
   onRemoveSubscription
 }: PendingSubscriptionsModalProps) {
   const [paidDates, setPaidDates] = useState<Record<string, string>>({})
+  const [paidAmounts, setPaidAmounts] = useState<Record<string, string>>({})
   const [pendingActions, setPendingActions] = useState<Record<string, 'confirm' | 'discard' | 'remove'>>({})
+
+  // Blank means "pay the whole bill", which is what almost every confirmation is. A figure below the
+  // amount due records a part payment and leaves the bill open for the rest; anything at or above it
+  // is the full payment, so it is sent as undefined rather than as a partial the server would refuse.
+  const partialAmountFor = (noti: PendingNotification): number | undefined => {
+    const raw = (paidAmounts[noti.id] ?? '').trim()
+    if (raw === '') return undefined
+    const parsed = Number(raw)
+    if (!Number.isFinite(parsed) || parsed <= 0) return undefined
+    const due = Math.abs(noti.amount)
+    return due > 0 && parsed >= due ? undefined : parsed
+  }
 
   useEffect(() => {
     if (!isOpen) {
@@ -138,13 +152,41 @@ export function PendingSubscriptionsModal({
                     className="w-full sm:flex-1"
                   />
               </div>
+              <div className={`w-full space-y-1.5 sm:w-auto sm:min-w-[170px] ${isPending ? 'pointer-events-none opacity-70' : ''}`}>
+                  <label
+                    htmlFor={`pending-amount-${noti.id}`}
+                    className="block text-[10px] font-bold text-muted-foreground"
+                  >
+                    Amount paid
+                  </label>
+                  <SmartAmountInput
+                    id={`pending-amount-${noti.id}`}
+                    type="text"
+                    inputMode="decimal"
+                    value={paidAmounts[noti.id] ?? ''}
+                    onChange={event => setPaidAmounts(prev => ({ ...prev, [noti.id]: event.target.value }))}
+                    placeholder={hideSensitive ? '' : formatCurrencyVal(Math.abs(noti.amount), currency)}
+                    disabled={hideSensitive}
+                    aria-describedby={`pending-amount-hint-${noti.id}`}
+                    className="w-full font-medium"
+                  />
+                  <p id={`pending-amount-hint-${noti.id}`} className="text-[10px] leading-relaxed text-muted-foreground">
+                    {partialAmountFor(noti) != null
+                      ? 'Part payment — the rest stays due on this bill.'
+                      : 'Leave blank to pay the full amount.'}
+                  </p>
+              </div>
                 <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
                   <Button
                     variant="primary"
                     onClick={() => runSubscriptionAction(
                       noti,
                       'confirm',
-                      () => onConfirmSubscription(noti, paidDates[noti.id] ?? noti.billingDate),
+                      () => onConfirmSubscription(
+                        noti,
+                        paidDates[noti.id] ?? noti.billingDate,
+                        partialAmountFor(noti),
+                      ),
                     )}
                     disabled={hideSensitive || isPending}
                     title={hideSensitive ? 'Show sensitive information to change bills' : undefined}

@@ -10,11 +10,13 @@ import {
   TrendingUp,
   Zap,
 } from 'lucide-react'
-import type { DashboardData, Transaction, WishlistItem } from '../types'
+import type { DashboardData, Loan, Transaction, WishlistItem } from '../types'
 import { useAppPrefs } from '../contexts/AppContext'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { buildCycleSummary, formatRate } from '../lib/cycleSummary'
 import { BottomSheet } from './ui/BottomSheet'
+import { Button } from './ui/Button'
+import { InfoHint } from './ui/InfoHint'
 import { CycleActivitySections, Section } from './cycle-summary/CycleActivitySections'
 import { InsightCard, StatTile } from './cycle-summary/CycleSummaryCards'
 import { changeTone } from '../lib/cycleSummaryTone'
@@ -28,6 +30,7 @@ interface CycleSummaryModalProps {
   loadError: string | null
   wishlist: WishlistItem[]
   transactions?: Transaction[]
+  loans?: Loan[]
   monthIndex: number
   year: number
   cycleDay: number
@@ -44,6 +47,7 @@ export function CycleSummaryModal({
   loadError,
   wishlist,
   transactions,
+  loans = [],
   monthIndex,
   year,
   cycleDay,
@@ -52,8 +56,8 @@ export function CycleSummaryModal({
 }: CycleSummaryModalProps) {
   const { formatSensitive } = useAppPrefs()
   const summary = useMemo(
-    () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay, transactions) : null,
-    [data, previousData, wishlist, year, monthIndex, cycleDay, transactions],
+    () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay, transactions, loans) : null,
+    [data, previousData, wishlist, year, monthIndex, cycleDay, transactions, loans],
   )
 
   // Rounded to whole percentage points, which is the unit the card reports in: a change of
@@ -85,13 +89,13 @@ export function CycleSummaryModal({
       footer={
         <div className="flex gap-2 sm:justify-end">
           {onViewLedger && summary?.hasActivity && (
-            <button onClick={onViewLedger} className="flex-1 cursor-pointer rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs font-bold text-foreground transition hover:bg-muted/70 sm:flex-none">
+            <Button variant="unstyled" onClick={onViewLedger} className="flex-1 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs font-bold text-foreground transition hover:bg-muted/70 sm:flex-none">
               View ledger
-            </button>
+            </Button>
           )}
-          <button onClick={onClose} className="flex-1 cursor-pointer rounded-lg bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:bg-foreground/90 sm:flex-none">
+          <Button variant="unstyled" onClick={onClose} className="flex-1 rounded-lg bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:bg-foreground/90 sm:flex-none">
             {variant === 'auto' ? 'Got it' : 'Close'}
-          </button>
+          </Button>
         </div>
       }
     >
@@ -117,7 +121,7 @@ export function CycleSummaryModal({
           </span>
           <h3 className="mt-4 text-sm font-bold text-foreground">No activity recorded</h3>
           <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
-            This cycle has no inflows, expenses, paid bills, or claimed rewards to summarize.
+            This cycle has no cash activity, bill updates, or claimed rewards to summarize.
           </p>
         </div>
       ) : (
@@ -145,7 +149,6 @@ export function CycleSummaryModal({
             <div className="grid gap-3 sm:grid-cols-2">
               {summary.envelopes.map(envelope => (
                 <div key={envelope.name} className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                  {/* Name + optional overspent badge */}
                   <div className="mb-2.5 flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-foreground">{envelope.name}</span>
                     {envelope.overspent && (
@@ -154,7 +157,6 @@ export function CycleSummaryModal({
                       </span>
                     )}
                   </div>
-                  {/* Two equal-weight stat tiles side by side */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="flex flex-col gap-0.5 rounded-lg bg-muted/40 px-2.5 py-2">
                       <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Spent</span>
@@ -181,6 +183,25 @@ export function CycleSummaryModal({
                       </span>
                     </div>
                   </div>
+                  {envelope.accounts.length > 0 && (
+                    <div className="mt-3 border-t border-border/40 pt-3">
+                      <div className="mb-2 flex items-center gap-1.5">
+                        <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Accounts at cycle close</span>
+                        <InfoHint label={`${envelope.name} account balances`} text="These account balances add up to the bucket's carry-forward amount at the end of this cycle." />
+                      </div>
+                      <div className="space-y-1.5">
+                        {envelope.accounts.map(account => (
+                          <div key={account.id} className="flex items-center justify-between gap-3 text-[10px]">
+                            <span className="min-w-0 truncate text-muted-foreground">
+                              {account.name}
+                              {account.isArchived ? ' · Archived' : ''}
+                            </span>
+                            <span className="shrink-0 font-bold text-foreground">{formatSensitive(account.remaining)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

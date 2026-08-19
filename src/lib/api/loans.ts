@@ -1,6 +1,6 @@
-import type { Loan } from '../../types'
-import type { WireLoan, WireLoanScheduleEntry } from '../apiTypes'
-import { deobfuscateLoan, deobfuscateLoanSchedule, obfuscateAmount } from './amounts'
+import type { Loan, LoanRepaymentActionResult, LoanRepaymentPreviewResult } from '../../types'
+import type { WireLoan, WireLoanRepaymentActionResult, WireLoanRepaymentPreviewResult, WireLoanScheduleEntry } from '../apiTypes'
+import { deobfuscateLoan, deobfuscateLoanRepaymentAction, deobfuscateLoanRepaymentPreview, deobfuscateLoanSchedule, obfuscateAmount } from './amounts'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
 export function fetchLoans(signal?: AbortSignal): Promise<Loan[]> {
@@ -60,4 +60,65 @@ export async function deleteLoan(id: string): Promise<void> {
     errorMessage: 'Failed to delete loan',
   })
   invalidateCache()
+}
+
+export async function previewAdvanceRepayment(id: string, cycles: number, signal?: AbortSignal): Promise<LoanRepaymentPreviewResult> {
+  const data = await request<WireLoanRepaymentPreviewResult>(`/loans/${encodeURIComponent(id)}/repayments/preview-advance`, {
+    method: 'POST',
+    ...jsonBody({ cycles }),
+    signal,
+    errorMessage: 'Failed to preview advance loan repayment',
+  })
+  return deobfuscateLoanRepaymentPreview(data)
+}
+
+export async function advanceCyclesRepayment(
+  id: string,
+  cycles: number,
+  accountId?: string,
+  clientKey?: string,
+  postedAt?: string,
+): Promise<LoanRepaymentActionResult> {
+  const data = await request<WireLoanRepaymentActionResult>(`/loans/${encodeURIComponent(id)}/repayments/advance-cycles`, {
+    method: 'POST',
+    ...jsonBody({
+      cycles,
+      accountId,
+      clientKey,
+      postedAt,
+    }),
+    errorMessage: 'Failed to record advance repayment',
+  })
+  invalidateCache()
+  return deobfuscateLoanRepaymentAction(data)
+}
+
+export async function fullSettlementRepayment(
+  id: string,
+  lenderQuoteAmount: number,
+  accountId?: string,
+  clientKey?: string,
+  postedAt?: string,
+): Promise<LoanRepaymentActionResult> {
+  const data = await request<WireLoanRepaymentActionResult>(`/loans/${encodeURIComponent(id)}/repayments/full-settlement`, {
+    method: 'POST',
+    ...jsonBody({
+      lenderQuoteAmount: obfuscateAmount(lenderQuoteAmount),
+      accountId,
+      clientKey,
+      postedAt,
+    }),
+    errorMessage: 'Failed to record full loan settlement',
+  })
+  invalidateCache()
+  return deobfuscateLoanRepaymentAction(data)
+}
+
+export async function undoRepaymentAction(actionId: string): Promise<LoanRepaymentActionResult> {
+  const data = await request<WireLoanRepaymentActionResult>(`/loans/repayments/${encodeURIComponent(actionId)}/undo`, {
+    method: 'POST',
+    errorMessage: 'Failed to undo repayment',
+  })
+  invalidateCache()
+  return deobfuscateLoanRepaymentAction(data)
 }

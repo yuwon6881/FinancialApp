@@ -19,6 +19,9 @@ import type {
   Loan,
   LoanPaymentSplit,
   LoanScheduleEntry,
+  LoanRepaymentPreviewCycle,
+  LoanRepaymentPreviewResult,
+  LoanRepaymentActionResult,
   LedgerAccount,
 } from '../types'
 
@@ -286,4 +289,21 @@ export interface WireWishlistPurchaseResult {
 
 export type WirePayEarlyResult = Omit<PayEarlyResult, 'transaction'> & {
   transaction: WireTransaction
+}
+
+export type WireLoanRepaymentPreviewCycle = Omit<LoanRepaymentPreviewCycle, 'payment' | 'interest' | 'principal' | 'balanceAfter'> & {
+  payment: WireAmount
+  interest: WireAmount
+  principal: WireAmount
+  balanceAfter: WireAmount
+}
+
+export type WireLoanRepaymentPreviewResult = Omit<LoanRepaymentPreviewResult, 'totalAmount' | 'occurrences'> & {
+  totalAmount: WireAmount
+  occurrences: WireLoanRepaymentPreviewCycle[]
+}
+
+export type WireLoanRepaymentActionResult = Omit<LoanRepaymentActionResult, 'loan' | 'transactions'> & {
+  loan: WireLoan
+  transactions: WireTransaction[]
 }

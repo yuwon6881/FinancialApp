@@ -56,9 +56,17 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
       </FormField>
 
       <div className="grid grid-cols-2 gap-4">
-        <FormField label={`Amount needed (${props.currency})`} required error={props.errors.target}>
+        <FormField
+          label={`Target (${props.currency})`}
+          required
+          error={props.errors.target}
+          hint={!props.errors.target && props.releasedByLowerTarget > 0
+            ? `That is below the ${props.formatSensitive(props.releasedByLowerTarget)} more you have already set aside. Saving returns the difference to your free ${props.fundingBucket.toLowerCase()} money.`
+            : undefined}
+        >
           <SmartAmountInput
             type="text"
+            inputMode="decimal"
             value={props.target}
             onChange={event => {
               props.onTargetChange(event)
@@ -67,16 +75,8 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             placeholder={isAdd ? '0.00' : undefined}
             className="font-medium [appearance:textfield]"
           />
-          {/* A consequence, not a rejection: saving is still allowed, so this is stated in the
-              hint slot rather than as an error that would refuse the very change it describes. */}
-          {!props.errors.target && props.releasedByLowerTarget > 0 && (
-            <p className="text-[10px] text-amber-500 font-medium mt-1">
-              That is below the {props.formatSensitive(props.releasedByLowerTarget)} more you have
-              already set aside. Saving returns the difference to your free {props.fundingBucket.toLowerCase()} money.
-            </p>
-          )}
         </FormField>
-        <FormField label="Priority">
+        <FormField label="Priority" hint="Funded first when money is short.">
           <CustomSelect
             ariaLabel="Commitment priority"
             value={props.priority}
@@ -84,7 +84,6 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             options={['High', 'Medium', 'Low'].map(value => ({ value, label: value }))}
             className="w-full"
           />
-          <p className="text-[10px] text-muted-foreground font-medium mt-1">Funded first when money is short.</p>
         </FormField>
       </div>
 
@@ -107,7 +106,16 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         </div>
       </FormField>
 
-      <FormField label="Needed by" required error={props.errors.date}>
+      <FormField
+        label="Needed by"
+        required
+        error={props.errors.date}
+        hint={!props.errors.date
+          ? (props.requiredPerCycle > 0
+            ? `Your deadline works out at about ${typeof props.formatSensitive(props.requiredPerCycle) === 'string' ? props.formatSensitive(props.requiredPerCycle) : ''} to set aside each cycle.`
+            : 'Your deadline sets how much to set aside each cycle.')
+          : undefined}
+      >
         <DatePicker
           value={props.date}
           onChange={value => {
@@ -116,12 +124,10 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
           }}
           className="w-full"
         />
-        {!props.errors.date && (
-            <p className="text-[11px] text-muted-foreground mt-1 font-medium">
-              {props.requiredPerCycle > 0
-                ? <>Your deadline works out at about {props.formatSensitive(props.requiredPerCycle)} to set aside each cycle.</>
-                : 'Your deadline sets how much to set aside each cycle.'}
-            </p>
+        {!props.errors.date && props.requiredPerCycle > 0 && typeof props.formatSensitive(props.requiredPerCycle) !== 'string' && (
+          <p className="text-[11px] text-muted-foreground mt-1 font-medium">
+            Your deadline works out at about {props.formatSensitive(props.requiredPerCycle)} to set aside each cycle.
+          </p>
         )}
       </FormField>
 
@@ -131,14 +137,17 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             id={`goal-recurring-${props.mode}`}
             checked={props.isRecurring}
             onChange={event => props.onRecurringChange(event.target.checked)}
-            className="size-3.5 border-border rounded focus:ring-ring"
           />
           <label htmlFor={`goal-recurring-${props.mode}`} className="text-foreground font-semibold cursor-pointer">
             This repeats
           </label>
         </div>
         {props.isRecurring ? (
-          <FormField label="Repeat every (months)" error={props.errors.recurrence}>
+          <FormField
+            label="Repeat every (months)"
+            error={props.errors.recurrence}
+            hint={!props.errors.recurrence ? 'Marking it done moves the deadline forward and restarts saving.' : undefined}
+          >
             <Input
               type="number"
               min={1}
@@ -151,11 +160,6 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
               }}
               className="font-medium [appearance:textfield]"
             />
-            {!props.errors.recurrence && (
-                <p className="text-[10px] text-muted-foreground font-medium mt-1">
-                  Marking it done moves the deadline forward and restarts saving.
-                </p>
-            )}
           </FormField>
         ) : (
           <p className="text-[10px] text-muted-foreground font-medium">

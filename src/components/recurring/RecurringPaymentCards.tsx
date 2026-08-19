@@ -237,7 +237,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
           <p className="min-w-0 max-w-md leading-relaxed">
             {totalCount > 0
               ? 'No subscriptions match your filter criteria.'
-              : 'You don\'t have any subscriptions yet. Click “New Subscription” above to create one.'
+              : 'Add a recurring bill, loan, or subscription above to track it here.'
             }
           </p>
         </div>

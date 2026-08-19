@@ -11,12 +11,16 @@ describe('CycleSkeleton', () => {
     },
   )
 
-  it('keeps a cycle-refresh wishlist skeleton to the pool only', () => {
+  it('keeps both rails on a cycle-refresh wishlist skeleton, but not the page header', () => {
     const { container } = render(<CycleSkeleton variant="wishlist" />)
 
+    // The rails are deliberately present without fullPage: standing in for the real content they
+    // hold the page's height while a cycle switch resolves, and rendering only the pool let the
+    // whole view collapse and then spring back. The page header and tab strip stay out, because
+    // switching cycles never replaces them.
     expect(screen.getByTestId('wishlist-pool-skeleton')).toBeTruthy()
     expect(screen.queryByTestId('wishlist-header-skeleton')).toBeNull()
-    expect(container.querySelectorAll('section')).toHaveLength(0)
+    expect(container.querySelectorAll('section')).toHaveLength(2)
   })
 
   it('adds both horizontal rails for a full-page wishlist skeleton', () => {

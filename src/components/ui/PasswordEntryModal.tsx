@@ -59,8 +59,8 @@ export const PasswordEntryModal: React.FC<PasswordEntryModalProps> = ({
       maxWidthClassName="max-w-sm"
       description={description}
       title={
-        <div className="flex items-center gap-2 text-blue-500">
-          <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+        <div className="flex items-center gap-2 text-accent-ink">
+          <span className="p-1.5 rounded-lg bg-primary/10 text-accent-ink">
             <KeyRound className="size-5" />
           </span>
           <span>{title}</span>

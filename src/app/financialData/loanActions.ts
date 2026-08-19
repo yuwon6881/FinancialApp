@@ -105,5 +105,40 @@ export function createLoanActions(deps: LoanActionDependencies) {
     })
   }
 
-  return { handleAddLoan, handleUpdateLoan, handleDeleteLoan, requestDeleteLoan }
+  const handleAdvanceRepayment = async (id: string, cycles: number, accountId?: string) => {
+    if (!guardSensitive()) return
+    const loan = loans.find(item => item.id === id)
+    if (!loan) return
+    mutateQueue(queue => enqueue(queue, 'loan', 'advanceRepayment', id, {
+      cycles,
+      accountId,
+      name: loan.name,
+    }))
+  }
+
+  const handleFullSettlement = async (id: string, lenderQuoteAmount: number, accountId?: string) => {
+    if (!guardSensitive()) return
+    const loan = loans.find(item => item.id === id)
+    if (!loan) return
+    mutateQueue(queue => enqueue(queue, 'loan', 'fullSettlement', id, {
+      amount: lenderQuoteAmount,
+      accountId,
+      name: loan.name,
+    }))
+  }
+
+  const handleUndoRepayment = async (actionId: string, loanId?: string) => {
+    if (!guardSensitive()) return
+    mutateQueue(queue => enqueue(queue, 'loan', 'undoRepayment', actionId, { loanId }))
+  }
+
+  return {
+    handleAddLoan,
+    handleUpdateLoan,
+    handleDeleteLoan,
+    requestDeleteLoan,
+    handleAdvanceRepayment,
+    handleFullSettlement,
+    handleUndoRepayment,
+  }
 }
