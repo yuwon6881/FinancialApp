@@ -131,6 +131,7 @@ export default defineConfig(({ mode }) => {
         ]
       },
       injectManifest: {
+        rollupFormat: 'iife',
         // Precache only the latin Inter subsets for offline first paint; the other
         // unicode-range subsets are never requested for this app's English UI.
         globPatterns: ['**/*.{js,css,html,ico,png,svg}', '**/inter-latin-opsz-normal-*.woff2']

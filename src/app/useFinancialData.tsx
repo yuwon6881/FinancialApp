@@ -1669,12 +1669,15 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     }))
   }
 
-  const handlePayEarly = (id: string) => {
+  const handlePayEarly = (id: string, amount?: number, accountId?: string) => {
     if (!guardSensitive()) return
     const payment = allRecurringPayments.find(p => p.id === id)
     if (!payment?.nextDueDate) return
     const occurrenceDate = payment.nextDueDate
     const postedAt = new Date().toISOString()
+    const isPartial = typeof amount === 'number' && amount > 0 && amount < Math.abs(payment.amount)
+    const paidAmount = isPartial ? amount : Math.abs(payment.amount)
+    const targetAccountId = accountId ?? payment.accountId
     const pendingTransactionId = createFinalId('transaction')
     const pendingTransaction: Transaction = {
       id: pendingTransactionId,
@@ -1683,8 +1686,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       description: payment.name,
       category: payment.category,
       ledgerCategory: payment.ledgerCategory,
-      amount: -Math.abs(payment.amount),
-      accountId: payment.accountId,
+      amount: -paidAmount,
+      accountId: targetAccountId,
       recurringPaymentId: payment.id,
       recurringOccurrenceDate: occurrenceDate,
       isPendingSync: true,
@@ -1693,10 +1696,11 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       name: payment.name,
       recurringPaymentId: payment.id,
       occurrenceDate,
-      status: 'Paid',
+      status: isPartial ? 'PartiallyPaid' : 'Paid',
       paidDate: financialDate(),
-      accountId: payment.accountId,
-      optimisticNextOccurrenceDate: computeNextOccurrenceDate(payment) ?? undefined,
+      accountId: targetAccountId,
+      amount: isPartial ? amount : undefined,
+      optimisticNextOccurrenceDate: isPartial ? undefined : (computeNextOccurrenceDate(payment) ?? undefined),
       optimisticTransaction: pendingTransaction,
     }))
   }

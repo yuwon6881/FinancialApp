@@ -406,6 +406,7 @@ export function AuthenticatedView({
                       thisDevicePushEnabled={push.billRemindersEnabled}
                       onUpdateReminder={financial.handleUpdateReminder}
                       onRequestPayEarly={financial.requestPayEarly}
+                      onPayEarly={financial.handlePayEarly}
                       loans={financial.allLoans}
                       onAddLoan={financial.handleAddLoan}
                       onUpdateLoan={financial.handleUpdateLoan}

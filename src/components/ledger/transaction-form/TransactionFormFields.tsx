@@ -1,6 +1,6 @@
 import { Input } from '../../ui/Input'
 import React, { useRef, useEffect } from 'react'
-import { Sparkles, Loader2, AlertTriangle } from 'lucide-react'
+import { Sparkles, Loader2, AlertTriangle, ArrowLeftRight } from 'lucide-react'
 import { PerimeterBeam } from '../../ui/PerimeterBeam'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { DatePicker } from '../../ui/DatePicker'
@@ -30,6 +30,7 @@ interface TransactionFormFieldsProps {
   errors: Record<string, string>
   onSetField: (field: keyof TransactionFormState, value: any) => void
   onSetSplitAccountId?: (bucket: TransferBucket, accountId: string) => void
+  onSwapTransfer?: () => void
   onSelectSuggestion: (s: any) => void
   onSuggestNotes: () => Promise<void>
   onSuggestCategory: () => Promise<void>
@@ -67,6 +68,7 @@ export function TransactionFormFields({
   errors,
   onSetField,
   onSetSplitAccountId,
+  onSwapTransfer,
   onSelectSuggestion,
   onSuggestNotes,
   onSuggestCategory,
@@ -373,7 +375,6 @@ export function TransactionFormFields({
       </div>
 
       <FormField
-        className="sm:col-span-2"
         label={`Amount (${getCurrencySymbol(currency)})`}
         required
         error={errors.amount}
@@ -396,8 +397,37 @@ export function TransactionFormFields({
         </div>
       </FormField>
 
+      <FormField label="Posting date" required error={errors.date}>
+        <DatePicker
+          value={state.date}
+          onChange={value => {
+            onSetField('date', value)
+          }}
+          className="w-full"
+        />
+      </FormField>
+
       {isAccountMove ? (
         <>
+          <div className="sm:col-span-2 flex items-center justify-between pt-1">
+            <span className="text-xs font-semibold text-muted-foreground">Account Transfer</span>
+            <Button
+              variant="outline"
+              size="xs"
+              type="button"
+              onClick={() => {
+                const temp = state.accountId
+                onSetField('accountId', state.counterAccountId)
+                onSetField('counterAccountId', temp)
+              }}
+              title="Swap source and destination accounts"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/20 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted/50 cursor-pointer transition"
+            >
+              <ArrowLeftRight className="size-3" />
+              Swap Accounts
+            </Button>
+          </div>
+
           <FormField
             label="From account"
             required
@@ -429,19 +459,24 @@ export function TransactionFormFields({
               className="w-full"
             />
           </FormField>
-
-          <FormField label="Posting date" className="sm:col-span-2" required error={errors.date}>
-            <DatePicker
-              value={state.date}
-              onChange={value => {
-                onSetField('date', value)
-              }}
-              className="w-full"
-            />
-          </FormField>
         </>
       ) : state.transactionType === 'transfer' ? (
         <>
+          <div className="sm:col-span-2 flex items-center justify-between pt-1">
+            <span className="text-xs font-semibold text-muted-foreground">Transfer Route</span>
+            <Button
+              variant="outline"
+              size="xs"
+              type="button"
+              onClick={onSwapTransfer}
+              title="Swap transfer source and destination"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/20 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted/50 cursor-pointer transition"
+            >
+              <ArrowLeftRight className="size-3 text-teal-500" />
+              Swap Direction
+            </Button>
+          </div>
+
           <FormField label="Source category (from)">
             <CustomSelect
               ariaLabel="Transfer source category"
@@ -501,21 +536,11 @@ export function TransactionFormFields({
               className="w-full"
             />
           </FormField>
-
-          <FormField label="Posting date" className="sm:col-span-2" required error={errors.date}>
-            <DatePicker
-              value={state.date}
-              onChange={value => {
-                onSetField('date', value)
-              }}
-              className="w-full"
-            />
-          </FormField>
         </>
       ) : (
         <>
           <FormField
-            className="relative sm:col-span-2"
+            className="relative"
             required
             error={errors.category}
             label="Category"
@@ -589,6 +614,7 @@ export function TransactionFormFields({
 
           {accountBucket && (
             <FormField
+              className="sm:col-span-2"
               label="Account"
               required
               error={errors.accountId}
@@ -602,16 +628,6 @@ export function TransactionFormFields({
               />
             </FormField>
           )}
-
-          <FormField label="Posting date" required error={errors.date}>
-            <DatePicker
-              value={state.date}
-              onChange={value => {
-                onSetField('date', value)
-              }}
-              className="w-full"
-            />
-          </FormField>
 
           <StabilityTopUpOffer
             offer={topUpOffer}

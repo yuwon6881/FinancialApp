@@ -13,6 +13,7 @@ import { RecurringTabs, type RecurringTabId } from './recurring/RecurringTabs'
 import type { LoanLoadStatus } from '../app/financialData/useLoanData'
 
 const LoansSection = React.lazy(() => import('./recurring/loans/LoansSection').then(module => ({ default: module.LoansSection })))
+const PayEarlySheet = React.lazy(() => import('./recurring/PayEarlySheet').then(module => ({ default: module.PayEarlySheet })))
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
@@ -47,6 +48,7 @@ interface RecurringPaymentsViewProps {
   thisDevicePushEnabled?: boolean
   onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
   onRequestPayEarly?: (id: string) => void
+  onPayEarly?: (id: string, amount?: number, accountId?: string) => Promise<void> | void
   loans?: Loan[]
   onAddLoan?: (loan: Partial<Loan>) => void
   onUpdateLoan?: (id: string, loan: Loan) => void
@@ -93,6 +95,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   thisDevicePushEnabled = true,
   onUpdateReminder,
   onRequestPayEarly,
+  onPayEarly,
   loans = [],
   onAddLoan = () => {},
   onUpdateLoan = () => {},
@@ -117,6 +120,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const isMobile = useIsMobile()
   const [activeTab, setActiveTab] = React.useState<RecurringTabId>(() => (highlightedLoanIdProp ? 'loans' : 'recurring'))
   const [internalHighlightedLoanId, setInternalHighlightedLoanId] = React.useState<string | null>(null)
+  const [payEarlyPayment, setPayEarlyPayment] = React.useState<RecurringPayment | null>(null)
   const currentHighlightedLoanId = highlightedLoanIdProp || internalHighlightedLoanId
 
   const handleClearHighlightedLoan = React.useCallback(() => {
@@ -240,7 +244,11 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             globalPushEnabled={globalPushEnabled}
             thisDevicePushEnabled={thisDevicePushEnabled}
             onUpdateReminder={onUpdateReminder}
-            onRequestPayEarly={onRequestPayEarly}
+            onRequestPayEarly={(id) => {
+              const payment = payments.find(p => p.id === id)
+              if (payment) setPayEarlyPayment(payment)
+              onRequestPayEarly?.(id)
+            }}
             onNavigateToLoan={(loanId) => {
               setActiveTab('loans')
               setInternalHighlightedLoanId(loanId)
@@ -306,6 +314,21 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         onSubmit={view.handleSubmit}
         onCancel={view.handleCancelForm}
       />
+
+      {payEarlyPayment && (
+        <Suspense fallback={null}>
+          <PayEarlySheet
+            isOpen={!!payEarlyPayment}
+            payment={payEarlyPayment}
+            accounts={accounts}
+            currency={currency}
+            onClose={() => setPayEarlyPayment(null)}
+            onPayEarly={async (id, amount, accountId) => {
+              await onPayEarly?.(id, amount, accountId)
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

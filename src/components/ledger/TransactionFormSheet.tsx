@@ -207,6 +207,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             errors={form.state.errors}
             onSetField={(field: any, val: any) => form.dispatch({ type: 'SET_FIELD', field, value: val })}
             onSetSplitAccountId={(bucket, accountId) => form.dispatch({ type: 'SET_SPLIT_ACCOUNT', bucket, accountId })}
+            onSwapTransfer={() => form.dispatch({ type: 'SWAP_TRANSFER' })}
             onSelectSuggestion={form.handleSelectSuggestion}
             onSuggestNotes={() => form.suggestions.requestNoteSuggestions(form.state.description.trim())}
             onSuggestCategory={async () => {

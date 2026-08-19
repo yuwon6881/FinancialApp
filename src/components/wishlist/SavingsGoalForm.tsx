@@ -55,7 +55,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         />
       </FormField>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField
           label={`Target (${props.currency})`}
           required
@@ -87,49 +87,51 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         </FormField>
       </div>
 
-      <FormField label="Where should this money come from?">
-        <div className="flex items-center gap-1.5">
-          <CustomSelect
-            ariaLabel="Commitment funding bucket"
-            value={props.fundingBucket}
-            onChange={value => props.onFundingBucketChange(value as SavingsGoalFundingBucket)}
-            options={[
-              { value: 'Essentials', label: 'From your everyday money (Essentials)' },
-              { value: 'Rewards', label: 'From your rewards money (Rewards)' },
-            ]}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FormField label="Where should this money come from?">
+          <div className="flex items-center gap-1.5">
+            <CustomSelect
+              ariaLabel="Commitment funding bucket"
+              value={props.fundingBucket}
+              onChange={value => props.onFundingBucketChange(value as SavingsGoalFundingBucket)}
+              options={[
+                { value: 'Essentials', label: 'Everyday money (Essentials)' },
+                { value: 'Rewards', label: 'Rewards money (Rewards)' },
+              ]}
+              className="w-full"
+            />
+            <InfoHint
+              label="commitment funding bucket"
+              text="Essentials is the money your bills come out of. Rewards is the money you set aside for treats and rewards."
+            />
+          </div>
+        </FormField>
+
+        <FormField
+          label="Needed by"
+          required
+          error={props.errors.date}
+          hint={!props.errors.date
+            ? (props.requiredPerCycle > 0
+              ? `Your deadline works out at about ${typeof props.formatSensitive(props.requiredPerCycle) === 'string' ? props.formatSensitive(props.requiredPerCycle) : ''} to set aside each cycle.`
+              : 'Your deadline sets how much to set aside each cycle.')
+            : undefined}
+        >
+          <DatePicker
+            value={props.date}
+            onChange={value => {
+              props.onDateChange(value)
+              props.onClearError('date')
+            }}
             className="w-full"
           />
-          <InfoHint
-            label="commitment funding bucket"
-            text="Essentials is the money your bills come out of. Rewards is the money you set aside for treats and rewards."
-          />
-        </div>
-      </FormField>
-
-      <FormField
-        label="Needed by"
-        required
-        error={props.errors.date}
-        hint={!props.errors.date
-          ? (props.requiredPerCycle > 0
-            ? `Your deadline works out at about ${typeof props.formatSensitive(props.requiredPerCycle) === 'string' ? props.formatSensitive(props.requiredPerCycle) : ''} to set aside each cycle.`
-            : 'Your deadline sets how much to set aside each cycle.')
-          : undefined}
-      >
-        <DatePicker
-          value={props.date}
-          onChange={value => {
-            props.onDateChange(value)
-            props.onClearError('date')
-          }}
-          className="w-full"
-        />
-        {!props.errors.date && props.requiredPerCycle > 0 && typeof props.formatSensitive(props.requiredPerCycle) !== 'string' && (
-          <p className="text-[11px] text-muted-foreground mt-1 font-medium">
-            Your deadline works out at about {props.formatSensitive(props.requiredPerCycle)} to set aside each cycle.
-          </p>
-        )}
-      </FormField>
+          {!props.errors.date && props.requiredPerCycle > 0 && typeof props.formatSensitive(props.requiredPerCycle) !== 'string' && (
+            <p className="text-[11px] text-muted-foreground mt-1 font-medium">
+              Your deadline works out at about {props.formatSensitive(props.requiredPerCycle)} to set aside each cycle.
+            </p>
+          )}
+        </FormField>
+      </div>
 
       <div className="rounded-xl border border-border/50 bg-muted/20 p-3 space-y-3">
         <div className="flex items-center gap-2 select-none">

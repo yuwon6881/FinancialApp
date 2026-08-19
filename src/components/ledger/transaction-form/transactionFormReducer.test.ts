@@ -167,4 +167,25 @@ describe('transactionFormReducer stabilityTopUpAccepted', () => {
     })
     expect(state.accountId).toBe('')
   })
+
+  it('swaps transfer source and target along with their selected accounts', () => {
+    const initial = {
+      ...getInitialState('2026-07-09', 'Other'),
+      transactionType: 'transfer' as const,
+      transferSource: 'Essentials' as const,
+      transferTarget: 'Rewards' as const,
+      accountId: 'acc-ess-1',
+      counterAccountId: 'acc-rew-1',
+      errors: { accountId: 'Invalid', transferTarget: 'Error' },
+    }
+
+    const state = transactionFormReducer(initial, { type: 'SWAP_TRANSFER' })
+
+    expect(state.transferSource).toBe('Rewards')
+    expect(state.transferTarget).toBe('Essentials')
+    expect(state.accountId).toBe('acc-rew-1')
+    expect(state.counterAccountId).toBe('acc-ess-1')
+    expect(state.errors.accountId).toBe('')
+    expect(state.errors.transferTarget).toBe('')
+  })
 })

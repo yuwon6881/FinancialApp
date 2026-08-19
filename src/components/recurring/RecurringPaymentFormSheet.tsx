@@ -142,14 +142,32 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
           />
         </FormField>
 
-        <FormField label="Payment frequency">
+        <FormField label="Ledger category">
           <CustomSelect
-            ariaLabel="Payment frequency"
-            value={frequency}
-            onChange={onFrequencyChange}
+            ariaLabel="Ledger category"
+            value={ledgerCategory}
+            onChange={val => onLedgerCategoryChange(val)}
             options={[
-              { value: 'Monthly', label: 'Monthly' },
-              { value: 'Annually', label: 'Annually' }
+              { value: 'Essentials', label: 'Essentials' },
+              { value: 'Growth', label: 'Growth' },
+              { value: 'Stability', label: 'Stability' },
+              { value: 'Rewards', label: 'Rewards' }
+            ]}
+            className="w-full"
+          />
+        </FormField>
+
+        <FormField label="Paid from account" required error={errors.accountId}>
+          <CustomSelect
+            ariaLabel="Paid from account"
+            value={accountId}
+            onChange={onAccountIdChange}
+            invalid={Boolean(errors.accountId)}
+            options={[
+              { value: '', label: 'Choose an account', disabled: true },
+              ...accounts
+                .filter(account => account.bucket === ledgerCategory && !account.isArchived)
+                .map(account => ({ value: account.id, label: `${account.name} · ${account.bucket}` })),
             ]}
             className="w-full"
           />
@@ -193,37 +211,6 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
           />
         </FormField>
 
-        <FormField label="Ledger category">
-          <CustomSelect
-            ariaLabel="Ledger category"
-            value={ledgerCategory}
-            onChange={val => onLedgerCategoryChange(val)}
-            options={[
-              { value: 'Essentials', label: 'Essentials' },
-              { value: 'Growth', label: 'Growth' },
-              { value: 'Stability', label: 'Stability' },
-              { value: 'Rewards', label: 'Rewards' }
-            ]}
-            className="w-full"
-          />
-        </FormField>
-
-        <FormField label="Paid from account" required error={errors.accountId}>
-          <CustomSelect
-            ariaLabel="Paid from account"
-            value={accountId}
-            onChange={onAccountIdChange}
-            invalid={Boolean(errors.accountId)}
-            options={[
-              { value: '', label: 'Choose an account', disabled: true },
-              ...accounts
-                .filter(account => account.bucket === ledgerCategory && !account.isArchived)
-                .map(account => ({ value: account.id, label: `${account.name} · ${account.bucket}` })),
-            ]}
-            className="w-full"
-          />
-        </FormField>
-
         <FormField
           label={editingPayment?.linkedLoanId ? 'End billing date' : 'End billing date (optional)'}
           hint={editingPayment?.linkedLoanId
@@ -234,6 +221,19 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
             value={endDateInput}
             onChange={onEndDateChange}
             placeholder="No end date"
+            className="w-full"
+          />
+        </FormField>
+
+        <FormField label="Payment frequency" className="sm:col-span-2">
+          <CustomSelect
+            ariaLabel="Payment frequency"
+            value={frequency}
+            onChange={onFrequencyChange}
+            options={[
+              { value: 'Monthly', label: 'Monthly' },
+              { value: 'Annually', label: 'Annually' }
+            ]}
             className="w-full"
           />
         </FormField>

@@ -51,7 +51,6 @@ const today = () => {
 
 const numberOrUndefined = (value: string) => value.trim() === '' ? undefined : Number(value)
 const formGridClass = 'grid items-start gap-4 sm:grid-cols-2'
-const formGridWideClass = 'grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4'
 
 const Field = ({ label, hint, error, className = '', required, children }: {
   label: React.ReactNode
@@ -380,18 +379,18 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
         successMessage="Investment activity scanned — review fields below and edit as needed"
       />
     </>}
-    <div className={formGridWideClass}>
-    <Field label="Activity type" plain><CustomSelect value={type} onChange={v => setType(v as InvestmentTransactionType)} options={activityTypes.map(t => ({ value: t.value, label: t.label }))} ariaLabel="Activity type" className="w-full" /></Field>
-    <Field label="Account" plain><CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
-    <Field label="Investment" plain><CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: `${i.symbol} · ${i.name}` }))} ariaLabel="Investment" className="w-full" /></Field>
-    <Field label="Trade date" plain><DatePicker value={tradeDate} onChange={setTradeDate} max={today()} className="w-full" /></Field>
-    {needsUnits && <Field label="Units" error={errors.units} hint={type === 'Sell' ? `${number(heldUnits, 8)} units held` : undefined}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value); setErrors(prev => ({ ...prev, units: '', form: '' })) }} /></Field>}
-    {trade && <Field label={`Unit price (${selectedInstrument?.currency})`} error={errors.unitPrice}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value); setErrors(prev => ({ ...prev, unitPrice: '', form: '' })) }} /></Field>}
-    <Field required={type === 'Dividend'} label={`${type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`} error={errors.cashAmount} hint={['Buy', 'FeeTax'].includes(type) && selectedInstrument ? `${money(Math.max(heldCash, 0), selectedInstrument.currency)} cash available` : undefined}><Input type="number" inputMode="decimal" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} /></Field>
-    {type !== 'FeeTax' && <>
-      <Field label={`Fees${feesLabelSuffix}`}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} /></Field>
-      <Field label={`Taxes${feesLabelSuffix}`}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} /></Field>
-    </>}
+    <div className={formGridClass}>
+      <Field label="Activity type" plain><CustomSelect value={type} onChange={v => setType(v as InvestmentTransactionType)} options={activityTypes.map(t => ({ value: t.value, label: t.label }))} ariaLabel="Activity type" className="w-full" /></Field>
+      <Field label="Trade date" plain><DatePicker value={tradeDate} onChange={setTradeDate} max={today()} className="w-full" /></Field>
+      <Field label="Account" plain><CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
+      <Field label="Investment" plain><CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: `${i.symbol} · ${i.name}` }))} ariaLabel="Investment" className="w-full" /></Field>
+      {needsUnits && <Field label="Units" error={errors.units} hint={type === 'Sell' ? `${number(heldUnits, 8)} units held` : undefined}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value); setErrors(prev => ({ ...prev, units: '', form: '' })) }} /></Field>}
+      {trade && <Field label={`Unit price (${selectedInstrument?.currency})`} error={errors.unitPrice}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value); setErrors(prev => ({ ...prev, unitPrice: '', form: '' })) }} /></Field>}
+      <Field className={type === 'FeeTax' ? 'sm:col-span-2' : ''} required={type === 'Dividend'} label={`${type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`} error={errors.cashAmount} hint={['Buy', 'FeeTax'].includes(type) && selectedInstrument ? `${money(Math.max(heldCash, 0), selectedInstrument.currency)} cash available` : undefined}><Input type="number" inputMode="decimal" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} /></Field>
+      {type !== 'FeeTax' && <>
+        <Field label={`Fees${feesLabelSuffix}`}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} /></Field>
+        <Field className={type === 'Dividend' ? 'sm:col-span-2' : ''} label={`Taxes${feesLabelSuffix}`}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} /></Field>
+      </>}
     </div>
     {trade && <p className="text-[10px] text-muted-foreground">Fill any two of units, unit price, and gross amount — the third is worked out for you.</p>}
     {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-[10px] text-muted-foreground">Amounts use {selectedInstrument.currency}; reports use {portfolio?.appCurrency} at that date's rate. Convert cash in "Manage cash" before trading.</p>}
@@ -588,7 +587,7 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
           <Field label="Currency" required error={errors.currency}><CurrencySelect value={currency} onChange={value => { setCurrency(value); setErrors(previous => ({ ...previous, currency: '' })) }} className="w-full" ariaLabel="Cash currency" /></Field>
         </>
       )}
-      <Field label="Date" plain><DatePicker value={date} onChange={setDate} max={today()} className="w-full" /></Field>
+      <Field label="Date" plain className="sm:col-span-2"><DatePicker value={date} onChange={setDate} max={today()} className="w-full" /></Field>
     </div>
     <p className="text-[10px] text-muted-foreground">Use for deposits, withdrawals, and currency conversions. Trades, dividends, and fees adjust cash automatically.</p>
     <FormActions busy={busy} onCancel={() => { clearScan(); onCancel() }} submitLabel={initial ? 'Save changes' : type === 'Conversion' ? 'Record conversion' : type === 'Withdrawal' ? 'Record withdrawal' : 'Record deposit'} disabled={!accountId} />

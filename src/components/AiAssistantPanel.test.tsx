@@ -755,6 +755,33 @@ describe('AiAssistantPanel', () => {
 
       expect(chatWithAi).not.toHaveBeenCalled()
       expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).value).toBe('transfer 50 from @RYT ')
+      expect(screen.queryByRole('listbox', { name: 'Ledger accounts' })).toBeNull()
+    })
+
+    it('closes the menu when Enter picks an account whose name prefixes another account, allowing the next Enter to send', async () => {
+      chatWithAi.mockResolvedValue(reply())
+      const multiAccounts = [
+        { id: 'acct-ryt', name: 'RYT', bucket: 'Essentials', kind: 'Bank', isArchived: false, remaining: 0, createdAt: '', updatedAt: '' },
+        { id: 'acct-ryt-ef', name: 'RYT Emergency Fund', bucket: 'Stability', kind: 'Bank', isArchived: false, remaining: 0, createdAt: '', updatedAt: '' },
+      ] as LedgerAccount[]
+      render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} accounts={multiAccounts} />)
+
+      const textarea = screen.getByLabelText('Ask AI') as HTMLTextAreaElement
+      await waitFor(() => expect(textarea.disabled).toBe(false))
+      fireEvent.change(textarea, { target: { value: '@RYT', selectionStart: 4 } })
+
+      expect(screen.getByRole('listbox', { name: 'Ledger accounts' })).toBeTruthy()
+      expect(screen.getAllByRole('option')).toHaveLength(2)
+
+      // First Enter picks "RYT" and closes the picker
+      fireEvent.keyDown(textarea, { key: 'Enter' })
+      expect(screen.queryByRole('listbox', { name: 'Ledger accounts' })).toBeNull()
+      expect(chatWithAi).not.toHaveBeenCalled()
+      expect(textarea.value).toBe('@RYT ')
+
+      // Second Enter sends the message
+      fireEvent.keyDown(textarea, { key: 'Enter' })
+      await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
     })
 
     it('sends the accounts the message names, in the order it names them', async () => {

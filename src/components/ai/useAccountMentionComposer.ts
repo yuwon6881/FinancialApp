@@ -70,6 +70,7 @@ export function useAccountMentionComposer({
     if (!mention) return
     const next = applyAccountMention(input, mention, account)
     pendingCaretRef.current = next.caret
+    setIsDismissed(true)
     setInput(next.text)
   }, [input, mention, setInput])
 

@@ -126,6 +126,60 @@ describe('TransactionFormFields', () => {
     expect(onSetField).toHaveBeenCalledWith('accountId', 'ess-2')
   })
 
+  it('triggers onSwapTransfer when the swap direction button is clicked in transfer mode', () => {
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+    const onSwapTransfer = vi.fn()
+
+    render(
+      <TransactionFormFields
+        state={{
+          ...getInitialState('2026-08-01', 'Entertainment'),
+          showAddForm: true,
+          transactionType: 'transfer',
+          transferSource: 'Essentials',
+          transferTarget: 'Rewards',
+          accountId: null,
+          counterAccountId: null,
+        }}
+        firstInputRef={React.createRef<HTMLInputElement>()}
+        descriptionRef={{ current: '' }}
+        autocompletedDescriptionRef={{ current: null }}
+        currency="MYR"
+        categories={[{ id: 'entertainment', name: 'Entertainment' }]}
+        accounts={[]}
+        errors={{}}
+        onSetField={vi.fn()}
+        onSwapTransfer={onSwapTransfer}
+        onSelectSuggestion={vi.fn()}
+        onSuggestNotes={vi.fn()}
+        onSuggestCategory={vi.fn()}
+        filteredSuggestions={[]}
+        quickSuggestionEntries={[]}
+        suggestions={{
+          categorySuggestions: [],
+          isSuggestingCategory: false,
+          categorySuggestionUnavailable: false,
+          isSuggestingNote: false,
+          noteSuggestions: [],
+          showNoteSuggestions: false,
+          noteSuggestionUnavailable: false,
+          setShowNoteSuggestions: vi.fn(),
+          setNoteSuggestions: vi.fn(),
+          setIsSuggestingNote: vi.fn(),
+        }}
+      />,
+    )
+
+    const swapButton = screen.getByRole('button', { name: /Swap Direction/i })
+    expect(swapButton).toBeTruthy()
+    fireEvent.click(swapButton)
+    expect(onSwapTransfer).toHaveBeenCalledTimes(1)
+  })
+
   it('renders the bucket outflow advisory warning banner when present', () => {
     vi.stubGlobal('ResizeObserver', class {
       observe() {}

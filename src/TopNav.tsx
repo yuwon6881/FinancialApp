@@ -219,30 +219,24 @@ const TopNav: React.FC<TopNavProps> = ({
               refresh/offline text may then clip at the edge of the left lane instead of
               shifting the draft into the fixed actions on the right. */}
           {isPhone && draftStatus}
-          {isOffline ? (
+          {isPhone && (isOffline ? (
             <div
               aria-label="Offline"
-              className={isPhone
-                ? 'ml-1.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-500'
-                : 'ml-2.5 flex shrink-0 items-center gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-500 select-none'}
+              className="ml-1.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-500"
               title="No network connection — showing cached data, changes will sync once you're back online"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-              {!isPhone && 'Offline'}
             </div>
-          ) : (isSyncing || syncLabel) && (!isPhone || syncStatusLabel !== 'Refreshing') && (
+          ) : (isSyncing || syncLabel) && syncStatusLabel !== 'Refreshing' ? (
             <div
               aria-label={syncStatusLabel}
               title={syncStatusLabel}
-              className={isPhone
-                ? 'ml-1.5 flex size-5 shrink-0 animate-pulse items-center justify-center rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-500'
-                : 'ml-2.5 flex shrink-0 animate-pulse items-center gap-1.5 rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-500 select-none'}
+              className="ml-1.5 flex size-5 shrink-0 animate-pulse items-center justify-center rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-500"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-              {!isPhone && syncStatusLabel}
             </div>
-          )}
-          {failedOpsCount > 0 && (
+          ) : null)}
+          {isPhone && failedOpsCount > 0 && (
             <Button variant="unstyled"
               type="button"
               onClick={() => onOpenFailedOps?.()}
@@ -253,7 +247,6 @@ const TopNav: React.FC<TopNavProps> = ({
               <span>{failedOpsCount} failed</span>
             </Button>
           )}
-          {!isPhone && draftStatus}
         </div>
 
         {/* Navigation Tabs - flow beside the actions on medium/tablet screens, centered mathematically on wide desktop */}
@@ -283,6 +276,41 @@ const TopNav: React.FC<TopNavProps> = ({
 
         {/* Right Side Widgets & Actions */}
         <div className="flex shrink-0 items-center justify-end gap-1.5 z-10 sm:gap-2.5 ml-auto md:ml-0 xl:flex-1 xl:gap-3">
+          {!isPhone && (
+            <>
+              {isOffline ? (
+                <div
+                  aria-label="Offline"
+                  className="flex shrink-0 items-center gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-500 select-none"
+                  title="No network connection — showing cached data, changes will sync once you're back online"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                  Offline
+                </div>
+              ) : (isSyncing || syncLabel) ? (
+                <div
+                  aria-label={syncStatusLabel}
+                  title={syncStatusLabel}
+                  className="flex shrink-0 animate-pulse items-center gap-1.5 rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-500 select-none"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                  {syncStatusLabel}
+                </div>
+              ) : null}
+              {failedOpsCount > 0 && (
+                <Button variant="unstyled"
+                  type="button"
+                  onClick={() => onOpenFailedOps?.()}
+                  className="flex items-center gap-1 px-2 py-0.5 bg-destructive/10 border border-destructive/20 rounded-md text-[10px] font-bold text-destructive cursor-pointer select-none shrink-0 hover:bg-destructive/20 transition duration-150"
+                  title="Operations that failed to sync and were removed from the active queue — click to view details"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
+                  <span>{failedOpsCount} failed</span>
+                </Button>
+              )}
+              {draftStatus}
+            </>
+          )}
           
           
           <Button variant="unstyled"

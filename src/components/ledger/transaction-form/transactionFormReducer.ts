@@ -49,6 +49,7 @@ export type TransactionFormAction =
   | { type: 'OPEN_DRAFT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; accountId?: string | null; counterAccountId?: string | null; splitAccountIds?: Record<string, string> | null; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
   | { type: 'SET_FIELD'; field: keyof TransactionFormState; value: any }
   | { type: 'SET_SPLIT_ACCOUNT'; bucket: TransferBucket; accountId: string }
+  | { type: 'SWAP_TRANSFER' }
   | { type: 'APPLY_RECEIPT'; payload: { description?: string; amount?: string | number | null; date?: string | null; txType?: TransactionType; ledgerCategory?: SelectableLedgerCategory; category?: string }; todayDate: string }
   | { type: 'APPLY_AI_DRAFT'; payload: Record<string, any>; todayDate: string }
   | { type: 'RESET'; todayDate: string; defaultCategory: string }
@@ -161,6 +162,20 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         splitAccountIds: {
           ...state.splitAccountIds,
           [action.bucket]: action.accountId,
+        },
+      }
+    case 'SWAP_TRANSFER':
+      return {
+        ...state,
+        transferSource: state.transferTarget,
+        transferTarget: state.transferSource,
+        accountId: state.counterAccountId,
+        counterAccountId: state.accountId,
+        errors: {
+          ...state.errors,
+          accountId: '',
+          counterAccountId: '',
+          transferTarget: '',
         },
       }
     case 'APPLY_RECEIPT': {

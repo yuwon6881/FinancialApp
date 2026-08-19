@@ -322,27 +322,29 @@ export function LoanRepaymentSheet({
               </p>
             </div>
 
-            <FormField label="Settlement amount" id="settlement-amount-input">
-              <SmartAmountInput
-                id="settlement-amount-input"
-                value={quoteAmount}
-                onChange={e => setQuoteAmount(e.target.value)}
-                placeholder="0.00"
-                disabled={submitting}
-              />
-            </FormField>
-
-            {accountOptions.length > 0 && (
-              <FormField label="Pay from account" id="settlement-account-select">
-                <CustomSelect
-                  id="settlement-account-select"
-                  value={selectedAccountId}
-                  onChange={setSelectedAccountId}
-                  options={accountOptions}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField label="Settlement amount" id="settlement-amount-input">
+                <SmartAmountInput
+                  id="settlement-amount-input"
+                  value={quoteAmount}
+                  onChange={e => setQuoteAmount(e.target.value)}
+                  placeholder="0.00"
                   disabled={submitting}
                 />
               </FormField>
-            )}
+
+              {accountOptions.length > 0 && (
+                <FormField label="Pay from account" id="settlement-account-select">
+                  <CustomSelect
+                    id="settlement-account-select"
+                    value={selectedAccountId}
+                    onChange={setSelectedAccountId}
+                    options={accountOptions}
+                    disabled={submitting}
+                  />
+                </FormField>
+              )}
+            </div>
 
             <ModalActions className="pt-2">
               <Button variant="outline" type="button" onClick={onClose} disabled={submitting} className="rounded-xl">
