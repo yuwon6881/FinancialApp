@@ -739,6 +739,7 @@ function App() {
             invocation={aiEntryPoint.invocation}
             onInvocationConsumed={aiEntryPoint.consume}
             surface={prefs.activeTab}
+            accounts={financial.allAccounts}
           />
         </Suspense>
 

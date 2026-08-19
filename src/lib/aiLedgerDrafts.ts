@@ -25,9 +25,10 @@ function localIsoDate(): string {
 /**
  * The account a drafted bucket leg lands in, using the same rule the transaction form applies: a
  * bucket holding exactly one open account preselects it, and one holding several leaves the choice
- * to the person reviewing the draft. The assistant is never told which accounts exist, so guessing
- * between two would put money somewhere nobody chose; leaving it undefined instead surfaces the
- * required field in the draft editor, which is the gate every other writer goes through.
+ * to the person reviewing the draft. The assistant may name an account only when the user did --
+ * with an "@" mention or the exact name -- so guessing between two would put money somewhere
+ * nobody chose; leaving it undefined instead surfaces the required field in the draft editor,
+ * which is the gate every other writer goes through.
  */
 function soleLiveAccountId(
   accounts: LedgerAccount[],
@@ -50,6 +51,25 @@ function explicitLiveAccountId(
   return match?.id
 }
 
+/**
+ * The description a transfer keeps when the user gave none. Naming the two sides is what the row
+ * is: "Transfer CIMB to RYT" reads the same in the ledger as it did in the request, where a blank
+ * description would have failed the draft editor's required field for a complete instruction.
+ */
+function transferDescription(
+  supplied: string | null,
+  accounts: LedgerAccount[],
+  accountId: string | undefined,
+  counterAccountId: string | undefined,
+  source: string,
+  target: string,
+): string {
+  if (supplied) return capitalizeWords(supplied)
+  const nameOf = (id: string | undefined, fallback: string) =>
+    accounts.find(account => account.id === id)?.name ?? fallback
+  return `Transfer ${nameOf(accountId, source)} to ${nameOf(counterAccountId, target)}`
+}
+
 /** Convert a validated AI ledger-add payload into local staging records. */
 export function buildAiLedgerDraftTransactions(
   payload: Record<string, unknown>,
@@ -70,16 +90,19 @@ export function buildAiLedgerDraftTransactions(
     const fields = raw as Record<string, unknown>
     const rawDescription = text(fields, 'description')
     const magnitude = number(fields, 'amount')
-    if (!rawDescription || magnitude == null || magnitude <= 0) return []
-    const description = capitalizeWords(rawDescription)
+    if (magnitude == null || magnitude <= 0) return []
 
     const rawType = text(fields, 'txType')?.toLowerCase()
     const txType = rawType === 'inflow' || rawType === 'transfer' ? rawType : 'outflow'
+    // Moving money is a complete instruction without a description: the two sides already name
+    // the row. Only a spend or a deposit genuinely needs one, so only those are refused for it.
+    if (!rawDescription && txType !== 'transfer') return []
     const requestedCategory = text(fields, 'category')?.toLowerCase()
     const category = (requestedCategory && categoriesByName.get(requestedCategory)) || fallbackCategory
     const rawLedger = text(fields, 'ledgerCategory')?.toLowerCase().replace(/^reward$/, 'rewards')
-    // AccountMove is a persisted internal marker, not a route the assistant is allowed to
-    // invent. It requires two same-bucket account ids that are unavailable to this draft parser.
+    // AccountMove is a persisted internal marker, never a ledger category the assistant may name
+    // directly. It is reached only through the transfer branch below, and only once the user has
+    // pointed at both accounts with an "@" mention.
     if (rawLedger === 'accountmove') return []
     const allowedLedgers = txType === 'inflow' ? INFLOW_LEDGERS : LEDGERS
     const defaultLedger = txType === 'inflow' ? 'Income' : 'Essentials'
@@ -92,21 +115,40 @@ export function buildAiLedgerDraftTransactions(
     if (txType === 'transfer') {
       const source = LEDGERS.find(candidate => candidate.toLowerCase() === text(fields, 'transferSource')?.toLowerCase())
       const target = LEDGERS.find(candidate => candidate.toLowerCase() === text(fields, 'transferTarget')?.toLowerCase())
-      if (!source || !target || source === target) return []
+      if (!source || !target) return []
+      const accountId = explicitLiveAccountId(accounts, text(fields, 'accountId') ?? undefined, source)
+        ?? soleLiveAccountId(accounts, source)
+      const counterAccountId = explicitLiveAccountId(accounts, text(fields, 'counterAccountId') ?? undefined, target)
+        ?? soleLiveAccountId(accounts, target)
+      // Two accounts in one bucket is an internal account move: the bucket total is unchanged,
+      // the money has only changed hands. It is only expressible once both ends are exact, which
+      // is what an "@" mention supplies -- guessing either side would move money nobody chose.
+      if (source === target) {
+        if (!accountId || !counterAccountId || accountId === counterAccountId) return []
+        return [{
+          description: transferDescription(rawDescription, accounts, accountId, counterAccountId, source, target),
+          amount: magnitude,
+          category: 'Transfer',
+          ledgerCategory: 'AccountMove',
+          date,
+          accountId,
+          counterAccountId,
+          isPendingSync: true,
+        }]
+      }
       return [{
-        description,
+        description: transferDescription(rawDescription, accounts, accountId, counterAccountId, source, target),
         amount: magnitude,
         category: 'Transfer',
         ledgerCategory: `Transfer:${source}->${target}`,
         date,
-        accountId: explicitLiveAccountId(accounts, text(fields, 'accountId') ?? undefined, source)
-          ?? soleLiveAccountId(accounts, source),
-        counterAccountId: explicitLiveAccountId(accounts, text(fields, 'counterAccountId') ?? undefined, target)
-          ?? soleLiveAccountId(accounts, target),
+        accountId,
+        counterAccountId,
         isPendingSync: true,
       }]
     }
 
+    const description = capitalizeWords(rawDescription!)
     if (!category) return []
     // An Income row is split four ways by the server, so it names a receiving account per bucket
     // rather than one for itself -- the same shape the manual form produces.

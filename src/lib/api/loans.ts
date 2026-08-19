@@ -63,7 +63,7 @@ export async function deleteLoan(id: string): Promise<void> {
 }
 
 export async function previewAdvanceRepayment(id: string, cycles: number, signal?: AbortSignal): Promise<LoanRepaymentPreviewResult> {
-  const data = await request<WireLoanRepaymentPreviewResult>(`/loans/${encodeURIComponent(id)}/repayments/preview-advance`, {
+  const data = await request<WireLoanRepaymentPreviewResult>(`/loans/${encodeURIComponent(id)}/repayments/preview`, {
     method: 'POST',
     ...jsonBody({ cycles }),
     signal,

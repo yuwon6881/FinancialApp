@@ -2,6 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { AiChatResponse, AiConversationState, AiUiAction } from '../lib/api/ai'
 import type { AiInvocationRequest } from './useAiConversation'
+import type { LedgerAccount } from '../types'
 
 // Mock the API module so no network happens and we can assert on call arguments.
 // Declared inside the factory: vi.mock is hoisted, so a module-scope class would
@@ -718,5 +719,66 @@ describe('AiAssistantPanel', () => {
     const closeOrder = onClose.mock.invocationCallOrder[0]
     const actionOrder = onActions.mock.invocationCallOrder[0]
     expect(actionOrder).toBeLessThan(closeOrder)
+  })
+
+  describe('@account mentions', () => {
+    const accounts = [
+      { id: 'acct-cimb', name: 'CIMB', bucket: 'Essentials', kind: 'Bank', isArchived: false, remaining: 0, createdAt: '', updatedAt: '' },
+      { id: 'acct-ryt', name: 'RYT', bucket: 'Essentials', kind: 'Bank', isArchived: false, remaining: 0, createdAt: '', updatedAt: '' },
+    ] as LedgerAccount[]
+
+    const renderWithAccounts = () =>
+      render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} accounts={accounts} />)
+
+    const typeInto = (value: string) => {
+      const textarea = screen.getByLabelText('Ask AI') as HTMLTextAreaElement
+      fireEvent.change(textarea, { target: { value, selectionStart: value.length } })
+      return textarea
+    }
+
+    it('opens the account list on @ and closes once the caret leaves the mention', () => {
+      renderWithAccounts()
+      typeInto('transfer 50 from @')
+      expect(screen.getByRole('listbox', { name: 'Ledger accounts' })).toBeTruthy()
+
+      typeInto('transfer 50 from')
+      expect(screen.queryByRole('listbox', { name: 'Ledger accounts' })).toBeNull()
+    })
+
+    it('filters to the typed account and inserts its exact name on Enter', () => {
+      renderWithAccounts()
+      const textarea = typeInto('transfer 50 from @ry')
+
+      expect(screen.getAllByRole('option').map(option => option.textContent)).toEqual(['RYTEssentials'])
+      // Enter belongs to the picker while it is open, so the half-typed line is not sent.
+      fireEvent.keyDown(textarea, { key: 'Enter' })
+
+      expect(chatWithAi).not.toHaveBeenCalled()
+      expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).value).toBe('transfer 50 from @RYT ')
+    })
+
+    it('sends the accounts the message names, in the order it names them', async () => {
+      chatWithAi.mockResolvedValue(reply())
+      renderWithAccounts()
+
+      // The trailing space finishes the mention, so Enter belongs to the message again.
+      await typeAndSend('transfer 50 from @CIMB to @RYT ')
+
+      await waitFor(() => expect(chatWithAi).toHaveBeenCalled())
+      expect(chatWithAi.mock.calls[0][7]).toEqual([
+        { token: 'CIMB', accountId: 'acct-cimb' },
+        { token: 'RYT', accountId: 'acct-ryt' },
+      ])
+    })
+
+    it('sends no mentions when the message names none', async () => {
+      chatWithAi.mockResolvedValue(reply())
+      renderWithAccounts()
+
+      await typeAndSend('how much did I spend')
+
+      await waitFor(() => expect(chatWithAi).toHaveBeenCalled())
+      expect(chatWithAi.mock.calls[0][7]).toEqual([])
+    })
   })
 })

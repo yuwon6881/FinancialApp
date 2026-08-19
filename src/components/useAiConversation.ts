@@ -11,6 +11,8 @@ import {
   type AiInvocationContext,
   type AiUiAction,
 } from '../lib/api/ai'
+import { resolveAccountMentions } from '../lib/aiAccountMentions'
+import type { LedgerAccount } from '../types'
 import type { AiInvocationRequest } from '../app/useAiEntryPoint'
 export type { AiInvocationRequest }
 
@@ -23,6 +25,7 @@ interface UseAiConversationOptions {
   defaultContext: AiInvocationContext
   invocation: AiInvocationRequest | null
   onInvocationConsumed: () => void
+  accounts: LedgerAccount[]
 }
 
 interface FailedTurn {
@@ -57,6 +60,7 @@ export function useAiConversation({
   defaultContext,
   invocation,
   onInvocationConsumed,
+  accounts,
 }: UseAiConversationOptions) {
   const [messages, setMessages] = useState<AiChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -236,6 +240,9 @@ export function useAiConversation({
         },
         failedTurn.context,
         sensitiveMode,
+        // Resolved from the message itself rather than kept as separate state, so a mention the
+        // user edited back out of the text is not still sent as a named account.
+        resolveAccountMentions(trimmed, accounts),
       )
       if (generation !== requestGenerationRef.current) return
       pendingTurnRef.current = null
@@ -307,6 +314,7 @@ export function useAiConversation({
       }
     }
   }, [
+    accounts,
     applySnapshot,
     defaultContext,
     input,

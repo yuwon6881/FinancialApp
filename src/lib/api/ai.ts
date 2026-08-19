@@ -1,4 +1,5 @@
 import { ApiError, jsonBody, request, requestVoid } from './client'
+import type { AiAccountMention } from '../aiAccountMentions'
 import type { AppTab } from '../../types'
 
 // The backend can chain several provider calls (classification, answer, then up to a
@@ -73,6 +74,10 @@ export interface AiConversationState {
   lastReportCycleKey?: string | null
   lastLoanId?: string | null
   lastLedgerAccountId?: string | null
+  // The request a clarification left unfinished. Echoed back verbatim so the answer to that
+  // question ("yes, cimb to ryt") completes it instead of starting from nothing; the server
+  // re-parses it and never treats it as a resolved reference.
+  pendingLedgerRequest?: string | null
 }
 
 export type AiInvocationPreset = 'report-review' | 'investment-explain' | 'rewards-plan' | 'loan-explain'
@@ -160,6 +165,9 @@ function normalizeAiConversationState(value: unknown): AiConversationState | nul
   ] as const) {
     if (Object.prototype.hasOwnProperty.call(candidate, key)) state[key] = text(key)
   }
+  // Not clamped to the 80-character reference limit: this one is a whole request, not a reference,
+  // and truncating it would hand back a half-instruction the next turn would try to carry out.
+  if (Object.prototype.hasOwnProperty.call(candidate, 'pendingLedgerRequest')) state.pendingLedgerRequest = text('pendingLedgerRequest', 2000)
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastMatchedTransactionIds')) state.lastMatchedTransactionIds = ids
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastWishlistItemId')) state.lastWishlistItemId = itemId
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastSavingsGoalId')) {
@@ -229,6 +237,7 @@ export async function chatWithAi(
   conversation?: AiConversationRequest,
   context?: AiInvocationContext,
   forceSensitiveMode = false,
+  accountMentions: AiAccountMention[] = [],
 ): Promise<AiChatResponse> {
   // Linked controller rather than AbortSignal.any(): the Android WebView we ship
   // through Capacitor can predate it.
@@ -253,6 +262,9 @@ export async function chatWithAi(
         context: context ?? null,
         forceSensitiveMode,
         clientContractVersion: 2,
+        // The server re-resolves every id against the account list it owns, so this is a
+        // convenience for the person typing, not an authority the request carries.
+        accountMentions,
       }),
       signal: controller.signal,
       errorMessage: 'AI is unavailable. Please try again.',

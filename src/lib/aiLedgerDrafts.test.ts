@@ -11,9 +11,10 @@ const account = (id: string, bucket: string, isArchived = false) =>
   ({ id, name: id, bucket, isArchived }) as LedgerAccount
 
 describe('buildAiLedgerDraftTransactions account placement', () => {
-  // The assistant is never told which accounts exist, so it must not pick between two. A bucket
-  // with one open account preselects it; a bucket with several leaves the field for the person
-  // reviewing the draft, which is the gate every other writer goes through.
+  // The assistant may name an account only when the user did -- with an "@" mention or the exact
+  // name -- so it must never pick between two on its own. A bucket with one open account
+  // preselects it; a bucket with several leaves the field for the person reviewing the draft,
+  // which is the gate every other writer goes through.
   it('preselects a bucket holding exactly one open account', () => {
     const [draft] = buildAiLedgerDraftTransactions(
       { description: 'lunch', amount: 12, txType: 'outflow', ledgerCategory: 'essentials', ledgerCategorySpecified: true },
@@ -62,6 +63,58 @@ describe('buildAiLedgerDraftTransactions account placement', () => {
     expect(draft.ledgerCategory).toBe('Transfer:Essentials->Rewards')
     expect(draft.accountId).toBe('ess-1')
     expect(draft.counterAccountId).toBe('rew-1')
+  })
+
+  // Two accounts in one bucket is an internal account move: the bucket total does not change,
+  // the money has only changed hands. It is expressible only once both ends are exact.
+  it('builds an account move when both named accounts sit in the same bucket', () => {
+    const [draft] = buildAiLedgerDraftTransactions(
+      {
+        description: 'move', amount: 50, txType: 'transfer',
+        transferSource: 'essentials', transferTarget: 'essentials',
+        accountId: 'ess-1', counterAccountId: 'ess-2',
+      },
+      categories,
+      [account('ess-1', 'Essentials'), account('ess-2', 'Essentials')],
+      '2026-08-01',
+    )
+    expect(draft.ledgerCategory).toBe('AccountMove')
+    expect(draft.category).toBe('Transfer')
+    expect(draft.amount).toBe(50)
+    expect(draft.accountId).toBe('ess-1')
+    expect(draft.counterAccountId).toBe('ess-2')
+  })
+
+  it('refuses a same-bucket move that names only one side, rather than guessing the other', () => {
+    expect(buildAiLedgerDraftTransactions(
+      {
+        description: 'move', amount: 50, txType: 'transfer',
+        transferSource: 'essentials', transferTarget: 'essentials', accountId: 'ess-1',
+      },
+      categories,
+      [account('ess-1', 'Essentials'), account('ess-2', 'Essentials')],
+      '2026-08-01',
+    )).toEqual([])
+  })
+
+  // Moving money is a complete instruction on its own; the description belongs to the app.
+  it('names a transfer from its two sides when the user gave no description', () => {
+    const [draft] = buildAiLedgerDraftTransactions(
+      { amount: 50, txType: 'transfer', transferSource: 'essentials', transferTarget: 'rewards' },
+      categories,
+      [account('ess-1', 'Essentials'), account('rew-1', 'Rewards')],
+      '2026-08-01',
+    )
+    expect(draft.description).toBe('Transfer ess-1 to rew-1')
+  })
+
+  it('still refuses a spend with no description, which genuinely needs one', () => {
+    expect(buildAiLedgerDraftTransactions(
+      { amount: 12, txType: 'outflow', ledgerCategory: 'essentials', ledgerCategorySpecified: true },
+      categories,
+      [account('ess-1', 'Essentials')],
+      '2026-08-01',
+    )).toEqual([])
   })
 
   // An Income row is split four ways by the server, so it names a receiving account per bucket

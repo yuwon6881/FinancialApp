@@ -5,8 +5,10 @@ import { BottomSheet } from './ui/BottomSheet'
 import { Button } from './ui/Button'
 import { PerimeterBeam } from './ui/PerimeterBeam'
 import type { AiUiAction } from '../lib/api/ai'
-import type { AppTab } from '../types'
+import type { AppTab, LedgerAccount } from '../types'
 import { useAiConversation, type AiInvocationRequest } from './useAiConversation'
+import { AccountMentionMenu } from './ai/AccountMentionMenu'
+import { useAccountMentionComposer } from './ai/useAccountMentionComposer'
 import { motionSafeScrollBehavior } from '../lib/motionPreference'
 
 interface AiAssistantPanelProps {
@@ -19,7 +21,11 @@ interface AiAssistantPanelProps {
   invocation?: AiInvocationRequest | null
   onInvocationConsumed?: () => void
   surface?: AppTab
+  accounts?: LedgerAccount[]
 }
+
+// A stable empty default: a fresh [] each render would re-run every memo keyed on the account list.
+const EMPTY_ACCOUNTS: LedgerAccount[] = []
 
 // Keep discovery prompts local: static UI copy does not justify an AI round trip.
 const SUGGESTED_PROMPTS = [
@@ -85,6 +91,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
   invocation = null,
   onInvocationConsumed = () => undefined,
   surface,
+  accounts = EMPTY_ACCOUNTS,
 }) => {
   const [suggestedPrompts, setSuggestedPrompts] = useState(() => pickSuggestedPrompts(sensitiveMode, surface))
   const defaultContext = useMemo(() => ({
@@ -122,7 +129,9 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
     defaultContext,
     invocation,
     onInvocationConsumed,
+    accounts,
   })
+  const mentions = useAccountMentionComposer({ input, setInput, accounts, textareaRef })
 
   useEffect(() => {
     if (isOpen && messages.length === 0) setSuggestedPrompts(pickSuggestedPrompts(sensitiveMode, surface))
@@ -310,6 +319,12 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
                   </Button>
                 ))}
               </div>
+              {accounts.length > 0 && (
+                <p className="mt-4 max-w-md text-[11px] leading-relaxed text-muted-foreground">
+                  Type <strong className="text-foreground">@</strong> to name one of your accounts — for example
+                  {' '}<span className="text-foreground">transfer 50 from @{accounts[0].name} to @…</span>
+                </p>
+              )}
               <p className="mt-4 max-w-md text-[10px] leading-relaxed text-muted-foreground">
                 Details go to the configured AI provider.
                 {sensitiveMode ? ' Sensitive mode hides amounts and disables changes.' : ' Changes still need your confirmation.'}
@@ -350,19 +365,38 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
           </div>
         </div>
 
-        <form noValidate onSubmit={event => { event.preventDefault(); void sendMessage() }} className="flex items-end gap-2 rounded-xl border border-border bg-card p-1.5 shadow-xs transition-[border-color,box-shadow] focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10">
+        <form noValidate onSubmit={event => { event.preventDefault(); void sendMessage() }} className="relative flex items-end gap-2 rounded-xl border border-border bg-card p-1.5 shadow-xs transition-[border-color,box-shadow] focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10">
+          {mentions.isOpen && (
+            <AccountMentionMenu
+              accounts={mentions.options}
+              activeIndex={mentions.activeIndex}
+              onPick={mentions.pick}
+              onHoverIndex={mentions.setActiveIndex}
+            />
+          )}
           <Textarea
             ref={textareaRef}
             aria-label="Ask AI"
+            role="combobox"
+            aria-expanded={mentions.isOpen}
+            aria-controls={mentions.isOpen ? 'ai-account-mentions' : undefined}
+            aria-activedescendant={mentions.activeAccountId ? `ai-account-mention-${mentions.activeAccountId}` : undefined}
+            aria-autocomplete="list"
             disabled={isOffline || isHydrating || isResetting}
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={e => mentions.handleChange(e.target.value, e.target.selectionStart ?? e.target.value.length)}
+            onSelect={mentions.syncCaret}
+            onClick={mentions.syncCaret}
             onKeyDown={e => {
+              // The picker owns the arrows and Enter only while it is open; every other moment
+              // they belong to the message being typed.
+              if (mentions.handleKeyDown(e)) return
               if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault()
                 void sendMessage()
               }
             }}
+            onKeyUp={mentions.syncCaret}
             placeholder={isOffline ? 'Ask AI is offline' : isHydrating ? 'Loading conversation…' : 'Ask about your finances…'}
             rows={1}
             className="min-h-11 max-h-40 flex-1 resize-none rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-sm leading-6 outline-hidden focus:border-transparent focus:ring-0 focus:outline-hidden placeholder:text-muted-foreground"
