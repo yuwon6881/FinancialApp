@@ -54,6 +54,9 @@ describe('stability reload parity', () => {
         expect(actual.obligations[i].transactionId).toBe(expected.obligations[i].transactionId)
         expect(actual.obligations[i].originalAmount).toBeCloseTo(expected.obligations[i].originalAmount, 2)
         expect(actual.obligations[i].remainingAmount).toBeCloseTo(expected.obligations[i].remainingAmount, 2)
+        if (expected.obligations[i].date !== undefined) {
+          expect(actual.obligations[i].date).toBe(expected.obligations[i].date)
+        }
       }
     })
   }

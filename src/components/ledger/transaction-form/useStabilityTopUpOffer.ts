@@ -84,6 +84,8 @@ export function useStabilityTopUpOffer(options: UseStabilityTopUpOfferOptions) {
         projectedTransactions: withoutOriginal,
         stabilityAlloc: stabilityTopUpContext?.stabilityAlloc ?? 0,
         projectedBalance: recoveryForOffer.currentBalance - originalStabilityContribution,
+        planPoints: stabilityTopUpContext?.planPoints,
+        currentCycleKey: stabilityTopUpContext?.currentCycleKey,
       })
     }
 

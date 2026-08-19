@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { renderHook } from '@testing-library/react'
 import type { StabilityRecovery } from '../../../types'
 import { getInitialState } from './transactionFormReducer'
-import { hasSavedTopUpCycleMismatch, isDateInStabilityTopUpCycle } from './useStabilityTopUpOffer'
+import {
+  hasSavedTopUpCycleMismatch,
+  isDateInStabilityTopUpCycle,
+  useStabilityTopUpOffer,
+} from './useStabilityTopUpOffer'
 import type { StabilityTopUpContext } from './useTransactionFormOptions'
 
 const recovery: StabilityRecovery = {
@@ -64,5 +69,76 @@ describe('hasSavedTopUpCycleMismatch', () => {
     expect(hasSavedTopUpCycleMismatch(state, context.cycleDay)).toBe(true)
     expect(hasSavedTopUpCycleMismatch({ ...state, stabilityTopUpAccepted: false }, context.cycleDay)).toBe(false)
     expect(hasSavedTopUpCycleMismatch({ ...state, date: '2026-09-27' }, context.cycleDay)).toBe(false)
+  })
+})
+
+describe('useStabilityTopUpOffer', () => {
+  it('updates edit-mode offer when queued target changes arrive via planPoints and currentCycleKey', () => {
+    const originalSalary = {
+      id: 'salary-1',
+      date: '2026-08-30',
+      description: 'Salary',
+      category: 'Income',
+      ledgerCategory: 'Income',
+      amount: 1000,
+      stabilityRecoveryTopUpAmount: 50,
+    }
+    const splitChild = {
+      id: 'salary-1-split-Stability',
+      date: '2026-08-30',
+      description: 'Stability split',
+      category: 'Transfer',
+      ledgerCategory: 'Transfer:Income->Stability',
+      amount: 200,
+    }
+    const transactions = [originalSalary, splitChild]
+
+    const state = {
+      ...getInitialState('2026-08-30', 'Salary'),
+      mode: 'edit' as const,
+      editingId: 'salary-1',
+      transactionType: 'inflow' as const,
+      ledgerCategory: 'Income' as const,
+      amount: '1000',
+      date: '2026-08-30',
+    }
+
+    const baseContext: StabilityTopUpContext = {
+      ...context,
+      recovery: {
+        ...recovery,
+        currentBalance: 9000,
+        target: 10000,
+        outstandingShortfall: 1000,
+        lastDrawdownCycleKey: '2026-08',
+      },
+    }
+
+    const { result: withoutPoints } = renderHook(() =>
+      useStabilityTopUpOffer({
+        state,
+        transactions,
+        cycleDay: 28,
+        stabilityTopUpContext: baseContext,
+      }),
+    )
+
+    const { result: withPoints } = renderHook(() =>
+      useStabilityTopUpOffer({
+        state,
+        transactions,
+        cycleDay: 28,
+        stabilityTopUpContext: {
+          ...baseContext,
+          planPoints: [
+            { effectiveAt: '2026-08-30T00:00:00.000Z', target: 8950 },
+          ],
+          currentCycleKey: '2026-08',
+        },
+      }),
+    )
+
+    expect(withoutPoints.current.topUpOffer?.proposedTopUp).toBeGreaterThan(0)
+    expect(withPoints.current.topUpOffer).toBeNull()
   })
 })

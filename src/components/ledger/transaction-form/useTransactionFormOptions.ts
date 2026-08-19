@@ -9,6 +9,7 @@ import type {
   TransactionCategory,
   TransactionDocumentChanges,
 } from '../../../types'
+import type { StabilityReloadPlanPoint } from '../../../lib/stabilityRecovery'
 import type { ReceiptScanResult } from '../../../lib/api'
 import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
 import type { LedgerAddPrefill } from '../../../app/useCycleNavigation'
@@ -26,6 +27,8 @@ export interface StabilityTopUpContext {
   growthBalance: number
   rewardsBalance: number
   stabilityOverflowRedirect: string
+  planPoints?: StabilityReloadPlanPoint[]
+  currentCycleKey?: string
 }
 
 export interface UseTransactionFormOptions {

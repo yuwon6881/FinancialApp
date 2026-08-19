@@ -28,6 +28,7 @@ export interface StabilityReloadObligation {
   transactionId: string
   originalAmount: number
   remainingAmount: number
+  date?: string
 }
 
 export interface StabilityReloadSummary {
@@ -186,7 +187,7 @@ export function replayStabilityReload(
   if (opening.obligations?.length) {
     for (const obligation of opening.obligations) {
       if (obligation.remainingAmount <= 0) continue
-      queue.push({ id: obligation.transactionId, amount: obligation.remainingAmount })
+      queue.push({ id: obligation.transactionId, date: obligation.date, amount: obligation.remainingAmount })
       obligations.set(obligation.transactionId, { ...obligation })
     }
   } else if (opening.outstanding > 0) {
@@ -200,7 +201,10 @@ export function replayStabilityReload(
   let repaidThisRun = 0
   let oldestMarkedThisRunDate: string | undefined
 
-  const points = [...planPoints].sort((left, right) =>
+  const points = (planPoints?.length ? [...planPoints] : [{
+    effectiveAt: '1970-01-01T00:00:00.000Z',
+    target,
+  }]).sort((left, right) =>
     Date.parse(left.effectiveAt) - Date.parse(right.effectiveAt))
   let pointIndex = 0
   let activeTarget = points[0]?.target ?? target
@@ -209,6 +213,10 @@ export function replayStabilityReload(
     const parsed = Date.parse(movement.postedAt || `${movement.date}T00:00:00.000Z`)
     return Number.isFinite(parsed) ? parsed : 0
   }
+
+  const sortedMovements = movements
+    .map((movement, index) => ({ movement, timestamp: timestampOf(movement), index }))
+    .sort((a, b) => a.timestamp !== b.timestamp ? a.timestamp - b.timestamp : a.index - b.index)
 
   const clearAtTarget = () => {
     for (const entry of queue) {
@@ -237,54 +245,62 @@ export function replayStabilityReload(
     }
   }
 
-  for (const movement of movements) {
-    applyPlanPointsThrough(timestampOf(movement))
-    running += movement.change
-
-    if (movement.marked && movement.change < 0) {
-      const marked = -movement.change
-      markedThisRun += marked
-      queue.push({ id: movement.id, date: movement.date, amount: marked })
-      if (movement.id) {
-        obligations.set(movement.id, {
-          transactionId: movement.id,
-          originalAmount: marked,
-          remainingAmount: marked,
-        })
-      }
-      if (!oldestMarkedThisRunDate || movement.date < oldestMarkedThisRunDate) {
-        oldestMarkedThisRunDate = movement.date
-      }
+  if (sortedMovements.length === 0) {
+    while (pointIndex < points.length) {
+      applyPlanPoint(points[pointIndex])
+      pointIndex += 1
     }
+  } else {
+    for (const { movement, timestamp } of sortedMovements) {
+      applyPlanPointsThrough(timestamp)
+      running += movement.change
 
-    const repayment = Math.min(outstandingNow(), Math.max(0, movement.repayment))
-    if (repayment > 0) {
-      let remaining = repayment
-      while (remaining > 0 && queue.length > 0) {
-        const oldest = queue.shift()!
-        const discharged = Math.min(oldest.amount, remaining)
-        remaining -= discharged
-        const left = oldest.amount - discharged
-        if (oldest.id) {
-          const obligation = obligations.get(oldest.id)
-          if (obligation) obligations.set(oldest.id, {
-            ...obligation,
-            remainingAmount: Math.max(0, obligation.remainingAmount - discharged),
+      if (movement.marked && movement.change < 0) {
+        const marked = -movement.change
+        markedThisRun += marked
+        queue.push({ id: movement.id, date: movement.date, amount: marked })
+        if (movement.id) {
+          obligations.set(movement.id, {
+            transactionId: movement.id,
+            originalAmount: marked,
+            remainingAmount: marked,
+            date: movement.date,
           })
         }
-        if (left > 0) queue.unshift({ ...oldest, amount: left })
+        if (!oldestMarkedThisRunDate || movement.date < oldestMarkedThisRunDate) {
+          oldestMarkedThisRunDate = movement.date
+        }
       }
-      repaidThisRun += repayment
+
+      const repayment = Math.min(outstandingNow(), Math.max(0, movement.repayment))
+      if (repayment > 0) {
+        let remaining = repayment
+        while (remaining > 0 && queue.length > 0) {
+          const oldest = queue.shift()!
+          const discharged = Math.min(oldest.amount, remaining)
+          remaining -= discharged
+          const left = oldest.amount - discharged
+          if (oldest.id) {
+            const obligation = obligations.get(oldest.id)
+            if (obligation) obligations.set(oldest.id, {
+              ...obligation,
+              remainingAmount: Math.max(0, obligation.remainingAmount - discharged),
+            })
+          }
+          if (left > 0) queue.unshift({ ...oldest, amount: left })
+        }
+        repaidThisRun += repayment
+      }
+
+      if (activeTarget > 0 && running >= activeTarget) {
+        clearAtTarget()
+      }
     }
 
-    if (activeTarget > 0 && running >= activeTarget) {
-      clearAtTarget()
+    while (pointIndex < points.length) {
+      applyPlanPoint(points[pointIndex])
+      pointIndex += 1
     }
-  }
-
-  while (pointIndex < points.length) {
-    applyPlanPoint(points[pointIndex])
-    pointIndex += 1
   }
 
   return {
@@ -508,8 +524,13 @@ export function projectStabilityRecovery(input: {
     ? paceAnchor
     : Math.ceil((paceAnchor / cyclesRemaining) * 100) / 100
 
+  const effectiveTarget = input.planPoints?.length
+    ? input.planPoints[input.planPoints.length - 1].target
+    : input.recovery.target
+
   return {
     ...input.recovery,
+    target: effectiveTarget,
     markedTotal,
     repaidTotal,
     currentBalance: input.projectedBalance,

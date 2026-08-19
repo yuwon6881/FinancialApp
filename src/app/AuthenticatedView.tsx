@@ -21,6 +21,7 @@ import type { useReceiptScanPolling } from '../lib/useReceiptScanPolling'
 import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
 import { getCycleYearAndMonthForDate, MONTH_NAMES } from '../lib/cycle'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
+import { buildStabilityPlanPoints } from '../lib/stabilityRecovery'
 import type { AiInvocationContext } from '../lib/api/ai'
 const DashboardView = lazy(() => import('../components/DashboardView').then(module => ({ default: module.DashboardView })))
 const ReportsView = lazy(() => import('../components/ReportsView').then(module => ({ default: module.ReportsView })))
@@ -129,6 +130,18 @@ export function AuthenticatedView({
     clearReceiptSplitJob,
   } = receiptSplit
   const currentCycleMonthIndex = MONTH_NAMES.indexOf(currentCycleMonth) + 1
+  const currentCycleKey = currentCycleYear && currentCycleMonthIndex > 0
+    ? `${currentCycleYear}-${String(currentCycleMonthIndex).padStart(2, '0')}`
+    : undefined
+  const stabilityPlanPoints = todayDashboardData?.setting
+    ? buildStabilityPlanPoints(
+        todayDashboardData.stabilityRecovery?.target ?? todayDashboardData.setting.targetStabilityFund,
+        todayDashboardData.setting.stabilityAlloc,
+        financial.activeOps
+          .filter(operation => operation.entity === 'settings' && operation.type === 'update')
+          .map(operation => ({ createdAt: operation.createdAt, payload: operation.payload as Record<string, unknown> | undefined })),
+      )
+    : undefined
   const stabilityTopUpContext = todayDashboardData?.stabilityRecovery && currentCycleMonthIndex > 0
     ? {
         recovery: todayDashboardData.stabilityRecovery,
@@ -143,6 +156,8 @@ export function AuthenticatedView({
         growthBalance: todayDashboardData.categories.find(category => category.name === 'Growth')?.remaining ?? 0,
         rewardsBalance: todayDashboardData.categories.find(category => category.name === 'Rewards')?.remaining ?? 0,
         stabilityOverflowRedirect: todayDashboardData.setting.stabilityOverflowRedirect || '',
+        planPoints: stabilityPlanPoints,
+        currentCycleKey,
       }
     : undefined
 

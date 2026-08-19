@@ -511,4 +511,39 @@ describe('stability reload projection', () => {
     })
     expect(complete.find(item => item.id === 'old-drawdown')?.stabilityReloadStatus).toBe('Complete')
   })
+
+  it('retains carried obligation date as oldest outstanding date', () => {
+    const result = replayStabilityReload(
+      {
+        outstanding: 300,
+        oldestOutstandingDate: '2026-06-15',
+        obligations: [{ transactionId: 'tx-carried', originalAmount: 300, remainingAmount: 300, date: '2026-06-15' }],
+      },
+      1000,
+      2000,
+      [],
+    )
+    expect(result.outstanding).toBe(300)
+    expect(result.oldestOutstandingDate).toBe('2026-06-15')
+    expect(result.obligations[0].date).toBe('2026-06-15')
+  })
+
+  it('does not skip plan revisions for backdated movements', () => {
+    const planPoints = [
+      { effectiveAt: '2026-07-01T00:00:00.000Z', target: 10000 },
+      { effectiveAt: '2026-07-10T00:00:00.000Z', target: 5000 },
+    ]
+    const movements = [
+      { date: '2026-07-02', postedAt: '2026-07-12T00:00:00.000Z', change: -500, repayment: 0, marked: true, id: 'backdated' },
+      { date: '2026-07-06', postedAt: '2026-07-05T00:00:00.000Z', change: 1500, repayment: 0, marked: false, id: 'deposit' },
+    ]
+    const result = replayStabilityReload(
+      { outstanding: 0 },
+      4000,
+      10000,
+      movements,
+      planPoints,
+    )
+    expect(result.outstanding).toBe(0)
+  })
 })
