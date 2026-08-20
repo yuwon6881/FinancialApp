@@ -40,12 +40,15 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #0b0e14;
+        background: var(--launch-surface, #0b0e14);
       }
       #__splash svg {
         width: 56px;
         height: 56px;
         animation: __splash-pulse 1.8s ease-in-out infinite;
+      }
+      #__splash svg path {
+        fill: var(--launch-accent, #e6b450);
       }
       @keyframes __splash-pulse {
         0%, 100% { opacity: .35; }
@@ -63,7 +66,7 @@
     <!-- Logo-only launch surface. It intentionally contains no visible title. -->
     <div id="__splash" aria-hidden="true">
       <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M30 32h40v8H38v12h28v8H38v16h-8V32z" fill="#e6b450"/>
+        <path d="M30 32h40v8H38v12h28v8H38v16h-8V32z" fill="var(--launch-accent, #e6b450)"/>
       </svg>
     </div>
     <div id="root"></div>

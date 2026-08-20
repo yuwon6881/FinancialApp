@@ -198,6 +198,13 @@ for (const file of allSourceFiles(SRC)) {
     const line = prefix.split(/\r?\n/).length
     errors.push(`${fileName}:${line} Unmapped palette utility "${match[0]}"; map it to an Ayu theme token in src/index.css.`)
   }
+
+  const ledgerUtilityPattern = /\b(?:bg|text|border|ring|outline|fill|stroke)-ledger-[^\s'"`]+\b/g
+  for (const match of sourceText.matchAll(ledgerUtilityPattern)) {
+    const prefix = sourceText.slice(0, match.index)
+    const line = prefix.split(/\r?\n/).length
+    errors.push(`${fileName}:${line} Invalid utility "${match[0]}"; use mapped theme color tokens (e.g. purple-500) instead of raw CSS variable names.`)
+  }
 }
 
 if (errors.length) {

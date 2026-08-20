@@ -121,7 +121,7 @@ export function DeleteTransactionModal({
             <label className={`flex items-start gap-2.5 cursor-pointer ${!isOnline ? 'opacity-50' : ''}`}>
               <div className="pt-0.5 shrink-0">
                 <Checkbox
-                  className="rounded border-border bg-background/50 accent-orange-600 focus:ring-offset-background/50 focus:ring-2 focus:ring-orange-500/20"
+                  className="accent-destructive"
                   checked={alsoDeleteDocuments}
                   onChange={e => onAlsoDeleteDocumentsChange?.(e.target.checked)}
                   disabled={!isOnline}

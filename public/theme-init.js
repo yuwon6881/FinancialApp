@@ -13,9 +13,11 @@
         ? false
         : !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
     var surface = isDark ? '#0b0e14' : '#fcfcfc'
+    var accent = isDark ? '#e6b450' : '#f29718'
     var root = document.documentElement
     if (isDark) root.classList.add('dark')
     root.style.setProperty('--launch-surface', surface)
+    root.style.setProperty('--launch-accent', accent)
     root.style.backgroundColor = surface
     root.style.colorScheme = isDark ? 'dark' : 'light'
     var meta = document.querySelector('meta[name="theme-color"]')

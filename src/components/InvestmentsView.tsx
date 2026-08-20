@@ -216,9 +216,9 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
             {isBackgroundRefreshing && (
               <span
                 role="status"
-                className="inline-flex items-center gap-1.5 rounded-full border border-ledger-purple-500/30 bg-ledger-purple-500/10 px-2.5 py-0.5 text-[11px] font-medium text-ledger-purple-400 dark:text-ledger-purple-300"
+                className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-medium text-purple-500 dark:text-purple-300"
               >
-                <RefreshCw className="size-3 animate-spin text-ledger-purple-400" />
+                <RefreshCw className="size-3 animate-spin text-purple-500 dark:text-purple-300" />
                 <span>Updating prices…</span>
               </span>
             )}
