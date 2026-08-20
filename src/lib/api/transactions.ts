@@ -68,7 +68,8 @@ export interface TransactionQuery {
 }
 
 function appendTransactionQuery(params: URLSearchParams, query: TransactionQuery): void {
-  if (query.search) params.append('search', query.search)
+  const search = query.search?.trim()
+  if (search) params.append('search', search)
   if (query.ledgerCategories?.length) params.append('ledgerCategory', query.ledgerCategories.join(','))
   if (query.categories?.length) params.append('category', query.categories.join(','))
   if (query.txType) params.append('txType', query.txType)

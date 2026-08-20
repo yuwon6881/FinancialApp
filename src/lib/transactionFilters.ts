@@ -88,8 +88,9 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
   if (!matchesLinkFilter(Boolean(t.recurringPaymentId), recurringFilter ?? 'all')) return false
   if (!matchesLinkFilter(t.wishlistItemId != null, wishlistFilter ?? 'all')) return false
 
-  if (search) {
-    const q = search.toLowerCase()
+  const normalizedSearch = search?.trim().toLowerCase()
+  if (normalizedSearch) {
+    const q = normalizedSearch
     const matchesSearch =
       (t.description || '').toLowerCase().includes(q) ||
       (t.ledgerCategory || '').toLowerCase().includes(q) ||

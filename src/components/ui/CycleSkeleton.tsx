@@ -106,7 +106,7 @@ const BillTimelineSkeleton: React.FC = () => (
 const LedgerToolbarSkeleton: React.FC = () => (
   <Card className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
     <div className="min-w-0 space-y-2">
-      <div className="flex flex-wrap items-center gap-3"><Skeleton className="h-6 w-44" /><Skeleton className="h-9 w-56 rounded-xl" /><Skeleton className="h-9 w-28 rounded-xl" /></div>
+      <div className="flex flex-wrap items-center gap-3"><Skeleton className="h-6 w-44" /><Skeleton className="h-9 w-48 rounded-xl" /><Skeleton className="h-9 w-56 rounded-xl" /><Skeleton className="h-9 w-28 rounded-xl" /></div>
       <Skeleton className="h-3 w-80 max-w-full" />
     </div>
     <div className="flex w-full gap-2 md:w-auto"><Skeleton className="h-11 flex-1 rounded-xl md:w-32 md:flex-initial" /><Skeleton className="h-11 flex-1 rounded-xl md:w-40 md:flex-initial" /></div>

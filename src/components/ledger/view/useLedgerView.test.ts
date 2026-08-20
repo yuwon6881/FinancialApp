@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { useLedgerView } from './useLedgerView'
 import type { Transaction } from '../../../types'
 
@@ -39,7 +39,6 @@ describe('useLedgerView highlighted transaction navigation', () => {
         highlightedTxId: targetId,
         onClearHighlightedTx,
         showAllCycles: false,
-        onClearAllCycles: vi.fn(),
         onDeleteTransaction: vi.fn(),
         hideSensitive: false,
         formRef: { current: null },
@@ -71,7 +70,6 @@ describe('useLedgerView highlighted transaction navigation', () => {
         highlightedTxId: targetId,
         onClearHighlightedTx,
         showAllCycles: false,
-        onClearAllCycles: vi.fn(),
         onDeleteTransaction: vi.fn(),
         hideSensitive: false,
         formRef: { current: null },
@@ -113,7 +111,6 @@ describe('useLedgerView highlighted transaction navigation', () => {
           incomingSearch: search,
           onClearHighlightedTx,
           showAllCycles: false,
-          onClearAllCycles: vi.fn(),
           onDeleteTransaction: vi.fn(),
           hideSensitive: false,
           formRef: { current: null },
@@ -144,5 +141,67 @@ describe('useLedgerView highlighted transaction navigation', () => {
 
     // Now it should reset to page 1
     expect(result.current.currentPage).toBe(1)
+  })
+})
+
+describe('useLedgerView mode parity', () => {
+  const baseTransaction = (id: string, pending = false): Transaction => ({
+    id,
+    date: '2026-08-20',
+    description: id,
+    category: 'General',
+    ledgerCategory: 'Essentials',
+    amount: -10,
+    isPendingSync: pending,
+  })
+
+  it('keeps current-cycle and all-cycle page sizes independent', () => {
+    const { result, rerender } = renderHook(
+      ({ showAllCycles }) => useLedgerView({
+        transactions: [], categories: [], selectedMonth: 'Aug', selectedYear: 2026,
+        cycleDay: 28, isMobile: false, showAllCycles, onDeleteTransaction: vi.fn(),
+        hideSensitive: false, formRef: { current: null },
+      }),
+      { initialProps: { showAllCycles: false } },
+    )
+
+    act(() => result.current.setPageSize(25))
+    rerender({ showAllCycles: true })
+    expect(result.current.pageSize).toBe(100)
+    act(() => result.current.setPageSize(50))
+    rerender({ showAllCycles: false })
+    expect(result.current.pageSize).toBe(25)
+  })
+
+  it('shows matching unsynced entries separately and keeps saved rows authoritative', async () => {
+    const pending = baseTransaction('pending', true)
+    const saved = baseTransaction('saved')
+    const onFetchPagedTransactions = vi.fn().mockResolvedValue({
+      items: [pending, saved], total: 2, page: 1, pageSize: 100,
+    })
+    const { result } = renderHook(() => useLedgerView({
+      transactions: [pending], categories: [], selectedMonth: 'Aug', selectedYear: 2026,
+      cycleDay: 28, isMobile: false, showAllCycles: true, onFetchPagedTransactions,
+      onDeleteTransaction: vi.fn(), hideSensitive: false, formRef: { current: null },
+    }))
+
+    await waitFor(() => expect(result.current.serverResult).not.toBeNull())
+    expect(result.current.syncingTransactions.map(transaction => transaction.id)).toEqual(['pending'])
+    expect(result.current.displayTransactions.map(transaction => transaction.id)).toEqual(['saved'])
+    expect(result.current.serverResult?.total).toBe(2)
+  })
+
+  it('retains a recoverable server error instead of rejecting the effect', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const onFetchPagedTransactions = vi.fn().mockRejectedValue(new Error('offline'))
+    const { result } = renderHook(() => useLedgerView({
+      transactions: [], categories: [], selectedMonth: 'Aug', selectedYear: 2026,
+      cycleDay: 28, isMobile: false, showAllCycles: true, onFetchPagedTransactions,
+      onDeleteTransaction: vi.fn(), hideSensitive: false, formRef: { current: null },
+    }))
+
+    await waitFor(() => expect(result.current.serverError).toContain('try again'))
+    await act(() => result.current.retryServerFetch())
+    expect(onFetchPagedTransactions).toHaveBeenCalledTimes(2)
   })
 })

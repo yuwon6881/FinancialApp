@@ -496,9 +496,9 @@ export function AuthenticatedView({
                       onClearIncomingFilters={nav.clearIncomingFilters}
                       onClearHighlightedTx={nav.clearHighlightedTx}
                       showAllCycles={nav.ledgerShowAllCycles}
-                      onClearAllCycles={() => {
-                        nav.setLedgerShowAllCycles(false)
-                        prefs.setLedgerCyclesRange('monthly')
+                      onShowAllCyclesChange={(showAllCycles) => {
+                        nav.setLedgerShowAllCycles(showAllCycles)
+                        if (!showAllCycles) prefs.setLedgerCyclesRange('monthly')
                       }}
                       cyclesRange={prefs.ledgerCyclesRange}
                       preferredPageSize={prefs.ledgerPageSize}

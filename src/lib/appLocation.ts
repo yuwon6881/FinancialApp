@@ -68,6 +68,20 @@ const LEDGER_PARAM_KEYS = [
 const MONTHS = new Set(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 const RANGES = new Set<LedgerRouteRange>(['monthly', '3month', '6month', 'yearly'])
 const TX_TYPES = new Set<Exclude<LedgerRouteTxType, null>>(['inflow', 'outflow', 'transfer'])
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+const parseLedgerDate = (value: string | null): string => {
+  if (!value || !ISO_DATE.test(value)) return ''
+  const date = new Date(`${value}T00:00:00Z`)
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? '' : value
+}
+
+const parseLedgerAmount = (value: string | null): string => {
+  const normalized = value?.trim() ?? ''
+  if (!normalized) return ''
+  const amount = Number(normalized)
+  return Number.isFinite(amount) && amount >= 0 ? normalized : ''
+}
 
 const parseLinkFilter = (value: string | null): TransactionLinkFilter => {
   if (value === 'exclude') return 'exclude'
@@ -117,10 +131,10 @@ export const readAppLocation = (): AppLocationState => {
     ledger: {
       filters: (params.get('filters') || '').split(',').map(value => value.trim()).filter(Boolean),
       search: params.get('q') || '',
-      startDate: params.get('from') || '',
-      endDate: params.get('to') || '',
-      minAmount: params.get('min') || '',
-      maxAmount: params.get('max') || '',
+      startDate: parseLedgerDate(params.get('from')),
+      endDate: parseLedgerDate(params.get('to')),
+      minAmount: parseLedgerAmount(params.get('min')),
+      maxAmount: parseLedgerAmount(params.get('max')),
       recurringFilter: parseLinkFilter(params.get('recurring')),
       wishlistFilter: parseLinkFilter(params.get('wishlist')),
       txType: txType && TX_TYPES.has(txType) ? txType : null,

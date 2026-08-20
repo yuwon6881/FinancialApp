@@ -36,6 +36,17 @@ describe('app URL state', () => {
     })
   })
 
+  it('drops malformed ledger dates and negative or non-numeric amounts', () => {
+    window.history.replaceState({}, '', '/ledger?from=2026-02-30&to=not-a-date&min=-1&max=lots')
+
+    const location = readAppLocation()
+
+    expect(location.ledger.startDate).toBe('')
+    expect(location.ledger.endDate).toBe('')
+    expect(location.ledger.minAmount).toBe('')
+    expect(location.ledger.maxAmount).toBe('')
+  })
+
   it('creates clean cross-view URLs while preserving the active cycle', () => {
     navigateToAppTab('ledger', {
       search: ledgerRouteSearch({ filters: ['Rewards'], txType: 'inflow', showAllCycles: true }),

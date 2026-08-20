@@ -5,7 +5,7 @@ import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi, MONTH_NAMES
 import { getCycleLabelForDropdown } from '../../../lib/cycleLabels'
 import { matchesTransactionFilters, splitFilterSelections, LEDGER_BUCKETS as LEDGER_BUCKET_VALUES, type TransactionLinkFilter } from '../../../lib/transactionFilters'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../../../lib/csvExport'
-import { compareTransactions, mergeTransactions, type TransactionSort } from '../../../lib/transactionOrdering'
+import { compareTransactions, type TransactionSort } from '../../../lib/transactionOrdering'
 import { ledgerRouteSearch, updateAppSearch, type LedgerRouteRange } from '../../../lib/appLocation'
 import { getLedgerTransactionRowElement, scrollLedgerTransactionRowIntoView } from '../../../lib/ledgerTransactionTarget'
 import { createLedgerSyncStatus } from './ledgerSyncStatus'
@@ -40,7 +40,6 @@ export interface UseLedgerViewOptions {
    */
   onClearHighlightedTx?: () => void
   showAllCycles: boolean
-  onClearAllCycles: () => void
   cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
   onRouteStateChange?: (state: {
     filters: string[]
@@ -73,25 +72,21 @@ export interface UseLedgerViewOptions {
 
 const LEDGER_BUCKETS: readonly string[] = LEDGER_BUCKET_VALUES
 type LedgerTxType = 'inflow' | 'outflow' | 'transfer' | null
-
 const parseAmountFilter = (value: string): number | undefined => {
   if (!value.trim()) return undefined
   const parsed = Number(value)
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined
 }
-
 const laterDate = (first?: string | null, second?: string | null) => {
   if (!first) return second || undefined
   if (!second) return first
   return first > second ? first : second
 }
-
 const earlierDate = (first?: string | null, second?: string | null) => {
   if (!first) return second || undefined
   if (!second) return first
   return first < second ? first : second
 }
-
 export function useLedgerView(options: UseLedgerViewOptions) {
   const {
     transactions,
@@ -116,7 +111,6 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     onClearIncomingFilters,
     onClearHighlightedTx,
     showAllCycles,
-    onClearAllCycles,
     cyclesRange,
     onRouteStateChange,
     onFetchPagedTransactions,
@@ -151,7 +145,6 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const [selectedWishlistFilter, setSelectedWishlistFilter] = useState<TransactionLinkFilter>(initialWishlistFilter)
   const [selectedTxTypeFilter, setSelectedTxTypeFilter] = useState<LedgerTxType>(incomingTxType || null)
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
-
   // Pagination states
   const [currentPage, setCurrentPage] = useState(() => {
     if (highlightedTxId) {
@@ -162,18 +155,24 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     }
     return 1
   })
-  const [pageSize, setPageSize] = useState(preferredPageSize ?? 10)
+  const [currentCyclePageSize, setCurrentCyclePageSize] = useState(preferredPageSize ?? 10)
+  const [allCyclesPageSize, setAllCyclesPageSize] = useState(100)
+  const pageSize = showAllCycles ? allCyclesPageSize : currentCyclePageSize
+  const setPageSize = useCallback((size: number) => {
+    if (showAllCycles) setAllCyclesPageSize(size)
+    else setCurrentCyclePageSize(size)
+  }, [showAllCycles])
   const [sortOrder, setSortOrder] = useState<TransactionSort>(preferredSortOrder ?? 'date-desc')
-
   // Server-side state
   const [serverResult, setServerResult] = useState<PagedTransactionResult | null>(null)
   const [serverIsFetching, setServerIsFetching] = useState(false)
+  const [serverError, setServerError] = useState<string | null>(null)
   const isInitialFetchDone = useRef(false)
+  const wasAllCyclesRef = useRef(false)
   const fetchSequenceRef = useRef(0)
   const fetchAbortRef = useRef<AbortController | null>(null)
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportIsFetching, setExportIsFetching] = useState(false)
-
   const [pendingSearchTerm, setPendingSearchTerm] = useState(incomingSearch || '')
   const [pendingFilters, setPendingFilters] = useState<string[]>(initialFilters)
   const [pendingStartDate, setPendingStartDate] = useState(initialStartDate)
@@ -238,7 +237,6 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       setCurrentPage(1)
     }
   }
-
   // Delete transaction state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
@@ -291,16 +289,13 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       startDate = getCycleRangeDates(activeYear, 1, cycleDay).start
       endDate = getCycleRangeDates(activeYear, 12, cycleDay).end
     }
-
     if (!startDate || !endDate) return null
     return {
       startDate: formatDateForApi(startDate),
       endDate: formatDateForApi(endDate)
     }
   }, [showAllCycles, cyclesRange, selectedMonth, selectedYear, cycleDay])
-
   const [recentlySyncedIds, setRecentlySyncedIds] = useState<Set<string>>(new Set())
-
   const runServerFetch = useCallback(async (opts: {
     page: number
     search: string
@@ -321,6 +316,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     const controller = new AbortController()
     fetchAbortRef.current = controller
     setServerIsFetching(true)
+    setServerError(null)
     try {
       const buckets = opts.filters.filter(f => LEDGER_BUCKETS.includes(f))
       const cats = opts.filters.filter(f => !LEDGER_BUCKETS.includes(f))
@@ -344,17 +340,20 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       setServerResult(result)
       setRecentlySyncedIds(new Set())
     } catch (error) {
-      if (!controller.signal.aborted) throw error
+      if (!controller.signal.aborted) {
+        console.error(error)
+        setServerError('Could not load saved transactions. Check your connection and try again.')
+      }
     } finally {
       if (sequence === fetchSequenceRef.current) setServerIsFetching(false)
     }
   }, [onFetchPagedTransactions, allCyclesRange])
-
   useEffect(() => () => fetchAbortRef.current?.abort(), [])
-
   // Trigger initial server fetch when entering all-cycles mode
   useEffect(() => {
     if (showAllCycles && onFetchPagedTransactions) {
+      if (wasAllCyclesRef.current) return
+      wasAllCyclesRef.current = true
       const initialFilters = incomingFilters ?? (incomingCategory ? [incomingCategory] : [])
       const initialTxType = incomingTxType || null
       const initialSearch = incomingSearch || ''
@@ -384,7 +383,6 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       setAppliedWishlistFilter(initialWishlistFilter)
       setAppliedTxTypeFilter(initialTxType)
       setCurrentPage(1)
-      setPageSize(100)
       isInitialFetchDone.current = false
       runServerFetch({
         page: 1,
@@ -398,18 +396,19 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         recurringFilter: initialRecurringFilter,
         wishlistFilter: initialWishlistFilter,
         sort: sortOrder,
-        pSize: 100,
+        pSize: allCyclesPageSize,
       })
         .finally(() => {
           isInitialFetchDone.current = true
         })
     } else {
+      wasAllCyclesRef.current = false
       setServerResult(null)
+      setServerError(null)
       isInitialFetchDone.current = false
     }
-  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingFilters, incomingTxType, incomingSearch, incomingDate, incomingStartDate, incomingEndDate, incomingMinAmount, incomingMaxAmount, incomingRecurringFilter, incomingWishlistFilter, sortOrder])
+  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingFilters, incomingTxType, incomingSearch, incomingDate, incomingStartDate, incomingEndDate, incomingMinAmount, incomingMaxAmount, incomingRecurringFilter, incomingWishlistFilter, sortOrder, allCyclesPageSize])
 
-  // Re-fetch when page changes in server mode
   useEffect(() => {
     if (showAllCycles && onFetchPagedTransactions && isInitialFetchDone.current) {
       runServerFetch({
@@ -617,9 +616,25 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   }
 
   const handleServerSearch = () => {
-    setAppliedSearch(pendingSearchTerm)
+    const normalized = pendingSearchTerm.trim()
+    setPendingSearchTerm(normalized)
+    setAppliedSearch(normalized)
     setCurrentPage(1)
   }
+
+  const handleClearServerSearch = () => {
+    setPendingSearchTerm('')
+    setAppliedSearch('')
+    setCurrentPage(1)
+  }
+
+  const retryServerFetch = () => runServerFetch({
+    page: currentPage, search: appliedSearch, filters: appliedFilters,
+    txType: appliedTxTypeFilter, startDate: appliedStartDate, endDate: appliedEndDate,
+    minAmount: appliedMinAmount, maxAmount: appliedMaxAmount,
+    recurringFilter: appliedRecurringFilter, wishlistFilter: appliedWishlistFilter,
+    sort: sortOrder, pSize: pageSize,
+  })
 
   useEffect(() => {
     if (!isFilterDropdownOpen) return
@@ -756,11 +771,13 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   }, [filteredTransactions, currentPage, pageSize])
 
   const displayTransactions = useMemo(() => {
-    if (showAllCycles && serverResult) {
-      return mergeTransactions(serverResult.items, filteredPendingTransactions, sortOrder)
+    if (showAllCycles) {
+      if (!serverResult) return []
+      const syncingIds = new Set(filteredPendingTransactions.map(transaction => String(transaction.id)))
+      return serverResult.items.filter(transaction => !syncingIds.has(String(transaction.id)))
     }
     return paginatedTransactions
-  }, [showAllCycles, serverResult, filteredPendingTransactions, paginatedTransactions, sortOrder])
+  }, [showAllCycles, serverResult, filteredPendingTransactions, paginatedTransactions])
 
   const totalPages = Math.ceil(filteredTransactions.length / pageSize) || 1
 
@@ -869,7 +886,6 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   const handleResetFilters = useCallback(() => {
     onClearIncomingFilters?.()
-    onClearAllCycles()
     setSelectedFilters([])
     setSelectedStartDate('')
     setSelectedEndDate('')
@@ -879,6 +895,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setSelectedWishlistFilter('all')
     setSelectedTxTypeFilter(null)
     setSearchTerm('')
+    setPendingSearchTerm('')
     setPendingFilters([])
     setPendingStartDate('')
     setPendingEndDate('')
@@ -897,7 +914,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setAppliedSearch('')
     setAppliedTxTypeFilter(null)
     setCurrentPage(1)
-  }, [onClearIncomingFilters, onClearAllCycles])
+  }, [onClearIncomingFilters])
 
   const getCycleRangeLabel = () => {
     if (cyclesRange === '3month') return 'Last 3 Cycles'
@@ -965,6 +982,10 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   const handleExportPage = () => {
     if (hideSensitive) return
+    if (showAllCycles && !serverResult) {
+      onShowAlert?.('Load the saved transactions before exporting this page.', 'Export Not Ready')
+      return
+    }
     const rows = showAllCycles && serverResult ? displayTransactions : paginatedTransactions
     downloadCsvRows(rows, getPageExportFilename(rows), accounts)
     setShowExportModal(false)
@@ -972,7 +993,11 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   const handleExportAll = async () => {
     if (hideSensitive) return
-    if (showAllCycles && serverResult && onExportTransactions) {
+    if (showAllCycles && filteredPendingTransactions.length > 0) {
+      onShowAlert?.('Wait for the matching transactions to finish syncing before exporting the entire result.', 'Export Not Ready')
+      return
+    }
+    if (showAllCycles && onExportTransactions) {
       setExportIsFetching(true)
       try {
         const buckets = appliedFilters.filter(f => LEDGER_BUCKETS.includes(f))
@@ -988,6 +1013,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
           maxAmount: parseAmountFilter(appliedMaxAmount),
           recurringFilter: appliedRecurringFilter,
           wishlistFilter: appliedWishlistFilter,
+          sort: sortOrder,
         })
         downloadCsvBlob(result.blob, getExportAllFilename())
         setShowExportModal(false)
@@ -1004,92 +1030,43 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   }
 
   return {
-    searchTerm,
-    setSearchTerm,
-    selectedFilters,
-    setSelectedFilters,
-    selectedStartDate,
-    setSelectedStartDate,
-    selectedEndDate,
-    setSelectedEndDate,
-    selectedMinAmount,
-    setSelectedMinAmount,
-    selectedMaxAmount,
-    setSelectedMaxAmount,
-    selectedRecurringFilter,
-    setSelectedRecurringFilter,
-    selectedWishlistFilter,
-    setSelectedWishlistFilter,
-    selectedTxTypeFilter,
-    setSelectedTxTypeFilter,
-    isFilterDropdownOpen,
-    setIsFilterDropdownOpen,
-    currentPage,
-    setCurrentPage,
-    pageSize,
-    setPageSize,
-    sortOrder,
-    setSortOrder,
-    serverResult,
-    serverIsFetching,
-    showExportModal,
-    setShowExportModal,
-    exportIsFetching,
-    pendingSearchTerm,
-    setPendingSearchTerm,
-    pendingFilters,
-    setPendingFilters,
-    pendingStartDate,
-    setPendingStartDate,
-    pendingEndDate,
-    setPendingEndDate,
-    pendingMinAmount,
-    setPendingMinAmount,
-    pendingMaxAmount,
-    setPendingMaxAmount,
-    pendingRecurringFilter,
-    setPendingRecurringFilter,
-    pendingWishlistFilter,
-    setPendingWishlistFilter,
-    pendingTxTypeFilter,
-    setPendingTxTypeFilter,
-    appliedSearch,
-    appliedFilters,
-    appliedStartDate,
-    appliedEndDate,
-    appliedMinAmount,
-    appliedMaxAmount,
-    appliedRecurringFilter,
-    appliedWishlistFilter,
-    appliedTxTypeFilter,
-    showDeleteModal,
-    txToDelete,
+    searchTerm, setSearchTerm,
+    selectedFilters, setSelectedFilters,
+    selectedStartDate, setSelectedStartDate,
+    selectedEndDate, setSelectedEndDate,
+    selectedMinAmount, setSelectedMinAmount,
+    selectedMaxAmount, setSelectedMaxAmount,
+    selectedRecurringFilter, setSelectedRecurringFilter,
+    selectedWishlistFilter, setSelectedWishlistFilter,
+    selectedTxTypeFilter, setSelectedTxTypeFilter,
+    isFilterDropdownOpen, setIsFilterDropdownOpen,
+    currentPage, setCurrentPage, pageSize, setPageSize, sortOrder, setSortOrder,
+    serverResult, serverIsFetching, serverError, retryServerFetch,
+    showExportModal, setShowExportModal, exportIsFetching,
+    pendingSearchTerm, setPendingSearchTerm,
+    pendingFilters, setPendingFilters,
+    pendingStartDate, setPendingStartDate,
+    pendingEndDate, setPendingEndDate,
+    pendingMinAmount, setPendingMinAmount,
+    pendingMaxAmount, setPendingMaxAmount,
+    pendingRecurringFilter, setPendingRecurringFilter,
+    pendingWishlistFilter, setPendingWishlistFilter,
+    pendingTxTypeFilter, setPendingTxTypeFilter,
+    appliedSearch, appliedFilters, appliedStartDate, appliedEndDate,
+    appliedMinAmount, appliedMaxAmount, appliedRecurringFilter,
+    appliedWishlistFilter, appliedTxTypeFilter,
+    syncingTransactions: filteredPendingTransactions,
+    hasMatchingPendingTransactions: filteredPendingTransactions.length > 0,
+    showDeleteModal, txToDelete,
     attachedDocumentCount: attachedDocumentIds.length,
-    alsoDeleteDocuments,
-    setAlsoDeleteDocuments,
-    areAttachedDocumentsLoading,
-    showEditDisabledModal,
-    setShowEditDisabledModal,
-    editBlockedTransaction,
-    displayTransactions,
-    totalPages,
-    filteredTransactions,
-    isTxDeleting,
-    isTxSyncing,
-    onStartEditStable,
-    onDuplicateStable,
-    onAddTransactionStable,
-    onDeleteClickStable,
-    onEditBlockedStable,
-    handleToggleFilter,
-    handleClearFilters,
-    handleApplyFilters,
-    handleServerSearch,
-    handleDeleteClick,
-    handleConfirmDelete,
-    handleCancelDelete,
-    handleExportPage,
-    handleExportAll,
-    handleResetFilters,
+    alsoDeleteDocuments, setAlsoDeleteDocuments, areAttachedDocumentsLoading,
+    showEditDisabledModal, setShowEditDisabledModal, editBlockedTransaction,
+    displayTransactions, totalPages, filteredTransactions, isTxDeleting, isTxSyncing,
+    onStartEditStable, onDuplicateStable, onAddTransactionStable,
+    onDeleteClickStable, onEditBlockedStable,
+    handleToggleFilter, handleClearFilters, handleApplyFilters,
+    handleServerSearch, handleClearServerSearch,
+    handleDeleteClick, handleConfirmDelete, handleCancelDelete,
+    handleExportPage, handleExportAll, handleResetFilters,
   }
 }

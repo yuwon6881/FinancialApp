@@ -115,6 +115,11 @@ describe('matchesTransactionFilters', () => {
     expect(matchesTransactionFilters(tx({ recurringPaymentId: null }), { recurringFilter: 'only' })).toBe(false)
   })
 
+  it('ignores surrounding whitespace in search text', () => {
+    expect(matchesTransactionFilters(tx({ description: 'Coffee shop' }), { search: '  coffee  ' })).toBe(true)
+    expect(matchesTransactionFilters(tx({ description: 'Coffee shop' }), { search: '   ' })).toBe(true)
+  })
+
   it('supports all three recurring relationship modes', () => {
     const recurring = tx({ recurringPaymentId: 'rent' })
     const ordinary = tx({ recurringPaymentId: null })

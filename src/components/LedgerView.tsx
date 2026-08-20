@@ -34,6 +34,7 @@ import { useLedgerView } from './ledger/view/useLedgerView'
 import { LedgerToolbar } from './ledger/view/LedgerToolbar'
 import { LedgerPendingReviews } from './ledger/LedgerPendingReviews'
 import { LedgerBalanceReconciliation } from './ledger/LedgerBalanceReconciliation'
+import { LedgerServerStatus } from './ledger/LedgerServerStatus'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
 import type { StabilityTopUpContext } from './ledger/transaction-form/useTransactionFormOptions'
 
@@ -78,7 +79,7 @@ interface LedgerViewProps {
   onClearIncomingFilters?: () => void
   onClearHighlightedTx?: () => void
   showAllCycles: boolean
-  onClearAllCycles: () => void
+  onShowAllCyclesChange: (showAllCycles: boolean) => void
   cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
   onRouteStateChange?: (state: Omit<LedgerRouteState, 'highlightedTxId'>) => void
   ledgerSummaries?: CategorySummary[]
@@ -208,14 +209,15 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   const pageTotals = React.useMemo(
     () => calculateLedgerTotals(ledger.displayTransactions, activeBucketFilter),
     [ledger.displayTransactions, activeBucketFilter])
-  const isServerMode = props.showAllCycles && !!ledger.serverResult
+  const isServerMode = props.showAllCycles
+  const serverTotal = ledger.serverResult?.total ?? 0
   const activeStartDate = props.showAllCycles ? ledger.appliedStartDate : ledger.selectedStartDate
   const activeEndDate = props.showAllCycles ? ledger.appliedEndDate : ledger.selectedEndDate
   const activeMinAmount = props.showAllCycles ? ledger.appliedMinAmount : ledger.selectedMinAmount
   const activeMaxAmount = props.showAllCycles ? ledger.appliedMaxAmount : ledger.selectedMaxAmount
   const activeRecurringFilter = props.showAllCycles ? ledger.appliedRecurringFilter : ledger.selectedRecurringFilter
   const activeWishlistFilter = props.showAllCycles ? ledger.appliedWishlistFilter : ledger.selectedWishlistFilter
-  const activeSearch = props.showAllCycles ? ledger.appliedSearch : ledger.searchTerm
+  const activeSearch = (props.showAllCycles ? ledger.appliedSearch : ledger.searchTerm).trim()
   const activeTxType = props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter
   const activeFilters = props.showAllCycles ? ledger.appliedFilters : ledger.selectedFilters
   const activeAdvancedFilterCount =
@@ -273,6 +275,9 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
           }
         }}
         onOpenExport={() => ledger.setShowExportModal(true)}
+        showAllCycles={props.showAllCycles}
+        onShowAllCyclesChange={props.onShowAllCyclesChange}
+        cyclesRange={props.cyclesRange}
       />
 
       <LedgerPendingReviews
@@ -286,7 +291,8 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         const activeCategoryFilters = props.showAllCycles ? ledger.appliedFilters : ledger.selectedFilters
         const activeTxType = props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter
         const activeSearch = props.showAllCycles ? ledger.appliedSearch : ledger.searchTerm
-        if (!props.showAllCycles && !hasAnyFilter) return null
+        const hasScopedRange = props.showAllCycles && props.cyclesRange && props.cyclesRange !== 'monthly'
+        if (!hasAnyFilter && !hasScopedRange) return null
 
         const parts: string[] = []
         if (props.showAllCycles) {
@@ -343,12 +349,14 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
               <span className="size-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse" />
               <span className="min-w-0 break-words">{label}</span>
             </div>
-            <Button variant="unstyled"
-              onClick={ledger.handleResetFilters}
-              className="flex shrink-0 items-center gap-1 whitespace-nowrap text-blue-500 hover:text-blue-500 text-[10px] font-semibold transition cursor-pointer cursor-pointer"
-            >
-              <X className="size-3" /> Clear filter
-            </Button>
+            {hasAnyFilter && (
+              <Button variant="unstyled"
+                onClick={ledger.handleResetFilters}
+                className="flex shrink-0 items-center gap-1 whitespace-nowrap text-blue-500 hover:text-blue-500 text-[10px] font-semibold transition cursor-pointer"
+              >
+                <X className="size-3" /> Clear filters
+              </Button>
+            )}
           </div>
         )
       })()}
@@ -419,6 +427,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         pendingSearchTerm={ledger.pendingSearchTerm}
         onPendingSearchChange={ledger.setPendingSearchTerm}
         onServerSearch={ledger.handleServerSearch}
+        onClearServerSearch={ledger.handleClearServerSearch}
         searchTerm={ledger.searchTerm}
         onSearchTermChange={ledger.setSearchTerm}
         isFilterDropdownOpen={ledger.isFilterDropdownOpen}
@@ -452,6 +461,17 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         }}
       />
 
+      {props.showAllCycles && (
+        <LedgerServerStatus
+          currentPage={ledger.currentPage}
+          error={ledger.serverError}
+          isFetching={ledger.serverIsFetching}
+          syncingTransactions={ledger.syncingTransactions}
+          listProps={listProps}
+          onRetry={ledger.retryServerFetch}
+        />
+      )}
+
       <LedgerBulkSelectionLayer
         listProps={listProps}
         allTransactions={props.transactions}
@@ -461,13 +481,13 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
       <LedgerPagination
         currentPage={ledger.currentPage}
         pageSize={ledger.pageSize}
-        totalItems={isServerMode ? ledger.serverResult!.total : ledger.filteredTransactions.length}
-        totalPages={isServerMode ? (Math.ceil(ledger.serverResult!.total / ledger.pageSize) || 1) : ledger.totalPages}
+        totalItems={isServerMode ? serverTotal : ledger.filteredTransactions.length}
+        totalPages={isServerMode ? (Math.ceil(serverTotal / ledger.pageSize) || 1) : ledger.totalPages}
         serverIsFetching={isServerMode && ledger.serverIsFetching}
         onPageChange={ledger.setCurrentPage}
         onPageSizeChange={(size) => {
           ledger.setPageSize(size)
-          props.onPreferredPageSizeChange?.(size)
+          if (!props.showAllCycles) props.onPreferredPageSizeChange?.(size)
           ledger.setCurrentPage(1)
         }}
       />
@@ -480,6 +500,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
             onClose={() => ledger.setShowExportModal(false)}
             onExportPage={ledger.handleExportPage}
             onExportAll={ledger.handleExportAll}
+            fullExportDisabled={props.showAllCycles && ledger.hasMatchingPendingTransactions}
           />
         </React.Suspense>
       )}

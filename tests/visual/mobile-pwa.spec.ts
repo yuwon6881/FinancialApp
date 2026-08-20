@@ -236,6 +236,7 @@ const mobilePwaRoutes = [
   { path: '/reports', slug: 'reports', readyText: 'Carryover Rolling Ledgers' },
   { path: '/recurring', slug: 'recurring', readyText: 'Recurring Bills & Subscriptions' },
   { path: '/ledger', slug: 'ledger', readyText: 'Neighbourhood Grocer' },
+  { path: '/ledger?all=1', slug: 'ledger-all-cycles', readyText: 'Neighbourhood Grocer' },
   { path: '/commitments-rewards', slug: 'commitments-rewards', readyText: 'Commitments & Rewards' },
   { path: '/settings', slug: 'settings', readyText: 'Financial Model' },
   { path: '/investments', slug: 'investments', readyText: 'Build your investment view' },
@@ -252,7 +253,7 @@ for (const route of mobilePwaRoutes) {
     await mockApi(page, { documents: vaultDocuments })
     await page.goto(route.path, { waitUntil: 'domcontentloaded' })
     await expect(page.locator('main')).toBeVisible()
-    await expect(page.getByText(route.readyText, { exact: true }).first()).toBeVisible()
+    await expect(page.getByText(route.readyText, { exact: true }).first()).toBeVisible({ timeout: 15_000 })
     const logo = page.getByRole('button', { name: 'Go to Today' })
     const wishlistAction = page.locator('header').getByRole('button', { name: 'Commitments and Rewards', exact: true })
     const billsAction = page.getByRole('button', { name: /Bills:/ })

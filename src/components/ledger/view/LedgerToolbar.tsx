@@ -14,6 +14,9 @@ interface LedgerToolbarProps {
   isFormOpen: boolean
   onToggleForm: () => void
   onOpenExport: () => void
+  showAllCycles: boolean
+  onShowAllCyclesChange: (showAllCycles: boolean) => void
+  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
 }
 
 export function LedgerToolbar({
@@ -26,55 +29,91 @@ export function LedgerToolbar({
   isFormOpen,
   onToggleForm,
   onOpenExport,
+  showAllCycles,
+  onShowAllCyclesChange,
+  cyclesRange,
 }: LedgerToolbarProps) {
+  const scopeLabel = cyclesRange === '3month'
+    ? 'the last 3 cycles'
+    : cyclesRange === '6month'
+      ? 'the last 6 cycles'
+      : cyclesRange === 'yearly'
+        ? `all cycles in ${selectedYear}`
+        : 'all saved cycles'
+
   return (
     <Card className="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div>
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-xl font-bold text-foreground">Financial Ledger</h2>
 
-          <div className="flex items-center gap-1.5 select-none w-full sm:w-auto">
-            <CustomSelect
-              ariaLabel="Ledger cycle"
-              value={selectedMonth}
-              onChange={val => onSelectPeriod(String(val), selectedYear)}
-              options={['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => ({
-                value: m,
-                label: getCycleLabelForDropdown(m, selectedYear, cycleDay),
-              }))}
-              className="flex-1 sm:w-56 sm:flex-initial"
-            />
-            <CustomSelect
-              ariaLabel="Ledger cycle year"
-              value={selectedYear}
-              onChange={val => onSelectPeriod(selectedMonth, Number(val))}
-              options={availableYears.map(y => ({
-                value: y,
-                label: y.toString(),
-              }))}
-              className="w-28 shrink-0"
-              align="right"
-            />
+          <div className="flex rounded-xl border border-border/70 bg-background p-1" role="group" aria-label="Ledger cycle scope">
+            <Button
+              variant={showAllCycles ? 'unstyled' : 'secondary'}
+              size="sm"
+              onClick={() => onShowAllCyclesChange(false)}
+              aria-pressed={!showAllCycles}
+              className="rounded-lg px-3 text-xs"
+            >
+              Current cycle
+            </Button>
+            <Button
+              variant={showAllCycles ? 'secondary' : 'unstyled'}
+              size="sm"
+              onClick={() => onShowAllCyclesChange(true)}
+              aria-pressed={showAllCycles}
+              className="rounded-lg px-3 text-xs"
+            >
+              All cycles
+            </Button>
           </div>
+
+          {(!showAllCycles || cyclesRange === '3month' || cyclesRange === '6month' || cyclesRange === 'yearly') && (
+            <div className="flex items-center gap-1.5 select-none w-full sm:w-auto">
+              {cyclesRange !== 'yearly' && (
+                <CustomSelect
+                  ariaLabel={showAllCycles ? 'Ledger range ending cycle' : 'Ledger cycle'}
+                  value={selectedMonth}
+                  onChange={val => onSelectPeriod(String(val), selectedYear)}
+                  options={['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => ({
+                    value: m,
+                    label: getCycleLabelForDropdown(m, selectedYear, cycleDay),
+                  }))}
+                  className="flex-1 sm:w-56 sm:flex-initial"
+                />
+              )}
+              <CustomSelect
+                ariaLabel={cyclesRange === 'yearly' ? 'Ledger range year' : 'Ledger cycle year'}
+                value={selectedYear}
+                onChange={val => onSelectPeriod(selectedMonth, Number(val))}
+                options={availableYears.map(y => ({ value: y, label: y.toString() }))}
+                className="w-28 shrink-0"
+                align="right"
+              />
+            </div>
+          )}
         </div>
         <p className="text-xs text-muted-foreground mt-1">
-          Comprehensive posting of all accounts and transactional balances for the currently selected cycle.
+          {showAllCycles
+            ? `Saved transactions across ${scopeLabel}. Filters, sorting, paging, and full export are handled by the server.`
+            : 'Transactions in the selected cycle. Search, filters, sorting, and paging update instantly on this device.'}
         </p>
       </div>
       <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center md:w-auto md:gap-3">
-        <button
+        <Button
+          variant="outline"
           onClick={onOpenExport}
           disabled={hideSensitive}
-          className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap px-4 py-2.5 rounded-xl border border-border font-medium text-xs transition duration-200 md:flex-initial ${
+          className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-xs md:flex-initial ${
             hideSensitive
-              ? 'opacity-40 cursor-not-allowed bg-background text-muted-foreground'
-              : 'bg-background hover:bg-muted text-foreground cursor-pointer'
+              ? 'opacity-40 cursor-not-allowed text-muted-foreground'
+              : 'cursor-pointer'
           }`}
           title={hideSensitive ? 'CSV export disabled while sensitive amounts are masked' : 'Export CSV'}
         >
           <Download className="size-3.5 text-muted-foreground" />
           Export CSV
-        </button>
+        </Button>
         <Button
           variant="primary"
           size="lg"

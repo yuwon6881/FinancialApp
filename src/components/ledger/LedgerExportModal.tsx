@@ -9,6 +9,7 @@ interface LedgerExportModalProps {
   onClose: () => void
   onExportPage: () => void
   onExportAll: () => void
+  fullExportDisabled?: boolean
 }
 
 // The "Export Ledger CSV" bottom sheet. All the export logic (page vs. full
@@ -19,6 +20,7 @@ export function LedgerExportModal({
   onClose,
   onExportPage,
   onExportAll,
+  fullExportDisabled = false,
 }: LedgerExportModalProps) {
   return (
     <BottomSheet
@@ -54,7 +56,7 @@ export function LedgerExportModal({
           <Button
             variant="primary"
             onClick={onExportAll}
-            disabled={exportIsFetching}
+            disabled={exportIsFetching || fullExportDisabled}
             className="rounded-xl px-4 py-2 text-xs font-semibold shadow-md"
           >
             {exportIsFetching && <Loader2 className="size-3.5 animate-spin" />}
@@ -70,6 +72,11 @@ export function LedgerExportModal({
         <p className="text-[10px] text-muted-foreground">
           Full exports use a server-side download to avoid large client loads.
         </p>
+        {fullExportDisabled && (
+          <p className="text-[10px] font-medium text-orange-500">
+            Full export becomes available after matching transactions finish syncing.
+          </p>
+        )}
       </div>
     </BottomSheet>
   )

@@ -31,6 +31,7 @@ interface LedgerFilterBarProps {
   pendingSearchTerm: string
   onPendingSearchChange: (value: string) => void
   onServerSearch: () => void
+  onClearServerSearch: () => void
   // Client-mode search (live filtering)
   searchTerm: string
   onSearchTermChange: (value: string) => void
@@ -74,6 +75,7 @@ export function LedgerFilterBar({
   pendingSearchTerm,
   onPendingSearchChange,
   onServerSearch,
+  onClearServerSearch,
   searchTerm,
   onSearchTermChange,
   isFilterDropdownOpen,
@@ -124,11 +126,11 @@ export function LedgerFilterBar({
     return categories.filter(c => {
       if (c.isPendingDelete) return false
       if (txType === 'inflow' || txType === 'outflow') {
-        return allowsCategoryFlow(c.type, txType)
+        return checkboxFilters.includes(c.name) || allowsCategoryFlow(c.type, txType)
       }
       return true
     })
-  }, [categories, txType])
+  }, [categories, txType, checkboxFilters])
 
   const advancedFilterControls = (
     <div className="space-y-4 border-t border-border/40 pt-4 lg:border-t-0 lg:pt-0">
@@ -297,7 +299,7 @@ export function LedgerFilterBar({
             {pendingSearchTerm && (
               <Button variant="unstyled"
                 type="button"
-                onClick={() => onPendingSearchChange('')}
+                onClick={onClearServerSearch}
                 aria-label="Clear search"
                 className="mr-1 flex size-6 shrink-0 items-center justify-center rounded-md text-foreground hover:bg-muted transition cursor-pointer"
               >

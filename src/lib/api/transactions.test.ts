@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchPagedTransactions } from './transactions'
+import { exportTransactionsCsv, fetchPagedTransactions } from './transactions'
 
 describe('fetchPagedTransactions', () => {
   afterEach(() => {
@@ -43,5 +43,21 @@ describe('fetchPagedTransactions', () => {
     const url = new URL(String(fetchMock.mock.calls[0][0]))
     expect(url.searchParams.get('recurringFilter')).toBe('exclude')
     expect(url.searchParams.get('wishlistFilter')).toBe('only')
+  })
+
+  it('preserves the active sort and trims search for a full export', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'attachment; filename="ledger.csv"' },
+      blob: async () => new Blob(['ledger']),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await exportTransactionsCsv({ search: '  coffee  ', sort: 'amount-asc' })
+
+    const url = new URL(String(fetchMock.mock.calls[0][0]))
+    expect(url.searchParams.get('search')).toBe('coffee')
+    expect(url.searchParams.get('sort')).toBe('amount-asc')
   })
 })
