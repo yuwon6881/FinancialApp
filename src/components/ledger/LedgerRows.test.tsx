@@ -74,9 +74,11 @@ describe('LedgerRows duplicate action', () => {
     ['split row', { id: 'tx-split-1' }],
     ['commitment completion', { savingsGoalId: 4 }],
     ['transfer', { ledgerCategory: 'Transfer:Essentials:Rewards' }],
-  ])('hides Duplicate for a %s', (_label, changes) => {
+  ])('disables Duplicate for a %s', (_label, changes) => {
     render(<table><tbody><DesktopLedgerRow {...props({ ...transaction('NotRequired'), ...changes })} /></tbody></table>)
-    expect(screen.queryByRole('button', { name: 'Duplicate' })).toBeNull()
+    const duplicateBtn = screen.getByRole('button', { name: 'Duplicate' })
+    expect(duplicateBtn).toBeDefined()
+    expect(duplicateBtn.hasAttribute('disabled')).toBe(true)
   })
 })
 
