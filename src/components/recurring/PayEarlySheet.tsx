@@ -56,7 +56,7 @@ export function PayEarlySheet({
       .filter(a => !a.isArchived)
       .map(a => ({
         value: a.id,
-        label: a.name,
+        label: `${a.name} (${a.bucket})`,
       }))
   }, [accounts])
 
