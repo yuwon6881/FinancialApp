@@ -35,6 +35,34 @@ export async function getFcmToken(registration: ServiceWorkerRegistration): Prom
   }
 }
 
+// A server-retired token cannot be repaired by reading Firebase's cached token and uploading the
+// same value again. Remove the local registration first so the next request creates a genuinely
+// new token for this browser subscription.
+export async function renewFcmToken(registration: ServiceWorkerRegistration): Promise<string | null> {
+  const messaging = await getMessagingInstance()
+  const vapidKey = getVapidKey()
+  if (!messaging || !vapidKey) return null
+  try {
+    const { deleteToken, getToken } = await import('firebase/messaging')
+    try {
+      await deleteToken(messaging)
+    } catch (err) {
+      // FCM commonly rejects deletion for the same reason it rejected delivery: the remote token
+      // is already gone. Firebase then leaves its IndexedDB token and PushSubscription intact,
+      // so getToken() would return the same dead value. Unsubscribing locally forces its mismatch
+      // path to mint a new registration while keeping notification permission unchanged.
+      console.warn('Could not revoke the retired FCM token remotely; replacing it locally.', err)
+      const subscription = await registration.pushManager.getSubscription()
+      await subscription?.unsubscribe()
+    }
+    const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration })
+    return token || null
+  } catch (err) {
+    console.warn('Could not renew the FCM token.', err)
+    return null
+  }
+}
+
 // Foreground messages never trigger the browser's native notification UI (only the
 // service worker's background handler does that); this only powers the in-app toast.
 export async function onForegroundMessage(callback: (payload: MessagePayload) => void): Promise<() => void> {

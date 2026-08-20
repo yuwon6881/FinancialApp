@@ -21,6 +21,7 @@ export interface UsePushNotificationsResult {
 const EMPTY_STATUS: PushStatus = {
   enabled: false,
   deviceRegistered: false,
+  tokenRenewalRequired: false,
   billRemindersEnabled: false,
   categoryAlertsEnabled: false,
   otherDevicesBillReminders: false,

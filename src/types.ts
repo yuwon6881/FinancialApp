@@ -438,10 +438,12 @@ export type PushChannel = 'billReminders' | 'categoryAlerts'
  * `billRemindersEnabled`/`categoryAlertsEnabled` are **this device's** state and are what the two
  * switches render from. `otherDevices*` is informational only: rendering an account-wide flag as a
  * switch state told a desktop it was receiving spending alerts a phone had turned on.
+ * `tokenRenewalRequired` is a transport repair hint, never an opt-in state.
  */
 export interface PushStatus {
   enabled: boolean
   deviceRegistered: boolean
+  tokenRenewalRequired: boolean
   billRemindersEnabled: boolean
   categoryAlertsEnabled: boolean
   otherDevicesBillReminders: boolean

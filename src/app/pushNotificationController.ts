@@ -77,7 +77,9 @@ export async function reconcilePush(
 
   try {
     const registration = await navigator.serviceWorker.ready
-    const token = await push.getFcmToken(registration)
+    const token = next.tokenRenewalRequired
+      ? await push.renewFcmToken(registration)
+      : await push.getFcmToken(registration)
     if (!token) return deviceId
     const channels = next.deviceRegistered
       ? undefined
@@ -131,7 +133,9 @@ export async function setPushChannel(
       return { success: false, status: currentStatus, guidance: push.PUSH_DENIED_GUIDANCE, enrolmentChanged: false }
     }
     const registration = await navigator.serviceWorker.ready
-    const token = await push.getFcmToken(registration)
+    const token = currentStatus.tokenRenewalRequired
+      ? await push.renewFcmToken(registration)
+      : await push.getFcmToken(registration)
     if (!token) {
       return { success: false, status: currentStatus, guidance: push.PUSH_UNSUPPORTED_GUIDANCE, enrolmentChanged: false }
     }

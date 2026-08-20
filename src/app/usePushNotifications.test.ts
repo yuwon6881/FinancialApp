@@ -7,6 +7,7 @@ import type { PushStatus } from '../types'
 
 vi.mock('../lib/push/firebaseMessaging', () => ({
   getFcmToken: vi.fn(async () => 'fcm-token-123'),
+  renewFcmToken: vi.fn(async () => 'fcm-token-123'),
   onForegroundMessage: vi.fn(async () => () => undefined),
 }))
 
@@ -20,13 +21,14 @@ vi.mock('../lib/push/deviceId', () => ({
   getExistingDeviceId: () => 'device-abc',
 }))
 
-import { getFcmToken, onForegroundMessage } from '../lib/push/firebaseMessaging'
+import { getFcmToken, onForegroundMessage, renewFcmToken } from '../lib/push/firebaseMessaging'
 
 const ACCOUNT = 'someone'
 
 const status = (overrides: Partial<PushStatus> = {}): PushStatus => ({
   enabled: false,
   deviceRegistered: false,
+  tokenRenewalRequired: false,
   billRemindersEnabled: false,
   categoryAlertsEnabled: false,
   otherDevicesBillReminders: false,
@@ -99,6 +101,7 @@ describe('usePushNotifications', () => {
     expect(success).toBe(true)
     expect(global.Notification.requestPermission).toHaveBeenCalled()
     expect(getFcmToken).toHaveBeenCalled()
+    expect(renewFcmToken).not.toHaveBeenCalled()
     // Only the kind being turned on is sent: the other is deliberately omitted so the server
     // leaves whatever this device already chose alone.
     expect(api.upsertPushSubscription).toHaveBeenCalledWith('device-abc', 'fcm-token-123', { billReminders: true })
@@ -211,13 +214,15 @@ describe('usePushNotifications', () => {
       JSON.stringify({ billReminders: true, categoryAlerts: true }),
     )
     vi.spyOn(api, 'fetchPushStatus')
-      .mockResolvedValueOnce(status())
+      .mockResolvedValueOnce(status({ tokenRenewalRequired: true }))
       .mockResolvedValue(bothOn)
 
     const { result } = renderHook(() => usePushNotifications(true, vi.fn(), ACCOUNT))
 
     await waitFor(() => expect(api.upsertPushSubscription).toHaveBeenCalledWith(
       'device-abc', 'fcm-token-123', { billReminders: true, categoryAlerts: true }))
+    expect(renewFcmToken).toHaveBeenCalled()
+    expect(getFcmToken).not.toHaveBeenCalled()
     await waitFor(() => expect(result.current.billRemindersEnabled).toBe(true))
     expect(result.current.categoryAlertsEnabled).toBe(true)
   })
@@ -255,6 +260,8 @@ describe('usePushNotifications', () => {
     // No channels argument: re-registering a rotated token must not restate the user's choices.
     await waitFor(() => expect(api.upsertPushSubscription).toHaveBeenCalledWith(
       'device-abc', 'fcm-token-123', undefined))
+    expect(getFcmToken).toHaveBeenCalled()
+    expect(renewFcmToken).not.toHaveBeenCalled()
   })
 
   it('releases this device when the browser has since revoked notification permission', async () => {
