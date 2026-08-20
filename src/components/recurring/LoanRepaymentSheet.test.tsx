@@ -29,10 +29,16 @@ const payment: RecurringPayment = {
   accountId: 'account-1', active: true, nextDueDate: '2026-01-01',
 }
 
-const accounts: LedgerAccount[] = [{
-  id: 'account-1', name: 'Main account', bucket: 'Essentials', kind: 'Bank', remaining: 2000,
-  isArchived: false, createdAt: '', updatedAt: '',
-}]
+const accounts: LedgerAccount[] = [
+  {
+    id: 'account-1', name: 'Main account', bucket: 'Essentials', kind: 'Bank', remaining: 2000,
+    isArchived: false, createdAt: '', updatedAt: '',
+  },
+  {
+    id: 'account-2', name: 'Growth account', bucket: 'Growth', kind: 'Bank', remaining: 500,
+    isArchived: false, createdAt: '', updatedAt: '',
+  },
+]
 
 describe('LoanRepaymentSheet', () => {
   beforeEach(() => {
@@ -68,5 +74,25 @@ describe('LoanRepaymentSheet', () => {
     await waitFor(() => expect(payButton.disabled).toBe(false))
     fireEvent.click(payButton)
     await waitFor(() => expect(onAdvanceRepayment).toHaveBeenCalledWith('loan-1', 10, 'account-1'))
+  })
+
+  it('offers every open account and keeps the server preview while switching repayment tabs', async () => {
+    render(
+      <LoanRepaymentSheet
+        isOpen loan={loan} payment={payment} accounts={accounts} currency="MYR"
+        onClose={vi.fn()} onAdvanceRepayment={vi.fn()} onFullSettlement={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(previewAdvanceRepayment).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByRole('combobox', { name: 'Pay from account' }))
+    expect(screen.getByRole('option', { name: 'Growth account (Growth)' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('option', { name: 'Growth account (Growth)' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Full settlement' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Advance cycles' }))
+
+    await waitFor(() => expect(previewAdvanceRepayment).toHaveBeenCalledTimes(1))
+    expect(screen.getByRole('combobox', { name: 'Pay from account' }).textContent).toContain('Growth account')
   })
 })

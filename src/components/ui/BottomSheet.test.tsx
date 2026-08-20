@@ -4,6 +4,8 @@ import { BottomSheet } from './BottomSheet'
 import { Button } from './Button'
 import { ModalActions } from './ModalActions'
 import { APP_CONTEXT_WILL_CHANGE_EVENT } from '../../lib/appLocation'
+import { createRef } from 'react'
+import { InfoHint } from './InfoHint'
 
 describe('BottomSheet HCI contract', () => {
   it('names and describes the dialog, traps focus, closes on Escape, and restores focus', async () => {
@@ -89,6 +91,24 @@ describe('BottomSheet HCI contract', () => {
 
     expect(screen.getByRole('dialog', { name: 'Public title' })).toBeTruthy()
     expect(screen.queryByRole('dialog', { name: 'Internal title' })).toBeNull()
+  })
+
+  it('uses an explicit safe focus target instead of opening the first information tooltip', async () => {
+    const closeRef = createRef<HTMLButtonElement>()
+    render(
+      <BottomSheet
+        isOpen
+        title="Cycle summary"
+        onClose={vi.fn()}
+        initialFocusRef={closeRef}
+        footer={<Button ref={closeRef}>Close</Button>}
+      >
+        <InfoHint label="account balances" text="Balances at cycle close." />
+      </BottomSheet>,
+    )
+
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close' })))
+    expect(screen.queryByRole('tooltip')).toBeNull()
   })
 
   it('closes when the app route or selected cycle changes', () => {

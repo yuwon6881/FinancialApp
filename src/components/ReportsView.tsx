@@ -20,6 +20,7 @@ import { CategoryLimitPerformance } from './dashboard/CategoryLimitPerformance'
 import { getCategoryLimitCardId } from './dashboard/types'
 import { SubscriptionsTimelineCard } from './dashboard/SubscriptionsTimelineCard'
 import { useHighlightedElement } from './ui/useHighlightedElement'
+import { buildBillTimelineModel } from '../lib/billTimeline'
 
 interface ReportsViewProps {
   dashboardData: DashboardData | null
@@ -95,6 +96,19 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const selectedMonthIndex = REPORT_MONTHS.indexOf(view.activeSettings.selectedMonth) + 1
   const selectedCycleEnded = selectedMonthIndex > 0 &&
     getCycleProgress(view.activeSettings.selectedYear, selectedMonthIndex, view.activeSettings.cycleDay).phase === 'ended'
+  const selectedCycleRecurring = React.useMemo(() => buildBillTimelineModel({
+    activeRecurringPayments: view.activeRecurring,
+    transactions,
+    selectedMonth: view.activeSettings.selectedMonth,
+    selectedYear: view.activeSettings.selectedYear,
+    cycleDay: view.activeSettings.cycleDay,
+  }).processedPayments, [
+    transactions,
+    view.activeRecurring,
+    view.activeSettings.cycleDay,
+    view.activeSettings.selectedMonth,
+    view.activeSettings.selectedYear,
+  ])
 
   if (isSwitchingCycle) return <CycleSkeleton variant="reports" />
 
@@ -216,7 +230,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
       <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,2fr)] lg:items-stretch">
         <SubscriptionsTimelineCard
-          activeRecurring={view.activeRecurring}
+          activeRecurring={selectedCycleRecurring}
           formatSensitive={view.formatSensitive}
           onNavigate={onNavigate}
           onNavigateToRecurring={onNavigateToRecurring}

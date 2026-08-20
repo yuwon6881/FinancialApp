@@ -41,6 +41,7 @@ export function LoanRepaymentSheet({
   const [quoteAmount, setQuoteAmount] = useState('')
   const [selectedAccountId, setSelectedAccountId] = useState('')
   const [preview, setPreview] = useState<LoanRepaymentPreviewResult | null>(null)
+  const [previewLoanId, setPreviewLoanId] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -61,12 +62,9 @@ export function LoanRepaymentSheet({
     return Math.max(1, Math.min(loan.termPeriods, 60))
   }, [loan])
 
-  // Filter accounts in the same bucket as the linked bill (or Essentials default)
-  const targetBucket = payment?.ledgerCategory || 'Essentials'
   const eligibleAccounts = useMemo(() => {
-    const matching = accounts.filter(a => a.bucket === targetBucket && !a.isArchived)
-    return matching.length > 0 ? matching : accounts.filter(a => !a.isArchived)
-  }, [accounts, targetBucket])
+    return accounts.filter(account => !account.isArchived)
+  }, [accounts])
 
   const accountOptions = useMemo(() => {
     return eligibleAccounts.map(account => ({
@@ -82,6 +80,7 @@ export function LoanRepaymentSheet({
       setQuoteAmount('')
       setSelectedAccountId('')
       setPreview(null)
+      setPreviewLoanId(null)
       setPreviewLoading(false)
       setPreviewError(null)
       setSubmitting(false)
@@ -106,8 +105,12 @@ export function LoanRepaymentSheet({
 
   useEffect(() => {
     if (!isOpen || !loan || tab !== 'advance' || isAutoDeduct) return
+    if (previewLoanId === loan.id && preview?.cyclesCount === cycles) {
+      setPreviewLoading(false)
+      setPreviewError(null)
+      return
+    }
     const controller = new AbortController()
-    setPreview(null)
     setPreviewLoading(true)
     setPreviewError(null)
     const timer = window.setTimeout(() => {
@@ -115,6 +118,7 @@ export function LoanRepaymentSheet({
       previewAdvanceRepayment(loan.id, cycles, controller.signal)
         .then(result => {
           setPreview(result)
+          setPreviewLoanId(loan.id)
         })
         .catch(err => {
           if (!controller.signal.aborted) {
@@ -132,7 +136,7 @@ export function LoanRepaymentSheet({
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [isOpen, loan, cycles, tab, isAutoDeduct])
+  }, [isOpen, loan, cycles, tab, isAutoDeduct, preview, previewLoanId])
 
   if (!loan) return null
 
@@ -173,7 +177,7 @@ export function LoanRepaymentSheet({
       onClose={onClose}
       title={
         <div className="min-w-0">
-          <div className="text-sm font-bold text-foreground">Repay {loan.name}</div>
+          <div className="text-sm font-bold text-foreground">Pay {loan.name}</div>
           <p className="text-[11px] font-normal text-muted-foreground">Linked bill: {loan.recurringPaymentName || 'Recurring bill'}</p>
         </div>
       }

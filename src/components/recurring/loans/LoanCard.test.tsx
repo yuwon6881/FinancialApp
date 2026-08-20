@@ -88,7 +88,14 @@ describe('LoanCard', () => {
     expect(screen.getByText('Delete')).not.toBeNull()
   })
 
-  it('shows the standard loader instead of stale schedule rows while the full schedule loads', () => {
+  it('names the repayment action as a payment', () => {
+    render(<LoanCard {...props(baseLoan)} onRepay={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: `Make a payment for ${baseLoan.name}` })).toBeTruthy()
+    expect(screen.getByText('Make payment')).toBeTruthy()
+  })
+
+  it('starts the full-schedule loader in the disclosure event so preview rows never flash first', () => {
     fetchLoanSchedule.mockReturnValue(new Promise(() => {}))
     const scheduledLoan = {
       ...baseLoan,
@@ -105,6 +112,7 @@ describe('LoanCard', () => {
     schedule.open = true
     fireEvent(schedule, new Event('toggle', { bubbles: true }))
 
+    expect(fetchLoanSchedule).toHaveBeenCalledWith('loan-card')
     expect(screen.getByRole('status').textContent).toContain('Loading full planned schedule')
     expect(screen.queryByText('Planned', { exact: true })).toBeNull()
   })

@@ -77,7 +77,6 @@ const makeProps = (overrides: Partial<React.ComponentProps<typeof DashboardView>
   onNavigate: vi.fn(),
   hideSensitive: false,
   hideBalanceAmounts: false,
-  walletBalance: 1234.56,
   onToggleBalanceAmounts: vi.fn(),
   pendingNotificationCount: 2,
   onOpenNotifications: vi.fn(),
@@ -100,6 +99,7 @@ describe('DashboardView focused Today experience', () => {
 
     expect(screen.getByText('Today')).toBeTruthy()
     expect(screen.getByText('Available now')).toBeTruthy()
+    expect(screen.getByText('$4,456.00')).toBeTruthy()
     expect(screen.getByText('2 bills need review')).toBeTruthy()
     expect(screen.getByText('Plan snapshot')).toBeTruthy()
     expect(screen.getByText('Essentials remaining')).toBeTruthy()
@@ -181,7 +181,7 @@ describe('DashboardView focused Today experience', () => {
 
   it('renders the today focus cards and the focused reward', () => {
     render(<DashboardView {...makeProps()} />)
-    expect(screen.getByText('$1,234.56')).toBeTruthy()
+    expect(screen.getByText('$4,456.00')).toBeTruthy()
     expect(screen.getByText('Cycle progress')).toBeTruthy()
     expect(screen.getByText('Reward: Camera')).toBeTruthy()
     expect(screen.getByText('40%')).toBeTruthy()

@@ -2,6 +2,12 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ReportsView } from './ReportsView'
 
+const { subscriptionsTimelineCard } = vi.hoisted(() => ({
+  subscriptionsTimelineCard: vi.fn(({ activeRecurring }: { activeRecurring: Array<{ name: string; status: string }> }) => (
+    <div>Selected-cycle subscriptions: {activeRecurring.map(item => `${item.name} ${item.status}`).join(', ')}</div>
+  )),
+}))
+
 vi.mock('./dashboard/useDashboardView', () => ({
   useDashboardView: () => ({
     months: ['Jun', 'Jul'],
@@ -45,7 +51,7 @@ vi.mock('./dashboard/useDashboardView', () => ({
 vi.mock('./dashboard/CarryoverLedgerTable', () => ({ CarryoverLedgerTable: () => <div>Carryover report</div> }))
 vi.mock('./dashboard/FinancialPlanMetrics', () => ({ FinancialPlanMetrics: () => <div>Plan performance report</div> }))
 vi.mock('./dashboard/CycleFlowCards', () => ({ CycleFlowCards: () => <div>Cycle flow report</div> }))
-vi.mock('./dashboard/SubscriptionsTimelineCard', () => ({ SubscriptionsTimelineCard: () => <div>Selected-cycle subscriptions</div> }))
+vi.mock('./dashboard/SubscriptionsTimelineCard', () => ({ SubscriptionsTimelineCard: subscriptionsTimelineCard }))
 vi.mock('./dashboard/TrendLineChart', () => ({ TrendLineChart: () => <div>Trend report</div> }))
 vi.mock('./dashboard/DoughnutChart', () => ({ DoughnutChart: () => <div>Category report</div> }))
 vi.mock('./dashboard/CycleCalendar', () => ({ CycleCalendar: ({ onSelectDate }: { onSelectDate: (date: string) => void }) => <button onClick={() => onSelectDate('2026-07-30')}>Activity calendar</button> }))
@@ -66,10 +72,35 @@ describe('ReportsView', () => {
     expect(screen.getByText('Carryover report')).toBeTruthy()
     expect(screen.getByText('Plan performance report')).toBeTruthy()
     expect(screen.getByText('Cycle flow report')).toBeTruthy()
-    expect(screen.getByText('Selected-cycle subscriptions')).toBeTruthy()
+    expect(screen.getByText(/Selected-cycle subscriptions/)).toBeTruthy()
     expect(screen.getByText('Trend report')).toBeTruthy()
     expect(screen.getByText('Category report')).toBeTruthy()
     expect(screen.getByText('Activity calendar')).toBeTruthy()
+  })
+
+  it('reconstructs paid and discarded subscriptions when a historical dashboard has no active rows', () => {
+    render(
+      <ReportsView
+        dashboardData={null}
+        transactions={[
+          {
+            id: 'paid', date: '2026-06-12', description: 'Internet', amount: -120,
+            category: 'Utilities', ledgerCategory: 'Essentials', recurringPaymentId: 'bill-1',
+            recurringOccurrenceDate: '2026-06-12',
+          },
+          {
+            id: 'discarded', date: '2026-06-20', description: 'Gym', amount: 0,
+            category: 'Health', ledgerCategory: 'Discarded', recurringPaymentId: 'bill-2',
+            recurringOccurrenceDate: '2026-06-20',
+          },
+        ]}
+        hideBalanceAmounts={false}
+        onSelectPeriod={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/Internet Paid/)).toBeTruthy()
+    expect(screen.getByText(/Gym Discarded/)).toBeTruthy()
   })
 
   it('links a calendar date back to the addressable ledger', () => {

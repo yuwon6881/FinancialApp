@@ -102,6 +102,14 @@ export function LoanCard({
     }
   }, [loan.id, loan.isPendingSync, scheduleKey, scheduleUnavailable])
 
+  const handleScheduleToggle = useCallback((event: React.ToggleEvent<HTMLDetailsElement>) => {
+    const open = event.currentTarget.open
+    setIsScheduleOpen(open)
+    if (open && !loan.isPendingSync && !scheduleUnavailable && loadedSchedule?.key !== scheduleKey && scheduleLoadingKey !== scheduleKey) {
+      void loadSchedule()
+    }
+  }, [loadSchedule, loadedSchedule?.key, loan.isPendingSync, scheduleKey, scheduleLoadingKey, scheduleUnavailable])
+
   useEffect(() => {
     if (!isScheduleOpen || loan.isPendingSync || scheduleUnavailable || loadedSchedule?.key === scheduleKey || scheduleLoadingKey === scheduleKey) return
     void loadSchedule()
@@ -197,7 +205,7 @@ export function LoanCard({
         </div>
       </details>
 
-      <details className="group/schedule mt-3 rounded-xl border border-border/50 bg-background/40 p-3 sm:p-3.5" onToggle={event => setIsScheduleOpen(event.currentTarget.open)}>
+      <details className="group/schedule mt-3 rounded-xl border border-border/50 bg-background/40 p-3 sm:p-3.5" onToggle={handleScheduleToggle}>
         <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-xs font-bold text-foreground transition-colors hover:text-accent-ink">
           <div className="flex items-center gap-2">
             <span>Payment history and planned schedule</span>
@@ -313,12 +321,12 @@ export function LoanCard({
               variant="primary"
               size="sm"
               type="button"
-              aria-label={`Make repayment for ${loan.name}`}
+              aria-label={`Make a payment for ${loan.name}`}
               title={hideSensitive ? 'Unhide balances to repay' : 'Pay instalments in advance or record full settlement'}
               onClick={onRepay}
               disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}
             >
-              <span>Repay loan</span>
+              <span>Make payment</span>
             </Button>
           )}
           <Button

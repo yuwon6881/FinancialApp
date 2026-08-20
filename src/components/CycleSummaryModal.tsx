@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -55,6 +55,7 @@ export function CycleSummaryModal({
   onViewLedger,
 }: CycleSummaryModalProps) {
   const { formatSensitive } = useAppPrefs()
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
   const summary = useMemo(
     () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay, transactions, loans) : null,
     [data, previousData, wishlist, year, monthIndex, cycleDay, transactions, loans],
@@ -72,6 +73,7 @@ export function CycleSummaryModal({
       isOpen={isOpen}
       onClose={onClose}
       maxWidthClassName="max-w-3xl"
+      initialFocusRef={closeButtonRef}
       ariaLabel="Cycle summary"
       title={
         <div className="flex items-center gap-2.5">
@@ -93,7 +95,7 @@ export function CycleSummaryModal({
               View ledger
             </Button>
           )}
-          <Button variant="unstyled" onClick={onClose} className="flex-1 rounded-lg bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:bg-foreground/90 sm:flex-none">
+          <Button ref={closeButtonRef} variant="unstyled" onClick={onClose} className="flex-1 rounded-lg bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:bg-foreground/90 sm:flex-none">
             {variant === 'auto' ? 'Got it' : 'Close'}
           </Button>
         </div>

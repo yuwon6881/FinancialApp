@@ -106,8 +106,33 @@ describe('TopNav mobile primary navigation', () => {
       />,
     )
 
-    expect(screen.getByLabelText('Refreshing')).toBeTruthy()
+    const status = screen.getByLabelText('Refreshing')
+    expect(status).toBeTruthy()
+    expect(status.className).toContain('absolute')
+    expect(status.closest('button')?.getAttribute('aria-label')).toBe('Go to Today')
     expect(screen.queryByText('Refreshing')).toBeNull()
+  })
+
+  it('moves keyboard focus styling from the home logo to its wordmark', () => {
+    render(
+      <TopNav
+        activeTab="dashboard"
+        onTabChange={vi.fn()}
+        hideSensitive={false}
+        sensitivePreferenceStatus="resolved"
+        onToggleHideSensitive={vi.fn()}
+        onRetrySensitivePreference={vi.fn()}
+        onLogout={vi.fn()}
+        username="Test User"
+        pendingNotifications={[]}
+        onOpenNotifications={vi.fn()}
+        darkMode={false}
+        onToggleDarkMode={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Go to Today' }).className).toContain('brand-home-button')
+    expect(screen.getByText('FinancialApp').className).toContain('brand-home-label')
   })
 
   it('renders privacy resolution as a floating overlay that does not take layout space', () => {

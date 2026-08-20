@@ -22,7 +22,6 @@ interface DashboardViewProps {
   onNavigate: (tab: AppTab) => void
   hideSensitive?: boolean
   hideBalanceAmounts: boolean
-  walletBalance: number
   onToggleBalanceAmounts: () => void
   pendingNotificationCount: number
   onOpenNotifications: () => void
@@ -51,7 +50,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigate,
   hideSensitive: hideSensitiveProp,
   hideBalanceAmounts,
-  walletBalance,
   onToggleBalanceAmounts,
   pendingNotificationCount,
   onOpenNotifications,
@@ -102,7 +100,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <DashboardHeader
         cycleLabel={view.cycleLabel}
         cycleDay={view.activeSettings.cycleDay}
-        walletBalance={walletBalance}
+        walletBalance={dashboardData?.stats.totalBalance ?? 0}
         areBalanceAmountsMasked={view.areBalanceAmountsMasked}
         hideSensitive={hideSensitive}
         hideBalanceAmounts={hideBalanceAmounts}

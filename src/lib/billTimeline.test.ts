@@ -121,4 +121,41 @@ describe('buildBillTimelineModel', () => {
     expect(result.timelineNodes).toHaveLength(1)
     expect(result.timelineNodes[0].bills).toHaveLength(2)
   })
+
+  it('reconstructs historical paid and discarded rows from their occurrence cycle', () => {
+    const transactions: Transaction[] = [
+      {
+        id: 'paid-history',
+        date: '2026-07-20',
+        description: 'Internet',
+        amount: -120,
+        category: 'Utilities',
+        ledgerCategory: 'Essentials',
+        recurringPaymentId: 'bill-1',
+        recurringOccurrenceDate: '2026-08-15',
+        accountId: 'acct-essentials',
+      },
+      {
+        id: 'discarded-history',
+        date: '2026-08-18',
+        description: 'Gym',
+        amount: 0,
+        category: 'Health',
+        ledgerCategory: 'Discarded',
+        recurringPaymentId: 'bill-2',
+        recurringOccurrenceDate: '2026-08-18',
+      },
+    ]
+
+    const result = buildBillTimelineModel({
+      ...baseOptions,
+      activeRecurringPayments: [],
+      transactions,
+    })
+
+    expect(result.processedPayments).toEqual(expect.arrayContaining([
+      expect.objectContaining({ recurringPaymentId: 'bill-1', dueDate: '2026-08-15', status: 'Paid' }),
+      expect.objectContaining({ recurringPaymentId: 'bill-2', dueDate: '2026-08-18', status: 'Discarded' }),
+    ]))
+  })
 })

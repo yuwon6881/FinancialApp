@@ -538,6 +538,18 @@ button, [role="button"] {
     inset: 0;
 }
 
+/* The home mark is tapped constantly, so browser-retained focus must not draw a ring around the
+   logo after navigation. Keyboard focus remains visible on the adjacent wordmark instead. */
+.brand-home-button:focus-visible {
+    outline: none !important;
+}
+
+.brand-home-button:focus-visible .brand-home-label {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+}
+
 /* Full-screen states render under installed-PWA system chrome because the
    document opts into viewport-fit=cover. Keep their authored breathing room
    and add the device safe area instead of making each screen repeat four

@@ -180,10 +180,18 @@ const TopNav: React.FC<TopNavProps> = ({
             type="button"
             aria-label="Go to Today"
             onClick={() => onTabChange('dashboard')}
-            className="flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-xl cursor-pointer select-none active:scale-95"
+            className="brand-home-button flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-xl cursor-pointer select-none active:scale-95"
           >
             <AppLogo className="size-9 rounded-xl transition-transform duration-200 hover:scale-105" />
-            <span className="hidden sm:inline md:hidden lg:inline text-base lg:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
+            {(isOffline || isSyncing || syncLabel) && (
+              <span
+                role="status"
+                aria-label={isOffline ? 'Offline' : syncStatusLabel}
+                title={isOffline ? 'No network connection — showing saved data; changes will sync when you are back online' : syncStatusLabel}
+                className={`absolute left-7 top-1 z-10 flex size-3.5 items-center justify-center rounded-full border-2 border-background ${isOffline ? 'bg-amber-500' : 'animate-pulse bg-blue-500'}`}
+              />
+            )}
+            <span className="brand-home-label hidden sm:inline md:hidden lg:inline text-base lg:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
               FinancialApp
             </span>
           </Button>
@@ -219,23 +227,6 @@ const TopNav: React.FC<TopNavProps> = ({
               refresh/offline text may then clip at the edge of the left lane instead of
               shifting the draft into the fixed actions on the right. */}
           {isPhone && draftStatus}
-          {isPhone && (isOffline ? (
-            <div
-              aria-label="Offline"
-              className="ml-1.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-500"
-              title="No network connection — showing cached data, changes will sync once you're back online"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-            </div>
-          ) : (isSyncing || syncLabel) ? (
-            <div
-              aria-label={syncStatusLabel}
-              title={syncStatusLabel}
-              className="ml-1.5 flex size-5 shrink-0 animate-pulse items-center justify-center rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-500"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-            </div>
-          ) : null)}
           {isPhone && failedOpsCount > 0 && (
             <Button variant="unstyled"
               type="button"
@@ -278,24 +269,6 @@ const TopNav: React.FC<TopNavProps> = ({
         <div className="flex shrink-0 items-center justify-end gap-1.5 z-10 sm:gap-2.5 ml-auto md:ml-0 xl:flex-1 xl:gap-3">
           {!isPhone && (
             <>
-              {isOffline ? (
-                <div
-                  aria-label="Offline"
-                  className="flex shrink-0 items-center gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-500 select-none"
-                  title="No network connection — showing cached data, changes will sync once you're back online"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                  Offline
-                </div>
-              ) : (isSyncing || syncLabel) ? (
-                <div
-                  aria-label={syncStatusLabel}
-                  title={syncStatusLabel}
-                  className="flex size-5 shrink-0 animate-pulse items-center justify-center rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-500 select-none"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                </div>
-              ) : null}
               {failedOpsCount > 0 && (
                 <Button variant="unstyled"
                   type="button"

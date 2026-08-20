@@ -206,124 +206,84 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         </div>
       )}
 
-      {/* Visual Timeline Section — horizontal graph (tablet and up) */}
-      <div className="hidden sm:block p-6 bg-muted/10 rounded-2xl border border-border/40 select-none">
-
-        {/* The horizontal line container */}
-        <div className="relative pt-12 pb-16 px-3.5">
-          <div className="relative h-1.5 bg-muted rounded-full">
-            {/* Progress bar to show today's position */}
-            {(() => {
-              const todayTime = new Date().getTime()
-              if (todayTime >= startTime && todayTime <= endTime) {
+      {/* Tablet and desktop: the graph carries timing only. Names and amounts live in the key
+          below, so bills one day apart never paint labels on top of each other. */}
+      {timelineNodes.length > 0 && (
+        <div className="hidden space-y-4 rounded-2xl border border-border/40 bg-muted/10 p-5 select-none sm:block">
+          <div className="relative px-3 pt-7 pb-3">
+            <span className="absolute left-3 top-0 text-[10px] font-bold text-muted-foreground">{startLabel}</span>
+            <span className="absolute right-3 top-0 text-[10px] font-bold text-muted-foreground">{endLabel}</span>
+            <div className="relative h-1.5 rounded-full bg-muted">
+              {(() => {
+                const todayTime = new Date().getTime()
+                if (todayTime < startTime || todayTime > endTime) return null
                 const todayPct = ((todayTime - startTime) / durationMs) * 100
+                return <div className="absolute left-0 top-0 h-full rounded-full bg-blue-500/30" style={{ width: `${todayPct}%` }} />
+              })()}
+              {timelineNodes.map(node => {
+                const allPaid = node.bills.every(b => b.status === 'Paid' || b.status === 'SettledByLoanPayoff')
+                const anyPartiallyPaid = node.bills.some(b => b.status === 'PartiallyPaid')
+                const anyPending = node.bills.some(b => b.status === 'Pending')
+                const allDiscarded = node.bills.every(b => b.status === 'Discarded')
+                const dotColor = allPaid || !anyPending && !anyPartiallyPaid && !allDiscarded
+                  ? 'bg-emerald-500 ring-emerald-500/20'
+                  : anyPartiallyPaid
+                    ? 'bg-blue-500 ring-blue-500/20'
+                    : allDiscarded
+                      ? 'bg-slate-400 ring-slate-400/20'
+                      : 'bg-amber-500 ring-amber-500/20'
+                const labelText = node.bills.length === 1 ? node.bills[0].name : `${node.bills.length} bills`
                 return (
-                  <div 
-                    className="absolute left-0 top-0 h-full bg-blue-500/30 rounded-full"
-                    style={{ width: `${todayPct}%` }}
-                  />
-                )
-              }
-              return null
-            })()}
-
-            {/* Render grouped timeline nodes */}
-            {timelineNodes.map((node) => {
-              // Determine status based on all bills in the node
-              const allPaid = node.bills.every(b => b.status === 'Paid' || b.status === 'SettledByLoanPayoff')
-              const anyPartiallyPaid = node.bills.some(b => b.status === 'PartiallyPaid')
-              const anyPending = node.bills.some(b => b.status === 'Pending')
-              const allDiscarded = node.bills.every(b => b.status === 'Discarded')
-
-              let dotColor = 'bg-amber-500 ring-amber-500/20' // Pending
-              if (allPaid) {
-                dotColor = 'bg-emerald-500 ring-emerald-500/20'
-              } else if (anyPartiallyPaid) {
-                dotColor = 'bg-blue-500 ring-blue-500/20'
-              } else if (allDiscarded) {
-                dotColor = 'bg-slate-400 ring-slate-400/20'
-              } else if (!anyPending) {
-                // Mixed state, but none pending (e.g. Paid & Discarded)
-                dotColor = 'bg-emerald-500 ring-emerald-500/20'
-              }
-
-              const formattedDueDay = new Date(node.dueDate).getDate()
-
-              // Construct readable label for single or multiple bills
-              const labelText = node.bills.length === 1
-                ? node.bills[0].name
-                : node.bills.length === 2
-                  ? `${node.bills[0].name} & ${node.bills[1].name}`
-                  : `${node.bills.length} Bills`
-
-              // Dynamic label alignment to prevent clipping on the boundaries
-              let alignClasses = 'left-1/2 -translate-x-1/2 items-center'
-              if (node.percent < 3) {
-                alignClasses = 'left-0 items-start'
-              } else if (node.percent > 97) {
-                alignClasses = 'left-auto right-0 items-end'
-              }
-
-              const connectorHeight = node.level === 'long' ? '36px' : '10px'
-
-              return (
-                <div
-                  key={node.dueDate}
-                  style={{ left: `${node.percent}%` }}
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group z-10 hover:z-50 focus-within:z-50"
-                >
-                  {/* Subtle vertical indicator line attached directly to the dot */}
-                  <div
-                    style={{ height: connectorHeight }}
-                    className={`absolute bottom-full left-1/2 -translate-x-1/2 w-0.5 bg-border group-hover:bg-blue-500 transition-colors pointer-events-none ${
-                      node.level === 'long' ? 'opacity-80' : 'opacity-40'
-                    }`}
-                  />
-
-                  {/* Date and Name tags — staggered above the node */}
-                  <div
-                    style={{ bottom: `calc(100% + ${connectorHeight} + 2px)` }}
-                    className={`absolute flex flex-col pointer-events-none group-hover:scale-105 transition-transform ${alignClasses}`}
-                  >
-                    <span className="text-[10px] font-black text-foreground tracking-tight whitespace-nowrap bg-background/80 px-1 py-0.5 rounded shadow-2xs">
-                      {BILL_TIMELINE_MONTHS[new Date(node.dueDate).getMonth()]} {formattedDueDay}
-                    </span>
-                    <span className="text-[9px] font-medium text-muted-foreground truncate max-w-[80px] text-center">
-                      {labelText}
-                    </span>
-                  </div>
-
-                  {/* Interactive Dot Node */}
-                  <Button variant="unstyled"
+                  <Button
+                    variant="unstyled"
+                    key={node.dueDate}
                     type="button"
                     onClick={() => handleNodeClick(node)}
                     aria-label={`View subscriptions due on ${node.dueDate}`}
-                    className={`relative z-20 size-4 sm:size-4.5 rounded-full ${dotColor} ring-4 transition-all duration-200 transform group-hover:scale-125 focus-visible:scale-125 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 cursor-pointer flex items-center justify-center p-0`}
+                    title={`${node.dueDate}: ${labelText}`}
+                    style={{ left: `${node.percent}%` }}
+                    className={`absolute top-1/2 z-10 flex size-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full p-0 ring-4 transition-transform hover:scale-125 focus-visible:scale-125 ${dotColor}`}
                   >
-                    <span className="sr-only">Due {node.dueDate}: {labelText}</span>
-                    {node.bills.length > 1 && (
-                      <span className="pointer-events-none select-none text-[8px] font-black leading-none text-on-vivid">
-                        {node.bills.length}
-                      </span>
-                    )}
+                    {node.bills.length > 1 && <span className="text-[8px] font-black leading-none text-on-vivid">{node.bills.length}</span>}
                   </Button>
+                )
+              })}
+            </div>
+          </div>
 
-                  {/* Amount tag — below the dot node */}
-                  <div
-                    className={`absolute top-full mt-2 flex flex-col pointer-events-none ${alignClasses}`}
-                  >
-                    <span className="text-[10px] font-bold text-foreground whitespace-nowrap bg-muted/40 px-1.5 py-0.5 rounded-md border border-border/20">
-                      {formatSensitive(
-                        node.bills.reduce((sum, b) => sum + (b.amount == null ? 0 : Math.abs(b.amount)), 0)
-                      )}
-                    </span>
-                  </div>
-                </div>
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {timelineNodes.map(node => {
+              const date = new Date(node.dueDate)
+              const nameLabel = node.bills.length === 1
+                ? node.bills[0].name
+                : node.bills.length === 2
+                  ? `${node.bills[0].name} & ${node.bills[1].name}`
+                  : `${node.bills.length} bills`
+              const total = node.bills.reduce((sum, bill) => sum + (bill.amount == null ? 0 : Math.abs(bill.amount)), 0)
+              const allPaid = node.bills.every(bill => bill.status === 'Paid' || bill.status === 'SettledByLoanPayoff')
+              const anyPartiallyPaid = node.bills.some(bill => bill.status === 'PartiallyPaid')
+              const allDiscarded = node.bills.every(bill => bill.status === 'Discarded')
+              const dotColor = allPaid ? 'bg-emerald-500' : anyPartiallyPaid ? 'bg-blue-500' : allDiscarded ? 'bg-slate-400' : 'bg-amber-500'
+              return (
+                <Button
+                  variant="unstyled"
+                  key={`key-${node.dueDate}`}
+                  type="button"
+                  onClick={() => handleNodeClick(node)}
+                  className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border/45 bg-card/60 p-2.5 text-left transition-colors hover:bg-muted/35"
+                >
+                  <span className={`size-2.5 shrink-0 rounded-full ${dotColor}`} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-bold text-foreground">{nameLabel}</span>
+                    <span className="block text-[10px] text-muted-foreground">{BILL_TIMELINE_MONTHS[date.getMonth()]} {date.getDate()}</span>
+                  </span>
+                  <span className="shrink-0 text-xs font-extrabold text-foreground">{formatSensitive(total)}</span>
+                </Button>
               )
             })}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Multiple Bills Selection Bottom Sheet */}
       {selectedNode && (

@@ -228,7 +228,6 @@ export function AuthenticatedView({
                       dashboardData={todayDashboardData}
                       onNavigate={prefs.setActiveTab}
                       hideBalanceAmounts={prefs.hideBalanceAmounts}
-                      walletBalance={financial.optimisticDashboardData?.stats.totalBalance ?? financial.totalBalance}
                       onToggleBalanceAmounts={handleToggleBalanceAmounts}
                       pendingNotificationCount={currentPendingNotificationsCount}
                       onOpenNotifications={() => dialogs.setShowLoginModal(true)}

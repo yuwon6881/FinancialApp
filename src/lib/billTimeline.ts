@@ -11,8 +11,6 @@ export interface BillTimelineNode {
   dueDate: string
   percent: number
   bills: ActiveRecurringPayment[]
-  isTop: boolean
-  level: 'short' | 'long'
 }
 
 export interface BillTimelineModel {
@@ -167,25 +165,40 @@ function applyOccurrenceStatuses(
     return payment
   })
 
-  const historical = transactions.flatMap(transaction => {
-    if (!isInCycle(transaction.date) || matchedTransactionIds.has(String(transaction.id)) ||
-        !transaction.recurringPaymentId || representedPaymentIds.has(transaction.recurringPaymentId)) return []
-    const discarded = isDiscardedTransaction(transaction)
-    const day = Number.parseInt(transaction.date.split('-')[2] || '', 10) || 1
-    return [{
-      id: `hist-tx-${transaction.id}`,
-      recurringPaymentId: transaction.recurringPaymentId,
-      name: transaction.description || 'Subscription',
-      amount: Math.abs(transaction.amount),
-      category: transaction.category || 'Subscriptions',
-      ledgerCategory: transaction.ledgerCategory || transaction.category || 'Subscriptions',
-      dueDate: transaction.date,
+  const historicalGroups = new Map<string, { dueDate: string; transactions: Transaction[] }>()
+  for (const transaction of transactions) {
+    if (matchedTransactionIds.has(String(transaction.id)) || !transaction.recurringPaymentId ||
+        representedPaymentIds.has(transaction.recurringPaymentId)) continue
+    // A pay-early row is posted today but belongs to the occurrence it names. Historical cycle
+    // views therefore use RecurringOccurrenceDate first, with posting date only as a legacy
+    // fallback for old tagged transactions.
+    const dueDate = toIsoDate(transaction.recurringOccurrenceDate || transaction.date)
+    if (!isInCycle(dueDate)) continue
+    const key = `${transaction.recurringPaymentId}|${dueDate}`
+    const group = historicalGroups.get(key)
+    if (group) group.transactions.push(transaction)
+    else historicalGroups.set(key, { dueDate, transactions: [transaction] })
+  }
+
+  const historical = [...historicalGroups.values()].map(({ dueDate, transactions: group }) => {
+    const discarded = group.some(isDiscardedTransaction)
+    const active = group.filter(transaction => !isDiscardedTransaction(transaction))
+    const representative = active[0] ?? group[0]
+    const day = Number.parseInt(dueDate.split('-')[2] || '', 10) || 1
+    return {
+      id: `hist-${representative.recurringPaymentId}-${dueDate}`,
+      recurringPaymentId: representative.recurringPaymentId!,
+      name: representative.description || 'Subscription',
+      amount: active.reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0),
+      category: representative.category || 'Subscriptions',
+      ledgerCategory: representative.ledgerCategory || representative.category || 'Subscriptions',
+      dueDate,
       dueDay: day,
       isPaid: !discarded,
       isDiscarded: discarded,
-      paidDate: discarded ? null : transaction.date,
+      paidDate: discarded ? null : active.map(transaction => toIsoDate(transaction.date)).sort().at(-1) || null,
       status: discarded ? 'Discarded' as const : 'Paid' as const,
-    }]
+    }
   })
 
   return [...mapped, ...historical]
@@ -225,10 +238,10 @@ export function buildBillTimelineModel({
   }
   const timelineNodes = [...grouped.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([dueDate, bills], index): BillTimelineNode => {
+    .map(([dueDate, bills]): BillTimelineNode => {
       const time = new Date(dueDate).getTime()
       const percent = durationMs > 0 ? Math.max(0, Math.min(100, ((time - startTime) / durationMs) * 100)) : 0
-      return { dueDate, percent, bills, isTop: index % 2 === 0, level: 'short' }
+      return { dueDate, percent, bills }
     })
 
   return {
