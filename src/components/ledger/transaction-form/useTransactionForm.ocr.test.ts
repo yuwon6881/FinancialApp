@@ -62,7 +62,12 @@ describe('useTransactionForm receipt cleanup', () => {
   })
 
   it('opens a fresh outflow prefilled from a confirmed receipt share', () => {
-    const { result } = renderHook(() => useTransactionForm(createOptions()))
+    const { result } = renderHook(() => useTransactionForm(createOptions({
+      accounts: [
+        { id: 'essentials-main', name: 'Main', bucket: 'Essentials', remaining: 0, isArchived: false },
+        { id: 'essentials-card', name: 'Card', bucket: 'Essentials', remaining: 0, isArchived: false },
+      ] as UseTransactionFormOptions['accounts'],
+    })))
 
     act(() => {
       result.current.openWithDraft({
@@ -72,6 +77,7 @@ describe('useTransactionForm receipt cleanup', () => {
         category: 'Food',
         ledgerCategory: 'Essentials',
         txType: 'outflow',
+        accountId: 'essentials-card',
       })
     })
 
@@ -83,6 +89,7 @@ describe('useTransactionForm receipt cleanup', () => {
     expect(result.current.state.category).toBe('Food')
     expect(result.current.state.ledgerCategory).toBe('Essentials')
     expect(result.current.state.transactionType).toBe('outflow')
+    expect(result.current.state.accountId).toBe('essentials-card')
   })
 
   it('opens the blank editor while the server privacy preference is pending', () => {
