@@ -10,6 +10,7 @@ import { SmartAmountInput } from '../ui/SmartAmountInput'
 import { ModalActions } from '../ui/ModalActions'
 import { AlertBanner } from '../ui/AlertBanner'
 import { InfoHint } from '../ui/InfoHint'
+import { Input } from '../ui/Input'
 import { Loader2, Minus, Plus } from 'lucide-react'
 
 interface LoanRepaymentSheetProps {
@@ -36,7 +37,7 @@ export function LoanRepaymentSheet({
   onFullSettlement,
 }: LoanRepaymentSheetProps) {
   const [tab, setTab] = useState<RepaymentTab>('advance')
-  const [cycles, setCycles] = useState(1)
+  const [cyclesInput, setCyclesInput] = useState('1')
   const [quoteAmount, setQuoteAmount] = useState('')
   const [selectedAccountId, setSelectedAccountId] = useState('')
   const [preview, setPreview] = useState<LoanRepaymentPreviewResult | null>(null)
@@ -55,8 +56,9 @@ export function LoanRepaymentSheet({
       : null
   const maxAvailableCycles = useMemo(() => {
     if (!loan) return 1
-    const futureCount = loan.snapshot.futureSchedule.length
-    return Math.max(1, Math.min(futureCount, 60))
+    // The loan list intentionally carries only a short schedule preview. The persisted term is
+    // the honest input ceiling here; the server preview narrows it to the instalments still open.
+    return Math.max(1, Math.min(loan.termPeriods, 60))
   }, [loan])
 
   // Filter accounts in the same bucket as the linked bill (or Essentials default)
@@ -76,7 +78,7 @@ export function LoanRepaymentSheet({
   useEffect(() => {
     if (!isOpen || !loan) {
       setTab('advance')
-      setCycles(1)
+      setCyclesInput('1')
       setQuoteAmount('')
       setSelectedAccountId('')
       setPreview(null)
@@ -92,28 +94,44 @@ export function LoanRepaymentSheet({
     setQuoteAmount(loan.snapshot.outstandingBalance > 0 ? String(loan.snapshot.outstandingBalance) : '')
   }, [isOpen, loan, payment, eligibleAccounts])
 
+  const cycles = useMemo(() => {
+    const parsed = Number.parseInt(cyclesInput, 10)
+    return Number.isFinite(parsed) ? Math.min(maxAvailableCycles, Math.max(1, parsed)) : 1
+  }, [cyclesInput, maxAvailableCycles])
+
+  useEffect(() => {
+    if (!isOpen) return
+    setCyclesInput(current => String(Math.min(maxAvailableCycles, Math.max(1, Number.parseInt(current, 10) || 1))))
+  }, [isOpen, maxAvailableCycles])
+
   useEffect(() => {
     if (!isOpen || !loan || tab !== 'advance' || isAutoDeduct) return
     const controller = new AbortController()
+    setPreview(null)
     setPreviewLoading(true)
     setPreviewError(null)
+    const timer = window.setTimeout(() => {
+      setPreviewLoading(true)
+      previewAdvanceRepayment(loan.id, cycles, controller.signal)
+        .then(result => {
+          setPreview(result)
+        })
+        .catch(err => {
+          if (!controller.signal.aborted) {
+            setPreviewError(err instanceof Error ? err.message : 'Failed to preview cycles')
+          }
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) {
+            setPreviewLoading(false)
+          }
+        })
+    }, 250)
 
-    previewAdvanceRepayment(loan.id, cycles, controller.signal)
-      .then(result => {
-        setPreview(result)
-      })
-      .catch(err => {
-        if (!controller.signal.aborted) {
-          setPreviewError(err instanceof Error ? err.message : 'Failed to preview cycles')
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setPreviewLoading(false)
-        }
-      })
-
-    return () => controller.abort()
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
   }, [isOpen, loan, cycles, tab, isAutoDeduct])
 
   if (!loan) return null
@@ -122,7 +140,7 @@ export function LoanRepaymentSheet({
     setActionError(null)
     setSubmitting(true)
     try {
-      await onAdvanceRepayment(loan.id, cycles, selectedAccountId || undefined)
+      await onAdvanceRepayment(loan.id, preview?.cyclesCount ?? cycles, selectedAccountId || undefined)
       onClose()
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to record advance repayment')
@@ -204,27 +222,40 @@ export function LoanRepaymentSheet({
               <>
                 <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs font-bold text-foreground">Number of instalments to pay</p>
-                      <p className="text-[11px] text-muted-foreground">Each cycle completes an upcoming scheduled payment</p>
+                      <p className="text-[11px] text-muted-foreground">Type a number from 1 to {maxAvailableCycles}, or use the step buttons.</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-1.5">
                       <Button
                         variant="secondary"
                         size="sm"
                         type="button"
-                        onClick={() => setCycles(prev => Math.max(1, prev - 1))}
+                        onClick={() => setCyclesInput(String(Math.max(1, cycles - 1)))}
                         disabled={cycles <= 1 || submitting}
                         aria-label="Decrease cycles"
                       >
                         <Minus className="size-3.5" />
                       </Button>
-                      <span className="w-8 text-center text-sm font-extrabold text-foreground">{cycles}</span>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        max={maxAvailableCycles}
+                        step={1}
+                        value={cyclesInput}
+                        onChange={event => setCyclesInput(event.target.value.replace(/\D/g, ''))}
+                        onBlur={() => setCyclesInput(String(cycles))}
+                        aria-label="Number of instalments to pay"
+                        controlSize="sm"
+                        className="w-16 text-center font-extrabold tabular-nums"
+                        disabled={submitting}
+                      />
                       <Button
                         variant="secondary"
                         size="sm"
                         type="button"
-                        onClick={() => setCycles(prev => Math.min(maxAvailableCycles, prev + 1))}
+                        onClick={() => setCyclesInput(String(Math.min(maxAvailableCycles, cycles + 1)))}
                         disabled={cycles >= maxAvailableCycles || submitting}
                         aria-label="Increase cycles"
                       >
@@ -301,7 +332,7 @@ export function LoanRepaymentSheet({
                     {submitting ? (
                       <span className="flex items-center gap-1.5"><Loader2 className="size-3.5 animate-spin" /> Recording…</span>
                     ) : (
-                      <span>Pay {cycles} {cycles === 1 ? 'cycle' : 'cycles'} ({formatCurrencyVal(preview?.totalAmount ?? 0, currency)})</span>
+                      <span>Pay {preview?.cyclesCount ?? cycles} {(preview?.cyclesCount ?? cycles) === 1 ? 'cycle' : 'cycles'} ({formatCurrencyVal(preview?.totalAmount ?? 0, currency)})</span>
                     )}
                   </Button>
                 </ModalActions>

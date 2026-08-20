@@ -1,7 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Loan } from '../../../types'
 import { LoanCard } from './LoanCard'
+
+const { fetchLoanSchedule } = vi.hoisted(() => ({ fetchLoanSchedule: vi.fn() }))
+vi.mock('../../../lib/api/loans', () => ({ fetchLoanSchedule }))
 
 const baseLoan: Loan = {
   id: 'loan-card',
@@ -83,5 +86,26 @@ describe('LoanCard', () => {
     expect(screen.getByText('Explain this loan')).not.toBeNull()
     expect(screen.getByText('Edit')).not.toBeNull()
     expect(screen.getByText('Delete')).not.toBeNull()
+  })
+
+  it('shows the standard loader instead of stale schedule rows while the full schedule loads', () => {
+    fetchLoanSchedule.mockReturnValue(new Promise(() => {}))
+    const scheduledLoan = {
+      ...baseLoan,
+      snapshot: {
+        ...baseLoan.snapshot,
+        futureSchedule: [{
+          occurrenceDate: '2026-02-01', payment: 340, interest: 10,
+          principal: 330, balanceAfter: 670,
+        }],
+      },
+    }
+    render(<LoanCard {...props(scheduledLoan)} />)
+    const schedule = screen.getByText('Payment history and planned schedule').closest('details')!
+    schedule.open = true
+    fireEvent(schedule, new Event('toggle', { bubbles: true }))
+
+    expect(screen.getByRole('status').textContent).toContain('Loading full planned schedule')
+    expect(screen.queryByText('Planned', { exact: true })).toBeNull()
   })
 })

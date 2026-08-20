@@ -125,12 +125,13 @@ function projectLoan(
         // out the split and the resulting balance exactly as the server's replay will.
         const cycles = typeof op.payload?.cycles === 'number' ? op.payload.cycles : 0
         for (const entry of loan.snapshot.futureSchedule.slice(0, Math.max(0, cycles))) {
-          if (hasInput(inputs, entry.occurrenceDate, undefined)) continue
+          const transactionId = `${op.id}-advance-${entry.occurrenceDate}`
+          if (inputs.some(input => input.transactionId === transactionId)) continue
           inputs.push({
             occurrenceDate: entry.occurrenceDate,
             postedAt: new Date(op.createdAt).toISOString(),
             amount: entry.payment,
-            transactionId: `${op.id}-advance-${entry.occurrenceDate}`,
+            transactionId,
           })
         }
       } else {
@@ -151,7 +152,7 @@ function projectLoan(
       const snapshot = op.payload?.status === 'Discarded'
         ? { ...(transaction ?? {}), ledgerCategory: 'Discarded', amount: 0 }
         : transaction
-      if (!hasInput(inputs, occurrenceDate, snapshot)) {
+      if (!hasInput(inputs, snapshot)) {
         addInput(inputs, occurrenceDate, snapshot, op)
       }
       if (!op.isCompleted) {
@@ -185,7 +186,6 @@ function projectLoan(
   const snapshot = settledByPayoff
     ? { ...replayed, outstandingBalance: 0, nextPayment: null, futureSchedule: [] }
     : replayed
-  if (settledByPayoff) projectedLoan.recurringPaymentExists = false
   return {
     ...projectedLoan,
     snapshot,
@@ -317,28 +317,35 @@ function getTransactionSnapshot(op: QueuedOp): Record<string, unknown> | undefin
 
 function hasInput(
   inputs: LoanPaymentInput[],
-  occurrenceDate: string,
   snapshot: Record<string, unknown> | undefined,
 ) {
   const transactionId = typeof snapshot?.id === 'string' ? snapshot.id : undefined
-  return inputs.some(input => (transactionId && input.transactionId === transactionId) || input.occurrenceDate === occurrenceDate)
+  // Several transactions may legitimately share one occurrence after partial payments were
+  // introduced. Only a stable transaction id identifies a replay; the date identifies the bill
+  // instalment, not one contribution to it.
+  return transactionId
+    ? inputs.some(input => input.transactionId === transactionId)
+    : false
 }
 
 function removeInput(inputs: LoanPaymentInput[], snapshot: Record<string, unknown> | undefined) {
   if (!snapshot) return
   const transactionId = typeof snapshot.id === 'string' ? snapshot.id : ''
   const occurrenceDate = typeof snapshot.recurringOccurrenceDate === 'string' ? snapshot.recurringOccurrenceDate : ''
-  for (let i = inputs.length - 1; i >= 0; i -= 1) {
-    if ((transactionId && inputs[i].transactionId === transactionId)
-      || (occurrenceDate && inputs[i].occurrenceDate === occurrenceDate)) {
-      inputs.splice(i, 1)
-    }
+  if (transactionId) {
+    const index = inputs.findIndex(input => input.transactionId === transactionId)
+    if (index >= 0) inputs.splice(index, 1)
+    return
   }
+  // Legacy snapshots should still be reversible, but removing one row must never erase every
+  // partial payment recorded against the same instalment.
+  const fallbackIndex = inputs.findIndex(input => occurrenceDate && input.occurrenceDate === occurrenceDate)
+  if (fallbackIndex >= 0) inputs.splice(fallbackIndex, 1)
 }
 
 function addInputFromSnapshot(inputs: LoanPaymentInput[], snapshot: Record<string, unknown> | undefined, op: QueuedOp) {
   const occurrenceDate = typeof snapshot?.recurringOccurrenceDate === 'string' ? snapshot.recurringOccurrenceDate : undefined
-  if (!occurrenceDate || hasInput(inputs, occurrenceDate, snapshot)) return
+  if (!occurrenceDate || hasInput(inputs, snapshot)) return
   addInput(inputs, occurrenceDate, snapshot, op)
 }
 
@@ -356,6 +363,6 @@ function addInput(
     postedAt: typeof snapshot?.postedAt === 'string' ? snapshot.postedAt : new Date(op.createdAt).toISOString(),
     amount: isDiscarded ? 0 : Math.abs(Number.isFinite(rawAmount) ? rawAmount : 0),
     isDiscarded,
-    transactionId: typeof snapshot?.id === 'string' ? snapshot.id : undefined,
+    transactionId: typeof snapshot?.id === 'string' ? snapshot.id : op.id,
   })
 }

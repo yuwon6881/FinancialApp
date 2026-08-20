@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { LedgerAccount, RecurringPayment } from '../../types'
+import type { ActiveRecurringPayment, LedgerAccount, RecurringPayment } from '../../types'
 import { formatCurrencyVal } from '../../lib/utils'
 import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
@@ -13,10 +13,11 @@ import { Loader2 } from 'lucide-react'
 interface PayEarlySheetProps {
   isOpen: boolean
   payment: RecurringPayment | null
+  occurrence?: ActiveRecurringPayment | null
   accounts: LedgerAccount[]
   currency: string
   onClose: () => void
-  onPayEarly: (id: string, amount?: number, accountId?: string) => Promise<void> | void
+  onPayEarly: (id: string, amount?: number, accountId?: string, settlesOccurrence?: boolean) => Promise<void> | void
 }
 
 type PayEarlyMode = 'full' | 'partial'
@@ -24,6 +25,7 @@ type PayEarlyMode = 'full' | 'partial'
 export function PayEarlySheet({
   isOpen,
   payment,
+  occurrence,
   accounts,
   currency,
   onClose,
@@ -35,7 +37,9 @@ export function PayEarlySheet({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const scheduledAmount = payment ? Math.abs(payment.amount) : 0
+  const scheduledAmount = Math.abs(occurrence?.scheduledAmount ?? payment?.amount ?? 0)
+  const outstandingAmount = Math.abs(occurrence?.remainingAmount ?? occurrence?.amount ?? payment?.amount ?? 0)
+  const alreadyPaidAmount = Math.max(0, scheduledAmount - outstandingAmount)
   const isAutoDeduct = payment?.paymentMode !== 'Manual'
 
   useEffect(() => {
@@ -66,8 +70,8 @@ export function PayEarlySheet({
 
   const remainingAmount = useMemo(() => {
     if (parsedPartialAmount == null) return 0
-    return Math.max(0, scheduledAmount - parsedPartialAmount)
-  }, [parsedPartialAmount, scheduledAmount])
+    return Math.max(0, outstandingAmount - parsedPartialAmount)
+  }, [outstandingAmount, parsedPartialAmount])
 
   const handleSubmit = async () => {
     if (!payment) return
@@ -78,8 +82,8 @@ export function PayEarlySheet({
         setError('Please enter a valid amount to pay.')
         return
       }
-      if (parsedPartialAmount >= scheduledAmount) {
-        setError('Partial payment must be less than the full scheduled amount. Choose "Pay in full" instead.')
+      if (parsedPartialAmount >= outstandingAmount) {
+        setError('Part payment must be less than the amount still due. Choose "Pay in full" instead.')
         return
       }
     }
@@ -88,8 +92,9 @@ export function PayEarlySheet({
     try {
       await onPayEarly(
         payment.id,
-        mode === 'partial' ? parsedPartialAmount : undefined,
+        mode === 'partial' ? parsedPartialAmount : outstandingAmount,
         selectedAccountId || undefined,
+        mode === 'full',
       )
       onClose()
     } catch (err: unknown) {
@@ -158,11 +163,17 @@ export function PayEarlySheet({
             {mode === 'full' ? (
               <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Scheduled amount</span>
+                  <span className="text-xs text-muted-foreground">Amount still due</span>
                   <span className="text-sm font-extrabold text-foreground">
-                    {formatCurrencyVal(scheduledAmount, currency)}
+                    {formatCurrencyVal(outstandingAmount, currency)}
                   </span>
                 </div>
+                {alreadyPaidAmount > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Already recorded</span>
+                    <span className="font-bold text-foreground">{formatCurrencyVal(alreadyPaidAmount, currency)}</span>
+                  </div>
+                )}
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                   Recording this full payment will add a transaction to your ledger and advance the subscription to the next cycle.
                 </p>
@@ -178,6 +189,12 @@ export function PayEarlySheet({
                     <span className="text-muted-foreground">Total bill amount</span>
                     <span className="font-bold text-foreground">{formatCurrencyVal(scheduledAmount, currency)}</span>
                   </div>
+                  {alreadyPaidAmount > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Already recorded</span>
+                      <span className="font-bold text-foreground">{formatCurrencyVal(alreadyPaidAmount, currency)}</span>
+                    </div>
+                  )}
                 </div>
 
                 <FormField label="Amount to pay now" id="pay-early-partial-amount">
@@ -231,7 +248,7 @@ export function PayEarlySheet({
                   <span className="flex items-center gap-1.5"><Loader2 className="size-3.5 animate-spin" /> Recording…</span>
                 ) : (
                   <span>
-                    Pay now ({formatCurrencyVal(mode === 'partial' ? (parsedPartialAmount ?? 0) : scheduledAmount, currency)})
+                    Pay now ({formatCurrencyVal(mode === 'partial' ? (parsedPartialAmount ?? 0) : outstandingAmount, currency)})
                   </span>
                 )}
               </Button>

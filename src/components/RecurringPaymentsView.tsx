@@ -48,7 +48,7 @@ interface RecurringPaymentsViewProps {
   thisDevicePushEnabled?: boolean
   onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
   onRequestPayEarly?: (id: string) => void
-  onPayEarly?: (id: string, amount?: number, accountId?: string) => Promise<void> | void
+  onPayEarly?: (id: string, amount?: number, accountId?: string, settlesOccurrence?: boolean) => Promise<void> | void
   loans?: Loan[]
   onAddLoan?: (loan: Partial<Loan>) => void
   onUpdateLoan?: (id: string, loan: Loan) => void
@@ -121,6 +121,11 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const [activeTab, setActiveTab] = React.useState<RecurringTabId>(() => (highlightedLoanIdProp ? 'loans' : 'recurring'))
   const [internalHighlightedLoanId, setInternalHighlightedLoanId] = React.useState<string | null>(null)
   const [payEarlyPayment, setPayEarlyPayment] = React.useState<RecurringPayment | null>(null)
+  const payEarlyOccurrence = payEarlyPayment
+    ? activeRecurringPayments.find(occurrence =>
+        occurrence.recurringPaymentId === payEarlyPayment.id
+        && occurrence.dueDate === payEarlyPayment.nextDueDate) ?? null
+    : null
   const currentHighlightedLoanId = highlightedLoanIdProp || internalHighlightedLoanId
 
   const handleClearHighlightedLoan = React.useCallback(() => {
@@ -320,11 +325,12 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           <PayEarlySheet
             isOpen={!!payEarlyPayment}
             payment={payEarlyPayment}
+            occurrence={payEarlyOccurrence}
             accounts={accounts}
             currency={currency}
             onClose={() => setPayEarlyPayment(null)}
-            onPayEarly={async (id, amount, accountId) => {
-              await onPayEarly?.(id, amount, accountId)
+            onPayEarly={async (id, amount, accountId, settlesOccurrence) => {
+              await onPayEarly?.(id, amount, accountId, settlesOccurrence)
             }}
           />
         </Suspense>

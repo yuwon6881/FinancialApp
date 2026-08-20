@@ -6,6 +6,7 @@ import { useIsMobile } from '../../lib/useIsMobile'
 import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
 import { Z_LAYERS } from '../../lib/zLayers'
 import { motionSafeScrollBehavior } from '../../lib/motionPreference'
+import { APP_CONTEXT_WILL_CHANGE_EVENT } from '../../lib/appLocation'
 
 interface BottomSheetProps {
   isOpen: boolean
@@ -88,6 +89,13 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   useEffect(() => {
     onCloseRef.current = onClose
   }, [onClose])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const closeForContextChange = () => onCloseRef.current()
+    window.addEventListener(APP_CONTEXT_WILL_CHANGE_EVENT, closeForContextChange)
+    return () => window.removeEventListener(APP_CONTEXT_WILL_CHANGE_EVENT, closeForContextChange)
+  }, [isOpen])
 
   // useId() is stable for a given component instance, including across
   // React StrictMode's dev-only synchronous mount->cleanup->remount

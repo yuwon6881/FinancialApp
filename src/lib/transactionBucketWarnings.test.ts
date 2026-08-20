@@ -33,7 +33,7 @@ function goal(overrides: Partial<SavingsGoal> = {}): SavingsGoal {
   }
 }
 
-function bill(ledgerCategory: string, amount: number, status: 'Pending' | 'Paid' | 'Discarded' = 'Pending'): ActiveRecurringPayment {
+function bill(ledgerCategory: string, amount: number, status: 'Pending' | 'PartiallyPaid' | 'Paid' | 'Discarded' = 'Pending'): ActiveRecurringPayment {
   return {
     id: 'rec-1',
     recurringPaymentId: 'rec-1',
@@ -77,6 +77,14 @@ describe('getBucketOutflowWarning', () => {
     expect(warning?.bucket).toBe('Essentials')
     expect(warning?.shortfall).toBe(150)
     expect(warning?.message).toContain('short of covering upcoming bills this cycle')
+  })
+
+  it('reserves only the remainder of a partially paid bill', () => {
+    const partial = { ...bill('Essentials', 400, 'PartiallyPaid'), paidAmount: 250, remainingAmount: 150 }
+    const context = { categories: [cat('Essentials', 1000)], activeRecurringPayments: [partial] }
+
+    expect(getBucketOutflowWarning({ bucket: 'Essentials', amount: 850, context })).toBeNull()
+    expect(getBucketOutflowWarning({ bucket: 'Essentials', amount: 900, context })?.shortfall).toBe(50)
   })
 
   it('warns when Essentials outflow leaves both upcoming bills and commitments short', () => {

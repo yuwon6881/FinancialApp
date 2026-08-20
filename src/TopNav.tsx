@@ -227,7 +227,7 @@ const TopNav: React.FC<TopNavProps> = ({
             >
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
             </div>
-          ) : (isSyncing || syncLabel) && syncStatusLabel !== 'Refreshing' ? (
+          ) : (isSyncing || syncLabel) ? (
             <div
               aria-label={syncStatusLabel}
               title={syncStatusLabel}
@@ -291,10 +291,9 @@ const TopNav: React.FC<TopNavProps> = ({
                 <div
                   aria-label={syncStatusLabel}
                   title={syncStatusLabel}
-                  className="flex shrink-0 animate-pulse items-center gap-1.5 rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-500 select-none"
+                  className="flex size-5 shrink-0 animate-pulse items-center justify-center rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-500 select-none"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                  {syncStatusLabel}
                 </div>
               ) : null}
               {failedOpsCount > 0 && (

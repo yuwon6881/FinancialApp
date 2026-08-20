@@ -18,6 +18,7 @@ function loan(): Loan {
     scheduleDueDay: 1,
     scheduleStartDate: '2026-01-01',
     scheduleStatus: 'Complete',
+    recurringPaymentExists: true,
     snapshot: {
       outstandingBalance: 1000,
       scheduledPayment: 100,
@@ -91,8 +92,8 @@ describe('loan repayment projection', () => {
     expect(projected.snapshot.outstandingBalance).toBe(0)
     expect(projected.snapshot.futureSchedule).toHaveLength(0)
     expect(projected.snapshot.nextPayment).toBeNull()
-    // The bill stops with the payoff, so the card must not keep advertising a next due date.
-    expect(projected.recurringPaymentExists).toBe(false)
+    // The bill becomes inactive but remains linked, so undo and history keep their relationship.
+    expect(projected.recurringPaymentExists).toBe(true)
     expect(projected.isPendingSync).toBe(true)
   })
 
@@ -300,5 +301,20 @@ describe('projectLoanStates', () => {
 
     expect(projected.snapshot.outstandingBalance).toBe(900)
     expect(projected.snapshot.payments).toHaveLength(1)
+  })
+
+  it('keeps separate part payments on one occurrence and deletes only the targeted row', () => {
+    const server = loan()
+    server.snapshot.payments = [
+      { occurrenceDate: '2026-01-01', payment: 30, interest: 0, principal: 30, balanceBefore: 1000, balanceAfter: 970, surplus: 0, paymentDidNotCoverInterest: false, transactionId: 'tx-part-1' },
+      { occurrenceDate: '2026-01-01', payment: 20, interest: 0, principal: 20, balanceBefore: 970, balanceAfter: 950, surplus: 0, paymentDidNotCoverInterest: false, transactionId: 'tx-part-2' },
+    ]
+    const projected = projectLoanStates([server], [op({
+      entity: 'transaction', type: 'delete', targetId: 'tx-part-1',
+      payload: { id: 'tx-part-1', recurringPaymentId: 'bill-test', recurringOccurrenceDate: '2026-01-01', amount: -30 },
+    })])[0]
+
+    expect(projected.snapshot.payments.map(payment => payment.transactionId)).toEqual(['tx-part-2'])
+    expect(projected.snapshot.outstandingBalance).toBe(980)
   })
 })

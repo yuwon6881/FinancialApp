@@ -31,6 +31,8 @@ export interface AppNavigationOptions {
   search?: Record<string, string | number | boolean | null | undefined>
 }
 
+export const APP_CONTEXT_WILL_CHANGE_EVENT = 'financial-app:context-will-change'
+
 const PATH_BY_TAB: Record<AppTab, string> = {
   dashboard: '/dashboard',
   reports: '/reports',
@@ -149,7 +151,20 @@ const writeUrl = (pathname: string, params: URLSearchParams, replace: boolean) =
   const nextUrl = `${pathname}${query ? `?${query}` : ''}`
   const currentUrl = `${window.location.pathname}${window.location.search}`
   if (nextUrl === currentUrl) return
-  window.history[replace ? 'replaceState' : 'pushState']({}, '', nextUrl)
+  const currentParams = new URLSearchParams(window.location.search)
+  const contextWillChange = pathname !== window.location.pathname
+    || params.get('month') !== currentParams.get('month')
+    || params.get('year') !== currentParams.get('year')
+
+  if (contextWillChange) {
+    window.dispatchEvent(new Event(APP_CONTEXT_WILL_CHANGE_EVENT))
+  }
+
+  // A BottomSheet leaves a sentinel on the history stack so browser Back can
+  // dismiss it. App navigation must consume that sentinel instead of pushing
+  // a route above it, or revisiting Back/Forward can resurrect the old sheet.
+  const replaceModalEntry = contextWillChange && Boolean(window.history.state?.modalId)
+  window.history[replace || replaceModalEntry ? 'replaceState' : 'pushState']({}, '', nextUrl)
 }
 
 export const navigateToAppTab = (tab: AppTab, options: AppNavigationOptions = {}) => {

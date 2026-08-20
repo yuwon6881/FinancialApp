@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { BottomSheet } from './BottomSheet'
 import { Button } from './Button'
 import { ModalActions } from './ModalActions'
+import { APP_CONTEXT_WILL_CHANGE_EVENT } from '../../lib/appLocation'
 
 describe('BottomSheet HCI contract', () => {
   it('names and describes the dialog, traps focus, closes on Escape, and restores focus', async () => {
@@ -88,6 +89,19 @@ describe('BottomSheet HCI contract', () => {
 
     expect(screen.getByRole('dialog', { name: 'Public title' })).toBeTruthy()
     expect(screen.queryByRole('dialog', { name: 'Internal title' })).toBeNull()
+  })
+
+  it('closes when the app route or selected cycle changes', () => {
+    const onClose = vi.fn()
+    render(
+      <BottomSheet isOpen title="Repay loan" onClose={onClose}>
+        <Button>Continue</Button>
+      </BottomSheet>,
+    )
+
+    window.dispatchEvent(new Event(APP_CONTEXT_WILL_CHANGE_EVENT))
+
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('focuses the panel without opening the mobile keyboard when the first control is text entry', async () => {

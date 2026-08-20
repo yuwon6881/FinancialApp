@@ -68,22 +68,27 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
   // re-render (or the marker's async server round-trip) can never reopen it. The persisted
   // backend marker is the cross-session/device guarantee; this is the in-session one.
   const dismissedKeyRef = useRef<string | null>(null)
+  const onMarkSummarySeenRef = useRef(onMarkSummarySeen)
+  useEffect(() => {
+    onMarkSummarySeenRef.current = onMarkSummarySeen
+  }, [onMarkSummarySeen])
+  const summaryMarker = dashboardData?.setting.lastSummaryCycleSeen ?? null
+  const hasDashboard = dashboardData != null
 
   // Once-per-cycle auto trigger. Fires only when the persisted marker lags the current cycle,
   // i.e. a cycle boundary was crossed since the user last acknowledged a summary.
   useEffect(() => {
     if (!token || !dashboardData) return
-    const marker = dashboardData.setting.lastSummaryCycleSeen ?? null
-    if (marker == null) {
+    if (summaryMarker == null) {
       // First ever run: silently adopt the current cycle -- never show a summary for a cycle
       // the user was never actually present for.
-      onMarkSummarySeen(currentKey)
+      onMarkSummarySeenRef.current(currentKey)
       return
     }
-    if (marker !== currentKey && dismissedKeyRef.current !== currentKey) {
+    if (summaryMarker !== currentKey && dismissedKeyRef.current !== currentKey) {
       setAutoOpen(true)
     }
-  }, [token, dashboardData, currentKey, onMarkSummarySeen])
+  }, [token, hasDashboard, currentKey, summaryMarker])
 
   const openManual = useCallback((monthIndex: number, year: number) => {
     setManualTarget({ monthIndex, year })
@@ -93,9 +98,9 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
 
   const closeAuto = useCallback(() => {
     dismissedKeyRef.current = currentKey
-    onMarkSummarySeen(currentKey)
+    onMarkSummarySeenRef.current(currentKey)
     setAutoOpen(false)
-  }, [currentKey, onMarkSummarySeen])
+  }, [currentKey])
 
   // Manual re-open wins over the auto trigger if both would apply.
   const isManual = manualTarget != null
@@ -117,8 +122,8 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
   const previousTarget = target ? prevCycle(target.year, target.monthIndex) : null
   const previousKey = previousTarget ? cycleKeyOf(previousTarget.year, previousTarget.monthIndex) : null
 
-  // Fetch the target cycle's dashboard when it isn't the selected cycle. Re-runs when the live
-  // dashboard changes (a proxy for "a sync happened") so an edit to the target cycle is reflected.
+  // Fetch the target cycle's dashboard when it isn't the selected cycle. The selected cycle reads
+  // optimistic data directly, while a different cycle gets one stable request per target.
   useEffect(() => {
     if (!token || !target) {
       setFetched(null)
@@ -134,7 +139,10 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
     const priorKey = cycleKeyOf(prior.year, prior.monthIndex)
     const priorMonth = MONTH_NAMES[prior.monthIndex - 1]
     const ac = new AbortController()
-    setIsLoading(true)
+    // A selected-cycle summary already has its authoritative optimistic data. Loading only the
+    // optional previous-cycle comparison must not replace that visible summary with a spinner.
+    // For a different target cycle, keep the loading state until its own data arrives.
+    setIsLoading(!targetIsSelected)
     setLoadError(null)
     Promise.allSettled([
       targetIsSelected ? Promise.resolve(null) : api.fetchDashboard(month, target.year, ac.signal, false, true),
@@ -173,9 +181,10 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
         if (!ac.signal.aborted) setIsLoading(false)
       })
     return () => ac.abort()
-    // optimisticDashboardData is intentionally a dep: it changes reference after any sync, which
-    // re-pulls the (non-selected) target so its numbers stay current.
-  }, [token, target?.monthIndex, target?.year, targetIsSelected, optimisticDashboardData])
+    // The selected cycle reads optimisticDashboardData directly below. Depending on that object's
+    // identity here restarted all three requests after every outbox tick and background refresh,
+    // which repeatedly hid an already-open summary behind its loading state.
+  }, [token, target?.monthIndex, target?.year, targetIsSelected])
 
   const data: DashboardData | null = targetIsSelected
     ? optimisticDashboardData

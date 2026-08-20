@@ -84,7 +84,7 @@ describe('TopNav mobile primary navigation', () => {
     expect(screen.queryByText('Refreshing')).toBeNull()
   })
 
-  it('keeps the full synchronization label in wider headers', () => {
+  it('keeps synchronization feedback compact in wider headers', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
     render(
       <TopNav
@@ -106,7 +106,8 @@ describe('TopNav mobile primary navigation', () => {
       />,
     )
 
-    expect(screen.getByText('Refreshing')).toBeTruthy()
+    expect(screen.getByLabelText('Refreshing')).toBeTruthy()
+    expect(screen.queryByText('Refreshing')).toBeNull()
   })
 
   it('renders privacy resolution as a floating overlay that does not take layout space', () => {

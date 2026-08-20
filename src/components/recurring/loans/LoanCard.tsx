@@ -1,4 +1,4 @@
-import { ChevronDown, Edit, Sparkles, Trash2 } from 'lucide-react'
+import { ChevronDown, Edit, Loader2, Sparkles, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { fetchLoanSchedule } from '../../../lib/api/loans'
 import { SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
@@ -207,17 +207,21 @@ export function LoanCard({
           </div>
           <ChevronDown className="size-3.5 text-muted-foreground transition-transform group-open/schedule:rotate-180" aria-hidden />
         </summary>
-        {scheduleLoadingKey === scheduleKey && (
-          <p className="mt-3 text-xs text-muted-foreground">Loading full planned schedule…</p>
-        )}
-        {scheduleError && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span>The full planned schedule could not be loaded.</span>
-            <Button variant="ghost" size="sm" onClick={() => void loadSchedule()} disabled={scheduleLoadingKey === scheduleKey}>Retry</Button>
+        {scheduleLoadingKey === scheduleKey ? (
+          <div className="mt-3 flex min-h-28 items-center justify-center gap-2 rounded-lg border border-border/40 bg-card/40 text-xs font-semibold text-muted-foreground" role="status">
+            <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
+            Loading full planned schedule…
           </div>
-        )}
-        {/* Mobile schedule: compact, full-width cards with no horizontal scrolling */}
-        <div className="mt-3 max-h-72 overflow-y-auto space-y-2 sm:hidden pr-0.5">
+        ) : (
+          <>
+            {scheduleError && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span>The full planned schedule could not be loaded.</span>
+                <Button variant="ghost" size="sm" onClick={() => void loadSchedule()}>Retry</Button>
+              </div>
+            )}
+            {/* Mobile schedule: compact, full-width cards with no horizontal scrolling */}
+            <div className="mt-3 max-h-72 overflow-y-auto space-y-2 sm:hidden pr-0.5">
           {[...actualRows, ...scheduleRows].map((row, index) => (
             <div
               key={`${row.occurrenceDate}-${row.kind}-${index}`}
@@ -246,10 +250,10 @@ export function LoanCard({
               </div>
             </div>
           ))}
-        </div>
+            </div>
 
-        {/* Desktop schedule: tabular view */}
-        <div className="mt-3 hidden max-h-72 overflow-x-auto overflow-y-auto rounded-lg border border-border/40 bg-card/60 sm:block">
+            {/* Desktop schedule: tabular view */}
+            <div className="mt-3 hidden max-h-72 overflow-x-auto overflow-y-auto rounded-lg border border-border/40 bg-card/60 sm:block">
           <table className="w-full min-w-[580px] text-left text-xs">
             <caption className="sr-only">Payment history and planned schedule for {loan.name}</caption>
             <thead className="sticky top-0 z-10 border-b border-border/40 bg-card text-[11px] text-muted-foreground shadow-2xs">
@@ -283,8 +287,10 @@ export function LoanCard({
               ))}
             </tbody>
           </table>
-        </div>
-        <p className="mt-2.5 text-[11px] text-muted-foreground">Amounts in {currency}. Schedule follows original bill cadence.</p>
+            </div>
+            <p className="mt-2.5 text-[11px] text-muted-foreground">Amounts in {currency}. Schedule follows original bill cadence.</p>
+          </>
+        )}
       </details>
 
       <div className="mt-4 flex flex-wrap items-center justify-between border-t border-border/30 pt-4 gap-2">

@@ -1,5 +1,4 @@
 import type { ActiveRecurringPayment, SavingsGoal } from '../types'
-import type { SavingsGoalFundingBucket } from '../types'
 
 /**
  * A goal that still holds a claim on the pool. A row queued for deletion has already released its
@@ -30,7 +29,7 @@ export function calculateFreeRewardsBalance(
 
 export function pendingRecurringAmount(
   payments: readonly Pick<ActiveRecurringPayment, 'status' | 'amount' | 'remainingAmount' | 'ledgerCategory'>[] | undefined,
-  fundingBucket: SavingsGoalFundingBucket,
+  fundingBucket: string,
 ): number {
   const total = (payments ?? []).reduce((sum, payment) => {
     if (payment.status !== 'Pending' && payment.status !== 'PartiallyPaid') return sum

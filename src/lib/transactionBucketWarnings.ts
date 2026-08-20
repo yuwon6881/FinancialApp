@@ -6,7 +6,7 @@ export type OutflowBucket = 'Essentials' | 'Growth' | 'Stability' | 'Rewards'
 export interface BucketWarningContext {
   categories?: readonly CategorySummary[]
   savingsGoals?: readonly SavingsGoal[]
-  activeRecurringPayments?: readonly Pick<ActiveRecurringPayment, 'status' | 'amount' | 'ledgerCategory'>[]
+  activeRecurringPayments?: readonly Pick<ActiveRecurringPayment, 'status' | 'amount' | 'remainingAmount' | 'ledgerCategory'>[]
   targetStabilityFund?: number
 }
 
@@ -47,16 +47,7 @@ export function getBucketOutflowWarning({
   if (!category) return null
 
   const baselineRemaining = toCents((category.remaining ?? 0) + Math.max(0, existingAmountInBucket))
-  const pendingRecurring = toCents(
-    (bucket === 'Essentials' || bucket === 'Rewards')
-      ? pendingRecurringAmount(context.activeRecurringPayments, bucket)
-      : (context.activeRecurringPayments ?? []).reduce((sum, p) => {
-          if (p.status !== 'Pending') return sum
-          return p.ledgerCategory?.toLowerCase() === bucket.toLowerCase()
-            ? sum + Math.max(0, p.amount ?? 0)
-            : sum
-        }, 0),
-  )
+  const pendingRecurring = toCents(pendingRecurringAmount(context.activeRecurringPayments, bucket))
 
   const earmarkedGoals = toCents(
     (context.savingsGoals ?? []).reduce((sum, goal) => {

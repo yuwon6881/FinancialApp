@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type {
-  ActiveRecurringPayment,
   CategorySummary,
   DashboardData,
   LedgerAccount,
@@ -12,7 +11,7 @@ import type { LedgerAccountReconcileInput } from '../../lib/api/accounts'
 import { createFinalId } from '../../lib/outbox'
 import { maskCurrencyInput } from '../../lib/utils'
 import { getActiveWishlistItem } from '../../lib/wishlist'
-import { calculateFreeRewardsBalance } from '../../lib/freeRewards'
+import { calculateFreeRewardsBalance, pendingRecurringAmount } from '../../lib/freeRewards'
 import { calculateEssentialsMetric, calculateGrowthMetric, calculateStabilityMetric } from '../../lib/financialPlanMetrics'
 import {
   formatCompactSensitiveAmount,
@@ -132,19 +131,9 @@ export function useDashboardView(options: UseDashboardViewOptions) {
       'Rewards': 0
     }
     const rpList = dashboardData?.activeRecurringPayments
-    if (rpList) {
-      rpList.forEach((rp: ActiveRecurringPayment) => {
-        // Only a bill still awaiting action should be projected as an upcoming deduction --
-        // isPaid alone is false for both "not yet paid" and "discarded", and a discarded bill
-        // isn't coming out of the budget, so status is the only field that distinguishes them.
-        if (rp.status === 'Pending') {
-          const cat = rp.ledgerCategory || rp.category
-          if (cat && sums[cat] !== undefined) {
-            sums[cat] += rp.amount == null ? 0 : Math.abs(rp.amount)
-          }
-        }
-      })
-    }
+    ;(['Essentials', 'Growth', 'Stability', 'Rewards'] as const).forEach(bucket => {
+      sums[bucket] = pendingRecurringAmount(rpList, bucket)
+    })
     return sums
   }, [dashboardData?.activeRecurringPayments])
 

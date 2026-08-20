@@ -263,7 +263,8 @@ export function computeOptimisticDashboard(
     }
   }
 
-  const pendingBills = data.activeRecurringPayments.filter(payment => payment.status === 'Pending')
+  const pendingBills = data.activeRecurringPayments.filter(payment =>
+    payment.status === 'Pending' || payment.status === 'PartiallyPaid')
   const categoryCollator = new Intl.Collator(undefined, { sensitivity: 'accent' })
   const totalDays = data.cycleSummaryInsights.cycleLengthDays
   const todayKey = dateKey(new Date())
@@ -283,7 +284,7 @@ export function computeOptimisticDashboard(
     const nonRecurringSpent = spent - recurringSpent
     const pendingCommitted = pendingBills
       .filter(payment => categoryCollator.compare(payment.category, limit.category) === 0)
-      .reduce((sum, payment) => sum + Math.abs(payment.amount ?? 0), 0)
+      .reduce((sum, payment) => sum + Math.abs(payment.remainingAmount ?? payment.amount ?? 0), 0)
     const projectedSpend = isEnded
       ? spent
       : recurringSpent + pendingCommitted + (elapsedDays > 0 ? nonRecurringSpent / elapsedDays * totalDays : 0)

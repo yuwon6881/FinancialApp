@@ -1669,14 +1669,15 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     }))
   }
 
-  const handlePayEarly = (id: string, amount?: number, accountId?: string) => {
+  const handlePayEarly = (id: string, amount?: number, accountId?: string, settlesOccurrence?: boolean) => {
     if (!guardSensitive()) return
     const payment = allRecurringPayments.find(p => p.id === id)
     if (!payment?.nextDueDate) return
     const occurrenceDate = payment.nextDueDate
     const postedAt = new Date().toISOString()
-    const isPartial = typeof amount === 'number' && amount > 0 && amount < Math.abs(payment.amount)
-    const paidAmount = isPartial ? amount : Math.abs(payment.amount)
+    const isPartial = settlesOccurrence === false
+      || (settlesOccurrence === undefined && typeof amount === 'number' && amount > 0 && amount < Math.abs(payment.amount))
+    const paidAmount = typeof amount === 'number' ? amount : Math.abs(payment.amount)
     const targetAccountId = accountId ?? payment.accountId
     const pendingTransactionId = createFinalId('transaction')
     const pendingTransaction: Transaction = {

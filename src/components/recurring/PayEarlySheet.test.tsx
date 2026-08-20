@@ -52,7 +52,7 @@ describe('PayEarlySheet', () => {
     const payButton = screen.getByRole('button', { name: /Pay now/i })
     fireEvent.click(payButton)
 
-    expect(onPayEarly).toHaveBeenCalledWith('rp-electricity', undefined, 'acc-main')
+    expect(onPayEarly).toHaveBeenCalledWith('rp-electricity', 250, 'acc-main', true)
   })
 
   it('allows switching to part amount mode and entering partial payment', async () => {
@@ -82,7 +82,32 @@ describe('PayEarlySheet', () => {
     const payButton = screen.getByRole('button', { name: /Pay now/i })
     fireEvent.click(payButton)
 
-    expect(onPayEarly).toHaveBeenCalledWith('rp-electricity', 100, 'acc-main')
+    expect(onPayEarly).toHaveBeenCalledWith('rp-electricity', 100, 'acc-main', false)
+  })
+
+  it('uses only the amount still due for a partially paid occurrence', () => {
+    const onPayEarly = vi.fn()
+    render(
+      <PayEarlySheet
+        isOpen
+        payment={samplePayment}
+        occurrence={{
+          id: 'occ-part', recurringPaymentId: samplePayment.id, name: samplePayment.name,
+          amount: 250, paidAmount: 100, remainingAmount: 150, category: samplePayment.category,
+          ledgerCategory: samplePayment.ledgerCategory, dueDate: samplePayment.nextDueDate!,
+          status: 'PartiallyPaid', isPaid: false, isDiscarded: false,
+        }}
+        accounts={sampleAccounts}
+        currency="MYR"
+        onClose={vi.fn()}
+        onPayEarly={onPayEarly}
+      />,
+    )
+
+    expect(screen.getByText('Already recorded')).toBeDefined()
+    expect(screen.getByText('Pay now (RM 150.00)')).toBeDefined()
+    fireEvent.click(screen.getByRole('button', { name: /Pay now/i }))
+    expect(onPayEarly).toHaveBeenCalledWith('rp-electricity', 150, 'acc-main', true)
   })
 
   it('shows warning when payment mode is AutoDeduct', () => {

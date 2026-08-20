@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  APP_CONTEXT_WILL_CHANGE_EVENT,
   ledgerRouteSearch,
   navigateToAppTab,
   readAppLocation,
@@ -63,10 +64,37 @@ describe('app URL state', () => {
   })
 
   it('updates live search state without changing the route', () => {
+    const contextListener = vi.fn()
+    window.addEventListener(APP_CONTEXT_WILL_CHANGE_EVENT, contextListener)
     updateAppSearch({ q: 'rent', recurring: true })
     expect(window.location.pathname).toBe('/dashboard')
     expect(new URLSearchParams(window.location.search).get('q')).toBe('rent')
     expect(new URLSearchParams(window.location.search).get('recurring')).toBe('1')
+    expect(contextListener).not.toHaveBeenCalled()
+    window.removeEventListener(APP_CONTEXT_WILL_CHANGE_EVENT, contextListener)
+  })
+
+  it('closes and consumes an open modal entry before changing app context', () => {
+    const contextListener = vi.fn()
+    window.addEventListener(APP_CONTEXT_WILL_CHANGE_EVENT, contextListener)
+    window.history.pushState({ modalId: 'modal-1' }, '')
+
+    navigateToAppTab('reports')
+
+    expect(contextListener).toHaveBeenCalledTimes(1)
+    expect(window.location.pathname).toBe('/reports')
+    expect(window.history.state).toEqual({})
+    window.removeEventListener(APP_CONTEXT_WILL_CHANGE_EVENT, contextListener)
+  })
+
+  it('treats a cycle change as app context navigation', () => {
+    const contextListener = vi.fn()
+    window.addEventListener(APP_CONTEXT_WILL_CHANGE_EVENT, contextListener)
+
+    updateAppSearch({ month: 'Aug' })
+
+    expect(contextListener).toHaveBeenCalledTimes(1)
+    window.removeEventListener(APP_CONTEXT_WILL_CHANGE_EVENT, contextListener)
   })
 
   it('preserves exclusion modes in the ledger URL', () => {
