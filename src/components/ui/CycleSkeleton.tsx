@@ -80,15 +80,16 @@ const RewardsPoolSkeleton: React.FC = () => (
 
 const RecurringHeaderSkeleton: React.FC = () => (
   <Card className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-    <div>
+    <div className="min-w-0 w-full md:flex-1">
       <Skeleton className="h-6 w-72 max-w-full" />
       <Skeleton className="mt-1 h-3 w-48" />
-      <div className="mt-4 flex gap-4">
-        <div className="space-y-1.5"><Skeleton className="h-2.5 w-24" /><Skeleton className="h-7 w-28" /></div>
-        <div className="space-y-1.5 border-l border-border/60 pl-4"><Skeleton className="h-2.5 w-32" /><Skeleton className="h-7 w-16" /></div>
+      <div className="mt-4 grid min-w-0 grid-cols-3">
+        <div className="min-w-0 space-y-1.5 pr-2"><Skeleton className="h-2.5 w-16 max-w-full" /><Skeleton className="h-7 w-20 max-w-full" /></div>
+        <div className="min-w-0 space-y-1.5 border-l border-border/60 px-2"><Skeleton className="h-2.5 w-16 max-w-full" /><Skeleton className="h-7 w-20 max-w-full" /></div>
+        <div className="min-w-0 space-y-1.5 border-l border-border/60 pl-2"><Skeleton className="h-2.5 w-16 max-w-full" /><Skeleton className="h-7 w-12 max-w-full" /></div>
       </div>
     </div>
-    <Skeleton className="h-11 w-full rounded-xl md:w-44" />
+    <Skeleton className="h-11 w-44 rounded-xl" />
   </Card>
 )
 
@@ -279,6 +280,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
     return (
       <div data-testid="reports-skeleton" className="space-y-6">
         <ReportsHeaderSkeleton />
+        <PanelSkeleton height="h-20" />
         <CarryoverLedgerSkeleton />
         <FinancialPlanSkeleton />
         <div className={`${panelClass} flex items-center justify-between gap-4 p-5`}><div className="flex items-center gap-3"><Skeleton className="size-11 rounded-xl" /><div className="space-y-2"><Skeleton className="h-4 w-36" /><Skeleton className="h-3 w-64 max-w-full" /></div></div><Skeleton className="h-6 w-28" /></div>

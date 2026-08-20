@@ -9,7 +9,7 @@ describe('PullToRefresh accessibility', () => {
 
     const status = screen.getByRole('status', { hidden: true })
     expect(status.getAttribute('aria-hidden')).toBe('true')
-    expect(status.getAttribute('aria-label')).toBe('Pull down to refresh')
+    expect(status.textContent).toContain('Pull down to refresh')
   })
 
   it('hands a dominant horizontal gesture to swipeable rows before tracking a pull', () => {

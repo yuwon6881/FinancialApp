@@ -117,6 +117,7 @@ export function useCurrentCycleDashboard({
   return {
     currentCycleMonth,
     currentCyclePeriod,
+    isCurrentCycle: selectedCycleIsCurrent,
     isCurrentCycleLoading,
     todayDashboardData,
   }

@@ -197,6 +197,7 @@ export function AppOverlays({
         onClose={() => dialogs.setShowFailedOpsModal(false)}
         onDiscard={financial.discardFailedOp}
         onDiscardAll={financial.discardAllFailedOps}
+        onRetry={financial.retryFailedOp}
         onOpenAccountReview={() => {
           dialogs.setShowFailedOpsModal(false)
           setIsAccountReviewOpen(true)

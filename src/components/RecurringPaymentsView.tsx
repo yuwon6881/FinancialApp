@@ -188,6 +188,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       <RecurringPaymentsHeader
         activeView={activeTab}
         totalCommittedMonthly={view.totalCommittedMonthly}
+        totalCommittedAnnual={view.totalCommittedAnnual}
         activeCount={view.activeCount}
         totalCount={payments.length}
         loanTotalOutstanding={loanTotalOutstanding}

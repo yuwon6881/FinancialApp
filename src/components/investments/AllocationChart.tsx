@@ -32,12 +32,13 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
         ? [sleeve.label, sleeve.key]
         : mode === 'asset' ? [holding.type, holding.type]
           : mode === 'account' ? [holding.accountName, holding.accountName]
+            : mode === 'currency' ? [holding.currency, holding.currency]
             : [`${holding.symbol} · ${holding.name}`, holding.symbol]
       add(label, filterKey, holding.valueApp ?? 0)
     })
     portfolio.cashBalances.forEach(balance => {
       if (balance.amountApp === undefined || balance.amountApp <= 0) return
-      const label = mode === 'account' ? balance.accountName : 'Cash'
+      const label = mode === 'account' ? balance.accountName : mode === 'currency' ? balance.currency : 'Cash'
       add(label, label, balance.amountApp)
     })
     return [...map.values()].sort((a, b) => b.value - a.value)
@@ -64,6 +65,7 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
     { value: 'instrument', label: 'Individual fund' },
     { value: 'asset', label: 'Kind of investment' },
     { value: 'account', label: 'Account' },
+    { value: 'currency', label: 'Currency' },
   ]
   const selectedLabel = selected?.mode === mode
     ? groups.find(group => group.filterKey === selected.key)?.label

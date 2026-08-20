@@ -36,6 +36,7 @@ describe('investment holding allocation filters', () => {
     expect(filterHoldings(holdings, { mode: 'asset', key: 'Stock' }, index)).toEqual([holdings[1]])
     expect(filterHoldings(holdings, { mode: 'account', key: 'Broker A' }, index)).toEqual([holdings[0]])
     expect(filterHoldings(holdings, { mode: 'instrument', key: 'VXUS' }, index)).toEqual([holdings[1]])
+    expect(filterHoldings(holdings, { mode: 'currency', key: 'USD' }, index)).toEqual(holdings)
   })
 
   it('returns all holdings when no slice is selected', () => {

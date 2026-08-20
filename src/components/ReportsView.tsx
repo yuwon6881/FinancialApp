@@ -2,7 +2,6 @@ import { Button } from './ui/Button'
 import React from 'react'
 import { BarChart3, ChartNoAxesCombined, ChevronRight, Sparkles, TrendingUp } from 'lucide-react'
 import type { AppTab, DashboardData, SavingsGoal, Transaction, WishlistItem } from '../types'
-import type { LedgerAccountReconcileInput } from '../lib/api/accounts'
 import { useAppPrefs } from '../contexts/AppContext'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
 import { getCycleProgress } from '../lib/cycle'
@@ -15,12 +14,12 @@ import { CycleFlowCards } from './dashboard/CycleFlowCards'
 import { TrendLineChart } from './dashboard/TrendLineChart'
 import { DoughnutChart } from './dashboard/DoughnutChart'
 import { CycleCalendar } from './dashboard/CycleCalendar'
-import { BalanceAdjustmentModals } from './dashboard/BalanceAdjustmentModals'
 import { CategoryLimitPerformance } from './dashboard/CategoryLimitPerformance'
 import { getCategoryLimitCardId } from './dashboard/types'
 import { SubscriptionsTimelineCard } from './dashboard/SubscriptionsTimelineCard'
 import { useHighlightedElement } from './ui/useHighlightedElement'
 import { buildBillTimelineModel } from '../lib/billTimeline'
+import { CycleInsightsCard } from './reports/CycleInsightsCard'
 
 interface ReportsViewProps {
   dashboardData: DashboardData | null
@@ -40,8 +39,7 @@ interface ReportsViewProps {
     highlightedTxId?: string | null
     showAllCycles?: boolean
   }) => void
-  onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
-  onReconcileAccounts?: (input: LedgerAccountReconcileInput) => Promise<void> | void
+  isCurrentCycle?: boolean
   isSwitchingCycle?: boolean
   onViewCycleSummary?: (monthIndex: number, year: number) => void
   onExplainWithAi?: (cycleKey: string) => void
@@ -65,8 +63,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   onNavigateToRecurring,
   onNavigateToAccounts,
   onNavigateToLedger,
-  onAddBalanceAdjustment,
-  onReconcileAccounts,
+  isCurrentCycle = true,
   isSwitchingCycle = false,
   onViewCycleSummary,
   onExplainWithAi,
@@ -87,8 +84,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     savingsGoals,
     hideSensitive,
     hideBalanceAmounts,
-    onAddBalanceAdjustment,
-    onReconcileAccounts,
   })
 
   // The end-of-cycle summary only makes sense for a cycle that has actually closed. Offer the
@@ -173,13 +168,18 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </div>
       </header>
 
+      {dashboardData?.cycleSummaryInsights && (
+        <CycleInsightsCard insights={dashboardData.cycleSummaryInsights} formatSensitive={view.formatSensitive} />
+      )}
+
       <CarryoverLedgerTable
         categories={view.categories}
+        isCurrentCycle={isCurrentCycle}
+        cycleLabel={view.cycleLabel}
         pendingDeductionsByCategory={view.pendingDeductionsByCategory}
         amountsMasked={view.areBalanceAmountsMasked}
         hideSensitive={hideSensitive}
         formatCurrency={view.formatCurrency}
-        onAdjust={view.openBalanceAdjustment}
         onNavigateToAccounts={onNavigateToAccounts}
       />
 
@@ -270,24 +270,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         onSelectDate={date => onNavigateToLedger?.({ date })}
       />
 
-      <BalanceAdjustmentModals
-        adjustingCategory={view.adjustingCategory}
-        newBalanceInput={view.newBalanceInput}
-        accountBalanceInputs={view.accountBalanceInputs}
-        balanceErrors={view.balanceErrors}
-        adjustmentDescription={view.adjustmentDescription}
-        pendingBalanceAdjustment={view.pendingBalanceAdjustment}
-        isAdjustmentUnchanged={view.isAdjustmentUnchanged}
-        adjustmentPreviewDiff={view.adjustmentPreviewDiff}
-        formatSensitive={view.formatSensitive}
-        onBalanceInputChange={view.handleBalanceInputChange}
-        onAccountBalanceInputChange={view.handleAccountBalanceInputChange}
-        onDescriptionChange={view.handleDescriptionChange}
-        onClose={view.handleCloseAdjustBalance}
-        onReview={view.prepareBalanceAdjustment}
-        onCancelPending={view.cancelBalanceAdjustment}
-        onConfirmPending={view.confirmBalanceAdjustment}
-      />
     </div>
   )
 }

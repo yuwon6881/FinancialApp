@@ -17,6 +17,10 @@ export interface LedgerListProps {
   onStartEdit: (t: Transaction) => void
   onDeleteClick: (t: Transaction) => void
   onEditBlocked: (t: Transaction) => void
+  onDuplicate?: (t: Transaction) => void
+  hasAnyFilter: boolean
+  onResetFilters: () => void
+  onAddTransaction: () => void
   isSelecting?: boolean
   isSelected?: (t: Transaction) => boolean
   canSelect?: (t: Transaction) => boolean

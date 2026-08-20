@@ -55,6 +55,7 @@ describe('useCurrentCycleDashboard', () => {
     await waitFor(() => expect(result.current.todayDashboardData).toBe(optimistic))
     expect(fetchDashboard).not.toHaveBeenCalled()
     expect(fetchDashboardInsights).not.toHaveBeenCalled()
+    expect(result.current.isCurrentCycle).toBe(true)
     expect(result.current.isCurrentCycleLoading).toBe(false)
   })
 
@@ -69,6 +70,7 @@ describe('useCurrentCycleDashboard', () => {
     )
 
     await waitFor(() => expect(result.current.todayDashboardData).not.toBeNull())
+    expect(result.current.isCurrentCycle).toBe(false)
     expect(fetchDashboard).toHaveBeenCalledTimes(1)
     expect(fetchDashboard).toHaveBeenCalledWith(currentMonth, current.year, expect.anything(), false)
 

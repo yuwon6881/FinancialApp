@@ -1,6 +1,6 @@
 import { Component, Fragment, type ErrorInfo, type ReactNode } from 'react'
 import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react'
-import { CACHE_KEYS } from '../lib/cache'
+import { clearDisposableFinancialCaches } from '../lib/cache'
 import { isChunkLoadError } from '../lib/chunkLoadError'
 import { Button } from './ui/Button'
 
@@ -80,14 +80,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     this.setState(state => ({ error: null, attempt: state.attempt + 1, retrying: true }))
 
   // Last-resort recovery: the crash is often caused by a stale/malformed
-  // cached record (e.g. a pending or draft transaction persisted before a
-  // schema change) that gets reloaded from localStorage on every render, so
+  // server-derived cache record that gets reloaded from localStorage on every render, so
   // "Try again" and "Reload app" alone can loop forever on the same crash.
   // Clearing just the cached data caches (not auth) forces a fresh fetch.
   clearCacheAndReload = () => {
-    Object.values(CACHE_KEYS).forEach(key => localStorage.removeItem(key))
-    localStorage.removeItem('draft_transactions')
-    localStorage.removeItem('pending_transactions_backup')
+    clearDisposableFinancialCaches()
     window.location.reload()
   }
 

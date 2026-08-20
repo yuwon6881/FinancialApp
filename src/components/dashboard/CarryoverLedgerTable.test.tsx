@@ -37,6 +37,8 @@ describe('CarryoverLedgerTable', () => {
     render(
       <CarryoverLedgerTable
         categories={mockCategories}
+        isCurrentCycle
+        cycleLabel="Aug 1st ~ Aug 31st"
         pendingDeductionsByCategory={{}}
         amountsMasked={false}
         hideSensitive={false}
@@ -59,6 +61,8 @@ describe('CarryoverLedgerTable', () => {
     expect(screen.getByText('Maybank')).toBeTruthy()
     expect(screen.getByText('Cash Wallet')).toBeTruthy()
     expect(screen.getByText('Total accounts balance')).toBeTruthy()
+    expect(screen.getByText('Current balance')).toBeTruthy()
+    expect(screen.queryByText(/Account editing and corrections use today/)).toBeNull()
 
     // Clicking account Edit navigates to accounts section with account id
     const editButtons = screen.getAllByRole('button', { name: /Edit Maybank in Settings/i })
@@ -69,5 +73,26 @@ describe('CarryoverLedgerTable', () => {
     fireEvent.click(screen.getByText('2 accounts'))
     fireEvent.click(screen.getByRole('button', { name: /Manage Essentials in Settings/i }))
     expect(onNavigateToAccounts).toHaveBeenCalledWith('Essentials')
+  })
+
+  it('labels past-cycle account figures as closing balances and explains where corrections post', () => {
+    render(
+      <CarryoverLedgerTable
+        categories={mockCategories}
+        isCurrentCycle={false}
+        cycleLabel="Mar 1st ~ Mar 31st"
+        pendingDeductionsByCategory={{}}
+        amountsMasked={false}
+        hideSensitive={false}
+        formatCurrency={(val) => `RM ${val.toFixed(2)}`}
+      />
+    )
+
+    fireEvent.click(screen.getByText('2 accounts'))
+
+    expect(screen.getByText('Balance at close')).toBeTruthy()
+    expect(screen.getByText('Total balance at close')).toBeTruthy()
+    expect(screen.getByText(/Mar 1st ~ Mar 31st/)).toBeTruthy()
+    expect(screen.getByText(/Account editing and corrections use today/)).toBeTruthy()
   })
 })

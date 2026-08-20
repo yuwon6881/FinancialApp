@@ -1,6 +1,6 @@
 import React from 'react'
 import { ChevronDown, ChevronUp, Gauge, Save } from 'lucide-react'
-import type { TransactionCategory } from '../../types'
+import type { CategoryBreakdown, TransactionCategory } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { isSpendingGuideCategory, isSystemCategoryName } from '../../lib/categoryFlow'
 import { getCurrencySymbol } from '../../lib/utils'
@@ -20,6 +20,8 @@ interface CategoryLimitsCardProps {
   activeSyncId?: string | null
   activeSyncIds?: ReadonlyArray<string>
   onUpdate: (id: string, cycleLimit: number | null) => void
+  last3CategoryBreakdown?: CategoryBreakdown[]
+  last6CategoryBreakdown?: CategoryBreakdown[]
 }
 
 const normalizedValue = (value: number | null | undefined) => value == null ? null : value.toFixed(2)
@@ -31,6 +33,8 @@ export function CategoryLimitsCard({
   activeSyncId,
   activeSyncIds,
   onUpdate,
+  last3CategoryBreakdown = [],
+  last6CategoryBreakdown = [],
 }: CategoryLimitsCardProps) {
   const spendingCategories = React.useMemo(
     () => categories.filter(category => !isSystemCategoryName(category.name) && isSpendingGuideCategory(category)),
@@ -50,6 +54,12 @@ export function CategoryLimitsCard({
     }
     return true
   })
+  const suggestedByCategory = React.useMemo(() => {
+    const suggestions = new Map<string, number>()
+    for (const item of last6CategoryBreakdown) suggestions.set(item.category, item.amount / 6)
+    for (const item of last3CategoryBreakdown) suggestions.set(item.category, item.amount / 3)
+    return suggestions
+  }, [last3CategoryBreakdown, last6CategoryBreakdown])
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -146,6 +156,7 @@ export function CategoryLimitsCard({
               const syncIds = activeSyncIds?.length ? activeSyncIds : activeSyncId ? [activeSyncId] : []
               const isSyncing = syncIds.includes(category.id)
                 || Boolean(category.pendingSyncOperationId && syncIds.includes(category.pendingSyncOperationId))
+              const suggested = suggestedByCategory.get(category.name)
               return (
                 <div
                   key={category.id}
@@ -215,6 +226,14 @@ export function CategoryLimitsCard({
                           }`}
                         />
                       </div>
+                      )}
+                      {!hideSensitive && suggested != null && suggested > 0 && (
+                        <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={() => {
+                          setDrafts(previous => ({ ...previous, [category.id]: suggested.toFixed(2) }))
+                          setErrors(previous => ({ ...previous, [category.id]: '' }))
+                        }}>
+                          Use recent average ({getCurrencySymbol(currency)}{suggested.toFixed(2)})
+                        </Button>
                       )}
                     </FormField>
                   )}

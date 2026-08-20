@@ -22,6 +22,7 @@ import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
 import { getCycleYearAndMonthForDate, MONTH_NAMES } from '../lib/cycle'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
 import { buildStabilityPlanPoints } from '../lib/stabilityRecovery'
+import { getTransactionCyclePlacement } from '../lib/transactionCyclePlacement'
 import type { AiInvocationContext } from '../lib/api/ai'
 const DashboardView = lazy(() => import('../components/DashboardView').then(module => ({ default: module.DashboardView })))
 const ReportsView = lazy(() => import('../components/ReportsView').then(module => ({ default: module.ReportsView })))
@@ -68,6 +69,8 @@ interface AuthenticatedViewProps {
   currentPendingNotificationsCount: number
   currentCycleMonth: string
   currentCycleYear: number
+  /** Labels the selected cycle; it never gates financial mutations. */
+  isCurrentCycle: boolean
   isCurrentCycleLoading: boolean
   autoOpenInvestmentAdd: boolean
   setAutoOpenInvestmentAdd: Dispatch<SetStateAction<boolean>>
@@ -104,6 +107,7 @@ export function AuthenticatedView({
   currentPendingNotificationsCount,
   currentCycleMonth,
   currentCycleYear,
+  isCurrentCycle,
   isCurrentCycleLoading,
   autoOpenInvestmentAdd,
   setAutoOpenInvestmentAdd,
@@ -116,6 +120,23 @@ export function AuthenticatedView({
   alert,
   onExplainWithAi,
 }: AuthenticatedViewProps) {
+  const handleOutsideCycleSave = (date: string) => {
+    const cycleDay = financial.optimisticDashboardData?.setting?.cycleDay || 28
+    const placement = getTransactionCyclePlacement(date, cycleDay)
+    if (!placement) return
+    dialogs.showToast(
+      `This transaction's posting date belongs to ${placement.label}.`,
+      'Saved in another cycle',
+      'info',
+      {
+        label: 'View cycle',
+        onAction: () => nav.handleNavigateToLedger({
+          targetMonth: placement.month,
+          targetYear: placement.year,
+        }),
+      },
+    )
+  }
   const {
     activeReceiptScanDraft,
     failedScanJob,
@@ -123,6 +144,9 @@ export function AuthenticatedView({
     handleReceiptScanStarted,
     clearReceiptScanJob,
   } = receiptScan
+  const unsyncedChangeCount = financial.pendingOps.length + financial.failedOps.length + (financial.activeSyncId ? 1 : 0)
+  const draftCount = financial.draftTransactions.length
+  const hasPendingLocalChanges = unsyncedChangeCount > 0 || draftCount > 0
   const {
     activeReceiptSplitDraft,
     failedReceiptSplitJob,
@@ -204,6 +228,9 @@ export function AuthenticatedView({
 
   return (
     <>
+      <a href="#main-content" className="sr-only fixed left-4 top-4 z-[100] rounded-lg bg-card px-3 py-2 text-sm font-bold text-foreground shadow-lg focus:not-sr-only">
+        Skip to main content
+      </a>
       <PullToRefresh
         onRefresh={() => financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)}
         disabled={financial.loading || session.isLocked}
@@ -213,6 +240,7 @@ export function AuthenticatedView({
             used to have, while `clip` contains a rogue-width view without ever
             creating a scroll container. */}
         <main
+          id="main-content"
           className={`${shouldShowMobileFab(prefs.activeTab) ? 'pb-fab-safe' : 'pb-nav-safe'} relative mx-auto w-full min-w-0 max-w-[1440px] flex-1 overflow-x-clip px-4 py-6 sm:px-6 sm:py-8 lg:px-8`}
           aria-busy={prefs.sensitivePreferenceStatus === 'pending' || financial.loading}
         >
@@ -262,8 +290,7 @@ export function AuthenticatedView({
                       onNavigateToRecurring={nav.handleNavigateToRecurring}
                       onNavigateToAccounts={nav.handleNavigateToAccounts}
                       onNavigateToLedger={nav.handleNavigateToLedger}
-                      onAddBalanceAdjustment={financial.handleAddBalanceAdjustment}
-                      onReconcileAccounts={financial.handleReconcileAccounts}
+                      isCurrentCycle={isCurrentCycle}
                       isSwitchingCycle={nav.isSwitchingCycle}
                       highlightedSection={nav.highlightedReportSection}
                       highlightedCategory={nav.highlightedReportCategory}
@@ -273,8 +300,7 @@ export function AuthenticatedView({
                         surface: 'reports',
                         preset: 'report-review',
                         cycleKey,
-                        hasPendingLocalChanges: financial.pendingOps.length > 0 || financial.failedOps.length > 0 ||
-                          financial.draftTransactions.length > 0 || financial.activeSyncId != null,
+                        hasPendingLocalChanges,
                       }, 'Explain this cycle')}
                     />
                   )}
@@ -300,6 +326,7 @@ export function AuthenticatedView({
                       onUpdateAccount={financial.handleUpdateAccount}
                       onRequestDeleteAccount={financial.requestDeleteAccount}
                       onReconcileAccounts={financial.handleReconcileAccounts}
+                      isCurrentCycle={isCurrentCycle}
                       notifyOnLoginEnabled={prefs.notifyOnLogin}
                       onToggleNotifyOnLogin={(checked) => {
                         const previous = prefs.notifyOnLogin
@@ -362,20 +389,30 @@ export function AuthenticatedView({
                       onClearLocalFinancialData={() => {
                         const month = nav.selectedMonth
                         const year = nav.selectedYear
-                        void (async () => {
-                          try {
-                            await financial.handleLogoutCleanup(session.username, false)
-                          } finally {
-                            clearLocalFinancialData()
-                          }
-                          await financial.loadAll(month, year, true)
-                          const copy = buildMutationSuccessToast({
-                            entity: 'Local Data',
-                            action: 'Cleared',
-                            message: 'Cached financial data and offline drafts were removed from this device.',
-                          })
-                          dialogs.showToast(copy.message, copy.title, copy.tone)
-                        })()
+                        const message = hasPendingLocalChanges
+                          ? `${unsyncedChangeCount} ${unsyncedChangeCount === 1 ? 'change has' : 'changes have'} not synced yet and ${draftCount} ${draftCount === 1 ? 'draft is' : 'drafts are'} saved only on this device. Clearing removes them permanently.`
+                          : 'This removes saved copies of your data from this device. Your account is unaffected.'
+                        dialogs.setConfirmModalData({
+                          title: 'Clear local data?',
+                          message,
+                          confirmText: 'Clear local data',
+                          onConfirm: () => {
+                            void (async () => {
+                              try {
+                                await financial.handleLogoutCleanup(session.username, false)
+                              } finally {
+                                clearLocalFinancialData()
+                              }
+                              await financial.loadAll(month, year, true)
+                              const copy = buildMutationSuccessToast({
+                                entity: 'Local Data',
+                                action: 'Cleared',
+                                message: 'Cached financial data, offline drafts and unsynced changes were removed from this device.',
+                              })
+                              dialogs.showToast(copy.message, copy.title, copy.tone)
+                            })()
+                          },
+                        })
                       }}
                     />
                   )}
@@ -420,8 +457,7 @@ export function AuthenticatedView({
                         surface: 'recurring',
                         preset: 'loan-explain',
                         loanId: loan.id,
-                        hasPendingLocalChanges: financial.pendingOps.length > 0 || financial.failedOps.length > 0 ||
-                          financial.draftTransactions.length > 0 || financial.activeSyncId != null,
+                        hasPendingLocalChanges,
                       }, 'Explain this loan')}
                       aiDraft={aiRouter.state.aiRecurringDraft}
                       aiEditDraft={aiRouter.state.aiRecurringEditDraft}
@@ -438,9 +474,11 @@ export function AuthenticatedView({
                       onAddTransaction={(tx, documents) => financial.handleAddTransaction(tx, prefs.setActiveTab, documents)}
                       onDeleteTransaction={financial.handleDeleteTransaction}
                       onUpdateTransaction={financial.handleUpdateTransaction}
+                      onOutsideCycleSave={handleOutsideCycleSave}
                       categories={financial.allCategories}
                       selectedMonth={nav.selectedMonth}
                       selectedYear={nav.selectedYear}
+                      isCurrentCycle={isCurrentCycle}
                       availableYears={financial.optimisticDashboardData?.availableYears || [nav.selectedYear || new Date().getFullYear()]}
                       cycleDay={financial.optimisticDashboardData?.setting?.cycleDay || 28}
                       onSelectPeriod={nav.handleSelectPeriod}
@@ -463,6 +501,10 @@ export function AuthenticatedView({
                         prefs.setLedgerCyclesRange('monthly')
                       }}
                       cyclesRange={prefs.ledgerCyclesRange}
+                      preferredPageSize={prefs.ledgerPageSize}
+                      preferredSortOrder={prefs.ledgerSortOrder}
+                      onPreferredPageSizeChange={prefs.setLedgerPageSize}
+                      onPreferredSortOrderChange={prefs.setLedgerSortOrder}
                       onRouteStateChange={nav.syncLedgerRouteState}
                       ledgerSummaries={financial.optimisticDashboardData?.categories}
                       savingsGoals={financial.allSavingsGoals}
@@ -561,13 +603,12 @@ export function AuthenticatedView({
                       onExplainWithAi={() => onExplainWithAi({
                         surface: 'wishlist',
                         preset: 'rewards-plan',
-                        hasPendingLocalChanges: financial.pendingOps.length > 0 || financial.failedOps.length > 0 ||
-                          financial.draftTransactions.length > 0 || financial.activeSyncId != null,
+                        hasPendingLocalChanges,
                       }, 'Explain my plan')}
                     />
                   )}
 
-                  {prefs.activeTab === 'drafts' && financial.draftTransactions.length > 0 && (
+                  {prefs.activeTab === 'drafts' && (
                     <DraftStagingView 
                       draftTransactions={financial.draftTransactions}
                       highlightedDraftId={nav.highlightedDraftId}
@@ -593,6 +634,8 @@ export function AuthenticatedView({
                         stabilityAlloc: financial.optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15,
                         rewardsAlloc: financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1,
                         cycleDay: financial.optimisticDashboardData?.setting?.cycleDay || 28,
+                        selectedMonth: nav.selectedMonth,
+                        selectedYear: nav.selectedYear,
                         stabilityBalance: financial.optimisticDashboardData?.categories?.find(c => c.name === 'Stability')?.remaining ?? 0,
                         stabilityTarget: financial.optimisticDashboardData?.setting?.targetStabilityFund ?? 10000,
                         stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect || '',
@@ -604,6 +647,7 @@ export function AuthenticatedView({
                         activeScanJobIds: receiptScanJobIds,
                         failedScanJob,
                         onShowAlert: alert,
+                        onOutsideCycleSave: handleOutsideCycleSave,
                         receiptSplitDraft: activeReceiptSplitDraft,
                         failedReceiptSplitJob,
                         onReceiptSplitStarted: handleReceiptSplitStarted,
@@ -628,8 +672,7 @@ export function AuthenticatedView({
                         surface: 'investments',
                         preset: 'investment-explain',
                         investmentRange: range,
-                        hasPendingLocalChanges: financial.pendingOps.length > 0 || financial.failedOps.length > 0 ||
-                          financial.draftTransactions.length > 0 || financial.activeSyncId != null,
+                        hasPendingLocalChanges,
                       }, 'Explain my portfolio')}
                     />
                   )}

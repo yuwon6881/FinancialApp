@@ -131,6 +131,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
       {!hasAny ? (
         <div className="rounded-xl border border-dashed border-border/60 bg-muted/15 px-4 py-6 text-center">
           <p className="text-xs text-muted-foreground">No commitments yet. Add one to save a set amount each cycle.</p>
+          <Button variant="secondary" size="sm" className="mt-3" onClick={onAddGoal} disabled={hideSensitive}>Add commitment</Button>
         </div>
       ) : isSolo ? (
         <div>{goalCards}{completedChips}</div>

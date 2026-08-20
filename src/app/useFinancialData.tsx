@@ -35,6 +35,7 @@ import { isSystemCategoryName } from '../lib/categoryFlow'
 import { buildUndoSuccessToast } from '../lib/mutationToast'
 import { computeNextOccurrenceDate, computeOccurrenceOnOrAfter } from '../lib/recurringPayments'
 import { financialDate } from '../lib/financialDate'
+import { formatDateForApi, getCycleRangeDates, MONTH_NAMES } from '../lib/cycle'
 import { buildStabilityPlanPoints, projectStabilityReloadStatuses } from '../lib/stabilityRecovery'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import type { ConfirmModalData } from './useAppDialogs'
@@ -75,6 +76,7 @@ export interface UseFinancialDataOptions {
   setHasShownModalThisSession: (value: boolean) => void
   hasShownModalThisSession: boolean
   setShowLoginModal: (value: boolean) => void
+  setShowFailedOpsModal: (value: boolean) => void
 }
 
 export function queuedTransactionDeleteCoversTarget(
@@ -142,6 +144,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setHasShownModalThisSession,
     hasShownModalThisSession,
     setShowLoginModal,
+    setShowFailedOpsModal,
   } = options
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => getCachedTransactions(CACHE_KEYS.transactions))
@@ -283,6 +286,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     lastUnlockedTimeRef,
     setError,
     showToast,
+    onViewFailedOps: () => setShowFailedOpsModal(true),
     onAuthError: handleLogout,
     onLockError: markSessionLocked,
     onRequestSensitiveReveal,
@@ -947,11 +951,24 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
           rewardsAlloc: optimisticDashboardData.setting.rewardsAlloc,
         }
       : undefined,
+    transactionDateRange: (() => {
+      const monthIndex = MONTH_NAMES.indexOf(selectedMonth) + 1
+      if (monthIndex <= 0 || !selectedYear) return undefined
+      const range = getCycleRangeDates(
+        selectedYear,
+        monthIndex,
+        optimisticDashboardData?.setting?.cycleDay || 28,
+      )
+      return { start: formatDateForApi(range.start), end: formatDateForApi(range.end) }
+    })(),
   }), [
     optimisticDashboardData?.setting?.essentialsAlloc,
     optimisticDashboardData?.setting?.growthAlloc,
     optimisticDashboardData?.setting?.stabilityAlloc,
     optimisticDashboardData?.setting?.rewardsAlloc,
+    optimisticDashboardData?.setting?.cycleDay,
+    selectedMonth,
+    selectedYear,
   ])
   const queuedTransactions = useOptimisticList(transactions, activeOps, 'transaction', {
     ...incomeSplitOptions,
@@ -1101,6 +1118,18 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       void processQueue()
     })
   }, [mutateFailedOps, mutateQueue, processQueue])
+
+  const retryFailedOp = useCallback((id: string) => {
+    const operation = getFailedOps().find(item => item.id === id)
+    if (!operation || operation.needsAccountReview) return
+    mutateFailedOps(previous => previous.filter(item => item.id !== id))
+    mutateQueue(previous => previous.some(item => item.id === operation.id)
+      ? previous
+      : [...previous, { ...operation, retryCount: 0, lastError: undefined }])
+    // Deliberately user-initiated. accountPlacementMigration documents why automatically
+    // requeuing unchanged failures from an effect can create a render/sync loop.
+    void processQueue()
+  }, [getFailedOps, mutateFailedOps, mutateQueue, processQueue])
 
   const allCategories = useOptimisticList(categoriesList, activeOps, 'category')
 
@@ -1347,17 +1376,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setDraftTransactions(prev => [...prev, ...drafts])
     void triggerHaptic(15)
     return drafts
-  }
-
-  const handleAddBalanceAdjustment = (newTx: Omit<Transaction, 'id'>) => {
-    if (!guardSensitive()) return
-    const finalId = createFinalId('transaction')
-    void triggerHaptic(20)
-    mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, {
-      ...newTx,
-      id: finalId,
-      excludeFromAutocomplete: true,
-    }))
   }
 
   const handleUpdateDraftTransaction = async (
@@ -1833,6 +1851,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     processQueue,
     discardFailedOp,
     discardAllFailedOps,
+    retryFailedOp,
     resolveAccountPlacementOps,
     setTransactions,
     setDashboardData,
@@ -1855,7 +1874,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     handleApplyCategoryCleanupSuggestion,
     handleAddTransaction,
     handleStageDraftTransactions,
-    handleAddBalanceAdjustment,
     handleUpdateDraftTransaction,
     loadDraftTransactionDocumentChanges,
     handleDeleteDraftTransaction,

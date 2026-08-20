@@ -155,7 +155,6 @@ describe('useFinancialData', () => {
 
     act(() => {
       expect(result.current.handleStageDraftTransactions([{} as any])).toEqual([])
-      result.current.handleAddBalanceAdjustment({} as any)
       result.current.handleDeleteDraftTransaction('draft-1')
       result.current.handleSyncDraftBatch()
       result.current.handleAddPayment({} as any)
@@ -166,7 +165,7 @@ describe('useFinancialData', () => {
 
     expect(result.current.pendingOps).toHaveLength(0)
     expect(result.current.draftTransactions).toHaveLength(0)
-    expect(guardSensitive).toHaveBeenCalledTimes(8)
+    expect(guardSensitive).toHaveBeenCalledTimes(7)
   })
 
   it('starts with bootstrap directly and does not restart startup when the outbox queue changes', async () => {

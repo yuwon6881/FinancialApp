@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { closeOpenSwipeableRow, isSwipeLocked } from '../../lib/swipeLock'
+import { triggerHaptic } from '../../lib/haptics'
 
 interface PullToRefreshProps {
   /** Called when the user pulls past the threshold. May return a promise; the spinner shows until it settles. */
@@ -29,6 +30,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
   const refreshingRef = useRef(false)
   const onRefreshRef = useRef(onRefresh)
   const drag = useRef({ startX: 0, startY: 0, pulling: false, active: false })
+  const thresholdHapticFiredRef = useRef(false)
 
   useEffect(() => {
     onRefreshRef.current = onRefresh
@@ -81,6 +83,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
         pulling: false,
         active: true,
       }
+      thresholdHapticFiredRef.current = false
       attachMove()
     }
 
@@ -128,7 +131,12 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
       s.pulling = true
       setDragging(true)
       e.preventDefault()
-      setPullBoth(Math.min(MAX_PULL, dy * PULL_RESISTANCE))
+      const nextPull = Math.min(MAX_PULL, dy * PULL_RESISTANCE)
+      if (nextPull >= THRESHOLD && !thresholdHapticFiredRef.current) {
+        thresholdHapticFiredRef.current = true
+        void triggerHaptic(10)
+      }
+      setPullBoth(nextPull)
     }
 
     const onEnd = async () => {
@@ -182,7 +190,6 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
           aria-live="polite"
           aria-atomic="true"
           aria-hidden={!visible}
-          aria-label={refreshing ? 'Refreshing data' : progress >= 1 ? 'Release to refresh' : 'Pull down to refresh'}
           className="fixed left-0 right-0 z-[55] flex justify-center pointer-events-none"
           style={{
             // Sit just below the sticky header so the spinner is always visible.
@@ -199,6 +206,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
               style={refreshing ? undefined : { transform: `rotate(${progress * 270}deg)`, opacity: 0.4 + progress * 0.6 }}
             />
             <span aria-hidden="true" className="text-[10px] font-bold text-foreground">{label}</span>
+            <span className="sr-only">{refreshing ? 'Refreshing data' : progress >= 1 ? 'Release to refresh' : 'Pull down to refresh'}</span>
           </div>
         </div>
       )}

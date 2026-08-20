@@ -31,6 +31,9 @@ const baseListProps: ListProps = {
   onStartEdit: () => {},
   onDeleteClick: () => {},
   onEditBlocked: () => {},
+  hasAnyFilter: false,
+  onResetFilters: () => {},
+  onAddTransaction: () => {},
   formatSensitive: (v) => <span>{v.toFixed(2)}</span>,
 }
 

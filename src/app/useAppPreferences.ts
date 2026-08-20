@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { AppTab } from '../types'
+import type { TransactionSort } from '../lib/transactionOrdering'
 import { navigateToAppTab, readAppLocation, type AppNavigationOptions } from '../lib/appLocation'
 
 export type SensitivePreferenceStatus = 'pending' | 'resolved' | 'unavailable'
@@ -21,6 +22,10 @@ export interface AppPreferences {
   setNotifyOnLogin: (value: boolean) => void
   ledgerCyclesRange: 'monthly' | '3month' | '6month' | 'yearly'
   setLedgerCyclesRange: (range: 'monthly' | '3month' | '6month' | 'yearly') => void
+  ledgerPageSize: number
+  setLedgerPageSize: (size: number) => void
+  ledgerSortOrder: TransactionSort
+  setLedgerSortOrder: (sort: TransactionSort) => void
   setPreferenceOwner: (username: string | null) => void
 }
 
@@ -51,6 +56,8 @@ export function useAppPreferences(): AppPreferences {
   })
 
   const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
+  const [ledgerPageSize, setLedgerPageSizeState] = useState(10)
+  const [ledgerSortOrder, setLedgerSortOrderState] = useState<TransactionSort>('date-desc')
 
   useEffect(() => {
     // Navigation is URL-based now (see appLocation.ts); the old `active_tab`
@@ -92,6 +99,10 @@ export function useAppPreferences(): AppPreferences {
     setSensitivePreferenceStatus(username ? 'pending' : 'resolved')
     setHideBalanceAmountsState(readBooleanPreference('hide_balance_amounts', false))
     setNotifyOnLoginState(readBooleanPreference('show_notifications_on_login', true))
+    const storedPageSize = Number(preferenceKey('ledger_page_size') && localStorage.getItem(preferenceKey('ledger_page_size')!))
+    setLedgerPageSizeState([10, 25, 50, 100].includes(storedPageSize) ? storedPageSize : 10)
+    const storedSort = preferenceKey('ledger_sort_order') && localStorage.getItem(preferenceKey('ledger_sort_order')!)
+    setLedgerSortOrderState(['date-desc', 'date-asc', 'amount-desc', 'amount-asc'].includes(storedSort || '') ? storedSort as TransactionSort : 'date-desc')
 
     const storedDarkMode = preferenceKey('dark_mode')
     if (storedDarkMode && localStorage.getItem(storedDarkMode) === 'true') {
@@ -144,6 +155,18 @@ export function useAppPreferences(): AppPreferences {
     if (key) localStorage.setItem(key, value.toString())
   }
 
+  const setLedgerPageSize = (value: number) => {
+    setLedgerPageSizeState(value)
+    const key = preferenceKey('ledger_page_size')
+    if (key) localStorage.setItem(key, value.toString())
+  }
+
+  const setLedgerSortOrder = (value: TransactionSort) => {
+    setLedgerSortOrderState(value)
+    const key = preferenceKey('ledger_sort_order')
+    if (key) localStorage.setItem(key, value)
+  }
+
   return {
     activeTab,
     setActiveTab,
@@ -161,6 +184,10 @@ export function useAppPreferences(): AppPreferences {
     setNotifyOnLogin,
     ledgerCyclesRange,
     setLedgerCyclesRange,
+    ledgerPageSize,
+    setLedgerPageSize,
+    ledgerSortOrder,
+    setLedgerSortOrder,
     setPreferenceOwner,
   }
 }

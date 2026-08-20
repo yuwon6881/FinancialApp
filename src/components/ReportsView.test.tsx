@@ -31,20 +31,6 @@ vi.mock('./dashboard/useDashboardView', () => ({
     formatCurrency: (value: number) => `$${value}`,
     formatSensitive: (value: number) => `$${value}`,
     formatCompactSensitive: (value: number) => String(value),
-    openBalanceAdjustment: vi.fn(),
-    adjustingCategory: null,
-    newBalanceInput: '',
-    balanceErrors: {},
-    adjustmentDescription: '',
-    pendingBalanceAdjustment: null,
-    isAdjustmentUnchanged: false,
-    adjustmentPreviewDiff: null,
-    handleBalanceInputChange: vi.fn(),
-    handleDescriptionChange: vi.fn(),
-    handleCloseAdjustBalance: vi.fn(),
-    prepareBalanceAdjustment: vi.fn(),
-    cancelBalanceAdjustment: vi.fn(),
-    confirmBalanceAdjustment: vi.fn(),
   }),
 }))
 
@@ -55,7 +41,6 @@ vi.mock('./dashboard/SubscriptionsTimelineCard', () => ({ SubscriptionsTimelineC
 vi.mock('./dashboard/TrendLineChart', () => ({ TrendLineChart: () => <div>Trend report</div> }))
 vi.mock('./dashboard/DoughnutChart', () => ({ DoughnutChart: () => <div>Category report</div> }))
 vi.mock('./dashboard/CycleCalendar', () => ({ CycleCalendar: ({ onSelectDate }: { onSelectDate: (date: string) => void }) => <button onClick={() => onSelectDate('2026-07-30')}>Activity calendar</button> }))
-vi.mock('./dashboard/BalanceAdjustmentModals', () => ({ BalanceAdjustmentModals: () => null }))
 
 describe('ReportsView', () => {
   it('contains the analytical sections removed from Today', () => {

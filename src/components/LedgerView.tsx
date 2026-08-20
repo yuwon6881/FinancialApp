@@ -59,6 +59,7 @@ interface LedgerViewProps {
   categories: TransactionCategory[]
   selectedMonth: string
   selectedYear: number
+  isCurrentCycle?: boolean
   availableYears: number[]
   cycleDay: number
   onSelectPeriod: (month: string, year: number) => void
@@ -101,6 +102,7 @@ interface LedgerViewProps {
   onFetchTransactionById?: (id: string) => Promise<Transaction>
   onExportTransactions?: (params: any) => Promise<{ blob: Blob; filename: string }>
   onShowAlert?: (message: string, title?: string) => void
+  onOutsideCycleSave?: (date: string) => void
   activeSyncId?: string | null
   activeSyncIds?: string[]
   deletingTxId?: string | null
@@ -125,6 +127,10 @@ interface LedgerViewProps {
   onReceiptSplitStarted?: (scanId: string) => void
   onReceiptSplitCleared?: (scanId: string) => void | Promise<void>
   onReceiptSplitOpenChange?: (open: boolean) => void
+  preferredPageSize?: number
+  preferredSortOrder?: import('../lib/transactionOrdering').TransactionSort
+  onPreferredPageSizeChange?: (size: number) => void
+  onPreferredSortOrderChange?: (sort: import('../lib/transactionOrdering').TransactionSort) => void
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = (props) => {
@@ -218,6 +224,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     (activeRecurringFilter !== 'all' ? 1 : 0) +
     (activeWishlistFilter !== 'all' ? 1 : 0) +
     (activeTxType ? 1 : 0)
+  const hasAnyFilter = activeFilters.length > 0 || Boolean(activeSearch) || activeAdvancedFilterCount > 0
   const balanceSummary = React.useMemo(() => {
     if (props.showAllCycles || !activeBucketFilter || activeBucketFilter === 'Income') return null
     if (activeFilters.length !== 1 || activeSearch || activeAdvancedFilterCount > 0) return null
@@ -237,6 +244,10 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     onStartEdit: ledger.onStartEditStable,
     onDeleteClick: ledger.onDeleteClickStable,
     onEditBlocked: ledger.onEditBlockedStable,
+    onDuplicate: ledger.onDuplicateStable,
+    hasAnyFilter,
+    onResetFilters: ledger.handleResetFilters,
+    onAddTransaction: ledger.onAddTransactionStable,
     formatSensitive,
   }
 
@@ -275,7 +286,6 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         const activeCategoryFilters = props.showAllCycles ? ledger.appliedFilters : ledger.selectedFilters
         const activeTxType = props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter
         const activeSearch = props.showAllCycles ? ledger.appliedSearch : ledger.searchTerm
-        const hasAnyFilter = activeCategoryFilters.length > 0 || !!activeTxType || !!activeSearch || activeAdvancedFilterCount > 0
         if (!props.showAllCycles && !hasAnyFilter) return null
 
         const parts: string[] = []
@@ -285,7 +295,9 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
           else if (props.cyclesRange === 'yearly') parts.push(`full year ${props.selectedYear}`)
           else parts.push("all cycles")
         } else {
-          parts.push("current cycle")
+          parts.push(props.isCurrentCycle !== false
+            ? 'current cycle'
+            : getCycleLabelForDropdown(props.selectedMonth, props.selectedYear, props.cycleDay))
         }
 
         const filterDetails: string[] = []
@@ -363,6 +375,8 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         stabilityAlloc={props.stabilityAlloc ?? 0.15}
         rewardsAlloc={props.rewardsAlloc ?? 0.1}
         cycleDay={props.cycleDay}
+        selectedMonth={props.showAllCycles ? undefined : props.selectedMonth}
+        selectedYear={props.showAllCycles ? undefined : props.selectedYear}
         stabilityBalance={props.stabilityBalance ?? 0}
         stabilityTarget={props.stabilityTarget ?? 10000}
         stabilityOverflowRedirect={props.stabilityOverflowRedirect || ''}
@@ -374,6 +388,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onUpdateTransaction={props.onUpdateTransaction}
         onStartEditPending={props.onStartEditPending}
         onAddFormOpenChange={handleAddFormOpenChange}
+        onOutsideCycleSave={props.onOutsideCycleSave}
         autoOpenAddForm={props.autoOpenAddForm}
         autoOpenTxType={props.autoOpenTxType}
         autoOpenPrefill={props.autoOpenPrefill}
@@ -432,6 +447,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         sortOrder={ledger.sortOrder}
         onSortOrderChange={value => {
           ledger.setSortOrder(value)
+          props.onPreferredSortOrderChange?.(value)
           ledger.setCurrentPage(1)
         }}
       />
@@ -451,6 +467,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onPageChange={ledger.setCurrentPage}
         onPageSizeChange={(size) => {
           ledger.setPageSize(size)
+          props.onPreferredPageSizeChange?.(size)
           ledger.setCurrentPage(1)
         }}
       />

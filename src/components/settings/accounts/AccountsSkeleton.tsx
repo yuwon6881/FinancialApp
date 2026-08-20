@@ -1,7 +1,7 @@
 import { Skeleton } from '../../ui/Skeleton'
 
 /** Mirrors the account panel's header, search bar, four bucket group cards, and note while it loads. */
-export function AccountsSkeleton() {
+export function AccountsSkeleton({ isCurrentCycle = true }: { isCurrentCycle?: boolean }) {
   return (
     <div data-testid="accounts-skeleton" className="app-panel space-y-6 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5">
       {/* Panel header */}
@@ -18,6 +18,8 @@ export function AccountsSkeleton() {
         </div>
         <Skeleton className="h-7 w-28 rounded-lg" />
       </div>
+
+      {!isCurrentCycle && <Skeleton className="h-16 w-full rounded-xl" />}
 
       {/* Search filter input skeleton */}
       <Skeleton className="h-10 w-64 max-w-full rounded-xl" />

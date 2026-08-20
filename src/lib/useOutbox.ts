@@ -13,6 +13,8 @@ import {
 } from './outbox'
 import { drainQueue, type SuccessfulSyncOp } from './outboxSync'
 import { buildUndoAction, snapshotForUndo, type RequestSensitiveReveal, type UndoSnapshot } from './undo'
+import { Eye } from 'lucide-react'
+import { triggerHaptic } from './haptics'
 
 const TOAST_STAGGER_MS = 350
 
@@ -26,6 +28,7 @@ interface UseOutboxOptions {
   onRequestSensitiveReveal?: RequestSensitiveReveal
   shouldRefresh?: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => boolean
   refresh: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => Promise<void>
+  onViewFailedOps?: () => void
 }
 
 export interface UseOutboxResult {
@@ -217,7 +220,11 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
         if (mountedRef.current) setRecentlyCompletedOps([])
       },
       addFailedOp: op => {
-        if (mountedRef.current) setFailedOps(previous => [...previous, op])
+        if (mountedRef.current) setFailedOps(previous => {
+          const next = [...previous, op]
+          failedOpsRef.current = next
+          return next
+        })
       },
       getSyncSuccessToast,
       buildUndoAction: createUndo,
@@ -231,7 +238,12 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
       emitFailureToast: op => {
         if (!mountedRef.current) return
         const description = op.payload?.description || op.payload?.name || op.entity
-        current.showToast(`Couldn't sync '${description}' — removed from queue`, 'Sync Failed', 'error')
+        void triggerHaptic([25, 45, 25])
+        current.showToast(`Couldn't sync '${description}' — removed from queue`, 'Sync Failed', 'error', {
+          label: 'View',
+          icon: Eye,
+          onAction: () => current.onViewFailedOps?.(),
+        })
       },
       onAuthError: current.onAuthError,
       onLockError: () => {
@@ -284,11 +296,22 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   }, [])
 
   const discardFailedOp = useCallback((id: string) => {
-    setFailedOps(previous => previous.filter(op => op.id !== id))
+    setFailedOps(previous => {
+      const next = previous.filter(op => op.id !== id)
+      failedOpsRef.current = next
+      return next
+    })
   }, [])
-  const discardAllFailedOps = useCallback(() => setFailedOps([]), [])
+  const discardAllFailedOps = useCallback(() => {
+    failedOpsRef.current = []
+    setFailedOps([])
+  }, [])
   const mutateFailedOps = useCallback((updater: (previous: QueuedOp[]) => QueuedOp[]) => {
-    setFailedOps(updater)
+    setFailedOps(previous => {
+      const next = updater(previous)
+      failedOpsRef.current = next
+      return next
+    })
   }, [])
   const getPendingOps = useCallback(() => pendingOpsRef.current, [])
   const getActiveOps = useCallback(
@@ -298,6 +321,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   const getFailedOps = useCallback(() => failedOpsRef.current, [])
   const reset = useCallback(() => {
     mutateQueue(() => [])
+    failedOpsRef.current = []
     setFailedOps([])
     recentlyCompletedOpsRef.current = []
     setRecentlyCompletedOps([])

@@ -9,6 +9,7 @@ interface FailedSyncModalProps {
   onClose: () => void
   onDiscard: (id: string) => void
   onDiscardAll: () => void
+  onRetry?: (id: string) => void
   onOpenAccountReview?: () => void
 }
 
@@ -79,7 +80,7 @@ function getPayloadEntries(op: QueuedOp): Array<[string, unknown]> {
   })
 }
 
-export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDiscardAll, onOpenAccountReview }: FailedSyncModalProps) {
+export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDiscardAll, onRetry, onOpenAccountReview }: FailedSyncModalProps) {
   if (failedOps.length === 0) return null
 
   const hasImmediateFailures = failedOps.some(op => op.retryCount < 5)
@@ -163,7 +164,12 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
                 Review account setup
               </Button>
             )}
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              {!op.needsAccountReview && onRetry && (
+                <Button variant="secondary" size="sm" onClick={() => onRetry(op.id)}>
+                  Retry
+                </Button>
+              )}
               <Button
                 variant="danger"
                 size="sm"

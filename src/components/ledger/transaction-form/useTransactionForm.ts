@@ -20,6 +20,7 @@ import { getErrorMessage } from '../../../lib/errors'
 import { canOpenBlankMutationForm } from '../../../lib/quickAddAvailability'
 import type { UseTransactionFormOptions } from './useTransactionFormOptions'
 import { getBucketOutflowWarning, type BucketOutflowWarning, type OutflowBucket } from '../../../lib/transactionBucketWarnings'
+import { isTransactionOutsideCycle } from '../../../lib/transactionCyclePlacement'
 export type { UseTransactionFormOptions } from './useTransactionFormOptions'
 export function useTransactionForm(options: UseTransactionFormOptions) {
   const {
@@ -31,6 +32,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     stabilityAlloc,
     rewardsAlloc,
     cycleDay,
+    selectedMonth,
+    selectedYear,
     stabilityBalance,
     stabilityTarget,
     stabilityOverflowRedirect,
@@ -54,6 +57,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     onAiEditDraftConsumed,
     onFetchTransactionById,
     onShowAlert,
+    onOutsideCycleSave,
     autocompleteSuggestions,
     transactions,
     hideSensitive,
@@ -543,6 +547,9 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       },
       todayDate,
     })
+    if (draft.accountId) {
+      dispatch({ type: 'SET_FIELD', field: 'accountId', value: draft.accountId })
+    }
     descriptionRef.current = draft.description
     autocompletedDescriptionRef.current = null
     suggestions.clearSuggestions()
@@ -695,6 +702,9 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
         await onUpdateDraftTransaction?.(state.editingId, mapped, documentChanges)
       } else {
         await onAddTransaction(mapped, documentChanges)
+      }
+      if (isTransactionOutsideCycle(mapped.date, selectedMonth, selectedYear, cycleDay)) {
+        onOutsideCycleSave?.(mapped.date)
       }
       dispatch({ type: 'RESET', todayDate, defaultCategory })
       clearFormDraft()

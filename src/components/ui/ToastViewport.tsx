@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from './Button'
-import { AlertCircle, CheckCircle2, Info, Undo2, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Info, Undo2, X, type LucideIcon } from 'lucide-react'
 import { m, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Z_LAYERS } from '../../lib/zLayers'
 
@@ -10,6 +10,7 @@ export type ToastTone = 'info' | 'success' | 'warning' | 'error'
 export interface ToastAction {
   label: string
   onAction: () => void
+  icon?: LucideIcon
 }
 
 export interface ToastMessage {
@@ -185,7 +186,9 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
               <div className="min-w-0 flex-1 pointer-events-none">
                 {toast.title && <div className="text-sm font-bold text-foreground">{toast.title}</div>}
                 <div className="text-[13px] leading-relaxed text-muted-foreground">{toast.message}</div>
-                {toast.action && (
+                {toast.action && (() => {
+                  const ActionIcon = toast.action.icon ?? Undo2
+                  return (
                   <Button variant="unstyled"
                     type="button"
                     onClick={(e) => {
@@ -195,10 +198,11 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
                     }}
                     className="pointer-events-auto mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-muted/60 px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted transition cursor-pointer sm:min-h-8"
                   >
-                    <Undo2 className="size-3.5" />
+                    <ActionIcon className="size-3.5" />
                     {toast.action.label}
                   </Button>
-                )}
+                  )
+                })()}
               </div>
               <Button variant="unstyled"
                 size="icon"

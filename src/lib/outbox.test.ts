@@ -723,6 +723,54 @@ describe('applyOpsToList — income splits', () => {
 })
 
 describe('applyOpsToList', () => {
+  describe('account reconciliation rows in a selected cycle', () => {
+    const reconcileOp = (isCompleted = false) => makeOp({
+      entity: 'ledgerAccountReconcile',
+      type: 'add',
+      targetId: 'reconcile-1',
+      createdAt: Date.parse('2026-08-20T04:00:00.000Z'),
+      isCompleted,
+      payload: {
+        reconciliation: {
+          bucket: 'Essentials',
+          expectedBucketTotal: 100,
+          targets: [{ id: 'acc-1', name: 'Everyday', expectedCurrent: 100, target: 125 }],
+        },
+      },
+    })
+
+    it('leaves the selected-cycle list unchanged before reconciliation is queued', () => {
+      const base: TestItem[] = [{ id: 'march-row', date: '2026-03-12', name: 'Groceries' }]
+
+      expect(applyOpsToList(base, [], 'transaction', {
+        transactionDateRange: { start: '2026-03-01', end: '2026-03-31' },
+      })).toEqual(base)
+    })
+
+    it('does not inject a syncing today-dated reconciliation into a past-cycle list', () => {
+      const result = applyOpsToList([] as TestItem[], [reconcileOp()], 'transaction', {
+        transactionDateRange: { start: '2026-03-01', end: '2026-03-31' },
+      })
+
+      expect(result).toEqual([])
+    })
+
+    it('does not inject a recently completed today-dated reconciliation into a past-cycle list', () => {
+      const result = applyOpsToList([] as TestItem[], [reconcileOp(true)], 'transaction', {
+        transactionDateRange: { start: '2026-03-01', end: '2026-03-31' },
+      })
+
+      expect(result).toEqual([])
+    })
+
+    it('keeps the legacy projection when no visible-cycle range is supplied', () => {
+      const result = applyOpsToList([] as TestItem[], [reconcileOp()], 'transaction')
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toMatchObject({ date: '2026-08-20', isPendingSync: true })
+    })
+  })
+
   it('prepends a new item for an add op and marks it pending while uncompleted', () => {
     const base: TestItem[] = []
     const ops = [makeOp({ type: 'add', targetId: 'local-1', payload: { name: 'New tx' } })]

@@ -2,6 +2,7 @@ import { ArrowRightLeft } from 'lucide-react'
 import { MobileLedgerRow } from './LedgerRows'
 import type { LedgerListProps } from './ledgerListShared'
 import { hasDistinctBucketMovement } from '../../lib/ledgerTotals'
+import { LedgerEmptyState } from './LedgerEmptyState'
 
 // Mobile (< md) ledger card list — swipe a row left to reveal Edit / Delete.
 // Mounted only when useIsMobile() is true, so the desktop table's row tree,
@@ -19,6 +20,10 @@ export function MobileLedgerList({
   accounts,
   onDeleteClick,
   onEditBlocked,
+  onDuplicate,
+  hasAnyFilter,
+  onResetFilters,
+  onAddTransaction,
   isSelecting = false,
   isSelected = () => false,
   canSelect = () => false,
@@ -49,6 +54,7 @@ export function MobileLedgerList({
           onStartEdit={onStartEdit}
           onDeleteClick={onDeleteClick}
           onEditBlocked={onEditBlocked}
+          onDuplicate={onDuplicate}
           isSelecting={isSelecting}
           isSelected={isSelected}
           canSelect={canSelect}
@@ -105,7 +111,7 @@ export function MobileLedgerList({
 
       {!hasRows && (
         <div className="list-row-enter p-8 text-center text-muted-foreground text-sm border rounded-xl bg-card">
-          {serverIsFetching ? 'Loading…' : 'No transactions match your criteria.'}
+          {serverIsFetching ? 'Loading…' : <LedgerEmptyState isFiltered={hasAnyFilter} onResetFilters={onResetFilters} onAddTransaction={onAddTransaction} />}
         </div>
       )}
     </div>

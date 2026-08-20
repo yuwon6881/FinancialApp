@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
-import { animate, m, useMotionValue, type PanInfo } from 'framer-motion'
+import { animate, m, useMotionValue, useReducedMotion, type PanInfo } from 'framer-motion'
 import { cn } from '../../lib/utils'
 import { useIsMobile } from '../../lib/useIsMobile'
-import { prefersReducedMotion } from '../../lib/motionPreference'
 import { triggerHaptic } from '../../lib/haptics'
 import {
   clearSwipeRowCloser,
@@ -38,7 +37,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   id,
 }) => {
   const isMobile = useIsMobile()
-  const reduceMotion = prefersReducedMotion()
+  const reduceMotion = useReducedMotion()
   const [open, setOpen] = useState(false)
   const x = useMotionValue(0)
   const settleAnimationRef = useRef<{ stop: () => void } | null>(null)

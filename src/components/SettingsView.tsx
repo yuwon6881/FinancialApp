@@ -67,6 +67,7 @@ interface SettingsViewProps {
   onUpdateAccount?: (id: string, input: LedgerAccountInput) => Promise<void> | void
   onRequestDeleteAccount?: (id: string) => void
   onReconcileAccounts?: (input: LedgerAccountReconcileInput) => Promise<void> | void
+  isCurrentCycle?: boolean
   notifyOnLoginEnabled?: boolean
   onToggleNotifyOnLogin?: (checked: boolean) => void
   activeSyncId?: string | null
@@ -412,8 +413,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 <div className="flex items-center gap-2">
                   <HardDrive className="size-4 text-muted-foreground shrink-0" />
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-medium text-foreground">Local Device Cache</span>
-                    <span className="text-[10px] text-muted-foreground">Clear cached data on this device.</span>
+                    <span className="font-medium text-foreground">Local Data</span>
+                    <span className="text-[10px] text-muted-foreground">Remove cached data, offline drafts and any changes still waiting to sync.</span>
                   </div>
                 </div>
                 <Button variant="unstyled"
@@ -813,6 +814,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               hideSensitive={hideSensitive}
               activeSyncId={activeSyncId}
               activeSyncIds={activeSyncIds}
+              last3CategoryBreakdown={props.dashboardData?.last3CategoryBreakdown}
+              last6CategoryBreakdown={props.dashboardData?.last6CategoryBreakdown}
               onUpdate={props.onUpdateCategoryCycleLimit}
             />
           </div>
@@ -820,7 +823,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       )}
 
       {activeTab === 'accounts' && (
-        <React.Suspense fallback={<AccountsSkeleton />}>
+        <React.Suspense fallback={<AccountsSkeleton isCurrentCycle={props.isCurrentCycle !== false} />}>
           <AccountsSection
             accounts={props.accounts ?? []}
             recurringPayments={props.recurringPayments}
@@ -836,6 +839,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             onUpdateAccount={(id, input) => props.onUpdateAccount?.(id, input)}
             onRequestDeleteAccount={id => props.onRequestDeleteAccount?.(id)}
             onReconcileAccounts={input => props.onReconcileAccounts?.(input)}
+            isCurrentCycle={props.isCurrentCycle !== false}
           />
         </React.Suspense>
       )}

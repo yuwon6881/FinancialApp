@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { CACHE_KEYS, clearLocalFinancialData, getCachedJSON, getCachedWishlist, setCachedCycleSnapshot, setCachedJSON } from './cache'
+import {
+  CACHE_KEYS,
+  clearDisposableFinancialCaches,
+  clearLocalFinancialData,
+  getCachedJSON,
+  getCachedWishlist,
+  setCachedCycleSnapshot,
+  setCachedJSON,
+} from './cache'
 import { obfuscateAmount } from './api/amounts'
 import type { DashboardData } from '../types'
 
@@ -71,6 +79,93 @@ describe('setCachedJSON', () => {
     expect(localStorage.getItem(CACHE_KEYS.transactions)).toBeNull()
     expect(localStorage.getItem('draft_transactions')).toBeNull()
     removeItem.mockRestore()
+  })
+})
+
+describe('local financial data clearing', () => {
+  beforeEach(() => localStorage.clear())
+
+  const disposableKeys = [
+    CACHE_KEYS.dashboardData,
+    CACHE_KEYS.transactions,
+    CACHE_KEYS.recurringPayments,
+    CACHE_KEYS.categories,
+    CACHE_KEYS.wishlist,
+    CACHE_KEYS.savingsGoals,
+    CACHE_KEYS.loans,
+    CACHE_KEYS.accounts,
+    CACHE_KEYS.walletBalance,
+    CACHE_KEYS.investmentPortfolio,
+    'cached_cycle_snapshots',
+  ]
+
+  it('removes every disposable cache and its timestamp sidecar', () => {
+    for (const key of disposableKeys) {
+      localStorage.setItem(key, 'cached')
+      localStorage.setItem(`${key}:cached_at`, '123')
+    }
+    localStorage.setItem('cached_investment_activity:1', 'cached')
+    localStorage.setItem('cached_investment_activity:1:cached_at', '123')
+    localStorage.setItem('cached_investment_cash_flows:1', 'cached')
+    localStorage.setItem('cached_investment_cash_flows:1:cached_at', '123')
+
+    clearDisposableFinancialCaches()
+
+    for (const key of disposableKeys) {
+      expect(localStorage.getItem(key)).toBeNull()
+      expect(localStorage.getItem(`${key}:cached_at`)).toBeNull()
+    }
+    expect(localStorage.getItem('cached_investment_activity:1')).toBeNull()
+    expect(localStorage.getItem('cached_investment_activity:1:cached_at')).toBeNull()
+    expect(localStorage.getItem('cached_investment_cash_flows:1')).toBeNull()
+    expect(localStorage.getItem('cached_investment_cash_flows:1:cached_at')).toBeNull()
+  })
+
+  it('preserves queues, failed operations, drafts and their backups', () => {
+    const userDataKeys = [
+      CACHE_KEYS.pendingOperations,
+      CACHE_KEYS.pendingTransactions,
+      'failed_operations',
+      'draft_transactions',
+      'pending_operations_backup',
+      'pending_transactions_backup',
+      'failed_operations_backup',
+      'draft_transactions_backup',
+    ]
+    for (const key of userDataKeys) localStorage.setItem(key, 'keep')
+
+    clearDisposableFinancialCaches()
+
+    for (const key of userDataKeys) expect(localStorage.getItem(key)).toBe('keep')
+  })
+
+  it('continues clearing disposable caches when one removal throws', () => {
+    localStorage.setItem(CACHE_KEYS.dashboardData, 'blocked')
+    localStorage.setItem(CACHE_KEYS.transactions, 'clear-me')
+    const originalRemoveItem = Storage.prototype.removeItem
+    const removeItem = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(function (this: Storage, key) {
+      if (key === CACHE_KEYS.dashboardData) throw new DOMException('Storage unavailable', 'SecurityError')
+      return originalRemoveItem.call(this, key)
+    })
+
+    expect(() => clearDisposableFinancialCaches()).not.toThrow()
+    expect(localStorage.getItem(CACHE_KEYS.dashboardData)).toBe('blocked')
+    expect(localStorage.getItem(CACHE_KEYS.transactions)).toBeNull()
+    removeItem.mockRestore()
+  })
+
+  it('keeps the deliberate full wipe broad enough to remove queued user data', () => {
+    localStorage.setItem(CACHE_KEYS.pendingOperations, 'queued')
+    localStorage.setItem(CACHE_KEYS.pendingTransactions, 'pending')
+    localStorage.setItem('failed_operations', 'failed')
+    localStorage.setItem('draft_transactions', 'draft')
+
+    clearLocalFinancialData()
+
+    expect(localStorage.getItem(CACHE_KEYS.pendingOperations)).toBeNull()
+    expect(localStorage.getItem(CACHE_KEYS.pendingTransactions)).toBeNull()
+    expect(localStorage.getItem('failed_operations')).toBeNull()
+    expect(localStorage.getItem('draft_transactions')).toBeNull()
   })
 })
 

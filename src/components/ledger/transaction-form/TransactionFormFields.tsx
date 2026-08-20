@@ -18,6 +18,8 @@ import type { RecoveryBucketState, RecoveryOffer } from '../../../lib/stabilityR
 import { isStabilityReloadFormDrawdown } from '../../../lib/stabilityRecovery'
 import { isSelectableTransactionCategory } from '../../../lib/categoryFlow'
 import type { BucketOutflowWarning } from '../../../lib/transactionBucketWarnings'
+import { AlertBanner } from '../../ui/AlertBanner'
+import { getTransactionCyclePlacement, isTransactionOutsideCycle } from '../../../lib/transactionCyclePlacement'
 
 interface TransactionFormFieldsProps {
   state: TransactionFormState
@@ -55,6 +57,9 @@ interface TransactionFormFieldsProps {
   bucketOutflowWarning?: BucketOutflowWarning | null
   hideSensitive?: boolean
   stabilityAlloc?: number
+  selectedMonth?: string
+  selectedYear?: number
+  cycleDay?: number
 }
 
 export function TransactionFormFields({
@@ -81,6 +86,9 @@ export function TransactionFormFields({
   bucketOutflowWarning = null,
   hideSensitive = false,
   stabilityAlloc = 0,
+  selectedMonth,
+  selectedYear,
+  cycleDay = 28,
 }: TransactionFormFieldsProps) {
   const [showSuggestions, setShowSuggestions] = React.useState(false)
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = React.useState(-1)
@@ -205,6 +213,8 @@ export function TransactionFormFields({
       })),
     ]
   }, [accounts, state.counterAccountId, state.transferTarget])
+  const outsideSelectedCycle = isTransactionOutsideCycle(state.date, selectedMonth, selectedYear, cycleDay)
+  const transactionCycle = outsideSelectedCycle ? getTransactionCyclePlacement(state.date, cycleDay) : null
 
   return (
     <>
@@ -662,6 +672,12 @@ export function TransactionFormFields({
             error={errors.stabilityTopUpAmount || stabilityTopUpError}
           />
         </>
+      )}
+
+      {transactionCycle && (
+        <AlertBanner variant="info" className="sm:col-span-2">
+          This posting date belongs to {transactionCycle.label}, not the cycle you are viewing. When this transaction reaches the Ledger, it will appear there.
+        </AlertBanner>
       )}
 
       {bucketOutflowWarning && (

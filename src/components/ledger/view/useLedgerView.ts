@@ -10,6 +10,7 @@ import { ledgerRouteSearch, updateAppSearch, type LedgerRouteRange } from '../..
 import { getLedgerTransactionRowElement, scrollLedgerTransactionRowIntoView } from '../../../lib/ledgerTransactionTarget'
 import { createLedgerSyncStatus } from './ledgerSyncStatus'
 import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
+import { financialDate } from '../../../lib/financialDate'
 
 export interface UseLedgerViewOptions {
   transactions: Transaction[]
@@ -66,6 +67,8 @@ export interface UseLedgerViewOptions {
   hideSensitive: boolean
   sensitivePreferenceStatus?: SensitivePreferenceStatus
   formRef: React.RefObject<any>
+  preferredPageSize?: number
+  preferredSortOrder?: TransactionSort
 }
 
 const LEDGER_BUCKETS: readonly string[] = LEDGER_BUCKET_VALUES
@@ -128,6 +131,8 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     hideSensitive,
     sensitivePreferenceStatus,
     formRef,
+    preferredPageSize,
+    preferredSortOrder,
   } = options
 
   // Search & Filter state
@@ -157,8 +162,8 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     }
     return 1
   })
-  const [pageSize, setPageSize] = useState(10)
-  const [sortOrder, setSortOrder] = useState<TransactionSort>('date-desc')
+  const [pageSize, setPageSize] = useState(preferredPageSize ?? 10)
+  const [sortOrder, setSortOrder] = useState<TransactionSort>(preferredSortOrder ?? 'date-desc')
 
   // Server-side state
   const [serverResult, setServerResult] = useState<PagedTransactionResult | null>(null)
@@ -846,6 +851,16 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     handleDeleteClickRef.current = handleDeleteClick
   })
   const onStartEditStable = useCallback((t: Transaction) => formRef.current?.handleStartEdit(t), [formRef])
+  const onDuplicateStable = useCallback((t: Transaction) => formRef.current?.openWithDraft({
+    description: t.description,
+    amount: t.amount,
+    date: financialDate(),
+    category: t.category,
+    ledgerCategory: t.ledgerCategory,
+    txType: t.amount < 0 ? 'outflow' : 'inflow',
+    accountId: t.accountId,
+  }), [formRef])
+  const onAddTransactionStable = useCallback(() => formRef.current?.openFresh(), [formRef])
   const onDeleteClickStable = useCallback((t: Transaction) => handleDeleteClickRef.current(t), [])
   const onEditBlockedStable = useCallback((transaction: Transaction) => {
     setEditBlockedTransaction(transaction)
@@ -1062,6 +1077,8 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     isTxDeleting,
     isTxSyncing,
     onStartEditStable,
+    onDuplicateStable,
+    onAddTransactionStable,
     onDeleteClickStable,
     onEditBlockedStable,
     handleToggleFilter,

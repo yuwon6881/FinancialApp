@@ -84,4 +84,19 @@ describe('CategoryLimitsCard', () => {
     expect((screen.getByRole('button', { name: 'Save Guides' }) as HTMLButtonElement).disabled).toBe(true)
     expect(onUpdate).not.toHaveBeenCalled()
   })
+
+  it('copies the recent per-cycle average into a spending guide', () => {
+    render(
+      <CategoryLimitsCard
+        categories={[{ id: 'cat-food', name: 'Food', cycleLimit: 500 }]}
+        currency="MYR"
+        hideSensitive={false}
+        last3CategoryBreakdown={[{ category: 'Food', amount: 1200 }]}
+        onUpdate={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Use recent average/ }))
+    expect((screen.getByRole('textbox', { name: /^Food cycle spending guide/ }) as HTMLInputElement).value).toBe('400.00')
+  })
 })

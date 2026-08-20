@@ -104,6 +104,9 @@ export function DatePicker({
   const dialogId = useId()
   const now = new Date()
   const todayISO = dateToISO(now)
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayISO = dateToISO(yesterday)
   const initialISO = clampISO(value || todayISO, min, max)
   const initialParsed = parseISO(initialISO) ?? {
     year: now.getFullYear(),
@@ -381,7 +384,15 @@ export function DatePicker({
           </div>
         </div>
 
-        <div className="mt-2.5 flex justify-end border-t border-border/40 pt-2.5">
+        <div className="mt-2.5 flex justify-end gap-1 border-t border-border/40 pt-2.5">
+          <Button variant="unstyled"
+            type="button"
+            disabled={Boolean((min && yesterdayISO < min) || (max && yesterdayISO > max))}
+            onClick={() => select(yesterdayISO)}
+            className="cursor-pointer rounded-lg px-2.5 py-1 text-[11px] font-bold text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Yesterday
+          </Button>
           <Button variant="unstyled"
             type="button"
             disabled={Boolean((min && todayISO < min) || (max && todayISO > max))}

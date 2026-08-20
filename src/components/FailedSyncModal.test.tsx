@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { FailedSyncModal } from './FailedSyncModal'
 
@@ -62,5 +62,27 @@ describe('FailedSyncModal', () => {
     expect(screen.queryByText(/\[object Object\]/)).toBeNull()
     expect(screen.getByText('Stability (1 account)')).not.toBeNull()
     expect(screen.queryByText(/Undo Reconciliation/i)).toBeNull()
+  })
+
+  it('retries a failed operation but directs account-review failures to their fix', () => {
+    const onRetry = vi.fn()
+    render(
+      <FailedSyncModal
+        isOpen
+        failedOps={[
+          { id: 'retry-me', entity: 'transaction', type: 'add', targetId: '1', createdAt: 1, retryCount: 5 },
+          { id: 'review-me', entity: 'transaction', type: 'add', targetId: '2', createdAt: 2, retryCount: 1, needsAccountReview: true },
+        ]}
+        onClose={vi.fn()}
+        onDiscard={vi.fn()}
+        onDiscardAll={vi.fn()}
+        onRetry={onRetry}
+        onOpenAccountReview={vi.fn()}
+      />,
+    )
+
+    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(onRetry).toHaveBeenCalledWith('retry-me')
   })
 })

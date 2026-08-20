@@ -18,7 +18,10 @@ function AlwaysCrashes(): never {
 }
 
 describe('ErrorBoundary', () => {
-  beforeEach(() => vi.spyOn(console, 'error').mockImplementation(() => {}))
+  beforeEach(() => {
+    localStorage.clear()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
   afterEach(() => vi.restoreAllMocks())
 
   it('remounts the subtree so a transient crash clears on Try again', () => {
@@ -44,6 +47,19 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText(/ran into the same problem/i)).toBeTruthy()
     expect(screen.getByRole('button', { name: /reload app/i })).toBeTruthy()
     expect(screen.getByRole('button', { name: /clear local data/i })).toBeTruthy()
+  })
+
+  it('preserves queued changes when clearing disposable local data', () => {
+    localStorage.setItem('pending_operations', JSON.stringify([{ id: 'queued-change' }]))
+    render(
+      <ErrorBoundary variant="screen">
+        <AlwaysCrashes />
+      </ErrorBoundary>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /clear local data/i }))
+
+    expect(JSON.parse(localStorage.getItem('pending_operations') || '[]')).toEqual([{ id: 'queued-change' }])
   })
 
   it('resets when resetKey changes', () => {

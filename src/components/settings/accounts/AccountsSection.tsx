@@ -19,6 +19,7 @@ import {
   type BucketSetupSessionSnapshot,
 } from './view/useBucketAccountSetupView'
 import { useAccountsView } from './view/useAccountsView'
+import { AlertBanner } from '../../ui/AlertBanner'
 
 interface AccountsSectionProps {
   accounts: LedgerAccount[]
@@ -36,6 +37,7 @@ interface AccountsSectionProps {
   onRequestDeleteAccount: (id: string) => void
   onReconcileAccounts: (input: LedgerAccountReconcileInput) => Promise<void> | void
   onNavigateToRecurring?: (recurringId: string) => void
+  isCurrentCycle: boolean
 }
 
 interface PendingBalanceCorrection {
@@ -76,6 +78,7 @@ export function AccountsSection({
   onRequestDeleteAccount,
   onReconcileAccounts,
   onNavigateToRecurring,
+  isCurrentCycle,
 }: AccountsSectionProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const {
@@ -256,6 +259,12 @@ export function AccountsSection({
             )}
           </div>
         </div>
+
+        {!isCurrentCycle && (
+          <AlertBanner variant="info" title="Balances shown here are today's">
+            Account corrections always use today's balance and post to today's cycle. A past cycle's closing balance is historical and cannot be changed here.
+          </AlertBanner>
+        )}
 
         {/* Search filter input */}
         {rows.length > 0 && (

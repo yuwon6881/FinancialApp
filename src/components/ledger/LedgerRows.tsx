@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react'
-import { Edit2, Trash2, Wallet } from 'lucide-react'
+import { Copy, Edit2, Trash2, Wallet } from 'lucide-react'
 import type { LedgerAccount, Transaction } from '../../types'
 import { formatCurrencyVal } from '../../lib/utils'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
@@ -24,6 +24,7 @@ export interface LedgerRowProps {
   onStartEdit: (transaction: Transaction) => void
   onDeleteClick: (transaction: Transaction) => void
   onEditBlocked: (transaction: Transaction) => void
+  onDuplicate?: (transaction: Transaction) => void
   isSelecting: boolean
   isSelected: (transaction: Transaction) => boolean
   canSelect: (transaction: Transaction) => boolean
@@ -148,6 +149,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
       <td className="p-4 text-center">
         <div className="flex items-center justify-center gap-2">
           <Button variant="ghost" size="sm" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.hideSensitive)}>Edit</Button>
+          {!editBlocked && !transfer && props.onDuplicate && <Button variant="ghost" size="sm" onClick={() => props.onDuplicate?.(transaction)} disabled={props.isDeleting || props.hideSensitive}>Duplicate</Button>}
           <Button variant="danger" size="sm" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.hideSensitive}>Delete</Button>
         </div>
       </td>
@@ -160,6 +162,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
   const transfer = transaction.ledgerCategory.startsWith('Transfer:') || transaction.ledgerCategory.toLowerCase() === 'accountmove'
   const split = transaction.id.includes('-split-')
   const editBlocked = split || transaction.savingsGoalId != null
+  const canDuplicate = !editBlocked && !transfer && Boolean(props.onDuplicate)
   const reloadDrawdown = isStabilityReloadDrawdown(transaction)
   const hasAccount = Boolean(transaction.accountId)
   const formatted = formatCurrencyVal(outflow ? Math.abs(transaction.amount) : transaction.amount, props.currency)
@@ -171,8 +174,8 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         hint={props.hint}
         disabled={props.isDeleting}
         className="rounded-2xl border border-border shadow-xs"
-        actionsWidth={128}
-        actions={<><Button variant="unstyled" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button><Button variant="unstyled" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
+        actionsWidth={canDuplicate ? 192 : 128}
+        actions={<><Button variant="unstyled" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button>{canDuplicate && <Button variant="unstyled" onClick={() => props.onDuplicate?.(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-secondary text-secondary-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Copy className="size-4" />Duplicate</Button>}<Button variant="unstyled" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
       >
         <div className={`h-0.5 w-full ${transfer ? 'bg-blue-500/60' : outflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'}`} />
         <div className="p-4 space-y-3">

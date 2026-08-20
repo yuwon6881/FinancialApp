@@ -632,6 +632,8 @@ export interface ApplyOpsOptions {
    */
   incomeAllocations?: IncomeAllocations
   ledgerAccounts?: ReadonlyArray<{ id: string; bucket: string }>
+  /** Inclusive visible Ledger range. Omitted callers retain the existing projection behavior. */
+  transactionDateRange?: { start: string; end: string }
 }
 
 export function expandBulkTransactionProjection(ops: QueuedOp[]): QueuedOp[] {
@@ -745,6 +747,8 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         ...reconciliation,
       })
       for (const row of projectedRows) {
+        const visibleRange = options?.transactionDateRange
+        if (visibleRange && (row.date < visibleRange.start || row.date > visibleRange.end)) continue
         if (findResultIndex(row.id) < 0) {
           result = [{ ...row, isPendingSync: !op.isCompleted, pendingSyncOperationId: op.isCompleted ? undefined : op.id } as unknown as T, ...result]
         }

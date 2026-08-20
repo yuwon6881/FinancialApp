@@ -125,7 +125,7 @@ export function DataTablePagination({
     <div className="flex flex-col items-center justify-between gap-4 text-xs select-none sm:flex-row">
       <div className="flex items-center gap-2 font-medium text-muted-foreground">
         {serverIsFetching && <Loader2 className="size-3.5 animate-spin text-accent-ink" aria-hidden="true" />}
-        <span>
+        <span aria-live="polite" aria-atomic="true">
           Showing <span className="font-semibold text-foreground">{displayFrom}</span> to{' '}
           <span className="font-semibold text-foreground">{displayTo}</span> of{' '}
           <span className="font-semibold text-foreground">{totalItems}</span> entries

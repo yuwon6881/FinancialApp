@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { TransactionFormFields } from './TransactionFormFields'
 import { getInitialState } from './transactionFormReducer'
@@ -234,5 +234,48 @@ describe('TransactionFormFields', () => {
     expect(alert.textContent).toContain('short of covering upcoming bills this cycle')
     expect(alert.textContent).toContain('250.00')
     expect(alert.textContent).toContain('You can still save this transaction')
+  })
+
+  it.each(['create', 'edit', 'draft'] as const)('shows the out-of-cycle posting note in %s mode', mode => {
+    render(
+      <TransactionFormFields
+        state={{
+          ...getInitialState('2026-08-20', 'Food'),
+          mode,
+          editingId: mode === 'create' ? null : `${mode}-1`,
+          showAddForm: true,
+        }}
+        firstInputRef={React.createRef<HTMLInputElement>()}
+        descriptionRef={{ current: '' }}
+        autocompletedDescriptionRef={{ current: null }}
+        currency="MYR"
+        categories={[{ id: 'food', name: 'Food' }]}
+        errors={{}}
+        selectedMonth="Mar"
+        selectedYear={2026}
+        cycleDay={1}
+        onSetField={vi.fn()}
+        onSelectSuggestion={vi.fn()}
+        onSuggestNotes={vi.fn()}
+        onSuggestCategory={vi.fn()}
+        filteredSuggestions={[]}
+        quickSuggestionEntries={[]}
+        suggestions={{
+          categorySuggestions: [],
+          isSuggestingCategory: false,
+          categorySuggestionUnavailable: false,
+          isSuggestingNote: false,
+          noteSuggestions: [],
+          showNoteSuggestions: false,
+          noteSuggestionUnavailable: false,
+          setShowNoteSuggestions: vi.fn(),
+          setNoteSuggestions: vi.fn(),
+          setIsSuggestingNote: vi.fn(),
+        }}
+      />,
+    )
+
+    expect(screen.getByText(/This posting date belongs to Aug 1st ~ Aug 31st, 2026/)).toBeTruthy()
+    cleanup()
   })
 })

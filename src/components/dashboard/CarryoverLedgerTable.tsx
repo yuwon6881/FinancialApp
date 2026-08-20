@@ -7,19 +7,23 @@ import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { Button } from '../ui/Button'
 import { BottomSheet } from '../ui/BottomSheet'
+import { AlertBanner } from '../ui/AlertBanner'
 
 interface CarryoverLedgerTableProps {
   categories: CategorySummary[]
+  isCurrentCycle: boolean
+  cycleLabel: string
   pendingDeductionsByCategory: Record<string, number>
   amountsMasked: boolean
   hideSensitive: boolean
   formatCurrency: (value: number) => string
-  onAdjust?: (category: CategorySummary) => void
   onNavigateToAccounts?: (targetIdOrBucket?: string | null) => void
 }
 
 export function CarryoverLedgerTable({
   categories,
+  isCurrentCycle,
+  cycleLabel,
   pendingDeductionsByCategory,
   amountsMasked,
   hideSensitive: _hideSensitive,
@@ -189,7 +193,7 @@ export function CarryoverLedgerTable({
               </span>
             </div>
           }
-          description={`Accounts contributing to the ${selectedCategory.name} ledger balance.`}
+          description={`Accounts contributing to the ${selectedCategory.name} ledger balance for ${cycleLabel}.`}
           footer={
             <div className="flex flex-wrap items-center justify-between gap-2 w-full">
               {onNavigateToAccounts && (
@@ -214,10 +218,15 @@ export function CarryoverLedgerTable({
           }
         >
           <div className="space-y-3 pt-2">
+            {!isCurrentCycle && (
+              <AlertBanner variant="info">
+                Account editing and corrections use today's balance, not this cycle's closing balance. Any correction posts to today's cycle.
+              </AlertBanner>
+            )}
             <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
               <div className="flex items-center justify-between gap-2 border-b border-border/50 bg-muted/40 px-4 py-2.5 text-xs font-semibold text-muted-foreground">
                 <span>Account</span>
-                <span>Current balance</span>
+                <span>{isCurrentCycle ? 'Current balance' : 'Balance at close'}</span>
               </div>
               <div className="divide-y divide-border/30">
                 {selectedCategory.accounts?.map(account => (
@@ -271,7 +280,7 @@ export function CarryoverLedgerTable({
               </div>
               <div className="flex items-center justify-between gap-2 border-t border-border/70 bg-muted/40 px-4 py-3.5 text-xs font-bold">
                 <div className="flex items-center gap-2 text-foreground">
-                  <span>Total accounts balance</span>
+                  <span>{isCurrentCycle ? 'Total accounts balance' : 'Total balance at close'}</span>
                   <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${getCategoryBadgeClass(selectedCategory.name)}`}>
                     {selectedCategory.accounts?.length ?? 0} {selectedCategory.accounts?.length === 1 ? 'account' : 'accounts'}
                   </span>

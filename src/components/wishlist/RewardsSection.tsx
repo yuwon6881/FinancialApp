@@ -75,6 +75,7 @@ export function RewardsSection(props: RewardsSectionProps) {
       ) : (
         <div className="rounded-xl border border-dashed border-border/60 bg-muted/15 px-4 py-6 text-center">
           <p className="text-xs text-muted-foreground">No rewards yet. Add one to save toward.</p>
+          <Button variant="secondary" size="sm" className="mt-3" onClick={props.onAdd} disabled={props.hideSensitive}>Add reward</Button>
         </div>
       )}
     </section>

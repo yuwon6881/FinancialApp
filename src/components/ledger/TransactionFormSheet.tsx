@@ -44,6 +44,8 @@ export interface TransactionFormSheetProps {
   stabilityAlloc: number
   rewardsAlloc: number
   cycleDay: number
+  selectedMonth?: string
+  selectedYear?: number
   stabilityBalance: number
   stabilityTarget: number
   stabilityOverflowRedirect: string
@@ -82,6 +84,7 @@ export interface TransactionFormSheetProps {
   onAiEditDraftConsumed?: () => void
   onFetchTransactionById?: (id: string) => Promise<Transaction>
   onShowAlert?: (message: string, title?: string) => void
+  onOutsideCycleSave?: (date: string) => void
   receiptSplitDraft?: ReceiptSplitDraft | null
   failedReceiptSplitJob?: ReceiptSplitFailure | null
   onReceiptSplitStarted?: (scanId: string) => void
@@ -98,6 +101,7 @@ export interface TransactionPrefillDraft {
   category?: string
   ledgerCategory?: string
   txType: 'inflow' | 'outflow'
+  accountId?: string | null
 }
 
 export interface TransactionFormSheetRef {
@@ -225,6 +229,9 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             bucketOutflowWarning={form.bucketOutflowWarning}
             hideSensitive={props.hideSensitive}
             stabilityAlloc={props.stabilityTopUpContext?.stabilityAlloc ?? props.stabilityAlloc}
+            selectedMonth={props.selectedMonth}
+            selectedYear={props.selectedYear}
+            cycleDay={props.cycleDay}
           />
 
           {form.state.transactionType === 'outflow' && (

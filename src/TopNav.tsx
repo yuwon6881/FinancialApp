@@ -160,6 +160,19 @@ const TopNav: React.FC<TopNavProps> = ({
       <span>{draftCount} Draft{draftCount > 1 ? 's' : ''}</span>
     </Button>
   ) : null
+  const failedOpsStatus = failedOpsCount > 0 ? (
+    <Button variant="unstyled"
+      type="button"
+      role="status"
+      aria-label={`${failedOpsCount} failed sync ${failedOpsCount === 1 ? 'item' : 'items'}`}
+      onClick={() => onOpenFailedOps?.()}
+      className="ml-2 flex items-center gap-1 px-2 py-0.5 bg-destructive/10 border border-destructive/20 rounded-md text-[10px] font-bold text-destructive cursor-pointer select-none shrink-0 hover:bg-destructive/20 transition duration-150"
+      title="Operations that failed to sync and were removed from the active queue — click to view details"
+    >
+      <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
+      <span>{failedOpsCount} failed</span>
+    </Button>
+  ) : null
 
   return (
     <>
@@ -196,6 +209,15 @@ const TopNav: React.FC<TopNavProps> = ({
             </span>
           </Button>
 
+          {isPhone && (isOffline || syncLabel) && (
+            <span
+              role="status"
+              className={`ml-2 shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-bold ${isOffline ? 'border-amber-500/20 bg-amber-500/10 text-amber-500' : 'border-blue-500/20 bg-blue-500/10 text-blue-500'}`}
+            >
+              {isOffline ? 'Offline' : syncStatusLabel}
+            </span>
+          )}
+
           {/* Field-shaped, button-behaved — the shape is what says "type here to find a record";
               a bare magnifier says nothing, which is why it read as one more command icon among
               five. It sits in this lane rather than the right one for two reasons: from xl the
@@ -227,17 +249,7 @@ const TopNav: React.FC<TopNavProps> = ({
               refresh/offline text may then clip at the edge of the left lane instead of
               shifting the draft into the fixed actions on the right. */}
           {isPhone && draftStatus}
-          {isPhone && failedOpsCount > 0 && (
-            <Button variant="unstyled"
-              type="button"
-              onClick={() => onOpenFailedOps?.()}
-              className="ml-2 flex items-center gap-1 px-2 py-0.5 bg-destructive/10 border border-destructive/20 rounded-md text-[10px] font-bold text-destructive cursor-pointer select-none shrink-0 hover:bg-destructive/20 transition duration-150"
-              title="Operations that failed to sync and were removed from the active queue — click to view details"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
-              <span>{failedOpsCount} failed</span>
-            </Button>
-          )}
+          {isPhone && failedOpsStatus}
         </div>
 
         {/* Navigation Tabs - flow beside the actions on medium/tablet screens, centered mathematically on wide desktop */}
@@ -269,17 +281,7 @@ const TopNav: React.FC<TopNavProps> = ({
         <div className="flex shrink-0 items-center justify-end gap-1.5 z-10 sm:gap-2.5 ml-auto md:ml-0 xl:flex-1 xl:gap-3">
           {!isPhone && (
             <>
-              {failedOpsCount > 0 && (
-                <Button variant="unstyled"
-                  type="button"
-                  onClick={() => onOpenFailedOps?.()}
-                  className="flex items-center gap-1 px-2 py-0.5 bg-destructive/10 border border-destructive/20 rounded-md text-[10px] font-bold text-destructive cursor-pointer select-none shrink-0 hover:bg-destructive/20 transition duration-150"
-                  title="Operations that failed to sync and were removed from the active queue — click to view details"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
-                  <span>{failedOpsCount} failed</span>
-                </Button>
-              )}
+              {failedOpsStatus}
               {draftStatus}
             </>
           )}

@@ -61,6 +61,26 @@ describe('useAppPreferences', () => {
     expect(result.current.sensitivePreferenceStatus).toBe('pending')
   })
 
+  it('persists ledger page size and sort order per account', () => {
+    const { result } = renderHook(() => useAppPreferences())
+    act(() => {
+      result.current.setPreferenceOwner('alice')
+      result.current.setLedgerPageSize(50)
+      result.current.setLedgerSortOrder('amount-desc')
+    })
+
+    expect(localStorage.getItem('ledger_page_size:alice')).toBe('50')
+    expect(localStorage.getItem('ledger_sort_order:alice')).toBe('amount-desc')
+
+    act(() => result.current.setPreferenceOwner('bob'))
+    expect(result.current.ledgerPageSize).toBe(10)
+    expect(result.current.ledgerSortOrder).toBe('date-desc')
+
+    act(() => result.current.setPreferenceOwner('alice'))
+    expect(result.current.ledgerPageSize).toBe(50)
+    expect(result.current.ledgerSortOrder).toBe('amount-desc')
+  })
+
   it('replaces legacy wishlist URLs with the canonical route and preserves the cycle', () => {
     window.history.replaceState({}, '', '/wishlist?month=Jul&year=2026')
     renderHook(() => useAppPreferences())

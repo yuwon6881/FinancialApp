@@ -45,6 +45,8 @@ export interface UseTransactionFormOptions {
   stabilityAlloc: number
   rewardsAlloc: number
   cycleDay: number
+  selectedMonth?: string
+  selectedYear?: number
   stabilityBalance: number
   stabilityTarget: number
   stabilityOverflowRedirect: string
@@ -71,4 +73,5 @@ export interface UseTransactionFormOptions {
   onAiEditDraftConsumed?: () => void
   onFetchTransactionById?: (id: string) => Promise<Transaction>
   onShowAlert?: (message: string, title?: string) => void
+  onOutsideCycleSave?: (date: string) => void
 }

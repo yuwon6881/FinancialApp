@@ -40,8 +40,29 @@ interface SavingsGoalFormProps {
 
 export function SavingsGoalForm(props: SavingsGoalFormProps) {
   const isAdd = props.mode === 'add'
+  const applyTemplate = (template: { name: string; bucket: SavingsGoalFundingBucket; priority: string; months: number; recurring: boolean }) => {
+    const date = new Date()
+    date.setMonth(date.getMonth() + template.months)
+    props.onNameChange(template.name)
+    props.onFundingBucketChange(template.bucket)
+    props.onPriorityChange(template.priority)
+    props.onDateChange(date.toLocaleDateString('en-CA'))
+    props.onRecurringChange(template.recurring)
+    props.onRecurrenceMonthsChange(String(template.months))
+  }
   return (
     <form noValidate onSubmit={props.onSubmit} className="space-y-4 text-xs font-semibold">
+      {isAdd && (
+        <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Start with a template</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button type="button" variant="secondary" size="sm" onClick={() => applyTemplate({ name: 'Annual insurance', bucket: 'Essentials', priority: 'High', months: 12, recurring: true })}>Annual insurance</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={() => applyTemplate({ name: 'Car maintenance', bucket: 'Essentials', priority: 'Medium', months: 6, recurring: true })}>Car maintenance</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={() => applyTemplate({ name: 'Holiday fund', bucket: 'Rewards', priority: 'Medium', months: 12, recurring: false })}>Holiday</Button>
+          </div>
+          <p className="mt-2 text-[10px] text-muted-foreground">Choose a starting point, then enter the amount you need.</p>
+        </div>
+      )}
       <FormField label="What are you saving for?" required error={props.errors.name}>
         <Input
           type="text"

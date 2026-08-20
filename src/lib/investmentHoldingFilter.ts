@@ -3,7 +3,7 @@ import { sleeveOf, type SleeveIndexEntry } from './investmentAllocation'
 
 type Holding = InvestmentPortfolio['holdings'][number]
 
-export type AllocationMode = 'sleeve' | 'asset' | 'account' | 'instrument'
+export type AllocationMode = 'sleeve' | 'asset' | 'account' | 'instrument' | 'currency'
 /** A chosen slice of the allocation chart. `key` is always a stable key, never a label. */
 export type AllocationFilter = { mode: AllocationMode; key: string } | null
 
@@ -23,6 +23,7 @@ export function matchesAllocationFilter(
     case 'asset': return holding.type === filter.key
     case 'instrument': return holding.symbol === filter.key
     case 'account': return holding.accountName === filter.key
+    case 'currency': return holding.currency === filter.key
   }
 }
 

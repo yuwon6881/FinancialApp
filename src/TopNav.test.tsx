@@ -58,7 +58,7 @@ describe('TopNav mobile primary navigation', () => {
     expect(screen.queryByText('Syncing…')).toBeNull()
   })
 
-  it('uses the pull indicator as the single refresh label when a phone has drafts', () => {
+  it('keeps sync progress visible on a phone alongside drafts', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
     render(
       <TopNav
@@ -81,7 +81,7 @@ describe('TopNav mobile primary navigation', () => {
     )
 
     expect(screen.getByRole('button', { name: '1 Draft' })).toBeTruthy()
-    expect(screen.queryByText('Refreshing')).toBeNull()
+    expect(screen.getByText('Refreshing')).toBeTruthy()
   })
 
   it('keeps synchronization feedback compact in wider headers', () => {

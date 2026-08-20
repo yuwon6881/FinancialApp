@@ -3,6 +3,7 @@ import { DataTable, DataTableBody, DataTableHeader, DataTableHeaderCell } from '
 import { DesktopLedgerRow } from './LedgerRows'
 import type { LedgerListProps } from './ledgerListShared'
 import { hasDistinctBucketMovement } from '../../lib/ledgerTotals'
+import { LedgerEmptyState } from './LedgerEmptyState'
 
 // Desktop (>= md) ledger table, including the page-total summary rows and the
 // empty/loading state. Mounted only when useIsMobile() is false, so a phone never
@@ -20,6 +21,10 @@ export function DesktopLedgerTable({
   accounts,
   onDeleteClick,
   onEditBlocked,
+  onDuplicate,
+  hasAnyFilter,
+  onResetFilters,
+  onAddTransaction,
   isSelecting = false,
   isSelected = () => false,
   canSelect = () => false,
@@ -62,6 +67,7 @@ export function DesktopLedgerTable({
                 onStartEdit={onStartEdit}
                 onDeleteClick={onDeleteClick}
                 onEditBlocked={onEditBlocked}
+                onDuplicate={onDuplicate}
                 isSelecting={isSelecting}
                 isSelected={isSelected}
                 canSelect={canSelect}
@@ -131,7 +137,7 @@ export function DesktopLedgerTable({
             {!hasRows && (
               <tr className="list-row-enter">
                 <td colSpan={isSelecting ? 8 : 7} className="p-8 text-center text-muted-foreground text-sm">
-                  {serverIsFetching ? 'Loading…' : 'No transactions match your search or filter criteria.'}
+                  {serverIsFetching ? 'Loading…' : <LedgerEmptyState isFiltered={hasAnyFilter} onResetFilters={onResetFilters} onAddTransaction={onAddTransaction} />}
                 </td>
               </tr>
             )}

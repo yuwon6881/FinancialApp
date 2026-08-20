@@ -245,6 +245,22 @@ export function clearCachedInvestmentPages(): void {
   }
 }
 
+/**
+ * Server-derived caches only. The outbox (`pendingOperations`, `pendingTransactions`),
+ * failed ops and drafts are user data that has not reached the server, so a recovery
+ * path must never take them -- see clearLocalFinancialData for the deliberate full wipe.
+ */
+export function clearDisposableFinancialCaches(): void {
+  for (const key of DISPOSABLE_CACHE_KEYS) {
+    try {
+      removeCachedKey(key)
+    } catch {
+      // Recovery is best-effort. One unavailable key must not leave the rest stale.
+    }
+  }
+  clearCachedInvestmentPages()
+}
+
 export function clearLocalFinancialData(): void {
   void import('./draftTransactionDocuments').then(({ clearDraftTransactionDocuments }) =>
     clearDraftTransactionDocuments())

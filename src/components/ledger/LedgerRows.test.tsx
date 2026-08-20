@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { LedgerAccount, Transaction } from '../../types'
 import { DesktopLedgerRow } from './LedgerRows'
@@ -26,6 +26,7 @@ const props = (tx: Transaction) => ({
   onStartEdit: vi.fn(),
   onDeleteClick: vi.fn(),
   onEditBlocked: vi.fn(),
+  onDuplicate: vi.fn(),
   isSelecting: false,
   isSelected: () => false,
   canSelect: () => true,
@@ -56,6 +57,26 @@ describe('LedgerRows emergency-fund intent chip', () => {
     )
 
     expect(screen.getByText(label)).toBeTruthy()
+  })
+})
+
+describe('LedgerRows duplicate action', () => {
+  it('duplicates an ordinary transaction', () => {
+    const rowProps = props(transaction('NotRequired'))
+    render(<table><tbody><DesktopLedgerRow {...rowProps} /></tbody></table>)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicate' }))
+
+    expect(rowProps.onDuplicate).toHaveBeenCalledWith(rowProps.transaction)
+  })
+
+  it.each([
+    ['split row', { id: 'tx-split-1' }],
+    ['commitment completion', { savingsGoalId: 4 }],
+    ['transfer', { ledgerCategory: 'Transfer:Essentials:Rewards' }],
+  ])('hides Duplicate for a %s', (_label, changes) => {
+    render(<table><tbody><DesktopLedgerRow {...props({ ...transaction('NotRequired'), ...changes })} /></tbody></table>)
+    expect(screen.queryByRole('button', { name: 'Duplicate' })).toBeNull()
   })
 })
 

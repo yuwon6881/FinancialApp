@@ -10,6 +10,7 @@ import { Loader2, X, Zap } from 'lucide-react'
 const LoginView = lazy(() => import('./components/LoginView').then(m => ({ default: m.LoginView })))
 const AccountCoverageGate = lazy(() => import('./components/AccountCoverageGate').then(m => ({ default: m.AccountCoverageGate })))
 import { ToastViewport } from './components/ui/ToastViewport'
+import { AlertBanner } from './components/ui/AlertBanner'
 import { Skeleton } from './components/ui/Skeleton'
 import type { PageSkeletonVariant } from './components/ui/CycleSkeleton'
 import { useVisualViewportVars } from './lib/useVisualViewportVars'
@@ -244,6 +245,7 @@ function App() {
     setHasShownModalThisSession,
     hasShownModalThisSession,
     setShowLoginModal: dialogs.setShowLoginModal,
+    setShowFailedOpsModal: dialogs.setShowFailedOpsModal,
   })
   useEffect(() => {
     persistSelectedPeriodRef.current = (month, year) => {
@@ -449,6 +451,7 @@ function App() {
   const {
     currentCycleMonth,
     currentCyclePeriod,
+    isCurrentCycle,
     isCurrentCycleLoading,
     todayDashboardData,
   } = useCurrentCycleDashboard({
@@ -744,8 +747,11 @@ function App() {
         </Suspense>
 
         {financial.error && (
-          <div className="bg-destructive/15 border-b border-destructive/30 text-destructive px-4 py-2 text-xs flex items-center justify-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-destructive animate-pulse select-none" />
+          <AlertBanner
+            variant={financial.error.startsWith('Sync pending:') ? 'info' : 'error'}
+            className="justify-center rounded-none border-x-0 border-t-0 px-4 py-2"
+          >
+            <div className="flex items-center justify-center gap-2">
             <span className="select-none">{financial.error}</span>
             <Button variant="unstyled"
               type="button"
@@ -755,7 +761,8 @@ function App() {
             >
               {financial.isBackgroundSyncing ? 'Retrying…' : 'Retry'}
             </Button>
-          </div>
+            </div>
+          </AlertBanner>
         )}
 
         <AuthenticatedView
@@ -781,6 +788,7 @@ function App() {
           currentPendingNotificationsCount={currentPendingNotifications.length}
           currentCycleMonth={currentCycleMonth}
           currentCycleYear={currentCyclePeriod.year}
+          isCurrentCycle={isCurrentCycle}
           isCurrentCycleLoading={isCurrentCycleLoading}
           autoOpenInvestmentAdd={autoOpenInvestmentAdd}
           setAutoOpenInvestmentAdd={setAutoOpenInvestmentAdd}

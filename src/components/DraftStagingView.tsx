@@ -72,6 +72,7 @@ export function DraftStagingView({
   ), [categories, draftTransactions])
   const firstInvalidDraft = draftTransactions.find(draft => (issuesById.get(draft.id)?.length ?? 0) > 0)
   const invalidCount = draftTransactions.filter(draft => (issuesById.get(draft.id)?.length ?? 0) > 0).length
+  const draftTotal = useMemo(() => draftTransactions.reduce((sum, draft) => sum + Math.abs(draft.amount), 0), [draftTransactions])
 
   useEffect(() => {
     let active = true
@@ -133,6 +134,17 @@ export function DraftStagingView({
         <div className="flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">
           <span>{documentLoadError}</span>
           <Button variant="outline" size="sm" onClick={() => setAttachmentRevision(revision => revision + 1)}>Retry</Button>
+        </div>
+      )}
+
+      {draftTransactions.length === 0 && (
+        <div role="status" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-8 text-center">
+          <p className="text-sm font-bold text-foreground">No draft transactions</p>
+          <p className="mt-1 text-xs text-muted-foreground">Post a new transaction now, or return to your Ledger.</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {onAddAnother && <Button onClick={onAddAnother} disabled={hideSensitive}>Post transaction</Button>}
+            <Button variant="outline" onClick={onCancel}>Back to Ledger</Button>
+          </div>
         </div>
       )}
 
@@ -205,23 +217,24 @@ export function DraftStagingView({
         })}
       </div>
 
-      {onAddAnother && (
+      {draftTransactions.length > 0 && onAddAnother && (
         <Button variant="outline" onClick={onAddAnother} disabled={hideSensitive} className="min-h-11 w-full gap-2 rounded-2xl border-dashed border-primary/40 bg-primary/5 text-accent-ink hover:bg-primary/10">
           <Plus className="size-4" />Add Another Transaction
         </Button>
       )}
 
-      <div className="sticky bottom-[calc(76px+env(safe-area-inset-bottom,0px))] z-20 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-[var(--app-shadow-elevated)] backdrop-blur lg:bottom-4">
+      {draftTransactions.length > 0 && <div className="sticky bottom-[calc(76px+env(safe-area-inset-bottom,0px))] z-20 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-[var(--app-shadow-elevated)] backdrop-blur lg:bottom-4">
         <Button
           onClick={() => void handlePrimaryAction()}
+          aria-label={firstInvalidDraft ? undefined : `Add ${draftTransactions.length} to Ledger`}
           disabled={hideSensitive || Boolean(documentLoadError) || isSubmitting}
           className="min-h-11 w-full rounded-xl"
         >
           {firstInvalidDraft
             ? invalidCount === 1 ? 'Review Draft' : 'Review First Draft'
-            : isSubmitting ? 'Adding to Ledger…' : `Add ${draftTransactions.length} to Ledger`}
+            : isSubmitting ? 'Adding to Ledger…' : <span className="flex items-center justify-center gap-2"><span>Add {draftTransactions.length} to Ledger</span><span aria-hidden="true">·</span>{hideSensitive ? <SensitiveMask /> : formatCurrencyVal(draftTotal, currency)}</span>}
         </Button>
-      </div>
+      </div>}
 
       <TransactionFormSheet
         ref={formRef}
