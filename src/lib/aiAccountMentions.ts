@@ -25,6 +25,12 @@ export interface AccountMentionQuery {
   query: string
 }
 
+export interface AccountMentionTextPart {
+  text: string
+  accountId?: string
+  accountName?: string
+}
+
 const MAX_MENTION_QUERY_LENGTH = 40
 export const MAX_AI_ACCOUNT_MENTIONS = 6
 
@@ -102,23 +108,55 @@ export function applyAccountMention(
 }
 
 /**
+ * Split visible message text into ordinary runs and exact live-account references. Keeping this
+ * pure lets both the composer highlight layer and sent chat bubbles use the same boundaries as the
+ * ids submitted to the server. Partial names and email addresses intentionally remain plain text.
+ */
+export function tokenizeAccountMentions(text: string, accounts: LedgerAccount[]): AccountMentionTextPart[] {
+  const live = [...liveAccounts(accounts)]
+    .filter(account => account.name.length > 0)
+    .sort((a, b) => b.name.length - a.name.length)
+  if (!text || live.length === 0) return text ? [{ text }] : []
+
+  const parts: AccountMentionTextPart[] = []
+  let plainStart = 0
+  let index = 0
+  while (index < text.length) {
+    if (text[index] !== '@' || (index > 0 && !/\s/.test(text[index - 1]))) {
+      index += 1
+      continue
+    }
+    const tail = text.slice(index + 1)
+    const account = live.find(candidate => {
+      if (!tail.toLowerCase().startsWith(candidate.name.toLowerCase())) return false
+      const after = tail[candidate.name.length]
+      return after === undefined || /[\s.,!?;:)\]}]/.test(after)
+    })
+    if (!account) {
+      index += 1
+      continue
+    }
+    if (plainStart < index) parts.push({ text: text.slice(plainStart, index) })
+    const end = index + account.name.length + 1
+    parts.push({ text: text.slice(index, end), accountId: account.id, accountName: account.name })
+    index = end
+    plainStart = end
+  }
+  if (plainStart < text.length) parts.push({ text: text.slice(plainStart) })
+  return parts.length > 0 ? parts : [{ text }]
+}
+
+/**
  * The accounts a message mentions, in the order they appear -- which is what makes "from @CIMB to
  * @RYT" directional. The longest matching account name wins so "@Maybank Savings" is not read as
  * "@Maybank".
  */
 export function resolveAccountMentions(text: string, accounts: LedgerAccount[]): AiAccountMention[] {
-  const live = [...liveAccounts(accounts)].sort((a, b) => b.name.length - a.name.length)
   const mentions: AiAccountMention[] = []
-  for (let index = 0; index < text.length; index += 1) {
-    if (text[index] !== '@') continue
-    const tail = text.slice(index + 1)
-    const account = live.find(candidate =>
-      candidate.name.length > 0 && tail.toLowerCase().startsWith(candidate.name.toLowerCase()))
-    if (!account) continue
-    if (!mentions.some(existing => existing.accountId === account.id)) {
-      mentions.push({ token: account.name, accountId: account.id })
+  for (const part of tokenizeAccountMentions(text, accounts)) {
+    if (part.accountId && part.accountName && !mentions.some(existing => existing.accountId === part.accountId)) {
+      mentions.push({ token: part.accountName, accountId: part.accountId })
     }
-    index += account.name.length
     if (mentions.length >= MAX_AI_ACCOUNT_MENTIONS) break
   }
   return mentions

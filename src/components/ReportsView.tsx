@@ -266,6 +266,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         transactions={transactions}
         recurringPayments={view.activeRecurring}
         formatNet={view.formatCompactSensitive}
+        hideSensitive={hideSensitive}
         onSelectDate={date => onNavigateToLedger?.({ date })}
       />
 

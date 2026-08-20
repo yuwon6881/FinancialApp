@@ -30,6 +30,7 @@ describe('CycleCalendar current-day edge highlight', () => {
     const amount = screen.getByText('$100')
     expect(amount.className).toContain('text-[7px]')
     expect(amount.className).toContain('md:text-[10px]')
+    expect(screen.getByLabelText('Cash activity heat scale')).toBeTruthy()
   })
 
   it('keeps the current-day ring inside the card at an edge column', () => {
@@ -45,9 +46,28 @@ describe('CycleCalendar current-day edge highlight', () => {
       />,
     )
 
-    const today = screen.getByTitle('Jul 25')
+    const today = screen.getByTitle('Jul 25: No cash activity.')
     expect(today.className).toContain('ring-inset')
     expect(today.className).toContain('ring-blue-500')
     expect(container.querySelector('[aria-label="Cycle days"]')?.parentElement?.className).toContain('px-0.5')
+  })
+
+  it('hides activity intensity with sensitive amounts', () => {
+    render(
+      <CycleCalendar
+        selectedMonth="Jul"
+        selectedYear={2026}
+        cycleDay={1}
+        cycleLabel="Jul 1 ~ Jul 31, 2026"
+        transactions={[{ id: 'income', date: '2026-07-01', description: 'Income', category: 'Salary', ledgerCategory: 'Income', amount: 100 }]}
+        recurringPayments={[]}
+        formatNet={() => '••••'}
+        hideSensitive
+      />,
+    )
+
+    expect(screen.getByText('Activity shading is hidden while amounts are hidden.')).toBeTruthy()
+    expect(screen.queryByLabelText('Cash activity heat scale')).toBeNull()
+    expect((screen.getByLabelText('Jul 1. Cash activity hidden.') as HTMLElement).style.backgroundColor).toBe('')
   })
 })

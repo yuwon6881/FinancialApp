@@ -756,6 +756,22 @@ describe('AiAssistantPanel', () => {
       expect(chatWithAi).not.toHaveBeenCalled()
       expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).value).toBe('transfer 50 from @RYT ')
       expect(screen.queryByRole('listbox', { name: 'Ledger accounts' })).toBeNull()
+      const composerToken = screen.getByTestId('ai-composer-highlight').querySelector('[data-account-mention="acct-ryt"]')
+      expect(composerToken?.textContent).toBe('@RYT')
+      expect(composerToken?.className).toContain('text-accent-ink')
+    })
+
+    it('keeps recognized account references styled after the message is sent', async () => {
+      chatWithAi.mockResolvedValue(reply({ reply: 'I will use **@RYT** for this reviewed draft.' }))
+      renderWithAccounts()
+
+      await typeAndSend('use @RYT for this')
+
+      await waitFor(() => {
+        const tokens = document.querySelectorAll('[data-account-mention="acct-ryt"]')
+        expect(tokens.length).toBeGreaterThanOrEqual(2)
+        expect(Array.from(tokens).some(token => token.closest('strong'))).toBe(true)
+      })
     })
 
     it('closes the menu when Enter picks an account whose name prefixes another account, allowing the next Enter to send', async () => {

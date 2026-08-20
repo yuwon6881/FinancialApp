@@ -1,5 +1,5 @@
 import { Textarea } from './ui/Textarea'
-import { Fragment, useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Send, Sparkles, X, RotateCcw, SquarePen, Square } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
 import { Button } from './ui/Button'
@@ -9,6 +9,7 @@ import type { AppTab, LedgerAccount } from '../types'
 import { useAiConversation, type AiInvocationRequest } from './useAiConversation'
 import { AccountMentionMenu } from './ai/AccountMentionMenu'
 import { useAccountMentionComposer } from './ai/useAccountMentionComposer'
+import { AccountMentionText, AiMessageContent } from './ai/AiMessageContent'
 import { motionSafeScrollBehavior } from '../lib/motionPreference'
 
 interface AiAssistantPanelProps {
@@ -56,22 +57,6 @@ const SURFACE_SUGGESTED_PROMPTS: Partial<Record<AppTab, string[]>> = {
   wishlist: ['Explain my plan', 'Which rewards can I afford now?', 'How are my commitments pacing?'],
 }
 
-// AI replies commonly use Markdown emphasis. Render the supported safe subset as React
-// nodes so the notation is useful without evaluating arbitrary HTML from the provider.
-const AI_MARKDOWN_TOKEN = /(\*\*[^*\r\n]+?\*\*|__[^_\r\n]+?__)/g
-
-const AiMessageContent: React.FC<{ content: string }> = ({ content }) => (
-  <>
-    {content.split(AI_MARKDOWN_TOKEN).map((part, index) => {
-      const isBold = (part.startsWith('**') && part.endsWith('**'))
-        || (part.startsWith('__') && part.endsWith('__'))
-      return isBold
-        ? <strong key={index}>{part.slice(2, -2)}</strong>
-        : <Fragment key={index}>{part}</Fragment>
-    })}
-  </>
-)
-
 const pickSuggestedPrompts = (sensitiveMode: boolean, surface?: AppTab) => {
   const prompts = [...(sensitiveMode ? SENSITIVE_SUGGESTED_PROMPTS : (surface ? SURFACE_SUGGESTED_PROMPTS[surface] : undefined) ?? SUGGESTED_PROMPTS)]
   for (let index = prompts.length - 1; index > 0; index -= 1) {
@@ -100,6 +85,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
   }), [hasPendingLocalChanges, surface])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const composerHighlightRef = useRef<HTMLDivElement>(null)
   const {
     messages,
     input,
@@ -150,6 +136,12 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`
     el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden'
+  }
+
+  const syncComposerScroll = () => {
+    if (!textareaRef.current || !composerHighlightRef.current) return
+    composerHighlightRef.current.scrollTop = textareaRef.current.scrollTop
+    composerHighlightRef.current.scrollLeft = textareaRef.current.scrollLeft
   }
 
   useEffect(() => {
@@ -338,7 +330,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
                         : 'border border-border/50 bg-card text-foreground shadow-xs'
                     }`}
                   >
-                    {message.role === 'assistant' ? <AiMessageContent content={message.content} /> : message.content}
+                    <AiMessageContent content={message.content} accounts={accounts} role={message.role} />
                   </div>
                   {message.role === 'assistant' && index === messages.length - 1 && lastFailedTurn && (
                     <Button variant="unstyled"
@@ -368,33 +360,45 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               onHoverIndex={mentions.setActiveIndex}
             />
           )}
-          <Textarea
-            ref={textareaRef}
-            aria-label="Ask AI"
-            role="combobox"
-            aria-expanded={mentions.isOpen}
-            aria-controls={mentions.isOpen ? 'ai-account-mentions' : undefined}
-            aria-activedescendant={mentions.activeAccountId ? `ai-account-mention-${mentions.activeAccountId}` : undefined}
-            aria-autocomplete="list"
-            disabled={isOffline || isHydrating || isResetting}
-            value={input}
-            onChange={e => mentions.handleChange(e.target.value, e.target.selectionStart ?? e.target.value.length)}
-            onSelect={mentions.syncCaret}
-            onClick={mentions.syncCaret}
-            onKeyDown={e => {
-              // The picker owns the arrows and Enter only while it is open; every other moment
-              // they belong to the message being typed.
-              if (mentions.handleKeyDown(e)) return
-              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault()
-                void sendMessage()
-              }
-            }}
-            onKeyUp={mentions.syncCaret}
-            placeholder={isOffline ? 'Ask AI is offline' : isHydrating ? 'Loading conversation…' : 'Ask about your finances…'}
-            rows={1}
-            className="min-h-11 max-h-40 flex-1 resize-none rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-sm leading-6 outline-hidden focus:border-transparent focus:ring-0 focus:outline-hidden placeholder:text-muted-foreground"
-          />
+          <div className="relative min-w-0 flex-1">
+            <div
+              ref={composerHighlightRef}
+              data-testid="ai-composer-highlight"
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-px overflow-hidden whitespace-pre-wrap break-words px-3 py-2.5 text-sm leading-6 text-foreground"
+            >
+              <AccountMentionText content={input} accounts={accounts} style="composer" />
+              {input.endsWith('\n') && '\u200b'}
+            </div>
+            <Textarea
+              ref={textareaRef}
+              aria-label="Ask AI"
+              role="combobox"
+              aria-expanded={mentions.isOpen}
+              aria-controls={mentions.isOpen ? 'ai-account-mentions' : undefined}
+              aria-activedescendant={mentions.activeAccountId ? `ai-account-mention-${mentions.activeAccountId}` : undefined}
+              aria-autocomplete="list"
+              disabled={isOffline || isHydrating || isResetting}
+              value={input}
+              onChange={e => mentions.handleChange(e.target.value, e.target.selectionStart ?? e.target.value.length)}
+              onSelect={mentions.syncCaret}
+              onClick={mentions.syncCaret}
+              onScroll={syncComposerScroll}
+              onKeyDown={e => {
+                // The picker owns the arrows and Enter only while it is open; every other moment
+                // they belong to the message being typed.
+                if (mentions.handleKeyDown(e)) return
+                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault()
+                  void sendMessage()
+                }
+              }}
+              onKeyUp={mentions.syncCaret}
+              placeholder={isOffline ? 'Ask AI is offline' : isHydrating ? 'Loading conversation…' : 'Ask about your finances…'}
+              rows={1}
+              className="relative z-10 min-h-11 max-h-40 w-full resize-none rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-sm leading-6 text-transparent caret-foreground outline-hidden selection:bg-primary/25 focus:border-transparent focus:ring-0 focus:outline-hidden placeholder:text-muted-foreground"
+            />
+          </div>
           {/* While a turn is in flight the primary control becomes Stop, so a slow
               answer is never a dead end with a disabled button. */}
           <Button

@@ -18,6 +18,8 @@ export interface CycleCalendarDay {
   date: Date
   dateKey: string
   net?: number
+  activity: number
+  heatLevel: 0 | 1 | 2 | 3 | 4
   recurringNames: string[]
 }
 
@@ -34,9 +36,11 @@ export function buildCycleCalendar(options: {
   const endKey = formatCalendarDate(end)
 
   const netByDay = new Map<string, number>()
+  const activityByDay = new Map<string, number>()
   for (const transaction of options.transactions) {
     if (transaction.date < startKey || transaction.date > endKey || !isReportableCashMovement(transaction)) continue
     netByDay.set(transaction.date, (netByDay.get(transaction.date) || 0) + transaction.amount)
+    activityByDay.set(transaction.date, (activityByDay.get(transaction.date) || 0) + Math.abs(transaction.amount))
   }
   const recurringByDay = new Map<string, string[]>()
   for (const payment of options.recurringPayments) {
@@ -44,12 +48,24 @@ export function buildCycleCalendar(options: {
     recurringByDay.set(payment.dueDate, [...(recurringByDay.get(payment.dueDate) || []), payment.name])
   }
 
+  const busiestDay = Math.max(0, ...activityByDay.values())
   const days: CycleCalendarDay[] = []
   const cursor = new Date(start)
   while (cursor <= end) {
     const date = new Date(cursor)
     const dateKey = formatCalendarDate(date)
-    days.push({ date, dateKey, net: netByDay.get(dateKey), recurringNames: recurringByDay.get(dateKey) || [] })
+    const activity = activityByDay.get(dateKey) || 0
+    const heatLevel = activity === 0 || busiestDay === 0
+      ? 0
+      : Math.min(4, Math.max(1, Math.ceil((activity / busiestDay) * 4))) as 1 | 2 | 3 | 4
+    days.push({
+      date,
+      dateKey,
+      net: netByDay.get(dateKey),
+      activity,
+      heatLevel,
+      recurringNames: recurringByDay.get(dateKey) || [],
+    })
     cursor.setDate(cursor.getDate() + 1)
   }
   return { startDayOfWeek: start.getDay(), days }

@@ -202,7 +202,7 @@ describe('RecurringPaymentCards highlight-on-navigation', () => {
 
     const card = document.getElementById('recur-card-rp-1')!
     await vi.advanceTimersByTimeAsync(350)
-    expect(card.classList.contains('ring-2')).toBe(true)
+    expect(card.classList.contains('search-target-highlight')).toBe(true)
 
     await vi.advanceTimersByTimeAsync(2600)
     expect(onClearHighlight).toHaveBeenCalled()

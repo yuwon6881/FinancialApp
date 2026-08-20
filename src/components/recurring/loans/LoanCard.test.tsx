@@ -108,11 +108,11 @@ describe('LoanCard', () => {
       },
     }
     render(<LoanCard {...props(scheduledLoan)} />)
-    const schedule = screen.getByText('Payment history and planned schedule').closest('details')!
-    schedule.open = true
-    fireEvent(schedule, new Event('toggle', { bubbles: true }))
+    const schedule = screen.getByRole('button', { name: /Payment history and planned schedule/ })
+    fireEvent.click(schedule)
 
     expect(fetchLoanSchedule).toHaveBeenCalledWith('loan-card')
+    expect(schedule.getAttribute('aria-expanded')).toBe('true')
     expect(screen.getByRole('status').textContent).toContain('Loading full planned schedule')
     expect(screen.queryByText('Planned', { exact: true })).toBeNull()
   })

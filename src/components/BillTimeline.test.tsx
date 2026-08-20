@@ -166,4 +166,57 @@ describe('BillTimeline', () => {
     expect(screen.getAllByText('Paid').length).toBeGreaterThan(0)
     expect(screen.getByText('2026-08-29')).toBeTruthy()
   })
+
+  it('links timeline hover and keyboard focus to the matching description', () => {
+    render(
+      <BillTimeline
+        activeRecurringPayments={sampleActiveRecurring}
+        selectedMonth="Aug"
+        selectedYear={2026}
+        cycleDay={28}
+        currency="MYR"
+        hideSensitive={false}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Subscriptions Billing Timeline' }))
+    const node = screen.getByRole('button', { name: 'View subscriptions due on 2026-08-27' })
+    const descriptionId = node.getAttribute('aria-describedby')!
+    const description = document.getElementById(descriptionId)!
+
+    fireEvent.mouseEnter(node)
+    expect(description.dataset.highlighted).toBe('true')
+    expect(description.className).toContain('border-accent/60')
+
+    fireEvent.mouseLeave(node)
+    fireEvent.focus(node)
+    expect(description.dataset.highlighted).toBe('true')
+  })
+
+  it('keeps a twenty-date cycle readable with bounded descriptions and a scrollable rail', () => {
+    const manyBills = Array.from({ length: 20 }, (_, index): ActiveRecurringPayment => ({
+      ...sampleActiveRecurring[0],
+      id: `bill-${index}`,
+      recurringPaymentId: `rp-${index}`,
+      name: `Bill ${index + 1}`,
+      dueDate: `2026-08-${String(index + 1).padStart(2, '0')}`,
+      dueDay: index + 1,
+    }))
+    const { container } = render(
+      <BillTimeline
+        activeRecurringPayments={manyBills}
+        selectedMonth="Aug"
+        selectedYear={2026}
+        cycleDay={1}
+        currency="MYR"
+        hideSensitive={false}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Subscriptions Billing Timeline' }))
+
+    expect(screen.getByText(/The 20 dates stay readable/)).toBeTruthy()
+    expect(container.querySelector('.overflow-x-auto')).toBeTruthy()
+    expect(container.querySelector('.max-h-72.overflow-y-auto')).toBeTruthy()
+  })
 })

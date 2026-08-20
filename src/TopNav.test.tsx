@@ -231,4 +231,29 @@ describe('TopNav mobile primary navigation', () => {
     expect(screen.queryByText('Premium Account')).toBeNull()
     expect(screen.queryByRole('menuitem', { name: /commands/i })).toBeNull()
   })
+
+  it('uses the same plus symbol for every Quick Add action', () => {
+    render(
+      <TopNav
+        activeTab="dashboard"
+        onTabChange={vi.fn()}
+        onQuickAction={vi.fn()}
+        hideSensitive={false}
+        sensitivePreferenceStatus="resolved"
+        onToggleHideSensitive={vi.fn()}
+        onRetrySensitivePreference={vi.fn()}
+        onLogout={vi.fn()}
+        username="Test User"
+        pendingNotifications={[]}
+        onOpenNotifications={vi.fn()}
+        darkMode={false}
+        onToggleDarkMode={vi.fn()}
+      />,
+    )
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Quick Add' }), { button: 0 })
+    for (const label of ['Post Transaction', 'New Subscription', 'Add Reward']) {
+      expect(screen.getByRole('menuitem', { name: label }).querySelector('.lucide-plus')).toBeTruthy()
+    }
+  })
 })

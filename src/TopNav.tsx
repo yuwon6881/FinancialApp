@@ -27,7 +27,7 @@ import {
   TrendingUp,
   Search as SearchIcon,
 } from 'lucide-react'
-import { CommitmentIcon, RewardIcon } from './components/semanticIcons'
+import { CommitmentIcon } from './components/semanticIcons'
 import { triggerHaptic } from './lib/haptics'
 import { AppLogo } from './components/ui/AppLogo'
 import { mutationBusyLabel } from './components/ui/rowSyncState'
@@ -356,7 +356,7 @@ const TopNav: React.FC<TopNavProps> = ({
                   onSelect={() => onQuickAction?.('wishlist')}
                   className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
                 >
-                  Add Reward <RewardIcon className="size-3 text-pink-500" aria-hidden />
+                  Add Reward <Plus className="size-3 text-pink-500" aria-hidden />
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -242,6 +242,20 @@ const PanelSkeleton = ({ height = 'h-40' }: { height?: string }) => (
   </div>
 )
 
+const CycleCalendarSkeleton = () => (
+  <div className={`${panelClass} p-4 sm:p-6`}>
+    <div className="space-y-2">
+      <div className="flex items-center gap-2"><Skeleton className="h-5 w-28" /><Skeleton className="size-7 rounded-full" /></div>
+      <Skeleton className="h-3 w-40" />
+      <div className="flex items-center gap-1.5"><Skeleton className="h-3 w-16" />{[1, 2, 3, 4].map(level => <Skeleton key={level} className="size-3 rounded-sm" />)}<Skeleton className="h-3 w-20" /></div>
+    </div>
+    <div className="mt-4 grid grid-cols-7 gap-1 sm:gap-2">
+      {Array.from({ length: 7 }).map((_, index) => <Skeleton key={`weekday-${index}`} className="mx-auto h-3 w-7" />)}
+      {Array.from({ length: 35 }).map((_, index) => <Skeleton key={`day-${index}`} className="h-11 w-full rounded-lg sm:h-14 sm:rounded-xl md:h-16" />)}
+    </div>
+  </div>
+)
+
 export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: boolean }> = ({ variant, fullPage = false }) => {
   if (variant === 'dashboard') {
     return (
@@ -280,7 +294,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
           <PanelSkeleton height="h-64" />
           <PanelSkeleton height="h-64" />
         </div>
-        <PanelSkeleton height="h-72" />
+        <CycleCalendarSkeleton />
       </div>
     )
   }

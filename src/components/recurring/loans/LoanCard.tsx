@@ -86,29 +86,42 @@ export function LoanCard({
   const [isLoanDetailsOpen, setIsLoanDetailsOpen] = useState(!isMobile)
   const [loadedSchedule, setLoadedSchedule] = useState<{ key: string; rows: LoanScheduleEntry[] } | null>(null)
   const [scheduleLoadingKey, setScheduleLoadingKey] = useState<string | null>(null)
-  const [scheduleError, setScheduleError] = useState(false)
+  const [scheduleErrorKey, setScheduleErrorKey] = useState<string | null>(null)
   const loadSchedule = useCallback(async () => {
     if (loan.isPendingSync || scheduleUnavailable) return
     const key = scheduleKey
     setScheduleLoadingKey(key)
-    setScheduleError(false)
+    setScheduleErrorKey(null)
     try {
       const rows = await fetchLoanSchedule(loan.id)
       setLoadedSchedule({ key, rows })
     } catch {
-      setScheduleError(true)
+      setScheduleErrorKey(key)
     } finally {
       setScheduleLoadingKey(current => current === key ? null : current)
     }
   }, [loan.id, loan.isPendingSync, scheduleKey, scheduleUnavailable])
 
-  const handleScheduleToggle = useCallback((event: React.ToggleEvent<HTMLDetailsElement>) => {
-    const open = event.currentTarget.open
-    setIsScheduleOpen(open)
-    if (open && !loan.isPendingSync && !scheduleUnavailable && loadedSchedule?.key !== scheduleKey && scheduleLoadingKey !== scheduleKey) {
+  const handleScheduleToggle = useCallback(() => {
+    if (isScheduleOpen) {
+      setIsScheduleOpen(false)
+      return
+    }
+
+    const needsFullSchedule = !loan.isPendingSync
+      && !scheduleUnavailable
+      && loadedSchedule?.key !== scheduleKey
+      && scheduleLoadingKey !== scheduleKey
+    if (needsFullSchedule) {
+      // Native <details> reveals its children before React receives `toggle`, which allowed the
+      // six-row list preview to paint for a frame before this loader. A controlled disclosure
+      // commits open + loading together, so stale preview rows can never become visible first.
+      setScheduleLoadingKey(scheduleKey)
+      setScheduleErrorKey(null)
       void loadSchedule()
     }
-  }, [loadSchedule, loadedSchedule?.key, loan.isPendingSync, scheduleKey, scheduleLoadingKey, scheduleUnavailable])
+    setIsScheduleOpen(true)
+  }, [isScheduleOpen, loadSchedule, loadedSchedule?.key, loan.isPendingSync, scheduleKey, scheduleLoadingKey, scheduleUnavailable])
 
   useEffect(() => {
     if (!isScheduleOpen || loan.isPendingSync || scheduleUnavailable || loadedSchedule?.key === scheduleKey || scheduleLoadingKey === scheduleKey) return
@@ -205,24 +218,33 @@ export function LoanCard({
         </div>
       </details>
 
-      <details className="group/schedule mt-3 rounded-xl border border-border/50 bg-background/40 p-3 sm:p-3.5" onToggle={handleScheduleToggle}>
-        <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-xs font-bold text-foreground transition-colors hover:text-accent-ink">
+      <div className="mt-3 rounded-xl border border-border/50 bg-background/40 p-3 sm:p-3.5">
+        <Button
+          variant="unstyled"
+          type="button"
+          aria-expanded={isScheduleOpen}
+          aria-controls={`loan-schedule-${loan.id}`}
+          onClick={handleScheduleToggle}
+          className="flex min-h-11 w-full cursor-pointer select-none items-center justify-between gap-2 rounded-lg text-left text-xs font-bold text-foreground transition-colors hover:text-accent-ink sm:min-h-0"
+        >
           <div className="flex items-center gap-2">
             <span>Payment history and planned schedule</span>
             <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
               {actualRows.length + scheduleRows.length}
             </span>
           </div>
-          <ChevronDown className="size-3.5 text-muted-foreground transition-transform group-open/schedule:rotate-180" aria-hidden />
-        </summary>
-        {scheduleLoadingKey === scheduleKey ? (
-          <div className="mt-3 flex min-h-28 items-center justify-center gap-2 rounded-lg border border-border/40 bg-card/40 text-xs font-semibold text-muted-foreground" role="status">
-            <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
-            Loading full planned schedule…
-          </div>
-        ) : (
-          <>
-            {scheduleError && (
+          <ChevronDown className={`size-3.5 text-muted-foreground transition-transform ${isScheduleOpen ? 'rotate-180' : ''}`} aria-hidden />
+        </Button>
+        {isScheduleOpen && (
+          <div id={`loan-schedule-${loan.id}`}>
+            {scheduleLoadingKey === scheduleKey ? (
+              <div className="mt-3 flex min-h-28 items-center justify-center gap-2 rounded-lg border border-border/40 bg-card/40 text-xs font-semibold text-muted-foreground" role="status">
+                <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
+                Loading full planned schedule…
+              </div>
+            ) : (
+              <>
+            {scheduleErrorKey === scheduleKey && (
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <span>The full planned schedule could not be loaded.</span>
                 <Button variant="ghost" size="sm" onClick={() => void loadSchedule()}>Retry</Button>
@@ -297,9 +319,11 @@ export function LoanCard({
           </table>
             </div>
             <p className="mt-2.5 text-[11px] text-muted-foreground">Amounts in {currency}. Schedule follows original bill cadence.</p>
-          </>
+              </>
+            )}
+          </div>
         )}
-      </details>
+      </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between border-t border-border/30 pt-4 gap-2">
         <div className="flex items-center gap-2">

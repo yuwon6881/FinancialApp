@@ -39,6 +39,8 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   const [isExpanded, setIsExpanded] = useState(false)
   const [selectedBill, setSelectedBill] = useState<ActiveRecurringPayment | null>(null)
   const [selectedNode, setSelectedNode] = useState<BillTimelineNode | null>(null)
+  const [highlightedNodeDate, setHighlightedNodeDate] = useState<string | null>(null)
+  const timelineId = React.useId().replace(/:/g, '')
 
   const {
     startTime,
@@ -60,6 +62,9 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   }), [activeRecurringPayments, allPayments, transactions, selectedMonth, selectedYear, cycleDay, cycleOffset])
 
   const displayTitle = title || (cycleOffset === 1 ? 'Upcoming Next Cycle Subscriptions' : 'Subscriptions Billing Timeline')
+  const denseTimeline = timelineNodes.length > 12
+  const cycleDays = Math.max(1, Math.ceil(durationMs / 86_400_000) + 1)
+  const denseTimelineMinWidth = denseTimeline ? Math.max(760, cycleDays * 36) : undefined
   const formatCurrency = (value: number) => formatCurrencyVal(value, currency)
   const formatSensitive = (value: number) =>
     hideSensitive ? <SensitiveMask /> : <span>{formatCurrency(value)}</span>
@@ -210,10 +215,11 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
           below, so bills one day apart never paint labels on top of each other. */}
       {timelineNodes.length > 0 && (
         <div className="hidden space-y-4 rounded-2xl border border-border/40 bg-muted/10 p-5 select-none sm:block">
-          <div className="relative px-3 pt-7 pb-3">
-            <span className="absolute left-3 top-0 text-[10px] font-bold text-muted-foreground">{startLabel}</span>
-            <span className="absolute right-3 top-0 text-[10px] font-bold text-muted-foreground">{endLabel}</span>
-            <div className="relative h-1.5 rounded-full bg-muted">
+          <div className="overflow-x-auto pb-2">
+            <div className="relative px-3 pt-7 pb-3" style={{ minWidth: denseTimelineMinWidth }}>
+              <span className="absolute left-3 top-0 text-[10px] font-bold text-muted-foreground">{startLabel}</span>
+              <span className="absolute right-3 top-0 text-[10px] font-bold text-muted-foreground">{endLabel}</span>
+              <div className="relative h-1.5 rounded-full bg-muted">
               {(() => {
                 const todayTime = new Date().getTime()
                 if (todayTime < startTime || todayTime > endTime) return null
@@ -233,25 +239,39 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                       ? 'bg-slate-400 ring-slate-400/20'
                       : 'bg-amber-500 ring-amber-500/20'
                 const labelText = node.bills.length === 1 ? node.bills[0].name : `${node.bills.length} bills`
+                const isHighlighted = highlightedNodeDate === node.dueDate
                 return (
                   <Button
                     variant="unstyled"
                     key={node.dueDate}
                     type="button"
                     onClick={() => handleNodeClick(node)}
+                    onMouseEnter={() => setHighlightedNodeDate(node.dueDate)}
+                    onMouseLeave={() => setHighlightedNodeDate(null)}
+                    onFocus={() => setHighlightedNodeDate(node.dueDate)}
+                    onBlur={() => setHighlightedNodeDate(null)}
                     aria-label={`View subscriptions due on ${node.dueDate}`}
+                    aria-describedby={`${timelineId}-description-${node.dueDate}`}
                     title={`${node.dueDate}: ${labelText}`}
                     style={{ left: `${node.percent}%` }}
-                    className={`absolute top-1/2 z-10 flex size-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full p-0 ring-4 transition-transform hover:scale-125 focus-visible:scale-125 ${dotColor}`}
+                    className={`absolute top-1/2 z-10 flex size-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full p-0 ring-4 transition-[transform,opacity,box-shadow] hover:scale-125 focus-visible:scale-125 ${dotColor} ${
+                      isHighlighted ? 'scale-125 shadow-lg' : highlightedNodeDate ? 'opacity-45' : ''
+                    }`}
                   >
                     {node.bills.length > 1 && <span className="text-[8px] font-black leading-none text-on-vivid">{node.bills.length}</span>}
                   </Button>
                 )
               })}
+              </div>
             </div>
           </div>
 
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          <p className="text-[10px] font-medium text-muted-foreground">
+            Hover or focus a dot to find its matching bill below. Select either one for details.
+            {denseTimeline ? ` The ${timelineNodes.length} dates stay readable in a horizontally scrollable timeline and a compact list.` : ''}
+          </p>
+
+          <div className={`grid gap-2 md:grid-cols-2 xl:grid-cols-3 ${denseTimeline ? 'max-h-72 overflow-y-auto pr-1' : ''}`}>
             {timelineNodes.map(node => {
               const date = new Date(node.dueDate)
               const nameLabel = node.bills.length === 1
@@ -264,13 +284,24 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               const anyPartiallyPaid = node.bills.some(bill => bill.status === 'PartiallyPaid')
               const allDiscarded = node.bills.every(bill => bill.status === 'Discarded')
               const dotColor = allPaid ? 'bg-emerald-500' : anyPartiallyPaid ? 'bg-blue-500' : allDiscarded ? 'bg-slate-400' : 'bg-amber-500'
+              const isHighlighted = highlightedNodeDate === node.dueDate
               return (
                 <Button
                   variant="unstyled"
                   key={`key-${node.dueDate}`}
                   type="button"
                   onClick={() => handleNodeClick(node)}
-                  className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border/45 bg-card/60 p-2.5 text-left transition-colors hover:bg-muted/35"
+                  onMouseEnter={() => setHighlightedNodeDate(node.dueDate)}
+                  onMouseLeave={() => setHighlightedNodeDate(null)}
+                  onFocus={() => setHighlightedNodeDate(node.dueDate)}
+                  onBlur={() => setHighlightedNodeDate(null)}
+                  id={`${timelineId}-description-${node.dueDate}`}
+                  data-highlighted={isHighlighted || undefined}
+                  className={`flex min-w-0 items-center gap-2.5 rounded-xl border bg-card/60 p-2.5 text-left transition-[background-color,border-color,box-shadow,opacity] hover:bg-muted/35 ${
+                    isHighlighted
+                      ? 'border-accent/60 bg-accent/10 shadow-sm'
+                      : highlightedNodeDate ? 'border-border/35 opacity-55' : 'border-border/45'
+                  }`}
                 >
                   <span className={`size-2.5 shrink-0 rounded-full ${dotColor}`} />
                   <span className="min-w-0 flex-1">

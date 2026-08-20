@@ -5,6 +5,7 @@ import {
   isAccountMentionComplete,
   matchAccountsForMention,
   resolveAccountMentions,
+  tokenizeAccountMentions,
 } from './aiAccountMentions'
 import type { LedgerAccount } from '../types'
 
@@ -99,6 +100,24 @@ describe('resolveAccountMentions', () => {
 
   it('reports each account once even when named twice', () => {
     expect(resolveAccountMentions('@CIMB then @CIMB again', accounts)).toHaveLength(1)
+  })
+
+  it('does not resolve an account prefix inside a longer token', () => {
+    expect(resolveAccountMentions('@CIMB-extra and me@CIMB', accounts)).toEqual([])
+  })
+})
+
+describe('tokenizeAccountMentions', () => {
+  it('preserves text while identifying repeated exact account references for presentation', () => {
+    expect(tokenizeAccountMentions('Move from @CIMB to @RYT, then @CIMB.', accounts)).toEqual([
+      { text: 'Move from ' },
+      { text: '@CIMB', accountId: 'acct-cimb', accountName: 'CIMB' },
+      { text: ' to ' },
+      { text: '@RYT', accountId: 'acct-ryt', accountName: 'RYT' },
+      { text: ', then ' },
+      { text: '@CIMB', accountId: 'acct-cimb', accountName: 'CIMB' },
+      { text: '.' },
+    ])
   })
 })
 

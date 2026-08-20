@@ -17,7 +17,28 @@ describe('buildCycleCalendar', () => {
 
     expect(result.days[0].dateKey).toBe('2026-02-28')
     expect(result.days[0].net).toBe(100)
+    expect(result.days[0].activity).toBe(100)
+    expect(result.days[0].heatLevel).toBe(4)
     expect(result.days.at(-1)?.dateKey).toBe('2026-03-30')
+  })
+
+  it('grades reportable daily cash activity relative to the busiest day', () => {
+    const result = buildCycleCalendar({
+      selectedMonth: 'Jul', selectedYear: 2026, cycleDay: 1, recurringPayments: [],
+      transactions: [
+        { id: '1', date: '2026-07-01', description: 'Small purchase', category: 'Food', ledgerCategory: 'Essentials', amount: -25 },
+        { id: '2', date: '2026-07-02', description: 'Purchase', category: 'Food', ledgerCategory: 'Essentials', amount: -50 },
+        { id: '3', date: '2026-07-03', description: 'Income', category: 'Salary', ledgerCategory: 'Income', amount: 100 },
+        { id: '4', date: '2026-07-03', description: 'Groceries', category: 'Food', ledgerCategory: 'Essentials', amount: -100 },
+      ],
+    })
+
+    expect(result.days.slice(0, 4).map(day => ({ activity: day.activity, heatLevel: day.heatLevel }))).toEqual([
+      { activity: 25, heatLevel: 1 },
+      { activity: 50, heatLevel: 1 },
+      { activity: 200, heatLevel: 4 },
+      { activity: 0, heatLevel: 0 },
+    ])
   })
 
   it('groups recurring-payment names by due date', () => {

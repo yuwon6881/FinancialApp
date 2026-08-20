@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { motionSafeScrollBehavior } from '../../lib/motionPreference'
 
-const HIGHLIGHT_CLASSES = ['ring-2', 'ring-blue-500/60', 'ring-offset-2', 'ring-offset-background', 'bg-blue-500/[0.06]', 'shadow-lg']
+const HIGHLIGHT_CLASS = 'search-target-highlight'
 
 /**
  * Scrolls a just-navigated-to element into view and flashes the shared highlight ring.
@@ -32,10 +32,13 @@ export function useHighlightedElement(elementId: string | null, onClear?: () => 
       // Allow destination view layout and un-highlighted base styles to paint first,
       // so scrollIntoView and CSS transition-all smoothly animate the highlight in.
       applyTimer = setTimeout(() => {
-        el.scrollIntoView({ behavior: motionSafeScrollBehavior(), block: 'center' })
-        el.classList.add(...HIGHLIGHT_CLASSES)
+        // `inline: center` is required for records in Rewards/Commitments rails. The default
+        // nearest-edge behavior was browser-dependent and could leave a searched card clipped at
+        // the far end even though the page itself had scrolled vertically to the section.
+        el.scrollIntoView({ behavior: motionSafeScrollBehavior(), block: 'center', inline: 'center' })
+        el.classList.add(HIGHLIGHT_CLASS)
         clearTimer = setTimeout(() => {
-          el.classList.remove(...HIGHLIGHT_CLASSES)
+          el.classList.remove(HIGHLIGHT_CLASS)
           onClearRef.current?.()
         }, 2600)
       }, 100)
@@ -65,7 +68,7 @@ export function useHighlightedElement(elementId: string | null, onClear?: () => 
       if (applyTimer) clearTimeout(applyTimer)
       if (clearTimer) clearTimeout(clearTimer)
       if (applied) {
-        document.getElementById(elementId)?.classList.remove(...HIGHLIGHT_CLASSES)
+        document.getElementById(elementId)?.classList.remove(HIGHLIGHT_CLASS)
       }
     }
   }, [elementId])
