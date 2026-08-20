@@ -149,7 +149,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
       <td className="p-4 text-center whitespace-nowrap">
         <div className="flex items-center justify-center gap-2">
           <Button variant="ghost" size="sm" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.hideSensitive)}>Edit</Button>
-          {!editBlocked && !transfer && props.onDuplicate && <Button variant="ghost" size="sm" onClick={() => props.onDuplicate?.(transaction)} disabled={props.isDeleting || props.hideSensitive} className="border border-primary/30 text-primary hover:bg-primary/10">Duplicate</Button>}
+          {!editBlocked && !transfer && props.onDuplicate && <Button variant="ghost" size="sm" onClick={() => props.onDuplicate?.(transaction)} disabled={props.isDeleting || props.hideSensitive} className="border border-primary/30 text-accent-ink hover:bg-primary/10">Duplicate</Button>}
           <Button variant="danger" size="sm" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.hideSensitive}>Delete</Button>
         </div>
       </td>
