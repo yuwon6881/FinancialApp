@@ -35,7 +35,9 @@ const baseProps = {
   onDeleteSelected: vi.fn(),
   currency: 'MYR',
   updateDocument: vi.fn().mockResolvedValue(undefined),
-  reliefCategoriesByTaxYear: {},
+  // Keyed by the document's own tax year: an absent key means that year's categories have not
+  // loaded yet, which is a different state from a year that genuinely has none configured.
+  reliefCategoriesByTaxYear: { [document.taxYear]: [] },
   pendingReliefCategories: new Map<number, string>(),
   onReliefCategoryChange: vi.fn(),
 }
@@ -225,6 +227,38 @@ describe('DocumentList selection toolbar', () => {
 
     expect(screen.queryByText(/legacy/i)).toBeNull()
     expect(screen.getAllByText('Choose tax relief category').length).toBeGreaterThan(0)
+  })
+
+  it('does not claim a document has no category while its tax year is still loading', () => {
+    // An all-years list holds documents from years the overview never described. Their categories
+    // arrive in a second request, and until then the row must say nothing rather than present an
+    // empty required picker for a category the document already has.
+    const filed = { ...document, id: 2, taxYear: 2024, reliefCategory: 'education' }
+    render(
+      <DocumentList
+        {...baseProps}
+        documents={[filed]}
+        reliefCategoriesByTaxYear={{ 2026: [] }}
+        selectedIds={new Set()}
+      />,
+    )
+
+    expect(screen.queryByText('Choose tax relief category')).toBeNull()
+    expect(screen.queryByLabelText('Tax relief category for tax.pdf')).toBeNull()
+  })
+
+  it('shows the stored category once its tax year has loaded', () => {
+    const filed = { ...document, id: 2, taxYear: 2024, reliefCategory: 'education' }
+    render(
+      <DocumentList
+        {...baseProps}
+        documents={[filed]}
+        reliefCategoriesByTaxYear={{ 2024: [{ id: 'education', name: 'Education', limit: 7000 }] }}
+        selectedIds={new Set()}
+      />,
+    )
+
+    expect(screen.getAllByText('Education').length).toBeGreaterThan(0)
   })
 
   it('keeps the filing facts behind a closed disclosure on the mobile card', () => {

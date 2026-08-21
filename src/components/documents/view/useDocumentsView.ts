@@ -32,6 +32,7 @@ export function useDocumentsView(showToast?: (message: string, title?: string, t
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<10 | 25 | 50>(10)
   const requestIdRef = useRef(0)
+  const requestedCategoryYearsRef = useRef(new Set<number>())
   const taxInsightsRequestIdRef = useRef(0)
   const queryKeyRef = useRef<string | null>(null)
   const overviewYearRef = useRef<number | undefined>(undefined)
@@ -77,9 +78,15 @@ export function useDocumentsView(showToast?: (message: string, title?: string, t
       setRetentionReview(overview.retention)
       setSummary(overview.summary)
       setReliefCategories(overview.reliefCategories)
-      setReliefCategoriesByTaxYear(overview.selectedTaxYear === null
-        ? {}
-        : { [overview.selectedTaxYear]: overview.reliefCategories })
+      // Merged, never replaced. The list can show documents from several tax years at once (the
+      // "All years" filter), and each row's category picker reads this map by the document's own
+      // tax year — so discarding the years the overview is not about left those rows with an empty
+      // picker and no way to see or change a category the document already had.
+      if (overview.selectedTaxYear !== null) {
+        const selectedYear = overview.selectedTaxYear
+        requestedCategoryYearsRef.current.add(selectedYear)
+        setReliefCategoriesByTaxYear(current => ({ ...current, [selectedYear]: overview.reliefCategories }))
+      }
       if (initialize) setTaxYear(overview.selectedTaxYear ?? undefined)
     } catch (err) {
       console.error('Failed to load document overview:', err)
@@ -118,6 +125,27 @@ export function useDocumentsView(showToast?: (message: string, title?: string, t
     if (!hasLoadedYears || overviewYearRef.current === taxYear) return
     void loadOverview(taxYear)
   }, [hasLoadedYears, loadOverview, taxYear])
+
+  // Fills in the relief categories for the other tax years on screen. Each year is asked for once
+  // and the answers are cached for an hour, so an all-years list costs one request per distinct
+  // year rather than one per page.
+  useEffect(() => {
+    const missingYears = [...new Set(documents.map(document => document.taxYear))]
+      .filter(year => !requestedCategoryYearsRef.current.has(year))
+    if (missingYears.length === 0) return
+
+    for (const year of missingYears) {
+      requestedCategoryYearsRef.current.add(year)
+      void api.getTaxReliefCategories(year)
+        .then(categories => setReliefCategoriesByTaxYear(current => ({ ...current, [year]: categories })))
+        .catch(err => {
+          // A year that could not be loaded is asked for again the next time its documents are
+          // listed; leaving it marked as requested would make one failure permanent for the session.
+          requestedCategoryYearsRef.current.delete(year)
+          console.error('Failed to load tax relief categories for', year, err)
+        })
+    }
+  }, [documents])
 
   useEffect(() => {
     setSelectedReliefCategories([])

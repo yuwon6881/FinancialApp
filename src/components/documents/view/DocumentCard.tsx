@@ -26,6 +26,8 @@ interface DocumentCardProps {
   /** Checkboxes appear only once the list is in selection mode; see DocumentList. */
   isSelecting: boolean
   reliefCategories: TaxReliefCategoryDefinition[]
+  /** False while this document's tax year has no category list yet — absent, not empty. */
+  areReliefCategoriesKnown?: boolean
   pendingReliefCategory: string | undefined
   openingTransactionId: string | null
   currency: string
@@ -60,6 +62,7 @@ export function DocumentCard({
   isDeleting,
   isSelecting,
   reliefCategories,
+  areReliefCategoriesKnown = true,
   pendingReliefCategory,
   openingTransactionId,
   currency,
@@ -87,7 +90,9 @@ export function DocumentCard({
   const [editingRelief, setEditingRelief] = useState(false)
   // An unset category has nothing to fall back to, so the picker stays open and there is no cancel —
   // the field is genuinely required. Once a category exists, opening the picker is reversible.
-  const showReliefPicker = editingRelief || !reliefName
+  // A name missing only because this year's categories have not arrived is not an unset category,
+  // and forcing the picker open there offered an empty required field for an answered question.
+  const showReliefPicker = editingRelief || (!reliefName && areReliefCategoriesKnown)
   const canCancelRelief = editingRelief && !!reliefName
   // Collapse anything open if the row starts syncing or deleting out from under it.
   useEffect(() => {
@@ -183,7 +188,9 @@ export function DocumentCard({
               <AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />
               <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{amountCaption}</p>
             </div>
-            {!showReliefPicker && (
+            {/* No name and no picker means the year's categories are still on their way: show
+                nothing rather than an empty chip claiming the document has no category. */}
+            {!showReliefPicker && reliefName && (
               <Button
                 variant="unstyled"
                 type="button"

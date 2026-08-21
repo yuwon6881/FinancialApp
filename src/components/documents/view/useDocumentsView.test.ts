@@ -82,6 +82,40 @@ describe('useDocumentsView', () => {
     await waitFor(() => expect(result.current.usage).toEqual({ totalBytes: 0, documentCount: 0 }))
   })
 
+  it('keeps a relief category list for every tax year on screen, not just the overview year', async () => {
+    // The all-years list mixes tax years, and each row's category picker reads this map by the
+    // document's own year. The overview only ever describes one year, so the other years' rows
+    // were left with no options and their existing category rendered as blank.
+    const olderDocument = { ...document, id: 2, taxYear: 2024, reliefCategory: 'education' }
+    api.listDocuments.mockResolvedValue({ items: [document, olderDocument], totalCount: 2 })
+    api.getTaxReliefCategories.mockResolvedValue([{ id: 'education', name: 'Education', limit: 7000 }])
+
+    const { result } = renderHook(() => useDocumentsView())
+
+    await waitFor(() => expect(result.current.reliefCategoriesByTaxYear[2024]).toEqual([
+      { id: 'education', name: 'Education', limit: 7000 },
+    ]))
+    expect(api.getTaxReliefCategories).toHaveBeenCalledWith(2024)
+    // The overview already answered for its own year, so that year is never asked for separately.
+    expect(api.getTaxReliefCategories).not.toHaveBeenCalledWith(2026)
+    expect(result.current.reliefCategoriesByTaxYear[2026]).toEqual([])
+  })
+
+  it('keeps other years\' relief categories when the overview reloads', async () => {
+    const olderDocument = { ...document, id: 2, taxYear: 2024, reliefCategory: 'education' }
+    api.listDocuments.mockResolvedValue({ items: [document, olderDocument], totalCount: 2 })
+    api.getTaxReliefCategories.mockResolvedValue([{ id: 'education', name: 'Education', limit: 7000 }])
+
+    const { result } = renderHook(() => useDocumentsView())
+    await waitFor(() => expect(result.current.reliefCategoriesByTaxYear[2024]).toHaveLength(1))
+
+    await act(async () => {
+      await result.current.loadOverview(2026)
+    })
+
+    expect(result.current.reliefCategoriesByTaxYear[2024]).toHaveLength(1)
+  })
+
   it('surfaces a failed document read and clears the error after a successful retry', async () => {
     api.listDocuments.mockRejectedValue(new Error('Vault service is unavailable.'))
     const { result } = renderHook(() => useDocumentsView())

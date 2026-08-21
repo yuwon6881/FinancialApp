@@ -176,6 +176,7 @@ export function DocumentList({
               isDeleting={deletingDocumentIds.has(document.id)}
               isSelecting={isSelecting}
               reliefCategories={reliefCategoriesByTaxYear[document.taxYear] ?? []}
+              areReliefCategoriesKnown={reliefCategoriesByTaxYear[document.taxYear] !== undefined}
               pendingReliefCategory={pendingReliefCategories.get(document.id)}
               openingTransactionId={openingTransactionId}
               currency={currency}
@@ -219,7 +220,11 @@ export function DocumentList({
               ) : documents.length === 0 ? (
                 <tr><td colSpan={isSelecting ? 8 : 7}><EmptyState isFiltered={isFiltered} /></td></tr>
               ) : documents.map(document => {
-                const documentReliefCategories = reliefCategoriesByTaxYear[document.taxYear] ?? []
+                const documentReliefCategories = reliefCategoriesByTaxYear[document.taxYear]
+                // Absent, not empty: this year's categories have not arrived yet. A select whose
+                // value matches none of its options renders blank, which read as "no category"
+                // for a document that has one.
+                const areReliefCategoriesKnown = documentReliefCategories !== undefined
                 const isDeleting = deletingDocumentIds.has(document.id)
                 const isSyncing = syncingDocumentIds.has(document.id)
                 const isBusy = isDeleting || isSyncing
@@ -251,17 +256,21 @@ export function DocumentList({
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5">
-                        <CustomSelect
-                          disabled={hideSensitive || isBusy}
-                          value={reliefId}
-                          onChange={value => onReliefCategoryChange(document.id, String(value))}
-                          options={[
-                            ...(reliefId ? [] : [{ value: '', label: 'Choose tax relief category', disabled: true }]),
-                            ...documentReliefCategories.map(category => ({ value: category.id, label: category.name })),
-                          ]}
-                          ariaLabel={`Tax relief category for ${document.originalFileName}`}
-                          className={`w-40 max-w-40 ${isReliefDraftChanged ? 'rounded-lg ring-2 ring-blue-500/50' : ''}`}
-                        />
+                        {areReliefCategoriesKnown ? (
+                          <CustomSelect
+                            disabled={hideSensitive || isBusy}
+                            value={reliefId}
+                            onChange={value => onReliefCategoryChange(document.id, String(value))}
+                            options={[
+                              ...(reliefId ? [] : [{ value: '', label: 'Choose tax relief category', disabled: true }]),
+                              ...documentReliefCategories.map(category => ({ value: category.id, label: category.name })),
+                            ]}
+                            ariaLabel={`Tax relief category for ${document.originalFileName}`}
+                            className={`w-40 max-w-40 ${isReliefDraftChanged ? 'rounded-lg ring-2 ring-blue-500/50' : ''}`}
+                          />
+                        ) : (
+                          <Skeleton className="h-9 w-40" />
+                        )}
                         {isReliefDraftChanged && <span className="inline-block size-1.5 shrink-0 rounded-full bg-blue-500" title="Unsaved change" />}
                       </div>
                     </td>
