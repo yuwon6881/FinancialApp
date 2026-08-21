@@ -1,6 +1,6 @@
 import type { LedgerAccount, Transaction, TransactionCategory } from '../types'
 import { capitalizeWords } from './utils'
-import { isSystemCategoryName } from './categoryFlow'
+import { isSelectableTransactionCategory } from './categoryFlow'
 
 // Transfer legs move between allocation buckets, so Income is never a valid leg.
 const LEDGERS = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
@@ -78,12 +78,27 @@ export function buildAiLedgerDraftTransactions(
   defaultDate = localIsoDate(),
 ): Omit<Transaction, 'id'>[] {
   const rawRecords = Array.isArray(payload.transactions) ? payload.transactions : [payload]
-  const normalNames = categories
-    .filter(category => !category.isPendingDelete)
+  // A drafted row is staged with a real category and can be synced from the review list without
+  // ever being opened, so the flow restriction the user set in Settings has to be applied here
+  // too. The assistant is handed category names without their flow, so it can name a money-in-only
+  // category for a spend; resolving against the categories that accept this row's direction is
+  // what keeps the setting true for a draft nobody edits.
+  const namesForFlow = (transactionType: 'inflow' | 'outflow') => categories
+    .filter(category => isSelectableTransactionCategory(category, transactionType))
     .map(category => category.name.trim())
-    .filter(name => !!name && !isSystemCategoryName(name))
-  const categoriesByName = new Map(normalNames.map(name => [name.toLowerCase(), name]))
-  const fallbackCategory = categoriesByName.get('other') ?? normalNames[0] ?? ''
+    .filter(Boolean)
+  const inflowNames = namesForFlow('inflow')
+  const outflowNames = namesForFlow('outflow')
+  const resolveCategory = (transactionType: 'inflow' | 'outflow', requested: string | undefined) => {
+    const names = transactionType === 'inflow' ? inflowNames : outflowNames
+    const requestedMatch = requested
+      ? names.find(name => name.toLowerCase() === requested)
+      : undefined
+    return requestedMatch
+      ?? names.find(name => name.toLowerCase() === 'other')
+      ?? names[0]
+      ?? ''
+  }
 
   return rawRecords.flatMap((raw): Omit<Transaction, 'id'>[] => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return []
@@ -98,7 +113,7 @@ export function buildAiLedgerDraftTransactions(
     // the row. Only a spend or a deposit genuinely needs one, so only those are refused for it.
     if (!rawDescription && txType !== 'transfer') return []
     const requestedCategory = text(fields, 'category')?.toLowerCase()
-    const category = (requestedCategory && categoriesByName.get(requestedCategory)) || fallbackCategory
+    const category = resolveCategory(txType === 'inflow' ? 'inflow' : 'outflow', requestedCategory)
     const rawLedger = text(fields, 'ledgerCategory')?.toLowerCase().replace(/^reward$/, 'rewards')
     // AccountMove is a persisted internal marker, never a ledger category the assistant may name
     // directly. It is reached only through the transfer branch below, and only once the user has

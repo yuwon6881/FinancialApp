@@ -19,7 +19,7 @@ import { useSettingsView } from './settings/view/useSettingsView'
 import { CategoryLimitsCard } from './settings/CategoryLimitsCard'
 import { ManageableNameList } from './settings/ManageableNameList'
 import { CategoryFlowFilter } from './settings/CategoryFlowFilter'
-import { isSystemCategoryName } from '../lib/categoryFlow'
+import { isSpendingGuideCategory, isSystemCategoryName } from '../lib/categoryFlow'
 import { AccountsSkeleton } from './settings/accounts/AccountsSkeleton'
 import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
 import { FormField } from './ui/FormField'
@@ -153,10 +153,15 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   }, [props.categoriesList, flowTypeDrafts])
 
   // A spending alert can only fire against a category that has a planned amount, so the
-  // notifications panel says so rather than offering a switch with nothing to watch.
+  // notifications panel says so rather than offering a switch with nothing to watch. Guides are
+  // outflow-only everywhere else — the limits card, the dashboard, the server's own alert
+  // evaluation — so a limit left on a category since restricted to money in is not one, and
+  // counting it here promised alerts that could never arrive.
   const hasSpendingGuides = React.useMemo(
     () => (props.categoriesList || []).some((category: TransactionCategory) =>
-      typeof category.cycleLimit === 'number' && category.cycleLimit > 0),
+      typeof category.cycleLimit === 'number' && category.cycleLimit > 0
+      && !isSystemCategoryName(category.name)
+      && isSpendingGuideCategory(category)),
     [props.categoriesList])
 
   const [activeTab, setActiveTab] = React.useState<SettingsTabId>(() => {

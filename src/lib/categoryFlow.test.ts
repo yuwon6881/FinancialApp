@@ -31,14 +31,17 @@ describe('category flow rules', () => {
   it('keeps reserved categories out of ordinary transaction category lists', () => {
     expect(isSelectableTransactionCategory({ name: 'Transfer', type: 'both' }, 'inflow')).toBe(false)
     expect(isSelectableTransactionCategory({ name: ' adjustment ', type: 'both' }, 'outflow')).toBe(false)
-    expect(isSelectableTransactionCategory({ name: 'Interest', type: 'inflow' }, 'inflow')).toBe(false)
     expect(isSelectableTransactionCategory({ name: 'Salary', type: 'inflow' }, 'inflow')).toBe(true)
+  })
+
+  it('keeps Interest selectable, since the user records interest by hand', () => {
+    expect(isSystemCategoryName('INTEREST')).toBe(false)
+    expect(isSelectableTransactionCategory({ name: 'Interest', type: 'both' }, 'inflow')).toBe(true)
   })
 
   it('recognizes all app-owned category names', () => {
     expect(isSystemCategoryName('Transfer')).toBe(true)
     expect(isSystemCategoryName(' adjustment ')).toBe(true)
-    expect(isSystemCategoryName('INTEREST')).toBe(true)
     expect(isSystemCategoryName('Food')).toBe(false)
   })
 })

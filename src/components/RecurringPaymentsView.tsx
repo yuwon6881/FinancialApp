@@ -153,7 +153,12 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     prevActiveTabRef.current = activeTab
   }, [activeTab, currentHighlightedLoanId, handleClearHighlightedLoan])
 
-  const loanTotalOutstanding = hasLoadedLoans && loans.every(loan => loan.scheduleStatus !== 'Incomplete' && !loan.isRecalculating)
+  React.useEffect(() => {
+    void onLoadLoans().catch(() => undefined)
+  }, [onLoadLoans])
+
+  const isLoansKnown = hasLoadedLoans || loanLoadStatus === 'cached' || loanLoadStatus === 'ready'
+  const loanTotalOutstanding = isLoansKnown && loans.every(loan => loan.scheduleStatus !== 'Incomplete' && !loan.isRecalculating)
     ? loans.reduce((total, loan) => total + Math.max(0, loan.snapshot.outstandingBalance), 0)
     : null
 
@@ -204,7 +209,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         activeTab={activeTab}
         onChange={setActiveTab}
         recurringCount={payments.length}
-        loansCount={hasLoadedLoans ? loans.length : undefined}
+        loansCount={isLoansKnown ? loans.length : undefined}
       />
 
       {activeTab === 'recurring' && (

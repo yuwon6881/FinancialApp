@@ -22,6 +22,7 @@ import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
 import { getCycleYearAndMonthForDate, MONTH_NAMES } from '../lib/cycle'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
 import { buildStabilityPlanPoints } from '../lib/stabilityRecovery'
+import { projectFinancialSetting } from '../lib/outbox'
 import { getTransactionCyclePlacement } from '../lib/transactionCyclePlacement'
 import type { AiInvocationContext } from '../lib/api/ai'
 const DashboardView = lazy(() => import('../components/DashboardView').then(module => ({ default: module.DashboardView })))
@@ -166,20 +167,30 @@ export function AuthenticatedView({
           .map(operation => ({ createdAt: operation.createdAt, payload: operation.payload as Record<string, unknown> | undefined })),
       )
     : undefined
-  const stabilityTopUpContext = todayDashboardData?.stabilityRecovery && currentCycleMonthIndex > 0
+  // The income split this context feeds is the plan the user last chose, which is not always the
+  // plan the server has answered with: Today reads a separately fetched current-cycle copy while
+  // another cycle is selected, and that copy carries no optimistic projection and deliberately
+  // waits for the queue to drain before refetching. So a salary posted into the recovery cycle
+  // right after editing the plan would have been split by the superseded percentages. Projecting
+  // the queued settings writes over it is the same reconciliation `stabilityPlanPoints` already
+  // does below; only these fields are taken, so a queued cycle selection cannot ride along.
+  const todayPlanSetting = todayDashboardData?.setting
+    ? projectFinancialSetting(todayDashboardData.setting, financial.activeOps)
+    : undefined
+  const stabilityTopUpContext = todayDashboardData?.stabilityRecovery && todayPlanSetting && currentCycleMonthIndex > 0
     ? {
         recovery: todayDashboardData.stabilityRecovery,
         cycleYear: currentCycleYear,
         cycleMonthIndex: currentCycleMonthIndex,
-        cycleDay: todayDashboardData.setting.cycleDay,
-        essentialsAlloc: todayDashboardData.setting.essentialsAlloc,
-        growthAlloc: todayDashboardData.setting.growthAlloc,
-        stabilityAlloc: todayDashboardData.setting.stabilityAlloc,
-        rewardsAlloc: todayDashboardData.setting.rewardsAlloc,
+        cycleDay: todayPlanSetting.cycleDay,
+        essentialsAlloc: todayPlanSetting.essentialsAlloc,
+        growthAlloc: todayPlanSetting.growthAlloc,
+        stabilityAlloc: todayPlanSetting.stabilityAlloc,
+        rewardsAlloc: todayPlanSetting.rewardsAlloc,
         essentialsBalance: todayDashboardData.categories.find(category => category.name === 'Essentials')?.remaining ?? 0,
         growthBalance: todayDashboardData.categories.find(category => category.name === 'Growth')?.remaining ?? 0,
         rewardsBalance: todayDashboardData.categories.find(category => category.name === 'Rewards')?.remaining ?? 0,
-        stabilityOverflowRedirect: todayDashboardData.setting.stabilityOverflowRedirect || '',
+        stabilityOverflowRedirect: todayPlanSetting.stabilityOverflowRedirect || '',
         planPoints: stabilityPlanPoints,
         currentCycleKey,
       }
@@ -389,8 +400,19 @@ export function AuthenticatedView({
                       onClearLocalFinancialData={() => {
                         const month = nav.selectedMonth
                         const year = nav.selectedYear
+                        // Names only what is actually at stake: either count can be zero on its
+                        // own, and "0 changes have not synced yet and 1 draft is saved only on
+                        // this device" reads as a bug in the sentence rather than a warning.
+                        const atStake = [
+                          unsyncedChangeCount > 0
+                            ? `${unsyncedChangeCount} ${unsyncedChangeCount === 1 ? 'change has' : 'changes have'} not synced yet`
+                            : null,
+                          draftCount > 0
+                            ? `${draftCount} ${draftCount === 1 ? 'draft is' : 'drafts are'} saved only on this device`
+                            : null,
+                        ].filter(Boolean)
                         const message = hasPendingLocalChanges
-                          ? `${unsyncedChangeCount} ${unsyncedChangeCount === 1 ? 'change has' : 'changes have'} not synced yet and ${draftCount} ${draftCount === 1 ? 'draft is' : 'drafts are'} saved only on this device. Clearing removes them permanently.`
+                          ? `${atStake.join(' and ')}. Clearing removes them permanently.`
                           : 'This removes saved copies of your data from this device. Your account is unaffected.'
                         dialogs.setConfirmModalData({
                           title: 'Clear local data?',

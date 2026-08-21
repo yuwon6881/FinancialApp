@@ -31,7 +31,7 @@ import type { AccountPlacementSelections } from '../lib/accountPlacementMigratio
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
-import { isSystemCategoryName } from '../lib/categoryFlow'
+import { isSpendingGuideCategory, isSystemCategoryName } from '../lib/categoryFlow'
 import { buildUndoSuccessToast } from '../lib/mutationToast'
 import { computeNextOccurrenceDate, computeOccurrenceOnOrAfter } from '../lib/recurringPayments'
 import { financialDate } from '../lib/financialDate'
@@ -1231,11 +1231,18 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     const category = allCategories.find(cat => String(cat.id) === String(id))
     if (!category || isSystemCategoryName(category.name)) return
     snapshotForUndo('category', String(id), category)
+    // Restricting a category to money in retires its spending guide: the server clears
+    // `CycleLimit` (and the current cycle's guide row) as part of the same write, so the
+    // projection has to say so too, or the limit stays on screen with nothing watching it. It
+    // also keeps the merged payload valid — `enqueue` folds a queued limit edit into this op,
+    // and the server refuses a limit and an inflow type in one request.
+    const clearsSpendingGuide = patch.type !== undefined && !isSpendingGuideCategory({ type: patch.type })
     mutateQueue(prev => enqueue(prev, 'category', 'update', id, {
       name: category?.name,
       type: category?.type,
       ...(patch.cycleLimit !== undefined ? { cycleLimit: patch.cycleLimit } : {}),
       ...(patch.type !== undefined ? { type: patch.type } : {}),
+      ...(clearsSpendingGuide ? { cycleLimit: null } : {}),
       undoSnapshot: category,
     }))
   }

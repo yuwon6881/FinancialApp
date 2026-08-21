@@ -19,10 +19,18 @@ export function allowsCategoryFlow(
   return normalizedType === 'both' || normalizedType === transactionType
 }
 
-/** Names owned by the app itself; people cannot create, edit, delete, or select them. */
+/**
+ * Names owned by the app itself; people cannot create, edit, delete, or select them.
+ *
+ * Kept in step with `TransactionCategoryService.IsReservedName`. `Interest` is deliberately
+ * absent: nothing writes those rows but the user now, so bank interest is recorded by hand like
+ * any other income and the category has to be selectable. It stayed listed here after the
+ * interest engine was removed, which hid the seeded category from Settings entirely — no limit,
+ * no flow, not counted — and left no way to categorise a real interest payment.
+ */
 export function isSystemCategoryName(name: string | null | undefined): boolean {
   const normalizedName = name?.trim().toLowerCase()
-  return normalizedName === 'transfer' || normalizedName === 'adjustment' || normalizedName === 'interest'
+  return normalizedName === 'transfer' || normalizedName === 'adjustment'
 }
 
 interface SelectableTransactionCategory {

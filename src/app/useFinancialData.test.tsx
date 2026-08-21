@@ -383,4 +383,47 @@ describe('useFinancialData', () => {
       Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: originalOnline })
     }
   })
+// The server retires a spending guide as part of the same write that restricts a category to
+  // money in, so the projection has to say so too — otherwise the limit stays on screen with
+  // nothing watching it, and a queued limit edit folded into this op is refused outright.
+  it('drops a spending guide when a category is restricted to money in', async () => {
+    mockHappyApi()
+    vi.spyOn(api, 'fetchCategories').mockResolvedValue([
+      { id: 'cat-1', name: 'Food', type: 'outflow', cycleLimit: 250 },
+    ] as any)
+    vi.spyOn(api, 'fetchBootstrap').mockResolvedValue({
+      month: 'July',
+      year: 2026,
+      dashboard,
+      insights,
+      transactions: [],
+      recurringPayments: [],
+      categories: [{ id: 'cat-1', name: 'Food', type: 'outflow', cycleLimit: 250 }],
+      wishlist: [],
+      autocomplete: [],
+      walletBalance: 100,
+    } as any)
+
+    const originalOnline = navigator.onLine
+    try {
+      const { result } = renderFinancialData()
+      await waitFor(() => expect(result.current.allCategories).toHaveLength(1))
+      Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false })
+      act(() => window.dispatchEvent(new Event('offline')))
+
+      act(() => {
+        result.current.handleUpdateCategoryType('cat-1', 'inflow')
+      })
+
+      await waitFor(() => expect(result.current.allCategories[0].cycleLimit).toBeNull())
+      expect(result.current.pendingOps).toEqual([expect.objectContaining({
+        entity: 'category',
+        type: 'update',
+        targetId: 'cat-1',
+        payload: expect.objectContaining({ type: 'inflow', cycleLimit: null }),
+      })])
+    } finally {
+      Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: originalOnline })
+    }
+  })
 })

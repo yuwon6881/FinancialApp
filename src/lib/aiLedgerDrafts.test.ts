@@ -147,3 +147,56 @@ describe('buildAiLedgerDraftTransactions account placement', () => {
     expect(draft.accountId).toBeUndefined()
   })
 })
+
+describe('buildAiLedgerDraftTransactions category flow', () => {
+  // A staged draft can be synced from the review list without ever being opened, so the flow
+  // restriction set in Settings has to hold here. The assistant is given category names without
+  // their flow, so it can name a money-in-only category for a spend.
+  const flowCategories = [
+    { id: 'salary', name: 'Salary', type: 'inflow' },
+    { id: 'food', name: 'Food', type: 'outflow' },
+    { id: 'other', name: 'Other', type: 'both' },
+  ] as TransactionCategory[]
+
+  it('replaces a category that cannot take the drafted direction', () => {
+    const [spend] = buildAiLedgerDraftTransactions(
+      { description: 'lunch', amount: 12, txType: 'outflow', category: 'Salary' },
+      flowCategories,
+      [],
+      '2026-08-01',
+    )
+    expect(spend.category).toBe('Other')
+
+    const [deposit] = buildAiLedgerDraftTransactions(
+      { description: 'bonus', amount: 500, txType: 'inflow', category: 'Food' },
+      flowCategories,
+      [],
+      '2026-08-01',
+    )
+    expect(deposit.category).toBe('Other')
+  })
+
+  it('keeps a category the flow allows', () => {
+    const [draft] = buildAiLedgerDraftTransactions(
+      { description: 'lunch', amount: 12, txType: 'outflow', category: 'Food' },
+      flowCategories,
+      [],
+      '2026-08-01',
+    )
+    expect(draft.category).toBe('Food')
+  })
+
+  // "Other" may itself be restricted, and the fallback must not reach past the flow rule to it.
+  it('falls back only to a category that accepts the direction', () => {
+    const [draft] = buildAiLedgerDraftTransactions(
+      { description: 'bonus', amount: 500, txType: 'inflow' },
+      [
+        { id: 'other', name: 'Other', type: 'outflow' },
+        { id: 'salary', name: 'Salary', type: 'inflow' },
+      ] as TransactionCategory[],
+      [],
+      '2026-08-01',
+    )
+    expect(draft.category).toBe('Salary')
+  })
+})

@@ -21,6 +21,8 @@ import { canOpenBlankMutationForm } from '../../../lib/quickAddAvailability'
 import type { UseTransactionFormOptions } from './useTransactionFormOptions'
 import { getBucketOutflowWarning, type BucketOutflowWarning, type OutflowBucket } from '../../../lib/transactionBucketWarnings'
 import { isTransactionOutsideCycle } from '../../../lib/transactionCyclePlacement'
+import { isSelectableTransactionCategory } from '../../../lib/categoryFlow'
+
 export type { UseTransactionFormOptions } from './useTransactionFormOptions'
 export function useTransactionForm(options: UseTransactionFormOptions) {
   const {
@@ -74,7 +76,11 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     return derived
   }, [transactions])
 
-  const defaultCategory = categories.length > 0 ? categories[0].name : ''
+  // Whatever this picks has to be an option the category select actually offers, so it is chosen
+  // with the same predicate the select filters by. Taking `categories[0]` blindly could seed an
+  // app-owned name (`Transfer`, `Adjustment`) or one queued for deletion — a value with no
+  // matching option, which the user cannot see and cannot correct, yet still gets saved.
+  const defaultCategory = categories.find(category => isSelectableTransactionCategory(category))?.name ?? ''
   const todayDate = getTodayDateString()
 
   const [state, dispatch] = useReducer(transactionFormReducer, getInitialState(todayDate, defaultCategory))
@@ -92,13 +98,14 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   }, [state.description])
 
   useEffect(() => {
-    if (state.transactionType !== 'inflow' && state.transactionType !== 'outflow') return
+    const flow = state.transactionType
+    if (flow !== 'inflow' && flow !== 'outflow') return
     const currentCategory = categories.find(c => c.name.toLowerCase() === state.category.toLowerCase())
     if (!currentCategory) return
-    if (currentCategory.type && currentCategory.type !== 'both' && currentCategory.type !== state.transactionType) {
-      const validCategories = categories.filter(c => !c.isPendingDelete && (!c.type || c.type === 'both' || c.type === state.transactionType))
-      if (validCategories.length > 0) {
-        dispatch({ type: 'SET_FIELD', field: 'category', value: validCategories[0].name })
+    if (currentCategory.type && currentCategory.type !== 'both' && currentCategory.type !== flow) {
+      const replacement = categories.find(candidate => isSelectableTransactionCategory(candidate, flow))
+      if (replacement) {
+        dispatch({ type: 'SET_FIELD', field: 'category', value: replacement.name })
       }
     }
   }, [categories, state.transactionType, state.category])

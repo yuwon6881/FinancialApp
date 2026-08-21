@@ -2,7 +2,9 @@ import { Input } from '../ui/Input'
 import React from 'react'
 import { Edit, Plus } from 'lucide-react'
 import type { LedgerAccount, RecurringFrequency, RecurringPayment, TransactionCategory } from '../../types'
-import { allowsCategoryFlow } from '../../lib/categoryFlow'
+// A bill's budget category is written to the ledger, so it obeys the same rule as the
+// transaction form's select: money-out categories only, and never an app-owned name.
+import { isSelectableTransactionCategory } from '../../lib/categoryFlow'
 import { RECURRING_PAYMENT_MODE_LABELS } from '../../lib/recurringPayments'
 import { getCurrencySymbol } from '../../lib/utils'
 import { CustomSelect } from '../ui/CustomSelect'
@@ -133,10 +135,10 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
         <FormField label="Budget category">
           <CustomSelect
             ariaLabel="Budget category"
-            value={category || (categories.find(c => !c.isPendingDelete && allowsCategoryFlow(c.type, 'outflow'))?.name || '')}
+            value={category || (categories.find(c => isSelectableTransactionCategory(c, 'outflow'))?.name || '')}
             onChange={val => onCategoryChange(val)}
             options={categories
-              .filter(c => !c.isPendingDelete && allowsCategoryFlow(c.type, 'outflow'))
+              .filter(c => isSelectableTransactionCategory(c, 'outflow'))
               .map(c => ({ value: c.name, label: c.name }))}
             className="w-full"
           />

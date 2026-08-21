@@ -107,4 +107,70 @@ describe('RecurringPaymentsView form', () => {
     rerender(renderView('resolved'))
     await waitFor(() => expect(screen.queryByPlaceholderText('e.g. Netflix, Spotify')).toBeNull())
   })
+
+  it('triggers onLoadLoans on mount even when active tab is recurring', () => {
+    const onLoadLoans = vi.fn().mockResolvedValue([])
+    render(
+      <RecurringPaymentsView
+        payments={[]}
+        accounts={accounts}
+        activeRecurringPayments={[]}
+        selectedMonth="Jul"
+        selectedYear={2026}
+        cycleDay={1}
+        onAddPayment={vi.fn()}
+        onToggleActive={vi.fn()}
+        onDeletePayment={vi.fn()}
+        onUpdatePayment={vi.fn()}
+        categories={[{ id: 'bills', name: 'Bills' }]}
+        onLoadLoans={onLoadLoans}
+      />,
+    )
+
+    expect(onLoadLoans).toHaveBeenCalledTimes(1)
+  })
+
+  it('displays the loans count badge when loans are cached or loaded', () => {
+    const sampleLoan = {
+      id: 'loan-1',
+      name: 'Car Loan',
+      recurringPaymentId: 'bill-1',
+      openingPrincipal: 10000,
+      trackingStartDate: '2026-01-01',
+      annualRatePercent: 4.5,
+      termPeriods: 48,
+      interestMethod: 'ReducingBalance' as const,
+      scheduleStatus: 'Complete' as const,
+      snapshot: {
+        outstandingBalance: 8000,
+        scheduledPayment: 250,
+        totalScheduledInterest: 1000,
+        totalInterestPaid: 200,
+        payments: [],
+        futureSchedule: [],
+      },
+    }
+
+    render(
+      <RecurringPaymentsView
+        payments={[]}
+        accounts={accounts}
+        activeRecurringPayments={[]}
+        selectedMonth="Jul"
+        selectedYear={2026}
+        cycleDay={1}
+        onAddPayment={vi.fn()}
+        onToggleActive={vi.fn()}
+        onDeletePayment={vi.fn()}
+        onUpdatePayment={vi.fn()}
+        categories={[{ id: 'bills', name: 'Bills' }]}
+        loans={[sampleLoan]}
+        loanLoadStatus="cached"
+      />,
+    )
+
+    // Recurring tab has 0 bills, Loans tab has 1 loan from cache
+    const loansTab = screen.getByRole('tab', { name: /loans/i })
+    expect(loansTab.textContent).toContain('1')
+  })
 })

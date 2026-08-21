@@ -290,8 +290,8 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     }
   }
 
-  // Only show categories that the user can change and manage; system mandatory categories
-  // (Transfer, Interest, Adjustment) are app-managed and hidden from the categories list.
+  // Only show categories that the user can change and manage; the app-owned names
+  // (Transfer, Adjustment) are hidden from the categories list.
   const editableCategories = categoriesList.filter(category => !isSystemCategoryName(category.name))
   const visibleCategories = editableCategories
 
