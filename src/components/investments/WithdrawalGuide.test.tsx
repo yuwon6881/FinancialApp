@@ -78,6 +78,13 @@ describe('WithdrawalGuide', () => {
     expect(screen.getByLabelText('Amount to withdraw in MYR')).toBeTruthy()
   })
 
+  it('clicking the entire card also expands the panel', () => {
+    renderGuide()
+    const card = screen.getByRole('group', { name: 'Taking money out' })
+    fireEvent.click(card)
+    expect(screen.getByLabelText('Amount to withdraw in MYR')).toBeTruthy()
+  })
+
   it('splits a withdrawal across the baskets by target weight', () => {
     renderGuide()
     open()

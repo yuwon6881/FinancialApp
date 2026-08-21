@@ -60,10 +60,11 @@ describe('InvestmentPlanPanel guidance', () => {
     render(<InvestmentPlanPanel allocation={watch} holdings={[]} instruments={[]} reference={{ currency: 'USD', rate: 0.25 }} masked={false} onNavigate={vi.fn()} />)
 
     expect(screen.queryByText('What to do next')).toBeNull()
-    expect(screen.getByText('Your next investment, split three ways')).toBeTruthy()
-    expect(screen.getByText('RM 120.00 to invest')).toBeTruthy()
-    expect(screen.getByText('RM 100.00')).toBeTruthy()
-    expect(screen.getByText(/cash already.*remaining.*new money/i)).toBeTruthy()
+    // DepositGuide is collapsed by default; the routine badge and toggle button are visible.
+    expect(screen.getByRole('button', { name: /Plan a deposit/ })).toBeTruthy()
+    expect(screen.getByText('RM 120.00 routine')).toBeTruthy()
+    // Sleeve amounts are only revealed once the panel is opened.
+    expect(screen.queryByText('RM 100.00')).toBeNull()
   })
 
   it('keeps incomplete setup guidance available', () => {
@@ -108,28 +109,30 @@ describe('InvestmentPlanPanel contribution split', () => {
     },
   }
 
-  it('shows the per-sleeve split even when the plan is on track', () => {
+  it('shows the deposit toggle and routine badge even when the plan is on track', () => {
     render(<InvestmentPlanPanel allocation={withPlan} holdings={[]} instruments={[]} masked={false} onNavigate={vi.fn()} />)
 
-    // The rebalancing guidance stays hidden; the routine split does not.
+    // The rebalancing guidance stays hidden; the deposit guide's toggle is visible.
     expect(screen.queryByText('What to do next')).toBeNull()
-    expect(screen.getByText('Your next investment, split three ways')).toBeTruthy()
-    expect(screen.getByText('RM 660.00')).toBeTruthy()
-    expect(screen.getByText(/66.0% of this amount/)).toBeTruthy()
-    expect(screen.getByText(/median of your Growth deposits/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Plan a deposit/ })).toBeTruthy()
+    expect(screen.getByText('RM 1,000.00 routine')).toBeTruthy()
+    // Sleeve amounts and basis text stay hidden until the panel is opened.
+    expect(screen.queryByText('RM 660.00')).toBeNull()
+    expect(screen.queryByText(/median of your Growth deposits/)).toBeNull()
   })
 
-  it('masks the amounts when sensitive values are hidden', () => {
+  it('masks the routine badge amount when sensitive values are hidden', () => {
     render(<InvestmentPlanPanel allocation={withPlan} holdings={[]} instruments={[]} masked onNavigate={vi.fn()} />)
 
-    expect(screen.queryByText('RM 660.00')).toBeNull()
-    expect(screen.getAllByText('••••').length).toBeGreaterThan(0)
+    expect(screen.queryByText('RM 1,000.00 routine')).toBeNull()
+    // The badge still renders but shows the masked placeholder.
+    expect(screen.getByText(/•••• routine/)).toBeTruthy()
   })
 
-  it('omits the section when there is nothing ready to invest', () => {
+  it('omits the deposit section when there is nothing ready to invest', () => {
     render(<InvestmentPlanPanel allocation={allocation} holdings={[]} instruments={[]} masked={false} onNavigate={vi.fn()} />)
 
-    expect(screen.queryByText('Your next investment, split three ways')).toBeNull()
+    expect(screen.queryByRole('button', { name: /Plan a deposit/ })).toBeNull()
   })
 })
 

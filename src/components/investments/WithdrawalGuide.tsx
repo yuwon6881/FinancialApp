@@ -50,8 +50,18 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
   const cashKnown = allocation.availableCash !== undefined
   const canPlan = cashKnown && (invested > 0 || (allocation.availableCash ?? 0) > 0)
 
+  const handleToggle = () => {
+    if (!canPlan) return
+    setOpen(value => !value)
+  }
+
   return (
-    <div className="mt-5 rounded-xl border border-border/50 bg-muted/20 p-4">
+    <div
+      className={`mt-5 rounded-xl border border-border/50 bg-muted/20 p-4 ${canPlan ? 'cursor-pointer' : ''}`}
+      onClick={handleToggle}
+      role="group"
+      aria-label="Taking money out"
+    >
       <div className="flex items-center justify-between gap-2">
         <h3 className="hidden items-center gap-1 text-xs font-bold text-foreground sm:flex">
           <HandCoins className="size-3.5 text-muted-foreground" /> Taking money out
@@ -65,7 +75,7 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
           variant="ghost"
           size="sm"
           aria-expanded={open}
-          onClick={() => setOpen(value => !value)}
+          onClick={e => { e.stopPropagation(); handleToggle() }}
           disabled={!canPlan}
           className="w-full justify-between sm:w-auto"
         >
@@ -86,6 +96,7 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
           animate={{ opacity: 1, height: 'auto' }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
           className="overflow-hidden"
+          onClick={e => e.stopPropagation()}
         >
           <div className="mt-3">
             <label htmlFor="withdrawal-amount" className="block text-[11px] font-semibold text-muted-foreground">
