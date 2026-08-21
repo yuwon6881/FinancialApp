@@ -246,7 +246,7 @@ export function CarryoverLedgerTable({
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                        <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
                           {account.isArchived ? 'Archived account' : 'Active ledger account'}
                         </p>
                       </div>
@@ -281,7 +281,7 @@ export function CarryoverLedgerTable({
               <div className="flex items-center justify-between gap-2 border-t border-border/70 bg-muted/40 px-4 py-3.5 text-xs font-bold">
                 <div className="flex items-center gap-2 text-foreground">
                   <span>{isCurrentCycle ? 'Total accounts balance' : 'Total balance at close'}</span>
-                  <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${getCategoryBadgeClass(selectedCategory.name)}`}>
+                  <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-bold whitespace-nowrap ${getCategoryBadgeClass(selectedCategory.name)}`}>
                     {selectedCategory.accounts?.length ?? 0} {selectedCategory.accounts?.length === 1 ? 'account' : 'accounts'}
                   </span>
                 </div>
