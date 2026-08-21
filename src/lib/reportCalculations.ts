@@ -27,7 +27,15 @@ export function buildCycleSummaryInsights(
   transactions: Transaction[],
   start: Date,
   end: Date,
+  referenceDate: Date = new Date(),
 ) {
+  const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+  const endMidnight = new Date(end.getFullYear(), end.getMonth(), end.getDate())
+  const referenceMidnight = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate())
+  const startKey = dateKey(startMidnight)
+  const endKey = dateKey(endMidnight)
+  const referenceKey = dateKey(referenceMidnight)
+
   const dayTotals = new Map<string, number>()
   let totalSpend = 0
   let committedSpend = 0
@@ -46,15 +54,28 @@ export function buildCycleSummaryInsights(
   }
   let biggestDay: [string, number] | undefined
   for (const day of dayTotals) if (!biggestDay || day[1] > biggestDay[1]) biggestDay = day
-  const cycleLengthDays = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1
+  const cycleLengthDays = Math.max(1, Math.round((endMidnight.getTime() - startMidnight.getTime()) / 86_400_000) + 1)
   const firstHalfDays = Math.ceil(cycleLengthDays / 2)
-  const secondHalfStart = new Date(start)
+  const secondHalfStart = new Date(startMidnight)
   secondHalfStart.setDate(secondHalfStart.getDate() + firstHalfDays)
   const secondHalfStartKey = dateKey(secondHalfStart)
   let velocityFirstHalf = 0
   for (const transaction of transactions) {
     if (transaction.date < secondHalfStartKey && isReportableOutflow(transaction)) {
       velocityFirstHalf += Math.abs(transaction.amount)
+    }
+  }
+
+  const elapsedDays = referenceMidnight < startMidnight
+    ? 0
+    : referenceMidnight > endMidnight
+      ? cycleLengthDays
+      : Math.round((referenceMidnight.getTime() - startMidnight.getTime()) / 86_400_000) + 1
+
+  let distinctExpenseDaysElapsed = 0
+  for (const date of dayTotals.keys()) {
+    if (date >= startKey && date <= referenceKey && date <= endKey) {
+      distinctExpenseDaysElapsed += 1
     }
   }
 
@@ -67,7 +88,7 @@ export function buildCycleSummaryInsights(
     cycleLengthDays,
     velocityFirstHalf: expenseCount > 0 ? velocityFirstHalf : undefined,
     velocitySecondHalf: expenseCount > 0 ? totalSpend - velocityFirstHalf : undefined,
-    noSpendDays: Math.max(0, cycleLengthDays - dayTotals.size),
+    noSpendDays: Math.max(0, elapsedDays - distinctExpenseDaysElapsed),
     transactionCount: expenseCount,
     committedSpend,
     discretionarySpend,
