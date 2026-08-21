@@ -51,6 +51,7 @@ export function InvestmentPlanPanel({
     ? CheckCircle2
     : allocation.status === 'Incomplete' || allocation.status === 'NotStarted' ? CircleHelp : AlertTriangle
   const showGuidance = allocation.incompleteReasons.length > 0
+  const classificationIncomplete = allocation.status === 'Incomplete'
   const contributionPlan = allocation.contributionPlan
   // Grouped once here, not per card — every card needs a different slice of the
   // same single pass over the holdings.
@@ -209,18 +210,20 @@ export function InvestmentPlanPanel({
         {showGuidance && <div className="rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-1 text-xs font-bold text-foreground">
-              What to do next
+              {classificationIncomplete ? 'What to do next' : 'Why guidance is unavailable'}
               <InfoHint
                 label="what to do next"
                 align="left"
-                text="Complete setup so every holding joins the plan."
+                text={classificationIncomplete
+                  ? 'Complete setup so every holding joins the plan.'
+                  : 'Missing exchange-rate data prevents a trustworthy cash-aware plan.'}
               />
             </h3>
           </div>
           <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
             {allocation.incompleteReasons.map(reason => <li key={reason}>• {reason}</li>)}
           </ul>
-          {allocation.status === 'Incomplete' && (
+          {classificationIncomplete && (
             <div className="mt-3 flex justify-end">
               <Button variant="ghost" size="sm" onClick={configure}>
                 Finish classification <ArrowRight className="size-4" />

@@ -61,6 +61,17 @@ export function allocationStatusLabel(status: InvestmentAllocationStatus) {
   return statusLabels[status]
 }
 
+export function validateInvestmentPlan(plan: InvestmentPlan) {
+  const targets = [plan.usEquityTarget, plan.internationalExUsTarget, plan.bondsTarget]
+  const driftBands = [plan.watchDrift, plan.alertDrift]
+  if (![...targets, ...driftBands].every(Number.isFinite)) return 'Targets and drift bands must be valid numbers.'
+  if (targets.some(value => value <= 0) || targets.reduce((sum, value) => sum + value, 0) !== 100)
+    return 'Targets must be positive and total exactly 100%.'
+  if (plan.watchDrift <= 0 || plan.alertDrift <= plan.watchDrift || plan.alertDrift > 100)
+    return 'Alert drift must be greater than Watch drift and no more than 100 points.'
+  return ''
+}
+
 type TargetKey = 'usEquityTarget' | 'internationalExUsTarget' | 'bondsTarget'
 
 export function redistributeInvestmentTargets(

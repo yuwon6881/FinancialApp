@@ -79,6 +79,17 @@ describe('InvestmentPlanPanel guidance', () => {
     expect(screen.getByText(/Assign VTI/)).toBeTruthy()
     expect(screen.queryByRole('button', { name: /Plan a withdrawal/ })).toBeNull()
   })
+
+  it('explains when missing cash exchange rates make cash-aware guidance unavailable', () => {
+    render(<InvestmentPlanPanel allocation={{
+      ...allocation,
+      availableCash: undefined,
+      incompleteReasons: ['EUR cash in Broker cannot be valued in MYR.'],
+    }} holdings={[]} instruments={[]} masked={false} onNavigate={vi.fn()} />)
+
+    expect(screen.getByText('Why guidance is unavailable')).toBeTruthy()
+    expect(screen.getByText(/EUR cash in Broker/)).toBeTruthy()
+  })
 })
 
 describe('InvestmentPlanPanel contribution split', () => {

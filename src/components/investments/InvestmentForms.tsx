@@ -337,6 +337,7 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
       accountId,
       instrumentId,
       units: numberOrUndefined(units),
+      unitPrice: numberOrUndefined(unitPrice),
       cashAmount: numberOrUndefined(cashAmount),
       fees: Number(fees || 0),
       taxes: Number(taxes || 0),

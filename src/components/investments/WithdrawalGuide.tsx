@@ -40,12 +40,15 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
   }), [allocation.sleeves, constituentsBySleeve])
 
   const plan = useMemo(
-    () => planWithdrawal(Number(amountText) || 0, allocation.availableCash, sleeveInputs),
+    () => allocation.availableCash === undefined
+      ? null
+      : planWithdrawal(Number(amountText) || 0, allocation.availableCash, sleeveInputs),
     [amountText, allocation.availableCash, sleeveInputs],
   )
 
   const invested = allocation.investedValue ?? 0
-  const canPlan = invested > 0 || allocation.availableCash > 0
+  const cashKnown = allocation.availableCash !== undefined
+  const canPlan = cashKnown && (invested > 0 || (allocation.availableCash ?? 0) > 0)
 
   return (
     <div className="mt-5 rounded-xl border border-border/50 bg-muted/20 p-4">
@@ -73,7 +76,7 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
 
       {!canPlan && (
         <p className="mt-2 text-[10px] text-muted-foreground">
-          There is nothing to withdraw yet.
+          {cashKnown ? 'There is nothing to withdraw yet.' : 'Update the missing cash exchange rate before planning a withdrawal.'}
         </p>
       )}
 

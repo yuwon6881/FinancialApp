@@ -91,6 +91,7 @@ describe('InvestmentPlanSection sliders', () => {
       </AppProvider>,
     )
 
+    await waitFor(() => expect(api.fetchInvestmentAllocation).toHaveBeenCalled())
     const firstGrip = screen.getByRole('button', { name: /Reorder AAA\. Position 1 of 2/i })
     fireEvent.keyDown(firstGrip, { key: 'ArrowDown' })
 
@@ -101,5 +102,18 @@ describe('InvestmentPlanSection sliders', () => {
       expect.objectContaining({ instrumentIds: ['fund-b', 'fund-a'] }),
     )
     expect(screen.getByRole('button', { name: /Reorder BBB\. Position 1 of 2/i })).toBeTruthy()
+  })
+
+  it('shows an offline explanation instead of an endless spinner without a cached plan', () => {
+    vi.mocked(api.readCachedInvestmentPortfolio).mockReturnValue(null)
+
+    render(
+      <AppProvider value={{ ...context, isOffline: true }}>
+        <InvestmentPlanSection />
+      </AppProvider>,
+    )
+
+    expect(screen.getByText(/connect once to load your investment plan/i)).toBeTruthy()
+    expect(screen.queryByRole('progressbar')).toBeNull()
   })
 })

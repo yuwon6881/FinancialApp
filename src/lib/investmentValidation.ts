@@ -22,6 +22,7 @@ export interface ActivityBalanceDraft {
   accountId: string
   instrumentId: string
   units?: number
+  unitPrice?: number
   cashAmount?: number
   fees?: number
   taxes?: number
@@ -82,7 +83,7 @@ export const availableUnits = (portfolio: InvestmentPortfolio | null, accountId:
  * currency. Mirrors the `switch` in `ValidateCashHistoryAsync`.
  */
 const activityCashEffect = (draft: ActivityBalanceDraft) => {
-  const gross = draft.cashAmount ?? 0
+  const gross = draft.cashAmount ?? (draft.units ?? 0) * (draft.unitPrice ?? 0)
   const charges = (draft.fees ?? 0) + (draft.taxes ?? 0)
   switch (draft.type) {
     case 'Buy':

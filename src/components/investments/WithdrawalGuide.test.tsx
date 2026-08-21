@@ -122,6 +122,13 @@ describe('WithdrawalGuide', () => {
     expect(screen.getByText('There is nothing to withdraw yet.')).toBeTruthy()
   })
 
+  it('withholds withdrawal guidance when positive cash cannot be converted', () => {
+    renderGuide({ availableCash: undefined })
+
+    expect(screen.getByRole('button', { name: /Plan a withdrawal/ })).toHaveProperty('disabled', true)
+    expect(screen.getByText(/missing cash exchange rate/i)).toBeTruthy()
+  })
+
   it('keeps a basket sale visible but omits its gain copy when its price is unknown', () => {
     const unknownConstituents = new Map(constituents)
     unknownConstituents.set('InternationalExUS', [holding('vxus', 3000)])

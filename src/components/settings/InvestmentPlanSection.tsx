@@ -1,8 +1,8 @@
 import { RangeInput } from '../ui/RangeInput'
 import { Input } from '../ui/Input'
 import { useEffect, useMemo, useState } from 'react'
-import { Reorder, useDragControls, useReducedMotion } from 'framer-motion'
-import { AlertCircle, GripVertical, Info, Loader2, Save, SlidersHorizontal, Lock, Unlock } from 'lucide-react'
+import { Reorder } from 'framer-motion'
+import { AlertCircle, Info, Loader2, Save, SlidersHorizontal, Lock, Unlock, WifiOff } from 'lucide-react'
 import type {
   InvestmentAllocationOverview,
   InvestmentAllocationSleeve,
@@ -10,11 +10,11 @@ import type {
 } from '../../types'
 import * as api from '../../lib/api'
 import { useAppContext } from '../../contexts/AppContext'
-import { CustomSelect } from '../ui/CustomSelect'
 import { Button } from '../ui/Button'
 import { FormField } from '../ui/FormField'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
-import { redistributeInvestmentTargets } from '../../lib/investmentAllocation'
+import { redistributeInvestmentTargets, validateInvestmentPlan } from '../../lib/investmentAllocation'
+import { InvestmentClassificationRow } from './InvestmentClassificationRow'
 
 type TargetKey = 'usEquityTarget' | 'internationalExUsTarget' | 'bondsTarget'
 
@@ -24,88 +24,6 @@ const defaults: InvestmentPlan = {
   bondsTarget: 24,
   watchDrift: 3,
   alertDrift: 5,
-}
-
-function ClassificationRow({
-  value,
-  classify,
-  onReorderFinished,
-  onMove,
-  position,
-  count,
-  isSyncing,
-  isPending,
-  orderBusy,
-  mutationsDisabled,
-}: {
-  value: InvestmentAllocationOverview['assignments'][number]
-  classify: (instrumentId: string, sleeve?: InvestmentAllocationSleeve) => void
-  onReorderFinished: () => void
-  onMove: (direction: -1 | 1) => void
-  position: number
-  count: number
-  isSyncing: boolean
-  isPending: boolean
-  orderBusy: boolean
-  mutationsDisabled: boolean
-}) {
-  const controls = useDragControls()
-  const reduceMotion = useReducedMotion()
-  const isBusy = mutationsDisabled || isSyncing || isPending || orderBusy
-
-  return (
-    <Reorder.Item
-      value={value}
-      dragListener={false}
-      dragControls={controls}
-      onDragEnd={onReorderFinished}
-      layout="position"
-      transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 38 }}
-      whileDrag={reduceMotion ? undefined : { scale: 1.015, boxShadow: 'var(--app-shadow)' }}
-      className="flex flex-col gap-2.5 rounded-xl border border-border/50 bg-card/60 p-3 shadow-2xs transition-colors hover:border-border/80 sm:flex-row sm:items-center sm:gap-3 w-full min-w-0 overflow-hidden"
-    >
-      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-        <Button
-          variant="unstyled"
-          type="button"
-          aria-label={`Reorder ${value.symbol}. Position ${position} of ${count}. Use Up or Down arrow keys.`}
-          aria-keyshortcuts="ArrowUp ArrowDown"
-          onPointerDown={event => controls.start(event)}
-          onKeyDown={event => {
-            if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
-            event.preventDefault()
-            onMove(event.key === 'ArrowUp' ? -1 : 1)
-          }}
-          disabled={isBusy}
-          className="inline-flex size-8 shrink-0 touch-none cursor-grab items-center justify-center rounded-lg text-muted-foreground/70 transition hover:bg-muted/40 hover:text-foreground active:cursor-grabbing"
-        >
-          <GripVertical className="size-4" />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <strong className="block truncate text-xs font-bold text-foreground">{value.symbol}</strong>
-            <RowSyncStatus isSyncing={isSyncing} isPending={isPending} entityLabel="classification" />
-          </div>
-          <span className="block truncate text-[11px] text-muted-foreground">{value.name}</span>
-        </div>
-      </div>
-      <div className="w-full sm:w-[190px] shrink-0 min-w-0">
-        <CustomSelect
-          ariaLabel={`Classify ${value.symbol}`}
-          value={value.sleeve ?? ''}
-          onChange={next => classify(value.instrumentId, String(next) === '' ? undefined : String(next) as InvestmentAllocationSleeve)}
-          disabled={isBusy}
-          options={[
-            { value: '', label: 'Unassigned' },
-            { value: 'USEquity', label: 'US Equity' },
-            { value: 'InternationalExUS', label: 'International ex-US' },
-            { value: 'Bonds', label: 'Bonds' },
-          ]}
-          className="w-full"
-        />
-      </div>
-    </Reorder.Item>
-  )
 }
 
 export function InvestmentPlanSection() {
@@ -218,12 +136,7 @@ export function InvestmentPlanSection() {
   }, [isOffline])
 
   const total = plan.usEquityTarget + plan.internationalExUsTarget + plan.bondsTarget
-  const validation = useMemo(() => {
-    if (total !== 100) return 'Targets must total exactly 100%.'
-    if (plan.watchDrift <= 0 || plan.alertDrift <= plan.watchDrift)
-      return 'Alert drift must be greater than Watch drift.'
-    return ''
-  }, [plan, total])
+  const validation = useMemo(() => validateInvestmentPlan(plan), [plan])
 
   const changeTarget = (key: TargetKey, value: number) => {
     if (hideSensitive) return
@@ -329,7 +242,10 @@ export function InvestmentPlanSection() {
     setGlobalTargetLock(true)
   }, [hideSensitive])
 
-  if (!overview && (loading || isOffline)) {
+  if (!overview && isOffline) {
+    return <div role="status" className="flex h-40 flex-col items-center justify-center gap-2 rounded-2xl border border-border/60 bg-card p-5 text-center"><WifiOff className="size-6 text-muted-foreground" /><p className="text-sm font-semibold text-foreground">Investment plan unavailable offline</p><p className="text-xs text-muted-foreground">Connect once to load your investment plan on this device.</p></div>
+  }
+  if (!overview && loading) {
     return <div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>
   }
 
@@ -439,7 +355,7 @@ export function InvestmentPlanSection() {
           className="mt-4 space-y-2.5 max-h-[380px] overflow-y-auto pr-1 w-full min-w-0"
         >
           {orderedAssignments.map((value, index) => (
-            <ClassificationRow
+            <InvestmentClassificationRow
               key={value.instrumentId}
               value={value}
               classify={classify}

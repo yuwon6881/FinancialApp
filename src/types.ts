@@ -216,7 +216,7 @@ export interface InvestmentAllocationOverview {
     staleInputs: string[]
   }
   investedValue?: number
-  availableCash: number
+  availableCash?: number
   minimumContribution?: number
   /**
    * How to split all uninvested broker cash plus the next routine Growth deposit.

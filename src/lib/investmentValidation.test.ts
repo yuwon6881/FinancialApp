@@ -54,6 +54,37 @@ describe('validateActivityBalances', () => {
     expect(issue?.message).toContain('available in Moomoo')
   })
 
+  it('derives the gross cost when a buy supplies units and unit price', () => {
+    const issue = validateActivityBalances(portfolio, {
+      type: 'Buy',
+      accountId: 'a1',
+      instrumentId: 'i1',
+      units: 2,
+      unitPrice: 251,
+      fees: 0,
+    })
+
+    expect(issue?.field).toBe('cashAmount')
+    expect(issue?.message).toMatch(/needs (?:US)?\$502\.00/)
+  })
+
+  it('counts a queued units-and-price buy before validating the next activity', () => {
+    const pendingBuy = {
+      id: 'pending-derived-buy',
+      accountId: 'a1',
+      instrumentId: 'i1',
+      type: 'Buy' as const,
+      tradeDate: '2026-06-01',
+      units: 2,
+      unitPrice: 200,
+      fees: 0,
+      taxes: 0,
+      createdAt: '',
+    }
+
+    expect(validateActivityBalances(portfolio, buy(101), undefined, [pendingBuy])?.field).toBe('cashAmount')
+  })
+
   it('counts a queued buy before validating another buy in the same account and currency', () => {
     const pendingBuy = {
       id: 'pending-buy',

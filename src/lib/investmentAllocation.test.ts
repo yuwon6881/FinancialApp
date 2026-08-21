@@ -1,10 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import type { InvestmentInstrument } from '../types'
-import { allocationStatusLabel, buildSleeveIndex, sleeveLabelFor, sleeveOf } from './investmentAllocation'
+import { allocationStatusLabel, buildSleeveIndex, sleeveLabelFor, sleeveOf, validateInvestmentPlan } from './investmentAllocation'
 
 const instrument = (overrides: Partial<InvestmentInstrument>): InvestmentInstrument => ({
   id: 'instrument-1', symbol: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'ETF', currency: 'USD',
   isCustom: false, isArchived: false, ...overrides,
+})
+
+describe('validateInvestmentPlan', () => {
+  it('rejects blank, non-finite, and out-of-range drift bands', () => {
+    const plan = {
+      usEquityTarget: 66,
+      internationalExUsTarget: 10,
+      bondsTarget: 24,
+      watchDrift: 3,
+      alertDrift: 5,
+    }
+
+    expect(validateInvestmentPlan({ ...plan, watchDrift: Number.NaN })).toContain('valid numbers')
+    expect(validateInvestmentPlan({ ...plan, alertDrift: 101 })).toContain('100')
+    expect(validateInvestmentPlan(plan)).toBe('')
+  })
 })
 
 describe('investment allocation sleeve index', () => {
