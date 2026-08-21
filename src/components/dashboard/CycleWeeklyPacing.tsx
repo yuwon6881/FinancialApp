@@ -1,10 +1,24 @@
 import React from 'react'
-import type { CycleWeekSummary } from '../../lib/cycleCalendar'
+import { cycleWeekMetric, type CycleHeatmapMode, type CycleMetricTone, type CycleWeekSummary } from '../../lib/cycleCalendar'
 import { cn } from '../../lib/utils'
 
 interface CycleWeeklyPacingProps {
   weeks: CycleWeekSummary[]
+  /** The pacing headline follows the shading mode, so the two never disagree. */
+  mode: CycleHeatmapMode
   formatAmount: (value: number) => React.ReactNode
+}
+
+const HEADINGS: Record<CycleHeatmapMode, string> = {
+  expense: 'Weekly Spend Pacing',
+  net: 'Weekly Net Pacing',
+  activity: 'Weekly Activity Pacing',
+}
+
+const TONE_CLASS: Record<CycleMetricTone, string> = {
+  inflow: 'text-blue-500',
+  outflow: 'text-orange-500',
+  neutral: 'text-foreground/80',
 }
 
 function formatShortDate(dateStr: string): string {
@@ -18,47 +32,55 @@ function formatShortDate(dateStr: string): string {
 
 export const CycleWeeklyPacing: React.FC<CycleWeeklyPacingProps> = ({
   weeks,
+  mode,
   formatAmount,
 }) => {
   if (weeks.length === 0) return null
 
   return (
     <div className="mt-4 border-t border-border/50 pt-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-          Weekly Spend Pacing
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:text-[11px]">
+          {HEADINGS[mode]}
         </h4>
         <span className="text-[10px] text-muted-foreground">
           {weeks.length} week cycles
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2 lg:grid-cols-5">
         {weeks.map((week) => {
-          const hasNet = week.totalNet !== 0
-          const isNetPositive = week.totalNet > 0
+          const metric = cycleWeekMetric(week, mode)
+          const notStarted = week.elapsedDayCount === 0
+          // A week that has not begun has no history to pace; showing a bare zero there read as
+          // "nothing spent" when it actually means "not here yet".
+          const headline = notStarted
+            ? week.projectedBillsAmount > 0
+              ? <>~{formatAmount(-week.projectedBillsAmount)}</>
+              : <span className="text-muted-foreground">Not here yet</span>
+            : formatAmount(metric.value ?? 0)
+
           return (
             <div
               key={week.weekNumber}
-              className="flex flex-col justify-between rounded-xl border border-border/50 bg-muted/15 p-2.5 transition-colors hover:bg-muted/30"
+              className={cn(
+                'flex flex-col justify-between rounded-xl border border-border/50 p-2 transition-colors sm:p-2.5',
+                notStarted ? 'border-dashed bg-transparent' : 'bg-muted/15 hover:bg-muted/30'
+              )}
             >
-              <div className="flex items-center justify-between text-[10px]">
+              <div className="flex items-baseline justify-between gap-1 text-[10px]">
                 <span className="font-bold text-foreground">Week {week.weekNumber}</span>
-                <span className="text-[9px] text-muted-foreground">
+                {/* Date ranges are desktop detail; a phone card only has room for the figure. */}
+                <span className="hidden text-[9px] text-muted-foreground lg:inline">
                   {formatShortDate(week.startDate)} - {formatShortDate(week.endDate)}
                 </span>
               </div>
               <div className="mt-1.5 flex items-baseline justify-between gap-1">
-                <span className="text-[10px] font-bold text-orange-500">
-                  {week.totalOutflow > 0 ? formatAmount(-week.totalOutflow) : 'RM0'}
+                <span className={cn('text-[10px] font-bold', notStarted ? 'text-muted-foreground' : TONE_CLASS[metric.tone])}>
+                  {headline}
                 </span>
-                {hasNet && (
-                  <span
-                    className={cn(
-                      'text-[9px] font-medium',
-                      isNetPositive ? 'text-emerald-500' : 'text-muted-foreground'
-                    )}
-                  >
-                    net {isNetPositive ? '+' : ''}{formatAmount(week.totalNet)}
+                {!notStarted && week.elapsedDayCount < week.dayCount && (
+                  <span className="text-[9px] font-medium text-muted-foreground">
+                    {week.elapsedDayCount}/{week.dayCount}d
                   </span>
                 )}
               </div>

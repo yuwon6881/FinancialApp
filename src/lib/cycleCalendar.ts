@@ -47,7 +47,14 @@ export interface CycleWeekSummary {
   totalOutflow: number
   totalInflow: number
   totalNet: number
+  /** Gross cash moved (inflow + outflow), so the Activity mode has a figure of its own. */
+  totalActivity: number
   transactionCount: number
+  /** Bills still owed on the week's upcoming days -- absent history, not zero spending. */
+  projectedBillsAmount: number
+  dayCount: number
+  /** Days of this week already reached, so a wholly-future week reads as upcoming, not empty. */
+  elapsedDayCount: number
 }
 
 export interface CycleCalendarStats {
@@ -193,7 +200,11 @@ export function buildCycleCalendar(options: {
       const totalOutflow = currentWeekDays.reduce((acc, d) => acc + d.outflow, 0)
       const totalInflow = currentWeekDays.reduce((acc, d) => acc + d.inflow, 0)
       const totalNet = currentWeekDays.reduce((acc, d) => acc + (d.net ?? 0), 0)
+      const totalActivity = currentWeekDays.reduce((acc, d) => acc + d.activity, 0)
       const transactionCount = currentWeekDays.reduce((acc, d) => acc + d.transactions.length, 0)
+      const projectedBillsAmount = currentWeekDays
+        .filter(d => d.isFuture)
+        .reduce((acc, d) => acc + d.projectedBillsAmount, 0)
 
       weeks.push({
         weekNumber: weekIndex,
@@ -202,7 +213,11 @@ export function buildCycleCalendar(options: {
         totalOutflow,
         totalInflow,
         totalNet,
+        totalActivity,
         transactionCount,
+        projectedBillsAmount,
+        dayCount: currentWeekDays.length,
+        elapsedDayCount: currentWeekDays.filter(d => !d.isFuture).length,
       })
       currentWeekDays = []
       weekIndex += 1
@@ -230,4 +245,38 @@ export function buildCycleCalendar(options: {
       noSpendDaysCount,
     },
   }
+}
+
+export type CycleMetricTone = 'inflow' | 'outflow' | 'neutral'
+
+export interface CycleMetric {
+  /** Signed figure to render, or undefined when the mode has nothing to say for this period. */
+  value?: number
+  tone: CycleMetricTone
+}
+
+/**
+ * The figure a day or week shows has to match the mode being shaded, otherwise Spending mode
+ * reports a salary as a positive number on a day with no spending at all.
+ */
+export function cycleDayMetric(
+  day: Pick<CycleCalendarDay, 'net' | 'outflow' | 'activity'>,
+  mode: CycleHeatmapMode,
+): CycleMetric {
+  if (mode === 'expense') {
+    return { value: day.outflow > 0 ? -day.outflow : undefined, tone: 'outflow' }
+  }
+  if (mode === 'activity') {
+    return { value: day.activity > 0 ? day.activity : undefined, tone: 'neutral' }
+  }
+  return { value: day.net, tone: (day.net ?? 0) >= 0 ? 'inflow' : 'outflow' }
+}
+
+export function cycleWeekMetric(
+  week: Pick<CycleWeekSummary, 'totalOutflow' | 'totalNet' | 'totalActivity'>,
+  mode: CycleHeatmapMode,
+): CycleMetric {
+  if (mode === 'expense') return { value: -week.totalOutflow, tone: 'outflow' }
+  if (mode === 'activity') return { value: week.totalActivity, tone: 'neutral' }
+  return { value: week.totalNet, tone: week.totalNet >= 0 ? 'inflow' : 'outflow' }
 }

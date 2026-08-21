@@ -244,24 +244,25 @@ const PanelSkeleton = ({ height = 'h-40' }: { height?: string }) => (
 )
 
 const CycleCalendarSkeleton = () => (
-  <div className={`${panelClass} p-4 sm:p-6`}>
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+  <div className={`${panelClass} p-3 sm:p-6`}>
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
       <div className="space-y-1.5">
         <div className="flex items-center gap-2"><Skeleton className="h-5 w-28" /><Skeleton className="size-7 rounded-full" /></div>
         <Skeleton className="h-3 w-40" />
       </div>
-      <div className="flex gap-1 rounded-xl border border-border/60 bg-muted/25 p-1">
-        <Skeleton className="h-6 w-16 rounded-md" />
-        <Skeleton className="h-6 w-16 rounded-md" />
-        <Skeleton className="h-6 w-16 rounded-md" />
+      <div className="flex gap-1 self-stretch rounded-xl border border-border/60 bg-muted/25 p-1 sm:self-start">
+        <Skeleton className="h-7 flex-1 rounded-md sm:h-6 sm:w-16 sm:flex-none" />
+        <Skeleton className="h-7 flex-1 rounded-md sm:h-6 sm:w-16 sm:flex-none" />
+        <Skeleton className="h-7 flex-1 rounded-md sm:h-6 sm:w-16 sm:flex-none" />
       </div>
     </div>
     <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2.5">
-      <div className="flex items-center gap-1.5"><Skeleton className="h-3 w-16" />{[1, 2, 3, 4].map(level => <Skeleton key={level} className="size-3 rounded-sm" />)}<Skeleton className="h-3 w-20" /></div>
+      <div className="hidden items-center gap-1.5 sm:flex"><Skeleton className="h-3 w-16" />{[1, 2, 3, 4].map(level => <Skeleton key={level} className="size-3 rounded-sm" />)}<Skeleton className="h-3 w-20" /></div>
+      <div className="hidden items-center gap-2.5 lg:flex"><Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-20" /></div>
       <div className="flex items-center gap-2"><Skeleton className="h-3 w-28" /><Skeleton className="h-3 w-20" /></div>
     </div>
     <div className="mt-4 grid grid-cols-7 gap-1 sm:gap-2">
-      {Array.from({ length: 7 }).map((_, index) => <Skeleton key={`weekday-${index}`} className="mx-auto h-3 w-7" />)}
+      {Array.from({ length: 7 }).map((_, index) => <Skeleton key={`weekday-${index}`} className="mx-auto h-3 w-3 sm:w-7" />)}
       {Array.from({ length: 35 }).map((_, index) => <Skeleton key={`day-${index}`} className="h-11 w-full rounded-lg sm:h-14 sm:rounded-xl md:h-16" />)}
     </div>
     <div className="mt-4 border-t border-border/50 pt-3">
@@ -269,11 +270,11 @@ const CycleCalendarSkeleton = () => (
         <Skeleton className="h-3 w-32" />
         <Skeleton className="h-3 w-16" />
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2 lg:grid-cols-5">
         {Array.from({ length: 5 }).map((_, index) => (
-          <div key={`week-${index}`} className="space-y-2 rounded-xl border border-border/50 bg-muted/15 p-2.5">
-            <div className="flex justify-between"><Skeleton className="h-3 w-12" /><Skeleton className="h-2.5 w-16" /></div>
-            <div className="flex justify-between"><Skeleton className="h-3 w-14" /><Skeleton className="h-2.5 w-12" /></div>
+          <div key={`week-${index}`} className="space-y-2 rounded-xl border border-border/50 bg-muted/15 p-2 sm:p-2.5">
+            <div className="flex justify-between"><Skeleton className="h-3 w-12" /><Skeleton className="hidden h-2.5 w-16 lg:block" /></div>
+            <div className="flex justify-between"><Skeleton className="h-3 w-14" /><Skeleton className="h-2.5 w-8" /></div>
           </div>
         ))}
       </div>

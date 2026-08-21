@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCycleCalendar } from './cycleCalendar'
+import { buildCycleCalendar, cycleDayMetric, cycleWeekMetric } from './cycleCalendar'
 
 describe('buildCycleCalendar', () => {
   it('clamps the cycle day and excludes transfers and adjustments from daily net activity', () => {
@@ -105,5 +105,63 @@ describe('buildCycleCalendar', () => {
 
     expect(result.days[0].dateKey).toBe('2025-01-31')
     expect(result.days.at(-1)?.dateKey).toBe('2025-02-27')
+  })
+
+  it('summarises each week by gross activity and elapsed days as well as flow', () => {
+    const result = buildCycleCalendar({
+      selectedMonth: 'Jul',
+      selectedYear: 2026,
+      cycleDay: 1,
+      today: new Date(2026, 6, 2),
+      transactions: [
+        { id: '1', date: '2026-07-01', description: 'Groceries', category: 'Food', ledgerCategory: 'Essentials', amount: -100 },
+        { id: '2', date: '2026-07-02', description: 'Salary', category: 'Salary', ledgerCategory: 'Income', amount: 400 },
+      ],
+      recurringPayments: [
+        {
+          id: 'bill1', recurringPaymentId: 'rp1', name: 'Cloud', amount: 60, category: 'Software',
+          ledgerCategory: 'Essentials', dueDate: '2026-07-20', status: 'Pending', isPaid: false, isDiscarded: false,
+        },
+      ],
+    })
+
+    const firstWeek = result.weeks[0]
+    expect(firstWeek.totalActivity).toBe(500)
+    expect(firstWeek.totalOutflow).toBe(100)
+    expect(firstWeek.totalNet).toBe(300)
+    expect(firstWeek.elapsedDayCount).toBe(2)
+    expect(firstWeek.projectedBillsAmount).toBe(0)
+
+    const billWeek = result.weeks.find(week => week.startDate <= '2026-07-20' && week.endDate >= '2026-07-20')
+    expect(billWeek?.elapsedDayCount).toBe(0)
+    expect(billWeek?.projectedBillsAmount).toBe(60)
+  })
+})
+
+describe('cycle mode metrics', () => {
+  const day = { net: 350, outflow: 150, activity: 650 }
+
+  it('reports only spending in Spending mode so an inflow never reads as money spent', () => {
+    expect(cycleDayMetric(day, 'expense')).toEqual({ value: -150, tone: 'outflow' })
+    expect(cycleDayMetric({ net: 500, outflow: 0, activity: 500 }, 'expense'))
+      .toEqual({ value: undefined, tone: 'outflow' })
+  })
+
+  it('reports signed net in Net Flow mode and gross movement in Activity mode', () => {
+    expect(cycleDayMetric(day, 'net')).toEqual({ value: 350, tone: 'inflow' })
+    expect(cycleDayMetric({ net: -20, outflow: 20, activity: 20 }, 'net')).toEqual({ value: -20, tone: 'outflow' })
+    expect(cycleDayMetric(day, 'activity')).toEqual({ value: 650, tone: 'neutral' })
+  })
+
+  it('leaves a day with nothing recorded absent rather than showing zero', () => {
+    expect(cycleDayMetric({ net: undefined, outflow: 0, activity: 0 }, 'net').value).toBeUndefined()
+    expect(cycleDayMetric({ net: undefined, outflow: 0, activity: 0 }, 'activity').value).toBeUndefined()
+  })
+
+  it('paces weeks by the same figure the grid is shading', () => {
+    const week = { totalOutflow: 300, totalNet: -100, totalActivity: 500 }
+    expect(cycleWeekMetric(week, 'expense')).toEqual({ value: -300, tone: 'outflow' })
+    expect(cycleWeekMetric(week, 'net')).toEqual({ value: -100, tone: 'outflow' })
+    expect(cycleWeekMetric(week, 'activity')).toEqual({ value: 500, tone: 'neutral' })
   })
 })
