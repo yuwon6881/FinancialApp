@@ -42,6 +42,13 @@ const formatIso = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
+const parseLocalDate = (iso: string): Date => {
+  const [year, month, day] = iso.split('-').map(Number)
+  return Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)
+    ? new Date(year, month - 1, day)
+    : new Date(iso)
+}
+
 const toIsoDate = (raw: string | null | undefined): string => {
   if (!raw) return ''
   if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10)
@@ -239,7 +246,9 @@ export function buildBillTimelineModel({
   const timelineNodes = [...grouped.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([dueDate, bills]): BillTimelineNode => {
-      const time = new Date(dueDate).getTime()
+      // `new Date('2026-08-05')` is parsed as UTC midnight while the cycle bounds are local
+      // midnight, which slid every node along the rail by the local UTC offset.
+      const time = parseLocalDate(dueDate).getTime()
       const percent = durationMs > 0 ? Math.max(0, Math.min(100, ((time - startTime) / durationMs) * 100)) : 0
       return { dueDate, percent, bills }
     })

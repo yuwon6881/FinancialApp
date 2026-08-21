@@ -84,7 +84,9 @@ export function buildCycleSummaryInsights(
     largestExpenseAmount: largest ? Math.abs(largest.amount) : undefined,
     biggestDayDate: biggestDay?.[0],
     biggestDayTotal: biggestDay?.[1],
-    avgDailySpend: expenseCount > 0 ? totalSpend / cycleLengthDays : undefined,
+    // Mirrors the server: a spend rate is per elapsed day, not per whole-cycle day, so the
+    // figure agrees with the cycle calendar's own daily average mid-cycle.
+    avgDailySpend: expenseCount > 0 && elapsedDays > 0 ? totalSpend / elapsedDays : undefined,
     cycleLengthDays,
     velocityFirstHalf: expenseCount > 0 ? velocityFirstHalf : undefined,
     velocitySecondHalf: expenseCount > 0 ? totalSpend - velocityFirstHalf : undefined,

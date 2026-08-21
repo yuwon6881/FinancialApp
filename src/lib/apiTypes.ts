@@ -27,15 +27,17 @@ import type {
 
 type WireAmount = string | number
 
+// A cycle with no reportable expenses has no largest expense, no busiest day and no daily
+// average, and the API sends those fields as explicit nulls rather than omitting them.
 interface WireCycleSummaryInsights {
-  largestExpenseDescription?: string
-  largestExpenseAmount?: WireAmount
-  biggestDayDate?: string
-  biggestDayTotal?: WireAmount
-  avgDailySpend?: WireAmount
+  largestExpenseDescription?: string | null
+  largestExpenseAmount?: WireAmount | null
+  biggestDayDate?: string | null
+  biggestDayTotal?: WireAmount | null
+  avgDailySpend?: WireAmount | null
   cycleLengthDays: number
-  velocityFirstHalf?: WireAmount
-  velocitySecondHalf?: WireAmount
+  velocityFirstHalf?: WireAmount | null
+  velocitySecondHalf?: WireAmount | null
   noSpendDays: number
   transactionCount: number
   committedSpend: WireAmount

@@ -29,6 +29,42 @@ describe('reportCalculations', () => {
     })
   })
 
+  describe('buildCycleSummaryInsights - average daily spend', () => {
+    const cycleStart = new Date(2026, 7, 1)
+    const cycleEnd = new Date(2026, 7, 31)
+
+    it('paces an in-progress cycle over elapsed days, not the whole cycle', () => {
+      const insights = buildCycleSummaryInsights(
+        [tx('2026-08-02', -100), tx('2026-08-05', -100)],
+        cycleStart,
+        cycleEnd,
+        new Date(2026, 7, 10),
+      )
+      // 200 spent over 10 elapsed days, not over the 31-day cycle.
+      expect(insights.avgDailySpend).toBe(20)
+    })
+
+    it('divides a completed cycle by its full length', () => {
+      const insights = buildCycleSummaryInsights(
+        [tx('2026-08-02', -155)],
+        cycleStart,
+        cycleEnd,
+        new Date(2026, 8, 5),
+      )
+      expect(insights.avgDailySpend).toBe(5)
+    })
+
+    it('leaves the average unknown for a cycle that has not started', () => {
+      const insights = buildCycleSummaryInsights(
+        [tx('2026-08-02', -100)],
+        cycleStart,
+        cycleEnd,
+        new Date(2026, 6, 20),
+      )
+      expect(insights.avgDailySpend).toBeUndefined()
+    })
+  })
+
   describe('buildCycleSummaryInsights - no-spend days', () => {
     const cycleStart = new Date(2026, 7, 1) // Aug 1, 2026
     const cycleEnd = new Date(2026, 7, 31) // Aug 31, 2026

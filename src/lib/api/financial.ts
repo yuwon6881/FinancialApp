@@ -11,6 +11,10 @@ import type {
 import { deobfuscateActiveRecurringPayment, deobfuscateAmount, obfuscateAmount } from './amounts'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
+/** Optional insight money field: absent and null both mean "not known", never zero. */
+const optionalInsightAmount = (value: string | number | null | undefined): number | undefined =>
+  value == null ? undefined : deobfuscateAmount(value)
+
 export function fetchDashboard(
   month?: string,
   year?: number,
@@ -141,14 +145,17 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
       })),
       ...(data.cycleSummaryInsights && {
         cycleSummaryInsights: {
-          largestExpenseDescription: data.cycleSummaryInsights.largestExpenseDescription,
-          largestExpenseAmount: data.cycleSummaryInsights.largestExpenseAmount !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.largestExpenseAmount) : undefined,
-          biggestDayDate: data.cycleSummaryInsights.biggestDayDate,
-          biggestDayTotal: data.cycleSummaryInsights.biggestDayTotal !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.biggestDayTotal) : undefined,
-          avgDailySpend: data.cycleSummaryInsights.avgDailySpend !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.avgDailySpend) : undefined,
+          largestExpenseDescription: data.cycleSummaryInsights.largestExpenseDescription ?? undefined,
+          // A cycle with no expenses sends these fields as JSON null rather than omitting them.
+          // Running a null through deobfuscateAmount yields 0, which the insights card then
+          // renders as a real "$0.00 per day" instead of "Unavailable".
+          largestExpenseAmount: optionalInsightAmount(data.cycleSummaryInsights.largestExpenseAmount),
+          biggestDayDate: data.cycleSummaryInsights.biggestDayDate ?? undefined,
+          biggestDayTotal: optionalInsightAmount(data.cycleSummaryInsights.biggestDayTotal),
+          avgDailySpend: optionalInsightAmount(data.cycleSummaryInsights.avgDailySpend),
           cycleLengthDays: data.cycleSummaryInsights.cycleLengthDays,
-          velocityFirstHalf: data.cycleSummaryInsights.velocityFirstHalf !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.velocityFirstHalf) : undefined,
-          velocitySecondHalf: data.cycleSummaryInsights.velocitySecondHalf !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.velocitySecondHalf) : undefined,
+          velocityFirstHalf: optionalInsightAmount(data.cycleSummaryInsights.velocityFirstHalf),
+          velocitySecondHalf: optionalInsightAmount(data.cycleSummaryInsights.velocitySecondHalf),
           noSpendDays: data.cycleSummaryInsights.noSpendDays,
           transactionCount: data.cycleSummaryInsights.transactionCount,
           committedSpend: deobfuscateAmount(data.cycleSummaryInsights.committedSpend),

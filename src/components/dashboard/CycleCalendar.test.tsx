@@ -236,7 +236,8 @@ describe('CycleCalendar component', () => {
     expect(dialog.getAttribute('aria-modal')).toBe('true')
     expect(screen.getByText('Dinner Out')).toBeTruthy()
     expect(screen.getByText('Streaming')).toBeTruthy()
-    expect(screen.getByText('$15')).toBeTruthy()
+    // Bills render as outflow figures, matching the "Money out" tile above them.
+    expect(screen.getByText('$-15')).toBeTruthy()
     expect(screen.queryByText(/NaN/)).toBeNull()
 
     fireEvent.click(screen.getByText('View in Ledger'))
@@ -271,5 +272,58 @@ describe('CycleCalendar component', () => {
 
     fireEvent.click(screen.getByTitle(/Jul 10:.*Bills due: Variable Utility/))
     expect(screen.getByText('Amount not set')).toBeTruthy()
+  })
+
+  it('shows what a settled bill cost rather than its zero remaining balance', () => {
+    render(
+      <CycleCalendar
+        selectedMonth="Jul"
+        selectedYear={2026}
+        cycleDay={1}
+        cycleLabel="Jul 1 ~ Jul 31, 2026"
+        transactions={[]}
+        recurringPayments={[
+          {
+            id: 'rp1',
+            recurringPaymentId: 'sub1',
+            name: 'Streaming',
+            amount: 15,
+            scheduledAmount: 15,
+            paidAmount: 15,
+            remainingAmount: 0,
+            category: 'Entertainment',
+            ledgerCategory: 'Essentials',
+            dueDate: '2026-07-10',
+            status: 'Paid',
+            isPaid: true,
+            isDiscarded: false,
+          },
+          {
+            id: 'rp2',
+            recurringPaymentId: 'sub2',
+            name: 'Gym',
+            amount: 40,
+            scheduledAmount: 40,
+            paidAmount: 0,
+            remainingAmount: 0,
+            category: 'Health',
+            ledgerCategory: 'Essentials',
+            dueDate: '2026-07-10',
+            // A loan payoff settles the occurrence without a tagged transaction of its own.
+            status: 'SettledByLoanPayoff',
+            isPaid: true,
+            isDiscarded: false,
+          },
+        ]}
+        formatNet={value => `$${value}`}
+      />,
+    )
+
+    fireEvent.click(screen.getByTitle(/Jul 10:.*Bills due: Streaming, Gym/))
+
+    const bills = screen.getByText(/Bills due/).closest('div')?.parentElement
+    expect(within(bills as HTMLElement).getByText('$-15')).toBeTruthy()
+    expect(within(bills as HTMLElement).getByText('$-40')).toBeTruthy()
+    expect(within(bills as HTMLElement).queryByText('$-0')).toBeNull()
   })
 })

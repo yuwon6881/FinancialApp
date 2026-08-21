@@ -113,7 +113,15 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
             {day.recurring.map((bill) => {
               const isSettled = bill.isPaid || bill.status === 'Paid' || bill.status === 'SettledByLoanPayoff'
               const isPartial = bill.status === 'PartiallyPaid'
-              const amount = bill.remainingAmount ?? bill.scheduledAmount ?? bill.amount
+              // A settled bill has nothing remaining, so leading with `remainingAmount` showed
+              // every paid bill as zero. Show what was actually settled there, and what is still
+              // owed only while the bill is outstanding.
+              // A loan payoff settles its occurrence with no tagged transaction of its own, so a
+              // zero paid figure there still falls back to what the bill was scheduled for.
+              const settledAmount = bill.paidAmount && bill.paidAmount > 0 ? bill.paidAmount : null
+              const amount = isSettled
+                ? settledAmount ?? bill.scheduledAmount ?? bill.amount
+                : bill.remainingAmount ?? bill.scheduledAmount ?? bill.amount
 
               return (
                 <div
@@ -124,7 +132,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
                   <div className="flex shrink-0 items-center gap-1.5">
                     {/* An occurrence with no scheduled amount is genuinely unknown, not zero. */}
                     <span className="font-bold text-muted-foreground">
-                      {amount == null ? 'Amount not set' : formatAmount(amount)}
+                      {amount == null ? 'Amount not set' : formatAmount(-Math.abs(amount))}
                     </span>
                     <span
                       className={cn(
