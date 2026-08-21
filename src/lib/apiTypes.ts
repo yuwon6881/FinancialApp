@@ -112,9 +112,16 @@ type WireDashboardStats = Omit<
   activeRecurringTotal: WireAmount
 }
 
-export type WireActiveRecurringPayment = Omit<ActiveRecurringPayment, 'amount'> & {
-  amount: WireAmount | null
-}
+// Every money field on an occurrence arrives obfuscated, not just `amount`. Typing the
+// scheduled/paid/remaining trio as plain numbers let raw wire strings reach arithmetic, which
+// surfaced as NaN bill figures downstream -- see deobfuscateActiveRecurringPayment.
+export type WireActiveRecurringPayment =
+  Omit<ActiveRecurringPayment, 'amount' | 'scheduledAmount' | 'paidAmount' | 'remainingAmount'> & {
+    amount: WireAmount | null
+    scheduledAmount?: WireAmount | null
+    paidAmount?: WireAmount | null
+    remainingAmount?: WireAmount | null
+  }
 
 export type WireRecurringSettlementResult = Omit<RecurringSettlementResult, 'occurrence' | 'transaction'> & {
   occurrence: WireActiveRecurringPayment

@@ -8,7 +8,7 @@ import type {
   WirePendingNotification,
   WireTrendPoint,
 } from '../apiTypes'
-import { deobfuscateAmount, obfuscateAmount } from './amounts'
+import { deobfuscateActiveRecurringPayment, deobfuscateAmount, obfuscateAmount } from './amounts'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
 export function fetchDashboard(
@@ -70,10 +70,9 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
         monthlyExpenses: deobfuscateAmount(data.stats.monthlyExpenses),
         activeRecurringTotal: deobfuscateAmount(data.stats.activeRecurringTotal),
       },
-      activeRecurringPayments: (data.activeRecurringPayments || []).map((payment: WireActiveRecurringPayment) => ({
-        ...payment,
-        amount: payment.amount == null ? null : deobfuscateAmount(payment.amount),
-      })),
+      activeRecurringPayments: (data.activeRecurringPayments || []).map(
+        (payment: WireActiveRecurringPayment) => deobfuscateActiveRecurringPayment(payment),
+      ),
       trendPoints: (data.trendPoints || []).map((point: WireTrendPoint) => ({
         ...point,
         balance: deobfuscateAmount(point.balance),

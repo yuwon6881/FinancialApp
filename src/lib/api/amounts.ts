@@ -1,5 +1,5 @@
-import type { LedgerAccount, Loan, LoanPaymentSplit, LoanScheduleEntry, LoanRepaymentPreviewResult, LoanRepaymentActionResult, RecurringPayment, SavingsGoal, Transaction, WishlistItem } from '../../types'
-import type { WireLedgerAccount, WireLoan, WireLoanPaymentSplit, WireLoanScheduleEntry, WireLoanRepaymentPreviewResult, WireLoanRepaymentActionResult, WireRecurringPayment, WireSavingsGoal, WireTransaction, WireWishlistItem } from '../apiTypes'
+import type { ActiveRecurringPayment, LedgerAccount, Loan, LoanPaymentSplit, LoanScheduleEntry, LoanRepaymentPreviewResult, LoanRepaymentActionResult, RecurringPayment, SavingsGoal, Transaction, WishlistItem } from '../../types'
+import type { WireActiveRecurringPayment, WireLedgerAccount, WireLoan, WireLoanPaymentSplit, WireLoanScheduleEntry, WireLoanRepaymentPreviewResult, WireLoanRepaymentActionResult, WireRecurringPayment, WireSavingsGoal, WireTransaction, WireWishlistItem } from '../apiTypes'
 
 const OBFUSCATION_KEY = 'FinancialAppObfuscationKey'
 
@@ -52,6 +52,23 @@ export function deobfuscateLedgerAccount(account: WireLedgerAccount): LedgerAcco
 
 export function deobfuscateRecurringPayment(payment: WireRecurringPayment): RecurringPayment {
   return { ...payment, amount: deobfuscateAmount(payment.amount) }
+}
+
+// An occurrence carries four obfuscated money fields. `amount` stays nullable because "no
+// scheduled amount" is a real state, while the scheduled/paid/remaining trio is only present on
+// responses that compute it -- absent must stay absent so `??` fallbacks still reach `amount`.
+export function deobfuscateActiveRecurringPayment(
+  payment: WireActiveRecurringPayment,
+): ActiveRecurringPayment {
+  const optional = (value: WireActiveRecurringPayment['paidAmount']) =>
+    value == null ? undefined : deobfuscateAmount(value)
+  return {
+    ...payment,
+    amount: payment.amount == null ? null : deobfuscateAmount(payment.amount),
+    scheduledAmount: payment.scheduledAmount == null ? payment.scheduledAmount : deobfuscateAmount(payment.scheduledAmount),
+    paidAmount: optional(payment.paidAmount),
+    remainingAmount: optional(payment.remainingAmount),
+  }
 }
 
 export function deobfuscateWishlistItem(item: WireWishlistItem): WishlistItem {

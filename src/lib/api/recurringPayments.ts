@@ -1,6 +1,6 @@
 import type { PayEarlyResult, RecurringPayment, RecurringReminderSettings, RecurringSettlementResult } from '../../types'
 import type { WirePayEarlyResult, WireRecurringPayment, WireRecurringSettlementResult } from '../apiTypes'
-import { deobfuscateAmount, deobfuscateRecurringPayment, deobfuscateTransaction, obfuscateAmount } from './amounts'
+import { deobfuscateActiveRecurringPayment, deobfuscateRecurringPayment, deobfuscateTransaction, obfuscateAmount } from './amounts'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
 export function fetchRecurringPayments(signal?: AbortSignal): Promise<RecurringPayment[]> {
@@ -105,10 +105,7 @@ export async function settleRecurringOccurrence(
   )
   invalidateCache()
   return {
-    occurrence: {
-      ...data.occurrence,
-      amount: data.occurrence.amount == null ? null : deobfuscateAmount(data.occurrence.amount),
-    },
+    occurrence: deobfuscateActiveRecurringPayment(data.occurrence),
     transaction: data.transaction ? deobfuscateTransaction(data.transaction) : null,
     nextOccurrenceDate: data.nextOccurrenceDate,
   }
