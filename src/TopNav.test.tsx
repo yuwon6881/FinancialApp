@@ -109,8 +109,42 @@ describe('TopNav mobile primary navigation', () => {
     const status = screen.getByLabelText('Refreshing')
     expect(status).toBeTruthy()
     expect(status.className).toContain('absolute')
+    // Anchored to the logo, not to the header bar, so it cannot drift at the wider paddings.
+    expect(status.parentElement?.className).toContain('relative')
     expect(status.closest('button')?.getAttribute('aria-label')).toBe('Go to Today')
     expect(screen.queryByText('Refreshing')).toBeNull()
+  })
+
+  it('animates the header rule while work is in flight and leaves it still when offline', () => {
+    const props = {
+      activeTab: 'dashboard' as const,
+      onTabChange: vi.fn(),
+      hideSensitive: false,
+      sensitivePreferenceStatus: 'resolved' as const,
+      onToggleHideSensitive: vi.fn(),
+      onRetrySensitivePreference: vi.fn(),
+      onLogout: vi.fn(),
+      username: 'Test User',
+      pendingNotifications: [],
+      onOpenNotifications: vi.fn(),
+      darkMode: false,
+      onToggleDarkMode: vi.fn(),
+    }
+
+    const idle = render(<TopNav {...props} />)
+    expect(idle.container.querySelector('.nav-activity-bar')).toBeNull()
+    idle.unmount()
+
+    const busy = render(<TopNav {...props} isSyncing />)
+    const bar = busy.container.querySelector('.nav-activity-bar')
+    expect(bar).toBeTruthy()
+    // Visual only: the badge beside the logo owns the announcement.
+    expect(bar?.getAttribute('aria-hidden')).toBe('true')
+    busy.unmount()
+
+    // Offline is a state, not activity.
+    const offline = render(<TopNav {...props} isOffline isSyncing />)
+    expect(offline.container.querySelector('.nav-activity-bar')).toBeNull()
   })
 
   it('moves keyboard focus styling from the home logo to its wordmark', () => {

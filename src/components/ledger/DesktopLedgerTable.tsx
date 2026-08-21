@@ -4,6 +4,7 @@ import { DesktopLedgerRow } from './LedgerRows'
 import type { LedgerListProps } from './ledgerListShared'
 import { hasDistinctBucketMovement } from '../../lib/ledgerTotals'
 import { LedgerEmptyState } from './LedgerEmptyState'
+import { Skeleton } from '../ui/Skeleton'
 
 // Desktop (>= md) ledger table, including the page-total summary rows and the
 // empty/loading state. Mounted only when useIsMobile() is false, so a phone never
@@ -14,6 +15,8 @@ export function DesktopLedgerTable({
   hideSensitive,
   currency,
   serverIsFetching,
+  serverIsLoadingRows = false,
+  loadingRowCount = 6,
   pageTotals,
   isTxDeleting,
   isTxSyncing,
@@ -134,7 +137,20 @@ export function DesktopLedgerTable({
               </tr>
             )}
 
-            {!hasRows && (
+            {serverIsLoadingRows && Array.from({ length: loadingRowCount }).map((_, index) => (
+              <tr key={`loading-${index}`} aria-hidden="true">
+                {isSelecting && <td><Skeleton className="size-4 rounded" /></td>}
+                <td><Skeleton className="h-3.5 w-20" /></td>
+                <td><Skeleton className="h-3.5 w-40" /></td>
+                <td><Skeleton className="h-3.5 w-24" /></td>
+                <td><Skeleton className="h-5 w-24 rounded-full" /></td>
+                <td className="text-right"><Skeleton className="ml-auto h-3.5 w-16" /></td>
+                <td className="text-right"><Skeleton className="ml-auto h-3.5 w-16" /></td>
+                <td><Skeleton className="mx-auto h-7 w-20 rounded-lg" /></td>
+              </tr>
+            ))}
+
+            {!hasRows && !serverIsLoadingRows && (
               <tr className="list-row-enter">
                 <td colSpan={isSelecting ? 8 : 7} className="p-8 text-center text-muted-foreground text-sm">
                   {serverIsFetching ? 'Loading…' : <LedgerEmptyState isFiltered={hasAnyFilter} onResetFilters={onResetFilters} onAddTransaction={onAddTransaction} />}

@@ -11,6 +11,14 @@ export interface LedgerListProps {
   hideSensitive: boolean
   currency: string
   serverIsFetching: boolean
+  /**
+   * A server fetch whose result replaces the rows currently on screen (page turn, page size,
+   * filters, sort). The list shows placeholders for it, because the rows it still holds belong to
+   * a query the user has already left.
+   */
+  serverIsLoadingRows?: boolean
+  /** Placeholder count while loading, so the list keeps roughly the height it is heading for. */
+  loadingRowCount?: number
   pageTotals: { inflow: number; outflow: number; transfer: number; bucket: string | null; bucketNet: number }
   isTxDeleting: (id: string) => boolean
   isTxSyncing: (id: string) => boolean

@@ -204,4 +204,99 @@ describe('useLedgerView mode parity', () => {
     await act(() => result.current.retryServerFetch())
     expect(onFetchPagedTransactions).toHaveBeenCalledTimes(2)
   })
+
+  it('withdraws the superseded page instead of showing it while the next one loads', async () => {
+    const pageOne = baseTransaction('page-1-row')
+    const pageTwo = baseTransaction('page-2-row')
+    let releaseSecondPage: ((value: unknown) => void) | undefined
+    const onFetchPagedTransactions = vi.fn()
+      // Total spans more than one page at the all-cycles page size, so page 2 is real and the
+      // out-of-range clamp cannot pull the request back to page 1.
+      .mockResolvedValueOnce({ items: [pageOne], total: 250, page: 1, pageSize: 100 })
+      .mockImplementationOnce(() => new Promise(resolve => {
+        releaseSecondPage = resolve
+      }))
+
+    const { result } = renderHook(() => useLedgerView({
+      transactions: [], categories: [], selectedMonth: 'Aug', selectedYear: 2026,
+      cycleDay: 28, isMobile: false, showAllCycles: true, onFetchPagedTransactions,
+      onDeleteTransaction: vi.fn(), hideSensitive: false, formRef: { current: null },
+    }))
+
+    await waitFor(() => expect(result.current.displayTransactions.map(t => t.id)).toEqual(['page-1-row']))
+
+    act(() => result.current.setCurrentPage(2))
+    await waitFor(() => expect(result.current.serverIsFetching).toBe(true))
+
+    expect(result.current.serverIsReplacingRows).toBe(true)
+    expect(result.current.displayTransactions).toEqual([])
+
+    await act(async () => {
+      releaseSecondPage?.({ items: [pageTwo], total: 250, page: 2, pageSize: 100 })
+    })
+
+    await waitFor(() => expect(result.current.displayTransactions.map(t => t.id)).toEqual(['page-2-row']))
+    expect(result.current.serverIsReplacingRows).toBe(false)
+  })
+
+  it('shows loading for a rows-per-page change as well as a page turn', async () => {
+    const row = baseTransaction('row')
+    let releaseResize: ((value: unknown) => void) | undefined
+    const onFetchPagedTransactions = vi.fn()
+      .mockResolvedValueOnce({ items: [row], total: 1, page: 1, pageSize: 100 })
+      .mockImplementationOnce(() => new Promise(resolve => {
+        releaseResize = resolve
+      }))
+
+    const { result } = renderHook(() => useLedgerView({
+      transactions: [], categories: [], selectedMonth: 'Aug', selectedYear: 2026,
+      cycleDay: 28, isMobile: false, showAllCycles: true, onFetchPagedTransactions,
+      onDeleteTransaction: vi.fn(), hideSensitive: false, formRef: { current: null },
+    }))
+
+    await waitFor(() => expect(result.current.displayTransactions.map(t => t.id)).toEqual(['row']))
+
+    act(() => result.current.setPageSize(25))
+    await waitFor(() => expect(result.current.serverIsReplacingRows).toBe(true))
+    expect(result.current.displayTransactions).toEqual([])
+    expect(onFetchPagedTransactions).toHaveBeenLastCalledWith(expect.objectContaining({ pageSize: 25 }))
+
+    await act(async () => {
+      releaseResize?.({ items: [row], total: 1, page: 1, pageSize: 25 })
+    })
+    expect(result.current.serverIsReplacingRows).toBe(false)
+  })
+
+  it('keeps rows on screen for a background revalidation after a sync', async () => {
+    const row = baseTransaction('row')
+    let releaseRevalidation: ((value: unknown) => void) | undefined
+    const onFetchPagedTransactions = vi.fn()
+      .mockResolvedValueOnce({ items: [row], total: 1, page: 1, pageSize: 100 })
+      .mockImplementationOnce(() => new Promise(resolve => {
+        releaseRevalidation = resolve
+      }))
+
+    const { result, rerender } = renderHook(
+      ({ activeSyncId }) => useLedgerView({
+        transactions: [], categories: [], selectedMonth: 'Aug', selectedYear: 2026,
+        cycleDay: 28, isMobile: false, showAllCycles: true, onFetchPagedTransactions,
+        onDeleteTransaction: vi.fn(), hideSensitive: false, formRef: { current: null },
+        activeSyncId,
+      }),
+      { initialProps: { activeSyncId: null as string | null } },
+    )
+
+    await waitFor(() => expect(result.current.displayTransactions.map(t => t.id)).toEqual(['row']))
+
+    rerender({ activeSyncId: 'op-1' })
+    rerender({ activeSyncId: null })
+
+    await waitFor(() => expect(result.current.serverIsFetching).toBe(true))
+    expect(result.current.serverIsReplacingRows).toBe(false)
+    expect(result.current.displayTransactions.map(t => t.id)).toEqual(['row'])
+
+    await act(async () => {
+      releaseRevalidation?.({ items: [row], total: 1, page: 1, pageSize: 100 })
+    })
+  })
 })

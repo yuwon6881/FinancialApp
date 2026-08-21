@@ -166,6 +166,11 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   // Server-side state
   const [serverResult, setServerResult] = useState<PagedTransactionResult | null>(null)
   const [serverIsFetching, setServerIsFetching] = useState(false)
+  // A fetch whose answer will be a different set of rows (a page turn, a new page size, new
+  // filters, a new sort). The rows on screen already contradict the pagination footer the moment
+  // such a fetch starts, so the list shows loading placeholders instead of the superseded page.
+  // Background revalidations (post-sync, post-delete) keep their rows and only spin the footer.
+  const [serverIsReplacingRows, setServerIsReplacingRows] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
   const isInitialFetchDone = useRef(false)
   const wasAllCyclesRef = useRef(false)
@@ -309,6 +314,8 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     wishlistFilter: TransactionLinkFilter
     sort: TransactionSort
     pSize: number
+    /** Revalidation of the same query: keep the current rows on screen while it runs. */
+    background?: boolean
   }) => {
     if (!onFetchPagedTransactions) return
     const sequence = ++fetchSequenceRef.current
@@ -316,6 +323,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     const controller = new AbortController()
     fetchAbortRef.current = controller
     setServerIsFetching(true)
+    setServerIsReplacingRows(!opts.background)
     setServerError(null)
     try {
       const buckets = opts.filters.filter(f => LEDGER_BUCKETS.includes(f))
@@ -345,7 +353,10 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         setServerError('Could not load saved transactions. Check your connection and try again.')
       }
     } finally {
-      if (sequence === fetchSequenceRef.current) setServerIsFetching(false)
+      if (sequence === fetchSequenceRef.current) {
+        setServerIsFetching(false)
+        setServerIsReplacingRows(false)
+      }
     }
   }, [onFetchPagedTransactions, allCyclesRange])
   useEffect(() => () => fetchAbortRef.current?.abort(), [])
@@ -405,6 +416,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       wasAllCyclesRef.current = false
       setServerResult(null)
       setServerError(null)
+      setServerIsReplacingRows(false)
       isInitialFetchDone.current = false
     }
   }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingFilters, incomingTxType, incomingSearch, incomingDate, incomingStartDate, incomingEndDate, incomingMinAmount, incomingMaxAmount, incomingRecurringFilter, incomingWishlistFilter, sortOrder, allCyclesPageSize])
@@ -453,6 +465,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         wishlistFilter: appliedWishlistFilter,
         sort: sortOrder,
         pSize: pageSize,
+        background: true,
       })
     }
     prevActiveSyncId.current = activeSyncId || null
@@ -475,6 +488,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         wishlistFilter: appliedWishlistFilter,
         sort: sortOrder,
         pSize: pageSize,
+        background: true,
       })
     }
     prevDeletingTxId.current = deletingTxId || null
@@ -772,12 +786,14 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   const displayTransactions = useMemo(() => {
     if (showAllCycles) {
-      if (!serverResult) return []
+      // Rows from the query that is being replaced are withdrawn immediately, so nothing on screen
+      // (or reachable by export, selection, or a row action) belongs to a page the user left.
+      if (!serverResult || serverIsReplacingRows) return []
       const syncingIds = new Set(filteredPendingTransactions.map(transaction => String(transaction.id)))
       return serverResult.items.filter(transaction => !syncingIds.has(String(transaction.id)))
     }
     return paginatedTransactions
-  }, [showAllCycles, serverResult, filteredPendingTransactions, paginatedTransactions])
+  }, [showAllCycles, serverResult, serverIsReplacingRows, filteredPendingTransactions, paginatedTransactions])
 
   const totalPages = Math.ceil(filteredTransactions.length / pageSize) || 1
 
@@ -982,7 +998,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   const handleExportPage = () => {
     if (hideSensitive) return
-    if (showAllCycles && !serverResult) {
+    if (showAllCycles && (!serverResult || serverIsReplacingRows)) {
       onShowAlert?.('Load the saved transactions before exporting this page.', 'Export Not Ready')
       return
     }
@@ -1041,7 +1057,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     selectedTxTypeFilter, setSelectedTxTypeFilter,
     isFilterDropdownOpen, setIsFilterDropdownOpen,
     currentPage, setCurrentPage, pageSize, setPageSize, sortOrder, setSortOrder,
-    serverResult, serverIsFetching, serverError, retryServerFetch,
+    serverResult, serverIsFetching, serverIsReplacingRows, serverError, retryServerFetch,
     showExportModal, setShowExportModal, exportIsFetching,
     pendingSearchTerm, setPendingSearchTerm,
     pendingFilters, setPendingFilters,

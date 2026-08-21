@@ -3,6 +3,7 @@ import { MobileLedgerRow } from './LedgerRows'
 import type { LedgerListProps } from './ledgerListShared'
 import { hasDistinctBucketMovement } from '../../lib/ledgerTotals'
 import { LedgerEmptyState } from './LedgerEmptyState'
+import { Skeleton } from '../ui/Skeleton'
 
 // Mobile (< md) ledger card list — swipe a row left to reveal Edit / Delete.
 // Mounted only when useIsMobile() is true, so the desktop table's row tree,
@@ -13,6 +14,8 @@ export function MobileLedgerList({
   hideSensitive,
   currency,
   serverIsFetching,
+  serverIsLoadingRows = false,
+  loadingRowCount = 5,
   pageTotals,
   isTxDeleting,
   isTxSyncing,
@@ -109,7 +112,24 @@ export function MobileLedgerList({
         </div>
       )}
 
-      {!hasRows && (
+      {serverIsLoadingRows && Array.from({ length: loadingRowCount }).map((_, index) => (
+        <div
+          key={`loading-${index}`}
+          aria-hidden="true"
+          className="space-y-2.5 rounded-xl border border-border/60 bg-card p-3"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <Skeleton className="h-3.5 w-40" />
+            <Skeleton className="h-3.5 w-16" />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </div>
+        </div>
+      ))}
+
+      {!hasRows && !serverIsLoadingRows && (
         <div className="list-row-enter p-8 text-center text-muted-foreground text-sm border rounded-xl bg-card">
           {serverIsFetching ? 'Loading…' : <LedgerEmptyState isFiltered={hasAnyFilter} onResetFilters={onResetFilters} onAddTransaction={onAddTransaction} />}
         </div>

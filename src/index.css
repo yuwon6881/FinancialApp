@@ -811,6 +811,40 @@ button, [role="button"] {
     }
 }
 
+/* The header's top rule doubles as the app's activity indicator: a sheen travels along it while
+   work is in flight. It is the one always-visible edge that can say "busy" without taking layout
+   or competing with the nav's controls, and unlike a badge it cannot drift off its anchor. */
+@keyframes nav-activity-sweep {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+.nav-activity-bar {
+    position: relative;
+    overflow: hidden;
+}
+.nav-activity-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--background) 85%, transparent) 45%,
+        color-mix(in srgb, var(--background) 85%, transparent) 55%,
+        transparent 100%
+    );
+    animation: nav-activity-sweep 1.15s linear infinite;
+}
+/* The global reduce rule collapses the sweep to a single 0.01ms run, which would park the sheen
+   off-screen and leave no signal at all. Hold it still and dim instead. */
+@media (prefers-reduced-motion: reduce) {
+    .nav-activity-bar::after {
+        animation: none;
+        transform: none;
+        opacity: 0.55;
+    }
+}
+
 /* Gentle nudge hinting that a record can be swiped to reveal its actions */
 @keyframes swipe-hint {
     0%, 100% { transform: translateX(0); opacity: 0.3; }

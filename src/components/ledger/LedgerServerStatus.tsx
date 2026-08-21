@@ -48,7 +48,14 @@ export function LedgerServerStatus({
               <p className="text-xs text-muted-foreground">These matching entries appear once here until the server confirms them. Saved result totals and pages stay authoritative.</p>
             </div>
           </div>
-          <LedgerTransactionList {...listProps} transactions={syncingTransactions} listKey={`${listProps.listKey}-syncing`} />
+          {/* Locally queued rows are already in hand, so a server page fetch must not replace them
+              with placeholders. */}
+          <LedgerTransactionList
+            {...listProps}
+            transactions={syncingTransactions}
+            serverIsLoadingRows={false}
+            listKey={`${listProps.listKey}-syncing`}
+          />
         </section>
       )}
 

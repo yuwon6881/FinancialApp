@@ -85,6 +85,9 @@ const TopNav: React.FC<TopNavProps> = ({
   const hasAlerts = pendingNotifications.length > 0
   const isPhone = useIsMobile(640)
   const syncStatusLabel = syncLabel || mutationBusyLabel('syncing')
+  // Offline is a state, not activity: it keeps the badge and the chip, but must not animate the
+  // activity rule as though something were in flight.
+  const isBusy = !isOffline && (isSyncing || Boolean(syncLabel))
 
   const getInitials = (name: string) => {
     if (!name) return 'U'
@@ -180,7 +183,15 @@ const TopNav: React.FC<TopNavProps> = ({
         className="glass-nav sticky top-0 z-50 w-full border-b border-border/40 backdrop-blur-xl"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        <div className="h-[2.5px] w-full bg-gradient-to-r from-blue-500 via-teal-500 via-amber-500 to-pink-500" />
+        {/* Activity rides the header's own top rule -- the conventional place for "the app is
+            working", visible from every view and every breakpoint. */}
+        <div
+          className={`h-[2.5px] w-full bg-gradient-to-r from-blue-500 via-teal-500 via-amber-500 to-pink-500 ${isBusy ? 'nav-activity-bar' : ''}`}
+          data-busy={isBusy || undefined}
+          // Purely visual: the status badge beside the logo already carries the accessible name,
+          // and a second live region for the same fact would announce it twice.
+          aria-hidden="true"
+        />
         <div className="relative mx-auto flex h-16 w-full max-w-[1440px] items-center px-4 sm:px-6 lg:px-8">
         
         {/* Left Side (Logo and Brand) */}
@@ -195,15 +206,20 @@ const TopNav: React.FC<TopNavProps> = ({
             onClick={() => onTabChange('dashboard')}
             className="brand-home-button flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-xl cursor-pointer select-none active:scale-95"
           >
-            <AppLogo className="size-9 rounded-xl transition-transform duration-200 hover:scale-105" />
-            {(isOffline || isSyncing || syncLabel) && (
-              <span
-                role="status"
-                aria-label={isOffline ? 'Offline' : syncStatusLabel}
-                title={isOffline ? 'No network connection — showing saved data; changes will sync when you are back online' : syncStatusLabel}
-                className={`absolute left-7 top-1 z-10 flex size-3.5 items-center justify-center rounded-full border-2 border-background ${isOffline ? 'bg-amber-500' : 'animate-pulse bg-blue-500'}`}
-              />
-            )}
+            {/* The badge is anchored to the logo itself. It used to be positioned against the
+                whole header bar, so at the wider paddings (sm:px-6, lg:px-8) it drifted off the
+                mark it was meant to sit on. */}
+            <span className="relative shrink-0">
+              <AppLogo className="size-9 rounded-xl transition-transform duration-200 hover:scale-105" />
+              {(isOffline || isSyncing || syncLabel) && (
+                <span
+                  role="status"
+                  aria-label={isOffline ? 'Offline' : syncStatusLabel}
+                  title={isOffline ? 'No network connection — showing saved data; changes will sync when you are back online' : syncStatusLabel}
+                  className={`absolute -right-0.5 -top-0.5 z-10 flex size-3.5 items-center justify-center rounded-full border-2 border-background ${isOffline ? 'bg-amber-500' : 'animate-pulse bg-blue-500'}`}
+                />
+              )}
+            </span>
             <span className="brand-home-label hidden sm:inline md:hidden lg:inline text-base lg:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
               FinancialApp
             </span>

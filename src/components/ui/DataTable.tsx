@@ -122,13 +122,19 @@ export function DataTablePagination({
   const nextDisabled = currentPage >= safeTotalPages || serverIsFetching
 
   return (
-    <div className="flex flex-col items-center justify-between gap-4 text-xs select-none sm:flex-row">
+    <div className="flex flex-col items-center justify-between gap-4 text-xs select-none sm:flex-row" aria-busy={serverIsFetching || undefined}>
       <div className="flex items-center gap-2 font-medium text-muted-foreground">
         {serverIsFetching && <Loader2 className="size-3.5 animate-spin text-accent-ink" aria-hidden="true" />}
         <span aria-live="polite" aria-atomic="true">
-          Showing <span className="font-semibold text-foreground">{displayFrom}</span> to{' '}
-          <span className="font-semibold text-foreground">{displayTo}</span> of{' '}
-          <span className="font-semibold text-foreground">{totalItems}</span> entries
+          {serverIsFetching ? (
+            <>Loading entries {displayFrom}–{displayTo}…</>
+          ) : (
+            <>
+              Showing <span className="font-semibold text-foreground">{displayFrom}</span> to{' '}
+              <span className="font-semibold text-foreground">{displayTo}</span> of{' '}
+              <span className="font-semibold text-foreground">{totalItems}</span> entries
+            </>
+          )}
         </span>
       </div>
 
@@ -136,6 +142,8 @@ export function DataTablePagination({
         {showPageSize && (
           <div className="flex items-center gap-2">
             <span className="font-medium text-muted-foreground">Rows per page:</span>
+            {/* Locked mid-fetch: a second size change would only abort the request whose rows the
+                footer is already describing. */}
             <CustomSelect
               ariaLabel="Rows per page"
               value={pageSize}
@@ -143,6 +151,7 @@ export function DataTablePagination({
               options={pageSizeOptions.map(value => ({ value, label: String(value) }))}
               className="w-20"
               direction="up"
+              disabled={serverIsFetching}
             />
           </div>
         )}
@@ -179,6 +188,7 @@ export function DataTablePagination({
                 variant={currentPage === page ? 'primary' : 'outline'}
                 size="sm"
                 onClick={() => onPageChange(page)}
+                disabled={serverIsFetching}
                 aria-current={currentPage === page ? 'page' : undefined}
                 className="min-w-8 px-2"
               >

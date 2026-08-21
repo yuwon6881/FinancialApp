@@ -240,6 +240,8 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     hideSensitive,
     currency,
     serverIsFetching: ledger.serverIsFetching,
+    serverIsLoadingRows: isServerMode && ledger.serverIsReplacingRows,
+    loadingRowCount: Math.min(ledger.pageSize, isMobile ? 5 : 8),
     pageTotals,
     isTxDeleting: ledger.isTxDeleting,
     isTxSyncing: ledger.isTxSyncing,
