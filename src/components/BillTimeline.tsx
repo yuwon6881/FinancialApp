@@ -5,7 +5,7 @@ import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryDotClass } from '../lib/categoryColors'
 import { ordinalSuffix } from '../lib/cycleLabels'
 import { getOccurrenceStatusLabel } from './recurring/formatters'
-import { BILL_TIMELINE_MONTHS, buildBillTimelineModel, type BillTimelineNode } from '../lib/billTimeline'
+import { BILL_TIMELINE_MONTHS, buildBillTimelineModel, getBillTimelineAmount, parseBillTimelineDate, type BillTimelineNode } from '../lib/billTimeline'
 import { BottomSheet } from './ui/BottomSheet'
 import { Card } from './ui/Card'
 import { SensitiveMask } from './ui/SensitiveAmount'
@@ -40,6 +40,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   const [selectedBill, setSelectedBill] = useState<ActiveRecurringPayment | null>(null)
   const [selectedNode, setSelectedNode] = useState<BillTimelineNode | null>(null)
   const [highlightedNodeDate, setHighlightedNodeDate] = useState<string | null>(null)
+  const descriptionRefs = React.useRef(new Map<string, HTMLButtonElement>())
   const timelineId = React.useId().replace(/:/g, '')
 
   const {
@@ -68,6 +69,15 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   const formatCurrency = (value: number) => formatCurrencyVal(value, currency)
   const formatSensitive = (value: number) =>
     hideSensitive ? <SensitiveMask /> : <span>{formatCurrency(value)}</span>
+  const formatTimelineAmount = (value: number | null) =>
+    value == null ? <span>Unavailable</span> : formatSensitive(value)
+
+  const highlightNode = (dueDate: string | null, revealDescription = false) => {
+    setHighlightedNodeDate(dueDate)
+    if (dueDate && revealDescription && denseTimeline) {
+      descriptionRefs.current.get(dueDate)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    }
+  }
 
   const handleNodeClick = (node: BillTimelineNode) => {
     if (node.bills.length === 1) {
@@ -99,7 +109,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             {processedPayments.length} bills
           </span>
           <span className="text-[10px] font-extrabold text-blue-500 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md shrink-0">
-            Cycle Total: {formatSensitive(cycleTotal)}
+            Cycle Total: {formatTimelineAmount(cycleTotal)}
           </span>
           <ChevronDown className="size-4 text-muted-foreground shrink-0" />
         </div>
@@ -137,7 +147,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             </span>
             <span>•</span>
             <span className="text-xs font-extrabold text-blue-500 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md">
-              Cycle Total: {formatSensitive(cycleTotal)} ({processedPayments.length} bills)
+              Cycle Total: {formatTimelineAmount(cycleTotal)} ({processedPayments.length} bills)
             </span>
           </div>
         </div>
@@ -162,14 +172,17 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             else if (allDiscarded) dotColor = 'bg-slate-400'
             else if (!anyPending) dotColor = 'bg-emerald-500'
 
-            const d = new Date(node.dueDate)
+            const d = parseBillTimelineDate(node.dueDate)
             const dateLabel = `${BILL_TIMELINE_MONTHS[d.getMonth()]} ${d.getDate()}${ordinalSuffix(d.getDate())}`
             const nameLabel = node.bills.length === 1
               ? node.bills[0].name
               : node.bills.length === 2
                 ? `${node.bills[0].name} & ${node.bills[1].name}`
                 : `${node.bills.length} bills`
-            const total = node.bills.reduce((s, b) => s + (b.amount == null ? 0 : Math.abs(b.amount)), 0)
+            const amounts = node.bills.map(getBillTimelineAmount)
+            const total = amounts.some(amount => amount == null)
+              ? null
+              : amounts.reduce<number>((sum, amount) => sum + (amount ?? 0), 0)
             const statusLabel = anyPartiallyPaid
               ? 'Part paid'
               : anyPending
@@ -202,7 +215,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   <div className="text-[10px] text-muted-foreground mt-0.5">Due {dateLabel}</div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-xs font-extrabold text-foreground">{formatSensitive(total)}</div>
+                  <div className="text-xs font-extrabold text-foreground">{formatTimelineAmount(total)}</div>
                   <span className={`inline-block mt-0.5 text-[8px] font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>{statusLabel}</span>
                 </div>
               </Button>
@@ -215,10 +228,10 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
           below, so bills one day apart never paint labels on top of each other. */}
       {timelineNodes.length > 0 && (
         <div className="hidden space-y-4 rounded-2xl border border-border/40 bg-muted/10 p-5 select-none sm:block">
-          <div className="overflow-x-auto pb-2">
-            <div className="relative px-3 pt-7 pb-3" style={{ minWidth: denseTimelineMinWidth }}>
-              <span className="absolute left-3 top-0 text-[10px] font-bold text-muted-foreground">{startLabel}</span>
-              <span className="absolute right-3 top-0 text-[10px] font-bold text-muted-foreground">{endLabel}</span>
+          <div className="overflow-x-auto pb-2" data-testid="bill-timeline-scrollport">
+            <div className="relative px-5 pt-7 pb-3" style={{ minWidth: denseTimelineMinWidth }}>
+              <span className="absolute left-5 top-0 text-[10px] font-bold text-muted-foreground">{startLabel}</span>
+              <span className="absolute right-5 top-0 text-[10px] font-bold text-muted-foreground">{endLabel}</span>
               <div className="relative h-1.5 rounded-full bg-muted">
               {(() => {
                 const todayTime = new Date().getTime()
@@ -246,19 +259,23 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                     key={node.dueDate}
                     type="button"
                     onClick={() => handleNodeClick(node)}
-                    onMouseEnter={() => setHighlightedNodeDate(node.dueDate)}
-                    onMouseLeave={() => setHighlightedNodeDate(null)}
-                    onFocus={() => setHighlightedNodeDate(node.dueDate)}
-                    onBlur={() => setHighlightedNodeDate(null)}
+                    onMouseEnter={() => highlightNode(node.dueDate, true)}
+                    onMouseLeave={() => highlightNode(null)}
+                    onFocus={() => highlightNode(node.dueDate, true)}
+                    onBlur={() => highlightNode(null)}
                     aria-label={`View subscriptions due on ${node.dueDate}`}
                     aria-describedby={`${timelineId}-description-${node.dueDate}`}
                     title={`${node.dueDate}: ${labelText}`}
                     style={{ left: `${node.percent}%` }}
-                    className={`absolute top-1/2 z-10 flex size-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full p-0 ring-4 transition-[transform,opacity,box-shadow] hover:scale-125 focus-visible:scale-125 ${dotColor} ${
-                      isHighlighted ? 'scale-125 shadow-lg' : highlightedNodeDate ? 'opacity-45' : ''
+                    className={`absolute top-1/2 z-10 flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full p-0 transition-opacity ${
+                      highlightedNodeDate && !isHighlighted ? 'opacity-45' : ''
                     }`}
                   >
-                    {node.bills.length > 1 && <span className="text-[8px] font-black leading-none text-on-vivid">{node.bills.length}</span>}
+                    <span className={`flex size-4 items-center justify-center rounded-full ring-4 transition-[transform,box-shadow] ${dotColor} ${
+                      isHighlighted ? 'scale-125 shadow-lg' : ''
+                    }`}>
+                      {node.bills.length > 1 && <span className="text-[8px] font-black leading-none text-on-vivid">{node.bills.length}</span>}
+                    </span>
                   </Button>
                 )
               })}
@@ -273,13 +290,16 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
           <div className={`grid gap-2 md:grid-cols-2 xl:grid-cols-3 ${denseTimeline ? 'max-h-72 overflow-y-auto pr-1' : ''}`}>
             {timelineNodes.map(node => {
-              const date = new Date(node.dueDate)
+              const date = parseBillTimelineDate(node.dueDate)
               const nameLabel = node.bills.length === 1
                 ? node.bills[0].name
                 : node.bills.length === 2
                   ? `${node.bills[0].name} & ${node.bills[1].name}`
                   : `${node.bills.length} bills`
-              const total = node.bills.reduce((sum, bill) => sum + (bill.amount == null ? 0 : Math.abs(bill.amount)), 0)
+              const amounts = node.bills.map(getBillTimelineAmount)
+              const total = amounts.some(amount => amount == null)
+                ? null
+                : amounts.reduce<number>((sum, amount) => sum + (amount ?? 0), 0)
               const allPaid = node.bills.every(bill => bill.status === 'Paid' || bill.status === 'SettledByLoanPayoff')
               const anyPartiallyPaid = node.bills.some(bill => bill.status === 'PartiallyPaid')
               const allDiscarded = node.bills.every(bill => bill.status === 'Discarded')
@@ -290,11 +310,15 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   variant="unstyled"
                   key={`key-${node.dueDate}`}
                   type="button"
+                  ref={(element) => {
+                    if (element) descriptionRefs.current.set(node.dueDate, element)
+                    else descriptionRefs.current.delete(node.dueDate)
+                  }}
                   onClick={() => handleNodeClick(node)}
-                  onMouseEnter={() => setHighlightedNodeDate(node.dueDate)}
-                  onMouseLeave={() => setHighlightedNodeDate(null)}
-                  onFocus={() => setHighlightedNodeDate(node.dueDate)}
-                  onBlur={() => setHighlightedNodeDate(null)}
+                  onMouseEnter={() => highlightNode(node.dueDate)}
+                  onMouseLeave={() => highlightNode(null)}
+                  onFocus={() => highlightNode(node.dueDate)}
+                  onBlur={() => highlightNode(null)}
                   id={`${timelineId}-description-${node.dueDate}`}
                   data-highlighted={isHighlighted || undefined}
                   className={`flex min-w-0 items-center gap-2.5 rounded-xl border bg-card/60 p-2.5 text-left transition-[background-color,border-color,box-shadow,opacity] hover:bg-muted/35 ${
@@ -308,7 +332,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                     <span className="block truncate text-xs font-bold text-foreground">{nameLabel}</span>
                     <span className="block text-[10px] text-muted-foreground">{BILL_TIMELINE_MONTHS[date.getMonth()]} {date.getDate()}</span>
                   </span>
-                  <span className="shrink-0 text-xs font-extrabold text-foreground">{formatSensitive(total)}</span>
+                  <span className="shrink-0 text-xs font-extrabold text-foreground">{formatTimelineAmount(total)}</span>
                 </Button>
               )
             })}
@@ -363,7 +387,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                     </div>
                   </div>
                   <div className="text-right flex flex-col items-end gap-1 font-semibold">
-                    <span className="text-xs font-extrabold text-foreground">{bill.amount == null ? 'Unavailable' : formatSensitive(Math.abs(bill.amount))}</span>
+                    <span className="text-xs font-extrabold text-foreground">{formatTimelineAmount(getBillTimelineAmount(bill))}</span>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>
                       {getOccurrenceStatusLabel(bill.status)}
                     </span>

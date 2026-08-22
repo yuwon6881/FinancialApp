@@ -68,11 +68,11 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             {hideBalanceAmounts ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
           </Button>
         </div>
-        <div className="mt-3 flex items-end justify-between gap-3 border-t border-border/40 pt-3">
-          <div className="text-2xl font-black text-foreground">
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-1 border-t border-border/40 pt-3">
+          <div className="min-w-0 text-2xl font-black text-foreground">
             <SensitiveAmount value={walletBalance} isMasked={areBalanceAmountsMasked} formatFn={formatCurrency} />
           </div>
-          <p className="pb-0.5 text-right text-[10px] font-semibold text-muted-foreground">
+          <p className="shrink-0 pb-0.5 text-right text-[10px] font-semibold text-muted-foreground">
             {hideSensitive ? 'Sensitive mode active' : hideBalanceAmounts ? 'Hidden on this device' : 'Visible on this device'}
           </p>
         </div>

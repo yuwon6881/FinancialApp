@@ -25,11 +25,10 @@ const allocation: InvestmentAllocationOverview = {
 const money = (value?: number) => value === undefined ? 'Incomplete' : formatCurrencyVal(value, 'MYR')
 const colors = ['bg-blue-500', 'bg-amber-500', 'bg-emerald-500']
 
-const renderGuide = (overrides: Partial<InvestmentAllocationOverview> = {}, routineAmount?: number) =>
+const renderGuide = (overrides: Partial<InvestmentAllocationOverview> = {}) =>
   render(
     <DepositGuide
       allocation={{ ...allocation, ...overrides }}
-      routineAmount={routineAmount}
       money={money}
       colors={colors}
     />,
@@ -54,11 +53,6 @@ describe('DepositGuide', () => {
     expect(screen.queryByLabelText('Amount to deposit in MYR')).toBeNull()
     open()
     expect(screen.getByLabelText('Amount to deposit in MYR')).toBeTruthy()
-  })
-
-  it('shows the routine amount badge when provided', () => {
-    renderGuide({}, 1200)
-    expect(screen.getByText(/RM 1,200.00 routine/)).toBeTruthy()
   })
 
   it('splits a deposit into a balanced portfolio by target weight', () => {

@@ -9,8 +9,6 @@ import { planDeposit, type DepositSleeveInput } from '../../lib/investmentDeposi
 
 interface DepositGuideProps {
   allocation: InvestmentAllocationOverview
-  /** Routine amount the server has already computed; shown as a badge at all times. */
-  routineAmount?: number
   money: (value?: number) => string
   colors: string[]
 }
@@ -18,12 +16,9 @@ interface DepositGuideProps {
 /**
  * Interactive deposit planning panel — the mirror of WithdrawalGuide.
  *
- * The server-computed contribution plan tells you *what* to invest based on your
- * cycle history; this panel lets you ask "if I put in X, how would it be split?"
- * for any custom amount. Both the static badge and the interactive calculator
- * are visible in the same section so neither crowds the other out.
+ * Lets you ask "if I put in X, how would it be split?" for any custom amount.
  */
-export function DepositGuide({ allocation, routineAmount, money, colors }: DepositGuideProps) {
+export function DepositGuide({ allocation, money, colors }: DepositGuideProps) {
   const reduceMotion = useReducedMotion()
   const [open, setOpen] = useState(false)
   const [amountText, setAmountText] = useState('')
@@ -65,11 +60,6 @@ export function DepositGuide({ allocation, routineAmount, money, colors }: Depos
           />
         </h3>
         <div className="flex flex-wrap items-center gap-2">
-          {routineAmount !== undefined && (
-            <span className="rounded-full border border-border/60 bg-background/60 px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-              {money(routineAmount)} routine
-            </span>
-          )}
           <Button
             variant="ghost"
             size="sm"

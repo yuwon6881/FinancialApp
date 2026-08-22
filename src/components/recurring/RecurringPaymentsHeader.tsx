@@ -46,30 +46,30 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
           <div className={`mt-4 grid min-w-0 ${isLoansView ? 'grid-cols-2' : 'grid-cols-3'}`}>
             {isLoansView ? (
               <>
-                <div className="min-w-0 pr-3">
+                <div className="min-w-0 overflow-hidden pr-3">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">Total still owed</span>
-                  <span className="text-2xl font-extrabold text-blue-500">
+                  <span className="block truncate text-lg font-extrabold text-blue-500 sm:text-2xl">
                     {loanTotalOutstanding == null ? 'Unavailable' : formatSensitive(loanTotalOutstanding)}
                   </span>
                 </div>
-                <div className="min-w-0 border-l border-border/60 pl-3">
+                <div className="min-w-0 overflow-hidden border-l border-border/60 pl-3">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">Loans tracked</span>
-                  <span className="text-2xl font-extrabold text-foreground">{loanCount}</span>
+                  <span className="block truncate text-lg font-extrabold text-foreground sm:text-2xl">{loanCount}</span>
                 </div>
               </>
             ) : (
               <>
-                <div className="min-w-0 pr-2">
+                <div className="min-w-0 overflow-hidden pr-2">
                   <span className="block text-[9px] font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:text-[10px] sm:tracking-wider">Monthly Total</span>
-                  <span className="text-2xl font-extrabold text-blue-500">{formatSensitive(totalCommittedMonthly)}</span>
+                  <span className="block truncate text-lg font-extrabold text-blue-500 sm:text-2xl">{formatSensitive(totalCommittedMonthly)}</span>
                 </div>
-                <div className="min-w-0 border-l border-border/60 px-2">
+                <div className="min-w-0 overflow-hidden border-l border-border/60 px-2">
                   <span className="block text-[9px] font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:text-[10px] sm:tracking-wider">Yearly Total</span>
-                  <span className="text-2xl font-extrabold text-blue-500">{formatSensitive(totalCommittedAnnual)}</span>
+                  <span className="block truncate text-lg font-extrabold text-blue-500 sm:text-2xl">{formatSensitive(totalCommittedAnnual)}</span>
                 </div>
-                <div className="min-w-0 border-l border-border/60 pl-2">
+                <div className="min-w-0 overflow-hidden border-l border-border/60 pl-2">
                   <span className="block text-[9px] font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:text-[10px] sm:tracking-wider">Active bills</span>
-                  <span className="text-2xl font-extrabold text-foreground">{activeCount} / {totalCount}</span>
+                  <span className="block truncate text-lg font-extrabold text-foreground sm:text-2xl">{activeCount} / {totalCount}</span>
                 </div>
               </>
             )}

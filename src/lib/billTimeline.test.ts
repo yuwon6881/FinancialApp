@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ActiveRecurringPayment, RecurringPayment, Transaction } from '../types'
-import { buildBillTimelineModel } from './billTimeline'
+import { buildBillTimelineModel, parseBillTimelineDate } from './billTimeline'
 
 const pendingPayment: ActiveRecurringPayment = {
   id: 'occurrence-1',
@@ -25,6 +25,15 @@ const baseOptions = {
 }
 
 describe('buildBillTimelineModel', () => {
+  it('parses ISO-only due dates as local calendar dates', () => {
+    const date = parseBillTimelineDate('2026-08-01')
+
+    expect(date.getFullYear()).toBe(2026)
+    expect(date.getMonth()).toBe(7)
+    expect(date.getDate()).toBe(1)
+    expect(date.getHours()).toBe(0)
+  })
+
   it('keeps current-cycle server status authoritative', () => {
     const transaction: Transaction = {
       id: 'tx-1',
@@ -120,6 +129,29 @@ describe('buildBillTimelineModel', () => {
     expect(result.cycleTotal).toBe(200)
     expect(result.timelineNodes).toHaveLength(1)
     expect(result.timelineNodes[0].bills).toHaveLength(2)
+  })
+
+  it('uses the frozen recurring amount instead of a partial occurrence remaining amount', () => {
+    const partial = {
+      ...pendingPayment,
+      amount: 30,
+      scheduledAmount: 120,
+      paidAmount: 90,
+      remainingAmount: 30,
+      status: 'PartiallyPaid' as const,
+    }
+
+    const result = buildBillTimelineModel({ ...baseOptions, activeRecurringPayments: [partial] })
+
+    expect(result.cycleTotal).toBe(120)
+  })
+
+  it('does not turn an unknown recurring amount into a zero cycle total', () => {
+    const unknown = { ...pendingPayment, amount: null, scheduledAmount: null }
+
+    const result = buildBillTimelineModel({ ...baseOptions, activeRecurringPayments: [unknown] })
+
+    expect(result.cycleTotal).toBeNull()
   })
 
   it('reconstructs historical paid and discarded rows from their occurrence cycle', () => {

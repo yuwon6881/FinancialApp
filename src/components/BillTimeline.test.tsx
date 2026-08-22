@@ -219,4 +219,65 @@ describe('BillTimeline', () => {
     expect(container.querySelector('.overflow-x-auto')).toBeTruthy()
     expect(container.querySelector('.max-h-72.overflow-y-auto')).toBeTruthy()
   })
+
+  it('keeps boundary markers inside paint space and reveals matches in a thirty-date list', () => {
+    const manyBills = Array.from({ length: 30 }, (_, index): ActiveRecurringPayment => ({
+      ...sampleActiveRecurring[0],
+      id: `bill-${index}`,
+      recurringPaymentId: `rp-${index}`,
+      name: `Bill ${index + 1}`,
+      dueDate: `2026-08-${String(index + 1).padStart(2, '0')}`,
+      dueDay: index + 1,
+    }))
+    const { container } = render(
+      <BillTimeline
+        activeRecurringPayments={manyBills}
+        selectedMonth="Aug"
+        selectedYear={2026}
+        cycleDay={1}
+        currency="MYR"
+        hideSensitive={false}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Subscriptions Billing Timeline' }))
+
+    const scrollport = screen.getByTestId('bill-timeline-scrollport')
+    expect(scrollport.firstElementChild?.className).toContain('px-5')
+
+    const lastNode = screen.getByRole('button', { name: 'View subscriptions due on 2026-08-30' })
+    expect(lastNode.className).toContain('size-7')
+    const description = document.getElementById(lastNode.getAttribute('aria-describedby')!)!
+    description.scrollIntoView = vi.fn()
+
+    fireEvent.mouseEnter(lastNode)
+
+    expect(description.dataset.highlighted).toBe('true')
+    expect(description.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+    expect(container.querySelectorAll('[aria-label^="View subscriptions due on"]')).toHaveLength(30)
+  })
+
+  it('shows the scheduled recurring amount for a partially paid bill', () => {
+    render(
+      <BillTimeline
+        activeRecurringPayments={[{
+          ...sampleActiveRecurring[0],
+          amount: 30,
+          scheduledAmount: 100,
+          paidAmount: 70,
+          remainingAmount: 30,
+          status: 'PartiallyPaid',
+        }]}
+        selectedMonth="Aug"
+        selectedYear={2026}
+        cycleDay={28}
+        currency="MYR"
+        hideSensitive={false}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Subscriptions Billing Timeline' }))
+
+    expect(screen.getAllByText(/100\.00/).length).toBeGreaterThan(0)
+  })
 })

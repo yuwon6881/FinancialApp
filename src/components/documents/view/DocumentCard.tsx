@@ -99,21 +99,15 @@ export function DocumentCard({
     if (isBusy) setEditingRelief(false)
   }, [isBusy])
 
-  // Tapping the card previews, so the common case costs no aim. Anything the user could have meant to
-  // press instead — the checkbox, the amount editor, the picker, the disclosure — wins the tap.
-  //
-  // But tap-to-preview also took away the gesture people reach for to back out of a half-finished
-  // edit: tapping empty space. So an open sub-state absorbs the first tap and closes, and only a card
-  // at rest opens the preview. Without this, every escape hatch on the card is a preview instead.
-  const previewOnBodyTap = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (hideSensitive || isBusy || isSelecting) return
+  // Tapping empty space is a natural escape hatch to dismiss the open relief-category picker.
+  // Previously this handler also opened preview, but that made swipe gestures accidentally
+  // trigger the preview sheet — the browser fires a trailing synthetic click after a drag ends.
+  // Preview is now exclusively via the eye button (PreviewDocumentButton).
+  const dismissPickerOnBodyTap = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!canCancelRelief) return
     const target = event.target as HTMLElement | null
     if (target?.closest('button, a, input, select, summary, label, [role="button"], [role="combobox"], [role="listbox"]')) return
-    if (canCancelRelief) {
-      setEditingRelief(false)
-      return
-    }
-    onPreview(document)
+    setEditingRelief(false)
   }
 
   return (
@@ -148,7 +142,7 @@ export function DocumentCard({
           </>
         }
       >
-        <div onClick={previewOnBodyTap}>
+        <div onClick={dismissPickerOnBodyTap}>
           {/* The name gets the full width of its own line. Sharing a flex row with three action
               buttons and two badges is what clipped it to "Official Receipt [REP-…". */}
           {/* `items-center`, not `items-start`: a 16px checkbox top-aligned beside a 40px icon tile

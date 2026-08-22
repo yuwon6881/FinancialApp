@@ -123,7 +123,6 @@ export function InvestmentPlanPanel({
       {contributionPlan && (
         <DepositGuide
           allocation={allocation}
-          routineAmount={contributionPlan.amount}
           money={money}
           colors={colors}
         />

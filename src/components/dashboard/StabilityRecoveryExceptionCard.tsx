@@ -72,12 +72,13 @@ export function StabilityRecoveryExceptionCard({
             </div>
             <h3
               id="stability-recovery-exception"
-              className="flex items-center gap-1 flex-wrap text-sm font-bold leading-snug text-amber-700 dark:text-amber-300"
+              className="text-sm font-bold leading-snug text-amber-700 dark:text-amber-300"
             >
-              <span>Your emergency fund is below where it was</span>
+              Your emergency fund is below where it was
               <InfoHint
                 label="How putting money back is worked out"
                 text="Only money you mark as needing to go back creates this reminder. Your normal salary share does not count as putting it back; reaching your target clears it."
+                className="inline-flex align-middle ml-0.5"
               />
             </h3>
           </div>

@@ -20,8 +20,13 @@ export interface BillTimelineModel {
   startLabel: string
   endLabel: string
   processedPayments: ActiveRecurringPayment[]
-  cycleTotal: number
+  cycleTotal: number | null
   timelineNodes: BillTimelineNode[]
+}
+
+export function getBillTimelineAmount(payment: Pick<ActiveRecurringPayment, 'amount' | 'scheduledAmount'>): number | null {
+  const amount = payment.scheduledAmount ?? payment.amount
+  return amount == null || !Number.isFinite(amount) ? null : Math.abs(amount)
 }
 
 export interface BuildBillTimelineModelOptions {
@@ -42,7 +47,7 @@ const formatIso = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
-const parseLocalDate = (iso: string): Date => {
+export const parseBillTimelineDate = (iso: string): Date => {
   const [year, month, day] = iso.split('-').map(Number)
   return Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)
     ? new Date(year, month - 1, day)
@@ -248,10 +253,12 @@ export function buildBillTimelineModel({
     .map(([dueDate, bills]): BillTimelineNode => {
       // `new Date('2026-08-05')` is parsed as UTC midnight while the cycle bounds are local
       // midnight, which slid every node along the rail by the local UTC offset.
-      const time = parseLocalDate(dueDate).getTime()
+      const time = parseBillTimelineDate(dueDate).getTime()
       const percent = durationMs > 0 ? Math.max(0, Math.min(100, ((time - startTime) / durationMs) * 100)) : 0
       return { dueDate, percent, bills }
     })
+
+  const displayAmounts = processedPayments.map(getBillTimelineAmount)
 
   return {
     startTime,
@@ -260,7 +267,9 @@ export function buildBillTimelineModel({
     startLabel: `${BILL_TIMELINE_MONTHS[range.start.getMonth()]} ${range.start.getDate()}${ordinalSuffix(range.start.getDate())}`,
     endLabel: `${BILL_TIMELINE_MONTHS[range.end.getMonth()]} ${range.end.getDate()}${ordinalSuffix(range.end.getDate())}`,
     processedPayments,
-    cycleTotal: processedPayments.reduce((total, payment) => total + Math.abs(payment.amount ?? 0), 0),
+    cycleTotal: displayAmounts.some(amount => amount == null)
+      ? null
+      : displayAmounts.reduce<number>((total, amount) => total + (amount ?? 0), 0),
     timelineNodes,
   }
 }
