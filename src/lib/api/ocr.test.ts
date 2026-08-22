@@ -1,10 +1,14 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { obfuscateAmount } from './amounts'
 import {
   deleteReceiptScanJob,
   fetchReceiptScanJob,
   startReceiptScan,
+  startInvestmentScan,
 } from './ocr'
+
+const compressionMocks = vi.hoisted(() => ({ compressImageFile: vi.fn() }))
+vi.mock('../imageCompression', () => ({ compressImageFile: compressionMocks.compressImageFile }))
 
 const jsonResponse = (payload: unknown) => ({
   ok: true,
@@ -14,9 +18,16 @@ const jsonResponse = (payload: unknown) => ({
 })
 
 describe('OCR API client', () => {
+  beforeEach(() => {
+    // The real helper leaves a small file alone; these tests only care that every scan
+    // upload goes through it.
+    compressionMocks.compressImageFile.mockImplementation(async (file: File) => file)
+  })
+
   afterEach(() => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
+    compressionMocks.compressImageFile.mockReset()
   })
 
   it('starts, polls, decodes, and cancels a receipt scan job', async () => {
@@ -60,5 +71,21 @@ describe('OCR API client', () => {
     expect(String(fetchMock.mock.calls[1][0])).toContain('/ocr/scan-receipt/jobs/ocr-1')
     expect(fetchMock.mock.calls[1][1]?.method ?? 'GET').toBe('GET')
     expect(fetchMock.mock.calls[2][1].method).toBe('DELETE')
+  })
+
+  it('downscales a camera photo before uploading it, and sends what came back', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ scanId: 'ocr-2', status: 'queued' }))
+    vi.stubGlobal('fetch', fetchMock)
+    const photo = new File(['x'.repeat(1024)], 'broker.jpg', { type: 'image/jpeg' })
+    const downscaled = new File(['x'], 'broker.webp', { type: 'image/webp' })
+    compressionMocks.compressImageFile.mockResolvedValue(downscaled)
+
+    await startInvestmentScan(photo)
+
+    expect(compressionMocks.compressImageFile).toHaveBeenCalledWith(
+      photo,
+      expect.objectContaining({ maxEdge: 2400 }),
+    )
+    expect((fetchMock.mock.calls[0][1].body as FormData).get('image')).toBe(downscaled)
   })
 })

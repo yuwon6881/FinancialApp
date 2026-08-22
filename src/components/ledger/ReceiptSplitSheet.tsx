@@ -231,13 +231,29 @@ export function ReceiptSplitSheet({
             </div>
           </details>
 
-          {(receipt.truncated || receipt.warnings.length > 0 || receipt.confidence < 0.7) && (
+          {(receipt.truncated || receipt.warnings.length > 0 || receipt.confidence < 0.7
+            || calculation.hasMismatch || calculation.chargeBaseIncomplete) && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
               <div className="flex items-center gap-2 font-bold">
                 <AlertTriangle className="size-4" /> Review the extracted receipt
               </div>
               {receipt.truncated && <p className="mt-1">Some visible receipt lines may be missing.</p>}
               {receipt.warnings.map((warning, index) => <p key={index} className="mt-1">{warning}</p>)}
+              {/* The lines and charges we read add up to something the receipt itself does not
+                  print, so at least one of them is wrong — and your share is built from them. */}
+              {calculation.hasMismatch && receipt.total != null && (
+                <p className="mt-1">
+                  These lines add up to {formatCurrencyVal(calculation.receiptComputedTotal, currency)},
+                  but the receipt says {formatCurrencyVal(receipt.total, currency)}. Fix the prices before
+                  trusting your share.
+                </p>
+              )}
+              {calculation.chargeBaseIncomplete && (
+                <p className="mt-1">
+                  A charge is being split across lines with no readable price, which overstates your
+                  share of it. Unlock those prices — including lines that are not yours.
+                </p>
+              )}
             </div>
           )}
 

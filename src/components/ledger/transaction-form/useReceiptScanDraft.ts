@@ -4,7 +4,6 @@ import type { ReceiptScanResult } from '../../../lib/api'
 import { getErrorMessage } from '../../../lib/errors'
 
 export interface UseReceiptScanDraftOptions {
-  showAddForm: boolean
   autoOpenAddForm?: boolean
   receiptScanDraft?: { jobId: string; result: ReceiptScanResult } | null
   activeScanJobIds?: string[]
@@ -18,7 +17,6 @@ export interface UseReceiptScanDraftOptions {
 
 export function useReceiptScanDraft(options: UseReceiptScanDraftOptions) {
   const {
-    showAddForm,
     autoOpenAddForm,
     receiptScanDraft,
     activeScanJobIds = [],
@@ -87,8 +85,9 @@ export function useReceiptScanDraft(options: UseReceiptScanDraftOptions) {
 
     const isLocallyStarted = locallyStartedReceiptScanJobsRef.current.has(receiptScanDraft.jobId)
 
-    if (!showAddForm && !isLocallyStarted && !autoOpenAddForm) return
-    if (showAddForm && !isLocallyStarted && !autoOpenAddForm) return
+    // A draft only opens the form for the tab that started the scan, or when the app was
+    // explicitly asked to open it (the completion toast's review action).
+    if (!isLocallyStarted && !autoOpenAddForm) return
 
     appliedReceiptScanJobRef.current = receiptScanDraft.jobId
     // Keep the completed job id until the user submits or cancels so that
@@ -101,7 +100,7 @@ export function useReceiptScanDraft(options: UseReceiptScanDraftOptions) {
     openTransactionForm()
     applyReceiptScanResult(receiptScanDraft.result)
     setShowScanBanner(true)
-  }, [receiptScanDraft, showAddForm, autoOpenAddForm, openTransactionForm, applyReceiptScanResult, onStartEditPending, setActiveReceiptScanJobId])
+  }, [receiptScanDraft, autoOpenAddForm, openTransactionForm, applyReceiptScanResult, onStartEditPending, setActiveReceiptScanJobId])
 
   useEffect(() => {
     if (failedScanJob && (

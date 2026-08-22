@@ -7,21 +7,22 @@ import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
 import { scanReviewAction } from './scanReviewAction'
 
 const JOB_IDS_KEY = 'receipt_split_scan_job_ids'
+const NOTIFIED_IDS_KEY = 'receipt_split_scan_notified_ids'
 
-function readStoredIds(): string[] {
+function readStoredIds(key: string): string[] {
   try {
-    const value = JSON.parse(localStorage.getItem(JOB_IDS_KEY) || '[]')
+    const value = JSON.parse(localStorage.getItem(key) || '[]')
     return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []
   } catch {
     return []
   }
 }
 
-function storeIds(ids: string[]) {
+function storeIds(key: string, ids: string[]) {
   try {
-    localStorage.setItem(JOB_IDS_KEY, JSON.stringify(ids))
+    localStorage.setItem(key, JSON.stringify(ids))
   } catch (error) {
-    console.warn('Failed to persist receipt split scan ids', error)
+    console.warn(`Failed to persist ${key}`, error)
   }
 }
 
@@ -51,8 +52,9 @@ export function useReceiptSplitPolling(options: Options) {
     setAutoOpenReceiptSplit,
     showToast,
   } = options
-  const [jobIds, setJobIds] = useState<string[]>(readStoredIds)
+  const [jobIds, setJobIds] = useState<string[]>(() => readStoredIds(JOB_IDS_KEY))
   const jobIdsRef = useRef(jobIds)
+  const [notifiedIds, setNotifiedIds] = useState<string[]>(() => readStoredIds(NOTIFIED_IDS_KEY))
   const [activeDraft, setActiveDraft] = useState<ReceiptSplitDraft | null>(null)
   const [failedJob, setFailedJob] = useState<ReceiptSplitFailure | null>(null)
   const pollInFlightRef = useRef(false)
@@ -62,8 +64,12 @@ export function useReceiptSplitPolling(options: Options) {
     const next = update(jobIdsRef.current)
     jobIdsRef.current = next
     setJobIds(next)
-    storeIds(next)
+    storeIds(JOB_IDS_KEY, next)
   }, [])
+
+  useEffect(() => {
+    storeIds(NOTIFIED_IDS_KEY, notifiedIds)
+  }, [notifiedIds])
 
   const handleStarted = useCallback((scanId: string) => {
     setFailedJob(null)
@@ -82,6 +88,7 @@ export function useReceiptSplitPolling(options: Options) {
 
   const clearJob = useCallback(async (scanId: string) => {
     updateIds(current => current.filter(id => id !== scanId))
+    setNotifiedIds(current => current.filter(id => id !== scanId))
     setActiveDraft(current => current?.jobId === scanId ? null : current)
     setFailedJob(current => current?.jobId === scanId ? null : current)
     await deleteOnce(scanId)
@@ -104,6 +111,7 @@ export function useReceiptSplitPolling(options: Options) {
               const message = job.errorMessage || 'Receipt split scan failed. Please try again.'
               setFailedJob({ jobId: scanId, errorMessage: message })
               updateIds(current => current.filter(id => id !== scanId))
+              setNotifiedIds(current => current.filter(id => id !== scanId))
               if (!isReceiptSplitOpenRef.current)
                 showToast(message, 'Receipt Split Failed', 'error')
               await deleteOnce(scanId)
@@ -111,7 +119,10 @@ export function useReceiptSplitPolling(options: Options) {
             }
             if (job.status === 'completed' && job.result) {
               setActiveDraft({ jobId: scanId, result: job.result })
-              if (!isReceiptSplitOpenRef.current) {
+              // Two finished scans take turns being the active draft, so without a
+              // one-shot record the same completion toast would fire on every tick.
+              if (!isReceiptSplitOpenRef.current && !notifiedIds.includes(scanId)) {
+                setNotifiedIds(current => current.includes(scanId) ? current : [...current, scanId])
                 showToast('Receipt items were prepared for review.', 'Receipt Split Completed', 'success', scanReviewAction(setActiveTab, setAutoOpenReceiptSplit, 'ledger'))
               }
             }
@@ -135,6 +146,7 @@ export function useReceiptSplitPolling(options: Options) {
   }, [
     token,
     jobIds,
+    notifiedIds,
     activeDraft,
     isReceiptSplitOpenRef,
     setActiveTab,

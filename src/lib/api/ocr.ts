@@ -109,9 +109,22 @@ type WireReceiptScanJob = Omit<ReceiptScanJob, 'result'> & {
   result: (Omit<ReceiptScanResult, 'amount'> & { amount: string | number | null }) | null
 }
 
-export async function startReceiptScan(imageFile: File): Promise<{ scanId: string; status: string }> {
+/**
+ * A camera photo routinely lands well past the 10 MB the scan endpoints accept, and the whole
+ * file has to cross a phone connection before the job can even start. Downscale it the way the
+ * document vault does, but with a longer edge and less loss, because small print on a receipt is
+ * the thing being read. Non-images, HEIC, already-small files and any decode failure come back
+ * untouched, so this can only ever shrink a real photo.
+ */
+async function scanFormData(imageFile: File): Promise<FormData> {
+  const { compressImageFile } = await import('../imageCompression')
   const formData = new FormData()
-  formData.append('image', imageFile)
+  formData.append('image', await compressImageFile(imageFile, { maxEdge: 2400, quality: 0.85 }))
+  return formData
+}
+
+export async function startReceiptScan(imageFile: File): Promise<{ scanId: string; status: string }> {
+  const formData = await scanFormData(imageFile)
   const response = await apiFetch('/ocr/scan-receipt/jobs', { method: 'POST', body: formData })
   if (!response.ok) await throwApiError(response, 'Could not start receipt scan. Please try again.')
   return response.json()
@@ -137,8 +150,7 @@ export async function deleteReceiptScanJob(scanId: string): Promise<void> {
 }
 
 export async function startReceiptSplitScan(imageFile: File): Promise<{ scanId: string; status: string }> {
-  const formData = new FormData()
-  formData.append('image', imageFile)
+  const formData = await scanFormData(imageFile)
   const response = await apiFetch('/ocr/scan-receipt-split/jobs', { method: 'POST', body: formData })
   if (!response.ok) await throwApiError(response, 'Could not start receipt split scan. Please try again.')
   return response.json()
@@ -182,8 +194,7 @@ export async function fetchReceiptSplitScanJob(scanId: string): Promise<ReceiptS
 }
 
 export async function startInvestmentScan(imageFile: File): Promise<{ scanId: string; status: string }> {
-  const formData = new FormData()
-  formData.append('image', imageFile)
+  const formData = await scanFormData(imageFile)
   const response = await apiFetch('/ocr/scan-investment/jobs', { method: 'POST', body: formData })
   if (!response.ok) await throwApiError(response, 'Could not start investment scan. Please try again.')
   return response.json()

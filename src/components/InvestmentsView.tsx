@@ -182,11 +182,12 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
     if (!investmentScanDraft || !['Deposit', 'Withdrawal', 'Conversion'].includes(investmentScanDraft.result.type ?? '')) return
     if (panel === null) return
     if (panel === 'cash' && !editingCashFlow) return
-    setEditingActivity(null)
-    setEditingCashFlow(null)
+    // Never throw away an edit in progress for a scan that finished in the background. The
+    // banner and the toast action still route it once the user closes the form.
+    if (editingActivity || editingCashFlow) return
     setFormKey(value => value + 1)
     setPanel('cash')
-  }, [investmentScanDraft, panel, editingCashFlow])
+  }, [investmentScanDraft, panel, editingActivity, editingCashFlow])
   useEffect(() => {
     onAddFormOpenChange?.((panel === 'activity' && !editingActivity) || (panel === 'cash' && !editingCashFlow))
   }, [panel, editingActivity, editingCashFlow, onAddFormOpenChange])

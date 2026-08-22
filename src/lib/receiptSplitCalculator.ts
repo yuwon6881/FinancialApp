@@ -44,18 +44,22 @@ function selectedBaseForCharge(
   charge: ReceiptSplitCharge,
   itemShares: bigint[],
   fullLines: Array<bigint | null>,
-): { selected: bigint; full: bigint } {
+  /** Lines with no readable amount that the user did not take, per index. */
+  unpricedOtherLines: boolean[],
+): { selected: bigint; full: bigint; missingFromBase: boolean } {
   const eligible = charge.eligibleItemIndexes.length > 0
     ? new Set(charge.eligibleItemIndexes)
     : null
   let selected = 0n
   let full = 0n
+  let missingFromBase = false
   fullLines.forEach((value, index) => {
     if (eligible && !eligible.has(index)) return
     selected += itemShares[index] ?? 0n
     full += value ?? 0n
+    if (unpricedOtherLines[index]) missingFromBase = true
   })
-  return { selected, full }
+  return { selected, full, missingFromBase }
 }
 
 export interface ReceiptShareChargeLine {
@@ -71,6 +75,11 @@ export interface ReceiptShareCalculation {
   total: number
   selectedItemCount: number
   invalidSelectedItemIndexes: number[]
+  /**
+   * A printed charge is being spread over a line nobody took that has no readable price, so
+   * your share of that charge is higher than the receipt supports.
+   */
+  chargeBaseIncomplete: boolean
   receiptComputedTotal: number
   reconciliationDifference: number | null
   hasMismatch: boolean
@@ -94,12 +103,19 @@ export function calculateReceiptShare(
     return roundedDivide(total * scaled(bounded), scaled(item.quantity))
   })
 
+  // A printed charge is prorated by your share of the lines it covers. An unreadable price on a
+  // line you did not take still shrinks that denominator, silently growing your cut of the
+  // charge — and unlike a selected line with no price, nothing else on the sheet mentions it.
+  const unpricedOtherLines = fullLines.map((value, index) =>
+    value == null && !((selectedQuantities[index] ?? 0) > 0))
+
   const calculateCharges = (shares: bigint[], useFullReceipt: boolean) => {
     let runningImpact = 0n
+    let prorationBaseIncomplete = false
     const lines: Array<{ charge: ReceiptSplitCharge; allocation: bigint }> = []
     const ordered = [...receipt.charges].sort((a, b) => a.sequence - b.sequence)
     for (const charge of ordered) {
-      const bases = selectedBaseForCharge(charge, shares, fullLines)
+      const bases = selectedBaseForCharge(charge, shares, fullLines, unpricedOtherLines)
       const selectedBase = bases.selected + (charge.basis === 'runningTotal' ? runningImpact : 0n)
       const fullBase = bases.full
       let allocation = 0n
@@ -108,6 +124,7 @@ export function calculateReceiptShare(
         allocation = useFullReceipt
           ? printed
           : fullBase === 0n ? 0n : roundedDivide(printed * bases.selected, fullBase)
+        if (!useFullReceipt && bases.missingFromBase && bases.selected > 0n) prorationBaseIncomplete = true
       } else if (charge.ratePercent != null && Number.isFinite(charge.ratePercent)) {
         allocation = roundedDivide(selectedBase * scaled(Math.abs(charge.ratePercent)), SCALE * 100n)
       }
@@ -115,7 +132,7 @@ export function calculateReceiptShare(
       if (charge.operation === 'subtract') runningImpact -= allocation
       lines.push({ charge, allocation })
     }
-    return { impact: runningImpact, lines }
+    return { impact: runningImpact, lines, prorationBaseIncomplete }
   }
 
   const selectedSubtotal = itemShares.reduce((sum, value) => sum + value, 0n)
@@ -139,6 +156,7 @@ export function calculateReceiptShare(
     total: toMoney(selectedSubtotal + selectedCharges.impact),
     selectedItemCount: selectedQuantities.filter(value => value > 0).length,
     invalidSelectedItemIndexes,
+    chargeBaseIncomplete: selectedCharges.prorationBaseIncomplete,
     receiptComputedTotal: toMoney(receiptComputed),
     reconciliationDifference: difference,
     hasMismatch: difference != null && Math.abs(difference) > 0.01,

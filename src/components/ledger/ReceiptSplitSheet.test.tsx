@@ -142,6 +142,32 @@ describe('ReceiptSplitSheet', () => {
     expect(onUseResult).toHaveBeenCalledWith(expect.objectContaining({ amount: 4.64 }))
   })
 
+  it('says so when the scanned lines do not add up to the printed total', () => {
+    renderSheet({ ...result(), total: 30 })
+
+    expect(screen.getByText(/but the receipt says/)).toBeTruthy()
+  })
+
+  it('warns that an unreadable price on any line inflates your cut of a printed charge', () => {
+    renderSheet({
+      ...result(),
+      total: 25,
+      items: [
+        { name: 'Mine', quantity: 1, unitPrice: 16, lineTotal: 16, confidence: 1 },
+        { name: 'Unreadable', quantity: 1, unitPrice: null, lineTotal: null, confidence: 0.2 },
+      ],
+      charges: [
+        { label: 'Service', kind: 'service', operation: 'add', basis: 'subtotal', amount: 5, ratePercent: null, sequence: 0, eligibleItemIndexes: [], confidence: 1 },
+      ],
+    })
+
+    // Item 2 starts selected but has no price, so the sheet asks for it as an invalid line;
+    // deselecting it leaves the charge silently landing entirely on item 1.
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease quantity for item 2' }))
+
+    expect(screen.getByText(/overstates your\s+share of it/)).toBeTruthy()
+  })
+
   it('cannot save a receipt where nothing is yours', () => {
     renderSheet()
 

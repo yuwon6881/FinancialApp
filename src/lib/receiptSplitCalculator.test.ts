@@ -118,6 +118,52 @@ describe('calculateReceiptShare', () => {
     expect(result.hasMismatch).toBe(true)
   })
 
+  it('flags a printed charge spread over lines with no readable price', () => {
+    const input = receipt({
+      subtotal: 100,
+      total: 105,
+      items: [
+        { name: 'Mine', quantity: 1, unitPrice: 20, lineTotal: 20, confidence: 1 },
+        { name: 'Unreadable', quantity: 1, unitPrice: null, lineTotal: null, confidence: 0.2 },
+      ],
+      charges: [
+        { label: 'Service', kind: 'service', operation: 'add', basis: 'subtotal', amount: 5, ratePercent: null, sequence: 0, eligibleItemIndexes: [], confidence: 1 },
+      ],
+    })
+
+    const result = calculateReceiptShare(input, [1, 0])
+
+    // The whole printed charge lands on the only line with a price, which is why the
+    // caller has to be told the proration base was incomplete.
+    expect(result.chargeLines[0].amount).toBe(5)
+    expect(result.chargeBaseIncomplete).toBe(true)
+    expect(result.invalidSelectedItemIndexes).toEqual([])
+  })
+
+  it('does not flag an incomplete base once every eligible line has a price', () => {
+    const result = calculateReceiptShare(receipt(), [1, 1])
+    expect(result.chargeBaseIncomplete).toBe(false)
+  })
+
+  it('leaves a selected unreadable line to the invalid-selection message instead', () => {
+    const input = receipt({
+      subtotal: 100,
+      total: 105,
+      items: [
+        { name: 'Mine', quantity: 1, unitPrice: 20, lineTotal: 20, confidence: 1 },
+        { name: 'Unreadable', quantity: 1, unitPrice: null, lineTotal: null, confidence: 0.2 },
+      ],
+      charges: [
+        { label: 'Service', kind: 'service', operation: 'add', basis: 'subtotal', amount: 5, ratePercent: null, sequence: 0, eligibleItemIndexes: [], confidence: 1 },
+      ],
+    })
+
+    const result = calculateReceiptShare(input, [1, 1])
+
+    expect(result.invalidSelectedItemIndexes).toEqual([1])
+    expect(result.chargeBaseIncomplete).toBe(false)
+  })
+
   it('keeps a zeroed line in the full receipt base for flat charges', () => {
     const input = receipt({
       items: [

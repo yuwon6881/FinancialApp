@@ -211,7 +211,6 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   }, [todayDate])
 
   const scanner = useReceiptScanDraft({
-    showAddForm: state.showAddForm,
     autoOpenAddForm,
     receiptScanDraft,
     activeScanJobIds,

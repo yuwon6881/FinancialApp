@@ -77,4 +77,50 @@ describe('useReceiptSplitPolling', () => {
     expect(JSON.parse(localStorage.getItem('receipt_split_scan_job_ids') || '[]')).toEqual([])
     unmount()
   })
+
+  it('announces each completed scan once when two are waiting', async () => {
+    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['split-a', 'split-b']))
+    apiMocks.fetchReceiptSplitScanJob.mockImplementation(async (scanId: string) => ({
+      scanId,
+      status: 'completed',
+      result: {
+        description: 'Dinner',
+        date: '2026-07-28',
+        currency: 'MYR',
+        subtotal: 20,
+        total: 20,
+        category: 'Food',
+        ledgerCategory: 'Essentials',
+        items: [],
+        charges: [],
+        fieldConfidence: { description: 1, date: 1, currency: 1, subtotal: 1, total: 1 },
+        truncated: false,
+        warnings: [],
+        confidence: 1,
+      },
+      createdAt: '2026-07-28T00:00:00Z',
+      updatedAt: '2026-07-28T00:00:01Z',
+    }))
+    const options = {
+      token: 'token',
+      isReceiptSplitOpenRef: { current: false },
+      setActiveTab: vi.fn(),
+      setAutoOpenReceiptSplit: vi.fn(),
+      showToast: vi.fn(),
+    }
+    const { result, unmount } = renderHook(() => useReceiptSplitPolling(options))
+
+    // Both jobs stay tracked and take turns as the active draft, so a missing one-shot
+    // record would re-announce them on every poll pass.
+    await waitFor(() => {
+      expect(options.showToast).toHaveBeenCalledTimes(2)
+    })
+    await waitFor(() => {
+      expect(JSON.parse(localStorage.getItem('receipt_split_scan_notified_ids') || '[]'))
+        .toEqual(['split-a', 'split-b'])
+    })
+    expect(result.current.receiptSplitJobIds).toEqual(['split-a', 'split-b'])
+    expect(options.showToast).toHaveBeenCalledTimes(2)
+    unmount()
+  })
 })

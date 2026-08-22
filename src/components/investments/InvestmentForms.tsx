@@ -253,12 +253,15 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
   }
   useEffect(() => {
     if (!scanDraft || appliedScanJobRef.current === scanDraft.jobId) return
+    const result = scanDraft.result
+    const scannedActivityType = activityTypes.find(value => value.value === result.type)?.value
+    // A deposit, withdrawal or conversion belongs to the cash form, which the view routes it
+    // to. Loading its amounts into a trade here would present them as a Buy.
+    if (result.type && !scannedActivityType) return
     appliedScanJobRef.current = scanDraft.jobId
     setActiveScanJobId(scanDraft.jobId)
     setIsScanning(false)
     setShowScanBanner(true)
-    const result = scanDraft.result
-    const scannedActivityType = activityTypes.find(value => value.value === result.type)?.value
     if (scannedActivityType) setType(scannedActivityType)
     if (result.accountId && accounts.some(value => value.id === result.accountId)) setAccountId(result.accountId)
     if (result.instrumentId && instruments.some(value => value.id === result.instrumentId)) setInstrumentId(result.instrumentId)

@@ -12,7 +12,6 @@ vi.mock('../../../lib/api', () => ({
 
 function createOptions(overrides: Partial<Parameters<typeof useReceiptScanDraft>[0]> = {}) {
   return {
-    showAddForm: false,
     autoOpenAddForm: false,
     receiptScanDraft: null,
     activeScanJobIds: [],
