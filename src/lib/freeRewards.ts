@@ -58,7 +58,7 @@ export function pendingRecurringAmount(
  * reach it without pulling the whole pacing module onto the critical bundle.
  */
 export function pendingRewardsAmount(
-  payments: readonly Pick<ActiveRecurringPayment, 'status' | 'amount' | 'ledgerCategory'>[] | undefined,
+  payments: readonly Pick<ActiveRecurringPayment, 'status' | 'amount' | 'remainingAmount' | 'ledgerCategory'>[] | undefined,
 ): number {
   return pendingRecurringAmount(payments, 'Rewards')
 }

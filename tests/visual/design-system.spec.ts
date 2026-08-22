@@ -1,11 +1,20 @@
 import { expect, test } from '@playwright/test'
-import type { InvestmentActivity, WishlistItem } from '../../src/types'
+import type { InvestmentActivity, SavingsGoal, WishlistItem } from '../../src/types'
 import { establishSession, mockApi, waitForStableLayout } from './visualTestSupport'
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.clock.setFixedTime(new Date('2026-07-30T10:00:00+08:00'))
 })
+
+async function openGlobalSearch(page: import('@playwright/test').Page) {
+  if ((page.viewportSize()?.width ?? 0) < 640) {
+    await page.getByRole('button', { name: 'Open Menu' }).click()
+    await page.getByRole('menuitem', { name: 'Search' }).click()
+  } else {
+    await page.getByRole('button', { name: 'Search your records' }).click()
+  }
+}
 
 test('authentication required validation', async ({ page }) => {
   await mockApi(page, { registered: false })
@@ -246,6 +255,84 @@ test('rewards rail responds to a desktop mouse wheel and releases page scrolling
 
   await page.mouse.wheel(0, 240)
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(pageOffsetBeforeEdgeWheel)
+})
+
+test('global search reveals and horizontally centers far commitment and reward cards', async ({ page }) => {
+  const rewardItems: WishlistItem[] = Array.from({ length: 5 }, (_, index) => ({
+    id: index + 1,
+    name: `Search Reward ${index + 1}`,
+    price: 100 + index * 25,
+    priority: index === 0 ? 'High' : 'Medium',
+    isPurchased: false,
+    createdAt: `2026-07-${String(index + 1).padStart(2, '0')}`,
+    isActive: index === 0,
+  }))
+  const goals: SavingsGoal[] = Array.from({ length: 5 }, (_, index) => ({
+    id: index + 1,
+    name: `Search Commitment ${index + 1}`,
+    targetAmount: 500 + index * 100,
+    earmarkedAmount: 25,
+    fundingBucket: 'Rewards',
+    targetDate: `2027-0${index + 1}-15`,
+    priority: 'Medium',
+    status: 'active',
+    isRecurring: false,
+    recurrenceMonths: 0,
+    cycleFundedAmount: 0,
+    createdAt: `2026-07-${String(index + 1).padStart(2, '0')}`,
+  }))
+
+  await establishSession(page)
+  await mockApi(page, { wishlist: rewardItems, savingsGoals: goals })
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+  await openGlobalSearch(page)
+  await page.getByRole('combobox', { name: 'Search query' }).fill('Search Commitment 5')
+  await page.getByRole('option', { name: /^Search Commitment 5 / }).click()
+
+  await expect(page).toHaveURL(/\/commitments-rewards\?.*commitment=5/)
+  const commitment = page.locator('#commitment-card-5')
+  await expect(commitment).toHaveClass(/search-target-highlight/)
+  const commitmentsRail = page.getByRole('group', { name: 'Commitments' })
+  await expect.poll(() => commitmentsRail.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
+  expect(await commitment.evaluate(element => {
+    const targetRect = element.getBoundingClientRect()
+    const railRect = element.closest('.horizontal-rail')!.getBoundingClientRect()
+    return targetRect.left >= railRect.left - 1 && targetRect.right <= railRect.right + 1
+  })).toBe(true)
+
+  await openGlobalSearch(page)
+  await page.getByRole('combobox', { name: 'Search query' }).fill('Search Reward 5')
+  await page.getByRole('option', { name: /^Search Reward 5 / }).click()
+
+  await expect(page).toHaveURL(/\/commitments-rewards\?.*reward=5/)
+  const target = page.locator('#reward-card-5')
+  await expect(target).toHaveClass(/search-target-highlight/)
+  const rail = page.getByRole('group', { name: 'Rewards' })
+  await expect.poll(() => rail.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
+  const visibility = await target.evaluate(element => {
+    const targetRect = element.getBoundingClientRect()
+    const railRect = element.closest('.horizontal-rail')!.getBoundingClientRect()
+    return {
+      left: targetRect.left >= railRect.left - 1,
+      right: targetRect.right <= railRect.right + 1,
+    }
+  })
+  expect(visibility).toEqual({ left: true, right: true })
+})
+
+test('global search uses the shared highlight on the responsive Ledger row', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page)
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+  await openGlobalSearch(page)
+  await page.getByRole('combobox', { name: 'Search query' }).fill('Neighbourhood Grocer')
+  await page.getByRole('option', { name: /^Neighbourhood Grocer / }).click()
+
+  await expect(page).toHaveURL(/\/ledger\?.*tx=tx-visual-1/)
+  const isCompactLedger = (page.viewportSize()?.width ?? 0) < 1024
+  const target = page.locator(`#tx-row-${isCompactLedger ? 'mobile' : 'desktop'}-tx-visual-1`)
+  await expect(target).toHaveClass(/search-target-highlight/)
+  await expect(target).toBeInViewport()
 })
 
 // The account dropdown and the quick-add menu are the app's only Radix consumers, so they are

@@ -19,11 +19,12 @@ import { shouldShowMobileFab } from './useFabMenu'
 import type { useInvestmentScanPolling } from '../lib/useInvestmentScanPolling'
 import type { useReceiptScanPolling } from '../lib/useReceiptScanPolling'
 import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
-import { getCycleYearAndMonthForDate, MONTH_NAMES } from '../lib/cycle'
+import { MONTH_NAMES } from '../lib/cycle'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
 import { buildStabilityPlanPoints } from '../lib/stabilityRecovery'
 import { projectFinancialSetting } from '../lib/outbox'
 import { getTransactionCyclePlacement } from '../lib/transactionCyclePlacement'
+import { openLedgerTransaction } from '../lib/openLedgerTransaction'
 import type { AiInvocationContext } from '../lib/api/ai'
 const DashboardView = lazy(() => import('../components/DashboardView').then(module => ({ default: module.DashboardView })))
 const ReportsView = lazy(() => import('../components/ReportsView').then(module => ({ default: module.ReportsView })))
@@ -210,29 +211,14 @@ export function AuthenticatedView({
   // been deleted, which is worth a sentence, not a modal that has to be dismissed.
   const openLinkedVaultTransaction = async (transactionId: string) => {
     const cannotOpen = (message: string) => dialogs.showToast(message, 'Linked transaction', 'warning')
-    try {
-      const transaction = await apiClient.fetchTransactionById(transactionId)
-      const match = /^(\d{4})-(\d{2})-/.exec(transaction.date)
-      if (!match) {
-        cannotOpen('This document records a date the ledger cannot open.')
-        return
-      }
-      const monthIndex = Number(match[2]) - 1
-      const day = Number(transaction.date.slice(8, 10))
-      if (monthIndex < 0 || monthIndex >= MONTH_NAMES.length || day < 1 || day > 31) {
-        cannotOpen('This document records a date the ledger cannot open.')
-        return
-      }
-      const cycleDay = financial.optimisticDashboardData?.setting?.cycleDay || 28
-      const cycle = getCycleYearAndMonthForDate(new Date(Number(match[1]), monthIndex, day), cycleDay)
-      nav.handleNavigateToLedger({
-        highlightedTxId: transaction.id,
-        showAllCycles: false,
-        range: 'monthly',
-        targetMonth: MONTH_NAMES[cycle.monthIndex - 1],
-        targetYear: cycle.year,
-      })
-    } catch {
+    const opened = await openLedgerTransaction({
+      transactionId,
+      transactions: financial.allTransactions,
+      cycleDay: financial.optimisticDashboardData?.setting?.cycleDay || 28,
+      fetchTransactionById: apiClient.fetchTransactionById,
+      navigate: nav.handleNavigateToLedger,
+    })
+    if (!opened) {
       cannotOpen('The transaction this document was attached to could not be opened. It may have been deleted.')
     }
   }
@@ -528,9 +514,12 @@ export function AuthenticatedView({
                       onPreferredPageSizeChange={prefs.setLedgerPageSize}
                       onPreferredSortOrderChange={prefs.setLedgerSortOrder}
                       onRouteStateChange={nav.syncLedgerRouteState}
-                      ledgerSummaries={financial.optimisticDashboardData?.categories}
+                      // Transaction bucket warnings protect today's shared pools even while the
+                      // ledger is displaying a historical cycle. Never pair a current commitment
+                      // earmark with the selected historical cycle's balance/bills.
+                      ledgerSummaries={todayDashboardData?.categories}
                       savingsGoals={financial.allSavingsGoals}
-                      activeRecurringPayments={financial.optimisticDashboardData?.activeRecurringPayments}
+                      activeRecurringPayments={todayDashboardData?.activeRecurringPayments}
                       autoOpenAddForm={nav.autoOpenLedgerAdd}
                       autoOpenTxType={nav.autoOpenLedgerTxType}
                       autoOpenPrefill={nav.autoOpenLedgerPrefill}

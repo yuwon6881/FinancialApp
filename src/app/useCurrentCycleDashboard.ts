@@ -114,11 +114,17 @@ export function useCurrentCycleDashboard({
       ? currentCycleDashboardData
       : null
 
+  // A historical-cycle screen has no optimistic projection for its separately fetched Today
+  // snapshot. Keep consumers in their existing loading/disabled state while any queued write can
+  // still change the server-side current pool, even if an older snapshot is available to display.
+  const isCurrentCycleStale = !selectedCycleIsCurrent && hasQueuedWrites
+
   return {
     currentCycleMonth,
     currentCyclePeriod,
     isCurrentCycle: selectedCycleIsCurrent,
     isCurrentCycleLoading,
+    isCurrentCycleStale,
     todayDashboardData,
   }
 }

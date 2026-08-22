@@ -24,6 +24,7 @@ describe('free Rewards parity fixture', () => {
       const pending = pendingRewardsAmount(testCase.input.pendingOccurrences.map(occurrence => ({
         status: occurrence.status,
         amount: occurrence.scheduledAmount,
+        remainingAmount: occurrence.remainingAmount,
         ledgerCategory: occurrence.ledgerCategory,
       })))
 

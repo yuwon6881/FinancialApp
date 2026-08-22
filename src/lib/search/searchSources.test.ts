@@ -96,7 +96,7 @@ describe('buildSearchResults', () => {
     expect(result.kind).toBe('transaction')
     expect(result.title).toBe('Coffee beans')
     expect(result.amount).toBe(-12.5)
-    expect(result.target).toEqual({ to: 'transaction', transactionId: 'tx-1' })
+    expect(result.target).toEqual({ to: 'transaction', transactionId: 'tx-1', transactionDate: '2026-08-04' })
   })
 
   it('matches an amount on its bare magnitude so an outflow is findable', () => {
@@ -156,6 +156,25 @@ describe('buildSearchResults', () => {
     )
     expect(foundDraft.kind).toBe('draft')
     expect(foundDraft.target).toEqual({ to: 'draft', draftId: 'draft-1' })
+  })
+
+  it('opens a claimed reward through its linked purchase and omits an unlinked dead end', () => {
+    const [claimed] = buildSearchResults({
+      wishlist: [reward({
+        isPurchased: true,
+        purchaseTransactionId: 'purchase-tx-1',
+        purchasedAt: '2026-07-18T08:00:00.000Z',
+      })],
+    }, 'headphones')
+    expect(claimed.target).toEqual({
+      to: 'transaction',
+      transactionId: 'purchase-tx-1',
+      transactionDate: '2026-07-18',
+    })
+
+    expect(buildSearchResults({
+      wishlist: [reward({ isPurchased: true, purchaseTransactionId: null })],
+    }, 'headphones')).toEqual([])
   })
 
   it('excludes the generated rows the server marks structural, and keeps a legacy row with no marker', () => {

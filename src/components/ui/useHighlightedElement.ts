@@ -2,6 +2,39 @@ import { useEffect, useRef } from 'react'
 import { motionSafeScrollBehavior } from '../../lib/motionPreference'
 
 const HIGHLIGHT_CLASS = 'search-target-highlight'
+export const SEARCH_TARGET_HIGHLIGHT_MS = 2600
+
+export interface HighlightedElementOptions {
+  /** Resolve responsive or otherwise non-standard target markup. */
+  resolveElement?: () => HTMLElement | null
+  /** Keep the destination intent alive while its data or view is still loading. */
+  ready?: boolean
+}
+
+const clamp = (value: number, minimum: number, maximum: number) =>
+  Math.max(minimum, Math.min(maximum, value))
+
+/**
+ * Reveal a target without relying on `scrollIntoView` to guess which axis owns a nested rail.
+ * The page owns vertical movement; HorizontalRail owns horizontal movement.
+ */
+export function revealHighlightedElement(element: HTMLElement) {
+  const behavior = motionSafeScrollBehavior()
+  const rail = element.closest<HTMLElement>('.horizontal-rail')
+  if (!rail) {
+    element.scrollIntoView({ behavior, block: 'center', inline: 'nearest' })
+    return
+  }
+
+  rail.scrollIntoView({ behavior, block: 'center', inline: 'nearest' })
+  const railRect = rail.getBoundingClientRect()
+  const targetRect = element.getBoundingClientRect()
+  const maxScrollLeft = Math.max(0, rail.scrollWidth - rail.clientWidth)
+  const centeredLeft = rail.scrollLeft
+    + (targetRect.left - railRect.left)
+    - ((rail.clientWidth - targetRect.width) / 2)
+  rail.scrollTo({ left: clamp(centeredLeft, 0, maxScrollLeft), behavior })
+}
 
 /**
  * Scrolls a just-navigated-to element into view and flashes the shared highlight ring.
@@ -12,14 +45,20 @@ const HIGHLIGHT_CLASS = 'search-target-highlight'
  * rendering its base state before the ring transition smoothly animates in; when the
  * target is not there (filtered out, not rendered) the highlight state is cleared.
  */
-export function useHighlightedElement(elementId: string | null, onClear?: () => void) {
+export function useHighlightedElement(
+  elementId: string | null,
+  onClear?: () => void,
+  options: HighlightedElementOptions = {},
+) {
   const onClearRef = useRef(onClear)
+  const resolveElementRef = useRef(options.resolveElement)
   useEffect(() => {
     onClearRef.current = onClear
+    resolveElementRef.current = options.resolveElement
   })
 
   useEffect(() => {
-    if (!elementId) return
+    if (!elementId || options.ready === false) return
     let clearTimer: ReturnType<typeof setTimeout> | undefined
     let applyTimer: ReturnType<typeof setTimeout> | undefined
     let pollInterval: ReturnType<typeof setInterval> | undefined
@@ -35,17 +74,17 @@ export function useHighlightedElement(elementId: string | null, onClear?: () => 
         // `inline: center` is required for records in Rewards/Commitments rails. The default
         // nearest-edge behavior was browser-dependent and could leave a searched card clipped at
         // the far end even though the page itself had scrolled vertically to the section.
-        el.scrollIntoView({ behavior: motionSafeScrollBehavior(), block: 'center', inline: 'center' })
+        revealHighlightedElement(el)
         el.classList.add(HIGHLIGHT_CLASS)
         clearTimer = setTimeout(() => {
           el.classList.remove(HIGHLIGHT_CLASS)
           onClearRef.current?.()
-        }, 2600)
+        }, SEARCH_TARGET_HIGHLIGHT_MS)
       }, 100)
     }
 
     const tryHighlight = () => {
-      const el = document.getElementById(elementId)
+      const el = resolveElementRef.current?.() ?? document.getElementById(elementId)
       if (el) {
         triggerHighlight(el)
         return true
@@ -71,5 +110,5 @@ export function useHighlightedElement(elementId: string | null, onClear?: () => 
         document.getElementById(elementId)?.classList.remove(HIGHLIGHT_CLASS)
       }
     }
-  }, [elementId])
+  }, [elementId, options.ready])
 }

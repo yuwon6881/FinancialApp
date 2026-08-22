@@ -133,6 +133,12 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     onClearHighlightedLoanProp?.()
   }, [onClearHighlightedLoanProp])
 
+  const handleTabChange = React.useCallback((nextTab: RecurringTabId) => {
+    if (nextTab !== 'recurring' && highlightedRecurringId) onClearHighlightedRecurring?.()
+    if (nextTab !== 'loans' && currentHighlightedLoanId) handleClearHighlightedLoan()
+    setActiveTab(nextTab)
+  }, [currentHighlightedLoanId, handleClearHighlightedLoan, highlightedRecurringId, onClearHighlightedRecurring])
+
   React.useEffect(() => {
     if (highlightedRecurringId) {
       setActiveTab('recurring')
@@ -182,6 +188,14 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     onAiEditDraftConsumed,
   })
 
+  React.useEffect(() => {
+    if (!highlightedRecurringId) return
+    // A global-search destination must win over a page-local filter that would otherwise leave
+    // the user on the right page with no matching card to reveal.
+    view.clearCategoryFilters()
+    view.setIsFilterDropdownOpen(false)
+  }, [highlightedRecurringId, view.clearCategoryFilters, view.setIsFilterDropdownOpen])
+
   if (isSwitchingCycle) {
     return <CycleSkeleton variant="recurring" />
   }
@@ -207,7 +221,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       {/* View Switcher Tabs (Recurring Bills | Loans) */}
       <RecurringTabs
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
         recurringCount={payments.length}
         loansCount={isLoansKnown ? loans.length : undefined}
       />

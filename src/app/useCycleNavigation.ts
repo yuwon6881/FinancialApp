@@ -92,38 +92,14 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const [autoOpenSubscriptionAdd, setAutoOpenSubscriptionAdd] = useState(false)
   const [autoOpenWishlistAdd, setAutoOpenWishlistAdd] = useState(false)
   const [highlightedTxId, setHighlightedTxId] = useState<string | null>(initialLocation.ledger.highlightedTxId)
-  const [highlightedRecurringId, setHighlightedRecurringId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null
-    return new URLSearchParams(window.location.search).get('subscription')
-  })
-  const [highlightedLoanId, setHighlightedLoanId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null
-    return new URLSearchParams(window.location.search).get('loan')
-  })
-  const [highlightedReportSection, setHighlightedReportSection] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null
-    return new URLSearchParams(window.location.search).get('focus')
-  })
-  const [highlightedReportCategory, setHighlightedReportCategory] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null
-    return new URLSearchParams(window.location.search).get('focusCategory')
-  })
-  const [highlightedAccountId, setHighlightedAccountId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null
-    return new URLSearchParams(window.location.search).get('account')
-  })
-  const [highlightedCommitmentId, setHighlightedCommitmentId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null
-    return new URLSearchParams(window.location.search).get('commitment')
-  })
-  const [highlightedRewardId, setHighlightedRewardId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null
-    return new URLSearchParams(window.location.search).get('reward')
-  })
-  const [highlightedDraftId, setHighlightedDraftId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null
-    return new URLSearchParams(window.location.search).get('draft')
-  })
+  const [highlightedRecurringId, setHighlightedRecurringId] = useState<string | null>(initialLocation.destination.recurringPaymentId)
+  const [highlightedLoanId, setHighlightedLoanId] = useState<string | null>(initialLocation.destination.loanId)
+  const [highlightedReportSection, setHighlightedReportSection] = useState<string | null>(initialLocation.destination.reportSection)
+  const [highlightedReportCategory, setHighlightedReportCategory] = useState<string | null>(initialLocation.destination.reportCategory)
+  const [highlightedAccountId, setHighlightedAccountId] = useState<string | null>(initialLocation.destination.accountId)
+  const [highlightedCommitmentId, setHighlightedCommitmentId] = useState<string | null>(initialLocation.destination.commitmentId)
+  const [highlightedRewardId, setHighlightedRewardId] = useState<string | null>(initialLocation.destination.rewardId)
+  const [highlightedDraftId, setHighlightedDraftId] = useState<string | null>(initialLocation.destination.draftId)
 
   const selectPeriodSeqRef = useRef(0)
   const selectPeriodQueueRef = useRef<Promise<void>>(Promise.resolve())
@@ -364,11 +340,14 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
       setLedgerRouteState(location.ledger)
       setLedgerCyclesRange(location.ledger.range)
       setHighlightedTxId(location.ledger.highlightedTxId)
-      setHighlightedRecurringId(new URLSearchParams(window.location.search).get('subscription'))
-      setHighlightedLoanId(new URLSearchParams(window.location.search).get('loan'))
-      const reportSearch = new URLSearchParams(window.location.search)
-      setHighlightedReportSection(reportSearch.get('focus'))
-      setHighlightedReportCategory(reportSearch.get('focusCategory'))
+      setHighlightedRecurringId(location.destination.recurringPaymentId)
+      setHighlightedLoanId(location.destination.loanId)
+      setHighlightedReportSection(location.destination.reportSection)
+      setHighlightedReportCategory(location.destination.reportCategory)
+      setHighlightedAccountId(location.destination.accountId)
+      setHighlightedCommitmentId(location.destination.commitmentId)
+      setHighlightedRewardId(location.destination.rewardId)
+      setHighlightedDraftId(location.destination.draftId)
 
       const period = selectedPeriodRef.current
       if (location.month && location.year && (location.month !== period.month || location.year !== period.year)) {

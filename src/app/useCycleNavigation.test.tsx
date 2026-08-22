@@ -170,4 +170,38 @@ describe('useCycleNavigation', () => {
     act(() => result.current.clearHighlightedLoan())
     expect(result.current.highlightedLoanId).toBeNull()
   })
+
+  it('restores every destination highlight on browser history navigation', () => {
+    const { result } = renderHook(() => useCycleNavigation({
+      loadAll: vi.fn(),
+      handleLogout: vi.fn(),
+      markSessionLocked: vi.fn(),
+      setDashboardData: vi.fn(),
+      setTransactions: vi.fn(),
+      setActiveTab: vi.fn(),
+      setLedgerCyclesRange: vi.fn(),
+    }))
+
+    act(() => {
+      window.history.replaceState({}, '', '/commitments-rewards?commitment=goal-1&reward=reward-2')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+    expect(result.current.highlightedCommitmentId).toBe('goal-1')
+    expect(result.current.highlightedRewardId).toBe('reward-2')
+
+    act(() => {
+      window.history.replaceState({}, '', '/settings?account=acc-1')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+    expect(result.current.highlightedAccountId).toBe('acc-1')
+    expect(result.current.highlightedCommitmentId).toBeNull()
+    expect(result.current.highlightedRewardId).toBeNull()
+
+    act(() => {
+      window.history.replaceState({}, '', '/drafts?draft=draft-1')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+    expect(result.current.highlightedDraftId).toBe('draft-1')
+    expect(result.current.highlightedAccountId).toBeNull()
+  })
 })

@@ -15,6 +15,8 @@ import { GlobalSearchLoading } from '../components/search/GlobalSearchLoading'
 import { loadGlobalSearch, preloadGlobalSearch } from '../components/search/globalSearchPreload'
 import type { useFabMenu } from './useFabMenu'
 import type { useFinancialData } from './useFinancialData'
+import { openLedgerTransaction } from '../lib/openLedgerTransaction'
+import { openSearchResult } from '../lib/search/openSearchResult'
 
 const PendingSubscriptionsModal = lazy(() => import('../components/PendingSubscriptionsModal').then(module => ({ default: module.PendingSubscriptionsModal })))
 const FailedSyncModal = lazy(() => import('../components/FailedSyncModal').then(module => ({ default: module.FailedSyncModal })))
@@ -61,6 +63,7 @@ interface AppOverlaysProps {
   todayDashboardData: DashboardData | null
   currentPendingNotifications: PendingNotification[]
   setIsAiOpen: Dispatch<SetStateAction<boolean>>
+  apiClient: Pick<typeof import('../lib/api'), 'fetchTransactionById'>
 }
 
 export function AppOverlays({
@@ -75,9 +78,28 @@ export function AppOverlays({
   todayDashboardData,
   currentPendingNotifications,
   setIsAiOpen,
+  apiClient,
 }: AppOverlaysProps) {
   const reduceMotion = useReducedMotion()
   const fabActionsRef = useRef<HTMLDivElement>(null)
+
+  const openSearchTransaction = async (transactionId: string, transactionDate?: string) => {
+    const opened = await openLedgerTransaction({
+      transactionId,
+      transactionDate,
+      transactions: financial.allTransactions,
+      cycleDay: financial.optimisticDashboardData?.setting?.cycleDay || 28,
+      fetchTransactionById: apiClient.fetchTransactionById,
+      navigate: nav.handleNavigateToLedger,
+    })
+    if (!opened) {
+      dialogs.showToast(
+        'The linked purchase transaction could not be opened. It may have been deleted or may not be available offline.',
+        'Transaction unavailable',
+        'warning',
+      )
+    }
+  }
   const searchLoanLoadAttemptedRef = useRef(false)
   const [isAccountReviewOpen, setIsAccountReviewOpen] = useState(false)
   const showMobileFab = shouldShowMobileFab(prefs.activeTab)
@@ -288,22 +310,15 @@ export function AppOverlays({
               wishlist: financial.allWishlist,
             }}
             onOpenResult={result => {
-              const { target } = result
-              if (target.to === 'transaction') {
-                nav.handleNavigateToLedger({ highlightedTxId: target.transactionId })
-              } else if (target.to === 'account') {
-                nav.handleNavigateToAccounts(target.accountId)
-              } else if (target.to === 'bill') {
-                nav.handleNavigateToRecurring(target.recurringPaymentId)
-              } else if (target.to === 'loan') {
-                nav.handleNavigateToLoan(target.loanId)
-              } else if (target.to === 'commitment') {
-                nav.handleNavigateToCommitment(target.savingsGoalId)
-              } else if (target.to === 'reward') {
-                nav.handleNavigateToReward(target.wishlistItemId)
-              } else {
-                nav.handleNavigateToDraft(target.draftId)
-              }
+              openSearchResult(result, {
+                transaction: (id, date) => { void openSearchTransaction(id, date) },
+                account: nav.handleNavigateToAccounts,
+                bill: nav.handleNavigateToRecurring,
+                loan: nav.handleNavigateToLoan,
+                commitment: nav.handleNavigateToCommitment,
+                reward: nav.handleNavigateToReward,
+                draft: nav.handleNavigateToDraft,
+              })
             }}
             onSearchAllCycles={query => {
               nav.handleNavigateToLedger({ search: query, showAllCycles: true, range: 'yearly' })

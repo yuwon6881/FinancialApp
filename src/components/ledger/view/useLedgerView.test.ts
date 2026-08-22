@@ -81,13 +81,13 @@ describe('useLedgerView highlighted transaction navigation', () => {
     })
 
     expect(rowEl.scrollIntoView).toHaveBeenCalled()
-    expect(rowEl.classList.contains('ledger-transaction-highlight')).toBe(true)
+    expect(rowEl.classList.contains('search-target-highlight')).toBe(true)
 
     act(() => {
-      vi.advanceTimersByTime(3600)
+      vi.advanceTimersByTime(2600)
     })
 
-    expect(rowEl.classList.contains('ledger-transaction-highlight')).toBe(false)
+    expect(rowEl.classList.contains('search-target-highlight')).toBe(false)
     expect(onClearHighlightedTx).toHaveBeenCalled()
 
     document.body.removeChild(rowEl)

@@ -33,6 +33,16 @@ describe('app URL state', () => {
         range: '3month',
         highlightedTxId: 'tx-1',
       },
+      destination: {
+        recurringPaymentId: null,
+        loanId: null,
+        reportSection: null,
+        reportCategory: null,
+        accountId: null,
+        commitmentId: null,
+        rewardId: null,
+        draftId: null,
+      },
     })
   })
 
@@ -64,6 +74,22 @@ describe('app URL state', () => {
     navigateToAppTab('wishlist')
     expect(window.location.pathname).toBe('/commitments-rewards')
     expect(window.location.search).toBe('?month=Jul&year=2026')
+  })
+
+  it('parses destination ids and removes stale ids when leaving their page', () => {
+    window.history.replaceState({}, '', '/commitments-rewards?reward=7&commitment=9&month=Jul&year=2026')
+    expect(readAppLocation().destination).toEqual(expect.objectContaining({ rewardId: '7', commitmentId: '9' }))
+
+    navigateToAppTab('settings', { search: { account: 'acc-1' } })
+    const params = new URLSearchParams(window.location.search)
+    expect(params.get('account')).toBe('acc-1')
+    expect(params.has('reward')).toBe(false)
+    expect(params.has('commitment')).toBe(false)
+
+    navigateToAppTab('drafts', { search: { draft: 'draft-1' } })
+    expect(new URLSearchParams(window.location.search).get('draft')).toBe('draft-1')
+    navigateToAppTab('reports')
+    expect(new URLSearchParams(window.location.search).has('draft')).toBe(false)
   })
 
   it('recognizes the legacy wishlist route and query view', () => {

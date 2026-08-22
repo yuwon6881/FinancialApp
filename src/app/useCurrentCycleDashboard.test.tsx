@@ -101,9 +101,11 @@ describe('useCurrentCycleDashboard', () => {
     rerender({ queued: true })
     expect(fetchDashboard).toHaveBeenCalledTimes(1)
     expect(result.current.isCurrentCycleLoading).toBe(false)
+    expect(result.current.isCurrentCycleStale).toBe(true)
 
     rerender({ queued: false })
     await waitFor(() => expect(fetchDashboard).toHaveBeenCalledTimes(2))
+    expect(result.current.isCurrentCycleStale).toBe(false)
   })
 
   it('still fetches with writes queued when there is nothing to show yet', async () => {

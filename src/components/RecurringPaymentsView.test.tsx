@@ -173,4 +173,43 @@ describe('RecurringPaymentsView form', () => {
     const loansTab = screen.getByRole('tab', { name: /loans/i })
     expect(loansTab.textContent).toContain('1')
   })
+
+  it('clears a category filter when search navigates to a hidden bill', () => {
+    const payments = [
+      {
+        id: 'bill-essential', name: 'Insurance', amount: 120, frequency: 'Monthly' as const,
+        category: 'Bills', ledgerCategory: 'Essentials', accountId: 'acct-essentials',
+        nextDueDate: '2026-08-20', dueDate: 20, startDate: '2026-01-20', active: true,
+        paymentMode: 'Manual' as const,
+      },
+      {
+        id: 'bill-reward', name: 'Streaming', amount: 30, frequency: 'Monthly' as const,
+        category: 'Entertainment', ledgerCategory: 'Rewards', accountId: 'acct-rewards',
+        nextDueDate: '2026-08-22', dueDate: 22, startDate: '2026-01-22', active: true,
+        paymentMode: 'Manual' as const,
+      },
+    ]
+    const baseProps = {
+      payments,
+      accounts,
+      activeRecurringPayments: [],
+      selectedMonth: 'Jul',
+      selectedYear: 2026,
+      cycleDay: 1,
+      onAddPayment: vi.fn(),
+      onToggleActive: vi.fn(),
+      onDeletePayment: vi.fn(),
+      onUpdatePayment: vi.fn(),
+      categories: [{ id: 'bills', name: 'Bills' }],
+    }
+    const { rerender } = render(<RecurringPaymentsView {...baseProps} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /all categories/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Rewards' }))
+    expect(screen.queryByText('Insurance')).toBeNull()
+
+    rerender(<RecurringPaymentsView {...baseProps} highlightedRecurringId="bill-essential" />)
+    expect(screen.getByText('Insurance')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /all categories/i })).toBeTruthy()
+  })
 })

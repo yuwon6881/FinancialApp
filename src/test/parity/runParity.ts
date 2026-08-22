@@ -57,10 +57,13 @@ export type FreeRewardsCase = {
       isPendingDelete: boolean
     }>
     pendingOccurrences: Array<{
-      status: 'Pending' | 'Paid'
+      status: 'Pending' | 'PartiallyPaid' | 'Paid'
       ledgerCategory: string
       category: string
       scheduledAmount: number
+      paidAmount?: number
+      remainingAmount?: number
+      occurrenceDate?: string
     }>
   }
   expected: { pendingRewards: number; unassigned: number }
@@ -76,7 +79,8 @@ export function readFixture<T>(domain: string): T[] {
   const fixture = JSON.parse(
     readFileSync(new URL(`./fixtures/${domain}.cases.json`, import.meta.url), 'utf8'),
   ) as Fixture<T>
-  if (fixture.domain !== domain || fixture.version !== 1) {
+  const expectedVersion = domain === 'free-rewards' ? 2 : 1
+  if (fixture.domain !== domain || fixture.version !== expectedVersion) {
     throw new Error(`Unsupported parity fixture: ${domain}`)
   }
   return fixture.cases

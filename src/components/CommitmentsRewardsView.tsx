@@ -156,6 +156,12 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
     else if (highlightedCommitmentId) setActiveTab('commitments')
   }, [highlightedCommitmentId, highlightedRewardId])
 
+  const handleTabChange = React.useCallback((nextTab: CommitmentsRewardsTabId) => {
+    if (nextTab !== 'commitments' && highlightedCommitmentId) onClearHighlightedCommitment?.()
+    if (nextTab !== 'rewards' && highlightedRewardId) onClearHighlightedReward?.()
+    setActiveTab(nextTab)
+  }, [highlightedCommitmentId, highlightedRewardId, onClearHighlightedCommitment, onClearHighlightedReward])
+
   useHighlightedElement(
     highlightedCommitmentId ? `commitment-card-${highlightedCommitmentId}` : null,
     onClearHighlightedCommitment,
@@ -300,7 +306,7 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
 
       <CommitmentsRewardsTabs
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
         commitmentsCount={commitmentsPool.activeGoals.length + completedGoals.length}
         rewardsCount={rewardItems.length}
       />

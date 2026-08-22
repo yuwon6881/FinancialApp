@@ -228,7 +228,13 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         </p>
       </div>
 
-      <SettingsTabs activeTab={activeTab} onChange={setActiveTab} />
+      <SettingsTabs
+        activeTab={activeTab}
+        onChange={nextTab => {
+          if (nextTab !== 'accounts' && props.highlightedAccountId) props.onClearHighlightedAccount?.()
+          setActiveTab(nextTab)
+        }}
+      />
 
       {activeTab === 'financial-model' && (
         <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="w-full grid grid-cols-1 lg:grid-cols-3 lg:items-start lg:gap-6 space-y-6 lg:space-y-0 animate-in fade-in duration-200">

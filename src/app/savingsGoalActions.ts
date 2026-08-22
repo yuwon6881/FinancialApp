@@ -13,6 +13,7 @@ import type { SavingsGoal, SavingsGoalFundingBucket, Transaction } from '../type
 import type { ToastAction } from '../components/ui/ToastViewport'
 import { getErrorMessage } from '../lib/errors'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
+import { createFinalId } from '../lib/outbox'
 import { formatCurrencyVal } from '../lib/utils'
 
 type ToastTone = 'info' | 'success' | 'warning' | 'error'
@@ -136,12 +137,12 @@ export async function completeGoal(deps: SavingsGoalActionDeps, id: number, acco
   }
   const { completeSavingsGoal } = await import('../lib/api/savingsGoals')
   const goal = deps.getGoal?.(id)
-  const pendingTransaction = goal ? createPendingCompletionTransaction(goal) : undefined
+  const pendingTransaction = goal ? createPendingCompletionTransaction(goal, accountId) : undefined
   const syncIds = [String(id), ...(pendingTransaction ? [pendingTransaction.id] : [])]
   deps.beginDirectSync?.(syncIds)
   if (pendingTransaction) deps.addPendingLedgerTransaction?.(pendingTransaction)
   try {
-    const result = await completeSavingsGoal(id, accountId)
+    const result = await completeSavingsGoal(id, accountId, pendingTransaction?.id, pendingTransaction?.postedAt)
     if (pendingTransaction) {
       deps.replacePendingLedgerTransaction?.(pendingTransaction.id, result.transaction)
     }
@@ -210,10 +211,13 @@ function showOnlineOnlyMessage(deps: SavingsGoalActionDeps, message: string): vo
   deps.showToast(message, 'Available online only', 'warning')
 }
 
-function createPendingCompletionTransaction(goal: SavingsGoal): Transaction {
+function createPendingCompletionTransaction(goal: SavingsGoal, accountId?: string): Transaction {
   const postedAt = new Date().toISOString()
   return {
-    id: `pending-savings-goal-completion-${goal.id}-${Date.now()}`,
+    // This is the final ledger ID, not a disposable placeholder. A lost completion response can
+    // therefore be retried without creating a second expense, and optimistic account attribution
+    // exactly matches the server row from the first frame.
+    id: createFinalId('transaction'),
     date: postedAt.slice(0, 10),
     postedAt,
     description: `Completed commitment: ${goal.name}`,
@@ -221,6 +225,7 @@ function createPendingCompletionTransaction(goal: SavingsGoal): Transaction {
     ledgerCategory: bucketLabel(goal),
     amount: -Math.abs(goal.earmarkedAmount),
     savingsGoalId: goal.id,
+    accountId: accountId ?? null,
     excludeFromAutocomplete: true,
     isPendingSync: true,
   }

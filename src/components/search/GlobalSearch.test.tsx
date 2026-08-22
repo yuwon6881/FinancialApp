@@ -62,7 +62,7 @@ describe('GlobalSearch', () => {
     type('coffee beans')
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Enter' })
     expect(props.onOpenResult).toHaveBeenCalledWith(
-      expect.objectContaining({ target: { to: 'transaction', transactionId: 'tx-1' } }),
+      expect.objectContaining({ target: { to: 'transaction', transactionId: 'tx-1', transactionDate: '2026-08-04' } }),
     )
     expect(props.onClose).toHaveBeenCalled()
   })

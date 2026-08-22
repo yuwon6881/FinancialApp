@@ -24,6 +24,16 @@ export interface AppLocationState {
   month: string
   year: number
   ledger: LedgerRouteState
+  destination: {
+    recurringPaymentId: string | null
+    loanId: string | null
+    reportSection: string | null
+    reportCategory: string | null
+    accountId: string | null
+    commitmentId: string | null
+    rewardId: string | null
+    draftId: string | null
+  }
 }
 
 export interface AppNavigationOptions {
@@ -115,7 +125,13 @@ const parseTab = (pathname: string, params: URLSearchParams): AppTab => {
 
 export const readAppLocation = (): AppLocationState => {
   if (typeof window === 'undefined') {
-    return { tab: 'dashboard', month: '', year: 0, ledger: emptyLedgerRouteState() }
+    return {
+      tab: 'dashboard', month: '', year: 0, ledger: emptyLedgerRouteState(),
+      destination: {
+        recurringPaymentId: null, loanId: null, reportSection: null, reportCategory: null,
+        accountId: null, commitmentId: null, rewardId: null, draftId: null,
+      },
+    }
   }
 
   const params = new URLSearchParams(window.location.search)
@@ -141,6 +157,16 @@ export const readAppLocation = (): AppLocationState => {
       showAllCycles: params.get('all') === '1',
       range: range && RANGES.has(range) ? range : 'monthly',
       highlightedTxId: params.get('tx'),
+    },
+    destination: {
+      recurringPaymentId: params.get('subscription'),
+      loanId: params.get('loan'),
+      reportSection: params.get('focus'),
+      reportCategory: params.get('focusCategory'),
+      accountId: params.get('account'),
+      commitmentId: params.get('commitment'),
+      rewardId: params.get('reward'),
+      draftId: params.get('draft'),
     },
   }
 }
@@ -195,6 +221,12 @@ export const navigateToAppTab = (tab: AppTab, options: AppNavigationOptions = {}
     params.delete('focus')
     params.delete('focusCategory')
   }
+  if (tab !== 'settings') params.delete('account')
+  if (tab !== 'wishlist') {
+    params.delete('commitment')
+    params.delete('reward')
+  }
+  if (tab !== 'drafts') params.delete('draft')
   if (tab === 'ledger' && options.search) {
     LEDGER_PARAM_KEYS.forEach(key => params.delete(key))
   }

@@ -385,6 +385,11 @@ function App() {
       }
       if (prevTab === 'wishlist') {
         nav.setAutoOpenWishlistAdd(false)
+        if (nav.highlightedCommitmentId) nav.clearHighlightedCommitment()
+        if (nav.highlightedRewardId) nav.clearHighlightedReward()
+      }
+      if (prevTab === 'drafts') {
+        if (nav.highlightedDraftId) nav.clearHighlightedDraft()
       }
       if (prevTab === 'reports') {
         if (nav.highlightedReportSection || nav.highlightedReportCategory) nav.clearHighlightedReportSection()
@@ -402,6 +407,12 @@ function App() {
     nav.setAutoOpenReceiptSplit,
     nav.setAutoOpenSubscriptionAdd,
     nav.setAutoOpenWishlistAdd,
+    nav.highlightedCommitmentId,
+    nav.clearHighlightedCommitment,
+    nav.highlightedRewardId,
+    nav.clearHighlightedReward,
+    nav.highlightedDraftId,
+    nav.clearHighlightedDraft,
     nav.highlightedTxId,
     nav.clearHighlightedTx,
     nav.highlightedRecurringId,
@@ -453,6 +464,7 @@ function App() {
     currentCyclePeriod,
     isCurrentCycle,
     isCurrentCycleLoading,
+    isCurrentCycleStale,
     todayDashboardData,
   } = useCurrentCycleDashboard({
     token: session.token,
@@ -465,7 +477,7 @@ function App() {
   // something on screen during a cold start, and `isWishlistCycleStale` below is what stops the
   // page rendering that fallback as if it were the pool.
   const wishlistDashboardData = todayDashboardData || financial.optimisticDashboardData
-  const isWishlistCycleStale = isCurrentCycleLoading || !todayDashboardData
+  const isWishlistCycleStale = isCurrentCycleLoading || isCurrentCycleStale || !todayDashboardData
   const wishlistPendingRewardsDeduction = pendingRewardsAmount(wishlistDashboardData?.activeRecurringPayments)
   const wishlistPendingEssentialsDeduction = pendingRecurringAmount(wishlistDashboardData?.activeRecurringPayments, 'Essentials')
   const wishlistRewardsBalance = wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0
@@ -836,6 +848,7 @@ function App() {
             todayDashboardData={todayDashboardData}
             currentPendingNotifications={currentPendingNotifications}
             setIsAiOpen={setIsAiOpen}
+            apiClient={api}
           />
         </Suspense>
       </div>

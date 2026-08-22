@@ -7,10 +7,11 @@ import { matchesTransactionFilters, splitFilterSelections, LEDGER_BUCKETS as LED
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../../../lib/csvExport'
 import { compareTransactions, type TransactionSort } from '../../../lib/transactionOrdering'
 import { ledgerRouteSearch, updateAppSearch, type LedgerRouteRange } from '../../../lib/appLocation'
-import { getLedgerTransactionRowElement, scrollLedgerTransactionRowIntoView } from '../../../lib/ledgerTransactionTarget'
+import { getLedgerTransactionRowElement } from '../../../lib/ledgerTransactionTarget'
 import { createLedgerSyncStatus } from './ledgerSyncStatus'
 import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
 import { financialDate } from '../../../lib/financialDate'
+import { useHighlightedElement } from '../../ui/useHighlightedElement'
 
 export interface UseLedgerViewOptions {
   transactions: Transaction[]
@@ -32,6 +33,7 @@ export interface UseLedgerViewOptions {
   incomingWishlistFilter?: TransactionLinkFilter | undefined
   incomingTxType?: 'inflow' | 'outflow' | 'transfer' | null | undefined
   highlightedTxId?: string | null | undefined
+  isSwitchingCycle?: boolean
   onClearIncomingFilters?: () => void
   /**
    * Drops just the highlight (state + `?tx=`) once it has faded. Separate from
@@ -108,6 +110,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     incomingWishlistFilter,
     incomingTxType,
     highlightedTxId,
+    isSwitchingCycle,
     onClearIncomingFilters,
     onClearHighlightedTx,
     showAllCycles,
@@ -822,62 +825,14 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     }
   }, [highlightedTxId, filteredTransactions, pageSize])
 
-  // Handle highlighted transaction arrival cue. The target may be on a later
-  // page, and the keyed list remounts after that page changes, so keep looking until its actual
-  // desktop row or mobile card exists instead of relying on one fixed post-render delay.
-  const onClearHighlightedTxRef = useRef(onClearHighlightedTx)
-  useEffect(() => {
-    onClearHighlightedTxRef.current = onClearHighlightedTx
+  // Page selection stays Ledger-specific, but the reveal and arrival cue are shared with every
+  // other global-search destination. The resolver picks the one responsive row actually mounted.
+  useHighlightedElement(highlightedTxId ?? null, onClearHighlightedTx, {
+    ready: !isSwitchingCycle,
+    resolveElement: () => highlightedTxId
+      ? getLedgerTransactionRowElement(highlightedTxId, isMobile)
+      : null,
   })
-
-  useEffect(() => {
-    if (!highlightedTxId) return
-
-    let clearTimer: ReturnType<typeof setTimeout> | undefined
-    let pollTimer: ReturnType<typeof setInterval> | null = null
-    let applied = false
-    const startedAt = Date.now()
-
-    const tryHighlight = () => {
-      const rowEl = getLedgerTransactionRowElement(highlightedTxId, isMobile)
-      if (rowEl) {
-        applied = true
-        if (pollTimer) {
-          clearInterval(pollTimer)
-          pollTimer = null
-        }
-        scrollLedgerTransactionRowIntoView(rowEl)
-        rowEl.classList.add('ledger-transaction-highlight')
-        clearTimer = setTimeout(() => {
-          rowEl.classList.remove('ledger-transaction-highlight')
-          onClearHighlightedTxRef.current?.()
-        }, 3600)
-        return true
-      }
-      if (Date.now() - startedAt > 3500) {
-        if (pollTimer) {
-          clearInterval(pollTimer)
-          pollTimer = null
-        }
-        onClearHighlightedTxRef.current?.()
-        return true
-      }
-      return false
-    }
-
-    if (!tryHighlight()) {
-      pollTimer = setInterval(tryHighlight, 50)
-    }
-
-    return () => {
-      if (pollTimer) clearInterval(pollTimer)
-      if (clearTimer) clearTimeout(clearTimer)
-      if (applied) {
-        const rowEl = getLedgerTransactionRowElement(highlightedTxId, isMobile)
-        rowEl?.classList.remove('ledger-transaction-highlight')
-      }
-    }
-  }, [highlightedTxId, isMobile, currentPage])
 
   const handleDeleteClickRef = useRef(handleDeleteClick)
   useEffect(() => {

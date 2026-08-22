@@ -32,13 +32,14 @@ export async function addSavingsGoal(goal: Partial<SavingsGoal>, clientKey?: str
   return deobfuscateSavingsGoal(data)
 }
 
-export async function updateSavingsGoal(id: number, goal: SavingsGoal): Promise<void> {
-  await requestVoid(`/savings-goals/${id}`, {
+export async function updateSavingsGoal(id: number, goal: SavingsGoal): Promise<SavingsGoal> {
+  const data = await request<WireSavingsGoal>(`/savings-goals/${id}`, {
     method: 'PUT',
     ...jsonBody(toMutationBody(goal)),
     errorMessage: 'Failed to update savings goal',
   })
   invalidateCache()
+  return deobfuscateSavingsGoal(data)
 }
 
 export async function deleteSavingsGoal(id: number): Promise<void> {
@@ -91,10 +92,25 @@ export async function fundSavingsGoalsForCycle(
   }
 }
 
-export async function completeSavingsGoal(id: number, accountId?: string) {
+export async function restoreDeletedSavingsGoal(goal: SavingsGoal, clientKey: string): Promise<SavingsGoal> {
+  const data = await request<WireSavingsGoal>('/savings-goals/restore', {
+    method: 'POST',
+    ...jsonBody({ ...toMutationBody(goal), clientKey }),
+    errorMessage: 'Failed to restore savings goal',
+  })
+  invalidateCache()
+  return deobfuscateSavingsGoal(data)
+}
+
+export async function completeSavingsGoal(
+  id: number,
+  accountId?: string,
+  transactionId?: string,
+  postedAt?: string,
+) {
   const data = await request<WireSavingsGoalCompletionResult>(`/savings-goals/${id}/complete`, {
     method: 'POST',
-    ...jsonBody({ accountId }),
+    ...jsonBody({ accountId, transactionId, postedAt }),
     errorMessage: 'Failed to complete savings goal',
   })
   invalidateCache()

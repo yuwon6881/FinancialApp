@@ -26,7 +26,7 @@ export type SearchResultKind = 'transaction' | 'draft' | 'account' | 'bill' | 'l
  * leaving the user to find the record themselves is what this replaced.
  */
 export type SearchTarget =
-  | { to: 'transaction'; transactionId: string }
+  | { to: 'transaction'; transactionId: string; transactionDate?: string }
   | { to: 'draft'; draftId: string }
   | { to: 'account'; accountId: string }
   | { to: 'bill'; recurringPaymentId: string }
@@ -190,7 +190,7 @@ export const buildSearchResults = (
         amount: transaction.amount,
         meta: transaction.date,
         isPendingSync: transaction.isPendingSync,
-        target: { to: 'transaction' as const, transactionId: transaction.id },
+        target: { to: 'transaction' as const, transactionId: transaction.id, transactionDate: transaction.date },
       },
     }
   })
@@ -297,22 +297,34 @@ export const buildSearchResults = (
     },
   }))
 
-  const rewards = collect(data.wishlist, tokens, item => isPendingDelete(item) ? null : ({
-    fields: [
-      ...field('title', item.name),
-      ...field('keyword', item.priority),
-      ...amounts(item.price),
-    ],
-    result: {
-      id: `reward:${item.id}`,
-      kind: 'reward' as const,
-      title: item.name,
-      subtitle: item.isPurchased ? 'Reward · Claimed' : 'Reward',
-      amount: item.price,
-      isPendingSync: item.isPendingSync,
-      target: { to: 'reward' as const, wishlistItemId: String(item.id) },
-    },
-  }))
+  const rewards = collect(data.wishlist, tokens, item => {
+    if (isPendingDelete(item)) return null
+    // Claimed rewards no longer have cards on the Rewards rail. Keep them searchable only when
+    // they can honestly open their authoritative purchase transaction instead.
+    if (item.isPurchased && !item.purchaseTransactionId) return null
+    return {
+      fields: [
+        ...field('title', item.name),
+        ...field('keyword', item.priority),
+        ...amounts(item.price),
+      ],
+      result: {
+        id: `reward:${item.id}`,
+        kind: 'reward' as const,
+        title: item.name,
+        subtitle: item.isPurchased ? 'Reward · Claimed' : 'Reward',
+        amount: item.price,
+        isPendingSync: item.isPendingSync,
+        target: item.isPurchased
+          ? {
+              to: 'transaction' as const,
+              transactionId: String(item.purchaseTransactionId),
+              transactionDate: item.purchasedAt?.slice(0, 10),
+            }
+          : { to: 'reward' as const, wishlistItemId: String(item.id) },
+      },
+    }
+  })
 
   return [...transactions, ...drafts, ...accounts, ...bills, ...loans, ...commitments, ...rewards]
 }

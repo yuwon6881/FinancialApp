@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Building2, CircleHelp } from 'lucide-react'
 import type { LedgerAccount, RecurringPayment } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
@@ -108,6 +108,9 @@ export function AccountsSection({
           ? `account-row-${highlightedAccountId}`
           : 'settings-panel-accounts')
     : null
+  useEffect(() => {
+    if (highlightedAccountId) setSearchQuery('')
+  }, [highlightedAccountId])
   useHighlightedElement(highlightTargetId, onClearHighlightedAccount)
 
   const [editingAccount, setEditingAccount] = useState<LedgerAccount | null>(null)

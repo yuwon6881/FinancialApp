@@ -205,7 +205,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     })
   }
 
-  const clearCategoryFilters = () => setSelectedCategories([])
+  const clearCategoryFilters = React.useCallback(() => setSelectedCategories([]), [])
 
   // Click outside to close filter dropdown
   React.useEffect(() => {

@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
-import type { InvestmentActivity, TaxReliefCategoryDefinition, VaultDocument, WishlistItem } from '../../src/types'
+import type { InvestmentActivity, SavingsGoal, TaxReliefCategoryDefinition, VaultDocument, WishlistItem } from '../../src/types'
 
 const transaction = {
   id: 'tx-visual-1',
@@ -185,6 +185,7 @@ interface MockApiOptions {
   failStatus?: boolean
   failDocuments?: boolean
   wishlist?: WishlistItem[]
+  savingsGoals?: SavingsGoal[]
   documents?: VaultDocument[]
   reliefCategories?: TaxReliefCategoryDefinition[]
   investmentTransactions?: InvestmentActivity[]
@@ -195,6 +196,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
   const themedBootstrap = {
     ...bootstrap,
     wishlist: options.wishlist ?? bootstrap.wishlist,
+    savingsGoals: options.savingsGoals ?? bootstrap.savingsGoals,
     dashboard: {
       ...bootstrap.dashboard,
       setting: { ...bootstrap.dashboard.setting, darkMode },
@@ -260,6 +262,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
       return fulfill(route, { items: documents, totalCount: documents.length })
     }
     if (pathname.endsWith('/wishlist')) return fulfill(route, options.wishlist ?? [])
+    if (pathname.endsWith('/savings-goals')) return fulfill(route, options.savingsGoals ?? [])
     if (pathname.endsWith('/investments/transactions')) {
       const items = options.investmentTransactions ?? []
       return fulfill(route, { items, total: items.length, page: 1, pageSize: Number(url.searchParams.get('pageSize') || 10) })
