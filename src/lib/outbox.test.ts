@@ -157,7 +157,7 @@ describe('DISPATCH idempotency wiring', () => {
   it('registers a dispatch handler for every savings goal op the UI can queue', () => {
     // The three ops the goal UI enqueues. Money movement (contribute/fund/complete) is
     // deliberately online-only, so it must NOT appear here.
-    for (const key of ['savingsGoal:add', 'savingsGoal:update', 'savingsGoal:delete']) {
+    for (const key of ['savingsGoal:add', 'savingsGoal:update', 'savingsGoal:delete', 'savingsGoal:restore']) {
       expect(typeof DISPATCH[key]).toBe('function')
     }
     expect(DISPATCH['savingsGoal:contribute']).toBeUndefined()
@@ -771,6 +771,20 @@ describe('applyOpsToList', () => {
     })
   })
 
+  it('releases excess earmark immediately when an update lowers the target', () => {
+    const base = [{ id: 7, targetAmount: 1_000, earmarkedAmount: 800, cycleFundedAmount: 500 }]
+    const ops = [makeOp({
+      entity: 'savingsGoal', type: 'update', targetId: '7', payload: { targetAmount: 600 },
+    })]
+
+    expect(applyOpsToList(base, ops, 'savingsGoal')[0]).toMatchObject({
+      targetAmount: 600,
+      earmarkedAmount: 600,
+      cycleFundedAmount: 300,
+      isPendingSync: true,
+    })
+  })
+
   it('prepends a new item for an add op and marks it pending while uncompleted', () => {
     const base: TestItem[] = []
     const ops = [makeOp({ type: 'add', targetId: 'local-1', payload: { name: 'New tx' } })]
@@ -1265,5 +1279,49 @@ describe('enqueue', () => {
     const next = enqueue([purchaseOp], 'wishlistItem', 'unpurchase', '1', undefined, true, 'op-purchase')
     expect(next).toHaveLength(2)
     expect(next[1]).toMatchObject({ entity: 'wishlistItem', type: 'unpurchase', targetId: '1', isUndo: true })
+  })
+})
+
+describe('undoSnapshot survives queue collapse', () => {
+  const first = { id: 'tx-1', description: 'Original', amount: -10 }
+  const second = { id: 'tx-1', description: 'Second', amount: -20 }
+
+  it('keeps the pre-change snapshot when repeated offline edits merge', () => {
+    let queue = enqueue([], 'transaction', 'update', 'tx-1', { description: 'Second', undoSnapshot: first })
+    queue = enqueue(queue, 'transaction', 'update', 'tx-1', { description: 'Third', undoSnapshot: second })
+
+    expect(queue).toHaveLength(1)
+    // Undo has to return to the state before the *first* edit, not to the intermediate one.
+    expect(queue[0].payload).toMatchObject({ description: 'Third', undoSnapshot: { description: 'Original' } })
+  })
+
+  it('keeps the pre-change snapshot when repeated toggles merge', () => {
+    let queue = enqueue([], 'recurringPayment', 'toggle', 'rp-1', { active: false, undoSnapshot: { id: 'rp-1', active: true } })
+    queue = enqueue(queue, 'recurringPayment', 'toggle', 'rp-1', { active: true, undoSnapshot: { id: 'rp-1', active: false } })
+
+    expect(queue).toHaveLength(1)
+    expect(queue[0].payload).toMatchObject({ active: true, undoSnapshot: { active: true } })
+  })
+
+  it('drops the snapshot when an edit merges into an unsent add', () => {
+    let queue = enqueue([], 'recurringPayment', 'add', 'rp-1', { name: 'Rent', amount: 1200 })
+    queue = enqueue(queue, 'recurringPayment', 'update', 'rp-1', { amount: 1300, undoSnapshot: { id: 'rp-1', amount: 1200 } })
+
+    expect(queue).toHaveLength(1)
+    expect(queue[0].type).toBe('add')
+    // An unsent add has no before-state, and the create body must not carry a nested record copy
+    // whose money fields would go out unobfuscated beside the obfuscated top-level ones.
+    expect(queue[0].payload).not.toHaveProperty('undoSnapshot')
+    expect(queue[0].payload).toMatchObject({ amount: 1300 })
+  })
+
+  it('strips optimistic markers off a persisted snapshot at enqueue', () => {
+    const queue = enqueue([], 'transaction', 'update', 'tx-1', {
+      description: 'Edited',
+      undoSnapshot: { id: 'tx-1', description: 'Original', isPendingSync: true, pendingSyncOperationId: 'op-9' },
+    })
+
+    // A snapshot is a server state; restoring one must not send projection flags back to the API.
+    expect(queue[0].payload?.undoSnapshot).toEqual({ id: 'tx-1', description: 'Original' })
   })
 })

@@ -138,6 +138,9 @@ export interface DrainQueueDeps {
   // --- toasts / undo ---
   getSyncSuccessToast: (op: QueuedOp) => ToastCopy | null
   buildUndoAction: (op: QueuedOp, result: DispatchResult) => ToastAction | undefined
+  // Optional, matching setActiveSyncOpId: the drain is exercised by harnesses that do not model
+  // undo state at all, and a missing remap only costs an Undo button, never correctness.
+  remapUndoSnapshot?: (entity: QueuedOp['entity'], fromTargetId: string, toTargetId: string) => void
   emitToast: (copy: ToastCopy, action: ToastAction | undefined) => void
   emitFailureToast: (op: QueuedOp, err: unknown) => void
 
@@ -334,6 +337,9 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
             // finishes. Give that temporary row its server id too, otherwise a user
             // action during this window can enqueue a DELETE for the negative local id.
             completedOp = { ...nextOp, targetId: realIdStr }
+            // Undo snapshots are keyed by target id as well, so they have to follow the row: an
+            // edit queued against the placeholder otherwise loses its Undo once the add resolves.
+            deps.remapUndoSnapshot?.(nextOp.entity, nextOp.targetId, realIdStr)
             next = next.map(op => (op.entity === nextOp.entity && op.targetId === nextOp.targetId)
               ? { ...op, targetId: realIdStr }
               : op)

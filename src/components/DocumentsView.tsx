@@ -381,6 +381,11 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 try {
                   await updateDocumentMetadata(id, updates)
                   void loadOverview(taxYear)
+                } catch (error) {
+                  // This is a direct (non-outbox) write, so nothing else reports it: without this
+                  // a failed metadata save was an unhandled rejection and the row silently kept
+                  // showing the edit as if it had stuck.
+                  showToast(getErrorMessage(error, 'The document details could not be saved.'), 'Save Failed', 'error')
                 } finally {
                   removeDocumentIds(setSyncingDocumentIds, [id])
                 }

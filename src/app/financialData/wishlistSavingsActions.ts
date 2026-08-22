@@ -171,8 +171,14 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
 
   const handleUpdateSavingsGoal = (id: number, updatedGoal: SavingsGoal) => {
     if (!guardSensitive()) return
-    snapshotForUndo('savingsGoal', String(id), allSavingsGoals.find(goal => String(goal.id) === String(id)))
-    mutateQueue(previous => enqueue(previous, 'savingsGoal', 'update', String(id), toOutboxPayload(updatedGoal)))
+    const previousGoal = allSavingsGoals.find(goal => String(goal.id) === String(id))
+    snapshotForUndo('savingsGoal', String(id), previousGoal)
+    // Persisted alongside the in-memory capture so Undo survives a reload while the op is queued,
+    // matching every other update handler.
+    mutateQueue(previous => enqueue(previous, 'savingsGoal', 'update', String(id), {
+      ...toOutboxPayload(updatedGoal),
+      undoSnapshot: previousGoal,
+    }))
     if (String(id) === editingPendingId) setEditingPendingId(null)
   }
 

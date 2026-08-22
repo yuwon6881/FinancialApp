@@ -14,7 +14,7 @@ async function dispatchBulkTransaction(op: QueuedOp): Promise<BulkTransactionMut
   return dispatch(op)
 }
 
-export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>> = {
+const HANDLERS: Record<string, (op: QueuedOp) => Promise<DispatchResult>> = {
   'transaction:bulkDelete': dispatchBulkTransaction,
   'transaction:bulkRestore': dispatchBulkTransaction,
   'transaction:add': (op) => api.addTransaction({ ...(withoutUndoSnapshot(op.payload) as Partial<Transaction>), id: op.targetId } as Omit<Transaction, 'id'> & { id?: string }),
@@ -30,6 +30,10 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     mode: (typeof op.payload?.reminderMode === 'string' ? op.payload.reminderMode : 'Once') as 'Once' | 'Daily',
     leadDays: typeof op.payload?.reminderLeadDays === 'number' ? op.payload.reminderLeadDays : 1,
   }),
+  // Nothing enqueues payEarly any more -- handlePayEarly moved to recurringOccurrence:settle. This
+  // stays reachable on purpose: `sanitizeQueuedOps` still accepts the type, so a queue persisted by
+  // an older build replays through here. Deleting the slice would silently drop those changes.
+  // Note it has no undo case, so such a replay toasts without an Undo button.
   'recurringPayment:payEarly': (op) => api.payRecurringPaymentEarly(
     op.targetId,
     typeof op.payload?.occurrenceDate === 'string' ? op.payload.occurrenceDate : '',
@@ -77,6 +81,10 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'savingsGoal:delete': async (op) => {
     const { deleteSavingsGoal } = await import('./api/savingsGoals')
     return deleteSavingsGoal(Number(op.targetId))
+  },
+  'savingsGoal:restore': async (op) => {
+    const { restoreDeletedSavingsGoal } = await import('./api/savingsGoals')
+    return restoreDeletedSavingsGoal(op.payload as unknown as SavingsGoal, op.id)
   },
 
   'loan:add': async (op) => {
@@ -198,3 +206,26 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     return documents.deleteTaxReliefCategory(Number(op.payload?.taxYear), op.targetId)
   },
 }
+
+/**
+ * `undoSnapshot` is local bookkeeping: it feeds the Undo toast (`buildUndoAction`) and is read as
+ * projection input off the queued op (`loanProjection`, `accountProjection`). It must never reach
+ * the wire. A nested copy of the record would ship alongside the obfuscated top-level money field,
+ * putting the same amount on the wire in cleartext, and for cash flows the nested `amount` keeps
+ * the sign the top level normalises away.
+ *
+ * Stripping it here, at the single dispatch boundary, is what makes that structural: no handler can
+ * opt out by forgetting to call `withoutUndoSnapshot`, which is exactly how the investment updates
+ * drifted. The remaining per-entry calls above are now redundant but harmless. Only the object
+ * handed to the handler is sanitised -- the queued op itself keeps the snapshot for projection.
+ */
+export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>> = Object.fromEntries(
+  Object.entries(HANDLERS).map(([key, handler]) => [
+    key,
+    (op: QueuedOp) => handler(
+      op.payload && 'undoSnapshot' in op.payload
+        ? { ...op, payload: withoutUndoSnapshot(op.payload) }
+        : op,
+    ),
+  ]),
+)

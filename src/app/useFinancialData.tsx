@@ -1628,6 +1628,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       active: nextActive,
       name: current.name,
       nextDueDate: nextActive ? computeOccurrenceOnOrAfter(current, trackingStart) : null,
+      // Toggling recomputes nextDueDate, so Undo needs the prior one to restore: rebuilding
+      // { active, name } alone left the recomputed date in place until the next server refresh.
+      undoSnapshot: current,
     } : undefined
     mutateQueue(prev => enqueue(prev, 'recurringPayment', 'toggle', id, payload))
   }

@@ -236,6 +236,11 @@ const TYPE_COPY: Partial<Record<OpType, { title: string; messageVerb: string }>>
   payEarly: { title: 'Paid Early', messageVerb: 'paid early' },
   settle: { title: 'Bill Updated', messageVerb: 'updated' },
   cleanup: { title: 'Applied', messageVerb: 'applied' },
+  // Loan repayment actions. Without these the fallback reads "Loan Processed -- 'Car loan' was
+  // processed", which tells the user nothing about what moved.
+  advanceRepayment: { title: 'Repayment Recorded', messageVerb: 'paid ahead of schedule' },
+  fullSettlement: { title: 'Loan Settled', messageVerb: 'settled in full' },
+  undoRepayment: { title: 'Repayment Undone', messageVerb: 'reverted' },
 }
 
 function defaultSyncSuccessToast(op: QueuedOp): ToastCopy {
@@ -422,17 +427,67 @@ function createOpId(): string {
   return `op-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }
 
+/**
+ * Keep the first `undoSnapshot` when a follow-up mutation collapses into an already-queued op.
+ * Undo has to return the row to the state before the user's first offline edit; a later edit's
+ * snapshot is an intermediate state they never asked to keep. The `reminder` branch below has
+ * always done this -- `update` and `toggle` did not, so repeated offline edits walked the snapshot
+ * forward and Undo became a no-op.
+ */
+const withFirstUndoSnapshot = (
+  merged: OutboxPayload,
+  existing: OutboxPayload | undefined,
+  incoming: OutboxPayload | undefined,
+): OutboxPayload => {
+  const first = existing?.undoSnapshot ?? incoming?.undoSnapshot
+  if (first === undefined) return withoutUndoSnapshot(merged)
+  return { ...merged, undoSnapshot: first }
+}
+
+/**
+ * An unsent add has no "before" state -- undoing it is a delete, not a restore -- so a snapshot
+ * merged in from a follow-up edit is dead weight in the cached queue.
+ */
+const withoutUndoSnapshot = (merged: OutboxPayload): OutboxPayload => {
+  const next = { ...merged }
+  delete next.undoSnapshot
+  return next
+}
+
+/**
+ * Strip optimistic projection markers off a persisted snapshot. Callers hand us the row straight
+ * out of `applyOpsToList`, which stamps these flags, and a snapshot is a *server* state: restoring
+ * one after a reload would otherwise send `isPendingSync: true` back to the API. Cleaning here
+ * rather than at each enqueue site keeps it true for every entity, present and future.
+ *
+ * Only the markers go. Projection reads this field as input (see `loanProjection`,
+ * `accountProjection`), and both depend on the money and identity fields, which are untouched.
+ */
+const cleanEnqueuedUndoSnapshot = (payload: OutboxPayload | undefined): OutboxPayload | undefined => {
+  const snapshot = payload?.undoSnapshot
+  if (!payload || !snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) return payload
+  const cleaned = { ...(snapshot as Record<string, unknown>) }
+  delete cleaned.isPendingSync
+  delete cleaned.isPendingDelete
+  delete cleaned.pendingSyncOperationId
+  delete cleaned.isRecalculating
+  return { ...payload, undoSnapshot: cleaned as OutboxPayload['undoSnapshot'] }
+}
+
 export function enqueue(
   queue: QueuedOp[],
   entity: EntityKind,
   type: OpType,
   targetId: string,
-  payload?: OutboxPayload,
+  rawPayload?: OutboxPayload,
   isUndo?: boolean,
   activeSyncOpId?: string | null
 ): QueuedOp[] {
   const targetIdStr = String(targetId)
   const createdAt = Date.now()
+  // Cleaned once, up front, so every branch below (and the op we queue) carries a snapshot free of
+  // optimistic markers.
+  const payload = cleanEnqueuedUndoSnapshot(rawPayload)
   const timestampedPayload = entity === 'transaction' && type === 'add' && !payload?.postedAt
     ? { ...payload, postedAt: getOptimisticTransactionPostedAt(createdAt) }
     : (entity === 'investmentActivity' || entity === 'investmentCashFlow') && type === 'add' && !payload?.createdAt
@@ -487,7 +542,7 @@ export function enqueue(
         if (op.entity === entity && op.targetId === targetIdStr && op.type === 'add') {
           return {
             ...op,
-            payload: { ...op.payload, ...payload }
+            payload: withoutUndoSnapshot({ ...op.payload, ...payload })
           }
         }
         return op
@@ -497,9 +552,10 @@ export function enqueue(
       const existingUpdateIndex = queue.findIndex(op => op.entity === entity && op.targetId === targetIdStr && op.type === 'update' && op.id !== activeSyncOpId)
       if (existingUpdateIndex >= 0) {
         const next = [...queue]
+        const existingPayload = next[existingUpdateIndex].payload
         next[existingUpdateIndex] = {
           ...next[existingUpdateIndex],
-          payload: { ...next[existingUpdateIndex].payload, ...payload }
+          payload: withFirstUndoSnapshot({ ...existingPayload, ...payload }, existingPayload, payload)
         }
         return next
       }
@@ -527,7 +583,13 @@ export function enqueue(
       const existingToggleIndex = queue.findIndex(op => op.entity === entity && op.targetId === targetIdStr && op.type === 'toggle' && op.id !== activeSyncOpId)
       if (existingToggleIndex >= 0) {
         const next = [...queue]
-        next[existingToggleIndex] = { ...next[existingToggleIndex], payload }
+        // The toggle payload is the absolute desired state, so it replaces rather than merges --
+        // but the first snapshot still has to survive for Undo.
+        const existingPayload = next[existingToggleIndex].payload
+        next[existingToggleIndex] = {
+          ...next[existingToggleIndex],
+          payload: withFirstUndoSnapshot({ ...payload }, existingPayload, payload),
+        }
         return next
       }
       return [...queue, newOp]
@@ -1042,11 +1104,35 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
             } as unknown as T
           })
         } else {
-          result[existingIndex] = {
+          const current = result[existingIndex] as T & {
+            earmarkedAmount?: number
+            targetAmount?: number
+            cycleFundedAmount?: number
+          }
+          // Same cast as `current` above: these savings-goal fields reach the row through
+          // OutboxPayload's index signature, and spreading an optional payload drops that
+          // signature from the inferred type.
+          const projected = {
             ...result[existingIndex],
             ...op.payload,
             isPendingSync: !op.isCompleted
+          } as T & {
+            earmarkedAmount?: number
+            targetAmount?: number
+            cycleFundedAmount?: number
+            isPendingSync: boolean
           }
+          if (entity === 'savingsGoal'
+              && typeof projected.targetAmount === 'number'
+              && typeof current.earmarkedAmount === 'number'
+              && current.earmarkedAmount > projected.targetAmount) {
+            const released = current.earmarkedAmount - projected.targetAmount
+            projected.earmarkedAmount = projected.targetAmount
+            if (typeof current.cycleFundedAmount === 'number') {
+              projected.cycleFundedAmount = Math.max(0, current.cycleFundedAmount - released)
+            }
+          }
+          result[existingIndex] = projected
         }
       }
       if (entity === 'transaction') {
@@ -1198,14 +1284,18 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
       // Investment activity/cash-flow undo uses a dedicated restore endpoint rather than
       // re-adding a record. Project the snapshot back into the visible list immediately so an
       // undo followed by navigation does not leave the user staring at a missing row.
-      const snapshots = entity === 'investmentActivity' && Array.isArray(op.payload?.transactions)
+      const snapshots = entity === 'savingsGoal' && op.payload
+        ? [op.payload]
+        : entity === 'investmentActivity' && Array.isArray(op.payload?.transactions)
         ? op.payload.transactions
         : entity === 'investmentCashFlow' && op.payload
           ? [op.payload]
           : []
       for (const snapshot of snapshots) {
         if (!snapshot || typeof snapshot !== 'object') continue
-        const snapshotId = 'id' in snapshot ? String(snapshot.id) : targetStr
+        const snapshotId = entity === 'savingsGoal'
+          ? targetStr
+          : 'id' in snapshot ? String(snapshot.id) : targetStr
         if (!snapshotId) continue
         const restored = {
           ...snapshot,

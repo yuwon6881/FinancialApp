@@ -1,8 +1,15 @@
 import type { ToastAction } from '../components/ui/ToastViewport'
-import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, LedgerAccount, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, LedgerAccount, Loan, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
 import { createFinalId, createLocalNumericId, createLocalWishlistId, type DispatchResult, type EntityKind, type OutboxPayload, type QueuedOp } from './outbox'
 
-export type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | WishlistItem | SavingsGoal | LedgerAccount | InvestmentAccount | InvestmentInstrument | InvestmentActivity | InvestmentCashFlow | TaxReliefCategoryDefinition) & {
+/**
+ * Note this union does NOT police which entities have undo support: its loosest member only
+ * requires `{ id: string, name: string }`, so almost any domain record is structurally assignable
+ * and a missing entity type-checks silently. `Loan` was absent here for as long as it was absent
+ * from `buildUndoAction`, and `tsc` never flagged either. The switch below is the real registry --
+ * adding a member here buys documentation, not enforcement.
+ */
+export type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | WishlistItem | SavingsGoal | LedgerAccount | Loan | InvestmentAccount | InvestmentInstrument | InvestmentActivity | InvestmentCashFlow | TaxReliefCategoryDefinition) & {
   isPendingSync?: boolean
   isPendingDelete?: boolean
 }
@@ -32,6 +39,40 @@ export function snapshotForUndo(
   delete clean.isPendingSync
   delete clean.isPendingDelete
   snapshots.set(key, clean)
+}
+
+/**
+ * Drop a captured snapshot without building an undo from it. `buildUndoAction` consumes the map on
+ * the success path only, so every terminal failure has to release its own key: capture is
+ * first-write-wins, and a snapshot left behind by a failed op would be handed to the *next* edit of
+ * the same row, whose Undo would then revert past the edit the user actually kept.
+ */
+export function releaseUndoSnapshot(
+  snapshots: Map<string, UndoSnapshot>,
+  entity: EntityKind,
+  targetId: string,
+): void {
+  snapshots.delete(snapshotKey(entity, targetId))
+}
+
+/**
+ * Follow a server-assigned id onto the snapshot map. The queue remaps `targetId` when an add
+ * resolves, and these keys are built from that same id, so without this the snapshot for an
+ * in-flight edit becomes unreachable and the row silently loses its Undo.
+ */
+export function remapUndoSnapshotTarget(
+  snapshots: Map<string, UndoSnapshot>,
+  entity: EntityKind,
+  fromTargetId: string,
+  toTargetId: string,
+): void {
+  if (fromTargetId === toTargetId) return
+  const from = snapshotKey(entity, fromTargetId)
+  const existing = snapshots.get(from)
+  if (!existing) return
+  snapshots.delete(from)
+  const to = snapshotKey(entity, toTargetId)
+  if (!snapshots.has(to)) snapshots.set(to, existing)
 }
 
 export function buildUndoAction(
@@ -67,6 +108,8 @@ export function buildUndoAction(
       return action('recurringPayment', 'delete', String(op.targetId), op.payload)
     case 'ledgerAccount:add':
       return action('ledgerAccount', 'delete', String(op.targetId), op.payload)
+    case 'loan:add':
+      return action('loan', 'delete', String(op.targetId), op.payload)
     case 'ledgerAccountReconcile:add': {
       const undo = op.payload?.undoReconciliation
       return undo && typeof undo === 'object'
@@ -115,6 +158,11 @@ export function buildUndoAction(
       return before ? action('recurringPayment', 'add', String(before.id), toPayload(before)) : undefined
     case 'ledgerAccount:delete':
       return before ? action('ledgerAccount', 'add', String(before.id), toPayload(before)) : undefined
+    // The loan API field-scopes both bodies to the authored terms, so the restore only has to be
+    // honest for the optimistic projection: `before.snapshot` is the correct pre-edit amortisation
+    // state, and `isRecalculating` is stripped from every snapshot at enqueue.
+    case 'loan:delete':
+      return before ? action('loan', 'add', String(before.id), toPayload(before)) : undefined
     case 'category:delete':
       return !op.payload?.replacementCategoryId && before
         ? action('category', 'add', String(before.id), toPayload(before))
@@ -132,11 +180,11 @@ export function buildUndoAction(
       return action('wishlistItem', 'add', String(createLocalWishlistId()), payload)
     }
     case 'savingsGoal:delete': {
-      // Re-created under a fresh local id: the original row is gone, so the restore is an add.
+      // The dedicated restore endpoint preserves the deleted row's cycle tally and revalidates its
+      // earmark under the server's shared-pool lock. A normal add deliberately resets that tally.
       if (!before) return undefined
       const payload = toPayload(before)
-      delete payload.id
-      return action('savingsGoal', 'add', String(createLocalNumericId()), payload)
+      return action('savingsGoal', 'restore', String(createLocalNumericId()), payload)
     }
     case 'investmentAccount:delete':
       return before ? action('investmentAccount', 'add', String(before.id), toPayload(before)) : undefined
@@ -160,6 +208,8 @@ export function buildUndoAction(
       return before ? action('recurringPayment', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'ledgerAccount:update':
       return before ? action('ledgerAccount', 'update', String(op.targetId), toPayload(before)) : undefined
+    case 'loan:update':
+      return before ? action('loan', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'recurringPayment:reminder':
       return before ? action('recurringPayment', 'reminder', String(op.targetId), {
         name: (before as any).name,
@@ -213,9 +263,14 @@ export function buildUndoAction(
       })
     case 'recurringPayment:toggle': {
       if (!op.payload || typeof op.payload.active !== 'boolean') return undefined
+      const restored = before as RecurringPayment | undefined
       return action('recurringPayment', 'toggle', String(op.targetId), {
         active: !op.payload.active,
         name: op.payload.name,
+        // The toggle recomputed nextDueDate, so restoring `active` alone would leave the new date
+        // showing. Only send the key when we actually have the old value -- the projection applies
+        // it by key presence, so an undefined would blank a date we do not know.
+        ...(restored && 'nextDueDate' in restored ? { nextDueDate: restored.nextDueDate } : {}),
       })
     }
     case 'category:cleanup': {

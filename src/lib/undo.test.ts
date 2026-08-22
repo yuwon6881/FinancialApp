@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { QueuedOp } from './outbox'
-import { buildUndoAction, snapshotForUndo, type UndoSnapshot } from './undo'
+import { buildUndoAction, releaseUndoSnapshot, remapUndoSnapshotTarget, snapshotForUndo, type UndoSnapshot } from './undo'
 
 const op = (entity: QueuedOp['entity'], type: QueuedOp['type'], targetId = '1', payload?: QueuedOp['payload']): QueuedOp => ({
   id: 'op-1', entity, type, targetId, payload, createdAt: 1, retryCount: 0,
@@ -163,7 +163,7 @@ describe('undo helpers', () => {
     action?.onAction()
     expect(enqueue).toHaveBeenCalledWith(
       'savingsGoal',
-      'add',
+      'restore',
       expect.any(String),
       expect.objectContaining({ name: 'Car service', earmarkedAmount: 300 }),
     )
@@ -249,6 +249,91 @@ describe('undo helpers', () => {
     expect(enqueue).toHaveBeenCalledWith('category', 'cleanup', 'cleanup-1:undo', expect.objectContaining({
       actions: [{ type: 'deleteByName', categories: ['New'] }],
       description: 'Old → New',
+    }))
+  })
+
+  // Loans queued both snapshot tiers long before buildUndoAction had a case for them, so every
+  // loan mutation toasted without an Undo button. These pin the three cases down.
+  it('offers Undo for a loan add by deleting the row it created', () => {
+    const enqueue = vi.fn()
+    const action = buildUndoAction(new Map(), op('loan', 'add', 'loan-1', { name: 'Car loan' }), undefined, enqueue)
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith('loan', 'delete', 'loan-1', expect.objectContaining({ name: 'Car loan' }))
+  })
+
+  it('restores the previous terms when undoing a loan update', () => {
+    const snapshots = new Map<string, UndoSnapshot>()
+    snapshotForUndo(snapshots, 'loan', 'loan-1', {
+      id: 'loan-1', name: 'Car loan', recurringPaymentId: 'rp-1', openingPrincipal: 30000,
+      trackingStartDate: '2026-01-01', annualRatePercent: 4.5, termPeriods: 60,
+      interestMethod: 'ReducingBalance', snapshot: { outstandingBalance: 25000 },
+    } as unknown as UndoSnapshot)
+    const enqueue = vi.fn()
+    const action = buildUndoAction(snapshots, op('loan', 'update', 'loan-1', { annualRatePercent: 9 }), undefined, enqueue)
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith('loan', 'update', 'loan-1', expect.objectContaining({
+      annualRatePercent: 4.5,
+      termPeriods: 60,
+    }))
+  })
+
+  it('recreates a deleted loan from the persisted payload snapshot', () => {
+    const enqueue = vi.fn()
+    // No in-memory snapshot: this is the post-reload path, served by op.payload.undoSnapshot.
+    const action = buildUndoAction(new Map(), op('loan', 'delete', 'loan-1', {
+      name: 'Car loan',
+      undoSnapshot: { id: 'loan-1', name: 'Car loan', openingPrincipal: 30000 },
+    }), undefined, enqueue)
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith('loan', 'add', 'loan-1', expect.objectContaining({ openingPrincipal: 30000 }))
+  })
+
+  it('releases a snapshot so a failed op cannot supply the next edit with a stale before-state', () => {
+    const snapshots = new Map<string, UndoSnapshot>()
+    const v0 = { id: '1', name: 'v0', limit: 1 } as unknown as UndoSnapshot
+    const v1 = { id: '1', name: 'v1', limit: 2 } as unknown as UndoSnapshot
+    snapshotForUndo(snapshots, 'taxReliefCategory', '1', v0)
+
+    // Capture is first-write-wins, so without the release the second edit keeps pointing at v0
+    // and its Undo would revert past the edit the user actually kept.
+    releaseUndoSnapshot(snapshots, 'taxReliefCategory', '1')
+    snapshotForUndo(snapshots, 'taxReliefCategory', '1', v1)
+
+    expect(snapshots.get('taxReliefCategory:1')).toMatchObject({ name: 'v1' })
+  })
+
+  it('follows a server-assigned id so an in-flight edit keeps its Undo', () => {
+    const snapshots = new Map<string, UndoSnapshot>()
+    snapshotForUndo(snapshots, 'savingsGoal', '-5', { id: -5, name: 'Before' } as unknown as UndoSnapshot)
+
+    remapUndoSnapshotTarget(snapshots, 'savingsGoal', '-5', '42')
+
+    expect(snapshots.has('savingsGoal:-5')).toBe(false)
+    const enqueue = vi.fn()
+    buildUndoAction(snapshots, op('savingsGoal', 'update', '42'), undefined, enqueue)?.onAction()
+    expect(enqueue).toHaveBeenCalledWith('savingsGoal', 'update', '42', expect.objectContaining({ name: 'Before' }))
+  })
+
+  it('restores the previous due date when undoing a bill toggle', () => {
+    const snapshots = new Map<string, UndoSnapshot>()
+    snapshotForUndo(snapshots, 'recurringPayment', 'rp-1', {
+      id: 'rp-1', name: 'Rent', active: false, nextDueDate: '2026-03-01',
+    } as unknown as UndoSnapshot)
+    const enqueue = vi.fn()
+    const action = buildUndoAction(
+      snapshots,
+      op('recurringPayment', 'toggle', 'rp-1', { active: true, name: 'Rent', nextDueDate: '2026-09-01' }),
+      undefined,
+      enqueue,
+    )
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith('recurringPayment', 'toggle', 'rp-1', expect.objectContaining({
+      active: false,
+      nextDueDate: '2026-03-01',
     }))
   })
 })

@@ -129,7 +129,12 @@ export function createLoanActions(deps: LoanActionDependencies) {
 
   const handleUndoRepayment = async (actionId: string, loanId?: string) => {
     if (!guardSensitive()) return
-    mutateQueue(queue => enqueue(queue, 'loan', 'undoRepayment', actionId, { loanId }))
+    const loan = loans.find(item => item.id === loanId)
+    // Flagged as an undo so it gets the undo-confirmation toast and never offers an Undo of its own.
+    mutateQueue(queue => enqueue(queue, 'loan', 'undoRepayment', actionId, {
+      loanId,
+      name: loan?.name,
+    }, true))
   }
 
   return {

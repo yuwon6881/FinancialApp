@@ -12,7 +12,7 @@ import {
   type QueuedOp,
 } from './outbox'
 import { drainQueue, type SuccessfulSyncOp } from './outboxSync'
-import { buildUndoAction, snapshotForUndo, type RequestSensitiveReveal, type UndoSnapshot } from './undo'
+import { buildUndoAction, releaseUndoSnapshot, remapUndoSnapshotTarget, snapshotForUndo, type RequestSensitiveReveal, type UndoSnapshot } from './undo'
 import { Eye } from 'lucide-react'
 import { triggerHaptic } from './haptics'
 
@@ -220,6 +220,9 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
         if (mountedRef.current) setRecentlyCompletedOps([])
       },
       addFailedOp: op => {
+        // Terminal for this attempt: release the snapshot so it can never be mistaken for a later
+        // edit's "before" state. A retry of this op still has its own persisted payload snapshot.
+        releaseUndoSnapshot(undoSnapshotsRef.current, op.entity, op.targetId)
         if (mountedRef.current) setFailedOps(previous => {
           const next = [...previous, op]
           failedOpsRef.current = next
@@ -228,6 +231,9 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
       },
       getSyncSuccessToast,
       buildUndoAction: createUndo,
+      remapUndoSnapshot: (entity, fromTargetId, toTargetId) => {
+        remapUndoSnapshotTarget(undoSnapshotsRef.current, entity, fromTargetId, toTargetId)
+      },
       emitToast: (copy, action) => {
         if (!mountedRef.current) return
         const now = Date.now()
