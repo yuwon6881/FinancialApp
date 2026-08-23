@@ -1,40 +1,29 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import * as api from '../lib/api'
 import type {
-  AppTab,
   Transaction,
   RecurringPayment,
-  RecurringReminderSettings,
   TransactionCategory,
-  CategoryFlowType,
   WishlistItem,
   SavingsGoal,
   DashboardData,
   AutocompleteSuggestion,
-  PendingNotification,
   TransactionDocumentChanges,
   LedgerAccount,
   FinancialSetting,
 } from '../types'
-import type { CategoryCleanupSuggestion } from '../lib/api'
 import { CACHE_KEYS, ensureAccountTrackingCacheVersion, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, setCachedCycleSnapshot } from '../lib/cache'
 import { useOptimisticList } from '../lib/useOptimisticList'
 import { useOutbox } from '../lib/useOutbox'
 import { useStartupSync } from './useStartupSync'
 import { useOptimisticDashboard } from './useOptimisticDashboard'
-import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
-import { createFinalId, projectFinancialSetting, sanitizeQueuedOps, type EntityKind, type OpType, type OutboxPayload, type QueuedOp } from '../lib/outbox'
+import { projectFinancialSetting, type EntityKind, type OpType, type OutboxPayload, type QueuedOp } from '../lib/outbox'
 import { projectLoanStates } from '../lib/loanProjection'
 import { loanEndDate } from '../lib/loanTermSchedule'
 import { projectAccountBalances, projectAccountBalancesFromTransactions } from '../lib/accountProjection'
 import type { AccountPlacementSelections } from '../lib/accountPlacementMigration'
-import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
-import { isSpendingGuideCategory, isSystemCategoryName } from '../lib/categoryFlow'
-import { buildUndoSuccessToast } from '../lib/mutationToast'
-import { computeNextOccurrenceDate, computeOccurrenceOnOrAfter } from '../lib/recurringPayments'
-import { financialDate } from '../lib/financialDate'
 import { formatDateForApi, getCycleRangeDates, MONTH_NAMES } from '../lib/cycle'
 import { buildStabilityPlanPoints, projectStabilityReloadStatuses } from '../lib/stabilityRecovery'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
@@ -44,10 +33,11 @@ import { createWishlistSavingsActions } from './financialData/wishlistSavingsAct
 import { createLoanActions } from './financialData/loanActions'
 import { createLedgerAccountActions } from './financialData/accountActions'
 import { useLoanData } from './financialData/useLoanData'
-// Deliberately the deferred wrapper, not the picker itself: importing CategoryReplacementSelect
-// directly here pulled its CustomSelect -> AnchoredPopover chain onto the eager critical path. See
-// the comment in CategoryReplacementSelectLazy for the measurement.
-import { CategoryReplacementSelectLazy } from '../components/ui/CategoryReplacementSelectLazy'
+import { useSessionRestore } from './financialData/useSessionRestore'
+import { createSettingsActions } from './financialData/settingsActions'
+import { createCategoryActions } from './financialData/categoryActions'
+import { useTransactionActions } from './financialData/useTransactionActions'
+import { createRecurringActions } from './financialData/recurringActions'
 
 export interface UseFinancialDataOptions {
   token: string | null
@@ -750,185 +740,35 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   }, [loadAllInner])
 
   // Backup outbox/drafts on logout
-  const handleLogoutCleanup = useCallback(async (currentOwner: string, createBackup = true) => {
-    // A new login must perform its own wake-up and initial fetch. Also invalidate
-    // the outgoing session's request so its finally block cannot hide the next
-    // session's loading skeleton after logout.
-    loadAllSeqRef.current += 1
-    loadAllAbortRef.current?.abort()
-    loadAllAbortRef.current = null
-    isServerAwakeRef.current = false
-
-    const currentPending = getPendingOps()
-    const currentDrafts = draftTransactions
-    const currentFailed = getFailedOps()
-
-    if (createBackup) {
-      let backupFailed = false
-      const tryBackup = (key: string, value: unknown) => {
-        try {
-          localStorage.setItem(key, JSON.stringify(value))
-        } catch (backupError) {
-          backupFailed = true
-          console.error(`Could not back up ${key} during logout.`, backupError)
-        }
-      }
-
-      if (currentPending.length > 0) {
-        tryBackup('pending_operations_backup', { owner: currentOwner, ops: currentPending })
-      }
-      if (currentDrafts.length > 0) {
-        tryBackup('draft_transactions_backup', { owner: currentOwner, transactions: currentDrafts })
-      }
-      if (currentFailed.length > 0) {
-        tryBackup('failed_operations_backup', { owner: currentOwner, ops: currentFailed })
-      }
-
-      try {
-        backupModalDraftsOnLogout(currentOwner)
-      } catch (backupError) {
-        backupFailed = true
-        console.error('Could not back up modal drafts during logout.', backupError)
-      }
-
-      if (backupFailed) {
-        showToast(
-          'Some unsynced local changes could not be backed up, but sign-out will continue.',
-          'Local backup unavailable',
-          'warning',
-        )
-      }
-    }
-
-    setDashboardData(null)
-    setWalletBalance(null)
-    setTransactions([])
-    setRecurringPayments([])
-    resetOutbox()
-    setDraftTransactions([])
-    pendingTransactionDocumentsRef.current.clear()
-    pendingTransactionDocumentDeletesRef.current.clear()
-    setCategoriesList([])
-    setWishlist([])
-    setSavingsGoals([])
-    setAccounts([])
-    loanData.reset()
-    setDirectSyncIds([])
-    setPendingLedgerTransactions([])
-    setSelectedMonth('')
-    setSelectedYear(0)
-    setLoading(true)
-
-    // Clear LocalStorage cache
-    for (const key of [
-      CACHE_KEYS.dashboardData,
-      CACHE_KEYS.transactions,
-      CACHE_KEYS.recurringPayments,
-      CACHE_KEYS.categories,
-      CACHE_KEYS.wishlist,
-      CACHE_KEYS.savingsGoals,
-      CACHE_KEYS.accounts,
-      CACHE_KEYS.loans,
-      CACHE_KEYS.walletBalance,
-      CACHE_KEYS.pendingTransactions,
-      CACHE_KEYS.pendingOperations,
-      'failed_operations',
-      'draft_transactions',
-    ]) {
-      try {
-        localStorage.removeItem(key)
-      } catch (storageError) {
-        console.warn(`Could not remove local storage key ${key}.`, storageError)
-      }
-    }
-    try {
-      clearAllModalDrafts()
-    } catch (storageError) {
-      console.warn('Could not clear modal drafts.', storageError)
-    }
-  }, [getPendingOps, getFailedOps, draftTransactions, resetOutbox, setSelectedMonth, setSelectedYear, showToast])
-
-  // Restore backups on login
-  const handleLoginSuccessRestore = useCallback((newUsername: string) => {
-    // The token state update causes wakeUpAndSync to run on the next render. Reset
-    // the previous session's wake state and show the foreground skeleton until
-    // that first dashboard payload arrives.
-    isServerAwakeRef.current = false
-    setLoading(true)
-    setError(null)
-
-    const cachedOpsBackup = localStorage.getItem('pending_operations_backup') || localStorage.getItem('pending_transactions_backup')
-    if (cachedOpsBackup) {
-      let consumedOrCorrupt = false
-      try {
-        const parsed = JSON.parse(cachedOpsBackup)
-        if (parsed && parsed.owner === newUsername) {
-          consumedOrCorrupt = true
-          const backedUpOps = sanitizeQueuedOps(parsed.ops || parsed.transactions)
-          if (backedUpOps.length > 0) {
-            mutateQueue(() => backedUpOps)
-            setCachedJSON(CACHE_KEYS.pendingOperations, backedUpOps)
-          }
-        }
-      } catch (e) {
-        console.error('Failed to parse backed up pending operations:', e)
-        consumedOrCorrupt = true
-      }
-      if (consumedOrCorrupt) {
-        localStorage.removeItem('pending_operations_backup')
-        localStorage.removeItem('pending_transactions_backup')
-      }
-    }
-
-    const cachedDraftBackup = localStorage.getItem('draft_transactions_backup')
-    if (cachedDraftBackup) {
-      let consumedOrCorrupt = false
-      try {
-        const parsed = JSON.parse(cachedDraftBackup)
-        if (parsed && parsed.owner === newUsername) {
-          consumedOrCorrupt = true
-          const backedUpDrafts = sanitizeTransactions(parsed.transactions)
-          if (backedUpDrafts.length > 0) {
-            setDraftTransactions(backedUpDrafts)
-            localStorage.setItem('draft_transactions', JSON.stringify(backedUpDrafts))
-          }
-        }
-      } catch (e) {
-        console.error('Failed to parse backed up draft transactions:', e)
-        consumedOrCorrupt = true
-      }
-      if (consumedOrCorrupt) {
-        localStorage.removeItem('draft_transactions_backup')
-      }
-    }
-
-    const cachedFailedBackup = localStorage.getItem('failed_operations_backup')
-    if (cachedFailedBackup) {
-      let consumedOrCorrupt = false
-      try {
-        const parsed = JSON.parse(cachedFailedBackup)
-        if (parsed && parsed.owner === newUsername) {
-          consumedOrCorrupt = true
-          const backedUpFailed = sanitizeQueuedOps(parsed.ops).map(op => ({ ...op, retryCount: 0 }))
-          if (backedUpFailed.length > 0) {
-            mutateQueue(prev => {
-              const merged = [...prev, ...backedUpFailed]
-              setCachedJSON(CACHE_KEYS.pendingOperations, merged)
-              return merged
-            })
-          }
-        }
-      } catch (e) {
-        console.error('Failed to parse backed up failed operations:', e)
-        consumedOrCorrupt = true
-      }
-      if (consumedOrCorrupt) {
-        localStorage.removeItem('failed_operations_backup')
-      }
-    }
-
-    restoreModalDraftsOnLogin(newUsername)
-  }, [mutateQueue])
+  const { handleLogoutCleanup, handleLoginSuccessRestore } = useSessionRestore({
+    draftTransactions,
+    loanReset: loanData.reset,
+    showToast,
+    getPendingOps,
+    getFailedOps,
+    mutateQueue,
+    resetOutbox,
+    loadAllSeqRef,
+    loadAllAbortRef,
+    isServerAwakeRef,
+    pendingTransactionDocumentsRef,
+    pendingTransactionDocumentDeletesRef,
+    setDashboardData,
+    setWalletBalance,
+    setTransactions,
+    setRecurringPayments,
+    setDraftTransactions,
+    setCategoriesList,
+    setWishlist,
+    setSavingsGoals,
+    setAccounts,
+    setDirectSyncIds,
+    setPendingLedgerTransactions,
+    setSelectedMonth,
+    setSelectedYear,
+    setLoading,
+    setError,
+  })
 
   const wakeUpAndSync = useStartupSync({
     token,
@@ -1140,632 +980,98 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const totalBalance = walletBalance ?? allTransactions.reduce((acc, t) => acc + t.amount, 0)
 
-  const handleUpdateSettings = (settings: {
-    targetStabilityFund: number
-    essentialsAlloc: number
-    growthAlloc: number
-    stabilityAlloc: number
-    rewardsAlloc: number
-    cycleDay: number
-    currency?: string
-    stabilityOverflowRedirect?: string
-    darkMode?: boolean
-    hideSensitive?: boolean
-  }) => {
-    if (!guardSensitive()) return
-    const payload = {
-      ...settings,
-      darkMode: settings.darkMode ?? darkMode,
-      hideSensitive: settings.hideSensitive ?? hideSensitive,
-    }
-    for (const [key, value] of Object.entries(payload)) {
-      if (value !== undefined) unconfirmedSettingWritesRef.current.set(key, value)
-    }
-    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'settings', {
-      ...payload,
-      undoSnapshot: dashboardData?.setting,
-    }))
-  }
+  const {
+    handleUpdateSettings,
+    handleUpdateDarkModePreference,
+    handleUpdateHideSensitivePreference,
+    handleMarkSummarySeen,
+  } = createSettingsActions({ // eslint-disable-line react-hooks/refs
+    darkMode,
+    hideSensitive,
+    dashboardData,
+    guardSensitive,
+    mutateQueue,
+    unconfirmedSettingWritesRef,
+    setDashboardData,
+  })
 
-  const handleUpdateDarkModePreference = (value: boolean) => {
-    unconfirmedSettingWritesRef.current.set('darkMode', value)
-    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'darkMode', {
-      darkMode: value,
-      undoSnapshot: { darkMode },
-    }))
-  }
+  const {
+    handleAddCategory,
+    handleUpdateCategoryCycleLimit,
+    handleUpdateCategoryType,
+    handleDeleteCategory,
+    requestDeleteCategory,
+    handleApplyCategoryCleanupSuggestion,
+  } = createCategoryActions({
+    categoriesList,
+    allCategories,
+    allRecurringPayments,
+    guardSensitive,
+    mutateQueue,
+    snapshotForUndo,
+    setConfirmModalData,
+    showToast,
+  })
 
-  const handleUpdateHideSensitivePreference = (value: boolean) => {
-    const previousValue = dashboardData?.setting.hideSensitive ?? !value
-    unconfirmedSettingWritesRef.current.set('hideSensitive', value)
-    setDashboardData(previous => {
-      if (!previous) return previous
-      const next = {
-        ...previous,
-        setting: {
-          ...previous.setting,
-          hideSensitive: value,
-        },
-      }
-      setCachedJSON(CACHE_KEYS.dashboardData, next)
-      return next
-    })
-    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', {
-      hideSensitive: value,
-      undoSnapshot: { hideSensitive: previousValue },
-    }))
-  }
+  const {
+    handleAddTransaction,
+    handleStageDraftTransactions,
+    handleUpdateDraftTransaction,
+    loadDraftTransactionDocumentChanges,
+    handleDeleteDraftTransaction,
+    requestDeleteDraftTransaction,
+    handleSyncDraftBatch,
+    handleDeleteTransaction,
+    handleUpdateTransaction,
+  } = useTransactionActions({
+    username,
+    selectedMonth,
+    selectedYear,
+    editingPendingId,
+    draftTransactions,
+    allTransactions,
+    allCategories,
+    allSavingsGoals,
+    guardSensitive,
+    createLocalId,
+    stageTransactionDocumentChanges,
+    loadAll,
+    beginDirectSync,
+    endDirectSync,
+    removePendingLedgerTransaction,
+    mutateQueue,
+    snapshotForUndo,
+    pendingTransactionDocumentsRef,
+    pendingTransactionDocumentDeletesRef,
+    setDraftTransactions,
+    setDeletingTxId,
+    setEditingPendingId,
+    setConfirmModalData,
+    showToast,
+  })
 
-  // Acknowledge (or silently adopt) the end-of-cycle summary for a given cycle key. Patches the
-  // marker into local dashboard state + cache immediately so the once-per-cycle trigger won't
-  // re-fire before the server write round-trips, then queues the durable server update.
-  const handleMarkSummarySeen = (cycleKey: string) => {
-    unconfirmedSettingWritesRef.current.set('lastSummaryCycleSeen', cycleKey)
-    const patchSetting = (data: DashboardData | null) =>
-      data
-        ? {
-            ...data,
-            setting: {
-              ...data.setting,
-              ...Object.fromEntries(unconfirmedSettingWritesRef.current),
-              lastSummaryCycleSeen: cycleKey,
-            },
-          }
-        : data
-    setDashboardData(prev => {
-      const next = patchSetting(prev)
-      if (next) setCachedJSON(CACHE_KEYS.dashboardData, next)
-      return next
-    })
-    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'summarySeen', { cycleKey }))
-  }
+  const {
+    handleConfirmSubscription,
+    handleDiscardSubscription,
+    handleAddPayment,
+    handleToggleActive,
+    handleUpdatePayment,
+    handleDeletePayment,
+    requestDeletePayment,
+    handleUpdateReminder,
+    handlePayEarly,
+    requestPayEarly,
+  } = createRecurringActions({
+    allRecurringPayments,
+    guardSensitive,
+    formatSensitive,
+    toOutboxPayload,
+    mutateQueue,
+    snapshotForUndo,
+    setConfirmModalData,
+    showToast,
+  })
 
-  const handleAddCategory = (newCat: Omit<TransactionCategory, 'id'>) => {
-    if (!guardSensitive()) return
-    const finalId = createFinalId('category')
-    mutateQueue(prev => enqueue(prev, 'category', 'add', finalId, { ...newCat, id: finalId }))
-  }
-
-  const updateCatMeta = (id: string, patch: { cycleLimit?: number | null; type?: CategoryFlowType }) => {
-    if (!guardSensitive()) return
-    const category = allCategories.find(cat => String(cat.id) === String(id))
-    if (!category || isSystemCategoryName(category.name)) return
-    snapshotForUndo('category', String(id), category)
-    // Restricting a category to money in retires its spending guide: the server clears
-    // `CycleLimit` (and the current cycle's guide row) as part of the same write, so the
-    // projection has to say so too, or the limit stays on screen with nothing watching it. It
-    // also keeps the merged payload valid — `enqueue` folds a queued limit edit into this op,
-    // and the server refuses a limit and an inflow type in one request.
-    const clearsSpendingGuide = patch.type !== undefined && !isSpendingGuideCategory({ type: patch.type })
-    mutateQueue(prev => enqueue(prev, 'category', 'update', id, {
-      name: category?.name,
-      type: category?.type,
-      ...(patch.cycleLimit !== undefined ? { cycleLimit: patch.cycleLimit } : {}),
-      ...(patch.type !== undefined ? { type: patch.type } : {}),
-      ...(clearsSpendingGuide ? { cycleLimit: null } : {}),
-      undoSnapshot: category,
-    }))
-  }
-
-  const handleUpdateCategoryCycleLimit = (id: string, cycleLimit: number | null) => updateCatMeta(id, { cycleLimit })
-  const handleUpdateCategoryType = (id: string, type: CategoryFlowType) => updateCatMeta(id, { type })
-
-  const handleDeleteCategory = (id: string, replacementCategoryId?: string) => {
-    if (!guardSensitive()) return
-    const category = allCategories.find(cat => String(cat.id) === String(id))
-    if (!category || isSystemCategoryName(category.name)) return
-    const replacementCategory = replacementCategoryId
-      ? allCategories.find(cat => String(cat.id) === String(replacementCategoryId))
-      : undefined
-    snapshotForUndo('category', String(id), category)
-    mutateQueue(prev => enqueue(prev, 'category', 'delete', id, {
-      name: category?.name,
-      replacementCategoryId,
-      replacementCategoryName: replacementCategory?.name,
-      undoSnapshot: category,
-    }))
-  }
-
-  const requestDeleteCategory = async (id: string) => {
-    if (!guardSensitive()) return
-    const category = categoriesList.find(cat => cat.id === id)
-    if (!category || isSystemCategoryName(category.name)) return
-    const replacementOptions = categoriesList.filter(cat => {
-      return cat.id !== id && !isSystemCategoryName(cat.name) && !cat.isPendingDelete
-    })
-    let transactionCount = 0
-    let usageLookupFailed = false
-    try {
-      const usage = await api.fetchPagedTransactions({ page: 1, pageSize: 1, categories: [category.name] })
-      transactionCount = usage.total
-    } catch (err) {
-      console.error(err)
-      usageLookupFailed = true
-    }
-    const recurringPaymentCount = allRecurringPayments.filter(payment =>
-      !payment.isPendingDelete && payment.category.trim().toLowerCase() === category.name.trim().toLowerCase()
-    ).length
-    const requiresReplacement = usageLookupFailed || transactionCount > 0 || recurringPaymentCount > 0
-    let selectedReplacementId = ''
-    setConfirmModalData({
-      title: 'Delete Category',
-      message: (
-        <div className={`space-y-3 ${requiresReplacement ? 'pb-36' : ''}`}>
-          <p>Delete "{category.name}"?</p>
-          {requiresReplacement ? (
-            <>
-              <p>
-                This category is used by {usageLookupFailed ? 'existing ledger transactions' : `${transactionCount} ledger transaction${transactionCount === 1 ? '' : 's'}`}
-                {recurringPaymentCount > 0 ? ` and ${recurringPaymentCount} recurring payment${recurringPaymentCount === 1 ? '' : 's'}` : ''}.
-                Choose a replacement category before deleting it.
-              </p>
-              <CategoryReplacementSelectLazy
-                options={replacementOptions}
-                onChange={selected => {
-                  selectedReplacementId = selected
-                  setConfirmModalData(previous => previous ? { ...previous, confirmDisabled: selectedReplacementId.length === 0 } : previous)
-                }}
-              />
-              {replacementOptions.length === 0 && (
-                <p className="text-[11px] font-semibold text-orange-500">
-                  Add another category before deleting this one.
-                </p>
-              )}
-            </>
-          ) : (
-            <p>No ledger transactions or recurring payments currently use this category.</p>
-          )}
-        </div>
-      ),
-      confirmText: requiresReplacement ? 'Transfer and Delete' : 'Delete',
-      confirmDisabled: requiresReplacement,
-      onConfirm: () => {
-        handleDeleteCategory(id, selectedReplacementId || undefined)
-      }
-    })
-  }
-
-  const handleApplyCategoryCleanupSuggestion = async (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => {
-    if (!guardSensitive()) return
-    if (suggestion.type === 'consolidate' && !targetCategoryOverride) {
-      showToast('Choose a category to move these entries to first.', 'AI Cleanup', 'warning')
-      return
-    }
-    const actions = suggestion.type === 'add'
-      ? [{ type: 'add' as const, newCategoryName: suggestion.newCategoryName || undefined, categoryId: createFinalId('category') }]
-      : suggestion.type === 'merge'
-      ? [{ type: 'merge' as const, categories: suggestion.categories, targetCategory: suggestion.targetCategory || undefined }]
-      : suggestion.type === 'consolidate'
-      ? [{ type: 'merge' as const, categories: suggestion.categories, targetCategory: targetCategoryOverride }]
-      : [{ type: 'delete' as const, categories: suggestion.categories }]
-
-    const description = suggestion.type === 'add'
-      ? suggestion.newCategoryName || 'new category'
-      : suggestion.type === 'consolidate'
-        ? `${suggestion.categories.join(', ')} → ${targetCategoryOverride}`
-        : suggestion.type === 'merge'
-          ? `${suggestion.categories.join(', ')} → ${suggestion.targetCategory || 'target category'}`
-          : suggestion.categories.join(', ')
-    mutateQueue(previous => enqueue(previous, 'category', 'cleanup', suggestion.id, {
-      actions,
-      description,
-    }))
-  }
-
-  const handleAddTransaction = async (
-    newTx: Omit<Transaction, 'id'>,
-    setActiveTab: (tab: AppTab) => void,
-    documentChanges?: TransactionDocumentChanges,
-  ) => {
-    const drafts = handleStageDraftTransactions([newTx])
-    if (drafts.length === 0) return undefined
-    if (documentChanges && (documentChanges.pending.length > 0 || documentChanges.unlinkIds.length > 0)) {
-      try {
-        const { saveDraftTransactionDocumentChanges } = await import('../lib/draftTransactionDocuments')
-        await saveDraftTransactionDocumentChanges(username, drafts[0].id, documentChanges)
-      } catch (error) {
-        setDraftTransactions(previous => previous.filter(draft => draft.id !== drafts[0].id))
-        throw error
-      }
-    }
-    setActiveTab('drafts')
-    return drafts[0].id
-  }
-
-  const handleStageDraftTransactions = (newTransactions: Omit<Transaction, 'id'>[]) => {
-    if (!guardSensitive()) return []
-    if (newTransactions.length === 0) return []
-    const drafts = newTransactions.map(transaction => ({
-      ...transaction,
-      id: createLocalId('draft'),
-      isPendingSync: true,
-    }))
-    setDraftTransactions(prev => [...prev, ...drafts])
-    void triggerHaptic(15)
-    return drafts
-  }
-
-  const handleUpdateDraftTransaction = async (
-    id: string,
-    updated: Omit<Transaction, 'id'>,
-    documentChanges: TransactionDocumentChanges = { pending: [], unlinkIds: [] },
-  ) => {
-    if (!guardSensitive()) return
-    const { saveDraftTransactionDocumentChanges } = await import('../lib/draftTransactionDocuments')
-    await saveDraftTransactionDocumentChanges(username, id, documentChanges)
-    setDraftTransactions(prev => prev.map(t => t.id === id ? { ...updated, id, isPendingSync: true } : t))
-    void triggerHaptic(15)
-  }
-
-  const loadDraftTransactionDocumentChanges = useCallback(async (id: string) => {
-    const { loadDraftTransactionDocumentChanges } = await import('../lib/draftTransactionDocuments')
-    return loadDraftTransactionDocumentChanges(username, id)
-  }, [username])
-
-  const handleDeleteDraftTransaction = (id: string) => {
-    if (!guardSensitive()) return
-    pendingTransactionDocumentsRef.current.delete(id)
-    void import('../lib/draftTransactionDocuments').then(({ deleteDraftTransactionDocumentChanges }) =>
-      deleteDraftTransactionDocumentChanges(username, id)).catch(() => {
-        showToast('The draft was removed, but its obsolete local file copy could not be cleared.', 'Draft cleanup incomplete', 'warning')
-      })
-    setDraftTransactions(prev => prev.filter(t => t.id !== id))
-    void triggerHaptic(30)
-  }
-
-  const requestDeleteDraftTransaction = (id: string) => {
-    if (!guardSensitive()) return
-    const draft = draftTransactions.find(t => t.id === id)
-    setConfirmModalData({
-      title: 'Delete Draft',
-      message: `Delete draft "${draft?.description || 'transaction'}"? This removes it from the draft queue before it is synced.`,
-      confirmText: 'Delete',
-      onConfirm: () => handleDeleteDraftTransaction(id)
-    })
-  }
-
-  const handleSyncDraftBatch = async () => {
-    if (!guardSensitive()) return
-    if (draftTransactions.length === 0) return
-    const drafts = draftTransactions
-    const { getDraftTransactionIssues } = await import('../lib/draftTransactionValidation')
-    const invalidDraft = drafts.find(draft => getDraftTransactionIssues(draft, allCategories).length > 0)
-    if (invalidDraft) {
-      showToast(
-        `Review “${invalidDraft.description || 'transaction'}” before adding this batch to the Ledger.`,
-        'Draft needs review',
-        'warning',
-      )
-      return
-    }
-    let documentChangesByDraft: Map<string, TransactionDocumentChanges>
-    try {
-      const { loadDraftTransactionDocumentChanges } = await import('../lib/draftTransactionDocuments')
-      documentChangesByDraft = new Map(await Promise.all(drafts.map(async draft => [
-        draft.id,
-        await loadDraftTransactionDocumentChanges(username, draft.id),
-      ] as const)))
-    } catch (error) {
-      showToast(getErrorMessage(error, 'Draft attachments could not be restored. Try again before adding these transactions.'), 'Draft files unavailable', 'error')
-      return
-    }
-    void triggerHaptic([25, 45, 25])
-    mutateQueue(prev => {
-      let nextQueue = prev
-      drafts.forEach(d => {
-        const finalId = createFinalId('transaction')
-        const documentChanges = documentChangesByDraft.get(d.id)
-        if (documentChanges && (documentChanges.pending.length > 0 || documentChanges.unlinkIds.length > 0)) {
-          pendingTransactionDocumentsRef.current.set(finalId, documentChanges)
-        }
-        const payload = { ...d, id: finalId }
-        delete payload.isPendingSync
-        nextQueue = enqueue(nextQueue, 'transaction', 'add', finalId, payload)
-      })
-      return nextQueue
-    })
-    setDraftTransactions([])
-    try {
-      const { deleteDraftTransactionDocumentChanges } = await import('../lib/draftTransactionDocuments')
-      await Promise.all(drafts.map(draft => deleteDraftTransactionDocumentChanges(username, draft.id)))
-    } catch {
-      showToast('The transactions were queued, but obsolete local draft files could not be cleared.', 'Draft cleanup incomplete', 'warning')
-    }
-  }
-
-  const handleDeleteTransaction = (
-    id: string,
-    transactionHint?: Transaction,
-    attachedDocumentIdsToDelete?: number[],
-  ) => {
-    if (!guardSensitive()) return
-    void triggerHaptic(30)
-    let deleteId = id
-    if (id.includes('-split-')) {
-      deleteId = id.split('-split-')[0]
-    }
-    setDeletingTxId(deleteId)
-    const transaction = transactionHint?.id === deleteId
-      ? transactionHint
-      : allTransactions.find(t => String(t.id) === deleteId)
-    if (transaction?.savingsGoalId != null) {
-      // Completion deletion rolls back both the ledger row and goal, so it cannot use the transaction-only outbox.
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        setDeletingTxId(null)
-        showToast('Undo requires a live connection to restore the linked ledger entry and goal.', 'Available online only', 'warning')
-        return
-      }
-      const syncIds = [deleteId, String(transaction.savingsGoalId)]
-      beginDirectSync(syncIds)
-      void (async () => {
-        try {
-          await api.deleteTransaction(deleteId)
-          await loadAll(selectedMonth || undefined, selectedYear || undefined, true, false, () => true)
-          removePendingLedgerTransaction(deleteId)
-          const goalName = allSavingsGoals.find(goal => goal.id === transaction.savingsGoalId)?.name
-          const fallbackName = transaction.description.replace(/^Completed commitment:\s*/i, '')
-          const undoCopy = buildUndoSuccessToast(goalName || fallbackName, 'savings goal')
-          showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
-        } catch (error: unknown) {
-          showToast(getErrorMessage(error), 'Could not undo completion', 'error')
-        } finally {
-          setDeletingTxId(null)
-          endDirectSync(syncIds)
-        }
-      })()
-      return
-    }
-    snapshotForUndo('transaction', deleteId, transaction)
-    // Any queued attachment work for this row is void now, and would otherwise upload a file to a
-    // transaction that is on its way out.
-    pendingTransactionDocumentsRef.current.delete(deleteId)
-    const documentIdsToDelete = attachedDocumentIdsToDelete?.length ? [...attachedDocumentIdsToDelete] : undefined
-    if (documentIdsToDelete) {
-      pendingTransactionDocumentDeletesRef.current.set(deleteId, documentIdsToDelete)
-    }
-    mutateQueue(prev => enqueue(prev, 'transaction', 'delete', deleteId, {
-      description: transaction?.description,
-      undoSnapshot: transaction,
-      // Read only by the success toast, so it can say plainly that the files are gone for good
-      // while the Undo beside it restores the transaction.
-      deletedDocumentCount: documentIdsToDelete?.length,
-    }))
-    if (deleteId === editingPendingId) setEditingPendingId(null)
-  }
-
-  const handleUpdateTransaction = (
-    id: string,
-    updatedTx: Omit<Transaction, 'id'>,
-    documentChanges?: TransactionDocumentChanges,
-  ) => {
-    if (!guardSensitive()) return
-    void triggerHaptic(15)
-    const previousTransaction = allTransactions.find(t => String(t.id) === String(id))
-    snapshotForUndo('transaction', String(id), previousTransaction)
-    if (documentChanges) stageTransactionDocumentChanges(id, documentChanges)
-    mutateQueue(prev => enqueue(prev, 'transaction', 'update', id, {
-      ...updatedTx,
-      undoSnapshot: previousTransaction,
-    }))
-    if (id === editingPendingId) setEditingPendingId(null)
-  }
-
-  const handleConfirmSubscription = (noti: PendingNotification, paidDate: string, amount?: number) => {
-    if (!guardSensitive()) return
-    const transactionId = createFinalId('transaction')
-    const postedAt = new Date().toISOString()
-    const payment = allRecurringPayments.find(item => item.id === noti.recurringPaymentId)
-    // The occurrence's own frozen account wins over the schedule's current one: re-pointing a bill
-    // moves its future occurrences, not one already waiting to be confirmed. The server resolves it
-    // the same way, so the two agree; only a legacy occurrence with no snapshot falls back.
-    const settlementAccountId = noti.accountId ?? payment?.accountId
-    const settleAmount = (amount != null && amount > 0) ? amount : noti.amount
-    mutateQueue(prev => enqueue(prev, 'recurringOccurrence', 'settle', noti.id, {
-      name: noti.name,
-      recurringPaymentId: noti.recurringPaymentId,
-      occurrenceDate: noti.billingDate,
-      amount: (amount != null && amount > 0) ? amount : undefined,
-      status: 'Paid',
-      paidDate,
-      accountId: settlementAccountId,
-      optimisticNextOccurrenceDate: payment ? computeNextOccurrenceDate(payment) ?? undefined : undefined,
-      optimisticTransaction: {
-        id: transactionId,
-        date: paidDate,
-        postedAt,
-        description: noti.name,
-        amount: -Math.abs(settleAmount),
-        category: noti.category,
-        ledgerCategory: noti.ledgerCategory,
-        accountId: settlementAccountId,
-        recurringPaymentId: noti.recurringPaymentId,
-        recurringOccurrenceDate: noti.billingDate,
-        isPendingSync: true,
-      },
-    }))
-  }
-
-  const handleDiscardSubscription = (noti: PendingNotification) => {
-    if (!guardSensitive()) return
-    const transactionId = createFinalId('transaction')
-    const postedAt = new Date().toISOString()
-    const payment = allRecurringPayments.find(item => item.id === noti.recurringPaymentId)
-    mutateQueue(prev => enqueue(prev, 'recurringOccurrence', 'settle', noti.id, {
-      name: noti.name,
-      recurringPaymentId: noti.recurringPaymentId,
-      occurrenceDate: noti.billingDate,
-      status: 'Discarded',
-      optimisticNextOccurrenceDate: payment ? computeNextOccurrenceDate(payment) ?? undefined : undefined,
-      optimisticTransaction: {
-      id: transactionId,
-      date: financialDate(),
-      postedAt,
-      description: `[Discarded] ${noti.name}`,
-      amount: 0,
-      category: noti.category,
-      ledgerCategory: 'Discarded',
-      recurringPaymentId: noti.recurringPaymentId,
-      recurringOccurrenceDate: noti.billingDate,
-      isPendingSync: true,
-      },
-    }))
-  }
-
-  const handleAddPayment = (newPay: Omit<RecurringPayment, 'id'>) => {
-    if (!guardSensitive()) return
-    const finalId = createFinalId('recurringPayment')
-    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'add', finalId, { ...newPay, id: finalId, active: true }))
-  }
-
-  const handleToggleActive = (id: string) => {
-    if (!guardSensitive()) return
-    const current = allRecurringPayments.find(p => String(p.id) === String(id))
-    const nextActive = current ? !current.active : false
-    const tomorrow = new Date(`${financialDate()}T12:00:00`)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const trackingStart = tomorrow.toLocaleDateString('en-CA')
-    const payload = current ? {
-      active: nextActive,
-      name: current.name,
-      nextDueDate: nextActive ? computeOccurrenceOnOrAfter(current, trackingStart) : null,
-      // Toggling recomputes nextDueDate, so Undo needs the prior one to restore: rebuilding
-      // { active, name } alone left the recomputed date in place until the next server refresh.
-      undoSnapshot: current,
-    } : undefined
-    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'toggle', id, payload))
-  }
-
-  const handleUpdatePayment = (id: string, payment: RecurringPayment) => {
-    if (!guardSensitive()) return
-    const previousPayment = allRecurringPayments.find(p => String(p.id) === String(id))
-    snapshotForUndo('recurringPayment', String(id), previousPayment)
-    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'update', id, {
-      ...toOutboxPayload(payment),
-      undoSnapshot: previousPayment,
-    }))
-  }
-
-  const handleDeletePayment = (id: string) => {
-    if (!guardSensitive()) return
-    const linkedPayment = allRecurringPayments.find(payment => payment.id === id)
-    if (linkedPayment?.linkedLoanId) {
-      showToast(
-        `“${linkedPayment.name}” is linked to ${linkedPayment.linkedLoanName || 'a loan'} and cannot be deleted.`,
-        'Recurring bill kept',
-        'warning',
-      )
-      return
-    }
-    void triggerHaptic(30)
-    const payment = allRecurringPayments.find(p => String(p.id) === String(id))
-    snapshotForUndo('recurringPayment', String(id), payment)
-    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'delete', id, {
-      name: payment?.name,
-      undoSnapshot: payment,
-    }))
-  }
-
-  const requestDeletePayment = (id: string) => {
-    if (!guardSensitive()) return
-    const payment = allRecurringPayments.find(p => p.id === id)
-    if (payment?.linkedLoanId) {
-      showToast(
-        `“${payment.name}” is linked to ${payment.linkedLoanName || 'a loan'} and cannot be deleted.`,
-        'Recurring bill kept',
-        'warning',
-      )
-      return
-    }
-    setConfirmModalData({
-      title: 'Delete Subscription',
-      message: `Delete "${payment?.name || 'this recurring subscription'}"? Future reminders stop; past ledger entries stay.`,
-      confirmText: 'Delete',
-      onConfirm: () => { handleDeletePayment(id) }
-    })
-  }
-
-  const handleUpdateReminder = (id: string, settings: RecurringReminderSettings) => {
-    if (!guardSensitive()) return
-    const previous = allRecurringPayments.find(p => p.id === id)
-    snapshotForUndo('recurringPayment', id, previous)
-    mutateQueue(queue => enqueue(queue, 'recurringPayment', 'reminder', id, {
-      name: previous?.name,
-      reminderEnabled: settings.enabled,
-      reminderMode: settings.mode,
-      reminderLeadDays: settings.leadDays,
-      undoSnapshot: previous,
-    }))
-  }
-
-  const handlePayEarly = (id: string, amount?: number, accountId?: string, settlesOccurrence?: boolean) => {
-    if (!guardSensitive()) return
-    const payment = allRecurringPayments.find(p => p.id === id)
-    if (!payment?.nextDueDate) return
-    const occurrenceDate = payment.nextDueDate
-    const postedAt = new Date().toISOString()
-    const isPartial = settlesOccurrence === false
-      || (settlesOccurrence === undefined && typeof amount === 'number' && amount > 0 && amount < Math.abs(payment.amount))
-    const paidAmount = typeof amount === 'number' ? amount : Math.abs(payment.amount)
-    const targetAccountId = accountId ?? payment.accountId
-    const pendingTransactionId = createFinalId('transaction')
-    const pendingTransaction: Transaction = {
-      id: pendingTransactionId,
-      date: financialDate(),
-      postedAt,
-      description: payment.name,
-      category: payment.category,
-      ledgerCategory: payment.ledgerCategory,
-      amount: -paidAmount,
-      accountId: targetAccountId,
-      recurringPaymentId: payment.id,
-      recurringOccurrenceDate: occurrenceDate,
-      isPendingSync: true,
-    }
-    mutateQueue(queue => enqueue(queue, 'recurringOccurrence', 'settle', `${id}:${occurrenceDate}`, {
-      name: payment.name,
-      recurringPaymentId: payment.id,
-      occurrenceDate,
-      status: isPartial ? 'PartiallyPaid' : 'Paid',
-      paidDate: financialDate(),
-      accountId: targetAccountId,
-      amount: isPartial ? amount : undefined,
-      optimisticNextOccurrenceDate: isPartial ? undefined : (computeNextOccurrenceDate(payment) ?? undefined),
-      optimisticTransaction: pendingTransaction,
-    }))
-  }
-
-  const requestPayEarly = (id: string) => {
-    if (!guardSensitive()) return
-    const payment = allRecurringPayments.find(p => p.id === id)
-    if (!payment?.nextDueDate) return
-    const todayFormatted = new Date().toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
-    setConfirmModalData({
-      title: 'Pay Early',
-      variant: 'primary',
-      message: (
-        <div className="space-y-3">
-          <p className="text-sm">Pay <strong>{payment.name}</strong> before its scheduled date?</p>
-          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2 text-xs">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Amount</span>
-              <strong className="text-foreground">{formatSensitive(Math.abs(payment.amount))}</strong>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Scheduled date</span>
-              <span className="font-semibold text-foreground">{payment.nextDueDate}</span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Transaction date</span>
-              <span className="font-semibold text-foreground">{todayFormatted}</span>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">The next due date will advance by one cycle after this payment.</p>
-        </div>
-      ),
-      confirmText: 'Pay Now',
-      onConfirm: () => { handlePayEarly(id) }
-    })
-  }
 
   // eslint-disable-next-line react-hooks/refs
   const wishlistSavingsActions = createWishlistSavingsActions({
