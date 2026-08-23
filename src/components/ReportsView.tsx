@@ -3,9 +3,7 @@ import React from 'react'
 import { BarChart3, ChartNoAxesCombined, ChevronRight, Sparkles, TrendingUp } from 'lucide-react'
 import type { AppTab, DashboardData, SavingsGoal, Transaction, WishlistItem } from '../types'
 import { useAppPrefs } from '../contexts/AppContext'
-import { getCycleLabelForDropdown } from '../lib/cycleLabels'
 import { getCycleProgress } from '../lib/cycle'
-import { CustomSelect } from './ui/CustomSelect'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useDashboardView } from './dashboard/useDashboardView'
 import { CarryoverLedgerTable } from './dashboard/CarryoverLedgerTable'
@@ -27,7 +25,6 @@ interface ReportsViewProps {
   wishlist?: WishlistItem[]
   savingsGoals?: SavingsGoal[]
   hideBalanceAmounts: boolean
-  onSelectPeriod: (month: string, year: number) => void
   onNavigate?: (tab: AppTab) => void
   onNavigateToRecurring?: (recurringPaymentId: string) => void
   onNavigateToAccounts?: (target?: string | null) => void
@@ -58,7 +55,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   wishlist = [],
   savingsGoals = [],
   hideBalanceAmounts,
-  onSelectPeriod,
   onNavigate = () => undefined,
   onNavigateToRecurring,
   onNavigateToAccounts,
@@ -121,25 +117,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               <p className="mt-1 text-xs text-muted-foreground">Trends, plan performance, and activity for {view.cycleLabel}.</p>
             </div>
           </div>
-          <div className="flex w-full min-w-0 flex-nowrap items-center gap-1.5 sm:gap-2 lg:w-auto">
-            <CustomSelect
-              ariaLabel="Report cycle"
-              value={view.activeSettings.selectedMonth}
-              onChange={month => onSelectPeriod(month, view.activeSettings.selectedYear)}
-              options={view.months.map(month => ({
-                value: month,
-                label: getCycleLabelForDropdown(month, view.activeSettings.selectedYear, view.activeSettings.cycleDay),
-              }))}
-              className="w-0 min-w-0 flex-1 sm:w-52 sm:flex-initial"
-            />
-            <CustomSelect
-              ariaLabel="Report year"
-              value={view.activeSettings.selectedYear}
-              onChange={year => onSelectPeriod(view.activeSettings.selectedMonth, Number(year))}
-              options={view.years.map(year => ({ value: year, label: String(year) }))}
-              className="w-28 shrink-0"
-              align="right"
-            />
+          {/* The cycle pickers live in the shared switcher above every cycle-dependent page. */}
+          <div className="flex w-full min-w-0 flex-nowrap items-center justify-end gap-1.5 sm:gap-2 lg:w-auto">
             {selectedCycleEnded && onViewCycleSummary && (
               <Button variant="unstyled"
                 type="button"

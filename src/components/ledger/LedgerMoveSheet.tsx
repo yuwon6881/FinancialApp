@@ -41,6 +41,8 @@ export function LedgerMoveSheet({ transactions, cycleDay, isOpen, onClose, onMov
         disabled={!targetDate || Boolean(reason)}
         onClick={() => {
           if (!app.guardSensitive()) return
+          // Only the parents are queued: the server moves an Income parent's generated split rows
+          // with it, and the optimistic projection re-derives those rows from the parent.
           const moves = transactions.map(transaction => ({ id: String(transaction.id), targetDate }))
           const beforeSnapshots = transactions.map(transaction => ({ id: String(transaction.id), date: transaction.date.slice(0, 10) }))
           if (!app.queueMutation?.('transaction', 'bulkMove', `move-${Date.now()}`, { moves, beforeSnapshots })) return

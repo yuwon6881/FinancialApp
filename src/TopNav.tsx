@@ -11,8 +11,6 @@ import {
   Loader2,
   ShieldAlert,
   Search as SearchIcon,
-  Eye,
-  EyeOff,
 } from 'lucide-react'
 import { CommitmentIcon } from './components/semanticIcons'
 import { AppLogo } from './components/ui/AppLogo'
@@ -31,8 +29,6 @@ interface TopNavProps {
   onAskAI?: () => void
   onOpenSearch?: () => void
   hideSensitive: boolean
-  hideFinancialFigures?: boolean
-  onToggleFinancialFigures?: () => void
   sensitivePreferenceStatus: SensitivePreferenceStatus
   onToggleHideSensitive: () => void
   onRetrySensitivePreference: () => void
@@ -105,8 +101,6 @@ const TopNav: React.FC<TopNavProps> = ({
   onAskAI,
   onOpenSearch,
   hideSensitive,
-  hideFinancialFigures = false,
-  onToggleFinancialFigures,
   sensitivePreferenceStatus,
   onToggleHideSensitive,
   onRetrySensitivePreference,
@@ -268,18 +262,6 @@ const TopNav: React.FC<TopNavProps> = ({
             <Sparkles className="size-3.5" />
             <span className="hidden xl:inline text-xs font-extrabold tracking-wide">ASK AI</span>
           </Button>
-
-          {onToggleFinancialFigures && <Button variant="unstyled"
-            type="button"
-            size="icon"
-            onClick={onToggleFinancialFigures}
-            aria-pressed={hideFinancialFigures}
-            aria-label={hideFinancialFigures ? 'Show financial figures on this device' : 'Hide financial figures on this device'}
-            title={hideFinancialFigures ? 'Show financial figures' : 'Hide financial figures'}
-            className="flex items-center justify-center rounded-xl border border-border/40 bg-muted/30 text-muted-foreground transition duration-150 hover:border-primary/30 hover:bg-primary/10 hover:text-foreground"
-          >
-            {hideFinancialFigures ? <Eye className="size-4" aria-hidden /> : <EyeOff className="size-4" aria-hidden />}
-          </Button>}
 
           <Button variant="unstyled"
             type="button"

@@ -120,8 +120,35 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
   return true
 }
 
+/** A word character for boundary purposes: letters and digits, matching the server's rule. */
+const WORD_CHARACTER = /[\p{L}\p{N}]/u
+
+/** The code point ending at `index`, so a surrogate pair is not read as a lone half. */
+function codePointBefore(value: string, index: number): string {
+  if (index <= 0) return ''
+  return [...value.slice(Math.max(0, index - 2), index)].at(-1) ?? ''
+}
+
+function codePointAt(value: string, index: number): string {
+  if (index >= value.length) return ''
+  return [...value.slice(index, index + 2)][0] ?? ''
+}
+
+/**
+ * Whole-word matching is a scan rather than a regex: a lookbehind assertion is not available on
+ * every browser this PWA is installed on (an unsupported engine throws while compiling it, not
+ * while matching), and the regex was being rebuilt for every field of every row.
+ */
 export function matchesTransactionText(value: string, search: string, mode: TransactionSearchMode): boolean {
-  if (mode === 'contains') return value.toLocaleLowerCase().includes(search.toLocaleLowerCase())
-  const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'iu').test(value)
+  const haystack = value.toLocaleLowerCase()
+  const needle = search.toLocaleLowerCase()
+  if (!needle) return true
+  if (mode === 'contains') return haystack.includes(needle)
+
+  for (let index = haystack.indexOf(needle); index !== -1; index = haystack.indexOf(needle, index + 1)) {
+    const before = codePointBefore(haystack, index)
+    const after = codePointAt(haystack, index + needle.length)
+    if (!WORD_CHARACTER.test(before) && !WORD_CHARACTER.test(after)) return true
+  }
+  return false
 }

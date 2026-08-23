@@ -172,6 +172,17 @@ export function getSyncSuccessToast(op: QueuedOp): ToastCopy | null {
     })
   }
 
+  if (op.entity === 'transaction' && op.type === 'bulkMove') {
+    const moves = Array.isArray(op.payload?.moves) ? op.payload.moves : []
+    const targetDate = moves.length > 0 ? String((moves[0] as { targetDate?: unknown })?.targetDate ?? '') : ''
+    const count = moves.length
+    return buildMutationSuccessToast({
+      entity: 'Transactions',
+      action: 'Moved',
+      message: `${count} transaction${count === 1 ? '' : 's'} moved to ${targetDate || 'a new date'}.`,
+    })
+  }
+
   const key = `${op.entity}:${op.type}`
   const override = SUCCESS_TOAST_OVERRIDES[key]
   return override ? override(op) : defaultSyncSuccessToast(op)

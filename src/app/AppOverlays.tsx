@@ -367,13 +367,16 @@ export function AppOverlays({
               >
                 {/* Search lives here rather than in the phone header: the header's right lane is
                     already the app's tightest space, and unlike the quick-add actions search is a
-                    read, so it is never blocked by sensitive mode. */}
+                    read, so it is never blocked by sensitive mode.
+                    The column grows upwards from the trigger, so this list runs top to bottom:
+                    the most-used action (Post Transaction) sits last, closest to the thumb, and
+                    the occasional reads sit furthest away. */}
                 {([
+                  { key: 'search' as const, label: 'Search', Icon: Search, color: 'bg-sky-500' },
+                  { key: 'ai' as const, label: 'Ask AI', Icon: Sparkles, color: 'bg-indigo-500' },
                   { key: 'wishlist' as const, label: 'Add Reward', Icon: RewardIcon, color: 'bg-pink-500' },
                   { key: 'subscription' as const, label: 'New Subscription', Icon: CreditCard, color: 'bg-violet-500' },
                   { key: 'transaction' as const, label: 'Post Transaction', Icon: Wallet, color: 'bg-emerald-500' },
-                  { key: 'ai' as const, label: 'Ask AI', Icon: Sparkles, color: 'bg-indigo-500' },
-                  { key: 'search' as const, label: 'Search', Icon: Search, color: 'bg-sky-500' },
                 ]).map(({ key, label, Icon, color }) => {
                   // Ask AI and Search are reads; only the three quick-add actions open a blank
                   // mutation form and are therefore gated by sensitive mode.

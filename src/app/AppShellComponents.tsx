@@ -29,6 +29,18 @@ export const AppOverlaysFallback = ({
   <>
     {visible && isOpen && (
       <div role="menu" aria-label="Quick actions">
+        {/* Same thumb-first order as the loaded menu: Post Transaction sits closest to the
+            trigger, the read-only action above it. */}
+        <Button
+          variant="secondary"
+          type="button"
+          role="menuitem"
+          onClick={onAskAi}
+          className="fixed right-8 z-40 flex items-center gap-2.5 cursor-pointer"
+          style={{ bottom: 'calc(216px + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <span>Ask AI</span>
+        </Button>
         <Button
           variant="secondary"
           type="button"
@@ -37,19 +49,9 @@ export const AppOverlaysFallback = ({
           disabled={postTransactionDisabled}
           title={postTransactionDisabled ? 'Reveal sensitive data to make financial changes' : 'Post Transaction'}
           className="fixed right-8 z-40 flex items-center gap-2.5 cursor-pointer"
-          style={{ bottom: 'calc(216px + env(safe-area-inset-bottom, 0px))' }}
-        >
-          <span>Post Transaction</span>
-        </Button>
-        <Button
-          variant="secondary"
-          type="button"
-          role="menuitem"
-          onClick={onAskAi}
-          className="fixed right-8 z-40 flex items-center gap-2.5 cursor-pointer"
           style={{ bottom: 'calc(164px + env(safe-area-inset-bottom, 0px))' }}
         >
-          <span>Ask AI</span>
+          <span>Post Transaction</span>
         </Button>
       </div>
     )}

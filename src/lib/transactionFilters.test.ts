@@ -121,6 +121,23 @@ describe('matchesTransactionFilters', () => {
     expect(matchesTransactionFilters(tx({ description: 'Café (special)' }), { search: 'café (special)', searchMode: 'whole-word' })).toBe(true)
   })
 
+  it('keeps looking after a substring hit that is not on a word boundary', () => {
+    // "beans" comes first and must not end the scan before the standalone "bean" is reached.
+    expect(matchesTransactionFilters(tx({ description: 'Beans, then bean' }), { search: 'bean', searchMode: 'whole-word' })).toBe(true)
+    expect(matchesTransactionFilters(tx({ description: 'Beans and beanstalk' }), { search: 'bean', searchMode: 'whole-word' })).toBe(false)
+  })
+
+  it('treats the start and end of the text, and punctuation, as word boundaries', () => {
+    expect(matchesTransactionFilters(tx({ description: 'Bean' }), { search: 'bean', searchMode: 'whole-word' })).toBe(true)
+    expect(matchesTransactionFilters(tx({ description: 'Rice/bean-mix' }), { search: 'bean', searchMode: 'whole-word' })).toBe(true)
+    expect(matchesTransactionFilters(tx({ description: 'Bean2' }), { search: 'bean', searchMode: 'whole-word' })).toBe(false)
+  })
+
+  it('matches whole words in the category and ledger category too', () => {
+    expect(matchesTransactionFilters(tx({ description: 'Lunch', category: 'Food' }), { search: 'food', searchMode: 'whole-word' })).toBe(true)
+    expect(matchesTransactionFilters(tx({ description: 'Lunch', category: 'Foodie' }), { search: 'food', searchMode: 'whole-word' })).toBe(false)
+  })
+
   it('ignores surrounding whitespace in search text', () => {
     expect(matchesTransactionFilters(tx({ description: 'Coffee shop' }), { search: '  coffee  ' })).toBe(true)
     expect(matchesTransactionFilters(tx({ description: 'Coffee shop' }), { search: '   ' })).toBe(true)

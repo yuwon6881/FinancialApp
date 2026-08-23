@@ -121,7 +121,9 @@ test('mobile quick actions move focus into the menu and restore it on Escape', a
   const trigger = page.getByRole('button', { name: 'Open Menu' })
   await trigger.click()
 
-  const firstAction = page.getByRole('menuitem', { name: 'Add Reward' })
+  // The menu grows upwards, so its first item is the topmost one: the reads sit there and
+  // Post Transaction sits last, nearest the thumb.
+  const firstAction = page.getByRole('menuitem', { name: 'Search' })
   await expect(firstAction).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(trigger).toBeFocused()
@@ -278,7 +280,7 @@ for (const route of mobilePwaRoutes) {
     }
     if (route.path === '/reports' || route.path === '/ledger') {
       const yearSelect = page.getByRole('combobox', {
-        name: route.path === '/reports' ? 'Report year' : 'Ledger cycle year',
+        name: route.path === '/reports' ? 'Report cycle year' : 'Ledger cycle year',
       })
       const yearWidth = await yearSelect.evaluate(element => element.getBoundingClientRect().width)
       expect(yearWidth, `${route.path} year control must leave room for all four digits`).toBeGreaterThanOrEqual(108)

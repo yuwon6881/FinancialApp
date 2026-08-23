@@ -1,15 +1,9 @@
 import { Download, Plus, X } from 'lucide-react'
 import { Card } from '../../ui/Card'
-import { CustomSelect } from '../../ui/CustomSelect'
 import { Button } from '../../ui/Button'
-import { getCycleLabelForDropdown } from '../../../lib/cycleLabels'
 
 interface LedgerToolbarProps {
-  selectedMonth: string
   selectedYear: number
-  availableYears: number[]
-  cycleDay: number
-  onSelectPeriod: (month: string, year: number) => void
   hideSensitive: boolean
   isFormOpen: boolean
   onToggleForm: () => void
@@ -20,11 +14,7 @@ interface LedgerToolbarProps {
 }
 
 export function LedgerToolbar({
-  selectedMonth,
   selectedYear,
-  availableYears,
-  cycleDay,
-  onSelectPeriod,
   hideSensitive,
   isFormOpen,
   onToggleForm,
@@ -68,30 +58,6 @@ export function LedgerToolbar({
             </Button>
           </div>
 
-          {(!showAllCycles || (cyclesRange !== 'all' && cyclesRange !== 'monthly')) && (
-            <div className="flex w-full min-w-0 items-center gap-1.5 select-none sm:w-auto">
-              {cyclesRange !== 'yearly' && (
-                <CustomSelect
-                  ariaLabel={showAllCycles ? 'Ledger range ending cycle' : 'Ledger cycle'}
-                  value={selectedMonth}
-                  onChange={val => onSelectPeriod(String(val), selectedYear)}
-                  options={['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => ({
-                    value: m,
-                    label: getCycleLabelForDropdown(m, selectedYear, cycleDay),
-                  }))}
-                  className="w-0 min-w-0 flex-1 sm:w-56 sm:flex-initial"
-                />
-              )}
-              <CustomSelect
-                ariaLabel={cyclesRange === 'yearly' ? 'Ledger range year' : 'Ledger cycle year'}
-                value={selectedYear}
-                onChange={val => onSelectPeriod(selectedMonth, Number(val))}
-                options={availableYears.map(y => ({ value: y, label: y.toString() }))}
-                className="w-28 shrink-0"
-                align="right"
-              />
-            </div>
-          )}
         </div>
         <p className="text-xs text-muted-foreground mt-1">
           {showAllCycles

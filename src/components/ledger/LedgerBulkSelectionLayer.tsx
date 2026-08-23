@@ -64,8 +64,11 @@ export function LedgerBulkSelectionLayer({
             variant="outline"
             size="sm"
             type="button"
-            disabled={bulk.exceedsLimit || bulk.selectedTransactions.some(transaction => transactionMoveIneligibility(transaction) != null)}
-            onClick={() => setIsMoveOpen(true)}
+            disabled={listProps.hideSensitive || bulk.exceedsLimit || bulk.selectedTransactions.some(transaction => transactionMoveIneligibility(transaction) != null)}
+            onClick={() => {
+              if (!app.guardSensitive()) return
+              setIsMoveOpen(true)
+            }}
           >Move to</Button><Button
             variant="destructive"
             size="sm"

@@ -150,12 +150,9 @@ vi.mock('@/components/DashboardView', () => ({
 }))
 
 vi.mock('@/components/ReportsView', () => ({
-  ReportsView: ({ onSelectPeriod }: any) => (
-    <div data-testid="reports-view">
-      Reports
-      <button onClick={() => onSelectPeriod('Jan', 2025)}>Select historical report</button>
-    </div>
-  )
+  // Cycle selection lives in the shared switcher the shell renders above this view, so the mock
+  // no longer needs to offer it.
+  ReportsView: () => <div data-testid="reports-view">Reports</div>
 }))
 
 vi.hoisted(() => {
@@ -423,7 +420,7 @@ describe('App behaviors', () => {
     expect(JSON.parse(localStorage.getItem('cached_dashboard_data') || '{}').setting.hideSensitive).toBe(false)
   })
 
-  it('keeps Today on the current cycle after Reports selects a historical cycle', async () => {
+  it('keeps Today on the current cycle after the shared switcher selects another cycle', async () => {
     localStorage.setItem('auth_session', '1')
     localStorage.setItem('auth_username', 'alice')
     const currentCycle = getCurrentCycleYearAndMonth(28)
@@ -433,9 +430,12 @@ describe('App behaviors', () => {
 
     await waitFor(() => expect(screen.getByTestId('today-cycle').textContent).toBe(currentCycleLabel))
     fireEvent.click(screen.getAllByRole('button', { name: /Reports/ })[0])
-    fireEvent.click(await screen.findByRole('button', { name: 'Select historical report' }))
+    fireEvent.click(await screen.findByRole('combobox', { name: 'Report cycle' }))
+    // The cycle after the current one, so the choice is always a real change.
+    const targetIndex = currentCycle.monthIndex % 12
+    fireEvent.click((await screen.findAllByRole('option'))[targetIndex])
 
-    await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalledWith('Jan', 2025, expect.any(AbortSignal)))
+    await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalledWith(MONTH_NAMES[targetIndex], currentCycle.year, expect.any(AbortSignal)))
     fireEvent.click(screen.getAllByRole('button', { name: /Today/ })[0])
 
     await waitFor(() => expect(screen.getByTestId('today-cycle').textContent).toBe(currentCycleLabel))

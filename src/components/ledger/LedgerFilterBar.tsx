@@ -1,7 +1,7 @@
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { useRef, useMemo } from 'react'
-import { Search, Filter, X, Loader2, ChevronDown } from 'lucide-react'
+import { Search, Filter, X, Loader2, ChevronDown, WholeWord } from 'lucide-react'
 import type { TransactionCategory } from '../../types'
 import { allowsCategoryFlow } from '../../lib/categoryFlow'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -144,79 +144,93 @@ export function LedgerFilterBar({
     onWishlistFilterChange,
   }
 
+  const isWholeWord = searchMode === 'whole-word'
+  // The match-mode switch lives inside the field it changes, the way a find bar puts it beside
+  // the query: on its own it read as an unlabelled "ab" button stranded in the middle of the row.
+  const searchModeToggle = (
+    <Button variant="unstyled"
+      type="button"
+      aria-pressed={isWholeWord}
+      aria-label={isWholeWord ? 'Matching whole words only' : 'Matching anywhere in the text'}
+      title={isWholeWord
+        ? 'Whole word: "bean" skips "beans". Tap to match anywhere in the text.'
+        : 'Matching anywhere in the text: "bean" also finds "beans". Tap to match whole words only.'}
+      onClick={() => onSearchModeChange(isWholeWord ? 'contains' : 'whole-word')}
+      className={`mr-1.5 flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-1.5 text-[10px] font-bold transition cursor-pointer lg:w-auto ${isWholeWord
+        ? 'border-primary/45 bg-primary/15 text-accent-ink'
+        : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+    >
+      <WholeWord className="size-4 shrink-0" aria-hidden />
+      <span className="hidden lg:inline whitespace-nowrap">Whole word</span>
+    </Button>
+  )
+
   return (
-    <div className="top-[calc(4rem+env(safe-area-inset-top,0px))] sticky z-30 flex flex-row items-center justify-between gap-2 lg:gap-4 p-2 lg:p-4 bg-card lg:bg-card/90 lg:supports-[backdrop-filter]:bg-card/75 lg:backdrop-blur-md border border-border/60 rounded-xl lg:rounded-2xl shadow-sm">
-      {showAllCycles ? (
-        <div className="group flex min-w-0 flex-1 items-stretch lg:w-auto overflow-hidden rounded-xl border border-border bg-card shadow-sm transition duration-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-ring/25 hover:border-blue-500/50">
-          <div className="flex min-w-0 flex-1 items-center lg:w-80">
-            <Search className="ml-3 size-4 shrink-0 text-foreground transition-colors group-focus-within:text-blue-500" />
+    <div className="top-[calc(4rem+env(safe-area-inset-top,0px))] sticky z-30 flex flex-wrap items-center gap-2 lg:gap-4 p-2 lg:p-4 bg-card lg:bg-card/90 lg:supports-[backdrop-filter]:bg-card/75 lg:backdrop-blur-md border border-border/60 rounded-xl lg:rounded-2xl shadow-sm">
+      {/* The search field takes a phone row of its own: sharing one row with the sort and filter
+          controls squeezed it down to little more than its own magnifier icon. */}
+      <div className="w-full min-w-0 lg:w-auto lg:flex-1">
+        {showAllCycles ? (
+          <div className="group flex min-w-0 items-stretch overflow-hidden rounded-xl border border-border bg-card shadow-sm transition duration-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-ring/25 hover:border-blue-500/50 lg:max-w-xl">
+            <div className="flex min-w-0 flex-1 items-center">
+              <Search className="ml-3 size-4 shrink-0 text-foreground transition-colors group-focus-within:text-blue-500" />
+              <Input
+                type="text"
+                placeholder="Search all transactions..."
+                value={pendingSearchTerm}
+                onChange={e => onPendingSearchChange(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') onServerSearch() }}
+                className="min-w-0 flex-1 rounded-none border-0 bg-transparent px-2.5 py-2.5 text-xs text-foreground shadow-none outline-none placeholder:text-foreground/60 focus:border-transparent focus:ring-0"
+              />
+              {pendingSearchTerm && (
+                <Button variant="unstyled"
+                  type="button"
+                  onClick={onClearServerSearch}
+                  aria-label="Clear search"
+                  className="mr-1 flex size-8 shrink-0 items-center justify-center rounded-md text-foreground hover:bg-muted transition cursor-pointer"
+                >
+                  <X className="size-3.5" />
+                </Button>
+              )}
+              {searchModeToggle}
+            </div>
+            <Button variant="unstyled"
+              onClick={onServerSearch}
+              disabled={serverIsFetching}
+              className="flex min-h-11 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground whitespace-nowrap transition-colors duration-200 hover:bg-primary/90 active:bg-primary/80 disabled:cursor-wait cursor-pointer lg:px-5"
+            >
+              {serverIsFetching
+                ? <Loader2 className="size-3.5 animate-spin" />
+                : <Search className="size-3.5" />}
+              <span>Search</span>
+            </Button>
+          </div>
+        ) : (
+          <div className="group flex min-w-0 items-center gap-1 rounded-xl border border-border/70 bg-background pl-3 shadow-sm transition duration-200 hover:border-border focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/25 lg:max-w-md">
+            <Search className="size-4 shrink-0 text-muted-foreground transition-colors group-focus-within:text-blue-500" />
             <Input
               type="text"
-              placeholder="Search all transactions..."
-              value={pendingSearchTerm}
-              onChange={e => onPendingSearchChange(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') onServerSearch() }}
-              className="min-w-0 flex-1 rounded-none border-0 bg-transparent px-2.5 py-2.5 text-xs text-foreground shadow-none outline-none placeholder:text-foreground/60 focus:border-transparent focus:ring-0"
+              placeholder="Search description, category..."
+              value={searchTerm}
+              onChange={e => onSearchTermChange(e.target.value)}
+              className="min-w-0 flex-1 rounded-none border-0 bg-transparent px-2 py-2.5 text-xs shadow-none outline-none focus:border-transparent focus:ring-0"
             />
-            {pendingSearchTerm && (
+            {searchTerm && (
               <Button variant="unstyled"
                 type="button"
-                onClick={onClearServerSearch}
+                onClick={() => onSearchTermChange('')}
                 aria-label="Clear search"
-                className="mr-1 flex size-6 shrink-0 items-center justify-center rounded-md text-foreground hover:bg-muted transition cursor-pointer"
+                className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
               >
                 <X className="size-3.5" />
               </Button>
             )}
+            {searchModeToggle}
           </div>
-          <Button variant="unstyled"
-            onClick={onServerSearch}
-            disabled={serverIsFetching}
-            className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground whitespace-nowrap transition-colors duration-200 hover:bg-primary/90 active:bg-primary/80 disabled:cursor-wait cursor-pointer lg:px-5"
-          >
-            {serverIsFetching
-              ? <Loader2 className="size-3.5 animate-spin" />
-              : <Search className="size-3.5" />}
-            <span className="hidden sm:inline">Search</span>
-          </Button>
-        </div>
-      ) : (
-        <div className="group relative min-w-0 flex-1 lg:w-72 lg:flex-initial">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-blue-500" />
-          <Input
-            type="text"
-            placeholder="Search description, category..."
-            value={searchTerm}
-            onChange={e => onSearchTermChange(e.target.value)}
-            className="w-full rounded-xl border border-border/70 bg-background py-2.5 pl-9 pr-9 text-xs shadow-sm outline-none transition duration-200 hover:border-border focus:border-ring/50 focus:ring-2 focus:ring-ring/25"
-          />
-          {searchTerm && (
-            <Button variant="unstyled"
-              type="button"
-              onClick={() => onSearchTermChange('')}
-              aria-label="Clear search"
-              className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
-            >
-              <X className="size-3.5" />
-            </Button>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
-      <Button
-        variant={searchMode === 'whole-word' ? 'secondary' : 'outline'}
-        size="sm"
-        type="button"
-        aria-pressed={searchMode === 'whole-word'}
-        aria-label="Match whole word or phrase"
-        title="Match whole word or phrase"
-        onClick={() => onSearchModeChange(searchMode === 'whole-word' ? 'contains' : 'whole-word')}
-        className="size-10 shrink-0 rounded-xl px-0 font-mono text-xs"
-      >
-        ab
-      </Button>
-
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex w-full shrink-0 items-center justify-between gap-2 lg:w-auto lg:justify-end">
         <CustomSelect
           ariaLabel="Sort ledger transactions"
           value={sortOrder}

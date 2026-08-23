@@ -16,6 +16,7 @@ export interface LedgerActiveFilterSummaryProps {
   activeCategoryFilters: string[]
   activeTxType: 'inflow' | 'outflow' | 'transfer' | null
   activeSearch: string
+  activeSearchMode?: 'contains' | 'whole-word'
   activeStartDate: string
   activeEndDate: string
   activeMinAmount: string
@@ -36,6 +37,7 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
   activeCategoryFilters,
   activeTxType,
   activeSearch,
+  activeSearchMode = 'contains',
   activeStartDate,
   activeEndDate,
   activeMinAmount,
@@ -89,7 +91,7 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
   if (activeWishlistFilter === 'only') filterDetails.push('reward purchases only')
   else if (activeWishlistFilter === 'exclude') filterDetails.push('excluding reward purchases')
   if (activeSearch) {
-    filterDetails.push(`search "${activeSearch}"`)
+    filterDetails.push(`search "${activeSearch}"${activeSearchMode === 'whole-word' ? ' (whole word)' : ''}`)
   }
 
   const label = filterDetails.length > 0

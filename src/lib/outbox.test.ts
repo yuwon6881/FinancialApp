@@ -381,6 +381,30 @@ describe('bulk transaction projection', () => {
     )
   })
 
+  // The server moves an income parent's generated split rows with it, so the projection has to
+  // land them on the new date too -- it re-derives them from the parent rather than being told.
+  it('moves an income parent and its generated split rows to the new date together', () => {
+    const dated = rows.map(row => ({ ...row, date: '2026-08-01' }))
+    const op = makeOp({
+      entity: 'transaction',
+      type: 'bulkMove',
+      targetId: 'move-1',
+      payload: {
+        moves: [{ id: 'tx-1', targetDate: '2026-09-03' }],
+        beforeSnapshots: [{ id: 'tx-1', date: '2026-08-01' }],
+      },
+    })
+
+    const moved = applyOpsToList<TestItem>(dated, [op], 'transaction', {
+      incomeAllocations: { essentialsAlloc: 0.5, growthAlloc: 0.25, stabilityAlloc: 0.15, rewardsAlloc: 0.1 },
+    })
+
+    expect(moved.find(row => row.id === 'tx-1')).toMatchObject({ date: '2026-09-03', isPendingSync: true })
+    const split = moved.find(row => String(row.id).startsWith('tx-1-split-'))
+    expect(split).toMatchObject({ date: '2026-09-03' })
+    expect(moved.find(row => row.id === 'tx-2')).toMatchObject({ date: '2026-08-01' })
+  })
+
   it('restores parent rows and regenerates split rows', () => {
     const op = makeOp({
       entity: 'transaction',

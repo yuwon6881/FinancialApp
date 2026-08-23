@@ -126,7 +126,12 @@ if (!fs.existsSync(distAssetsPath)) {
 // The growth represents module boundaries and per-hook React Compiler caches across the split pieces.
 // The same seven chunks remain on the critical path; nothing lazy became eager, and the 1.5 kB headroom
 // preserves the cross-platform gzip variance buffer.
-const CRITICAL_PATH_LIMIT_KB = 210.5
+// 212.5: raised from 210.5 (measured 210.77). The shell now decides which tabs get the shared cycle
+// switcher, so the gate and its props sit on the eager path; the control itself is a lazy chunk of
+// its own (CycleSwitcher-*.js, 1.33 kB) and is fetched with the page that shows it. The rest is the
+// whole-word search matcher and the move toast, both of which are already-eager modules. The same
+// seven chunks remain on the critical path, and the raise restores the ~1.5 kB variance headroom.
+const CRITICAL_PATH_LIMIT_KB = 212.5
 const PRECACHE_RAW_LIMIT_KB = 3 * 1024
 
 function criticalPathChunks(files) {

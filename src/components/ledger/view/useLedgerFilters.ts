@@ -274,6 +274,17 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     setCurrentPage(1)
   }
 
+  // All-cycles search is submitted, not live, but a match-mode switch made while a search is
+  // already on screen is meant to change those rows now: leaving it pending until the next
+  // Search press reads as a toggle that does nothing.
+  const handlePendingSearchModeChange = (mode: TransactionSearchMode) => {
+    setPendingSearchMode(mode)
+    if (appliedSearch) {
+      setAppliedSearchMode(mode)
+      setCurrentPage(1)
+    }
+  }
+
   const handleResetFilters = useCallback(() => {
     onClearIncomingFilters?.()
     setSelectedFilters([])
@@ -357,6 +368,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     handleApplyFilters,
     handleServerSearch,
     handleClearServerSearch,
+    handlePendingSearchModeChange,
     handleResetFilters,
   }
 }

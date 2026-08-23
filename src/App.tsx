@@ -339,8 +339,6 @@ function App() {
           onAskAI={() => setIsAiOpen(true)}
           onOpenSearch={() => dialogs.setShowSearch(true)}
           hideSensitive={prefs.hideSensitive}
-          hideFinancialFigures={prefs.hideFinancialFigures}
-          onToggleFinancialFigures={handleToggleBalanceAmounts}
           sensitivePreferenceStatus={prefs.sensitivePreferenceStatus}
           onToggleHideSensitive={handleToggleHideSensitive}
           onRetrySensitivePreference={retrySensitivePreference}

@@ -49,7 +49,6 @@ describe('ReportsView', () => {
         dashboardData={null}
         transactions={[]}
         hideBalanceAmounts={false}
-        onSelectPeriod={vi.fn()}
       />,
     )
 
@@ -80,7 +79,6 @@ describe('ReportsView', () => {
           },
         ]}
         hideBalanceAmounts={false}
-        onSelectPeriod={vi.fn()}
       />,
     )
 
@@ -95,7 +93,6 @@ describe('ReportsView', () => {
         dashboardData={null}
         transactions={[]}
         hideBalanceAmounts={false}
-        onSelectPeriod={vi.fn()}
         onNavigateToLedger={onNavigateToLedger}
       />,
     )
@@ -110,7 +107,6 @@ describe('ReportsView', () => {
         dashboardData={null}
         transactions={[]}
         hideBalanceAmounts={false}
-        onSelectPeriod={vi.fn()}
         onNavigate={onNavigate}
       />,
     )
@@ -127,7 +123,6 @@ describe('ReportsView', () => {
         dashboardData={null}
         transactions={[]}
         hideBalanceAmounts={false}
-        onSelectPeriod={vi.fn()}
         onViewCycleSummary={onViewCycleSummary}
       />,
     )
@@ -142,7 +137,6 @@ describe('ReportsView', () => {
         dashboardData={null}
         transactions={[]}
         hideBalanceAmounts={false}
-        onSelectPeriod={vi.fn()}
         onViewCycleSummary={vi.fn()}
         onExplainWithAi={vi.fn()}
       />,
@@ -152,6 +146,7 @@ describe('ReportsView', () => {
     expect(askAi.className).toContain('size-11')
     expect(askAi.className).toContain('sm:size-auto')
     expect(askAi.parentElement?.className).toContain('flex-nowrap')
-    expect(screen.getByRole('combobox', { name: 'Report cycle' }).parentElement?.className).toContain('min-w-0')
+    // The cycle pickers now live in the shared switcher above the page, not in this header.
+    expect(screen.queryByRole('combobox', { name: 'Report cycle' })).toBeNull()
   })
 })

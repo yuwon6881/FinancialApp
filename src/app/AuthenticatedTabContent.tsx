@@ -1,4 +1,4 @@
-import { lazy, type Dispatch, type SetStateAction } from 'react'
+import { lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
 import type { DashboardData } from '../types'
 import type { useAiActionRouter } from './useAiActionRouter'
 import type { useAppDialogs } from './useAppDialogs'
@@ -14,6 +14,12 @@ import type { useReceiptScanPolling } from '../lib/useReceiptScanPolling'
 import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
 import type { AiInvocationContext } from '../lib/api/ai'
 import { AuthenticatedSettingsRoute } from './AuthenticatedSettingsRoute'
+// Lazy like the views it sits above: the picker's select control is not part of the eager
+// critical path, and the pages that need it are lazily loaded anyway.
+const CycleSwitcher = lazy(() => import('../components/ui/CycleSwitcher').then(module => ({ default: module.CycleSwitcher })))
+
+/** Tabs whose figures are read from the selected financial cycle rather than from today. */
+const CYCLE_DEPENDENT_TABS = ['ledger', 'reports', 'recurring'] as const
 
 const DashboardView = lazy(() => import('../components/DashboardView').then(module => ({ default: module.DashboardView })))
 const ReportsView = lazy(() => import('../components/ReportsView').then(module => ({ default: module.ReportsView })))
@@ -132,8 +138,37 @@ export function AuthenticatedTabContent({
     clearInvestmentScanJob,
   } = investmentScan
 
+  const cycleDay = financial.optimisticDashboardData?.setting?.cycleDay || 28
+  // The Ledger's all-cycles scope spans every saved cycle, so a single-cycle picker would claim
+  // to filter rows it does not reach; its own scope toggle is the way back to one cycle.
+  const ledgerSpansAllCycles = prefs.activeTab === 'ledger'
+    && nav.ledgerShowAllCycles
+    && prefs.ledgerCyclesRange === 'all'
+  const showCycleSwitcher = (CYCLE_DEPENDENT_TABS as readonly string[]).includes(prefs.activeTab)
+    && !ledgerSpansAllCycles
+
   return (
     <div key={prefs.activeTab} className="w-full view-enter">
+      {showCycleSwitcher && (
+        <Suspense fallback={<div className="mb-4 h-[60px] rounded-2xl border border-border/60 bg-card/92 sm:h-[68px]" aria-hidden />}>
+        <div className="mb-4">
+          <CycleSwitcher
+            selectedMonth={nav.selectedMonth}
+            selectedYear={nav.selectedYear}
+            availableYears={financial.optimisticDashboardData?.availableYears || [nav.selectedYear]}
+            cycleDay={cycleDay}
+            onSelectPeriod={nav.handleSelectPeriod}
+            currentCycleMonth={currentCycleMonth}
+            currentCycleYear={currentCycleYear}
+            periodMode={prefs.activeTab === 'ledger' && nav.ledgerShowAllCycles && prefs.ledgerCyclesRange === 'yearly'
+              ? 'year'
+              : 'month-year'}
+            surfaceLabel={prefs.activeTab === 'ledger' ? 'Ledger' : prefs.activeTab === 'reports' ? 'Report' : 'Recurring'}
+            disabled={nav.isSwitchingCycle}
+          />
+        </div>
+        </Suspense>
+      )}
       {prefs.activeTab === 'dashboard' && (
         <DashboardView
           dashboardData={todayDashboardData}
@@ -168,7 +203,6 @@ export function AuthenticatedTabContent({
           wishlist={financial.allWishlist}
           savingsGoals={financial.allSavingsGoals}
           hideBalanceAmounts={prefs.maskPassiveFinancialFigures}
-          onSelectPeriod={nav.handleSelectPeriod}
           onNavigate={prefs.setActiveTab}
           onNavigateToRecurring={nav.handleNavigateToRecurring}
           onNavigateToAccounts={nav.handleNavigateToAccounts}
@@ -268,9 +302,7 @@ export function AuthenticatedTabContent({
           selectedMonth={nav.selectedMonth}
           selectedYear={nav.selectedYear}
           isCurrentCycle={isCurrentCycle}
-          availableYears={financial.optimisticDashboardData?.availableYears || [nav.selectedYear || new Date().getFullYear()]}
           cycleDay={financial.optimisticDashboardData?.setting?.cycleDay || 28}
-          onSelectPeriod={nav.handleSelectPeriod}
           incomingCategory={nav.ledgerIncomingFilters[0] || null}
           incomingFilters={nav.ledgerIncomingFilters}
           incomingSearch={nav.ledgerIncomingSearch}

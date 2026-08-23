@@ -4,11 +4,7 @@ import { LedgerToolbar } from './LedgerToolbar'
 
 const renderToolbar = (showAllCycles: boolean, onShowAllCyclesChange = vi.fn()) => render(
   <LedgerToolbar
-    selectedMonth="Aug"
     selectedYear={2026}
-    availableYears={[2026]}
-    cycleDay={28}
-    onSelectPeriod={vi.fn()}
     hideSensitive={false}
     isFormOpen={false}
     onToggleForm={vi.fn()}
@@ -28,10 +24,13 @@ describe('LedgerToolbar', () => {
     expect(onShowAllCyclesChange).toHaveBeenCalledWith(true)
   })
 
-  it('removes irrelevant cycle selectors when all saved cycles are shown', () => {
+  // The cycle pickers moved to the shared switcher above the page, so the toolbar keeps only the
+  // scope choice and must not grow a second copy of them.
+  it('leaves cycle selection to the shared switcher', () => {
     renderToolbar(true)
 
     expect(screen.queryByLabelText('Ledger cycle')).toBeNull()
+    expect(screen.queryByLabelText('Ledger cycle year')).toBeNull()
     expect(screen.getByText(/server/)).toBeTruthy()
   })
 })

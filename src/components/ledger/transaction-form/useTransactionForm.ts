@@ -170,7 +170,11 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       })
       descriptionRef.current = saved.description
       autocompletedDescriptionRef.current = null
-    }
+    },
+    // The sheet is route-mounted: the Ledger tab remounts it on every navigation into the page,
+    // so restoring on mount reopened a stale sheet ("Edit Draft") each time the user came back.
+    // The draft is still written while the sheet is open, and only an explicit action opens it.
+    { restoreOnMount: false },
   )
 
   useEffect(() => {

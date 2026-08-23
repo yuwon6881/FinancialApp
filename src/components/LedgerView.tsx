@@ -62,9 +62,7 @@ interface LedgerViewProps {
   selectedMonth: string
   selectedYear: number
   isCurrentCycle?: boolean
-  availableYears: number[]
   cycleDay: number
-  onSelectPeriod: (month: string, year: number) => void
   incomingCategory: string | null
   incomingFilters?: string[]
   incomingSearch?: string | null
@@ -267,11 +265,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   return (
     <div className="space-y-6">
       <LedgerToolbar
-        selectedMonth={props.selectedMonth}
         selectedYear={props.selectedYear}
-        availableYears={props.availableYears}
-        cycleDay={props.cycleDay}
-        onSelectPeriod={props.onSelectPeriod}
         hideSensitive={hideSensitive}
         isFormOpen={isFormOpen}
         onToggleForm={() => {
@@ -305,6 +299,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         activeCategoryFilters={props.showAllCycles ? ledger.appliedFilters : ledger.selectedFilters}
         activeTxType={props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter}
         activeSearch={props.showAllCycles ? ledger.appliedSearch : ledger.searchTerm}
+        activeSearchMode={props.showAllCycles ? ledger.appliedSearchMode : ledger.searchMode}
         activeStartDate={activeStartDate}
         activeEndDate={activeEndDate}
         activeMinAmount={activeMinAmount}
@@ -384,7 +379,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         searchTerm={ledger.searchTerm}
         onSearchTermChange={ledger.setSearchTerm}
         searchMode={props.showAllCycles ? ledger.pendingSearchMode : ledger.searchMode}
-        onSearchModeChange={props.showAllCycles ? ledger.setPendingSearchMode : ledger.setSearchMode}
+        onSearchModeChange={props.showAllCycles ? ledger.handlePendingSearchModeChange : ledger.setSearchMode}
         isFilterDropdownOpen={ledger.isFilterDropdownOpen}
         onFilterDropdownOpenChange={ledger.setIsFilterDropdownOpen}
         appliedFilters={ledger.appliedFilters}
