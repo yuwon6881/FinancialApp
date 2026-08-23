@@ -47,7 +47,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-blue-500/15 bg-background/65 p-4 shadow-sm backdrop-blur-sm">
+      <div className="min-w-0 w-full rounded-2xl border border-blue-500/15 bg-background/65 p-4 shadow-sm backdrop-blur-sm">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
@@ -69,7 +69,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           </Button>
         </div>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-1 border-t border-border/40 pt-3">
-          <div className="min-w-0 text-2xl font-black text-foreground">
+          <div className="min-w-0 truncate text-2xl font-black text-foreground">
             <SensitiveAmount value={walletBalance} isMasked={areBalanceAmountsMasked} formatFn={formatCurrency} />
           </div>
           <p className="shrink-0 pb-0.5 text-right text-[10px] font-semibold text-muted-foreground">

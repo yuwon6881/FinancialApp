@@ -185,13 +185,15 @@ export function CarryoverLedgerTable({
           isOpen={Boolean(selectedCategory)}
           onClose={() => setSelectedCategory(null)}
           title={
-            <div className="flex items-center gap-2.5">
-              <span className={`size-3 rounded-full ${getCategoryDotClass(selectedCategory.name)} shadow-xs`} />
-              <span className="text-base font-bold text-foreground">{selectedCategory.name} Account Balances</span>
-              <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold ${getCategoryBadgeClass(selectedCategory.name)}`}>
-                {(selectedCategory.allocation * 100).toFixed(0)}% Allocation
-              </span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className={`size-3 shrink-0 rounded-full ${getCategoryDotClass(selectedCategory.name)} shadow-xs`} />
+              <span className="text-base font-bold text-foreground truncate">{selectedCategory.name} Account Balances</span>
             </div>
+          }
+          headerActions={
+            <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold shrink-0 ${getCategoryBadgeClass(selectedCategory.name)}`}>
+              {(selectedCategory.allocation * 100).toFixed(0)}% Allocation
+            </span>
           }
           description={`Accounts contributing to the ${selectedCategory.name} ledger balance for ${cycleLabel}.`}
           footer={
@@ -279,9 +281,9 @@ export function CarryoverLedgerTable({
                 ))}
               </div>
               <div className="flex items-center justify-between gap-2 border-t border-border/70 bg-muted/40 px-4 py-3.5 text-xs font-bold">
-                <div className="flex items-center gap-2 text-foreground">
-                  <span>{isCurrentCycle ? 'Total accounts balance' : 'Total balance at close'}</span>
-                  <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-bold whitespace-nowrap ${getCategoryBadgeClass(selectedCategory.name)}`}>
+                <div className="flex min-w-0 items-center gap-2 text-foreground">
+                  <span className="whitespace-nowrap">{isCurrentCycle ? 'Total accounts balance' : 'Total balance at close'}</span>
+                  <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-bold shrink-0 whitespace-nowrap ${getCategoryBadgeClass(selectedCategory.name)}`}>
                     {selectedCategory.accounts?.length ?? 0} {selectedCategory.accounts?.length === 1 ? 'account' : 'accounts'}
                   </span>
                 </div>

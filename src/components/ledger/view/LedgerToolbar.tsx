@@ -43,7 +43,7 @@ export function LedgerToolbar({
 
   return (
     <Card className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
+      <div className="min-w-0 w-full md:flex-1">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-xl font-bold text-foreground">Financial Ledger</h2>
 
@@ -69,7 +69,7 @@ export function LedgerToolbar({
           </div>
 
           {(!showAllCycles || cyclesRange === '3month' || cyclesRange === '6month' || cyclesRange === 'yearly') && (
-            <div className="flex items-center gap-1.5 select-none w-full sm:w-auto">
+            <div className="flex w-full min-w-0 items-center gap-1.5 select-none sm:w-auto">
               {cyclesRange !== 'yearly' && (
                 <CustomSelect
                   ariaLabel={showAllCycles ? 'Ledger range ending cycle' : 'Ledger cycle'}
@@ -79,7 +79,7 @@ export function LedgerToolbar({
                     value: m,
                     label: getCycleLabelForDropdown(m, selectedYear, cycleDay),
                   }))}
-                  className="flex-1 sm:w-56 sm:flex-initial"
+                  className="w-0 min-w-0 flex-1 sm:w-56 sm:flex-initial"
                 />
               )}
               <CustomSelect

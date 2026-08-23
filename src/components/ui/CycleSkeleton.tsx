@@ -47,7 +47,7 @@ const DashboardHeaderSkeleton: React.FC = () => (
   <div className={`${panelClass} overflow-hidden`}>
     <div className="grid gap-5 rounded-2xl bg-linear-to-br from-blue-500/10 via-transparent to-teal-500/10 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,25rem)] lg:items-center">
       <div className="flex items-center gap-3"><Skeleton className="size-11 rounded-xl" /><div className="space-y-2"><Skeleton className="h-6 w-32" /><Skeleton className="h-3 w-48" /></div></div>
-      <div className="space-y-3 rounded-2xl border border-border/60 bg-background/65 p-4"><Skeleton className="h-3 w-28" /><Skeleton className="h-7 w-36" /><Skeleton className="h-3 w-40" /></div>
+      <div className="min-w-0 w-full space-y-3 rounded-2xl border border-border/60 bg-background/65 p-4"><Skeleton className="h-3 w-28" /><Skeleton className="h-7 w-36" /><Skeleton className="h-3 w-40" /></div>
     </div>
   </div>
 )
@@ -83,10 +83,10 @@ const RecurringHeaderSkeleton: React.FC = () => (
     <div className="min-w-0 w-full md:flex-1">
       <Skeleton className="h-6 w-72 max-w-full" />
       <Skeleton className="mt-1 h-3 w-48" />
-      <div className="mt-4 grid min-w-0 grid-cols-3">
+      <div className="mt-4 grid min-w-0 grid-cols-2 gap-y-3 sm:grid-cols-3 sm:gap-y-0">
         <div className="min-w-0 space-y-1.5 pr-2"><Skeleton className="h-2.5 w-16 max-w-full" /><Skeleton className="h-7 w-20 max-w-full" /></div>
-        <div className="min-w-0 space-y-1.5 border-l border-border/60 px-2"><Skeleton className="h-2.5 w-16 max-w-full" /><Skeleton className="h-7 w-20 max-w-full" /></div>
-        <div className="min-w-0 space-y-1.5 border-l border-border/60 pl-2"><Skeleton className="h-2.5 w-16 max-w-full" /><Skeleton className="h-7 w-12 max-w-full" /></div>
+        <div className="min-w-0 space-y-1.5 border-l border-border/60 pl-2 sm:px-2"><Skeleton className="h-2.5 w-16 max-w-full" /><Skeleton className="h-7 w-20 max-w-full" /></div>
+        <div className="col-span-2 min-w-0 space-y-1.5 border-t border-border/60 pt-2 sm:col-span-1 sm:border-t-0 sm:border-l sm:pl-2 sm:pt-0"><Skeleton className="h-2.5 w-16 max-w-full" /><Skeleton className="h-7 w-12 max-w-full" /></div>
       </div>
     </div>
     <Skeleton className="h-11 w-44 rounded-xl" />
@@ -105,8 +105,15 @@ const BillTimelineSkeleton: React.FC = () => (
 
 const LedgerToolbarSkeleton: React.FC = () => (
   <Card className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-    <div className="min-w-0 space-y-2">
-      <div className="flex flex-wrap items-center gap-3"><Skeleton className="h-6 w-44" /><Skeleton className="h-9 w-48 rounded-xl" /><Skeleton className="h-9 w-56 rounded-xl" /><Skeleton className="h-9 w-28 rounded-xl" /></div>
+    <div className="min-w-0 w-full space-y-2 md:flex-1">
+      <div className="flex flex-wrap items-center gap-3">
+        <Skeleton className="h-6 w-44" />
+        <Skeleton className="h-9 w-48 rounded-xl" />
+        <div className="flex w-full min-w-0 items-center gap-1.5 sm:w-auto">
+          <Skeleton className="h-9 w-0 min-w-0 flex-1 rounded-xl sm:w-56 sm:flex-initial" />
+          <Skeleton className="h-9 w-28 shrink-0 rounded-xl" />
+        </div>
+      </div>
       <Skeleton className="h-3 w-80 max-w-full" />
     </div>
     <div className="flex w-full gap-2 md:w-auto"><Skeleton className="h-11 flex-1 rounded-xl md:w-32 md:flex-initial" /><Skeleton className="h-11 flex-1 rounded-xl md:w-40 md:flex-initial" /></div>

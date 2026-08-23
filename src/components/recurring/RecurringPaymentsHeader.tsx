@@ -43,7 +43,7 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
           <p className="text-xs text-muted-foreground mt-0.5">
             {isLoansView ? 'Track what is still owed from linked bill history.' : 'Manage your recurring bills.'}
           </p>
-          <div className={`mt-4 grid min-w-0 ${isLoansView ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          <div className={`mt-4 grid min-w-0 gap-y-3 ${isLoansView ? 'grid-cols-2 gap-x-3' : 'grid-cols-2 gap-x-2 sm:grid-cols-3 sm:gap-x-0 sm:gap-y-0'}`}>
             {isLoansView ? (
               <>
                 <div className="min-w-0 overflow-hidden pr-3">
@@ -61,15 +61,17 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
               <>
                 <div className="min-w-0 overflow-hidden pr-2">
                   <span className="block text-[9px] font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:text-[10px] sm:tracking-wider">Monthly Total</span>
-                  <span className="block truncate text-lg font-extrabold text-blue-500 sm:text-2xl">{formatSensitive(totalCommittedMonthly)}</span>
+                  <span className="block truncate text-base font-extrabold text-blue-500 sm:text-2xl">{formatSensitive(totalCommittedMonthly)}</span>
                 </div>
-                <div className="min-w-0 overflow-hidden border-l border-border/60 px-2">
+                <div className="min-w-0 overflow-hidden border-l border-border/60 pl-2 pr-1 sm:px-2">
                   <span className="block text-[9px] font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:text-[10px] sm:tracking-wider">Yearly Total</span>
-                  <span className="block truncate text-lg font-extrabold text-blue-500 sm:text-2xl">{formatSensitive(totalCommittedAnnual)}</span>
+                  <span className="block truncate text-base font-extrabold text-blue-500 sm:text-2xl">{formatSensitive(totalCommittedAnnual)}</span>
                 </div>
-                <div className="min-w-0 overflow-hidden border-l border-border/60 pl-2">
-                  <span className="block text-[9px] font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:text-[10px] sm:tracking-wider">Active bills</span>
-                  <span className="block truncate text-lg font-extrabold text-foreground sm:text-2xl">{activeCount} / {totalCount}</span>
+                <div className="col-span-2 min-w-0 overflow-hidden border-t border-border/60 pt-2 sm:col-span-1 sm:border-t-0 sm:border-l sm:pl-2 sm:pt-0">
+                  <div className="flex items-center justify-between sm:block">
+                    <span className="block text-[9px] font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:text-[10px] sm:tracking-wider">Active bills</span>
+                    <span className="block truncate text-sm font-extrabold text-foreground sm:text-2xl">{activeCount} / {totalCount}</span>
+                  </div>
                 </div>
               </>
             )}
