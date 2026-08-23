@@ -3,6 +3,15 @@ import type { RecurringFrequency } from '../../types'
 import { formatCurrencyVal } from '../../lib/utils'
 import { SensitiveMask } from '../ui/SensitiveAmount'
 
+/**
+ * A loan or occurrence date as the loan cards and the summary card both show it. Absent stays
+ * absent: an unknown date reads 'Unavailable' rather than borrowing today's. Noon avoids the
+ * date shifting a day either way when the browser's zone crosses midnight against UTC.
+ */
+export const formatOccurrenceDate = (value?: string | null, options?: Intl.DateTimeFormatOptions) => value
+  ? new Date(`${value}T12:00:00`).toLocaleDateString(undefined, options ?? { year: 'numeric', month: 'short', day: 'numeric' })
+  : 'Unavailable'
+
 // Ordinal suffix for a day-of-month (1st, 2nd, 3rd, 4th, ... 11th-13th).
 export const getDayWithSuffix = (day: number) => {
   if (day >= 11 && day <= 13) return `${day}th`

@@ -453,3 +453,45 @@ test('mobile category toolbar keeps the filter and Add action on one row', async
   expect(filterBounds.bottom).toBeLessThanOrEqual(toolbarBounds.bottom)
   expect(addBounds.bottom).toBeLessThanOrEqual(toolbarBounds.bottom)
 })
+
+// The two tabs share one summary card, so switching tabs must not change its shape or move its
+// primary action. This measures the card on both tabs rather than trusting the snapshot alone.
+test('recurring summary card keeps its shape and top action across both tabs', async ({ page }) => {
+  test.skip(!test.info().project.name.startsWith('mobile'), 'The tab summary card is measured on mobile.')
+
+  await establishSession(page)
+  await mockApi(page)
+  await page.goto('/recurring', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByText('Recurring Bills & Subscriptions', { exact: true })).toBeVisible({ timeout: 15_000 })
+  await page.waitForFunction(() => document.fonts.status === 'loaded')
+  await waitForStableLayout(page)
+
+  const cardBounds = async () => page.getByRole('heading', { level: 2 })
+    .evaluate(heading => {
+      const card = heading.closest('div[class*="rounded"]') ?? heading.parentElement!.parentElement!
+      const rect = card.getBoundingClientRect()
+      return { width: Math.round(rect.width), height: Math.round(rect.height) }
+    })
+
+  const billsCard = await cardBounds()
+  const newSubscription = page.getByRole('button', { name: 'New Subscription' })
+  await expect(newSubscription).toBeVisible()
+  const subscriptionTop = await newSubscription.evaluate(element => Math.round(element.getBoundingClientRect().top))
+
+  await page.getByRole('tab', { name: /Loans/ }).click()
+  await expect(page.getByRole('heading', { name: 'Loans', level: 2 })).toBeVisible()
+  await waitForStableLayout(page)
+
+  const loansCard = await cardBounds()
+  const newLoan = page.getByRole('button', { name: 'New Loan' })
+  await expect(newLoan).toBeVisible()
+  const loanTop = await newLoan.evaluate(element => Math.round(element.getBoundingClientRect().top))
+
+  expect(loansCard.width).toBe(billsCard.width)
+  expect(Math.abs(loansCard.height - billsCard.height)).toBeLessThanOrEqual(24)
+  expect(Math.abs(loanTop - subscriptionTop)).toBeLessThanOrEqual(24)
+  // Adding a loan lives in the summary card now, not beside the "Tracked loans" sub-heading.
+  await expect(page.getByRole('button', { name: 'Add loan' })).toHaveCount(0)
+
+  await expect(page).toHaveScreenshot('mobile-pwa-recurring-loans.png')
+})

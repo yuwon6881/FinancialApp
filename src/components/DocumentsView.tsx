@@ -3,7 +3,6 @@ import { Download, Loader2, ShieldCheck, UploadCloud } from 'lucide-react'
 import { DocumentUploadSheet } from './documents/DocumentUploadSheet'
 import { VaultRetentionNotice } from './documents/VaultRetentionNotice'
 import { useDocumentsView } from './documents/view/useDocumentsView'
-import { CustomConfirmModal } from './ui/CustomConfirmModal'
 import { DocumentFilterBar } from './documents/view/DocumentFilterBar'
 import { StorageUsageMeter } from './documents/view/StorageUsageMeter'
 import { DocumentList } from './documents/view/DocumentList'
@@ -12,6 +11,7 @@ import { DocumentsLoadError } from './documents/view/DocumentsLoadError'
 import { useStagedReliefCategories } from './documents/view/useStagedReliefCategories'
 import { useAppPrefs, useAppSync, useAppUi } from '../contexts/AppContext'
 import { TaxReliefOverview } from './documents/view/TaxReliefOverview'
+import { DocumentDeleteModals } from './documents/view/DocumentDeleteModals'
 import * as documentsApi from '../lib/api/documents'
 import { getErrorMessage } from '../lib/errors'
 import { buildMutationSuccessToast } from '../lib/mutationToast'
@@ -70,8 +70,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
-  // Two flags, not one: the header archive button and the selection download are different controls,
-  // and a shared flag made each of them relabel and disable the other while the other was running.
   const [isDownloadingArchive, setIsDownloadingArchive] = useState(false)
   const [isDownloadingSelection, setIsDownloadingSelection] = useState(false)
   const refreshedCategoryOpsRef = useRef(new Set<string>())
@@ -125,9 +123,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
   useEffect(() => {
     setSelectedIds(new Set())
-    // Staged category edits are cleared with the selection, and for the same reason: after a filter
-    // change the staged rows are no longer on screen, so the "N staged" bar counted documents the
-    // user could not see or reach, and Save wrote changes they had lost sight of.
     stagedCategories.clear()
   }, [taxYear, selectedReliefCategories, sortOrder, pageSize])
 
@@ -166,8 +161,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             Keep receipts, invoices, and tax records in one place. Nothing is deleted automatically.
           </p>
         </div>
-        {/* Two equal halves on mobile: wrapping left the pair ragged with dead
-            space beside it, and a full-width Download made the pairing unclear. */}
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
           <Button
             variant="outline"
@@ -252,10 +245,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
       {/* Documents */}
       <section className="rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card sm:p-4 sm:shadow-xs" aria-labelledby="vault-documents-heading">
-        {/* `px-3` matches the inner padding every boxed child below uses, so the heading, the filter
-            controls, the selection count and each document's filename all start on one x. Without it
-            the section had four different content edges: 12px here, 22px in the filter bar and
-            toolbar, 26px inside a card. */}
         <div className="mb-3 flex items-end justify-between gap-3 sm:px-3">
           <div>
             <h3 id="vault-documents-heading" className="text-sm font-black text-foreground">Your documents</h3>
@@ -324,74 +313,71 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           <div className={isLoading && documents.length > 0 ? 'pointer-events-none opacity-55 blur-[1px] transition-all duration-200' : 'transition-all duration-200'}>
             {(!loadError || documents.length > 0) && <>
               <DocumentList
-              documents={documents}
-              isLoading={isLoading}
-              isFiltered={taxYear !== undefined || selectedReliefCategories.length > 0}
-              setDocToDelete={setDocToDelete}
-              selectedIds={selectedIds}
-              toggleSelected={id => setSelectedIds(current => {
-                const next = new Set(current)
-                if (next.has(id)) next.delete(id)
-                else next.add(id)
-                return next
-              })}
-              onToggleSelectAll={toggleSelectAllVisible}
-              onClearSelection={() => setSelectedIds(new Set())}
-              allVisibleSelected={allVisibleSelected}
-              someVisibleSelected={someVisibleSelected}
-              isDownloadingSelected={isDownloadingSelection}
-              onDownloadSelected={() => {
-                if (!guardSensitive()) return
-                const idsToDownload = [...selectedIds]
-                setIsDownloadingSelection(true)
-                void documentsApi.downloadSelectedDocumentArchive(idsToDownload)
-                  .then(() => {
-                    setSelectedIds(current => {
-                      const next = new Set(current)
-                      idsToDownload.forEach(id => next.delete(id))
-                      return next
+                documents={documents}
+                isLoading={isLoading}
+                isFiltered={taxYear !== undefined || selectedReliefCategories.length > 0}
+                setDocToDelete={setDocToDelete}
+                selectedIds={selectedIds}
+                toggleSelected={id => setSelectedIds(current => {
+                  const next = new Set(current)
+                  if (next.has(id)) next.delete(id)
+                  else next.add(id)
+                  return next
+                })}
+                onToggleSelectAll={toggleSelectAllVisible}
+                onClearSelection={() => setSelectedIds(new Set())}
+                allVisibleSelected={allVisibleSelected}
+                someVisibleSelected={someVisibleSelected}
+                isDownloadingSelected={isDownloadingSelection}
+                onDownloadSelected={() => {
+                  if (!guardSensitive()) return
+                  const idsToDownload = [...selectedIds]
+                  setIsDownloadingSelection(true)
+                  void documentsApi.downloadSelectedDocumentArchive(idsToDownload)
+                    .then(() => {
+                      setSelectedIds(current => {
+                        const next = new Set(current)
+                        idsToDownload.forEach(id => next.delete(id))
+                        return next
+                      })
+                      const copy = buildMutationSuccessToast({
+                        entity: 'Documents',
+                        action: 'Downloaded',
+                        message: `${idsToDownload.length} document${idsToDownload.length === 1 ? '' : 's'} were downloaded.`,
+                      })
+                      showToast(copy.message, copy.title, copy.tone)
                     })
-                    const copy = buildMutationSuccessToast({
-                      entity: 'Documents',
-                      action: 'Downloaded',
-                      message: `${idsToDownload.length} document${idsToDownload.length === 1 ? '' : 's'} were downloaded.`,
-                    })
-                    showToast(copy.message, copy.title, copy.tone)
-                  })
-                  .catch(error => showToast(
-                    getErrorMessage(error, 'The selected documents could not be downloaded.'),
-                    'Download Failed',
-                    'error',
-                  ))
-                  .finally(() => setIsDownloadingSelection(false))
-              }}
-              onDeleteSelected={() => {
-                if (!guardSensitive()) return
-                setIsBulkDeleteOpen(true)
-              }}
-              isDeletingSelected={isBulkDeleting}
-              syncingDocumentIds={syncingDocumentIds}
-              deletingDocumentIds={deletingDocumentIds}
-              currency={currency}
-              pendingReliefCategories={stagedCategories.staged}
-              onReliefCategoryChange={stagedCategories.stage}
-              updateDocument={async (id, updates) => {
-                if (!guardSensitive()) return
-                addDocumentIds(setSyncingDocumentIds, [id])
-                try {
-                  await updateDocumentMetadata(id, updates)
-                  void loadOverview(taxYear)
-                } catch (error) {
-                  // This is a direct (non-outbox) write, so nothing else reports it: without this
-                  // a failed metadata save was an unhandled rejection and the row silently kept
-                  // showing the edit as if it had stuck.
-                  showToast(getErrorMessage(error, 'The document details could not be saved.'), 'Save Failed', 'error')
-                } finally {
-                  removeDocumentIds(setSyncingDocumentIds, [id])
-                }
-              }}
-              reliefCategoriesByTaxYear={reliefCategoriesByTaxYear}
-              onNavigateToTransaction={onNavigateToTransaction}
+                    .catch(error => showToast(
+                      getErrorMessage(error, 'The selected documents could not be downloaded.'),
+                      'Download Failed',
+                      'error',
+                    ))
+                    .finally(() => setIsDownloadingSelection(false))
+                }}
+                onDeleteSelected={() => {
+                  if (!guardSensitive()) return
+                  setIsBulkDeleteOpen(true)
+                }}
+                isDeletingSelected={isBulkDeleting}
+                syncingDocumentIds={syncingDocumentIds}
+                deletingDocumentIds={deletingDocumentIds}
+                currency={currency}
+                pendingReliefCategories={stagedCategories.staged}
+                onReliefCategoryChange={stagedCategories.stage}
+                updateDocument={async (id, updates) => {
+                  if (!guardSensitive()) return
+                  addDocumentIds(setSyncingDocumentIds, [id])
+                  try {
+                    await updateDocumentMetadata(id, updates)
+                    void loadOverview(taxYear)
+                  } catch (error) {
+                    showToast(getErrorMessage(error, 'The document details could not be saved.'), 'Save Failed', 'error')
+                  } finally {
+                    removeDocumentIds(setSyncingDocumentIds, [id])
+                  }
+                }}
+                reliefCategoriesByTaxYear={reliefCategoriesByTaxYear}
+                onNavigateToTransaction={onNavigateToTransaction}
               />
 
               <DocumentPagination
@@ -418,104 +404,26 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         currency={currency}
       />
 
-      <CustomConfirmModal
-        isOpen={docToDelete !== null}
-        title="Delete Document"
-        message="Delete this file permanently? Download a copy first if you still need it for tax evidence."
-        confirmText="Delete"
-        isConfirming={deletingDocumentId !== null}
-        confirmingText="Deleting…"
-        cancelText="Cancel"
-        variant="danger"
-        onConfirm={async () => {
-          if (docToDelete === null) return
-          if (!guardSensitive()) {
-            setDocToDelete(null)
-            return
-          }
-          const document = documents.find(item => item.id === docToDelete)
-          setDeletingDocumentId(docToDelete)
-          addDocumentIds(setDeletingDocumentIds, [docToDelete])
-          try {
-            await deleteDocument(docToDelete)
-            setSelectedIds(current => {
-              const next = new Set(current)
-              next.delete(docToDelete)
-              return next
-            })
-            stagedCategories.forget([docToDelete])
-            const copy = buildMutationSuccessToast({
-              entity: 'Document',
-              action: 'Deleted',
-              recordName: document?.originalFileName,
-            })
-            showToast(copy.message, copy.title, copy.tone)
-          } catch (error) {
-            // deleteDocument rethrows so the row stays put; surface it instead of
-            // leaving the modal open on an unhandled rejection.
-            showToast(getErrorMessage(error, 'The document could not be deleted.'), 'Delete Failed', 'error')
-          } finally {
-            setDeletingDocumentId(null)
-            removeDocumentIds(setDeletingDocumentIds, [docToDelete])
-            setDocToDelete(null)
-          }
-        }}
-        onCancel={() => setDocToDelete(null)}
-      />
-
-      <CustomConfirmModal
-        isOpen={isBulkDeleteOpen}
-        title={`Delete ${selectedIds.size} documents?`}
-        message="Delete the selected files permanently? Successful deletions cannot be undone; failed files stay in the Vault."
-        confirmText="Delete selected"
-        isConfirming={isBulkDeleting}
-        confirmingText="Deleting…"
-        cancelText="Cancel"
-        variant="danger"
-        onConfirm={async () => {
-          if (!guardSensitive()) {
-            setIsBulkDeleteOpen(false)
-            return
-          }
-          const idsToDelete = [...selectedIds]
-          setIsBulkDeleting(true)
-          addDocumentIds(setDeletingDocumentIds, idsToDelete)
-          try {
-            const results = await bulkDelete(idsToDelete)
-            const failed = results.filter(result => !result.deleted)
-            setSelectedIds(current => {
-              const next = new Set(current)
-              idsToDelete.forEach(id => next.delete(id))
-              failed.forEach(result => next.add(result.id))
-              return next
-            })
-            stagedCategories.forget(results.filter(result => result.deleted).map(result => result.id))
-            if (failed.length) {
-              // The endpoint says why each one failed; a bare count left the user to guess whether
-              // retrying was worth it.
-              const reason = failed.find(result => result.message)?.message
-              showToast(
-                `${results.length - failed.length} document${results.length - failed.length === 1 ? '' : 's'} deleted; ${failed.length} failed and remain selected.${reason ? ` ${reason}` : ''}`,
-                'Documents Partially Deleted',
-                'error',
-              )
-            } else {
-              const copy = buildMutationSuccessToast({
-                entity: 'Documents',
-                action: 'Deleted',
-                message: `${results.length} document${results.length === 1 ? '' : 's'} were deleted.`,
-              })
-              showToast(copy.message, copy.title, copy.tone)
-            }
-          } catch (error) {
-            showToast(getErrorMessage(error, 'The selected documents could not be deleted.'), 'Delete Failed', 'error')
-          } finally {
-            setIsBulkDeleting(false)
-            removeDocumentIds(setDeletingDocumentIds, idsToDelete)
-            setIsBulkDeleteOpen(false)
-          }
-        }}
-        onCancel={() => setIsBulkDeleteOpen(false)}
+      <DocumentDeleteModals
+        docToDelete={docToDelete}
+        setDocToDelete={setDocToDelete}
+        deletingDocumentId={deletingDocumentId}
+        setDeletingDocumentId={setDeletingDocumentId}
+        documents={documents}
+        deleteDocument={deleteDocument}
+        setSelectedIds={setSelectedIds}
+        stagedCategories={stagedCategories}
+        showToast={showToast}
+        guardSensitive={guardSensitive}
+        addDocumentIds={addDocumentIds}
+        removeDocumentIds={removeDocumentIds}
+        setDeletingDocumentIds={setDeletingDocumentIds}
+        isBulkDeleteOpen={isBulkDeleteOpen}
+        setIsBulkDeleteOpen={setIsBulkDeleteOpen}
+        selectedIds={selectedIds}
+        isBulkDeleting={isBulkDeleting}
+        setIsBulkDeleting={setIsBulkDeleting}
+        bulkDelete={bulkDelete}
       />
     </div>
   )

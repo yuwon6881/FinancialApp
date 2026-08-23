@@ -1,48 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, CheckCircle2, CircleDollarSign, Filter, Loader2, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
+import { CheckCircle2, CircleDollarSign, Filter, Loader2, Pencil } from 'lucide-react'
 import type { TaxReliefCategoryDefinition, TaxReliefCategorySummary, TaxYearReliefSummary } from '../../../types'
-import { Input } from '../../ui/Input'
 import { Button } from '../../ui/Button'
-import { BottomSheet } from '../../ui/BottomSheet'
 import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
 import { getErrorMessage } from '../../../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
 import { HorizontalRail } from '../../ui/HorizontalRail'
-import { FormField } from '../../ui/FormField'
 import { orderTaxReliefCategories } from '../../../lib/taxReliefOrdering'
 import { mapServerErrorToField, type ServerFieldRule } from '../../../lib/formErrors'
 import { revealFirstFieldError } from '../../ui/formValidation'
-import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { useSyncStatus } from '../../../lib/useOptimisticList'
+import { TaxReliefLimitsSheet } from './TaxReliefLimitsSheet'
 
 type CategoryInput = { name: string; limit: number }
 type CategoryDraft = { name: string; limit: string }
-/**
- * `form` is for a refusal that belongs to no single field — the tax year being too old to edit is a
- * fact about the whole sheet, and hanging it off `limit` blamed a number the user had typed correctly.
- */
 type CategoryValidationErrors = { name?: string; limit?: string; form?: string }
 
 const EMPTY_CATEGORY_DRAFT: CategoryDraft = { name: '', limit: '' }
-
-/** Mirrors TryNormalizeCategoryInput in DocumentVaultService. */
 const MAX_CATEGORY_NAME_LENGTH = 120
-/**
- * The server's ceiling is 9,999,999,999,999,999.99, which a double cannot hold
- * exactly. This stays comfortably under it and inside the exact-integer range,
- * so the check is deterministic — and it is still astronomically above any real
- * relief limit.
- */
 const MAX_CATEGORY_LIMIT = 1e15
-/** Mirrors TaxYearLookbackYears in DocumentVaultService. */
 const TAX_YEAR_LOOKBACK = 7
 
-/**
- * The server owns the final word on these rules — a name can be taken, or the
- * last document moved off a category, between this tab loading and submitting.
- * Routing the rejection back onto the field keeps the explanation inside the
- * sheet instead of behind it.
- */
 const SAVE_ERROR_RULES: ServerFieldRule<'name' | 'limit'>[] = [
   { field: 'name', match: ['already exists'], status: 409 },
   { field: 'name', match: ['details are invalid'], status: 400, message: 'Check the category name and limit, then try again.' },
@@ -68,11 +46,6 @@ interface TaxReliefOverviewProps {
   deletingId?: string | number | null
 }
 
-/**
- * The server refuses to delete a category that documents still point at. The
- * tracker summary already carries those counts, so the refusal can be shown as
- * a blocked button with a reason instead of arriving as an error afterwards.
- */
 function blockedDeleteReason(documentCount: number | undefined): string | null {
   if (!documentCount) return null
   return documentCount === 1
@@ -149,8 +122,6 @@ export function TaxReliefOverview({
     activeSyncIds,
     activeDeletingId,
   )
-  // The summary already knows how many documents sit in each category, so the
-  // server's "still in use" refusal can be prevented rather than reported.
   const documentCountByCategory = new Map(
     (summary?.categories ?? []).map(category => [category.id, category.documentCount]),
   )
@@ -257,8 +228,6 @@ export function TaxReliefOverview({
       setConfirmingDeleteId(null)
       if (editingId === category.id) setEditingId(null)
     } catch (error) {
-      // "Still in use" and "already gone" are both answers about this row, so
-      // they belong next to it rather than in a notification over the sheet.
       const mapped = mapServerErrorToField(error, DELETE_ERROR_RULES)
       if (mapped) {
         setDeleteError({ id: category.id, message: mapped.message })
@@ -331,14 +300,6 @@ export function TaxReliefOverview({
                   aria-pressed={selected}
                   aria-label={selected ? `Remove ${category.name} from the documents filter` : `Add ${category.name} to the documents filter`}
                   title={selected ? `Remove ${category.name} from the document filter` : `Filter documents by ${category.name}`}
-                  // w-full resolves against the rail's own visible width, so one card
-                  // fills the viewport exactly rather than the 80vw that left a
-                  // permanently clipped card beside it.
-                  // Status and selection are given separate visual channels, because they are
-                  // independent facts that can both be true. Reaching the limit owns the border
-                  // and fill (emerald, as everywhere else in the app); filtering by this category
-                  // owns an inset ring plus an explicit "Filtering" chip. The ring stays inside
-                  // the card so the horizontal rail cannot clip its top edge.
                   className={`group flex min-h-32 w-full sm:w-[22rem] shrink-0 cursor-pointer snap-start flex-col gap-3 rounded-2xl border p-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
                     full
                       ? 'border-emerald-500/45 bg-emerald-500/10 hover:border-emerald-500/70 hover:bg-emerald-500/14'
@@ -349,8 +310,6 @@ export function TaxReliefOverview({
                 >
                   <div className="flex min-w-0 items-start justify-between gap-2">
                     <p className="min-w-0 truncate text-sm font-bold text-foreground" title={category.name}>{category.name}</p>
-                    {/* The chip carries the filter state in words as well as colour, so the two
-                        states are separable without relying on hue discrimination. */}
                     <span className="flex shrink-0 items-center gap-1.5 transition">
                       {selected && (
                         <span className="flex items-center gap-1 rounded-md border border-primary/40 bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold text-accent-ink">
@@ -386,7 +345,7 @@ export function TaxReliefOverview({
       </div>
 
       {selectedYear !== undefined && editorOpen && (
-        <BottomSheet
+        <TaxReliefLimitsSheet
           isOpen={editorOpen}
           onClose={() => {
             setEditorOpen(false)
@@ -399,118 +358,38 @@ export function TaxReliefOverview({
             setDraft(EMPTY_CATEGORY_DRAFT)
             setNewCategory(EMPTY_CATEGORY_DRAFT)
           }}
-          title={`Manage tax relief limits for YA ${selectedYear}`}
-          maxWidthClassName="max-w-2xl"
-        >
-        <div className="space-y-3" ref={sheetBodyRef}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h4 className="text-xs font-black">Categories and limits for YA {selectedYear}</h4>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">Only this year changes. Amounts marked for review are never counted as confirmed.</p>
-            </div>
-            {!isAdding && (
-              <Button variant="outline" size="sm" type="button" onClick={() => setIsAdding(true)} className="shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground">
-                <Plus className="size-3.5" /> Add category
-              </Button>
-            )}
-          </div>
-
-          <div className="mt-3 space-y-2">
-            {categories.map(category => {
-              const isEditing = editingId === category.id
-              const isDraftChanged = isEditing && (
-                draft.name.trim() !== category.name ||
-                (draft.limit.trim() !== '' && !Number.isNaN(Number(draft.limit)) && Number(draft.limit) !== category.limit)
-              )
-
-              return (
-                <div
-                  key={category.id}
-                  className={`rounded-lg border p-2.5 transition-all duration-150 ${
-                    isDraftChanged
-                      ? 'border-blue-500/40 bg-blue-500/5 ring-2 ring-blue-500/50'
-                      : 'border-border/60'
-                  }`}
-                >
-                  {isEditing ? (
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <FormField label="Category" required error={draftErrors.name}><Input value={draft.name} onChange={event => { setDraft(current => ({ ...current, name: event.target.value })); setDraftErrors(current => ({ ...current, name: undefined })) }} controlSize="sm" /></FormField>
-                      <FormField label={`Limit (${currency})`} required error={draftErrors.limit}><Input type="number" min="0" step="0.01" value={draft.limit} onChange={event => { setDraft(current => ({ ...current, limit: event.target.value })); setDraftErrors(current => ({ ...current, limit: undefined })) }} controlSize="sm" className="tabular-nums" /></FormField>
-                      {draftErrors.form && <p role="alert" className="text-[10px] font-semibold text-destructive sm:col-span-2">{draftErrors.form}</p>}
-                      <div className="flex items-center justify-end gap-1.5 sm:col-span-2">
-                        {isDraftChanged && (
-                          <span className="mr-auto flex items-center gap-1 text-[10px] font-semibold text-blue-500">
-                            <span className="inline-block size-1.5 rounded-full bg-blue-500" title="Unsaved change" />
-                            Unsaved changes
-                          </span>
-                        )}
-                        <Button variant="primary" size="sm" type="button" onClick={() => void saveEdit(category.id)} disabled={savingId === category.id} className="py-2"><Save className="size-3.5" /> Save</Button>
-                        <Button variant="unstyled" type="button" onClick={() => setEditingId(null)} aria-label="Close category editor" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button>
-                      </div>
-                    </div>
-                  ) : confirmingDeleteId === category.id ? (
-                    <div className="space-y-1.5">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="min-w-0 flex-1 text-[10px] text-muted-foreground">
-                          Delete <span className="font-bold text-foreground">{category.name}</span> from YA {selectedYear}? Documents already filed under it must be moved first.
-                        </p>
-                        <div className="flex shrink-0 gap-1.5">
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            type="button"
-                            onClick={() => void deleteCategory(category)}
-                            disabled={deletingId === category.id || Boolean(deleteBlockedById.get(category.id))}
-                            title={deleteBlockedById.get(category.id) ?? undefined}
-                          >
-                            <Trash2 className="size-3" /> Delete
-                          </Button>
-                          <Button variant="outline" size="sm" type="button" onClick={() => { setConfirmingDeleteId(null); setDeleteError(null) }} className="text-muted-foreground hover:bg-muted hover:text-foreground">Cancel</Button>
-                        </div>
-                      </div>
-                      {(deleteError?.id === category.id ? deleteError.message : deleteBlockedById.get(category.id)) && (
-                        <p role="alert" className="text-[10px] font-semibold text-destructive">
-                          {deleteError?.id === category.id ? deleteError.message : deleteBlockedById.get(category.id)}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-start gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <p className="truncate text-[11px] font-bold">{category.name}</p>
-                          <RowSyncStatus
-                            entityLabel="tax relief category"
-                            isDeleting={isCategoryDeleting(category.id)}
-                            isSyncing={isCategorySyncing(category.id)}
-                            isPending={category.isPendingSync && !isCategorySyncing(category.id)}
-                          />
-                        </div>
-                        <p className="mt-0.5 text-[10px] text-muted-foreground">{money(category.limit)} limit{category.isInherited ? ' · inherited default' : ''}</p>
-                      </div>
-                      <div className="flex shrink-0 gap-1.5">
-                        <Button variant="outline" size="sm" type="button" onClick={() => beginEdit(category)} className="text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="size-3" /> Edit</Button>
-                        <Button variant="unstyled" type="button" onClick={() => { setEditingId(null); setDeleteError(null); setConfirmingDeleteId(category.id) }} aria-label={`Delete ${category.name}`} title={`Delete ${category.name}`} className="rounded-lg border border-border p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-3" /></Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          {isAdding && (
-            <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <FormField label="Category" required error={newCategoryErrors.name}><Input autoFocus value={newCategory.name} onChange={event => { setNewCategory(current => ({ ...current, name: event.target.value })); setNewCategoryErrors(current => ({ ...current, name: undefined })) }} placeholder="e.g. Education" controlSize="sm" /></FormField>
-                <FormField label={`Limit (${currency})`} required error={newCategoryErrors.limit}><Input type="number" min="0" step="0.01" value={newCategory.limit} onChange={event => { setNewCategory(current => ({ ...current, limit: event.target.value })); setNewCategoryErrors(current => ({ ...current, limit: undefined })) }} controlSize="sm" className="tabular-nums" /></FormField>
-                {newCategoryErrors.form && <p role="alert" className="text-[10px] font-semibold text-destructive sm:col-span-2">{newCategoryErrors.form}</p>}
-                <div className="flex justify-end gap-1.5 sm:col-span-2"><Button variant="primary" size="sm" type="button" onClick={() => void addCategory()} disabled={isAddingBusy} className="py-2"><Check className="size-3.5" /> Add</Button><Button variant="unstyled" type="button" onClick={() => { setIsAdding(false); setNewCategory(EMPTY_CATEGORY_DRAFT); setNewCategoryErrors({}) }} aria-label="Close add category form" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
-              </div>
-            </div>
-          )}
-        </div>
-        </BottomSheet>
+          selectedYear={selectedYear}
+          categories={categories}
+          editingId={editingId}
+          setEditingId={setEditingId}
+          draft={draft}
+          setDraft={setDraft}
+          draftErrors={draftErrors}
+          setDraftErrors={setDraftErrors}
+          savingId={savingId}
+          onSaveEdit={saveEdit}
+          confirmingDeleteId={confirmingDeleteId}
+          setConfirmingDeleteId={setConfirmingDeleteId}
+          deletingId={deletingId}
+          deleteBlockedById={deleteBlockedById}
+          deleteError={deleteError}
+          setDeleteError={setDeleteError}
+          onDeleteCategory={deleteCategory}
+          onBeginEdit={beginEdit}
+          isAdding={isAdding}
+          setIsAdding={setIsAdding}
+          newCategory={newCategory}
+          setNewCategory={setNewCategory}
+          newCategoryErrors={newCategoryErrors}
+          setNewCategoryErrors={setNewCategoryErrors}
+          isAddingBusy={isAddingBusy}
+          onAddCategory={addCategory}
+          currency={currency}
+          money={money}
+          isCategorySyncing={isCategorySyncing}
+          isCategoryDeleting={isCategoryDeleting}
+          sheetBodyRef={sheetBodyRef}
+        />
       )}
 
       <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">

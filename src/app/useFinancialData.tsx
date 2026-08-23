@@ -1,114 +1,51 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import * as api from '../lib/api'
-import type {
-  Transaction,
-  RecurringPayment,
-  TransactionCategory,
-  WishlistItem,
-  SavingsGoal,
-  DashboardData,
-  AutocompleteSuggestion,
-  TransactionDocumentChanges,
-  LedgerAccount,
-  FinancialSetting,
-} from '../types'
-import { CACHE_KEYS, ensureAccountTrackingCacheVersion, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, setCachedCycleSnapshot } from '../lib/cache'
 import { useOptimisticList } from '../lib/useOptimisticList'
 import { useOutbox } from '../lib/useOutbox'
 import { useStartupSync } from './useStartupSync'
-import { useOptimisticDashboard } from './useOptimisticDashboard'
-import { projectFinancialSetting, type EntityKind, type OpType, type OutboxPayload, type QueuedOp } from '../lib/outbox'
-import { projectLoanStates } from '../lib/loanProjection'
-import { loanEndDate } from '../lib/loanTermSchedule'
-import { projectAccountBalances, projectAccountBalancesFromTransactions } from '../lib/accountProjection'
-import type { AccountPlacementSelections } from '../lib/accountPlacementMigration'
-import { getErrorMessage, getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
+import type { EntityKind, OpType, OutboxPayload, QueuedOp } from '../lib/outbox'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
-import { formatDateForApi, getCycleRangeDates, MONTH_NAMES } from '../lib/cycle'
-import { buildStabilityPlanPoints, projectStabilityReloadStatuses } from '../lib/stabilityRecovery'
-import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
-import type { ConfirmModalData } from './useAppDialogs'
-import { fetchBootstrapPayload } from './financialData/bootstrap'
-import { createWishlistSavingsActions } from './financialData/wishlistSavingsActions'
-import { createLoanActions } from './financialData/loanActions'
-import { createLedgerAccountActions } from './financialData/accountActions'
-import { useLoanData } from './financialData/useLoanData'
+import { useFinancialBaseData } from './financialData/useFinancialBaseData'
 import { useSessionRestore } from './financialData/useSessionRestore'
-import { createSettingsActions } from './financialData/settingsActions'
-import { createCategoryActions } from './financialData/categoryActions'
-import { useTransactionActions } from './financialData/useTransactionActions'
-import { createRecurringActions } from './financialData/recurringActions'
+import { useLoadAll } from './financialData/useLoadAll'
+import { useProjectedFinancialData } from './financialData/useProjectedFinancialData'
+import { useFinancialDomainActions } from './financialData/useFinancialDomainActions'
+import { createOutboxRefreshHandler } from './financialData/useOutboxRefresh'
+import { useDirectSyncState } from './financialData/useDirectSyncState'
+import { useDraftTransactionsState } from './financialData/useDraftTransactionsState'
+import { useAccountPlacementReview } from './financialData/useAccountPlacementReview'
+import {
+  createLocalId,
+  PERSISTED_SETTING_KEYS,
+  queuedTransactionDeleteCoversTarget,
+  type UseFinancialDataOptions,
+} from './financialData/financialDataTypes'
 
-export interface UseFinancialDataOptions {
-  token: string | null
-  username: string
-  usernameRef: React.MutableRefObject<string>
-  lastUnlockedTimeRef: React.MutableRefObject<number>
-  isLocked: boolean
-  markSessionLocked: () => void
-  handleLogout: () => Promise<void>
-  hideSensitive: boolean
-  darkMode: boolean
-  showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
-  guardSensitive: () => boolean
-  setConfirmModalData: React.Dispatch<React.SetStateAction<ConfirmModalData | null>>
-  onRequestSensitiveReveal?: () => void
-  resolveHideSensitive: (value: boolean) => void
-  markSensitivePreferenceUnavailable: () => void
-  setDarkMode: (value: boolean) => void
-  notifyOnLogin: boolean
-  loadAllAbortRef: React.MutableRefObject<AbortController | null>
-  selectedMonth: string
-  setSelectedMonth: (month: string) => void
-  selectedYear: number
-  setSelectedYear: (year: number) => void
-  setIsSwitchingCycle: (switching: boolean) => void
-  setHasShownModalThisSession: (value: boolean) => void
-  hasShownModalThisSession: boolean
-  setShowLoginModal: (value: boolean) => void
-  setShowFailedOpsModal: (value: boolean) => void
-}
-
-export function queuedTransactionDeleteCoversTarget(
-  pending: Pick<QueuedOp, 'entity' | 'type' | 'targetId' | 'payload'>,
-  targetId: string,
-): boolean {
-  if (pending.entity !== 'transaction') return false
-  if (pending.type === 'delete') return pending.targetId === targetId
-  if (pending.type !== 'bulkDelete') return false
-  const transactionIds = pending.payload?.transactionIds
-  return Array.isArray(transactionIds) && transactionIds.some(id => String(id) === targetId)
-}
-
-const createLocalId = (prefix: string, separator = '_') => {
-  return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
-}
-
-const PERSISTED_SETTING_KEYS = [
-  'targetStabilityFund',
-  'selectedMonth',
-  'selectedYear',
-  'essentialsAlloc',
-  'growthAlloc',
-  'stabilityAlloc',
-  'rewardsAlloc',
-  'cycleDay',
-  'darkMode',
-  'hideSensitive',
-  'stabilityOverflowRedirect',
-  'currency',
-  'lastSummaryCycleSeen',
-] as const satisfies ReadonlyArray<keyof FinancialSetting>
+export { queuedTransactionDeleteCoversTarget }
+export type { UseFinancialDataOptions }
 
 export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernameRef' | 'setIsSwitchingCycle'>) {
-  // Read the dashboard before invalidating account-dependent caches. The migration must remove
-  // unsafe persisted projections, but an already available snapshot can still keep the shell
-  // useful while the authoritative bootstrap response is in flight.
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedJSON(CACHE_KEYS.dashboardData, null))
-  useState(() => {
-    ensureAccountTrackingCacheVersion()
-    return true
-  })
+  const {
+    dashboardData,
+    setDashboardData,
+    transactions,
+    setTransactions,
+    recurringPayments,
+    setRecurringPayments,
+    categoriesList,
+    setCategoriesList,
+    walletBalance,
+    setWalletBalance,
+    wishlist,
+    setWishlist,
+    savingsGoals,
+    setSavingsGoals,
+    accounts,
+    setAccounts,
+    loanData,
+    autocompleteSuggestions,
+    setAutocompleteSuggestions,
+  } = useFinancialBaseData()
+
   const {
     token,
     username,
@@ -137,16 +74,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setShowFailedOpsModal,
   } = options
 
-  const [transactions, setTransactions] = useState<Transaction[]>(() => getCachedTransactions(CACHE_KEYS.transactions))
-  const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => getCachedJSON(CACHE_KEYS.recurringPayments, []))
-  const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => getCachedJSON(CACHE_KEYS.categories, []))
-  const [walletBalance, setWalletBalance] = useState<number | null>(() => getCachedJSON<number | null>(CACHE_KEYS.walletBalance, null))
-  const [wishlist, setWishlist] = useState<WishlistItem[]>(() => getCachedWishlist(CACHE_KEYS.wishlist))
-  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(() => getCachedJSON(CACHE_KEYS.savingsGoals, []))
-  const [accounts, setAccounts] = useState<LedgerAccount[]>(() => getCachedJSON(CACHE_KEYS.accounts, []))
-  const loanData = useLoanData()
-  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<AutocompleteSuggestion[]>([])
-
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(() => dashboardData === null)
   const [isOffline, setIsOffline] = useState<boolean>(() => typeof navigator !== 'undefined' ? !navigator.onLine : false)
@@ -158,36 +85,14 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   // same value. Queue state alone is insufficient here: a fast settings write can leave
   // the outbox before an older, slower bootstrap response commits.
   const unconfirmedSettingWritesRef = useRef(new Map<string, unknown>())
-  const accountPlacementMigrationSignatureRef = useRef('')
 
-  const [draftTransactions, setDraftTransactions] = useState<Transaction[]>(() => {
-    try {
-      const stored = localStorage.getItem('draft_transactions')
-      return sanitizeTransactions(stored ? JSON.parse(stored) : [])
-    } catch {
-      return []
-    }
-  })
-  const pendingTransactionDocumentsRef = useRef(new Map<string, TransactionDocumentChanges>())
-  /** Vault documents to delete once their transaction's queued delete has actually synced. */
-  const pendingTransactionDocumentDeletesRef = useRef(new Map<string, number[]>())
-
-  /**
-   * Merged, never replaced. `enqueue` collapses a second edit of the same transaction into the
-   * queued add/update, so a plain `set` here dropped the first edit's uploads and detaches on the
-   * floor — silently, and invisibly, since the form reads its existing documents from the server
-   * and never showed the queued file at all.
-   */
-  const stageTransactionDocumentChanges = (targetId: string, changes: TransactionDocumentChanges) => {
-    if (changes.pending.length === 0 && changes.unlinkIds.length === 0) return
-    const existing = pendingTransactionDocumentsRef.current.get(targetId)
-    pendingTransactionDocumentsRef.current.set(targetId, existing
-      ? {
-          pending: [...existing.pending, ...changes.pending],
-          unlinkIds: [...new Set([...existing.unlinkIds, ...changes.unlinkIds])],
-        }
-      : changes)
-  }
+  const {
+    draftTransactions,
+    setDraftTransactions,
+    pendingTransactionDocumentsRef,
+    pendingTransactionDocumentDeletesRef,
+    stageTransactionDocumentChanges,
+  } = useDraftTransactionsState()
 
   useEffect(() => {
     unconfirmedSettingWritesRef.current.clear()
@@ -203,50 +108,44 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     }
   }, [loadAllAbortRef])
 
-  // Persist draft transactions to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('draft_transactions', JSON.stringify(draftTransactions))
-    } catch (storageError) {
-      console.warn('Could not persist draft transactions locally.', storageError)
-    }
-  }, [draftTransactions])
-
   const toOutboxPayload = (value: object): OutboxPayload => ({ ...value })
 
-  // Direct, authoritative POSTs are not outbox operations, but they still need the same
-  // cross-page contract: the source row and any record created by the request stay visible
-  // with a syncing state until the server has answered.
-  const [directSyncIds, setDirectSyncIds] = useState<string[]>([])
-  const [pendingLedgerTransactions, setPendingLedgerTransactions] = useState<Transaction[]>([])
+  const {
+    directSyncIds,
+    setDirectSyncIds,
+    pendingLedgerTransactions,
+    setPendingLedgerTransactions,
+    beginDirectSync,
+    endDirectSync,
+    addPendingLedgerTransaction,
+    replacePendingLedgerTransaction,
+    removePendingLedgerTransaction,
+  } = useDirectSyncState()
 
-  const beginDirectSync = useCallback((ids: Array<string | number>) => {
-    const normalized = ids.map(String).filter(Boolean)
-    if (normalized.length === 0) return
-    setDirectSyncIds(previous => Array.from(new Set([...previous, ...normalized])))
-  }, [])
+  const loadAllRef = useRef<ReturnType<typeof useLoadAll>>(() => Promise.resolve())
+  const getPendingOpsRef = useRef<() => QueuedOp[]>(() => [])
 
-  const endDirectSync = useCallback((ids: Array<string | number>) => {
-    const toRemove = new Set(ids.map(String))
-    setDirectSyncIds(previous => previous.filter(id => !toRemove.has(id)))
-  }, [])
-
-  const addPendingLedgerTransaction = useCallback((transaction: Transaction) => {
-    setPendingLedgerTransactions(previous => [
-      ...previous.filter(item => String(item.id) !== String(transaction.id)),
-      transaction,
-    ])
-  }, [])
-
-  const replacePendingLedgerTransaction = useCallback((pendingId: string, transaction: Transaction) => {
-    setPendingLedgerTransactions(previous => previous.map(item =>
-      String(item.id) === String(pendingId) ? { ...transaction, isPendingSync: false } : item,
-    ))
-  }, [])
-
-  const removePendingLedgerTransaction = useCallback((id: string) => {
-    setPendingLedgerTransactions(previous => previous.filter(item => String(item.id) !== String(id)))
-  }, [])
+  const outboxRefresh = useCallback(async (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => {
+    const handler = createOutboxRefreshHandler({
+      pendingTransactionDocumentsRef,
+      pendingTransactionDocumentDeletesRef,
+      showToast,
+      getPendingOps: () => getPendingOpsRef.current(),
+      setError,
+      isServerAwakeRef,
+      setWishlist,
+      setSavingsGoals,
+      loanData,
+      setRecurringPayments,
+      setAccounts,
+      setCategoriesList,
+      loadAll: (...args) => loadAllRef.current(...args),
+      selectedMonth,
+      selectedYear,
+      unconfirmedSettingWritesRef,
+    })
+    await handler(successfulOps)
+  }, [loanData, selectedMonth, selectedYear, setError, setWishlist, setSavingsGoals, setRecurringPayments, setAccounts, setCategoriesList, showToast])
 
   const {
     pendingOps,
@@ -280,185 +179,12 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     onAuthError: handleLogout,
     onLockError: markSessionLocked,
     onRequestSensitiveReveal,
-    refresh: async successfulOps => {
-      const ops = successfulOps.map(({ op }) => op)
-      for (const op of ops) {
-        if (op.entity !== 'transaction') continue
-
-        if (op.type === 'delete') {
-          const documentIds = pendingTransactionDocumentDeletesRef.current.get(op.targetId)
-          if (!documentIds) continue
-          pendingTransactionDocumentDeletesRef.current.delete(op.targetId)
-          try {
-            const { deleteDocument } = await import('../lib/api/documents')
-            for (const documentId of documentIds) {
-              await deleteDocument(documentId)
-            }
-          } catch (error) {
-            showToast(
-              getErrorMessage(error, 'The transaction was deleted, but its attached documents could not be removed. They are still in your Document Vault.'),
-              'Document Vault',
-              'error',
-            )
-          }
-          continue
-        }
-
-        if (op.type !== 'add' && op.type !== 'update') continue
-        const documentChanges = pendingTransactionDocumentsRef.current.get(op.targetId)
-        if (!documentChanges) continue
-
-        // An Undo tapped on the add's own success toast queues the delete while this refresh is
-        // still running, so uploading here would attach files to a row that is about to go and
-        // leave them orphaned in the vault with the user believing they undid the whole thing.
-        if (getPendingOps().some(pending => queuedTransactionDeleteCoversTarget(pending, op.targetId))) {
-          pendingTransactionDocumentsRef.current.delete(op.targetId)
-          continue
-        }
-
-        try {
-          // Both imported lazily: this hook sits on the eager critical path, while the
-          // vault API and the canvas compression helper are only needed once a queued
-          // document change actually drains.
-          const { updateDocument, uploadDocument } = await import('../lib/api/documents')
-
-          for (const documentId of documentChanges.unlinkIds) {
-            await updateDocument(documentId, { transactionId: null })
-          }
-          if (documentChanges.pending.length > 0) {
-            const { compressImageFile } = await import('../lib/imageCompression')
-
-            for (const pending of documentChanges.pending) {
-              const uploadFile = await compressImageFile(pending.file)
-              await uploadDocument(
-                uploadFile,
-                pending.taxYear,
-                op.targetId,
-                undefined,
-                pending.reliefCategory,
-                pending.amount,
-                pending.amountCurrency,
-              )
-            }
-          }
-        } catch (error) {
-          showToast(
-            getErrorMessage(error, 'The transaction was saved, but one or more document changes failed. Any uploaded document remains safe in the Document Vault.'),
-            'Document Vault',
-            'error',
-          )
-        } finally {
-          pendingTransactionDocumentsRef.current.delete(op.targetId)
-        }
-      }
-
-      const onlyInvestments = ops.length > 0 && ops.every(op => op.entity.startsWith('investment'))
-      if (onlyInvestments) {
-        const reconciliations: Promise<void>[] = []
-        window.dispatchEvent(new CustomEvent('investment-sync', {
-          detail: {
-            operations: ops.map(op => op.id),
-            acknowledge: (work: Promise<void>) => { reconciliations.push(work) },
-          },
-        }))
-        await Promise.all(reconciliations)
-        setError(null)
-        isServerAwakeRef.current = true
-        return
-      }
-      // NOTE: `delete` is intentionally excluded from this wishlist-only fast path.
-      // Deleting a *purchased* wishlist item cascade-deletes its linked ledger
-      // transaction on the backend (see WishlistService.DeleteWishlistItemAsync),
-      // which also shifts dashboard/cycle balances. Refetching only the wishlist
-      // would leave that deleted transaction lingering in FE state/cache until a
-      // full reload (e.g. undoing a fast add-then-purchase). Route deletes through
-      // the full reconcile below instead.
-      const onlyWishlistCrud = ops.length > 0 && ops.every(op =>
-        op.entity === 'wishlistItem'
-        && (op.type === 'add' || op.type === 'update')
-      )
-      if (onlyWishlistCrud) {
-        const wishes = await api.fetchWishlist()
-        setWishlist(wishes)
-        setCachedJSON(CACHE_KEYS.wishlist, wishes)
-        setError(null)
-        isServerAwakeRef.current = true
-        return
-      }
-
-      // Savings goal authoring is ledger-neutral: an earmark is a claim on Rewards money that
-      // already exists, so no transaction, dashboard figure or cycle balance can shift. Unlike the
-      // wishlist fast path above, `delete` is safe to include here for the same reason — deleting a
-      // goal only releases its claim.
-      const onlySavingsGoalCrud = ops.length > 0 && ops.every(op =>
-        op.entity === 'savingsGoal'
-        && (op.type === 'add' || op.type === 'update' || op.type === 'delete')
-      )
-      if (onlySavingsGoalCrud) {
-        const { fetchSavingsGoals } = await import('../lib/api/savingsGoals')
-        const goals = await fetchSavingsGoals()
-        setSavingsGoals(goals)
-        setCachedJSON(CACHE_KEYS.savingsGoals, goals)
-        setError(null)
-        isServerAwakeRef.current = true
-        return
-      }
-
-      // Loan terms are ledger-neutral. Their read model replays the full history returned by the
-      // endpoint, so a CRUD-only drain does not need to reload the dashboard or cycle slice.
-      const onlyLoanCrud = ops.length > 0 && ops.every(op =>
-        op.entity === 'loan' && (op.type === 'add' || op.type === 'update' || op.type === 'delete')
-      )
-      if (onlyLoanCrud) {
-        await loanData.refresh()
-        const refreshedPayments = await api.fetchRecurringPayments()
-        setRecurringPayments(refreshedPayments)
-        setCachedJSON(CACHE_KEYS.recurringPayments, refreshedPayments)
-        setError(null)
-        isServerAwakeRef.current = true
-        return
-      }
-
-      const onlyLedgerAccountCrud = ops.length > 0 && ops.every(op =>
-        op.entity === 'ledgerAccount' && (op.type === 'add' || op.type === 'update' || op.type === 'delete'))
-      const accountOpeningChanges = ops.some(op =>
-        op.entity === 'ledgerAccount' && op.type === 'add' && Number(op.payload?.openingAmount ?? 0) !== 0)
-      if (onlyLedgerAccountCrud && !accountOpeningChanges) {
-        const { fetchLedgerAccounts } = await import('../lib/api/accounts')
-        const refreshedAccounts = await fetchLedgerAccounts()
-        setAccounts(refreshedAccounts)
-        setCachedJSON(CACHE_KEYS.accounts, refreshedAccounts)
-        setError(null)
-        isServerAwakeRef.current = true
-        return
-      }
-
-      const onlyCategoryAdds = ops.length > 0 && ops.every(op =>
-        op.entity === 'category' && op.type === 'add'
-      )
-      if (onlyCategoryAdds) {
-        const categories = await api.fetchCategories()
-        setCategoriesList(categories)
-        setCachedJSON(CACHE_KEYS.categories, categories)
-        setError(null)
-        isServerAwakeRef.current = true
-        return
-      }
-
-      // Transactions, recurring payments, purchases, category deletion, and
-      // full settings updates can affect multiple derived dashboard values.
-      // Reconcile those together and propagate any failure so completed
-      // optimistic operations remain projected until a later successful fetch.
-      await loadAll(selectedMonth || undefined, selectedYear || undefined, true, true)
-      if (loanData.hasLoadedFromServer && ops.some(op =>
-        op.entity === 'transaction' || op.entity === 'recurringPayment' || op.entity === 'recurringOccurrence')) {
-        await loanData.refresh()
-      }
-      if (ops.some(op => op.entity === 'settings' && typeof op.payload?.currency === 'string')) {
-        window.dispatchEvent(new CustomEvent('investment-sync'))
-      }
-    },
+    refresh: outboxRefresh,
   })
+
+  useEffect(() => {
+    getPendingOpsRef.current = getPendingOps
+  }, [getPendingOps])
 
   const queueMutation = useCallback((
     entity: EntityKind,
@@ -506,238 +232,43 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const activeSyncId = activeSyncIds[0] || null
 
   // Fetch initial ledger and dashboard statistics
-  const loadAllInner = useCallback(async (
-    month?: string,
-    year?: number,
-    isBackground = false,
-    rethrowOnError = false,
-    shouldCommit?: () => boolean,
-  ) => {
-    if (!token || !isFinancialDataMountedRef.current) return
-    const requestSeq = ++loadAllSeqRef.current
-    const isStale = () => !isFinancialDataMountedRef.current || requestSeq !== loadAllSeqRef.current
-    // A preference can finish syncing while this request is in flight. Preserve
-    // the request-start snapshot so an older bootstrap response cannot overwrite
-    // that user choice after the outbox removes its completed operation.
-    const activeOpsAtRequestStart = getActiveOps()
-    loadAllAbortRef.current?.abort()
-    const ac = new AbortController()
-    loadAllAbortRef.current = ac
-    if (!isBackground) {
-      setLoading(true)
-    } else {
-      setIsBackgroundSyncing(true)
-    }
-    try {
-      // One request for the whole payload (see api/bootstrap.ts). The fan-out below is the
-      // fallback for a server that predates /api/bootstrap — a deployed PWA can outlive the
-      // API version it shipped against, and an install that only ever gets a 404 here would
-      // otherwise be permanently unable to load.
-      const bootstrapped = await fetchBootstrapPayload(month, year, ac.signal)
-
-      const [dbData, txs, recs, cats, wishes, autoSuggests, wallet, insights, goals, bootAccounts] = bootstrapped ?? await (async () => {
-        const dashboardPromise = api.fetchDashboard(month, year, ac.signal)
-        const transactionsPromise = (month && year !== undefined)
-          ? api.fetchTransactions(month, year, undefined, ac.signal)
-          : dashboardPromise.then(d => api.fetchTransactions(d.setting.selectedMonth, d.setting.selectedYear, undefined, ac.signal))
-        const insightsPromise = (month && year !== undefined)
-          ? api.fetchDashboardInsights(month, year, ac.signal)
-          : dashboardPromise.then(d => api.fetchDashboardInsights(d.setting.selectedMonth, d.setting.selectedYear, ac.signal))
-
-        return Promise.all([
-          dashboardPromise,
-          transactionsPromise,
-          api.fetchRecurringPayments(ac.signal),
-          api.fetchCategories(ac.signal),
-          api.fetchWishlist(ac.signal).catch((wishlistError: unknown) => {
-            if (getErrorName(wishlistError) === 'AbortError' || rethrowOnError) throw wishlistError
-            console.warn('Could not refresh wishlist; keeping the last known local copy.', wishlistError)
-            return null
-          }),
-          api.fetchAutocompleteSuggestions(ac.signal).catch(() => []),
-          api.fetchWalletBalance(ac.signal).catch(() => null),
-          insightsPromise,
-          // Dynamic import keeps the savings-goal API module out of the eager bundle; this fan-out
-          // is only the fallback path for a server without /api/bootstrap.
-          import('../lib/api/savingsGoals').then(m => m.fetchSavingsGoals(ac.signal)).catch((goalsError: unknown) => {
-            if (getErrorName(goalsError) === 'AbortError' || rethrowOnError) throw goalsError
-            console.warn('Could not refresh savings goals; keeping the last known local copy.', goalsError)
-            return null
-          }),
-          import('../lib/api/accounts').then(m => m.fetchLedgerAccounts(ac.signal)).catch((accountsError: unknown) => {
-            if (getErrorName(accountsError) === 'AbortError' || rethrowOnError) throw accountsError
-            console.warn('Could not refresh ledger accounts; keeping the last known local copy.', accountsError)
-            return null
-          }),
-        ] as const)
-      })()
-
-      if (isStale() || shouldCommit?.() === false) return
-      if (wallet !== null) {
-        setWalletBalance(wallet)
-        setCachedJSON(CACHE_KEYS.walletBalance, wallet)
-      }
-      // Read directly from the outbox refs at commit time. React's activeOps state
-      // can still be one render behind when a user changes a preference while this
-      // request is in flight.
-      const failedOpIds = new Set(getFailedOps().map(op => op.id))
-      const requestSettingOps = activeOpsAtRequestStart.filter(op => !failedOpIds.has(op.id))
-      let effectiveSetting = projectFinancialSetting(dbData.setting, [
-        ...requestSettingOps,
-        ...getActiveOps(),
-      ])
-      for (const [key, localValue] of unconfirmedSettingWritesRef.current) {
-        const serverValue = dbData.setting[key as keyof typeof dbData.setting]
-        if (Object.is(serverValue, localValue)) {
-          unconfirmedSettingWritesRef.current.delete(key)
-        } else {
-          effectiveSetting = { ...effectiveSetting, [key]: localValue }
-        }
-      }
-      const effectiveHideSensitive = effectiveSetting.hideSensitive ?? true
-      const mergedDashboard: DashboardData = {
-        ...dbData,
-        setting: effectiveSetting,
-        last3CategoryBreakdown: insights.last3CategoryBreakdown,
-        last6CategoryBreakdown: insights.last6CategoryBreakdown,
-        yearlyCategoryBreakdown: insights.yearlyCategoryBreakdown,
-        availableYears: insights.availableYears,
-        stats: {
-          ...dbData.stats,
-          pastThreeMonthsRewardsAverage: insights.pastThreeMonthsRewardsAverage,
-          hasRewardsHistory: insights.hasRewardsHistory
-        }
-      }
-      setSelectedMonth(effectiveSetting.selectedMonth)
-      setSelectedYear(effectiveSetting.selectedYear)
-      setDashboardData(mergedDashboard)
-      setTransactions(txs)
-      setRecurringPayments(recs)
-      setCategoriesList(cats)
-      if (wishes !== null) {
-        setWishlist(wishes)
-      }
-      if (Array.isArray(goals)) {
-        setSavingsGoals(goals)
-      }
-      if (Array.isArray(bootAccounts)) {
-        setAccounts(bootAccounts)
-      }
-      setAutocompleteSuggestions(autoSuggests)
-      setError(null)
-      isServerAwakeRef.current = true
-
-      setCachedJSON(CACHE_KEYS.dashboardData, mergedDashboard)
-      setCachedJSON(CACHE_KEYS.transactions, txs)
-      setCachedJSON(CACHE_KEYS.recurringPayments, recs)
-      setCachedJSON(CACHE_KEYS.categories, cats)
-      if (wishes !== null) {
-        setCachedJSON(CACHE_KEYS.wishlist, wishes)
-      }
-      if (Array.isArray(goals)) {
-        setCachedJSON(CACHE_KEYS.savingsGoals, goals)
-      }
-      if (Array.isArray(bootAccounts)) {
-        setCachedJSON(CACHE_KEYS.accounts, bootAccounts)
-      }
-      // This snapshot duplicates the two large payloads just written above. Let React paint
-      // the fresh screen before serialising and rotating the offline cycle history.
-      window.setTimeout(() => {
-        if (!isStale()) {
-          setCachedCycleSnapshot(effectiveSetting.selectedMonth, effectiveSetting.selectedYear, mergedDashboard, txs)
-        }
-      }, 0)
-
-      // A concrete server value is an explicit user choice; null means "never chosen",
-      // so we follow the OS/browser scheme — matching the login screen — and keep the
-      // preference unset locally so it keeps tracking the OS.
-      const effectiveDarkMode = effectiveSetting.darkMode
-      if (effectiveDarkMode === true || effectiveDarkMode === false) {
-        setDarkMode(effectiveDarkMode)
-      } else {
-        const osDark = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-          ? window.matchMedia('(prefers-color-scheme: dark)').matches
-          : false
-        setDarkMode(osDark)
-      }
-
-      resolveHideSensitive(effectiveHideSensitive)
-
-      if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
-        if (notifyOnLogin) {
-          setShowLoginModal(true)
-        }
-        setHasShownModalThisSession(true)
-      }
-    } catch (err: unknown) {
-      if (getErrorName(err) === 'AbortError' || isStale() || shouldCommit?.() === false) {
-        if (rethrowOnError) throw err
-        return
-      }
-      console.error(err)
-      const isJustLoggedIn = Date.now() - lastUnlockedTimeRef.current < JUST_LOGGED_IN_WINDOW_MS
-      if (isAuthError(err)) {
-        if (rethrowOnError) throw err
-        if (!isJustLoggedIn) {
-          void handleLogout()
-        } else {
-          setError(null)
-        }
-      } else if (isLockError(err)) {
-        if (rethrowOnError) throw err
-        markSessionLocked()
-      } else {
-        setError('Could not connect to the database API server. Running in offline view mode.')
-        isServerAwakeRef.current = false
-        markSensitivePreferenceUnavailable()
-        if (rethrowOnError) throw err
-      }
-    } finally {
-      if (!isStale()) {
-        setLoading(false)
-        setIsBackgroundSyncing(false)
-      }
-    }
-  }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, resolveHideSensitive, markSensitivePreferenceUnavailable, notifyOnLogin, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear, getActiveOps])
-
-  /**
-   * Coalesces concurrent background refreshes of the same cycle onto one request.
-   *
-   * Several mutations landing together each asked for a full reload; because loadAll aborts
-   * the previous request before starting its own, that produced a burst of started-then-
-   * cancelled fetches and only the last one's data. Callers awaiting an aborted reload also
-   * returned before the new data arrived. Now the second caller awaits the first request.
-   *
-   * Only plain background refreshes are shared. A foreground load drives the loading skeleton,
-   * and `rethrowOnError`/`shouldCommit` callers have per-call semantics that a shared promise
-   * cannot honour, so those always get their own request.
-   */
-  const inFlightBackgroundLoadRef = useRef<{ key: string; promise: Promise<void> } | null>(null)
-
-  const loadAll = useCallback(async (
-    month?: string,
-    year?: number,
-    isBackground = false,
-    rethrowOnError = false,
-    shouldCommit?: () => boolean,
-  ) => {
-    const isShareable = isBackground && !rethrowOnError && !shouldCommit
-    if (!isShareable) {
-      return loadAllInner(month, year, isBackground, rethrowOnError, shouldCommit)
-    }
-
-    const key = `${month ?? ''}:${year ?? ''}`
-    const inFlight = inFlightBackgroundLoadRef.current
-    if (inFlight?.key === key) return inFlight.promise
-
-    const promise = loadAllInner(month, year, true).finally(() => {
-      if (inFlightBackgroundLoadRef.current?.promise === promise) {
-        inFlightBackgroundLoadRef.current = null
-      }
-    })
-    inFlightBackgroundLoadRef.current = { key, promise }
-    return promise
-  }, [loadAllInner])
+  const loadAll = useLoadAll({
+    token,
+    notifyOnLogin,
+    hasShownModalThisSession,
+    getActiveOps,
+    getFailedOps,
+    handleLogout,
+    markSessionLocked,
+    markSensitivePreferenceUnavailable,
+    resolveHideSensitive,
+    setDarkMode,
+    isFinancialDataMountedRef,
+    isServerAwakeRef,
+    lastUnlockedTimeRef,
+    loadAllAbortRef,
+    loadAllSeqRef,
+    unconfirmedSettingWritesRef,
+    setDashboardData,
+    setTransactions,
+    setRecurringPayments,
+    setCategoriesList,
+    setWishlist,
+    setSavingsGoals,
+    setAccounts,
+    setWalletBalance,
+    setAutocompleteSuggestions,
+    setLoading,
+    setIsBackgroundSyncing,
+    setError,
+    setSelectedMonth,
+    setSelectedYear,
+    setHasShownModalThisSession,
+    setShowLoginModal,
+  })
+  useEffect(() => {
+    loadAllRef.current = loadAll
+  }, [loadAll])
 
   // Backup outbox/drafts on logout
   const { handleLogoutCleanup, handleLoginSuccessRestore } = useSessionRestore({
@@ -778,198 +309,40 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setIsOffline,
   })
 
-  const optimisticDashboardData = useOptimisticDashboard(dashboardData, activeOps, transactions)
-
-  // A queued salary generates four bucket rows server-side; projecting them needs the optimistic
-  // plan percentages whenever the row was saved as plain `Income` (see incomeSplitProjection.ts).
-  const incomeSplitOptions = useMemo(() => ({
-    incomeAllocations: optimisticDashboardData?.setting
-      ? {
-          essentialsAlloc: optimisticDashboardData.setting.essentialsAlloc,
-          growthAlloc: optimisticDashboardData.setting.growthAlloc,
-          stabilityAlloc: optimisticDashboardData.setting.stabilityAlloc,
-          rewardsAlloc: optimisticDashboardData.setting.rewardsAlloc,
-        }
-      : undefined,
-    transactionDateRange: (() => {
-      const monthIndex = MONTH_NAMES.indexOf(selectedMonth) + 1
-      if (monthIndex <= 0 || !selectedYear) return undefined
-      const range = getCycleRangeDates(
-        selectedYear,
-        monthIndex,
-        optimisticDashboardData?.setting?.cycleDay || 28,
-      )
-      return { start: formatDateForApi(range.start), end: formatDateForApi(range.end) }
-    })(),
-  }), [
-    optimisticDashboardData?.setting?.essentialsAlloc,
-    optimisticDashboardData?.setting?.growthAlloc,
-    optimisticDashboardData?.setting?.stabilityAlloc,
-    optimisticDashboardData?.setting?.rewardsAlloc,
-    optimisticDashboardData?.setting?.cycleDay,
+  const {
+    optimisticDashboardData,
+    allTransactions,
+    allWishlist,
+    allSavingsGoals,
+    allAccounts,
+    optimisticDashboardWithAccounts,
+    allLoans,
+    allRecurringPayments,
+  } = useProjectedFinancialData({
+    activeOps,
     selectedMonth,
     selectedYear,
-  ])
-  const queuedTransactions = useOptimisticList(transactions, activeOps, 'transaction', {
-    ...incomeSplitOptions,
-    ledgerAccounts: accounts,
-  })
-  const allTransactions = useMemo(() => {
-    // Direct server actions can create a ledger row before the next bootstrap response arrives.
-    // Keep that row in the same collection consumed by LedgerView so changing tabs immediately
-    // after the click cannot hide the in-flight transaction.
-    const queuedIds = new Set(queuedTransactions.map(transaction => String(transaction.id)))
-    const directTransactions = pendingLedgerTransactions.filter(transaction => !queuedIds.has(String(transaction.id)))
-    const projected = [...directTransactions, ...queuedTransactions]
-    const recovery = optimisticDashboardData?.stabilityRecovery
-    if (!recovery || !dashboardData?.setting) return projected
-    const planPoints = buildStabilityPlanPoints(
-      dashboardData.stabilityRecovery?.target ?? dashboardData.setting.targetStabilityFund,
-      dashboardData.setting.stabilityAlloc,
-      activeOps
-        .filter(operation => operation.entity === 'settings' && operation.type === 'update')
-        .map(operation => ({ createdAt: operation.createdAt, payload: operation.payload as Record<string, unknown> | undefined })),
-    )
-    return projectStabilityReloadStatuses({
-      recovery,
-      baseTransactions: transactions,
-      projectedTransactions: projected,
-      stabilityAlloc: dashboardData.setting.stabilityAlloc,
-      projectedBalance: recovery.currentBalance,
-      planPoints,
-    })
-  }, [
-    activeOps,
     dashboardData,
-    optimisticDashboardData,
-    pendingLedgerTransactions,
-    queuedTransactions,
     transactions,
-  ])
-  const queuedRecurringPayments = useOptimisticList(recurringPayments, activeOps, 'recurringPayment')
-  const allWishlist = useOptimisticList(wishlist, activeOps, 'wishlistItem')
-  const allSavingsGoals = useOptimisticList(savingsGoals, activeOps, 'savingsGoal')
-  const queuedAccounts = useOptimisticList(accounts, activeOps, 'ledgerAccount')
-  const allAccounts = useMemo(
-    () => projectAccountBalances(queuedAccounts, activeOps, transactions, incomeSplitOptions.incomeAllocations),
-    [activeOps, incomeSplitOptions, queuedAccounts, transactions],
-  )
-  const optimisticDashboardWithAccounts = useMemo(() => {
-    if (!optimisticDashboardData) return null
+    pendingLedgerTransactions,
+    recurringPayments,
+    wishlist,
+    savingsGoals,
+    accounts,
+    loanData,
+  })
 
-    const accountSnapshots = new Map(
-      (dashboardData?.categories ?? []).flatMap(category =>
-        (category.accounts ?? []).map(account => [account.id, account] as const)),
-    )
-    const snapshotAccounts = allAccounts.map(account => ({
-      ...account,
-      remaining: accountSnapshots.get(account.id)?.remaining ?? account.remaining,
-    }))
-    const projectedAccounts = projectAccountBalancesFromTransactions(
-      snapshotAccounts,
-      transactions,
-      allTransactions,
-    )
-    const projectedById = new Map(projectedAccounts.map(account => [account.id, account]))
-
-    return {
-      ...optimisticDashboardData,
-      categories: optimisticDashboardData.categories.map(category => {
-        const serverAccounts = category.accounts ?? []
-        const bucketAccounts = projectedAccounts.filter(account =>
-          account.bucket.toLowerCase() === category.name.toLowerCase(),
-        )
-        if (serverAccounts.length === 0 && bucketAccounts.length === 0) return category
-        const accountIds = new Set(serverAccounts.map(account => account.id))
-        const accountsForCategory = [
-          ...serverAccounts.map(account => ({
-            ...account,
-            remaining: projectedById.get(account.id)?.remaining ?? account.remaining,
-          })),
-          ...bucketAccounts
-            .filter(account => !accountIds.has(account.id))
-            .map(account => ({
-              id: account.id,
-              name: account.name,
-              remaining: account.remaining,
-              isArchived: account.isArchived,
-            })),
-        ]
-        return { ...category, accounts: accountsForCategory }
-      }),
-    }
-  }, [allAccounts, allTransactions, dashboardData, optimisticDashboardData, transactions])
-  const queuedLoans = useOptimisticList(loanData.loans, activeOps, 'loan')
-  const allLoans = useMemo(() => projectLoanStates(queuedLoans, activeOps, queuedRecurringPayments), [activeOps, queuedLoans, queuedRecurringPayments])
-  const allRecurringPayments = useMemo(() => {
-    const hasProjectedLoanMutation = activeOps.some(operation => operation.entity === 'loan')
-    if (!loanData.hasLoadedFromServer && !hasProjectedLoanMutation) return queuedRecurringPayments
-    return queuedRecurringPayments.map(payment => {
-      const loan = allLoans.find(candidate => !candidate.isPendingDelete && candidate.recurringPaymentId === payment.id)
-      const persistedLoan = loan ? loanData.loans.find(candidate => candidate.id === loan.id) : undefined
-      const hasLoanTermMutation = loan && activeOps.some(operation => operation.entity === 'loan'
-        && operation.targetId === loan.id
-        && (operation.type === 'add' || operation.type === 'update')
-        && typeof operation.payload?.termPeriods === 'number'
-        && (operation.type === 'add'
-          || !payment.endDate
-          || operation.payload.termPeriods !== persistedLoan?.termPeriods))
-      const projectedEndDate = hasLoanTermMutation ? loanEndDate(loan) : null
-      return {
-        ...payment,
-        endDate: projectedEndDate ?? payment.endDate,
-        linkedLoanId: loan?.id ?? null,
-        linkedLoanName: loan?.name ?? null,
-      }
-    })
-  }, [activeOps, allLoans, loanData.hasLoadedFromServer, queuedRecurringPayments])
-
-  useEffect(() => {
-    if (!token) return
-    // Deliberately keyed on account identity only. isPendingSync is derived from the live queue, so
-    // including it re-ran the migration on every enqueue/fail transition rather than when the set of
-    // accounts actually changed -- which is the only thing that can unblock a placement.
-    const signature = `${token}:${allAccounts.map(account => `${account.id}:${account.bucket}:${account.isArchived}`).sort().join('|')}`
-    if (signature === accountPlacementMigrationSignatureRef.current) return
-    accountPlacementMigrationSignatureRef.current = signature
-    let cancelled = false
-    void import('../lib/accountPlacementMigration').then(({ migrateAccountPlacementOperations }) => {
-      if (cancelled) return
-      const result = migrateAccountPlacementOperations(getPendingOps(), getFailedOps(), allAccounts, allRecurringPayments)
-      if (!result.changed) return
-      mutateQueue(() => result.pendingOps)
-      mutateFailedOps(() => result.failedOps)
-      if (result.reviewCount > 0) {
-        showToast(
-          `${result.reviewCount} offline change${result.reviewCount === 1 ? '' : 's'} need an account before syncing. Review the failed sync items after setup.`,
-          'Account placement needed',
-          'warning',
-        )
-      }
-    })
-    return () => { cancelled = true }
-  }, [allAccounts, allRecurringPayments, getFailedOps, getPendingOps, mutateFailedOps, mutateQueue, showToast, token])
-
-  const resolveAccountPlacementOps = useCallback((operation: QueuedOp, selections: AccountPlacementSelections) => {
-    void import('../lib/accountPlacementMigration').then(({ resolveAccountPlacementOperation }) => {
-      const resolved = resolveAccountPlacementOperation(operation, selections)
-      mutateFailedOps(previous => previous.filter(item => item.id !== operation.id))
-      mutateQueue(previous => previous.some(item => item.id === resolved.id) ? previous : [...previous, resolved])
-      void processQueue()
-    })
-  }, [mutateFailedOps, mutateQueue, processQueue])
-
-  const retryFailedOp = useCallback((id: string) => {
-    const operation = getFailedOps().find(item => item.id === id)
-    if (!operation || operation.needsAccountReview) return
-    mutateFailedOps(previous => previous.filter(item => item.id !== id))
-    mutateQueue(previous => previous.some(item => item.id === operation.id)
-      ? previous
-      : [...previous, { ...operation, retryCount: 0, lastError: undefined }])
-    // Deliberately user-initiated. accountPlacementMigration documents why automatically
-    // requeuing unchanged failures from an effect can create a render/sync loop.
-    void processQueue()
-  }, [getFailedOps, mutateFailedOps, mutateQueue, processQueue])
+  const { resolveAccountPlacementOps, retryFailedOp } = useAccountPlacementReview({
+    token,
+    allAccounts,
+    allRecurringPayments,
+    getPendingOps,
+    getFailedOps,
+    mutateQueue,
+    mutateFailedOps,
+    showToast,
+    processQueue,
+  })
 
   const allCategories = useOptimisticList(categoriesList, activeOps, 'category')
 
@@ -980,12 +353,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const totalBalance = walletBalance ?? allTransactions.reduce((acc, t) => acc + t.amount, 0)
 
-  const {
-    handleUpdateSettings,
-    handleUpdateDarkModePreference,
-    handleUpdateHideSensitivePreference,
-    handleMarkSummarySeen,
-  } = createSettingsActions({ // eslint-disable-line react-hooks/refs
+  const domainActions = useFinancialDomainActions({
     darkMode,
     hideSensitive,
     dashboardData,
@@ -993,130 +361,42 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     mutateQueue,
     unconfirmedSettingWritesRef,
     setDashboardData,
-  })
-
-  const {
-    handleAddCategory,
-    handleUpdateCategoryCycleLimit,
-    handleUpdateCategoryType,
-    handleDeleteCategory,
-    requestDeleteCategory,
-    handleApplyCategoryCleanupSuggestion,
-  } = createCategoryActions({
     categoriesList,
     allCategories,
     allRecurringPayments,
-    guardSensitive,
-    mutateQueue,
     snapshotForUndo,
     setConfirmModalData,
     showToast,
-  })
-
-  const {
-    handleAddTransaction,
-    handleStageDraftTransactions,
-    handleUpdateDraftTransaction,
-    loadDraftTransactionDocumentChanges,
-    handleDeleteDraftTransaction,
-    requestDeleteDraftTransaction,
-    handleSyncDraftBatch,
-    handleDeleteTransaction,
-    handleUpdateTransaction,
-  } = useTransactionActions({
     username,
     selectedMonth,
     selectedYear,
     editingPendingId,
     draftTransactions,
     allTransactions,
-    allCategories,
     allSavingsGoals,
-    guardSensitive,
     createLocalId,
     stageTransactionDocumentChanges,
     loadAll,
     beginDirectSync,
     endDirectSync,
     removePendingLedgerTransaction,
-    mutateQueue,
-    snapshotForUndo,
     pendingTransactionDocumentsRef,
     pendingTransactionDocumentDeletesRef,
     setDraftTransactions,
     setDeletingTxId,
     setEditingPendingId,
-    setConfirmModalData,
-    showToast,
-  })
-
-  const {
-    handleConfirmSubscription,
-    handleDiscardSubscription,
-    handleAddPayment,
-    handleToggleActive,
-    handleUpdatePayment,
-    handleDeletePayment,
-    requestDeletePayment,
-    handleUpdateReminder,
-    handlePayEarly,
-    requestPayEarly,
-  } = createRecurringActions({
-    allRecurringPayments,
-    guardSensitive,
     formatSensitive,
     toOutboxPayload,
-    mutateQueue,
-    snapshotForUndo,
-    setConfirmModalData,
-    showToast,
-  })
-
-
-  // eslint-disable-next-line react-hooks/refs
-  const wishlistSavingsActions = createWishlistSavingsActions({
     wishlist,
     savingsGoals,
     allWishlist,
-    allSavingsGoals,
     currency: optimisticDashboardWithAccounts?.setting?.currency || 'USD',
-    editingPendingId,
-    guardSensitive,
-    showToast,
-    setConfirmModalData,
-    setEditingPendingId,
     enqueue,
-    mutateQueue,
-    snapshotForUndo,
     setSavingsGoals,
-    beginDirectSync,
-    endDirectSync,
-    getGoal: (id: number) => allSavingsGoals.find(goal => goal.id === id),
-    getActiveGoalIds: () => allSavingsGoals.filter(goal => goal.status === 'active').map(goal => goal.id),
     addPendingLedgerTransaction,
     replacePendingLedgerTransaction,
-    removePendingLedgerTransaction,
-    setDeletingTransactionId: setDeletingTxId,
-    refreshAll: () => loadAll(selectedMonth || undefined, selectedYear || undefined, true, false, () => true),
-  })
-
-  const loanActions = createLoanActions({
-    loans: allLoans,
-    recurringPayments: allRecurringPayments,
-    guardSensitive,
-    enqueue,
-    mutateQueue,
-    snapshotForUndo,
-    setConfirmModalData,
-  })
-
-  const accountActions = createLedgerAccountActions({
-    accounts: allAccounts,
-    guardSensitive,
-    enqueue,
-    mutateQueue,
-    snapshotForUndo,
-    setConfirmModalData,
+    allLoans,
+    allAccounts,
   })
 
   return {
@@ -1178,37 +458,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     handleLoginSuccessRestore,
     wakeUpAndSync,
     formatSensitive,
-    handleUpdateSettings,
-    handleUpdateDarkModePreference,
-    handleUpdateHideSensitivePreference,
-    handleMarkSummarySeen,
-    handleAddCategory,
-    handleUpdateCategoryCycleLimit,
-    handleUpdateCategoryType,
-    handleDeleteCategory,
-    requestDeleteCategory,
-    handleApplyCategoryCleanupSuggestion,
-    handleAddTransaction,
-    handleStageDraftTransactions,
-    handleUpdateDraftTransaction,
-    loadDraftTransactionDocumentChanges,
-    handleDeleteDraftTransaction,
-    requestDeleteDraftTransaction,
-    handleSyncDraftBatch,
-    handleDeleteTransaction,
-    handleUpdateTransaction,
-    handleConfirmSubscription,
-    handleDiscardSubscription,
-    handleAddPayment,
-    handleToggleActive,
-    handleUpdatePayment,
-    handleDeletePayment,
-    requestDeletePayment,
-    handleUpdateReminder,
-    handlePayEarly,
-    requestPayEarly,
-    ...wishlistSavingsActions,
-    ...loanActions,
-    ...accountActions,
+    ...domainActions,
   }
 }

@@ -18,6 +18,7 @@ import { AuthCard, AuthHeader, AuthLoadingState, AuthShell } from './ui/AuthLayo
 import { Button } from './ui/Button'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
+import { TwoFactorVerification } from './auth/TwoFactorVerification'
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, username: string) => void
@@ -53,8 +54,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     try {
       const res = await api.fetchAuthStatus()
       setIsRegistered(res.isRegistered)
-      // Fall back to the legacy meaning (open only before the first user) if an older API
-      // build doesn't send registrationOpen.
       setRegistrationOpen(res.registrationOpen ?? !res.isRegistered)
       localStorage.setItem('cached_is_registered', res.isRegistered.toString())
     } catch (err) {
@@ -68,7 +67,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     isPlatformAuthenticatorAvailable().then(setPlatformAuthAvailable)
   }, [])
 
-  // No account yet (first user) OR an invitee who opted into signup while slots remain.
   const registering = !isRegistered || wantsRegister
 
   useEffect(() => {
@@ -144,10 +142,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
     try {
       if (registering) {
-        // Register flow (first user, or an additional invitee while slots remain)
         await api.register({ username, password })
         localStorage.setItem('cached_is_registered', 'true')
-        // Immediately login after successful registration
         const loginRes = await api.login({ username, password })
         if ('requiresTwoFactor' in loginRes) {
           setPendingToken(loginRes.pendingToken)
@@ -158,7 +154,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           onLoginSuccess(loginRes.token, loginRes.username)
         }
       } else {
-        // Login flow
         const loginRes = await api.login({ username, password })
         localStorage.setItem('cached_is_registered', 'true')
         if ('requiresTwoFactor' in loginRes) {
@@ -222,7 +217,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     } catch (err: unknown) {
       console.error(err)
       if (getErrorName(err) === 'NotAllowedError') {
-        // User cancelled the prompt or it timed out - not worth alarming them.
+        // User cancelled prompt
       } else {
         setError(getErrorMessage(err, 'Device unlock failed. Please use your password instead.'))
       }
@@ -250,65 +245,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
   if (pendingToken) {
     return (
-      <AuthShell>
-        <AuthCard>
-          <AuthHeader
-            icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-blue-500/10"><ShieldCheck className="size-6 text-blue-500" /></span>}
-            title="Two-factor verification"
-            description="Enter the code from your authenticator app, or use one of your recovery codes."
-          />
-
-          {error && (
-            <AlertBanner variant="error">{error}</AlertBanner>
-          )}
-
-          <form noValidate onSubmit={handleTwoFactorSubmit} className="space-y-4">
-            <FormField
-              label="Verification code"
-              required
-              error={errors.twoFactorCode}
-              labelClassName="uppercase tracking-wider"
-            >
-              <Input
-                type="text"
-                inputMode="numeric"
-                autoFocus
-                disabled={twoFactorLoading}
-                placeholder="123456"
-                value={twoFactorCode}
-                onChange={e => {
-                  setTwoFactorCode(e.target.value)
-                  if (errors.twoFactorCode) setErrors(previous => ({ ...previous, twoFactorCode: '' }))
-                }}
-                autoComplete="one-time-code"
-                className="text-center tracking-[0.3em]"
-              />
-            </FormField>
-
-            <Button
-              type="submit"
-              size="lg"
-              disabled={twoFactorLoading}
-              className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
-            >
-              {twoFactorLoading ? (
-                <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
-              ) : (
-                'Verify'
-              )}
-            </Button>
-
-            <Button
-              type="button"
-              variant="unstyled"
-              onClick={() => { setPendingToken(null); setTwoFactorCode(''); setError(null) }}
-              className="w-full text-center text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
-            >
-              Back to login
-            </Button>
-          </form>
-        </AuthCard>
-      </AuthShell>
+      <TwoFactorVerification
+        error={error}
+        errors={errors}
+        setErrors={setErrors}
+        twoFactorCode={twoFactorCode}
+        setTwoFactorCode={setTwoFactorCode}
+        twoFactorLoading={twoFactorLoading}
+        onSubmit={handleTwoFactorSubmit}
+        onBackToLogin={() => { setPendingToken(null); setTwoFactorCode(''); setError(null) }}
+      />
     )
   }
 
@@ -332,7 +278,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         )}
 
         <form noValidate onSubmit={handleSubmit} className="space-y-4">
-          {/* Username Input */}
           {(registering || loginStep === 1) && (
             <FormField
               label="Username"
@@ -379,7 +324,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             </div>
           )}
 
-          {/* Password Input */}
           {(registering || loginStep === 2) && (
             <FormField
               label="Password"
@@ -434,7 +378,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             </FormField>
           )}
 
-          {/* Confirm Password (only for registration) */}
           {registering && (
             <FormField
               label="Confirm password"
@@ -485,7 +428,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </Button>
         </form>
 
-        {/* Additional-user signup toggle: only when at least one account exists and slots remain. */}
         {isRegistered && registrationOpen && loginStep === 1 && (
           <Button
             type="button"

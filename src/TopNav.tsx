@@ -1,39 +1,26 @@
 import { Button } from './components/ui/Button'
 import React from 'react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { 
   CalendarCheck2,
   Wallet, 
-  LogOut, 
-  Plus, 
   CreditCard,
-  Eye,
-  EyeOff,
   Bell,
-  Moon,
-  Sun,
   FileText,
-  Settings,
   Sparkles,
   BarChart3,
   Loader2,
   ShieldAlert,
-  TrendingUp,
   Search as SearchIcon,
 } from 'lucide-react'
 import { CommitmentIcon } from './components/semanticIcons'
-import { triggerHaptic } from './lib/haptics'
 import { AppLogo } from './components/ui/AppLogo'
 import { mutationBusyLabel } from './components/ui/rowSyncState'
 import { useIsMobile } from './lib/useIsMobile'
 import type { AppTab, PendingNotification } from './types'
 import type { SensitivePreferenceStatus } from './app/useAppPreferences'
+import { MobileBottomNav, type NavItemConfig } from './components/nav/MobileBottomNav'
+import { QuickActionsDropdown } from './components/nav/QuickActionsDropdown'
+import { UserProfileDropdown } from './components/nav/UserProfileDropdown'
 
 interface TopNavProps {
   activeTab: AppTab
@@ -58,6 +45,54 @@ interface TopNavProps {
   failedOpsCount?: number
   onOpenFailedOps?: () => void
 }
+
+const navItems: NavItemConfig[] = [
+  {
+    tab: 'dashboard',
+    label: 'Today',
+    mobileLabel: 'Today',
+    Icon: CalendarCheck2,
+    activeClass: 'bg-blue-500/12 text-blue-600 dark:text-blue-400 border-blue-500/25 shadow-blue-500/10',
+    iconClass: 'text-blue-500',
+    dotClass: 'bg-blue-500'
+  },
+  {
+    tab: 'reports',
+    label: 'Reports',
+    mobileLabel: 'Reports',
+    Icon: BarChart3,
+    activeClass: 'bg-indigo-500/12 text-indigo-600 dark:text-indigo-400 border-indigo-500/25 shadow-indigo-500/10',
+    iconClass: 'text-indigo-500',
+    dotClass: 'bg-indigo-500'
+  },
+  {
+    tab: 'ledger',
+    label: 'Ledger',
+    mobileLabel: 'Ledger',
+    Icon: Wallet,
+    activeClass: 'bg-teal-500/12 text-teal-600 dark:text-teal-400 border-teal-500/25 shadow-teal-500/10',
+    iconClass: 'text-teal-500',
+    dotClass: 'bg-teal-500'
+  },
+  {
+    tab: 'recurring',
+    label: 'Recurring',
+    mobileLabel: 'Recurring',
+    Icon: CreditCard,
+    activeClass: 'bg-violet-500/12 text-violet-600 dark:text-violet-400 border-violet-500/25 shadow-violet-500/10',
+    iconClass: 'text-violet-500',
+    dotClass: 'bg-violet-500'
+  },
+  {
+    tab: 'documents',
+    label: 'Vault',
+    mobileLabel: 'Vault',
+    Icon: FileText,
+    activeClass: 'bg-amber-500/12 text-amber-600 dark:text-amber-400 border-amber-500/25 shadow-amber-500/10',
+    iconClass: 'text-amber-500',
+    dotClass: 'bg-amber-500'
+  }
+]
 
 const TopNav: React.FC<TopNavProps> = ({
   activeTab,
@@ -85,72 +120,7 @@ const TopNav: React.FC<TopNavProps> = ({
   const hasAlerts = pendingNotifications.length > 0
   const isPhone = useIsMobile(640)
   const syncStatusLabel = syncLabel || mutationBusyLabel('syncing')
-  // Offline is a state, not activity: it keeps the badge and the chip, but must not animate the
-  // activity rule as though something were in flight.
   const isBusy = !isOffline && (isSyncing || Boolean(syncLabel))
-
-  const getInitials = (name: string) => {
-    if (!name) return 'U'
-    const parts = name.trim().split(/\s+/)
-    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase()
-    return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
-  }
-
-  const navItems: Array<{
-    tab: AppTab
-    label: string
-    mobileLabel: string
-    Icon: React.ComponentType<{ className?: string }>
-    activeClass: string
-    iconClass: string
-    dotClass: string
-  }> = [
-    {
-      tab: 'dashboard',
-      label: 'Today',
-      mobileLabel: 'Today',
-      Icon: CalendarCheck2,
-      activeClass: 'bg-blue-500/12 text-blue-600 dark:text-blue-400 border-blue-500/25 shadow-blue-500/10',
-      iconClass: 'text-blue-500',
-      dotClass: 'bg-blue-500'
-    },
-    {
-      tab: 'reports',
-      label: 'Reports',
-      mobileLabel: 'Reports',
-      Icon: BarChart3,
-      activeClass: 'bg-indigo-500/12 text-indigo-600 dark:text-indigo-400 border-indigo-500/25 shadow-indigo-500/10',
-      iconClass: 'text-indigo-500',
-      dotClass: 'bg-indigo-500'
-    },
-    {
-      tab: 'ledger',
-      label: 'Ledger',
-      mobileLabel: 'Ledger',
-      Icon: Wallet,
-      activeClass: 'bg-teal-500/12 text-teal-600 dark:text-teal-400 border-teal-500/25 shadow-teal-500/10',
-      iconClass: 'text-teal-500',
-      dotClass: 'bg-teal-500'
-    },
-    {
-      tab: 'recurring',
-      label: 'Recurring',
-      mobileLabel: 'Recurring',
-      Icon: CreditCard,
-      activeClass: 'bg-violet-500/12 text-violet-600 dark:text-violet-400 border-violet-500/25 shadow-violet-500/10',
-      iconClass: 'text-violet-500',
-      dotClass: 'bg-violet-500'
-    },
-    {
-      tab: 'documents',
-      label: 'Vault',
-      mobileLabel: 'Vault',
-      Icon: FileText,
-      activeClass: 'bg-amber-500/12 text-amber-600 dark:text-amber-400 border-amber-500/25 shadow-amber-500/10',
-      iconClass: 'text-amber-500',
-      dotClass: 'bg-amber-500'
-    }
-  ]
 
   const draftStatus = draftCount > 0 ? (
     <Button variant="unstyled"
@@ -163,6 +133,7 @@ const TopNav: React.FC<TopNavProps> = ({
       <span>{draftCount} Draft{draftCount > 1 ? 's' : ''}</span>
     </Button>
   ) : null
+
   const failedOpsStatus = failedOpsCount > 0 ? (
     <Button variant="unstyled"
       type="button"
@@ -183,21 +154,14 @@ const TopNav: React.FC<TopNavProps> = ({
         className="glass-nav sticky top-0 z-50 w-full border-b border-border/40 backdrop-blur-xl"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        {/* Activity rides the header's own top rule -- the conventional place for "the app is
-            working", visible from every view and every breakpoint. */}
         <div
           className={`h-[2.5px] w-full bg-gradient-to-r from-blue-500 via-teal-500 via-amber-500 to-pink-500 ${isBusy ? 'nav-activity-bar' : ''}`}
           data-busy={isBusy || undefined}
-          // Purely visual: the status badge beside the logo already carries the accessible name,
-          // and a second live region for the same fact would announce it twice.
           aria-hidden="true"
         />
         <div className="relative mx-auto flex h-16 w-full max-w-[1440px] items-center px-4 sm:px-6 lg:px-8">
         
         {/* Left Side (Logo and Brand) */}
-        {/* min-w-0 (not min-w-max): the status badges below are shrink-0, so a
-            max-content floor here would push the whole header past a phone
-            viewport and make the page scroll sideways. */}
         <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden z-10 md:flex-initial md:shrink-0 xl:flex-1">
           <Button
             variant="unstyled"
@@ -206,9 +170,6 @@ const TopNav: React.FC<TopNavProps> = ({
             onClick={() => onTabChange('dashboard')}
             className="brand-home-button flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-xl cursor-pointer select-none active:scale-95"
           >
-            {/* The badge is anchored to the logo itself. It used to be positioned against the
-                whole header bar, so at the wider paddings (sm:px-6, lg:px-8) it drifted off the
-                mark it was meant to sit on. */}
             <span className="relative shrink-0">
               <AppLogo className="size-9 rounded-xl transition-transform duration-200 hover:scale-105" />
               {(isOffline || isSyncing || syncLabel) && (
@@ -234,14 +195,6 @@ const TopNav: React.FC<TopNavProps> = ({
             </span>
           )}
 
-          {/* Field-shaped, button-behaved — the shape is what says "type here to find a record";
-              a bare magnifier says nothing, which is why it read as one more command icon among
-              five. It sits in this lane rather than the right one for two reasons: from xl the
-              tab rail leaves the flow (xl:absolute) so the room is here, and the right lane is
-              the app's tightest space, which is the crowding this moved away from. It stays a
-              36px chip below xl, where the rail is still inline and there is no room to spend.
-              No ⌘ glyph: that is the macOS Command key, absent from the Windows, Android and PWA
-              targets this ships to. Phones reach search from the FAB menu, so it starts at md. */}
           {onOpenSearch && (
             <Button
               variant="unstyled"
@@ -261,14 +214,11 @@ const TopNav: React.FC<TopNavProps> = ({
               </span>
             </Button>
           )}
-          {/* On phones, keep the actionable draft count anchored beside the logo. Transient
-              refresh/offline text may then clip at the edge of the left lane instead of
-              shifting the draft into the fixed actions on the right. */}
           {isPhone && draftStatus}
           {isPhone && failedOpsStatus}
         </div>
 
-        {/* Navigation Tabs - flow beside the actions on medium/tablet screens, centered mathematically on wide desktop */}
+        {/* Navigation Tabs */}
         <div className="hidden min-w-0 flex-1 items-center justify-center md:flex xl:absolute xl:left-1/2 xl:top-1/2 xl:z-20 xl:w-max xl:-translate-x-1/2 xl:-translate-y-1/2 xl:flex-none">
           <nav className="flex min-w-0 max-w-full items-center gap-0.5 rounded-xl border border-border/50 bg-card/72 p-1 shadow-sm select-none lg:gap-1 lg:p-1.5">
             {navItems.map(({ tab, label, Icon, activeClass, iconClass, dotClass }) => {
@@ -302,7 +252,6 @@ const TopNav: React.FC<TopNavProps> = ({
             </>
           )}
           
-          
           <Button variant="unstyled"
             type="button"
             onClick={onAskAI}
@@ -330,7 +279,6 @@ const TopNav: React.FC<TopNavProps> = ({
             <CommitmentIcon className="size-4" aria-hidden />
           </Button>
 
-          {/* One notification entry point; the shared review sheet is owned by App. */}
           <div className="relative">
             <Button variant="unstyled"
               type="button"
@@ -347,116 +295,18 @@ const TopNav: React.FC<TopNavProps> = ({
             </Button>
           </div>
 
-          {/* Quick Actions menu. A single isolated menu, so it uses DropdownMenu like the account
-              menu rather than a Menubar root: a Menubar exists to give a *row* of sibling menus one
-              roving focus group, and standing one menu inside it bought nothing while costing the
-              menubar and roving-focus primitives on the eager critical path. */}
-          <div className="hidden md:block border border-border/60 rounded-xl bg-background shrink-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger className="h-9 px-2 py-1 sm:px-2.5 text-xs font-semibold hover:bg-muted/50 rounded-lg cursor-pointer flex items-center gap-1 whitespace-nowrap">
-                <Plus className="size-3.5 text-blue-500" />
-                <span className="hidden xl:inline">Quick Add</span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="z-50 min-w-[160px] bg-card border border-border p-1 rounded-xl shadow-md">
-                <DropdownMenuItem
-                  onSelect={() => onQuickAction?.('transaction')}
-                  className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
-                >
-                  Post Transaction <Plus className="size-3 text-blue-500" />
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => onQuickAction?.('subscription')}
-                  className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
-                >
-                  New Subscription <Plus className="size-3 text-violet-500" />
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => onQuickAction?.('wishlist')}
-                  className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
-                >
-                  Add Reward <Plus className="size-3 text-pink-500" aria-hidden />
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <QuickActionsDropdown onQuickAction={onQuickAction} />
 
-          {/* Profile/Account menu */}
-          <div className="shrink-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                aria-label="Account menu"
-                title="Account menu"
-                className="flex size-11 items-center justify-center rounded-xl border border-border/60 bg-background p-0 cursor-pointer hover:bg-muted/50 active:scale-95 sm:size-9 transition duration-150"
-              >
-                <div className="flex size-7 items-center justify-center rounded-full border border-blue-500/20 bg-linear-to-tr from-blue-500 to-sky-400 text-[11px] font-extrabold text-on-vivid">
-                  {getInitials(username)}
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="z-50 min-w-[180px] bg-card border border-border p-1 rounded-xl shadow-md">
-                {/* Signed-in identity only. This carried a "Premium Account" line, which no part
-                    of the app can substantiate -- there are no tiers, plans or entitlements here,
-                    so it was decoration that read as a factual claim about the account. */}
-                <div className="px-2.5 py-2">
-                  <p className="text-xs font-bold text-foreground">{username || 'User'}</p>
-                </div>
-
-                <DropdownMenuSeparator className="my-1 border-t border-border/30" />
-
-                <DropdownMenuItem
-                  onSelect={() => onTabChange('investments')}
-                  className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
-                >
-                  <TrendingUp className="size-3.5 text-violet-500" />
-                  <span>Investments</span>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem
-                  onSelect={() => onTabChange('settings')}
-                  className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
-                >
-                  <Settings className="size-3.5 text-blue-500" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem
-                  onSelect={sensitivePreferenceStatus === 'resolved' ? onToggleHideSensitive : undefined}
-                  disabled={sensitivePreferenceStatus !== 'resolved'}
-                  className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground disabled:cursor-not-allowed sm:min-h-0"
-                >
-                  {sensitivePreferenceStatus === 'pending'
-                    ? <Loader2 className="size-3.5 animate-spin text-blue-500" />
-                    : hideSensitive
-                      ? <Eye className="size-3.5 text-blue-500" />
-                      : <EyeOff className="size-3.5 text-blue-500" />}
-                  <span>
-                    {sensitivePreferenceStatus === 'pending'
-                      ? 'Checking Privacy Settings'
-                      : sensitivePreferenceStatus === 'unavailable'
-                        ? 'Privacy Setting Unavailable'
-                        : hideSensitive ? 'Show Sensitive' : 'Hide Sensitive'}
-                  </span>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem
-                  onSelect={onToggleDarkMode}
-                  className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
-                >
-                  {darkMode ? <Sun className="size-3.5 text-blue-500" /> : <Moon className="size-3.5 text-blue-500" />}
-                  <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
-                </DropdownMenuItem>
-
-                <DropdownMenuSeparator className="my-1 border-t border-border/30" />
-                  
-                <DropdownMenuItem
-                  onSelect={onLogout}
-                  className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg text-orange-500 hover:bg-orange-500/10 outline-hidden cursor-pointer sm:min-h-0"
-                >
-                  <LogOut className="size-3.5" /> Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          
+          <UserProfileDropdown
+            username={username}
+            onTabChange={onTabChange}
+            hideSensitive={hideSensitive}
+            sensitivePreferenceStatus={sensitivePreferenceStatus}
+            onToggleHideSensitive={onToggleHideSensitive}
+            darkMode={darkMode}
+            onToggleDarkMode={onToggleDarkMode}
+            onLogout={onLogout}
+          />
         </div>
         </div>
         {sensitivePreferenceStatus !== 'resolved' && (
@@ -501,35 +351,11 @@ const TopNav: React.FC<TopNavProps> = ({
         )}
       </header>
 
-    {/* Mobile Navigation bar (Sticky Bottom Nav) */}
-    <div
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[var(--app-shadow-nav-up)] transform-gpu"
-      style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px', willChange: 'transform' }}
-    >
-      <nav aria-label="Primary" className="grid grid-cols-5 w-full max-w-md md:max-w-none px-2 md:px-8 mx-auto justify-items-center">
-        {navItems.map(({ tab, mobileLabel, Icon, activeClass, iconClass, dotClass }) => {
-          const isActive = activeTab === tab
-          return (
-            <Button variant="unstyled"
-              key={tab}
-              onClick={() => { triggerHaptic(8); onTabChange(tab) }}
-              aria-current={isActive ? 'page' : undefined}
-              className={`relative flex min-w-0 flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
-                isActive ? 'scale-105 font-bold text-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <span className={`relative flex size-8 items-center justify-center rounded-xl border transition-all duration-200 ${
-                isActive ? `${activeClass} shadow-sm` : 'border-transparent bg-transparent'
-              }`}>
-                <Icon className={`size-4.5 mx-auto ${isActive ? iconClass : 'text-muted-foreground'}`} />
-                {isActive && <span className={`absolute -top-0.5 -right-0.5 size-1.5 rounded-full ${dotClass}`} />}
-              </span>
-              <span className="truncate max-w-full px-0.5">{mobileLabel}</span>
-            </Button>
-          )
-        })}
-      </nav>
-    </div>
+      <MobileBottomNav
+        navItems={navItems}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
+      />
     </>
   )
 }

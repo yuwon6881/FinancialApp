@@ -41,7 +41,7 @@ export function useAppPreferences(): AppPreferences {
   const [sensitivePreferenceStatus, setSensitivePreferenceStatus] = useState<SensitivePreferenceStatus>('pending')
 
   const [hideBalanceAmounts, setHideBalanceAmountsState] = useState<boolean>(() => {
-    return false
+    return true
   })
 
   const [darkMode, setDarkModeState] = useState<boolean>(() => {
@@ -97,7 +97,7 @@ export function useAppPreferences(): AppPreferences {
     // account's dashboard settings have loaded instead of reusing browser state.
     setHideSensitiveState(true)
     setSensitivePreferenceStatus(username ? 'pending' : 'resolved')
-    setHideBalanceAmountsState(readBooleanPreference('hide_balance_amounts', false))
+    setHideBalanceAmountsState(true)
     setNotifyOnLoginState(readBooleanPreference('show_notifications_on_login', true))
     const storedPageSize = Number(preferenceKey('ledger_page_size') && localStorage.getItem(preferenceKey('ledger_page_size')!))
     setLedgerPageSizeState([10, 25, 50, 100].includes(storedPageSize) ? storedPageSize : 10)

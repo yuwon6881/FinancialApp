@@ -218,7 +218,8 @@ export default defineConfig(({ mode }) => {
           if (id.includes('/src/lib/outboxSync') || id.includes('\\src\\lib\\outboxSync')) return 'sync-engine'
           // The authenticated data coordinator is large, stable shell code. Keep it independently
           // cacheable and parallel without changing the eager total guarded below.
-          if (id.includes('/src/app/useFinancialData') || id.includes('\\src\\app\\useFinancialData')) return 'financial-data'
+          if (id.includes('/src/app/useFinancialData') || id.includes('\\src\\app\\useFinancialData') ||
+              id.includes('/src/app/financialData') || id.includes('\\src\\app\\financialData')) return 'financial-data'
           // Web-push support is used only after authentication and changes independently of
           // the app shell. Keep the orchestration helpers in their own cacheable chunk; the
           // much larger Firebase SDK is additionally loaded on demand by firebaseMessaging.

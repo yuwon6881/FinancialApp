@@ -11,6 +11,7 @@ const baseProps = {
   hideSensitive: false,
   formatSensitive: (value: number) => `$${value}`,
   onToggleForm: vi.fn(),
+  onAddLoan: vi.fn(),
 }
 
 describe('RecurringPaymentsHeader', () => {
@@ -21,6 +22,7 @@ describe('RecurringPaymentsHeader', () => {
         activeView="loans"
         loanTotalOutstanding={1250}
         loanCount={2}
+        loanNextPaymentDate="2026-09-01"
       />,
     )
 
@@ -30,6 +32,15 @@ describe('RecurringPaymentsHeader', () => {
     expect(screen.getByText('Loans tracked')).not.toBeNull()
     expect(screen.getByText('2')).not.toBeNull()
     expect(screen.queryByRole('button', { name: /new subscription/i })).toBeNull()
+    expect(screen.getByText('Next payment')).not.toBeNull()
+    expect(screen.getByRole('button', { name: /new loan/i })).not.toBeNull()
+  })
+
+  it('says a loan next-payment date is unavailable rather than guessing one', () => {
+    render(<RecurringPaymentsHeader {...baseProps} activeView="loans" loanTotalOutstanding={null} loanCount={1} />)
+
+    expect(screen.getByText('Next payment')).not.toBeNull()
+    expect(screen.getAllByText('Unavailable').length).toBe(2)
   })
 
   it('keeps the recurring summary and add action on the recurring tab', () => {
@@ -40,5 +51,6 @@ describe('RecurringPaymentsHeader', () => {
     expect(screen.getByText('Yearly Total')).not.toBeNull()
     expect(screen.getByText('$5040')).not.toBeNull()
     expect(screen.getByRole('button', { name: /new subscription/i })).not.toBeNull()
+    expect(screen.queryByRole('button', { name: /new loan/i })).toBeNull()
   })
 })

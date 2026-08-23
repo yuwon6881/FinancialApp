@@ -163,9 +163,19 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     void onLoadLoans().catch(() => undefined)
   }, [onLoadLoans])
 
+  const [isLoanFormOpen, setIsLoanFormOpen] = React.useState(false)
   const isLoansKnown = hasLoadedLoans || loanLoadStatus === 'cached' || loanLoadStatus === 'ready'
   const loanTotalOutstanding = isLoansKnown && loans.every(loan => loan.scheduleStatus !== 'Incomplete' && !loan.isRecalculating)
     ? loans.reduce((total, loan) => total + Math.max(0, loan.snapshot.outstandingBalance), 0)
+    : null
+  // The soonest replayed occurrence across tracked loans. A loan whose schedule is still
+  // incomplete or recalculating has no trustworthy next date, so the tile stays unavailable
+  // rather than reporting the earliest of a partial set as if it were the earliest of all.
+  const loanNextPaymentDate = isLoansKnown && loans.every(loan => loan.scheduleStatus !== 'Incomplete' && !loan.isRecalculating)
+    ? loans
+      .map(loan => loan.snapshot.nextPayment?.occurrenceDate)
+      .filter((date): date is string => Boolean(date))
+      .sort()[0] ?? null
     : null
 
   const view = useRecurringPaymentsView({
@@ -212,10 +222,12 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         totalCount={payments.length}
         loanTotalOutstanding={loanTotalOutstanding}
         loanCount={loans.length}
+        loanNextPaymentDate={loanNextPaymentDate}
         showAddForm={view.showAddForm}
         hideSensitive={hideSensitive}
         formatSensitive={view.formatSensitive}
         onToggleForm={view.toggleAddForm}
+        onAddLoan={() => setIsLoanFormOpen(true)}
       />
 
       {/* View Switcher Tabs (Recurring Bills | Loans) */}
@@ -303,6 +315,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             onUndoRepayment={onUndoRepayment}
             highlightedLoanId={currentHighlightedLoanId}
             onClearHighlightedLoan={handleClearHighlightedLoan}
+            isAddFormOpen={isLoanFormOpen}
+            onOpenAddForm={() => setIsLoanFormOpen(true)}
+            onCloseAddForm={() => setIsLoanFormOpen(false)}
           />
         </Suspense>
       )}

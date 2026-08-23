@@ -167,7 +167,7 @@ describe('useLedgerView mode parity', () => {
 
     act(() => result.current.setPageSize(25))
     rerender({ showAllCycles: true })
-    expect(result.current.pageSize).toBe(100)
+    expect(result.current.pageSize).toBe(10)
     act(() => result.current.setPageSize(50))
     rerender({ showAllCycles: false })
     expect(result.current.pageSize).toBe(25)
@@ -177,7 +177,7 @@ describe('useLedgerView mode parity', () => {
     const pending = baseTransaction('pending', true)
     const saved = baseTransaction('saved')
     const onFetchPagedTransactions = vi.fn().mockResolvedValue({
-      items: [pending, saved], total: 2, page: 1, pageSize: 100,
+      items: [pending, saved], total: 2, page: 1, pageSize: 10,
     })
     const { result } = renderHook(() => useLedgerView({
       transactions: [pending], categories: [], selectedMonth: 'Aug', selectedYear: 2026,
@@ -212,7 +212,7 @@ describe('useLedgerView mode parity', () => {
     const onFetchPagedTransactions = vi.fn()
       // Total spans more than one page at the all-cycles page size, so page 2 is real and the
       // out-of-range clamp cannot pull the request back to page 1.
-      .mockResolvedValueOnce({ items: [pageOne], total: 250, page: 1, pageSize: 100 })
+      .mockResolvedValueOnce({ items: [pageOne], total: 250, page: 1, pageSize: 10 })
       .mockImplementationOnce(() => new Promise(resolve => {
         releaseSecondPage = resolve
       }))
@@ -232,7 +232,7 @@ describe('useLedgerView mode parity', () => {
     expect(result.current.displayTransactions).toEqual([])
 
     await act(async () => {
-      releaseSecondPage?.({ items: [pageTwo], total: 250, page: 2, pageSize: 100 })
+      releaseSecondPage?.({ items: [pageTwo], total: 250, page: 2, pageSize: 10 })
     })
 
     await waitFor(() => expect(result.current.displayTransactions.map(t => t.id)).toEqual(['page-2-row']))
@@ -243,7 +243,7 @@ describe('useLedgerView mode parity', () => {
     const row = baseTransaction('row')
     let releaseResize: ((value: unknown) => void) | undefined
     const onFetchPagedTransactions = vi.fn()
-      .mockResolvedValueOnce({ items: [row], total: 1, page: 1, pageSize: 100 })
+      .mockResolvedValueOnce({ items: [row], total: 1, page: 1, pageSize: 10 })
       .mockImplementationOnce(() => new Promise(resolve => {
         releaseResize = resolve
       }))
@@ -271,7 +271,7 @@ describe('useLedgerView mode parity', () => {
     const row = baseTransaction('row')
     let releaseRevalidation: ((value: unknown) => void) | undefined
     const onFetchPagedTransactions = vi.fn()
-      .mockResolvedValueOnce({ items: [row], total: 1, page: 1, pageSize: 100 })
+      .mockResolvedValueOnce({ items: [row], total: 1, page: 1, pageSize: 10 })
       .mockImplementationOnce(() => new Promise(resolve => {
         releaseRevalidation = resolve
       }))
@@ -296,7 +296,7 @@ describe('useLedgerView mode parity', () => {
     expect(result.current.displayTransactions.map(t => t.id)).toEqual(['row'])
 
     await act(async () => {
-      releaseRevalidation?.({ items: [row], total: 1, page: 1, pageSize: 100 })
+      releaseRevalidation?.({ items: [row], total: 1, page: 1, pageSize: 10 })
     })
   })
 })

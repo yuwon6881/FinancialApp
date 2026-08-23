@@ -16,20 +16,20 @@ describe('useAppPreferences', () => {
     act(() => {
       result.current.setPreferenceOwner('alice')
       result.current.resolveHideSensitive(false)
-      result.current.setHideBalanceAmounts(true)
+      result.current.setHideBalanceAmounts(false)
       result.current.setDarkMode(true)
       result.current.setNotifyOnLogin(false)
     })
 
     expect(localStorage.getItem('hide_sensitive:alice')).toBe('false')
-    expect(localStorage.getItem('hide_balance_amounts:alice')).toBe('true')
+    expect(localStorage.getItem('hide_balance_amounts:alice')).toBe('false')
     expect(result.current.sensitivePreferenceStatus).toBe('resolved')
 
     act(() => result.current.setPreferenceOwner('bob'))
 
     expect(result.current.hideSensitive).toBe(true)
     expect(result.current.sensitivePreferenceStatus).toBe('pending')
-    expect(result.current.hideBalanceAmounts).toBe(false)
+    expect(result.current.hideBalanceAmounts).toBe(true)
     expect(result.current.darkMode).toBe(false)
     expect(result.current.notifyOnLogin).toBe(true)
 
@@ -42,6 +42,33 @@ describe('useAppPreferences', () => {
     expect(result.current.hideBalanceAmounts).toBe(true)
     expect(result.current.darkMode).toBe(true)
     expect(result.current.notifyOnLogin).toBe(false)
+  })
+
+  it('defaults local hide balance amounts to hidden and resets to hidden on logout and login', () => {
+    const { result } = renderHook(() => useAppPreferences())
+    expect(result.current.hideBalanceAmounts).toBe(true)
+
+    act(() => {
+      result.current.setPreferenceOwner('alice')
+    })
+    expect(result.current.hideBalanceAmounts).toBe(true)
+
+    act(() => {
+      result.current.setHideBalanceAmounts(false)
+    })
+    expect(result.current.hideBalanceAmounts).toBe(false)
+
+    // Logging out resets local hide balance to hidden
+    act(() => {
+      result.current.setPreferenceOwner(null)
+    })
+    expect(result.current.hideBalanceAmounts).toBe(true)
+
+    // Logging in resets local hide balance to hidden
+    act(() => {
+      result.current.setPreferenceOwner('alice')
+    })
+    expect(result.current.hideBalanceAmounts).toBe(true)
   })
 
   it('keeps amounts hidden and exposes an unavailable state when verification fails', () => {

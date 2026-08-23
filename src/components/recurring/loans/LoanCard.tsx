@@ -8,6 +8,7 @@ import { Button } from '../../ui/Button'
 import { AlertBanner } from '../../ui/AlertBanner'
 import { InfoHint } from '../../ui/InfoHint'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
+import { formatOccurrenceDate } from '../formatters'
 
 interface LoanCardProps {
   loan: Loan
@@ -22,9 +23,6 @@ interface LoanCardProps {
   onRepay?: () => void
   onUndoSettlement?: () => void
 }
-const formatDate = (value?: string | null) => value
-  ? new Date(`${value}T12:00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-  : 'Unavailable'
 
 export function LoanCard({
   loan,
@@ -168,7 +166,7 @@ export function LoanCard({
         <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
           <Metric label="Still owed" value={formatSensitive(loan.snapshot.outstandingBalance)} />
           <Metric label="Next instalment" value={finalBalanceDueNow ? 'Final balance due now' : formatSensitive(loan.snapshot.scheduledPayment)} />
-          <Metric label="Expected payoff" value={interestOnlyBalanceRemains ? 'No automatic payoff' : formatDate(loan.snapshot.payoffDate)} />
+          <Metric label="Expected payoff" value={interestOnlyBalanceRemains ? 'No automatic payoff' : formatOccurrenceDate(loan.snapshot.payoffDate)} />
           <Metric label="Remaining interest" value={formatSensitive(loan.snapshot.totalScheduledInterest)} />
         </div>
       )}
@@ -259,7 +257,7 @@ export function LoanCard({
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold text-foreground">{formatDate(row.occurrenceDate)}</span>
+                  <span className="font-semibold text-foreground">{formatOccurrenceDate(row.occurrenceDate)}</span>
                   <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-bold ${
                     row.kind === 'Paid'
                       ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
@@ -299,7 +297,7 @@ export function LoanCard({
             <tbody className="divide-y divide-border/30">
               {[...actualRows, ...scheduleRows].map((row, index) => (
                 <tr key={`${row.occurrenceDate}-${row.kind}-${index}`} className="transition-colors hover:bg-muted/30">
-                  <td className="px-3 py-2 font-medium text-foreground">{formatDate(row.occurrenceDate)}</td>
+                  <td className="px-3 py-2 font-medium text-foreground">{formatOccurrenceDate(row.occurrenceDate)}</td>
                   <td className="px-3 py-2">
                     <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
                       row.kind === 'Paid'

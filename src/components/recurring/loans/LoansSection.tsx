@@ -33,6 +33,10 @@ interface LoansSectionProps {
   onUndoRepayment?: (actionId: string, loanId?: string) => Promise<void>
   highlightedLoanId?: string | null
   onClearHighlightedLoan?: () => void
+  /** Owned by the parent so the summary card's New Loan button can open this section's form. */
+  isAddFormOpen: boolean
+  onOpenAddForm: () => void
+  onCloseAddForm: () => void
 }
 export function LoansSection({
   loans,
@@ -53,20 +57,22 @@ export function LoansSection({
   onUndoRepayment,
   highlightedLoanId = null,
   onClearHighlightedLoan,
+  isAddFormOpen,
+  onOpenAddForm,
+  onCloseAddForm,
 }: LoansSectionProps) {
-  const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null)
   const [repayingLoan, setRepayingLoan] = useState<Loan | null>(null)
 
   const openAdd = () => {
     setEditingLoan(null)
-    setIsFormOpen(true)
+    onOpenAddForm()
   }
   const openEdit = (loan: Loan) => {
     setEditingLoan(loan)
-    setIsFormOpen(true)
+    onOpenAddForm()
   }
-  const closeForm = () => setIsFormOpen(false)
+  const closeForm = () => onCloseAddForm()
   const handleSave = (loan: Partial<Loan>) => {
     if (editingLoan) {
       onUpdateLoan(editingLoan.id, { ...editingLoan, ...loan } as Loan)
@@ -93,14 +99,11 @@ export function LoansSection({
 
   return (
     <section className="app-panel space-y-4 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/92 sm:p-5" aria-label="Loans list">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-bold text-foreground sm:text-base">Tracked loans</h3>
-          <p className="mt-0.5 text-[11px] text-muted-foreground sm:text-xs">Follow repayments, interest splits, and estimated payoff dates.</p>
-        </div>
-        <Button variant="primary" size="sm" className="size-10 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5" onClick={openAdd} aria-label="Add loan" title="Add loan">
-          <Plus className="size-3.5" aria-hidden /> <span className="hidden sm:inline">Add loan</span>
-        </Button>
+      {/* Adding a loan is the summary card's New Loan button, matching where New Subscription sits
+          on the bills tab. Only the empty state repeats the action, where there is nothing else to do. */}
+      <div>
+        <h3 className="text-sm font-bold text-foreground sm:text-base">Tracked loans</h3>
+        <p className="mt-0.5 text-[11px] text-muted-foreground sm:text-xs">Follow repayments, interest splits, and estimated payoff dates.</p>
       </div>
 
       {loans.length > 0 && (
@@ -184,7 +187,7 @@ export function LoansSection({
       )}
 
       <LoanFormSheet
-        isOpen={isFormOpen}
+        isOpen={isAddFormOpen}
         editingLoan={editingLoan}
         payments={payments}
         linkedPaymentIds={view.linkedPaymentIds}
