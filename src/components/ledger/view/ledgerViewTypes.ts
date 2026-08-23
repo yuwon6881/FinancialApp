@@ -1,6 +1,6 @@
 import type { LedgerAccount, Transaction } from '../../../types'
 import type { PagedTransactionResult } from '../../../lib/api'
-import { LEDGER_BUCKETS as LEDGER_BUCKET_VALUES, type TransactionLinkFilter } from '../../../lib/transactionFilters'
+import { LEDGER_BUCKETS as LEDGER_BUCKET_VALUES, type TransactionLinkFilter, type TransactionSearchMode } from '../../../lib/transactionFilters'
 import type { TransactionSort } from '../../../lib/transactionOrdering'
 import type { LedgerRouteRange } from '../../../lib/appLocation'
 import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
@@ -38,6 +38,7 @@ export interface UseLedgerViewOptions {
   incomingCategory?: string | null | undefined
   incomingFilters?: string[] | undefined
   incomingSearch?: string | null | undefined
+  incomingSearchMode?: TransactionSearchMode
   incomingDate?: string | null | undefined
   incomingStartDate?: string | null | undefined
   incomingEndDate?: string | null | undefined
@@ -51,10 +52,11 @@ export interface UseLedgerViewOptions {
   onClearIncomingFilters?: () => void
   onClearHighlightedTx?: () => void
   showAllCycles: boolean
-  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
+  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
   onRouteStateChange?: (state: {
     filters: string[]
     search: string
+    searchMode: TransactionSearchMode
     startDate: string
     endDate: string
     minAmount: string

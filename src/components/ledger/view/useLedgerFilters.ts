@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { TransactionLinkFilter } from '../../../lib/transactionFilters'
+import type { TransactionLinkFilter, TransactionSearchMode } from '../../../lib/transactionFilters'
 import { ledgerRouteSearch, updateAppSearch, type LedgerRouteRange } from '../../../lib/appLocation'
 import {
   LEDGER_BUCKETS,
@@ -11,6 +11,7 @@ export interface UseLedgerFiltersOptions {
   incomingCategory?: string | null
   incomingFilters?: string[]
   incomingSearch?: string | null
+  incomingSearchMode?: TransactionSearchMode
   incomingDate?: string | null
   incomingStartDate?: string | null
   incomingEndDate?: string | null
@@ -21,11 +22,12 @@ export interface UseLedgerFiltersOptions {
   incomingTxType?: LedgerTxType
   highlightedTxId?: string | null
   showAllCycles: boolean
-  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
+  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
   onClearIncomingFilters?: () => void
   onRouteStateChange?: (state: {
     filters: string[]
     search: string
+    searchMode: TransactionSearchMode
     startDate: string
     endDate: string
     minAmount: string
@@ -45,6 +47,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     incomingCategory,
     incomingFilters,
     incomingSearch,
+    incomingSearchMode = 'contains',
     incomingDate,
     incomingStartDate,
     incomingEndDate,
@@ -68,6 +71,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
   const initialWishlistFilter: TransactionLinkFilter = incomingWishlistFilter ?? 'all'
 
   const [searchTerm, setSearchTerm] = useState(incomingSearch || '')
+  const [searchMode, setSearchMode] = useState<TransactionSearchMode>(incomingSearchMode)
   const [selectedFilters, setSelectedFilters] = useState<string[]>(initialFilters)
   const [selectedStartDate, setSelectedStartDate] = useState(initialStartDate)
   const [selectedEndDate, setSelectedEndDate] = useState(initialEndDate)
@@ -79,6 +83,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
 
   const [pendingSearchTerm, setPendingSearchTerm] = useState(incomingSearch || '')
+  const [pendingSearchMode, setPendingSearchMode] = useState<TransactionSearchMode>(incomingSearchMode)
   const [pendingFilters, setPendingFilters] = useState<string[]>(initialFilters)
   const [pendingStartDate, setPendingStartDate] = useState(initialStartDate)
   const [pendingEndDate, setPendingEndDate] = useState(initialEndDate)
@@ -89,6 +94,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
   const [pendingTxTypeFilter, setPendingTxTypeFilter] = useState<LedgerTxType>(incomingTxType || null)
 
   const [appliedSearch, setAppliedSearch] = useState(incomingSearch || '')
+  const [appliedSearchMode, setAppliedSearchMode] = useState<TransactionSearchMode>(incomingSearchMode)
   const [appliedFilters, setAppliedFilters] = useState<string[]>(initialFilters)
   const [appliedStartDate, setAppliedStartDate] = useState(initialStartDate)
   const [appliedEndDate, setAppliedEndDate] = useState(initialEndDate)
@@ -99,7 +105,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
   const [appliedTxTypeFilter, setAppliedTxTypeFilter] = useState<LedgerTxType>(incomingTxType || null)
 
   const incomingFilterSignature = JSON.stringify([
-    initialFilters, incomingSearch || '', initialStartDate, initialEndDate,
+    initialFilters, incomingSearch || '', incomingSearchMode, initialStartDate, initialEndDate,
     incomingMinAmount || '', incomingMaxAmount || '',
     initialRecurringFilter, initialWishlistFilter, incomingTxType || null,
   ])
@@ -107,6 +113,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
   if (appliedIncomingSignature !== incomingFilterSignature) {
     setAppliedIncomingSignature(incomingFilterSignature)
     setSearchTerm(incomingSearch || '')
+    setSearchMode(incomingSearchMode)
     setSelectedFilters(initialFilters)
     setSelectedStartDate(initialStartDate)
     setSelectedEndDate(initialEndDate)
@@ -116,6 +123,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     setSelectedWishlistFilter(initialWishlistFilter)
     setSelectedTxTypeFilter(incomingTxType || null)
     setPendingSearchTerm(incomingSearch || '')
+    setPendingSearchMode(incomingSearchMode)
     setPendingFilters(initialFilters)
     setPendingStartDate(initialStartDate)
     setPendingEndDate(initialEndDate)
@@ -125,6 +133,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     setPendingWishlistFilter(initialWishlistFilter)
     setPendingTxTypeFilter(incomingTxType || null)
     setAppliedSearch(incomingSearch || '')
+    setAppliedSearchMode(incomingSearchMode)
     setAppliedFilters(initialFilters)
     setAppliedStartDate(initialStartDate)
     setAppliedEndDate(initialEndDate)
@@ -145,6 +154,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
       ? {
           filters: appliedFilters,
           search: appliedSearch,
+          searchMode: appliedSearchMode,
           startDate: appliedStartDate,
           endDate: appliedEndDate,
           minAmount: appliedMinAmount,
@@ -156,6 +166,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
       : {
           filters: selectedFilters,
           search: searchTerm,
+          searchMode,
           startDate: selectedStartDate,
           endDate: selectedEndDate,
           minAmount: selectedMinAmount,
@@ -175,7 +186,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
       showAllCycles,
       range: cyclesRange || 'monthly',
     })
-  }, [showAllCycles, cyclesRange, highlightedTxId, searchTerm, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringFilter, selectedWishlistFilter, selectedTxTypeFilter, appliedSearch, appliedFilters, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, appliedTxTypeFilter, onRouteStateChange])
+  }, [showAllCycles, cyclesRange, highlightedTxId, searchTerm, searchMode, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringFilter, selectedWishlistFilter, selectedTxTypeFilter, appliedSearch, appliedSearchMode, appliedFilters, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, appliedTxTypeFilter, onRouteStateChange])
 
   const handleToggleFilter = (filterName: string) => {
     const isLedgerCategory = LEDGER_BUCKETS.includes(filterName)
@@ -253,6 +264,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     const normalized = pendingSearchTerm.trim()
     setPendingSearchTerm(normalized)
     setAppliedSearch(normalized)
+    setAppliedSearchMode(pendingSearchMode)
     setCurrentPage(1)
   }
 
@@ -290,6 +302,9 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     setAppliedRecurringFilter('all')
     setAppliedWishlistFilter('all')
     setAppliedSearch('')
+    setSearchMode('contains')
+    setPendingSearchMode('contains')
+    setAppliedSearchMode('contains')
     setAppliedTxTypeFilter(null)
     setCurrentPage(1)
   }, [onClearIncomingFilters, setCurrentPage])
@@ -309,7 +324,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
   }, [isFilterDropdownOpen])
 
   return {
-    searchTerm, setSearchTerm,
+    searchTerm, setSearchTerm, searchMode, setSearchMode,
     selectedFilters, setSelectedFilters,
     selectedStartDate, setSelectedStartDate,
     selectedEndDate, setSelectedEndDate,
@@ -319,7 +334,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     selectedWishlistFilter, setSelectedWishlistFilter,
     selectedTxTypeFilter, setSelectedTxTypeFilter,
     isFilterDropdownOpen, setIsFilterDropdownOpen,
-    pendingSearchTerm, setPendingSearchTerm,
+    pendingSearchTerm, setPendingSearchTerm, pendingSearchMode, setPendingSearchMode,
     pendingFilters, setPendingFilters,
     pendingStartDate, setPendingStartDate,
     pendingEndDate, setPendingEndDate,
@@ -328,7 +343,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     pendingRecurringFilter, setPendingRecurringFilter,
     pendingWishlistFilter, setPendingWishlistFilter,
     pendingTxTypeFilter, setPendingTxTypeFilter,
-    appliedSearch, setAppliedSearch,
+    appliedSearch, setAppliedSearch, appliedSearchMode, setAppliedSearchMode,
     appliedFilters, setAppliedFilters,
     appliedStartDate, setAppliedStartDate,
     appliedEndDate, setAppliedEndDate,

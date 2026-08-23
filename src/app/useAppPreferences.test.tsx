@@ -16,20 +16,20 @@ describe('useAppPreferences', () => {
     act(() => {
       result.current.setPreferenceOwner('alice')
       result.current.resolveHideSensitive(false)
-      result.current.setHideBalanceAmounts(false)
+      result.current.setHideFinancialFigures(false)
       result.current.setDarkMode(true)
       result.current.setNotifyOnLogin(false)
     })
 
     expect(localStorage.getItem('hide_sensitive:alice')).toBe('false')
-    expect(localStorage.getItem('hide_balance_amounts:alice')).toBe('false')
+    expect(localStorage.getItem('hide_financial_figures:alice')).toBe('false')
     expect(result.current.sensitivePreferenceStatus).toBe('resolved')
 
     act(() => result.current.setPreferenceOwner('bob'))
 
     expect(result.current.hideSensitive).toBe(true)
     expect(result.current.sensitivePreferenceStatus).toBe('pending')
-    expect(result.current.hideBalanceAmounts).toBe(true)
+    expect(result.current.hideFinancialFigures).toBe(true)
     expect(result.current.darkMode).toBe(false)
     expect(result.current.notifyOnLogin).toBe(true)
 
@@ -39,36 +39,36 @@ describe('useAppPreferences', () => {
     // server-backed choice, rather than using the old browser value.
     expect(result.current.hideSensitive).toBe(true)
     expect(result.current.sensitivePreferenceStatus).toBe('pending')
-    expect(result.current.hideBalanceAmounts).toBe(true)
+    expect(result.current.hideFinancialFigures).toBe(false)
     expect(result.current.darkMode).toBe(true)
     expect(result.current.notifyOnLogin).toBe(false)
   })
 
-  it('defaults local hide balance amounts to hidden and resets to hidden on logout and login', () => {
+  it('defaults local financial figures to hidden and restores the account-scoped preference', () => {
     const { result } = renderHook(() => useAppPreferences())
-    expect(result.current.hideBalanceAmounts).toBe(true)
+    expect(result.current.hideFinancialFigures).toBe(true)
 
     act(() => {
       result.current.setPreferenceOwner('alice')
     })
-    expect(result.current.hideBalanceAmounts).toBe(true)
+    expect(result.current.hideFinancialFigures).toBe(true)
 
     act(() => {
-      result.current.setHideBalanceAmounts(false)
+      result.current.setHideFinancialFigures(false)
     })
-    expect(result.current.hideBalanceAmounts).toBe(false)
+    expect(result.current.hideFinancialFigures).toBe(false)
 
     // Logging out resets local hide balance to hidden
     act(() => {
       result.current.setPreferenceOwner(null)
     })
-    expect(result.current.hideBalanceAmounts).toBe(true)
+    expect(result.current.hideFinancialFigures).toBe(true)
 
     // Logging in resets local hide balance to hidden
     act(() => {
       result.current.setPreferenceOwner('alice')
     })
-    expect(result.current.hideBalanceAmounts).toBe(true)
+    expect(result.current.hideFinancialFigures).toBe(false)
   })
 
   it('keeps amounts hidden and exposes an unavailable state when verification fails', () => {

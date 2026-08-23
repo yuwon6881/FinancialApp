@@ -71,7 +71,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   highlightedCategory = null,
   onClearHighlightedSection,
 }) => {
-  const { hideSensitive } = useAppPrefs()
+  const prefs = useAppPrefs()
+  const hideSensitive = prefs.maskPassiveFinancialFigures ?? prefs.hideSensitive
   const highlightTargetId = highlightedCategory
     ? getCategoryLimitCardId(highlightedCategory)
     : highlightedSection

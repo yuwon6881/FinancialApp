@@ -11,12 +11,14 @@ export const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', '
 
 /** How a transaction relationship should affect the Ledger list. */
 export type TransactionLinkFilter = 'all' | 'exclude' | 'only'
+export type TransactionSearchMode = 'contains' | 'whole-word'
 
 type TxTypeFilter = '' | 'inflow' | 'outflow' | 'transfer' | null | undefined
 
 export interface TransactionFilterCriteria {
   /** Free-text search; empty/undefined matches everything. */
   search?: string
+  searchMode?: TransactionSearchMode
   /** Selected ledger buckets; empty matches everything. */
   buckets?: string[]
   /** Selected sub-categories; empty matches everything. */
@@ -66,7 +68,7 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
   if (t.ledgerCategory === 'Discarded') return false
 
   const {
-    search,
+    search, searchMode = 'contains',
     buckets,
     categories,
     txType,
@@ -91,10 +93,8 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
   const normalizedSearch = search?.trim().toLowerCase()
   if (normalizedSearch) {
     const q = normalizedSearch
-    const matchesSearch =
-      (t.description || '').toLowerCase().includes(q) ||
-      (t.ledgerCategory || '').toLowerCase().includes(q) ||
-      (t.category || '').toLowerCase().includes(q)
+    const fields = [t.description, t.ledgerCategory, t.category]
+    const matchesSearch = fields.some(field => matchesTransactionText(field || '', q, searchMode))
     if (!matchesSearch) return false
   }
 
@@ -118,4 +118,10 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
   }
 
   return true
+}
+
+export function matchesTransactionText(value: string, search: string, mode: TransactionSearchMode): boolean {
+  if (mode === 'contains') return value.toLocaleLowerCase().includes(search.toLocaleLowerCase())
+  const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'iu').test(value)
 }

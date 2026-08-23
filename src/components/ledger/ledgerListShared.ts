@@ -9,6 +9,7 @@ export interface LedgerListProps {
   // Remount key so a cycle/page/mode change replays the list entrance animation.
   listKey: string
   hideSensitive: boolean
+  maskFinancialFigures?: boolean
   currency: string
   serverIsFetching: boolean
   /**
@@ -25,7 +26,7 @@ export interface LedgerListProps {
   onStartEdit: (t: Transaction) => void
   onDeleteClick: (t: Transaction) => void
   onEditBlocked: (t: Transaction) => void
-  onDuplicate?: (t: Transaction) => void
+  onMove?: (t: Transaction) => void
   hasAnyFilter: boolean
   onResetFilters: () => void
   onAddTransaction: () => void

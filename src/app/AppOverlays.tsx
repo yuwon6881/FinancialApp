@@ -321,10 +321,10 @@ export function AppOverlays({
               })
             }}
             onSearchAllCycles={query => {
-              nav.handleNavigateToLedger({ search: query, showAllCycles: true, range: 'yearly' })
+              nav.handleNavigateToLedger({ search: query, showAllCycles: true, range: 'all' })
             }}
             formatAmount={financial.formatSensitive}
-            maskAmounts={prefs.hideSensitive}
+            maskAmounts={prefs.maskPassiveFinancialFigures}
             isLoadingLoans={financial.loanLoadStatus === 'loading' && financial.allLoans.length === 0}
             didLoansFailToLoad={financial.loanLoadStatus === 'error'}
             onRetryLoans={() => {

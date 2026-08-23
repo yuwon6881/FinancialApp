@@ -22,7 +22,7 @@ export * from './outboxSanitize'
 
 export function expandBulkTransactionProjection(ops: QueuedOp[]): QueuedOp[] {
   return ops.flatMap(op => {
-    if (op.entity !== 'transaction' || (op.type !== 'bulkDelete' && op.type !== 'bulkRestore')) return [op]
+    if (op.entity !== 'transaction' || !['bulkDelete', 'bulkRestore', 'bulkMove'].includes(op.type)) return [op]
     const snapshots = Array.isArray(op.payload?.transactions)
       ? op.payload.transactions.filter((item): item is Partial<Transaction> & { id: string | number } => Boolean(item && typeof item === 'object' && 'id' in item))
       : []
@@ -36,6 +36,18 @@ export function expandBulkTransactionProjection(ops: QueuedOp[]): QueuedOp[] {
           pendingSyncOperationId: op.isCompleted ? undefined : op.id,
         } as OutboxPayload,
       }))
+    }
+    if (op.type === 'bulkMove') {
+      const moves = Array.isArray(op.payload?.moves) ? op.payload.moves : []
+      return moves.flatMap(move => {
+        if (!move || typeof move !== 'object' || !('id' in move) || !('targetDate' in move)) return []
+        return [{
+          ...op,
+          type: 'update' as const,
+          targetId: String(move.id),
+          payload: { date: String(move.targetDate) },
+        }]
+      })
     }
     const ids = Array.isArray(op.payload?.transactionIds) ? op.payload.transactionIds.map(String).filter(Boolean) : []
     const snapshotById = new Map(snapshots.map(snapshot => {

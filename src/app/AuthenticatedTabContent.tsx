@@ -138,7 +138,7 @@ export function AuthenticatedTabContent({
         <DashboardView
           dashboardData={todayDashboardData}
           onNavigate={prefs.setActiveTab}
-          hideBalanceAmounts={prefs.hideBalanceAmounts}
+          hideBalanceAmounts={prefs.hideFinancialFigures}
           onToggleBalanceAmounts={handleToggleBalanceAmounts}
           pendingNotificationCount={currentPendingNotificationsCount}
           onOpenNotifications={() => dialogs.setShowLoginModal(true)}
@@ -167,7 +167,7 @@ export function AuthenticatedTabContent({
           transactions={financial.allTransactions}
           wishlist={financial.allWishlist}
           savingsGoals={financial.allSavingsGoals}
-          hideBalanceAmounts={prefs.hideBalanceAmounts}
+          hideBalanceAmounts={prefs.maskPassiveFinancialFigures}
           onSelectPeriod={nav.handleSelectPeriod}
           onNavigate={prefs.setActiveTab}
           onNavigateToRecurring={nav.handleNavigateToRecurring}
@@ -256,6 +256,7 @@ export function AuthenticatedTabContent({
 
       {prefs.activeTab === 'ledger' && (
         <LedgerView 
+          maskFinancialFigures={prefs.maskPassiveFinancialFigures}
           transactions={financial.allTransactions}
           accounts={financial.allAccounts}
           autocompleteSuggestions={financial.autocompleteSuggestions}
@@ -273,6 +274,7 @@ export function AuthenticatedTabContent({
           incomingCategory={nav.ledgerIncomingFilters[0] || null}
           incomingFilters={nav.ledgerIncomingFilters}
           incomingSearch={nav.ledgerIncomingSearch}
+          incomingSearchMode={nav.ledgerIncomingSearchMode}
           incomingStartDate={nav.ledgerIncomingStartDate}
           incomingEndDate={nav.ledgerIncomingEndDate}
           incomingMinAmount={nav.ledgerIncomingMinAmount}
@@ -286,7 +288,7 @@ export function AuthenticatedTabContent({
           showAllCycles={nav.ledgerShowAllCycles}
           onShowAllCyclesChange={(showAllCycles) => {
             nav.setLedgerShowAllCycles(showAllCycles)
-            if (!showAllCycles) prefs.setLedgerCyclesRange('monthly')
+            prefs.setLedgerCyclesRange(showAllCycles ? 'all' : 'monthly')
           }}
           cyclesRange={prefs.ledgerCyclesRange}
           preferredPageSize={prefs.ledgerPageSize}

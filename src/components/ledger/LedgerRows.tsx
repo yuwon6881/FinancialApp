@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react'
-import { Copy, Edit2, Trash2, Wallet } from 'lucide-react'
+import { CalendarClock, Edit2, Trash2, Wallet } from 'lucide-react'
 import type { LedgerAccount, Transaction } from '../../types'
 import { formatCurrencyVal } from '../../lib/utils'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
@@ -11,6 +11,7 @@ import { ledgerTransactionRowId } from '../../lib/ledgerTransactionTarget'
 import { SensitiveMask } from '../ui/SensitiveAmount'
 import { Checkbox } from '../ui/Checkbox'
 import { isStabilityReloadDrawdown, stabilityReloadStatusLabel } from '../../lib/stabilityRecovery'
+import { transactionMoveIneligibility } from './transactionMoveEligibility'
 
 export interface LedgerRowProps {
   transaction: Transaction
@@ -18,13 +19,14 @@ export interface LedgerRowProps {
   isDeleting: boolean
   isSyncing: boolean
   hideSensitive: boolean
+  maskFinancialFigures?: boolean
   currency: string
   /** Position in the rendered page, used only for the CSS entrance stagger. */
   index?: number
   onStartEdit: (transaction: Transaction) => void
   onDeleteClick: (transaction: Transaction) => void
   onEditBlocked: (transaction: Transaction) => void
-  onDuplicate?: (transaction: Transaction) => void
+  onMove?: (transaction: Transaction) => void
   isSelecting: boolean
   isSelected: (transaction: Transaction) => boolean
   canSelect: (transaction: Transaction) => boolean
@@ -92,10 +94,11 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
   const completion = transaction.savingsGoalId != null
   const editBlocked = split || completion
   const transfer = transaction.ledgerCategory.startsWith('Transfer:') || transaction.ledgerCategory.toLowerCase() === 'accountmove'
-  const canDuplicate = !editBlocked && !transfer && Boolean(props.onDuplicate)
+  const moveReason = transactionMoveIneligibility(transaction)
+  const canMove = !editBlocked && !moveReason && Boolean(props.onMove)
   const reloadDrawdown = isStabilityReloadDrawdown(transaction)
   const hasAccount = Boolean(transaction.accountId)
-  const money = (value: number) => <Amount value={formatCurrencyVal(value, props.currency)} hidden={props.hideSensitive} />
+  const money = (value: number) => <Amount value={formatCurrencyVal(value, props.currency)} hidden={props.maskFinancialFigures ?? props.hideSensitive} />
   return (
     <tr
       id={ledgerTransactionRowId(transaction.id, 'desktop')}
@@ -150,7 +153,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
       <td className="p-4 text-center whitespace-nowrap">
         <div className="flex items-center justify-center gap-2">
           <Button variant="ghost" size="sm" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.hideSensitive)}>Edit</Button>
-          {props.onDuplicate && <Button variant="ghost" size="sm" onClick={() => canDuplicate ? props.onDuplicate?.(transaction) : undefined} disabled={!canDuplicate || props.isDeleting || props.hideSensitive} className={canDuplicate ? 'border border-primary/30 text-accent-ink hover:bg-primary/10' : 'border border-border/50 text-muted-foreground'}>Duplicate</Button>}
+          {props.onMove && <Button variant="ghost" size="sm" title={moveReason ?? undefined} onClick={() => canMove ? props.onMove?.(transaction) : undefined} disabled={!canMove || props.isDeleting || props.hideSensitive} className={canMove ? 'border border-primary/30 text-accent-ink hover:bg-primary/10' : 'border border-border/50 text-muted-foreground'}>Move to</Button>}
           <Button variant="danger" size="sm" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.hideSensitive}>Delete</Button>
         </div>
       </td>
@@ -163,7 +166,8 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
   const transfer = transaction.ledgerCategory.startsWith('Transfer:') || transaction.ledgerCategory.toLowerCase() === 'accountmove'
   const split = transaction.id.includes('-split-')
   const editBlocked = split || transaction.savingsGoalId != null
-  const canDuplicate = !editBlocked && !transfer && Boolean(props.onDuplicate)
+  const moveReason = transactionMoveIneligibility(transaction)
+  const canMove = !editBlocked && !moveReason && Boolean(props.onMove)
   const reloadDrawdown = isStabilityReloadDrawdown(transaction)
   const hasAccount = Boolean(transaction.accountId)
   const formatted = formatCurrencyVal(outflow ? Math.abs(transaction.amount) : transaction.amount, props.currency)
@@ -175,8 +179,8 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         hint={props.hint}
         disabled={props.isDeleting}
         className="rounded-2xl border border-border shadow-xs"
-        actionsWidth={props.onDuplicate ? 192 : 128}
-        actions={<><Button variant="unstyled" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button>{props.onDuplicate && <Button variant="unstyled" onClick={() => props.onDuplicate?.(transaction)} disabled={!canDuplicate || props.isDeleting || props.isSyncing || props.hideSensitive} className={`flex-1 flex flex-col items-center justify-center gap-1 text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${canDuplicate ? 'bg-primary/60 text-primary-foreground' : 'bg-muted/50 text-muted-foreground'}`}><Copy className="size-4" />Duplicate</Button>}<Button variant="unstyled" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
+        actionsWidth={props.onMove ? 192 : 128}
+        actions={<><Button variant="unstyled" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button>{props.onMove && <Button variant="unstyled" onClick={() => props.onMove?.(transaction)} disabled={!canMove || props.isDeleting || props.isSyncing || props.hideSensitive} className={`flex-1 flex flex-col items-center justify-center gap-1 text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${canMove ? 'bg-primary/60 text-primary-foreground' : 'bg-muted/50 text-muted-foreground'}`}><CalendarClock className="size-4" />Move to</Button>}<Button variant="unstyled" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
       >
         <div className={`h-0.5 w-full ${transfer ? 'bg-blue-500/60' : outflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'}`} />
         <div className="p-4 space-y-3">
@@ -211,7 +215,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
                 </div>
               )}
             </div>
-            <span className={`max-w-[45%] shrink-0 break-words text-right text-sm font-bold ${transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>{props.hideSensitive ? <SensitiveMask /> : <>{transfer ? '' : outflow ? '-' : '+'}{formatted}</>}</span>
+            <span className={`max-w-[45%] shrink-0 break-words text-right text-sm font-bold ${(props.maskFinancialFigures ?? props.hideSensitive) ? 'text-muted-foreground' : transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>{(props.maskFinancialFigures ?? props.hideSensitive) ? <SensitiveMask /> : <>{transfer ? '' : outflow ? '-' : '+'}{formatted}</>}</span>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/30"><span className="text-[10px] text-muted-foreground flex items-center gap-1.5">Ledger:<LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact /></span></div>
         </div>

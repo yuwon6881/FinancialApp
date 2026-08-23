@@ -102,6 +102,18 @@ export function buildUndoAction(
         ? action('transaction', 'bulkRestore', String(op.targetId), { transactions: deleted })
         : undefined
     }
+    case 'transaction:bulkMove': {
+      const snapshots = Array.isArray(op.payload?.beforeSnapshots) ? op.payload.beforeSnapshots : []
+      const moves = snapshots.flatMap(snapshot => snapshot && typeof snapshot === 'object' && 'id' in snapshot && 'date' in snapshot
+        ? [{ id: String(snapshot.id), targetDate: String(snapshot.date) }]
+        : [])
+      return moves.length > 0
+        ? action('transaction', 'bulkMove', String(op.targetId), {
+            moves,
+            beforeSnapshots: result && typeof result === 'object' && 'moved' in result ? result.moved : [],
+          })
+        : undefined
+    }
     case 'transaction:add':
       return action('transaction', 'delete', String(op.targetId), op.payload)
     case 'recurringPayment:add':

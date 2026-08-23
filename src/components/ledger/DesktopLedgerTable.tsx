@@ -13,6 +13,7 @@ export function DesktopLedgerTable({
   transactions,
   listKey,
   hideSensitive,
+  maskFinancialFigures,
   currency,
   serverIsFetching,
   serverIsLoadingRows = false,
@@ -24,7 +25,7 @@ export function DesktopLedgerTable({
   accounts,
   onDeleteClick,
   onEditBlocked,
-  onDuplicate,
+  onMove,
   hasAnyFilter,
   onResetFilters,
   onAddTransaction,
@@ -66,11 +67,12 @@ export function DesktopLedgerTable({
                 isDeleting={isTxDeleting(t.id)}
                 isSyncing={isTxSyncing(t.id)}
                 hideSensitive={hideSensitive}
+                maskFinancialFigures={maskFinancialFigures}
                 currency={currency}
                 onStartEdit={onStartEdit}
                 onDeleteClick={onDeleteClick}
                 onEditBlocked={onEditBlocked}
-                onDuplicate={onDuplicate}
+                onMove={onMove}
                 isSelecting={isSelecting}
                 isSelected={isSelected}
                 canSelect={canSelect}

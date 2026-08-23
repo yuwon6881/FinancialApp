@@ -5,7 +5,6 @@ import { matchesTransactionFilters, splitFilterSelections } from '../../../lib/t
 import { compareTransactions, type TransactionSort } from '../../../lib/transactionOrdering'
 import { getLedgerTransactionRowElement } from '../../../lib/ledgerTransactionTarget'
 import { createLedgerSyncStatus } from './ledgerSyncStatus'
-import { financialDate } from '../../../lib/financialDate'
 import { useHighlightedElement } from '../../ui/useHighlightedElement'
 import {
   type UseLedgerViewOptions,
@@ -32,6 +31,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     incomingCategory,
     incomingFilters,
     incomingSearch,
+    incomingSearchMode,
     incomingDate,
     incomingStartDate,
     incomingEndDate,
@@ -87,6 +87,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     incomingCategory,
     incomingFilters,
     incomingSearch,
+    incomingSearchMode,
     incomingDate,
     incomingStartDate,
     incomingEndDate,
@@ -129,6 +130,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     incomingWishlistFilter,
     incomingTxType,
     appliedSearch: filterState.appliedSearch,
+    appliedSearchMode: filterState.appliedSearchMode,
     appliedFilters: filterState.appliedFilters,
     appliedStartDate: filterState.appliedStartDate,
     appliedEndDate: filterState.appliedEndDate,
@@ -176,6 +178,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     return pendingTransactions.filter(t => {
       return matchesTransactionFilters(t, {
         search: filterState.appliedSearch,
+        searchMode: filterState.appliedSearchMode,
         buckets: selectedBuckets,
         categories: selectedCategories,
         txType: filterState.appliedTxTypeFilter,
@@ -200,6 +203,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
     return transactions.filter(t => matchesTransactionFilters(t, {
         search: filterState.searchTerm,
+        searchMode: filterState.searchMode,
         buckets: selectedBuckets,
         categories: selectedCategories,
         txType: filterState.selectedTxTypeFilter,
@@ -278,6 +282,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     accounts,
     appliedFilters: filterState.appliedFilters,
     appliedSearch: filterState.appliedSearch,
+    appliedSearchMode: filterState.appliedSearchMode,
     appliedStartDate: filterState.appliedStartDate,
     appliedEndDate: filterState.appliedEndDate,
     appliedMinAmount: filterState.appliedMinAmount,
@@ -321,15 +326,6 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   }, [filterState.searchTerm, filterState.selectedFilters, filterState.selectedStartDate, filterState.selectedEndDate, filterState.selectedMinAmount, filterState.selectedMaxAmount, filterState.selectedRecurringFilter, filterState.selectedWishlistFilter, filterState.selectedTxTypeFilter, showAllCycles])
 
   const onStartEditStable = useCallback((t: Transaction) => formRef.current?.handleStartEdit(t), [formRef])
-  const onDuplicateStable = useCallback((t: Transaction) => formRef.current?.openWithDraft({
-    description: t.description,
-    amount: t.amount,
-    date: financialDate(),
-    category: t.category,
-    ledgerCategory: t.ledgerCategory,
-    txType: t.amount < 0 ? 'outflow' : 'inflow',
-    accountId: t.accountId,
-  }), [formRef])
   const onAddTransactionStable = useCallback(() => formRef.current?.openFresh(), [formRef])
 
   return {
@@ -355,7 +351,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setShowEditDisabledModal: deleteModal.setShowEditDisabledModal,
     editBlockedTransaction: deleteModal.editBlockedTransaction,
     displayTransactions, totalPages, filteredTransactions, isTxDeleting, isTxSyncing,
-    onStartEditStable, onDuplicateStable, onAddTransactionStable,
+    onStartEditStable, onAddTransactionStable,
     onDeleteClickStable: deleteModal.onDeleteClickStable,
     onEditBlockedStable: deleteModal.onEditBlockedStable,
     handleDeleteClick: deleteModal.handleDeleteClick,

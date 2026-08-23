@@ -7,7 +7,7 @@ const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'
 
 export interface LedgerActiveFilterSummaryProps {
   showAllCycles: boolean
-  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
+  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
   isCurrentCycle?: boolean
   selectedMonth: string
   selectedYear: number
@@ -44,7 +44,7 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
   activeWishlistFilter,
   onResetFilters,
 }) => {
-  const hasScopedRange = showAllCycles && cyclesRange && cyclesRange !== 'monthly'
+  const hasScopedRange = showAllCycles && cyclesRange && cyclesRange !== 'monthly' && cyclesRange !== 'all'
   if (!hasAnyFilter && !hasScopedRange) return null
 
   const parts: string[] = []

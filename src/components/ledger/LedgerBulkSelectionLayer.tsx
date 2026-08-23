@@ -8,11 +8,14 @@ import { LedgerTransactionList } from './LedgerTransactionList'
 import { useLedgerBulkSelection } from './view/useLedgerBulkSelection'
 import type { LedgerListProps } from './ledgerListShared'
 import { buildBulkTransactionDeleteRequest } from '../../app/financialData/transactionBulkActions'
+import { LedgerMoveSheet } from './LedgerMoveSheet'
+import { transactionMoveIneligibility } from './transactionMoveEligibility'
 
 interface LedgerBulkSelectionLayerProps {
   listProps: LedgerListProps
   allTransactions: readonly Transaction[]
   resetKey: string
+  cycleDay: number
 }
 
 /**
@@ -24,9 +27,11 @@ export function LedgerBulkSelectionLayer({
   listProps,
   allTransactions,
   resetKey,
+  cycleDay,
 }: LedgerBulkSelectionLayerProps) {
   const app = useAppContext()
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+  const [isMoveOpen, setIsMoveOpen] = useState(false)
   const bulk = useLedgerBulkSelection({
     transactions: listProps.transactions,
     allTransactions,
@@ -55,7 +60,13 @@ export function LedgerBulkSelectionLayer({
         disabled={listProps.hideSensitive}
         itemLabel="transactions"
         actions={bulk.selectedCount > 0 && (
-          <Button
+          <div className="flex gap-2"><Button
+            variant="outline"
+            size="sm"
+            type="button"
+            disabled={bulk.exceedsLimit || bulk.selectedTransactions.some(transaction => transactionMoveIneligibility(transaction) != null)}
+            onClick={() => setIsMoveOpen(true)}
+          >Move to</Button><Button
             variant="destructive"
             size="sm"
             type="button"
@@ -67,7 +78,7 @@ export function LedgerBulkSelectionLayer({
             aria-label="Delete selected transactions"
           >
             Delete
-          </Button>
+          </Button></div>
         )}
       />
 
@@ -103,6 +114,13 @@ export function LedgerBulkSelectionLayer({
           setIsConfirmOpen(false)
         }}
         onCancel={() => setIsConfirmOpen(false)}
+      />
+      <LedgerMoveSheet
+        isOpen={isMoveOpen}
+        transactions={bulk.selectedTransactions}
+        cycleDay={cycleDay}
+        onClose={() => setIsMoveOpen(false)}
+        onMoved={bulk.leaveSelection}
       />
     </>
   )

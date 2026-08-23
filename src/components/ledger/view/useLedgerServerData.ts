@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import type { PagedTransactionResult } from '../../../lib/api'
 import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../../../lib/cycle'
 import type { TransactionSort } from '../../../lib/transactionOrdering'
-import type { TransactionLinkFilter } from '../../../lib/transactionFilters'
+import type { TransactionLinkFilter, TransactionSearchMode } from '../../../lib/transactionFilters'
 import {
   LEDGER_BUCKETS,
   parseAmountFilter,
@@ -13,7 +13,7 @@ import {
 
 export interface UseLedgerServerDataOptions {
   showAllCycles: boolean
-  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
+  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
   selectedMonth: string
   selectedYear: number
   cycleDay: number
@@ -37,6 +37,7 @@ export interface UseLedgerServerDataOptions {
   incomingWishlistFilter?: TransactionLinkFilter
   incomingTxType?: LedgerTxType
   appliedSearch: string
+  appliedSearchMode: TransactionSearchMode
   appliedFilters: string[]
   appliedStartDate: string
   appliedEndDate: string
@@ -92,6 +93,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
     incomingWishlistFilter,
     incomingTxType,
     appliedSearch,
+    appliedSearchMode,
     appliedFilters,
     appliedStartDate,
     appliedEndDate,
@@ -133,7 +135,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
 
   const allCyclesRange = useMemo(() => {
     if (!showAllCycles) return null
-    if (!cyclesRange || cyclesRange === 'monthly') return null
+    if (!cyclesRange || cyclesRange === 'monthly' || cyclesRange === 'all') return null
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     const activeMonthIdx = monthNames.indexOf(selectedMonth) + 1
     if (activeMonthIdx <= 0) return null
@@ -162,6 +164,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
   const runServerFetch = useCallback(async (opts: {
     page: number
     search: string
+    searchMode?: TransactionSearchMode
     filters: string[]
     txType: LedgerTxType
     startDate: string
@@ -189,6 +192,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
         page: opts.page,
         pageSize: opts.pSize,
         search: opts.search || undefined,
+        searchMode: opts.searchMode ?? 'contains',
         ledgerCategories: buckets.length > 0 ? buckets : undefined,
         categories: cats.length > 0 ? cats : undefined,
         txType: opts.txType || null,
@@ -257,6 +261,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
       runServerFetch({
         page: 1,
         search: initialSearch,
+        searchMode: appliedSearchMode,
         filters: initialFilters,
         txType: initialTxType,
         startDate: initialStartDate,
@@ -285,6 +290,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
       runServerFetch({
         page: currentPage,
         search: appliedSearch,
+        searchMode: appliedSearchMode,
         filters: appliedFilters,
         txType: appliedTxTypeFilter,
         startDate: appliedStartDate,
@@ -297,7 +303,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
         pSize: pageSize,
       })
     }
-  }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, runServerFetch, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, allCyclesRange, sortOrder])
+  }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, runServerFetch, appliedSearch, appliedSearchMode, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, allCyclesRange, sortOrder])
 
   // Re-fetch server result when activeSyncId transitions from non-null to null (sync completed)
   const prevActiveSyncId = useRef<string | null>(null)
@@ -314,6 +320,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
       runServerFetch({
         page: currentPage,
         search: appliedSearch,
+        searchMode: appliedSearchMode,
         filters: appliedFilters,
         txType: appliedTxTypeFilter,
         startDate: appliedStartDate,
@@ -337,6 +344,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
       runServerFetch({
         page: currentPage,
         search: appliedSearch,
+        searchMode: appliedSearchMode,
         filters: appliedFilters,
         txType: appliedTxTypeFilter,
         startDate: appliedStartDate,

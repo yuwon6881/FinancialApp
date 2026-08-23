@@ -27,6 +27,7 @@ interface ConfirmRequest {
  */
 export interface AppPrefsValue {
   hideSensitive: boolean
+  maskPassiveFinancialFigures?: boolean
   /** Privacy is safe-by-default while the server-backed preference is still resolving. */
   sensitivePreferenceStatus?: SensitivePreferenceStatus
   currency: string
@@ -56,6 +57,7 @@ export interface AppContextValue extends AppPrefsValue, AppUiValue, AppSyncValue
 
 const defaultPrefs: AppPrefsValue = {
   hideSensitive: false,
+  maskPassiveFinancialFigures: false,
   sensitivePreferenceStatus: 'resolved',
   currency: 'USD',
   darkMode: false,

@@ -14,14 +14,16 @@ export interface AppPreferences {
   beginSensitivePreferenceResolution: () => void
   resolveHideSensitive: (value: boolean) => void
   markSensitivePreferenceUnavailable: () => void
-  hideBalanceAmounts: boolean
-  setHideBalanceAmounts: (value: boolean) => void
+  hideFinancialFigures: boolean
+  setHideFinancialFigures: (value: boolean) => void
+  /** Passive display masking; unlike Sensitive Mode this never blocks an action. */
+  maskPassiveFinancialFigures: boolean
   darkMode: boolean
   setDarkMode: (value: boolean) => void
   notifyOnLogin: boolean
   setNotifyOnLogin: (value: boolean) => void
-  ledgerCyclesRange: 'monthly' | '3month' | '6month' | 'yearly'
-  setLedgerCyclesRange: (range: 'monthly' | '3month' | '6month' | 'yearly') => void
+  ledgerCyclesRange: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
+  setLedgerCyclesRange: (range: 'monthly' | '3month' | '6month' | 'yearly' | 'all') => void
   ledgerPageSize: number
   setLedgerPageSize: (size: number) => void
   ledgerSortOrder: TransactionSort
@@ -40,7 +42,7 @@ export function useAppPreferences(): AppPreferences {
   })
   const [sensitivePreferenceStatus, setSensitivePreferenceStatus] = useState<SensitivePreferenceStatus>('pending')
 
-  const [hideBalanceAmounts, setHideBalanceAmountsState] = useState<boolean>(() => {
+  const [hideFinancialFigures, setHideFinancialFiguresState] = useState<boolean>(() => {
     return true
   })
 
@@ -55,7 +57,7 @@ export function useAppPreferences(): AppPreferences {
     return true
   })
 
-  const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
+  const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly' | 'all'>('monthly')
   const [ledgerPageSize, setLedgerPageSizeState] = useState(10)
   const [ledgerSortOrder, setLedgerSortOrderState] = useState<TransactionSort>('date-desc')
 
@@ -97,7 +99,13 @@ export function useAppPreferences(): AppPreferences {
     // account's dashboard settings have loaded instead of reusing browser state.
     setHideSensitiveState(true)
     setSensitivePreferenceStatus(username ? 'pending' : 'resolved')
-    setHideBalanceAmountsState(true)
+    const newKey = preferenceKey('hide_financial_figures')
+    const legacyKey = preferenceKey('hide_balance_amounts')
+    const stored = newKey ? localStorage.getItem(newKey) : null
+    const legacy = legacyKey ? localStorage.getItem(legacyKey) : null
+    const migratedValue = stored ?? legacy
+    setHideFinancialFiguresState(migratedValue === null ? true : migratedValue === 'true')
+    if (newKey && stored === null && legacy !== null) localStorage.setItem(newKey, legacy)
     setNotifyOnLoginState(readBooleanPreference('show_notifications_on_login', true))
     const storedPageSize = Number(preferenceKey('ledger_page_size') && localStorage.getItem(preferenceKey('ledger_page_size')!))
     setLedgerPageSizeState([10, 25, 50, 100].includes(storedPageSize) ? storedPageSize : 10)
@@ -137,9 +145,9 @@ export function useAppPreferences(): AppPreferences {
     setSensitivePreferenceStatus(current => current === 'pending' ? 'unavailable' : current)
   }
 
-  const setHideBalanceAmounts = (value: boolean) => {
-    setHideBalanceAmountsState(value)
-    const key = preferenceKey('hide_balance_amounts')
+  const setHideFinancialFigures = (value: boolean) => {
+    setHideFinancialFiguresState(value)
+    const key = preferenceKey('hide_financial_figures')
     if (key) localStorage.setItem(key, value.toString())
   }
 
@@ -176,8 +184,9 @@ export function useAppPreferences(): AppPreferences {
     beginSensitivePreferenceResolution,
     resolveHideSensitive,
     markSensitivePreferenceUnavailable,
-    hideBalanceAmounts,
-    setHideBalanceAmounts,
+    hideFinancialFigures,
+    setHideFinancialFigures,
+    maskPassiveFinancialFigures: hideSensitive || hideFinancialFigures,
     darkMode,
     setDarkMode,
     notifyOnLogin,

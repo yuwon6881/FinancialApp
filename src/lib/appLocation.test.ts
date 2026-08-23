@@ -21,7 +21,8 @@ describe('app URL state', () => {
       year: 2026,
       ledger: {
         filters: ['Essentials', 'Food'],
-        search: 'coffee',
+      search: 'coffee',
+      searchMode: 'contains',
         startDate: '2026-07-01',
         endDate: '2026-07-31',
         minAmount: '5',
@@ -142,6 +143,7 @@ describe('app URL state', () => {
     expect(ledgerRouteSearch({ recurringFilter: 'exclude', wishlistFilter: 'only' })).toEqual({
       filters: null,
       q: null,
+      match: null,
       from: null,
       to: null,
       min: null,

@@ -1,6 +1,6 @@
 import type { AutocompleteSuggestion, Transaction } from '../../types'
 import type { TransactionSort } from '../transactionOrdering'
-import type { TransactionLinkFilter } from '../transactionFilters'
+import type { TransactionLinkFilter, TransactionSearchMode } from '../transactionFilters'
 import type { WirePagedTransactionResult, WireTransaction } from '../apiTypes'
 import { deobfuscateTransaction, obfuscateAmount } from './amounts'
 import { API_BASE_URL, apiFetch, cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
@@ -55,6 +55,7 @@ export async function fetchTransactionById(id: string, signal?: AbortSignal): Pr
 
 export interface TransactionQuery {
   search?: string
+  searchMode?: TransactionSearchMode
   ledgerCategories?: string[]
   categories?: string[]
   txType?: 'inflow' | 'outflow' | 'transfer' | null
@@ -70,6 +71,7 @@ export interface TransactionQuery {
 function appendTransactionQuery(params: URLSearchParams, query: TransactionQuery): void {
   const search = query.search?.trim()
   if (search) params.append('search', search)
+  if (search && query.searchMode === 'whole-word') params.append('searchMode', 'whole-word')
   if (query.ledgerCategories?.length) params.append('ledgerCategory', query.ledgerCategories.join(','))
   if (query.categories?.length) params.append('category', query.categories.join(','))
   if (query.txType) params.append('txType', query.txType)

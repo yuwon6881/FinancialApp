@@ -16,7 +16,7 @@ export type EntityKind = 'transaction' | 'recurringPayment' | 'recurringOccurren
   | 'investmentAllocationOrder' | 'taxReliefCategory'
   | 'ledgerAccount' | 'ledgerAccountReconcile'
 export type OpType = 'add' | 'update' | 'delete' | 'restore' | 'toggle' | 'purchase' | 'unpurchase'
-  | 'reminder' | 'payEarly' | 'settle' | 'cleanup' | 'bulkDelete' | 'bulkRestore'
+  | 'reminder' | 'payEarly' | 'settle' | 'cleanup' | 'bulkDelete' | 'bulkRestore' | 'bulkMove'
   | 'advanceRepayment' | 'fullSettlement' | 'undoRepayment'
 export interface OutboxPayload {
   [key: string]: unknown
@@ -55,6 +55,8 @@ export interface OutboxPayload {
   taxYear?: number
   transactions?: unknown
   transactionIds?: unknown
+  moves?: unknown
+  beforeSnapshots?: unknown
   /** Attached vault documents this delete also removes, for the success toast's honesty clause. */
   deletedDocumentCount?: number
   openingPrincipal?: number
@@ -124,4 +126,3 @@ export interface QueuedOp {
   needsAccountReview?: boolean
   needsAccountReviewBuckets?: string[]
 }
-

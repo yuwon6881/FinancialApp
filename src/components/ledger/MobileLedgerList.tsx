@@ -12,6 +12,7 @@ export function MobileLedgerList({
   transactions,
   listKey,
   hideSensitive,
+  maskFinancialFigures,
   currency,
   serverIsFetching,
   serverIsLoadingRows = false,
@@ -23,7 +24,7 @@ export function MobileLedgerList({
   accounts,
   onDeleteClick,
   onEditBlocked,
-  onDuplicate,
+  onMove,
   hasAnyFilter,
   onResetFilters,
   onAddTransaction,
@@ -53,11 +54,12 @@ export function MobileLedgerList({
           isDeleting={isTxDeleting(t.id)}
           isSyncing={isTxSyncing(t.id)}
           hideSensitive={hideSensitive}
+          maskFinancialFigures={maskFinancialFigures}
           currency={currency}
           onStartEdit={onStartEdit}
           onDeleteClick={onDeleteClick}
           onEditBlocked={onEditBlocked}
-          onDuplicate={onDuplicate}
+          onMove={onMove}
           isSelecting={isSelecting}
           isSelected={isSelected}
           canSelect={canSelect}

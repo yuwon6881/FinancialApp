@@ -115,6 +115,12 @@ describe('matchesTransactionFilters', () => {
     expect(matchesTransactionFilters(tx({ recurringPaymentId: null }), { recurringFilter: 'only' })).toBe(false)
   })
 
+  it('matches a literal Unicode-bounded whole word or phrase without substring leakage', () => {
+    expect(matchesTransactionFilters(tx({ description: 'Iced Coffee Bean Latte' }), { search: 'coffee bean', searchMode: 'whole-word' })).toBe(true)
+    expect(matchesTransactionFilters(tx({ description: 'Coffee Beans' }), { search: 'coffee bean', searchMode: 'whole-word' })).toBe(false)
+    expect(matchesTransactionFilters(tx({ description: 'Café (special)' }), { search: 'café (special)', searchMode: 'whole-word' })).toBe(true)
+  })
+
   it('ignores surrounding whitespace in search text', () => {
     expect(matchesTransactionFilters(tx({ description: 'Coffee shop' }), { search: '  coffee  ' })).toBe(true)
     expect(matchesTransactionFilters(tx({ description: 'Coffee shop' }), { search: '   ' })).toBe(true)

@@ -1,12 +1,13 @@
 import { APP_TABS, type AppTab } from '../types'
-import type { TransactionLinkFilter } from './transactionFilters'
+import type { TransactionLinkFilter, TransactionSearchMode } from './transactionFilters'
 
-export type LedgerRouteRange = 'monthly' | '3month' | '6month' | 'yearly'
+export type LedgerRouteRange = 'monthly' | '3month' | '6month' | 'yearly' | 'all'
 type LedgerRouteTxType = 'inflow' | 'outflow' | 'transfer' | null
 
 export interface LedgerRouteState {
   filters: string[]
   search: string
+  searchMode: TransactionSearchMode
   startDate: string
   endDate: string
   minAmount: string
@@ -63,6 +64,7 @@ TAB_BY_PATH['/wishlist'] = 'wishlist'
 const LEDGER_PARAM_KEYS = [
   'filters',
   'q',
+  'match',
   'from',
   'to',
   'min',
@@ -76,7 +78,7 @@ const LEDGER_PARAM_KEYS = [
 ] as const
 
 const MONTHS = new Set(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
-const RANGES = new Set<LedgerRouteRange>(['monthly', '3month', '6month', 'yearly'])
+const RANGES = new Set<LedgerRouteRange>(['monthly', '3month', '6month', 'yearly', 'all'])
 const TX_TYPES = new Set<Exclude<LedgerRouteTxType, null>>(['inflow', 'outflow', 'transfer'])
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -103,6 +105,7 @@ const parseLinkFilter = (value: string | null): TransactionLinkFilter => {
 const emptyLedgerRouteState = (): LedgerRouteState => ({
   filters: [],
   search: '',
+  searchMode: 'contains',
   startDate: '',
   endDate: '',
   minAmount: '',
@@ -137,7 +140,8 @@ export const readAppLocation = (): AppLocationState => {
   const params = new URLSearchParams(window.location.search)
   const rawMonth = params.get('month') || ''
   const rawYear = Number(params.get('year') || 0)
-  const range = params.get('range') as LedgerRouteRange | null
+  const rawRange = params.get('range') as LedgerRouteRange | null
+  const range = params.get('all') === '1' && (!rawRange || rawRange === 'monthly') ? 'all' : rawRange
   const txType = params.get('type') as Exclude<LedgerRouteTxType, null> | null
 
   return {
@@ -147,6 +151,7 @@ export const readAppLocation = (): AppLocationState => {
     ledger: {
       filters: (params.get('filters') || '').split(',').map(value => value.trim()).filter(Boolean),
       search: params.get('q') || '',
+      searchMode: params.get('match') === 'whole-word' ? 'whole-word' : 'contains',
       startDate: parseLedgerDate(params.get('from')),
       endDate: parseLedgerDate(params.get('to')),
       minAmount: parseLedgerAmount(params.get('min')),
@@ -247,6 +252,7 @@ export const updateAppSearch = (
 export const ledgerRouteSearch = (state: Partial<LedgerRouteState>) => ({
   filters: state.filters?.join(',') || null,
   q: state.search || null,
+  match: state.searchMode === 'whole-word' ? 'whole-word' : null,
   from: state.startDate || null,
   to: state.endDate || null,
   min: state.minAmount || null,

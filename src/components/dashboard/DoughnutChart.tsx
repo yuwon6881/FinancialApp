@@ -14,7 +14,9 @@ interface DoughnutChartProps {
 }
 
 export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger }: DoughnutChartProps) {
-  const { formatSensitive, hideSensitive } = useAppPrefs()
+  const prefs = useAppPrefs()
+  const { formatSensitive } = prefs
+  const hideSensitive = prefs.maskPassiveFinancialFigures ?? prefs.hideSensitive
   const [chartView, setChartView] = useState<ChartRange>('monthly')
 
   const breakdownData = useMemo(() => {

@@ -5,6 +5,7 @@ import type { SensitivePreferenceStatus } from './useAppPreferences'
 
 export function buildAppContextValue(params: {
   hideSensitive: boolean
+  maskPassiveFinancialFigures: boolean
   sensitivePreferenceStatus?: SensitivePreferenceStatus
   currency: string
   darkMode: boolean
@@ -22,6 +23,7 @@ export function buildAppContextValue(params: {
 }): AppContextValue {
   return {
     hideSensitive: params.hideSensitive,
+    maskPassiveFinancialFigures: params.maskPassiveFinancialFigures,
     sensitivePreferenceStatus: params.sensitivePreferenceStatus,
     currency: params.currency,
     darkMode: params.darkMode,

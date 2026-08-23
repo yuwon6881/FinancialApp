@@ -4,7 +4,7 @@ import type { PagedTransactionResult } from '../../../lib/api'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../../../lib/csvExport'
 import { getCycleLabelForDropdown } from '../../../lib/cycleLabels'
 import type { TransactionSort } from '../../../lib/transactionOrdering'
-import type { TransactionLinkFilter } from '../../../lib/transactionFilters'
+import type { TransactionLinkFilter, TransactionSearchMode } from '../../../lib/transactionFilters'
 import {
   LEDGER_BUCKETS,
   parseAmountFilter,
@@ -16,13 +16,14 @@ import {
 export interface UseLedgerExportOptions {
   hideSensitive: boolean
   showAllCycles: boolean
-  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
+  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
   selectedMonth: string
   selectedYear: number
   cycleDay: number
   accounts?: LedgerAccount[]
   appliedFilters: string[]
   appliedSearch: string
+  appliedSearchMode: TransactionSearchMode
   appliedStartDate: string
   appliedEndDate: string
   appliedMinAmount: string
@@ -56,6 +57,7 @@ export function useLedgerExport(options: UseLedgerExportOptions) {
     accounts,
     appliedFilters,
     appliedSearch,
+    appliedSearchMode,
     appliedStartDate,
     appliedEndDate,
     appliedMinAmount,
@@ -176,6 +178,7 @@ export function useLedgerExport(options: UseLedgerExportOptions) {
         const cats = appliedFilters.filter(f => !LEDGER_BUCKETS.includes(f))
         const result = await onExportTransactions({
           search: appliedSearch || undefined,
+          searchMode: appliedSearchMode,
           ledgerCategories: buckets.length > 0 ? buckets : undefined,
           categories: cats.length > 0 ? cats : undefined,
           txType: appliedTxTypeFilter || null,

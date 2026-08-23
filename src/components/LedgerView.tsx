@@ -26,6 +26,7 @@ import type { LedgerRouteState } from '../lib/appLocation'
 import { useIsMobile } from '../lib/useIsMobile'
 import { formatCurrencyVal } from '../lib/utils'
 import { SensitiveMask } from './ui/SensitiveAmount'
+import { LedgerMoveSheet } from './ledger/LedgerMoveSheet'
 
 // Hooks and sub-components
 import { useLedgerView } from './ledger/view/useLedgerView'
@@ -56,6 +57,7 @@ interface LedgerViewProps {
     documentChanges?: TransactionDocumentChanges,
   ) => Promise<void> | void
   hideSensitive?: boolean
+  maskFinancialFigures?: boolean
   categories: TransactionCategory[]
   selectedMonth: string
   selectedYear: number
@@ -66,6 +68,7 @@ interface LedgerViewProps {
   incomingCategory: string | null
   incomingFilters?: string[]
   incomingSearch?: string | null
+  incomingSearchMode?: import('../lib/transactionFilters').TransactionSearchMode
   incomingDate?: string | null
   incomingStartDate?: string | null
   incomingEndDate?: string | null
@@ -79,7 +82,7 @@ interface LedgerViewProps {
   onClearHighlightedTx?: () => void
   showAllCycles: boolean
   onShowAllCyclesChange: (showAllCycles: boolean) => void
-  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
+  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
   onRouteStateChange?: (state: Omit<LedgerRouteState, 'highlightedTxId'>) => void
   ledgerSummaries?: CategorySummary[]
   savingsGoals?: SavingsGoal[]
@@ -136,6 +139,7 @@ interface LedgerViewProps {
 export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   const app = useAppContext()
   const hideSensitive = props.hideSensitive ?? app.hideSensitive
+  const maskFinancialFigures = props.maskFinancialFigures ?? app.maskPassiveFinancialFigures
   const currency = props.currency ?? app.currency
   const activeSyncId = props.activeSyncId ?? app.activeSyncId
   const activeSyncIds = props.activeSyncIds
@@ -147,6 +151,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
 
   const formRef = useRef<TransactionFormSheetRef>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [moveTransactions, setMoveTransactions] = useState<Transaction[]>([])
   const handleAddFormOpenChange = useCallback((open: boolean) => {
     setIsFormOpen(open)
     props.onAddFormOpenChange?.(open)
@@ -193,7 +198,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   }
 
   const formatSensitive = (val: number) => {
-    return hideSensitive
+    return maskFinancialFigures
       ? <SensitiveMask />
       : <span className="transition-[filter] duration-200">{formatCurrency(val)}</span>
   }
@@ -237,6 +242,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     accounts: props.accounts,
     listKey: `${props.selectedMonth}-${props.selectedYear}-${props.showAllCycles}-${ledger.currentPage}`,
     hideSensitive,
+    maskFinancialFigures,
     currency,
     serverIsFetching: ledger.serverIsFetching,
     serverIsLoadingRows: isServerMode && ledger.serverIsReplacingRows,
@@ -247,7 +253,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     onStartEdit: ledger.onStartEditStable,
     onDeleteClick: ledger.onDeleteClickStable,
     onEditBlocked: ledger.onEditBlockedStable,
-    onDuplicate: ledger.onDuplicateStable,
+    onMove: transaction => setMoveTransactions([transaction]),
     hasAnyFilter,
     onResetFilters: ledger.handleResetFilters,
     onAddTransaction: ledger.onAddTransactionStable,
@@ -377,6 +383,8 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onClearServerSearch={ledger.handleClearServerSearch}
         searchTerm={ledger.searchTerm}
         onSearchTermChange={ledger.setSearchTerm}
+        searchMode={props.showAllCycles ? ledger.pendingSearchMode : ledger.searchMode}
+        onSearchModeChange={props.showAllCycles ? ledger.setPendingSearchMode : ledger.setSearchMode}
         isFilterDropdownOpen={ledger.isFilterDropdownOpen}
         onFilterDropdownOpenChange={ledger.setIsFilterDropdownOpen}
         appliedFilters={ledger.appliedFilters}
@@ -423,7 +431,10 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         listProps={listProps}
         allTransactions={props.transactions}
         resetKey={bulkResetKey}
+        cycleDay={props.cycleDay}
       />
+
+      <LedgerMoveSheet isOpen={moveTransactions.length > 0} transactions={moveTransactions} cycleDay={props.cycleDay} onClose={() => setMoveTransactions([])} />
 
       <LedgerPagination
         currentPage={ledger.currentPage}

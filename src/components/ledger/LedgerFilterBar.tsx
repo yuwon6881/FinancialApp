@@ -7,7 +7,7 @@ import { allowsCategoryFlow } from '../../lib/categoryFlow'
 import { BottomSheet } from '../ui/BottomSheet'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
 import { CustomSelect } from '../ui/CustomSelect'
-import type { TransactionLinkFilter } from '../../lib/transactionFilters'
+import type { TransactionLinkFilter, TransactionSearchMode } from '../../lib/transactionFilters'
 import type { TransactionSort } from '../../lib/transactionOrdering'
 import { LedgerAdvancedFilterControls } from './LedgerAdvancedFilterControls'
 import { LedgerCategoryChecklist } from './LedgerCategoryChecklist'
@@ -29,6 +29,8 @@ interface LedgerFilterBarProps {
   onServerSearch: () => void
   onClearServerSearch: () => void
   searchTerm: string
+  searchMode: TransactionSearchMode
+  onSearchModeChange: (mode: TransactionSearchMode) => void
   onSearchTermChange: (value: string) => void
   isFilterDropdownOpen: boolean
   onFilterDropdownOpenChange: (open: boolean) => void
@@ -67,6 +69,8 @@ export function LedgerFilterBar({
   onServerSearch,
   onClearServerSearch,
   searchTerm,
+  searchMode,
+  onSearchModeChange,
   onSearchTermChange,
   isFilterDropdownOpen,
   onFilterDropdownOpenChange,
@@ -198,6 +202,19 @@ export function LedgerFilterBar({
           )}
         </div>
       )}
+
+      <Button
+        variant={searchMode === 'whole-word' ? 'secondary' : 'outline'}
+        size="sm"
+        type="button"
+        aria-pressed={searchMode === 'whole-word'}
+        aria-label="Match whole word or phrase"
+        title="Match whole word or phrase"
+        onClick={() => onSearchModeChange(searchMode === 'whole-word' ? 'contains' : 'whole-word')}
+        className="size-10 shrink-0 rounded-xl px-0 font-mono text-xs"
+      >
+        ab
+      </Button>
 
       <div className="flex shrink-0 items-center gap-2">
         <CustomSelect

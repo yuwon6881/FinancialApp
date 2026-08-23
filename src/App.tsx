@@ -282,8 +282,8 @@ function App() {
   }
 
   const handleToggleBalanceAmounts = () => {
-    const nextHidden = !prefs.hideBalanceAmounts
-    prefs.setHideBalanceAmounts(nextHidden)
+    const nextHidden = !prefs.hideFinancialFigures
+    prefs.setHideFinancialFigures(nextHidden)
   }
 
   const handleToggleDarkMode = () => {
@@ -339,6 +339,8 @@ function App() {
           onAskAI={() => setIsAiOpen(true)}
           onOpenSearch={() => dialogs.setShowSearch(true)}
           hideSensitive={prefs.hideSensitive}
+          hideFinancialFigures={prefs.hideFinancialFigures}
+          onToggleFinancialFigures={handleToggleBalanceAmounts}
           sensitivePreferenceStatus={prefs.sensitivePreferenceStatus}
           onToggleHideSensitive={handleToggleHideSensitive}
           onRetrySensitivePreference={retrySensitivePreference}

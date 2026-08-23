@@ -10,7 +10,7 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
     typeof o.entity === 'string' &&
     WELL_FORMED_ENTITY_KINDS.includes(o.entity as EntityKind) &&
     typeof o.type === 'string' &&
-    ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase', 'reminder', 'payEarly', 'settle', 'cleanup', 'bulkDelete', 'bulkRestore', 'advanceRepayment', 'fullSettlement', 'undoRepayment'].includes(o.type as string) &&
+    ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase', 'reminder', 'payEarly', 'settle', 'cleanup', 'bulkDelete', 'bulkRestore', 'bulkMove', 'advanceRepayment', 'fullSettlement', 'undoRepayment'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&
     typeof o.createdAt === 'number' &&
     typeof o.retryCount === 'number'

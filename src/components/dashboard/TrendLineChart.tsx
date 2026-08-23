@@ -30,7 +30,9 @@ const axisLabel = (point: TrendPoint, pointCount: number) =>
 
 export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData: DashboardData | null; growthBalance: number }) {
   const reduceMotion = useReducedMotion()
-  const { hideSensitive, currency, formatSensitive } = useAppPrefs()
+  const prefs = useAppPrefs()
+  const { currency, formatSensitive } = prefs
+  const hideSensitive = prefs.maskPassiveFinancialFigures ?? prefs.hideSensitive
   const [range, setRange] = useState<TrendRange>('yearly')
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)

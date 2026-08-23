@@ -129,7 +129,7 @@ describe('useCycleNavigation', () => {
 
     act(() => result.current.syncLedgerRouteState({
       filters: ['Stability'],
-      search: '',
+        search: '', searchMode: 'contains',
       startDate: '2026-08-09',
       endDate: '2026-08-11',
       minAmount: '',

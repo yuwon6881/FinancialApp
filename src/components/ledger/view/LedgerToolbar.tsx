@@ -16,7 +16,7 @@ interface LedgerToolbarProps {
   onOpenExport: () => void
   showAllCycles: boolean
   onShowAllCyclesChange: (showAllCycles: boolean) => void
-  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
+  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
 }
 
 export function LedgerToolbar({
@@ -58,17 +58,17 @@ export function LedgerToolbar({
               Current cycle
             </Button>
             <Button
-              variant={showAllCycles ? 'secondary' : 'unstyled'}
+              variant={showAllCycles && cyclesRange === 'all' ? 'secondary' : 'unstyled'}
               size="sm"
               onClick={() => onShowAllCyclesChange(true)}
-              aria-pressed={showAllCycles}
+              aria-pressed={showAllCycles && cyclesRange === 'all'}
               className="rounded-lg px-3 text-xs"
             >
               All cycles
             </Button>
           </div>
 
-          {(!showAllCycles || cyclesRange === '3month' || cyclesRange === '6month' || cyclesRange === 'yearly') && (
+          {(!showAllCycles || (cyclesRange !== 'all' && cyclesRange !== 'monthly')) && (
             <div className="flex w-full min-w-0 items-center gap-1.5 select-none sm:w-auto">
               {cyclesRange !== 'yearly' && (
                 <CustomSelect

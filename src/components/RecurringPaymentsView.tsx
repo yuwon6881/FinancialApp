@@ -11,6 +11,7 @@ import { RecurringPaymentCards } from './recurring/RecurringPaymentCards'
 import { useRecurringPaymentsView } from './recurring/useRecurringPaymentsView'
 import { RecurringTabs, type RecurringTabId } from './recurring/RecurringTabs'
 import type { LoanLoadStatus } from '../app/financialData/useLoanData'
+import { formatSensitiveAmount } from './recurring/formatters'
 
 const LoansSection = React.lazy(() => import('./recurring/loans/LoansSection').then(module => ({ default: module.LoansSection })))
 const PayEarlySheet = React.lazy(() => import('./recurring/PayEarlySheet').then(module => ({ default: module.PayEarlySheet })))
@@ -111,6 +112,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const app = useAppContext()
   const hideSensitive = hideSensitiveProp ?? app.hideSensitive
   const currency = currencyProp ?? app.currency
+  const passiveMask = hideSensitive || Boolean(app.maskPassiveFinancialFigures)
+  const formatPassive = React.useCallback((value: number) => formatSensitiveAmount(value, passiveMask, currency), [currency, passiveMask])
   const activeSyncId = activeSyncIdProp ?? app.activeSyncId
   const activeSyncIds = activeSyncIdsProp
     ?? (activeSyncIdProp !== undefined
@@ -225,7 +228,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         loanNextPaymentDate={loanNextPaymentDate}
         showAddForm={view.showAddForm}
         hideSensitive={hideSensitive}
-        formatSensitive={view.formatSensitive}
+        formatSensitive={formatPassive}
         onToggleForm={view.toggleAddForm}
         onAddLoan={() => setIsLoanFormOpen(true)}
       />
@@ -249,7 +252,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             selectedYear={selectedYear}
             cycleDay={cycleDay}
             currency={currency}
-            hideSensitive={hideSensitive}
+            hideSensitive={passiveMask}
           />
 
           {/* Filter and Sort controls */}
@@ -270,7 +273,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             payments={view.filteredAndSortedPayments}
             totalCount={payments.length}
             hideSensitive={hideSensitive}
-            formatSensitive={view.formatSensitive}
+            formatSensitive={formatPassive}
             isPaymentSyncing={view.isPaymentSyncing}
             isPaymentDeleting={view.isPaymentDeleting}
             onToggleActive={onToggleActive}
@@ -302,7 +305,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             accounts={accounts}
             currency={currency}
             hideSensitive={hideSensitive}
-            formatSensitive={view.formatSensitive}
+            formatSensitive={formatPassive}
             activeSyncIds={activeSyncIds}
             onAddLoan={onAddLoan}
             onUpdateLoan={onUpdateLoan}

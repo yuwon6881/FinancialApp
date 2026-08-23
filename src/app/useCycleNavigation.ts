@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import * as api from '../lib/api'
 import { getCachedDashboardPeriod, getCachedCycleSnapshot } from '../lib/cache'
 import type { AppTab, DashboardData, Transaction } from '../types'
-import type { TransactionLinkFilter } from '../lib/transactionFilters'
+import type { TransactionLinkFilter, TransactionSearchMode } from '../lib/transactionFilters'
 import {
   ledgerRouteSearch,
   readAppLocation,
@@ -41,6 +41,7 @@ const areLedgerStatesEqual = (
 ): boolean =>
   areStringArraysEqual(a.filters, b.filters) &&
   a.search === b.search &&
+  a.searchMode === b.searchMode &&
   a.startDate === b.startDate &&
   a.endDate === b.endDate &&
   a.minAmount === b.minAmount &&
@@ -70,6 +71,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const {
     filters: ledgerIncomingFilters,
     search: ledgerIncomingSearch,
+    searchMode: ledgerIncomingSearchMode,
     startDate: ledgerIncomingStartDate,
     endDate: ledgerIncomingEndDate,
     minAmount: ledgerIncomingMinAmount,
@@ -79,6 +81,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     txType: ledgerIncomingTxType,
     showAllCycles: ledgerShowAllCycles,
   } = ledgerRouteState
+  useEffect(() => setLedgerCyclesRange(ledgerRouteState.range), [ledgerRouteState.range, setLedgerCyclesRange])
   const setLedgerShowAllCycles = useCallback((showAllCycles: boolean) => {
     setLedgerRouteState(current => ({ ...current, showAllCycles }))
   }, [])
@@ -145,6 +148,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const handleNavigateToLedger = useCallback((navOptions: {
     category?: string | null
     search?: string | null
+    searchMode?: TransactionSearchMode
     date?: string | null
     // Explicit range bounds. `date` remains the shorthand for a single exact day and is used
     // for both ends when startDate/endDate are absent.
@@ -158,7 +162,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     recurringOnly?: boolean
     wishlistOnly?: boolean
     txType?: 'inflow' | 'outflow' | 'transfer' | null
-    range?: 'monthly' | '3month' | '6month' | 'yearly'
+    range?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
     highlightedTxId?: string | null
     showAllCycles?: boolean
     // When set, first switch the active cycle to this period (monthly view) so a
@@ -176,18 +180,19 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     }
     const filters = navOptions.category ? [navOptions.category] : []
     const search = navOptions.search || ''
+    const searchMode = navOptions.searchMode ?? 'contains'
     const startDate = navOptions.startDate || navOptions.date || ''
     const endDate = navOptions.endDate || navOptions.date || ''
     const minAmount = navOptions.minAmount || ''
     const maxAmount = navOptions.maxAmount || ''
     const recurringFilter: TransactionLinkFilter = navOptions.recurringFilter ?? (navOptions.recurringOnly === true ? 'only' : 'all')
     const wishlistFilter: TransactionLinkFilter = navOptions.wishlistFilter ?? (navOptions.wishlistOnly === true ? 'only' : 'all')
-    const range = navOptions.range || 'monthly'
+    const range = navOptions.range || (navOptions.showAllCycles ? 'all' : 'monthly')
     setLedgerCyclesRange(range)
     const showAll = navOptions.showAllCycles !== undefined ? navOptions.showAllCycles : (range !== 'monthly')
     const highlightedTxId = navOptions.highlightedTxId || null
     setLedgerRouteState({
-      filters, search, startDate, endDate, minAmount, maxAmount,
+      filters, search, searchMode, startDate, endDate, minAmount, maxAmount,
       recurringFilter, wishlistFilter, txType: navOptions.txType || null,
       showAllCycles: showAll, range,
     })
@@ -196,6 +201,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
       search: ledgerRouteSearch({
         filters,
         search,
+        searchMode,
         startDate,
         endDate,
         minAmount,
@@ -319,7 +325,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const clearIncomingFilters = useCallback(() => {
     setLedgerRouteState(current => ({
       ...current,
-      filters: [], search: '', startDate: '', endDate: '', minAmount: '', maxAmount: '',
+      filters: [], search: '', searchMode: 'contains', startDate: '', endDate: '', minAmount: '', maxAmount: '',
       recurringFilter: 'all', wishlistFilter: 'all', txType: null,
     }))
     setHighlightedTxId(null)
@@ -406,6 +412,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     handleNavigateToAccounts,
     clearHighlightedAccount,
     ledgerIncomingSearch,
+    ledgerIncomingSearchMode,
     handleSelectPeriod,
     handleNavigateToLedger,
     handleNavigateToRecurring,

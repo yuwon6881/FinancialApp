@@ -4,6 +4,7 @@ import { buildAppContextValue } from './buildAppContextValue'
 import type { useAppPreferences } from './useAppPreferences'
 import type { useFinancialData } from './useFinancialData'
 import type { useAppDialogs } from './useAppDialogs'
+import { SENSITIVE_AMOUNT_MASK } from '../lib/utils'
 
 export function useAppRootContext(options: {
   prefs: ReturnType<typeof useAppPreferences>
@@ -15,6 +16,7 @@ export function useAppRootContext(options: {
 
   return useMemo<AppContextValue>(() => buildAppContextValue({
     hideSensitive: prefs.hideSensitive,
+    maskPassiveFinancialFigures: prefs.maskPassiveFinancialFigures,
     sensitivePreferenceStatus: prefs.sensitivePreferenceStatus,
     currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
     darkMode: prefs.darkMode,
@@ -23,7 +25,7 @@ export function useAppRootContext(options: {
     deletingId: financial.deletingTxId,
     isSyncing: financial.isBackgroundSyncing || financial.pendingOps.length > 0 || financial.activeSyncIds.length > 0,
     isOffline: financial.isOffline,
-    formatSensitive: financial.formatSensitive,
+    formatSensitive: value => prefs.maskPassiveFinancialFigures ? SENSITIVE_AMOUNT_MASK : financial.formatSensitive(value),
     showToast: dialogs.showToast,
     guardSensitive,
     confirm: dialogs.setConfirmModalData,
@@ -34,6 +36,7 @@ export function useAppRootContext(options: {
     },
   }), [
     prefs.hideSensitive,
+    prefs.maskPassiveFinancialFigures,
     prefs.sensitivePreferenceStatus,
     financial.optimisticDashboardData?.setting?.currency,
     prefs.darkMode,

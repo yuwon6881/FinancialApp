@@ -61,7 +61,8 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   onInvestmentScanCleared,
   onExplainWithAi,
 }) => {
-  const { hideSensitive, isOffline, confirm, activeSyncId, activeSyncIds = [], operations = [], queueMutation = () => false } = useAppContext()
+  const { hideSensitive, maskPassiveFinancialFigures, isOffline, confirm, activeSyncId, activeSyncIds = [], operations = [], queueMutation = () => false } = useAppContext()
+  const passiveMask = maskPassiveFinancialFigures ?? hideSensitive
   const investmentOps = useMemo(
     () => operations.filter(operation => operation.entity.startsWith('investment')),
     [operations],
@@ -293,7 +294,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
         />
       ) : (
         <>
-          <SummaryCards portfolio={portfolio} masked={hideSensitive} />
+          <SummaryCards portfolio={portfolio} masked={passiveMask} />
           <ActionToolbar
             portfolio={setupPortfolio ?? portfolio}
             isOffline={isOffline}
@@ -310,7 +311,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
             holdings={portfolio.holdings}
             instruments={portfolio.instruments}
             reference={referenceCurrency}
-            masked={hideSensitive}
+            masked={passiveMask}
             onNavigate={onNavigate}
           />
           <AccountsAndInstruments
@@ -375,25 +376,25 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
             </details>
           )}
           <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-            <ValueChart portfolio={portfolio} masked={hideSensitive} range={range} isFetching={loading} onRangeChange={setRange} />
-            <AllocationChart portfolio={portfolio} masked={hideSensitive} selected={allocationFilter} onSelect={setAllocationFilter} />
+            <ValueChart portfolio={portfolio} masked={passiveMask} range={range} isFetching={loading} onRangeChange={setRange} />
+            <AllocationChart portfolio={portfolio} masked={passiveMask} selected={allocationFilter} onSelect={setAllocationFilter} />
           </div>
           <InvestmentForecastPanel
             key={`${portfolio.summary.totalValue ?? 'incomplete'}-${portfolio.allocation.plan.updatedAt ?? 'default'}-${portfolio.allocation.contributionPlan?.amount ?? 0}-${portfolio.allocation.contributionPlan?.routineContribution ?? 'unknown'}-${portfolio.allocation.contributionPlan?.isEstimated ?? false}`}
             portfolio={portfolio}
-            masked={hideSensitive}
+            masked={passiveMask}
           />
-          <PerformanceBars portfolio={portfolio} masked={hideSensitive} onSelectHolding={setDetailHolding} />
-          <HoldingsTable portfolio={portfolio} masked={hideSensitive} filter={allocationFilter} onSelectHolding={setDetailHolding} />
+          <PerformanceBars portfolio={portfolio} masked={passiveMask} onSelectHolding={setDetailHolding} />
+          <HoldingsTable portfolio={portfolio} masked={passiveMask} filter={allocationFilter} onSelectHolding={setDetailHolding} />
           <HoldingDetailSheet
             holding={detailHolding}
             appCurrency={portfolio.appCurrency}
-            masked={hideSensitive}
+            masked={passiveMask}
             onClose={() => setDetailHolding(null)}
           />
           <PagedActivityTable
             portfolio={setupPortfolio ?? portfolio}
-            masked={hideSensitive}
+            masked={passiveMask}
             refreshToken={activityRevision}
             operations={investmentOps}
             activeSyncId={activeSyncId}

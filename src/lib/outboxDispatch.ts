@@ -17,6 +17,7 @@ async function dispatchBulkTransaction(op: QueuedOp): Promise<BulkTransactionMut
 const HANDLERS: Record<string, (op: QueuedOp) => Promise<DispatchResult>> = {
   'transaction:bulkDelete': dispatchBulkTransaction,
   'transaction:bulkRestore': dispatchBulkTransaction,
+  'transaction:bulkMove': dispatchBulkTransaction,
   'transaction:add': (op) => api.addTransaction({ ...(withoutUndoSnapshot(op.payload) as Partial<Transaction>), id: op.targetId } as Omit<Transaction, 'id'> & { id?: string }),
   'transaction:update': (op) => api.updateTransaction(op.targetId, withoutUndoSnapshot(op.payload) as unknown as Omit<Transaction, 'id'>),
   'transaction:delete': (op) => api.deleteTransaction(op.targetId),
