@@ -15,9 +15,10 @@ const SETTINGS_TABS: ReadonlyArray<readonly [SettingsTabId, string]> = [
 interface SettingsTabsProps {
   activeTab: SettingsTabId
   onChange: (tab: SettingsTabId) => void
+  onPreload?: (tab: SettingsTabId) => void
 }
 
-export function SettingsTabs({ activeTab, onChange }: SettingsTabsProps) {
+export function SettingsTabs({ activeTab, onChange, onPreload }: SettingsTabsProps) {
   const reduceMotion = useReducedMotion()
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
 
@@ -47,6 +48,8 @@ export function SettingsTabs({ activeTab, onChange }: SettingsTabsProps) {
           aria-controls={`settings-panel-${id}`}
           tabIndex={activeTab === id ? 0 : -1}
           onClick={() => onChange(id)}
+          onPointerEnter={() => onPreload?.(id)}
+          onFocus={() => onPreload?.(id)}
           onKeyDown={event => handleKeyDown(event, index)}
           className={`relative flex min-h-11 min-w-0 cursor-pointer items-end px-1.5 pb-3 text-left text-xs font-bold transition sm:min-h-0 sm:shrink-0 sm:px-1 sm:text-center ${
             activeTab === id ? 'font-extrabold text-accent-ink' : 'text-muted-foreground hover:text-foreground'

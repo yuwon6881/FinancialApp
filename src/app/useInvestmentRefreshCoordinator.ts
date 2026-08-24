@@ -8,7 +8,7 @@ let lastCompletedRefreshAt = 0
 const RESUME_REFRESH_COOLDOWN_MS = 60_000
 
 export function useInvestmentRefreshCoordinator(enabled: boolean, isOffline: boolean) {
-  const [allocation, setAllocation] = useState<InvestmentAllocationOverview | null>(null)
+  const [allocation, setAllocation] = useState<InvestmentAllocationOverview | null>(() => api.readCachedInvestmentAllocation())
   const mounted = useRef(true)
 
   useEffect(() => {

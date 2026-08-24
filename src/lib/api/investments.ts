@@ -115,6 +115,13 @@ export function readCachedInvestmentPortfolio(): InvestmentPortfolio | null {
   return cached
 }
 
+export function readCachedInvestmentAllocation(): InvestmentAllocationOverview | null {
+  return getCachedJSON<InvestmentAllocationOverview | null>(
+    CACHE_KEYS.investmentAllocation,
+    readCachedInvestmentPortfolio()?.allocation ?? null,
+  )
+}
+
 export async function fetchInvestmentPortfolio(
   range: InvestmentRange,
   signal?: AbortSignal,
@@ -125,6 +132,7 @@ export async function fetchInvestmentPortfolio(
   })
   const portfolio: InvestmentPortfolio = { ...data, activity: [], cashFlows: [] }
   setCachedJSON(CACHE_KEYS.investmentPortfolio, portfolio)
+  setCachedJSON(CACHE_KEYS.investmentAllocation, portfolio.allocation)
   return portfolio
 }
 
@@ -345,10 +353,13 @@ export function refreshInvestmentMarketData(): Promise<MarketRefreshResponse> {
 }
 
 export function fetchInvestmentAllocation(signal?: AbortSignal): Promise<InvestmentAllocationOverview> {
-  return request('/investments/allocation', {
-    signal,
-    errorMessage: 'Could not load the investment plan',
-  })
+  return cachedGet(CACHE_KEYS.investmentAllocation, async () => {
+    const overview = await request<InvestmentAllocationOverview>('/investments/allocation', {
+      errorMessage: 'Could not load the investment plan',
+    })
+    setCachedJSON(CACHE_KEYS.investmentAllocation, overview)
+    return overview
+  }, { signal, staleTime: 60_000 })
 }
 
 export function updateInvestmentPlan(value: Omit<InvestmentPlan, 'id' | 'updatedAt'>): Promise<InvestmentPlan> {

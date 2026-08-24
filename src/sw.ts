@@ -2,7 +2,6 @@
 
 import { initializeApp } from 'firebase/app'
 import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw'
-import { clientsClaim } from 'workbox-core'
 import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
 import { StaleWhileRevalidate } from 'workbox-strategies'
@@ -14,8 +13,6 @@ import { cacheWillUpdate } from './swCachePolicy'
 
 declare let self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<unknown> }
 
-self.skipWaiting()
-clientsClaim()
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 

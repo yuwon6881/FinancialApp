@@ -96,6 +96,7 @@ describe('local financial data clearing', () => {
     CACHE_KEYS.accounts,
     CACHE_KEYS.walletBalance,
     CACHE_KEYS.investmentPortfolio,
+    CACHE_KEYS.investmentAllocation,
     'cached_cycle_snapshots',
   ]
 

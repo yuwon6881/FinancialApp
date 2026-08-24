@@ -7,7 +7,7 @@ import * as api from '../../lib/api'
 import { InvestmentPlanSection } from './InvestmentPlanSection'
 
 vi.mock('../../lib/api', () => ({
-  readCachedInvestmentPortfolio: vi.fn(),
+  readCachedInvestmentAllocation: vi.fn(),
   fetchInvestmentAllocation: vi.fn(),
 }))
 
@@ -46,7 +46,7 @@ const context: AppContextValue = {
 
 describe('InvestmentPlanSection sliders', () => {
   beforeEach(() => {
-    vi.mocked(api.readCachedInvestmentPortfolio).mockReturnValue({ allocation } as never)
+    vi.mocked(api.readCachedInvestmentAllocation).mockReturnValue(allocation)
     vi.mocked(api.fetchInvestmentAllocation).mockResolvedValue(allocation)
   })
 
@@ -82,7 +82,7 @@ describe('InvestmentPlanSection sliders', () => {
       ],
     }
     const queueMutation = vi.fn(() => true)
-    vi.mocked(api.readCachedInvestmentPortfolio).mockReturnValue({ allocation: withAssignments } as never)
+    vi.mocked(api.readCachedInvestmentAllocation).mockReturnValue(withAssignments)
     vi.mocked(api.fetchInvestmentAllocation).mockResolvedValue(withAssignments)
 
     render(
@@ -105,7 +105,7 @@ describe('InvestmentPlanSection sliders', () => {
   })
 
   it('shows an offline explanation instead of an endless spinner without a cached plan', () => {
-    vi.mocked(api.readCachedInvestmentPortfolio).mockReturnValue(null)
+    vi.mocked(api.readCachedInvestmentAllocation).mockReturnValue(null)
 
     render(
       <AppProvider value={{ ...context, isOffline: true }}>

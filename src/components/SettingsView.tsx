@@ -7,6 +7,7 @@ import type {
   PushChannel,
   RecurringPayment,
   TransactionCategory,
+  InvestmentAllocationOverview,
 } from '../types'
 import type { CategoryCleanupSuggestion } from '../lib/api'
 import type { ToastTone } from './ui/ToastViewport'
@@ -22,14 +23,20 @@ import type { LedgerAccountReconcileInput } from '../lib/api/accounts'
 import { FinancialModelTab } from './settings/FinancialModelTab'
 import { CategoriesPreferencesTab } from './settings/CategoriesPreferencesTab'
 
-const TwoFactorSection = React.lazy(() => import('./TwoFactorSection').then(m => ({ default: m.TwoFactorSection })))
-const ChangePasswordSection = React.lazy(() => import('./ChangePasswordSection').then(m => ({ default: m.ChangePasswordSection })))
-const ActiveDevicesSection = React.lazy(() => import('./settings/ActiveDevicesSection').then(m => ({ default: m.ActiveDevicesSection })))
-const FingerprintSection = React.lazy(() => import('./settings/FingerprintSection').then(m => ({ default: m.FingerprintSection })))
-const InvestmentPlanSection = React.lazy(() => import('./settings/InvestmentPlanSection').then(m => ({ default: m.InvestmentPlanSection })))
+const loadTwoFactorSection = () => import('./TwoFactorSection')
+const loadChangePasswordSection = () => import('./ChangePasswordSection')
+const loadActiveDevicesSection = () => import('./settings/ActiveDevicesSection')
+const loadFingerprintSection = () => import('./settings/FingerprintSection')
+const loadInvestmentPlanSection = () => import('./settings/InvestmentPlanSection')
+const TwoFactorSection = React.lazy(() => loadTwoFactorSection().then(m => ({ default: m.TwoFactorSection })))
+const ChangePasswordSection = React.lazy(() => loadChangePasswordSection().then(m => ({ default: m.ChangePasswordSection })))
+const ActiveDevicesSection = React.lazy(() => loadActiveDevicesSection().then(m => ({ default: m.ActiveDevicesSection })))
+const FingerprintSection = React.lazy(() => loadFingerprintSection().then(m => ({ default: m.FingerprintSection })))
+const InvestmentPlanSection = React.lazy(() => loadInvestmentPlanSection().then(m => ({ default: m.InvestmentPlanSection })))
 const AccountsSection = React.lazy(() => import('./settings/accounts/AccountsSection').then(m => ({ default: m.AccountsSection })))
 
 interface SettingsViewProps {
+  investmentAllocation?: InvestmentAllocationOverview | null
   dashboardData: DashboardData | null
   categoriesList: TransactionCategory[]
   darkMode?: boolean
@@ -140,6 +147,31 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     return 'financial-model'
   })
 
+  const preloadTab = React.useCallback((tab: SettingsTabId) => {
+    if (tab === 'investment-plan') void loadInvestmentPlanSection()
+    if (tab === 'security') {
+      void Promise.allSettled([
+        loadActiveDevicesSection(),
+        loadChangePasswordSection(),
+        loadTwoFactorSection(),
+        loadFingerprintSection(),
+      ])
+    }
+  }, [])
+
+  React.useEffect(() => {
+    const preload = () => {
+      preloadTab('investment-plan')
+      preloadTab('security')
+    }
+    const idleId = window.requestIdleCallback?.(preload, { timeout: 2_000 })
+    if (idleId === undefined) {
+      const timeoutId = window.setTimeout(preload, 1_000)
+      return () => window.clearTimeout(timeoutId)
+    }
+    return () => window.cancelIdleCallback?.(idleId)
+  }, [preloadTab])
+
   React.useEffect(() => {
     if (props.highlightedAccountId) {
       setActiveTab('accounts')
@@ -185,6 +217,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
 
       <SettingsTabs
         activeTab={activeTab}
+        onPreload={preloadTab}
         onChange={nextTab => {
           if (nextTab !== 'accounts' && props.highlightedAccountId) props.onClearHighlightedAccount?.()
           setActiveTab(nextTab)
@@ -225,7 +258,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
 
       {activeTab === 'investment-plan' && (
         <React.Suspense fallback={<div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}>
-          <InvestmentPlanSection />
+          <InvestmentPlanSection initialOverview={props.investmentAllocation} />
         </React.Suspense>
       )}
 
@@ -268,20 +301,30 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       )}
 
       {activeTab === 'security' && (
-        <React.Suspense fallback={<div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}>
-          <div id="settings-panel-security" role="tabpanel" aria-labelledby="settings-tab-security" className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-in fade-in duration-200">
-            <div className="space-y-6">
+        <div id="settings-panel-security" role="tabpanel" aria-labelledby="settings-tab-security" className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-in fade-in duration-200">
+          <div className="space-y-6">
+            <React.Suspense fallback={<SecurityCardFallback />}>
               <ActiveDevicesSection />
+            </React.Suspense>
+            <React.Suspense fallback={<SecurityCardFallback />}>
               <ChangePasswordSection hideSensitive={hideSensitive} />
-            </div>
-            <div className="space-y-6">
-              <TwoFactorSection hideSensitive={hideSensitive} />
-              <FingerprintSection />
-            </div>
+            </React.Suspense>
           </div>
-        </React.Suspense>
+          <div className="space-y-6">
+            <React.Suspense fallback={<SecurityCardFallback />}>
+              <TwoFactorSection hideSensitive={hideSensitive} />
+            </React.Suspense>
+            <React.Suspense fallback={<SecurityCardFallback />}>
+              <FingerprintSection />
+            </React.Suspense>
+          </div>
+        </div>
       )}
     </div>
   )
+}
+
+function SecurityCardFallback() {
+  return <div className="app-panel flex min-h-28 items-center justify-center rounded-2xl border border-border/60 bg-card/92"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div>
 }
 export default SettingsView

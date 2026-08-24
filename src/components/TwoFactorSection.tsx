@@ -1,6 +1,5 @@
 import { Input } from './ui/Input'
 import React, { useEffect, useState } from 'react'
-import QRCode from 'qrcode'
 import { ShieldCheck, ShieldOff, KeyRound, ChevronDown, ChevronUp } from 'lucide-react'
 import * as api from '../lib/api'
 import type { ToastTone } from './ui/ToastViewport'
@@ -61,9 +60,9 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
     if (hideSensitive) return
     setSetupBusy(true)
     try {
-      const { secret, otpauthUri } = await api.setupTotp()
+      const [{ secret, otpauthUri }, qrCode] = await Promise.all([api.setupTotp(), import('qrcode')])
       setSetupSecret(secret)
-      setQrDataUrl(await QRCode.toDataURL(otpauthUri))
+      setQrDataUrl(await qrCode.default.toDataURL(otpauthUri))
     } catch (err: unknown) {
       onToast?.(getErrorMessage(err, 'Failed to start two-factor setup.'), 'Error', 'error')
     } finally {

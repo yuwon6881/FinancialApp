@@ -26,7 +26,11 @@ const defaults: InvestmentPlan = {
   alertDrift: 5,
 }
 
-export function InvestmentPlanSection() {
+interface InvestmentPlanSectionProps {
+  initialOverview?: InvestmentAllocationOverview | null
+}
+
+export function InvestmentPlanSection({ initialOverview: providedOverview }: InvestmentPlanSectionProps) {
   const {
     isOffline,
     activeSyncId,
@@ -48,7 +52,7 @@ export function InvestmentPlanSection() {
   const planPending = Boolean(planOperation && !planOperation.isCompleted && !planSyncing)
   const orderSyncing = isActive('classification')
   const orderPending = Boolean(orderOperation && !orderOperation.isCompleted && !orderSyncing)
-  const cachedOverview = () => api.readCachedInvestmentPortfolio()?.allocation ?? null
+  const cachedOverview = () => providedOverview ?? api.readCachedInvestmentAllocation()
   const projectQueuedPlan = (value: InvestmentPlan) => {
     const queuedPlan = [...investmentOps].reverse().find(operation =>
       operation.entity === 'investmentPlan' && operation.type === 'update')
@@ -86,6 +90,13 @@ export function InvestmentPlanSection() {
   const [globalTargetLock, setGlobalTargetLock] = useState(true)
   const [loading, setLoading] = useState(() => !cachedOverview())
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!providedOverview) return
+    const projected = projectQueuedChanges(providedOverview)
+    setOverview(projected)
+    setPlan(projected?.plan ?? providedOverview.plan)
+  }, [providedOverview])
 
   const load = () => {
     if (isOffline) {

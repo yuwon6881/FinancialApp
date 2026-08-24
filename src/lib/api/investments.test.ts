@@ -128,23 +128,20 @@ describe('investments API contract', () => {
     expect(calls.find(call => requestPath(call) === '/api/investments/allocation/order')?.[1]).toMatchObject({ method: 'PUT' })
   })
 
-  it('reuses a 304 payload and clears the ETag after a same-user mutation', async () => {
+  it('coalesces allocation consumers and clears the ETag after a same-user mutation', async () => {
     expect(jsonResponse({ ok: true }, { ETag: 'W/"check"' }).headers.get('ETag')).toBe('W/"check"')
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ status: 'OnTrack' }, { ETag: 'W/"allocation-1"' }))
-      .mockResolvedValueOnce(new Response(null, { status: 304, headers: { ETag: 'W/"allocation-1"' } }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(jsonResponse({ status: 'OnTrack' }))
     vi.stubGlobal('fetch', fetchMock)
 
-    await fetchInvestmentAllocation()
-    await fetchInvestmentAllocation()
-    const secondHeaders = new Headers(fetchMock.mock.calls[1][1].headers)
-    expect(secondHeaders.get('If-None-Match')).toBe('W/"allocation-1"')
+    await Promise.all([fetchInvestmentAllocation(), fetchInvestmentAllocation()])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
 
     await createInvestmentAccount({ name: 'New broker', baseCurrency: 'USD' })
     await fetchInvestmentAllocation()
-    const afterMutationHeaders = new Headers(fetchMock.mock.calls[3][1].headers)
+    const afterMutationHeaders = new Headers(fetchMock.mock.calls[2][1].headers)
     expect(afterMutationHeaders.has('If-None-Match')).toBe(false)
   })
 })

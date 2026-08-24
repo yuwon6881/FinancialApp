@@ -7,6 +7,7 @@ import type { useCycleNavigation } from './useCycleNavigation'
 import type { useAppSession } from './useAppSession'
 import type { useAppDialogs } from './useAppDialogs'
 import type { usePushNotifications } from './usePushNotifications'
+import type { InvestmentAllocationOverview } from '../types'
 
 const SettingsView = lazy(() => import('../components/SettingsView').then(module => ({ default: module.SettingsView })))
 
@@ -23,6 +24,7 @@ export interface AuthenticatedSettingsRouteProps {
   hasPendingLocalChanges: boolean
   unsyncedChangeCount: number
   draftCount: number
+  investmentAllocation: InvestmentAllocationOverview | null
 }
 
 export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProps> = ({
@@ -38,9 +40,11 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
   hasPendingLocalChanges,
   unsyncedChangeCount,
   draftCount,
+  investmentAllocation,
 }) => {
   return (
     <SettingsView 
+      investmentAllocation={investmentAllocation}
       dashboardData={financial.optimisticDashboardData}
       categoriesList={financial.allCategories}
       onToggleDarkMode={handleToggleDarkMode}

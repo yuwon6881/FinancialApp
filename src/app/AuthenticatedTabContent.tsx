@@ -224,6 +224,7 @@ export function AuthenticatedTabContent({
 
       {prefs.activeTab === 'settings' && (
         <AuthenticatedSettingsRoute
+          investmentAllocation={investmentAllocation}
           prefs={prefs}
           financial={financial}
           nav={nav}

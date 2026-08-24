@@ -22,23 +22,30 @@ export function FingerprintSection() {
   const [open, setOpen] = useState(false)
   const [credentials, setCredentials] = useState<FingerprintCredentialSummary[]>([])
   const [credentialsLoaded, setCredentialsLoaded] = useState(false)
+  const [credentialsError, setCredentialsError] = useState('')
   const [busy, setBusy] = useState(false)
   const [removingCredentialId, setRemovingCredentialId] = useState<string | null>(null)
-  const [available, setAvailable] = useState(false)
+  const [capability, setCapability] = useState<'checking' | 'supported' | 'unsupported'>('checking')
   const username = localStorage.getItem('auth_username') || ''
   const load = async () => {
+    setCredentialsLoaded(false)
+    setCredentialsError('')
     try {
       setCredentials(await api.listFingerprintCredentials())
+    } catch (error) {
+      setCredentialsError(getErrorMessage(error, 'Could not load registered credentials.'))
     } finally {
       setCredentialsLoaded(true)
     }
   }
   useEffect(() => {
-    void load().catch(console.error)
+    void load()
     // A credential-creation call is not a silent capability probe: browsers show their native
     // passkey prompt before the promise can be cancelled. Only the explicit setup action below
     // may invoke WebAuthn creation.
-    void isPlatformAuthenticatorAvailable().then(setAvailable)
+    void isPlatformAuthenticatorAvailable()
+      .then(available => setCapability(available ? 'supported' : 'unsupported'))
+      .catch(() => setCapability('unsupported'))
   }, [])
 
   const enrolledHere = useMemo(() => {
@@ -51,6 +58,8 @@ export function FingerprintSection() {
   const enabledOnAccount = credentials.length > 0
   const status = !credentialsLoaded
     ? { label: 'Checking', className: 'text-muted-foreground' }
+    : credentialsError
+      ? { label: 'Unavailable', className: 'text-destructive' }
     : enrolledHere
       ? { label: 'Enabled here', className: 'text-emerald-500' }
       : enabledOnAccount
@@ -58,7 +67,7 @@ export function FingerprintSection() {
         : { label: 'Not enabled', className: 'text-muted-foreground' }
 
   const enroll = async () => {
-    if (hideSensitive) return
+    if (hideSensitive || capability !== 'supported') return
     setBusy(true)
     try {
       const { challengeId, options } = await api.getFingerprintRegisterOptions()
@@ -104,7 +113,6 @@ export function FingerprintSection() {
     }
   }
 
-  if (!available) return null
   return (
     <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden animate-in fade-in duration-200">
       <Button variant="unstyled"
@@ -143,12 +151,18 @@ export function FingerprintSection() {
                   ? 'This device can unlock your account using biometrics or screen lock.'
                   : 'Register this device to allow fast biometric or PIN unlock on the login screen.'}
               </p>
+              {capability === 'checking' && (
+                <p className="mt-1 text-[11px] text-muted-foreground">Checking whether this device can add a credential…</p>
+              )}
+              {capability === 'unsupported' && (
+                <p className="mt-1 text-[11px] text-muted-foreground">This device cannot add a local biometric or screen-lock credential. You can still manage credentials already registered to the account.</p>
+              )}
             </div>
             <Button
               type="button"
               variant={enrolledHere ? 'outline' : 'primary'}
               size="sm"
-              disabled={busy || hideSensitive}
+              disabled={busy || hideSensitive || capability !== 'supported'}
               onClick={enroll}
               className="shrink-0"
             >
@@ -166,6 +180,15 @@ export function FingerprintSection() {
               )}
             </Button>
           </div>
+
+          {credentialsError && (
+            <div role="alert" className="flex flex-col gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive sm:flex-row sm:items-center sm:justify-between">
+              <span>{credentialsError}</span>
+              <Button type="button" variant="outline" size="sm" onClick={() => void load()} disabled={!credentialsLoaded}>
+                Retry
+              </Button>
+            </div>
+          )}
 
           {credentials.length > 0 && (
             <div className="space-y-2 pt-2 border-t border-border/40">
