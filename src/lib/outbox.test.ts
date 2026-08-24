@@ -403,6 +403,60 @@ describe('bulk transaction projection', () => {
     const split = moved.find(row => String(row.id).startsWith('tx-1-split-'))
     expect(split).toMatchObject({ date: '2026-09-03' })
     expect(moved.find(row => row.id === 'tx-2')).toMatchObject({ date: '2026-08-01' })
+
+    // The bulk targetId is synthetic, so the row itself has to carry the operation id for the
+    // per-row syncing badge to resolve -- otherwise the parent is the only row with no status.
+    expect(moved.find(row => row.id === 'tx-1')).toMatchObject({ pendingSyncOperationId: 'op-1' })
+  })
+
+  // The operation stays in activeOps with isCompleted until the refresh that replaces these rows
+  // succeeds, so the projection has to keep holding them there rather than dropping them.
+  it('still projects a moved parent and its split rows once the move completes', () => {
+    const dated = rows.map(row => ({ ...row, date: '2026-08-01' }))
+    const op = makeOp({
+      entity: 'transaction',
+      type: 'bulkMove',
+      targetId: 'move-1',
+      isCompleted: true,
+      payload: {
+        moves: [{ id: 'tx-1', targetDate: '2026-09-03' }],
+        beforeSnapshots: [{ id: 'tx-1', date: '2026-08-01' }],
+      },
+    })
+
+    const moved = applyOpsToList<TestItem>(dated, [op], 'transaction', {
+      incomeAllocations: { essentialsAlloc: 0.5, growthAlloc: 0.25, stabilityAlloc: 0.15, rewardsAlloc: 0.1 },
+    })
+
+    expect(moved.find(row => row.id === 'tx-1')).toMatchObject({ date: '2026-09-03', isPendingSync: false })
+    expect(moved.filter(row => String(row.id).startsWith('tx-1-split-')).length).toBeGreaterThan(0)
+    expect(moved.every(row => String(row.id).startsWith('tx-1-split-') ? row.date === '2026-09-03' : true)).toBe(true)
+  })
+
+  // Undoing a move from the page the rows left means the parent is no longer in the base list, and
+  // an `update` against a row that is absent is a silent no-op.
+  it('re-inserts a moved parent from its snapshot when the row is no longer in the list', () => {
+    const op = makeOp({
+      entity: 'transaction',
+      type: 'bulkMove',
+      targetId: 'move-1',
+      payload: {
+        moves: [{ id: 'tx-1', targetDate: '2026-08-01' }],
+        beforeSnapshots: [{ id: 'tx-1', date: '2026-09-03' }],
+        transactions: [{ ...rows[0], date: '2026-09-03' }],
+      },
+    })
+
+    const undone = applyOpsToList<TestItem>([rows[2]], [op], 'transaction', {
+      incomeAllocations: { essentialsAlloc: 0.5, growthAlloc: 0.25, stabilityAlloc: 0.15, rewardsAlloc: 0.1 },
+    })
+
+    expect(undone.find(row => row.id === 'tx-1')).toMatchObject({
+      date: '2026-08-01',
+      isPendingSync: true,
+      pendingSyncOperationId: 'op-1',
+    })
+    expect(undone.filter(row => String(row.id).startsWith('tx-1-split-')).length).toBeGreaterThan(0)
   })
 
   it('restores parent rows and regenerates split rows', () => {

@@ -202,7 +202,8 @@ export function FingerprintSection() {
                   return (
                     <div
                       key={c.id}
-                      className="flex items-center justify-between p-2.5 rounded-xl border border-border/50 bg-background/50 text-xs"
+                      aria-busy={isRemoving}
+                      className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-border/50 bg-background/50 text-xs"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         {isCurrent ? (
@@ -219,8 +220,12 @@ export function FingerprintSection() {
                               </span>
                             )}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">
-                            Added {new Date(c.createdAt).toLocaleDateString()}
+                          {/* The status badge is wider than the icon button, so it belongs in the
+                              row's meta flow: inside a fixed-size `size-8` control it bleeds out
+                              over the label and past the card border. */}
+                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                            <span>Added {new Date(c.createdAt).toLocaleDateString()}</span>
+                            <RowSyncStatus isDeleting={isRemoving} entityLabel="credential" />
                           </div>
                         </div>
                       </div>
@@ -230,12 +235,12 @@ export function FingerprintSection() {
                         size="icon"
                         disabled={busy || removingCredentialId !== null || hideSensitive}
                         onClick={() => remove(c.id)}
-                        className="size-11 text-muted-foreground hover:text-destructive hover:bg-destructive/10 sm:size-8"
+                        className="size-11 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 sm:size-8"
                         title={`Remove ${c.deviceLabel || 'credential'}`}
                         aria-label={`Remove ${c.deviceLabel || 'credential'}`}
                       >
                         {isRemoving ? (
-                          <RowSyncStatus isDeleting entityLabel="Credential" />
+                          <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
                         ) : (
                           <Trash2 className="size-3.5" />
                         )}

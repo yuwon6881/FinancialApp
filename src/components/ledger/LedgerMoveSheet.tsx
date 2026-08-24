@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Transaction } from '../../types'
+import { buildParentTransactionSnapshots } from '../../app/financialData/transactionBulkActions'
 import { getTransactionCyclePlacement } from '../../lib/transactionCyclePlacement'
 import { useAppContext } from '../../contexts/AppContext'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -45,7 +46,10 @@ export function LedgerMoveSheet({ transactions, cycleDay, isOpen, onClose, onMov
           // with it, and the optimistic projection re-derives those rows from the parent.
           const moves = transactions.map(transaction => ({ id: String(transaction.id), targetDate }))
           const beforeSnapshots = transactions.map(transaction => ({ id: String(transaction.id), date: transaction.date.slice(0, 10) }))
-          if (!app.queueMutation?.('transaction', 'bulkMove', `move-${Date.now()}`, { moves, beforeSnapshots })) return
+          // Full rows travel with the operation so undoing a move can re-insert a parent that has
+          // already scrolled out of the visible cycle. The wire request reads `moves` alone.
+          const snapshots = buildParentTransactionSnapshots(transactions)
+          if (!app.queueMutation?.('transaction', 'bulkMove', `move-${Date.now()}`, { moves, beforeSnapshots, transactions: snapshots })) return
           onMoved?.()
           onClose()
         }}

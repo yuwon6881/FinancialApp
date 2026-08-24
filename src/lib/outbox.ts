@@ -39,13 +39,31 @@ export function expandBulkTransactionProjection(ops: QueuedOp[]): QueuedOp[] {
     }
     if (op.type === 'bulkMove') {
       const moves = Array.isArray(op.payload?.moves) ? op.payload.moves : []
-      return moves.flatMap(move => {
+      const snapshotById = new Map(snapshots.map(snapshot => [String(snapshot.id), snapshot] as const))
+      return moves.flatMap((move): QueuedOp[] => {
         if (!move || typeof move !== 'object' || !('id' in move) || !('targetDate' in move)) return []
+        const moveId = String(move.id)
+        const targetDate = String(move.targetDate)
+        // A bulk targetId is synthetic, so the row has to carry the operation id itself for the
+        // per-row syncing badge to resolve -- the generated split rows already get it from
+        // splitRowState, and without this the parent is the only row with no status.
+        const pendingSyncOperationId = op.isCompleted ? undefined : op.id
+        const snapshot = snapshotById.get(moveId)
+        if (snapshot) {
+          // Undo lands here when the parent has already left the visible list: an `update` is a
+          // no-op against a row that is absent, so re-insert it the way bulkRestore does.
+          return [{
+            ...op,
+            type: 'add' as const,
+            targetId: moveId,
+            payload: { ...snapshot, date: targetDate, pendingSyncOperationId } as OutboxPayload,
+          }]
+        }
         return [{
           ...op,
           type: 'update' as const,
-          targetId: String(move.id),
-          payload: { date: String(move.targetDate) },
+          targetId: moveId,
+          payload: { date: targetDate, pendingSyncOperationId },
         }]
       })
     }

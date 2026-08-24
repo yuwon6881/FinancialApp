@@ -107,10 +107,15 @@ export function buildUndoAction(
       const moves = snapshots.flatMap(snapshot => snapshot && typeof snapshot === 'object' && 'id' in snapshot && 'date' in snapshot
         ? [{ id: String(snapshot.id), targetDate: String(snapshot.date) }]
         : [])
+      // The server echoes the rows it moved, which are fresher than what we queued; fall back to
+      // the original snapshots so an undo can still re-insert a parent that has left the view.
+      const moved = result && typeof result === 'object' && 'moved' in result ? result.moved : []
+      const rows = Array.isArray(moved) && moved.length > 0 ? moved : op.payload?.transactions
       return moves.length > 0
         ? action('transaction', 'bulkMove', String(op.targetId), {
             moves,
-            beforeSnapshots: result && typeof result === 'object' && 'moved' in result ? result.moved : [],
+            beforeSnapshots: moved,
+            transactions: rows,
           })
         : undefined
     }

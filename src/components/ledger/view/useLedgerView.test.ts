@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useLedgerView } from './useLedgerView'
 import type { Transaction } from '../../../types'
+import type { QueuedOp } from '../../../lib/outboxTypes'
 
 describe('useLedgerView highlighted transaction navigation', () => {
   beforeEach(() => {
@@ -298,5 +299,67 @@ describe('useLedgerView mode parity', () => {
     await act(async () => {
       releaseRevalidation?.({ items: [row], total: 1, page: 1, pageSize: 10 })
     })
+  })
+
+  // A bulk move's targetId is synthetic, so retention keyed on it matched no row and the moved
+  // salary plus its four generated children blinked out between dispatch and the refresh.
+  it('holds a moved parent and its split rows on screen until the refresh lands', async () => {
+    const parent = baseTransaction('tx-1')
+    const children = ['Essentials', 'Growth', 'Stability', 'Rewards']
+      .map(bucket => baseTransaction(`tx-1-split-${bucket}`))
+    const movedRows = [parent, ...children].map(row => ({ ...row, date: '2026-08-25' }))
+
+    let releaseRevalidation: ((value: unknown) => void) | undefined
+    const onFetchPagedTransactions = vi.fn()
+      .mockResolvedValueOnce({ items: [parent, ...children], total: 5, page: 1, pageSize: 10 })
+      .mockImplementationOnce(() => new Promise(resolve => {
+        releaseRevalidation = resolve
+      }))
+
+    const moveOp: QueuedOp = {
+      id: 'op-move-1',
+      entity: 'transaction',
+      type: 'bulkMove',
+      targetId: 'move-123',
+      createdAt: 1,
+      retryCount: 0,
+      payload: {
+        moves: [{ id: 'tx-1', targetDate: '2026-08-25' }],
+        beforeSnapshots: [{ id: 'tx-1', date: '2026-08-20' }],
+      },
+    }
+
+    const { result, rerender } = renderHook(
+      ({ activeSyncId, operations }) => useLedgerView({
+        transactions: movedRows, categories: [], selectedMonth: 'Aug', selectedYear: 2026,
+        cycleDay: 28, isMobile: false, showAllCycles: true, onFetchPagedTransactions,
+        onDeleteTransaction: vi.fn(), hideSensitive: false, formRef: { current: null },
+        activeSyncId, operations,
+      }),
+      { initialProps: { activeSyncId: null as string | null, operations: [] as typeof moveOp[] } },
+    )
+
+    await waitFor(() => expect(result.current.displayTransactions.length).toBe(5))
+
+    // Dispatch in flight, then completed-but-not-yet-refreshed: the operation stays in activeOps
+    // with isCompleted, which is exactly the window the rows used to vanish in.
+    rerender({ activeSyncId: 'move-123', operations: [moveOp] })
+    rerender({ activeSyncId: null, operations: [{ ...moveOp, isCompleted: true }] })
+
+    await waitFor(() => expect(result.current.serverIsFetching).toBe(true))
+    expect(result.current.serverIsReplacingRows).toBe(false)
+    expect(result.current.syncingTransactions.map(t => String(t.id)).sort()).toEqual(
+      ['tx-1', 'tx-1-split-Essentials', 'tx-1-split-Growth', 'tx-1-split-Rewards', 'tx-1-split-Stability'],
+    )
+
+    await act(async () => {
+      releaseRevalidation?.({ items: movedRows, total: 5, page: 1, pageSize: 10 })
+    })
+
+    // The refresh succeeded, so the outbox drops the completed operation. The rows hand over from
+    // the retained list to the server list without passing through a frame that shows neither.
+    rerender({ activeSyncId: null, operations: [] })
+    expect(result.current.syncingTransactions).toEqual([])
+    expect(result.current.displayTransactions.length).toBe(5)
   })
 })

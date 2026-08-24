@@ -1,3 +1,5 @@
+import { splitParentId } from '../../../lib/incomeSplitProjection'
+
 type LedgerSyncTransaction = {
   id: string
   isPendingDelete?: boolean
@@ -9,11 +11,6 @@ type LedgerSyncStatusOptions = {
   activeSyncId?: string | null
   activeSyncIds?: ReadonlyArray<string>
   deletingTxId?: string | null
-}
-
-const splitParentId = (transactionId: string) => {
-  const splitMarker = transactionId.indexOf('-split-')
-  return splitMarker < 0 ? null : transactionId.slice(0, splitMarker)
 }
 
 export function createLedgerSyncStatus({

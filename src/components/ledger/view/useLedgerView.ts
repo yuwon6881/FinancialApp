@@ -5,6 +5,7 @@ import { matchesTransactionFilters, splitFilterSelections } from '../../../lib/t
 import { compareTransactions, type TransactionSort } from '../../../lib/transactionOrdering'
 import { getLedgerTransactionRowElement } from '../../../lib/ledgerTransactionTarget'
 import { createLedgerSyncStatus } from './ledgerSyncStatus'
+import { collectOptimisticTransactionIds, isOptimisticRow } from '../../../lib/optimisticRowRetention'
 import { useHighlightedElement } from '../../ui/useHighlightedElement'
 import {
   type UseLedgerViewOptions,
@@ -52,6 +53,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     onShowAlert,
     activeSyncId,
     activeSyncIds,
+    operations,
     deletingTxId,
     onDeleteTransaction,
     onAiExportRequestConsumed,
@@ -166,9 +168,17 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     deletingTxId,
   }), [activeSyncId, activeSyncIds, deletingTxId, transactions])
 
+  // Rows an active operation still owns have to stay on screen until the refresh that replaces
+  // them lands. `isPendingSync` alone goes false the moment the operation completes, several ticks
+  // before the server rows arrive -- that gap is what made moved rows blink out.
+  const optimisticRowIds = useMemo(
+    () => collectOptimisticTransactionIds(operations ?? [], serverData.recentlySyncedIds),
+    [operations, serverData.recentlySyncedIds],
+  )
+
   const pendingTransactions = useMemo(() => {
-    return transactions.filter(t => t.isPendingSync || serverData.recentlySyncedIds.has(String(t.id)))
-  }, [transactions, serverData.recentlySyncedIds])
+    return transactions.filter(t => t.isPendingSync || isOptimisticRow(String(t.id), optimisticRowIds))
+  }, [transactions, optimisticRowIds])
 
   const filteredPendingTransactions = useMemo(() => {
     if (!showAllCycles) return []

@@ -4,6 +4,7 @@ import { LEDGER_BUCKETS as LEDGER_BUCKET_VALUES, type TransactionLinkFilter, typ
 import type { TransactionSort } from '../../../lib/transactionOrdering'
 import type { LedgerRouteRange } from '../../../lib/appLocation'
 import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
+import type { QueuedOp } from '../../../lib/outboxTypes'
 
 export type LedgerTxType = 'inflow' | 'outflow' | 'transfer' | null
 
@@ -72,6 +73,8 @@ export interface UseLedgerViewOptions {
   onShowAlert?: (message: string, title?: string) => void
   activeSyncId?: string | null
   activeSyncIds?: ReadonlyArray<string>
+  /** Queued and just-completed outbox operations, for row-level optimistic retention. */
+  operations?: ReadonlyArray<QueuedOp>
   deletingTxId?: string | null
   onDeleteTransaction: (id: string, transaction?: Transaction, attachedDocumentIdsToDelete?: number[]) => Promise<void> | void
   onAiExportRequestConsumed?: () => void

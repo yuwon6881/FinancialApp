@@ -111,7 +111,11 @@ describe('FingerprintSection', () => {
     const remove = screen.getByRole('button', { name: 'Remove Other phone' })
     fireEvent.click(remove)
 
-    expect(screen.getByText('Deleting…')).toBeTruthy()
+    const badge = screen.getByText('Deleting…')
+    expect(badge).toBeTruthy()
+    // The badge is wider than the fixed-size icon button, so inside it the pill spills over the
+    // credential label and past the card border.
+    expect(remove.contains(badge)).toBe(false)
     expect(remove.hasAttribute('disabled')).toBe(true)
 
     await act(async () => resolveDelete())

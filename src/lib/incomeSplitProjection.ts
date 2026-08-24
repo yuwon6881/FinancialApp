@@ -101,6 +101,15 @@ export function buildIncomeSplitRows(
 }
 
 /**
+ * The parent a generated bucket row belongs to, or null for an ordinary row. Split ids are minted
+ * as `${parentId}-split-${bucket}` above, so this module owns reading them back apart.
+ */
+export function splitParentId(transactionId: string): string | null {
+  const splitMarker = transactionId.indexOf('-split-')
+  return splitMarker < 0 ? null : transactionId.slice(0, splitMarker)
+}
+
+/**
  * Replace the generated bucket rows belonging to one transaction.
  *
  * Rebuilding from scratch keeps the projection idempotent across replays and covers the edits
