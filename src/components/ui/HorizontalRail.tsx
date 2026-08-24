@@ -116,11 +116,11 @@ export function HorizontalRail({ children, className, label, showControls = fals
         className={cn(
           // No touch-action restriction: vertical finger gestures must remain available to the page.
           // Desktop CSS disables snapping so small mouse-wheel ticks cannot be rolled back between
-          // wide cards; touch devices retain the native proximity snap that already feels right.
+          // wide cards; touch devices use mandatory snapping to always land on one full card.
           // The inset padding is paint space for the shared search-target outline/shadow. Without
           // it, the first/last card and the top edge are clipped by this overflow container.
           'horizontal-rail no-scrollbar flex w-full min-w-0 gap-3 overflow-x-auto overscroll-x-contain',
-          'snap-x snap-proximity p-2 scroll-px-2',
+          'snap-x snap-mandatory p-2 scroll-px-2',
           className,
         )}
       >
