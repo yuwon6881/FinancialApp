@@ -3,6 +3,7 @@ import {
   replayStabilityReload,
   type StabilityReloadMovement,
   type StabilityReloadObligation,
+  type StabilityReloadPlanPoint,
 } from '../../lib/stabilityRecovery'
 import { readFixture } from './runParity'
 
@@ -17,6 +18,8 @@ interface StabilityReloadCase {
     }
     openingBalance: number
     target: number
+    /** A case may carry an effective-dated plan timeline instead of one flat target. */
+    planPoints?: StabilityReloadPlanPoint[]
     movements: StabilityReloadMovement[]
   }
   expected: {
@@ -24,6 +27,8 @@ interface StabilityReloadCase {
     oldestOutstandingDate: string | null
     markedThisRun: number
     repaidThisRun: number
+    openMarkedTotal: number
+    openRepaidTotal: number
     obligations: StabilityReloadObligation[]
   }
 }
@@ -42,12 +47,17 @@ describe('stability reload parity', () => {
         input.openingBalance,
         input.target,
         input.movements,
+        input.planPoints,
       )
 
       expect(actual.outstanding).toBeCloseTo(expected.outstanding, 2)
       expect(actual.oldestOutstandingDate ?? null).toBe(expected.oldestOutstandingDate)
       expect(actual.markedThisRun).toBeCloseTo(expected.markedThisRun, 2)
       expect(actual.repaidThisRun).toBeCloseTo(expected.repaidThisRun, 2)
+      expect(actual.openMarkedTotal).toBeCloseTo(expected.openMarkedTotal, 2)
+      expect(actual.openRepaidTotal).toBeCloseTo(expected.openRepaidTotal, 2)
+      // The reported totals must always account for exactly what is owed.
+      expect(actual.openMarkedTotal - actual.openRepaidTotal).toBeCloseTo(actual.outstanding, 2)
 
       expect(actual.obligations.length).toBe(expected.obligations.length)
       for (let i = 0; i < expected.obligations.length; i++) {

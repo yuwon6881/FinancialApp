@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test'
 import type { InvestmentActivity, SavingsGoal, WishlistItem } from '../../src/types'
-import { establishSession, mockApi, waitForStableLayout } from './visualTestSupport'
+import {
+  establishSession,
+  mockApi,
+  stabilityRecoveryFixture,
+  waitForStableLayout,
+} from './visualTestSupport'
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -38,6 +43,23 @@ test('representative dashboard', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   await waitForStableLayout(page)
   await expect(page).toHaveScreenshot('dashboard.png', { fullPage: true })
+})
+
+// The three reported figures are one subtraction and are only legible if they read as adjacent
+// rows. jsdom can assert the labels exist but not that the panel lays them out that way, nor that
+// the disclosure opens to a contained block at phone width.
+test('emergency fund recovery card reads as one subtraction', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page, { stabilityRecovery: stabilityRecoveryFixture })
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+
+  const card = page.getByText('Putting it back progress').locator('xpath=ancestor::section[1]')
+  await expect(card).toBeVisible()
+  await card.getByText('Where this figure comes from').click()
+  await expect(card.getByText('Taken out and not yet fully back')).toBeVisible()
+  await waitForStableLayout(page)
+
+  await expect(card).toHaveScreenshot('stability-recovery-card.png')
 })
 
 test('accounts settings panel uses the complete card shell', async ({ page }) => {

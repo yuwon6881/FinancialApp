@@ -180,8 +180,41 @@ async function fulfill(route: Route, body: unknown, status = 200) {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
 }
 
+/**
+ * The dashboard's emergency-fund recovery block. Opt-in so the shared dashboard baselines keep
+ * showing a healthy fund; a test that wants the exception card asks for it. Amounts are plain
+ * numbers, which `deobfuscateAmount` passes through unchanged.
+ */
+export const stabilityRecoveryFixture = {
+  isActive: true,
+  // 676.77 taken out and not yet fully back, 325 of it already returned, 351.77 still short. The
+  // drawdown that was put back in full is deliberately absent from all three.
+  markedTotal: 676.77,
+  repaidTotal: 325,
+  target: 10_000,
+  currentBalance: 4_354.98,
+  outstandingShortfall: 351.77,
+  openingOutstanding: 0,
+  openingObligations: [],
+  cyclesRemaining: 3,
+  requiredThisCycle: 117.26,
+  toppedUpThisCycle: 520,
+  outstandingThisCycle: 0,
+  isOverdue: false,
+  lastDrawdownCycleKey: '2026-08',
+  recoveryFromDate: '2026-08-09',
+  essentialsCommitted: 0,
+  rewardsCommitted: 0,
+  suggestedDraws: [
+    { bucket: 'Essentials', share: 0.588235 },
+    { bucket: 'Growth', share: 0.294118 },
+    { bucket: 'Rewards', share: 0.117647 },
+  ],
+}
+
 interface MockApiOptions {
   registered?: boolean
+  stabilityRecovery?: typeof stabilityRecoveryFixture
   failStatus?: boolean
   failDocuments?: boolean
   wishlist?: WishlistItem[]
@@ -200,6 +233,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
     dashboard: {
       ...bootstrap.dashboard,
       setting: { ...bootstrap.dashboard.setting, darkMode },
+      ...(options.stabilityRecovery ? { stabilityRecovery: options.stabilityRecovery } : {}),
     },
   }
 

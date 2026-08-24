@@ -86,6 +86,7 @@ export function computeOptimisticDashboard(
         projectedBalance,
         planPoints: stabilityPlanPoints,
         currentCycleKey: `${data.setting.selectedYear}-${String(selectedMonth).padStart(2, '0')}`,
+        cycleDay: data.setting.cycleDay,
       }),
       target: data.setting.targetStabilityFund,
     }

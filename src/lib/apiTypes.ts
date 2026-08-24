@@ -14,6 +14,7 @@ import type {
   TodayPlanInsights,
   CategoryLimitProgress,
   StabilityRecovery,
+  StabilityReloadObligation,
   WishlistItem,
   SavingsGoal,
   Loan,
@@ -157,8 +158,17 @@ type WireTodayPlanInsights = Omit<
   projectedEssentialsEndingBalance: WireAmount
 }
 
+type WireStabilityReloadObligation = Omit<
+  StabilityReloadObligation,
+  'originalAmount' | 'remainingAmount'
+> & {
+  originalAmount: WireAmount
+  remainingAmount: WireAmount
+}
+
 type WireStabilityRecovery = Omit<
   StabilityRecovery,
+  | 'openingObligations'
   | 'target'
   | 'currentBalance'
   | 'outstandingShortfall'
@@ -180,6 +190,7 @@ type WireStabilityRecovery = Omit<
   repaidTotal: WireAmount
   essentialsCommitted: WireAmount
   rewardsCommitted: WireAmount
+  openingObligations?: WireStabilityReloadObligation[]
 }
 
 export type WireLoanPaymentSplit = Omit<LoanPaymentSplit, 'payment' | 'interest' | 'principal' | 'balanceBefore' | 'balanceAfter' | 'surplus'> & {

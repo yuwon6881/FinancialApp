@@ -6,7 +6,7 @@ import {
   projectStabilityReloadStatuses,
   replayStabilityReload,
   proposeTopUp,
-  summarizeStabilityReload,
+  describeStabilityReloadMovements,
   stabilityReloadStatusLabel,
   type RecoveryBucketState,
 } from './stabilityRecovery'
@@ -14,6 +14,18 @@ import type { StabilityRecovery, Transaction } from '@/types'
 
 // Mirrors StabilityRecoveryPlannerTests.cs case for case, so drift between the two
 // implementations shows up as a failing pair rather than a quiet disagreement.
+
+// A raw fold over described movements, with no FIFO discharge and no target clearing. Deliberately
+// test-only: it is the right shape for asserting the per-movement description rules below and the
+// wrong shape for any reported total, because a settled drawdown still contributes to it.
+const summarize = (transactions: Transaction[], stabilityAlloc: number) =>
+  describeStabilityReloadMovements(transactions, stabilityAlloc).reduce(
+    (accumulated, movement) => ({
+      markedAmount: accumulated.markedAmount + (movement.marked ? Math.max(0, -movement.change) : 0),
+      repaidAmount: accumulated.repaidAmount + movement.repayment,
+    }),
+    { markedAmount: 0, repaidAmount: 0 },
+  )
 
 const recovery = (overrides: Partial<StabilityRecovery> = {}): StabilityRecovery => ({
   isActive: true,
@@ -338,6 +350,188 @@ describe('stability reload projection', () => {
     expect(projected.isActive).toBe(true)
   })
 
+  it('does not add a settled carried drawdown to what is still asked back', () => {
+    // The reported defect: 500 out and 400 back last cycle, then 300 out and 100 back this cycle.
+    // The 100 settles the carried 500 outright, so only the 300 is still asked about.
+    const drawdown = transaction({
+      id: 'current-drawdown', date: '2026-07-04', amount: -300,
+      ledgerCategory: 'Stability', stabilityReloadIntent: 'Required',
+    })
+    const repayment = transaction({
+      id: 'current-repayment', date: '2026-07-20', amount: 100,
+      ledgerCategory: 'Transfer:Growth->Stability',
+    })
+    const projected = projectStabilityRecovery({
+      recovery: recovery({
+        markedTotal: 500,
+        repaidTotal: 400,
+        outstandingShortfall: 100,
+        currentBalance: 1900,
+        target: 10000,
+        toppedUpThisCycle: 0,
+        openingOutstanding: 100,
+        openingOldestDate: '2026-06-04',
+        openingObligations: [{
+          transactionId: 'old-drawdown',
+          originalAmount: 500,
+          remainingAmount: 100,
+          date: '2026-06-04',
+        }],
+        lastDrawdownCycleKey: '2026-06',
+      }),
+      baseTransactions: [],
+      projectedTransactions: [drawdown, repayment],
+      stabilityAlloc: 0.15,
+      projectedBalance: 1700,
+      currentCycleKey: '2026-07',
+      cycleDay: 1,
+    })
+
+    expect(projected.outstandingShortfall).toBe(300)
+    expect(projected.markedTotal).toBe(300)
+    expect(projected.repaidTotal).toBe(0)
+    // The anchor moves off the settled June drawdown, so the window is not reported overdue.
+    expect(projected.lastDrawdownCycleKey).toBe('2026-07')
+    expect(projected.recoveryFromDate).toBe('2026-07-04')
+  })
+
+  it('keeps a carried drawdown only partly put back at its full original amount', () => {
+    const repayment = transaction({
+      id: 'current-repayment', date: '2026-07-20', amount: 200,
+      ledgerCategory: 'Transfer:Growth->Stability',
+    })
+    const projected = projectStabilityRecovery({
+      recovery: recovery({
+        markedTotal: 500,
+        repaidTotal: 0,
+        outstandingShortfall: 500,
+        currentBalance: 500,
+        target: 10000,
+        toppedUpThisCycle: 0,
+        openingOutstanding: 500,
+        openingOldestDate: '2026-06-04',
+        openingObligations: [{
+          transactionId: 'old-drawdown',
+          originalAmount: 500,
+          remainingAmount: 500,
+          date: '2026-06-04',
+        }],
+        lastDrawdownCycleKey: '2026-06',
+      }),
+      baseTransactions: [],
+      projectedTransactions: [repayment],
+      stabilityAlloc: 0.15,
+      projectedBalance: 700,
+      currentCycleKey: '2026-07',
+      cycleDay: 1,
+    })
+
+    expect(projected.markedTotal).toBe(500)
+    expect(projected.repaidTotal).toBe(200)
+    expect(projected.outstandingShortfall).toBe(300)
+    expect(projected.lastDrawdownCycleKey).toBe('2026-06')
+    expect(projected.recoveryFromDate).toBe('2026-06-04')
+  })
+
+  it('does not compound the reported total when a queued drawdown lands on a settled one', () => {
+    // The optimistic path used to add this cycle's delta onto the server's figure, so a new drawdown
+    // grew the ask by its own amount on top of a total that already counted settled drawdowns.
+    const settled = transaction({
+      id: 'settled', date: '2026-07-01', amount: -400,
+      ledgerCategory: 'Stability', stabilityReloadIntent: 'Required',
+    })
+    const back = transaction({
+      id: 'back', date: '2026-07-02', amount: 400,
+      ledgerCategory: 'Transfer:Growth->Stability',
+    })
+    const queued = transaction({
+      id: 'queued', date: '2026-07-10', amount: -250,
+      ledgerCategory: 'Stability', stabilityReloadIntent: 'Required',
+    })
+    const base = recovery({
+      markedTotal: 0, repaidTotal: 0, outstandingShortfall: 0, isActive: false,
+      currentBalance: 2000, target: 10000, toppedUpThisCycle: 400, openingOutstanding: 0,
+    })
+    const projected = projectStabilityRecovery({
+      recovery: base,
+      baseTransactions: [settled, back],
+      projectedTransactions: [settled, back, queued],
+      stabilityAlloc: 0.15,
+      projectedBalance: 1750,
+      currentCycleKey: '2026-07',
+      cycleDay: 1,
+    })
+
+    expect(projected.markedTotal).toBe(250)
+    expect(projected.repaidTotal).toBe(0)
+    expect(projected.outstandingShortfall).toBe(250)
+    // Invariant: what is asked back less what has gone back is exactly what is owed.
+    expect(projected.markedTotal - projected.repaidTotal).toBe(projected.outstandingShortfall)
+  })
+
+  it('preserves same-day FIFO order across the carried obligation payload', () => {
+    const projected = projectStabilityRecovery({
+      recovery: recovery({
+        markedTotal: 180,
+        repaidTotal: 0,
+        outstandingShortfall: 180,
+        openingOutstanding: 180,
+        openingOldestDate: '2026-06-01',
+        openingObligations: [
+          { transactionId: 'z-first', originalAmount: 100, remainingAmount: 100, date: '2026-06-01' },
+          { transactionId: 'a-second', originalAmount: 80, remainingAmount: 80, date: '2026-06-01' },
+        ],
+        target: 0,
+        currentBalance: 0,
+        toppedUpThisCycle: 0,
+      }),
+      baseTransactions: [],
+      projectedTransactions: [transaction({
+        id: 'repayment', date: '2026-07-05', amount: 120,
+        ledgerCategory: 'Transfer:Growth->Stability',
+      })],
+      stabilityAlloc: 0.15,
+      projectedBalance: 120,
+      currentCycleKey: '2026-07',
+      cycleDay: 1,
+    })
+
+    expect(projected.outstandingShortfall).toBe(60)
+    expect(projected.markedTotal).toBe(80)
+    expect(projected.repaidTotal).toBe(20)
+  })
+
+  it('falls back to the authoritative opening total when obligation detail is stale', () => {
+    const projected = projectStabilityRecovery({
+      recovery: recovery({
+        markedTotal: 180,
+        repaidTotal: 0,
+        outstandingShortfall: 180,
+        openingOutstanding: 180,
+        openingOldestDate: '2026-06-01',
+        openingObligations: [
+          { transactionId: 'stale', originalAmount: 500, remainingAmount: 300, date: '2026-06-01' },
+        ],
+        target: 0,
+        currentBalance: 0,
+        toppedUpThisCycle: 0,
+      }),
+      baseTransactions: [],
+      projectedTransactions: [transaction({
+        id: 'repayment', date: '2026-07-05', amount: 50,
+        ledgerCategory: 'Transfer:Growth->Stability',
+      })],
+      stabilityAlloc: 0.15,
+      projectedBalance: 50,
+      currentCycleKey: '2026-07',
+      cycleDay: 1,
+    })
+
+    expect(projected.outstandingShortfall).toBe(130)
+    expect(projected.markedTotal).toBe(130)
+    expect(projected.repaidTotal).toBe(0)
+  })
+
   it('resets the per-cycle repayment count when attainment is followed by a drawdown', () => {
     const result = replayStabilityReload(
       { outstanding: 0 },
@@ -384,7 +578,7 @@ describe('stability reload projection', () => {
       transaction({ id: 'required', amount: -500, stabilityReloadIntent: 'Unanswered' }),
       transaction({ id: 'spent', amount: -200, stabilityReloadIntent: 'NotRequired' }),
     ]
-    expect(summarizeStabilityReload(rows, 0.15)).toEqual({ markedAmount: 500, repaidAmount: 0 })
+    expect(summarize(rows, 0.15)).toEqual({ markedAmount: 500, repaidAmount: 0 })
   })
 
   it('does not count ordinary salary allocation as putting a marked amount back', () => {
@@ -398,7 +592,7 @@ describe('stability reload projection', () => {
       amount: 600,
       ledgerCategory: 'Transfer:Income->Stability',
     })
-    expect(summarizeStabilityReload([salary, child], 0.15).repaidAmount).toBe(0)
+    expect(summarize([salary, child], 0.15).repaidAmount).toBe(0)
   })
 
   it('counts explicit extra salary money, transfers in, and positive adjustments as repayment', () => {
@@ -406,14 +600,14 @@ describe('stability reload projection', () => {
     const child = transaction({ id: 'salary-split-Stability', amount: 1100, ledgerCategory: 'Transfer:Income->Stability' })
     const transfer = transaction({ id: 'transfer', amount: 100, ledgerCategory: 'Transfer:Growth->Stability' })
     const adjustment = transaction({ id: 'adjustment', amount: 50, ledgerCategory: 'Stability' })
-    expect(summarizeStabilityReload([salary, child, transfer, adjustment], 0.15).repaidAmount).toBe(650)
+    expect(summarize([salary, child, transfer, adjustment], 0.15).repaidAmount).toBe(650)
   })
 
   it('does not treat account balance corrections as put-back money', () => {
     const correction = transaction({
       id: 'balance-correction', amount: 50, isAccountBalanceAdjustment: true,
     })
-    expect(summarizeStabilityReload([correction], 0.15)).toEqual({ markedAmount: 0, repaidAmount: 0 })
+    expect(summarize([correction], 0.15)).toEqual({ markedAmount: 0, repaidAmount: 0 })
   })
 
   it('uses a saved salary reimbursement when the plan allocation later changes', () => {
@@ -422,7 +616,7 @@ describe('stability reload projection', () => {
     })
     const child = transaction({ id: 'salary-split-Stability', amount: 600, ledgerCategory: 'Transfer:Income->Stability' })
 
-    expect(summarizeStabilityReload([salary, child], 0.10).repaidAmount).toBe(30)
+    expect(summarize([salary, child], 0.10).repaidAmount).toBe(30)
   })
 
   it('keeps the marked obligation after ordinary salary reaches an old high point below target', () => {

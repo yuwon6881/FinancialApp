@@ -1,5 +1,13 @@
-import type { StabilityReloadIntent, StabilityReloadStatus, Transaction } from '@/types'
+import type {
+  StabilityReloadIntent,
+  StabilityReloadObligation,
+  StabilityReloadStatus,
+  Transaction,
+} from '@/types'
 import { bucketAmount } from './bucketAttribution'
+
+// Re-exported so the replay's own consumers keep a single import path for the queue's shape.
+export type { StabilityReloadObligation }
 
 export interface StabilityReloadMovement {
   id?: string
@@ -16,25 +24,26 @@ export interface StabilityReloadPlanPoint {
   stabilityAlloc?: number
 }
 
-export interface StabilityReloadObligation {
-  transactionId: string
-  originalAmount: number
-  remainingAmount: number
-  date?: string
-}
-
-export interface StabilityReloadSummary {
-  markedAmount: number
-  repaidAmount: number
-}
-
 export interface StabilityReloadReplay {
   outstanding: number
   oldestOutstandingDate?: string
   markedThisRun: number
   repaidThisRun: number
-  oldestMarkedThisRunDate?: string
+  /**
+   * Retained after they are fully discharged so per-row status can still say "complete"; only the
+   * two totals below drop them.
+   */
   obligations: StabilityReloadObligation[]
+  /**
+   * What is still owed, counted per obligation rather than per movement. `openMarkedTotal` sums the
+   * original amount of every obligation with money still owing and `openRepaidTotal` sums what has
+   * gone back against those same obligations, so a drawdown put back in full leaves both figures
+   * entirely. By construction `openMarkedTotal - openRepaidTotal === outstanding`: summing movements
+   * instead let a settled drawdown keep inflating the reported total for as long as anything else
+   * was owed.
+   */
+  openMarkedTotal: number
+  openRepaidTotal: number
 }
 
 export const normalizeReloadIntent = (intent: string | null | undefined): StabilityReloadIntent =>
@@ -142,19 +151,6 @@ export function describeStabilityReloadMovements(
   return movements
 }
 
-export function summarizeStabilityReload(
-  transactions: Transaction[],
-  stabilityAlloc: number,
-): StabilityReloadSummary {
-  return describeStabilityReloadMovements(transactions, stabilityAlloc).reduce(
-    (summary, movement) => ({
-      markedAmount: summary.markedAmount + (movement.marked ? Math.max(0, -movement.change) : 0),
-      repaidAmount: summary.repaidAmount + movement.repayment,
-    }),
-    { markedAmount: 0, repaidAmount: 0 },
-  )
-}
-
 /** The ordered FIFO replay shared by the optimistic projection and the API ledger replay. */
 export function replayStabilityReload(
   opening: {
@@ -187,7 +183,6 @@ export function replayStabilityReload(
   let running = openingBalance
   let markedThisRun = 0
   let repaidThisRun = 0
-  let oldestMarkedThisRunDate: string | undefined
 
   const points = (planPoints?.length ? [...planPoints] : [{
     effectiveAt: '1970-01-01T00:00:00.000Z',
@@ -213,8 +208,9 @@ export function replayStabilityReload(
       if (obligation) obligations.set(entry.id, { ...obligation, remainingAmount: 0 })
     }
     queue.length = 0
+    // Attainment settles everything: nothing is owed, so nothing is reported as owed. Only
+    // markedThisRun survives, as an audit total of what left the fund during this run.
     repaidThisRun = 0
-    oldestMarkedThisRunDate = undefined
   }
 
   const applyPlanPoint = (point: StabilityReloadPlanPoint) => {
@@ -253,9 +249,6 @@ export function replayStabilityReload(
             date: movement.date,
           })
         }
-        if (!oldestMarkedThisRunDate || movement.date < oldestMarkedThisRunDate) {
-          oldestMarkedThisRunDate = movement.date
-        }
       }
 
       const repayment = Math.min(outstandingNow(), Math.max(0, movement.repayment))
@@ -289,14 +282,33 @@ export function replayStabilityReload(
     }
   }
 
+  // Only obligations that still owe money are reported. An anonymous carried entry has no original
+  // amount to compare against, so its remaining amount is all it can contribute -- that entry
+  // shrinks as it is discharged, which keeps the difference equal to what is outstanding.
+  let openMarkedTotal = 0
+  let openRepaidTotal = 0
+  for (const obligation of obligations.values()) {
+    if (obligation.remainingAmount <= 0) continue
+    // Taking the larger of the two as the original keeps the difference equal to what is still owed
+    // even for a malformed carried entry claiming more remaining than original.
+    const original = Math.max(obligation.originalAmount, obligation.remainingAmount)
+    openMarkedTotal += original
+    openRepaidTotal += original - obligation.remainingAmount
+  }
+  for (const entry of queue) {
+    if (!entry.id) openMarkedTotal += entry.amount
+  }
+
   return {
     outstanding: outstandingNow(),
     oldestOutstandingDate: queue[0]?.date,
     markedThisRun,
     repaidThisRun,
-    oldestMarkedThisRunDate,
-    obligations: [...obligations.values()].sort((left, right) =>
-      left.transactionId.localeCompare(right.transactionId)),
+    // Map iteration is insertion/FIFO order. The server's cycle cache carries open entries in this
+    // exact order; sorting by id swaps same-day withdrawals and completes the wrong Ledger row.
+    obligations: [...obligations.values()],
+    openMarkedTotal,
+    openRepaidTotal,
   }
 }
 

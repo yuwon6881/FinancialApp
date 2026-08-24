@@ -135,23 +135,26 @@ export function StabilityRecoveryExceptionCard({
         </summary>
         <div className="mt-2 space-y-2.5 rounded-xl border border-border/60 bg-card/60 p-3.5">
           <dl className="space-y-1.5 text-[11px] sm:text-xs">
+            {/* The first three rows are one subtraction and are kept adjacent so they read as one:
+                what is still being put back, less what has gone back, is what is still short.
+                Anything already put back in full has left all three. */}
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
-              <dt className="min-w-0 leading-snug text-muted-foreground">You marked as needing to go back</dt>
+              <dt className="min-w-0 leading-snug text-muted-foreground">Taken out and not yet fully back</dt>
               <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.markedTotal)}</dd>
             </div>
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
               <dt className="min-w-0 leading-snug text-muted-foreground">Put back so far</dt>
               <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.repaidTotal)}</dd>
             </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
-              <dt className="min-w-0 leading-snug text-muted-foreground">In it now</dt>
-              <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.currentBalance)}</dd>
-            </div>
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 border-t border-border/40 pt-1.5">
               <dt className="font-semibold text-foreground">Still short</dt>
               <dd className="text-right font-extrabold tabular-nums text-amber-600 dark:text-amber-400">
                 {formatSensitive(recovery.outstandingShortfall)}
               </dd>
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
+              <dt className="min-w-0 leading-snug text-muted-foreground">In it now</dt>
+              <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.currentBalance)}</dd>
             </div>
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
               <dt className="min-w-0 leading-snug text-muted-foreground">

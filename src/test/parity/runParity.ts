@@ -75,11 +75,18 @@ type Fixture<T> = {
   cases: T[]
 }
 
+// Fixtures are version 1 unless a shape change bumped them. Pinning the version is what makes a
+// fixture edit that either side has not caught up with fail loudly instead of silently skipping.
+const FIXTURE_VERSIONS: Record<string, number> = {
+  'free-rewards': 2,
+  'stability-reload': 2,
+}
+
 export function readFixture<T>(domain: string): T[] {
   const fixture = JSON.parse(
     readFileSync(new URL(`./fixtures/${domain}.cases.json`, import.meta.url), 'utf8'),
   ) as Fixture<T>
-  const expectedVersion = domain === 'free-rewards' ? 2 : 1
+  const expectedVersion = FIXTURE_VERSIONS[domain] ?? 1
   if (fixture.domain !== domain || fixture.version !== expectedVersion) {
     throw new Error(`Unsupported parity fixture: ${domain}`)
   }

@@ -121,10 +121,27 @@ describe('StabilityRecoveryExceptionCard', () => {
   it('shows the subtraction the figure comes from', () => {
     render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
 
-    expect(screen.getByText('You marked as needing to go back')).toBeTruthy()
+    expect(screen.getByText('Taken out and not yet fully back')).toBeTruthy()
     expect(screen.getByText('Put back so far')).toBeTruthy()
     expect(screen.getByText('In it now')).toBeTruthy()
     expect(screen.getByText('Still short')).toBeTruthy()
+  })
+
+  // The reported defect showed up here: 800 asked back against 200 owed, because drawdowns already
+  // put back in full were still counted. The three figures are one subtraction and must agree.
+  it('reports figures that account for exactly what is still owed', () => {
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({ markedTotal: 300, repaidTotal: 100, outstandingShortfall: 200 })}
+        formatSensitive={format}
+      />
+    )
+
+    expect(screen.getByText('$300.00')).toBeTruthy()
+    expect(screen.getByText('$100.00')).toBeTruthy()
+    expect(screen.getByText('$200.00')).toBeTruthy()
+    // 100 of 300 back, measured against what is still being put back rather than a running history.
+    expect(screen.getByText('33%')).toBeTruthy()
   })
 
   it('opens the ledger on the window the shortfall accumulated over', () => {

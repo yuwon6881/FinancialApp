@@ -115,6 +115,12 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
             ? undefined
             : deobfuscateAmount(data.stabilityRecovery.openingOutstanding),
           openingOldestDate: data.stabilityRecovery.openingOldestDate ?? undefined,
+          openingObligations: (data.stabilityRecovery.openingObligations ?? []).map(obligation => ({
+            transactionId: obligation.transactionId,
+            originalAmount: deobfuscateAmount(obligation.originalAmount),
+            remainingAmount: deobfuscateAmount(obligation.remainingAmount),
+            date: obligation.date ?? undefined,
+          })),
           cyclesRemaining: data.stabilityRecovery.cyclesRemaining || 0,
           requiredThisCycle: deobfuscateAmount(data.stabilityRecovery.requiredThisCycle),
           toppedUpThisCycle: deobfuscateAmount(data.stabilityRecovery.toppedUpThisCycle),
