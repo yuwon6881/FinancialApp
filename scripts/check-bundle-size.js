@@ -50,9 +50,11 @@ const budgets = [
   // deferred: the form refuses to save without it, so it belongs in the form's own chunk, and the
   // badge renders with every row. The replay math it reads lives in lib/stabilityRecovery.ts,
   // already on the eager graph via optimisticDashboard, so this chunk does not duplicate it.
-  // 24.0: raised from 21.5 (measured 22.47) for decomposing SettingsView into focused tab
-  // and card components (FinancialModelTab, CategoriesPreferencesTab, etc.) and React Compiler memoization.
-  { name: 'SettingsView-*.js', pattern: /^SettingsView-.*\.js$/, limitKb: 24.0 }
+  // 38.0: raised from 24.0 (measured 36.31) so Investment Plan and Security cards ship with
+  // SettingsView. Vite's generated dependency-preload wrapper could remain pending forever for
+  // those runtime chunks; keeping the focused components in the already-lazy Settings route
+  // removes that failure path without adding them to the eager application graph.
+  { name: 'SettingsView-*.js', pattern: /^SettingsView-.*\.js$/, limitKb: 38.0 }
 ]
 
 function getGzipSize(filePath) {

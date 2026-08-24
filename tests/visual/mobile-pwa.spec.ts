@@ -144,6 +144,21 @@ test('settings tabs support roving keyboard focus on mobile', async ({ page }) =
   await expect(investmentTab).toHaveAttribute('aria-selected', 'true')
 })
 
+test('Investment Plan and Security settings render without a suspended chunk', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page)
+  await page.goto('/settings', { waitUntil: 'domcontentloaded' })
+
+  await page.getByRole('tab', { name: 'Investment Plan' }).click()
+  await expect(page.getByRole('heading', { name: /Portfolio targets/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Investment classification/ })).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Security & Devices' }).click()
+  for (const heading of ['Active Devices', 'Change Password', 'Two-Factor Authentication', 'Device Unlock']) {
+    await expect(page.getByRole('heading', { name: heading })).toBeVisible()
+  }
+})
+
 test('mobile transaction sheet remains contained at keyboard height', async ({ page }) => {
   test.skip(!test.info().project.name.startsWith('mobile'), 'The virtual-keyboard viewport is mobile-only.')
 
