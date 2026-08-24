@@ -38,15 +38,15 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
       >
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-muted-foreground">Cycle Inflow</span>
-          <div className="p-2 rounded-lg bg-teal-500/10 text-teal-500 group-hover:scale-110 transition-transform duration-300">
-            <ArrowDownLeft className="size-4" />
+          <div className="flex size-9 items-center justify-center rounded-xl bg-teal-500/10 text-teal-500 ring-1 ring-teal-500/20 group-hover:scale-105 transition-transform duration-300">
+            <ArrowDownLeft className="size-4.5" />
           </div>
         </div>
-        <div className="text-2xl font-black text-foreground">
+        <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground tabular-nums">
           <SensitiveAmount value={stats.monthlyInflow} isMasked={hideSensitive} formatFn={formatCurrency} />
         </div>
-        <p className="text-[10px] mt-1.5 text-muted-foreground">
-          Total Actual Income: <span className="font-semibold text-teal-500">{formatSensitive(stats.monthlyIncome)}</span>
+        <p className="text-xs mt-2 text-muted-foreground font-medium">
+          Total Actual Income: <span className="font-bold text-teal-500 tabular-nums">{formatSensitive(stats.monthlyIncome)}</span>
         </p>
       </div>
 
@@ -60,15 +60,15 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
       >
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-muted-foreground">Cycle Outflow</span>
-          <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500 group-hover:scale-110 transition-transform duration-300">
-            <ArrowUpRight className="size-4" />
+          <div className="flex size-9 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 ring-1 ring-orange-500/20 group-hover:scale-105 transition-transform duration-300">
+            <ArrowUpRight className="size-4.5" />
           </div>
         </div>
-        <div className="text-2xl font-black text-foreground">
+        <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground tabular-nums">
           <SensitiveAmount value={stats.monthlyExpenses} isMasked={hideSensitive} formatFn={formatCurrency} />
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1.5">
-          Active bills (monthly equivalent): <span className="font-semibold text-orange-500">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
+        <p className="text-xs text-muted-foreground mt-2 font-medium">
+          Active bills (monthly equivalent): <span className="font-bold text-orange-500 tabular-nums">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
         </p>
       </div>
     </div>

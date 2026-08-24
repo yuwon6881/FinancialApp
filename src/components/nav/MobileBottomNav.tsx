@@ -37,15 +37,15 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               key={tab}
               onClick={() => { triggerHaptic(8); onTabChange(tab) }}
               aria-current={isActive ? 'page' : undefined}
-              className={`relative flex min-w-0 flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
-                isActive ? 'scale-105 font-bold text-foreground' : 'text-muted-foreground hover:text-foreground'
+              className={`relative flex min-w-0 flex-col items-center gap-1 text-[11px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
+                isActive ? 'scale-[1.03] font-bold text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <span className={`relative flex size-8 items-center justify-center rounded-xl border transition-all duration-200 ${
+              <span className={`relative flex size-9 items-center justify-center rounded-xl border transition-all duration-200 ${
                 isActive ? `${activeClass} shadow-sm` : 'border-transparent bg-transparent'
               }`}>
                 <Icon className={`size-4.5 mx-auto ${isActive ? iconClass : 'text-muted-foreground'}`} />
-                {isActive && <span className={`absolute -top-0.5 -right-0.5 size-1.5 rounded-full ${dotClass}`} />}
+                {isActive && <span className={`absolute -top-0.5 -right-0.5 size-1.5 rounded-full ${dotClass} ring-1 ring-background`} />}
               </span>
               <span className="truncate max-w-full px-0.5">{mobileLabel}</span>
             </Button>

@@ -24,7 +24,7 @@ export const SensitiveMask: React.FC<SensitiveMaskProps> = ({
     role="img"
     aria-label="Sensitive amount hidden"
     title="Sensitive amount hidden"
-    className={`inline-block font-mono font-semibold tracking-wide select-none ${className}`}
+    className={`inline-block font-mono font-semibold tabular-nums tracking-wide select-none ${className}`}
   >
     <span aria-hidden="true">{mask}</span>
   </span>
@@ -49,7 +49,7 @@ export const SensitiveAmount: React.FC<SensitiveAmountProps> = ({
           role="img"
           aria-label="Sensitive amount hidden"
           title="Sensitive amount hidden"
-          className={`font-mono font-semibold tracking-wide select-none ${className}`}
+          className={`font-mono font-semibold tabular-nums tracking-wide select-none ${className}`}
         >
           <span aria-hidden="true">{mask}</span>
         </m.span>
@@ -60,7 +60,7 @@ export const SensitiveAmount: React.FC<SensitiveAmountProps> = ({
           animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
           exit={{ opacity: 0.4, filter: 'blur(4px)', scale: 0.98 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          className={className}
+          className={`tabular-nums ${className}`}
         >
           <AnimatedNumber value={value} formatFn={formatFn} />
         </m.span>

@@ -72,5 +72,5 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
     return springValue.on('change', write)
   }, [springValue, reduceMotion, write])
 
-  return <span ref={nodeRef} className={className} />
+  return <span ref={nodeRef} className={`tabular-nums ${className || ''}`.trim()} />
 }

@@ -62,9 +62,9 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
           question most people are asking — they want the price against what they
           themselves paid. Both are shown so neither is mistaken for the other. */}
       {paidComparison !== undefined && (
-        <p className="mt-2 text-[10px] text-muted-foreground">
+        <p className="mt-2 text-xs text-muted-foreground">
           The latest price is{' '}
-          <b className={paidComparison >= 0 ? 'text-emerald-500' : 'text-orange-500'}>
+          <b className={paidComparison >= 0 ? 'text-emerald-500 tabular-nums' : 'text-orange-500 tabular-nums'}>
             {masked ? '••••' : `${money(Math.abs(paidComparison))} ${paidComparison >= 0 ? 'above' : 'below'}`}
           </b>{' '}
           what you paid on average.
@@ -120,13 +120,13 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
         </svg>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-semibold text-muted-foreground">
-        <span><i className="mr-1 inline-block size-2 rounded-full bg-violet-500" /> Price</span>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-medium text-muted-foreground">
+        <span className="flex items-center gap-1.5"><i className="inline-block size-2 rounded-full bg-violet-500 ring-1 ring-background" /> Price</span>
         {history.averageCostNative !== undefined && (
-          <span><i className="mr-1 inline-block w-4 border-t-2 border-dashed border-amber-500 align-middle" /> What you paid on average</span>
+          <span className="flex items-center gap-1.5"><i className="inline-block w-4 border-t-2 border-dashed border-amber-500 align-middle" /> What you paid on average</span>
         )}
-        <span>Lowest {masked ? '••••' : money(low)}</span>
-        <span>Highest {masked ? '••••' : money(high)}</span>
+        <span>Lowest <strong className="font-bold text-foreground tabular-nums">{masked ? '••••' : money(low)}</strong></span>
+        <span>Highest <strong className="font-bold text-foreground tabular-nums">{masked ? '••••' : money(high)}</strong></span>
       </div>
 
       <div className="sr-only">

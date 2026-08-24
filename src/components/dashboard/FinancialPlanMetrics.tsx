@@ -65,30 +65,30 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
       {/* Legend -- protan-safe: blue (current) + orange (pending) */}
       <div className="flex items-center gap-4 mb-4">
         <div className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-2 rounded-sm bg-blue-500" />
-          <span className="text-[10px] text-muted-foreground">Current</span>
+          <span className="inline-block size-2 rounded-full bg-blue-500 ring-1 ring-background" />
+          <span className="text-xs font-medium text-muted-foreground">Current</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-2 rounded-sm bg-orange-500" />
-          <span className="text-[10px] text-muted-foreground">Pending deduction</span>
+          <span className="inline-block size-2 rounded-full bg-orange-500 ring-1 ring-background" />
+          <span className="text-xs font-medium text-muted-foreground">Pending deduction</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {/* Growth Achieved */}
         <div
           onClick={() => onNavigateToLedger?.({ category: 'Growth', showAllCycles: true })}
           onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Growth', showAllCycles: true }))}
           role="button"
           tabIndex={0}
-          className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-violet-500/40 shadow-xs hover:shadow-lg hover:shadow-violet-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
+          className="interactive-card space-y-2.5 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-violet-500/40 shadow-xs hover:shadow-lg hover:shadow-violet-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
         >
           <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold">
             <span className="text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
-              <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" />
+              <span className="size-2 rounded-full bg-violet-500 inline-block ring-1 ring-background" />
               Growth Achieved
             </span>
-            <span className="text-foreground">
+            <span className="text-foreground font-bold tabular-nums">
               {(growthMetric.currentPct * 100).toFixed(1)}%
               {growthMetric.pending > 0 && (
                 <span className="text-orange-500 ml-1">{'→'} {(growthMetric.safePct * 100).toFixed(1)}%</span>
@@ -107,8 +107,8 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
               />
             )}
           </div>
-          <span className="text-[10px] text-muted-foreground block leading-relaxed">
-            Plan Target: Deposit <strong>{(growthAlloc * 100).toFixed(0)}%</strong> of income ({formatSensitive(growthMetric.target)}) into savings this cycle.
+          <span className="text-xs text-muted-foreground block leading-relaxed font-normal">
+            Plan Target: Deposit <strong className="text-foreground">{(growthAlloc * 100).toFixed(0)}%</strong> of income (<span className="font-semibold text-foreground tabular-nums">{formatSensitive(growthMetric.target)}</span>) into savings this cycle.
             {renderProjected(growthMetric.pending, growthMetric.projectedRemaining)}
           </span>
         </div>
@@ -119,14 +119,14 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Essentials', showAllCycles: false }))}
           role="button"
           tabIndex={0}
-          className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-sky-500/40 shadow-xs hover:shadow-lg hover:shadow-sky-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
+          className="interactive-card space-y-2.5 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-sky-500/40 shadow-xs hover:shadow-lg hover:shadow-sky-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
         >
           <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold">
             <span className="text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
-              <span className="w-2 h-2 rounded-full bg-sky-500 inline-block" />
+              <span className="size-2 rounded-full bg-sky-500 inline-block ring-1 ring-background" />
               Essentials Remaining
             </span>
-            <span className="text-foreground">
+            <span className="text-foreground font-bold tabular-nums">
               {(essentialsMetric.currentPct * 100).toFixed(1)}%
               {essentialsMetric.pending > 0 && (
                 <span className="text-orange-500 ml-1">{'→'} {(essentialsMetric.projectedPct * 100).toFixed(1)}%</span>
@@ -145,8 +145,8 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
               />
             )}
           </div>
-          <span className="text-[10px] text-muted-foreground block leading-relaxed">
-            Available budget: <strong>{formatSensitive(essentialsMetric.totalAvailable)}</strong>.
+          <span className="text-xs text-muted-foreground block leading-relaxed font-normal">
+            Available budget: <strong className="text-foreground tabular-nums">{formatSensitive(essentialsMetric.totalAvailable)}</strong>.
             {renderProjected(essentialsMetric.pending, essentialsMetric.projectedRemaining)}
           </span>
         </div>
@@ -157,14 +157,14 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Stability', showAllCycles: true }))}
           role="button"
           tabIndex={0}
-          className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-emerald-500/40 shadow-xs hover:shadow-lg hover:shadow-emerald-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
+          className="interactive-card space-y-2.5 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-emerald-500/40 shadow-xs hover:shadow-lg hover:shadow-emerald-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
         >
           <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold">
             <span className="text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+              <span className="size-2 rounded-full bg-emerald-500 inline-block ring-1 ring-background" />
               {stabilityMetric.hasTarget ? 'Stability Cap Reached' : 'Stability Fund'}
             </span>
-            <span className="text-foreground">
+            <span className="text-foreground font-bold tabular-nums">
               {stabilityMetric.hasTarget ? `${(stabilityMetric.currentPct * 100).toFixed(1)}%` : 'No limit set'}
               {stabilityMetric.pending > 0 && (
                 <span className="text-orange-500 ml-1">{'→'} {(stabilityMetric.projectedPct * 100).toFixed(1)}%</span>
@@ -183,11 +183,11 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
               />
             )}
           </div>}
-          <span className="text-[10px] text-muted-foreground block leading-relaxed">
+          <span className="text-xs text-muted-foreground block leading-relaxed font-normal">
             {stabilityMetric.hasTarget
-              ? <>Target Stability Fund goal is <strong>{formatSensitive(targetStabilityFund)}</strong>. </>
+              ? <>Target Stability Fund goal is <strong className="text-foreground tabular-nums">{formatSensitive(targetStabilityFund)}</strong>. </>
               : <>No Stability limit is set. </>}
-            Currently at {formatSensitive(stabilityMetric.currentBalance)}.
+            Currently at <span className="font-semibold text-foreground tabular-nums">{formatSensitive(stabilityMetric.currentBalance)}</span>.
             {renderProjected(stabilityMetric.pending, stabilityMetric.projectedBalance)}
           </span>
         </div>

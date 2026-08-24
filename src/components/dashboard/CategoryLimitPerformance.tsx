@@ -117,21 +117,21 @@ export function CategoryLimitPerformance({
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className={`min-w-0 truncate rounded border px-2 py-0.5 text-[10px] font-semibold ${getCategoryBadgeClass(item.category)}`}>
+                <span className={`min-w-0 truncate rounded-md border px-2 py-0.5 text-xs font-semibold ${getCategoryBadgeClass(item.category)}`}>
                   {item.category}
                 </span>
-                <span className={`shrink-0 text-[9px] font-bold uppercase tracking-wide ${exceeded ? 'text-orange-500' : watch ? 'text-amber-500' : 'text-emerald-500'}`}>
+                <span className={`shrink-0 text-xs font-bold uppercase tracking-wider ${exceeded ? 'text-orange-500' : watch ? 'text-amber-500' : 'text-emerald-500'}`}>
                   {exceeded ? 'Exceeded' : watch ? 'Watch' : 'On track'}
                 </span>
               </div>
 
               <div className="mt-3 flex items-baseline justify-between gap-2">
-                <span className="text-sm font-extrabold text-foreground">{formatSensitive(item.spent)}</span>
-                <span className="text-[10px] font-semibold text-muted-foreground">of {formatSensitive(item.limit)}</span>
+                <span className="text-sm font-extrabold text-foreground tabular-nums">{formatSensitive(item.spent)}</span>
+                <span className="text-xs font-medium text-muted-foreground tabular-nums">of {formatSensitive(item.limit)}</span>
               </div>
-              <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-muted">
+              <div className="relative mt-2.5 h-2.5 overflow-hidden rounded-full bg-muted/80">
                 <div
-                  className={`absolute inset-y-0 left-0 rounded-full ${exceeded ? 'bg-orange-500' : watch ? 'bg-amber-500' : 'bg-blue-500'}`}
+                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${exceeded ? 'bg-orange-500' : watch ? 'bg-amber-500' : 'bg-blue-500'}`}
                   style={{ width: `${Math.min(100, usedPct)}%` }}
                 />
                 {!exceeded && projectedPct > usedPct && (
@@ -143,17 +143,17 @@ export function CategoryLimitPerformance({
                 )}
               </div>
 
-              <div className="mt-2 flex items-center justify-between gap-2 text-[10px]">
-                <span className={exceeded ? 'font-bold text-orange-500' : 'text-muted-foreground'}>
+              <div className="mt-2.5 flex items-center justify-between gap-2 text-xs font-medium">
+                <span className={exceeded ? 'font-bold text-orange-500 tabular-nums' : 'text-muted-foreground tabular-nums'}>
                   {exceeded ? <>{formatSensitive(Math.abs(item.remaining))} over</> : <>{formatSensitive(item.remaining)} left</>}
                 </span>
                 {watch && (
-                  <span className="flex items-center gap-1 font-semibold text-amber-500">
-                    <TrendingUp className="size-3" /> projects {formatSensitive(item.projectedSpend)}
+                  <span className="flex items-center gap-1 font-semibold text-amber-500 tabular-nums">
+                    <TrendingUp className="size-3.5" /> projects {formatSensitive(item.projectedSpend)}
                   </span>
                 )}
                 {!watch && item.pendingCommitted > 0 && (
-                  <span className="text-muted-foreground">{formatSensitive(item.pendingCommitted)} committed</span>
+                  <span className="text-muted-foreground tabular-nums">{formatSensitive(item.pendingCommitted)} committed</span>
                 )}
               </div>
             </button>
@@ -162,7 +162,7 @@ export function CategoryLimitPerformance({
       </div>
 
       {anyProjectionMarker && (
-        <p className="mt-3 flex items-center gap-2 text-[10px] text-muted-foreground">
+        <p className="mt-3.5 flex items-center gap-2 text-xs text-muted-foreground">
           <span aria-hidden className="inline-block h-3 w-0 border-r-2 border-amber-500/90" />
           Projected end-of-cycle total at the current pace.
         </p>

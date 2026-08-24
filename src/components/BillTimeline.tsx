@@ -103,15 +103,15 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-foreground flex-wrap">
           <Calendar className="size-4 text-blue-500 shrink-0" />
           <span>{displayTitle}</span>
-          <span className="text-[10px] text-muted-foreground bg-muted/70 px-2 py-0.5 rounded-md font-semibold shrink-0">
+          <span className="text-xs text-muted-foreground bg-muted/70 px-2 py-0.5 rounded-md font-semibold shrink-0">
             {processedPayments.length} bills
           </span>
-          <span className="text-[10px] font-extrabold text-blue-500 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md shrink-0">
+          <span className="text-xs font-extrabold text-blue-500 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md shrink-0 tabular-nums">
             Cycle Total: {formatTimelineAmount(cycleTotal)}
           </span>
           <ChevronDown className="size-4 text-muted-foreground shrink-0" />
         </div>
-        <div className="text-[10px] text-muted-foreground font-semibold bg-muted/50 px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0 hidden sm:block">
+        <div className="text-xs text-muted-foreground font-medium bg-muted/50 px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0 hidden sm:block">
           {startLabel} – {endLabel}
         </div>
       </Card>
@@ -144,13 +144,13 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               Cycle Range: {startLabel} – {endLabel}
             </span>
             <span>•</span>
-            <span className="text-xs font-extrabold text-blue-500 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md">
+            <span className="text-xs font-extrabold text-blue-500 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md tabular-nums">
               Cycle Total: {formatTimelineAmount(cycleTotal)} ({processedPayments.length} bills)
             </span>
           </div>
         </div>
         <div className="p-1.5 text-muted-foreground rounded-lg flex items-center gap-1 text-xs font-semibold shrink-0">
-          <span className="text-[10px] hidden sm:inline">Collapse</span>
+          <span className="text-xs hidden sm:inline">Collapse</span>
           <ChevronUp className="size-4" />
         </div>
       </div>

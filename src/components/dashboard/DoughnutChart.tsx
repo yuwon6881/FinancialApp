@@ -57,10 +57,10 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
       <div>
         <div className="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-2">
           <div>
-            <h3 className="text-base font-semibold text-foreground">Outflow Categories</h3>
-            <p className="text-[10px] text-muted-foreground">Expense breakdown by category</p>
+            <h3 className="text-base font-bold text-foreground">Outflow Categories</h3>
+            <p className="text-xs text-muted-foreground">Expense breakdown by category</p>
           </div>
-          <div role="group" aria-label="Breakdown range" className="grid w-full grid-cols-4 items-center rounded-lg border border-border/40 bg-muted/40 p-0.5 text-[9px] sm:flex sm:w-auto sm:shrink-0">
+          <div role="group" aria-label="Breakdown range" className="grid w-full grid-cols-4 items-center rounded-lg border border-border/40 bg-muted/40 p-0.5 text-xs sm:flex sm:w-auto sm:shrink-0">
             {(['monthly', '3month', '6month', 'yearly'] as const).map(view => (
               <Button variant="unstyled"
                 key={view}
@@ -68,7 +68,7 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
                 onClick={() => setChartView(view)}
                 aria-pressed={chartView === view}
                 aria-label={view === 'monthly' ? 'Selected cycle' : view === '3month' ? 'Last 3 months' : view === '6month' ? 'Last 6 months' : 'Full year'}
-                className={`inline-flex min-h-11 min-w-0 items-center justify-center rounded-md px-2 py-0.5 font-bold transition cursor-pointer sm:min-h-8 ${
+                className={`inline-flex min-h-11 min-w-0 items-center justify-center rounded-md px-2.5 py-1 font-bold transition cursor-pointer sm:min-h-8 ${
                   chartView === view ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -88,17 +88,17 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
               formatValue={formatSensitive}
               masked={hideSensitive}
               chartClassName="mx-auto size-52 sm:mx-0 sm:size-44 lg:size-52"
-              legendClassName="grid max-h-32 w-full min-w-0 grid-cols-1 content-start gap-x-4 gap-y-0.5 overflow-y-auto pr-0.5 no-scrollbar sm:max-h-40 xl:grid-cols-2"
+              legendClassName="grid max-h-32 w-full min-w-0 grid-cols-1 content-start gap-x-4 gap-y-1 overflow-y-auto pr-0.5 no-scrollbar sm:max-h-40 xl:grid-cols-2"
               onActivate={slice => onNavigateToLedger?.({ category: slice.label, range: chartView })}
             />
           </div>
         ) : (
           <div className="h-52 flex flex-col items-center justify-center text-center p-4">
-            <span className="text-[10px] text-muted-foreground">No outflows logged.</span>
+            <span className="text-xs text-muted-foreground">No outflows logged.</span>
           </div>
         )}
       </div>
-      <div className="border-t border-border/50 pt-3 mt-3 text-[10px] text-muted-foreground text-center">
+      <div className="border-t border-border/50 pt-3 mt-3 text-xs text-muted-foreground text-center">
         {chartView === 'monthly' ? 'Selected Cycle Outflow Share'
           : chartView === '3month' ? 'Last 3 Cycles Outflow Share'
             : chartView === '6month' ? 'Last 6 Cycles Outflow Share'

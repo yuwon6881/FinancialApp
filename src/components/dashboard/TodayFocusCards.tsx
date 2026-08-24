@@ -65,18 +65,18 @@ export const TodayFocusCards: React.FC<TodayFocusCardsProps> = ({
       <div className="metric-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-muted-foreground">Cycle progress</span>
-          <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
-            <CalendarClock className="size-4" />
+          <div className="flex size-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20">
+            <CalendarClock className="size-4.5" />
           </div>
         </div>
-        <div className="text-2xl font-black text-foreground">{progressHeadline}</div>
+        <div className="text-2xl font-black tracking-tight text-foreground">{progressHeadline}</div>
         <div className="w-full bg-muted rounded-full h-2 mt-3 overflow-hidden">
           <div
             className="h-full bg-blue-500 rounded-full transition-all duration-700 ease-out"
             style={{ width: `${cycle.progressPct}%` }}
           />
         </div>
-        <p className="text-[10px] mt-2 text-muted-foreground">{progressCaption}</p>
+        <p className="text-xs mt-2.5 text-muted-foreground font-medium">{progressCaption}</p>
       </div>
 
       {/* Focused reward (shown when an open reward exists) */}
@@ -94,22 +94,22 @@ export const TodayFocusCards: React.FC<TodayFocusCardsProps> = ({
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground truncate max-w-[70%]">Reward: {wishlistGoal.item.name}</span>
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
-              <RewardIcon className="size-4" aria-hidden />
+            <div className="flex size-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20 group-hover:scale-105 transition-transform duration-300">
+              <RewardIcon className="size-4.5" aria-hidden />
             </div>
           </div>
-          <div className="text-2xl font-black text-foreground">
+          <div className="text-2xl font-black tracking-tight text-foreground tabular-nums">
             <AnimatedNumber value={wishlistGoal.pct} formatFn={(val) => val.toFixed(0) + '%'} />
           </div>
-          <div className="w-full bg-muted rounded-full h-2.5 mt-2 overflow-hidden flex">
+          <div className="w-full bg-muted rounded-full h-2.5 mt-2.5 overflow-hidden flex">
             <div
               className="h-full bg-blue-500 transition-all duration-500 rounded-full"
               style={{ width: `${wishlistGoal.pct}%` }}
             />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-2 flex justify-between">
+          <p className="text-xs text-muted-foreground mt-2.5 flex justify-between font-medium">
             <span><SensitiveAmount value={wishlistGoal.rewardsBalance} isMasked={hideSensitive} formatFn={formatCurrency} /> saved</span>
-            <span className="font-semibold text-foreground">{formatSensitive(wishlistGoal.item.price)}</span>
+            <span className="font-bold text-foreground">{formatSensitive(wishlistGoal.item.price)}</span>
           </p>
         </div>
       )}

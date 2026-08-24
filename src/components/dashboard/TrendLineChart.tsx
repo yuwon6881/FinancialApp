@@ -28,6 +28,28 @@ const trendLabel = (point: TrendPoint) => {
 const axisLabel = (point: TrendPoint, pointCount: number) =>
   pointCount > 6 ? point.month : trendLabel(point)
 
+const buildSmoothSpline = (positions: Array<{ x: number; y: number }>) => {
+  if (positions.length === 0) return ''
+  if (positions.length === 1) return `M ${positions[0].x},${positions[0].y}`
+  if (positions.length === 2) return `M ${positions[0].x},${positions[0].y} L ${positions[1].x},${positions[1].y}`
+
+  let d = `M ${positions[0].x.toFixed(1)},${positions[0].y.toFixed(1)}`
+  for (let i = 0; i < positions.length - 1; i++) {
+    const p0 = positions[i === 0 ? 0 : i - 1]
+    const p1 = positions[i]
+    const p2 = positions[i + 1]
+    const p3 = positions[i + 2 < positions.length ? i + 2 : i + 1]
+
+    const cp1x = p1.x + (p2.x - p0.x) / 6
+    const cp1y = p1.y + (p2.y - p0.y) / 6
+    const cp2x = p2.x - (p3.x - p1.x) / 6
+    const cp2y = p2.y - (p3.y - p1.y) / 6
+
+    d += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`
+  }
+  return d
+}
+
 export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData: DashboardData | null; growthBalance: number }) {
   const reduceMotion = useReducedMotion()
   const prefs = useAppPrefs()
@@ -41,10 +63,13 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
     : range === '6month'
       ? dashboardData?.last6TrendPoints || []
       : dashboardData?.trendPoints || []
-  const polyline = useMemo(() => points.map((_, index) => {
-      const position = chartPosition(points, index)
-      return `${position.x},${position.y}`
-    }).join(' '), [points])
+
+  const positions = useMemo(() => points.map((_, index) => chartPosition(points, index)), [points])
+  const splinePath = useMemo(() => buildSmoothSpline(positions), [positions])
+  const fillPath = useMemo(() => {
+    if (positions.length <= 1) return ''
+    return `${splinePath} L ${positions[positions.length - 1].x.toFixed(1)},105 L ${positions[0].x.toFixed(1)},105 Z`
+  }, [splinePath, positions])
 
   const rangeLabel = range === '3month' ? 'last 3 cycles' : range === '6month' ? 'last 6 cycles' : 'full year'
   const chartSummary = points.length > 0
@@ -63,14 +88,16 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
       <div>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-base font-semibold text-foreground">Growth ledger balance</h3>
-            <p className="text-[10px] text-muted-foreground">Growth balance carried across budget cycles</p>
+            <h3 className="text-base font-bold text-foreground">Growth ledger balance</h3>
+            <p className="text-xs text-muted-foreground">Growth balance carried across budget cycles</p>
           </div>
-          <TrendingUp className="size-4 text-blue-500" />
+          <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+            <TrendingUp className="size-4" />
+          </div>
         </div>
-        <div role="group" aria-label="Trend range" className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-[9px] mb-3 w-fit">
+        <div role="group" aria-label="Trend range" className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-xs mb-3 w-fit">
           {(['3month', '6month', 'yearly'] as const).map(value => (
-            <Button variant="unstyled" key={value} type="button" onClick={() => setRange(value)} aria-pressed={range === value} aria-label={value === '3month' ? 'Last 3 months' : value === '6month' ? 'Last 6 months' : 'Full year'} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-0.5 font-bold transition cursor-pointer sm:min-h-8 sm:min-w-8 ${range === value ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
+            <Button variant="unstyled" key={value} type="button" onClick={() => setRange(value)} aria-pressed={range === value} aria-label={value === '3month' ? 'Last 3 months' : value === '6month' ? 'Last 6 months' : 'Full year'} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2.5 py-1 text-xs font-bold transition cursor-pointer sm:min-h-8 sm:min-w-8 ${range === value ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
               {value === '3month' ? '3M' : value === '6month' ? '6M' : 'Year'}
             </Button>
           ))}
@@ -84,29 +111,39 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
           onTouchMove={event => selectNearest(event.touches[0].clientX)}
           className={`h-40 flex flex-col justify-end w-full relative mt-2 cursor-pointer ${hideSensitive ? 'blur-xs pointer-events-none' : ''}`}
         >
-          {polyline ? (
+          {splinePath ? (
             <>
               <svg ref={svgRef} role="img" aria-label={chartSummary} className="w-full h-[120px] overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
-                <defs><linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.25" /><stop offset="100%" stopColor="var(--chart-line)" stopOpacity="0" /></linearGradient></defs>
-                {/* d/points are set as static attributes and only opacity is
-                    animated. Animating the path data numerically makes framer-motion
-                    interpolate between path strings; when the point count changes
-                    (range switch or re-render on navigation) the two paths have
-                    different segment counts and it emits a malformed `d`
-                    ("Expected number" SVG error). Fading in avoids that entirely. */}
-                {/* Keyed by range so a timeframe switch remounts the fill/line and
-                    replays the fade-in with the new shape, rather than snapping. */}
-                {points.length > 1 && <m.path
+                <defs>
+                  <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.28" />
+                    <stop offset="100%" stopColor="var(--chart-line)" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+                {hoveredIndex !== null && positions[hoveredIndex] && (
+                  <line
+                    x1={positions[hoveredIndex].x}
+                    x2={positions[hoveredIndex].x}
+                    y1={15}
+                    y2={105}
+                    stroke="var(--chart-line)"
+                    strokeWidth="1.5"
+                    strokeDasharray="3 3"
+                    strokeOpacity="0.5"
+                    aria-hidden="true"
+                  />
+                )}
+                {points.length > 1 && fillPath && <m.path
                   key={`fill-${range}`}
-                  d={`M 15,105 L ${polyline} L 485,105 Z`}
+                  d={fillPath}
                   fill="url(#growthGradient)"
                   initial={reduceMotion ? false : { opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: reduceMotion ? 0 : 0.4, ease: 'easeInOut' }}
                 />}
-                {points.length > 1 && <m.polyline
+                {points.length > 1 && <m.path
                   key={`line-${range}`}
-                  points={polyline}
+                  d={splinePath}
                   fill="none"
                   stroke="var(--chart-line)"
                   strokeWidth="2.5"
@@ -117,29 +154,36 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                   transition={{ duration: reduceMotion ? 0 : 0.4, ease: 'easeInOut' }}
                 />}
               </svg>
-              {points.map((point, index) => {
-                const position = chartPosition(points, index)
+              {positions.map((position, index) => {
+                const isHovered = hoveredIndex === index
+                const point = points[index]
                 return (
                   <m.span
-                    // Keyed by range and positioned statically via `style`. Previously
-                    // `layout` + a spring on left/top made the dots overshoot and bounce
-                    // into place on every timeframe switch. Remounting per range and
-                    // easing only scale/opacity gives a smooth staggered fade-in with no
-                    // position morph, so the dots land cleanly with the redrawn line.
-                    key={`${range}-${point.cycleKey || point.month}-${index}`}
+                    key={`${range}-${point?.cycleKey || point?.month || index}-${index}`}
                     initial={reduceMotion ? false : { scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: reduceMotion ? 0 : 0.3, ease: 'easeOut', delay: reduceMotion ? 0 : index * 0.03 }}
+                    animate={{ scale: isHovered ? 1.5 : 1, opacity: 1 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.2, ease: 'easeOut', delay: reduceMotion ? 0 : index * 0.03 }}
                     aria-hidden="true"
-                    className="absolute size-1.5 rounded-full bg-blue-500/80 shadow-xs"
-                    style={{ left: `calc(${position.left}% - 3px)`, top: `calc(${position.top}% - 3px)` }}
+                    className={`absolute rounded-full shadow-xs transition-colors duration-150 ${isHovered ? 'size-2 bg-blue-500 ring-2 ring-background' : 'size-1.5 bg-blue-500/80'}`}
+                    style={{ left: `calc(${position.left}% - ${isHovered ? 4 : 3}px)`, top: `calc(${position.top}% - ${isHovered ? 4 : 3}px)` }}
                   />
                 )
               })}
               {hoveredIndex !== null && points[hoveredIndex] && (() => {
                 const point = points[hoveredIndex]
-                const position = chartPosition(points, hoveredIndex)
-                return <div aria-hidden="true" className="absolute z-20 bg-card border rounded-xl p-1.5 shadow-xl text-center" style={{ left: `clamp(4px, calc(${position.left}% - 50px), calc(100% - 104px))`, top: `clamp(4px, calc(${position.top}% - 46px), calc(100% - 40px))`, width: 100 }}><b className="block text-[9px]">{trendLabel(point)}</b><span className="text-[10px] font-black text-blue-500">{hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(point.balance, currency)}</span></div>
+                const position = positions[hoveredIndex]
+                return (
+                  <div
+                    aria-hidden="true"
+                    className="absolute z-20 bg-card/95 backdrop-blur-md border border-border/80 rounded-xl p-2 shadow-xl text-center"
+                    style={{ left: `clamp(4px, calc(${position.left}% - 55px), calc(100% - 114px))`, top: `clamp(4px, calc(${position.top}% - 50px), calc(100% - 46px))`, width: 110 }}
+                  >
+                    <b className="block text-[11px] font-semibold text-muted-foreground">{trendLabel(point)}</b>
+                    <span className="text-xs font-black tabular-nums text-blue-500">
+                      {hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(point.balance, currency)}
+                    </span>
+                  </div>
+                )
               })()}
               {/* Screen-reader-only data table: the SVG scrubber is pointer-only, so expose the
                   underlying points as a real table for assistive tech and keyboard users. */}
@@ -162,11 +206,11 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
             </>
           ) : <div className="text-xs text-muted-foreground pb-12 text-center">Calculating trend points...</div>}
         </div>
-        <div aria-hidden="true" className="flex px-[3%] mt-1">{points.map((point, index) => <span key={point.cycleKey || `${point.month}-${index}`} className="flex-1 min-w-0 text-center truncate text-[9px] text-muted-foreground font-bold">{axisLabel(point, points.length)}</span>)}</div>
+        <div aria-hidden="true" className="flex px-[3%] mt-1.5">{points.map((point, index) => <span key={point.cycleKey || `${point.month}-${index}`} className="flex-1 min-w-0 text-center truncate text-[11px] text-muted-foreground font-medium">{axisLabel(point, points.length)}</span>)}</div>
       </div>
-      <div className="border-t border-border/50 pt-3 mt-3 flex justify-between text-[10px] text-muted-foreground">
+      <div className="border-t border-border/50 pt-3 mt-3 flex justify-between text-xs text-muted-foreground">
         <span>{range === '3month' ? 'Last 3 cycles' : range === '6month' ? 'Last 6 cycles' : `${dashboardData?.setting.selectedYear || new Date().getFullYear()} full year`}</span>
-        <span>Growth Savings: {formatSensitive(growthBalance)}</span>
+        <span className="font-medium">Growth Savings: <strong className="font-bold text-foreground tabular-nums">{formatSensitive(growthBalance)}</strong></span>
       </div>
     </div>
   )

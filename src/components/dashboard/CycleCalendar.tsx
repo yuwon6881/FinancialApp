@@ -100,7 +100,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
               text="Shows cashflow rhythms across this billing cycle. Toggle between Spending, Net Flow, and Gross Activity to spot trends and upcoming bills. Tap any day for its full breakdown."
             />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">{props.cycleLabel}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{props.cycleLabel}</p>
         </div>
 
         {/* Heatmap Mode Selector */}
@@ -110,7 +110,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
               key={entry.mode}
               size="xs"
               variant={mode === entry.mode ? 'primary' : 'ghost'}
-              className={cn('h-7 flex-1 px-2 text-[10px] sm:h-6 sm:flex-none', mode !== entry.mode && 'text-muted-foreground hover:text-foreground')}
+              className={cn('h-7 flex-1 px-2.5 text-xs font-semibold sm:h-7 sm:flex-none', mode !== entry.mode && 'text-muted-foreground hover:text-foreground')}
               onClick={() => setMode(entry.mode)}
               aria-pressed={mode === entry.mode}
             >
@@ -125,9 +125,9 @@ export function CycleCalendar(props: CycleCalendarProps) {
           line only, since the grid itself already carries the shading. */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2.5">
         {props.hideSensitive ? (
-          <p className="text-[10px] font-medium text-muted-foreground">Activity shading is hidden while amounts are hidden.</p>
+          <p className="text-xs font-medium text-muted-foreground">Activity shading is hidden while amounts are hidden.</p>
         ) : mode === 'net' ? (
-          <div aria-label="Cash activity heat scale" className="hidden items-center gap-1.5 text-[9px] font-medium text-muted-foreground sm:flex sm:text-[10px]">
+          <div aria-label="Cash activity heat scale" className="hidden items-center gap-1.5 text-xs font-medium text-muted-foreground sm:flex">
             <span>Net outflow</span>
             <span className="size-3 rounded-sm border" style={heatStyle(3, 'net', -100)} aria-hidden="true" />
             <span className="size-3 rounded-sm border" style={heatStyle(1, 'net', -10)} aria-hidden="true" />
@@ -137,7 +137,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
             <span>Net inflow</span>
           </div>
         ) : (
-          <div aria-label="Cash activity heat scale" className="hidden items-center gap-1.5 text-[9px] font-medium text-muted-foreground sm:flex sm:text-[10px]">
+          <div aria-label="Cash activity heat scale" className="hidden items-center gap-1.5 text-xs font-medium text-muted-foreground sm:flex">
             <span>{mode === 'expense' ? 'Less spending' : 'Less activity'}</span>
             {([1, 2, 3, 4] as const).map(level => (
               <span key={level} className="size-3 rounded-sm border" style={heatStyle(level, mode)} aria-hidden="true" />
@@ -147,7 +147,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
         )}
 
         {/* Tells apart the two cells that used to look alike. */}
-        <div className="hidden items-center gap-2.5 text-[9px] font-medium text-muted-foreground lg:flex lg:text-[10px]">
+        <div className="hidden items-center gap-2.5 text-xs font-medium text-muted-foreground lg:flex">
           <span className="flex items-center gap-1">
             <span className="flex size-3 items-center justify-center rounded-sm border border-border/40 bg-muted/25" aria-hidden="true">
               <span className="size-1 rounded-full bg-muted-foreground/40" />
@@ -160,10 +160,10 @@ export function CycleCalendar(props: CycleCalendarProps) {
           </span>
         </div>
 
-        <div className="flex items-center gap-2 text-[9px] font-medium text-muted-foreground sm:text-[10px]">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <span>{calendar.stats.noSpendDaysCount} zero-spend days</span>
           <span>•</span>
-          <span>Avg: {props.formatNet(-Math.round(calendar.stats.averageDailySpend))}/day</span>
+          <span className="tabular-nums">Avg: {props.formatNet(-Math.round(calendar.stats.averageDailySpend))}/day</span>
         </div>
       </div>
 
@@ -176,7 +176,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
               <div
                 key={day}
                 className={cn(
-                  'pb-1.5 text-[9px] font-bold sm:text-xs',
+                  'pb-1.5 text-xs font-bold',
                   isWeekendHeader ? 'text-muted-foreground/70' : 'text-muted-foreground'
                 )}
               >

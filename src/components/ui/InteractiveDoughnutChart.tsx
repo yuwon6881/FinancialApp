@@ -107,10 +107,10 @@ export function InteractiveDoughnutChart({
         {/* The hole is 62% of the box (rInner 62 / viewBox 100); cap the labels a
             little under that so long amounts never touch the ring. */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex select-none flex-col items-center justify-center px-[19%] text-center">
-          <span className="max-w-full truncate text-[10px] font-bold uppercase text-muted-foreground">
+          <span className="max-w-full truncate text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
             {active?.label ?? centerLabel}
           </span>
-          <span className="max-w-full truncate text-base font-black text-foreground">
+          <span className="max-w-full truncate text-lg font-black tracking-tight tabular-nums text-foreground">
             {masked ? '••••' : active ? `${(active.percentage * 100).toFixed(1)}%` : centerValue}
           </span>
         </div>
@@ -125,8 +125,8 @@ export function InteractiveDoughnutChart({
             role="listitem"
             aria-label={`${slice.label}: ${masked ? 'hidden' : `${formatValue(slice.value)}, ${(slice.percentage * 100).toFixed(1)}%`}`}
             aria-pressed={selectedKey === slice.key}
-            className={`flex w-full min-w-0 cursor-pointer items-center justify-between rounded-md px-1.5 py-1 text-left text-xs transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${
-              activeKey === slice.key ? 'bg-muted/50' : 'hover:bg-muted/30'
+            className={`flex w-full min-w-0 cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${
+              activeKey === slice.key ? 'bg-muted/60 ring-1 ring-border/50' : 'hover:bg-muted/30'
             }`}
             onMouseEnter={() => setHoveredKey(slice.key)}
             onMouseLeave={() => setHoveredKey(null)}
@@ -134,11 +134,11 @@ export function InteractiveDoughnutChart({
             onBlur={() => setHoveredKey(null)}
             onClick={() => onActivate?.(slice)}
           >
-            <span className="mr-2 flex min-w-0 flex-1 items-center gap-1.5">
-              <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ backgroundColor: slice.color }} />
+            <span className="mr-2 flex min-w-0 flex-1 items-center gap-2">
+              <span aria-hidden="true" className="size-2 shrink-0 rounded-full ring-1 ring-background" style={{ backgroundColor: slice.color }} />
               <span className="truncate font-bold text-foreground">{slice.label}</span>
             </span>
-            <span className="shrink-0 font-extrabold text-foreground/90">
+            <span className="shrink-0 font-bold tabular-nums text-foreground/90">
               {masked ? '••••' : <>{formatValue(slice.value)} ({(slice.percentage * 100).toFixed(1)}%)</>}
             </span>
           </m.button>

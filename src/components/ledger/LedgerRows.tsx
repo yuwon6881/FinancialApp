@@ -63,7 +63,7 @@ const ReloadIntentChip = ({
   return (
     <span
       title={`Stability recovery status: ${label}`}
-      className={`inline-flex max-w-full shrink-0 items-center gap-1 text-[10px] font-medium whitespace-nowrap ${isPending ? 'text-accent-ink' : 'text-muted-foreground'}`}
+      className={`inline-flex max-w-full shrink-0 items-center gap-1 text-[11px] font-medium whitespace-nowrap ${isPending ? 'text-accent-ink' : 'text-muted-foreground'}`}
     >
       <span className={`size-1.5 shrink-0 rounded-full ${isPending ? 'bg-accent-ink' : 'bg-muted-foreground/60'}`} aria-hidden="true" />
       <span className="truncate">{label}</span>
@@ -78,9 +78,9 @@ function AccountChip({ transaction, accounts }: { transaction: Transaction; acco
   return (
     <span
       title={`Account: ${account.name}${account.isArchived ? ' (Closed)' : ''}`}
-      className={`inline-flex min-w-0 max-w-[14rem] shrink items-center gap-1 text-[10px] font-medium text-muted-foreground/90 ${account.isArchived ? 'opacity-70' : ''}`}
+      className={`inline-flex min-w-0 max-w-[14rem] shrink items-center gap-1 text-[11px] font-medium text-muted-foreground/90 ${account.isArchived ? 'opacity-70' : ''}`}
     >
-      <Wallet className="size-2.5 shrink-0 text-accent-ink" aria-hidden="true" />
+      <Wallet className="size-3 shrink-0 text-accent-ink" aria-hidden="true" />
       <span className="min-w-0 truncate"><span className="sr-only">Account: </span>{account.name}{account.isArchived ? ' (Closed)' : ''}</span>
     </span>
   )
@@ -118,7 +118,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
           title={transaction.savingsGoalId != null ? 'Commitment completions must be deleted individually.' : undefined}
         />
       </td>}
-      <td className="p-4 font-medium text-muted-foreground">{transaction.date}</td>
+      <td className="p-4 font-medium text-muted-foreground text-xs font-mono">{transaction.date}</td>
       <td className="p-4 font-semibold text-foreground">
         <div className="flex flex-col gap-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -126,29 +126,29 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
             <RowSyncStatus isDeleting={props.isDeleting} isSyncing={props.isSyncing} isPending={transaction.isPendingSync} entityLabel="transaction" />
           </div>
           {(hasAccount || reloadDrawdown) && (
-            <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-normal text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs font-normal text-muted-foreground">
               <AccountChip transaction={transaction} accounts={props.accounts} />
               {reloadDrawdown && <ReloadIntentChip intent={transaction.stabilityReloadIntent} status={transaction.stabilityReloadStatus} />}
             </div>
           )}
         </div>
       </td>
-      <td className="p-4"><span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${getCategoryBadgeClass(transaction.category)}`}>{transaction.category}</span></td>
+      <td className="p-4"><span className={`inline-block text-xs px-2.5 py-0.5 font-semibold rounded-md border ${getCategoryBadgeClass(transaction.category)}`}>{transaction.category}</span></td>
       <td className="p-4">
         <span className="inline-flex flex-col items-start gap-1">
           <LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} />
           {transfer && (
-            <span className="text-[10px] font-semibold text-blue-500 whitespace-nowrap">
+            <span className="text-xs font-semibold text-blue-500 whitespace-nowrap tabular-nums">
               {split ? 'Allocated' : 'Moved'} {money(Math.abs(transaction.amount))}
             </span>
           )}
         </span>
       </td>
       <td className="p-4 text-right font-medium">
-        {income || transfer ? <span className="text-muted-foreground/30">-</span> : outflow ? <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">{money(Math.abs(transaction.amount))}</span> : <span className="text-muted-foreground/30">-</span>}
+        {income || transfer ? <span className="text-muted-foreground/30">-</span> : outflow ? <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs tabular-nums">{money(Math.abs(transaction.amount))}</span> : <span className="text-muted-foreground/30">-</span>}
       </td>
       <td className="p-4 text-right font-medium">
-        {!transfer && (income || !outflow) ? <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">{money(transaction.amount)}</span> : <span className="text-muted-foreground/30">-</span>}
+        {!transfer && (income || !outflow) ? <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs tabular-nums">{money(transaction.amount)}</span> : <span className="text-muted-foreground/30">-</span>}
       </td>
       <td className="p-4 text-center whitespace-nowrap">
         <div className="flex items-center justify-center gap-2">
@@ -180,12 +180,12 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         disabled={props.isDeleting}
         className="rounded-2xl border border-border shadow-xs"
         actionsWidth={props.onMove ? 192 : 128}
-        actions={<><Button variant="unstyled" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button>{props.onMove && <Button variant="unstyled" onClick={() => props.onMove?.(transaction)} disabled={!canMove || props.isDeleting || props.isSyncing || props.hideSensitive} className={`flex-1 flex flex-col items-center justify-center gap-1 text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${canMove ? 'bg-primary/60 text-primary-foreground' : 'bg-muted/50 text-muted-foreground'}`}><CalendarClock className="size-4" />Move to</Button>}<Button variant="unstyled" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
+        actions={<><Button variant="unstyled" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button>{props.onMove && <Button variant="unstyled" onClick={() => props.onMove?.(transaction)} disabled={!canMove || props.isDeleting || props.isSyncing || props.hideSensitive} className={`flex-1 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${canMove ? 'bg-primary/60 text-primary-foreground' : 'bg-muted/50 text-muted-foreground'}`}><CalendarClock className="size-4" />Move to</Button>}<Button variant="unstyled" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
       >
         <div className={`h-0.5 w-full ${transfer ? 'bg-blue-500/60' : outflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'}`} />
         <div className="p-4 space-y-3">
           {props.isSelecting && <div className="flex items-center justify-between gap-2">
-            <label className="inline-flex items-center gap-2 text-[10px] font-semibold text-muted-foreground">
+            <label className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground">
               <Checkbox
                 checked={props.isSelected(transaction)}
                 onChange={() => props.onToggleSelected(transaction)}
@@ -201,7 +201,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
             </label>
           </div>}
 
-          <div className="flex items-center justify-between gap-2"><span className="shrink-0 text-[10px] text-muted-foreground font-mono">{transaction.date}</span><span title={transaction.category} className={`min-w-0 max-w-[65%] truncate px-2 py-0.5 text-right text-[10px] font-semibold rounded-full border ${getCategoryBadgeClass(transaction.category)}`}>{transaction.category}</span></div>
+          <div className="flex items-center justify-between gap-2"><span className="shrink-0 text-xs text-muted-foreground font-mono">{transaction.date}</span><span title={transaction.category} className={`min-w-0 max-w-[65%] truncate px-2.5 py-0.5 text-right text-xs font-semibold rounded-md border ${getCategoryBadgeClass(transaction.category)}`}>{transaction.category}</span></div>
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="flex items-center gap-1.5">
@@ -215,9 +215,9 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
                 </div>
               )}
             </div>
-            <span className={`max-w-[45%] shrink-0 break-words text-right text-sm font-bold ${(props.maskFinancialFigures ?? props.hideSensitive) ? 'text-muted-foreground' : transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>{(props.maskFinancialFigures ?? props.hideSensitive) ? <SensitiveMask /> : <>{transfer ? '' : outflow ? '-' : '+'}{formatted}</>}</span>
+            <span className={`max-w-[45%] shrink-0 break-words text-right text-sm font-bold tabular-nums ${(props.maskFinancialFigures ?? props.hideSensitive) ? 'text-muted-foreground' : transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>{(props.maskFinancialFigures ?? props.hideSensitive) ? <SensitiveMask /> : <>{transfer ? '' : outflow ? '-' : '+'}{formatted}</>}</span>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/30"><span className="text-[10px] text-muted-foreground flex items-center gap-1.5">Ledger:<LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact /></span></div>
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/30"><span className="text-xs text-muted-foreground flex items-center gap-1.5">Ledger:<LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact /></span></div>
         </div>
       </SwipeableRow>
     </div>

@@ -46,10 +46,12 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h3 className="text-base font-semibold text-foreground">Subscriptions</h3>
-            <p className="text-[10px] text-muted-foreground">Bills for this selected cycle</p>
+            <h3 className="text-base font-bold text-foreground">Subscriptions</h3>
+            <p className="text-xs text-muted-foreground">Bills for this selected cycle</p>
           </div>
-          <Calendar className="size-4 text-blue-500 shrink-0" />
+          <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 shrink-0">
+            <Calendar className="size-4" />
+          </div>
         </div>
 
         <m.div
@@ -72,10 +74,10 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
 
               <div className="min-w-0 flex-1">
                 <span className={`font-bold text-foreground truncate block transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400 ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
-                <div className="mt-0.5 flex min-w-0 items-center gap-1 select-none">
+                <div className="mt-1 flex min-w-0 items-center gap-1.5 select-none">
                   <span
                     title={rp.category}
-                    className={`min-w-0 truncate text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}
+                    className={`min-w-0 truncate text-xs px-2 py-0.5 font-semibold rounded-md border ${getCategoryBadgeClass(rp.category)}`}
                   >
                     {rp.category}
                   </span>
@@ -94,15 +96,11 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
                   )}
                 </div>
               </div>
-              <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                <span className={`font-bold block ${rp.isDiscarded ? 'text-slate-500 line-through' : 'text-orange-500'}`}>
-                  {/* A fragment, not a template literal: `formatSensitive` here is
-                      dashboard/formatters' node-returning version (a <span>, or <SensitiveMask/>
-                      when masked), and interpolating an element into a string renders the literal
-                      text "[object Object]" for every bill. */}
+              <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
+                <span className={`font-bold tabular-nums block ${rp.isDiscarded ? 'text-slate-500 line-through' : 'text-orange-500'}`}>
                   {rp.amount == null ? 'Unavailable' : <>-{formatSensitive(rp.amount)}</>}
                 </span>
-                <span className="text-muted-foreground text-[9px]">Due {rp.dueDate}</span>
+                <span className="text-muted-foreground text-[11px] font-medium">Due {rp.dueDate}</span>
               </div>
               {/* Chevron affordance: fades and slides in on hover */}
               <ChevronRight className="size-4 shrink-0 text-blue-500 opacity-70 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 sm:-translate-x-1 sm:opacity-0" aria-hidden="true" />
