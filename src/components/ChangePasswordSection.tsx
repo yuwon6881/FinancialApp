@@ -9,6 +9,7 @@ import { buildMutationSuccessToast } from '../lib/mutationToast'
 import { Button } from './ui/Button'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
+import { getNewPasswordError } from '../lib/passwordPolicy'
 
 interface ChangePasswordSectionProps {
   hideSensitive: boolean
@@ -29,7 +30,8 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
 
     const newErrors: Record<string, string> = {}
     if (!currentPassword.trim()) newErrors.currentPassword = 'Current password is required.'
-    if (!newPassword.trim()) newErrors.newPassword = 'New password is required.'
+    const passwordError = getNewPasswordError(newPassword)
+    if (passwordError) newErrors.newPassword = passwordError.replace('Password is', 'New password is')
     if (!confirmPassword.trim()) {
       newErrors.confirmPassword = 'Confirm password is required.'
     } else if (newPassword !== confirmPassword) {

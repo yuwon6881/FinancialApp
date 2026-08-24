@@ -30,7 +30,7 @@ describe('LoginView validation', () => {
     })
   })
 
-  it('shows device unlock when the account has registered credentials', async () => {
+  it('hides device unlock when the account credential is registered on another device', async () => {
     vi.mocked(isPlatformAuthenticatorAvailable).mockResolvedValue(true)
     vi.mocked(api.fetchAuthStatus).mockResolvedValue({
       isRegistered: true,
@@ -44,7 +44,7 @@ describe('LoginView validation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
     await waitFor(() => expect(api.fetchAuthStatus).toHaveBeenCalledWith('alice'))
-    expect(await screen.findByRole('button', { name: 'Unlock with device' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Unlock with device' })).toBeNull()
   })
 
   it('shows device unlock when this device credential belongs to the account', async () => {

@@ -58,6 +58,15 @@ describe('app URL state', () => {
     expect(location.ledger.maxAmount).toBe('')
   })
 
+  it('persists exact Ledger matching and migrates the former whole-word URL', () => {
+    window.history.replaceState({}, '', '/ledger?match=exact')
+    expect(readAppLocation().ledger.searchMode).toBe('exact')
+    expect(ledgerRouteSearch({ searchMode: 'exact' }).match).toBe('exact')
+
+    window.history.replaceState({}, '', '/ledger?match=whole-word')
+    expect(readAppLocation().ledger.searchMode).toBe('exact')
+  })
+
   it('creates clean cross-view URLs while preserving the active cycle', () => {
     navigateToAppTab('ledger', {
       search: ledgerRouteSearch({ filters: ['Rewards'], txType: 'inflow', showAllCycles: true }),

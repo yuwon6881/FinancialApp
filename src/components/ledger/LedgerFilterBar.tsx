@@ -1,7 +1,7 @@
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { useRef, useMemo } from 'react'
-import { Search, Filter, X, Loader2, ChevronDown, WholeWord } from 'lucide-react'
+import { Search, Filter, X, Loader2, ChevronDown, Equal } from 'lucide-react'
 import type { TransactionCategory } from '../../types'
 import { allowsCategoryFlow } from '../../lib/categoryFlow'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -144,24 +144,24 @@ export function LedgerFilterBar({
     onWishlistFilterChange,
   }
 
-  const isWholeWord = searchMode === 'whole-word'
+  const isExactMatch = searchMode === 'exact'
   // The match-mode switch lives inside the field it changes, the way a find bar puts it beside
-  // the query: on its own it read as an unlabelled "ab" button stranded in the middle of the row.
+  // the query; on its own the icon would be ambiguous and disconnected from the search it changes.
   const searchModeToggle = (
     <Button variant="unstyled"
       type="button"
-      aria-pressed={isWholeWord}
-      aria-label={isWholeWord ? 'Matching whole words only' : 'Matching anywhere in the text'}
-      title={isWholeWord
-        ? 'Whole word: "bean" skips "beans". Tap to match anywhere in the text.'
-        : 'Matching anywhere in the text: "bean" also finds "beans". Tap to match whole words only.'}
-      onClick={() => onSearchModeChange(isWholeWord ? 'contains' : 'whole-word')}
-      className={`mr-1.5 flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-1.5 text-[10px] font-bold transition cursor-pointer lg:w-auto ${isWholeWord
+      aria-pressed={isExactMatch}
+      aria-label={isExactMatch ? 'Matching complete fields exactly' : 'Matching anywhere in the text'}
+      title={isExactMatch
+        ? 'Exact match: "Badminton" skips "Badminton String". Tap to match anywhere in the text.'
+        : 'Matching anywhere in the text: "Badminton" also finds "Badminton String". Tap to require an exact match.'}
+      onClick={() => onSearchModeChange(isExactMatch ? 'contains' : 'exact')}
+      className={`mr-1.5 flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-1.5 text-[10px] font-bold transition cursor-pointer lg:w-auto ${isExactMatch
         ? 'border-primary/45 bg-primary/15 text-accent-ink'
         : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'}`}
     >
-      <WholeWord className="size-4 shrink-0" aria-hidden />
-      <span className="hidden lg:inline whitespace-nowrap">Whole word</span>
+      <Equal className="size-4 shrink-0" aria-hidden />
+      <span className="hidden lg:inline whitespace-nowrap">Exact match</span>
     </Button>
   )
 

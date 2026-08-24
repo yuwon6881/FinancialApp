@@ -28,6 +28,7 @@ export interface UseAutoLockOptions {
 export function useAutoLock(options: UseAutoLockOptions): void {
   const { token, isLocked, hasFingerprintSetup, markSessionLocked, onAuthError } = options
   const unlockChallengePrefetchedForIdleRef = useRef(false)
+  const lockRequestInFlightRef = useRef(false)
 
   useEffect(() => {
     if (!token) return
@@ -40,7 +41,10 @@ export function useAutoLock(options: UseAutoLockOptions): void {
   // Inactivity tracking - update last_active_time in localStorage
   useEffect(() => {
     if (!token || isLocked) return
-    localStorage.setItem('last_active_time', Date.now().toString())
+    const restoredLastActive = Number(localStorage.getItem('last_active_time'))
+    if (!Number.isFinite(restoredLastActive) || restoredLastActive <= 0) {
+      localStorage.setItem('last_active_time', Date.now().toString())
+    }
     void api.sendSessionHeartbeat()
     const updateActivity = () => {
       localStorage.setItem('last_active_time', Date.now().toString())
@@ -71,7 +75,7 @@ export function useAutoLock(options: UseAutoLockOptions): void {
   // Check inactivity every 15 seconds and lock if exceeded
   useEffect(() => {
     if (!token || isLocked) return
-    const interval = setInterval(() => {
+    const checkInactivity = () => {
       const lastActive = Number(localStorage.getItem('last_active_time') || Date.now())
       const idleFor = Date.now() - lastActive
       if (
@@ -82,21 +86,25 @@ export function useAutoLock(options: UseAutoLockOptions): void {
         unlockChallengePrefetchedForIdleRef.current = true
         void prefetchFingerprintAssertOptions().catch(() => undefined)
       }
-      if (idleFor > LOCK_TIMEOUT_MS) {
-        api.lockSession()
-          .then(() => {
-            void prefetchFingerprintAssertOptions().catch(() => undefined)
-            markSessionLocked()
-          })
+      if (idleFor > LOCK_TIMEOUT_MS && !lockRequestInFlightRef.current) {
+        lockRequestInFlightRef.current = true
+        markSessionLocked()
+        void prefetchFingerprintAssertOptions().catch(() => undefined)
+        void api.lockSession()
           .catch(err => {
             if (err?.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
               onAuthError()
             } else {
-              console.warn('Failed to lock session on server, bypassing local lock to prevent fake lock state:', err)
+              console.warn('Failed to lock session on server; the local inactivity lock remains active:', err)
             }
           })
+          .finally(() => {
+            lockRequestInFlightRef.current = false
+          })
       }
-    }, 15000)
+    }
+    checkInactivity()
+    const interval = setInterval(checkInactivity, 15000)
     return () => clearInterval(interval)
-  }, [token, isLocked, markSessionLocked, hasFingerprintSetup])
+  }, [token, isLocked, markSessionLocked, hasFingerprintSetup, onAuthError])
 }

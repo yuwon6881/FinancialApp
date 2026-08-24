@@ -2,6 +2,7 @@ import React from 'react'
 import { X } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { getCycleLabelForDropdown } from '../../lib/cycleLabels'
+import type { TransactionSearchMode } from '../../lib/transactionFilters'
 
 const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
 
@@ -16,7 +17,7 @@ export interface LedgerActiveFilterSummaryProps {
   activeCategoryFilters: string[]
   activeTxType: 'inflow' | 'outflow' | 'transfer' | null
   activeSearch: string
-  activeSearchMode?: 'contains' | 'whole-word'
+  activeSearchMode?: TransactionSearchMode
   activeStartDate: string
   activeEndDate: string
   activeMinAmount: string
@@ -91,7 +92,7 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
   if (activeWishlistFilter === 'only') filterDetails.push('reward purchases only')
   else if (activeWishlistFilter === 'exclude') filterDetails.push('excluding reward purchases')
   if (activeSearch) {
-    filterDetails.push(`search "${activeSearch}"${activeSearchMode === 'whole-word' ? ' (whole word)' : ''}`)
+    filterDetails.push(`search "${activeSearch}"${activeSearchMode === 'exact' ? ' (exact match)' : ''}`)
   }
 
   const label = filterDetails.length > 0

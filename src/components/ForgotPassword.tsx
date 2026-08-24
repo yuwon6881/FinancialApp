@@ -8,6 +8,7 @@ import { AuthCard, AuthHeader, AuthShell } from './ui/AuthLayout'
 import { Button } from './ui/Button'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
+import { getNewPasswordError } from '../lib/passwordPolicy'
 
 interface ForgotPasswordProps {
   onBackToLogin: () => void
@@ -78,8 +79,8 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
     setError(null)
 
     const nextErrors: Record<string, string> = {}
-    if (!newPassword) nextErrors.newPassword = 'New password is required.'
-    else if (newPassword.length < 6) nextErrors.newPassword = 'Password must be at least 6 characters.'
+    const passwordError = getNewPasswordError(newPassword)
+    if (passwordError) nextErrors.newPassword = passwordError.replace('Password is', 'New password is')
     if (!confirmPassword) nextErrors.confirmPassword = 'Confirm password is required.'
     else if (newPassword !== confirmPassword) nextErrors.confirmPassword = 'Passwords do not match.'
     if (Object.keys(nextErrors).length > 0) {
@@ -217,6 +218,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                     <Input
                       type="text"
                       value={item.a}
+                      maxLength={256}
                       onChange={e => {
                         item.setA(e.target.value)
                         const key = `answer${idx + 1}`

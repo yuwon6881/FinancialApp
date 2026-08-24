@@ -151,7 +151,7 @@ export const readAppLocation = (): AppLocationState => {
     ledger: {
       filters: (params.get('filters') || '').split(',').map(value => value.trim()).filter(Boolean),
       search: params.get('q') || '',
-      searchMode: params.get('match') === 'whole-word' ? 'whole-word' : 'contains',
+      searchMode: params.get('match') === 'exact' || params.get('match') === 'whole-word' ? 'exact' : 'contains',
       startDate: parseLedgerDate(params.get('from')),
       endDate: parseLedgerDate(params.get('to')),
       minAmount: parseLedgerAmount(params.get('min')),
@@ -252,7 +252,7 @@ export const updateAppSearch = (
 export const ledgerRouteSearch = (state: Partial<LedgerRouteState>) => ({
   filters: state.filters?.join(',') || null,
   q: state.search || null,
-  match: state.searchMode === 'whole-word' ? 'whole-word' : null,
+  match: state.searchMode === 'exact' ? 'exact' : null,
   from: state.startDate || null,
   to: state.endDate || null,
   min: state.minAmount || null,

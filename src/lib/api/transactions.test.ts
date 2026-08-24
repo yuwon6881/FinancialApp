@@ -45,6 +45,22 @@ describe('fetchPagedTransactions', () => {
     expect(url.searchParams.get('wishlistFilter')).toBe('only')
   })
 
+  it('sends exact matching for server-backed Ledger searches', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({ items: [], total: 0, page: 1, pageSize: 10 }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await fetchPagedTransactions({ page: 1, pageSize: 10, search: 'Badminton', searchMode: 'exact' })
+
+    const url = new URL(String(fetchMock.mock.calls[0][0]))
+    expect(url.searchParams.get('search')).toBe('Badminton')
+    expect(url.searchParams.get('searchMode')).toBe('exact')
+  })
+
   it('preserves the active sort and trims search for a full export', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

@@ -141,6 +141,7 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
                   <Input
                     type="text"
                     value={item.ans}
+                    maxLength={256}
                     onChange={e => {
                       item.setAns(e.target.value)
                       const key = `a${idx + 1}`

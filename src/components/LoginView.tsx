@@ -19,6 +19,7 @@ import { Button } from './ui/Button'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
 import { TwoFactorVerification } from './auth/TwoFactorVerification'
+import { getNewPasswordError } from '../lib/passwordPolicy'
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, username: string) => void
@@ -80,7 +81,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     setHasFingerprint(false)
     void api.fetchAuthStatus(username.trim()).then(status => {
       if (cancelled) return
-      const available = status.hasFingerprintOnDevice || status.hasFingerprint
+      const available = status.hasFingerprintOnDevice
       setHasFingerprint(available)
       if (available) {
         void prefetchFingerprintLoginOptions(username.trim()).catch(() => undefined)
@@ -120,7 +121,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       return
     }
 
-    if (!password.trim()) {
+    if (registering) {
+      const passwordError = getNewPasswordError(password)
+      if (passwordError) newErrors.password = passwordError
+    } else if (!password.trim()) {
       newErrors.password = 'Password is required.'
     }
     if (registering) {

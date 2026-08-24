@@ -115,27 +115,15 @@ describe('matchesTransactionFilters', () => {
     expect(matchesTransactionFilters(tx({ recurringPaymentId: null }), { recurringFilter: 'only' })).toBe(false)
   })
 
-  it('matches a literal Unicode-bounded whole word or phrase without substring leakage', () => {
-    expect(matchesTransactionFilters(tx({ description: 'Iced Coffee Bean Latte' }), { search: 'coffee bean', searchMode: 'whole-word' })).toBe(true)
-    expect(matchesTransactionFilters(tx({ description: 'Coffee Beans' }), { search: 'coffee bean', searchMode: 'whole-word' })).toBe(false)
-    expect(matchesTransactionFilters(tx({ description: 'Café (special)' }), { search: 'café (special)', searchMode: 'whole-word' })).toBe(true)
+  it('matches only a complete searchable field in exact mode', () => {
+    expect(matchesTransactionFilters(tx({ description: 'Badminton' }), { search: 'badminton', searchMode: 'exact' })).toBe(true)
+    expect(matchesTransactionFilters(tx({ description: 'Badminton String' }), { search: 'badminton', searchMode: 'exact' })).toBe(false)
+    expect(matchesTransactionFilters(tx({ description: 'Badmintons' }), { search: 'badminton', searchMode: 'exact' })).toBe(false)
   })
 
-  it('keeps looking after a substring hit that is not on a word boundary', () => {
-    // "beans" comes first and must not end the scan before the standalone "bean" is reached.
-    expect(matchesTransactionFilters(tx({ description: 'Beans, then bean' }), { search: 'bean', searchMode: 'whole-word' })).toBe(true)
-    expect(matchesTransactionFilters(tx({ description: 'Beans and beanstalk' }), { search: 'bean', searchMode: 'whole-word' })).toBe(false)
-  })
-
-  it('treats the start and end of the text, and punctuation, as word boundaries', () => {
-    expect(matchesTransactionFilters(tx({ description: 'Bean' }), { search: 'bean', searchMode: 'whole-word' })).toBe(true)
-    expect(matchesTransactionFilters(tx({ description: 'Rice/bean-mix' }), { search: 'bean', searchMode: 'whole-word' })).toBe(true)
-    expect(matchesTransactionFilters(tx({ description: 'Bean2' }), { search: 'bean', searchMode: 'whole-word' })).toBe(false)
-  })
-
-  it('matches whole words in the category and ledger category too', () => {
-    expect(matchesTransactionFilters(tx({ description: 'Lunch', category: 'Food' }), { search: 'food', searchMode: 'whole-word' })).toBe(true)
-    expect(matchesTransactionFilters(tx({ description: 'Lunch', category: 'Foodie' }), { search: 'food', searchMode: 'whole-word' })).toBe(false)
+  it('matches category and ledger allocation only when the complete field is equal', () => {
+    expect(matchesTransactionFilters(tx({ description: 'Lunch', category: 'Food' }), { search: 'food', searchMode: 'exact' })).toBe(true)
+    expect(matchesTransactionFilters(tx({ description: 'Lunch', category: 'Food Court' }), { search: 'food', searchMode: 'exact' })).toBe(false)
   })
 
   it('ignores surrounding whitespace in search text', () => {
