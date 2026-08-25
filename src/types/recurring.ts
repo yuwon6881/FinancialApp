@@ -118,6 +118,7 @@ export interface LoanRepaymentPreviewResult {
   cyclesCount: number
   totalAmount: number
   occurrences: LoanRepaymentPreviewCycle[]
+  previewFingerprint: string
 }
 
 export interface LoanRepaymentActionResult {

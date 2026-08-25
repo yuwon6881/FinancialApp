@@ -20,7 +20,7 @@ interface LoanRepaymentSheetProps {
   accounts: LedgerAccount[]
   currency: string
   onClose: () => void
-  onAdvanceRepayment: (loanId: string, cycles: number, accountId?: string) => Promise<void>
+  onAdvanceRepayment: (loanId: string, cycles: number, accountId?: string, previewFingerprint?: string) => Promise<void>
   onFullSettlement: (loanId: string, quoteAmount: number, accountId?: string) => Promise<void>
 }
 
@@ -144,7 +144,11 @@ export function LoanRepaymentSheet({
     setActionError(null)
     setSubmitting(true)
     try {
-      await onAdvanceRepayment(loan.id, preview?.cyclesCount ?? cycles, selectedAccountId || undefined)
+      if (!preview?.previewFingerprint) {
+        setActionError('Wait for the repayment preview before confirming.')
+        return
+      }
+      await onAdvanceRepayment(loan.id, preview.cyclesCount, selectedAccountId || undefined, preview.previewFingerprint)
       onClose()
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to record advance repayment')

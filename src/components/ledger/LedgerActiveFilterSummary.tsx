@@ -1,6 +1,7 @@
 import React from 'react'
 import { X } from 'lucide-react'
 import { Button } from '../ui/Button'
+import type { LedgerAccount } from '../../types'
 import { getCycleLabelForDropdown } from '../../lib/cycleLabels'
 import {
   type TransactionSearchMode,
@@ -22,6 +23,8 @@ export interface LedgerActiveFilterSummaryProps {
   activeCategoryFilters: string[]
   activeTxType: TxTypeFilter
   activeReloadFilter?: StabilityReloadFilter
+  activeAccountIds?: string[]
+  accounts?: LedgerAccount[]
   activeSearch: string
   activeSearchMode?: TransactionSearchMode
   activeStartDate: string
@@ -44,6 +47,8 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
   activeCategoryFilters,
   activeTxType,
   activeReloadFilter,
+  activeAccountIds = [],
+  accounts = [],
   activeSearch,
   activeSearchMode = 'contains',
   activeStartDate,
@@ -109,6 +114,10 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
   }
   if (activeReloadFilter && reloadFilterLabel[activeReloadFilter]) {
     filterDetails.push(reloadFilterLabel[activeReloadFilter])
+  }
+  if (activeAccountIds.length > 0) {
+    const names = activeAccountIds.map(id => accounts.find(account => account.id === id)?.name ?? 'Unknown account')
+    filterDetails.push(`account ${names.map(name => `"${name}"`).join(' and ')}`)
   }
   if (activeRecurringFilter === 'only') filterDetails.push('recurring transactions only')
   else if (activeRecurringFilter === 'exclude') filterDetails.push('excluding recurring transactions')

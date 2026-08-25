@@ -14,6 +14,7 @@ import type { ToastTone } from './ui/ToastViewport'
 import type { PushBusyAction } from '../app/usePushNotifications'
 import { useAppContext } from '../contexts/AppContext'
 import { useSettingsView } from './settings/view/useSettingsView'
+import type { RequestDeleteCategoryOptions } from '../app/financialData/categoryActions'
 import { isSpendingGuideCategory, isSystemCategoryName } from '../lib/categoryFlow'
 import { AccountsSkeleton } from './settings/accounts/AccountsSkeleton'
 import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
@@ -52,7 +53,7 @@ interface SettingsViewProps {
   onAddCategory: (category: Omit<TransactionCategory, 'id'>) => void
   onUpdateCategoryCycleLimit: (id: string, cycleLimit: number | null) => void
   onUpdateCategoryType?: (id: string, type: CategoryFlowType) => void
-  onDeleteCategory: (id: string) => void | Promise<void>
+  onDeleteCategory: (id: string, options: RequestDeleteCategoryOptions) => void | Promise<void>
   onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
   accounts?: LedgerAccount[]
   recurringPayments?: RecurringPayment[]

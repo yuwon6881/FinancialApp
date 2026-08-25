@@ -50,6 +50,8 @@ export interface TransactionFilterCriteria {
   wishlistFilter?: TransactionLinkFilter
   /** Optional intent/status filter for Stability drawdown rows. */
   reloadFilter?: StabilityReloadFilter
+  /** Stable ledger account IDs. Either side of a transfer/account move may match. */
+  accountIds?: string[]
 }
 
 /**
@@ -94,7 +96,12 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
     recurringFilter,
     wishlistFilter,
     reloadFilter,
+    accountIds,
   } = criteria
+
+  if (accountIds && accountIds.length > 0
+    && !accountIds.includes(String(t.accountId ?? ''))
+    && !accountIds.includes(String(t.counterAccountId ?? ''))) return false
 
   if (startDate && t.date < startDate) return false
   if (endDate && t.date > endDate) return false
@@ -112,7 +119,10 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
 
     const intent = normalizeReloadIntent(t.stabilityReloadIntent)
     if (reloadFilter === 'not-required') return intent === 'NotRequired'
-    if (intent !== 'Required') return false
+    // Legacy and offline-authored rows may still carry Unanswered. The authoritative FIFO replay
+    // deliberately treats every value except NotRequired as a promise to put the money back, so
+    // Ledger filtering must not hide those obligations.
+    if (intent === 'NotRequired') return false
     if (reloadFilter === 'put-back') return true
 
     const status = t.stabilityReloadStatus ?? 'Outstanding'

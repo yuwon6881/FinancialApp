@@ -315,6 +315,7 @@ export function AuthenticatedTabContent({
           incomingRecurringFilter={nav.ledgerIncomingRecurringFilter}
           incomingWishlistFilter={nav.ledgerIncomingWishlistFilter}
           incomingReloadFilter={nav.ledgerIncomingReloadFilter}
+          incomingAccountIds={nav.ledgerIncomingAccountIds}
           incomingTxType={nav.ledgerIncomingTxType}
           highlightedTxId={nav.highlightedTxId}
           onClearIncomingFilters={nav.clearIncomingFilters}

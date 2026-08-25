@@ -77,6 +77,7 @@ export async function advanceCyclesRepayment(
   cycles: number,
   accountId?: string,
   clientKey?: string,
+  previewFingerprint?: string,
   postedAt?: string,
 ): Promise<LoanRepaymentActionResult> {
   const data = await request<WireLoanRepaymentActionResult>(`/loans/${encodeURIComponent(id)}/repayments/advance-cycles`, {
@@ -85,6 +86,7 @@ export async function advanceCyclesRepayment(
       cycles,
       accountId,
       clientKey,
+      previewFingerprint,
       postedAt,
     }),
     errorMessage: 'Failed to record advance repayment',

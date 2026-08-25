@@ -17,6 +17,7 @@ import type { useFabMenu } from './useFabMenu'
 import type { useFinancialData } from './useFinancialData'
 import { openLedgerTransaction } from '../lib/openLedgerTransaction'
 import { openSearchResult } from '../lib/search/openSearchResult'
+import { CustomConfirmModal } from '../components/ui/CustomConfirmModal'
 
 const PendingSubscriptionsModal = lazy(() => import('../components/PendingSubscriptionsModal').then(module => ({ default: module.PendingSubscriptionsModal })))
 const FailedSyncModal = lazy(() => import('../components/FailedSyncModal').then(module => ({ default: module.FailedSyncModal })))
@@ -25,7 +26,6 @@ const PasswordPromptModal = lazy(() => import('../components/PasswordPromptModal
 const LockScreen = lazy(() => import('../components/LockScreen').then(module => ({ default: module.LockScreen })))
 const CycleSummaryModal = lazy(() => import('../components/CycleSummaryModal').then(module => ({ default: module.CycleSummaryModal })))
 const CustomAlertModal = lazy(() => import('../components/ui/CustomAlertModal').then(module => ({ default: module.CustomAlertModal })))
-const CustomConfirmModal = lazy(() => import('../components/ui/CustomConfirmModal').then(module => ({ default: module.CustomConfirmModal })))
 const GlobalSearch = lazy(() => loadGlobalSearch().then(module => ({ default: module.GlobalSearch })))
 
 const fabMenuVariants = {
@@ -272,8 +272,7 @@ export function AppOverlays({
       )}
 
       {dialogs.confirmModalData && (
-        <Suspense fallback={null}>
-          <CustomConfirmModal
+        <CustomConfirmModal
             isOpen
             title={dialogs.confirmModalData.title || 'Confirmation'}
             message={dialogs.confirmModalData.message || ''}
@@ -288,8 +287,7 @@ export function AppOverlays({
               }
             }}
             onCancel={() => dialogs.setConfirmModalData(null)}
-          />
-        </Suspense>
+        />
       )}
 
       {dialogs.showSearch && (

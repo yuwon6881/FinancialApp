@@ -10,7 +10,7 @@ export interface StabilityRecoveryLedgerJump {
   startDate?: string | null
   endDate?: string | null
   showAllCycles?: boolean
-  range?: 'monthly' | '3month' | '6month' | 'yearly'
+  range?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
   reloadFilter?: StabilityReloadFilter
 }
 
@@ -181,7 +181,7 @@ export function StabilityRecoveryExceptionCard({
                   endDate: new Date().toLocaleDateString('en-CA'),
                   reloadFilter: 'needs-put-back',
                   showAllCycles: true,
-                  range: 'yearly',
+                  range: 'all',
                 })}
               >
                 View pending reload movements

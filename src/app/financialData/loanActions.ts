@@ -105,13 +105,14 @@ export function createLoanActions(deps: LoanActionDependencies) {
     })
   }
 
-  const handleAdvanceRepayment = async (id: string, cycles: number, accountId?: string) => {
+  const handleAdvanceRepayment = async (id: string, cycles: number, accountId?: string, previewFingerprint?: string) => {
     if (!guardSensitive()) return
     const loan = loans.find(item => item.id === id)
     if (!loan) return
     mutateQueue(queue => enqueue(queue, 'loan', 'advanceRepayment', id, {
       cycles,
       accountId,
+      previewFingerprint,
       name: loan.name,
     }))
   }

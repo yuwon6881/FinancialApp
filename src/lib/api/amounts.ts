@@ -131,6 +131,7 @@ export function deobfuscateLoan(loan: WireLoan): Loan {
 export function deobfuscateLoanRepaymentPreview(preview: WireLoanRepaymentPreviewResult): LoanRepaymentPreviewResult {
   return {
     cyclesCount: preview.cyclesCount,
+    previewFingerprint: preview.previewFingerprint,
     totalAmount: deobfuscateAmount(preview.totalAmount),
     occurrences: (preview.occurrences || []).map(o => ({
       occurrenceDate: o.occurrenceDate,

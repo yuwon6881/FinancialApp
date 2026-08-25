@@ -1,4 +1,5 @@
 import React from 'react'
+import type { LedgerRouteRange } from '../lib/appLocation'
 import type { DashboardData, SavingsGoal, WishlistItem, AppTab, InvestmentAllocationOverview, StabilityReloadFilter } from '../types'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useAppPrefs } from '../contexts/AppContext'
@@ -31,7 +32,7 @@ interface DashboardViewProps {
     startDate?: string | null;
     endDate?: string | null;
     txType?: 'inflow' | 'outflow' | null;
-    range?: 'monthly' | '3month' | '6month' | 'yearly';
+    range?: LedgerRouteRange;
     highlightedTxId?: string | null;
     showAllCycles?: boolean;
     reloadFilter?: StabilityReloadFilter;

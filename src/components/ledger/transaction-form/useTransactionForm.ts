@@ -344,6 +344,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     state,
     dispatch,
     accountsLoading,
+    accounts,
     hideSensitive,
     sensitivePreferenceStatus,
     resolveAcceptedTopUp,

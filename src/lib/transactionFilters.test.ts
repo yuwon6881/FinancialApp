@@ -187,6 +187,60 @@ describe('matchesTransactionFilters', () => {
     expect(matchesTransactionFilters(spentForGoodOutflow, { reloadFilter: 'not-required' })).toBe(true)
   })
 
+  // Parity with the server filter and with the authoritative Stability replay: only an explicit
+  // NotRequired opts a drawdown out. Missing and Unanswered intents are obligations, and the
+  // filter meant to list them must not be the one place they disappear.
+  it('treats unanswered and missing reload intent as required', () => {
+    const unanswered = tx({
+      id: 'unanswered',
+      amount: -300,
+      ledgerCategory: 'Stability',
+      stabilityReloadIntent: 'Unanswered',
+    })
+    const missing = tx({ id: 'missing', amount: -200, ledgerCategory: 'Stability' })
+    const spentForGood = tx({
+      id: 'spent',
+      amount: -100,
+      ledgerCategory: 'Stability',
+      stabilityReloadIntent: 'NotRequired',
+    })
+
+    for (const row of [unanswered, missing]) {
+      expect(matchesTransactionFilters(row, { reloadFilter: 'put-back' })).toBe(true)
+      expect(matchesTransactionFilters(row, { reloadFilter: 'needs-put-back' })).toBe(true)
+      expect(matchesTransactionFilters(row, { reloadFilter: 'outstanding' })).toBe(true)
+      expect(matchesTransactionFilters(row, { reloadFilter: 'not-required' })).toBe(false)
+    }
+
+    // 'Spent for good' stays isolated to NotRequired.
+    expect(matchesTransactionFilters(spentForGood, { reloadFilter: 'put-back' })).toBe(false)
+    expect(matchesTransactionFilters(spentForGood, { reloadFilter: 'needs-put-back' })).toBe(false)
+    expect(matchesTransactionFilters(spentForGood, { reloadFilter: 'not-required' })).toBe(true)
+  })
+
+  it('matches an account filter on either the direct or the counter leg', () => {
+    const direct = tx({ id: 'direct', accountId: 'essentials-wallet' })
+    const counter = tx({
+      id: 'counter',
+      amount: 150,
+      ledgerCategory: 'Transfer:Growth->Stability',
+      accountId: 'growth-pot',
+      counterAccountId: 'essentials-wallet',
+    })
+    const elsewhere = tx({ id: 'elsewhere', accountId: 'rewards-card' })
+    const unattributed = tx({ id: 'unattributed' })
+
+    const criteria = { accountIds: ['essentials-wallet'] }
+    expect(matchesTransactionFilters(direct, criteria)).toBe(true)
+    expect(matchesTransactionFilters(counter, criteria)).toBe(true)
+    expect(matchesTransactionFilters(elsewhere, criteria)).toBe(false)
+    expect(matchesTransactionFilters(unattributed, criteria)).toBe(false)
+
+    // Multi-select is a union, and an empty selection is no filter at all.
+    expect(matchesTransactionFilters(elsewhere, { accountIds: ['essentials-wallet', 'rewards-card'] })).toBe(true)
+    expect(matchesTransactionFilters(unattributed, { accountIds: [] })).toBe(true)
+  })
+
   it('applies inclusive date ranges', () => {
     expect(matchesTransactionFilters(tx({ date: '2026-07-10' }), { startDate: '2026-07-10', endDate: '2026-07-10' })).toBe(true)
     expect(matchesTransactionFilters(tx({ date: '2026-07-09' }), { startDate: '2026-07-10' })).toBe(false)

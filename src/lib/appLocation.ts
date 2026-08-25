@@ -20,6 +20,7 @@ export interface LedgerRouteState {
   recurringFilter: TransactionLinkFilter
   wishlistFilter: TransactionLinkFilter
   reloadFilter: StabilityReloadFilter
+  accountIds: string[]
   txType: LedgerRouteTxType
   showAllCycles: boolean
   range: LedgerRouteRange
@@ -78,6 +79,7 @@ const LEDGER_PARAM_KEYS = [
   'recurring',
   'wishlist',
   'reload',
+  'accounts',
   'type',
   'all',
   'range',
@@ -138,6 +140,7 @@ const emptyLedgerRouteState = (): LedgerRouteState => ({
   recurringFilter: 'all',
   wishlistFilter: 'all',
   reloadFilter: 'all',
+  accountIds: [],
   txType: null,
   showAllCycles: false,
   range: 'monthly',
@@ -184,6 +187,7 @@ export const readAppLocation = (): AppLocationState => {
       recurringFilter: parseLinkFilter(params.get('recurring')),
       wishlistFilter: parseLinkFilter(params.get('wishlist')),
       reloadFilter: parseReloadFilter(params.get('reload')),
+      accountIds: Array.from(new Set((params.get('accounts') || '').split(',').map(value => value.trim()).filter(Boolean))),
       txType: parseLedgerTxType(params.get('type')),
       showAllCycles: params.get('all') === '1',
       range: range && RANGES.has(range) ? range : 'monthly',
@@ -296,6 +300,7 @@ export const ledgerRouteSearch = (state: Partial<LedgerRouteState>) => {
     recurring: state.recurringFilter && state.recurringFilter !== 'all' ? state.recurringFilter : null,
     wishlist: state.wishlistFilter && state.wishlistFilter !== 'all' ? state.wishlistFilter : null,
     reload: state.reloadFilter && state.reloadFilter !== 'all' ? state.reloadFilter : null,
+    accounts: state.accountIds?.length ? Array.from(new Set(state.accountIds)).sort().join(',') : null,
     type: formatTxType(state.txType),
     all: state.showAllCycles || null,
     range: state.range && state.range !== 'monthly' ? state.range : null,

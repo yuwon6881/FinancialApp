@@ -31,6 +31,7 @@ export interface UseLedgerExportOptions {
   appliedRecurringFilter: TransactionLinkFilter
   appliedWishlistFilter: TransactionLinkFilter
   appliedReloadFilter?: import('./ledgerViewTypes').LedgerReloadFilter
+  appliedAccountIds: string[]
   appliedTxTypeFilter: LedgerTxType
   sortOrder: TransactionSort
   allCyclesRange: { startDate: string; endDate: string } | null
@@ -65,6 +66,7 @@ export function useLedgerExport(options: UseLedgerExportOptions) {
     appliedMaxAmount,
     appliedRecurringFilter,
     appliedWishlistFilter,
+    appliedAccountIds,
     appliedTxTypeFilter,
     sortOrder,
     allCyclesRange,
@@ -120,6 +122,7 @@ export function useLedgerExport(options: UseLedgerExportOptions) {
     else if (appliedRecurringFilter === 'exclude') parts.push('Without Recurring')
     if (appliedWishlistFilter === 'only') parts.push('Reward Purchases')
     else if (appliedWishlistFilter === 'exclude') parts.push('Without Reward Purchases')
+    if (appliedAccountIds.length > 0) parts.push(`${appliedAccountIds.length} Account${appliedAccountIds.length === 1 ? '' : 's'}`)
     if (appliedSearch) {
       parts.push(`Search ${appliedSearch}`)
     }
@@ -184,6 +187,7 @@ export function useLedgerExport(options: UseLedgerExportOptions) {
           categories: cats.length > 0 ? cats : undefined,
           txType: appliedTxTypeFilter || null,
           reloadFilter: options.appliedReloadFilter && options.appliedReloadFilter !== 'all' ? options.appliedReloadFilter : undefined,
+          accountIds: appliedAccountIds,
           startDate: laterDate(allCyclesRange?.startDate, appliedStartDate),
           endDate: earlierDate(allCyclesRange?.endDate, appliedEndDate),
           minAmount: parseAmountFilter(appliedMinAmount),

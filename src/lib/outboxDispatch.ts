@@ -107,6 +107,7 @@ const HANDLERS: Record<string, (op: QueuedOp) => Promise<DispatchResult>> = {
       typeof op.payload?.cycles === 'number' ? op.payload.cycles : 1,
       typeof op.payload?.accountId === 'string' ? op.payload.accountId : undefined,
       op.id,
+      typeof op.payload?.previewFingerprint === 'string' ? op.payload.previewFingerprint : undefined,
       typeof op.payload?.postedAt === 'string' ? op.payload.postedAt : undefined,
     )
   },

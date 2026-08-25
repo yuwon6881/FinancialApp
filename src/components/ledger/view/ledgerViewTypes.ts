@@ -55,6 +55,7 @@ export interface UseLedgerViewOptions {
   incomingRecurringFilter?: TransactionLinkFilter | undefined
   incomingWishlistFilter?: TransactionLinkFilter | undefined
   incomingReloadFilter?: LedgerReloadFilter | undefined
+  incomingAccountIds?: string[] | undefined
   incomingTxType?: LedgerTxType | undefined
   highlightedTxId?: string | null | undefined
   isSwitchingCycle?: boolean
@@ -73,6 +74,7 @@ export interface UseLedgerViewOptions {
     recurringFilter: TransactionLinkFilter
     wishlistFilter: TransactionLinkFilter
     reloadFilter: LedgerReloadFilter
+    accountIds: string[]
     txType: LedgerTxType
     showAllCycles: boolean
     range: LedgerRouteRange

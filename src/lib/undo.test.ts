@@ -291,6 +291,59 @@ describe('undo helpers', () => {
     expect(enqueue).toHaveBeenCalledWith('loan', 'add', 'loan-1', expect.objectContaining({ openingPrincipal: 30000 }))
   })
 
+  // A loan repayment is server-authoritative and reversible through its own endpoint, but the
+  // success toast used to offer nothing -- so the only way back from a mis-entered advance
+  // repayment was to find the rows and unpick them by hand.
+  it('offers Undo for an advance repayment through the returned repayment action', () => {
+    const enqueue = vi.fn()
+    const action = buildUndoAction(
+      new Map(),
+      op('loan', 'advanceRepayment', 'loan-1', { cycles: 2, name: 'Car loan' }),
+      { actionId: 'action-7', kind: 'AdvanceCycles' } as never,
+      enqueue,
+    )
+
+    action?.onAction()
+    // Keyed by the repayment action; the loan id rides in the payload because the projection
+    // attributes the pending undo by loanId, not by targetId.
+    expect(enqueue).toHaveBeenCalledWith('loan', 'undoRepayment', 'action-7', expect.objectContaining({
+      loanId: 'loan-1',
+      name: 'Car loan',
+    }))
+  })
+
+  it('offers Undo for a full settlement through the returned repayment action', () => {
+    const enqueue = vi.fn()
+    const action = buildUndoAction(
+      new Map(),
+      op('loan', 'fullSettlement', 'loan-2', { amount: 1200, name: 'Bike loan' }),
+      { actionId: 'action-9', kind: 'FullSettlement' } as never,
+      enqueue,
+    )
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith('loan', 'undoRepayment', 'action-9', expect.objectContaining({
+      loanId: 'loan-2',
+    }))
+  })
+
+  // Without an action id there is nothing to reverse. Offering an Undo button that cannot work is
+  // worse than offering none.
+  it('offers no repayment Undo when the server returned no action id', () => {
+    expect(buildUndoAction(
+      new Map(),
+      op('loan', 'advanceRepayment', 'loan-1', { cycles: 1 }),
+      { kind: 'AdvanceCycles' } as never,
+      vi.fn(),
+    )).toBeUndefined()
+    expect(buildUndoAction(
+      new Map(),
+      op('loan', 'fullSettlement', 'loan-1', { amount: 10 }),
+      undefined,
+      vi.fn(),
+    )).toBeUndefined()
+  })
+
   it('releases a snapshot so a failed op cannot supply the next edit with a stale before-state', () => {
     const snapshots = new Map<string, UndoSnapshot>()
     const v0 = { id: '1', name: 'v0', limit: 1 } as unknown as UndoSnapshot

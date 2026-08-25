@@ -8,6 +8,11 @@ import { getErrorMessage } from '../../../lib/errors'
 import { focusFirstInvalidField } from '../../ui/formValidation'
 import { useSyncStatus } from '../../../lib/useOptimisticList'
 import { isSystemCategoryName } from '../../../lib/categoryFlow'
+// Static, from inside the already-lazy Settings chunk: the delete confirmation's only
+// interactive control must be present the moment the modal renders. Behind a runtime import it
+// could sit on a "Loading categories..." fallback forever, and the eager shell must not carry it.
+import { CategoryReplacementSelect } from '../../ui/CategoryReplacementSelect'
+import type { RequestDeleteCategoryOptions } from '../../../app/financialData/categoryActions'
 
 export interface UseSettingsViewOptions {
   dashboardData: DashboardData | null
@@ -16,7 +21,7 @@ export interface UseSettingsViewOptions {
   hideSensitive: boolean
   onUpdateSettings: (settings: any) => void
   onAddCategory: (category: any) => void
-  onDeleteCategory: (id: string) => void | Promise<void>
+  onDeleteCategory: (id: string, options: RequestDeleteCategoryOptions) => void | Promise<void>
   onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
   onToast: (message: string, title?: string, tone?: any) => void
   activeSyncId?: string | null
@@ -246,7 +251,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     // confirm modal, so surface a spinner on the row while that check runs.
     setCheckingDeleteId(id)
     try {
-      await onDeleteCategory(id)
+      await onDeleteCategory(id, { ReplacementSelect: CategoryReplacementSelect })
     } finally {
       setCheckingDeleteId(null)
     }

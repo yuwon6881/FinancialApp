@@ -66,6 +66,7 @@ export interface TransactionQuery {
   recurringFilter?: TransactionLinkFilter
   wishlistFilter?: TransactionLinkFilter
   reloadFilter?: StabilityReloadFilter
+  accountIds?: string[]
   sort?: TransactionSort
 }
 
@@ -92,6 +93,7 @@ function appendTransactionQuery(params: URLSearchParams, query: TransactionQuery
   if (query.reloadFilter && query.reloadFilter !== 'all') {
     params.append('reloadFilter', query.reloadFilter)
   }
+  if (query.accountIds?.length) params.append('accountId', query.accountIds.join(','))
   if (query.sort) params.append('sort', query.sort)
 }
 

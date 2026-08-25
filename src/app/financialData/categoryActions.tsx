@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { CategoryFlowType, RecurringPayment, TransactionCategory } from '../../types'
 import { ExternalLink } from 'lucide-react'
 import * as api from '../../lib/api'
@@ -8,11 +9,32 @@ import type { UseOutboxResult } from '../../lib/useOutbox'
 import type { AppDialogs } from '../useAppDialogs'
 import type { ToastAction, ToastTone } from '../../components/ui/ToastViewport'
 import { Button } from '../../components/ui/Button'
-// Deliberately the deferred wrapper, not the picker itself: importing CategoryReplacementSelect
-// directly here pulled its CustomSelect -> AnchoredPopover chain onto the eager critical path. See
-// the comment in CategoryReplacementSelectLazy for the measurement.
-import { CategoryReplacementSelectLazy } from '../../components/ui/CategoryReplacementSelectLazy'
-import { preloadCategoryReplacementSelect } from '../../components/ui/categoryReplacementSelectChunk'
+
+/**
+ * The replacement picker is *injected* rather than imported here, and that is load-bearing in
+ * both directions.
+ *
+ * Importing it statically would pull its CustomSelect -> AnchoredPopover chain onto the eager
+ * critical path: this module is pinned to the `financial-data` chunk (see vite.config.ts), which
+ * the shell loads before first paint, for a modal most launches never open.
+ *
+ * Loading it behind `React.lazy` was worse. Vite's generated dependency-preload wrapper can stay
+ * pending forever for a runtime chunk -- the same failure scripts/check-bundle-size.js records for
+ * the Settings cards -- and when it does, the confirmation is stuck on a "Loading categories..."
+ * fallback with no control to choose a replacement, so the delete can never be confirmed.
+ *
+ * Injection avoids both: Settings hands the control in from its own already-lazy chunk, where
+ * CustomSelect is already present at no extra cost, so the confirmation renders complete on its
+ * first open with no runtime import anywhere in the path.
+ */
+export type CategoryReplacementSelectComponent = (props: {
+  options: { id: string; name: string }[]
+  onChange: (selected: string) => void
+}) => ReactNode
+
+export interface RequestDeleteCategoryOptions {
+  ReplacementSelect: CategoryReplacementSelectComponent
+}
 
 interface CategoryActionDependencies {
   /** The optimistic projection, so a row visible in Settings is always resolvable here. */
@@ -96,14 +118,13 @@ export function createCategoryActions(deps: CategoryActionDependencies) {
     }))
   }
 
-  const requestDeleteCategory = async (id: string) => {
+  const requestDeleteCategory = async (id: string, { ReplacementSelect }: RequestDeleteCategoryOptions) => {
     if (!guardSensitive()) return
     const category = allCategories.find(cat => String(cat.id) === String(id))
     if (!category || isSystemCategoryName(category.name)) return
     const replacementOptions = allCategories.filter(cat => {
       return String(cat.id) !== String(id) && !isSystemCategoryName(cat.name) && !cat.isPendingDelete
     })
-    preloadCategoryReplacementSelect()
     let transactionCount = 0
     let usageLookupFailed = false
     try {
@@ -168,7 +189,7 @@ export function createCategoryActions(deps: CategoryActionDependencies) {
                 <p className="text-xs text-muted-foreground">
                   Choose a replacement category before deleting:
                 </p>
-                <CategoryReplacementSelectLazy
+                <ReplacementSelect
                   options={replacementOptions}
                   onChange={selected => {
                     selectedReplacementId = selected

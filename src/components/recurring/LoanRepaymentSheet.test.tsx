@@ -45,6 +45,7 @@ describe('LoanRepaymentSheet', () => {
     previewAdvanceRepayment.mockReset()
     previewAdvanceRepayment.mockImplementation((_loanId: string, cycles: number) => Promise.resolve({
       cyclesCount: cycles,
+      previewFingerprint: `fingerprint-${cycles}`,
       totalAmount: cycles * 100,
       occurrences: Array.from({ length: cycles }, (_, index) => ({
         occurrenceDate: `2026-${String(index + 1).padStart(2, '0')}-01`, payment: 100,
@@ -73,7 +74,7 @@ describe('LoanRepaymentSheet', () => {
     const payButton = await screen.findByRole('button', { name: /Pay 10 cycles/ }) as HTMLButtonElement
     await waitFor(() => expect(payButton.disabled).toBe(false))
     fireEvent.click(payButton)
-    await waitFor(() => expect(onAdvanceRepayment).toHaveBeenCalledWith('loan-1', 10, 'account-1'))
+    await waitFor(() => expect(onAdvanceRepayment).toHaveBeenCalledWith('loan-1', 10, 'account-1', 'fingerprint-10'))
   })
 
   it('offers every open account and keeps the server preview while switching repayment tabs', async () => {

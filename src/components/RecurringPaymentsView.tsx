@@ -58,7 +58,7 @@ interface RecurringPaymentsViewProps {
   hasLoadedLoans?: boolean
   onLoadLoans?: () => Promise<Loan[]>
   onExplainLoan?: (loan: Loan) => void
-  onAdvanceRepayment?: (id: string, cycles: number, accountId?: string) => Promise<void>
+  onAdvanceRepayment?: (id: string, cycles: number, accountId?: string, previewFingerprint?: string) => Promise<void>
   onFullSettlement?: (id: string, quoteAmount: number, accountId?: string) => Promise<void>
   onUndoRepayment?: (actionId: string, loanId?: string) => Promise<void>
 }

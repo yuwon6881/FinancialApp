@@ -225,6 +225,23 @@ export function buildUndoAction(
       return before ? action('recurringPayment', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'ledgerAccount:update':
       return before ? action('ledgerAccount', 'update', String(op.targetId), toPayload(before)) : undefined
+    // Advance repayment and full settlement are server-authoritative and already reversible: the
+    // server records a repayment action and owns the endpoint that reverses exactly the ledger rows
+    // and occurrences it wrote. The Undo here is that endpoint, keyed by the action id the server
+    // just returned -- so the toast can offer it without the client reconstructing anything. The
+    // loan id travels in the payload because `targetId` is the repayment action, which is what the
+    // projection needs to attribute the pending undo to its loan.
+    case 'loan:advanceRepayment':
+    case 'loan:fullSettlement': {
+      const actionId = result && typeof result === 'object' && 'actionId' in result
+        ? String((result as { actionId?: unknown }).actionId ?? '').trim()
+        : ''
+      if (!actionId) return undefined
+      return action('loan', 'undoRepayment', actionId, {
+        loanId: String(op.targetId),
+        name: op.payload?.name,
+      })
+    }
     case 'loan:update':
       return before ? action('loan', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'recurringPayment:reminder':

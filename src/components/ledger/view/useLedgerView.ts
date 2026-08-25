@@ -40,6 +40,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     incomingMaxAmount,
     incomingRecurringFilter,
     incomingWishlistFilter,
+    incomingAccountIds,
     incomingTxType,
     highlightedTxId,
     isSwitchingCycle,
@@ -98,6 +99,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     incomingRecurringFilter,
     incomingWishlistFilter,
     incomingReloadFilter: options.incomingReloadFilter,
+    incomingAccountIds,
     incomingTxType,
     highlightedTxId,
     showAllCycles,
@@ -132,6 +134,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     incomingRecurringFilter,
     incomingWishlistFilter,
     incomingReloadFilter: options.incomingReloadFilter,
+    incomingAccountIds,
     incomingTxType,
     appliedSearch: filterState.appliedSearch,
     appliedSearchMode: filterState.appliedSearchMode,
@@ -143,6 +146,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     appliedRecurringFilter: filterState.appliedRecurringFilter,
     appliedWishlistFilter: filterState.appliedWishlistFilter,
     appliedReloadFilter: filterState.appliedReloadFilter,
+    appliedAccountIds: filterState.appliedAccountIds,
     appliedTxTypeFilter: filterState.appliedTxTypeFilter,
     setPendingSearchTerm: filterState.setPendingSearchTerm,
     setPendingFilters: filterState.setPendingFilters,
@@ -153,6 +157,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setPendingRecurringFilter: filterState.setPendingRecurringFilter,
     setPendingWishlistFilter: filterState.setPendingWishlistFilter,
     setPendingReloadFilter: filterState.setPendingReloadFilter,
+    setPendingAccountIds: filterState.setPendingAccountIds,
     setPendingTxTypeFilter: filterState.setPendingTxTypeFilter,
     setAppliedSearch: filterState.setAppliedSearch,
     setAppliedFilters: filterState.setAppliedFilters,
@@ -163,6 +168,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setAppliedRecurringFilter: filterState.setAppliedRecurringFilter,
     setAppliedWishlistFilter: filterState.setAppliedWishlistFilter,
     setAppliedReloadFilter: filterState.setAppliedReloadFilter,
+    setAppliedAccountIds: filterState.setAppliedAccountIds,
     setAppliedTxTypeFilter: filterState.setAppliedTxTypeFilter,
   })
 
@@ -198,6 +204,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         categories: selectedCategories,
         txType: filterState.appliedTxTypeFilter,
         reloadFilter: filterState.appliedReloadFilter,
+        accountIds: filterState.appliedAccountIds,
         startDate: laterDate(serverData.allCyclesRange?.startDate, filterState.appliedStartDate),
         endDate: earlierDate(serverData.allCyclesRange?.endDate, filterState.appliedEndDate),
         minAmount: parseAmountFilter(filterState.appliedMinAmount),
@@ -206,7 +213,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         wishlistFilter: filterState.appliedWishlistFilter,
       })
     }).sort((a, b) => compareTransactions(a, b, sortOrder))
-  }, [pendingTransactions, showAllCycles, filterState.appliedSearch, filterState.appliedFilters, filterState.appliedTxTypeFilter, filterState.appliedReloadFilter, serverData.allCyclesRange, filterState.appliedStartDate, filterState.appliedEndDate, filterState.appliedMinAmount, filterState.appliedMaxAmount, filterState.appliedRecurringFilter, filterState.appliedWishlistFilter, sortOrder])
+  }, [pendingTransactions, showAllCycles, filterState.appliedSearch, filterState.appliedFilters, filterState.appliedTxTypeFilter, filterState.appliedReloadFilter, filterState.appliedAccountIds, serverData.allCyclesRange, filterState.appliedStartDate, filterState.appliedEndDate, filterState.appliedMinAmount, filterState.appliedMaxAmount, filterState.appliedRecurringFilter, filterState.appliedWishlistFilter, sortOrder])
 
   const filteredTransactions = useMemo(() => {
     const { buckets: selectedBuckets, categories: selectedCategories } = splitFilterSelections(filterState.selectedFilters)
@@ -224,6 +231,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         categories: selectedCategories,
         txType: filterState.selectedTxTypeFilter,
         reloadFilter: filterState.selectedReloadFilter,
+        accountIds: filterState.selectedAccountIds,
         startDate: laterDate(cycleStartDate, filterState.selectedStartDate),
         endDate: earlierDate(cycleEndDate, filterState.selectedEndDate),
         minAmount: parseAmountFilter(filterState.selectedMinAmount),
@@ -231,7 +239,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         recurringFilter: filterState.selectedRecurringFilter,
         wishlistFilter: filterState.selectedWishlistFilter,
       })).sort((a, b) => compareTransactions(a, b, sortOrder))
-  }, [transactions, filterState.searchTerm, filterState.selectedFilters, filterState.selectedTxTypeFilter, filterState.selectedReloadFilter, filterState.selectedStartDate, filterState.selectedEndDate, filterState.selectedMinAmount, filterState.selectedMaxAmount, filterState.selectedRecurringFilter, filterState.selectedWishlistFilter, selectedMonth, selectedYear, cycleDay, sortOrder])
+  }, [transactions, filterState.searchTerm, filterState.searchMode, filterState.selectedFilters, filterState.selectedTxTypeFilter, filterState.selectedReloadFilter, filterState.selectedAccountIds, filterState.selectedStartDate, filterState.selectedEndDate, filterState.selectedMinAmount, filterState.selectedMaxAmount, filterState.selectedRecurringFilter, filterState.selectedWishlistFilter, selectedMonth, selectedYear, cycleDay, sortOrder])
 
   const paginatedTransactions = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize
@@ -307,6 +315,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     appliedRecurringFilter: filterState.appliedRecurringFilter,
     appliedWishlistFilter: filterState.appliedWishlistFilter,
     appliedReloadFilter: filterState.appliedReloadFilter,
+    appliedAccountIds: filterState.appliedAccountIds,
     appliedTxTypeFilter: filterState.appliedTxTypeFilter,
     sortOrder,
     allCyclesRange: serverData.allCyclesRange,
@@ -327,9 +336,9 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const prevFilterSignatureRef = useRef<string | null>(null)
   useEffect(() => {
     const currentSignature = JSON.stringify([
-      filterState.searchTerm, filterState.selectedFilters, filterState.selectedStartDate, filterState.selectedEndDate,
+      filterState.searchTerm, filterState.searchMode, filterState.selectedFilters, filterState.selectedStartDate, filterState.selectedEndDate,
       filterState.selectedMinAmount, filterState.selectedMaxAmount, filterState.selectedRecurringFilter,
-      filterState.selectedWishlistFilter, filterState.selectedReloadFilter, filterState.selectedTxTypeFilter, showAllCycles,
+      filterState.selectedWishlistFilter, filterState.selectedReloadFilter, filterState.selectedAccountIds, filterState.selectedTxTypeFilter, showAllCycles,
     ])
     if (prevFilterSignatureRef.current === null) {
       prevFilterSignatureRef.current = currentSignature
@@ -341,7 +350,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         setCurrentPage(1)
       }
     }
-  }, [filterState.searchTerm, filterState.selectedFilters, filterState.selectedStartDate, filterState.selectedEndDate, filterState.selectedMinAmount, filterState.selectedMaxAmount, filterState.selectedRecurringFilter, filterState.selectedWishlistFilter, filterState.selectedTxTypeFilter, showAllCycles])
+  }, [filterState.searchTerm, filterState.searchMode, filterState.selectedFilters, filterState.selectedStartDate, filterState.selectedEndDate, filterState.selectedMinAmount, filterState.selectedMaxAmount, filterState.selectedRecurringFilter, filterState.selectedWishlistFilter, filterState.selectedReloadFilter, filterState.selectedAccountIds, filterState.selectedTxTypeFilter, showAllCycles])
 
   const onStartEditStable = useCallback((t: Transaction) => formRef.current?.handleStartEdit(t), [formRef])
   const onAddTransactionStable = useCallback(() => formRef.current?.openFresh(), [formRef])

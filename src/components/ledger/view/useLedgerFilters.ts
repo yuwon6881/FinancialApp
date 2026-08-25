@@ -27,6 +27,7 @@ export interface UseLedgerFiltersOptions {
   incomingRecurringFilter?: TransactionLinkFilter
   incomingWishlistFilter?: TransactionLinkFilter
   incomingReloadFilter?: LedgerReloadFilter
+  incomingAccountIds?: string[]
   incomingTxType?: LedgerTxType
   highlightedTxId?: string | null
   showAllCycles: boolean
@@ -43,6 +44,7 @@ export interface UseLedgerFiltersOptions {
     recurringFilter: TransactionLinkFilter
     wishlistFilter: TransactionLinkFilter
     reloadFilter: LedgerReloadFilter
+    accountIds: string[]
     txType: LedgerTxType
     showAllCycles: boolean
     range: LedgerRouteRange
@@ -65,6 +67,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     incomingRecurringFilter,
     incomingWishlistFilter,
     incomingReloadFilter,
+    incomingAccountIds,
     incomingTxType,
     highlightedTxId,
     showAllCycles,
@@ -80,6 +83,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
   const initialRecurringFilter: TransactionLinkFilter = incomingRecurringFilter ?? 'all'
   const initialWishlistFilter: TransactionLinkFilter = incomingWishlistFilter ?? 'all'
   const initialReloadFilter: StabilityReloadFilter = incomingReloadFilter ?? 'all'
+  const initialAccountIds = incomingAccountIds ?? []
   const initialTxType: TransactionTypeFilterOption[] = parseTxTypes(incomingTxType)
 
   const [searchTerm, setSearchTerm] = useState(incomingSearch || '')
@@ -92,6 +96,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
   const [selectedRecurringFilter, setSelectedRecurringFilter] = useState<TransactionLinkFilter>(initialRecurringFilter)
   const [selectedWishlistFilter, setSelectedWishlistFilter] = useState<TransactionLinkFilter>(initialWishlistFilter)
   const [selectedReloadFilter, setSelectedReloadFilter] = useState<StabilityReloadFilter>(initialReloadFilter)
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>(initialAccountIds)
   const [selectedTxTypeFilter, setSelectedTxTypeFilter] = useState<TransactionTypeFilterOption[]>(initialTxType)
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
 
@@ -105,6 +110,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
   const [pendingRecurringFilter, setPendingRecurringFilter] = useState<TransactionLinkFilter>(initialRecurringFilter)
   const [pendingWishlistFilter, setPendingWishlistFilter] = useState<TransactionLinkFilter>(initialWishlistFilter)
   const [pendingReloadFilter, setPendingReloadFilter] = useState<StabilityReloadFilter>(initialReloadFilter)
+  const [pendingAccountIds, setPendingAccountIds] = useState<string[]>(initialAccountIds)
   const [pendingTxTypeFilter, setPendingTxTypeFilter] = useState<TransactionTypeFilterOption[]>(initialTxType)
 
   const [appliedSearch, setAppliedSearch] = useState(incomingSearch || '')
@@ -117,12 +123,13 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
   const [appliedRecurringFilter, setAppliedRecurringFilter] = useState<TransactionLinkFilter>(initialRecurringFilter)
   const [appliedWishlistFilter, setAppliedWishlistFilter] = useState<TransactionLinkFilter>(initialWishlistFilter)
   const [appliedReloadFilter, setAppliedReloadFilter] = useState<StabilityReloadFilter>(initialReloadFilter)
+  const [appliedAccountIds, setAppliedAccountIds] = useState<string[]>(initialAccountIds)
   const [appliedTxTypeFilter, setAppliedTxTypeFilter] = useState<TransactionTypeFilterOption[]>(initialTxType)
 
   const incomingFilterSignature = JSON.stringify([
     initialFilters, incomingSearch || '', incomingSearchMode, initialStartDate, initialEndDate,
     incomingMinAmount || '', incomingMaxAmount || '',
-    initialRecurringFilter, initialWishlistFilter, initialReloadFilter, initialTxType,
+    initialRecurringFilter, initialWishlistFilter, initialReloadFilter, initialAccountIds, initialTxType,
   ])
   const [appliedIncomingSignature, setAppliedIncomingSignature] = useState(incomingFilterSignature)
   if (appliedIncomingSignature !== incomingFilterSignature) {
@@ -137,6 +144,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     setSelectedRecurringFilter(initialRecurringFilter)
     setSelectedWishlistFilter(initialWishlistFilter)
     setSelectedReloadFilter(initialReloadFilter)
+    setSelectedAccountIds(initialAccountIds)
     setSelectedTxTypeFilter(initialTxType)
     setPendingSearchTerm(incomingSearch || '')
     setPendingSearchMode(incomingSearchMode)
@@ -148,6 +156,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     setPendingRecurringFilter(initialRecurringFilter)
     setPendingWishlistFilter(initialWishlistFilter)
     setPendingReloadFilter(initialReloadFilter)
+    setPendingAccountIds(initialAccountIds)
     setPendingTxTypeFilter(initialTxType)
     setAppliedSearch(incomingSearch || '')
     setAppliedSearchMode(incomingSearchMode)
@@ -159,6 +168,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     setAppliedRecurringFilter(initialRecurringFilter)
     setAppliedWishlistFilter(initialWishlistFilter)
     setAppliedReloadFilter(initialReloadFilter)
+    setAppliedAccountIds(initialAccountIds)
     setAppliedTxTypeFilter(initialTxType)
     if (!highlightedTxId) {
       setCurrentPage(1)
@@ -185,6 +195,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
           recurringFilter: appliedRecurringFilter,
           wishlistFilter: appliedWishlistFilter,
           reloadFilter: appliedReloadFilter,
+          accountIds: appliedAccountIds,
           txType: formatTxTypes(appliedTxTypeFilter),
         }
       : {
@@ -198,6 +209,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
           recurringFilter: selectedRecurringFilter,
           wishlistFilter: selectedWishlistFilter,
           reloadFilter: selectedReloadFilter,
+          accountIds: selectedAccountIds,
           txType: formatTxTypes(selectedTxTypeFilter),
         }
     updateAppSearch(ledgerRouteSearch({
@@ -211,7 +223,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
       showAllCycles,
       range: cyclesRange || 'monthly',
     })
-  }, [showAllCycles, cyclesRange, highlightedTxId, searchTerm, searchMode, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringFilter, selectedWishlistFilter, selectedReloadFilter, selectedTxTypeFilter, appliedSearch, appliedSearchMode, appliedFilters, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, appliedReloadFilter, appliedTxTypeFilter, onRouteStateChange])
+  }, [showAllCycles, cyclesRange, highlightedTxId, searchTerm, searchMode, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringFilter, selectedWishlistFilter, selectedReloadFilter, selectedAccountIds, selectedTxTypeFilter, appliedSearch, appliedSearchMode, appliedFilters, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, appliedReloadFilter, appliedAccountIds, appliedTxTypeFilter, onRouteStateChange])
 
   const handleToggleFilter = (filterName: string) => {
     const isLedgerCategory = LEDGER_BUCKETS.includes(filterName)
@@ -268,6 +280,14 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     }
   }
 
+  const handleToggleAccount = (accountId: string) => {
+    const toggle = (ids: string[]) => ids.includes(accountId)
+      ? ids.filter(id => id !== accountId)
+      : [...ids, accountId]
+    if (showAllCycles) setPendingAccountIds(toggle)
+    else setSelectedAccountIds(toggle)
+  }
+
   const handleClearFilters = () => {
     if (showAllCycles) {
       setPendingFilters([])
@@ -278,6 +298,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
       setPendingRecurringFilter('all')
       setPendingWishlistFilter('all')
       setPendingReloadFilter('all')
+      setPendingAccountIds([])
       setPendingTxTypeFilter([])
       setAppliedFilters([])
       setAppliedStartDate('')
@@ -287,6 +308,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
       setAppliedRecurringFilter('all')
       setAppliedWishlistFilter('all')
       setAppliedReloadFilter('all')
+      setAppliedAccountIds([])
       setAppliedTxTypeFilter([])
       setCurrentPage(1)
     } else {
@@ -298,6 +320,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
       setSelectedRecurringFilter('all')
       setSelectedWishlistFilter('all')
       setSelectedReloadFilter('all')
+      setSelectedAccountIds([])
       setSelectedTxTypeFilter([])
     }
   }
@@ -311,6 +334,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     setAppliedRecurringFilter(pendingRecurringFilter)
     setAppliedWishlistFilter(pendingWishlistFilter)
     setAppliedReloadFilter(pendingReloadFilter)
+    setAppliedAccountIds(pendingAccountIds)
     setAppliedTxTypeFilter(pendingTxTypeFilter)
     setCurrentPage(1)
     setIsFilterDropdownOpen(false)
@@ -351,6 +375,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     setSelectedRecurringFilter('all')
     setSelectedWishlistFilter('all')
     setSelectedReloadFilter('all')
+    setSelectedAccountIds([])
     setSelectedTxTypeFilter([])
     setSearchTerm('')
     setPendingSearchTerm('')
@@ -362,6 +387,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     setPendingRecurringFilter('all')
     setPendingWishlistFilter('all')
     setPendingReloadFilter('all')
+    setPendingAccountIds([])
     setPendingTxTypeFilter([])
     setAppliedFilters([])
     setAppliedStartDate('')
@@ -371,6 +397,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     setAppliedRecurringFilter('all')
     setAppliedWishlistFilter('all')
     setAppliedReloadFilter('all')
+    setAppliedAccountIds([])
     setAppliedSearch('')
     setSearchMode('contains')
     setPendingSearchMode('contains')
@@ -403,6 +430,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     selectedRecurringFilter, setSelectedRecurringFilter,
     selectedWishlistFilter, setSelectedWishlistFilter,
     selectedReloadFilter, setSelectedReloadFilter,
+    selectedAccountIds, setSelectedAccountIds,
     selectedTxTypeFilter, setSelectedTxTypeFilter,
     isFilterDropdownOpen, setIsFilterDropdownOpen,
     pendingSearchTerm, setPendingSearchTerm, pendingSearchMode, setPendingSearchMode,
@@ -414,6 +442,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     pendingRecurringFilter, setPendingRecurringFilter,
     pendingWishlistFilter, setPendingWishlistFilter,
     pendingReloadFilter, setPendingReloadFilter,
+    pendingAccountIds, setPendingAccountIds,
     pendingTxTypeFilter, setPendingTxTypeFilter,
     appliedSearch, setAppliedSearch, appliedSearchMode, setAppliedSearchMode,
     appliedFilters, setAppliedFilters,
@@ -424,10 +453,12 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
     appliedRecurringFilter, setAppliedRecurringFilter,
     appliedWishlistFilter, setAppliedWishlistFilter,
     appliedReloadFilter, setAppliedReloadFilter,
+    appliedAccountIds, setAppliedAccountIds,
     appliedTxTypeFilter, setAppliedTxTypeFilter,
     handleToggleFilter,
     handleToggleTxType,
     handleToggleReloadFilter,
+    handleToggleAccount,
     handleClearFilters,
     handleApplyFilters,
     handleServerSearch,

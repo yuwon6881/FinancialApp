@@ -2,7 +2,7 @@ import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { useRef, useMemo } from 'react'
 import { Search, Filter, X, Loader2, ChevronDown, Equal } from 'lucide-react'
-import type { TransactionCategory } from '../../types'
+import type { LedgerAccount, TransactionCategory } from '../../types'
 import { allowsCategoryFlow } from '../../lib/categoryFlow'
 import { BottomSheet } from '../ui/BottomSheet'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
@@ -59,6 +59,9 @@ interface LedgerFilterBarProps {
   onWishlistFilterChange: (value: TransactionLinkFilter) => void
   reloadFilter?: StabilityReloadFilter
   onReloadFilterChange?: (value: StabilityReloadFilter) => void
+  accounts: LedgerAccount[]
+  accountIds: string[]
+  onAccountToggle: (accountId: string) => void
   txType: TxTypeFilter
   onTxTypeChange: (value: TransactionTypeFilterOption | null) => void
   activeAdvancedFilterCount: number
@@ -101,6 +104,9 @@ export function LedgerFilterBar({
   onWishlistFilterChange,
   reloadFilter,
   onReloadFilterChange,
+  accounts,
+  accountIds,
+  onAccountToggle,
   txType,
   onTxTypeChange,
   activeAdvancedFilterCount,
@@ -120,6 +126,7 @@ export function LedgerFilterBar({
     (recurringFilter !== 'all' ? 1 : 0) +
     (wishlistFilter !== 'all' ? 1 : 0) +
     (reloadFilter && reloadFilter !== 'all' ? 1 : 0) +
+    (accountIds.length > 0 ? 1 : 0) +
     (activeTxTypes.length > 0 ? 1 : 0)
   const draftFilterCount = checkboxFilters.length + draftAdvancedFilterCount
   const parsedMin = minAmount === '' ? undefined : Number(minAmount)
@@ -157,6 +164,9 @@ export function LedgerFilterBar({
     onWishlistFilterChange,
     reloadFilter,
     onReloadFilterChange,
+    accounts,
+    accountIds,
+    onAccountToggle,
   }
 
   const isExactMatch = searchMode === 'exact'

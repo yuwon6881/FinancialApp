@@ -29,6 +29,7 @@ export interface UseTransactionFormSubmitOptions extends Pick<
   | 'onOutsideCycleSave'
   | 'hideSensitive'
   | 'sensitivePreferenceStatus'
+  | 'accounts'
 > {
   state: TransactionFormState
   dispatch: Dispatch<TransactionFormAction>
@@ -49,6 +50,7 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
     state,
     dispatch,
     accountsLoading,
+    accounts = [],
     hideSensitive,
     sensitivePreferenceStatus,
     resolveAcceptedTopUp,
@@ -104,6 +106,8 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
       transferTarget: state.transferTarget,
       accountId: state.accountId,
       counterAccountId: state.counterAccountId,
+      splitAccountIds: state.splitAccountIds,
+      accounts,
       stabilityReloadIntent: state.stabilityReloadIntent,
     })
 

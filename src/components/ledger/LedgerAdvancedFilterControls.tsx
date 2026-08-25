@@ -4,6 +4,8 @@ import { FormField } from '../ui/FormField'
 import { DatePicker } from '../ui/DatePicker'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
+import { Checkbox } from '../ui/Checkbox'
+import type { LedgerAccount } from '../../types'
 import { CustomSelect } from '../ui/CustomSelect'
 import {
   type TransactionLinkFilter,
@@ -32,6 +34,9 @@ export interface LedgerAdvancedFilterControlsProps {
   onWishlistFilterChange: (value: TransactionLinkFilter) => void
   reloadFilter?: StabilityReloadFilter
   onReloadFilterChange?: (value: StabilityReloadFilter) => void
+  accounts: LedgerAccount[]
+  accountIds: string[]
+  onAccountToggle: (accountId: string) => void
 }
 
 export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControlsProps> = ({
@@ -53,6 +58,9 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
   onWishlistFilterChange,
   reloadFilter,
   onReloadFilterChange,
+  accounts,
+  accountIds,
+  onAccountToggle,
 }) => {
   const activeTxTypes = parseTxTypes(txType)
 
@@ -178,6 +186,35 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
             className="w-44 shrink-0"
           />
         </div>
+      )}
+      {accounts.length > 0 && (
+        <fieldset className="space-y-2">
+          <legend className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Accounts</legend>
+          <div className="max-h-48 space-y-3 overflow-y-auto rounded-xl border border-border bg-background p-2">
+            {(['Essentials', 'Growth', 'Stability', 'Rewards'] as const).map(bucket => {
+              const bucketAccounts = accounts
+                .filter(account => account.bucket === bucket && !account.isPendingDelete)
+                .sort((a, b) => Number(a.isArchived) - Number(b.isArchived) || a.name.localeCompare(b.name))
+              if (bucketAccounts.length === 0) return null
+              return (
+                <div key={bucket} className="space-y-1">
+                  <span className="block px-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{bucket}</span>
+                  {bucketAccounts.map(account => (
+                    <label key={account.id} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-muted sm:min-h-0">
+                      <Checkbox
+                        checked={accountIds.includes(account.id)}
+                        onChange={() => onAccountToggle(account.id)}
+                        aria-label={`Filter by ${account.name}${account.isArchived ? ', closed account' : ''}`}
+                      />
+                      <span className="min-w-0 flex-1 truncate font-medium">{account.name}</span>
+                      {account.isArchived && <span className="shrink-0 text-[9px] text-muted-foreground">Closed</span>}
+                    </label>
+                  ))}
+                </div>
+              )
+            })}
+          </div>
+        </fieldset>
       )}
       <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5">
         <span className="min-w-0 text-xs font-semibold text-foreground">Recurring transactions</span>

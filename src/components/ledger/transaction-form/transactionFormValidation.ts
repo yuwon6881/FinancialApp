@@ -1,3 +1,4 @@
+import type { LedgerAccount } from '../../../types'
 import { isStabilityReloadFormDrawdown } from '../../../lib/stabilityRecovery'
 
 export function validateTransactionForm(state: {
@@ -12,6 +13,7 @@ export function validateTransactionForm(state: {
   counterAccountId?: string | null
   splitAccountIds?: Partial<Record<'Essentials' | 'Growth' | 'Stability' | 'Rewards', string>>
   stabilityReloadIntent?: string
+  accounts?: LedgerAccount[]
 }) {
   const errors: Record<string, string> = {}
   if (!state.description.trim()) {
@@ -44,7 +46,12 @@ export function validateTransactionForm(state: {
   }
   if (state.ledgerCategory === 'Income') {
     for (const bucket of ['Essentials', 'Growth', 'Stability', 'Rewards'] as const) {
-      if (!state.splitAccountIds?.[bucket]) errors[`splitAccountIds.${bucket}`] = `Choose the ${bucket} receiving account.`
+      const accountId = state.splitAccountIds?.[bucket]
+      const account = accountId ? state.accounts?.find(candidate => candidate.id === accountId) : undefined
+      if (!accountId) errors[`splitAccountIds.${bucket}`] = `Choose the ${bucket} receiving account.`
+      else if (state.accounts && (!account || account.bucket !== bucket || account.isArchived)) {
+        errors[`splitAccountIds.${bucket}`] = `Choose an open ${bucket} account.`
+      }
     }
   }
   if (state.ledgerCategory === 'AccountMove') {

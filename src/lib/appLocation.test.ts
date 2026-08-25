@@ -30,6 +30,7 @@ describe('app URL state', () => {
         recurringFilter: 'only',
         wishlistFilter: 'only',
         reloadFilter: 'all',
+        accountIds: [],
         txType: 'outflow',
         showAllCycles: true,
         range: '3month',
@@ -161,11 +162,25 @@ describe('app URL state', () => {
       recurring: 'exclude',
       wishlist: 'only',
       reload: null,
+      accounts: null,
       type: null,
       all: null,
       range: null,
       tx: null,
     })
+  })
+
+  it('round-trips a multi-account ledger filter through the URL', () => {
+    window.history.replaceState({}, '', '/ledger?accounts=acc-b,acc-a,acc-b,,acc-c')
+
+    // Duplicates and blanks are dropped on read; a filter is a set, not a list.
+    expect(readAppLocation().ledger.accountIds).toEqual(['acc-b', 'acc-a', 'acc-c'])
+
+    // Written back sorted, so the same selection always produces the same URL and does not
+    // churn browser history on re-render.
+    expect(ledgerRouteSearch({ accountIds: ['acc-c', 'acc-a', 'acc-c'] }).accounts).toBe('acc-a,acc-c')
+    expect(ledgerRouteSearch({ accountIds: [] }).accounts).toBeNull()
+    expect(ledgerRouteSearch({}).accounts).toBeNull()
   })
 
   it('supports multi-select transaction types in ledger URL state', () => {
