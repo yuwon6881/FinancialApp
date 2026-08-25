@@ -60,7 +60,6 @@ describe('createCategoryActions - requestDeleteCategory', () => {
     const onNavigateToLedger = vi.fn()
 
     const actions = createCategoryActions({
-      categoriesList: [sampleCategory, replacementCategory],
       allCategories: [sampleCategory, replacementCategory],
       allRecurringPayments: [recurringPayment],
       guardSensitive: () => true,
@@ -80,8 +79,8 @@ describe('createCategoryActions - requestDeleteCategory', () => {
 
     const rendered = render(modalData.message)
     expect(rendered.getByText(/Delete/i)).toBeDefined()
-    expect(rendered.getByText('5')).toBeDefined()
-    expect(rendered.getByText('1')).toBeDefined()
+    expect(rendered.getByText('5 transactions')).toBeDefined()
+    expect(rendered.getByText('1 bill')).toBeDefined()
 
     const viewInLedgerBtn = screen.getByRole('button', { name: /view in ledger/i })
     expect(viewInLedgerBtn).toBeDefined()
@@ -112,7 +111,6 @@ describe('createCategoryActions - requestDeleteCategory', () => {
     const onNavigateToLedger = vi.fn()
 
     const actions = createCategoryActions({
-      categoriesList: [sampleCategory, replacementCategory],
       allCategories: [sampleCategory, replacementCategory],
       allRecurringPayments: [],
       guardSensitive: () => true,
@@ -131,5 +129,32 @@ describe('createCategoryActions - requestDeleteCategory', () => {
     const rendered = render(modalData.message)
     expect(rendered.getByText(/No ledger transactions or recurring payments currently use this category/i)).toBeDefined()
     expect(screen.queryByRole('button', { name: /view in ledger/i })).toBeNull()
+  })
+
+  // Rows come from the optimistic projection, whose ids are whatever the server sent. A numeric id
+  // reaching the handler as the string the DOM carries used to fail the strict-equality lookup, so
+  // the handler returned before opening anything and the click read as doing nothing.
+  it('resolves the category when the row id and the stored id differ only by type', async () => {
+    vi.mocked(api.fetchPagedTransactions).mockResolvedValue({
+      items: [], total: 0, page: 1, pageSize: 1, totalPages: 0,
+    } as any)
+
+    let modalData: any = null
+    const actions = createCategoryActions({
+      allCategories: [{ ...sampleCategory, id: 7 as unknown as string }, replacementCategory],
+      allRecurringPayments: [],
+      guardSensitive: () => true,
+      mutateQueue: vi.fn(),
+      snapshotForUndo: vi.fn(),
+      setConfirmModalData: vi.fn(data => {
+        modalData = typeof data === 'function' ? data(modalData) : data
+      }),
+      showToast: vi.fn(),
+    })
+
+    await actions.requestDeleteCategory('7')
+
+    expect(modalData).not.toBeNull()
+    expect(modalData.title).toBe('Delete Category')
   })
 })

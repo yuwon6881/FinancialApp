@@ -41,7 +41,6 @@ interface ManageableNameListProps<T extends ManageableNameItem> {
   onDelete: (item: T) => Promise<void> | void
   onEdit?: (item: T) => void
   renderName?: (item: T) => ReactNode
-  renderMeta?: (item: T) => ReactNode
   renderStatus?: (item: T) => ReactNode
   validateName?: (name: string) => string | null
 }
@@ -67,7 +66,6 @@ export function ManageableNameList<T extends ManageableNameItem>({
   onDelete,
   onEdit,
   renderName,
-  renderMeta,
   renderStatus,
   validateName,
 }: ManageableNameListProps<T>) {
@@ -232,7 +230,6 @@ export function ManageableNameList<T extends ManageableNameItem>({
             >
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 {renderName ? renderName(item) : <span className="truncate font-semibold">{item.name}</span>}
-                {renderMeta?.(item)}
               </div>
               <div className={`flex shrink-0 items-center gap-2 ${stackActionsOnMobile ? 'self-end sm:self-auto' : ''}`}>
                 {renderStatus?.(item)}

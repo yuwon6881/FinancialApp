@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react'
+import { loadCategoryReplacementSelect } from './categoryReplacementSelectChunk'
 
 // Deferred wrapper around CategoryReplacementSelect.
 //
@@ -11,9 +12,7 @@ import { lazy, Suspense } from 'react'
 // This wrapper is what useFinancialData imports instead: the wrapper itself is trivially small and
 // eager, while the picker and its popover chain stay in a chunk fetched when the modal opens. It
 // lives in its own file so the hook module keeps exporting only hooks (react-refresh).
-const CategoryReplacementSelect = lazy(() =>
-  import('./CategoryReplacementSelect').then(m => ({ default: m.CategoryReplacementSelect }))
-)
+const CategoryReplacementSelect = lazy(loadCategoryReplacementSelect)
 
 interface CategoryReplacementSelectLazyProps {
   options: { id: string; name: string }[]
@@ -22,8 +21,9 @@ interface CategoryReplacementSelectLazyProps {
 
 export function CategoryReplacementSelectLazy(props: CategoryReplacementSelectLazyProps) {
   return (
-    // The fallback matches the control's height so the modal does not jump while the chunk loads.
-    <Suspense fallback={<div className="h-9 rounded-xl bg-muted/40" />}>
+    // Same height as the control so the modal does not jump, and labelled rather than blank: an
+    // unlabelled grey bar reads as a picker with nothing in it.
+    <Suspense fallback={<div className="flex h-9 items-center rounded-xl border border-border/60 bg-muted/40 px-3 text-xs text-muted-foreground">Loading categories…</div>}>
       <CategoryReplacementSelect {...props} />
     </Suspense>
   )

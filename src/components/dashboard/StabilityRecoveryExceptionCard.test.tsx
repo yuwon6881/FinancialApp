@@ -41,7 +41,6 @@ describe('StabilityRecoveryExceptionCard', () => {
       <StabilityRecoveryExceptionCard
         recovery={recovery(overrides as Partial<StabilityRecovery>)}
         formatSensitive={format}
-       
       />
     )
     expect(container.innerHTML).toBe('')
@@ -86,7 +85,6 @@ describe('StabilityRecoveryExceptionCard', () => {
       <StabilityRecoveryExceptionCard
         recovery={recovery({ cyclesRemaining: 1, outstandingThisCycle: 400 })}
         formatSensitive={format}
-       
       />
     )
 
@@ -101,7 +99,6 @@ describe('StabilityRecoveryExceptionCard', () => {
       <StabilityRecoveryExceptionCard
         recovery={recovery({ isOverdue: true, cyclesRemaining: 1, outstandingShortfall: 746.8 })}
         formatSensitive={format}
-       
       />
     )
 
@@ -154,13 +151,13 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /every movement since then/i }))
+    fireEvent.click(screen.getByRole('button', { name: /pending reload movements/i }))
     expect(onNavigateToLedger).toHaveBeenCalledWith(expect.objectContaining({
       category: 'Stability',
       startDate: '2026-06-28',
+      reloadFilter: 'needs-put-back',
       showAllCycles: true,
     }))
-    expect(onNavigateToLedger.mock.calls[0]?.[0]).not.toHaveProperty('reloadFilter')
   })
 
   // Without a window there is no date filter to build, so the jump would land on an unfiltered
@@ -175,7 +172,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
-    expect(screen.queryByRole('button', { name: /every movement since then/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /pending reload movements/i })).toBeNull()
     expect(screen.getByText(/no window of movements to list/)).toBeTruthy()
   })
 

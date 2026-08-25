@@ -1,7 +1,7 @@
 import React from 'react'
 import { m, useReducedMotion } from 'framer-motion'
 import { ChevronRight, ShieldAlert } from 'lucide-react'
-import type { StabilityRecovery } from '../../types'
+import type { StabilityRecovery, StabilityReloadFilter } from '../../types'
 import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
 
@@ -11,6 +11,7 @@ export interface StabilityRecoveryLedgerJump {
   endDate?: string | null
   showAllCycles?: boolean
   range?: 'monthly' | '3month' | '6month' | 'yearly'
+  reloadFilter?: StabilityReloadFilter
 }
 
 interface StabilityRecoveryExceptionCardProps {
@@ -178,16 +179,17 @@ export function StabilityRecoveryExceptionCard({
                   category: 'Stability',
                   startDate: recovery.recoveryFromDate,
                   endDate: new Date().toLocaleDateString('en-CA'),
+                  reloadFilter: 'needs-put-back',
                   showAllCycles: true,
                   range: 'yearly',
                 })}
               >
-                See every movement since then
+                View pending reload movements
               </Button>
               {/* Said plainly rather than left to be discovered: the ledger totals it lands on
                   are per page, and the window can run to more rows than one page holds. */}
               <p className="text-[10px] leading-snug text-muted-foreground">
-                Opens your ledger on every emergency-fund movement from when your fund was last full.
+                Opens your ledger on pending and partly put-back emergency fund reload movements since your fund was last full.
                 A long window may span more than one page.
               </p>
             </>

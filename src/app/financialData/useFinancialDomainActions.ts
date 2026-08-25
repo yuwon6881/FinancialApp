@@ -28,7 +28,6 @@ export interface UseFinancialDomainActionsOptions {
   mutateQueue: (modifier: (ops: QueuedOp[]) => QueuedOp[]) => void
   unconfirmedSettingWritesRef: React.MutableRefObject<Map<string, unknown>>
   setDashboardData: React.Dispatch<React.SetStateAction<DashboardData | null>>
-  categoriesList: TransactionCategory[]
   allCategories: TransactionCategory[]
   allRecurringPayments: RecurringPayment[]
   snapshotForUndo: (entity: any, targetId: string, value: any) => void
@@ -96,7 +95,6 @@ export function useFinancialDomainActions(options: UseFinancialDomainActionsOpti
     mutateQueue,
     unconfirmedSettingWritesRef,
     setDashboardData,
-    categoriesList,
     allCategories,
     allRecurringPayments,
     snapshotForUndo,
@@ -145,7 +143,6 @@ export function useFinancialDomainActions(options: UseFinancialDomainActionsOpti
   })
 
   const categoryActions = createCategoryActions({
-    categoriesList,
     allCategories,
     allRecurringPayments,
     guardSensitive,

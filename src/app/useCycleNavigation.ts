@@ -330,8 +330,12 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   // Clearing filters also drops the cycle scope a jump brought with it. `yearly`, `3month`, and
   // `6month` are reachable only from a deep link or a programmatic jump — the toolbar toggle emits
   // just `all`/`monthly` — so leaving the scope behind stranded people in a window with no control
-  // to leave it, and with the month picker hidden. `range` reaches prefs through the effect above.
+  // to leave it, and with the month picker hidden. Prefs are written directly rather than left to
+  // the routeState->prefs effect above: the toolbar all-cycles toggle sets prefs without touching
+  // routeState.range, so a range already at `monthly` is a no-op there and prefs would stay on the
+  // wide scope, which then flows back in and re-widens the window the clear was meant to close.
   const clearIncomingFilters = useCallback(() => {
+    setLedgerCyclesRange('monthly')
     setLedgerRouteState(current => ({
       ...current,
       filters: [], search: '', searchMode: 'contains', startDate: '', endDate: '', minAmount: '', maxAmount: '',
@@ -339,7 +343,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
       showAllCycles: false, range: 'monthly',
     }))
     setHighlightedTxId(null)
-  }, [])
+  }, [setLedgerCyclesRange])
 
   const syncLedgerRouteState = useCallback((state: Omit<LedgerRouteState, 'highlightedTxId'>) => {
     setLedgerRouteState(current => (areLedgerStatesEqual(current, state) ? current : state))

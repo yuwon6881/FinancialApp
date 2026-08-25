@@ -12,9 +12,10 @@ import { Button } from '../../components/ui/Button'
 // directly here pulled its CustomSelect -> AnchoredPopover chain onto the eager critical path. See
 // the comment in CategoryReplacementSelectLazy for the measurement.
 import { CategoryReplacementSelectLazy } from '../../components/ui/CategoryReplacementSelectLazy'
+import { preloadCategoryReplacementSelect } from '../../components/ui/categoryReplacementSelectChunk'
 
 interface CategoryActionDependencies {
-  categoriesList: TransactionCategory[]
+  /** The optimistic projection, so a row visible in Settings is always resolvable here. */
   allCategories: TransactionCategory[]
   allRecurringPayments: RecurringPayment[]
   guardSensitive: () => boolean
@@ -39,7 +40,6 @@ interface CategoryActionDependencies {
  */
 export function createCategoryActions(deps: CategoryActionDependencies) {
   const {
-    categoriesList,
     allCategories,
     allRecurringPayments,
     guardSensitive,
@@ -98,11 +98,12 @@ export function createCategoryActions(deps: CategoryActionDependencies) {
 
   const requestDeleteCategory = async (id: string) => {
     if (!guardSensitive()) return
-    const category = categoriesList.find(cat => cat.id === id)
+    const category = allCategories.find(cat => String(cat.id) === String(id))
     if (!category || isSystemCategoryName(category.name)) return
-    const replacementOptions = categoriesList.filter(cat => {
-      return cat.id !== id && !isSystemCategoryName(cat.name) && !cat.isPendingDelete
+    const replacementOptions = allCategories.filter(cat => {
+      return String(cat.id) !== String(id) && !isSystemCategoryName(cat.name) && !cat.isPendingDelete
     })
+    preloadCategoryReplacementSelect()
     let transactionCount = 0
     let usageLookupFailed = false
     try {
@@ -130,9 +131,9 @@ export function createCategoryActions(deps: CategoryActionDependencies) {
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted-foreground">Ledger transactions</span>
                   <div className="flex items-center gap-2">
-                    <strong className="font-semibold text-foreground">
-                      {usageLookupFailed ? '1+' : transactionCount}
-                    </strong>
+                    <span className="rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 font-semibold text-foreground">
+                      {usageLookupFailed ? '1+ transactions' : `${transactionCount} ${transactionCount === 1 ? 'transaction' : 'transactions'}`}
+                    </span>
                     {(transactionCount > 0 || usageLookupFailed) && onNavigateToLedger && (
                       <Button
                         variant="outline"
@@ -157,9 +158,9 @@ export function createCategoryActions(deps: CategoryActionDependencies) {
                 {recurringPaymentCount > 0 && (
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-muted-foreground">Recurring bills</span>
-                    <strong className="font-semibold text-foreground">
-                      {recurringPaymentCount}
-                    </strong>
+                    <span className="rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 font-semibold text-foreground">
+                      {recurringPaymentCount} {recurringPaymentCount === 1 ? 'bill' : 'bills'}
+                    </span>
                   </div>
                 )}
               </div>

@@ -187,6 +187,32 @@ describe('useCycleNavigation', () => {
     expect(result.current.ledgerIncomingReloadFilter).toBe('all')
   })
 
+  // The toolbar all-cycles toggle widens prefs without touching routeState.range, so the route
+  // range can already read `monthly` while prefs sit on `all`. Clearing has to write prefs
+  // itself: setting routeState.range to a value it already holds is a no-op the sync effect never
+  // sees, and the stale wide scope flows straight back in.
+  it('narrows the cycle scope even when the route range never widened with it', () => {
+    const setLedgerCyclesRange = vi.fn()
+    const { result } = renderHook(() => useCycleNavigation({
+      loadAll: vi.fn(),
+      handleLogout: vi.fn(),
+      markSessionLocked: vi.fn(),
+      setDashboardData: vi.fn(),
+      setTransactions: vi.fn(),
+      setActiveTab: vi.fn(),
+      setLedgerCyclesRange,
+    }))
+
+    act(() => result.current.setLedgerShowAllCycles(true))
+    expect(result.current.ledgerShowAllCycles).toBe(true)
+    setLedgerCyclesRange.mockClear()
+
+    act(() => result.current.clearIncomingFilters())
+
+    expect(result.current.ledgerShowAllCycles).toBe(false)
+    expect(setLedgerCyclesRange).toHaveBeenCalledWith('monthly')
+  })
+
   it('navigates to recurring loans tab with highlighted loan id', async () => {
     const setActiveTab = vi.fn()
     const { result } = renderHook(() => useCycleNavigation({

@@ -3,7 +3,7 @@
 // all-cycles pending list). Search, category, date, amount, recurring, stability
 // reload and transaction-type matching live here so the rules exist in exactly one place.
 
-import type { Transaction } from '../types'
+import type { Transaction, StabilityReloadFilter } from '../types'
 import { isReportTransfer, isReportableInflow, isReportableOutflow } from './transactionReportSemantics'
 import { isStabilityReloadDrawdown, normalizeReloadIntent } from './stabilityRecoveryReplay'
 
@@ -16,14 +16,7 @@ export type TransactionSearchMode = 'contains' | 'exact'
 
 export type TransactionTypeFilterOption = 'inflow' | 'outflow' | 'transfer'
 export type TxTypeFilter = string | string[] | null | undefined
-export type StabilityReloadFilter =
-  | 'all'
-  | 'put-back'
-  | 'needs-put-back'
-  | 'outstanding'
-  | 'partly-repaid'
-  | 'complete'
-  | 'not-required'
+export type { StabilityReloadFilter }
 
 export function parseTxTypes(value: TxTypeFilter): TransactionTypeFilterOption[] {
   if (!value) return []

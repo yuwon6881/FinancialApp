@@ -363,7 +363,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     mutateQueue,
     unconfirmedSettingWritesRef,
     setDashboardData,
-    categoriesList,
     allCategories,
     allRecurringPayments,
     snapshotForUndo,

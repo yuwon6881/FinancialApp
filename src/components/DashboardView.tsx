@@ -1,5 +1,5 @@
 import React from 'react'
-import type { DashboardData, SavingsGoal, WishlistItem, AppTab, InvestmentAllocationOverview } from '../types'
+import type { DashboardData, SavingsGoal, WishlistItem, AppTab, InvestmentAllocationOverview, StabilityReloadFilter } from '../types'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useAppPrefs } from '../contexts/AppContext'
 import { DashboardHeader } from './dashboard/DashboardHeader'
@@ -34,6 +34,7 @@ interface DashboardViewProps {
     range?: 'monthly' | '3month' | '6month' | 'yearly';
     highlightedTxId?: string | null;
     showAllCycles?: boolean;
+    reloadFilter?: StabilityReloadFilter;
   }) => void
   wishlist?: WishlistItem[]
   savingsGoals?: SavingsGoal[]

@@ -8,6 +8,15 @@ export type StabilityReloadIntent = 'Unanswered' | 'Required' | 'NotRequired'
 
 export type StabilityReloadStatus = 'Outstanding' | 'PartlyRepaid' | 'Complete' | 'NotRequired'
 
+export type StabilityReloadFilter =
+  | 'all'
+  | 'put-back'
+  | 'needs-put-back'
+  | 'outstanding'
+  | 'partly-repaid'
+  | 'complete'
+  | 'not-required'
+
 /** One marked drawdown and how much of it is still owed. */
 export interface StabilityReloadObligation {
   transactionId: string
