@@ -1,5 +1,4 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import type { CategoryFlowType } from '../../types'
 import {
   filterAndGroupCategoryRows,
   type CategoryFlowFilterValue,
@@ -9,7 +8,6 @@ import { CustomSelect } from '../ui/CustomSelect'
 
 interface CategoryFlowFilterProps {
   rows: CategoryFlowRow[]
-  flowTypeDrafts: Record<string, CategoryFlowType>
   /**
    * Receives the filtered rows and the select itself, so the consumer decides where the control
    * sits. It used to render its own labelled row above the children, which put a third separate
@@ -18,11 +16,11 @@ interface CategoryFlowFilterProps {
   children: (rows: CategoryFlowRow[], control: ReactNode) => ReactNode
 }
 
-export function CategoryFlowFilter({ rows, flowTypeDrafts, children }: CategoryFlowFilterProps) {
+export function CategoryFlowFilter({ rows, children }: CategoryFlowFilterProps) {
   const [filter, setFilter] = useState<CategoryFlowFilterValue>('all')
   const visibleRows = useMemo(
-    () => filterAndGroupCategoryRows(rows, flowTypeDrafts, filter),
-    [filter, flowTypeDrafts, rows],
+    () => filterAndGroupCategoryRows(rows, filter),
+    [filter, rows],
   )
 
   const control = (

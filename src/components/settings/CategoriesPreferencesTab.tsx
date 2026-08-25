@@ -26,6 +26,40 @@ import { CategoryFlowFilter } from './CategoryFlowFilter'
 import { isSystemCategoryName } from '../../lib/categoryFlow'
 import { Button } from '../ui/Button'
 
+/**
+ * One segment per flow type, so a specific type is a single click. The control used to be one pill
+ * that cycled both → inflow → outflow, which took up to three clicks to land on a given type.
+ */
+const CATEGORY_FLOW_SEGMENTS: ReadonlyArray<{
+  value: CategoryFlowType
+  label: string
+  title: string
+  Icon: typeof ArrowLeftRight
+  activeClass: string
+}> = [
+  {
+    value: 'both',
+    label: 'Allow money in and out',
+    title: 'Both — money in and money out',
+    Icon: ArrowLeftRight,
+    activeClass: 'bg-card text-foreground shadow-xs',
+  },
+  {
+    value: 'inflow',
+    label: 'Restrict to money in',
+    title: 'Inflow only — money in',
+    Icon: ArrowDownLeft,
+    activeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  },
+  {
+    value: 'outflow',
+    label: 'Restrict to money out',
+    title: 'Outflow only — money out',
+    Icon: ArrowUpRight,
+    activeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+  },
+]
+
 export interface CategoriesPreferencesTabProps {
   view: ReturnType<typeof useSettingsView>
   categoriesList: TransactionCategory[]
@@ -272,8 +306,109 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
               </div>
             )}
 
+            <CategoryFlowFilter rows={categoryRows}>
+              {(filteredCategoryRows, flowControl) => <ManageableNameList
+              items={filteredCategoryRows.map(({ category, count }) => ({ ...category, count }))}
+              duplicateItems={categoryRows.map(({ category, count }) => ({ ...category, count }))}
+              itemLabel="Category"
+              addPlaceholder="New Category Name"
+              addFormTitle="Add a category"
+              addFormDescription="It starts open to both money in and money out; change that from the flow buttons beside its name."
+              filterSlot={flowControl}
+              disabled={hideSensitive}
+              isLoading={isCategoryListLoading}
+              isItemReadOnly={item => isSystemCategoryName(item.name)}
+              validateName={name => isSystemCategoryName(name) ? 'Name is a reserved word.' : null}
+              onAdd={name => onAddCategory({ name, type: 'both' })}
+              onDelete={item => view.handleDeleteCategory(item.id)}
+              renderName={item => {
+                const activeType = flowTypeDrafts[item.id] || item.type || 'both'
+                const isDraftChanged = flowTypeDrafts[item.id] != null && flowTypeDrafts[item.id] !== (item.type || 'both')
+                const isSystemCategory = isSystemCategoryName(item.name)
+                return (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex shrink-0 items-center rounded border px-2 py-0.5 font-semibold ${getCategoryBadgeClass(item.name)}`}>
+                      {item.name}
+                    </span>
+                    {isSystemCategory ? (
+                      <span
+                        role="img"
+                        aria-label={`${item.name} is managed by FinancialApp; flow is ${activeType === 'inflow' ? 'money in' : activeType === 'outflow' ? 'money out' : 'money in and out'}`}
+                        title="Managed category; its flow cannot be changed."
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                          activeType === 'inflow'
+                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : activeType === 'outflow'
+                              ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              : 'border-border/60 bg-muted/40 text-muted-foreground'
+                        }`}
+                      >
+                        <Lock className="size-2.5" aria-hidden="true" />
+                        <span className="capitalize">{activeType}</span>
+                      </span>
+                    ) : (
+                      <div
+                        role="group"
+                        aria-label={`Flow restriction for ${item.name}`}
+                        className={`inline-flex shrink-0 items-center gap-0.5 rounded-full border p-0.5 ${
+                          isDraftChanged ? 'border-blue-500/50 bg-blue-500/5' : 'border-border/60 bg-muted/40'
+                        }`}
+                      >
+                        {CATEGORY_FLOW_SEGMENTS.map(segment => {
+                          const isActive = activeType === segment.value
+                          return (
+                            <Button variant="unstyled"
+                              key={segment.value}
+                              type="button"
+                              disabled={hideSensitive}
+                              onClick={() => setFlowTypeDrafts(prev => ({ ...prev, [item.id]: segment.value }))}
+                              aria-pressed={isActive}
+                              aria-label={`${segment.label} for ${item.name}`}
+                              title={segment.title}
+                              // `size-*`, not `min-h-*`: the unlayered `button` floor in index.css
+                              // outranks layered utilities, so a min-height of 44px never applied.
+                              className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 sm:size-7 ${
+                                isActive ? segment.activeClass : 'text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              <segment.Icon className="size-3" aria-hidden="true" />
+                            </Button>
+                          )
+                        })}
+                        {isDraftChanged && (
+                          <span
+                            role="img"
+                            aria-label="Unsaved flow change"
+                            title="Unsaved change"
+                            className="mx-1 inline-block size-1.5 shrink-0 rounded-full bg-blue-500"
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              }}
+              renderMeta={item => item.count === 0
+                ? <span className="truncate text-[10px] font-semibold text-orange-500">Unused</span>
+                : item.count != null && item.count <= view.RARELY_USED_MAX_COUNT
+                  ? <span className="truncate text-[10px] font-semibold text-amber-600 dark:text-amber-500">Rarely used · {item.count}×</span>
+                  : null}
+              renderStatus={item => (
+                <RowSyncStatus
+                  isDeleting={view.isCatDeleting(item.id)}
+                  isSyncing={view.isCatSyncing(item.id)}
+                  isPending={item.isPendingSync}
+                  entityLabel="category"
+                />
+              )}
+              />}
+            </CategoryFlowFilter>
+
+            {/* Below the list, not above it: appearing on the first edit used to push every row
+                down by its own height, so the flow control moved out from under the pointer on the
+                very click that summoned it. Sticky keeps Save reachable without displacing rows. */}
             {changedFlowTypeCategories.length > 0 && (
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 animate-in fade-in duration-150">
+              <div className="sticky bottom-0 z-10 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 backdrop-blur-sm animate-in fade-in duration-150">
                 <span className="truncate text-[11px] font-bold text-accent-ink">
                   {changedFlowTypeCategories.length} category flow type{changedFlowTypeCategories.length > 1 ? 's' : ''} modified
                 </span>
@@ -315,91 +450,6 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                 </div>
               </div>
             )}
-
-            <CategoryFlowFilter rows={categoryRows} flowTypeDrafts={flowTypeDrafts}>
-              {(filteredCategoryRows, flowControl) => <ManageableNameList
-              items={filteredCategoryRows.map(({ category, count }) => ({ ...category, count }))}
-              duplicateItems={categoryRows.map(({ category, count }) => ({ ...category, count }))}
-              itemLabel="Category"
-              addPlaceholder="New Category Name"
-              addFormTitle="Add a category"
-              addFormDescription="It starts open to both money in and money out; change that from the badge beside its name."
-              filterSlot={flowControl}
-              disabled={hideSensitive}
-              isLoading={isCategoryListLoading}
-              isItemReadOnly={item => isSystemCategoryName(item.name)}
-              validateName={name => isSystemCategoryName(name) ? 'Name is a reserved word.' : null}
-              onAdd={name => onAddCategory({ name, type: 'both' })}
-              onDelete={item => view.handleDeleteCategory(item.id)}
-              renderName={item => {
-                const activeType = flowTypeDrafts[item.id] || item.type || 'both'
-                const isDraftChanged = flowTypeDrafts[item.id] != null && flowTypeDrafts[item.id] !== (item.type || 'both')
-                const isSystemCategory = isSystemCategoryName(item.name)
-                return (
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-flex shrink-0 items-center rounded border px-2 py-0.5 font-semibold ${getCategoryBadgeClass(item.name)}`}>
-                      {item.name}
-                    </span>
-                    {isSystemCategory ? (
-                      <span
-                        role="img"
-                        aria-label={`${item.name} is managed by FinancialApp; flow is ${activeType === 'inflow' ? 'money in' : activeType === 'outflow' ? 'money out' : 'money in and out'}`}
-                        title="Managed category; its flow cannot be changed."
-                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
-                          activeType === 'inflow'
-                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                            : activeType === 'outflow'
-                              ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                              : 'border-border/60 bg-muted/40 text-muted-foreground'
-                        }`}
-                      >
-                        <Lock className="size-2.5" aria-hidden="true" />
-                        <span className="capitalize">{activeType}</span>
-                      </span>
-                    ) : (
-                      <Button variant="unstyled"
-                        type="button"
-                        disabled={hideSensitive}
-                        onClick={() => {
-                          const current = flowTypeDrafts[item.id] || item.type || 'both'
-                          const next: CategoryFlowType = current === 'both' ? 'inflow' : current === 'inflow' ? 'outflow' : 'both'
-                          setFlowTypeDrafts(prev => ({ ...prev, [item.id]: next }))
-                        }}
-                        aria-label={`Change ${item.name} flow. Currently ${activeType === 'inflow' ? 'money in' : activeType === 'outflow' ? 'money out' : 'money in and out'}.`}
-                        title="Click to toggle flow restriction (Both → Inflow → Outflow)"
-                        className={`inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition hover:scale-105 active:scale-95 disabled:opacity-50 sm:min-h-8 ${
-                          activeType === 'inflow'
-                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                            : activeType === 'outflow'
-                              ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                              : 'border-border/60 bg-muted/40 text-muted-foreground'
-                        } ${isDraftChanged ? 'ring-2 ring-blue-500/50' : ''}`}
-                      >
-                        {activeType === 'inflow' && <ArrowDownLeft className="size-2.5" />}
-                        {activeType === 'outflow' && <ArrowUpRight className="size-2.5" />}
-                        {activeType === 'both' && <ArrowLeftRight className="size-2.5" />}
-                        <span className="capitalize">{activeType}</span>
-                        {isDraftChanged && <span className="size-1.5 rounded-full bg-blue-500 inline-block" title="Unsaved change" />}
-                      </Button>
-                    )}
-                  </div>
-                )
-              }}
-              renderMeta={item => item.count === 0
-                ? <span className="truncate text-[10px] font-semibold text-orange-500">Unused</span>
-                : item.count != null && item.count <= view.RARELY_USED_MAX_COUNT
-                  ? <span className="truncate text-[10px] font-semibold text-amber-600 dark:text-amber-500">Rarely used · {item.count}×</span>
-                  : null}
-              renderStatus={item => (
-                <RowSyncStatus
-                  isDeleting={view.isCatDeleting(item.id)}
-                  isSyncing={view.isCatSyncing(item.id)}
-                  isPending={item.isPendingSync}
-                  entityLabel="category"
-                />
-              )}
-              />}
-            </CategoryFlowFilter>
 
             {view.categoryUsage && view.visibleCategories.length > 0 && (
               <p className="text-[10px] text-muted-foreground px-0.5">

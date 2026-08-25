@@ -222,6 +222,8 @@ interface MockApiOptions {
   documents?: VaultDocument[]
   reliefCategories?: TaxReliefCategoryDefinition[]
   investmentTransactions?: InvestmentActivity[]
+  /** Lets a spec give categories explicit flow types; the default fixture leaves them all `both`. */
+  categories?: Array<{ id: string; name: string; type?: string }>
 }
 
 export async function mockApi(page: Page, options: MockApiOptions = {}) {
@@ -230,6 +232,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
     ...bootstrap,
     wishlist: options.wishlist ?? bootstrap.wishlist,
     savingsGoals: options.savingsGoals ?? bootstrap.savingsGoals,
+    categories: options.categories ?? bootstrap.categories,
     dashboard: {
       ...bootstrap.dashboard,
       setting: { ...bootstrap.dashboard.setting, darkMode },

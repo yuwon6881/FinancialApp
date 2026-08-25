@@ -167,6 +167,11 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
             options={[
               { value: 'all', label: 'Include all' },
               { value: 'put-back', label: 'Marked as put back' },
+              { value: 'needs-put-back', label: 'Still needs put back' },
+              { value: 'outstanding', label: 'Not started' },
+              { value: 'partly-repaid', label: 'Partly put back' },
+              { value: 'complete', label: 'Put back complete' },
+              { value: 'not-required', label: 'Spent for good' },
             ]}
             align="right"
             controlSize="sm"

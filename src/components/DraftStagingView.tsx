@@ -141,7 +141,7 @@ export function DraftStagingView({
                 {draftTransactions.length}
               </span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Review each draft, then drag a grip to set its Ledger order. The top draft is recorded first.</p>
+            <p className="mt-1 text-sm text-muted-foreground">The top draft records first. In the Ledger’s default newest-first view, same-day drafts appear in reverse order.</p>
           </div>
         </div>
       </header>
@@ -219,6 +219,12 @@ export function DraftStagingView({
                     <p className="truncate text-sm font-bold text-foreground">{draft.description}</p>
                     <div className="mt-1 min-w-0 space-y-1.5 pr-10 text-[10px] text-muted-foreground lg:pr-0">
                       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <span
+                          className="shrink-0 rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 font-bold text-foreground"
+                          aria-label={`Recording position ${index + 1} of ${draftTransactions.length}`}
+                        >
+                          Records {index + 1} of {draftTransactions.length}
+                        </span>
                         {issues.length > 0 && (
                           <span className="max-w-full truncate rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400" title={issues.join(' ')}>
                             Needs review

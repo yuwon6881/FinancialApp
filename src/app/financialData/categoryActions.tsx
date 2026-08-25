@@ -1,4 +1,5 @@
 import type { CategoryFlowType, RecurringPayment, TransactionCategory } from '../../types'
+import { ExternalLink } from 'lucide-react'
 import * as api from '../../lib/api'
 import type { CategoryCleanupSuggestion } from '../../lib/api'
 import { isSpendingGuideCategory, isSystemCategoryName } from '../../lib/categoryFlow'
@@ -6,6 +7,7 @@ import { createFinalId, enqueue } from '../../lib/outbox'
 import type { UseOutboxResult } from '../../lib/useOutbox'
 import type { AppDialogs } from '../useAppDialogs'
 import type { ToastAction, ToastTone } from '../../components/ui/ToastViewport'
+import { Button } from '../../components/ui/Button'
 // Deliberately the deferred wrapper, not the picker itself: importing CategoryReplacementSelect
 // directly here pulled its CustomSelect -> AnchoredPopover chain onto the eager critical path. See
 // the comment in CategoryReplacementSelectLazy for the measurement.
@@ -20,6 +22,14 @@ interface CategoryActionDependencies {
   snapshotForUndo: UseOutboxResult['snapshotForUndo']
   setConfirmModalData: AppDialogs['setConfirmModalData']
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
+  onNavigateToLedger?: (options: {
+    category?: string | null
+    range?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
+    showAllCycles?: boolean
+    search?: string | null
+    date?: string | null
+    highlightedTxId?: string | null
+  }) => void
 }
 
 /**
@@ -37,6 +47,7 @@ export function createCategoryActions(deps: CategoryActionDependencies) {
     snapshotForUndo,
     setConfirmModalData,
     showToast,
+    onNavigateToLedger,
   } = deps
 
   const handleAddCategory = (newCat: Omit<TransactionCategory, 'id'>) => {
@@ -109,30 +120,71 @@ export function createCategoryActions(deps: CategoryActionDependencies) {
     setConfirmModalData({
       title: 'Delete Category',
       message: (
-        <div className={`space-y-3 ${requiresReplacement ? 'pb-36' : ''}`}>
-          <p>Delete "{category.name}"?</p>
+        <div className="space-y-3.5">
+          <p className="text-sm text-foreground">
+            Delete <strong className="font-semibold text-foreground">"{category.name}"</strong>?
+          </p>
           {requiresReplacement ? (
             <>
-              <p>
-                This category is used by {usageLookupFailed ? 'existing ledger transactions' : `${transactionCount} ledger transaction${transactionCount === 1 ? '' : 's'}`}
-                {recurringPaymentCount > 0 ? ` and ${recurringPaymentCount} recurring payment${recurringPaymentCount === 1 ? '' : 's'}` : ''}.
-                Choose a replacement category before deleting it.
-              </p>
-              <CategoryReplacementSelectLazy
-                options={replacementOptions}
-                onChange={selected => {
-                  selectedReplacementId = selected
-                  setConfirmModalData(previous => previous ? { ...previous, confirmDisabled: selectedReplacementId.length === 0 } : previous)
-                }}
-              />
-              {replacementOptions.length === 0 && (
-                <p className="text-[11px] font-semibold text-orange-500">
-                  Add another category before deleting this one.
+              <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Ledger transactions</span>
+                  <div className="flex items-center gap-2">
+                    <strong className="font-semibold text-foreground">
+                      {usageLookupFailed ? '1+' : transactionCount}
+                    </strong>
+                    {(transactionCount > 0 || usageLookupFailed) && onNavigateToLedger && (
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        type="button"
+                        onClick={() => {
+                          setConfirmModalData(null)
+                          onNavigateToLedger({
+                            category: category.name,
+                            showAllCycles: true,
+                            range: 'all',
+                          })
+                        }}
+                        className="gap-1 rounded-lg text-[11px]"
+                      >
+                        <ExternalLink className="size-3" aria-hidden="true" />
+                        <span>View in Ledger</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {recurringPaymentCount > 0 && (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Recurring bills</span>
+                    <strong className="font-semibold text-foreground">
+                      {recurringPaymentCount}
+                    </strong>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs text-muted-foreground">
+                  Choose a replacement category before deleting:
                 </p>
-              )}
+                <CategoryReplacementSelectLazy
+                  options={replacementOptions}
+                  onChange={selected => {
+                    selectedReplacementId = selected
+                    setConfirmModalData(previous => previous ? { ...previous, confirmDisabled: selectedReplacementId.length === 0 } : previous)
+                  }}
+                />
+                {replacementOptions.length === 0 && (
+                  <p className="text-[11px] font-semibold text-destructive">
+                    Add another category before deleting this one.
+                  </p>
+                )}
+              </div>
             </>
           ) : (
-            <p>No ledger transactions or recurring payments currently use this category.</p>
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
+              <p>No ledger transactions or recurring payments currently use this category. It can be safely deleted.</p>
+            </div>
           )}
         </div>
       ),

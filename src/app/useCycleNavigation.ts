@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import * as api from '../lib/api'
 import { getCachedDashboardPeriod, getCachedCycleSnapshot } from '../lib/cache'
 import type { AppTab, DashboardData, Transaction } from '../types'
-import type { TransactionLinkFilter, TransactionSearchMode } from '../lib/transactionFilters'
+import type { StabilityReloadFilter, TransactionLinkFilter, TransactionSearchMode } from '../lib/transactionFilters'
 import {
   ledgerRouteSearch,
   readAppLocation,
@@ -160,7 +160,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     maxAmount?: string | null
     recurringFilter?: TransactionLinkFilter
     wishlistFilter?: TransactionLinkFilter
-    reloadFilter?: 'all' | 'put-back'
+    reloadFilter?: StabilityReloadFilter
     /** Legacy navigation aliases; true maps to the new `only` mode. */
     recurringOnly?: boolean
     wishlistOnly?: boolean
@@ -190,7 +190,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     const maxAmount = navOptions.maxAmount || ''
     const recurringFilter: TransactionLinkFilter = navOptions.recurringFilter ?? (navOptions.recurringOnly === true ? 'only' : 'all')
     const wishlistFilter: TransactionLinkFilter = navOptions.wishlistFilter ?? (navOptions.wishlistOnly === true ? 'only' : 'all')
-    const reloadFilter: 'all' | 'put-back' = navOptions.reloadFilter ?? 'all'
+    const reloadFilter: StabilityReloadFilter = navOptions.reloadFilter ?? 'all'
     const range = navOptions.range || (navOptions.showAllCycles ? 'all' : 'monthly')
     setLedgerCyclesRange(range)
     const showAll = navOptions.showAllCycles !== undefined ? navOptions.showAllCycles : (range !== 'monthly')
@@ -327,11 +327,16 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     updateAppSearch({ tx: null })
   }, [])
 
+  // Clearing filters also drops the cycle scope a jump brought with it. `yearly`, `3month`, and
+  // `6month` are reachable only from a deep link or a programmatic jump — the toolbar toggle emits
+  // just `all`/`monthly` — so leaving the scope behind stranded people in a window with no control
+  // to leave it, and with the month picker hidden. `range` reaches prefs through the effect above.
   const clearIncomingFilters = useCallback(() => {
     setLedgerRouteState(current => ({
       ...current,
       filters: [], search: '', searchMode: 'contains', startDate: '', endDate: '', minAmount: '', maxAmount: '',
       recurringFilter: 'all', wishlistFilter: 'all', reloadFilter: 'all', txType: null,
+      showAllCycles: false, range: 'monthly',
     }))
     setHighlightedTxId(null)
   }, [])

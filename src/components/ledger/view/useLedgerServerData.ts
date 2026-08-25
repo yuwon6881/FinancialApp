@@ -344,6 +344,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
         searchMode: appliedSearchMode,
         filters: appliedFilters,
         txType: appliedTxTypeFilter,
+        reloadFilter: appliedReloadFilter,
         startDate: appliedStartDate,
         endDate: appliedEndDate,
         minAmount: appliedMinAmount,
@@ -356,7 +357,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
       })
     }
     prevActiveSyncId.current = activeSyncId || null
-  }, [activeSyncId, showAllCycles, currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, pageSize, onFetchPagedTransactions, runServerFetch, sortOrder])
+  }, [activeSyncId, showAllCycles, currentPage, appliedSearch, appliedSearchMode, appliedFilters, appliedTxTypeFilter, appliedReloadFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, pageSize, onFetchPagedTransactions, runServerFetch, sortOrder])
 
   // Re-fetch server result when deletingTxId transitions from non-null to null (delete completed)
   const prevDeletingTxId = useRef<string | null>(null)
@@ -368,6 +369,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
         searchMode: appliedSearchMode,
         filters: appliedFilters,
         txType: appliedTxTypeFilter,
+        reloadFilter: appliedReloadFilter,
         startDate: appliedStartDate,
         endDate: appliedEndDate,
         minAmount: appliedMinAmount,
@@ -380,15 +382,15 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
       })
     }
     prevDeletingTxId.current = deletingTxId || null
-  }, [deletingTxId, showAllCycles, currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, pageSize, onFetchPagedTransactions, runServerFetch, sortOrder])
+  }, [deletingTxId, showAllCycles, currentPage, appliedSearch, appliedSearchMode, appliedFilters, appliedTxTypeFilter, appliedReloadFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, pageSize, onFetchPagedTransactions, runServerFetch, sortOrder])
 
   const retryServerFetch = useCallback(() => runServerFetch({
-    page: currentPage, search: appliedSearch, filters: appliedFilters,
-    txType: appliedTxTypeFilter, startDate: appliedStartDate, endDate: appliedEndDate,
+    page: currentPage, search: appliedSearch, searchMode: appliedSearchMode, filters: appliedFilters,
+    txType: appliedTxTypeFilter, reloadFilter: appliedReloadFilter, startDate: appliedStartDate, endDate: appliedEndDate,
     minAmount: appliedMinAmount, maxAmount: appliedMaxAmount,
     recurringFilter: appliedRecurringFilter, wishlistFilter: appliedWishlistFilter,
     sort: sortOrder, pSize: pageSize,
-  }), [currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, sortOrder, pageSize, runServerFetch])
+  }), [currentPage, appliedSearch, appliedSearchMode, appliedFilters, appliedTxTypeFilter, appliedReloadFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, sortOrder, pageSize, runServerFetch])
 
   return {
     serverResult,

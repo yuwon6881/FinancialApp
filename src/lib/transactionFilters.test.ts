@@ -134,6 +134,21 @@ describe('matchesTransactionFilters', () => {
       amount: -100,
       ledgerCategory: 'Stability',
       stabilityReloadIntent: 'Required',
+      stabilityReloadStatus: 'Outstanding',
+    })
+    const partlyRepaid = tx({
+      id: 'partly',
+      amount: -80,
+      ledgerCategory: 'Stability',
+      stabilityReloadIntent: 'Required',
+      stabilityReloadStatus: 'PartlyRepaid',
+    })
+    const complete = tx({
+      id: 'complete',
+      amount: -60,
+      ledgerCategory: 'Stability',
+      stabilityReloadIntent: 'Required',
+      stabilityReloadStatus: 'Complete',
     })
     const spentForGoodOutflow = tx({
       amount: -100,
@@ -161,6 +176,15 @@ describe('matchesTransactionFilters', () => {
     expect(matchesTransactionFilters(spentForGoodOutflow, { reloadFilter: 'put-back' })).toBe(false)
     expect(matchesTransactionFilters(incomeSplit, { reloadFilter: 'put-back' })).toBe(false)
     expect(matchesTransactionFilters(adjustment, { reloadFilter: 'put-back' })).toBe(false)
+
+    expect(matchesTransactionFilters(putBackOutflow, { reloadFilter: 'needs-put-back' })).toBe(true)
+    expect(matchesTransactionFilters(partlyRepaid, { reloadFilter: 'needs-put-back' })).toBe(true)
+    expect(matchesTransactionFilters(complete, { reloadFilter: 'needs-put-back' })).toBe(false)
+    expect(matchesTransactionFilters(putBackOutflow, { reloadFilter: 'outstanding' })).toBe(true)
+    expect(matchesTransactionFilters(partlyRepaid, { reloadFilter: 'outstanding' })).toBe(false)
+    expect(matchesTransactionFilters(partlyRepaid, { reloadFilter: 'partly-repaid' })).toBe(true)
+    expect(matchesTransactionFilters(complete, { reloadFilter: 'complete' })).toBe(true)
+    expect(matchesTransactionFilters(spentForGoodOutflow, { reloadFilter: 'not-required' })).toBe(true)
   })
 
   it('applies inclusive date ranges', () => {

@@ -184,12 +184,14 @@ describe('app URL state', () => {
   })
 
   it('supports stability reload put-back filter in ledger URL state', () => {
-    window.history.replaceState({}, '', '/ledger?reload=put-back')
-    expect(readAppLocation().ledger.reloadFilter).toBe('put-back')
+    for (const filter of ['put-back', 'needs-put-back', 'outstanding', 'partly-repaid', 'complete', 'not-required'] as const) {
+      window.history.replaceState({}, '', `/ledger?reload=${filter}`)
+      expect(readAppLocation().ledger.reloadFilter).toBe(filter)
+      expect(ledgerRouteSearch({ reloadFilter: filter })).toEqual(expect.objectContaining({
+        reload: filter,
+      }))
+    }
 
-    expect(ledgerRouteSearch({ reloadFilter: 'put-back' })).toEqual(expect.objectContaining({
-      reload: 'put-back',
-    }))
     expect(ledgerRouteSearch({ reloadFilter: 'all' })).toEqual(expect.objectContaining({
       reload: null,
     }))

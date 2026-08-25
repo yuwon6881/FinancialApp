@@ -73,6 +73,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     hasShownModalThisSession,
     setShowLoginModal,
     setShowFailedOpsModal,
+    onNavigateToLedger,
   } = options
 
   const [error, setError] = useState<string | null>(null)
@@ -398,6 +399,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     replacePendingLedgerTransaction,
     allLoans,
     allAccounts,
+    onNavigateToLedger,
   })
 
   return {

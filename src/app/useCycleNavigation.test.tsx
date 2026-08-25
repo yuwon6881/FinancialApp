@@ -149,6 +149,44 @@ describe('useCycleNavigation', () => {
     expect(setLedgerCyclesRange).toHaveBeenLastCalledWith('yearly')
   })
 
+  it('drops a jump-injected cycle scope when the incoming filters are cleared', () => {
+    const setLedgerCyclesRange = vi.fn()
+    const { result } = renderHook(() => useCycleNavigation({
+      loadAll: vi.fn(),
+      handleLogout: vi.fn(),
+      markSessionLocked: vi.fn(),
+      setDashboardData: vi.fn(),
+      setTransactions: vi.fn(),
+      setActiveTab: vi.fn(),
+      setLedgerCyclesRange,
+    }))
+
+    act(() => result.current.syncLedgerRouteState({
+      filters: ['Stability'],
+      search: '', searchMode: 'contains',
+      startDate: '2026-06-28',
+      endDate: '2026-08-25',
+      minAmount: '',
+      maxAmount: '',
+      recurringFilter: 'all',
+      wishlistFilter: 'all',
+      reloadFilter: 'put-back',
+      txType: null,
+      showAllCycles: true,
+      range: 'yearly',
+    }))
+    expect(result.current.ledgerShowAllCycles).toBe(true)
+
+    act(() => result.current.clearIncomingFilters())
+
+    // The scope has no toolbar control of its own, so it has to leave with the filters.
+    expect(result.current.ledgerShowAllCycles).toBe(false)
+    expect(setLedgerCyclesRange).toHaveBeenLastCalledWith('monthly')
+    expect(result.current.ledgerIncomingFilters).toEqual([])
+    expect(result.current.ledgerIncomingStartDate).toBe('')
+    expect(result.current.ledgerIncomingReloadFilter).toBe('all')
+  })
+
   it('navigates to recurring loans tab with highlighted loan id', async () => {
     const setActiveTab = vi.fn()
     const { result } = renderHook(() => useCycleNavigation({

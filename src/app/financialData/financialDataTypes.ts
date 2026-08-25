@@ -62,4 +62,13 @@ export interface UseFinancialDataOptions {
   hasShownModalThisSession: boolean
   setShowLoginModal: (value: boolean) => void
   setShowFailedOpsModal: (value: boolean) => void
+  onNavigateToLedger?: (options: {
+    category?: string | null
+    range?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
+    showAllCycles?: boolean
+    search?: string | null
+    date?: string | null
+    highlightedTxId?: string | null
+  }) => void
 }
+

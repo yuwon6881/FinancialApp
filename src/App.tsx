@@ -128,6 +128,7 @@ function App() {
     hasShownModalThisSession,
     setShowLoginModal: dialogs.setShowLoginModal,
     setShowFailedOpsModal: dialogs.setShowFailedOpsModal,
+    onNavigateToLedger: nav.handleNavigateToLedger,
   })
   useEffect(() => {
     persistSelectedPeriodRef.current = (month, year) => {

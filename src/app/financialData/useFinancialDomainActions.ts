@@ -77,6 +77,14 @@ export interface UseFinancialDomainActionsOptions {
   replacePendingLedgerTransaction: (pendingId: string, transaction: Transaction) => void
   allLoans: Loan[]
   allAccounts: LedgerAccount[]
+  onNavigateToLedger?: (options: {
+    category?: string | null
+    range?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
+    showAllCycles?: boolean
+    search?: string | null
+    date?: string | null
+    highlightedTxId?: string | null
+  }) => void
 }
 
 export function useFinancialDomainActions(options: UseFinancialDomainActionsOptions) {
@@ -145,6 +153,7 @@ export function useFinancialDomainActions(options: UseFinancialDomainActionsOpti
     snapshotForUndo,
     setConfirmModalData,
     showToast,
+    onNavigateToLedger: options.onNavigateToLedger,
   })
 
   const transactionActions = useTransactionActions({

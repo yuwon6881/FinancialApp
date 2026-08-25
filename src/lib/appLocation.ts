@@ -109,8 +109,13 @@ const parseLinkFilter = (value: string | null): TransactionLinkFilter => {
   return 'all'
 }
 
-const parseReloadFilter = (value: string | null): 'all' | 'put-back' => {
+const RELOAD_FILTERS = new Set<StabilityReloadFilter>([
+  'put-back', 'needs-put-back', 'outstanding', 'partly-repaid', 'complete', 'not-required',
+])
+
+const parseReloadFilter = (value: string | null): StabilityReloadFilter => {
   if (value === 'put-back' || value === 'required' || value === '1') return 'put-back'
+  if (value && RELOAD_FILTERS.has(value as StabilityReloadFilter)) return value as StabilityReloadFilter
   return 'all'
 }
 

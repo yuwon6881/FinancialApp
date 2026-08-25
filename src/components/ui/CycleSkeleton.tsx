@@ -89,6 +89,7 @@ const DraftRowSkeleton: React.FC = () => (
     <div className="min-w-0 space-y-1.5">
       <Skeleton className="h-4 w-40 max-w-full" />
       <div className="flex flex-wrap items-center gap-1.5">
+        <Skeleton className="h-5 w-20 rounded-md" />
         <Skeleton className="h-4 w-20 rounded-md" />
         <Skeleton className="h-4 w-20" />
         <Skeleton className="h-5 w-16 rounded-full" />

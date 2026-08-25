@@ -99,8 +99,16 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
     const labels = activeTxTypes.map(t => t === 'inflow' ? 'inflows' : t === 'outflow' ? 'outflows' : 'transfers')
     filterDetails.push(`${labels.join(' & ')} only`)
   }
-  if (activeReloadFilter === 'put-back') {
-    filterDetails.push('marked as put back only')
+  const reloadFilterLabel: Partial<Record<StabilityReloadFilter, string>> = {
+    'put-back': 'marked as put back only',
+    'needs-put-back': 'still needs put back only',
+    outstanding: 'put back not started only',
+    'partly-repaid': 'partly put back only',
+    complete: 'put back complete only',
+    'not-required': 'spent for good only',
+  }
+  if (activeReloadFilter && reloadFilterLabel[activeReloadFilter]) {
+    filterDetails.push(reloadFilterLabel[activeReloadFilter])
   }
   if (activeRecurringFilter === 'only') filterDetails.push('recurring transactions only')
   else if (activeRecurringFilter === 'exclude') filterDetails.push('excluding recurring transactions')
@@ -120,7 +128,7 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
         <span className="size-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse" />
         <span className="min-w-0 break-words">{label}</span>
       </div>
-      {hasAnyFilter && (
+      {(hasAnyFilter || hasScopedRange) && (
         <Button variant="unstyled"
           onClick={onResetFilters}
           className="flex shrink-0 items-center gap-1 whitespace-nowrap text-blue-500 hover:text-blue-500 text-[10px] font-semibold transition cursor-pointer"

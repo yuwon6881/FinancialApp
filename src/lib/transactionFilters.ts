@@ -16,7 +16,14 @@ export type TransactionSearchMode = 'contains' | 'exact'
 
 export type TransactionTypeFilterOption = 'inflow' | 'outflow' | 'transfer'
 export type TxTypeFilter = string | string[] | null | undefined
-export type StabilityReloadFilter = 'all' | 'put-back'
+export type StabilityReloadFilter =
+  | 'all'
+  | 'put-back'
+  | 'needs-put-back'
+  | 'outstanding'
+  | 'partly-repaid'
+  | 'complete'
+  | 'not-required'
 
 export function parseTxTypes(value: TxTypeFilter): TransactionTypeFilterOption[] {
   if (!value) return []
@@ -48,7 +55,7 @@ export interface TransactionFilterCriteria {
   recurringFilter?: TransactionLinkFilter
   /** Whether wishlist-linked transactions are included, excluded, or shown alone. */
   wishlistFilter?: TransactionLinkFilter
-  /** Whether only stability records marked as put-back are shown. */
+  /** Optional intent/status filter for Stability drawdown rows. */
   reloadFilter?: StabilityReloadFilter
 }
 
@@ -106,10 +113,20 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
   if (!matchesLinkFilter(Boolean(t.recurringPaymentId), recurringFilter ?? 'all')) return false
   if (!matchesLinkFilter(t.wishlistItemId != null, wishlistFilter ?? 'all')) return false
 
-  if (reloadFilter === 'put-back') {
+  if (reloadFilter && reloadFilter !== 'all') {
     if (t.isAccountBalanceAdjustment) return false
-    if (normalizeReloadIntent(t.stabilityReloadIntent) !== 'Required') return false
     if (!isStabilityReloadDrawdown(t)) return false
+
+    const intent = normalizeReloadIntent(t.stabilityReloadIntent)
+    if (reloadFilter === 'not-required') return intent === 'NotRequired'
+    if (intent !== 'Required') return false
+    if (reloadFilter === 'put-back') return true
+
+    const status = t.stabilityReloadStatus ?? 'Outstanding'
+    if (reloadFilter === 'needs-put-back') return status === 'Outstanding' || status === 'PartlyRepaid'
+    if (reloadFilter === 'outstanding') return status === 'Outstanding'
+    if (reloadFilter === 'partly-repaid') return status === 'PartlyRepaid'
+    if (reloadFilter === 'complete') return status === 'Complete'
   }
 
   const normalizedSearch = search?.trim().toLowerCase()

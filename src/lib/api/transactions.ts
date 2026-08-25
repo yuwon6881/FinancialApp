@@ -1,6 +1,6 @@
 import type { AutocompleteSuggestion, Transaction } from '../../types'
 import type { TransactionSort } from '../transactionOrdering'
-import type { TransactionLinkFilter, TransactionSearchMode } from '../transactionFilters'
+import type { StabilityReloadFilter, TransactionLinkFilter, TransactionSearchMode } from '../transactionFilters'
 import type { WirePagedTransactionResult, WireTransaction } from '../apiTypes'
 import { deobfuscateTransaction, obfuscateAmount } from './amounts'
 import { API_BASE_URL, apiFetch, cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
@@ -65,7 +65,7 @@ export interface TransactionQuery {
   maxAmount?: number
   recurringFilter?: TransactionLinkFilter
   wishlistFilter?: TransactionLinkFilter
-  reloadFilter?: 'all' | 'put-back'
+  reloadFilter?: StabilityReloadFilter
   sort?: TransactionSort
 }
 

@@ -11,7 +11,6 @@ export interface StabilityRecoveryLedgerJump {
   endDate?: string | null
   showAllCycles?: boolean
   range?: 'monthly' | '3month' | '6month' | 'yearly'
-  reloadFilter?: 'all' | 'put-back'
 }
 
 interface StabilityRecoveryExceptionCardProps {
@@ -181,7 +180,6 @@ export function StabilityRecoveryExceptionCard({
                   endDate: new Date().toLocaleDateString('en-CA'),
                   showAllCycles: true,
                   range: 'yearly',
-                  reloadFilter: 'put-back',
                 })}
               >
                 See every movement since then
@@ -189,7 +187,7 @@ export function StabilityRecoveryExceptionCard({
               {/* Said plainly rather than left to be discovered: the ledger totals it lands on
                   are per page, and the window can run to more rows than one page holds. */}
               <p className="text-[10px] leading-snug text-muted-foreground">
-                Opens your ledger on emergency-fund movements from when your fund was last full.
+                Opens your ledger on every emergency-fund movement from when your fund was last full.
                 A long window may span more than one page.
               </p>
             </>

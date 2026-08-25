@@ -168,7 +168,7 @@ describe('useFinancialData', () => {
     expect(guardSensitive).toHaveBeenCalledTimes(7)
   })
 
-  it('queues reordered drafts first and preserves that order in same-day Ledger timestamps', async () => {
+  it('queues top drafts first and reverses them in same-day newest-first Ledger timestamps', async () => {
     const drafts = [
       {
         id: 'draft-groceries',
@@ -220,7 +220,7 @@ describe('useFinancialData', () => {
       'Car Fuel',
     ])
     const postedAt = result.current.pendingOps.map(operation => Date.parse(String(operation.payload?.postedAt)))
-    expect(postedAt[0]).toBeGreaterThan(postedAt[1])
+    expect(postedAt[0]).toBeLessThan(postedAt[1])
   })
 
   it('starts with bootstrap directly and does not restart startup when the outbox queue changes', async () => {

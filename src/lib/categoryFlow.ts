@@ -62,14 +62,19 @@ const FLOW_GROUP_ORDER: Record<CategoryFlowType, number> = {
   outflow: 2,
 }
 
+/**
+ * Grouping and filtering read the saved type, never an unsaved draft.
+ *
+ * Reading the draft made a row change group on the click that edited it, so the control moved out
+ * from under the pointer mid-edit — and with a flow filter active the row left the list before it
+ * could be saved. Order is a property of saved data; unsaved intent is shown by the row's own
+ * changed marker instead, and the list regroups when the save lands and new categories arrive.
+ */
 export function filterAndGroupCategoryRows(
   rows: CategoryFlowRow[],
-  flowTypeDrafts: Record<string, CategoryFlowType>,
   filter: CategoryFlowFilterValue,
 ): CategoryFlowRow[] {
-  const flowType = (row: CategoryFlowRow) => normalizeCategoryFlowType(
-    flowTypeDrafts[row.category.id] ?? row.category.type,
-  )
+  const flowType = (row: CategoryFlowRow) => normalizeCategoryFlowType(row.category.type)
   const filteredRows = filter === 'all' ? rows : rows.filter(row => flowType(row) === filter)
   if (filter !== 'all') return filteredRows
   return [...filteredRows].sort((left, right) => FLOW_GROUP_ORDER[flowType(left)] - FLOW_GROUP_ORDER[flowType(right)])

@@ -198,12 +198,16 @@ describe('useLedgerView mode parity', () => {
     const { result } = renderHook(() => useLedgerView({
       transactions: [], categories: [], selectedMonth: 'Aug', selectedYear: 2026,
       cycleDay: 28, isMobile: false, showAllCycles: true, onFetchPagedTransactions,
+      incomingReloadFilter: 'partly-repaid',
       onDeleteTransaction: vi.fn(), hideSensitive: false, formRef: { current: null },
     }))
 
     await waitFor(() => expect(result.current.serverError).toContain('try again'))
     await act(() => result.current.retryServerFetch())
     expect(onFetchPagedTransactions).toHaveBeenCalledTimes(2)
+    expect(onFetchPagedTransactions).toHaveBeenLastCalledWith(expect.objectContaining({
+      reloadFilter: 'partly-repaid',
+    }))
   })
 
   it('withdraws the superseded page instead of showing it while the next one loads', async () => {
@@ -281,6 +285,7 @@ describe('useLedgerView mode parity', () => {
       ({ activeSyncId }) => useLedgerView({
         transactions: [], categories: [], selectedMonth: 'Aug', selectedYear: 2026,
         cycleDay: 28, isMobile: false, showAllCycles: true, onFetchPagedTransactions,
+        incomingReloadFilter: 'complete',
         onDeleteTransaction: vi.fn(), hideSensitive: false, formRef: { current: null },
         activeSyncId,
       }),
@@ -293,6 +298,9 @@ describe('useLedgerView mode parity', () => {
     rerender({ activeSyncId: null })
 
     await waitFor(() => expect(result.current.serverIsFetching).toBe(true))
+    expect(onFetchPagedTransactions).toHaveBeenLastCalledWith(expect.objectContaining({
+      reloadFilter: 'complete',
+    }))
     expect(result.current.serverIsReplacingRows).toBe(false)
     expect(result.current.displayTransactions.map(t => t.id)).toEqual(['row'])
 

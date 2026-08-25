@@ -112,6 +112,16 @@ describe('DraftStagingView', () => {
     expect(onReorderDraftTransactions).toHaveBeenCalledWith([secondDraft, draft])
   })
 
+  it('labels the recording position and explains the reversed newest-first Ledger order', () => {
+    renderView({
+      draftTransactions: [draft, { ...draft, id: 'draft-2', description: 'Groceries' }],
+    })
+
+    expect(screen.getByLabelText('Recording position 1 of 2').textContent).toBe('Records 1 of 2')
+    expect(screen.getByLabelText('Recording position 2 of 2').textContent).toBe('Records 2 of 2')
+    expect(screen.getByText(/same-day drafts appear in reverse order/i)).toBeTruthy()
+  })
+
   it('routes an incomplete Stability drawdown to review instead of syncing', async () => {
     const onSyncDraftBatch = vi.fn()
     renderView({

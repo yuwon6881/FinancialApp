@@ -159,8 +159,8 @@ describe('StabilityRecoveryExceptionCard', () => {
       category: 'Stability',
       startDate: '2026-06-28',
       showAllCycles: true,
-      reloadFilter: 'put-back',
     }))
+    expect(onNavigateToLedger.mock.calls[0]?.[0]).not.toHaveProperty('reloadFilter')
   })
 
   // Without a window there is no date filter to build, so the jump would land on an unfiltered

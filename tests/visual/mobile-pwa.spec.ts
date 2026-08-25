@@ -561,3 +561,63 @@ test('recurring summary card keeps its shape and top action across both tabs', a
 
   await expect(page).toHaveScreenshot('mobile-pwa-recurring-loans.png')
 })
+
+test('editing a category flow type holds the row still and keeps a 44px target', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page, {
+    categories: [
+      { id: 'groceries', name: 'Groceries', type: 'outflow' },
+      { id: 'refunds', name: 'Refunds', type: 'both' },
+      { id: 'salary', name: 'Salary', type: 'inflow' },
+    ],
+  })
+  await page.goto('/settings', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('tab', { name: 'Categories & Limits' }).click()
+
+  // The card starts collapsed on a phone, so the list is not interactive until it is opened.
+  const categoriesHeader = page.getByRole('button', { name: /Transaction Categories/ })
+  if (await categoriesHeader.getAttribute('aria-expanded') === 'false') {
+    await categoriesHeader.click()
+    await expect(categoriesHeader).toHaveAttribute('aria-expanded', 'true')
+  }
+
+  const groups = page.getByRole('group', { name: /^Flow restriction for / })
+  const order = () => groups.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')))
+  // Grouped by saved type: both, then inflow, then outflow.
+  await expect.poll(order).toEqual([
+    'Flow restriction for Refunds',
+    'Flow restriction for Salary',
+    'Flow restriction for Groceries',
+  ])
+
+  const target = page.getByRole('button', { name: 'Restrict to money out for Salary' })
+  // Measured against the first row rather than the viewport or the document: clicking can scroll
+  // an ancestor into view, and any such scroll cancels out of a difference between two rows.
+  const offsetFromFirstRow = () => groups.evaluateAll(nodes => {
+    const first = nodes[0].getBoundingClientRect().y
+    const salary = nodes.find(node => node.getAttribute('aria-label')!.endsWith('Salary'))!
+    return Math.round(salary.getBoundingClientRect().y - first)
+  })
+  const offsetBefore = await offsetFromFirstRow()
+  const boxBefore = (await target.boundingBox())!
+  if (test.info().project.name.startsWith('mobile')) {
+    expect(boxBefore.height).toBeGreaterThanOrEqual(44)
+    expect(boxBefore.width).toBeGreaterThanOrEqual(44)
+  }
+
+  await target.click()
+
+  // The pointer must still be over the same control: an unsaved type change may not reorder rows.
+  await expect(target).toHaveAttribute('aria-pressed', 'true')
+  expect(await offsetFromFirstRow()).toBe(offsetBefore)
+  expect(await order()).toEqual([
+    'Flow restriction for Refunds',
+    'Flow restriction for Salary',
+    'Flow restriction for Groceries',
+  ])
+  await expect(page.getByText(/1 category flow type modified/)).toBeVisible()
+
+  // The whole row cluster stays inside the viewport at 390px rather than overflowing sideways.
+  const overflows = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
+  expect(overflows).toBe(false)
+})

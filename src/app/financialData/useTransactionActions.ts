@@ -174,6 +174,7 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
     }
     void triggerHaptic([25, 45, 25])
     const batchPostedAt = Date.now()
+    const firstDraftPostedAt = batchPostedAt - Math.max(0, drafts.length - 1)
     mutateQueue(prev => {
       let nextQueue = prev
       drafts.forEach((d, index) => {
@@ -182,10 +183,10 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
         if (documentChanges && (documentChanges.pending.length > 0 || documentChanges.unlinkIds.length > 0)) {
           pendingTransactionDocumentsRef.current.set(finalId, documentChanges)
         }
-        // The outbox drains in array order, while the Ledger's default same-day order is newest
-        // first. Give the top draft the newest timestamp and step backwards so the chosen order is
-        // stable optimistically, through offline replay, and after the server refreshes the rows.
-        const payload = { ...d, id: finalId, postedAt: new Date(batchPostedAt - index).toISOString() }
+        // The outbox drains from the top draft down. Give each later record a later timestamp so
+        // the Ledger's default newest-first view intentionally displays a same-day batch in the
+        // reverse order: the draft recorded first appears last, and the one recorded last is first.
+        const payload = { ...d, id: finalId, postedAt: new Date(firstDraftPostedAt + index).toISOString() }
         delete payload.isPendingSync
         nextQueue = enqueue(nextQueue, 'transaction', 'add', finalId, payload)
       })
