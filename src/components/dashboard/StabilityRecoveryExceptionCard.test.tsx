@@ -159,6 +159,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       category: 'Stability',
       startDate: '2026-06-28',
       showAllCycles: true,
+      reloadFilter: 'put-back',
     }))
   })
 

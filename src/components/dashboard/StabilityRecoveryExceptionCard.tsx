@@ -11,6 +11,7 @@ export interface StabilityRecoveryLedgerJump {
   endDate?: string | null
   showAllCycles?: boolean
   range?: 'monthly' | '3month' | '6month' | 'yearly'
+  reloadFilter?: 'all' | 'put-back'
 }
 
 interface StabilityRecoveryExceptionCardProps {
@@ -180,6 +181,7 @@ export function StabilityRecoveryExceptionCard({
                   endDate: new Date().toLocaleDateString('en-CA'),
                   showAllCycles: true,
                   range: 'yearly',
+                  reloadFilter: 'put-back',
                 })}
               >
                 See every movement since then

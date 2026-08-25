@@ -261,6 +261,55 @@ const mobilePwaRoutes = [
   { path: '/drafts', slug: 'drafts', readyText: 'Weekend market' },
 ] as const
 
+test('draft recording order control persists at every responsive size', async ({ page }) => {
+  await establishSession(page)
+  await page.addInitScript(drafts => {
+    if (!localStorage.getItem('draft_transactions')) {
+      localStorage.setItem('draft_transactions', JSON.stringify(drafts))
+    }
+  }, [
+    {
+      id: 'draft-order-1',
+      date: '2026-08-02',
+      description: 'Weekend market',
+      category: 'Food',
+      ledgerCategory: 'Essentials',
+      amount: -42.5,
+      accountId: 'acct-essentials',
+    },
+    {
+      id: 'draft-order-2',
+      date: '2026-08-02',
+      description: 'Car fuel',
+      category: 'Transport',
+      ledgerCategory: 'Essentials',
+      amount: -30,
+      accountId: 'acct-essentials',
+    },
+  ])
+  await mockApi(page)
+  await page.goto('/drafts', { waitUntil: 'domcontentloaded' })
+
+  const firstGrip = page.getByRole('button', { name: /Reorder Weekend market\. Position 1 of 2/i })
+  const secondGrip = page.getByRole('button', { name: /Reorder Car fuel\. Position 2 of 2/i })
+  await expect(firstGrip).toBeVisible()
+  await expect(secondGrip).toBeVisible()
+  const firstBox = await firstGrip.boundingBox()
+  expect(firstBox).not.toBeNull()
+  if (!firstBox) return
+  if (test.info().project.name.startsWith('mobile')) {
+    expect(firstBox.width).toBeGreaterThanOrEqual(44)
+    expect(firstBox.height).toBeGreaterThanOrEqual(44)
+  }
+
+  await firstGrip.press('ArrowDown')
+
+  await expect(page.getByRole('button', { name: /Reorder Car fuel\. Position 1 of 2/i })).toBeVisible()
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByRole('button', { name: /Reorder Car fuel\. Position 1 of 2/i })).toBeVisible()
+  await expect(page).toHaveScreenshot('draft-recording-order.png')
+})
+
 for (const route of mobilePwaRoutes) {
   test(`mobile PWA ${route.slug} viewport`, async ({ page }) => {
     test.skip(!test.info().project.name.startsWith('mobile'), 'The route viewport matrix is mobile-only.')

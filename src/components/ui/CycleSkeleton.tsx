@@ -84,7 +84,8 @@ const ListRowSkeleton: React.FC = () => (
 )
 
 const DraftRowSkeleton: React.FC = () => (
-  <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 rounded-2xl border border-border/60 bg-card p-4 shadow-xs">
+  <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 rounded-2xl border border-border/60 bg-card p-3 shadow-xs sm:gap-x-3 sm:p-4">
+    <Skeleton className="size-11 shrink-0 rounded-xl sm:size-9" />
     <div className="min-w-0 space-y-1.5">
       <Skeleton className="h-4 w-40 max-w-full" />
       <div className="flex flex-wrap items-center gap-1.5">

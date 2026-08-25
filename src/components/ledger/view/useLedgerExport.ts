@@ -30,6 +30,7 @@ export interface UseLedgerExportOptions {
   appliedMaxAmount: string
   appliedRecurringFilter: TransactionLinkFilter
   appliedWishlistFilter: TransactionLinkFilter
+  appliedReloadFilter?: import('./ledgerViewTypes').LedgerReloadFilter
   appliedTxTypeFilter: LedgerTxType
   sortOrder: TransactionSort
   allCyclesRange: { startDate: string; endDate: string } | null
@@ -182,6 +183,7 @@ export function useLedgerExport(options: UseLedgerExportOptions) {
           ledgerCategories: buckets.length > 0 ? buckets : undefined,
           categories: cats.length > 0 ? cats : undefined,
           txType: appliedTxTypeFilter || null,
+          reloadFilter: options.appliedReloadFilter && options.appliedReloadFilter !== 'all' ? options.appliedReloadFilter : undefined,
           startDate: laterDate(allCyclesRange?.startDate, appliedStartDate),
           endDate: earlierDate(allCyclesRange?.endDate, appliedEndDate),
           minAmount: parseAmountFilter(appliedMinAmount),

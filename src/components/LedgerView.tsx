@@ -74,7 +74,8 @@ interface LedgerViewProps {
   incomingMaxAmount?: string | null
   incomingRecurringFilter?: TransactionLinkFilter
   incomingWishlistFilter?: TransactionLinkFilter
-  incomingTxType?: 'inflow' | 'outflow' | 'transfer' | null
+  incomingReloadFilter?: import('./ledger/view/ledgerViewTypes').LedgerReloadFilter
+  incomingTxType?: import('./ledger/view/ledgerViewTypes').LedgerTxType
   highlightedTxId?: string | null
   onClearIncomingFilters?: () => void
   onClearHighlightedTx?: () => void
@@ -180,6 +181,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     props.showAllCycles ? ledger.appliedMaxAmount : ledger.selectedMaxAmount,
     props.showAllCycles ? ledger.appliedRecurringFilter : ledger.selectedRecurringFilter,
     props.showAllCycles ? ledger.appliedWishlistFilter : ledger.selectedWishlistFilter,
+    props.showAllCycles ? ledger.appliedReloadFilter : ledger.selectedReloadFilter,
     props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter,
     props.showAllCycles ? ledger.pendingSearchTerm : ledger.searchTerm,
     props.showAllCycles ? ledger.pendingFilters : ledger.selectedFilters,
@@ -189,6 +191,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     props.showAllCycles ? ledger.pendingMaxAmount : ledger.selectedMaxAmount,
     props.showAllCycles ? ledger.pendingRecurringFilter : ledger.selectedRecurringFilter,
     props.showAllCycles ? ledger.pendingWishlistFilter : ledger.selectedWishlistFilter,
+    props.showAllCycles ? ledger.pendingReloadFilter : ledger.selectedReloadFilter,
     props.showAllCycles ? ledger.pendingTxTypeFilter : ledger.selectedTxTypeFilter,
     hideSensitive,
   ])
@@ -220,6 +223,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   const activeMaxAmount = props.showAllCycles ? ledger.appliedMaxAmount : ledger.selectedMaxAmount
   const activeRecurringFilter = props.showAllCycles ? ledger.appliedRecurringFilter : ledger.selectedRecurringFilter
   const activeWishlistFilter = props.showAllCycles ? ledger.appliedWishlistFilter : ledger.selectedWishlistFilter
+  const activeReloadFilter = props.showAllCycles ? ledger.appliedReloadFilter : ledger.selectedReloadFilter
   const activeSearch = (props.showAllCycles ? ledger.appliedSearch : ledger.searchTerm).trim()
   const activeTxType = props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter
   const activeFilters = props.showAllCycles ? ledger.appliedFilters : ledger.selectedFilters
@@ -228,7 +232,8 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     (activeMinAmount || activeMaxAmount ? 1 : 0) +
     (activeRecurringFilter !== 'all' ? 1 : 0) +
     (activeWishlistFilter !== 'all' ? 1 : 0) +
-    (activeTxType ? 1 : 0)
+    (activeReloadFilter !== 'all' ? 1 : 0) +
+    (activeTxType && activeTxType.length > 0 ? 1 : 0)
   const hasAnyFilter = activeFilters.length > 0 || Boolean(activeSearch) || activeAdvancedFilterCount > 0
   const balanceSummary = React.useMemo(() => {
     if (props.showAllCycles || !activeBucketFilter || activeBucketFilter === 'Income') return null
@@ -299,6 +304,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         hasAnyFilter={hasAnyFilter}
         activeCategoryFilters={props.showAllCycles ? ledger.appliedFilters : ledger.selectedFilters}
         activeTxType={props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter}
+        activeReloadFilter={activeReloadFilter}
         activeSearch={props.showAllCycles ? ledger.appliedSearch : ledger.searchTerm}
         activeSearchMode={props.showAllCycles ? ledger.appliedSearchMode : ledger.searchMode}
         activeStartDate={activeStartDate}
@@ -399,8 +405,10 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onRecurringFilterChange={props.showAllCycles ? ledger.setPendingRecurringFilter : ledger.setSelectedRecurringFilter}
         wishlistFilter={props.showAllCycles ? ledger.pendingWishlistFilter : ledger.selectedWishlistFilter}
         onWishlistFilterChange={props.showAllCycles ? ledger.setPendingWishlistFilter : ledger.setSelectedWishlistFilter}
+        reloadFilter={props.showAllCycles ? ledger.pendingReloadFilter : ledger.selectedReloadFilter}
+        onReloadFilterChange={ledger.handleToggleReloadFilter}
         txType={props.showAllCycles ? ledger.pendingTxTypeFilter : ledger.selectedTxTypeFilter}
-        onTxTypeChange={props.showAllCycles ? ledger.setPendingTxTypeFilter : ledger.setSelectedTxTypeFilter}
+        onTxTypeChange={ledger.handleToggleTxType}
         activeAdvancedFilterCount={activeAdvancedFilterCount}
         onClearFilters={ledger.handleClearFilters}
         onApplyFilters={ledger.handleApplyFilters}

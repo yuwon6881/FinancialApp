@@ -2,7 +2,12 @@ import React from 'react'
 import { X } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { getCycleLabelForDropdown } from '../../lib/cycleLabels'
-import type { TransactionSearchMode } from '../../lib/transactionFilters'
+import {
+  type TransactionSearchMode,
+  type TxTypeFilter,
+  type StabilityReloadFilter,
+  parseTxTypes,
+} from '../../lib/transactionFilters'
 
 const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
 
@@ -15,7 +20,8 @@ export interface LedgerActiveFilterSummaryProps {
   cycleDay: number
   hasAnyFilter: boolean
   activeCategoryFilters: string[]
-  activeTxType: 'inflow' | 'outflow' | 'transfer' | null
+  activeTxType: TxTypeFilter
+  activeReloadFilter?: StabilityReloadFilter
   activeSearch: string
   activeSearchMode?: TransactionSearchMode
   activeStartDate: string
@@ -37,6 +43,7 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
   hasAnyFilter,
   activeCategoryFilters,
   activeTxType,
+  activeReloadFilter,
   activeSearch,
   activeSearchMode = 'contains',
   activeStartDate,
@@ -84,8 +91,16 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
   if (activeMinAmount || activeMaxAmount) {
     filterDetails.push(`absolute amount ${activeMinAmount || '0'} to ${activeMaxAmount || 'any'}`)
   }
-  if (activeTxType) {
-    filterDetails.push(activeTxType === 'inflow' ? 'inflows only' : activeTxType === 'outflow' ? 'outflows only' : 'transfers only')
+  const activeTxTypes = parseTxTypes(activeTxType)
+  if (activeTxTypes.length === 1) {
+    const typeLabel = activeTxTypes[0] === 'inflow' ? 'inflows' : activeTxTypes[0] === 'outflow' ? 'outflows' : 'transfers'
+    filterDetails.push(`${typeLabel} only`)
+  } else if (activeTxTypes.length === 2) {
+    const labels = activeTxTypes.map(t => t === 'inflow' ? 'inflows' : t === 'outflow' ? 'outflows' : 'transfers')
+    filterDetails.push(`${labels.join(' & ')} only`)
+  }
+  if (activeReloadFilter === 'put-back') {
+    filterDetails.push('marked as put back only')
   }
   if (activeRecurringFilter === 'only') filterDetails.push('recurring transactions only')
   else if (activeRecurringFilter === 'exclude') filterDetails.push('excluding recurring transactions')

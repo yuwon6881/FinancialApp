@@ -48,7 +48,8 @@ const areLedgerStatesEqual = (
   a.maxAmount === b.maxAmount &&
   a.recurringFilter === b.recurringFilter &&
   a.wishlistFilter === b.wishlistFilter &&
-  a.txType === b.txType &&
+  a.reloadFilter === b.reloadFilter &&
+  (Array.isArray(a.txType) && Array.isArray(b.txType) ? areStringArraysEqual(a.txType, b.txType) : String(a.txType ?? '') === String(b.txType ?? '')) &&
   a.showAllCycles === b.showAllCycles &&
   a.range === b.range
 
@@ -78,6 +79,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     maxAmount: ledgerIncomingMaxAmount,
     recurringFilter: ledgerIncomingRecurringFilter,
     wishlistFilter: ledgerIncomingWishlistFilter,
+    reloadFilter: ledgerIncomingReloadFilter,
     txType: ledgerIncomingTxType,
     showAllCycles: ledgerShowAllCycles,
   } = ledgerRouteState
@@ -158,10 +160,11 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     maxAmount?: string | null
     recurringFilter?: TransactionLinkFilter
     wishlistFilter?: TransactionLinkFilter
+    reloadFilter?: 'all' | 'put-back'
     /** Legacy navigation aliases; true maps to the new `only` mode. */
     recurringOnly?: boolean
     wishlistOnly?: boolean
-    txType?: 'inflow' | 'outflow' | 'transfer' | null
+    txType?: 'inflow' | 'outflow' | 'transfer' | string[] | string | null
     range?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
     highlightedTxId?: string | null
     showAllCycles?: boolean
@@ -187,13 +190,14 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     const maxAmount = navOptions.maxAmount || ''
     const recurringFilter: TransactionLinkFilter = navOptions.recurringFilter ?? (navOptions.recurringOnly === true ? 'only' : 'all')
     const wishlistFilter: TransactionLinkFilter = navOptions.wishlistFilter ?? (navOptions.wishlistOnly === true ? 'only' : 'all')
+    const reloadFilter: 'all' | 'put-back' = navOptions.reloadFilter ?? 'all'
     const range = navOptions.range || (navOptions.showAllCycles ? 'all' : 'monthly')
     setLedgerCyclesRange(range)
     const showAll = navOptions.showAllCycles !== undefined ? navOptions.showAllCycles : (range !== 'monthly')
     const highlightedTxId = navOptions.highlightedTxId || null
     setLedgerRouteState({
       filters, search, searchMode, startDate, endDate, minAmount, maxAmount,
-      recurringFilter, wishlistFilter, txType: navOptions.txType || null,
+      recurringFilter, wishlistFilter, reloadFilter, txType: navOptions.txType || null,
       showAllCycles: showAll, range,
     })
     setHighlightedTxId(highlightedTxId)
@@ -208,6 +212,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
         maxAmount,
         recurringFilter,
         wishlistFilter,
+        reloadFilter,
         txType: navOptions.txType || null,
         showAllCycles: showAll,
         range,
@@ -326,7 +331,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setLedgerRouteState(current => ({
       ...current,
       filters: [], search: '', searchMode: 'contains', startDate: '', endDate: '', minAmount: '', maxAmount: '',
-      recurringFilter: 'all', wishlistFilter: 'all', txType: null,
+      recurringFilter: 'all', wishlistFilter: 'all', reloadFilter: 'all', txType: null,
     }))
     setHighlightedTxId(null)
   }, [])
@@ -379,6 +384,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     ledgerIncomingMaxAmount,
     ledgerIncomingRecurringFilter,
     ledgerIncomingWishlistFilter,
+    ledgerIncomingReloadFilter,
     ledgerIncomingTxType,
     ledgerShowAllCycles,
     setLedgerShowAllCycles,

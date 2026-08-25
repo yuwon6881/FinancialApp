@@ -1,10 +1,11 @@
 // Shared transaction filter predicate. LedgerView carried two near-identical
 // copies of this matching logic (one for the current-cycle list, one for the
-// all-cycles pending list). Search, category, date, amount, recurring and
-// transaction-type matching live here so the rules exist in exactly one place.
+// all-cycles pending list). Search, category, date, amount, recurring, stability
+// reload and transaction-type matching live here so the rules exist in exactly one place.
 
 import type { Transaction } from '../types'
 import { isReportTransfer, isReportableInflow, isReportableOutflow } from './transactionReportSemantics'
+import { isStabilityReloadDrawdown, normalizeReloadIntent } from './stabilityRecoveryReplay'
 
 /** The ledger "bucket" pseudo-categories, distinct from user sub-categories. */
 export const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'] as const
@@ -13,7 +14,19 @@ export const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', '
 export type TransactionLinkFilter = 'all' | 'exclude' | 'only'
 export type TransactionSearchMode = 'contains' | 'exact'
 
-type TxTypeFilter = '' | 'inflow' | 'outflow' | 'transfer' | null | undefined
+export type TransactionTypeFilterOption = 'inflow' | 'outflow' | 'transfer'
+export type TxTypeFilter = string | string[] | null | undefined
+export type StabilityReloadFilter = 'all' | 'put-back'
+
+export function parseTxTypes(value: TxTypeFilter): TransactionTypeFilterOption[] {
+  if (!value) return []
+  const items = Array.isArray(value) ? value : value.split(',')
+  const valid = items
+    .map(s => s.trim().toLowerCase())
+    .filter((s): s is TransactionTypeFilterOption => s === 'inflow' || s === 'outflow' || s === 'transfer')
+  const unique = Array.from(new Set(valid))
+  return unique.length === 3 ? [] : unique
+}
 
 export interface TransactionFilterCriteria {
   /** Free-text search; empty/undefined matches everything. */
@@ -35,6 +48,8 @@ export interface TransactionFilterCriteria {
   recurringFilter?: TransactionLinkFilter
   /** Whether wishlist-linked transactions are included, excluded, or shown alone. */
   wishlistFilter?: TransactionLinkFilter
+  /** Whether only stability records marked as put-back are shown. */
+  reloadFilter?: StabilityReloadFilter
 }
 
 /**
@@ -78,6 +93,7 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
     maxAmount,
     recurringFilter,
     wishlistFilter,
+    reloadFilter,
   } = criteria
 
   if (startDate && t.date < startDate) return false
@@ -89,6 +105,12 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
 
   if (!matchesLinkFilter(Boolean(t.recurringPaymentId), recurringFilter ?? 'all')) return false
   if (!matchesLinkFilter(t.wishlistItemId != null, wishlistFilter ?? 'all')) return false
+
+  if (reloadFilter === 'put-back') {
+    if (t.isAccountBalanceAdjustment) return false
+    if (normalizeReloadIntent(t.stabilityReloadIntent) !== 'Required') return false
+    if (!isStabilityReloadDrawdown(t)) return false
+  }
 
   const normalizedSearch = search?.trim().toLowerCase()
   if (normalizedSearch) {
@@ -111,10 +133,15 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
     if (!matchesSubcat) return false
   }
 
-  if (txType) {
-    if (txType === 'inflow' && !isReportableInflow(t)) return false
-    if (txType === 'outflow' && !isReportableOutflow(t)) return false
-    if (txType === 'transfer' && !isReportTransfer(t)) return false
+  const activeTxTypes = parseTxTypes(txType)
+  if (activeTxTypes.length > 0) {
+    const matchesType = activeTxTypes.some(type => {
+      if (type === 'inflow') return isReportableInflow(t)
+      if (type === 'outflow') return isReportableOutflow(t)
+      if (type === 'transfer') return isReportTransfer(t)
+      return false
+    })
+    if (!matchesType) return false
   }
 
   return true

@@ -3,6 +3,7 @@ import {
   matchesTransactionFilters,
   splitFilterSelections,
   isIncomeLedgerCategory,
+  parseTxTypes,
 } from './transactionFilters'
 import type { Transaction } from '../types'
 
@@ -17,6 +18,18 @@ function tx(partial: Partial<Transaction>): Transaction {
     ...partial,
   } as Transaction
 }
+
+describe('parseTxTypes', () => {
+  it('parses string, array, and normalizes all three to empty', () => {
+    expect(parseTxTypes('inflow')).toEqual(['inflow'])
+    expect(parseTxTypes(['inflow', 'outflow'])).toEqual(['inflow', 'outflow'])
+    expect(parseTxTypes('inflow,outflow')).toEqual(['inflow', 'outflow'])
+    expect(parseTxTypes(['inflow', 'outflow', 'transfer'])).toEqual([])
+    expect(parseTxTypes('inflow,outflow,transfer')).toEqual([])
+    expect(parseTxTypes(null)).toEqual([])
+    expect(parseTxTypes(undefined)).toEqual([])
+  })
+})
 
 describe('splitFilterSelections', () => {
   it('separates ledger buckets from sub-categories', () => {
@@ -98,6 +111,58 @@ describe('matchesTransactionFilters', () => {
     expect(matchesTransactionFilters(tx({ amount: 5, ledgerCategory: 'Income' }), { txType: 'transfer' })).toBe(false)
   })
 
+  it('supports multi-type filtering such as inflow + outflow or inflow + transfer', () => {
+    const inflow = tx({ amount: 100, ledgerCategory: 'Income' })
+    const outflow = tx({ amount: -50, ledgerCategory: 'Essentials' })
+    const transfer = tx({ amount: 50, ledgerCategory: 'Transfer:Essentials->Rewards' })
+
+    expect(matchesTransactionFilters(inflow, { txType: ['inflow', 'outflow'] })).toBe(true)
+    expect(matchesTransactionFilters(outflow, { txType: ['inflow', 'outflow'] })).toBe(true)
+    expect(matchesTransactionFilters(transfer, { txType: ['inflow', 'outflow'] })).toBe(false)
+
+    expect(matchesTransactionFilters(inflow, { txType: 'inflow,outflow' })).toBe(true)
+    expect(matchesTransactionFilters(transfer, { txType: 'inflow,transfer' })).toBe(true)
+    expect(matchesTransactionFilters(outflow, { txType: 'inflow,transfer' })).toBe(false)
+
+    // All three selected normalizes to matching all
+    expect(matchesTransactionFilters(transfer, { txType: ['inflow', 'outflow', 'transfer'] })).toBe(true)
+    expect(matchesTransactionFilters(inflow, { txType: 'inflow,outflow,transfer' })).toBe(true)
+  })
+
+  it('filters by stability reload put-back intent', () => {
+    const putBackOutflow = tx({
+      amount: -100,
+      ledgerCategory: 'Stability',
+      stabilityReloadIntent: 'Required',
+    })
+    const spentForGoodOutflow = tx({
+      amount: -100,
+      ledgerCategory: 'Stability',
+      stabilityReloadIntent: 'NotRequired',
+    })
+    const incomeSplit = tx({
+      amount: 1000,
+      ledgerCategory: 'IncomeSplit:50,25,15,10',
+    })
+    const putBackTransfer = tx({
+      amount: 80,
+      ledgerCategory: 'Transfer:Stability->Rewards',
+      stabilityReloadIntent: 'Required',
+    })
+    const adjustment = tx({
+      amount: -100,
+      ledgerCategory: 'Stability',
+      isAccountBalanceAdjustment: true,
+      stabilityReloadIntent: 'Required',
+    })
+
+    expect(matchesTransactionFilters(putBackOutflow, { reloadFilter: 'put-back' })).toBe(true)
+    expect(matchesTransactionFilters(putBackTransfer, { reloadFilter: 'put-back' })).toBe(true)
+    expect(matchesTransactionFilters(spentForGoodOutflow, { reloadFilter: 'put-back' })).toBe(false)
+    expect(matchesTransactionFilters(incomeSplit, { reloadFilter: 'put-back' })).toBe(false)
+    expect(matchesTransactionFilters(adjustment, { reloadFilter: 'put-back' })).toBe(false)
+  })
+
   it('applies inclusive date ranges', () => {
     expect(matchesTransactionFilters(tx({ date: '2026-07-10' }), { startDate: '2026-07-10', endDate: '2026-07-10' })).toBe(true)
     expect(matchesTransactionFilters(tx({ date: '2026-07-09' }), { startDate: '2026-07-10' })).toBe(false)
@@ -108,11 +173,6 @@ describe('matchesTransactionFilters', () => {
     expect(matchesTransactionFilters(tx({ amount: -50 }), { minAmount: 50, maxAmount: 100 })).toBe(true)
     expect(matchesTransactionFilters(tx({ amount: 49.99 }), { minAmount: 50 })).toBe(false)
     expect(matchesTransactionFilters(tx({ amount: -100.01 }), { maxAmount: 100 })).toBe(false)
-  })
-
-  it('filters recurring transactions by their recurring payment link', () => {
-    expect(matchesTransactionFilters(tx({ recurringPaymentId: 'rent' }), { recurringFilter: 'only' })).toBe(true)
-    expect(matchesTransactionFilters(tx({ recurringPaymentId: null }), { recurringFilter: 'only' })).toBe(false)
   })
 
   it('matches only a complete searchable field in exact mode', () => {

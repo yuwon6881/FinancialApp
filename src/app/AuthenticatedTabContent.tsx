@@ -314,6 +314,7 @@ export function AuthenticatedTabContent({
           incomingMaxAmount={nav.ledgerIncomingMaxAmount}
           incomingRecurringFilter={nav.ledgerIncomingRecurringFilter}
           incomingWishlistFilter={nav.ledgerIncomingWishlistFilter}
+          incomingReloadFilter={nav.ledgerIncomingReloadFilter}
           incomingTxType={nav.ledgerIncomingTxType}
           highlightedTxId={nav.highlightedTxId}
           onClearIncomingFilters={nav.clearIncomingFilters}
@@ -435,6 +436,7 @@ export function AuthenticatedTabContent({
           onUpdateDraftTransaction={financial.handleUpdateDraftTransaction}
           onLoadDraftDocumentChanges={financial.loadDraftTransactionDocumentChanges}
           onDeleteDraftTransaction={financial.requestDeleteDraftTransaction}
+          onReorderDraftTransactions={financial.setDraftTransactions}
           onSyncDraftBatch={financial.handleSyncDraftBatch}
           hideSensitive={prefs.hideSensitive}
           currency={financial.optimisticDashboardData?.setting?.currency || 'USD'}

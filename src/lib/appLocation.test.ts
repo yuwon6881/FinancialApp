@@ -21,14 +21,15 @@ describe('app URL state', () => {
       year: 2026,
       ledger: {
         filters: ['Essentials', 'Food'],
-      search: 'coffee',
-      searchMode: 'contains',
+        search: 'coffee',
+        searchMode: 'contains',
         startDate: '2026-07-01',
         endDate: '2026-07-31',
         minAmount: '5',
         maxAmount: '50',
         recurringFilter: 'only',
         wishlistFilter: 'only',
+        reloadFilter: 'all',
         txType: 'outflow',
         showAllCycles: true,
         range: '3month',
@@ -159,10 +160,38 @@ describe('app URL state', () => {
       max: null,
       recurring: 'exclude',
       wishlist: 'only',
+      reload: null,
       type: null,
       all: null,
       range: null,
       tx: null,
     })
+  })
+
+  it('supports multi-select transaction types in ledger URL state', () => {
+    window.history.replaceState({}, '', '/ledger?type=inflow,outflow')
+    expect(readAppLocation().ledger.txType).toBe('inflow,outflow')
+
+    window.history.replaceState({}, '', '/ledger?type=inflow,outflow,transfer')
+    expect(readAppLocation().ledger.txType).toBeNull()
+
+    expect(ledgerRouteSearch({ txType: ['inflow', 'transfer'] })).toEqual(expect.objectContaining({
+      type: 'inflow,transfer',
+    }))
+    expect(ledgerRouteSearch({ txType: ['inflow', 'outflow', 'transfer'] })).toEqual(expect.objectContaining({
+      type: null,
+    }))
+  })
+
+  it('supports stability reload put-back filter in ledger URL state', () => {
+    window.history.replaceState({}, '', '/ledger?reload=put-back')
+    expect(readAppLocation().ledger.reloadFilter).toBe('put-back')
+
+    expect(ledgerRouteSearch({ reloadFilter: 'put-back' })).toEqual(expect.objectContaining({
+      reload: 'put-back',
+    }))
+    expect(ledgerRouteSearch({ reloadFilter: 'all' })).toEqual(expect.objectContaining({
+      reload: null,
+    }))
   })
 })

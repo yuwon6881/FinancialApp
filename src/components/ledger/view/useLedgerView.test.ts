@@ -362,4 +362,107 @@ describe('useLedgerView mode parity', () => {
     expect(result.current.syncingTransactions).toEqual([])
     expect(result.current.displayTransactions.length).toBe(5)
   })
+
+  it('supports multi-type filtering and resets to All Types when all 3 are selected', () => {
+    const inflow: Transaction = {
+      id: 'tx-inflow',
+      date: '2026-08-29',
+      description: 'Income',
+      category: 'Salary',
+      ledgerCategory: 'Income',
+      amount: 1000,
+    }
+    const outflow: Transaction = {
+      id: 'tx-outflow',
+      date: '2026-08-30',
+      description: 'Groceries',
+      category: 'Food',
+      ledgerCategory: 'Essentials',
+      amount: -50,
+    }
+    const transfer: Transaction = {
+      id: 'tx-transfer',
+      date: '2026-08-31',
+      description: 'Fund move',
+      category: 'Transfer',
+      ledgerCategory: 'Transfer:Essentials->Rewards',
+      amount: 50,
+    }
+
+    const { result } = renderHook(() =>
+      useLedgerView({
+        transactions: [inflow, outflow, transfer],
+        categories: [],
+        selectedMonth: 'Aug',
+        selectedYear: 2026,
+        cycleDay: 28,
+        isMobile: false,
+        showAllCycles: false,
+        onDeleteTransaction: vi.fn(),
+        hideSensitive: false,
+        formRef: { current: null },
+      })
+    )
+
+    // Initially all 3 displayed
+    expect(result.current.displayTransactions.length).toBe(3)
+
+    // Select inflow
+    act(() => {
+      result.current.handleToggleTxType('inflow')
+    })
+    expect(result.current.displayTransactions.map(t => t.id)).toEqual(['tx-inflow'])
+
+    // Select outflow as well (inflow + outflow)
+    act(() => {
+      result.current.handleToggleTxType('outflow')
+    })
+    expect(result.current.displayTransactions.map(t => t.id).sort()).toEqual(['tx-inflow', 'tx-outflow'])
+
+    // Select transfer as well (all 3 selected -> resets to all 3 deselected / All types)
+    act(() => {
+      result.current.handleToggleTxType('transfer')
+    })
+    expect(result.current.selectedTxTypeFilter).toEqual([])
+    expect(result.current.displayTransactions.length).toBe(3)
+  })
+
+  it('filters by stability put-back records in useLedgerView', () => {
+    const putBack: Transaction = {
+      id: 'tx-putback',
+      date: '2026-08-29',
+      description: 'Emergency repair',
+      category: 'Emergency',
+      ledgerCategory: 'Stability',
+      amount: -300,
+      stabilityReloadIntent: 'Required',
+    }
+    const spentForGood: Transaction = {
+      id: 'tx-spent',
+      date: '2026-08-30',
+      description: 'Permanent spend',
+      category: 'Emergency',
+      ledgerCategory: 'Stability',
+      amount: -200,
+      stabilityReloadIntent: 'NotRequired',
+    }
+
+    const { result } = renderHook(() =>
+      useLedgerView({
+        transactions: [putBack, spentForGood],
+        categories: [],
+        selectedMonth: 'Aug',
+        selectedYear: 2026,
+        cycleDay: 28,
+        isMobile: false,
+        incomingReloadFilter: 'put-back',
+        showAllCycles: false,
+        onDeleteTransaction: vi.fn(),
+        hideSensitive: false,
+        formRef: { current: null },
+      })
+    )
+
+    expect(result.current.displayTransactions.map(t => t.id)).toEqual(['tx-putback'])
+  })
 })

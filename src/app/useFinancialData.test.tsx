@@ -168,6 +168,61 @@ describe('useFinancialData', () => {
     expect(guardSensitive).toHaveBeenCalledTimes(7)
   })
 
+  it('queues reordered drafts first and preserves that order in same-day Ledger timestamps', async () => {
+    const drafts = [
+      {
+        id: 'draft-groceries',
+        description: 'Groceries',
+        amount: -80,
+        date: '2026-07-13',
+        category: 'Transport',
+        ledgerCategory: 'Essentials',
+        accountId: 'acct-essentials',
+        stabilityReloadIntent: 'NotRequired',
+        isPendingSync: true,
+      },
+      {
+        id: 'draft-fuel',
+        description: 'Car Fuel',
+        amount: -30,
+        date: '2026-07-13',
+        category: 'Transport',
+        ledgerCategory: 'Essentials',
+        accountId: 'acct-essentials',
+        stabilityReloadIntent: 'NotRequired',
+        isPendingSync: true,
+      },
+    ]
+    localStorage.setItem('draft_transactions', JSON.stringify(drafts))
+    mockHappyApi()
+    vi.spyOn(api, 'addTransaction').mockReturnValue(new Promise(() => undefined) as any)
+    vi.mocked(api.fetchBootstrap).mockResolvedValue({
+      month: 'July',
+      year: 2026,
+      dashboard,
+      insights,
+      transactions: [],
+      recurringPayments: [],
+      categories: [{ id: 'transport', name: 'Transport', type: 'outflow' }],
+      wishlist: [],
+      autocomplete: [],
+      walletBalance: 100,
+    } as any)
+    const { result } = renderFinancialData()
+    await waitFor(() => expect(result.current.allCategories).toHaveLength(1))
+
+    await act(async () => {
+      await result.current.handleSyncDraftBatch()
+    })
+
+    expect(result.current.pendingOps.map(operation => operation.payload?.description)).toEqual([
+      'Groceries',
+      'Car Fuel',
+    ])
+    const postedAt = result.current.pendingOps.map(operation => Date.parse(String(operation.payload?.postedAt)))
+    expect(postedAt[0]).toBeGreaterThan(postedAt[1])
+  })
+
   it('starts with bootstrap directly and does not restart startup when the outbox queue changes', async () => {
     mockHappyApi()
 

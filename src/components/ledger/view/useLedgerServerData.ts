@@ -2,13 +2,19 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import type { PagedTransactionResult } from '../../../lib/api'
 import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../../../lib/cycle'
 import type { TransactionSort } from '../../../lib/transactionOrdering'
-import type { TransactionLinkFilter, TransactionSearchMode } from '../../../lib/transactionFilters'
+import {
+  type TransactionLinkFilter,
+  type TransactionSearchMode,
+  type TransactionTypeFilterOption,
+  parseTxTypes,
+} from '../../../lib/transactionFilters'
 import {
   LEDGER_BUCKETS,
   parseAmountFilter,
   laterDate,
   earlierDate,
   type LedgerTxType,
+  type LedgerReloadFilter,
 } from './ledgerViewTypes'
 
 export interface UseLedgerServerDataOptions {
@@ -35,6 +41,7 @@ export interface UseLedgerServerDataOptions {
   incomingMaxAmount?: string | null
   incomingRecurringFilter?: TransactionLinkFilter
   incomingWishlistFilter?: TransactionLinkFilter
+  incomingReloadFilter?: LedgerReloadFilter
   incomingTxType?: LedgerTxType
   appliedSearch: string
   appliedSearchMode: TransactionSearchMode
@@ -45,7 +52,8 @@ export interface UseLedgerServerDataOptions {
   appliedMaxAmount: string
   appliedRecurringFilter: TransactionLinkFilter
   appliedWishlistFilter: TransactionLinkFilter
-  appliedTxTypeFilter: LedgerTxType
+  appliedReloadFilter: LedgerReloadFilter
+  appliedTxTypeFilter: TransactionTypeFilterOption[]
   setPendingSearchTerm: (term: string) => void
   setPendingFilters: (filters: string[]) => void
   setPendingStartDate: (date: string) => void
@@ -54,7 +62,8 @@ export interface UseLedgerServerDataOptions {
   setPendingMaxAmount: (amount: string) => void
   setPendingRecurringFilter: (filter: TransactionLinkFilter) => void
   setPendingWishlistFilter: (filter: TransactionLinkFilter) => void
-  setPendingTxTypeFilter: (type: LedgerTxType) => void
+  setPendingReloadFilter: (filter: LedgerReloadFilter) => void
+  setPendingTxTypeFilter: (type: TransactionTypeFilterOption[] | ((prev: TransactionTypeFilterOption[]) => TransactionTypeFilterOption[])) => void
   setAppliedSearch: (term: string) => void
   setAppliedFilters: (filters: string[]) => void
   setAppliedStartDate: (date: string) => void
@@ -63,7 +72,8 @@ export interface UseLedgerServerDataOptions {
   setAppliedMaxAmount: (amount: string) => void
   setAppliedRecurringFilter: (filter: TransactionLinkFilter) => void
   setAppliedWishlistFilter: (filter: TransactionLinkFilter) => void
-  setAppliedTxTypeFilter: (type: LedgerTxType) => void
+  setAppliedReloadFilter: (filter: LedgerReloadFilter) => void
+  setAppliedTxTypeFilter: (type: TransactionTypeFilterOption[] | ((prev: TransactionTypeFilterOption[]) => TransactionTypeFilterOption[])) => void
 }
 
 export function useLedgerServerData(options: UseLedgerServerDataOptions) {
@@ -91,6 +101,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
     incomingMaxAmount,
     incomingRecurringFilter,
     incomingWishlistFilter,
+    incomingReloadFilter,
     incomingTxType,
     appliedSearch,
     appliedSearchMode,
@@ -101,6 +112,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
     appliedMaxAmount,
     appliedRecurringFilter,
     appliedWishlistFilter,
+    appliedReloadFilter,
     appliedTxTypeFilter,
     setPendingSearchTerm,
     setPendingFilters,
@@ -110,6 +122,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
     setPendingMaxAmount,
     setPendingRecurringFilter,
     setPendingWishlistFilter,
+    setPendingReloadFilter,
     setPendingTxTypeFilter,
     setAppliedSearch,
     setAppliedFilters,
@@ -119,6 +132,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
     setAppliedMaxAmount,
     setAppliedRecurringFilter,
     setAppliedWishlistFilter,
+    setAppliedReloadFilter,
     setAppliedTxTypeFilter,
   } = options
 
@@ -167,6 +181,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
     searchMode?: TransactionSearchMode
     filters: string[]
     txType: LedgerTxType
+    reloadFilter?: LedgerReloadFilter
     startDate: string
     endDate: string
     minAmount: string
@@ -196,6 +211,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
         ledgerCategories: buckets.length > 0 ? buckets : undefined,
         categories: cats.length > 0 ? cats : undefined,
         txType: opts.txType || null,
+        reloadFilter: opts.reloadFilter && opts.reloadFilter !== 'all' ? opts.reloadFilter : undefined,
         startDate: laterDate(allCyclesRange?.startDate, opts.startDate),
         endDate: earlierDate(allCyclesRange?.endDate, opts.endDate),
         minAmount: parseAmountFilter(opts.minAmount),
@@ -229,7 +245,8 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
       if (wasAllCyclesRef.current) return
       wasAllCyclesRef.current = true
       const initialFilters = incomingFilters ?? (incomingCategory ? [incomingCategory] : [])
-      const initialTxType = incomingTxType || null
+      const initialTxType = parseTxTypes(incomingTxType)
+      const initialReloadFilter = incomingReloadFilter ?? 'all'
       const initialSearch = incomingSearch || ''
       const initialStartDate = incomingStartDate ?? incomingDate ?? ''
       const initialEndDate = incomingEndDate ?? incomingDate ?? ''
@@ -246,6 +263,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
       setPendingMaxAmount(initialMaxAmount)
       setPendingRecurringFilter(initialRecurringFilter)
       setPendingWishlistFilter(initialWishlistFilter)
+      setPendingReloadFilter(initialReloadFilter)
       setPendingTxTypeFilter(initialTxType)
       setAppliedSearch(initialSearch)
       setAppliedFilters(initialFilters)
@@ -255,6 +273,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
       setAppliedMaxAmount(initialMaxAmount)
       setAppliedRecurringFilter(initialRecurringFilter)
       setAppliedWishlistFilter(initialWishlistFilter)
+      setAppliedReloadFilter(initialReloadFilter)
       setAppliedTxTypeFilter(initialTxType)
       setCurrentPage(1)
       isInitialFetchDone.current = false
@@ -264,6 +283,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
         searchMode: appliedSearchMode,
         filters: initialFilters,
         txType: initialTxType,
+        reloadFilter: initialReloadFilter,
         startDate: initialStartDate,
         endDate: initialEndDate,
         minAmount: initialMinAmount,
@@ -283,7 +303,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
       setServerIsReplacingRows(false)
       isInitialFetchDone.current = false
     }
-  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingFilters, incomingTxType, incomingSearch, incomingDate, incomingStartDate, incomingEndDate, incomingMinAmount, incomingMaxAmount, incomingRecurringFilter, incomingWishlistFilter, sortOrder, allCyclesPageSize, setPendingSearchTerm, setPendingFilters, setPendingStartDate, setPendingEndDate, setPendingMinAmount, setPendingMaxAmount, setPendingRecurringFilter, setPendingWishlistFilter, setPendingTxTypeFilter, setAppliedSearch, setAppliedFilters, setAppliedStartDate, setAppliedEndDate, setAppliedMinAmount, setAppliedMaxAmount, setAppliedRecurringFilter, setAppliedWishlistFilter, setAppliedTxTypeFilter, setCurrentPage])
+  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingFilters, incomingTxType, incomingReloadFilter, incomingSearch, incomingDate, incomingStartDate, incomingEndDate, incomingMinAmount, incomingMaxAmount, incomingRecurringFilter, incomingWishlistFilter, sortOrder, allCyclesPageSize, setPendingSearchTerm, setPendingFilters, setPendingStartDate, setPendingEndDate, setPendingMinAmount, setPendingMaxAmount, setPendingRecurringFilter, setPendingWishlistFilter, setPendingReloadFilter, setPendingTxTypeFilter, setAppliedSearch, setAppliedFilters, setAppliedStartDate, setAppliedEndDate, setAppliedMinAmount, setAppliedMaxAmount, setAppliedRecurringFilter, setAppliedWishlistFilter, setAppliedReloadFilter, setAppliedTxTypeFilter, setCurrentPage])
 
   useEffect(() => {
     if (showAllCycles && onFetchPagedTransactions && isInitialFetchDone.current) {
@@ -293,6 +313,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
         searchMode: appliedSearchMode,
         filters: appliedFilters,
         txType: appliedTxTypeFilter,
+        reloadFilter: appliedReloadFilter,
         startDate: appliedStartDate,
         endDate: appliedEndDate,
         minAmount: appliedMinAmount,
@@ -303,7 +324,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
         pSize: pageSize,
       })
     }
-  }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, runServerFetch, appliedSearch, appliedSearchMode, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, allCyclesRange, sortOrder])
+  }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, runServerFetch, appliedSearch, appliedSearchMode, appliedFilters, appliedTxTypeFilter, appliedReloadFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, allCyclesRange, sortOrder])
 
   // Re-fetch server result when activeSyncId transitions from non-null to null (sync completed)
   const prevActiveSyncId = useRef<string | null>(null)

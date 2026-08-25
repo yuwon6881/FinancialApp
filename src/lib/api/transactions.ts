@@ -58,13 +58,14 @@ export interface TransactionQuery {
   searchMode?: TransactionSearchMode
   ledgerCategories?: string[]
   categories?: string[]
-  txType?: 'inflow' | 'outflow' | 'transfer' | null
+  txType?: string | string[] | null
   startDate?: string
   endDate?: string
   minAmount?: number
   maxAmount?: number
   recurringFilter?: TransactionLinkFilter
   wishlistFilter?: TransactionLinkFilter
+  reloadFilter?: 'all' | 'put-back'
   sort?: TransactionSort
 }
 
@@ -74,7 +75,10 @@ function appendTransactionQuery(params: URLSearchParams, query: TransactionQuery
   if (search && query.searchMode === 'exact') params.append('searchMode', 'exact')
   if (query.ledgerCategories?.length) params.append('ledgerCategory', query.ledgerCategories.join(','))
   if (query.categories?.length) params.append('category', query.categories.join(','))
-  if (query.txType) params.append('txType', query.txType)
+  if (query.txType) {
+    const formatted = Array.isArray(query.txType) ? query.txType.join(',') : query.txType
+    if (formatted) params.append('txType', formatted)
+  }
   if (query.startDate) params.append('startDate', query.startDate)
   if (query.endDate) params.append('endDate', query.endDate)
   if (query.minAmount !== undefined) params.append('minAmount', query.minAmount.toString())
@@ -84,6 +88,9 @@ function appendTransactionQuery(params: URLSearchParams, query: TransactionQuery
   }
   if (query.wishlistFilter && query.wishlistFilter !== 'all') {
     params.append('wishlistFilter', query.wishlistFilter)
+  }
+  if (query.reloadFilter && query.reloadFilter !== 'all') {
+    params.append('reloadFilter', query.reloadFilter)
   }
   if (query.sort) params.append('sort', query.sort)
 }

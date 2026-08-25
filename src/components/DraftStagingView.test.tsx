@@ -35,6 +35,7 @@ function renderView(overrides: Partial<React.ComponentProps<typeof DraftStagingV
     onUpdateDraftTransaction: vi.fn(),
     onLoadDraftDocumentChanges: vi.fn().mockResolvedValue({ pending: [], unlinkIds: [] }),
     onDeleteDraftTransaction: vi.fn(),
+    onReorderDraftTransactions: vi.fn(),
     onSyncDraftBatch: vi.fn(),
     hideSensitive: false,
     onCancel: vi.fn(),
@@ -87,12 +88,28 @@ describe('DraftStagingView', () => {
 
     await waitFor(() => {
       const surface = document.querySelector('[data-swipe-content]')
-      expect(surface?.firstElementChild?.className).toContain('grid-cols-[minmax(0,1fr)_auto]')
+      expect(surface?.firstElementChild?.className).toContain('grid-cols-[auto_minmax(0,1fr)_auto]')
       expect(surface?.firstElementChild?.className).toContain('items-center')
       expect(surface?.firstElementChild?.querySelector('span.text-orange-500')?.className).toContain('max-w-[45%]')
       expect(screen.getByText('Household essentials and school supplies').className).toContain('truncate')
       expect(screen.getByText('Household essentials and school supplies').parentElement).not.toBe(screen.getByText('2026-07-13').parentElement)
     })
+  })
+
+  it('lets keyboard users move a draft with the same reorder grip used by Investment Settings', () => {
+    const onReorderDraftTransactions = vi.fn()
+    const secondDraft = { ...draft, id: 'draft-2', description: 'Groceries' }
+    renderView({
+      draftTransactions: [draft, secondDraft],
+      onReorderDraftTransactions,
+    })
+
+    const firstGrip = screen.getByRole('button', { name: /Reorder Car Fuel\. Position 1 of 2/i })
+    expect(firstGrip.className).toContain('touch-none')
+    expect(firstGrip.className).toContain('size-11')
+    fireEvent.keyDown(firstGrip, { key: 'ArrowDown' })
+
+    expect(onReorderDraftTransactions).toHaveBeenCalledWith([secondDraft, draft])
   })
 
   it('routes an incomplete Stability drawdown to review instead of syncing', async () => {

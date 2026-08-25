@@ -1,12 +1,19 @@
 import type { LedgerAccount, Transaction } from '../../../types'
 import type { PagedTransactionResult } from '../../../lib/api'
-import { LEDGER_BUCKETS as LEDGER_BUCKET_VALUES, type TransactionLinkFilter, type TransactionSearchMode } from '../../../lib/transactionFilters'
+import {
+  LEDGER_BUCKETS as LEDGER_BUCKET_VALUES,
+  type TransactionLinkFilter,
+  type TransactionSearchMode,
+  type TxTypeFilter,
+  type StabilityReloadFilter,
+} from '../../../lib/transactionFilters'
 import type { TransactionSort } from '../../../lib/transactionOrdering'
 import type { LedgerRouteRange } from '../../../lib/appLocation'
 import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
 import type { QueuedOp } from '../../../lib/outboxTypes'
 
-export type LedgerTxType = 'inflow' | 'outflow' | 'transfer' | null
+export type LedgerTxType = TxTypeFilter
+export type LedgerReloadFilter = StabilityReloadFilter
 
 export const LEDGER_BUCKETS: readonly string[] = LEDGER_BUCKET_VALUES
 
@@ -47,6 +54,7 @@ export interface UseLedgerViewOptions {
   incomingMaxAmount?: string | null | undefined
   incomingRecurringFilter?: TransactionLinkFilter | undefined
   incomingWishlistFilter?: TransactionLinkFilter | undefined
+  incomingReloadFilter?: LedgerReloadFilter | undefined
   incomingTxType?: LedgerTxType | undefined
   highlightedTxId?: string | null | undefined
   isSwitchingCycle?: boolean
@@ -64,6 +72,7 @@ export interface UseLedgerViewOptions {
     maxAmount: string
     recurringFilter: TransactionLinkFilter
     wishlistFilter: TransactionLinkFilter
+    reloadFilter: LedgerReloadFilter
     txType: LedgerTxType
     showAllCycles: boolean
     range: LedgerRouteRange

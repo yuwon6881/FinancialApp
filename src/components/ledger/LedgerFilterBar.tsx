@@ -7,7 +7,14 @@ import { allowsCategoryFlow } from '../../lib/categoryFlow'
 import { BottomSheet } from '../ui/BottomSheet'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
 import { CustomSelect } from '../ui/CustomSelect'
-import type { TransactionLinkFilter, TransactionSearchMode } from '../../lib/transactionFilters'
+import {
+  type TransactionLinkFilter,
+  type TransactionSearchMode,
+  type TransactionTypeFilterOption,
+  type TxTypeFilter,
+  type StabilityReloadFilter,
+  parseTxTypes,
+} from '../../lib/transactionFilters'
 import type { TransactionSort } from '../../lib/transactionOrdering'
 import { LedgerAdvancedFilterControls } from './LedgerAdvancedFilterControls'
 import { LedgerCategoryChecklist } from './LedgerCategoryChecklist'
@@ -50,8 +57,10 @@ interface LedgerFilterBarProps {
   onRecurringFilterChange: (value: TransactionLinkFilter) => void
   wishlistFilter: TransactionLinkFilter
   onWishlistFilterChange: (value: TransactionLinkFilter) => void
-  txType: 'inflow' | 'outflow' | 'transfer' | null
-  onTxTypeChange: (value: 'inflow' | 'outflow' | 'transfer' | null) => void
+  reloadFilter?: StabilityReloadFilter
+  onReloadFilterChange?: (value: StabilityReloadFilter) => void
+  txType: TxTypeFilter
+  onTxTypeChange: (value: TransactionTypeFilterOption | null) => void
   activeAdvancedFilterCount: number
   onClearFilters: () => void
   onApplyFilters: () => void
@@ -90,6 +99,8 @@ export function LedgerFilterBar({
   onRecurringFilterChange,
   wishlistFilter,
   onWishlistFilterChange,
+  reloadFilter,
+  onReloadFilterChange,
   txType,
   onTxTypeChange,
   activeAdvancedFilterCount,
@@ -101,13 +112,15 @@ export function LedgerFilterBar({
   const filterButtonRef = useRef<HTMLButtonElement>(null)
   const filterPanelRef = useRef<HTMLDivElement>(null)
   const checkboxFilters = showAllCycles ? pendingFilters : selectedFilters
+  const activeTxTypes = parseTxTypes(txType)
   const activeFilterCount = (showAllCycles ? appliedFilters.length : selectedFilters.length) + activeAdvancedFilterCount
   const draftAdvancedFilterCount =
     (startDate || endDate ? 1 : 0) +
     (minAmount || maxAmount ? 1 : 0) +
     (recurringFilter !== 'all' ? 1 : 0) +
     (wishlistFilter !== 'all' ? 1 : 0) +
-    (txType ? 1 : 0)
+    (reloadFilter && reloadFilter !== 'all' ? 1 : 0) +
+    (activeTxTypes.length > 0 ? 1 : 0)
   const draftFilterCount = checkboxFilters.length + draftAdvancedFilterCount
   const parsedMin = minAmount === '' ? undefined : Number(minAmount)
   const parsedMax = maxAmount === '' ? undefined : Number(maxAmount)
@@ -118,12 +131,12 @@ export function LedgerFilterBar({
   const availableCategories = useMemo(() => {
     return categories.filter(c => {
       if (c.isPendingDelete) return false
-      if (txType === 'inflow' || txType === 'outflow') {
-        return checkboxFilters.includes(c.name) || allowsCategoryFlow(c.type, txType)
+      if (activeTxTypes.length === 1 && (activeTxTypes[0] === 'inflow' || activeTxTypes[0] === 'outflow')) {
+        return checkboxFilters.includes(c.name) || allowsCategoryFlow(c.type, activeTxTypes[0])
       }
       return true
     })
-  }, [categories, txType, checkboxFilters])
+  }, [categories, activeTxTypes, checkboxFilters])
 
   const advancedFilterProps = {
     startDate,
@@ -142,6 +155,8 @@ export function LedgerFilterBar({
     onRecurringFilterChange,
     wishlistFilter,
     onWishlistFilterChange,
+    reloadFilter,
+    onReloadFilterChange,
   }
 
   const isExactMatch = searchMode === 'exact'

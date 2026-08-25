@@ -1,8 +1,13 @@
 import { APP_TABS, type AppTab } from '../types'
-import type { TransactionLinkFilter, TransactionSearchMode } from './transactionFilters'
+import type {
+  TransactionLinkFilter,
+  TransactionSearchMode,
+  TxTypeFilter,
+  StabilityReloadFilter,
+} from './transactionFilters'
 
 export type LedgerRouteRange = 'monthly' | '3month' | '6month' | 'yearly' | 'all'
-type LedgerRouteTxType = 'inflow' | 'outflow' | 'transfer' | null
+export type LedgerRouteTxType = TxTypeFilter
 
 export interface LedgerRouteState {
   filters: string[]
@@ -14,6 +19,7 @@ export interface LedgerRouteState {
   maxAmount: string
   recurringFilter: TransactionLinkFilter
   wishlistFilter: TransactionLinkFilter
+  reloadFilter: StabilityReloadFilter
   txType: LedgerRouteTxType
   showAllCycles: boolean
   range: LedgerRouteRange
@@ -71,6 +77,7 @@ const LEDGER_PARAM_KEYS = [
   'max',
   'recurring',
   'wishlist',
+  'reload',
   'type',
   'all',
   'range',
@@ -79,7 +86,7 @@ const LEDGER_PARAM_KEYS = [
 
 const MONTHS = new Set(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 const RANGES = new Set<LedgerRouteRange>(['monthly', '3month', '6month', 'yearly', 'all'])
-const TX_TYPES = new Set<Exclude<LedgerRouteTxType, null>>(['inflow', 'outflow', 'transfer'])
+const TX_TYPES = new Set(['inflow', 'outflow', 'transfer'])
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 const parseLedgerDate = (value: string | null): string => {
@@ -102,6 +109,19 @@ const parseLinkFilter = (value: string | null): TransactionLinkFilter => {
   return 'all'
 }
 
+const parseReloadFilter = (value: string | null): 'all' | 'put-back' => {
+  if (value === 'put-back' || value === 'required' || value === '1') return 'put-back'
+  return 'all'
+}
+
+const parseLedgerTxType = (value: string | null): string | null => {
+  if (!value) return null
+  const list = value.split(',').map(s => s.trim().toLowerCase()).filter(s => TX_TYPES.has(s))
+  const unique = Array.from(new Set(list))
+  if (unique.length === 0 || unique.length === 3) return null
+  return unique.join(',')
+}
+
 const emptyLedgerRouteState = (): LedgerRouteState => ({
   filters: [],
   search: '',
@@ -112,6 +132,7 @@ const emptyLedgerRouteState = (): LedgerRouteState => ({
   maxAmount: '',
   recurringFilter: 'all',
   wishlistFilter: 'all',
+  reloadFilter: 'all',
   txType: null,
   showAllCycles: false,
   range: 'monthly',
@@ -142,7 +163,6 @@ export const readAppLocation = (): AppLocationState => {
   const rawYear = Number(params.get('year') || 0)
   const rawRange = params.get('range') as LedgerRouteRange | null
   const range = params.get('all') === '1' && (!rawRange || rawRange === 'monthly') ? 'all' : rawRange
-  const txType = params.get('type') as Exclude<LedgerRouteTxType, null> | null
 
   return {
     tab: parseTab(window.location.pathname, params),
@@ -158,7 +178,8 @@ export const readAppLocation = (): AppLocationState => {
       maxAmount: parseLedgerAmount(params.get('max')),
       recurringFilter: parseLinkFilter(params.get('recurring')),
       wishlistFilter: parseLinkFilter(params.get('wishlist')),
-      txType: txType && TX_TYPES.has(txType) ? txType : null,
+      reloadFilter: parseReloadFilter(params.get('reload')),
+      txType: parseLedgerTxType(params.get('type')),
       showAllCycles: params.get('all') === '1',
       range: range && RANGES.has(range) ? range : 'monthly',
       highlightedTxId: params.get('tx'),
@@ -249,18 +270,30 @@ export const updateAppSearch = (
   writeUrl(window.location.pathname, params, options.replace !== false)
 }
 
-export const ledgerRouteSearch = (state: Partial<LedgerRouteState>) => ({
-  filters: state.filters?.join(',') || null,
-  q: state.search || null,
-  match: state.searchMode === 'exact' ? 'exact' : null,
-  from: state.startDate || null,
-  to: state.endDate || null,
-  min: state.minAmount || null,
-  max: state.maxAmount || null,
-  recurring: state.recurringFilter && state.recurringFilter !== 'all' ? state.recurringFilter : null,
-  wishlist: state.wishlistFilter && state.wishlistFilter !== 'all' ? state.wishlistFilter : null,
-  type: state.txType || null,
-  all: state.showAllCycles || null,
-  range: state.range && state.range !== 'monthly' ? state.range : null,
-  tx: state.highlightedTxId || null,
-})
+export const ledgerRouteSearch = (state: Partial<LedgerRouteState>) => {
+  const formatTxType = (value: string | string[] | null | undefined): string | null => {
+    if (!value) return null
+    const list = Array.isArray(value) ? value : value.split(',')
+    const valid = list.map(s => s.trim().toLowerCase()).filter(s => TX_TYPES.has(s))
+    const unique = Array.from(new Set(valid))
+    if (unique.length === 0 || unique.length === 3) return null
+    return unique.join(',')
+  }
+
+  return {
+    filters: state.filters?.join(',') || null,
+    q: state.search || null,
+    match: state.searchMode === 'exact' ? 'exact' : null,
+    from: state.startDate || null,
+    to: state.endDate || null,
+    min: state.minAmount || null,
+    max: state.maxAmount || null,
+    recurring: state.recurringFilter && state.recurringFilter !== 'all' ? state.recurringFilter : null,
+    wishlist: state.wishlistFilter && state.wishlistFilter !== 'all' ? state.wishlistFilter : null,
+    reload: state.reloadFilter && state.reloadFilter !== 'all' ? state.reloadFilter : null,
+    type: formatTxType(state.txType),
+    all: state.showAllCycles || null,
+    range: state.range && state.range !== 'monthly' ? state.range : null,
+    tx: state.highlightedTxId || null,
+  }
+}

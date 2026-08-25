@@ -136,6 +136,7 @@ describe('useCycleNavigation', () => {
       maxAmount: '',
       recurringFilter: 'all',
       wishlistFilter: 'all',
+      reloadFilter: 'all',
       txType: null,
       showAllCycles: true,
       range: 'yearly',

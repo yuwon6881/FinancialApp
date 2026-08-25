@@ -97,6 +97,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     incomingMaxAmount,
     incomingRecurringFilter,
     incomingWishlistFilter,
+    incomingReloadFilter: options.incomingReloadFilter,
     incomingTxType,
     highlightedTxId,
     showAllCycles,
@@ -130,6 +131,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     incomingMaxAmount,
     incomingRecurringFilter,
     incomingWishlistFilter,
+    incomingReloadFilter: options.incomingReloadFilter,
     incomingTxType,
     appliedSearch: filterState.appliedSearch,
     appliedSearchMode: filterState.appliedSearchMode,
@@ -140,6 +142,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     appliedMaxAmount: filterState.appliedMaxAmount,
     appliedRecurringFilter: filterState.appliedRecurringFilter,
     appliedWishlistFilter: filterState.appliedWishlistFilter,
+    appliedReloadFilter: filterState.appliedReloadFilter,
     appliedTxTypeFilter: filterState.appliedTxTypeFilter,
     setPendingSearchTerm: filterState.setPendingSearchTerm,
     setPendingFilters: filterState.setPendingFilters,
@@ -149,6 +152,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setPendingMaxAmount: filterState.setPendingMaxAmount,
     setPendingRecurringFilter: filterState.setPendingRecurringFilter,
     setPendingWishlistFilter: filterState.setPendingWishlistFilter,
+    setPendingReloadFilter: filterState.setPendingReloadFilter,
     setPendingTxTypeFilter: filterState.setPendingTxTypeFilter,
     setAppliedSearch: filterState.setAppliedSearch,
     setAppliedFilters: filterState.setAppliedFilters,
@@ -158,6 +162,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setAppliedMaxAmount: filterState.setAppliedMaxAmount,
     setAppliedRecurringFilter: filterState.setAppliedRecurringFilter,
     setAppliedWishlistFilter: filterState.setAppliedWishlistFilter,
+    setAppliedReloadFilter: filterState.setAppliedReloadFilter,
     setAppliedTxTypeFilter: filterState.setAppliedTxTypeFilter,
   })
 
@@ -192,6 +197,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         buckets: selectedBuckets,
         categories: selectedCategories,
         txType: filterState.appliedTxTypeFilter,
+        reloadFilter: filterState.appliedReloadFilter,
         startDate: laterDate(serverData.allCyclesRange?.startDate, filterState.appliedStartDate),
         endDate: earlierDate(serverData.allCyclesRange?.endDate, filterState.appliedEndDate),
         minAmount: parseAmountFilter(filterState.appliedMinAmount),
@@ -200,7 +206,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         wishlistFilter: filterState.appliedWishlistFilter,
       })
     }).sort((a, b) => compareTransactions(a, b, sortOrder))
-  }, [pendingTransactions, showAllCycles, filterState.appliedSearch, filterState.appliedFilters, filterState.appliedTxTypeFilter, serverData.allCyclesRange, filterState.appliedStartDate, filterState.appliedEndDate, filterState.appliedMinAmount, filterState.appliedMaxAmount, filterState.appliedRecurringFilter, filterState.appliedWishlistFilter, sortOrder])
+  }, [pendingTransactions, showAllCycles, filterState.appliedSearch, filterState.appliedFilters, filterState.appliedTxTypeFilter, filterState.appliedReloadFilter, serverData.allCyclesRange, filterState.appliedStartDate, filterState.appliedEndDate, filterState.appliedMinAmount, filterState.appliedMaxAmount, filterState.appliedRecurringFilter, filterState.appliedWishlistFilter, sortOrder])
 
   const filteredTransactions = useMemo(() => {
     const { buckets: selectedBuckets, categories: selectedCategories } = splitFilterSelections(filterState.selectedFilters)
@@ -217,6 +223,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         buckets: selectedBuckets,
         categories: selectedCategories,
         txType: filterState.selectedTxTypeFilter,
+        reloadFilter: filterState.selectedReloadFilter,
         startDate: laterDate(cycleStartDate, filterState.selectedStartDate),
         endDate: earlierDate(cycleEndDate, filterState.selectedEndDate),
         minAmount: parseAmountFilter(filterState.selectedMinAmount),
@@ -224,7 +231,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         recurringFilter: filterState.selectedRecurringFilter,
         wishlistFilter: filterState.selectedWishlistFilter,
       })).sort((a, b) => compareTransactions(a, b, sortOrder))
-  }, [transactions, filterState.searchTerm, filterState.selectedFilters, filterState.selectedTxTypeFilter, filterState.selectedStartDate, filterState.selectedEndDate, filterState.selectedMinAmount, filterState.selectedMaxAmount, filterState.selectedRecurringFilter, filterState.selectedWishlistFilter, selectedMonth, selectedYear, cycleDay, sortOrder])
+  }, [transactions, filterState.searchTerm, filterState.selectedFilters, filterState.selectedTxTypeFilter, filterState.selectedReloadFilter, filterState.selectedStartDate, filterState.selectedEndDate, filterState.selectedMinAmount, filterState.selectedMaxAmount, filterState.selectedRecurringFilter, filterState.selectedWishlistFilter, selectedMonth, selectedYear, cycleDay, sortOrder])
 
   const paginatedTransactions = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize
@@ -299,6 +306,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     appliedMaxAmount: filterState.appliedMaxAmount,
     appliedRecurringFilter: filterState.appliedRecurringFilter,
     appliedWishlistFilter: filterState.appliedWishlistFilter,
+    appliedReloadFilter: filterState.appliedReloadFilter,
     appliedTxTypeFilter: filterState.appliedTxTypeFilter,
     sortOrder,
     allCyclesRange: serverData.allCyclesRange,
@@ -321,7 +329,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     const currentSignature = JSON.stringify([
       filterState.searchTerm, filterState.selectedFilters, filterState.selectedStartDate, filterState.selectedEndDate,
       filterState.selectedMinAmount, filterState.selectedMaxAmount, filterState.selectedRecurringFilter,
-      filterState.selectedWishlistFilter, filterState.selectedTxTypeFilter, showAllCycles,
+      filterState.selectedWishlistFilter, filterState.selectedReloadFilter, filterState.selectedTxTypeFilter, showAllCycles,
     ])
     if (prevFilterSignatureRef.current === null) {
       prevFilterSignatureRef.current = currentSignature
