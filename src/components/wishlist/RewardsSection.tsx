@@ -40,9 +40,6 @@ export function RewardsSection(props: RewardsSectionProps) {
           </h3>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
             From your {props.formatSensitive(props.claimableBalance)} free rewards
-            {!props.activeItem || props.claimableBalance >= props.activeItem.price
-              ? null
-              : <> · {props.activeItem.name} in {props.rewardTimeline(props.activeItem.price)}</>}
           </p>
         </div>
         <Button variant="secondary" size="sm" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5" onClick={props.onAdd} disabled={props.hideSensitive} title={props.hideSensitive ? 'Unhide balances to add a reward' : undefined} aria-label="Add reward">
@@ -58,6 +55,9 @@ export function RewardsSection(props: RewardsSectionProps) {
               elementId={`reward-card-${item.id}`}
               item={item}
               isFocused={props.activeItem?.id === item.id}
+              timeline={props.activeItem?.id === item.id && props.claimableBalance < item.price
+                ? props.rewardTimeline(item.price)
+                : null}
               claimableBalance={props.claimableBalance}
               freeAfterGoalPace={props.freeAfterGoalPace}
               formatSensitive={props.formatSensitive}

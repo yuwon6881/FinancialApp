@@ -32,13 +32,18 @@ export function useLedgerBulkSelection({ transactions, allTransactions = transac
   const eligible = useCallback((transaction: Transaction) => {
     const id = String(transaction.id)
     const canonicalId = parentId(id)
-    const canonical = transactionById.get(canonicalId) ?? transaction
+    const canonical = transactionById.get(canonicalId)
+    // In all-cycles mode a page can show a generated split leg while its parent sits in another
+    // cycle and off the page. Selecting it would key the split row`s own money and category
+    // under the parent id, so bulk actions would act on, and restore, the wrong figures.
+    if (canonical == null && id !== canonicalId) return false
+    const resolved = canonical ?? transaction
     return !hideSensitive
       && !transaction.isPendingSync
       && !transaction.isPendingDelete
-      && canonical.isPendingSync !== true
-      && canonical.isPendingDelete !== true
-      && canonical.savingsGoalId == null
+      && resolved.isPendingSync !== true
+      && resolved.isPendingDelete !== true
+      && resolved.savingsGoalId == null
       && !isDeleting(id)
       && !isSyncing(id)
       && !isDeleting(canonicalId)
@@ -62,7 +67,9 @@ export function useLedgerBulkSelection({ transactions, allTransactions = transac
   const selectedVisibleCount = visibleIds.filter(id => selectedIds.has(id)).length
   const allVisibleSelected = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length
   const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected
-  const exceedsLimit = selectedCount > LEDGER_BULK_LIMIT
+  // Both toggles stop adding at the limit, so the old "exceeds" flag was unreachable and hitting
+  // the cap was silent. Surface having reached it instead.
+  const isAtLimit = selectedCount >= LEDGER_BULK_LIMIT
 
   useEffect(() => {
     setSelectionRequested(false)
@@ -119,6 +126,17 @@ export function useLedgerBulkSelection({ transactions, allTransactions = transac
     })
   }, [allVisibleSelected, visibleGroups, visibleIds])
 
+  // Referentially stable, and resolved against the live rows rather than the snapshot captured
+  // when the checkbox was ticked. A new array identity on every render re-ran consumers` effects —
+  // the Move sheet reset the destination date the user had just chosen, so confirming a bulk move
+  // silently moved everything back to its original date. The snapshot survives only as the
+  // fallback for a row that has since left the list.
+  const selectedTransactions = useMemo(
+    () => Array.from(selectedIds)
+      .map(id => transactionById.get(id) ?? selectedRows.get(id))
+      .filter((transaction): transaction is Transaction => transaction != null),
+    [selectedIds, selectedRows, transactionById])
+
   const leaveSelection = useCallback(() => {
     setSelectionRequested(false)
     setSelectedIds(new Set())
@@ -131,14 +149,14 @@ export function useLedgerBulkSelection({ transactions, allTransactions = transac
     selectionRequested,
     startSelection,
     selectedIds,
-    selectedTransactions: Array.from(selectedRows.values()),
+    selectedTransactions,
     selectedCount,
     visibleIds,
     eligibleVisibleCount: visibleIds.length,
     protectedVisibleCount: transactions.filter(transaction => transaction.savingsGoalId != null).length,
     allVisibleSelected,
     someVisibleSelected,
-    exceedsLimit,
+    isAtLimit,
     toggleSelected,
     canSelect: eligible,
     isSelected: (transaction: Transaction) => selectedIds.has(parentId(String(transaction.id))),

@@ -2,7 +2,11 @@ import React from 'react'
 import { Plus, X } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
-import { formatOccurrenceDate } from './formatters'
+import { AnchoredPopover } from '../ui/AnchoredPopover'
+import { BottomSheet } from '../ui/BottomSheet'
+import { useIsMobile } from '../../lib/useIsMobile'
+import type { Loan, RecurringPayment } from '../../types'
+import { StatDistributionBreakdown, type DistributionBreakdownMode } from './StatDistributionBreakdown'
 
 interface RecurringPaymentsHeaderProps {
   activeView: 'recurring' | 'loans'
@@ -11,9 +15,10 @@ interface RecurringPaymentsHeaderProps {
   activeCount: number
   totalCount: number
   loanTotalOutstanding?: number | null
+  loanTotalAnnual?: number | null
   loanCount?: number
-  /** Nearest upcoming repayment date across tracked loans; null when it cannot be known yet. */
-  loanNextPaymentDate?: string | null
+  payments?: RecurringPayment[]
+  loans?: Loan[]
   showAddForm: boolean
   hideSensitive: boolean
   formatSensitive: (val: number) => React.ReactNode
@@ -45,6 +50,155 @@ const StatTile: React.FC<{
   </div>
 )
 
+const InteractiveStatTile: React.FC<{
+  label: string
+  value: React.ReactNode
+  tone?: 'figure' | 'count'
+  title?: string
+  className?: string
+  mode: DistributionBreakdownMode
+  payments?: RecurringPayment[]
+  loans?: Loan[]
+  totalCommittedAnnual?: number
+  loanTotalOutstanding?: number | null
+  loanTotalAnnual?: number | null
+  formatSensitive: (val: number) => React.ReactNode
+  hideSensitive?: boolean
+  isMobile: boolean
+}> = ({
+  label,
+  value,
+  tone = 'figure',
+  title,
+  className = '',
+  mode,
+  payments,
+  loans,
+  totalCommittedAnnual,
+  loanTotalOutstanding,
+  loanTotalAnnual,
+  formatSensitive,
+  hideSensitive,
+  isMobile,
+}) => {
+  const [open, setOpen] = React.useState(false)
+  const [pinned, setPinned] = React.useState(false)
+  const anchorRef = React.useRef<HTMLButtonElement | null>(null)
+  const id = React.useId()
+
+  React.useEffect(() => {
+    if (!pinned) return
+    const dismiss = (event: Event) => {
+      if (anchorRef.current?.contains(event.target as Node)) return
+      setPinned(false)
+      setOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setPinned(false)
+        setOpen(false)
+      }
+    }
+    document.addEventListener('pointerdown', dismiss)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', dismiss)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [pinned])
+
+  const sheetTitle = mode === 'recurring-annual'
+    ? 'Yearly Bills Distribution'
+    : mode === 'loan-owed'
+      ? 'Total Still Owed Distribution'
+      : 'Yearly Loan Distribution'
+
+  return (
+    <div className={`min-w-0 overflow-hidden ${className}`}>
+      <Button
+        variant="unstyled"
+        ref={anchorRef}
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open || pinned}
+        aria-controls={(open || pinned) ? id : undefined}
+        onClick={() => {
+          const next = !pinned
+          setPinned(next)
+          setOpen(next)
+        }}
+        onMouseEnter={() => { if (!isMobile) setOpen(true) }}
+        onMouseLeave={() => { if (!isMobile && !pinned) setOpen(false) }}
+        onFocus={() => { if (!isMobile) setOpen(true) }}
+        onBlur={() => { if (!isMobile && !pinned) setOpen(false) }}
+        className="group/stat block w-full text-left cursor-pointer select-none rounded-lg p-1 -m-1 transition-colors hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-ring"
+      >
+        <div className="flex items-center gap-1">
+          <span className="block text-[9px] font-bold uppercase leading-tight tracking-wide text-muted-foreground transition-colors group-hover/stat:text-foreground sm:text-[10px] sm:tracking-wider">
+            {label}
+          </span>
+          <span className="rounded bg-muted/60 px-1 py-0.5 text-[8px] font-semibold text-muted-foreground opacity-70 group-hover/stat:opacity-100 transition-opacity">
+            Breakdown
+          </span>
+        </div>
+        <span
+          title={title}
+          className={`block truncate text-base font-extrabold sm:text-2xl ${tone === 'figure' ? 'text-blue-500' : 'text-foreground'}`}
+        >
+          {value}
+        </span>
+      </Button>
+
+      {/* Desktop Popover */}
+      {!isMobile && (
+        <AnchoredPopover
+          open={open || pinned}
+          anchorRef={anchorRef}
+          align="left"
+          side="bottom"
+          role="dialog"
+          aria-label={sheetTitle}
+          id={id}
+          className="w-84 rounded-2xl border border-border bg-card p-4 shadow-xl z-[200] animate-in fade-in slide-in-from-top-1 duration-150"
+        >
+          <StatDistributionBreakdown
+            mode={mode}
+            payments={payments}
+            loans={loans}
+            totalCommittedAnnual={totalCommittedAnnual}
+            loanTotalOutstanding={loanTotalOutstanding}
+            loanTotalAnnual={loanTotalAnnual}
+            formatSensitive={formatSensitive}
+            hideSensitive={hideSensitive}
+          />
+        </AnchoredPopover>
+      )}
+
+      {/* Mobile BottomSheet */}
+      {isMobile && (
+        <BottomSheet
+          isOpen={pinned}
+          title={sheetTitle}
+          onClose={() => { setPinned(false); setOpen(false) }}
+        >
+          <div className="p-1">
+            <StatDistributionBreakdown
+              mode={mode}
+              payments={payments}
+              loans={loans}
+              totalCommittedAnnual={totalCommittedAnnual}
+              loanTotalOutstanding={loanTotalOutstanding}
+              loanTotalAnnual={loanTotalAnnual}
+              formatSensitive={formatSensitive}
+              hideSensitive={hideSensitive}
+            />
+          </div>
+        </BottomSheet>
+      )}
+    </div>
+  )
+}
+
 // Header section with Stats
 export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = ({
   activeView,
@@ -53,8 +207,10 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
   activeCount,
   totalCount,
   loanTotalOutstanding = null,
+  loanTotalAnnual = null,
   loanCount = 0,
-  loanNextPaymentDate = null,
+  payments = [],
+  loans = [],
   showAddForm,
   hideSensitive,
   formatSensitive,
@@ -62,6 +218,7 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
   onAddLoan,
 }) => {
   const isLoansView = activeView === 'loans'
+  const isMobile = useIsMobile(640)
 
   return (
     <div className="w-full">
@@ -76,23 +233,31 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
           <div className="mt-4 grid min-w-0 grid-cols-2 gap-x-2 gap-y-3 sm:grid-cols-3 sm:gap-y-0">
             {isLoansView ? (
               <>
-                <StatTile
+                <InteractiveStatTile
                   label="Total still owed"
                   value={loanTotalOutstanding == null ? 'Unavailable' : formatSensitive(loanTotalOutstanding)}
+                  mode="loan-owed"
+                  loans={loans}
+                  loanTotalOutstanding={loanTotalOutstanding}
+                  formatSensitive={formatSensitive}
+                  hideSensitive={hideSensitive}
+                  isMobile={isMobile}
                   className="pr-2"
+                />
+                <InteractiveStatTile
+                  label="Yearly Total"
+                  value={loanTotalAnnual == null ? 'Unavailable' : formatSensitive(loanTotalAnnual)}
+                  mode="loan-annual"
+                  loans={loans}
+                  loanTotalAnnual={loanTotalAnnual}
+                  formatSensitive={formatSensitive}
+                  hideSensitive={hideSensitive}
+                  isMobile={isMobile}
+                  className="border-l border-border/60 pl-2 pr-1 sm:px-2"
                 />
                 <StatTile
                   label="Loans tracked"
                   value={loanCount}
-                  tone="count"
-                  className="border-l border-border/60 pl-2 pr-1 sm:px-2"
-                />
-                <StatTile
-                  label="Next payment"
-                  value={loanNextPaymentDate
-                    ? formatOccurrenceDate(loanNextPaymentDate, { month: 'short', day: 'numeric' })
-                    : 'Unavailable'}
-                  title={loanNextPaymentDate ? formatOccurrenceDate(loanNextPaymentDate) : undefined}
                   tone="count"
                   className="col-span-2 border-t border-border/60 pt-2 sm:col-span-1 sm:border-t-0 sm:border-l sm:pl-2 sm:pt-0"
                 />
@@ -100,9 +265,15 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
             ) : (
               <>
                 <StatTile label="Monthly Total" value={formatSensitive(totalCommittedMonthly)} className="pr-2" />
-                <StatTile
+                <InteractiveStatTile
                   label="Yearly Total"
                   value={formatSensitive(totalCommittedAnnual)}
+                  mode="recurring-annual"
+                  payments={payments}
+                  totalCommittedAnnual={totalCommittedAnnual}
+                  formatSensitive={formatSensitive}
+                  hideSensitive={hideSensitive}
+                  isMobile={isMobile}
                   className="border-l border-border/60 pl-2 pr-1 sm:px-2"
                 />
                 <StatTile

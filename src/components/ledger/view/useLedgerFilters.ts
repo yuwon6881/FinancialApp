@@ -9,6 +9,7 @@ import {
 import { ledgerRouteSearch, updateAppSearch, type LedgerRouteRange } from '../../../lib/appLocation'
 import {
   LEDGER_BUCKETS,
+  canonicalBucket,
   type LedgerTxType,
   type LedgerReloadFilter,
 } from './ledgerViewTypes'
@@ -226,7 +227,7 @@ export function useLedgerFilters(options: UseLedgerFiltersOptions) {
   }, [showAllCycles, cyclesRange, highlightedTxId, searchTerm, searchMode, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringFilter, selectedWishlistFilter, selectedReloadFilter, selectedAccountIds, selectedTxTypeFilter, appliedSearch, appliedSearchMode, appliedFilters, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, appliedReloadFilter, appliedAccountIds, appliedTxTypeFilter, onRouteStateChange])
 
   const handleToggleFilter = (filterName: string) => {
-    const isLedgerCategory = LEDGER_BUCKETS.includes(filterName)
+    const isLedgerCategory = canonicalBucket(filterName) != null
     const groupFilters = isLedgerCategory
       ? LEDGER_BUCKETS
       : categories.map(c => c.name)

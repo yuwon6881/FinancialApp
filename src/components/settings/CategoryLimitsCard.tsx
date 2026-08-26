@@ -42,6 +42,7 @@ export function CategoryLimitsCard({
   )
   const [drafts, setDrafts] = React.useState<Record<string, string | null>>({})
   const [errors, setErrors] = React.useState<Record<string, string>>({})
+  const dirtyIdsRef = React.useRef(new Set<string>())
   const sectionRef = React.useRef<HTMLElement>(null)
   const [isOpen, setIsOpen] = React.useState(() => {
     if (typeof window !== 'undefined') {
@@ -72,12 +73,21 @@ export function CategoryLimitsCard({
   }, [])
 
   React.useEffect(() => {
-    setDrafts(Object.fromEntries(spendingCategories.map(category => [category.id, normalizedValue(category.cycleLimit)])))
-    setErrors({})
+    setDrafts(previous => Object.fromEntries(spendingCategories.map(category => {
+      const serverValue = normalizedValue(category.cycleLimit)
+      const draft = previous[category.id]
+      if (dirtyIdsRef.current.has(category.id) && draft !== undefined && draft !== serverValue) {
+        return [category.id, draft]
+      }
+      dirtyIdsRef.current.delete(category.id)
+      return [category.id, serverValue]
+    })))
+    setErrors(previous => Object.fromEntries(Object.entries(previous).filter(([id]) => dirtyIdsRef.current.has(id))))
   }, [spendingCategories])
 
   React.useEffect(() => {
     if (!hideSensitive) return
+    dirtyIdsRef.current.clear()
     setDrafts(Object.fromEntries(spendingCategories.map(category => [category.id, normalizedValue(category.cycleLimit)])))
     setErrors({})
   }, [hideSensitive, spendingCategories])
@@ -116,7 +126,10 @@ export function CategoryLimitsCard({
       if (sectionRef.current) focusFirstInvalidField(sectionRef.current)
       return
     }
-    updates.forEach(update => onUpdate(update.id, update.amount))
+    updates.forEach(update => {
+      dirtyIdsRef.current.delete(update.id)
+      onUpdate(update.id, update.amount)
+    })
   }
 
   return (
@@ -174,6 +187,7 @@ export function CategoryLimitsCard({
                         label={`Track ${category.name} cycle spending`}
                         className="size-6 shrink-0"
                         onClick={() => {
+                          dirtyIdsRef.current.add(category.id)
                           setDrafts(previous => ({
                             ...previous,
                             [category.id]: enabled ? null : (normalizedValue(category.cycleLimit) ?? ''),
@@ -217,6 +231,7 @@ export function CategoryLimitsCard({
                           disabled={isSyncing}
                           value={drafts[category.id] ?? ''}
                           onChange={event => {
+                            dirtyIdsRef.current.add(category.id)
                             setDrafts(previous => ({ ...previous, [category.id]: event.target.value }))
                             setErrors(previous => ({ ...previous, [category.id]: '' }))
                           }}
@@ -229,6 +244,7 @@ export function CategoryLimitsCard({
                       )}
                       {!hideSensitive && suggested != null && suggested > 0 && (
                         <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={() => {
+                          dirtyIdsRef.current.add(category.id)
                           setDrafts(previous => ({ ...previous, [category.id]: suggested.toFixed(2) }))
                           setErrors(previous => ({ ...previous, [category.id]: '' }))
                         }}>

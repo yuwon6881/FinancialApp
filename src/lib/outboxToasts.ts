@@ -155,6 +155,26 @@ const SUCCESS_TOAST_OVERRIDES: Partial<Record<string, (op: QueuedOp) => ToastCop
 // Single source of truth for "queued op finished syncing" toast copy, used by the outbox
 // drain loop. The runtime dispatch map lives in the lazy outboxDispatch module, so a new entity/op type gets a working
 // toast automatically, and custom wording for a specific op is a one-line addition above.
+/**
+ * What a failed operation was trying to do, in the user's terms.
+ *
+ * A bulk operation has no description or name on its payload, so naming the record fell through to
+ * the bare entity kind and the toast read "Couldn't sync 'transaction'" — for a batch of forty
+ * rows that all just snapped back to their old dates, with no clue why.
+ */
+export function describeFailedOp(op: QueuedOp): string {
+  if (op.entity === 'transaction' && (op.type === 'bulkMove' || op.type === 'bulkDelete')) {
+    const items = op.type === 'bulkMove' ? op.payload?.moves : op.payload?.transactionIds
+    const count = Array.isArray(items) ? items.length : 0
+    const verb = op.type === 'bulkMove' ? 'move' : 'deletion'
+    return `the ${verb} of ${count} transaction${count === 1 ? '' : 's'}`
+  }
+  const named = [op.payload?.description, op.payload?.name, op.payload?.symbol]
+    .find(value => typeof value === 'string' && value.trim().length > 0) as string | undefined
+  if (named) return `'${named}'`
+  return ENTITY_LABELS[op.entity]?.toLowerCase() || op.entity
+}
+
 export function getSyncSuccessToast(op: QueuedOp): ToastCopy | null {
   if (op.isUndo) {
     const entityName = ENTITY_LABELS[op.entity] || 'Item'

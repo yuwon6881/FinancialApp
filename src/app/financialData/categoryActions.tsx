@@ -220,6 +220,16 @@ export function createCategoryActions(deps: CategoryActionDependencies) {
 
   const handleApplyCategoryCleanupSuggestion = async (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => {
     if (!guardSensitive()) return
+    if (suggestion.type === 'changeFlow') {
+      const category = allCategories.find(item =>
+        suggestion.categories.some(name => name.toLowerCase() === item.name.toLowerCase()))
+      if (!category || !suggestion.targetFlow || category.type !== suggestion.sourceFlow) {
+        showToast('This category changed after the review. Run the AI review again.', 'AI Review', 'warning')
+        return
+      }
+      updateCatMeta(category.id, { type: suggestion.targetFlow })
+      return
+    }
     if (suggestion.type === 'consolidate' && !targetCategoryOverride) {
       showToast('Choose a category to move these entries to first.', 'AI Cleanup', 'warning')
       return

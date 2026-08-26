@@ -6,7 +6,7 @@ import { getCycleLabelForDropdown } from '../../../lib/cycleLabels'
 import type { TransactionSort } from '../../../lib/transactionOrdering'
 import type { TransactionLinkFilter, TransactionSearchMode } from '../../../lib/transactionFilters'
 import {
-  LEDGER_BUCKETS,
+  splitFilterSelections,
   parseAmountFilter,
   laterDate,
   earlierDate,
@@ -101,8 +101,7 @@ export function useLedgerExport(options: UseLedgerExportOptions) {
   }
 
   const buildFilterLabel = () => {
-    const buckets = appliedFilters.filter(f => LEDGER_BUCKETS.includes(f))
-    const cats = appliedFilters.filter(f => !LEDGER_BUCKETS.includes(f))
+    const { buckets, categories: cats } = splitFilterSelections(appliedFilters)
     const categoryFilters = [...buckets, ...cats]
     const parts: string[] = []
     if (categoryFilters.length > 0) {
@@ -178,8 +177,7 @@ export function useLedgerExport(options: UseLedgerExportOptions) {
     if (showAllCycles && onExportTransactions) {
       setExportIsFetching(true)
       try {
-        const buckets = appliedFilters.filter(f => LEDGER_BUCKETS.includes(f))
-        const cats = appliedFilters.filter(f => !LEDGER_BUCKETS.includes(f))
+        const { buckets, categories: cats } = splitFilterSelections(appliedFilters)
         const result = await onExportTransactions({
           search: appliedSearch || undefined,
           searchMode: appliedSearchMode,

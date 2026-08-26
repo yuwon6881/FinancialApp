@@ -433,6 +433,34 @@ describe('bulk transaction projection', () => {
     expect(moved.every(row => String(row.id).startsWith('tx-1-split-') ? row.date === '2026-09-03' : true)).toBe(true)
   })
 
+  // A move changes one field. Replacing the row from the snapshot captured when the checkbox was
+  // ticked showed a stale amount, description and category until the next refresh, and recorded a
+  // date the row never had for undo to restore.
+  it('moves a row without reverting fields edited since it was selected', () => {
+    const live = { ...rows[2], date: '2026-08-01', amount: -500, description: 'Coffee machine' }
+    const op = makeOp({
+      entity: 'transaction',
+      type: 'bulkMove',
+      targetId: 'move-1',
+      payload: {
+        moves: [{ id: 'tx-2', targetDate: '2026-09-03' }],
+        beforeSnapshots: [{ id: 'tx-2', date: '2026-08-01' }],
+        transactions: [{ ...rows[2], date: '2026-08-01', amount: -10, description: 'Lunch' }],
+      },
+    })
+
+    const moved = applyOpsToList<TestItem>([live], [op], 'transaction', {
+      incomeAllocations: { essentialsAlloc: 0.5, growthAlloc: 0.25, stabilityAlloc: 0.15, rewardsAlloc: 0.1 },
+    })
+
+    expect(moved.find(row => row.id === 'tx-2')).toMatchObject({
+      date: '2026-09-03',
+      amount: -500,
+      description: 'Coffee machine',
+      isPendingSync: true,
+    })
+  })
+
   // Undoing a move from the page the rows left means the parent is no longer in the base list, and
   // an `update` against a row that is absent is a silent no-op.
   it('re-inserts a moved parent from its snapshot when the row is no longer in the list', () => {

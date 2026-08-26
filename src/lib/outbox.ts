@@ -48,22 +48,22 @@ export function expandBulkTransactionProjection(ops: QueuedOp[]): QueuedOp[] {
         // per-row syncing badge to resolve -- the generated split rows already get it from
         // splitRowState, and without this the parent is the only row with no status.
         const pendingSyncOperationId = op.isCompleted ? undefined : op.id
+        // A move changes one field, so project it as an update against the live row. Replacing the
+        // row wholesale from the snapshot showed the amount, description and category as they were
+        // when the checkbox was ticked, not as they are now.
+        //
+        // The snapshot survives only as a fallback: undo can target a parent that has already left
+        // the visible list, and an update against an absent row is a no-op, so the projection
+        // re-inserts from this instead of dropping the operation.
         const snapshot = snapshotById.get(moveId)
-        if (snapshot) {
-          // Undo lands here when the parent has already left the visible list: an `update` is a
-          // no-op against a row that is absent, so re-insert it the way bulkRestore does.
-          return [{
-            ...op,
-            type: 'add' as const,
-            targetId: moveId,
-            payload: { ...snapshot, date: targetDate, pendingSyncOperationId } as OutboxPayload,
-          }]
-        }
         return [{
           ...op,
           type: 'update' as const,
           targetId: moveId,
           payload: { date: targetDate, pendingSyncOperationId },
+          insertFallbackPayload: snapshot
+            ? ({ ...snapshot, date: targetDate, pendingSyncOperationId } as OutboxPayload)
+            : undefined,
         }]
       })
     }

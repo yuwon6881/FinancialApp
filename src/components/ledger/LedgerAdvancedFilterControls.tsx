@@ -1,5 +1,5 @@
 import React from 'react'
-import { CalendarDays, Banknote } from 'lucide-react'
+import { CalendarDays, Banknote, SlidersHorizontal } from 'lucide-react'
 import { FormField } from '../ui/FormField'
 import { DatePicker } from '../ui/DatePicker'
 import { Input } from '../ui/Input'
@@ -66,12 +66,13 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
 
   return (
     <div className="space-y-4 border-t border-border/40 pt-4 lg:border-t-0 lg:pt-0">
-      <div className="space-y-2">
-        <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
-          <CalendarDays className="size-3" /> Date range
+      {/* Date Range */}
+      <div className="space-y-1.5">
+        <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+          <CalendarDays className="size-3 text-accent-ink" /> Date range
         </span>
         <div className="grid grid-cols-2 gap-2">
-          <FormField label="From" labelClassName="text-[10px]">
+          <FormField label="From" labelClassName="text-[10px] text-muted-foreground">
             <DatePicker
               value={startDate}
               max={endDate || undefined}
@@ -84,7 +85,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
               popoverClassName="ledger-filter-dropdown"
             />
           </FormField>
-          <FormField label="To" labelClassName="text-[10px]">
+          <FormField label="To" labelClassName="text-[10px] text-muted-foreground">
             <DatePicker
               value={endDate}
               min={startDate || undefined}
@@ -101,12 +102,13 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
         {hasInvalidDateRange && <p role="alert" className="text-[10px] font-semibold text-destructive">Start date must be before the end date.</p>}
       </div>
 
-      <div className="space-y-2">
-        <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
-          <Banknote className="size-3" /> Amount range
+      {/* Amount Range */}
+      <div className="space-y-1.5">
+        <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+          <Banknote className="size-3 text-accent-ink" /> Amount range
         </span>
         <div className="grid grid-cols-2 gap-2">
-          <FormField label="Minimum" labelClassName="text-[10px]">
+          <FormField label="Minimum" labelClassName="text-[10px] text-muted-foreground">
             <Input
               type="number"
               min="0"
@@ -119,7 +121,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
               controlSize="sm"
             />
           </FormField>
-          <FormField label="Maximum" labelClassName="text-[10px]">
+          <FormField label="Maximum" labelClassName="text-[10px] text-muted-foreground">
             <Input
               type="number"
               min="0"
@@ -133,29 +135,33 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
             />
           </FormField>
         </div>
-        <p className="text-[9px] text-muted-foreground">Uses the absolute amount for both inflows and outflows.</p>
+        <p className="text-[9px] text-muted-foreground">Uses absolute amount for both inflows and outflows.</p>
         {hasInvalidAmountRange && <p role="alert" className="text-[10px] font-semibold text-destructive">Minimum amount cannot exceed maximum amount.</p>}
       </div>
 
-      <div className="space-y-2">
-        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Transaction type</span>
-        <div className="grid grid-cols-2 gap-1.5">
+      {/* Transaction Type Segmented Control */}
+      <div className="space-y-1.5">
+        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+          Transaction type
+        </span>
+        <div className="grid grid-cols-4 gap-1 rounded-xl border border-border/60 bg-muted/30 p-1">
           {([
-            [null, 'All types'],
+            [null, 'All'],
             ['inflow', 'Inflow'],
             ['outflow', 'Outflow'],
             ['transfer', 'Transfer'],
           ] as const).map(([value, label]) => {
             const isSelected = value === null ? activeTxTypes.length === 0 : activeTxTypes.includes(value)
             return (
-              <Button variant="unstyled"
+              <Button
+                variant="unstyled"
                 type="button"
                 key={label}
                 onClick={() => onTxTypeChange(value)}
-                className={`rounded-lg border px-2 py-2 text-[10px] font-semibold transition cursor-pointer ${
+                className={`rounded-lg py-1.5 text-center text-xs font-semibold transition cursor-pointer select-none ${
                   isSelected
-                    ? 'border-blue-500/50 bg-blue-500/10 text-blue-500'
-                    : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                    ? 'bg-card text-blue-500 shadow-xs border border-border/80 font-bold'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
                 }`}
               >
                 {label}
@@ -165,32 +171,74 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
         </div>
       </div>
 
-      {onReloadFilterChange && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5">
-          <span className="min-w-0 text-xs font-semibold text-foreground">Emergency fund reload</span>
-          <CustomSelect<StabilityReloadFilter>
-            ariaLabel="Emergency fund reload filter"
-            value={reloadFilter ?? 'all'}
-            onChange={onReloadFilterChange}
-            options={[
-              { value: 'all', label: 'Include all' },
-              { value: 'put-back', label: 'Marked as put back' },
-              { value: 'needs-put-back', label: 'Still needs put back' },
-              { value: 'outstanding', label: 'Not started' },
-              { value: 'partly-repaid', label: 'Partly put back' },
-              { value: 'complete', label: 'Put back complete' },
-              { value: 'not-required', label: 'Spent for good' },
-            ]}
-            align="right"
-            controlSize="sm"
-            className="w-44 shrink-0"
-          />
+      {/* Grouped Property Filters */}
+      <div className="space-y-1.5">
+        <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+          <SlidersHorizontal className="size-3 text-accent-ink" /> Filters & Rules
+        </span>
+        <div className="space-y-2 rounded-xl border border-border/60 bg-background/50 p-2.5">
+          {onReloadFilterChange && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 text-xs font-medium text-foreground">Emergency reload</span>
+              <CustomSelect<StabilityReloadFilter>
+                ariaLabel="Emergency fund reload filter"
+                value={reloadFilter ?? 'all'}
+                onChange={onReloadFilterChange}
+                options={[
+                  { value: 'all', label: 'Include all' },
+                  { value: 'put-back', label: 'Marked as put back' },
+                  { value: 'needs-put-back', label: 'Needs put back' },
+                  { value: 'outstanding', label: 'Not started' },
+                  { value: 'partly-repaid', label: 'Partly put back' },
+                  { value: 'complete', label: 'Put back complete' },
+                  { value: 'not-required', label: 'Spent for good' },
+                ]}
+                align="right"
+                controlSize="sm"
+                className="w-40 shrink-0"
+              />
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/30">
+            <span className="min-w-0 text-xs font-medium text-foreground">Recurring bills</span>
+            <CustomSelect<TransactionLinkFilter>
+              ariaLabel="Recurring transactions filter"
+              value={recurringFilter}
+              onChange={onRecurringFilterChange}
+              options={[
+                { value: 'all', label: 'Include all' },
+                { value: 'exclude', label: 'Exclude recurring' },
+                { value: 'only', label: 'Recurring only' },
+              ]}
+              align="right"
+              controlSize="sm"
+              className="w-40 shrink-0"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/30">
+            <span className="min-w-0 text-xs font-medium text-foreground">Wishlist rewards</span>
+            <CustomSelect<TransactionLinkFilter>
+              ariaLabel="Reward purchases filter"
+              value={wishlistFilter}
+              onChange={onWishlistFilterChange}
+              options={[
+                { value: 'all', label: 'Include all' },
+                { value: 'exclude', label: 'Exclude rewards' },
+                { value: 'only', label: 'Rewards only' },
+              ]}
+              align="right"
+              controlSize="sm"
+              className="w-40 shrink-0"
+            />
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* Accounts List */}
       {accounts.length > 0 && (
-        <fieldset className="space-y-2">
-          <legend className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Accounts</legend>
-          <div className="max-h-48 space-y-3 overflow-y-auto rounded-xl border border-border bg-background p-2">
+        <fieldset className="space-y-1.5">
+          <legend className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Accounts</legend>
+          <div className="max-h-44 space-y-2.5 overflow-y-auto rounded-xl border border-border/60 bg-background/50 p-2.5">
             {(['Essentials', 'Growth', 'Stability', 'Rewards'] as const).map(bucket => {
               const bucketAccounts = accounts
                 .filter(account => account.bucket === bucket && !account.isPendingDelete)
@@ -199,55 +247,25 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
               return (
                 <div key={bucket} className="space-y-1">
                   <span className="block px-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{bucket}</span>
-                  {bucketAccounts.map(account => (
-                    <label key={account.id} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-muted sm:min-h-0">
-                      <Checkbox
-                        checked={accountIds.includes(account.id)}
-                        onChange={() => onAccountToggle(account.id)}
-                        aria-label={`Filter by ${account.name}${account.isArchived ? ', closed account' : ''}`}
-                      />
-                      <span className="min-w-0 flex-1 truncate font-medium">{account.name}</span>
-                      {account.isArchived && <span className="shrink-0 text-[9px] text-muted-foreground">Closed</span>}
-                    </label>
-                  ))}
+                  <div className="space-y-0.5">
+                    {bucketAccounts.map(account => (
+                      <label key={account.id} className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs hover:bg-muted/40 transition-colors">
+                        <Checkbox
+                          checked={accountIds.includes(account.id)}
+                          onChange={() => onAccountToggle(account.id)}
+                          aria-label={`Filter by ${account.name}${account.isArchived ? ', closed account' : ''}`}
+                        />
+                        <span className="min-w-0 flex-1 truncate font-medium text-foreground">{account.name}</span>
+                        {account.isArchived && <span className="shrink-0 text-[9px] text-muted-foreground bg-muted/60 px-1 rounded">Closed</span>}
+                      </label>
+                    ))}
+                  </div>
                 </div>
               )
             })}
           </div>
         </fieldset>
       )}
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5">
-        <span className="min-w-0 text-xs font-semibold text-foreground">Recurring transactions</span>
-        <CustomSelect<TransactionLinkFilter>
-          ariaLabel="Recurring transactions filter"
-          value={recurringFilter}
-          onChange={onRecurringFilterChange}
-          options={[
-            { value: 'all', label: 'Include all' },
-            { value: 'exclude', label: 'Exclude recurring' },
-            { value: 'only', label: 'Recurring only' },
-          ]}
-          align="right"
-          controlSize="sm"
-          className="w-44 shrink-0"
-        />
-      </div>
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5">
-        <span className="min-w-0 text-xs font-semibold text-foreground">Reward purchases</span>
-        <CustomSelect<TransactionLinkFilter>
-          ariaLabel="Reward purchases filter"
-          value={wishlistFilter}
-          onChange={onWishlistFilterChange}
-          options={[
-            { value: 'all', label: 'Include all' },
-            { value: 'exclude', label: 'Exclude reward purchases' },
-            { value: 'only', label: 'Reward purchases only' },
-          ]}
-          align="right"
-          controlSize="sm"
-          className="w-44 shrink-0"
-        />
-      </div>
     </div>
   )
 }

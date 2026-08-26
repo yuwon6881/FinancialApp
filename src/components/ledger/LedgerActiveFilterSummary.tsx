@@ -8,9 +8,8 @@ import {
   type TxTypeFilter,
   type StabilityReloadFilter,
   parseTxTypes,
+  splitFilterSelections,
 } from '../../lib/transactionFilters'
-
-const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
 
 export interface LedgerActiveFilterSummaryProps {
   showAllCycles: boolean
@@ -75,8 +74,8 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
   }
 
   const filterDetails: string[] = []
-  const selectedBuckets = activeCategoryFilters.filter(f => LEDGER_BUCKETS.includes(f))
-  const selectedCats = activeCategoryFilters.filter(f => !LEDGER_BUCKETS.includes(f))
+  const { buckets: selectedBuckets, categories: selectedCats } =
+    splitFilterSelections(activeCategoryFilters)
 
   if (selectedBuckets.length > 0) {
     const names = selectedBuckets.map(b => `"${b}"`).join(' and ')

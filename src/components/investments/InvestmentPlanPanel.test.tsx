@@ -27,6 +27,16 @@ const allocation: InvestmentAllocationOverview = {
   minimumContribution: 0,
 }
 
+const plannedInstruments: InvestmentPortfolio['instruments'] = [
+  { id: 'vti', symbol: 'VTI', name: 'US total market', type: 'ETF', currency: 'USD', allocationSleeve: 'USEquity', isCustom: false, isArchived: false },
+  { id: 'vxus', symbol: 'VXUS', name: 'International market', type: 'ETF', currency: 'USD', allocationSleeve: 'InternationalExUS', isCustom: false, isArchived: false },
+  { id: 'bnd', symbol: 'BND', name: 'US bonds', type: 'ETF', currency: 'USD', allocationSleeve: 'Bonds', isCustom: false, isArchived: false },
+]
+
+const usdFx: NonNullable<InvestmentPortfolio['planFxRates']> = [
+  { currency: 'USD', rateToAppCurrency: 4.5, asOf: '2026-08-26', source: 'Frankfurter' },
+]
+
 describe('InvestmentPlanPanel guidance', () => {
   it('omits the guidance section when every sleeve is within its configured drift', () => {
     render(<InvestmentPlanPanel allocation={allocation} holdings={[]} instruments={[]} reference={{ currency: 'USD', rate: 0.25 }} masked={false} onNavigate={vi.fn()} />)
@@ -60,8 +70,7 @@ describe('InvestmentPlanPanel guidance', () => {
     render(<InvestmentPlanPanel allocation={watch} holdings={[]} instruments={[]} reference={{ currency: 'USD', rate: 0.25 }} masked={false} onNavigate={vi.fn()} />)
 
     expect(screen.queryByText('What to do next')).toBeNull()
-    // DepositGuide is collapsed by default; the toggle button is visible.
-    expect(screen.getByRole('button', { name: /Plan a deposit/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Plan money in or out/ })).toBeTruthy()
     expect(screen.queryByText(/routine/)).toBeNull()
     // Sleeve amounts are only revealed once the panel is opened.
     expect(screen.queryByText('RM 100.00')).toBeNull()
@@ -114,7 +123,7 @@ describe('InvestmentPlanPanel contribution split', () => {
 
     // The rebalancing guidance stays hidden; the deposit guide's toggle is visible.
     expect(screen.queryByText('What to do next')).toBeNull()
-    expect(screen.getByRole('button', { name: /Plan a deposit/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Plan money in or out/ })).toBeTruthy()
     expect(screen.queryByText(/routine/)).toBeNull()
     // Sleeve amounts and basis text stay hidden until the panel is opened.
     expect(screen.queryByText('RM 660.00')).toBeNull()
@@ -122,17 +131,18 @@ describe('InvestmentPlanPanel contribution split', () => {
   })
 
   it('masks deposit plan sleeve amounts when sensitive values are hidden', () => {
-    render(<InvestmentPlanPanel allocation={withPlan} holdings={[]} instruments={[]} masked onNavigate={vi.fn()} />)
+    render(<InvestmentPlanPanel allocation={withPlan} holdings={[]} instruments={plannedInstruments} fxRates={usdFx} masked onNavigate={vi.fn()} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /Plan a deposit/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Plan money in or out/ }))
     fireEvent.change(screen.getByLabelText('Amount to deposit in MYR'), { target: { value: '1000' } })
     expect(screen.getAllByText('••••').length).toBeGreaterThan(0)
   })
 
-  it('omits the deposit section when there is nothing ready to invest', () => {
+  it('keeps the planner available and explains incomplete classification', () => {
     render(<InvestmentPlanPanel allocation={allocation} holdings={[]} instruments={[]} masked={false} onNavigate={vi.fn()} />)
 
-    expect(screen.queryByRole('button', { name: /Plan a deposit/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Plan money in or out/ }))
+    expect(screen.getByText('Classify at least one investment into a plan basket first.')).toBeTruthy()
   })
 })
 

@@ -21,7 +21,7 @@ import type { LedgerListProps } from './ledger/ledgerListShared'
 import { TransactionFormSheet, type TransactionFormSheetRef } from './ledger/TransactionFormSheet'
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../lib/useReceiptSplitPolling'
 import { calculateLedgerTotals } from '../lib/ledgerTotals'
-import type { TransactionLinkFilter } from '../lib/transactionFilters'
+import { splitFilterSelections, type TransactionLinkFilter } from '../lib/transactionFilters'
 import type { LedgerRouteState } from '../lib/appLocation'
 import { useIsMobile } from '../lib/useIsMobile'
 import { formatCurrencyVal } from '../lib/utils'
@@ -38,7 +38,6 @@ import { LedgerActiveFilterSummary } from './ledger/LedgerActiveFilterSummary'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
 import type { StabilityTopUpContext } from './ledger/transaction-form/useTransactionFormOptions'
 
-const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
 const LedgerExportModal = React.lazy(() =>
   import('./ledger/LedgerExportModal').then(module => ({ default: module.LedgerExportModal })))
 
@@ -168,10 +167,15 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     formRef,
   })
 
+  // Selection is page-scoped by construction: the toolbar counts, the select-all checkbox and
+  // the eligible-row count all describe the visible page only. Without the page in this key you
+  // could select rows on page 1, navigate away, and have Move or Delete act on rows that are no
+  // longer on screen and cannot be reviewed.
   const bulkResetKey = JSON.stringify([
     props.showAllCycles,
     props.selectedMonth,
     props.selectedYear,
+    ledger.currentPage,
     ledger.pageSize,
     ledger.sortOrder,
     props.showAllCycles ? ledger.appliedSearch : ledger.searchTerm,
@@ -211,9 +215,9 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   // Only a lone bucket filter gets a net: with two selected the figure would be a sum across
   // buckets that no balance on any screen corresponds to.
   const activeBucketFilter = React.useMemo(() => {
-    const active = (props.showAllCycles ? ledger.appliedFilters : ledger.selectedFilters)
-      .filter(filter => LEDGER_BUCKETS.includes(filter))
-    return active.length === 1 ? active[0] : null
+    const { buckets } = splitFilterSelections(
+      props.showAllCycles ? ledger.appliedFilters : ledger.selectedFilters)
+    return buckets.length === 1 ? buckets[0] : null
   }, [props.showAllCycles, ledger.appliedFilters, ledger.selectedFilters])
   const pageTotals = React.useMemo(
     () => calculateLedgerTotals(ledger.displayTransactions, activeBucketFilter),

@@ -3,6 +3,7 @@ import type { LedgerAccount, WishlistItem, SavingsGoal, SavingsGoalFundingBucket
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useSyncStatus } from '../lib/useOptimisticList'
 import { Button } from './ui/Button'
+import { InfoHint } from './ui/InfoHint'
 import { useAppContext } from '../contexts/AppContext'
 import { useWishlistForm } from './wishlist/useWishlistForm'
 import { useSavingsGoalForm } from './wishlist/useSavingsGoalForm'
@@ -291,8 +292,13 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
               <CommitmentIcon className="size-5" aria-hidden />
             </div>
             <div className="min-w-0">
-              <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Commitments &amp; Rewards</h2>
-              <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">Set money aside for commitments, then see what is free for rewards.</p>
+              <h2 className="flex items-center gap-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                Commitments &amp; Rewards
+                <InfoHint
+                  label="this page"
+                  text="Set money aside for commitments, then see what is free for rewards."
+                />
+              </h2>
             </div>
           </div>
           {onExplainWithAi && (

@@ -161,6 +161,46 @@ describe('createCategoryActions - requestDeleteCategory', () => {
   })
 })
 
+describe('createCategoryActions - flow review', () => {
+  it('queues an accepted flow correction through the normal update and undo path', async () => {
+    const mutateQueue = vi.fn()
+    const snapshotForUndo = vi.fn()
+    const salary = { ...sampleCategory, name: 'Salary', type: 'outflow' as const, cycleLimit: 400 }
+    const actions = createCategoryActions({
+      allCategories: [salary], allRecurringPayments: [], guardSensitive: () => true,
+      mutateQueue, snapshotForUndo, setConfirmModalData: vi.fn(), showToast: vi.fn(),
+    })
+
+    await actions.handleApplyCategoryCleanupSuggestion({
+      id: 'flow-salary', type: 'changeFlow', title: 'Correct Salary flow', categories: ['Salary'],
+      summary: 'Salary is normally money in.', confidence: 0.95, affectedTransactionCount: 1,
+      sourceFlow: 'outflow', targetFlow: 'inflow',
+    })
+
+    expect(snapshotForUndo).toHaveBeenCalledWith('category', salary.id, salary)
+    expect(mutateQueue).toHaveBeenCalledOnce()
+    expect(JSON.stringify(mutateQueue.mock.calls[0][0]([]))).toContain('"type":"inflow"')
+    expect(JSON.stringify(mutateQueue.mock.calls[0][0]([]))).toContain('"cycleLimit":null')
+  })
+
+  it('rejects a stale flow correction after the category changed', async () => {
+    const mutateQueue = vi.fn()
+    const showToast = vi.fn()
+    const actions = createCategoryActions({
+      allCategories: [{ ...sampleCategory, name: 'Salary', type: 'inflow' }], allRecurringPayments: [],
+      guardSensitive: () => true, mutateQueue, snapshotForUndo: vi.fn(), setConfirmModalData: vi.fn(), showToast,
+    })
+
+    await actions.handleApplyCategoryCleanupSuggestion({
+      id: 'stale', type: 'changeFlow', title: 'Correct Salary flow', categories: ['Salary'], summary: '',
+      confidence: 0.95, affectedTransactionCount: 0, sourceFlow: 'outflow', targetFlow: 'inflow',
+    })
+
+    expect(mutateQueue).not.toHaveBeenCalled()
+    expect(showToast).toHaveBeenCalledWith(expect.stringMatching(/changed after the review/i), 'AI Review', 'warning')
+  })
+})
+
 /**
  * The confirmation used to reach its replacement picker through React.lazy. Vite's generated
  * dependency-preload wrapper can stay pending forever for a runtime chunk, and when it did the

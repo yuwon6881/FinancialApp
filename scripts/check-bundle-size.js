@@ -133,7 +133,10 @@ if (!fs.existsSync(distAssetsPath)) {
 // its own (CycleSwitcher-*.js, 1.33 kB) and is fetched with the page that shows it. The rest is the
 // whole-word search matcher and the move toast, both of which are already-eager modules. The same
 // seven chunks remain on the critical path, and the raise restores the ~1.5 kB variance headroom.
-const CRITICAL_PATH_LIMIT_KB = 212.5
+// 214.75: raised from 212.5 (measured 213.12). Accepting an AI category-flow correction now uses
+// the already-eager category outbox/undo coordinator, so no lazy surface moved onto the startup
+// path. The narrowly scoped increase restores the established cross-platform gzip headroom.
+const CRITICAL_PATH_LIMIT_KB = 214.75
 const PRECACHE_RAW_LIMIT_KB = 3 * 1024
 
 function criticalPathChunks(files) {

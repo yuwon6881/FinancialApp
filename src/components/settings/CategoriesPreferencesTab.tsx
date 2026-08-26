@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import {
   Save,
-  AlertCircle,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Lock,
@@ -13,10 +11,8 @@ import {
   ArrowLeftRight,
 } from 'lucide-react'
 import type { CategoryFlowType, DashboardData, TransactionCategory } from '../../types'
-import { CustomSelect } from '../ui/CustomSelect'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
-import { PerimeterBeam } from '../ui/PerimeterBeam'
 import type { CategoryCleanupSuggestion } from '../../lib/api'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
 import type { useSettingsView } from './view/useSettingsView'
@@ -25,6 +21,7 @@ import { ManageableNameList } from './ManageableNameList'
 import { CategoryFlowFilter } from './CategoryFlowFilter'
 import { isSystemCategoryName } from '../../lib/categoryFlow'
 import { Button } from '../ui/Button'
+import { CategoryCleanupReviewPanel } from './CategoryCleanupReviewPanel'
 
 /**
  * One segment per flow type, so a specific type is a single click. The control used to be one pill
@@ -175,136 +172,20 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
 
         <CollapsibleBody open={view.categoriesOpen}>
           <div className="space-y-4 px-0.5 pt-4">
-            {(view.cleanupReviewOpen || view.cleanupReviewError) && (
-              <div className={`rounded-xl border border-primary/25 bg-primary/5 p-3 space-y-2 ${view.isReviewingCleanup ? 'perimeter-beam-host' : ''}`}>
-                {view.isReviewingCleanup && <PerimeterBeam size={120} />}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                    <Sparkles className="size-3.5 text-accent-ink" />
-                    AI Category Review
-                  </div>
-                  <Button variant="unstyled"
-                    type="button"
-                    onClick={() => { view.setCleanupReviewOpen(false) }}
-                    className="inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-background transition cursor-pointer sm:size-8"
-                    aria-label="Close AI category review"
-                  >
-                    <ChevronUp className="size-3.5" />
-                  </Button>
-                </div>
-
-                {view.isReviewingCleanup && (
-                  <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground">
-                    <Loader2 className="size-3.5 animate-spin text-accent-ink" />
-                    Reviewing category usage...
-                  </div>
-                )}
-
-                {view.cleanupReviewError && (
-                  <p className="text-[11px] font-semibold text-orange-500 flex items-center gap-1">
-                    <AlertCircle className="size-3 shrink-0" />
-                    {view.cleanupReviewError}
-                  </p>
-                )}
-
-                {!view.isReviewingCleanup && !view.cleanupReviewError && view.cleanupSuggestions.length === 0 && (
-                  <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                    <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
-                    No cleanup proposals right now.
-                  </p>
-                )}
-
-                {!view.isReviewingCleanup && view.cleanupSuggestions.length > 0 && (
-                  <div className="space-y-2 max-h-72 overflow-y-auto overscroll-contain pr-1">
-                    {view.cleanupSuggestions.map(suggestion => {
-                      const confidence = Math.round(Math.max(0, Math.min(1, suggestion.confidence)) * 100)
-                      const consolidateOptions = view.editableCategories.filter(cat =>
-                        !suggestion.categories.some(name => name.toLowerCase() === cat.name.toLowerCase())
-                      )
-                      const consolidateTarget = view.consolidateTargets[suggestion.id] || ''
-                      const isApplyingThis = view.applyingCleanupId === suggestion.id
-                      const isConsolidateDisabled = suggestion.type === 'consolidate' && !consolidateTarget
-
-                      return (
-                        <div key={suggestion.id} className="rounded-lg border border-border/60 bg-background p-2.5 space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="text-xs font-bold text-foreground">{suggestion.title}</div>
-                              <div className="text-[11px] text-muted-foreground leading-relaxed">{suggestion.summary}</div>
-                            </div>
-                            <span className="shrink-0 rounded-md border border-blue-500/25 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-blue-600 dark:text-blue-400">
-                              Confidence {confidence}%
-                            </span>
-                          </div>
-
-                          {suggestion.categories.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {suggestion.categories.map(name => (
-                                <Button variant="unstyled"
-                                  key={name}
-                                  type="button"
-                                  onClick={() => onNavigateToLedger?.({ category: name, showAllCycles: true })}
-                                  title={`Filter ledger by ${name}`}
-                                  className={`press-scale inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-semibold cursor-pointer hover:opacity-85 transition ${getCategoryBadgeClass(name)}`}
-                                >
-                                  {name}
-                                </Button>
-                              ))}
-                            </div>
-                          )}
-
-                          {suggestion.type === 'consolidate' && (
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-semibold text-muted-foreground">Move its entries to:</span>
-                              <div>
-                                <CustomSelect
-                                  ariaLabel="Category consolidation target"
-                                  value={consolidateTarget}
-                                  onChange={val => view.setConsolidateTargets(prev => ({ ...prev, [suggestion.id]: String(val) }))}
-                                  options={[
-                                    { value: '', label: 'Choose a category' },
-                                    ...consolidateOptions.map(cat => ({ value: cat.name, label: cat.name }))
-                                  ]}
-                                  className="max-w-full"
-                                />
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between gap-2">
-                            {suggestion.affectedTransactionCount > 0 && suggestion.categories.length > 0 ? (
-                              <Button variant="unstyled"
-                                type="button"
-                                onClick={() => onNavigateToLedger?.({ category: suggestion.categories[0], showAllCycles: true })}
-                                title="View entries in ledger"
-                                className="press-scale inline-flex min-h-11 min-w-0 items-center px-2.5 rounded-full border sm:h-8 sm:min-h-0 border-orange-500/20 bg-orange-500/10 text-[9px] font-bold uppercase text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 transition cursor-pointer select-none"
-                              >
-                                <span className="truncate">{suggestion.affectedTransactionCount} ledger {suggestion.affectedTransactionCount === 1 ? 'entry' : 'entries'} need validation</span>
-                              </Button>
-                            ) : (
-                              <span className="inline-flex min-h-11 min-w-0 items-center px-2.5 rounded-full border sm:h-8 sm:min-h-0 border-border bg-muted/30 text-[9px] font-bold uppercase text-muted-foreground select-none">
-                                {suggestion.affectedTransactionCount > 0
-                                  ? `${suggestion.affectedTransactionCount} ledger entr${suggestion.affectedTransactionCount === 1 ? 'y' : 'ies'} need validation`
-                                  : 'No ledger entries affected'}
-                              </span>
-                            )}
-                            <Button variant="unstyled"
-                              type="button"
-                              onClick={() => void view.handleApplyCleanupSuggestion(suggestion)}
-                              disabled={!onApplyCategoryCleanupSuggestion || view.applyingCleanupId !== null || isConsolidateDisabled}
-                              title={!onApplyCategoryCleanupSuggestion ? 'Category cleanup is unavailable' : isConsolidateDisabled ? 'Choose a category first' : 'Accept'}
-                              className="inline-flex min-h-11 w-20 shrink-0 items-center justify-center rounded-lg border sm:h-8 sm:min-h-0 border-blue-500/30 bg-blue-500/5 px-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {isApplyingThis ? <Loader2 className="size-3 animate-spin" /> : 'Accept'}
-                            </Button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+            <CategoryCleanupReviewPanel
+              open={view.cleanupReviewOpen}
+              error={view.cleanupReviewError}
+              reviewing={view.isReviewingCleanup}
+              suggestions={view.cleanupSuggestions}
+              editableCategories={view.editableCategories}
+              consolidateTargets={view.consolidateTargets}
+              setConsolidateTargets={view.setConsolidateTargets}
+              applyingId={view.applyingCleanupId}
+              canApply={Boolean(onApplyCategoryCleanupSuggestion)}
+              onClose={() => view.setCleanupReviewOpen(false)}
+              onApply={suggestion => void view.handleApplyCleanupSuggestion(suggestion)}
+              onNavigateToLedger={onNavigateToLedger}
+            />
 
             <CategoryFlowFilter rows={categoryRows}>
               {(filteredCategoryRows, flowControl) => <ManageableNameList

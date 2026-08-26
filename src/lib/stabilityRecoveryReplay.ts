@@ -5,6 +5,7 @@ import type {
   Transaction,
 } from '@/types'
 import { bucketAmount } from './bucketAttribution'
+import { compareIdsOrdinal } from './ordinalCompare'
 
 // Re-exported so the replay's own consumers keep a single import path for the queue's shape.
 export type { StabilityReloadObligation }
@@ -125,10 +126,12 @@ export function describeStabilityReloadMovements(
   transactions: Transaction[],
   stabilityAlloc: number | ((transaction: Transaction) => number),
 ): StabilityReloadMovement[] {
+  // Ordinal on the id tie-break, matching the server's StringComparer.Ordinal. This is FIFO
+  // posting order, so a disagreement repays a different obligation first.
   const ordered = [...transactions].sort((left, right) =>
-    left.date.localeCompare(right.date) ||
-    (left.postedAt ?? '').localeCompare(right.postedAt ?? '') ||
-    String(left.id).localeCompare(String(right.id)))
+    compareIdsOrdinal(left.date, right.date) ||
+    compareIdsOrdinal(left.postedAt ?? '', right.postedAt ?? '') ||
+    compareIdsOrdinal(String(left.id), String(right.id)))
   const stabilityChildren = new Map(
     ordered
       .filter(transaction => String(transaction.id).endsWith('-split-Stability'))

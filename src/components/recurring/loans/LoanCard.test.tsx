@@ -46,6 +46,64 @@ const props = (loan: Loan) => ({
   onExplain: vi.fn(),
 })
 
+describe('LoanCard headline', () => {
+  it('leads with what is still owed and how much of the tracked principal is cleared', () => {
+    render(<LoanCard {...props({ ...baseLoan, snapshot: { ...baseLoan.snapshot, outstandingBalance: 620 } })} />)
+
+    expect(screen.getByText('Still owed')).toBeTruthy()
+    expect(screen.getByText('RM 620.00')).toBeTruthy()
+
+    const meter = screen.getByRole('progressbar', { name: '38% of the tracked principal cleared' })
+    expect(meter.getAttribute('aria-valuenow')).toBe('38')
+    expect(screen.getByText(/38% paid off/)).toBeTruthy()
+    // "tracked", never "borrowed": the opening principal is the balance at the tracking start date.
+    expect(screen.getByText(/RM 1000.00 tracked/)).toBeTruthy()
+  })
+
+  it('keeps one secondary fact visible and demotes the rest into Loan details', () => {
+    render(<LoanCard {...props(baseLoan)} isMobile />)
+
+    expect(screen.getByText('Next instalment')).toBeTruthy()
+    // Still reachable, but inside the disclosure rather than competing for the summary.
+    const payoff = screen.getByText('Expected payoff')
+    expect(payoff.closest('details')).not.toBeNull()
+    expect(screen.getByText('Remaining interest').closest('details')).not.toBeNull()
+  })
+
+  it('shows no balance, meter or percentage when the schedule is unavailable', () => {
+    // The balance is not knowable, and a 0% bar would read as "no progress" rather than "unknown".
+    render(<LoanCard {...props({ ...baseLoan, scheduleStatus: 'Incomplete' })} />)
+
+    expect(screen.queryByText('Still owed')).toBeNull()
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    expect(screen.getByText(/cannot show a balance or schedule/)).toBeTruthy()
+  })
+
+  it('shows no meter while a replay is in flight', () => {
+    render(<LoanCard {...props({ ...baseLoan, isRecalculating: true })} />)
+
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    expect(screen.getByText(/Recalculating from/)).toBeTruthy()
+  })
+
+  it('reports a genuine 0% for an untouched loan rather than hiding the bar', () => {
+    render(<LoanCard {...props(baseLoan)} />)
+
+    const meter = screen.getByRole('progressbar', { name: '0% of the tracked principal cleared' })
+    expect(meter.getAttribute('aria-valuenow')).toBe('0')
+  })
+
+  it('names the final balance instead of an instalment amount when the loan is closing out', () => {
+    render(<LoanCard {...props({
+      ...baseLoan,
+      interestMethod: 'InterestOnly',
+      snapshot: { ...baseLoan.snapshot, scheduledPayment: 0 },
+    })} />)
+
+    expect(screen.getAllByText('Final balance due now').length).toBeGreaterThan(0)
+  })
+})
+
 describe('LoanCard', () => {
   it('uses plain-language labels for every interest method', () => {
     for (const method of ['ReducingBalance', 'ReducingBalanceDaily', 'Flat', 'InterestOnly'] as const) {

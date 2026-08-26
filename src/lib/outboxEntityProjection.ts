@@ -45,7 +45,14 @@ export function applyEntityOp<T extends ProjectionRow>(
     }
   } else if (op.type === 'update') {
     const existingIndex = rows.findIndex(targetStr)
-    if (existingIndex >= 0) {
+    if (existingIndex < 0 && op.insertFallbackPayload) {
+      // The targeted row is not in this list — an undone move whose parent has scrolled out of
+      // the visible cycle. Insert the carried row rather than dropping the operation.
+      rows.rows = [
+        ...rows.rows,
+        { ...op.insertFallbackPayload, isPendingSync: !op.isCompleted } as unknown as T,
+      ]
+    } else if (existingIndex >= 0) {
       if (entity === 'wishlistItem' && op.payload && op.payload.isActive === true) {
         rows.rows = rows.rows.map((item, idx) => {
           if (idx === existingIndex) {

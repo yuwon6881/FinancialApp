@@ -1,12 +1,15 @@
 import React from 'react'
-import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
-import { CalendarClock, CheckCircle2, Edit2, Minus, MoreHorizontal, Plus, Repeat, Trash2, X } from 'lucide-react'
+import { CheckCircle2, Edit2, Minus, Plus, Trash2 } from 'lucide-react'
 import type { SavingsGoal } from '../../types'
 import type { GoalPace, GoalPaceStatus } from '../../lib/savingsGoals'
 import { MONTH_NAMES } from '../../lib/cycle'
 import { parseGoalDate } from '../../lib/savingsGoals'
+import { useDetailDisclosure } from '../../lib/useDetailDisclosure'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
+import { DetailDisclosure } from '../ui/DetailDisclosure'
+import { Meter } from '../ui/Meter'
+import { OverflowMenu } from '../ui/OverflowMenu'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { getCategoryBadgeClass, getCategoryChartColor } from '../../lib/categoryColors'
 
@@ -71,7 +74,6 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
   onTopUp,
   onRelease,
 }) => {
-  const reduceMotion = useReducedMotion()
   const pct = goal.targetAmount > 0
     ? Math.max(0, Math.min(100, (goal.earmarkedAmount / goal.targetAmount) * 100))
     : 0
@@ -83,12 +85,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
   const cyclePct = cycleTarget > 0 ? Math.min(100, (pace.fundedThisCycle / cycleTarget) * 100) : 100
   const cycleDone = pace.outstandingThisCycle <= 0
   const isBusy = isSyncing || isDeleting || goal.isPendingSync === true
-  const [showManage, setShowManage] = React.useState(false)
-  // Collapse if the row starts syncing or deleting underneath the open panel: leaving Edit and Delete
-  // showing on a row that is on its way out invites a tap at the one moment it cannot be honoured.
-  React.useEffect(() => {
-    if (isBusy) setShowManage(false)
-  }, [isBusy])
+  const detail = useDetailDisclosure()
 
   return (
     <Card
@@ -101,22 +98,18 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
         <div className="flex items-center gap-1.5">
           <span className={`size-1.5 rounded-full shrink-0 ${style.dot}`} aria-hidden />
           <h4 className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{goal.name}</h4>
-          {goal.isRecurring && (
-            <Repeat
-              className="size-3 text-muted-foreground shrink-0"
-              aria-label={`Repeats every ${goal.recurrenceMonths} months`}
-            />
-          )}
           <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={goal.isPendingSync} entityLabel="goal" />
         </div>
         <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
           <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${getCategoryBadgeClass(fundingBucket)}`}>
             {fundingBucket}
           </span>
-          <span>{formatDeadline(goal.targetDate)} · {describeHorizon(pace)}</span>
+          <span>{formatDeadline(goal.targetDate)}</span>
         </p>
       </div>
 
+      {/* One headline: saved against target, with the percentage that was already computed here and
+          never shown. */}
       <div>
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-lg font-extrabold text-foreground">{formatSensitive(goal.earmarkedAmount)}</span>
@@ -124,171 +117,139 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
             of {formatSensitive(goal.targetAmount)}
           </span>
         </div>
-        <div className="mt-1.5 w-full bg-muted rounded-full h-1.5 overflow-hidden">
-          <div className={`h-full ${style.bar} transition-all duration-500 rounded-full`} style={{ width: `${pct}%`, ...(status === 'onPace' || status === 'needsFunding' ? { backgroundColor: bucketColor } : {}) }} />
+        <div className="mt-1.5 flex items-center gap-2">
+          <Meter
+            percent={pct}
+            label={`${pct.toFixed(0)}% of this commitment set aside`}
+            tone={style.bar}
+            color={status === 'onPace' || status === 'needsFunding' ? bucketColor : undefined}
+          />
+          <span className="shrink-0 text-[10px] font-bold tabular-nums text-muted-foreground">{pct.toFixed(0)}%</span>
         </div>
       </div>
 
-      {/* This cycle's share as its own inset meter. The bar above tracks the whole target, which is
-          a different (and much slower-moving) question than "is this cycle paid up" — a single line
-          of text under the target bar left the two indistinguishable. */}
-      {pace.isFunded ? (
-        <p className="flex items-center gap-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-500">
-          <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Ready to use
-        </p>
-      ) : (
-        <div className="rounded-xl border border-border/50 bg-muted/25 p-2.5 space-y-1.5">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              {cycleDone
-                ? <CheckCircle2 className="size-3 text-emerald-500" aria-hidden />
-                : <CalendarClock className="size-3 text-pink-500" aria-hidden />}
-              This cycle
-            </span>
-            <span className="text-[10px] font-semibold text-muted-foreground">
-              <span className={`font-extrabold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
-                {formatSensitive(pace.fundedThisCycle)}
-              </span>
-              {' '}of {formatSensitive(pace.requiredPerCycle)}
-            </span>
+      {/* One status line. The per-cycle figures behind it used to sit in an always-open inset that
+          repeated what the Rewards pool panel and its Committed tile already said — with a single
+          commitment the same number appeared three times on one screen. */}
+      <p className={`text-xs font-bold ${pace.isFunded || cycleDone ? 'text-emerald-500' : style.text}`}>
+        {pace.isFunded ? (
+          <span className="flex items-center gap-1.5">
+            <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Ready to use
+          </span>
+        ) : cycleDone ? (
+          <span className="flex items-center gap-1.5">
+            <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Done for this cycle
+          </span>
+        ) : (
+          <>{formatSensitive(pace.outstandingThisCycle)} still to set aside this cycle</>
+        )}
+      </p>
+
+      <DetailDisclosure
+        label="Details"
+        open={detail.isOpen}
+        onOpenChange={detail.setOpen}
+        expandedFrom="lg"
+      >
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px]">
+          <div>
+            <dt className="font-semibold text-muted-foreground">Per cycle</dt>
+            <dd className="font-bold text-foreground">{formatSensitive(pace.requiredPerCycle)}</dd>
           </div>
-
-          <div
-            className="w-full h-1 rounded-full bg-muted overflow-hidden"
-            role="img"
-            aria-label={cycleDone
-              ? "This cycle's share is set aside"
-              : `${cyclePct.toFixed(0)}% of this cycle's share set aside`}
-          >
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${cycleDone ? 'bg-emerald-500' : style.bar}`}
-              style={{ width: `${cyclePct}%`, ...(!cycleDone ? { backgroundColor: bucketColor } : {}) }}
-            />
+          <div>
+            <dt className="font-semibold text-muted-foreground">Time left</dt>
+            <dd className="font-bold text-foreground">{describeHorizon(pace)}</dd>
           </div>
-
-          <p className={`text-xs font-bold ${cycleDone ? 'text-emerald-500' : style.text}`}>
-            {cycleDone
-              ? 'Done for this cycle'
-              : <>{formatSensitive(pace.outstandingThisCycle)} still to set aside</>}
-          </p>
-        </div>
-      )}
-
-      {/* Management *replaces* the money actions rather than joining them. Adding a sixth control to
-          a row that already held five at the rail's 80vw is what squeezed the tick and pushed the
-          close button past the card edge — and nobody needs the top-up buttons while deciding whether
-          to delete. Keep the management actions content-sized so a wide desktop card does not turn
-          two short labels into oversized full-width controls. */}
-      <div className="mt-auto flex items-center gap-1.5 border-t border-border/30 pt-3">
-        <AnimatePresence initial={false} mode="wait">
-          {showManage ? (
-            <m.div
-              key="manage-actions"
-              initial={reduceMotion ? false : { opacity: 0, y: 4, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
-              transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
-              className="ml-auto flex items-center gap-1.5"
-            >
-              <Button
-                variant="ghost"
-                size="sm"
-                className="shrink-0"
-                onClick={() => onEdit(goal)}
-                disabled={isBusy || hideSensitive}
-                aria-label={`Edit ${goal.name}`}
-                title={hideSensitive ? 'Unhide balances to edit' : 'Edit goal'}
-              >
-                <Edit2 className="size-3.5 shrink-0" /> Edit
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                className="shrink-0"
-                onClick={() => onDelete(goal.id)}
-                disabled={isBusy || hideSensitive}
-                aria-label={`Delete ${goal.name}`}
-                title={hideSensitive ? 'Unhide balances to delete' : 'Delete goal'}
-              >
-                <Trash2 className="size-3.5 shrink-0" /> Delete
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0"
-                onClick={() => setShowManage(false)}
-                aria-expanded
-                aria-label={`Hide edit and delete for ${goal.name}`}
-                title="Back"
-              >
-                <X className="size-3.5" />
-              </Button>
-            </m.div>
-          ) : (
-            <m.div
-              key="primary-actions"
-              initial={reduceMotion ? false : { opacity: 0, y: 4, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
-              transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
-              className="flex min-w-0 flex-1 items-center gap-1"
-            >
-              <div className="flex items-center gap-px rounded-lg overflow-hidden shrink-0 shadow-xs ring-1 ring-border/50">
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="rounded-none border-none shadow-none hover:shadow-none"
-                  onClick={() => onTopUp(goal)}
-                  disabled={isBusy || hideSensitive || pace.isFunded}
-                  aria-label={`Add money to ${goal.name}`}
-                  title={pace.isFunded ? 'This goal already has everything it needs' : `Move free ${fundingBucket.toLowerCase()} money into this goal`}
-                >
-                  <Plus className="size-3.5" />
-                </Button>
-                <div className="w-px h-5 bg-border/40" aria-hidden />
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="rounded-none border-none shadow-none hover:shadow-none"
-                  onClick={() => onRelease(goal)}
-                  disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
-                  aria-label={`Release money from ${goal.name}`}
-                  title={`Release money back to your free ${fundingBucket.toLowerCase()}`}
-                >
-                  <Minus className="size-3.5" />
-                </Button>
-              </div>
-              <Button
-                variant="successGhost"
-                size="icon"
-                className="shrink-0"
-                onClick={() => onComplete(goal.id)}
-                disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
-                aria-label={goal.isRecurring ? `Complete this cycle for ${goal.name}` : `Mark ${goal.name} done`}
-                title={goal.earmarkedAmount <= 0
-                  ? `Set aside some ${fundingBucket.toLowerCase()} money before marking this commitment done`
-                  : goal.isRecurring
-                    ? 'Spend the saved amount and roll the deadline forward'
-                    : 'Spend the saved amount and mark this commitment done'}
-              >
-                <CheckCircle2 className="size-3.5" />
-              </Button>
-              {/* Swipe-to-reveal is not an option for these two: the card lives in a horizontally
-                  scrolling rail, so a horizontal drag on it belongs to the rail. */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="ml-auto shrink-0"
-                onClick={() => setShowManage(true)}
-                aria-expanded={false}
-                aria-label={`Edit or delete ${goal.name}`}
-                title="Edit or delete"
-              >
-                <MoreHorizontal className="size-3.5" />
-              </Button>
-            </m.div>
+          <div>
+            <dt className="font-semibold text-muted-foreground">Still to save</dt>
+            <dd className="font-bold text-foreground">{formatSensitive(pace.remaining)}</dd>
+          </div>
+          {goal.isRecurring && (
+            <div>
+              <dt className="font-semibold text-muted-foreground">Repeats</dt>
+              <dd className="font-bold text-foreground">Every {goal.recurrenceMonths} months</dd>
+            </div>
           )}
-        </AnimatePresence>
+          <div className="col-span-2 space-y-1">
+            <dt className="font-semibold text-muted-foreground">
+              This cycle: <span className={`font-extrabold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
+                {formatSensitive(pace.fundedThisCycle)}
+              </span>{' '}of {formatSensitive(pace.requiredPerCycle)}
+            </dt>
+            <dd>
+              <Meter
+                percent={cyclePct}
+                size="sm"
+                tone={cycleDone ? 'bg-emerald-500' : style.bar}
+                label={cycleDone
+                  ? "This cycle's share is set aside"
+                  : `${cyclePct.toFixed(0)}% of this cycle's share set aside`}
+              />
+            </dd>
+          </div>
+        </dl>
+      </DetailDisclosure>
+
+      <div className="mt-auto flex items-center gap-1.5 border-t border-border/30 pt-3">
+        <Button
+          variant="secondary"
+          size="icon"
+          className="shrink-0"
+          onClick={() => onTopUp(goal)}
+          disabled={isBusy || hideSensitive || pace.isFunded}
+          aria-label={`Add money to ${goal.name}`}
+          title={pace.isFunded ? 'This goal already has everything it needs' : `Move free ${fundingBucket.toLowerCase()} money into this goal`}
+        >
+          <Plus className="size-3.5" />
+        </Button>
+        <Button
+          variant="successGhost"
+          size="sm"
+          className="shrink-0"
+          onClick={() => onComplete(goal.id)}
+          disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
+          aria-label={goal.isRecurring ? `Complete this cycle for ${goal.name}` : `Mark ${goal.name} done`}
+          title={goal.earmarkedAmount <= 0
+            ? `Set aside some ${fundingBucket.toLowerCase()} money before marking this commitment done`
+            : goal.isRecurring
+              ? 'Spend the saved amount and roll the deadline forward'
+              : 'Spend the saved amount and mark this commitment done'}
+        >
+          <CheckCircle2 className="size-3.5 shrink-0" /> Done
+        </Button>
+        {/* One primary pair plus a menu, so releasing money and editing no longer have to replace
+            the money actions to fit at rail width. */}
+        <OverflowMenu
+          className="ml-auto"
+          entityLabel={goal.name}
+          disabled={isBusy}
+          items={[
+            {
+              label: 'Release money',
+              icon: Minus,
+              onSelect: () => onRelease(goal),
+              disabled: hideSensitive || goal.earmarkedAmount <= 0,
+              hint: hideSensitive
+                ? 'Unhide balances to release money'
+                : `Nothing is set aside in ${goal.name} yet`,
+            },
+            {
+              label: 'Edit',
+              icon: Edit2,
+              onSelect: () => onEdit(goal),
+              disabled: hideSensitive,
+              hint: 'Unhide balances to edit',
+            },
+            {
+              label: 'Delete',
+              icon: Trash2,
+              tone: 'danger',
+              onSelect: () => onDelete(goal.id),
+              disabled: hideSensitive,
+              hint: 'Unhide balances to delete',
+            },
+          ]}
+        />
       </div>
     </Card>
   )

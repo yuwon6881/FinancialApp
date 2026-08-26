@@ -86,9 +86,6 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>(null)
   const [detailHolding, setDetailHolding] = useState<InvestmentPortfolio['holdings'][number] | null>(null)
 
-  const referenceCurrency = portfolio?.referenceRate !== undefined && portfolio.referenceCurrency
-    ? { currency: portfolio.referenceCurrency, rate: portfolio.referenceRate }
-    : undefined
   const setupPortfolio = useMemo(() => portfolio ? {
     ...portfolio,
     accounts: applyOpsToList(portfolio.accounts, investmentOps, 'investmentAccount'),
@@ -310,7 +307,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
             allocation={portfolio.allocation}
             holdings={portfolio.holdings}
             instruments={portfolio.instruments}
-            reference={referenceCurrency}
+            fxRates={portfolio.planFxRates}
             masked={passiveMask}
             onNavigate={onNavigate}
           />

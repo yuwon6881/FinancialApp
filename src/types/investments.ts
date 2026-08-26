@@ -47,6 +47,7 @@ export interface InvestmentInstrument {
   isCustom: boolean
   isArchived: boolean
   allocationSleeve?: InvestmentAllocationSleeve
+  allocationOrder?: number
   canDelete?: boolean
   canArchive?: boolean
   archiveUnavailableReason?: string
@@ -133,6 +134,8 @@ export interface InvestmentPortfolio {
   /** Rate and code of the second currency the plan can be read in; supplied by the API, never assumed. */
   referenceRate?: number
   referenceCurrency?: string
+  /** Current native-to-app rates for currencies used by classified investments. */
+  planFxRates?: Array<{ currency: string; rateToAppCurrency: number; asOf: string; source: string }>
   summary: {
     growthLedgerBalance: number
     growthContributions?: number

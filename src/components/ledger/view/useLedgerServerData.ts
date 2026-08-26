@@ -9,13 +9,58 @@ import {
   parseTxTypes,
 } from '../../../lib/transactionFilters'
 import {
-  LEDGER_BUCKETS,
+  splitFilterSelections,
   parseAmountFilter,
   laterDate,
   earlierDate,
   type LedgerTxType,
   type LedgerReloadFilter,
 } from './ledgerViewTypes'
+
+interface ServerFetchCriteria {
+  page: number
+  search: string
+  searchMode?: TransactionSearchMode
+  filters: string[]
+  txType: LedgerTxType
+  reloadFilter?: LedgerReloadFilter
+  accountIds: string[]
+  startDate: string
+  endDate: string
+  minAmount: string
+  maxAmount: string
+  recurringFilter: TransactionLinkFilter
+  wishlistFilter: TransactionLinkFilter
+  sort: TransactionSort
+  pSize: number
+}
+
+/**
+ * Everything that changes which rows a server page should contain, as one comparable string.
+ *
+ * Arrays are joined rather than stringified so a reordered but equivalent selection does not read
+ * as a change. background is deliberately absent: it changes how a fetch is presented, not what it
+ * asks for, so a background revalidation must not be mistaken for new criteria.
+ */
+function serverFetchSignature(criteria: ServerFetchCriteria): string {
+  return JSON.stringify([
+    criteria.page,
+    criteria.pSize,
+    criteria.sort,
+    criteria.search,
+    criteria.searchMode ?? "contains",
+    [...criteria.filters].sort().join(","),
+    parseTxTypes(criteria.txType).slice().sort().join(","),
+    criteria.reloadFilter ?? "all",
+    [...criteria.accountIds].sort().join(","),
+    criteria.startDate,
+    criteria.endDate,
+    criteria.minAmount,
+    criteria.maxAmount,
+    criteria.recurringFilter,
+    criteria.wishlistFilter,
+  ])
+}
 
 export interface UseLedgerServerDataOptions {
   showAllCycles: boolean
@@ -150,7 +195,12 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
   const [serverError, setServerError] = useState<string | null>(null)
   const [recentlySyncedIds, setRecentlySyncedIds] = useState<Set<string>>(new Set())
 
-  const isInitialFetchDone = useRef(false)
+  // The signature of the criteria the newest fetch was issued for, written synchronously when the
+  // request goes out. The refetch effect compares against it, which both dedupes the initial fetch
+  // and — unlike the boolean flag this replaced — cannot swallow a filter applied while that first
+  // request is still in flight. Flipping a ref inside .finally() causes no re-render, so the
+  // effect never re-ran to notice the newer criteria.
+  const lastFetchSignatureRef = useRef<string | null>(null)
   const wasAllCyclesRef = useRef(false)
   const fetchSequenceRef = useRef(0)
   const fetchAbortRef = useRef<AbortController | null>(null)
@@ -202,6 +252,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
     background?: boolean
   }) => {
     if (!onFetchPagedTransactions) return
+    lastFetchSignatureRef.current = serverFetchSignature(opts)
     const sequence = ++fetchSequenceRef.current
     fetchAbortRef.current?.abort()
     const controller = new AbortController()
@@ -210,8 +261,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
     setServerIsReplacingRows(!opts.background)
     setServerError(null)
     try {
-      const buckets = opts.filters.filter(f => LEDGER_BUCKETS.includes(f))
-      const cats = opts.filters.filter(f => !LEDGER_BUCKETS.includes(f))
+      const { buckets, categories: cats } = splitFilterSelections(opts.filters)
       const result = await onFetchPagedTransactions({
         page: opts.page,
         pageSize: opts.pSize,
@@ -289,7 +339,6 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
       setAppliedAccountIds(initialAccountIds)
       setAppliedTxTypeFilter(initialTxType)
       setCurrentPage(1)
-      isInitialFetchDone.current = false
       runServerFetch({
         page: 1,
         search: initialSearch,
@@ -307,37 +356,36 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
         sort: sortOrder,
         pSize: allCyclesPageSize,
       })
-        .finally(() => {
-          isInitialFetchDone.current = true
-        })
     } else {
       wasAllCyclesRef.current = false
       setServerResult(null)
       setServerError(null)
       setServerIsReplacingRows(false)
-      isInitialFetchDone.current = false
+      lastFetchSignatureRef.current = null
     }
   }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingFilters, incomingTxType, incomingReloadFilter, incomingAccountIds, incomingSearch, incomingDate, incomingStartDate, incomingEndDate, incomingMinAmount, incomingMaxAmount, incomingRecurringFilter, incomingWishlistFilter, sortOrder, allCyclesPageSize, setPendingSearchTerm, setPendingFilters, setPendingStartDate, setPendingEndDate, setPendingMinAmount, setPendingMaxAmount, setPendingRecurringFilter, setPendingWishlistFilter, setPendingReloadFilter, setPendingAccountIds, setPendingTxTypeFilter, setAppliedSearch, setAppliedFilters, setAppliedStartDate, setAppliedEndDate, setAppliedMinAmount, setAppliedMaxAmount, setAppliedRecurringFilter, setAppliedWishlistFilter, setAppliedReloadFilter, setAppliedAccountIds, setAppliedTxTypeFilter, setCurrentPage])
 
   useEffect(() => {
-    if (showAllCycles && onFetchPagedTransactions && isInitialFetchDone.current) {
-      runServerFetch({
-        page: currentPage,
-        search: appliedSearch,
-        searchMode: appliedSearchMode,
-        filters: appliedFilters,
-        txType: appliedTxTypeFilter,
-        reloadFilter: appliedReloadFilter,
-        accountIds: appliedAccountIds,
-        startDate: appliedStartDate,
-        endDate: appliedEndDate,
-        minAmount: appliedMinAmount,
-        maxAmount: appliedMaxAmount,
-        recurringFilter: appliedRecurringFilter,
-        wishlistFilter: appliedWishlistFilter,
-        sort: sortOrder,
-        pSize: pageSize,
-      })
+    if (!showAllCycles || !onFetchPagedTransactions) return
+    const criteria = {
+      page: currentPage,
+      search: appliedSearch,
+      searchMode: appliedSearchMode,
+      filters: appliedFilters,
+      txType: appliedTxTypeFilter,
+      reloadFilter: appliedReloadFilter,
+      accountIds: appliedAccountIds,
+      startDate: appliedStartDate,
+      endDate: appliedEndDate,
+      minAmount: appliedMinAmount,
+      maxAmount: appliedMaxAmount,
+      recurringFilter: appliedRecurringFilter,
+      wishlistFilter: appliedWishlistFilter,
+      sort: sortOrder,
+      pSize: pageSize,
+    }
+    if (serverFetchSignature(criteria) !== lastFetchSignatureRef.current) {
+      runServerFetch(criteria)
     }
   }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, runServerFetch, appliedSearch, appliedSearchMode, appliedFilters, appliedTxTypeFilter, appliedReloadFilter, appliedAccountIds, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, allCyclesRange, sortOrder])
 
@@ -352,7 +400,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
         return next
       })
     }
-    if (showAllCycles && prevActiveSyncId.current !== null && activeSyncId === null && onFetchPagedTransactions && isInitialFetchDone.current) {
+    if (showAllCycles && prevActiveSyncId.current !== null && activeSyncId === null && onFetchPagedTransactions && wasAllCyclesRef.current) {
       runServerFetch({
         page: currentPage,
         search: appliedSearch,
@@ -378,7 +426,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
   // Re-fetch server result when deletingTxId transitions from non-null to null (delete completed)
   const prevDeletingTxId = useRef<string | null>(null)
   useEffect(() => {
-    if (showAllCycles && prevDeletingTxId.current !== null && deletingTxId === null && onFetchPagedTransactions && isInitialFetchDone.current) {
+    if (showAllCycles && prevDeletingTxId.current !== null && deletingTxId === null && onFetchPagedTransactions && wasAllCyclesRef.current) {
       runServerFetch({
         page: currentPage,
         search: appliedSearch,

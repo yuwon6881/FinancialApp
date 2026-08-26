@@ -5,7 +5,11 @@
 
 import type { Transaction, StabilityReloadFilter } from '../types'
 import { isReportTransfer, isReportableInflow, isReportableOutflow } from './transactionReportSemantics'
-import { isStabilityReloadDrawdown, normalizeReloadIntent } from './stabilityRecoveryReplay'
+import {
+  isIncomeLedgerCategory,
+  isStabilityReloadDrawdown,
+  normalizeReloadIntent,
+} from './stabilityRecoveryReplay'
 
 /** The ledger "bucket" pseudo-categories, distinct from user sub-categories. */
 export const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'] as const
@@ -59,17 +63,32 @@ export interface TransactionFilterCriteria {
  * user sub-categories. Duplicated inline throughout LedgerView.
  */
 export function splitFilterSelections(filters: string[]): { buckets: string[]; categories: string[] } {
-  const bucketSet = LEDGER_BUCKETS as readonly string[]
-  return {
-    buckets: filters.filter(f => bucketSet.includes(f)),
-    categories: filters.filter(f => !bucketSet.includes(f)),
+  const buckets: string[] = []
+  const categories: string[] = []
+  for (const filter of filters) {
+    const canonical = canonicalBucket(filter)
+    if (canonical) buckets.push(canonical)
+    else categories.push(filter)
   }
+  return { buckets, categories }
+}
+
+/**
+ * The canonically-cased bucket a filter chip names, or null when it names a sub-category.
+ *
+ * Matching is case-insensitive but the canonical spelling is what comes back, so the wire
+ * parameter, the chip label and the predicate all agree. A case-sensitive match silently demoted
+ * a deep-linked `?filters=stability` to a sub-category that matches nothing, while the summary
+ * chip still claimed a Stability filter was active.
+ */
+export function canonicalBucket(filter: string): string | null {
+  const normalized = filter.trim().toLowerCase()
+  return (LEDGER_BUCKETS as readonly string[])
+    .find(bucket => bucket.toLowerCase() === normalized) ?? null
 }
 
 /** Whether a transaction is income (plain Income bucket or an IncomeSplit). */
-export function isIncomeLedgerCategory(ledgerCategory: string | null | undefined): boolean {
-  return ledgerCategory === 'Income' || (ledgerCategory || '').startsWith('IncomeSplit:')
-}
+export { isIncomeLedgerCategory }
 
 function matchesLinkFilter(hasLink: boolean, filter: TransactionLinkFilter): boolean {
   if (filter === 'only') return hasLink
@@ -82,7 +101,8 @@ function matchesLinkFilter(hasLink: boolean, filter: TransactionLinkFilter): boo
  * Discarded rows, then applies all active ledger filters.
  */
 export function matchesTransactionFilters(t: Transaction, criteria: TransactionFilterCriteria): boolean {
-  if (t.ledgerCategory === 'Discarded') return false
+  // Case-insensitive, matching the server's reader-side exclusion and every writer-side check.
+  if ((t.ledgerCategory || '').toLowerCase() === 'discarded') return false
 
   const {
     search, searchMode = 'contains',
@@ -140,16 +160,21 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
     if (!matchesSearch) return false
   }
 
+  // Bucket and sub-category matching is case-insensitive on both sides, matching the server's
+  // lower()-on-both-sides SQL. A case-only difference used to return different rows in
+  // current-cycle mode than in all-cycles mode for the same filter.
   if (buckets && buckets.length > 0) {
+    const ledger = (t.ledgerCategory || '').toLowerCase()
     const matchesBucket = buckets.some(bucket => {
-      if (bucket === 'Income') return isIncomeLedgerCategory(t.ledgerCategory)
-      return t.ledgerCategory === bucket || (t.ledgerCategory || '').includes(bucket)
+      if (bucket.toLowerCase() === 'income') return isIncomeLedgerCategory(t.ledgerCategory)
+      return ledger.includes(bucket.toLowerCase())
     })
     if (!matchesBucket) return false
   }
 
   if (categories && categories.length > 0) {
-    const matchesSubcat = categories.some(subcat => t.category === subcat)
+    const subcategory = (t.category || '').toLowerCase()
+    const matchesSubcat = categories.some(subcat => subcategory === subcat.trim().toLowerCase())
     if (!matchesSubcat) return false
   }
 
@@ -169,8 +194,11 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
 
 /** Match anywhere by default, or require equality with one complete searchable field. */
 export function matchesTransactionText(value: string, search: string, mode: TransactionSearchMode): boolean {
-  const haystack = value.toLocaleLowerCase()
-  const needle = search.toLocaleLowerCase()
+  // Locale-invariant on both sides. toLocaleLowerCase folds differently per locale — in tr-TR an
+  // uppercase I becomes a dotless ı — so a needle and a haystack folded under different rules
+  // could fail to match text the server's ILIKE happily finds.
+  const haystack = value.toLowerCase()
+  const needle = search.toLowerCase()
   if (!needle) return true
   if (mode === 'contains') return haystack.includes(needle)
   return haystack === needle

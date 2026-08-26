@@ -6,6 +6,7 @@ import type { GoalPoolSummary } from '../../lib/savingsGoals'
 import { getPaceStatus } from '../../lib/savingsGoals'
 import { Button } from '../ui/Button'
 import { HorizontalRail } from '../ui/HorizontalRail'
+import { InfoHint } from '../ui/InfoHint'
 import { SavingsGoalCard } from './SavingsGoalCard'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 
@@ -120,8 +121,11 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
                 {pool.activeGoals.length + completedGoals.length}
               </span>
             )}
+            <InfoHint
+              label="a commitment"
+              text="Money held back from an existing bucket for something specific."
+            />
           </h3>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">Money held back from an existing bucket for something specific.</p>
         </div>
         <Button variant="secondary" size="sm" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5" onClick={onAddGoal} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a commitment' : undefined} aria-label="Add commitment">
           <Plus className="size-3" aria-hidden /> <span className="hidden sm:inline">Add commitment</span>

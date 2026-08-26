@@ -19,9 +19,14 @@ interface LedgerMoveSheetProps {
 export function LedgerMoveSheet({ transactions, cycleDay, isOpen, onClose, onMoved }: LedgerMoveSheetProps) {
   const app = useAppContext()
   const [targetDate, setTargetDate] = useState('')
+  const selectionKey = transactions.map(transaction => String(transaction.id)).join(',')
+  const sourceDate = transactions[0]?.date?.slice(0, 10)
   useEffect(() => {
-    if (isOpen) setTargetDate(transactions[0]?.date?.slice(0, 10) || new Date().toLocaleDateString('en-CA'))
-  }, [isOpen, transactions])
+    if (isOpen) setTargetDate(sourceDate || new Date().toLocaleDateString('en-CA'))
+    // Keyed on the selected ids, not the array identity: bulk selections rebuild that array on
+    // every render, which reset the destination date the user had just chosen and made Confirm
+    // silently move everything back to where it already was.
+  }, [isOpen, selectionKey, sourceDate])
   const sourceRange = useMemo(() => {
     const dates = transactions.map(transaction => transaction.date.slice(0, 10)).sort()
     if (dates.length === 0) return ''
@@ -49,7 +54,7 @@ export function LedgerMoveSheet({ transactions, cycleDay, isOpen, onClose, onMov
           // Full rows travel with the operation so undoing a move can re-insert a parent that has
           // already scrolled out of the visible cycle. The wire request reads `moves` alone.
           const snapshots = buildParentTransactionSnapshots(transactions)
-          if (!app.queueMutation?.('transaction', 'bulkMove', `move-${Date.now()}`, { moves, beforeSnapshots, transactions: snapshots })) return
+          if (!app.queueMutation?.('transaction', 'bulkMove', `move-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, { moves, beforeSnapshots, transactions: snapshots })) return
           onMoved?.()
           onClose()
         }}

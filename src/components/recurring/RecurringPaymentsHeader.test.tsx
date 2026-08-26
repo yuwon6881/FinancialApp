@@ -15,31 +15,35 @@ const baseProps = {
 }
 
 describe('RecurringPaymentsHeader', () => {
-  it('shows loan totals and removes the subscription action on the Loans tab', () => {
+  it('shows loan totals, yearly total, and removes the subscription action on the Loans tab', () => {
     render(
       <RecurringPaymentsHeader
         {...baseProps}
         activeView="loans"
         loanTotalOutstanding={1250}
+        loanTotalAnnual={3000}
         loanCount={2}
-        loanNextPaymentDate="2026-09-01"
       />,
     )
 
     expect(screen.getByRole('heading', { name: 'Loans' })).not.toBeNull()
     expect(screen.getByText('Total still owed')).not.toBeNull()
     expect(screen.getByText('$1250')).not.toBeNull()
+    expect(screen.getByText('Yearly Total')).not.toBeNull()
+    expect(screen.getByText('$3000')).not.toBeNull()
     expect(screen.getByText('Loans tracked')).not.toBeNull()
     expect(screen.getByText('2')).not.toBeNull()
     expect(screen.queryByRole('button', { name: /new subscription/i })).toBeNull()
-    expect(screen.getByText('Next payment')).not.toBeNull()
+    expect(screen.queryByText('Next payment')).toBeNull()
     expect(screen.getByRole('button', { name: /new loan/i })).not.toBeNull()
   })
 
-  it('says a loan next-payment date is unavailable rather than guessing one', () => {
-    render(<RecurringPaymentsHeader {...baseProps} activeView="loans" loanTotalOutstanding={null} loanCount={1} />)
+  it('says loan total and yearly total are unavailable rather than guessing', () => {
+    render(<RecurringPaymentsHeader {...baseProps} activeView="loans" loanTotalOutstanding={null} loanTotalAnnual={null} loanCount={1} />)
 
-    expect(screen.getByText('Next payment')).not.toBeNull()
+    expect(screen.queryByText('Next payment')).toBeNull()
+    expect(screen.getByText('Total still owed')).not.toBeNull()
+    expect(screen.getByText('Yearly Total')).not.toBeNull()
     expect(screen.getAllByText('Unavailable').length).toBe(2)
   })
 

@@ -104,29 +104,66 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     const target = e.target as HTMLElement | null
     if (!target?.closest?.('button, a, [role="button"], [data-swipe-action]')) return
     close()
+
   }, [close])
 
   // Mobile browsers hold back the synthesized `click` event for a defensive
   // cooldown after any drag gesture on the page, so tapping an action button
   // right after swiping can take an extra tap before the native click fires.
   // Pointer events aren't subject to that delay, so drive the tap ourselves.
-  const actionTapStart = useRef<{ x: number; y: number; target: HTMLElement } | null>(null)
+  const actionTapStart = useRef<{ x: number; y: number; target: HTMLElement | null } | null>(null)
 
   const handleActionPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType !== 'touch') return
     const target = (e.target as HTMLElement).closest('button, a, [role="button"], [data-swipe-action]') as HTMLElement | null
-    if (!target) return
-    e.preventDefault()
     actionTapStart.current = { x: e.clientX, y: e.clientY, target }
   }, [])
+
+  const handleActionPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const start = actionTapStart.current
+    if (!start || e.pointerType !== 'touch') return
+    const dx = e.clientX - start.x
+    const dy = e.clientY - start.y
+
+    // If dragging right horizontally, dynamically pull the card closed
+    if (dx > 5 && dx > Math.abs(dy)) {
+      stopSettle()
+      x.set(Math.min(0, -actionsWidth + dx))
+    }
+  }, [actionsWidth, stopSettle, x])
 
   const handleActionPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const start = actionTapStart.current
     actionTapStart.current = null
     if (!start || e.pointerType !== 'touch') return
-    if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) return
-    start.target.click()
-  }, [])
+
+    const dx = e.clientX - start.x
+    const dy = e.clientY - start.y
+
+    // If user swiped right by more than 25px, close the row
+    if (dx > 25 && dx > Math.abs(dy)) {
+      close()
+      return
+    }
+
+    // If user started swiping right but released early, bounce back to open
+    if (dx > 5 && dx > Math.abs(dy)) {
+      settle(-actionsWidth)
+      return
+    }
+
+    // Clean tap on an action button
+    if (Math.hypot(dx, dy) <= 10 && start.target) {
+      start.target.click()
+    }
+  }, [actionsWidth, close, settle])
+
+  const handleActionPointerCancel = useCallback(() => {
+    if (actionTapStart.current) {
+      actionTapStart.current = null
+      settle(-actionsWidth)
+    }
+  }, [actionsWidth, settle])
 
   // Keep only one row open at a time across the whole app.
   useEffect(() => {
@@ -209,11 +246,13 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         role="group"
         aria-label="Row actions"
         className="absolute inset-y-0 right-0 z-0 flex items-stretch [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]"
-        style={{ width: actionsWidth }}
+        style={{ width: actionsWidth, touchAction: 'pan-y' }}
         inert={!open}
         onClickCapture={closeForAction}
         onPointerDown={handleActionPointerDown}
+        onPointerMove={handleActionPointerMove}
         onPointerUp={handleActionPointerUp}
+        onPointerCancel={handleActionPointerCancel}
       >
         {actions}
       </div>

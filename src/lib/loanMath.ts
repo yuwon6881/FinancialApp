@@ -1,5 +1,6 @@
 import type { Loan, LoanPaymentSplit, LoanScheduleEntry } from '../types'
 import { roundMoney } from './money'
+import { compareIdsOrdinal } from './ordinalCompare'
 
 export { roundMoney } from './money'
 
@@ -126,9 +127,11 @@ export function replayLoan(
 
   const ordered = [...inputs]
     .filter(input => input.occurrenceDate >= loan.trackingStartDate)
-    .sort((left, right) => left.occurrenceDate.localeCompare(right.occurrenceDate)
-      || String(left.postedAt ?? '').localeCompare(String(right.postedAt ?? ''))
-      || String(left.transactionId ?? '').localeCompare(String(right.transactionId ?? '')))
+    // Ordinal throughout, matching LoanReplay's StringComparer.Ordinal tie-break: replay order
+    // decides how each payment splits between interest and principal.
+    .sort((left, right) => compareIdsOrdinal(left.occurrenceDate, right.occurrenceDate)
+      || compareIdsOrdinal(String(left.postedAt ?? ''), String(right.postedAt ?? ''))
+      || compareIdsOrdinal(String(left.transactionId ?? ''), String(right.transactionId ?? '')))
 
   const groupedInputs = new Map<string, LoanPaymentInput[]>()
   for (const input of ordered) {

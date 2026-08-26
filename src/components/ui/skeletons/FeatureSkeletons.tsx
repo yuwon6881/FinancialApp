@@ -65,15 +65,13 @@ export const RewardsPoolSkeleton: React.FC = () => (
   <Card data-testid="wishlist-pool-skeleton" className="space-y-3 p-3 sm:space-y-4 sm:p-5">
     <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-start sm:justify-between">
       <div className="space-y-2"><Skeleton className="h-3 w-24" /><Skeleton className="h-7 w-32" /></div>
-      <div className="flex items-center justify-end gap-2"><Skeleton className="h-8 w-20 rounded-xl" /><Skeleton className="h-8 w-32 rounded-xl" /></div>
+      <div className="flex items-center justify-end gap-2"><Skeleton className="h-8 w-32 rounded-xl" /><Skeleton className="size-8 rounded-lg" /></div>
     </div>
     <Skeleton className="h-2.5 w-full rounded-full" />
-    <div className="grid grid-cols-2 gap-2"><Skeleton className="h-10 w-full rounded-xl" /><Skeleton className="h-10 w-full rounded-xl" /></div>
-    <div className="space-y-2 rounded-xl border border-border/50 bg-muted/25 p-3">
-      <div className="flex justify-between gap-3"><Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-36" /></div>
-      <Skeleton className="h-1.5 w-full rounded-full" />
-      <Skeleton className="h-3 w-64 max-w-full" />
-    </div>
+    {/* One status line and one collapsed summary row. The legend tiles and the cycle meter moved
+        into the detail tail, so reserving their height here would shift the layout on hydrate. */}
+    <Skeleton className="h-3 w-56 max-w-full" />
+    <Skeleton className="h-9 w-full rounded-lg" />
   </Card>
 )
 
@@ -125,12 +123,13 @@ export const HorizontalRailSkeleton: React.FC<{ kind: 'commitments' | 'rewards';
         <div key={i} className="snap-start flex w-[calc(100vw-3.5rem)] shrink-0 flex-col gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-xs sm:w-[22rem]">
           <div className="space-y-1.5"><Skeleton className="h-4 w-32" /><Skeleton className="h-2.5 w-28" /></div>
           <div className="space-y-2"><div className="flex justify-between"><Skeleton className="h-5 w-24" /><Skeleton className="h-3 w-20" /></div><Skeleton className="h-1.5 w-full rounded-full" /></div>
-          {kind === 'commitments' ? (
-            <div className="space-y-2 rounded-xl border border-border/50 bg-muted/25 p-2.5"><div className="flex justify-between"><Skeleton className="h-2.5 w-20" /><Skeleton className="h-2.5 w-24" /></div><Skeleton className="h-1 w-full rounded-full" /><Skeleton className="h-3 w-36" /></div>
-          ) : <Skeleton className="h-3 w-36" />}
+          {/* One status line plus a collapsed detail summary, for both card kinds. */}
+          <Skeleton className="h-3 w-36" />
+          <Skeleton className="h-9 w-full rounded-lg" />
           <div className="mt-auto flex items-center gap-1.5 border-t border-border/30 pt-3">
-            {kind === 'commitments' ? <><Skeleton className="size-8 rounded-lg" /><Skeleton className="size-8 rounded-lg" /></> : <Skeleton className="h-8 w-20 rounded-lg" />}
-            {kind === 'commitments' ? <Skeleton className="size-8 rounded-lg" /> : <Skeleton className="size-8 rounded-lg" />}
+            {kind === 'commitments'
+              ? <><Skeleton className="size-8 rounded-lg" /><Skeleton className="h-8 w-16 rounded-lg" /></>
+              : <Skeleton className="h-8 w-20 rounded-lg" />}
             <Skeleton className="ml-auto size-8 rounded-lg" />
           </div>
         </div>
@@ -138,6 +137,34 @@ export const HorizontalRailSkeleton: React.FC<{ kind: 'commitments' | 'rewards';
       </div>
       <Skeleton className="absolute left-2 top-1/2 size-8 -translate-y-1/2 rounded-full" />
       <Skeleton className="absolute right-2 top-1/2 size-8 -translate-y-1/2 rounded-full" />
+    </div>
+  </section>
+)
+
+export const LoanCardSkeleton: React.FC = () => (
+  <div className="space-y-3 rounded-2xl border border-border/60 bg-card/85 p-4 shadow-sm sm:p-5">
+    <div className="space-y-1.5"><Skeleton className="h-5 w-40" /><Skeleton className="h-3 w-32" /></div>
+    <div className="space-y-2">
+      <Skeleton className="h-3 w-20" />
+      <Skeleton className="h-8 w-40" />
+      <Skeleton className="h-1.5 w-full rounded-full" />
+      <Skeleton className="h-3 w-56 max-w-full" />
+      <Skeleton className="h-3 w-44" />
+    </div>
+    <Skeleton className="h-11 w-full rounded-xl" />
+    <Skeleton className="h-11 w-full rounded-xl" />
+    <div className="flex items-center justify-between gap-2 border-t border-border/30 pt-4">
+      <Skeleton className="h-9 w-32 rounded-lg" />
+      <Skeleton className="h-9 w-24 rounded-lg" />
+    </div>
+  </div>
+)
+
+export const LoansSectionSkeleton: React.FC<{ cards?: number }> = ({ cards = 3 }) => (
+  <section className={`${panelClass} space-y-4 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/92 sm:p-5`}>
+    <Skeleton className="h-4 w-32" />
+    <div className="space-y-3">
+      {Array.from({ length: cards }, (_, index) => <LoanCardSkeleton key={index} />)}
     </div>
   </section>
 )

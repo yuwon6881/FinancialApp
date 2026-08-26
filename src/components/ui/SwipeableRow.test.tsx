@@ -123,4 +123,22 @@ describe('SwipeableRow closed-state opacity', () => {
     await waitFor(() => expect(disclosure.getAttribute('aria-expanded')).toBe('false'))
     expect(screen.getByText('Delete').closest('[inert]')).not.toBeNull()
   })
+
+  it('closes when swiping right on the exposed action buttons', async () => {
+    renderRow()
+    const disclosure = screen.getByRole('button', { name: 'Show row actions' })
+    fireEvent.click(disclosure)
+    await waitFor(() => expect(disclosure.getAttribute('aria-expanded')).toBe('true'))
+
+    const deleteBtn = screen.getByRole('button', { name: 'Delete' })
+    const drawer = deleteBtn.closest('[role="group"]')!
+
+    // User touches the action button and swipes right
+    fireEvent.pointerDown(drawer, { pointerType: 'touch', clientX: 200, clientY: 50 })
+    fireEvent.pointerMove(drawer, { pointerType: 'touch', clientX: 240, clientY: 50 })
+    fireEvent.pointerUp(drawer, { pointerType: 'touch', clientX: 250, clientY: 50 })
+
+    await waitFor(() => expect(disclosure.getAttribute('aria-expanded')).toBe('false'))
+    expect(screen.getByText('Delete').closest('[inert]')).not.toBeNull()
+  })
 })

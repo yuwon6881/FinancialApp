@@ -86,7 +86,7 @@ describe('CategoryLimitsCard', () => {
   })
 
   it('copies the recent per-cycle average into a spending guide', () => {
-    render(
+    const { rerender } = render(
       <CategoryLimitsCard
         categories={[{ id: 'cat-food', name: 'Food', cycleLimit: 500 }]}
         currency="MYR"
@@ -98,5 +98,28 @@ describe('CategoryLimitsCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Use recent average/ }))
     expect((screen.getByRole('textbox', { name: /^Food cycle spending guide/ }) as HTMLInputElement).value).toBe('400.00')
+
+    rerender(
+      <CategoryLimitsCard
+        categories={[{ id: 'cat-food', name: 'Food', cycleLimit: 500 }]}
+        currency="MYR"
+        hideSensitive={false}
+        last3CategoryBreakdown={[{ category: 'Food', amount: 1200 }]}
+        activeSyncIds={[]}
+        onUpdate={vi.fn()}
+      />,
+    )
+    expect((screen.getByRole('textbox', { name: /^Food cycle spending guide/ }) as HTMLInputElement).value).toBe('400.00')
+  })
+
+  it('keeps a newly enabled guide open across parent rerenders', () => {
+    const props = { currency: 'MYR', hideSensitive: false, onUpdate: vi.fn() }
+    const { rerender } = render(<CategoryLimitsCard {...props} categories={[{ id: 'cat-food', name: 'Food', cycleLimit: null }]} />)
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Track Food cycle spending' }))
+    rerender(<CategoryLimitsCard {...props} categories={[{ id: 'cat-food', name: 'Food', cycleLimit: null }]} activeSyncIds={[]} />)
+
+    expect(screen.getByRole('switch', { name: 'Track Food cycle spending' }).getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByRole('textbox', { name: /^Food cycle spending guide/ })).toBeTruthy()
   })
 })

@@ -1,8 +1,12 @@
 import React from 'react'
-import { AlertTriangle, CalendarClock, CheckCircle2, History, Loader2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, History, Loader2 } from 'lucide-react'
 import { CommitmentIcon } from '../semanticIcons'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
+import { DetailDisclosure } from '../ui/DetailDisclosure'
+import { Meter } from '../ui/Meter'
+import { OverflowMenu } from '../ui/OverflowMenu'
+import { useDetailDisclosure } from '../../lib/useDetailDisclosure'
 import type { GoalPoolSummary } from '../../lib/savingsGoals'
 import type { SavingsGoalFundingBucket } from '../../types'
 import { getCategoryChartColor } from '../../lib/categoryColors'
@@ -64,18 +68,13 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   // goal cards that still claim money the pool no longer holds, with nothing connecting the two.
   const overCommitted = Math.round((totalEarmarked - bucketBalance) * 100) / 100
 
-  // This cycle's share, as its own meter. The pool bar above answers "how is the balance divided";
-  // this answers "has this cycle's contribution actually been made" — two different questions that
-  // a single line of text underneath was conflating.
-  //
-  // With a single commitment the panel is pure duplication: every figure in it is already on that
-  // goal's own card a short scroll below, down to the wording, so the page said the same thing twice
-  // and buried the difference between "the pool" and "this goal" in the repetition. It earns its
-  // space only once it is summing more than one commitment.
+  // The per-cycle figures live in the detail tail now. They used to sit in an always-open inset
+  // here *and* on every commitment card, alongside the Committed legend tile — three renderings of
+  // the same number, which with a single commitment was most of the screen.
   const cycleTarget = Math.max(requiredPerCycleTotal, fundedThisCycleTotal)
   const cyclePct = cycleTarget > 0 ? Math.min(100, (fundedThisCycleTotal / cycleTarget) * 100) : 0
   const cycleDone = outstandingThisCycleTotal <= 0
-  const showCyclePanel = summary.activeGoals.length > 1 && cycleTarget > 0
+  const detail = useDetailDisclosure()
 
   // Shown while anything is still unfinished, so it does not vanish the moment a cycle is paced --
   // but a paced cycle reports as a quiet pill rather than a disabled primary button: a filled button
@@ -110,11 +109,6 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
           </div>
         </div>
         <div className="flex items-center justify-end gap-2 sm:flex-wrap">
-          {onViewRewardsHistory && (
-            <Button variant="ghost" size="sm" onClick={onViewRewardsHistory}>
-              <History className="size-3" /> History
-            </Button>
-          )}
           {showFundAction && (cycleDone && !isFunding ? (
             <span className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-500">
               <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Funded this cycle
@@ -131,6 +125,12 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
               {isFunding ? 'Setting aside…' : <>Set aside {formatSensitive(fundableNow)}</>}
             </Button>
           ))}
+          {onViewRewardsHistory && (
+            <OverflowMenu
+              entityLabel={`your ${bucketLabel.toLowerCase()} pool`}
+              items={[{ label: 'View history', icon: History, onSelect: onViewRewardsHistory }]}
+            />
+          )}
         </div>
       </div>
 
@@ -162,92 +162,97 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         ))}
       </div>
 
-      <div className="grid max-w-2xl grid-cols-2 gap-3 text-xs font-semibold">
-        {(activeView === 'commitments'
-          ? [
-              { key: 'committed', label: 'Committed', amount: totalEarmarked, color: committedColor },
-              { key: 'free', label: 'Free to spend', amount: unassigned, color: freeColor },
-            ]
-          : [
-              { key: 'free', label: 'Free to spend', amount: unassigned, color: freeColor },
-              { key: 'committed', label: 'Committed', amount: totalEarmarked, color: committedColor },
-            ]
-        ).map(item => (
-          <span key={item.key} className="flex min-w-0 items-center gap-1.5 rounded-lg border border-border/60 bg-muted/35 px-2.5 py-2">
-            <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} aria-hidden />
-            <span className="min-w-0 truncate text-muted-foreground">{item.label}</span>
-            <span className="ml-auto shrink-0 font-extrabold text-foreground">{formatSensitive(item.amount)}</span>
+      {/* One status line, worst news first: an over-commitment or an unreachable pace matters more
+          than this cycle's bookkeeping, so it takes the line rather than sitting below it. */}
+      {overCommitted > 0 ? (
+        <p className="flex items-start gap-2 text-xs font-bold text-destructive">
+          <AlertTriangle className="size-3.5 shrink-0 mt-px" aria-hidden />
+          <span>Commitments claim {formatSensitive(overCommitted)} more than your {bucketLabel.toLowerCase()} holds</span>
+        </p>
+      ) : paceShortfall > 0 ? (
+        <p className="flex items-start gap-2 text-xs font-bold text-amber-500">
+          <AlertTriangle className="size-3.5 shrink-0 mt-px" aria-hidden />
+          <span>
+            Commitments need {formatSensitive(requiredPerCycleTotal)} a cycle —{' '}
+            {formatSensitive(paceShortfall)} over budget
           </span>
-        ))}
-      </div>
+        </p>
+      ) : !hasGoals ? (
+        <p className="text-xs font-semibold text-muted-foreground">No commitments yet</p>
+      ) : cycleDone ? (
+        <p className="flex items-center gap-1.5 text-xs font-bold text-emerald-500">
+          <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Funded this cycle
+        </p>
+      ) : (
+        <p className="text-xs font-bold text-muted-foreground">
+          <span className="text-amber-500">{formatSensitive(outstandingThisCycleTotal)}</span>
+          {' '}still to set aside across {summary.activeGoals.length}{' '}
+          {summary.activeGoals.length === 1 ? 'commitment' : 'commitments'}
+        </p>
+      )}
 
-      {/* This cycle's share gets its own inset panel rather than a caption, so "the balance is
-          split like this" and "this cycle is/isn't paid up" stop competing for the same line. */}
-      {showCyclePanel && (
-        <div className="rounded-xl border border-border/50 bg-muted/25 p-3 space-y-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              {cycleDone
-                ? <CheckCircle2 className="size-3 text-emerald-500" aria-hidden />
-                : <CalendarClock className="size-3" style={{ color: committedColor }} aria-hidden />}
-              This cycle
+      <DetailDisclosure
+        label="Details"
+        open={detail.isOpen}
+        onOpenChange={detail.setOpen}
+        expandedFrom="lg"
+        bodyClassName="space-y-3"
+      >
+        {/* The one place the Committed figure is spelled out. Keeping it here and nowhere else is
+            what stops the pool, the legend and the commitment card from all repeating it. */}
+        <div className="grid max-w-2xl grid-cols-2 gap-3 text-xs font-semibold">
+          {(activeView === 'commitments'
+            ? [
+                { key: 'committed', label: 'Committed', amount: totalEarmarked, color: committedColor },
+                { key: 'free', label: 'Free to spend', amount: unassigned, color: freeColor },
+              ]
+            : [
+                { key: 'free', label: 'Free to spend', amount: unassigned, color: freeColor },
+                { key: 'committed', label: 'Committed', amount: totalEarmarked, color: committedColor },
+              ]
+          ).map(item => (
+            <span key={item.key} className="flex min-w-0 items-center gap-1.5 rounded-lg border border-border/60 bg-muted/35 px-2.5 py-2">
+              <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} aria-hidden />
+              <span className="min-w-0 truncate text-muted-foreground">{item.label}</span>
+              <span className="ml-auto shrink-0 font-extrabold text-foreground">{formatSensitive(item.amount)}</span>
             </span>
-            <span className="text-xs font-semibold text-muted-foreground">
+          ))}
+        </div>
+
+        {cycleTarget > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold text-muted-foreground">
+              This cycle:{' '}
               <span className={`font-extrabold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
                 {formatSensitive(fundedThisCycleTotal)}
               </span>
               {' '}of {formatSensitive(requiredPerCycleTotal)} set aside
-            </span>
-          </div>
-
-          <div
-            className="w-full h-1.5 rounded-full bg-muted overflow-hidden"
-            role="img"
-            aria-label={cycleDone
-              ? "Every commitment has its share for this cycle"
-              : `${cyclePct.toFixed(0)}% of this cycle's commitments set aside`}
-          >
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${cycleDone ? 'bg-emerald-500' : ''}`}
-              style={{ width: `${cyclePct}%`, ...(cycleDone ? {} : { backgroundColor: committedColor }) }}
+            </p>
+            <Meter
+              percent={cyclePct}
+              color={cycleDone ? undefined : committedColor}
+              tone={cycleDone ? 'bg-emerald-500' : undefined}
+              label={cycleDone
+                ? 'Every commitment has its share for this cycle'
+                : `${cyclePct.toFixed(0)}% of this cycle's commitments set aside`}
             />
           </div>
+        )}
 
-          <p className={`text-xs font-bold ${cycleDone ? 'text-emerald-500' : 'text-muted-foreground'}`}>
-            {cycleDone
-              ? 'Every commitment has its share for this cycle.'
-              : <>
-                  <span className="text-amber-500">{formatSensitive(outstandingThisCycleTotal)}</span>
-                  {' '}still to set aside across {summary.activeGoals.length}{' '}
-                  {summary.activeGoals.length === 1 ? 'commitment' : 'commitments'}
-                </>}
-          </p>
-        </div>
-      )}
-
-      {overCommitted > 0 && (
-        <p className="flex items-start gap-2 text-xs font-semibold text-destructive">
-          <AlertTriangle className="size-3.5 shrink-0 mt-px" />
-          <span>
+        {overCommitted > 0 && (
+          <p className="text-xs font-semibold text-destructive">
             {bucket === 'Rewards'
-              ? <>Your commitments claim {formatSensitive(overCommitted)} more than your rewards hold. Something has been spent from Rewards since it was set aside — release money from a commitment, or let this cycle's rewards money refill the pool.</>
-              : <>Your commitments claim {formatSensitive(overCommitted)} more than your {bucketLabel.toLowerCase()} pool holds. Something has been spent from {bucketLabel} since it was set aside — release money from a commitment, or let this cycle's {bucketLabel.toLowerCase()} money refill the pool.</>}
-          </span>
-        </p>
-      )}
+              ? <>Something has been spent from Rewards since it was set aside — release money from a commitment, or let this cycle's rewards money refill the pool.</>
+              : <>Something has been spent from {bucketLabel} since it was set aside — release money from a commitment, or let this cycle's {bucketLabel.toLowerCase()} money refill the pool.</>}
+          </p>
+        )}
 
-      {/* The budget-level warning still wins over the panel above, because an unreachable deadline
-          matters more than this cycle's bookkeeping. */}
-      {paceShortfall > 0 ? (
-        <p className="flex items-start gap-2 text-xs font-semibold text-amber-500">
-          <AlertTriangle className="size-3.5 shrink-0 mt-px" />
-          <span>
-            Your commitments need {formatSensitive(summary.requiredPerCycleTotal)} a cycle —{' '}
-            {formatSensitive(paceShortfall)} above your {bucketLabel.toLowerCase()} budget. Extend a deadline, lower a
-            target, or raise your {bucketLabel} share.
-          </span>
-        </p>
-      ) : null}
+        {paceShortfall > 0 && (
+          <p className="text-xs font-semibold text-amber-500">
+            Extend a deadline, lower a target, or raise your {bucketLabel} share.
+          </p>
+        )}
+      </DetailDisclosure>
     </Card>
   )
 }

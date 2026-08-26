@@ -67,15 +67,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   } = options
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(() => {
-    if (highlightedTxId) {
-      const index = transactions.findIndex(t => t.id === highlightedTxId)
-      if (index !== -1) {
-        return Math.floor(index / 10) + 1
-      }
-    }
-    return 1
-  })
+  const [currentPage, setCurrentPage] = useState(1)
   const [currentCyclePageSize, setCurrentCyclePageSize] = useState(preferredPageSize ?? 10)
   const [allCyclesPageSize, setAllCyclesPageSize] = useState(10)
   const pageSize = showAllCycles ? allCyclesPageSize : currentCyclePageSize
@@ -275,12 +267,16 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   // Page selection for highlighted transaction (if target is on a different page)
   useEffect(() => {
     if (!highlightedTxId) return
+    // Client-side mode only. filteredTransactions holds the current cycle, so in all-cycles mode
+    // its index says nothing about which server page the row is on — computing one sent the user
+    // to an arbitrary page that could not contain the highlight.
+    if (showAllCycles) return
     const index = filteredTransactions.findIndex(t => t.id === highlightedTxId)
     if (index !== -1) {
       const targetPage = Math.floor(index / pageSize) + 1
       setCurrentPage(prev => (prev !== targetPage ? targetPage : prev))
     }
-  }, [highlightedTxId, filteredTransactions, pageSize])
+  }, [highlightedTxId, filteredTransactions, pageSize, showAllCycles])
 
   useHighlightedElement(highlightedTxId ?? null, onClearHighlightedTx, {
     ready: !isSwitchingCycle,

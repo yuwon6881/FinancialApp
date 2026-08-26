@@ -47,6 +47,9 @@ export function SelectionToolbar({
     if (checkboxRef.current) checkboxRef.current.indeterminate = someVisibleSelected
   }, [someVisibleSelected])
 
+  // Callers cap additions at the limit, so reaching it is the reportable state; exceeding it
+  // stays an error only for a caller that does not cap.
+  const atLimit = selectedCount >= selectionLimit
   const exceedsLimit = selectedCount > selectionLimit
   const hasSelection = selectedCount > 0
 
@@ -70,7 +73,7 @@ export function SelectionToolbar({
           </>
         )}
         <p className={`truncate text-[10px] font-semibold sm:text-xs ${exceedsLimit ? 'text-destructive' : hasSelection ? 'text-accent-ink' : 'text-muted-foreground'}`} aria-live="polite">
-          {hasSelection ? `${selectedCount} ${selectedLabel}${exceedsLimit ? ` · max ${selectionLimit}` : ''}` : `${itemCount} on this page`}
+          {hasSelection ? `${selectedCount} ${selectedLabel}${atLimit ? ` · max ${selectionLimit}` : ''}` : `${itemCount} on this page`}
         </p>
       </div>
 

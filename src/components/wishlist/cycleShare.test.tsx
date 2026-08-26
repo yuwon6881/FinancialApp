@@ -8,6 +8,26 @@ import { SavingsGoalCard } from './SavingsGoalCard'
 
 // The cycle share is the number a user acts on ("do I owe anything right now?"), so it is asserted
 // as a labelled meter rather than trusted to a caption that is easy to lose in a redesign.
+//
+// Secondary figures now live behind a "Details" tail, closed by default at phone widths. Tests that
+// assert one open it first; tests that assert the visible summary deliberately do not.
+
+const openDetails = (index = 0) => {
+  fireEvent.click(screen.getAllByText('Details')[index])
+}
+
+/**
+ * Matches only what a user can actually read right now.
+ *
+ * jsdom applies no default stylesheet, so the children of a *closed* native <details> are still in
+ * the document and still found by a plain text query. Filtering them out is the only way to assert
+ * what the collapsed card shows.
+ */
+const visible = (matcher: Parameters<typeof screen.queryAllByText>[0]) =>
+  screen.queryAllByText(matcher).filter(node => {
+    const details = node.closest('details')
+    return details === null || details.open
+  })
 
 const goal: SavingsGoal = {
   id: 7,
@@ -39,6 +59,21 @@ const pace = (over: Partial<GoalPace> = {}): GoalPace => ({
 // goal every figure in it already appears verbatim on that goal's card, so the panel is suppressed
 // and there would be nothing to assert against.
 const secondGoal: SavingsGoal = { ...goal, id: 8, name: 'Laptop' }
+
+// jsdom has no matchMedia, so useIsMobile reports desktop and the tails start open. Forcing the
+// mobile branch is what makes "collapsed by default" assertable at all.
+const asMobile = () => {
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia
+}
 
 const summary = (over: Partial<GoalPoolSummary> = {}): GoalPoolSummary => ({
   rewardsBalance: 550.4,
@@ -149,34 +184,92 @@ describe('RewardsPoolBar cycle share', () => {
 
   it('shows funded against required, and a full meter, once the cycle is paced', () => {
     renderBar()
-    expect(screen.getByText('This cycle')).toBeTruthy()
+    openDetails()
     expect(screen.getByText(/of RM 175\.00 set aside/)).toBeTruthy()
-    const meter = screen.getByLabelText('Every commitment has its share for this cycle')
+    const meter = screen.getByRole('progressbar', { name: 'Every commitment has its share for this cycle' })
     expect((meter.firstElementChild as HTMLElement).style.width).toBe('100%')
   })
 
   it('reports what is still owed and part-fills the meter when the cycle is short', () => {
     renderBar({ fundedThisCycleTotal: 70, outstandingThisCycleTotal: 105 })
-    const meter = screen.getByLabelText("40% of this cycle's commitments set aside")
-    expect((meter.firstElementChild as HTMLElement).style.width).toBe('40%')
+    // The shortfall is the visible status line; the meter behind it is a detail.
     expect(screen.getByText(/still to set aside across 2 commitments/)).toBeTruthy()
+    openDetails()
+    const meter = screen.getByRole('progressbar', { name: "40% of this cycle's commitments set aside" })
+    expect((meter.firstElementChild as HTMLElement).style.width).toBe('40%')
   })
 
-  it('drops the panel entirely when there is nothing committed', () => {
+  it('says there is nothing committed instead of rendering an empty cycle block', () => {
     renderBar({ activeGoals: [], paces: new Map(), requiredPerCycleTotal: 0, fundedThisCycleTotal: 0 })
-    expect(screen.queryByText('This cycle')).toBeNull()
+    expect(screen.getByText('No commitments yet')).toBeTruthy()
+    openDetails()
+    expect(screen.queryByText(/set aside/)).toBeNull()
   })
 
-  it('drops the panel for a single commitment, whose own card already carries every figure in it', () => {
-    renderBar({ activeGoals: [goal], paces: new Map([[7, pace()]]) })
-    expect(screen.queryByText('This cycle')).toBeNull()
-    expect(screen.queryByText(/of RM 175\.00 set aside/)).toBeNull()
+  // The pool panel, the Committed legend tile and the commitment card each used to spell out the
+  // same figure, so with one commitment the page said it three times. The old fix suppressed the
+  // pool panel for a single goal; each figure now has one home, so assert that directly.
+  it('states each figure once when the pool and its only commitment are on screen together', () => {
+    asMobile()
+    // A per-cycle figure distinct from the earmarked total, so "RM 60.00 appears nowhere" is a
+    // statement about the cycle figures alone and cannot be satisfied by the card's headline.
+    const cyclePace = pace({ requiredPerCycle: 60, fundedThisCycle: 60 })
+    const single = summary({
+      activeGoals: [goal],
+      paces: new Map([[7, cyclePace]]),
+      requiredPerCycleTotal: 60,
+      fundedThisCycleTotal: 60,
+    })
+    render(
+      <>
+        <RewardsPoolBar
+          summary={single}
+          expectedInflow={379.2}
+          formatSensitive={money}
+          hideSensitive={false}
+          isOffline={false}
+          onFundCycle={() => undefined}
+        />
+        <SavingsGoalCard
+          goal={goal}
+          pace={cyclePace}
+          status="onPace"
+          formatSensitive={money}
+          hideSensitive={false}
+          isSyncing={false}
+          isDeleting={false}
+          onEdit={() => undefined}
+          onDelete={() => undefined}
+          onComplete={() => undefined}
+          onTopUp={() => undefined}
+          onRelease={() => undefined}
+        />
+      </>,
+    )
+
+    // Both tails are collapsed, so no per-cycle figure is on screen and the only thing said about
+    // this cycle is the card's one status line. Before the restructure this same tree rendered the
+    // per-cycle amount three times: the pool inset, the Committed tile and the card inset.
+    expect(visible(money(60))).toHaveLength(0)
+    expect(visible(/of RM 60\.00 set aside/)).toHaveLength(0)
+    expect(visible('Committed')).toHaveLength(0)
+    expect(visible('Done for this cycle')).toHaveLength(1)
+
+    // The earmarked total is the card's headline, and belongs to the card alone.
+    expect(visible(money(175))).toHaveLength(1)
+
+    // Every figure stays reachable, exactly once, when the tails are opened.
+    openDetails(0)
+    openDetails(1)
+    expect(visible('Committed')).toHaveLength(1)
+    expect(visible(/of RM 60\.00 set aside/)).toHaveLength(1)
   })
 
-  it('reports a paced cycle as a status pill, never as a disabled button', () => {
+  it('reports a paced cycle as a status line, never as a disabled button', () => {
     renderBar()
-    const funded = screen.getByText('Funded this cycle')
-    expect(funded.closest('button')).toBeNull()
+    const funded = screen.getAllByText('Funded this cycle')
+    expect(funded.length).toBeGreaterThan(0)
+    expect(funded.every(node => node.closest('button') === null)).toBe(true)
     expect(screen.queryByRole('button', { name: /set aside/i })).toBeNull()
   })
 
@@ -193,49 +286,63 @@ describe('RewardsPoolBar cycle share', () => {
     expect(screen.getByRole('button', { name: /Set aside RM 40\.00/ })).toBeTruthy()
   })
 
-  it('says so when the earmarks outrun the balance, instead of only showing nothing free', () => {
+  it('leads with over-commitment and keeps the guidance in the detail tail', () => {
     renderBar({ rewardsBalance: 120, totalEarmarked: 175, unassigned: 0 })
-    expect(screen.getByText(/claim RM 55\.00 more than your rewards hold/)).toBeTruthy()
+    expect(screen.getByText(/claim RM 55\.00 more than your rewards holds/)).toBeTruthy()
+
+    openDetails()
+    expect(screen.getByText(/release money from a commitment/)).toBeTruthy()
+  })
+
+  it('lets an unreachable pace outrank the cycle bookkeeping on the status line', () => {
+    renderBar({ paceShortfall: 60, fundedThisCycleTotal: 70, outstandingThisCycleTotal: 105 })
+    expect(screen.getByText(/RM 60\.00 over budget/)).toBeTruthy()
+    expect(screen.queryByText(/still to set aside across/)).toBeNull()
   })
 
   it('stays quiet about over-commitment while the balance covers the earmarks', () => {
     renderBar()
-    expect(screen.queryByText(/more than your rewards hold/)).toBeNull()
+    expect(screen.queryByText(/more than your rewards holds/)).toBeNull()
   })
 })
 
 describe('SavingsGoalCard cycle share', () => {
-  it('gives the cycle its own meter separate from the target bar', () => {
+  it('leads with what this cycle still owes and keeps the meter in the tail', () => {
     renderCard({ fundedThisCycle: 70, outstandingThisCycle: 105 })
-    expect(screen.getByText('This cycle')).toBeTruthy()
-    expect(screen.getByText(/of RM 175\.00/)).toBeTruthy()
-    const meter = screen.getByLabelText("40% of this cycle's share set aside")
+    expect(screen.getByText(/RM 105\.00 still to set aside this cycle/)).toBeTruthy()
+
+    openDetails()
+    const meter = screen.getByRole('progressbar', { name: "40% of this cycle's share set aside" })
     expect((meter.firstElementChild as HTMLElement).style.width).toBe('40%')
-    expect(screen.getByText(/RM 105\.00 still to set aside/)).toBeTruthy()
+    expect(screen.getByText(/of RM 175\.00/)).toBeTruthy()
   })
 
-  it('marks a paced cycle done', () => {
+  it('marks a paced cycle done on the always-visible status line', () => {
     renderCard()
-    expect(screen.getByLabelText("This cycle's share is set aside")).toBeTruthy()
+    // Asserted without opening the tail: this is the one line the card must always show.
     expect(screen.getByText('Done for this cycle')).toBeTruthy()
+    openDetails()
+    expect(screen.getByRole('progressbar', { name: "This cycle's share is set aside" })).toBeTruthy()
   })
 
-  it('replaces the meter with a ready chip once the goal is fully funded', () => {
+  it('says the commitment is ready once it is fully funded', () => {
     renderCard({ isFunded: true, remaining: 0 })
     expect(screen.getByText('Ready to use')).toBeTruthy()
-    expect(screen.queryByText('This cycle')).toBeNull()
+    expect(screen.queryByText(/still to set aside/)).toBeNull()
   })
 
-  it('animates into compact management actions without inheriting completion styles', async () => {
+  // The money actions used to be replaced by Edit/Delete, because six controls would not fit at
+  // rail width. They now coexist: the primary pair stays put and the rest sit in a menu.
+  it('keeps the money actions available while offering edit and delete in a menu', async () => {
     renderCard()
-    const completeButton = screen.getByRole('button', { name: 'Complete this cycle for Car Maintenance' })
+    const topUp = screen.getByRole('button', { name: 'Add money to Car Maintenance' })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit or delete Car Maintenance' }))
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Car Maintenance' }))
 
-    const deleteButton = await screen.findByRole('button', { name: 'Delete Car Maintenance' })
-    expect(deleteButton).not.toBe(completeButton)
-    expect(deleteButton.className).toContain('shrink-0')
-    expect(deleteButton.className).not.toContain('flex-1')
+    expect(await screen.findByRole('menuitem', { name: 'Delete' })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Release money' })).toBeTruthy()
+    expect(topUp).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Complete this cycle for Car Maintenance' })).toBeTruthy()
   })
 })
 
@@ -251,15 +358,40 @@ describe('RewardCard management actions', () => {
     expect(screen.queryByText(/leaves your commitments/)).toBeNull()
   })
 
-  it('animates into compact management actions without inheriting the claim style', async () => {
+  it('keeps Claim in place while offering the rest in a menu', async () => {
     renderRewardCard()
     const claimButton = screen.getByRole('button', { name: 'Claim' })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit or delete Noise-cancelling headphones' }))
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Noise-cancelling headphones' }))
 
-    const editButton = await screen.findByRole('button', { name: 'Edit Noise-cancelling headphones' })
-    expect(editButton).not.toBe(claimButton)
-    expect(editButton.className).toContain('shrink-0')
-    expect(editButton.className).not.toContain('flex-1')
+    expect(await screen.findByRole('menuitem', { name: 'Edit' })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Save toward this next' })).toBeTruthy()
+    expect(claimButton).toBeTruthy()
+  })
+
+  it('keeps masked figures out of the detail tail and the menu', () => {
+    render(
+      <RewardCard
+        item={reward}
+        isFocused={false}
+        claimableBalance={100}
+        freeAfterGoalPace={100}
+        formatSensitive={() => '......'}
+        hideSensitive
+        isSyncing={false}
+        isDeleting={false}
+        onClaim={() => undefined}
+        onFocus={() => undefined}
+        onEdit={() => undefined}
+        onDelete={() => undefined}
+      />,
+    )
+    openDetails()
+
+    expect(screen.queryByText(money(250))).toBeNull()
+    expect(screen.queryByText(money(100))).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Noise-cancelling headphones' }))
+    expect(screen.getByRole('menuitem', { name: 'Edit' }).getAttribute('title')).toBe('Unhide balances to edit')
   })
 })

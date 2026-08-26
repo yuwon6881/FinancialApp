@@ -9,6 +9,7 @@ import { LoanFormSheet } from './LoanFormSheet'
 import { LoanRepaymentSheet } from '../LoanRepaymentSheet'
 import { useLoansView } from './view/useLoansView'
 import { RecurringFilterBar } from '../RecurringFilterBar'
+import { InfoHint } from '../../ui/InfoHint'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import type { LoanLoadStatus } from '../../../app/financialData/useLoanData'
 import { useHighlightedElement } from '../../ui/useHighlightedElement'
@@ -102,11 +103,18 @@ export function LoansSection({
       {/* Adding a loan is the summary card's New Loan button, matching where New Subscription sits
           on the bills tab. Only the empty state repeats the action, where there is nothing else to do. */}
       <div>
-        <h3 className="text-sm font-bold text-foreground sm:text-base">Tracked loans</h3>
-        <p className="mt-0.5 text-[11px] text-muted-foreground sm:text-xs">Follow repayments, interest splits, and estimated payoff dates.</p>
+        <h3 className="flex items-center gap-1 text-sm font-bold text-foreground sm:text-base">
+          Tracked loans
+          <InfoHint
+            label="tracked loans"
+            text="Follow repayments, interest splits, and estimated payoff dates."
+          />
+        </h3>
       </div>
 
-      {loans.length > 0 && (
+      {/* One loan has nothing to filter or sort, and two controls above a single card is most of
+          what makes this screen feel busy. */}
+      {loans.length > 1 && (
         <RecurringFilterBar
           isMobile={isMobile}
           selectedCategories={view.selectedCategories}

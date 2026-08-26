@@ -69,6 +69,7 @@ function resolveExplicitRecoveryShares(
 export function buildIncomeSplitRows(
   transaction: Pick<Transaction, 'id' | 'date' | 'postedAt' | 'description' | 'ledgerCategory' | 'amount' | 'stabilityRecoveryTopUpAmount' | 'splitAccountIds'>,
   allocations: IncomeAllocations | undefined,
+  previousAccountIdByBucket?: Readonly<Record<string, string | undefined>>,
 ): Transaction[] {
   const shares = resolveIncomeSplitShares(transaction, allocations)?.map(share => share > 0 ? share : 0)
   const shareTotal = shares?.reduce((sum, share) => sum + share, 0) ?? 0
@@ -96,7 +97,11 @@ export function buildIncomeSplitRows(
     ledgerCategory: `Transfer:Income->${bucket}`,
     amount: cents[index] / 100,
     excludeFromAutocomplete: true,
-    accountId: transaction.splitAccountIds?.[bucket],
+    // splitAccountIds only ever arrives on a create/update request — the list DTO does not carry
+    // it — so re-deriving children for a saved row falls back to the account each child already
+    // had. The server only rewrites the child's date on a move, and dropping the account here made
+    // every receiving account's balance dip until the next refresh put it back.
+    accountId: transaction.splitAccountIds?.[bucket] ?? previousAccountIdByBucket?.[bucket],
   }])
 }
 
@@ -122,10 +127,21 @@ export function projectIncomeSplitRows<T extends { id: string | number }>(
   allocations: IncomeAllocations | undefined,
   rowState: Partial<Transaction>,
 ): T[] {
-  const rest = list.filter(item => !String(item.id).startsWith(`${parentId}-split-`))
+  const previousAccountIdByBucket: Record<string, string | undefined> = {}
+  const rest: T[] = []
+  for (const item of list) {
+    const id = String(item.id)
+    if (!id.startsWith(`${parentId}-split-`)) {
+      rest.push(item)
+      continue
+    }
+    const bucket = id.slice(`${parentId}-split-`.length)
+    const existing = (item as T & Partial<Transaction>).accountId
+    if (existing) previousAccountIdByBucket[bucket] = existing
+  }
   const parent = rest.find(item => String(item.id) === parentId) as (T & Transaction) | undefined
   if (!parent) return rest
 
-  const rows = buildIncomeSplitRows(parent, allocations)
+  const rows = buildIncomeSplitRows(parent, allocations, previousAccountIdByBucket)
   return rows.length === 0 ? rest : [...rest, ...rows.map(row => ({ ...row, ...rowState }) as unknown as T)]
 }

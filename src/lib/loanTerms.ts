@@ -1,4 +1,4 @@
-import type { LoanInterestMethod, LoanRateBasis } from '../types'
+import type { Loan, LoanInterestMethod, LoanRateBasis } from '../types'
 
 export interface LoanInterestMethodCopy {
   key: LoanInterestMethod
@@ -67,4 +67,41 @@ export function formatRatePercent(value: number) {
 
 function roundRate(value: number) {
   return Math.round(value * 10000) / 10000
+}
+
+export interface LoanPayoffProgress {
+  /** 0-100, clamped. Null when the tracked principal cannot anchor a percentage. */
+  percentPaid: number
+  clearedPrincipal: number
+  trackedPrincipal: number
+}
+
+/**
+ * How much of the *tracked* principal has been cleared.
+ *
+ * The anchor is `openingPrincipal` — the balance at `trackingStartDate`, not the original loan — so
+ * user-facing copy must say "tracked", never "borrowed". A loan added part-way through its life has
+ * no record of what came before, and claiming otherwise would overstate progress.
+ *
+ * Returns null rather than a zero when the figure is not knowable: no tracked principal, a replay in
+ * flight, or an incomplete schedule. Rendering 0% there would read as "no progress" instead of
+ * "unknown", which the honest-absence rule forbids.
+ *
+ * An interest-only loan with its balance intact legitimately reports 0%, so callers must present
+ * that as a fact about the loan rather than as an error.
+ */
+export function loanPayoffProgress(
+  loan: Pick<Loan, 'openingPrincipal' | 'snapshot' | 'isRecalculating'>,
+  scheduleUnavailable: boolean,
+): LoanPayoffProgress | null {
+  if (scheduleUnavailable || loan.isRecalculating) return null
+  const trackedPrincipal = loan.openingPrincipal
+  if (!(trackedPrincipal > 0)) return null
+
+  const clearedPrincipal = Math.max(0, trackedPrincipal - loan.snapshot.outstandingBalance)
+  return {
+    trackedPrincipal,
+    clearedPrincipal,
+    percentPaid: Math.min(100, (clearedPrincipal / trackedPrincipal) * 100),
+  }
 }

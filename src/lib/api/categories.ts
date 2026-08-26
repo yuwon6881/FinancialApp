@@ -19,7 +19,7 @@ export interface TransactionNoteSuggestion {
 
 export interface CategoryCleanupSuggestion {
   id: string
-  type: 'add' | 'delete' | 'merge' | 'consolidate'
+  type: 'add' | 'delete' | 'merge' | 'consolidate' | 'changeFlow'
   title: string
   summary: string
   categories: string[]
@@ -27,6 +27,8 @@ export interface CategoryCleanupSuggestion {
   newCategoryName?: string | null
   affectedTransactionCount: number
   confidence: number
+  sourceFlow?: CategoryFlowType | null
+  targetFlow?: CategoryFlowType | null
 }
 
 export interface CategoryCleanupAction {

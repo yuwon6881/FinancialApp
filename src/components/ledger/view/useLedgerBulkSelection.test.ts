@@ -69,10 +69,81 @@ describe('useLedgerBulkSelection', () => {
       result.current.toggleSelectAll()
     })
     expect(result.current.selectedCount).toBe(100)
-    expect(result.current.exceedsLimit).toBe(false)
+    expect(result.current.isAtLimit).toBe(true)
 
     rerender({ resetKey: 'two' })
     expect(result.current.selectedCount).toBe(0)
     expect(result.current.isSelecting).toBe(false)
+  })
+
+  it("keeps selectedTransactions referentially stable across renders", () => {
+    // The Move sheet resets its destination date whenever this array's identity changes, so a
+    // fresh array on every render silently reverted the date the user chose.
+    const rows = [transaction("tx-1"), transaction("tx-2")]
+    const { result, rerender } = renderHook(({ resetKey }) => useLedgerBulkSelection(options(rows, resetKey)), {
+      initialProps: { resetKey: "one" },
+    })
+
+    act(() => {
+      result.current.startSelection()
+      result.current.toggleSelected(rows[0])
+    })
+    const first = result.current.selectedTransactions
+
+    rerender({ resetKey: "one" })
+
+    expect(result.current.selectedTransactions).toBe(first)
+  })
+
+  it("resolves a selected row against the live list, not the snapshot taken when it was ticked", () => {
+    const stale = transaction("tx-1", { amount: -10, description: "Coffee" })
+    const { result, rerender } = renderHook(
+      ({ rows }) => useLedgerBulkSelection(options(rows)),
+      { initialProps: { rows: [stale] } })
+
+    act(() => {
+      result.current.startSelection()
+      result.current.toggleSelected(stale)
+    })
+
+    const corrected = transaction("tx-1", { amount: -500, description: "Coffee machine" })
+    rerender({ rows: [corrected] })
+
+    expect(result.current.selectedTransactions[0].amount).toBe(-500)
+    expect(result.current.selectedTransactions[0].description).toBe("Coffee machine")
+  })
+
+  it("falls back to the snapshot once a selected row leaves the list", () => {
+    const row = transaction("tx-1")
+    const { result, rerender } = renderHook(
+      ({ rows }) => useLedgerBulkSelection(options(rows)),
+      { initialProps: { rows: [row] } })
+
+    act(() => {
+      result.current.startSelection()
+      result.current.toggleSelected(row)
+    })
+    rerender({ rows: [] })
+
+    expect(result.current.selectedTransactions.map(item => item.id)).toEqual(["tx-1"])
+  })
+
+  it("refuses a split row whose parent is not in the list", () => {
+    // All-cycles mode can page a generated leg while its parent sits in another cycle. Keying the
+    // leg's own money and category under the parent id would make bulk actions act on, and
+    // restore, the wrong figures.
+    const orphan = transaction("tx-9-split-Growth", {
+      ledgerCategory: "Transfer:Income->Growth",
+      description: "[Split: Growth] Salary",
+      amount: 250,
+    })
+    const { result } = renderHook(() => useLedgerBulkSelection(options([orphan])))
+
+    expect(result.current.canSelect(orphan)).toBe(false)
+    act(() => {
+      result.current.startSelection()
+      result.current.toggleSelected(orphan)
+    })
+    expect(result.current.selectedCount).toBe(0)
   })
 })

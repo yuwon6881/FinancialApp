@@ -297,7 +297,10 @@ export function useSettingsView(options: UseSettingsViewOptions) {
 
   // Only show categories that the user can change and manage; the app-owned names
   // (Transfer, Adjustment) are hidden from the categories list.
-  const editableCategories = categoriesList.filter(category => !isSystemCategoryName(category.name))
+  const editableCategories = useMemo(
+    () => categoriesList.filter(category => !isSystemCategoryName(category.name)),
+    [categoriesList],
+  )
   const visibleCategories = editableCategories
 
   const categoryUsage = useMemo(() => {

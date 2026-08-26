@@ -1,11 +1,14 @@
 import React from 'react'
-import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
-import { Edit2, MoreHorizontal, Trash2, X } from 'lucide-react'
+import { Edit2, Trash2 } from 'lucide-react'
 import { RewardIcon } from '../semanticIcons'
 import type { WishlistItem } from '../../types'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
+import { DetailDisclosure } from '../ui/DetailDisclosure'
+import { Meter } from '../ui/Meter'
+import { OverflowMenu } from '../ui/OverflowMenu'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
+import { useDetailDisclosure } from '../../lib/useDetailDisclosure'
 
 interface RewardCardProps {
   item: WishlistItem
@@ -21,6 +24,8 @@ interface RewardCardProps {
   claimableBalance: number
   /** Free rewards after reserving the active goals' outstanding share for this cycle. */
   freeAfterGoalPace: number
+  /** How long until this reward is affordable, when it is the focused one. */
+  timeline?: string | null
   formatSensitive: (value: number) => React.ReactNode
   hideSensitive: boolean
   isSyncing: boolean
@@ -38,6 +43,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
   isFocused,
   claimableBalance,
   freeAfterGoalPace,
+  timeline,
   formatSensitive,
   hideSensitive,
   isSyncing,
@@ -47,18 +53,13 @@ export const RewardCard: React.FC<RewardCardProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const reduceMotion = useReducedMotion()
   const pct = item.price > 0
     ? Math.max(0, Math.min(100, (claimableBalance / item.price) * 100))
     : 0
   const canAfford = claimableBalance >= item.price
   const goalPaceShortfall = Math.max(0, item.price - freeAfterGoalPace)
   const isBusy = isSyncing || isDeleting || item.isPendingSync === true
-  const [showManage, setShowManage] = React.useState(false)
-  // Same rule as SavingsGoalCard: a row on its way out must not keep offering Edit and Delete.
-  React.useEffect(() => {
-    if (isBusy) setShowManage(false)
-  }, [isBusy])
+  const detail = useDetailDisclosure()
 
   return (
     <Card
@@ -78,9 +79,6 @@ export const RewardCard: React.FC<RewardCardProps> = ({
           <h4 className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{item.name}</h4>
           <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={item.isPendingSync} entityLabel="item" />
         </div>
-        <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">
-          {item.priority} priority
-        </p>
       </div>
 
       <div>
@@ -93,12 +91,14 @@ export const RewardCard: React.FC<RewardCardProps> = ({
         {/* pink is the Rewards bucket colour everywhere else in the app — its ledger badge, its
             chart slice, its filter chip. This bar was blue, which is what Income and Transfer are
             painted with, so the one page about Rewards money was the one page not using its colour. */}
-        <div className="mt-1.5 w-full bg-muted rounded-full h-1.5 overflow-hidden">
-          <div
-            className={`h-full transition-all duration-500 rounded-full ${canAfford ? 'bg-emerald-500' : 'bg-pink-500'}`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
+        <Meter
+          className="mt-1.5"
+          percent={pct}
+          tone={canAfford ? 'bg-emerald-500' : 'bg-pink-500'}
+          label={canAfford
+            ? 'Enough free rewards to claim this'
+            : `${pct.toFixed(0)}% of this reward covered by free rewards`}
+        />
       </div>
 
       <p className={`text-xs font-bold ${canAfford ? 'text-emerald-500' : 'text-muted-foreground'}`}>
@@ -113,101 +113,73 @@ export const RewardCard: React.FC<RewardCardProps> = ({
         </p>
       )}
 
-      {/* Management *replaces* the claim actions, exactly as it does on SavingsGoalCard. This row
-          used to carry a permanently visible red Delete beside a text Edit — the loudest thing on
-          the page, on a card whose neighbour in the next rail keeps both behind a toggle. */}
-      <div className="mt-auto flex items-center gap-1.5 border-t border-border/30 pt-3">
-        <AnimatePresence initial={false} mode="wait">
-          {showManage ? (
-            <m.div
-              key="manage-actions"
-              initial={reduceMotion ? false : { opacity: 0, y: 4, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
-              transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
-              className="ml-auto flex items-center gap-1.5"
-            >
-              <Button
-                variant="ghost"
-                size="sm"
-                className="shrink-0"
-                onClick={() => onEdit(item)}
-                disabled={isBusy || hideSensitive}
-                aria-label={`Edit ${item.name}`}
-                title={hideSensitive ? 'Unhide balances to edit' : 'Edit reward'}
-              >
-                <Edit2 className="size-3.5 shrink-0" /> Edit
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                className="shrink-0"
-                onClick={() => onDelete(item.id)}
-                disabled={isBusy || hideSensitive}
-                aria-label={`Delete ${item.name}`}
-                title={hideSensitive ? 'Unhide balances to delete' : 'Delete reward'}
-              >
-                <Trash2 className="size-3.5 shrink-0" /> Delete
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0"
-                onClick={() => setShowManage(false)}
-                aria-expanded
-                aria-label={`Hide edit and delete for ${item.name}`}
-                title="Back"
-              >
-                <X className="size-3.5" />
-              </Button>
-            </m.div>
-          ) : (
-            <m.div
-              key="primary-actions"
-              initial={reduceMotion ? false : { opacity: 0, y: 4, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
-              transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
-              className="flex min-w-0 flex-1 items-center gap-1"
-            >
-              <Button
-                size="sm"
-                className="shrink-0"
-                onClick={() => onClaim(item)}
-                disabled={!canAfford || isBusy || hideSensitive}
-                title={canAfford ? 'Claim this reward and log it to your ledger' : 'Not enough free rewards yet'}
-              >
-                Claim
-              </Button>
-              {!isFocused && (
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="shrink-0"
-                  onClick={() => onFocus(item)}
-                  disabled={isBusy || hideSensitive}
-                  aria-label={`Focus ${item.name}`}
-                  title="Save toward this one next"
-                >
-                  <RewardIcon className="size-3.5" aria-hidden />
-                </Button>
-              )}
-              {/* Swipe-to-reveal is not an option here either: the card lives in a horizontally
-                  scrolling rail, so a horizontal drag on it belongs to the rail. */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="ml-auto shrink-0"
-                onClick={() => setShowManage(true)}
-                aria-expanded={false}
-                aria-label={`Edit or delete ${item.name}`}
-                title="Edit or delete"
-              >
-                <MoreHorizontal className="size-3.5" />
-              </Button>
-            </m.div>
+      <DetailDisclosure
+        label="Details"
+        open={detail.isOpen}
+        onOpenChange={detail.setOpen}
+        expandedFrom="lg"
+      >
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px]">
+          <div>
+            <dt className="font-semibold text-muted-foreground">Priority</dt>
+            <dd className="font-bold text-foreground">{item.priority}</dd>
+          </div>
+          <div>
+            <dt className="font-semibold text-muted-foreground">Free rewards</dt>
+            <dd className="font-bold text-foreground">{formatSensitive(claimableBalance)}</dd>
+          </div>
+          <div>
+            <dt className="font-semibold text-muted-foreground">Free after commitments</dt>
+            <dd className="font-bold text-foreground">{formatSensitive(freeAfterGoalPace)}</dd>
+          </div>
+          {timeline && (
+            <div>
+              <dt className="font-semibold text-muted-foreground">Affordable in</dt>
+              <dd className="font-bold text-foreground">{timeline}</dd>
+            </div>
           )}
-        </AnimatePresence>
+        </dl>
+      </DetailDisclosure>
+
+      <div className="mt-auto flex items-center gap-1.5 border-t border-border/30 pt-3">
+        <Button
+          size="sm"
+          className="shrink-0"
+          onClick={() => onClaim(item)}
+          disabled={!canAfford || isBusy || hideSensitive}
+          title={canAfford ? 'Claim this reward and log it to your ledger' : 'Not enough free rewards yet'}
+        >
+          Claim
+        </Button>
+        <OverflowMenu
+          className="ml-auto"
+          entityLabel={item.name}
+          disabled={isBusy}
+          items={[
+            ...(isFocused ? [] : [{
+              label: 'Save toward this next',
+              icon: RewardIcon,
+              onSelect: () => onFocus(item),
+              disabled: hideSensitive,
+              hint: 'Unhide balances to change focus',
+            }]),
+            {
+              label: 'Edit',
+              icon: Edit2,
+              onSelect: () => onEdit(item),
+              disabled: hideSensitive,
+              hint: 'Unhide balances to edit',
+            },
+            {
+              label: 'Delete',
+              icon: Trash2,
+              tone: 'danger' as const,
+              onSelect: () => onDelete(item.id),
+              disabled: hideSensitive,
+              hint: 'Unhide balances to delete',
+            },
+          ]}
+        />
       </div>
     </Card>
   )

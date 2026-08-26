@@ -127,4 +127,10 @@ export interface QueuedOp {
   /** The cutover could not safely infer a live account placement for this operation. */
   needsAccountReview?: boolean
   needsAccountReviewBuckets?: string[]
+  /**
+   * Projection-only full row, used when an expanded synthetic op must fall back to inserting the
+   * row it targets because that row is not in the current list. Never dispatched and never
+   * spread onto a row, so it cannot leak stale fields into a live one.
+   */
+  insertFallbackPayload?: OutboxPayload
 }

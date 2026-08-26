@@ -1,4 +1,5 @@
 import type { Transaction } from '../types'
+import { compareIdsOrdinal } from './ordinalCompare'
 
 export type TransactionSort = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'
 
@@ -26,8 +27,9 @@ export function compareTransactionsNewestFirst(a: Transaction, b: Transaction): 
   // deletes), and legacy same-day rows may not have postedAt to distinguish
   // them. Sorting pending rows first made those rows jump to the top while the
   // request was in flight. New optimistic adds already receive a postedAt.
-  return String(b.id).localeCompare(String(a.id))
+  return compareIdsOrdinal(String(b.id), String(a.id))
 }
+
 
 export function compareTransactions(a: Transaction, b: Transaction, sort: TransactionSort): number {
   if (sort === 'amount-desc' || sort === 'amount-asc') {

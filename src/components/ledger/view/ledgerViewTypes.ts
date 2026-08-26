@@ -2,6 +2,8 @@ import type { LedgerAccount, Transaction } from '../../../types'
 import type { PagedTransactionResult } from '../../../lib/api'
 import {
   LEDGER_BUCKETS as LEDGER_BUCKET_VALUES,
+  splitFilterSelections,
+  canonicalBucket,
   type TransactionLinkFilter,
   type TransactionSearchMode,
   type TxTypeFilter,
@@ -16,6 +18,11 @@ export type LedgerTxType = TxTypeFilter
 export type LedgerReloadFilter = StabilityReloadFilter
 
 export const LEDGER_BUCKETS: readonly string[] = LEDGER_BUCKET_VALUES
+
+// Re-exported so every ledger caller partitions filter chips through the one canonical helper.
+// Hand-rolled LEDGER_BUCKETS.includes(f) splits were case-sensitive, which silently demoted a
+// lower-cased bucket in a deep link to a sub-category that matches nothing.
+export { splitFilterSelections, canonicalBucket }
 
 export const parseAmountFilter = (value: string): number | undefined => {
   if (!value.trim()) return undefined

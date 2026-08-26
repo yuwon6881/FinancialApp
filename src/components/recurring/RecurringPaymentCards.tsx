@@ -89,7 +89,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                     <RowSyncStatus isDeleting={isPaymentDeleting(rp.id)} isSyncing={isPaymentSyncing(rp.id)} isPending={rp.isPendingSync} entityLabel="subscription" />
                   </h3>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <span className={`inline-flex items-center h-5 text-[10px] font-semibold rounded border px-1.5 leading-none ${getCategoryBadgeClass(rp.category)}`}>
+                    <span className={`inline-flex items-center justify-center h-5 box-border text-[10px] font-semibold rounded border px-1.5 leading-none shrink-0 ${getCategoryBadgeClass(rp.category)}`}>
                       {rp.category}
                     </span>
                     {rp.linkedLoanId && (
@@ -97,7 +97,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                         variant="unstyled"
                         type="button"
                         onClick={() => onNavigateToLoan?.(rp.linkedLoanId!)}
-                        className="inline-flex items-center h-5 gap-1 rounded border border-accent-ink/25 bg-accent/30 hover:bg-accent/50 text-accent-ink px-1.5 text-[10px] font-semibold leading-none transition cursor-pointer"
+                        className="inline-flex items-center justify-center h-5 box-border gap-1 rounded border border-accent-ink/25 bg-accent/30 hover:bg-accent/50 text-accent-ink px-1.5 py-0 text-[10px] font-semibold leading-none transition cursor-pointer shrink-0"
                         title={`View linked loan: ${rp.linkedLoanName || 'Loan'}`}
                         aria-label={`View linked loan: ${rp.linkedLoanName || 'Loan'}`}
                       >

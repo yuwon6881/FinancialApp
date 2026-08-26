@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObjec
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import { CACHE_KEYS, getCachedJSON, getCachedOps, setCachedJSON } from './cache'
 import {
+  describeFailedOp,
   enqueue as enqueueOperation,
   getSyncSuccessToast,
   sanitizeQueuedOps,
@@ -241,11 +242,13 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
         nextToastAtRef.current = showAt + TOAST_STAGGER_MS
         window.setTimeout(() => current.showToast(copy.message, copy.title, copy.tone, action), showAt - now)
       },
-      emitFailureToast: op => {
+      emitFailureToast: (op, err) => {
         if (!mountedRef.current) return
-        const description = op.payload?.description || op.payload?.name || op.entity
+        // Quote the server's reason. A bulk move is atomic, so one stale row rejects the whole
+        // batch; without the reason the user sees every row snap back and cannot tell why.
+        const reason = err instanceof Error && err.message.trim() ? ` ${err.message.trim()}` : ''
         void triggerHaptic([25, 45, 25])
-        current.showToast(`Couldn't sync '${description}' — removed from queue`, 'Sync Failed', 'error', {
+        current.showToast(`Couldn't sync ${describeFailedOp(op)} — removed from queue.${reason}`, 'Sync Failed', 'error', {
           label: 'View',
           icon: Eye,
           onAction: () => current.onViewFailedOps?.(),

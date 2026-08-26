@@ -38,6 +38,38 @@ describe('splitFilterSelections', () => {
       categories: ['Food', 'Hobbies'],
     })
   })
+
+  it('recognizes a bucket regardless of case and returns the canonical spelling', () => {
+    // A deep link or hand-edited URL can carry any casing. Treating "stability" as a sub-category
+    // sent category=stability to the server, matched nothing in either mode, and still rendered a
+    // chip claiming the Stability bucket was filtering.
+    expect(splitFilterSelections(['stability', 'ESSENTIALS', ' rewards '])).toEqual({
+      buckets: ['Stability', 'Essentials', 'Rewards'],
+      categories: [],
+    })
+  })
+
+  it('still treats an unknown name as a sub-category', () => {
+    expect(splitFilterSelections(['Groceries'])).toEqual({ buckets: [], categories: ['Groceries'] })
+  })
+})
+
+describe('bucket and sub-category matching is case-insensitive on both sides', () => {
+  it('matches a bucket whatever case the ledger category was stored in', () => {
+    expect(matchesTransactionFilters(tx({ ledgerCategory: 'stability' }), { buckets: ['Stability'] })).toBe(true)
+    expect(matchesTransactionFilters(tx({ ledgerCategory: 'Stability' }), { buckets: ['stability'] })).toBe(true)
+    expect(matchesTransactionFilters(tx({ ledgerCategory: 'transfer:stability->growth' }), { buckets: ['Stability'] })).toBe(true)
+  })
+
+  it('matches a sub-category whatever case either side uses', () => {
+    expect(matchesTransactionFilters(tx({ category: 'Food' }), { categories: ['food'] })).toBe(true)
+    expect(matchesTransactionFilters(tx({ category: 'food' }), { categories: ['Food'] })).toBe(true)
+    expect(matchesTransactionFilters(tx({ category: 'Transport' }), { categories: ['Food'] })).toBe(false)
+  })
+
+  it('excludes a Discarded marker whatever case it was written in', () => {
+    expect(matchesTransactionFilters(tx({ ledgerCategory: 'discarded' }), {})).toBe(false)
+  })
 })
 
 describe('isIncomeLedgerCategory', () => {

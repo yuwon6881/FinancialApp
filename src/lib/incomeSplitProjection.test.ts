@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildIncomeSplitRows } from './incomeSplitProjection'
+import { buildIncomeSplitRows, projectIncomeSplitRows } from './incomeSplitProjection'
 import { computeIncomeLedgerCategory } from './incomeSplit'
 
 const allocations = {
@@ -121,5 +121,45 @@ describe('buildIncomeSplitRows', () => {
     expect(rows.find(r => r.id === 'tx-1-split-Growth')?.accountId).toBe('acc-growth-custom')
     expect(rows.find(r => r.id === 'tx-1-split-Stability')?.accountId).toBe('acc-stability-custom')
     expect(rows.find(r => r.id === 'tx-1-split-Rewards')?.accountId).toBe('acc-rewards-custom')
+  })
+})
+
+describe('re-deriving children keeps their account placement', () => {
+  // splitAccountIds only ever travels on a create/update request; the list DTO does not return it.
+  // Re-deriving children for a saved row therefore has to fall back to the account each child
+  // already had, as the server does — a move rewrites only the child's date. Dropping the account
+  // made every receiving account's balance dip until the next refresh put it back.
+  const parent = { ...income, ledgerCategory: 'IncomeSplit:50,20,10,20', amount: 1000 }
+  const existingChildren = [
+    { id: 'tx-1-split-Essentials', accountId: 'acct-essentials' },
+    { id: 'tx-1-split-Growth', accountId: 'acct-growth' },
+    { id: 'tx-1-split-Stability', accountId: 'acct-stability' },
+    { id: 'tx-1-split-Rewards', accountId: 'acct-rewards' },
+  ]
+
+  it('carries each existing child\x27s account onto the rebuilt row', () => {
+    const projected = projectIncomeSplitRows(
+      [parent, ...existingChildren] as never[],
+      'tx-1',
+      allocations,
+      {},
+    ) as unknown as { id: string; accountId?: string }[]
+
+    expect(projected.find(row => row.id === 'tx-1-split-Essentials')?.accountId).toBe('acct-essentials')
+    expect(projected.find(row => row.id === 'tx-1-split-Growth')?.accountId).toBe('acct-growth')
+    expect(projected.find(row => row.id === 'tx-1-split-Stability')?.accountId).toBe('acct-stability')
+    expect(projected.find(row => row.id === 'tx-1-split-Rewards')?.accountId).toBe('acct-rewards')
+  })
+
+  it('prefers an explicit request placement over the previous one', () => {
+    const projected = projectIncomeSplitRows(
+      [{ ...parent, splitAccountIds: { Growth: 'acct-growth-new' } }, ...existingChildren] as never[],
+      'tx-1',
+      allocations,
+      {},
+    ) as unknown as { id: string; accountId?: string }[]
+
+    expect(projected.find(row => row.id === 'tx-1-split-Growth')?.accountId).toBe('acct-growth-new')
+    expect(projected.find(row => row.id === 'tx-1-split-Rewards')?.accountId).toBe('acct-rewards')
   })
 })

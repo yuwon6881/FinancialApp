@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react'
 import type { LedgerAccount, Loan, RecurringPayment, RecurringReminderSettings, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
 import { CycleSkeleton } from './ui/CycleSkeleton'
+import { LoansSectionSkeleton } from './ui/skeletons/FeatureSkeletons'
 import { useIsMobile } from '../lib/useIsMobile'
 import { useAppContext } from '../contexts/AppContext'
 import { RecurringPaymentsHeader } from './recurring/RecurringPaymentsHeader'
@@ -171,14 +172,13 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const loanTotalOutstanding = isLoansKnown && loans.every(loan => loan.scheduleStatus !== 'Incomplete' && !loan.isRecalculating)
     ? loans.reduce((total, loan) => total + Math.max(0, loan.snapshot.outstandingBalance), 0)
     : null
-  // The soonest replayed occurrence across tracked loans. A loan whose schedule is still
-  // incomplete or recalculating has no trustworthy next date, so the tile stays unavailable
-  // rather than reporting the earliest of a partial set as if it were the earliest of all.
-  const loanNextPaymentDate = isLoansKnown && loans.every(loan => loan.scheduleStatus !== 'Incomplete' && !loan.isRecalculating)
-    ? loans
-      .map(loan => loan.snapshot.nextPayment?.occurrenceDate)
-      .filter((date): date is string => Boolean(date))
-      .sort()[0] ?? null
+  const loanTotalAnnual = isLoansKnown && loans.every(loan => loan.scheduleStatus !== 'Incomplete' && !loan.isRecalculating)
+    ? loans.reduce((total, loan) => {
+        if (loan.snapshot.outstandingBalance <= 0) return total
+        const isAnnual = loan.scheduleFrequency === 'Annually'
+        const annualAmt = isAnnual ? loan.snapshot.scheduledPayment : loan.snapshot.scheduledPayment * 12
+        return total + annualAmt
+      }, 0)
     : null
 
   const view = useRecurringPaymentsView({
@@ -224,8 +224,10 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         activeCount={view.activeCount}
         totalCount={payments.length}
         loanTotalOutstanding={loanTotalOutstanding}
+        loanTotalAnnual={loanTotalAnnual}
         loanCount={loans.length}
-        loanNextPaymentDate={loanNextPaymentDate}
+        payments={payments}
+        loans={loans}
         showAddForm={view.showAddForm}
         hideSensitive={hideSensitive}
         formatSensitive={formatPassive}
@@ -297,8 +299,10 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         </>
       )}
 
+      {/* The fallback is a real skeleton, not a lone pulsing bar: it is the first thing a user
+          sees when the Loans tab opens, so it should have the shape of what is about to arrive. */}
       {activeTab === 'loans' && (
-        <Suspense fallback={<div className="app-panel rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:bg-card/92 sm:p-5" aria-busy="true"><div className="h-5 w-24 animate-pulse rounded bg-muted" /></div>}>
+        <Suspense fallback={<LoansSectionSkeleton />}>
           <LoansSection
             loans={loans}
             payments={payments}

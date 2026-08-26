@@ -64,7 +64,7 @@ export function LedgerBulkSelectionLayer({
             variant="outline"
             size="sm"
             type="button"
-            disabled={listProps.hideSensitive || bulk.exceedsLimit || bulk.selectedTransactions.some(transaction => transactionMoveIneligibility(transaction) != null)}
+            disabled={listProps.hideSensitive || bulk.selectedTransactions.some(transaction => transactionMoveIneligibility(transaction) != null)}
             onClick={() => {
               if (!app.guardSensitive()) return
               setIsMoveOpen(true)
@@ -73,7 +73,7 @@ export function LedgerBulkSelectionLayer({
             variant="destructive"
             size="sm"
             type="button"
-            disabled={listProps.hideSensitive || bulk.exceedsLimit}
+            disabled={listProps.hideSensitive}
             onClick={() => {
               if (!app.guardSensitive()) return
               setIsConfirmOpen(true)
@@ -105,7 +105,7 @@ export function LedgerBulkSelectionLayer({
         )}
         confirmText="Delete selected"
         cancelText="Cancel"
-        confirmDisabled={bulk.selectedCount === 0 || bulk.exceedsLimit}
+        confirmDisabled={bulk.selectedCount === 0}
         onConfirm={() => {
           if (!app.guardSensitive()) {
             setIsConfirmOpen(false)

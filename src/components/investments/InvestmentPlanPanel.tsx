@@ -8,8 +8,7 @@ import { useMemo } from 'react'
 import { allocationStatusLabel, buildSleeveIndex, UNASSIGNED_SLEEVE_KEY } from '../../lib/investmentAllocation'
 import { breakdownBySleeve } from '../../lib/investmentSleeveBreakdown'
 import { SleeveCard } from './SleeveCard'
-import { DepositGuide } from './DepositGuide'
-import { WithdrawalGuide } from './WithdrawalGuide'
+import { InvestmentMovementPlanner } from './InvestmentMovementPlanner'
 
 const tone: Record<InvestmentAllocationStatus, string> = {
   NotStarted: 'border-border/60 bg-muted/20 text-muted-foreground',
@@ -25,13 +24,15 @@ export function InvestmentPlanPanel({
   allocation,
   holdings,
   instruments,
+  fxRates = [],
   masked,
   onNavigate,
 }: {
   allocation: InvestmentAllocationOverview
   holdings: InvestmentPortfolio['holdings']
   instruments: InvestmentPortfolio['instruments']
-  /** The optional second currency this plan can also be read in. Absent means no toggle. */
+  fxRates?: InvestmentPortfolio['planFxRates']
+  /** Retained for callers during the portfolio contract transition; native ETF rates are used. */
   reference?: { currency: string; rate: number }
   masked: boolean
   onNavigate: (tab: AppTab) => void
@@ -53,7 +54,6 @@ export function InvestmentPlanPanel({
     : allocation.status === 'Incomplete' || allocation.status === 'NotStarted' ? CircleHelp : AlertTriangle
   const showGuidance = allocation.incompleteReasons.length > 0
   const classificationIncomplete = allocation.status === 'Incomplete'
-  const contributionPlan = allocation.contributionPlan
   // Grouped once here, not per card — every card needs a different slice of the
   // same single pass over the holdings.
   const constituentsBySleeve = useMemo(
@@ -120,24 +120,7 @@ export function InvestmentPlanPanel({
         )}
       </div>
 
-      {contributionPlan && (
-        <DepositGuide
-          allocation={allocation}
-          money={money}
-          colors={colors}
-        />
-      )}
-
-      {/* Only offered once the plan can actually be valued: an unpriced or unsorted
-          portfolio cannot say which basket is overweight, so it cannot answer this. */}
-      {(allocation.status === 'OnTrack' || allocation.status === 'Watch' || allocation.status === 'Alert') && (
-        <WithdrawalGuide
-          allocation={allocation}
-          constituentsBySleeve={constituentsBySleeve}
-          money={money}
-          colors={colors}
-        />
-      )}
+      <InvestmentMovementPlanner allocation={allocation} holdings={holdings} instruments={instruments} fxRates={fxRates} masked={masked} money={money} colors={colors} />
 
       <div className={`mt-5 grid gap-4 ${showGuidance ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]' : ''}`}>
         <div className="rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">

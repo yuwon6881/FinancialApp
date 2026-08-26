@@ -1,14 +1,14 @@
 import { ChevronDown, Edit, Loader2, Sparkles, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { fetchLoanSchedule } from '../../../lib/api/loans'
-import { SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
-import { entryRateFromAnnual, formatRatePercent, loanInterestMethodCopy } from '../../../lib/loanTerms'
+import { entryRateFromAnnual, formatRatePercent, loanPayoffProgress } from '../../../lib/loanTerms'
 import type { Loan, LoanScheduleEntry } from '../../../types'
 import { Button } from '../../ui/Button'
 import { AlertBanner } from '../../ui/AlertBanner'
-import { InfoHint } from '../../ui/InfoHint'
+import { Meter } from '../../ui/Meter'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { formatOccurrenceDate } from '../formatters'
+import { LoanCardDetails } from './LoanCardDetails'
 
 interface LoanCardProps {
   loan: Loan
@@ -38,6 +38,7 @@ export function LoanCard({
   onUndoSettlement,
 }: LoanCardProps) {
   const scheduleUnavailable = loan.isRecalculating === true || loan.scheduleStatus === 'Incomplete' || !loan.scheduleFrequency || !loan.scheduleDueDay || !loan.scheduleStartDate
+  const payoffProgress = loanPayoffProgress(loan, scheduleUnavailable)
   const next = loan.snapshot.nextPayment
   const rateBasis = loan.rateBasis ?? 'Yearly'
   const rateText = rateBasis === 'Monthly'
@@ -163,11 +164,38 @@ export function LoanCard({
           This loan cannot show a balance or schedule because its bill history is incomplete. Edit this loan to choose a valid bill.
         </AlertBanner>
       ) : (
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-          <Metric label="Still owed" value={formatSensitive(loan.snapshot.outstandingBalance)} />
-          <Metric label="Next instalment" value={finalBalanceDueNow ? 'Final balance due now' : formatSensitive(loan.snapshot.scheduledPayment)} />
-          <Metric label="Expected payoff" value={interestOnlyBalanceRemains ? 'No automatic payoff' : formatOccurrenceDate(loan.snapshot.payoffDate)} />
-          <Metric label="Remaining interest" value={formatSensitive(loan.snapshot.totalScheduledInterest)} />
+        <div className="mt-4 space-y-2">
+          <div>
+            <p className="text-[11px] font-semibold text-muted-foreground">Still owed</p>
+            <p className="text-2xl font-black tracking-tight text-foreground">
+              {formatSensitive(loan.snapshot.outstandingBalance)}
+            </p>
+          </div>
+
+          {/* Anchored on the principal at the tracking start date, so the copy says "tracked" and
+              never "borrowed": a loan added part-way through its life has no record of what came
+              before it. Absent entirely when the figure is not knowable. */}
+          {payoffProgress && (
+            <div className="space-y-1">
+              <Meter
+                percent={payoffProgress.percentPaid}
+                tone="bg-primary"
+                label={`${payoffProgress.percentPaid.toFixed(0)}% of the tracked principal cleared`}
+              />
+              <p className="text-[11px] font-semibold text-muted-foreground">
+                {payoffProgress.percentPaid.toFixed(0)}% paid off ·{' '}
+                {formatSensitive(payoffProgress.clearedPrincipal)} cleared of{' '}
+                {formatSensitive(payoffProgress.trackedPrincipal)} tracked
+              </p>
+            </div>
+          )}
+
+          <p className="text-xs font-semibold text-muted-foreground">
+            Next instalment{' '}
+            <span className="font-bold text-foreground">
+              {finalBalanceDueNow ? 'Final balance due now' : formatSensitive(loan.snapshot.scheduledPayment)}
+            </span>
+          </p>
         </div>
       )}
 
@@ -176,44 +204,16 @@ export function LoanCard({
           <span>Loan details</span>
           <ChevronDown className="size-3.5 text-muted-foreground transition-transform group-open/loan-details:rotate-180" aria-hidden />
         </summary>
-        <div className="grid gap-3 border-t border-border/50 p-3 text-xs sm:grid-cols-2 lg:grid-cols-4 lg:border-t-0">
-          <div>
-            <div className="flex items-start gap-1.5">
-              <div>
-                <p className="text-muted-foreground">Interest method</p>
-                <p className="mt-1 font-semibold text-foreground">{loanInterestMethodCopy(loan.interestMethod).label}</p>
-              </div>
-              <InfoHint label="interest method" text={loanInterestMethodCopy(loan.interestMethod).hint} />
-            </div>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Interest rate</p>
-            <p className="mt-1 font-semibold text-foreground" aria-hidden={hideSensitive || undefined}>{hideSensitive ? SENSITIVE_AMOUNT_MASK : rateText}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Next instalment split</p>
-            {scheduleUnavailable ? (
-              <p className="mt-1 font-semibold text-muted-foreground">Unavailable</p>
-            ) : next ? (
-              <p className="mt-1 font-semibold text-foreground">
-                {formatSensitive(next.principal)} clears the debt · {formatSensitive(next.interest)} interest
-              </p>
-            ) : finalBalanceDueNow ? (
-              <p className="mt-1 font-semibold text-muted-foreground">Final balance due now</p>
-            ) : (
-              <p className="mt-1 font-semibold text-muted-foreground">Unavailable</p>
-            )}
-          </div>
-          <div>
-            <div className="flex items-start gap-1.5">
-              <div>
-                <p className="text-muted-foreground">Payoff estimation</p>
-                <p className="mt-1 font-medium text-foreground">Calculated from bill history.</p>
-              </div>
-              <InfoHint label="loan payoff warning" text="A payment that does not cover that period's interest reduces none of the amount owed, so the payoff date is not promised." />
-            </div>
-          </div>
-        </div>
+        <LoanCardDetails
+          loan={loan}
+          hideSensitive={hideSensitive}
+          formatSensitive={formatSensitive}
+          scheduleUnavailable={scheduleUnavailable}
+          interestOnlyBalanceRemains={interestOnlyBalanceRemains}
+          finalBalanceDueNow={finalBalanceDueNow}
+          next={next}
+          rateText={rateText}
+        />
       </details>
 
       <div className="mt-3 rounded-xl border border-border/50 bg-background/40 p-3 sm:p-3.5">
@@ -323,8 +323,8 @@ export function LoanCard({
         )}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between border-t border-border/30 pt-4 gap-2">
-        <div className="flex items-center gap-2">
+      <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between border-t border-border/30 pt-4">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
           {loan.settlementActionId && onUndoSettlement && (
             <Button
               variant="secondary"
@@ -334,6 +334,7 @@ export function LoanCard({
               title={hideSensitive ? 'Unhide balances to undo this settlement' : 'Reopen this loan and restore its recurring bill'}
               onClick={onUndoSettlement}
               disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}
+              className="w-full justify-center sm:w-auto"
             >
               <span>Undo settlement</span>
             </Button>
@@ -347,6 +348,7 @@ export function LoanCard({
               title={hideSensitive ? 'Unhide balances to repay' : 'Pay instalments in advance or record full settlement'}
               onClick={onRepay}
               disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}
+              className="w-full justify-center sm:w-auto shadow-sm"
             >
               <span>Make payment</span>
             </Button>
@@ -359,13 +361,13 @@ export function LoanCard({
             title={hideSensitive ? 'Unhide balances to explain this loan' : 'Explain this loan with Ask AI'}
             onClick={onExplain}
             disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}
-            className="shrink-0"
+            className={`w-full justify-center sm:w-auto ${!(loan.snapshot.outstandingBalance > 0 && !scheduleUnavailable && onRepay) ? 'col-span-2' : ''}`}
           >
-            <Sparkles className="size-3.5" aria-hidden="true" />
+            <Sparkles className="size-3.5 shrink-0" aria-hidden="true" />
             <span>Explain this loan</span>
           </Button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-1.5 pt-1 sm:pt-0 border-t border-border/20 sm:border-t-0">
           <Button
             variant="ghost"
             size="sm"
@@ -391,14 +393,5 @@ export function LoanCard({
         </div>
       </div>
     </article>
-  )
-}
-
-function Metric({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="rounded-xl border border-border/50 bg-background/50 p-2.5 sm:p-3">
-      <p className="text-[11px] font-semibold text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-bold text-foreground sm:text-base">{value}</p>
-    </div>
   )
 }
