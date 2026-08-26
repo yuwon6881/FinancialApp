@@ -197,7 +197,10 @@ if (!criticalChunks) {
   if (!passed) failed = true
 }
 
-const precacheExtensions = new Set(['.js', '.css', '.html', '.ico', '.png', '.svg'])
+// Precache assets: emitted app assets that Workbox injects into self.__WB_MANIFEST for offline routing.
+// Exclude sw.js itself: the service worker bundle is emitted to dist/sw.js (Workbox swDest) and
+// executed by the browser; Workbox automatically ignores swDest and never precaches the worker inside its own cache.
+const precacheExtensions = new Set(['.js', '.css', '.html', '.ico', '.png', '.svg', '.webmanifest'])
 function walkFiles(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
     const fullPath = path.join(directory, entry.name)
@@ -206,6 +209,7 @@ function walkFiles(directory) {
 }
 const precacheFiles = walkFiles(path.join(process.cwd(), 'dist')).filter(filePath => {
   const name = path.basename(filePath)
+  if (name === 'sw.js' || name === 'sw.js.map') return false
   return precacheExtensions.has(path.extname(name)) || /^inter-latin-opsz-normal-.*\.woff2$/.test(name)
 })
 const precacheRawKb = precacheFiles.reduce((sum, filePath) => sum + fs.statSync(filePath).size, 0) / 1024
