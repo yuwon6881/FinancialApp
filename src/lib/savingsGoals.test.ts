@@ -189,6 +189,27 @@ describe('outstanding this cycle', () => {
 
     expect(pace.outstandingThisCycle).toBe(50)
   })
+
+  it('redistributes a partial cycle shortfall across the cycles that remain', () => {
+    const goal = newGoal({
+      targetAmount: 160,
+      earmarkedAmount: 30,
+      targetDate: '2026-10-20',
+      cycleFundedKey: CYCLE_KEY,
+      cycleFundedAmount: 30,
+    })
+
+    const current = computePace(goal, TODAY, CYCLE_DAY, CYCLE_KEY)
+    const next = computePace(goal, new Date(2026, 7, 15), CYCLE_DAY, '2026-08')
+
+    // July required 40, but only 30 was set aside. The 10 shortfall remains in the total balance;
+    // after July closes it is spread over August, September and October (130 / 3 = 43.34).
+    expect(current.requiredPerCycle).toBe(40)
+    expect(current.outstandingThisCycle).toBe(10)
+    expect(next.cyclesRemaining).toBe(3)
+    expect(next.remaining).toBe(130)
+    expect(next.requiredPerCycle).toBe(43.34)
+  })
 })
 
 describe('free Rewards balance', () => {

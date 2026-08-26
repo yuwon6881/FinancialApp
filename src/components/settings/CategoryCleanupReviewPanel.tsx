@@ -43,7 +43,7 @@ export function CategoryCleanupReviewPanel({
   if (!open && !error) return null
 
   return (
-    <section aria-labelledby="category-review-heading" className={`relative space-y-3 rounded-xl border border-primary/25 bg-primary/5 p-3.5 ${reviewing ? 'perimeter-beam-host' : ''}`}>
+    <section aria-labelledby="category-review-heading" className={`relative flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3.5 ${reviewing ? 'perimeter-beam-host' : ''}`}>
       {reviewing && <PerimeterBeam size={120} />}
       <header className="flex items-center justify-between gap-3">
         <div className="min-w-0">

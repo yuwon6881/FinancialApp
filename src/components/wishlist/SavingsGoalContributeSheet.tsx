@@ -16,8 +16,10 @@ interface SavingsGoalContributeSheetProps {
   currency: string
   /** Free-to-spend bucket money — the ceiling on a top-up. */
   available: number
-  /** What this goal needs this cycle, offered as a one-tap suggestion. */
-  suggested: number
+  /** What remains outstanding for this goal this cycle, offered for a top-up. */
+  suggestedTopUp: number
+  /** The current cycle's nominal pace, offered for a release. */
+  suggestedRelease: number
   formatSensitive: (value: number) => React.ReactNode
   onClose: () => void
   /**
@@ -41,7 +43,8 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
   mode,
   currency,
   available,
-  suggested,
+  suggestedTopUp,
+  suggestedRelease,
   formatSensitive,
   onClose,
   onConfirm,
@@ -50,12 +53,18 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
   const fundingBucket = goal.fundingBucket ?? 'Rewards'
   const bucketLabel = fundingBucket.toLowerCase()
   // The most this move can be: free rewards (capped by what the goal still needs) for a top-up, or
-  // everything the goal currently holds for a release. Both directions default to one cycle's
-  // pace; releasing the entire commitment remains available by entering that amount explicitly.
+  // everything the goal currently holds for a release. Both directions normally default to one
+  // cycle's pace; a top-up with no outstanding pace stays blank, while full release remains
+  // available by entering that amount explicitly.
   const ceiling = isTopUp
     ? Math.min(available, Math.max(0, goal.targetAmount - goal.earmarkedAmount))
     : goal.earmarkedAmount
-  const defaultAmount = Math.min(ceiling, suggested > 0 ? suggested : ceiling)
+  const suggested = isTopUp ? suggestedTopUp : suggestedRelease
+  // A top-up with no outstanding pace should not silently suggest the entire remaining goal.
+  // Release keeps its historical fallback of offering the whole earmark when no cycle pace exists.
+  const defaultAmount = isTopUp
+    ? Math.min(ceiling, Math.max(0, suggested))
+    : Math.min(ceiling, suggested > 0 ? suggested : ceiling)
 
   const [amountInput, setAmountInput] = React.useState(() => (defaultAmount > 0 ? defaultAmount.toFixed(2) : ''))
   const [error, setError] = React.useState('')
@@ -135,6 +144,11 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
         <p className="text-[11px] text-muted-foreground font-medium">
           This reserves {fundingBucket} money without adding a ledger transaction.
         </p>
+        {isTopUp && (
+          <p className="text-[11px] text-muted-foreground font-medium">
+            If this cycle stays short, the missing amount is recalculated across the cycles left before the deadline. Once the deadline arrives, the full amount still missing is due.
+          </p>
+        )}
 
         <ModalActions className="pt-2">
           <Button variant="outline" className="rounded-xl py-2.5" onClick={onClose} disabled={busy}>

@@ -671,6 +671,7 @@ button, [role="button"] {
        (overflow-hidden) would otherwise cut away the outer ring this element is
        masked down to, leaving the trace half-drawn or invisible. */
     inset: 0;
+    margin: 0 !important;
     border-radius: inherit;
     z-index: 1;
     overflow: hidden;

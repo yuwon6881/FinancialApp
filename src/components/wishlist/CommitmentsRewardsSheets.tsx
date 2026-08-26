@@ -143,7 +143,8 @@ export function CommitmentsRewardsSheets(props: Props) {
           mode={props.contributeTarget.mode}
           currency={props.currency}
           available={(props.contributeTarget.goal.fundingBucket ?? 'Rewards') === 'Essentials' ? props.essentialsPool.unassigned : props.rewardsPool.unassigned}
-          suggested={(props.contributeTarget.goal.fundingBucket ?? 'Rewards') === 'Essentials' ? props.essentialsPool.paces.get(props.contributeTarget.goal.id)?.requiredPerCycle ?? 0 : props.rewardsPool.paces.get(props.contributeTarget.goal.id)?.requiredPerCycle ?? 0}
+          suggestedTopUp={(props.contributeTarget.goal.fundingBucket ?? 'Rewards') === 'Essentials' ? props.essentialsPool.paces.get(props.contributeTarget.goal.id)?.outstandingThisCycle ?? 0 : props.rewardsPool.paces.get(props.contributeTarget.goal.id)?.outstandingThisCycle ?? 0}
+          suggestedRelease={(props.contributeTarget.goal.fundingBucket ?? 'Rewards') === 'Essentials' ? props.essentialsPool.paces.get(props.contributeTarget.goal.id)?.requiredPerCycle ?? 0 : props.rewardsPool.paces.get(props.contributeTarget.goal.id)?.requiredPerCycle ?? 0}
           formatSensitive={props.formatSensitive}
           onClose={() => props.setContributeTarget(null)}
           onConfirm={async amount => {

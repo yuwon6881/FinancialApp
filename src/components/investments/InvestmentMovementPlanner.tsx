@@ -88,7 +88,20 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
 
       {open && <div className="space-y-4 border-t border-border/50 p-4">
         <div role="group" aria-label="Investment movement type" className="grid grid-cols-2 rounded-lg border border-border/60 bg-background/50 p-1">
-          {(['deposit', 'withdrawal'] as const).map(value => <Button key={value} type="button" variant={mode === value ? 'secondary' : 'unstyled'} size="sm" aria-pressed={mode === value} onClick={() => { setMode(value); setAmountText('') }} className="min-h-11 capitalize sm:min-h-9">{value === 'deposit' ? <ArrowDownToLine className="size-3.5" /> : <ArrowUpFromLine className="size-3.5" />}{value}</Button>)}
+          {(['deposit', 'withdrawal'] as const).map(value => (
+            <Button
+              key={value}
+              type="button"
+              variant={mode === value ? 'secondary' : 'ghost'}
+              size="sm"
+              aria-pressed={mode === value}
+              onClick={() => { setMode(value); setAmountText('') }}
+              className={`min-h-11 capitalize sm:min-h-9 ${mode === value ? '' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              {value === 'deposit' ? <ArrowDownToLine className="size-3.5" /> : <ArrowUpFromLine className="size-3.5" />}
+              {value}
+            </Button>
+          ))}
         </div>
 
         <label className="block text-[11px] font-semibold text-muted-foreground">

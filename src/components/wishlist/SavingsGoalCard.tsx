@@ -205,7 +205,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
         <Button
           variant="successGhost"
           size="sm"
-          className="shrink-0"
+          className="h-11 sm:h-9 shrink-0"
           onClick={() => onComplete(goal.id)}
           disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
           aria-label={goal.isRecurring ? `Complete this cycle for ${goal.name}` : `Mark ${goal.name} done`}

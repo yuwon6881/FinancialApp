@@ -32,7 +32,8 @@ describe('SavingsGoalContributeSheet', () => {
         mode="release"
         currency="MYR"
         available={500}
-        suggested={250}
+        suggestedTopUp={100}
+        suggestedRelease={250}
         formatSensitive={value => `RM ${value.toFixed(2)}`}
         onClose={() => undefined}
         onConfirm={onConfirm}
@@ -46,5 +47,58 @@ describe('SavingsGoalContributeSheet', () => {
 
     expect(onConfirm).toHaveBeenCalledWith(-250)
   })
-})
 
+  it('defaults a partial top-up to the amount still outstanding this cycle', () => {
+    render(
+      <SavingsGoalContributeSheet
+        goal={{ ...goal, earmarkedAmount: 1030, cycleFundedAmount: 30 }}
+        mode="topUp"
+        currency="MYR"
+        available={500}
+        suggestedTopUp={10}
+        suggestedRelease={40}
+        formatSensitive={value => `RM ${value.toFixed(2)}`}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />,
+    )
+
+    expect((screen.getByRole('textbox', { name: /amount/i }) as HTMLInputElement).value).toBe('10.00')
+  })
+
+  it('defaults an untouched top-up to the full current-cycle pace', () => {
+    render(
+      <SavingsGoalContributeSheet
+        goal={goal}
+        mode="topUp"
+        currency="MYR"
+        available={500}
+        suggestedTopUp={250}
+        suggestedRelease={250}
+        formatSensitive={value => `RM ${value.toFixed(2)}`}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />,
+    )
+
+    expect((screen.getByRole('textbox', { name: /amount/i }) as HTMLInputElement).value).toBe('250.00')
+  })
+
+  it('does not suggest a routine top-up when the cycle is already covered', () => {
+    render(
+      <SavingsGoalContributeSheet
+        goal={goal}
+        mode="topUp"
+        currency="MYR"
+        available={500}
+        suggestedTopUp={0}
+        suggestedRelease={250}
+        formatSensitive={value => `RM ${value.toFixed(2)}`}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />,
+    )
+
+    expect((screen.getByRole('textbox', { name: /amount/i }) as HTMLInputElement).value).toBe('')
+  })
+})
