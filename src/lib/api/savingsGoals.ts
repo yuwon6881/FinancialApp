@@ -1,5 +1,5 @@
 import type { SavingsGoal, SavingsGoalFundingBucket } from '../../types'
-import type { WireSavingsGoal, WireSavingsGoalCompletionResult, WireSavingsGoalFundingResult } from '../apiTypes'
+import type { WireSavingsGoal, WireSavingsGoalCompletionResult, WireSavingsGoalFundingResult, WireSavingsGoalFundingUndoResult } from '../apiTypes'
 import { deobfuscateAmount, deobfuscateSavingsGoal, deobfuscateTransaction, obfuscateAmount } from './amounts'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
@@ -62,6 +62,7 @@ export async function contributeToSavingsGoal(id: number, amount: number): Promi
 }
 
 export interface SavingsGoalFundingResult {
+  actionId?: string | null
   goals: SavingsGoal[]
   totalGranted: number
   freeToSpend: number
@@ -84,6 +85,7 @@ export async function fundSavingsGoalsForCycle(
   })
   invalidateCache()
   return {
+    actionId: data.actionId,
     goals: (data.goals || []).map(deobfuscateSavingsGoal),
     totalGranted: deobfuscateAmount(data.totalGranted),
     freeToSpend: deobfuscateAmount(data.freeToSpend),
@@ -118,4 +120,13 @@ export async function completeSavingsGoal(
     goal: deobfuscateSavingsGoal(data.goal),
     transaction: deobfuscateTransaction(data.transaction),
   }
+}
+
+export async function undoSavingsGoalsCycleFunding(actionId: string): Promise<SavingsGoal[]> {
+  const data = await request<WireSavingsGoalFundingUndoResult>(`/savings-goals/fund/${encodeURIComponent(actionId)}/undo`, {
+    method: 'POST',
+    errorMessage: 'Failed to undo cycle goal funding',
+  })
+  invalidateCache()
+  return (data.goals || []).map(deobfuscateSavingsGoal)
 }

@@ -1,6 +1,6 @@
 import React from 'react'
 import { m, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Loader2, Clock } from 'lucide-react'
+import { AlertCircle, Loader2, Clock } from 'lucide-react'
 import { mutationBusyLabel, resolveRowSyncState, type RowSyncFlags, type RowSyncState } from './rowSyncState'
 
 export interface RowSyncStatusProps extends RowSyncFlags {
@@ -25,6 +25,7 @@ const STATE_STYLE: Record<RowSyncState, string> = {
   deleting: 'text-red-500 bg-red-500/10 border-red-500/20',
   syncing: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
   pending: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+  failed: 'text-destructive bg-destructive/10 border-destructive/20',
 }
 
 /**
@@ -34,8 +35,12 @@ const STATE_STYLE: Record<RowSyncState, string> = {
  */
 const RowSyncBadge: React.FC<{ state: RowSyncState; entityLabel: string }> = ({ state, entityLabel }) => {
   const reduceMotion = useReducedMotion()
-  const title = state === 'pending' ? 'Pending sync (offline)' : `${state === 'deleting' ? 'Deleting' : 'Updating'} ${entityLabel}…`
-  const Icon = state === 'pending' ? Clock : Loader2
+  const title = state === 'pending'
+    ? 'Pending sync (offline)'
+    : state === 'failed'
+      ? `${entityLabel} sync failed; open Sync issues to retry`
+      : `${state === 'deleting' ? 'Deleting' : 'Updating'} ${entityLabel}…`
+  const Icon = state === 'pending' ? Clock : state === 'failed' ? AlertCircle : Loader2
 
   return (
     <m.span
@@ -50,7 +55,7 @@ const RowSyncBadge: React.FC<{ state: RowSyncState; entityLabel: string }> = ({ 
       aria-label={title}
       className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 select-none ${STATE_STYLE[state]}`}
     >
-      <Icon aria-hidden="true" className={`size-2.5 shrink-0 mr-1 ${state === 'pending' ? '' : 'animate-spin'}`} />
+      <Icon aria-hidden="true" className={`size-2.5 shrink-0 mr-1 ${state === 'syncing' || state === 'deleting' ? 'animate-spin' : ''}`} />
       <span aria-hidden="true">{mutationBusyLabel(state)}</span>
     </m.span>
   )

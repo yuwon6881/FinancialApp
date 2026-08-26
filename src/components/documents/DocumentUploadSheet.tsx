@@ -6,7 +6,7 @@ import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { compressImageFile } from '../../lib/imageCompression'
 import { getErrorMessage } from '../../lib/errors'
-import { buildMutationSuccessToast } from '../../lib/mutationToast'
+import { buildMutationSuccessToast, buildUndoSuccessToast } from '../../lib/mutationToast'
 import * as api from '../../lib/api/documents'
 import { useAppUi } from '../../contexts/AppContext'
 import { formatCurrencyVal } from '../../lib/utils'
@@ -139,12 +139,31 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
       const successCount = uploadResults.filter(result => result.uploaded).length
       if (successCount > 0) onSuccess()
       if (uploadResults.every(result => result.uploaded)) {
+        const uploadedIds = uploadResults.flatMap(result => result.uploaded && typeof result.id === 'number' ? [result.id] : [])
         const copy = buildMutationSuccessToast({
           entity: 'Documents',
           action: 'Added',
           message: `${successCount} document${successCount === 1 ? '' : 's'} were added. Review the extracted amount${successCount === 1 ? '' : 's'} in the Vault.`,
         })
-        showToast(copy.message, copy.title, copy.tone)
+        showToast(copy.message, copy.title, copy.tone, uploadedIds.length === successCount ? {
+          label: 'Undo',
+          onAction: () => {
+            void (async () => {
+              if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                showToast('Undoing an upload needs a live connection because the stored files must be removed from the Vault.', 'Available online only', 'warning')
+                return
+              }
+              try {
+                await Promise.all(uploadedIds.map(id => api.deleteDocument(id)))
+                onSuccess()
+                const undoCopy = buildUndoSuccessToast(`${uploadedIds.length} document${uploadedIds.length === 1 ? '' : 's'}`, 'Vault upload')
+                showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
+              } catch (error) {
+                showToast(getErrorMessage(error, 'The uploaded documents could not be removed.'), 'Undo Failed', 'error')
+              }
+            })()
+          },
+        } : undefined)
       }
     } catch (error) {
       // A rejected tax year or category is answerable inside the sheet; storage

@@ -72,11 +72,17 @@ export type WireSavingsGoal = Omit<SavingsGoal, 'targetAmount' | 'earmarkedAmoun
 }
 
 export interface WireSavingsGoalFundingResult {
+  actionId?: string | null
   goals?: WireSavingsGoal[]
   totalGranted: WireAmount
   freeToSpend: WireAmount
   rewardsFreeToSpend?: WireAmount
   essentialsFreeToSpend?: WireAmount
+}
+
+export interface WireSavingsGoalFundingUndoResult {
+  actionId: string
+  goals?: WireSavingsGoal[]
 }
 
 export type WireLedgerAccount = Omit<LedgerAccount, 'remaining'> & {

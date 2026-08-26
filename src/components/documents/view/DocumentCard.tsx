@@ -22,6 +22,7 @@ interface DocumentCardProps {
   document: VaultDocument
   isSelected: boolean
   isSyncing: boolean
+  isFailed: boolean
   isDeleting: boolean
   /** Checkboxes appear only once the list is in selection mode; see DocumentList. */
   isSelecting: boolean
@@ -59,6 +60,7 @@ export function DocumentCard({
   document,
   isSelected,
   isSyncing,
+  isFailed,
   isDeleting,
   isSelecting,
   reliefCategories,
@@ -166,7 +168,7 @@ export function DocumentCard({
                 {document.originalFileName}
               </p>
               <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 empty:hidden">
-                <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} entityLabel="document" />
+                <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isFailed={isFailed} isPending={document.isPendingSync} entityLabel="document" />
                 <LinkedTransactionButton
                   document={document}
                   openingTransactionId={openingTransactionId}

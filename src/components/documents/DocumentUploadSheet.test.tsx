@@ -18,12 +18,14 @@ const getTaxReliefCategories = vi.fn(async () => [
 ])
 const uploadDocuments = vi.fn()
 const uploadDocument = vi.fn()
+const deleteDocument = vi.fn()
 
 vi.mock('../../lib/api/documents', () => ({
   getDocumentConstraints: (...args: unknown[]) => getDocumentConstraints(...(args as [])),
   getTaxReliefCategories: (...args: unknown[]) => getTaxReliefCategories(...(args as [])),
   uploadDocuments: (...args: unknown[]) => uploadDocuments(...(args as [])),
   uploadDocument: (...args: unknown[]) => uploadDocument(...(args as [])),
+  deleteDocument: (...args: unknown[]) => deleteDocument(...(args as [])),
 }))
 
 const renderSheet = () => render(
@@ -52,6 +54,7 @@ describe('DocumentUploadSheet validation', () => {
   beforeEach(() => {
     showToast.mockClear()
     uploadDocuments.mockReset()
+    deleteDocument.mockReset()
   })
 
   it('reports a missing file on the field rather than through a toast', async () => {
@@ -106,5 +109,22 @@ describe('DocumentUploadSheet validation', () => {
 
     await waitFor(() => expect(showToast).toHaveBeenCalled())
     expect(showToast.mock.calls[0][2]).toBe('error')
+  })
+
+  it('offers Undo only when every uploaded document id is known', async () => {
+    uploadDocuments.mockResolvedValue([{ fileName: 'receipt.pdf', uploaded: true, id: 42 }])
+    deleteDocument.mockResolvedValue(undefined)
+    renderSheet()
+    await waitFor(() => expect(getTaxReliefCategories).toHaveBeenCalled())
+    await chooseFile()
+    await chooseCategory()
+
+    fireEvent.click(screen.getByRole('button', { name: /^Upload/ }))
+
+    await waitFor(() => expect(showToast).toHaveBeenCalled())
+    const undo = showToast.mock.calls[0][3]
+    expect(undo?.label).toBe('Undo')
+    undo.onAction()
+    await waitFor(() => expect(deleteDocument).toHaveBeenCalledWith(42))
   })
 })

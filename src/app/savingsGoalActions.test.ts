@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SavingsGoal, Transaction } from '../types'
 import { completeGoal, fundGoalsForCycle } from './savingsGoalActions'
-import { completeSavingsGoal, fundSavingsGoalsForCycle } from '../lib/api/savingsGoals'
+import { completeSavingsGoal, fundSavingsGoalsForCycle, undoSavingsGoalsCycleFunding } from '../lib/api/savingsGoals'
 import { deleteTransaction } from '../lib/api/transactions'
 
 vi.mock('../lib/api/savingsGoals', () => ({
   completeSavingsGoal: vi.fn(),
   fundSavingsGoalsForCycle: vi.fn(),
+  undoSavingsGoalsCycleFunding: vi.fn(),
 }))
 
 vi.mock('../lib/api/transactions', () => ({
@@ -204,5 +205,35 @@ describe('fundGoalsForCycle', () => {
       expect.any(String),
       expect.any(String),
     )
+  })
+
+  it('offers server-authoritative Undo when funding returns an action id', async () => {
+    const fundedGoals = [{ ...goal, earmarkedAmount: 100 }]
+    vi.mocked(fundSavingsGoalsForCycle).mockResolvedValue({
+      actionId: 'fund-action-1',
+      goals: fundedGoals,
+      totalGranted: 100,
+      freeToSpend: 50,
+      rewardsFreeToSpend: 50,
+      essentialsFreeToSpend: 0,
+    })
+    vi.mocked(undoSavingsGoalsCycleFunding).mockResolvedValue([goal])
+    const commitGoals = vi.fn()
+    const showToast = vi.fn()
+
+    await fundGoalsForCycle({
+      currency: 'MYR',
+      commitGoals,
+      commitGoal: vi.fn(),
+      getGoalName: vi.fn(),
+      refreshAll: vi.fn().mockResolvedValue(undefined),
+      showToast,
+    }, 'Rewards')
+
+    const undo = showToast.mock.calls[0][3]
+    expect(undo?.label).toBe('Undo')
+    undo.onAction()
+    await vi.waitFor(() => expect(undoSavingsGoalsCycleFunding).toHaveBeenCalledWith('fund-action-1'))
+    expect(commitGoals).toHaveBeenLastCalledWith([goal])
   })
 })

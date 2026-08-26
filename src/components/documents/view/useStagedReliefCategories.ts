@@ -7,6 +7,7 @@ import { buildMutationSuccessToast } from '../../../lib/mutationToast'
 interface UseStagedReliefCategoriesOptions {
   documents: VaultDocument[]
   bulkUpdate: (updates: BulkDocumentCategoryUpdate[]) => Promise<BulkDocumentCategoryUpdateResult[]>
+  isQueued?: boolean
   /** Marks rows busy while their staged change is in flight, through the shared RowSyncStatus path. */
   setRowsSyncing: (ids: number[], isSyncing: boolean) => void
   showToast: (message: string, title: string, tone: 'success' | 'error') => void
@@ -27,6 +28,7 @@ interface UseStagedReliefCategoriesOptions {
 export function useStagedReliefCategories({
   documents,
   bulkUpdate,
+  isQueued = false,
   setRowsSyncing,
   showToast,
   guardSensitive,
@@ -67,7 +69,7 @@ export function useStagedReliefCategories({
     const entries = Array.from(staged.entries())
     const stagedIds = entries.map(([id]) => id)
     setIsSaving(true)
-    setRowsSyncing(stagedIds, true)
+    if (!isQueued) setRowsSyncing(stagedIds, true)
     try {
       const results = await bulkUpdate(entries.map(([id, reliefCategory]) => ({ id, reliefCategory })))
       const resultsById = new Map(results.map(result => [result.id, result]))
@@ -93,7 +95,7 @@ export function useStagedReliefCategories({
           'Document Categories Partially Updated',
           'error',
         )
-      } else {
+      } else if (!isQueued) {
         const copy = buildMutationSuccessToast({
           entity: 'Document Categories',
           action: 'Updated',
@@ -104,7 +106,7 @@ export function useStagedReliefCategories({
     } catch (error) {
       showToast(getErrorMessage(error, 'The document categories could not be saved.'), 'Category update failed', 'error')
     } finally {
-      setRowsSyncing(stagedIds, false)
+      if (!isQueued) setRowsSyncing(stagedIds, false)
       setIsSaving(false)
     }
   }

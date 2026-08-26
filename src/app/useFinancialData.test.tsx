@@ -65,17 +65,20 @@ function renderFinancialData(guardSensitive: () => boolean = () => true) {
   // Every option must be stable across renders -- an inline literal or `vi.fn()` here
   // would churn `loadAll`'s identity by itself and mask the churn these tests pin.
   const setDarkMode = vi.fn()
+  const showToast = vi.fn()
+  const setConfirmModalData = vi.fn()
   const options = {
     token: 'token-1',
+    username: 'test-user',
     lastUnlockedTimeRef: { current: 0 },
     isLocked: false,
     markSessionLocked,
     handleLogout,
     hideSensitive: false,
     darkMode: false,
-    showToast: vi.fn(),
+    showToast,
     guardSensitive,
-    setConfirmModalData: vi.fn(),
+    setConfirmModalData,
     resolveHideSensitive: vi.fn(),
     markSensitivePreferenceUnavailable,
     setDarkMode,
@@ -91,7 +94,7 @@ function renderFinancialData(guardSensitive: () => boolean = () => true) {
   }
   const rendered = renderHook(() => useFinancialData(options as any))
   mountedFinancialDataHooks.add(rendered.unmount)
-  return { ...rendered, setDarkMode }
+  return { ...rendered, setDarkMode, showToast, setConfirmModalData }
 }
 
 function mockHappyApi(recurring: RecurringPayment[] = [payment]) {
@@ -166,6 +169,25 @@ describe('useFinancialData', () => {
     expect(result.current.pendingOps).toHaveLength(0)
     expect(result.current.draftTransactions).toHaveLength(0)
     expect(guardSensitive).toHaveBeenCalledTimes(7)
+  })
+
+  it('restores a deleted draft at its original position through toast Undo', async () => {
+    const drafts = [
+      { id: 'draft-1', description: 'First', amount: -10, date: '2026-07-01', category: 'Other', ledgerCategory: 'Needs', isPendingSync: true },
+      { id: 'draft-2', description: 'Second', amount: -20, date: '2026-07-02', category: 'Other', ledgerCategory: 'Needs', isPendingSync: true },
+    ]
+    localStorage.setItem('draft_transactions', JSON.stringify(drafts))
+    mockHappyApi()
+    const { result, showToast } = renderFinancialData()
+    await waitFor(() => expect(result.current.draftTransactions.map(item => item.id)).toEqual(['draft-1', 'draft-2']))
+
+    await act(async () => { await result.current.handleDeleteDraftTransaction('draft-1') })
+    expect(result.current.draftTransactions.map(item => item.id)).toEqual(['draft-2'])
+    const undo = showToast.mock.calls.at(-1)?.[3]
+    expect(undo?.label).toBe('Undo')
+
+    await act(async () => { undo.onAction(); await Promise.resolve() })
+    await waitFor(() => expect(result.current.draftTransactions.map(item => item.id)).toEqual(['draft-1', 'draft-2']))
   })
 
   it('queues top drafts first and reverses them in same-day newest-first Ledger timestamps', async () => {

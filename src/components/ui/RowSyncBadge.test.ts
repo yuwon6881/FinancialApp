@@ -19,6 +19,10 @@ describe('resolveRowSyncState', () => {
     expect(resolveRowSyncState({ isPending: true })).toBe('pending')
   })
 
+  it('shows a failed mutation ahead of an unsent pending marker', () => {
+    expect(resolveRowSyncState({ isFailed: true, isPending: true })).toBe('failed')
+  })
+
   it('renders nothing when the row is idle', () => {
     expect(resolveRowSyncState({})).toBeNull()
     expect(resolveRowSyncState({ isDeleting: false, isSyncing: false, isPending: false })).toBeNull()
@@ -36,6 +40,7 @@ describe('mutation busy vocabulary', () => {
       expect(mutationBusyLabel(state)).not.toContain('...')
     }
     expect(mutationBusyLabel('pending')).toBe('Pending')
+    expect(mutationBusyLabel('failed')).toBe('Failed')
   })
 
   it('maps an in-flight op type onto the same words the row badge shows', () => {

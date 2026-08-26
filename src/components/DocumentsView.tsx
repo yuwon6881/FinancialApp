@@ -27,10 +27,10 @@ interface DocumentsViewProps {
 export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
   const { showToast, guardSensitive } = useAppUi()
   const { currency, hideSensitive } = useAppPrefs()
-  const { operations = [], activeSyncIds = [], deletingId, queueMutation } = useAppSync()
+  const { operations = [], failedOperations = [], activeSyncIds = [], deletingId, queueMutation } = useAppSync()
 
   const {
-    documents,
+    documents: serverDocuments,
     usage,
     availableYears,
     summary,
@@ -57,8 +57,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     loadDocuments,
     loadOverview,
     deleteDocument,
-    updateDocumentMetadata,
-    bulkUpdateDocumentCategories,
     bulkDelete,
   } = useDocumentsView(showToast)
 
@@ -73,6 +71,26 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
   const [isDownloadingArchive, setIsDownloadingArchive] = useState(false)
   const [isDownloadingSelection, setIsDownloadingSelection] = useState(false)
   const refreshedCategoryOpsRef = useRef(new Set<string>())
+  const refreshedDocumentOpsRef = useRef(new Set<string>())
+
+  const vaultDocumentOperations = useMemo(() => operations.filter(operation =>
+    operation.entity === 'vaultDocument',
+  ), [operations])
+  const outboxSyncingDocumentIds = useMemo(() => new Set(
+    vaultDocumentOperations
+      .filter(operation => activeSyncIds.includes(operation.id))
+      .map(operation => Number(operation.targetId)),
+  ), [activeSyncIds, vaultDocumentOperations])
+  const failedDocumentIds = useMemo(() => new Set(
+    failedOperations
+      .filter(operation => operation.entity === 'vaultDocument')
+      .map(operation => Number(operation.targetId)),
+  ), [failedOperations])
+  const visibleSyncingDocumentIds = useMemo(
+    () => new Set([...syncingDocumentIds, ...outboxSyncingDocumentIds]),
+    [outboxSyncingDocumentIds, syncingDocumentIds],
+  )
+  const documents = useOptimisticList(serverDocuments, vaultDocumentOperations, 'vaultDocument')
 
   const addDocumentIds = (setter: Dispatch<SetStateAction<Set<number>>>, ids: number[]) => {
     setter(current => {
@@ -92,7 +110,22 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
   const stagedCategories = useStagedReliefCategories({
     documents,
-    bulkUpdate: bulkUpdateDocumentCategories,
+    bulkUpdate: async updates => {
+      const results = updates.map(update => {
+        const document = documents.find(item => item.id === update.id)
+        if (!document || !queueMutation) return { id: update.id, updated: false, message: 'Document is no longer available.' }
+        const queued = queueMutation('vaultDocument', 'update', String(update.id), {
+          reliefCategory: update.reliefCategory,
+          name: document.originalFileName,
+          undoSnapshot: document,
+        })
+        return queued
+          ? { id: update.id, updated: true }
+          : { id: update.id, updated: false, message: 'Change could not be queued.' }
+      })
+      return results
+    },
+    isQueued: true,
     setRowsSyncing: (ids, isSyncing) =>
       (isSyncing ? addDocumentIds : removeDocumentIds)(setSyncingDocumentIds, ids),
     showToast,
@@ -114,6 +147,16 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     newlyCompleted.forEach(operation => refreshedCategoryOpsRef.current.add(operation.id))
     void loadOverview(taxYear)
   }, [loadOverview, taxReliefOperations, taxYear])
+
+  useEffect(() => {
+    const newlyCompleted = vaultDocumentOperations.filter(operation =>
+      operation.isCompleted && !refreshedDocumentOpsRef.current.has(operation.id),
+    )
+    if (newlyCompleted.length === 0) return
+    newlyCompleted.forEach(operation => refreshedDocumentOpsRef.current.add(operation.id))
+    void loadDocuments()
+    void loadOverview(taxYear)
+  }, [loadDocuments, loadOverview, taxYear, vaultDocumentOperations])
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
   const visibleIds = documents.map(document => document.id)
@@ -359,22 +402,21 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                   setIsBulkDeleteOpen(true)
                 }}
                 isDeletingSelected={isBulkDeleting}
-                syncingDocumentIds={syncingDocumentIds}
+                syncingDocumentIds={visibleSyncingDocumentIds}
+                failedDocumentIds={failedDocumentIds}
                 deletingDocumentIds={deletingDocumentIds}
                 currency={currency}
                 pendingReliefCategories={stagedCategories.staged}
                 onReliefCategoryChange={stagedCategories.stage}
                 updateDocument={async (id, updates) => {
                   if (!guardSensitive()) return
-                  addDocumentIds(setSyncingDocumentIds, [id])
-                  try {
-                    await updateDocumentMetadata(id, updates)
-                    void loadOverview(taxYear)
-                  } catch (error) {
-                    showToast(getErrorMessage(error, 'The document details could not be saved.'), 'Save Failed', 'error')
-                  } finally {
-                    removeDocumentIds(setSyncingDocumentIds, [id])
-                  }
+                  const document = documents.find(item => item.id === id)
+                  if (!document || !queueMutation) return
+                  queueMutation('vaultDocument', 'update', String(id), {
+                    ...updates,
+                    name: document.originalFileName,
+                    undoSnapshot: document,
+                  })
                 }}
                 reliefCategoriesByTaxYear={reliefCategoriesByTaxYear}
                 onNavigateToTransaction={onNavigateToTransaction}

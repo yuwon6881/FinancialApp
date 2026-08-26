@@ -13,6 +13,7 @@ vi.mock('./api', () => ({}))
 
 import { DISPATCH } from './outboxDispatch'
 import { SERVER_ASSIGNED_ID_ENTITIES } from './outboxSync'
+import { QUEUED_MUTATION_POLICIES } from './mutationPolicy'
 
 const dispatchEntries = Object.keys(DISPATCH).map(key => {
   const [entity, type] = key.split(':')
@@ -78,5 +79,15 @@ describe('outbox registry contracts', () => {
       validOp('transaction', 'not-a-real-operation' as OpType),
       validOp('not-a-real-entity' as EntityKind, 'add'),
     ])).toEqual([])
+  })
+
+  it('requires an explicit mutation policy for every queued dispatcher', () => {
+    expect(Object.keys(QUEUED_MUTATION_POLICIES).sort()).toEqual(Object.keys(DISPATCH).sort())
+    for (const [key, policy] of Object.entries(QUEUED_MUTATION_POLICIES)) {
+      expect(policy.projection, `${key} needs projection policy`).toBeTruthy()
+      expect(policy.retry, `${key} needs retry policy`).toBeTruthy()
+      expect(policy.toast, `${key} needs toast policy`).toBeTruthy()
+      if (policy.undo === 'exempt') expect(policy.undoExemption, `${key} needs an Undo exemption reason`).toBeTruthy()
+    }
   })
 })

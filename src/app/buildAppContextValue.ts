@@ -19,6 +19,7 @@ export function buildAppContextValue(params: {
   guardSensitive: () => boolean
   confirm: (request: any) => void
   operations: QueuedOp[]
+  failedOperations: QueuedOp[]
   queueMutation: (entity: EntityKind, type: OpType, targetId: string, payload?: OutboxPayload, isUndo?: boolean) => boolean
 }): AppContextValue {
   return {
@@ -37,6 +38,7 @@ export function buildAppContextValue(params: {
     guardSensitive: params.guardSensitive,
     confirm: params.confirm,
     operations: params.operations,
+    failedOperations: params.failedOperations,
     queueMutation: params.queueMutation,
   }
 }

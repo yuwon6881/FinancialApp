@@ -116,7 +116,24 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
                 : 'This device will now be told when a category gets close to its planned amount.'
               : 'This device will no longer show these. Your other devices are unchanged.',
           })
-          dialogs.showToast(copy.message, copy.title, copy.tone)
+          dialogs.showToast(copy.message, copy.title, copy.tone, {
+            label: 'Undo',
+            onAction: () => {
+              void (async () => {
+                const undone = await push.setChannelEnabled(channel, !checked)
+                if (!undone) {
+                  dialogs.showToast(
+                    'The notification setting could not be restored. Check this device\'s permission and connection, then try again.',
+                    'Undo failed',
+                    'error',
+                  )
+                  return
+                }
+                const undoCopy = buildUndoSuccessToast(isBills ? 'Bill reminders' : 'Spending alerts', 'notification setting')
+                dialogs.showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
+              })()
+            },
+          })
         })()
       }}
       onNavigateToLedger={nav.handleNavigateToLedger}

@@ -1,6 +1,5 @@
 import type { AiUiAction } from './api/ai'
 import type { AiActionsDeps } from './aiActions'
-import { buildMutationSuccessToast } from './mutationToast'
 import { REMINDER_LEAD_DAY_OPTIONS } from './recurringPayments'
 
 type RecurringActionDeps = Pick<
@@ -45,13 +44,7 @@ export function dispatchAiRecurringSettingAction(action: AiUiAction, deps: Recur
       confirmText: requestedActive ? 'Resume' : 'Pause',
       onConfirm: () => {
         deps.handleToggleActive(payment.id)
-        const copy = buildMutationSuccessToast({
-          entity: 'Recurring Payment',
-          action: requestedActive ? 'Resumed' : 'Paused',
-          recordName: payment.name,
-          messageVerb: requestedActive ? 'resumed' : 'paused',
-        })
-        deps.showToast(copy.message, copy.title, copy.tone)
+        // The queued mutation owns the single success toast and its working Undo action.
         deps.navigate({ tab: 'recurring', recurringId: payment.id })
       },
     })
@@ -87,15 +80,7 @@ export function dispatchAiRecurringSettingAction(action: AiUiAction, deps: Recur
     confirmText: 'Update Reminder',
     onConfirm: () => {
       deps.handleUpdateReminder(payment.id, { ...settings })
-      const copy = buildMutationSuccessToast({
-        entity: 'Recurring Payment',
-        action: 'Updated',
-        recordName: payment.name,
-        messageSuffix: settings.enabled
-          ? `Reminder is on — ${settings.mode === 'Daily' ? 'daily' : 'once'}, ${settings.leadDays} day${settings.leadDays === 1 ? '' : 's'} before it is due.`
-          : 'Reminder is off.',
-      })
-      deps.showToast(copy.message, copy.title, copy.tone)
+      // The queued mutation owns the single success toast and its working Undo action.
       deps.navigate({ tab: 'recurring', recurringId: payment.id })
     },
   })

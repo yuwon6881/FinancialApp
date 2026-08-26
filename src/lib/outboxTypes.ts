@@ -2,7 +2,7 @@ import type { BulkTransactionMutationResult } from './api/transactionBulk'
 import type { LedgerAccountReconcileResult } from './api/accounts'
 import type { CategoryCleanupApplyResult } from './api/categories'
 import type { DeletedTransactionsSnapshot } from './api/investments'
-import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, LedgerAccount, Loan, PayEarlyResult, RecurringPayment, RecurringSettlementResult, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, LedgerAccount, Loan, PayEarlyResult, RecurringPayment, RecurringSettlementResult, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, VaultDocument, WishlistItem } from '../types'
 
 
 // Loan balances are replayed from the full-history bootstrap snapshot, not from the cycle-scoped
@@ -15,6 +15,7 @@ export type EntityKind = 'transaction' | 'recurringPayment' | 'recurringOccurren
   | 'investmentPlan' | 'investmentAllocation'
   | 'investmentAllocationOrder' | 'taxReliefCategory'
   | 'ledgerAccount' | 'ledgerAccountReconcile'
+  | 'vaultDocument'
 export type OpType = 'add' | 'update' | 'delete' | 'restore' | 'toggle' | 'purchase' | 'unpurchase'
   | 'reminder' | 'payEarly' | 'settle' | 'cleanup' | 'bulkDelete' | 'bulkRestore' | 'bulkMove'
   | 'advanceRepayment' | 'fullSettlement' | 'undoRepayment'
@@ -25,7 +26,7 @@ export interface OutboxPayload {
   description?: string
   category?: string
   ledgerCategory?: string
-  amount?: number
+  amount?: number | null
   stabilityRecoveryTopUpAmount?: number | null
   stabilityReloadIntent?: 'Unanswered' | 'Required' | 'NotRequired'
   price?: number
@@ -101,6 +102,7 @@ export type DispatchResult =
   | PayEarlyResult
   | RecurringSettlementResult
   | LedgerAccountReconcileResult
+  | VaultDocument
   | import('../types').LoanRepaymentActionResult
   | { id: string }
   | { item: WishlistItem; transaction: Transaction; id?: undefined }

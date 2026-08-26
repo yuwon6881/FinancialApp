@@ -4,7 +4,7 @@ import * as api from '../../lib/api'
 import { createFinalId, enqueue } from '../../lib/outbox'
 import { triggerHaptic } from '../../lib/haptics'
 import { getErrorMessage } from '../../lib/errors'
-import { buildUndoSuccessToast } from '../../lib/mutationToast'
+import { buildMutationSuccessToast, buildUndoSuccessToast } from '../../lib/mutationToast'
 import type { UseOutboxResult } from '../../lib/useOutbox'
 import type { AppDialogs } from '../useAppDialogs'
 import type { ToastAction, ToastTone } from '../../components/ui/ToastViewport'
@@ -125,15 +125,51 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
     return loadDraftTransactionDocumentChanges(username, id)
   }, [username])
 
-  const handleDeleteDraftTransaction = (id: string) => {
+  const handleDeleteDraftTransaction = async (id: string) => {
     if (!guardSensitive()) return
+    const index = draftTransactions.findIndex(draft => draft.id === id)
+    const draft = index >= 0 ? draftTransactions[index] : undefined
+    if (!draft) return
+    let documentChanges: TransactionDocumentChanges
+    try {
+      const documents = await import('../../lib/draftTransactionDocuments')
+      documentChanges = await documents.loadDraftTransactionDocumentChanges(username, id)
+      await documents.deleteDraftTransactionDocumentChanges(username, id)
+    } catch (error) {
+      showToast(getErrorMessage(error, 'The draft could not be removed because its attachments could not be preserved for Undo.'), 'Delete Failed', 'error')
+      return
+    }
     pendingTransactionDocumentsRef.current.delete(id)
-    void import('../../lib/draftTransactionDocuments').then(({ deleteDraftTransactionDocumentChanges }) =>
-      deleteDraftTransactionDocumentChanges(username, id)).catch(() => {
-        showToast('The draft was removed, but its obsolete local file copy could not be cleared.', 'Draft cleanup incomplete', 'warning')
-      })
     setDraftTransactions(prev => prev.filter(t => t.id !== id))
     void triggerHaptic(30)
+    const copy = buildMutationSuccessToast({
+      entity: 'Draft',
+      action: 'Deleted',
+      recordName: draft.description || 'transaction',
+      messageVerb: 'deleted',
+    })
+    showToast(copy.message, copy.title, copy.tone, {
+      label: 'Undo',
+      onAction: () => {
+        void (async () => {
+          try {
+            const documents = await import('../../lib/draftTransactionDocuments')
+            await documents.saveDraftTransactionDocumentChanges(username, id, documentChanges)
+            pendingTransactionDocumentsRef.current.set(id, documentChanges)
+            setDraftTransactions(previous => {
+              if (previous.some(item => item.id === id)) return previous
+              const restored = [...previous]
+              restored.splice(Math.min(index, restored.length), 0, draft)
+              return restored
+            })
+            const undoCopy = buildUndoSuccessToast(draft.description || 'transaction', 'draft')
+            showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
+          } catch (error) {
+            showToast(getErrorMessage(error, 'The draft attachments could not be restored.'), 'Undo Failed', 'error')
+          }
+        })()
+      },
+    })
   }
 
   const requestDeleteDraftTransaction = (id: string) => {
@@ -143,7 +179,7 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
       title: 'Delete Draft',
       message: `Delete draft "${draft?.description || 'transaction'}"? This removes it from the draft queue before it is synced.`,
       confirmText: 'Delete',
-      onConfirm: () => handleDeleteDraftTransaction(id)
+      onConfirm: () => { void handleDeleteDraftTransaction(id) }
     })
   }
 

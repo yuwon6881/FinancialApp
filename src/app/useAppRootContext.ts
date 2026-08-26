@@ -30,6 +30,7 @@ export function useAppRootContext(options: {
     guardSensitive,
     confirm: dialogs.setConfirmModalData,
     operations: financial.activeOps,
+    failedOperations: financial.failedOps,
     queueMutation: (entity, type, targetId, payload, isUndo) => {
       if (!guardSensitive()) return false
       return financial.queueMutation(entity, type, targetId, payload, isUndo)
@@ -46,6 +47,7 @@ export function useAppRootContext(options: {
     financial.isBackgroundSyncing,
     financial.pendingOps.length,
     financial.activeOps,
+    financial.failedOps,
     financial.queueMutation,
     financial.isOffline,
     financial.formatSensitive,

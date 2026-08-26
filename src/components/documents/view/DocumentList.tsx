@@ -30,6 +30,7 @@ interface DocumentListProps {
   isDeletingSelected?: boolean
   currency: string
   syncingDocumentIds?: ReadonlySet<number>
+  failedDocumentIds?: ReadonlySet<number>
   deletingDocumentIds?: ReadonlySet<number>
   updateDocument: UpdateDocumentFn
   reliefCategoriesByTaxYear: Readonly<Record<number, TaxReliefCategoryDefinition[]>>
@@ -56,6 +57,7 @@ export function DocumentList({
   isDeletingSelected = false,
   currency,
   syncingDocumentIds = new Set<number>(),
+  failedDocumentIds = new Set<number>(),
   deletingDocumentIds = new Set<number>(),
   updateDocument,
   reliefCategoriesByTaxYear,
@@ -173,6 +175,7 @@ export function DocumentList({
               document={document}
               isSelected={selectedIds.has(document.id)}
               isSyncing={syncingDocumentIds.has(document.id)}
+              isFailed={failedDocumentIds.has(document.id)}
               isDeleting={deletingDocumentIds.has(document.id)}
               isSelecting={isSelecting}
               reliefCategories={reliefCategoriesByTaxYear[document.taxYear] ?? []}
@@ -244,7 +247,7 @@ export function DocumentList({
                             <p className="truncate font-bold text-foreground" title={document.originalFileName}>
                               {document.originalFileName}
                             </p>
-                            <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} entityLabel="document" />
+                            <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isFailed={failedDocumentIds.has(document.id)} isPending={document.isPendingSync} entityLabel="document" />
                             <LinkedTransactionButton
                               document={document}
                               openingTransactionId={openingTransactionId}

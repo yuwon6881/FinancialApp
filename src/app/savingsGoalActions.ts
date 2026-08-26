@@ -118,8 +118,31 @@ export async function fundGoalsForCycle(deps: SavingsGoalActionDeps, bucket: Sav
         action: 'Funded',
         message: `${bucketLabel} commitments were funded for this cycle. ${formatCurrencyVal(result.totalGranted, deps.currency)} was set aside. ${formatCurrencyVal(freeToSpend, deps.currency)} remains free in ${bucketLabel}.`,
       })
-      // No undo added because unfundSavingsGoalsForCycle does not exist in the API
-      deps.showToast(copy.message, copy.title, copy.tone)
+      const undoAction = result.actionId ? {
+        label: 'Undo',
+        onAction: () => {
+          void (async () => {
+            if (!isOnline()) {
+              showOnlineOnlyMessage(deps, 'Undoing cycle funding needs a live connection so later commitment changes cannot be overwritten.')
+              return
+            }
+            const undoSyncIds = ['savings-goals-fund-undo', ...(deps.getActiveGoalIds?.() ?? [])]
+            deps.beginDirectSync?.(undoSyncIds)
+            try {
+              const { undoSavingsGoalsCycleFunding } = await import('../lib/api/savingsGoals')
+              deps.commitGoals(await undoSavingsGoalsCycleFunding(result.actionId!))
+              const undoCopy = buildUndoSuccessToast(`${bucketLabel} commitments`, 'cycle funding')
+              deps.showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
+            } catch (error) {
+              deps.showToast(getErrorMessage(error, 'Cycle funding could not be undone.'), 'Undo failed', 'error')
+            } finally {
+              deps.endDirectSync?.(undoSyncIds)
+            }
+          })()
+        },
+      } : undefined
+      if (undoAction) deps.showToast(copy.message, copy.title, copy.tone, undoAction)
+      else deps.showToast(copy.message, copy.title, copy.tone)
     } else {
       deps.showToast(`Your ${bucketLabel.toLowerCase()} goals are already funded for this cycle. ${formatCurrencyVal(freeToSpend, deps.currency)} remains free.`, 'Nothing to fund', 'info')
     }

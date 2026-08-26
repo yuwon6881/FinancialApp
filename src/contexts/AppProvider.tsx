@@ -38,6 +38,7 @@ export function AppProvider({ value, children }: { value: AppContextValue; child
     isSyncing: value.isSyncing,
     isOffline: value.isOffline,
     operations: value.operations,
+    failedOperations: value.failedOperations,
     queueMutation: value.queueMutation,
   }), [
     value.activeSyncId,
@@ -46,6 +47,7 @@ export function AppProvider({ value, children }: { value: AppContextValue; child
     value.isSyncing,
     value.isOffline,
     value.operations,
+    value.failedOperations,
     value.queueMutation,
   ])
 

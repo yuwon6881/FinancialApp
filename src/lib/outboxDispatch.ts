@@ -207,6 +207,18 @@ const HANDLERS: Record<string, (op: QueuedOp) => Promise<DispatchResult>> = {
     const documents = await import('./api/documents')
     return documents.deleteTaxReliefCategory(Number(op.payload?.taxYear), op.targetId)
   },
+  'vaultDocument:update': async (op) => {
+    const documents = await import('./api/documents')
+    const payload = withoutUndoSnapshot(op.payload)
+    return documents.updateDocument(Number(op.targetId), {
+      ...('taxYear' in payload && typeof payload.taxYear === 'number' ? { taxYear: payload.taxYear } : {}),
+      ...('transactionId' in payload ? { transactionId: typeof payload.transactionId === 'string' ? payload.transactionId : null } : {}),
+      ...('reliefCategory' in payload ? { reliefCategory: typeof payload.reliefCategory === 'string' ? payload.reliefCategory : null } : {}),
+      ...('amount' in payload ? { amount: typeof payload.amount === 'number' ? payload.amount : null } : {}),
+      ...('amountCurrency' in payload && (payload.amountCurrency === 'MYR' || payload.amountCurrency === 'OTHER') ? { amountCurrency: payload.amountCurrency } : {}),
+      ...('amountStatus' in payload && (payload.amountStatus === 'Confirmed' || payload.amountStatus === 'NeedsReview') ? { amountStatus: payload.amountStatus } : {}),
+    })
+  },
 }
 
 /**

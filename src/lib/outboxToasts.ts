@@ -28,6 +28,7 @@ export const ENTITY_LABELS: Record<EntityKind, string> = {
   taxReliefCategory: 'Tax relief category',
   ledgerAccount: 'Account',
   ledgerAccountReconcile: 'Account reconciliation',
+  vaultDocument: 'Vault document',
 }
 
 /** Kept beside the validator's persisted-op shape so registration tests can detect drift. */
@@ -50,6 +51,7 @@ export const WELL_FORMED_ENTITY_KINDS: readonly EntityKind[] = [
   'investmentAllocation',
   'investmentAllocationOrder',
   'taxReliefCategory',
+  'vaultDocument',
 ]
 
 const TYPE_COPY: Partial<Record<OpType, { title: string; messageVerb: string }>> = {

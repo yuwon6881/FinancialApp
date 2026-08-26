@@ -1,5 +1,5 @@
 import type { ToastAction } from '../components/ui/ToastViewport'
-import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, LedgerAccount, Loan, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, LedgerAccount, Loan, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, VaultDocument, WishlistItem } from '../types'
 import { createFinalId, createLocalNumericId, createLocalWishlistId, type DispatchResult, type EntityKind, type OutboxPayload, type QueuedOp } from './outbox'
 
 /**
@@ -9,7 +9,7 @@ import { createFinalId, createLocalNumericId, createLocalWishlistId, type Dispat
  * from `buildUndoAction`, and `tsc` never flagged either. The switch below is the real registry --
  * adding a member here buys documentation, not enforcement.
  */
-export type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | WishlistItem | SavingsGoal | LedgerAccount | Loan | InvestmentAccount | InvestmentInstrument | InvestmentActivity | InvestmentCashFlow | TaxReliefCategoryDefinition) & {
+export type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | WishlistItem | SavingsGoal | LedgerAccount | Loan | InvestmentAccount | InvestmentInstrument | InvestmentActivity | InvestmentCashFlow | TaxReliefCategoryDefinition | VaultDocument) & {
   isPendingSync?: boolean
   isPendingDelete?: boolean
 }
@@ -271,6 +271,8 @@ export function buildUndoAction(
       return before ? action('investmentActivity', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'investmentCashFlow:update':
       return before ? action('investmentCashFlow', 'update', String(op.targetId), toPayload(before)) : undefined
+    case 'vaultDocument:update':
+      return before ? action('vaultDocument', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'investmentPlan:update':
       return persisted && typeof persisted === 'object'
         ? action('investmentPlan', 'update', String(op.targetId), { ...(persisted as object) })

@@ -49,6 +49,7 @@ export interface AppSyncValue {
   isSyncing: boolean
   isOffline: boolean
   operations?: QueuedOp[]
+  failedOperations?: QueuedOp[]
   queueMutation?: (entity: EntityKind, type: OpType, targetId: string, payload?: OutboxPayload, isUndo?: boolean) => boolean
 }
 
@@ -77,6 +78,7 @@ const defaultSync: AppSyncValue = {
   isSyncing: false,
   isOffline: false,
   operations: [],
+  failedOperations: [],
   queueMutation: () => false,
 }
 

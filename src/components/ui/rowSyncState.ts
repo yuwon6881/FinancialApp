@@ -1,4 +1,4 @@
-export type RowSyncState = 'deleting' | 'syncing' | 'pending'
+export type RowSyncState = 'deleting' | 'syncing' | 'failed' | 'pending'
 
 export interface RowSyncFlags {
   /** Optimistic-delete in flight or queued (isPendingDelete / deletingId match). */
@@ -7,6 +7,8 @@ export interface RowSyncFlags {
   isSyncing?: boolean
   /** Row has an unsent queued mutation (offline) — isPendingSync. */
   isPending?: boolean
+  /** The queued mutation exhausted automatic retry and needs user attention. */
+  isFailed?: boolean
 }
 
 /**
@@ -19,6 +21,7 @@ export interface RowSyncFlags {
 export function resolveRowSyncState(flags: RowSyncFlags): RowSyncState | null {
   if (flags.isDeleting) return 'deleting'
   if (flags.isSyncing) return 'syncing'
+  if (flags.isFailed) return 'failed'
   if (flags.isPending) return 'pending'
   return null
 }
@@ -40,6 +43,7 @@ const MUTATION_BUSY_LABELS: Record<MutationBusyState, string> = {
   deleting: 'Deleting…',
   syncing: 'Syncing…',
   pending: 'Pending',
+  failed: 'Failed',
   saving: 'Saving…',
   undoing: 'Undoing…',
 }
