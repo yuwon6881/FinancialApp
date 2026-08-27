@@ -75,6 +75,52 @@ describe('CycleCalendar component', () => {
     expect(past.style.backgroundImage).toBe('')
   })
 
+  it('renders a centre dot for zero-spend days that remains visible on desktop', () => {
+    render(
+      <CycleCalendar
+        selectedMonth="Jul"
+        selectedYear={2026}
+        cycleDay={1}
+        cycleLabel="Jul 1 ~ Jul 31, 2026"
+        transactions={[]}
+        recurringPayments={[]}
+        formatNet={value => String(value)}
+      />,
+    )
+
+    const past = screen.getByTitle('Jul 20: No cash activity.')
+    const dot = past.querySelector('[aria-hidden="true"]') as HTMLElement
+    expect(dot).toBeTruthy()
+    expect(dot.className).toContain('rounded-full')
+    expect(dot.className).toContain('size-1')
+    expect(dot.className).toContain('bg-muted-foreground/40')
+    expect(dot.className).not.toContain('md:hidden')
+
+    const future = screen.getByTitle('Jul 28: Not here yet.')
+    const futureDot = future.querySelector('[aria-hidden="true"]')
+    expect(futureDot).toBeNull()
+  })
+
+  it('hides the presence dot on desktop when an amount figure is displayed', () => {
+    render(
+      <CycleCalendar
+        selectedMonth="Jul"
+        selectedYear={2026}
+        cycleDay={1}
+        cycleLabel="Jul 1 ~ Jul 31, 2026"
+        transactions={[{ id: '1', date: '2026-07-20', description: 'Groceries', category: 'Food', ledgerCategory: 'Essentials', amount: -50 }]}
+        recurringPayments={[]}
+        formatNet={value => `$${value}`}
+      />,
+    )
+
+    const dayWithSpend = screen.getByTitle(/Jul 20:/)
+    const dot = dayWithSpend.querySelector('span[aria-hidden="true"]') as HTMLElement
+    expect(dot).toBeTruthy()
+    expect(dot.className).toContain('size-1.5')
+    expect(dot.className).toContain('md:hidden')
+  })
+
   it('hides activity intensity with sensitive amounts', () => {
     render(
       <CycleCalendar

@@ -257,9 +257,9 @@ export function CycleCalendar(props: CycleCalendarProps) {
                 {!day.isFuture && !props.hideSensitive && (
                   <span
                     className={cn(
-                      'mt-0.5 rounded-full md:hidden',
+                      'mt-0.5 rounded-full',
                       metric.value !== undefined
-                        ? cn('size-1.5', TONE_DOT_CLASS[metric.tone])
+                        ? cn('size-1.5 md:hidden', TONE_DOT_CLASS[metric.tone])
                         : 'size-1 bg-muted-foreground/40'
                     )}
                     aria-hidden="true"
