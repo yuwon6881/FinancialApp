@@ -234,10 +234,10 @@ test('draft attachments survive a reload before the batch is added', async ({ pa
   await dialog.getByRole('combobox', { name: 'Tax relief category for weekend-market.pdf' }).click()
   await page.getByRole('option', { name: /Medical/ }).click()
   await dialog.getByRole('button', { name: 'Save Draft' }).click()
-  await expect(page.getByText('1 document')).toBeVisible()
+  await expect(page.getByText('1 attached')).toBeVisible()
 
   await page.reload({ waitUntil: 'domcontentloaded' })
-  await expect(page.getByText('1 document')).toBeVisible()
+  await expect(page.getByText('1 attached')).toBeVisible()
   await expect(page.getByText('Weekend market')).toBeVisible({ timeout: 15_000 })
   const reloadShowActions = page.getByRole('button', { name: 'Show row actions' }).first()
   if (await reloadShowActions.isVisible()) {
@@ -264,8 +264,9 @@ const mobilePwaRoutes = [
 test('draft recording order control persists at every responsive size', async ({ page }) => {
   await establishSession(page)
   await page.addInitScript(drafts => {
-    if (!localStorage.getItem('draft_transactions')) {
+    if (!sessionStorage.getItem('draft-order-seeded')) {
       localStorage.setItem('draft_transactions', JSON.stringify(drafts))
+      sessionStorage.setItem('draft-order-seeded', 'true')
     }
   }, [
     {
@@ -308,6 +309,47 @@ test('draft recording order control persists at every responsive size', async ({
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByRole('button', { name: /Reorder Car fuel\. Position 1 of 2/i })).toBeVisible()
   await expect(page).toHaveScreenshot('draft-recording-order.png')
+})
+
+test('mobile draft review queue clears fixed navigation at keyboard height', async ({ page }) => {
+  test.skip(!test.info().project.name.startsWith('mobile'), 'The keyboard-height check is mobile-only.')
+
+  await establishSession(page)
+  await page.addInitScript(drafts => {
+    localStorage.setItem('draft_transactions', JSON.stringify(drafts))
+  }, [{
+    id: 'draft-keyboard-height',
+    date: '2026-08-02',
+    description: 'Weekend market',
+    category: 'Food',
+    ledgerCategory: 'Essentials',
+    amount: -42.5,
+    accountId: 'acct-essentials',
+  }])
+  await mockApi(page)
+  await page.setViewportSize({ width: 390, height: 500 })
+  await page.goto('/drafts', { waitUntil: 'domcontentloaded' })
+
+  const reorder = page.getByRole('button', { name: /Reorder Weekend market\. Position 1 of 1/i })
+  const menu = page.getByRole('button', { name: 'More actions for Weekend market' })
+  const batchAction = page.getByRole('button', { name: 'Add 1 to Ledger' })
+  await expect(reorder).toBeVisible()
+  await expect(menu).toBeVisible()
+  await expect(batchAction).toBeEnabled()
+
+  for (const control of [reorder, menu, batchAction]) {
+    const box = await control.boundingBox()
+    expect(box).not.toBeNull()
+    if (!box) continue
+    expect(box.width).toBeGreaterThanOrEqual(44)
+    expect(box.height).toBeGreaterThanOrEqual(44)
+  }
+
+  await batchAction.scrollIntoViewIfNeeded()
+  const batchBox = await batchAction.boundingBox()
+  expect(batchBox).not.toBeNull()
+  if (batchBox) expect(batchBox.y + batchBox.height).toBeLessThanOrEqual(500 - 76 + 1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
 })
 
 for (const route of mobilePwaRoutes) {

@@ -14,7 +14,7 @@ No P0 accessibility or layout failure was confirmed in the audited visual baseli
 - Older composite controls still use raw buttons and do not automatically inherit the 44px phone target.
 - Typography is visually protected by a global 12px floor, but source code still contains 573 authored `8px`–`13px` utilities, making hierarchy difficult to maintain.
 - Mobile route coverage is broad, while tablet and desktop coverage is concentrated on representative surfaces rather than every route and nested state.
-- Draft Transactions needed a clearer review model. This audit delivers a complete responsive redesign specification and standalone implementation package that preserves all persistence and financial contracts while eliminating review friction.
+- Draft Transactions needed a clearer review model. This release delivers the responsive redesign as a standalone implementation package that preserves all persistence and financial contracts while eliminating review friction.
 
 ## Evidence and standards
 
@@ -51,7 +51,7 @@ The small authored sizes are not presently rendered below 12px because of the gl
 | Ledger current cycle | Both themes | Representative shared tests | Finding | Export and Post actions have similar prominence; the transaction-type selector is undersized on phones |
 | Ledger all cycles | Both mobile themes | Partial | Conforming with gap | Overflow is guarded; desktop/tablet route snapshots remain incomplete |
 | Commitments & Rewards | Both themes | Interaction-focused | Finding | The mobile title wraps early and page/card action hierarchy varies by section |
-| Draft Transactions | Both themes | All responsive projects for ordering | Redesign Spec | Audited and specified as a complete responsive batch review queue |
+| Draft Transactions | Both themes | All responsive projects for ordering | Implemented | Responsive batch review queue delivered with targeted state and interaction coverage |
 | Settings | Both themes, Accounts across all sizes | Accounts and representative controls | Finding | Five tabs become a two-column text grid that is usable but weak as navigation |
 | Investments | Both mobile themes | Desktop table checks | Finding | Empty-state primary and secondary actions use different control language |
 | Vault | Both themes plus unavailable state | Partial | Finding | Header and action row do not share the standard page-header composition |
@@ -59,9 +59,9 @@ The small authored sizes are not presently rendered below 12px because of the gl
 | Sheets and confirmations | Transaction and destructive states across all sizes | All themes | Conforming | Width, overflow, focus, and keyboard-height behavior are established |
 | Offline, privacy, loading | Route-specific tests | Selective | Coverage gap | These states exist but are not matrix-complete for every route |
 
-## Draft Transactions Redesign Specification
+## Draft Transactions Redesign Delivered
 
-This standalone package specifies a full modernization of `DraftStagingView` (`/drafts`), replacing confusing repetitive badges with a structured, touch-ergonomic batch review queue.
+This standalone package modernizes `DraftStagingView` (`/drafts`), replacing confusing repetitive badges with a structured, touch-ergonomic batch review queue.
 
 ### Responsive Layout Diagrams
 
@@ -174,24 +174,26 @@ This standalone package specifies a full modernization of `DraftStagingView` (`/
    - Primary action logic: If any draft is invalid, triggers `Review Draft` (opens the first invalid draft in `TransactionFormSheet`); if all valid, triggers `Add N to Ledger`.
 
 6. **`DraftEmptyState`**:
-   - Clean icon illustration, headline "No drafts in staging".
-   - Explanatory copy: "Drafts captured offline or staged from receipts will appear here before being added to your ledger."
-   - Dual actions: "+ Post New Transaction" (primary) and "Go to Ledger" (secondary).
+   - Lightweight icon panel and headline "Your draft queue is clear".
+   - Concise onboarding copy explaining that new transactions can be reviewed before Ledger posting.
+   - Dual actions: "Post Transaction" (primary) and "Back to Ledger" (secondary).
 
 ### Preserved Contracts & Boundaries
 
 - **Public Interface**: `DraftStagingViewProps` remains unchanged:
   - `draftTransactions: Transaction[]`
+  - `onUpdateDraftTransaction: (...) => Promise<void> | void`
+  - `onLoadDraftDocumentChanges: (id: string) => Promise<TransactionDocumentChanges>`
   - `onDeleteDraftTransaction: (id: string) => void`
-  - `onSaveDraftTransaction: (draft: Transaction) => void`
-  - `onAddDraftsToLedger: (drafts: Transaction[]) => Promise<void>`
+  - `onReorderDraftTransactions: (drafts: Transaction[]) => void`
+  - `onSyncDraftBatch: () => Promise<void> | void`
   - `onAddAnother?: () => void`
   - `currency?: string`
-  - `hideSensitive?: boolean`
+  - `hideSensitive: boolean`
 - **Zero API or Schema Changes**: Operates strictly on client-side IndexedDB draft state.
-- **Strict Financial Semantics**: Reordering preserves exact chronological sequence and intra-day sequence numbers.
+- **Strict Financial Semantics**: Reordering uses the existing callback and persistence path; the displayed queue remains the authoritative same-day posting order.
 - **Privacy Mode**: Sensitive amounts are masked with `<SensitiveMask />` across all cards, summaries, and action bars.
-- **Accessibility**: 100% compliant with 44px touch targets on mobile, roving keyboard focus, full screen-reader announcements for position changes.
+- **Accessibility**: Reorder, overflow, review, and batch actions retain 44px phone targets; handles support Arrow Up/Down reordering and expose the current position through accessible names.
 
 ## Prioritized backlog
 

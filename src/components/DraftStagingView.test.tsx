@@ -76,7 +76,7 @@ describe('DraftStagingView', () => {
     })
   })
 
-  it('keeps long draft wording in the left lane and the category on its own row', async () => {
+  it('keeps long draft wording and amounts contained in the primary row', async () => {
     window.innerWidth = 500
     renderView({
       draftTransactions: [{
@@ -88,21 +88,20 @@ describe('DraftStagingView', () => {
 
     await waitFor(() => {
       const surface = document.querySelector('[data-swipe-content]')
-      expect(surface?.firstElementChild?.className).toContain('grid-cols-[auto_minmax(0,1fr)_auto]')
-      expect(surface?.firstElementChild?.className).toContain('items-center')
+      expect(surface?.firstElementChild?.className).toContain('items-start')
       expect(surface?.firstElementChild?.querySelector('span.text-orange-500')?.className).toContain('max-w-[45%]')
       expect(screen.getByText('Household essentials and school supplies').className).toContain('truncate')
-      expect(screen.getByText('Household essentials and school supplies').parentElement).not.toBe(screen.getByText('2026-07-13').parentElement)
     })
   })
 
-  it('lets keyboard users move a draft with the same reorder grip used by Investment Settings', () => {
+  it('lets keyboard users move a draft with the same reorder grip used by Investment Settings', async () => {
     const onReorderDraftTransactions = vi.fn()
     const secondDraft = { ...draft, id: 'draft-2', description: 'Groceries' }
     renderView({
       draftTransactions: [draft, secondDraft],
       onReorderDraftTransactions,
     })
+    await screen.findByText('0 attached')
 
     const firstGrip = screen.getByRole('button', { name: /Reorder Car Fuel\. Position 1 of 2/i })
     expect(firstGrip.className).toContain('touch-none')
@@ -112,14 +111,39 @@ describe('DraftStagingView', () => {
     expect(onReorderDraftTransactions).toHaveBeenCalledWith([secondDraft, draft])
   })
 
-  it('labels the recording position and explains the reversed newest-first Ledger order', () => {
+  it('labels the recording position and explains the reversed newest-first Ledger order', async () => {
     renderView({
       draftTransactions: [draft, { ...draft, id: 'draft-2', description: 'Groceries' }],
     })
+    await screen.findByText('0 attached')
 
-    expect(screen.getByLabelText('Recording position 1 of 2').textContent).toBe('Records 1 of 2')
-    expect(screen.getByLabelText('Recording position 2 of 2').textContent).toBe('Records 2 of 2')
+    expect(screen.getByRole('button', { name: /Reorder Car Fuel\. Position 1 of 2/i }).textContent).toContain('1')
+    expect(screen.getByRole('button', { name: /Reorder Groceries\. Position 2 of 2/i }).textContent).toContain('2')
     expect(screen.getByText(/same-day drafts appear in reverse order/i)).toBeTruthy()
+  })
+
+  it('summarizes readiness and exposes mobile actions without requiring a swipe', async () => {
+    window.innerWidth = 500
+    renderView()
+
+    expect(screen.getByRole('heading', { name: 'Batch summary' })).toBeTruthy()
+    expect(screen.getByText('1 ready · 0 to review')).toBeTruthy()
+    expect(screen.getByText('Ready')).toBeTruthy()
+    await screen.findByText('0 attached')
+
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Car Fuel' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit draft' }))
+    expect(await screen.findByRole('heading', { name: 'Edit Draft' })).toBeTruthy()
+  })
+
+  it('uses an onboarding empty state without hiding the Ledger exit', () => {
+    const onAddAnother = vi.fn()
+    renderView({ draftTransactions: [], onAddAnother })
+
+    expect(screen.getByRole('heading', { name: 'Your draft queue is clear' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Post Transaction' }))
+    expect(onAddAnother).toHaveBeenCalledTimes(1)
+    expect(screen.getAllByRole('button', { name: 'Back to Ledger' })).toHaveLength(2)
   })
 
   it('routes an incomplete Stability drawdown to review instead of syncing', async () => {
@@ -129,8 +153,8 @@ describe('DraftStagingView', () => {
       onSyncDraftBatch,
     })
 
-    expect(screen.getByText('Needs review')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Review Draft' }))
+    expect(screen.getAllByText('Needs review').length).toBeGreaterThan(0)
+    fireEvent.click(await screen.findByRole('button', { name: 'Review Draft' }))
 
     expect(await screen.findByRole('heading', { name: 'Edit Draft' })).toBeTruthy()
     expect(onSyncDraftBatch).not.toHaveBeenCalled()
@@ -140,7 +164,7 @@ describe('DraftStagingView', () => {
     const onSyncDraftBatch = vi.fn().mockResolvedValue(undefined)
     renderView({ onSyncDraftBatch })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add 1 to Ledger' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Add 1 to Ledger' }))
 
     await waitFor(() => expect(onSyncDraftBatch).toHaveBeenCalledTimes(1))
   })
