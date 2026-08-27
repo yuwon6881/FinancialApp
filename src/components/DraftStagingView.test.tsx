@@ -191,4 +191,45 @@ describe('DraftStagingView', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('Draft attachments could not be checked')
     expect((screen.getByRole('button', { name: 'Add 1 draft to Ledger' }) as HTMLButtonElement).disabled).toBe(true)
   })
+
+  it('does not retrigger attachment loading when draft transactions are reordered', async () => {
+    const onLoadDraftDocumentChanges = vi.fn().mockResolvedValue({ pending: [], unlinkIds: [] })
+    const secondDraft = { ...draft, id: 'draft-2', description: 'Groceries' }
+    const { rerender } = render(
+      <DraftStagingView
+        draftTransactions={[draft, secondDraft]}
+        categories={[{ id: 'transport', name: 'Transport', type: 'outflow' }]}
+        onUpdateDraftTransaction={vi.fn()}
+        onLoadDraftDocumentChanges={onLoadDraftDocumentChanges}
+        onDeleteDraftTransaction={vi.fn()}
+        onReorderDraftTransactions={vi.fn()}
+        onSyncDraftBatch={vi.fn()}
+        hideSensitive={false}
+        onCancel={vi.fn()}
+        editorProps={editorProps}
+      />,
+    )
+
+    await screen.findByText('No attachments')
+    expect(onLoadDraftDocumentChanges).toHaveBeenCalledTimes(2)
+
+    rerender(
+      <DraftStagingView
+        draftTransactions={[secondDraft, draft]}
+        categories={[{ id: 'transport', name: 'Transport', type: 'outflow' }]}
+        onUpdateDraftTransaction={vi.fn()}
+        onLoadDraftDocumentChanges={onLoadDraftDocumentChanges}
+        onDeleteDraftTransaction={vi.fn()}
+        onReorderDraftTransactions={vi.fn()}
+        onSyncDraftBatch={vi.fn()}
+        hideSensitive={false}
+        onCancel={vi.fn()}
+        editorProps={editorProps}
+      />,
+    )
+
+    expect(screen.queryByText('Checking attachments…')).toBeNull()
+    expect(screen.getByText('No attachments')).toBeTruthy()
+    expect(onLoadDraftDocumentChanges).toHaveBeenCalledTimes(2)
+  })
 })

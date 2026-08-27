@@ -64,6 +64,11 @@ export function DraftStagingView({
   const draftTotal = useMemo(() => draftTransactions.reduce((sum, draft) => sum + Math.abs(draft.amount), 0), [draftTransactions])
   const attachmentCount = useMemo(() => Object.values(documentCounts).reduce((sum, count) => sum + count, 0), [documentCounts])
 
+  const draftIdsKey = useMemo(
+    () => draftTransactions.map(draft => draft.id).sort().join(','),
+    [draftTransactions],
+  )
+
   useEffect(() => {
     if (draftTransactions.length === 0) {
       setDocumentCounts({})
@@ -85,12 +90,21 @@ export function DraftStagingView({
       if (active) setAttachmentsLoading(false)
     })
     return () => { active = false }
-  }, [attachmentRevision, draftTransactions, onLoadDraftDocumentChanges])
+  }, [attachmentRevision, draftIdsKey, onLoadDraftDocumentChanges])
 
   useHighlightedElement(highlightedDraftId ? `draft-row-${highlightedDraftId}` : null, onClearHighlightedDraft)
 
   const openDraft = (draft: Transaction) => {
     void formRef.current?.handleStartDraft(draft).catch(() => setDocumentLoadError('This draft’s attachments could not be opened. Please retry.'))
+  }
+
+  const handleUpdateDraft = async (
+    id: string,
+    updated: Omit<Transaction, 'id'>,
+    documentChanges: TransactionDocumentChanges,
+  ) => {
+    await onUpdateDraftTransaction(id, updated, documentChanges)
+    setDocumentCounts(prev => ({ ...prev, [id]: documentChanges.pending.length }))
   }
 
   const handlePrimaryAction = async () => {
@@ -214,7 +228,7 @@ export function DraftStagingView({
         </>
       )}
 
-      <TransactionFormSheet ref={formRef} {...editorProps} categories={categories} currency={currency} hideSensitive={hideSensitive} onAddTransaction={() => undefined} onUpdateDraftTransaction={onUpdateDraftTransaction} onLoadDraftDocumentChanges={onLoadDraftDocumentChanges} />
+      <TransactionFormSheet ref={formRef} {...editorProps} categories={categories} currency={currency} hideSensitive={hideSensitive} onAddTransaction={() => undefined} onUpdateDraftTransaction={handleUpdateDraft} onLoadDraftDocumentChanges={onLoadDraftDocumentChanges} />
     </section>
   )
 }
