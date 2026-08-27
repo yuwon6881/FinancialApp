@@ -101,7 +101,7 @@ describe('DraftStagingView', () => {
       draftTransactions: [draft, secondDraft],
       onReorderDraftTransactions,
     })
-    await screen.findByText('0 attached')
+    await screen.findByText('No attachments')
 
     const firstGrip = screen.getByRole('button', { name: /Reorder Car Fuel\. Position 1 of 2/i })
     expect(firstGrip.className).toContain('touch-none')
@@ -115,7 +115,7 @@ describe('DraftStagingView', () => {
     renderView({
       draftTransactions: [draft, { ...draft, id: 'draft-2', description: 'Groceries' }],
     })
-    await screen.findByText('0 attached')
+    await screen.findByText('No attachments')
 
     expect(screen.getByRole('button', { name: /Reorder Car Fuel\. Position 1 of 2/i }).textContent).toContain('1')
     expect(screen.getByRole('button', { name: /Reorder Groceries\. Position 2 of 2/i }).textContent).toContain('2')
@@ -126,14 +126,26 @@ describe('DraftStagingView', () => {
     window.innerWidth = 500
     renderView()
 
-    expect(screen.getByRole('heading', { name: 'Batch summary' })).toBeTruthy()
-    expect(screen.getByText('1 ready · 0 to review')).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'Batch overview' })).toBeTruthy()
+    expect(screen.getByText('All ready')).toBeTruthy()
     expect(screen.getByText('Ready')).toBeTruthy()
-    await screen.findByText('0 attached')
+    await screen.findByText('No attachments')
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Car Fuel' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit draft' }))
     expect(await screen.findByRole('heading', { name: 'Edit Draft' })).toBeTruthy()
+  })
+
+  it('uses one Add draft action across responsive layouts', async () => {
+    const onAddAnother = vi.fn()
+    renderView({ onAddAnother })
+    await screen.findByText('No attachments')
+
+    const addDraft = screen.getByRole('button', { name: 'Add draft' })
+    expect(addDraft.className).not.toContain('hidden')
+    expect(screen.getAllByRole('button', { name: 'Add draft' })).toHaveLength(1)
+    fireEvent.click(addDraft)
+    expect(onAddAnother).toHaveBeenCalledTimes(1)
   })
 
   it('uses an onboarding empty state without hiding the Ledger exit', () => {
@@ -154,7 +166,7 @@ describe('DraftStagingView', () => {
     })
 
     expect(screen.getAllByText('Needs review').length).toBeGreaterThan(0)
-    fireEvent.click(await screen.findByRole('button', { name: 'Review Draft' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Review first draft' }))
 
     expect(await screen.findByRole('heading', { name: 'Edit Draft' })).toBeTruthy()
     expect(onSyncDraftBatch).not.toHaveBeenCalled()
@@ -164,7 +176,7 @@ describe('DraftStagingView', () => {
     const onSyncDraftBatch = vi.fn().mockResolvedValue(undefined)
     renderView({ onSyncDraftBatch })
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Add 1 to Ledger' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Add 1 draft to Ledger' }))
 
     await waitFor(() => expect(onSyncDraftBatch).toHaveBeenCalledTimes(1))
   })
@@ -177,6 +189,6 @@ describe('DraftStagingView', () => {
     })
 
     expect((await screen.findByRole('alert')).textContent).toContain('Draft attachments could not be checked')
-    expect((screen.getByRole('button', { name: 'Add 1 to Ledger' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Add 1 draft to Ledger' }) as HTMLButtonElement).disabled).toBe(true)
   })
 })

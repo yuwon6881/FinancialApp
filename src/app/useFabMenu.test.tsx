@@ -27,9 +27,10 @@ describe('useFabMenu', () => {
     expect(result.current.isOpen).toBe(false)
   })
 
-  it('shows the mobile quick-add on every authenticated surface', () => {
-    for (const tab of ['dashboard', 'reports', 'recurring', 'ledger', 'wishlist', 'drafts', 'settings', 'investments', 'documents'] as const) {
+  it('keeps quick-add off the Draft review surface where dedicated actions already exist', () => {
+    for (const tab of ['dashboard', 'reports', 'recurring', 'ledger', 'wishlist', 'settings', 'investments', 'documents'] as const) {
       expect(shouldShowMobileFab(tab)).toBe(true)
     }
+    expect(shouldShowMobileFab('drafts')).toBe(false)
   })
 })

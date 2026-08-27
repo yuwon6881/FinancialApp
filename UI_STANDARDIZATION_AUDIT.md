@@ -69,16 +69,12 @@ This standalone package modernizes `DraftStagingView` (`/drafts`), replacing con
 ```text
 +------------------------------------------+
 | [<-]  [Doc] Draft Transactions (2)  (i)  |
-| The top draft records first...           |
+| Check the details, then add to Ledger.   |
 +------------------------------------------+
-| BATCH SUMMARY                            |
-| +--------------------------------------+ |
-| | Value: RM 72.50                      | |
-| | Status: 1 ready · 1 needs review     | |
-| | Attachments: 0 attached              | |
-| +--------------------------------------+ |
+| Batch total RM 72.50                    |
+| 1 needs review       No attachments     |
 +------------------------------------------+
-| REVIEW QUEUE                             |
+| REVIEW DRAFTS                [+ Add draft]|
 | +--------------------------------------+ |
 | | [::1] Car fuel              -RM 30.00| |
 | |       [Needs review] 2026-08-02      | |
@@ -92,14 +88,10 @@ This standalone package modernizes `DraftStagingView` (`/drafts`), replacing con
 | |       [Ready] 2026-08-02             | |
 | |       [Essentials] [Food]       [...] | |
 | +--------------------------------------+ |
-|                                          |
-| [ + Add Another Transaction (44px)     ] |
-|                                          |
 | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ |
 | [STICKY ACTION BAR (above MobileBottomNav)]
-| | 1 draft needs review                 | |
-| | 2 drafts · RM 72.50                  | |
-| | [ Review Draft (44px)               ]| |
+| | 1 needs review · RM 72.50            | |
+| | [ Review first draft (44px)         ]| |
 | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ |
 | [Home] [Ledger] [Recurring] [Vault] [...]| <- 76px bottom nav
 +------------------------------------------+
@@ -109,17 +101,11 @@ This standalone package modernizes `DraftStagingView` (`/drafts`), replacing con
 ```text
 +--------------------------------------------------------------------------+
 | [<-]  [Doc] Draft Transactions (2)  (i)                                  |
-|       The top draft records first. In Ledger newest-first view, same-day |
-|       drafts appear in reverse order.                                    |
+|       Check the details, then add everything to your Ledger.             |
 +--------------------------------------------------------------------------+
-| BATCH SUMMARY                                                [+ Add Draft]
-| +---------------------+-----------------------+------------------------+ |
-| | Batch value         | Readiness             | Attachments            | |
-| | RM 72.50            | 1 ready · 1 to review | 0 attached             | |
-| +---------------------+-----------------------+------------------------+ |
+| Batch total RM 72.50       1 needs review       No attachments          |
 +--------------------------------------------------------------------------+
-| REVIEW QUEUE                                                     2 drafts|
-| Drag numbered handles or use Arrow keys to reorder.                      |
+| REVIEW DRAFTS                                                 [+ Add draft]|
 | +----------------------------------------------------------------------+ |
 | | [:: 1] Car fuel                                             -RM 30.00| |
 | |        [Needs review] 2026-08-02 [Essentials] [Transport] [Edit][Del]| |
@@ -133,13 +119,13 @@ This standalone package modernizes `DraftStagingView` (`/drafts`), replacing con
 | +----------------------------------------------------------------------+ |
 +--------------------------------------------------------------------------+
 | [STICKY ACTION BAR]                                                      |
-| 1 draft still needs review                                               |
-| 2 drafts · RM 72.50                                  [ Review Draft (44px) ]
+| 1 needs review · RM 72.50                      [ Review first draft (44px) ]
 +--------------------------------------------------------------------------+
 ```
 
 #### 3. Keyboard-Constrained Viewport (390 × 500 px)
 - Sticky batch bar clears viewport bottom with `bottom-[calc(76px+env(safe-area-inset-bottom,0px))]`.
+- The global mobile FAB is hidden on this action-dense route; the dedicated Add draft and batch actions remain unobstructed.
 - Review queue is vertically scrollable with zero horizontal overflow (`scrollWidth <= 390px`).
 - Numbered reorder handles and 44px overflow menus remain fully interactive without clipping.
 
@@ -150,22 +136,21 @@ This standalone package modernizes `DraftStagingView` (`/drafts`), replacing con
    - Page identity icon, title, and count pill.
    - Accessible `InfoHint` explaining same-day timestamp ordering.
 
-2. **`DraftBatchSummary`**:
-   - Total batch outlay / income.
-   - Validation tally: count of `Ready` vs `Needs review`.
-   - Document readiness indicator showing whether attachments are fully loaded from IndexedDB.
-   - Header "+ Add Draft" action on desktop.
+2. **`DraftBatchOverview`**:
+   - One compact, borderless information row for total value, readiness, and attachment verification.
+   - Avoids separate metric cards and repeated explanatory copy.
 
 3. **`DraftReviewQueue`**:
    - Wrapped in Framer Motion `Reorder.Group` (`axis="y"`).
    - Reorder handles (`GripVertical`) with `aria-label="Reorder {description}. Position {index+1} of {total}"` and keyboard arrow up/down listener (`onKeyDown`).
+   - One identical 44px phone / compact desktop "Add draft" action in the queue header at every breakpoint.
 
 4. **`DraftQueueCard`**:
    - Primary line: Description (truncated with title tooltip) and tabular formatted amount.
-   - Secondary line: Numbered position chip, readiness badge (`Ready` vs `Needs review`), financial date, `LedgerAllocationBadge`, category badge, document clip counter.
+   - Secondary line: Quiet readiness text, financial date, `LedgerAllocationBadge`, category badge, and document clip counter.
    - Problem banner: When invalid, displays issues with high-contrast text and a direct "Review" button.
    - Mobile interaction: `SwipeableRow` with underlying Edit (primary) / Delete (danger) 44px buttons, plus a visible 44px `OverflowMenu` trigger on the card face.
-   - Desktop interaction: Inline hover `size="icon"` buttons for Edit and Delete.
+   - Desktop interaction: Inline `size="icon"` Edit and Delete controls aligned with the amount in the primary row.
 
 5. **`DraftBatchActionBar`**:
    - Sticky elevation with frosted glass backdrop (`bg-card/95 backdrop-blur`).

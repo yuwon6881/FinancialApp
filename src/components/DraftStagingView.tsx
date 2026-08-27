@@ -61,7 +61,6 @@ export function DraftStagingView({
   ), [categories, draftTransactions])
   const firstInvalidDraft = draftTransactions.find(draft => (issuesById.get(draft.id)?.length ?? 0) > 0)
   const invalidCount = draftTransactions.filter(draft => (issuesById.get(draft.id)?.length ?? 0) > 0).length
-  const readyCount = draftTransactions.length - invalidCount
   const draftTotal = useMemo(() => draftTransactions.reduce((sum, draft) => sum + Math.abs(draft.amount), 0), [draftTransactions])
   const attachmentCount = useMemo(() => Object.values(documentCounts).reduce((sum, count) => sum + count, 0), [documentCounts])
 
@@ -126,7 +125,7 @@ export function DraftStagingView({
             <span className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-bold text-muted-foreground">{draftTransactions.length}</span>
             <InfoHint text={recordingOrderExplanation} label="draft recording order" align="left" />
           </div>
-          <p className="text-xs text-muted-foreground">Review the queue, fix anything incomplete, then add the batch to your Ledger.</p>
+          <p className="text-xs text-muted-foreground">Check the details, then add everything to your Ledger.</p>
           <p className="sr-only">{recordingOrderExplanation}</p>
         </div>
       </header>
@@ -143,25 +142,51 @@ export function DraftStagingView({
         </div>
       ) : (
         <>
-          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-3.5 sm:p-5" aria-labelledby="draft-batch-summary-title">
-            <div className="flex items-center justify-between gap-3">
-              <div><h3 id="draft-batch-summary-title" className="text-sm font-bold text-foreground">Batch summary</h3><p className="mt-0.5 text-xs text-muted-foreground">Queue order controls how same-day drafts are recorded.</p></div>
-              {onAddAnother && <Button variant="outline" size="sm" onClick={onAddAnother} disabled={hideSensitive} className="hidden shrink-0 sm:inline-flex"><Plus className="size-3.5" aria-hidden="true" />Add draft</Button>}
+          <section
+            className="app-panel flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-border/60 bg-card/80 px-4 py-3 sm:px-5"
+            aria-label="Batch overview"
+          >
+            <div className="mr-auto min-w-0">
+              <span className="block text-xs font-semibold text-muted-foreground">Batch total</span>
+              <span className="block truncate text-base font-extrabold text-foreground tabular-nums">
+                {hideSensitive ? <SensitiveMask /> : formatCurrencyVal(draftTotal, currency)}
+              </span>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <div className="rounded-xl border border-border/55 bg-muted/20 p-3"><span className="block text-xs font-semibold text-muted-foreground">Batch value</span><span className="mt-1 block truncate text-base font-extrabold text-foreground tabular-nums">{hideSensitive ? <SensitiveMask /> : formatCurrencyVal(draftTotal, currency)}</span></div>
-              <div className={`rounded-xl border p-3 ${invalidCount > 0 ? 'border-amber-500/30 bg-amber-500/10' : 'border-emerald-500/25 bg-emerald-500/10'}`}>
-                <span className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">{invalidCount > 0 ? <AlertTriangle className="size-3.5 text-amber-500" aria-hidden="true" /> : <CheckCircle2 className="size-3.5 text-emerald-500" aria-hidden="true" />}Readiness</span>
-                <span className="mt-1 block text-sm font-bold text-foreground">{readyCount} ready · {invalidCount} to review</span>
-              </div>
-              <div className="col-span-2 rounded-xl border border-border/55 bg-muted/20 p-3 sm:col-span-1"><span className="flex items-center gap-1 text-xs font-semibold text-muted-foreground"><Paperclip className="size-3.5" aria-hidden="true" />Attachments</span><span className="mt-1 block text-sm font-bold text-foreground">{attachmentsLoading ? 'Checking…' : documentLoadError ? 'Check failed' : `${attachmentCount} attached`}</span></div>
-            </div>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${invalidCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+              {invalidCount > 0
+                ? <AlertTriangle className="size-3.5" aria-hidden="true" />
+                : <CheckCircle2 className="size-3.5" aria-hidden="true" />}
+              {invalidCount > 0 ? `${invalidCount} need review` : 'All ready'}
+            </span>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${documentLoadError ? 'text-destructive' : 'text-muted-foreground'}`}>
+              <Paperclip className="size-3.5" aria-hidden="true" />
+              {attachmentsLoading
+                ? 'Checking attachments…'
+                : documentLoadError
+                  ? 'Attachment check failed'
+                  : attachmentCount === 0
+                    ? 'No attachments'
+                    : `${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'}`}
+            </span>
           </section>
 
           {documentLoadError && <div className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between" role="alert"><span>{documentLoadError}</span><Button variant="outline" size="sm" onClick={() => setAttachmentRevision(revision => revision + 1)} className="shrink-0">Retry</Button></div>}
 
           <section aria-labelledby="draft-review-queue-title">
-            <div className="mb-2.5 flex items-center justify-between gap-3 px-0.5"><div><h3 id="draft-review-queue-title" className="text-sm font-bold text-foreground">Review queue</h3><p className="mt-0.5 text-xs text-muted-foreground">Drag the numbered handles or use their arrow keys to reorder.</p></div><span className="shrink-0 text-xs font-semibold text-muted-foreground">{draftTransactions.length} draft{draftTransactions.length === 1 ? '' : 's'}</span></div>
+            <div className="mb-2.5 flex min-h-11 items-center justify-between gap-3 px-0.5 sm:min-h-9">
+              <h3 id="draft-review-queue-title" className="text-sm font-bold text-foreground">Review drafts</h3>
+              {onAddAnother && (
+                <Button
+                  variant="outline"
+                  onClick={onAddAnother}
+                  disabled={hideSensitive}
+                  className="h-11 shrink-0 gap-1.5 px-3 sm:h-9"
+                >
+                  <Plus className="size-3.5" aria-hidden="true" />
+                  Add draft
+                </Button>
+              )}
+            </div>
             <Reorder.Group axis="y" values={draftTransactions} onReorder={reordered => { if (!hideSensitive) onReorderDraftTransactions(reordered) }} className="space-y-3" aria-label="Draft transaction recording order">
               {draftTransactions.map((draft, index) => (
                 <DraftReorderItem key={draft.id} value={draft} position={index + 1} count={draftTransactions.length} disabled={hideSensitive} onMove={direction => moveDraft(draft.id, direction)}>
@@ -171,11 +196,20 @@ export function DraftStagingView({
             </Reorder.Group>
           </section>
 
-          {onAddAnother && <Button variant="outline" onClick={onAddAnother} disabled={hideSensitive} className="min-h-11 w-full gap-2 rounded-2xl border-dashed border-primary/40 bg-primary/5 text-accent-ink hover:bg-primary/10 sm:hidden"><Plus className="size-4" aria-hidden="true" />Add Another Transaction</Button>}
-
           <div className="sticky bottom-[calc(76px+env(safe-area-inset-bottom,0px))] z-20 grid gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-[var(--app-shadow-elevated)] backdrop-blur sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-4 lg:bottom-4">
-            <div className="min-w-0 px-1"><p className="text-xs font-bold text-foreground">{invalidCount > 0 ? `${invalidCount} draft${invalidCount === 1 ? '' : 's'} still need review` : 'Batch ready for the Ledger'}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{draftTransactions.length} draft{draftTransactions.length === 1 ? '' : 's'} · {hideSensitive ? <SensitiveMask /> : formatCurrencyVal(draftTotal, currency)}</p></div>
-            <Button onClick={() => void handlePrimaryAction()} aria-label={firstInvalidDraft ? undefined : `Add ${draftTransactions.length} to Ledger`} disabled={hideSensitive || Boolean(documentLoadError) || attachmentsLoading || isSubmitting} className="h-11 w-auto rounded-xl max-md:mr-16 sm:min-w-52 md:mr-0">{firstInvalidDraft ? invalidCount === 1 ? 'Review Draft' : 'Review First Draft' : isSubmitting ? 'Adding to Ledger…' : `Add ${draftTransactions.length} to Ledger`}</Button>
+            <p className="min-w-0 truncate px-1 text-xs font-semibold text-muted-foreground">
+              <span className="text-foreground">{invalidCount > 0 ? `${invalidCount} need review` : 'Ready to add'}</span>
+              <span aria-hidden="true"> · </span>
+              {hideSensitive ? <SensitiveMask /> : formatCurrencyVal(draftTotal, currency)}
+            </p>
+            <Button
+              onClick={() => void handlePrimaryAction()}
+              aria-label={firstInvalidDraft ? undefined : `Add ${draftTransactions.length} draft${draftTransactions.length === 1 ? '' : 's'} to Ledger`}
+              disabled={hideSensitive || Boolean(documentLoadError) || attachmentsLoading || isSubmitting}
+              className="h-11 w-full rounded-xl sm:w-auto sm:min-w-44"
+            >
+              {firstInvalidDraft ? 'Review first draft' : isSubmitting ? 'Adding…' : 'Add to Ledger'}
+            </Button>
           </div>
         </>
       )}

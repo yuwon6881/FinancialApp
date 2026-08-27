@@ -41,17 +41,14 @@ export function DraftQueueCard({ draft, grip, issues, documentCount, currency, h
         <Button variant="unstyled" onClick={onEdit} disabled={hideSensitive} aria-label={`Edit ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-primary text-[11px] font-bold text-primary-foreground"><Edit2 className="size-4" aria-hidden="true" />Edit</Button>
         <Button variant="unstyled" onClick={onDelete} disabled={hideSensitive} aria-label={`Delete ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-destructive text-[11px] font-bold text-destructive-foreground"><Trash2 className="size-4" aria-hidden="true" />Delete</Button>
       </>}
-      desktopActions={<>
-        <Button variant="ghost" size="icon" onClick={onEdit} disabled={hideSensitive} aria-label={`Edit ${draft.description}`} title={hideSensitive ? actionHint : 'Edit draft'}><Edit2 className="size-4" aria-hidden="true" /></Button>
-        <Button variant="ghost" size="icon" onClick={onDelete} disabled={hideSensitive} aria-label={`Delete ${draft.description}`} title={hideSensitive ? actionHint : 'Delete draft'} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" aria-hidden="true" /></Button>
-      </>}
+      desktopActions={false}
     >
       <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
         {grip}
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-start justify-between gap-2">
-            <p className="min-w-0 flex-1 truncate pt-0.5 text-sm font-bold text-foreground" title={draft.description}>{draft.description}</p>
-            <span className={`max-w-[45%] shrink-0 whitespace-nowrap pt-0.5 text-right text-sm font-extrabold tabular-nums ${amountClass}`}>
+          <div className="flex min-h-9 min-w-0 items-center justify-between gap-2">
+            <p className="min-w-0 flex-1 truncate text-sm font-bold text-foreground" title={draft.description}>{draft.description}</p>
+            <span className={`max-w-[45%] shrink-0 whitespace-nowrap text-right text-sm font-extrabold tabular-nums ${amountClass}`}>
               {hideSensitive ? <SensitiveMask /> : <>{amountPrefix}{formatCurrencyVal(Math.abs(draft.amount), currency)}</>}
             </span>
             <OverflowMenu
@@ -63,9 +60,17 @@ export function DraftQueueCard({ draft, grip, issues, documentCount, currency, h
                 { label: 'Delete draft', icon: Trash2, onSelect: onDelete, disabled: hideSensitive, hint: actionHint, tone: 'danger' },
               ]}
             />
+            <div className="hidden shrink-0 items-center gap-1 lg:flex">
+              <Button variant="ghost" size="icon" onClick={onEdit} disabled={hideSensitive} aria-label={`Edit ${draft.description}`} title={hideSensitive ? actionHint : 'Edit draft'}>
+                <Edit2 className="size-4" aria-hidden="true" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={onDelete} disabled={hideSensitive} aria-label={`Delete ${draft.description}`} title={hideSensitive ? actionHint : 'Delete draft'} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                <Trash2 className="size-4" aria-hidden="true" />
+              </Button>
+            </div>
           </div>
-          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${needsReview ? 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-muted-foreground">
+            <span className={`inline-flex items-center gap-1 font-bold ${needsReview ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
               {needsReview ? <AlertTriangle className="size-3" aria-hidden="true" /> : <CheckCircle2 className="size-3" aria-hidden="true" />}
               {needsReview ? 'Needs review' : 'Ready'}
             </span>
