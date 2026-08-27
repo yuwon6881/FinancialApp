@@ -46,15 +46,15 @@ const NotificationRow: React.FC<{
     <div className="flex min-w-0 flex-1 gap-2">
       <span className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true">{icon}</span>
       <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium text-foreground sm:text-sm">
+        <span className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-foreground sm:text-sm">
           <span className="truncate">{title}</span>
           <ScopeChip scope={scope} />
-          {status}
         </span>
         <span className="text-[10px] leading-snug text-muted-foreground">{description}</span>
       </span>
     </div>
     <div className="flex shrink-0 items-center gap-1.5">
+      {status}
       {hint}
       {control}
     </div>

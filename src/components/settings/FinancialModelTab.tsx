@@ -241,33 +241,33 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
             <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
               <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
                 {darkMode ? <Moon className="size-4 text-muted-foreground shrink-0" /> : <Sun className="size-4 text-muted-foreground shrink-0" />}
-                <span className="flex min-w-0 items-center gap-2 font-medium text-foreground truncate">
-                  <span className="truncate">Dark Mode</span>
-                  <RowSyncStatus isSyncing={darkModeSyncing} isPending={darkModePending} entityLabel="dark mode" />
-                </span>
+                <span className="font-medium text-foreground truncate">Dark Mode</span>
               </div>
-              <ToggleButton active={darkMode} onClick={onToggleDarkMode || (() => {})} disabled={darkModeSyncing || darkModePending} label="Dark mode" />
+              <div className="flex shrink-0 items-center gap-1.5">
+                <RowSyncStatus isSyncing={darkModeSyncing} isPending={darkModePending} entityLabel="dark mode" />
+                <ToggleButton active={darkMode} onClick={onToggleDarkMode || (() => {})} disabled={darkModeSyncing || darkModePending} label="Dark mode" />
+              </div>
             </div>
             <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
               <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
                 {hideSensitive ? <EyeOff className="size-4 text-muted-foreground shrink-0" /> : <Eye className="size-4 text-muted-foreground shrink-0" />}
-                <span className="flex min-w-0 items-center gap-2 font-medium text-foreground truncate">
-                  <span className="truncate">Sensitive Mode (Masked)</span>
-                  <RowSyncStatus isSyncing={hideSensitiveSyncing} isPending={hideSensitivePending} entityLabel="sensitive mode" />
-                </span>
+                <span className="font-medium text-foreground truncate">Sensitive Mode (Masked)</span>
               </div>
-              <ToggleButton
-                active={hideSensitive}
-                onClick={onToggleHideSensitive || (() => {})}
-                label={
-                  sensitivePreferenceStatus === 'pending'
-                    ? 'Sensitive mode, checking privacy settings'
-                    : sensitivePreferenceStatus === 'unavailable'
-                      ? 'Sensitive mode, privacy setting unavailable'
-                      : 'Sensitive mode'
-                }
-                disabled={hideSensitiveSyncing || hideSensitivePending || (sensitivePreferenceStatus !== undefined && sensitivePreferenceStatus !== 'resolved')}
-              />
+              <div className="flex shrink-0 items-center gap-1.5">
+                <RowSyncStatus isSyncing={hideSensitiveSyncing} isPending={hideSensitivePending} entityLabel="sensitive mode" />
+                <ToggleButton
+                  active={hideSensitive}
+                  onClick={onToggleHideSensitive || (() => {})}
+                  label={
+                    sensitivePreferenceStatus === 'pending'
+                      ? 'Sensitive mode, checking privacy settings'
+                      : sensitivePreferenceStatus === 'unavailable'
+                        ? 'Sensitive mode, privacy setting unavailable'
+                        : 'Sensitive mode'
+                  }
+                  disabled={hideSensitiveSyncing || hideSensitivePending || (sensitivePreferenceStatus !== undefined && sensitivePreferenceStatus !== 'resolved')}
+                />
+              </div>
             </div>
             <div className="flex items-center justify-between text-sm py-1">
               <div className="flex items-center gap-2">

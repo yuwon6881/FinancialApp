@@ -23,7 +23,7 @@ export const RowSyncStatus: React.FC<RowSyncStatusProps> = ({ entityLabel, ...fl
 
 const STATE_STYLE: Record<RowSyncState, string> = {
   deleting: 'text-red-500 bg-red-500/10 border-red-500/20',
-  syncing: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+  syncing: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
   pending: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
   failed: 'text-destructive bg-destructive/10 border-destructive/20',
 }

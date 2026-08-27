@@ -164,11 +164,13 @@ export function DocumentCard({
               <DocumentTypeIcon contentType={document.contentType} className="size-4" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="line-clamp-2 text-xs font-bold leading-snug text-foreground" title={document.originalFileName}>
-                {document.originalFileName}
-              </p>
-              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 empty:hidden">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <p className="truncate text-xs font-bold leading-snug text-foreground" title={document.originalFileName}>
+                  {document.originalFileName}
+                </p>
                 <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isFailed={isFailed} isPending={document.isPendingSync} entityLabel="document" />
+              </div>
+              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 empty:hidden">
                 <LinkedTransactionButton
                   document={document}
                   openingTransactionId={openingTransactionId}
