@@ -146,6 +146,36 @@ describe('BillTimeline', () => {
     expect(screen.getByText('2026-08-03')).toBeTruthy()
   })
 
+  it('closes occurrence details when the selected cycle changes', () => {
+    const { rerender } = render(
+      <BillTimeline
+        activeRecurringPayments={[{ ...sampleActiveRecurring[0], status: 'Paid', isPaid: true, paidDate: '2026-08-03' }]}
+        selectedMonth="Aug"
+        selectedYear={2026}
+        cycleDay={28}
+        currency="MYR"
+        hideSensitive={false}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Subscriptions Billing Timeline' }))
+    fireEvent.click(screen.getAllByText('ChatGPT Plus')[0])
+    expect(screen.getByTestId('bottom-sheet')).toBeTruthy()
+
+    rerender(
+      <BillTimeline
+        activeRecurringPayments={[{ ...sampleActiveRecurring[0], id: 'sep-occurrence', dueDate: '2026-09-27', dueDay: 27 }]}
+        selectedMonth="Sep"
+        selectedYear={2026}
+        cycleDay={28}
+        currency="MYR"
+        hideSensitive={false}
+      />
+    )
+
+    expect(screen.queryByTestId('bottom-sheet')).toBeNull()
+  })
+
   it('keeps the legacy undated transaction fallback for cached rows without a status', () => {
     const legacyRow = { ...sampleActiveRecurring[0], status: undefined, isPaid: false } as unknown as ActiveRecurringPayment
     render(

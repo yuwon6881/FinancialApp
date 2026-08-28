@@ -113,7 +113,12 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
 
   const handleSelectPeriod = useCallback(async (month: string, year: number, syncLocation = true) => {
     const requestSeq = ++selectPeriodSeqRef.current
+    const previousPeriod = selectedPeriodRef.current
+    const previousSnapshot = previousPeriod.month && previousPeriod.year
+      ? getCachedCycleSnapshot(previousPeriod.month, previousPeriod.year)
+      : null
     if (syncLocation) updateAppSearch({ month, year }, { replace: false })
+    selectedPeriodRef.current = { month, year }
     setSelectedMonth(month)
     setSelectedYear(year)
     const cachedSnapshot = getCachedCycleSnapshot(month, year)
@@ -140,6 +145,33 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
       } else if (msg.includes('423')) {
         markSessionLocked()
       } else {
+        // A cycle label must never get ahead of the figures beneath it. Restore the last
+        // authoritative period (and its cached payload when available), then supersede the
+        // queued selected-period write so a later outbox drain cannot silently reapply the
+        // failed destination.
+        if (previousPeriod.month && previousPeriod.year) {
+          selectedPeriodRef.current = previousPeriod
+          setSelectedMonth(previousPeriod.month)
+          setSelectedYear(previousPeriod.year)
+          if (previousSnapshot) {
+            setDashboardData(previousSnapshot.dashboardData)
+            setTransactions(previousSnapshot.transactions)
+          }
+          if (syncLocation) {
+            updateAppSearch({ month: previousPeriod.month, year: previousPeriod.year }, { replace: true })
+          }
+          try {
+            const rollbackRequest = selectPeriodQueueRef.current
+              .catch(() => undefined)
+              .then(() => requestSeq === selectPeriodSeqRef.current
+                ? persistPeriod(previousPeriod.month, previousPeriod.year)
+                : undefined)
+            selectPeriodQueueRef.current = rollbackRequest.then(() => undefined, () => undefined)
+            await rollbackRequest
+          } catch (rollbackError) {
+            console.error('Could not restore the previous cycle selection', rollbackError)
+          }
+        }
         showAlert?.('The active month could not be updated. Please try again.', 'Cycle update failed')
       }
     } finally {

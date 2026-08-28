@@ -3,16 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../lib/api'
 import { useCycleNavigation } from './useCycleNavigation'
 
+const cacheMocks = vi.hoisted(() => ({
+  getCachedCycleSnapshot: vi.fn(() => null),
+}))
+
 vi.mock('../lib/api', () => ({ selectPeriod: vi.fn() }))
 vi.mock('../lib/cache', () => ({
   getCachedDashboardPeriod: () => ({ month: 'Jun', year: 2026 }),
-  getCachedCycleSnapshot: () => null,
+  getCachedCycleSnapshot: cacheMocks.getCachedCycleSnapshot,
 }))
 
 describe('useCycleNavigation', () => {
   beforeEach(() => {
     window.history.replaceState({}, '', '/')
     vi.clearAllMocks()
+    cacheMocks.getCachedCycleSnapshot.mockReturnValue(null)
   })
 
   it('invalidates the older cycle load as soon as a newer cycle is selected', async () => {
@@ -113,6 +118,42 @@ describe('useCycleNavigation', () => {
 
     expect(persistPeriod).toHaveBeenCalledWith('Sep', 2026)
     expect(api.selectPeriod).not.toHaveBeenCalled()
+  })
+
+  it('restores the previous cycle when an uncached cycle load fails', async () => {
+    const persistPeriod = vi.fn().mockResolvedValue(undefined)
+    const showAlert = vi.fn()
+    const setDashboardData = vi.fn()
+    const setTransactions = vi.fn()
+    const previousSnapshot = {
+      dashboardData: { setting: { selectedMonth: 'Jun', selectedYear: 2026 } },
+      transactions: [{ id: 'jun-row' }],
+    }
+    cacheMocks.getCachedCycleSnapshot.mockImplementation((month?: string) => (
+      month === 'Jun' ? previousSnapshot as never : null
+    ))
+    const { result } = renderHook(() => useCycleNavigation({
+      loadAll: vi.fn().mockRejectedValue(new Error('network unavailable')),
+      handleLogout: vi.fn(),
+      markSessionLocked: vi.fn(),
+      setDashboardData,
+      setTransactions,
+      setActiveTab: vi.fn(),
+      setLedgerCyclesRange: vi.fn(),
+      persistPeriod,
+      showAlert,
+    }))
+
+    await act(async () => result.current.handleSelectPeriod('Sep', 2026))
+
+    expect(result.current.selectedMonth).toBe('Jun')
+    expect(result.current.selectedYear).toBe(2026)
+    expect(result.current.isSwitchingCycle).toBe(false)
+    expect(persistPeriod.mock.calls).toEqual([['Sep', 2026], ['Jun', 2026]])
+    expect(setDashboardData).toHaveBeenLastCalledWith(previousSnapshot.dashboardData)
+    expect(setTransactions).toHaveBeenLastCalledWith(previousSnapshot.transactions)
+    expect(new URLSearchParams(window.location.search).get('month')).toBe('Jun')
+    expect(showAlert).toHaveBeenCalledWith('The active month could not be updated. Please try again.', 'Cycle update failed')
   })
 
   it('retains the applied Ledger route state for a later remount', () => {

@@ -331,7 +331,8 @@ export function AuthenticatedTabContent({
           onPreferredPageSizeChange={prefs.setLedgerPageSize}
           onPreferredSortOrderChange={prefs.setLedgerSortOrder}
           onRouteStateChange={nav.syncLedgerRouteState}
-          ledgerSummaries={todayDashboardData?.categories}
+          ledgerSummaries={financial.optimisticDashboardData?.categories}
+          transactionFormLedgerSummaries={todayDashboardData?.categories}
           savingsGoals={financial.allSavingsGoals}
           activeRecurringPayments={todayDashboardData?.activeRecurringPayments}
           autoOpenAddForm={nav.autoOpenLedgerAdd}
@@ -405,8 +406,8 @@ export function AuthenticatedTabContent({
           autoOpenAddModal={nav.autoOpenWishlistAdd}
           onResetAutoOpen={() => nav.setAutoOpenWishlistAdd(false)}
           onNavigateToLedger={nav.handleNavigateToLedger}
-          cycleDay={financial.optimisticDashboardData?.setting?.cycleDay || 28}
-          isSwitchingCycle={nav.isSwitchingCycle || isWishlistCycleStale}
+          cycleDay={wishlistDashboardData?.setting?.cycleDay || 28}
+          isSwitchingCycle={isWishlistCycleStale}
           highlightedCommitmentId={nav.highlightedCommitmentId}
           highlightedRewardId={nav.highlightedRewardId}
           onClearHighlightedCommitment={nav.clearHighlightedCommitment}

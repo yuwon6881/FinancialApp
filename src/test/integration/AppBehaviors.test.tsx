@@ -16,6 +16,11 @@ const mobilePwaGateMocks = vi.hoisted(() => ({
   verify: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
 }))
 
+const viewMocks = vi.hoisted(() => ({
+  commitmentsProps: null as any,
+  ledgerProps: null as any,
+}))
+
 const testAccounts = ['Essentials', 'Growth', 'Stability', 'Rewards'].map(bucket => ({
   id: `acct-${bucket.toLowerCase()}`,
   name: `${bucket} balance`,
@@ -155,6 +160,25 @@ vi.mock('@/components/ReportsView', () => ({
   ReportsView: () => <div data-testid="reports-view">Reports</div>
 }))
 
+vi.mock('@/components/CommitmentsRewardsView', () => ({
+  CommitmentsRewardsView: (props: any) => {
+    viewMocks.commitmentsProps = props
+    return (
+      <div data-testid="commitments-rewards-view">
+        <span data-testid="commitments-cycle-day">{props.cycleDay}</span>
+        <span data-testid="commitments-rewards-balance">{props.rewardsBalance}</span>
+      </div>
+    )
+  },
+}))
+
+vi.mock('@/components/LedgerView', () => ({
+  LedgerView: (props: any) => {
+    viewMocks.ledgerProps = props
+    return <div data-testid="ledger-view">Ledger</div>
+  },
+}))
+
 vi.hoisted(() => {
   window.matchMedia = vi.fn().mockImplementation(query => ({
     matches: false,
@@ -178,6 +202,8 @@ describe('App behaviors', () => {
     localStorage.setItem(ACCOUNT_TRACKING_CACHE_VERSION_KEY, ACCOUNT_TRACKING_CACHE_VERSION)
     sessionStorage.clear()
     vi.clearAllMocks()
+    viewMocks.commitmentsProps = null
+    viewMocks.ledgerProps = null
     mobilePwaGateMocks.credentialId = null
     mobilePwaGateMocks.verify.mockResolvedValue(undefined)
   })
@@ -440,6 +466,108 @@ describe('App behaviors', () => {
 
     await waitFor(() => expect(screen.getByTestId('today-cycle').textContent).toBe(currentCycleLabel))
     expect(api.fetchDashboard).toHaveBeenCalledWith(currentMonth, currentCycle.year, expect.any(AbortSignal), false)
+  })
+
+  it('keeps Commitments and Rewards on current-pool settings while a historical cycle is selected', async () => {
+    window.history.replaceState({}, '', '/commitments-rewards?month=Jan&year=2024')
+    localStorage.setItem('auth_session', '1')
+    localStorage.setItem('auth_username', 'alice')
+    vi.mocked(api.fetchBootstrap).mockResolvedValueOnce({
+      month: 'Jan',
+      year: 2024,
+      dashboard: {
+        setting: { selectedMonth: 'Jan', selectedYear: 2024, cycleDay: 5, currency: 'USD', hideSensitive: false, darkMode: false },
+        stats: { pastThreeMonthsRewardsAverage: 10, hasRewardsHistory: true },
+        categories: [{ name: 'Rewards', allocation: 0.1, target: 100, incomeAllocated: 0, budget: 0, netChange: 0, remaining: 10 }],
+        activeRecurringPayments: [],
+        pendingNotifications: [],
+      },
+      insights: {
+        last3CategoryBreakdown: [],
+        last6CategoryBreakdown: [],
+        yearlyCategoryBreakdown: [],
+        availableYears: [2024, 2026],
+        pastThreeMonthsRewardsAverage: 10,
+        hasRewardsHistory: true,
+      },
+      transactions: [],
+      recurringPayments: [],
+      categories: [],
+      wishlist: [],
+      savingsGoals: [],
+      loans: null,
+      autocomplete: [],
+      accounts: testAccounts,
+      walletBalance: 1000,
+    } as any)
+    const defaultFetchDashboard = vi.mocked(api.fetchDashboard).getMockImplementation()
+    vi.mocked(api.fetchDashboard).mockResolvedValue({
+      setting: { selectedMonth: 'Aug', selectedYear: 2026, cycleDay: 28, currency: 'USD', hideSensitive: false, darkMode: false },
+      stats: { pastThreeMonthsRewardsAverage: 250, hasRewardsHistory: true },
+      categories: [{ name: 'Rewards', allocation: 0.1, target: 400, incomeAllocated: 0, budget: 0, netChange: 0, remaining: 900 }],
+      activeRecurringPayments: [],
+      pendingNotifications: [],
+    } as any)
+
+    try {
+      render(<App />)
+
+      await waitFor(() => expect(screen.getByTestId('commitments-rewards-view')).toBeDefined(), { timeout: 15_000 })
+      await waitFor(() => expect(screen.getByTestId('commitments-rewards-balance').textContent).toBe('900'))
+      expect(screen.getByTestId('commitments-cycle-day').textContent).toBe('28')
+      expect(screen.queryByRole('combobox', { name: /Commitments.*cycle/i })).toBeNull()
+      expect(viewMocks.commitmentsProps.isSwitchingCycle).toBe(false)
+    } finally {
+      if (defaultFetchDashboard) vi.mocked(api.fetchDashboard).mockImplementation(defaultFetchDashboard)
+    }
+  })
+
+  it('uses the selected cycle balance summary in Ledger while today has a different balance', async () => {
+    window.history.replaceState({}, '', '/ledger?month=Jan&year=2024')
+    localStorage.setItem('auth_session', '1')
+    localStorage.setItem('auth_username', 'alice')
+    vi.mocked(api.fetchBootstrap).mockResolvedValueOnce({
+      month: 'Jan',
+      year: 2024,
+      dashboard: {
+        setting: { selectedMonth: 'Jan', selectedYear: 2024, cycleDay: 5, currency: 'USD', hideSensitive: false, darkMode: false },
+        stats: { pastThreeMonthsRewardsAverage: 10, hasRewardsHistory: true },
+        categories: [{ name: 'Rewards', allocation: 0.1, target: 100, incomeAllocated: 0, budget: 0, netChange: 0, remaining: 10 }],
+        activeRecurringPayments: [],
+        pendingNotifications: [],
+      },
+      insights: { last3CategoryBreakdown: [], last6CategoryBreakdown: [], yearlyCategoryBreakdown: [], availableYears: [2024, 2026] },
+      transactions: [],
+      recurringPayments: [],
+      categories: [],
+      wishlist: [],
+      savingsGoals: [],
+      loans: null,
+      autocomplete: [],
+      accounts: testAccounts,
+      walletBalance: 1000,
+    } as any)
+    const defaultFetchDashboard = vi.mocked(api.fetchDashboard).getMockImplementation()
+    vi.mocked(api.fetchDashboard).mockResolvedValue({
+      setting: { selectedMonth: 'Aug', selectedYear: 2026, cycleDay: 28, currency: 'USD', hideSensitive: false, darkMode: false },
+      stats: { pastThreeMonthsRewardsAverage: 250, hasRewardsHistory: true },
+      categories: [{ name: 'Rewards', allocation: 0.1, target: 400, incomeAllocated: 0, budget: 0, netChange: 0, remaining: 900 }],
+      activeRecurringPayments: [],
+      pendingNotifications: [],
+    } as any)
+
+    try {
+      render(<App />)
+      await waitFor(() => expect(screen.getByTestId('ledger-view')).toBeDefined(), { timeout: 15_000 })
+      expect(viewMocks.ledgerProps.ledgerSummaries).toEqual([
+        expect.objectContaining({ name: 'Rewards', remaining: 10 }),
+      ])
+      expect(viewMocks.ledgerProps.transactionFormLedgerSummaries).toEqual([
+        expect.objectContaining({ name: 'Rewards', remaining: 900 }),
+      ])
+    } finally {
+      if (defaultFetchDashboard) vi.mocked(api.fetchDashboard).mockImplementation(defaultFetchDashboard)
+    }
   })
 
   it('performs cache preservation and local storage cleanup on logout', async () => {

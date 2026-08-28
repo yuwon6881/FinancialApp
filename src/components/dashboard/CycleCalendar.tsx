@@ -1,5 +1,5 @@
 import { m, useReducedMotion } from 'framer-motion'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ActiveRecurringPayment, Transaction } from '../../types'
 import {
   buildCycleCalendar,
@@ -79,6 +79,10 @@ export function CycleCalendar(props: CycleCalendarProps) {
   const reduceMotion = useReducedMotion()
   const [mode, setMode] = useState<CycleHeatmapMode>('expense')
   const [selectedDay, setSelectedDay] = useState<CycleCalendarDay | null>(null)
+
+  useEffect(() => {
+    setSelectedDay(null)
+  }, [props.selectedMonth, props.selectedYear])
 
   const calendar = useMemo(() => buildCycleCalendar({
     selectedMonth: props.selectedMonth,

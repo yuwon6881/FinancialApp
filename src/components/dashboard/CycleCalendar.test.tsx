@@ -315,6 +315,45 @@ describe('CycleCalendar component', () => {
     expect(onSelectDate).toHaveBeenCalledWith('2026-07-10')
   })
 
+  it('closes the selected day when the viewed cycle changes', () => {
+    const transaction = {
+      id: 'expense-1',
+      date: '2026-07-10',
+      description: 'Dinner Out',
+      amount: -45,
+      category: 'Dining',
+      ledgerCategory: 'Essentials',
+    }
+    const { rerender } = render(
+      <CycleCalendar
+        selectedMonth="Jul"
+        selectedYear={2026}
+        cycleDay={1}
+        cycleLabel="Jul 1st ~ Jul 31st, 2026"
+        transactions={[transaction]}
+        recurringPayments={[]}
+        formatNet={value => `$${value}`}
+      />,
+    )
+
+    fireEvent.click(screen.getByTitle(/Jul 10:/))
+    expect(screen.getByRole('dialog')).toBeTruthy()
+
+    rerender(
+      <CycleCalendar
+        selectedMonth="Aug"
+        selectedYear={2026}
+        cycleDay={1}
+        cycleLabel="Aug 1st ~ Aug 31st, 2026"
+        transactions={[]}
+        recurringPayments={[]}
+        formatNet={value => `$${value}`}
+      />,
+    )
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('reports an occurrence with no scheduled amount honestly instead of as zero', () => {
     render(
       <CycleCalendar

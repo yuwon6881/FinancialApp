@@ -41,6 +41,12 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   const descriptionRefs = React.useRef(new Map<string, HTMLButtonElement>())
   const timelineId = React.useId().replace(/:/g, '')
 
+  React.useEffect(() => {
+    setSelectedBill(null)
+    setSelectedNode(null)
+    setHighlightedNodeDate(null)
+  }, [selectedMonth, selectedYear])
+
   const {
     startTime,
     endTime,

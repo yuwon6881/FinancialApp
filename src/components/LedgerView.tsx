@@ -84,6 +84,7 @@ interface LedgerViewProps {
   cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
   onRouteStateChange?: (state: Omit<LedgerRouteState, 'highlightedTxId'>) => void
   ledgerSummaries?: CategorySummary[]
+  transactionFormLedgerSummaries?: CategorySummary[]
   savingsGoals?: SavingsGoal[]
   activeRecurringPayments?: ActiveRecurringPayment[]
   currency?: string
@@ -357,7 +358,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         stabilityTopUpContext={props.stabilityTopUpContext}
         savingsGoals={props.savingsGoals}
         activeRecurringPayments={props.activeRecurringPayments}
-        ledgerSummaries={props.ledgerSummaries}
+        ledgerSummaries={props.transactionFormLedgerSummaries ?? props.ledgerSummaries}
         onAddTransaction={props.onAddTransaction}
         onUpdateTransaction={props.onUpdateTransaction}
         onStartEditPending={props.onStartEditPending}

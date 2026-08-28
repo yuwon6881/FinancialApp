@@ -90,7 +90,9 @@ function App() {
   // 4. Cycle Navigation
   const persistSelectedPeriodRef = useRef<(month: string, year: number) => void | Promise<void>>(api.selectPeriod)
   const nav = useCycleNavigation({
-    loadAll: (m, y, b, shouldCommit) => financial.loadAll(m, y, b, false, shouldCommit),
+    // Cycle navigation owns rollback and user feedback, so unlike ordinary background refreshes
+    // it must observe a failed fetch instead of treating it as a successful switch.
+    loadAll: (m, y, b, shouldCommit) => financial.loadAll(m, y, b, true, shouldCommit),
     handleLogout: session.handleLogout,
     markSessionLocked: session.markSessionLocked,
     setDashboardData: (d) => financial.setDashboardData(d),
