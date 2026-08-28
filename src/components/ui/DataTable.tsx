@@ -167,7 +167,7 @@ export function DataTablePagination({
             <ChevronLeft className="size-3.5" aria-hidden="true" />
             Prev
           </Button>
-          <span className="text-[10px] font-semibold text-muted-foreground sm:hidden">
+          <span className="text-xs font-semibold text-muted-foreground sm:hidden">
             Page {currentPage} / {safeTotalPages}
           </span>
           <div className="hidden items-center gap-1 sm:flex">

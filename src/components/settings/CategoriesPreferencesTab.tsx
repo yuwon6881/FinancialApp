@@ -122,7 +122,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
         >
           <div className="min-w-0">
             <h3 className="text-sm font-bold text-foreground">Transaction Categories</h3>
-            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
               <span>
                 {isCategoryListLoading
                   ? 'Loading categories…'
@@ -157,7 +157,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
               onClick={e => { e.stopPropagation(); void view.handleAiCleanupReview() }}
               disabled={hideSensitive || view.isReviewingCleanup || view.visibleCategories.length === 0}
               title={hideSensitive ? 'Unhide balances to review' : 'AI category review'}
-              className={`inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition cursor-pointer sm:min-h-8 ${
+              className={`inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer sm:min-h-8 ${
                 view.isReviewingCleanup
                   ? 'border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
                   : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed'
@@ -213,9 +213,9 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                         {item.name}
                       </span>
                       {item.count === 0 ? (
-                        <span className="truncate text-[10px] font-semibold text-orange-500">Unused</span>
+                        <span className="truncate text-xs font-semibold text-orange-500">Unused</span>
                       ) : item.count != null && item.count <= view.RARELY_USED_MAX_COUNT ? (
-                        <span className="truncate text-[10px] font-semibold text-amber-600 dark:text-amber-500">Rarely used · {item.count}×</span>
+                        <span className="truncate text-xs font-semibold text-amber-600 dark:text-amber-500">Rarely used · {item.count}×</span>
                       ) : null}
                     </div>
                     <div className="flex items-center gap-2">
@@ -224,7 +224,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                           role="img"
                           aria-label={`${item.name} is managed by FinancialApp; flow is ${activeType === 'inflow' ? 'money in' : activeType === 'outflow' ? 'money out' : 'money in and out'}`}
                           title="Managed category; its flow cannot be changed."
-                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold ${
                             activeType === 'inflow'
                               ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                               : activeType === 'outflow'
@@ -294,7 +294,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                 very click that summoned it. Sticky keeps Save reachable without displacing rows. */}
             {changedFlowTypeCategories.length > 0 && (
               <div className="sticky bottom-0 z-10 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 backdrop-blur-sm animate-in fade-in duration-150">
-                <span className="truncate text-[11px] font-bold text-accent-ink">
+                <span className="truncate text-xs font-bold text-accent-ink">
                   {changedFlowTypeCategories.length} category flow type{changedFlowTypeCategories.length > 1 ? 's' : ''} modified
                 </span>
                 <div className="flex shrink-0 items-center justify-end gap-1.5">
@@ -337,12 +337,12 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
             )}
 
             {view.categoryUsage && view.visibleCategories.length > 0 && (
-              <p className="text-[10px] text-muted-foreground px-0.5">
+              <p className="text-xs text-muted-foreground px-0.5">
                 Usage over the last {view.USAGE_LOOKBACK_CYCLES} cycles, least used first.
               </p>
             )}
             {view.usageError && (
-              <p className="text-[10px] font-medium text-destructive px-0.5">{view.usageError}</p>
+              <p className="text-xs font-medium text-destructive px-0.5">{view.usageError}</p>
             )}
           </div>
         </CollapsibleBody>

@@ -7,8 +7,10 @@ import {
   downloadDocument,
   downloadSelectedDocumentArchive,
   getDocumentContent,
+  getDocumentOverview,
   getTaxReliefCategories,
   listDocuments,
+  primeDocumentOverview,
   updateDocument,
   uploadDocument,
   uploadDocuments,
@@ -253,6 +255,42 @@ describe('documents API', () => {
 
       await Promise.all([first, second])
       expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('drops an older overview validator when partial bootstrap primes authoritative data', async () => {
+      const oldOverview = {
+        usage: { totalBytes: 10, documentCount: 1, quotaBytes: 1_000 },
+        availableYears: [2026],
+        retention: { taxYears: [], noticeWindowDays: 180, keepYears: 7 },
+        selectedTaxYear: 2026,
+        summary: null,
+        reliefCategories: [],
+      }
+      const refreshedOverview = {
+        ...oldOverview,
+        usage: { ...oldOverview.usage, totalBytes: 20, documentCount: 2 },
+      }
+      const serverAfterExpiry = {
+        ...refreshedOverview,
+        usage: { ...refreshedOverview.usage, totalBytes: 30, documentCount: 3 },
+      }
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(new Response(JSON.stringify(oldOverview), {
+          status: 200,
+          headers: { ETag: 'W/"old-overview"', 'Content-Type': 'application/json' },
+        }))
+        .mockResolvedValueOnce(okJson(serverAfterExpiry))
+      vi.stubGlobal('fetch', fetchMock)
+
+      await expect(getDocumentOverview()).resolves.toEqual(oldOverview)
+      primeDocumentOverview(refreshedOverview)
+      await expect(getDocumentOverview()).resolves.toEqual(refreshedOverview)
+      vi.advanceTimersByTime(30_001)
+      await expect(getDocumentOverview()).resolves.toEqual(serverAfterExpiry)
+
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      const afterPrimeHeaders = new Headers(fetchMock.mock.calls[1][1].headers)
+      expect(afterPrimeHeaders.has('If-None-Match')).toBe(false)
     })
 
     it('different tax years, offsets, and page sizes do not collide', async () => {

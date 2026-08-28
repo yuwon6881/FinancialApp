@@ -168,7 +168,7 @@ export function createCategoryActions(deps: CategoryActionDependencies) {
                             range: 'all',
                           })
                         }}
-                        className="gap-1 rounded-lg text-[11px]"
+                        className="gap-1 rounded-lg text-xs"
                       >
                         <ExternalLink className="size-3" aria-hidden="true" />
                         <span>View in Ledger</span>
@@ -197,7 +197,7 @@ export function createCategoryActions(deps: CategoryActionDependencies) {
                   }}
                 />
                 {replacementOptions.length === 0 && (
-                  <p className="text-[11px] font-semibold text-destructive">
+                  <p className="text-xs font-semibold text-destructive">
                     Add another category before deleting this one.
                   </p>
                 )}

@@ -14,6 +14,7 @@ import type { useAppDialogs } from './useAppDialogs'
 import type { useFinancialData } from './useFinancialData'
 import type { useCycleNavigation } from './useCycleNavigation'
 import { hasCompleteAccountCoverage } from '../lib/ledgerAccountCoverage'
+import { PageContainer } from '../components/ui/PageContainer'
 
 const LoginView = lazy(() => import('../components/LoginView').then(m => ({ default: m.LoginView })))
 const AccountCoverageGate = lazy(() => import('../components/AccountCoverageGate').then(m => ({ default: m.AccountCoverageGate })))
@@ -83,7 +84,7 @@ export const AppGateways: React.FC<AppGatewaysProps> = ({
           aria-busy="true"
           aria-label="Loading your financial data securely"
         >
-          <div className="safe-screen-inset mx-auto w-full max-w-[1440px] space-y-6 [--safe-screen-block:1.5rem] sm:[--safe-screen-inline:1.5rem] lg:[--safe-screen-inline:2rem]">
+          <PageContainer className="safe-screen-inset space-y-6 [--safe-screen-block:1.5rem] !px-0 sm:[--safe-screen-inline:1.5rem] lg:[--safe-screen-inline:2rem]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <AppLogo className="size-10 rounded-xl" pulse />
@@ -100,7 +101,7 @@ export const AppGateways: React.FC<AppGatewaysProps> = ({
             <Suspense fallback={<CycleSkeletonFallback />}>
               <CycleSkeleton variant={getPageSkeletonVariant(prefs.activeTab)} fullPage />
             </Suspense>
-          </div>
+          </PageContainer>
         </div>
       </LaunchReady>
     )

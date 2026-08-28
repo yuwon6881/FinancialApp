@@ -10,15 +10,19 @@ export function useLoanData() {
   const [status, setStatus] = useState<LoanLoadStatus>(hadCachedLoans ? 'cached' : 'idle')
   const requestRef = useRef<Promise<Loan[]> | null>(null)
 
+  const setAuthoritativeLoans = useCallback((result: Loan[]) => {
+    setLoans(result)
+    setCachedJSON(CACHE_KEYS.loans, result)
+    setStatus('ready')
+  }, [])
+
   const refresh = useCallback(async () => {
     if (requestRef.current) return requestRef.current
     setStatus(current => loans.length > 0 ? current : 'loading')
     const request = import('../../lib/api/loans')
       .then(module => module.fetchLoans())
       .then(result => {
-        setLoans(result)
-        setCachedJSON(CACHE_KEYS.loans, result)
-        setStatus('ready')
+        setAuthoritativeLoans(result)
         return result
       })
       .catch(cause => {
@@ -30,7 +34,7 @@ export function useLoanData() {
       })
     requestRef.current = request
     return request
-  }, [loans.length])
+  }, [loans.length, setAuthoritativeLoans])
 
   const load = useCallback(async () => {
     if (status === 'ready') return loans
@@ -46,6 +50,7 @@ export function useLoanData() {
   return {
     loans,
     setLoans,
+    setAuthoritativeLoans,
     status,
     hasLoadedFromServer: status === 'ready',
     load,

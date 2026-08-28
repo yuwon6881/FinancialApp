@@ -69,11 +69,11 @@ export function LedgerExportModal({
         <p>
           Choose whether to export the current page or the full result set based on your active filters.
         </p>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Full exports use a server-side download to avoid large client loads.
         </p>
         {fullExportDisabled && (
-          <p className="text-[10px] font-medium text-orange-500">
+          <p className="text-xs font-medium text-orange-500">
             Full export becomes available after matching transactions finish syncing.
           </p>
         )}

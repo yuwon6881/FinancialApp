@@ -148,7 +148,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
           onClick={onAddClick ?? toggleAdd}
           disabled={disabled}
           aria-expanded={isAddOpen}
-          aria-controls={addPanelId}
+          aria-controls={onAddClick ? undefined : addPanelId}
           className="h-9 shrink-0 whitespace-nowrap px-2 sm:px-2.5"
         >
           {isAddOpen ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
@@ -162,7 +162,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
             {addFormTitle && (
               <div className="space-y-0.5">
                 <p className="text-xs font-bold text-foreground">{addFormTitle}</p>
-                {addFormDescription && <p className="text-[11px] leading-relaxed text-muted-foreground">{addFormDescription}</p>}
+                {addFormDescription && <p className="text-xs leading-relaxed text-muted-foreground">{addFormDescription}</p>}
               </div>
             )}
             {addFormFields}
@@ -192,8 +192,8 @@ export function ManageableNameList<T extends ManageableNameItem>({
                 </Button>
               </div>
             </div>
-            {duplicate && <p className="text-[10px] font-semibold text-destructive">{itemLabel} already exists.</p>}
-            {validationError && <p className="text-[10px] font-semibold text-destructive">{validationError}</p>}
+            {duplicate && <p className="text-xs font-semibold text-destructive">{itemLabel} already exists.</p>}
+            {validationError && <p className="text-xs font-semibold text-destructive">{validationError}</p>}
           </div>
         </CollapsibleBody>
       </div>}
@@ -213,7 +213,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
           </div>
         ) : filtered.length === 0 ? (
           search || !emptyState ? (
-            <p className="py-6 text-center text-[11px] text-muted-foreground">
+            <p className="py-6 text-center text-xs text-muted-foreground">
               {search ? `No ${pluralItemLabel} match your search.` : `No ${pluralItemLabel} yet.`}
             </p>
           ) : emptyState

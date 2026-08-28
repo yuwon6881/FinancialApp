@@ -9,7 +9,7 @@ interface TransactionTypeFieldsProps {
 }
 
 export function TransactionTypeFields({ txType, onChangeTxType, disabled = false }: TransactionTypeFieldsProps) {
-  const base = `min-w-0 flex-1 flex items-center justify-center gap-1 px-1 py-2 text-[9px] sm:text-[10px] whitespace-nowrap font-semibold rounded-xl border transition ${
+  const base = `min-w-0 flex-1 flex items-center justify-center gap-1 px-1 py-2 text-xs sm:text-xs whitespace-nowrap font-semibold rounded-xl border transition ${
     disabled ? 'cursor-not-allowed disabled:pointer-events-none' : 'cursor-pointer'
   }`
 

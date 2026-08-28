@@ -185,7 +185,7 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
               <div className="mt-0.5 shrink-0">{toneIcon[tone]}</div>
               <div className="min-w-0 flex-1 pointer-events-none">
                 {toast.title && <div className="text-sm font-bold text-foreground">{toast.title}</div>}
-                <div className="text-[13px] leading-relaxed text-muted-foreground">{toast.message}</div>
+                <div className="text-body leading-relaxed text-muted-foreground">{toast.message}</div>
                 {toast.action && (() => {
                   const ActionIcon = toast.action.icon ?? Undo2
                   return (

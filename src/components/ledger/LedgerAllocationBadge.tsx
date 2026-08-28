@@ -24,7 +24,7 @@ function parseTransferRoute(ledgerCategory: string): TransferRoute | null {
 }
 
 const badgeClass = (compact: boolean) =>
-  `${compact ? 'px-1.5' : 'px-2'} py-0.5 rounded-md border text-[10px] font-semibold whitespace-nowrap`
+  `${compact ? 'px-1.5' : 'px-2'} py-0.5 rounded-md border text-xs font-semibold whitespace-nowrap`
 
 export function LedgerAllocationBadge({
   ledgerCategory,

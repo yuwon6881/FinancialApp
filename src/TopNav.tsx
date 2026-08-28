@@ -11,16 +11,21 @@ import {
   Loader2,
   ShieldAlert,
   Search as SearchIcon,
+  ClipboardList,
+  Settings,
+  TrendingUp,
 } from 'lucide-react'
 import { CommitmentIcon } from './components/semanticIcons'
 import { AppLogo } from './components/ui/AppLogo'
 import { mutationBusyLabel } from './components/ui/rowSyncState'
-import { useIsMobile } from './lib/useIsMobile'
+import { useIsCompact } from './lib/breakpoints'
 import type { AppTab, PendingNotification } from './types'
 import type { SensitivePreferenceStatus } from './app/useAppPreferences'
 import { MobileBottomNav, type NavItemConfig } from './components/nav/MobileBottomNav'
 import { QuickActionsDropdown } from './components/nav/QuickActionsDropdown'
 import { UserProfileDropdown } from './components/nav/UserProfileDropdown'
+import { PageContainer } from './components/ui/PageContainer'
+import { DesktopNavRail } from './components/nav/DesktopNavRail'
 
 interface TopNavProps {
   activeTab: AppTab
@@ -46,7 +51,7 @@ interface TopNavProps {
   onOpenFailedOps?: () => void
 }
 
-const navItems: NavItemConfig[] = [
+const compactNavItems: NavItemConfig[] = [
   {
     tab: 'dashboard',
     label: 'Today',
@@ -94,6 +99,31 @@ const navItems: NavItemConfig[] = [
   }
 ]
 
+const navItems: NavItemConfig[] = [
+  ...compactNavItems.slice(0, 4),
+  {
+    tab: 'wishlist', label: 'Commitments & Rewards', mobileLabel: 'Rewards', Icon: CommitmentIcon,
+    activeClass: 'bg-pink-500/12 text-pink-600 dark:text-pink-400 border-pink-500/25 shadow-pink-500/10',
+    iconClass: 'text-pink-500', dotClass: 'bg-pink-500',
+  },
+  {
+    tab: 'drafts', label: 'Drafts', mobileLabel: 'Drafts', Icon: ClipboardList,
+    activeClass: 'bg-sky-500/12 text-sky-600 dark:text-sky-400 border-sky-500/25 shadow-sky-500/10',
+    iconClass: 'text-sky-500', dotClass: 'bg-sky-500',
+  },
+  {
+    tab: 'investments', label: 'Investments', mobileLabel: 'Invest', Icon: TrendingUp,
+    activeClass: 'bg-violet-500/12 text-violet-600 dark:text-violet-400 border-violet-500/25 shadow-violet-500/10',
+    iconClass: 'text-violet-500', dotClass: 'bg-violet-500',
+  },
+  compactNavItems[4],
+  {
+    tab: 'settings', label: 'Settings', mobileLabel: 'Settings', Icon: Settings,
+    activeClass: 'bg-blue-500/12 text-blue-600 dark:text-blue-400 border-blue-500/25 shadow-blue-500/10',
+    iconClass: 'text-blue-500', dotClass: 'bg-blue-500',
+  },
+]
+
 const TopNav: React.FC<TopNavProps> = ({
   activeTab,
   onTabChange,
@@ -118,7 +148,7 @@ const TopNav: React.FC<TopNavProps> = ({
   onOpenFailedOps
 }) => {
   const hasAlerts = pendingNotifications.length > 0
-  const isPhone = useIsMobile(640)
+  const isPhone = useIsCompact()
   const syncStatusLabel = syncLabel || mutationBusyLabel('syncing')
   const isBusy = !isOffline && (isSyncing || Boolean(syncLabel))
 
@@ -126,7 +156,7 @@ const TopNav: React.FC<TopNavProps> = ({
     <Button variant="unstyled"
       type="button"
       onClick={() => onTabChange('drafts')}
-      className="ml-2.5 flex items-center gap-1 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-[10px] font-bold text-amber-500 cursor-pointer select-none shrink-0 hover:bg-amber-500/25 transition duration-150 animate-in fade-in zoom-in-95"
+      className="ml-2.5 flex items-center gap-1 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-xs font-bold text-amber-500 cursor-pointer select-none shrink-0 hover:bg-amber-500/25 transition duration-150 animate-in fade-in zoom-in-95"
       title="Draft transactions waiting to be synced to the server"
     >
       <FileText className="size-3" />
@@ -140,7 +170,7 @@ const TopNav: React.FC<TopNavProps> = ({
       role="status"
       aria-label={`${failedOpsCount} failed sync ${failedOpsCount === 1 ? 'item' : 'items'}`}
       onClick={() => onOpenFailedOps?.()}
-      className="ml-2 flex items-center gap-1 px-2 py-0.5 bg-destructive/10 border border-destructive/20 rounded-md text-[10px] font-bold text-destructive cursor-pointer select-none shrink-0 hover:bg-destructive/20 transition duration-150"
+      className="ml-2 flex items-center gap-1 px-2 py-0.5 bg-destructive/10 border border-destructive/20 rounded-md text-xs font-bold text-destructive cursor-pointer select-none shrink-0 hover:bg-destructive/20 transition duration-150"
       title="Operations that failed to sync and were removed from the active queue — click to view details"
     >
       <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
@@ -159,10 +189,10 @@ const TopNav: React.FC<TopNavProps> = ({
           data-busy={isBusy || undefined}
           aria-hidden="true"
         />
-        <div className="relative mx-auto flex h-16 w-full max-w-[1440px] items-center px-4 sm:px-6 lg:px-8">
+        <PageContainer className="relative flex h-16 items-center">
         
         {/* Left Side (Logo and Brand) */}
-        <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden z-10 md:flex-initial md:shrink-0 xl:flex-1">
+        <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden z-10 md:flex-initial md:shrink xl:flex-1">
           <Button
             variant="unstyled"
             type="button"
@@ -189,7 +219,7 @@ const TopNav: React.FC<TopNavProps> = ({
           {isPhone && (isOffline || syncLabel) && (
             <span
               role="status"
-              className={`ml-2 shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-bold ${isOffline ? 'border-amber-500/20 bg-amber-500/10 text-amber-500' : 'border-blue-500/20 bg-blue-500/10 text-blue-500'}`}
+              className={`ml-2 shrink-0 rounded-md border px-2 py-0.5 text-xs font-bold ${isOffline ? 'border-amber-500/20 bg-amber-500/10 text-amber-500' : 'border-blue-500/20 bg-blue-500/10 text-blue-500'}`}
             >
               {isOffline ? 'Offline' : syncStatusLabel}
             </span>
@@ -208,7 +238,7 @@ const TopNav: React.FC<TopNavProps> = ({
               <span className="hidden truncate text-xs font-medium 2xl:inline">Search records…</span>
               <span
                 aria-hidden
-                className="ml-auto hidden shrink-0 rounded-md border border-border/50 bg-muted/50 px-1.5 py-0.5 text-[10px] font-bold 2xl:inline"
+                className="ml-auto hidden shrink-0 rounded-md border border-border/50 bg-muted/50 px-1.5 py-0.5 text-xs font-bold 2xl:inline"
               >
                 Ctrl K
               </span>
@@ -216,31 +246,6 @@ const TopNav: React.FC<TopNavProps> = ({
           )}
           {isPhone && draftStatus}
           {isPhone && failedOpsStatus}
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="hidden min-w-0 flex-1 items-center justify-center md:flex xl:absolute xl:left-1/2 xl:top-1/2 xl:z-20 xl:w-max xl:-translate-x-1/2 xl:-translate-y-1/2 xl:flex-none">
-          <nav className="flex min-w-0 max-w-full items-center gap-0.5 rounded-xl border border-border/50 bg-card/72 p-1 shadow-sm select-none lg:gap-1 lg:p-1.5">
-            {navItems.map(({ tab, label, Icon, activeClass, iconClass, dotClass }) => {
-              const isActive = activeTab === tab
-              return (
-                <Button variant="unstyled"
-                  key={tab}
-                  onClick={() => onTabChange(tab)}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`relative flex min-w-0 items-center gap-1 px-1.5 py-1.5 text-xs font-semibold rounded-lg border transition-all duration-200 cursor-pointer lg:gap-1.5 lg:px-3 ${
-                    isActive
-                      ? `${activeClass} font-bold shadow-sm scale-[1.02]`
-                      : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/45'
-                  }`}
-                >
-                  <Icon className={`size-3.5 ${isActive ? iconClass : 'text-muted-foreground'}`} />
-                  <span>{label}</span>
-                  {isActive && <span className={`absolute -bottom-1 left-1/2 h-1 w-5 -translate-x-1/2 rounded-full ${dotClass}`} />}
-                </Button>
-              )
-            })}
-          </nav>
         </div>
 
         {/* Right Side Widgets & Actions */}
@@ -308,7 +313,7 @@ const TopNav: React.FC<TopNavProps> = ({
             onLogout={onLogout}
           />
         </div>
-        </div>
+        </PageContainer>
         {sensitivePreferenceStatus !== 'resolved' && (
           <div
             role="status"
@@ -325,7 +330,7 @@ const TopNav: React.FC<TopNavProps> = ({
                   </div>
                   <div className="min-w-0 flex-1 text-left">
                     <div className="text-sm font-bold text-foreground">Protecting your amounts</div>
-                    <div className="text-[13px] leading-relaxed text-muted-foreground mt-0.5">Checking privacy settings before anything is revealed.</div>
+                    <div className="text-body leading-relaxed text-muted-foreground mt-0.5">Checking privacy settings before anything is revealed.</div>
                   </div>
                 </>
               ) : (
@@ -335,7 +340,7 @@ const TopNav: React.FC<TopNavProps> = ({
                   </div>
                   <div className="min-w-0 flex-1 text-left">
                     <div className="text-sm font-bold text-foreground">Amounts remain protected</div>
-                    <div className="text-[13px] leading-relaxed text-muted-foreground mt-0.5">Privacy settings couldn't be verified.</div>
+                    <div className="text-body leading-relaxed text-muted-foreground mt-0.5">Privacy settings couldn't be verified.</div>
                   </div>
                   <Button variant="unstyled"
                     type="button"
@@ -351,11 +356,15 @@ const TopNav: React.FC<TopNavProps> = ({
         )}
       </header>
 
-      <MobileBottomNav
-        navItems={navItems}
-        activeTab={activeTab}
-        onTabChange={onTabChange}
-      />
+      {isPhone ? (
+        <MobileBottomNav
+          navItems={compactNavItems}
+          activeTab={activeTab}
+          onTabChange={onTabChange}
+        />
+      ) : (
+        <DesktopNavRail navItems={navItems} activeTab={activeTab} onTabChange={onTabChange} />
+      )}
     </>
   )
 }

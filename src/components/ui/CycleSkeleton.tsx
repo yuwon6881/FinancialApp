@@ -2,7 +2,6 @@ import React from 'react'
 import { cn } from '../../lib/utils'
 import { Skeleton } from './Skeleton'
 import {
-  panelClass,
   CardSkeleton,
   PlainHeaderSkeleton,
   SettingsHeaderSkeleton,
@@ -17,6 +16,7 @@ import {
   InvestmentSummarySkeleton,
   CycleCalendarSkeleton,
 } from './skeletons/FeatureSkeletons'
+import { panelClass } from './Panel'
 
 const LedgerToolbarSkeleton: React.FC = () => (
   <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center rounded-2xl border border-border/60 bg-card p-5">

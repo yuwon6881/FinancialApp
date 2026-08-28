@@ -12,6 +12,7 @@ import { FormField } from '../ui/FormField'
 import { focusFirstInvalidField } from '../ui/formValidation'
 import { Button } from '../ui/Button'
 import { SensitiveMask } from '../ui/SensitiveAmount'
+import { useIsCompact } from '../../lib/breakpoints'
 
 interface CategoryLimitsCardProps {
   categories: TransactionCategory[]
@@ -36,6 +37,7 @@ export function CategoryLimitsCard({
   last3CategoryBreakdown = [],
   last6CategoryBreakdown = [],
 }: CategoryLimitsCardProps) {
+  const isCompact = useIsCompact()
   const spendingCategories = React.useMemo(
     () => categories.filter(category => !isSystemCategoryName(category.name) && isSpendingGuideCategory(category)),
     [categories],
@@ -51,7 +53,7 @@ export function CategoryLimitsCard({
       if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
         return true
       }
-      return window.innerWidth >= 768
+      return !isCompact
     }
     return true
   })
@@ -146,12 +148,12 @@ export function CategoryLimitsCard({
           <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
             <Gauge className="size-4 text-blue-500" /> Cycle Spending Guides
           </h3>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
             Optional category expectations. Spending is never blocked when a guide is reached.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="rounded-full bg-blue-500/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-blue-500">
+          <span className="rounded-full bg-blue-500/10 px-2 py-1 text-xs font-bold uppercase tracking-wide text-blue-500">
             {spendingCategories.filter(category => category.cycleLimit != null).length} tracked
           </span>
           {isOpen ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
@@ -202,7 +204,7 @@ export function CategoryLimitsCard({
                         <RowSyncStatus isSyncing={isSyncing} isPending={category.isPendingSync} entityLabel="guide" />
                       </div>
                     </div>
-                    <span className={`text-[11px] font-semibold shrink-0 ${enabled ? 'text-blue-500 font-bold' : 'text-muted-foreground'}`}>
+                    <span className={`text-xs font-semibold shrink-0 ${enabled ? 'text-blue-500 font-bold' : 'text-muted-foreground'}`}>
                       {enabled ? 'Active Guide' : 'No Guide'}
                     </span>
                   </div>
@@ -213,8 +215,8 @@ export function CategoryLimitsCard({
                       required
                       error={errors[category.id]}
                       className="mt-3 pt-3 border-t border-border/30 animate-in fade-in duration-150"
-                      labelClassName="text-[10px] uppercase tracking-wider"
-                      errorClassName="text-[10px] font-semibold"
+                      labelClassName="text-xs uppercase tracking-wider"
+                      errorClassName="text-xs font-semibold"
                     >
                       {hideSensitive ? (
                         <div className="flex h-10 items-center rounded-md border border-border bg-muted/20 px-3">
@@ -264,7 +266,7 @@ export function CategoryLimitsCard({
           </div>
 
           <div className="flex flex-col gap-3 border-t border-border/30 pt-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[10px] leading-relaxed text-muted-foreground">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               Changes apply from the current salary cycle onward; earlier cycle reports keep their original guide.
             </p>
             <Button

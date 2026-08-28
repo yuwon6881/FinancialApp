@@ -234,6 +234,7 @@ test('draft attachments survive a reload before the batch is added', async ({ pa
   await dialog.getByRole('combobox', { name: 'Tax relief category for weekend-market.pdf' }).click()
   await page.getByRole('option', { name: /Medical/ }).click()
   await dialog.getByRole('button', { name: 'Save Draft' }).click()
+  await expect(dialog).toBeHidden()
   await expect(page.getByText('1 attachment')).toBeVisible()
 
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -249,7 +250,7 @@ test('draft attachments survive a reload before the batch is added', async ({ pa
   await expect(page.getByRole('dialog', { name: 'Edit Draft' }).getByText('weekend-market.pdf')).toBeVisible()
 })
 
-const mobilePwaRoutes = [
+const responsiveRoutes = [
   { path: '/reports', slug: 'reports', readyText: 'Carryover Rolling Ledgers' },
   { path: '/recurring', slug: 'recurring', readyText: 'Recurring Bills & Subscriptions' },
   { path: '/ledger', slug: 'ledger', readyText: 'Neighbourhood Grocer' },
@@ -358,16 +359,17 @@ test('mobile draft review queue clears fixed navigation at keyboard height', asy
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
 })
 
-for (const route of mobilePwaRoutes) {
-  test(`mobile PWA ${route.slug} viewport`, async ({ page }) => {
-    test.skip(!test.info().project.name.startsWith('mobile'), 'The route viewport matrix is mobile-only.')
+for (const route of responsiveRoutes) {
+  test(`responsive ${route.slug} viewport`, async ({ page }) => {
 
     await establishSession(page)
     if (route.path === '/drafts') await seedDraftTransaction(page)
     await mockApi(page, { documents: vaultDocuments })
     await page.goto(route.path, { waitUntil: 'domcontentloaded' })
     await expect(page.locator('main')).toBeVisible()
-    await expect(page.getByText(route.readyText, { exact: true }).first()).toBeVisible({ timeout: 15_000 })
+    // Scoped to main: the navigation rail carries the same destination labels in the shell,
+    // and at medium they are present but visually hidden.
+    await expect(page.locator('main').getByText(route.readyText, { exact: true }).first()).toBeVisible({ timeout: 15_000 })
     const logo = page.getByRole('button', { name: 'Go to Today' })
     const wishlistAction = page.locator('header').getByRole('button', { name: 'Commitments and Rewards', exact: true })
     const billsAction = page.getByRole('button', { name: /Bills:/ })
@@ -403,7 +405,7 @@ for (const route of mobilePwaRoutes) {
       }))
       expect(labelWidth.scroll, `${route.path} year label must not truncate`).toBeLessThanOrEqual(labelWidth.client + 1)
     }
-    await expect(page).toHaveScreenshot(`mobile-pwa-${route.slug}.png`)
+    await expect(page).toHaveScreenshot(`responsive-${route.slug}.png`)
   })
 }
 

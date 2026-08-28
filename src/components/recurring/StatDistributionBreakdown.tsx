@@ -150,11 +150,11 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
       <div className="flex items-baseline justify-between gap-2 border-b border-border/40 pb-2.5">
         <div className="min-w-0">
           <h4 className="text-xs font-bold text-foreground sm:text-sm">{title}</h4>
-          <p className="text-[10px] text-muted-foreground sm:text-xs">{subtitle}</p>
+          <p className="text-xs text-muted-foreground sm:text-xs">{subtitle}</p>
         </div>
         <div className="text-right shrink-0">
           <span className="text-xs font-extrabold text-blue-500 sm:text-sm">{totalFormatted}</span>
-          <span className="block text-[9px] uppercase font-bold tracking-wide text-muted-foreground">
+          <span className="block text-xs uppercase font-bold tracking-wide text-muted-foreground">
             {mode === 'loan-owed' ? 'total owed' : 'total / year'}
           </span>
         </div>
@@ -180,13 +180,13 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
                       {row.name}
                     </span>
                     {row.category && (
-                      <span className={`inline-flex items-center text-[9px] font-semibold px-1.5 py-0.5 rounded border shrink-0 ${getCategoryBadgeClass(row.category)}`}>
+                      <span className={`inline-flex items-center text-xs font-semibold px-1.5 py-0.5 rounded border shrink-0 ${getCategoryBadgeClass(row.category)}`}>
                         <span className={`size-1.5 rounded-full mr-1 ${getCategoryDotClass(row.category)}`} />
                         {row.category}
                       </span>
                     )}
                   </div>
-                  <div className="mt-0.5 text-[10px] text-muted-foreground flex items-center gap-1">
+                  <div className="mt-0.5 text-xs text-muted-foreground flex items-center gap-1">
                     {mode === 'loan-owed' && row.originalPrincipal !== undefined ? (
                       <span>Original principal: {formatSensitive(row.originalPrincipal)}</span>
                     ) : row.monthlyAmount !== undefined ? (
@@ -199,11 +199,11 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
                     <span className="text-xs font-bold text-foreground">
                       {formatSensitive(row.primaryAmount)}
                     </span>
-                    <span className="rounded-full bg-muted/60 px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">
+                    <span className="rounded-full bg-muted/60 px-1.5 py-0.5 text-xs font-bold text-muted-foreground">
                       {row.percentage.toFixed(1)}%
                     </span>
                   </div>
-                  <span className="text-[9px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {mode === 'loan-owed' ? 'outstanding' : 'per year'}
                   </span>
                 </div>

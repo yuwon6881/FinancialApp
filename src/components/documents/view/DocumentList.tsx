@@ -14,6 +14,7 @@ import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { DocumentCard } from './DocumentCard'
 import { AmountReview, DocumentActions, DocumentTypeIcon, EmptyState, LinkedTransactionButton, type UpdateDocumentFn } from './documentRowParts'
 import { DOCUMENT_BULK_LIMIT } from '../../../lib/api/documents'
+import { useIsExpanded } from '../../../lib/breakpoints'
 
 interface DocumentListProps {
   documents: VaultDocument[]
@@ -69,6 +70,7 @@ export function DocumentList({
 }: DocumentListProps) {
   const { showToast } = useAppUi()
   const { hideSensitive } = useAppPrefs()
+  const isExpanded = useIsExpanded()
   const [previewDocument, setPreviewDocument] = useState<VaultDocument | null>(null)
   const [openingTransactionId, setOpeningTransactionId] = useState<string | null>(null)
   const hasSelection = selectedIds.size > 0
@@ -145,13 +147,14 @@ export function DocumentList({
           it changes the list's position the moment a box is ticked. The buttons above are disabled
           at this point, and a disabled button with no stated reason reads as broken. */}
       {exceedsSelectionLimit && (
-        <p role="alert" className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/8 px-3 py-2 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+        <p role="alert" className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/8 px-3 py-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
           You have {selectedIds.size} files picked, and these buttons work on up to {DOCUMENT_BULK_LIMIT} at a time.
           Untick {selectedIds.size - DOCUMENT_BULK_LIMIT} to carry on, or do it in two goes.
         </p>
       )}
       <div data-testid="document-results">
-        <div className="space-y-3 lg:hidden">
+        {!isExpanded ? (
+        <div className="space-y-3">
           {isLoading && documents.length === 0 ? (
             Array.from({ length: 3 }).map((_, index) => (
               <div key={index} className="rounded-xl border border-border/50 bg-muted/20 p-3">
@@ -193,10 +196,10 @@ export function DocumentList({
             />
           ))}
         </div>
-
-        <div className="hidden w-full lg:block">
+        ) : (
+        <div className="w-full">
           <DataTable>
-            <DataTableHeader className="text-[10px] uppercase tracking-wider">
+            <DataTableHeader className="text-xs uppercase tracking-wider">
               {isSelecting && <DataTableHeaderCell className="w-8 font-bold"><span className="sr-only">Select</span></DataTableHeaderCell>}
               <DataTableHeaderCell className="font-bold">Document</DataTableHeaderCell>
               <DataTableHeaderCell className="font-bold">Tax relief</DataTableHeaderCell>
@@ -279,10 +282,10 @@ export function DocumentList({
                     </td>
                     <td className="px-3 py-2.5 font-bold text-foreground tabular-nums">{document.taxYear}</td>
                     <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{formatBytes(document.sizeBytes)}</td>
-                    <td className="px-3 py-2.5"><AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />{document.amountStatus === 'NeedsReview' && <p className="mt-0.5 text-[10px] text-amber-600">AI · review</p>}</td>
+                    <td className="px-3 py-2.5"><AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />{document.amountStatus === 'NeedsReview' && <p className="mt-0.5 text-xs text-amber-600">AI · review</p>}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">
                       <div className="whitespace-nowrap">{formatDate(document.uploadedAt)}</div>
-                      <div className="whitespace-nowrap text-[10px]">Keep until {formatDate(document.retentionUntil)}</div>
+                      <div className="whitespace-nowrap text-xs">Keep until {formatDate(document.retentionUntil)}</div>
                     </td>
                     <td className="px-3 py-2.5">
                       <DocumentActions
@@ -299,6 +302,7 @@ export function DocumentList({
             </DataTableBody>
           </DataTable>
         </div>
+        )}
         <DocumentPreviewSheet document={previewDocument} onClose={() => setPreviewDocument(null)} />
       </div>
     </>

@@ -8,6 +8,7 @@ import { buildMutationSuccessToast, buildUndoSuccessToast } from '../../lib/muta
 import type { UseOutboxResult } from '../../lib/useOutbox'
 import type { AppDialogs } from '../useAppDialogs'
 import type { ToastAction, ToastTone } from '../../components/ui/ToastViewport'
+import { collectRefreshHints } from '../../lib/refreshSlices'
 
 interface TransactionActionDependencies {
   username: string
@@ -27,6 +28,7 @@ interface TransactionActionDependencies {
     isBackground?: boolean,
     force?: boolean,
     shouldApply?: () => boolean,
+    refreshSlices?: readonly import('../../lib/refreshSlices').RefreshSlice[],
   ) => Promise<void>
   beginDirectSync: (ids: Array<string | number>) => void
   endDirectSync: (ids: Array<string | number>) => void
@@ -263,8 +265,11 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
       beginDirectSync(syncIds)
       void (async () => {
         try {
-          await api.deleteTransaction(deleteId)
-          await loadAll(selectedMonth || undefined, selectedYear || undefined, true, false, () => true)
+          const { hints } = await collectRefreshHints(() => api.deleteTransaction(deleteId))
+          const slices = hints.seen && !hints.requiresFull && hints.slices.length > 0
+            ? hints.slices
+            : undefined
+          await loadAll(selectedMonth || undefined, selectedYear || undefined, true, false, () => true, slices)
           removePendingLedgerTransaction(deleteId)
           const goalName = allSavingsGoals.find(goal => goal.id === transaction.savingsGoalId)?.name
           const fallbackName = transaction.description.replace(/^Completed commitment:\s*/i, '')

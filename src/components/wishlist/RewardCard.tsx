@@ -64,7 +64,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
   return (
     <Card
       id={elementId}
-      className={`${fullWidth ? 'w-full sm:w-[22rem]' : 'snap-start shrink-0 w-[calc(100vw-3.5rem)] sm:w-[22rem]'} flex flex-col gap-3 p-4 transition-colors duration-300 ${
+      className={`${fullWidth ? 'w-full' : 'w-[calc(100vw-3.5rem)] shrink-0 snap-start sm:w-full sm:min-w-0'} flex flex-col gap-3 p-4 transition-colors duration-300 ${
         isFocused ? 'border-pink-500/50 ring-1 ring-pink-500/20' : ''
       }`}
     >
@@ -119,7 +119,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
         onOpenChange={detail.setOpen}
         expandedFrom="lg"
       >
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px]">
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
           <div>
             <dt className="font-semibold text-muted-foreground">Priority</dt>
             <dd className="font-bold text-foreground">{item.priority}</dd>

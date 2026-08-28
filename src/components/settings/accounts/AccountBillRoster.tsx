@@ -51,27 +51,27 @@ function BillItemRow({
           {/* The bill's own spending category, in the colour it already carries in the Ledger and
               the charts. This list was previously entirely grey, so a dozen bills read as one
               undifferentiated block and nothing said what kind of spending each one was. */}
-          <span className={`rounded border px-1.5 py-0.2 text-[9px] font-semibold ${getCategoryBadgeClass(payment.category)}`}>
+          <span className={`rounded border px-1.5 py-0.2 text-xs font-semibold ${getCategoryBadgeClass(payment.category)}`}>
             {payment.category}
           </span>
           {payment.frequency === 'Annually' && (
-            <span className="rounded border border-border/60 bg-muted/40 px-1.5 py-0.2 text-[9px] font-medium text-muted-foreground">
+            <span className="rounded border border-border/60 bg-muted/40 px-1.5 py-0.2 text-xs font-medium text-muted-foreground">
               Annual
             </span>
           )}
           {payment.linkedLoanName && (
-            <span className="rounded border border-border/60 bg-primary/10 px-1.5 py-0.2 text-[9px] font-medium text-accent-ink">
+            <span className="rounded border border-border/60 bg-primary/10 px-1.5 py-0.2 text-xs font-medium text-accent-ink">
               {payment.linkedLoanName}
             </span>
           )}
           {isPaused && (
-            <span className="rounded border border-border/60 bg-muted/60 px-1.5 py-0.2 text-[9px] font-semibold text-muted-foreground">
+            <span className="rounded border border-border/60 bg-muted/60 px-1.5 py-0.2 text-xs font-semibold text-muted-foreground">
               {isEnded ? 'Ended' : 'Paused'}
             </span>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
           {/* Auto-deduct is the one mode the bank moves on its own, and the only one that can
               overdraw this account without the user acting, so it is the mode worth a colour. */}
           <span className={payment.paymentMode === 'AutoDeduct' && !isPaused ? 'font-semibold text-blue-500' : ''}>
@@ -141,7 +141,7 @@ export function AccountBillRoster({
       open={isOpen}
       onToggle={event => setIsOpen(event.currentTarget.open)}
     >
-      <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-[11px] font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
+      <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
         <div className="flex flex-wrap items-center gap-1.5">
           <span>Bills paid from here · {totalCount}</span>
           {monthlyTotal > 0 && (
@@ -194,7 +194,7 @@ export function AccountBillRoster({
 
             {pausedBills.length > 0 && (
               <div className="space-y-1.5 pt-1">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Paused or ended bills ({pausedBills.length})
                 </p>
                 {pausedBills.map(summary => (

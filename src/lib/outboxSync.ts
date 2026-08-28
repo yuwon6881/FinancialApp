@@ -40,6 +40,7 @@ import {
   mergeCompletedOps,
   retryMessage,
 } from './outboxDrainHelpers'
+import { beginRefreshHintCollection, type RefreshHintSummary } from './refreshSlices'
 
 export * from './outboxRetryConstants'
 export * from './outboxDrainHelpers'
@@ -104,7 +105,7 @@ export interface DrainQueueDeps {
   // --- post-drain ---
   /** Defaults to refreshing. Preference-only batches can opt out. */
   shouldRefresh?: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => boolean
-  refresh: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => Promise<void>
+  refresh: (successfulOps: ReadonlyArray<SuccessfulSyncOp>, hints?: RefreshHintSummary) => Promise<void>
   onSettled: () => void
   reTrigger: () => void
 }
@@ -121,6 +122,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
     return
   }
   deps.setSyncing(true)
+  const hintCollection = beginRefreshHintCollection()
 
   // One escalating wait shared by every retryable failure in this session, consumed on use
   // and cleared by anything that works, so a run of failures backs away while a recovered
@@ -315,7 +317,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
       } else {
         let refreshSucceeded = false
         try {
-          await deps.refresh(completedOps)
+          await deps.refresh(completedOps, hintCollection.finish())
           refreshSucceeded = true
         } catch (refreshErr) {
           const isSuperseded = getErrorName(refreshErr) === 'AbortError'
@@ -352,6 +354,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
       }
     }
   } finally {
+    hintCollection.dispose()
     deps.onSettled()
     deps.setSyncing(false)
     const queue = deps.getQueue()

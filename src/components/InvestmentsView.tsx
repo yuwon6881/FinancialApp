@@ -14,6 +14,7 @@ import type {
 } from '../types'
 import { useAppContext } from '../contexts/AppContext'
 import { Button } from './ui/Button'
+import { PageHeader } from './ui/PageHeader'
 import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useInvestmentPortfolio } from './investments/useInvestmentPortfolio'
@@ -176,8 +177,8 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
 
   return (
     <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
-      <header className="flex items-start gap-3">
-        <Button
+      <PageHeader
+        leading={<Button
           variant="unstyled"
           type="button"
           onClick={back}
@@ -185,35 +186,32 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           aria-label="Back to Today"
         >
           <ArrowLeft className="size-4" />
-        </Button>
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-2xl font-black tracking-tight text-foreground">Growth Investments</h1>
+        </Button>}
+        title={<span className="flex flex-wrap items-center gap-2.5">Growth Investments
             {isBackgroundRefreshing && (
               <span
                 role="status"
-                className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-medium text-purple-500 dark:text-purple-300"
+                className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-xs font-medium text-purple-500 dark:text-purple-300"
               >
                 <RefreshCw className="size-3 animate-spin text-purple-500 dark:text-purple-300" />
                 <span>Updating prices…</span>
               </span>
-            )}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Track holdings across your brokers.</p>
-        </div>
-        {onExplainWithAi && (
+            )}</span>}
+        description="Track holdings across your brokers."
+        actions={onExplainWithAi && (
           <Button
             variant="secondary"
             size="sm"
             type="button"
             className="ml-auto shrink-0"
+            aria-label="Explain my portfolio"
             onClick={() => onExplainWithAi(range)}
           >
-            <Sparkles className="size-3.5" />
+            <Sparkles className="size-3.5" aria-hidden="true" />
             <span className="hidden sm:inline">Explain my portfolio</span>
           </Button>
         )}
-      </header>
+      />
 
       {investmentScanDraft && panel === null && (
         <section aria-labelledby="investment-scan-ready-title" className="app-panel rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4">
@@ -366,7 +364,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           {portfolio.warnings.length > 0 && (
             <details className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
               <summary id="calculation-warnings" className="cursor-pointer text-sm font-bold text-foreground">Why some figures are missing</summary>
-              <p className="mt-1 text-[10px] text-muted-foreground">Most clear up after selecting "Update prices".</p>
+              <p className="mt-1 text-xs text-muted-foreground">Most clear up after selecting "Update prices".</p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
                 {portfolio.warnings.map(warning => <li key={warning}>{warning}</li>)}
               </ul>

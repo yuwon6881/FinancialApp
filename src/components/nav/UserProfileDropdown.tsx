@@ -55,7 +55,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           title="Account menu"
           className="flex size-11 items-center justify-center rounded-xl border border-border/60 bg-background p-0 cursor-pointer hover:bg-muted/50 active:scale-95 sm:size-9 transition duration-150"
         >
-          <div className="flex size-7 items-center justify-center rounded-full border border-blue-500/20 bg-linear-to-tr from-blue-500 to-sky-400 text-[11px] font-extrabold text-on-vivid">
+          <div className="flex size-7 items-center justify-center rounded-full border border-blue-500/20 bg-linear-to-tr from-blue-500 to-sky-400 text-xs font-extrabold text-on-vivid">
             {getInitials(username)}
           </div>
         </DropdownMenuTrigger>

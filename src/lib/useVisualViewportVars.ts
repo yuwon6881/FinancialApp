@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { isCompactViewport } from './breakpoints'
 
 /**
  * Keep visual-viewport CSS vars (`--app-vvh/vvw/vv-top/vv-left`) in sync so
@@ -84,7 +85,7 @@ export function useVisualViewportVars(): void {
       }
     }
 
-    const isSheetLayout = () => window.matchMedia('(max-width: 639px)').matches
+    const isSheetLayout = isCompactViewport
     const handleFocusIn = (e: FocusEvent) => {
       if (!isSheetLayout()) return
       const el = e.target as HTMLElement | null

@@ -4,6 +4,7 @@ import type {
   AutocompleteSuggestion,
   DashboardData,
   LedgerAccount,
+  Loan,
   RecurringPayment,
   SavingsGoal,
   Transaction,
@@ -14,6 +15,8 @@ import { CACHE_KEYS, setCachedCycleSnapshot, setCachedJSON } from '../../lib/cac
 import { getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../../lib/errors'
 import { projectFinancialSetting, type QueuedOp } from '../../lib/outbox'
 import { fetchBootstrapPayload } from './bootstrap'
+import type { RefreshSlice } from '../../lib/refreshSlices'
+import { MONTH_NAMES } from '../../lib/cycle'
 
 interface LoadAllDependencies {
   token: string | null
@@ -38,6 +41,7 @@ interface LoadAllDependencies {
   setCategoriesList: React.Dispatch<React.SetStateAction<TransactionCategory[]>>
   setWishlist: React.Dispatch<React.SetStateAction<WishlistItem[]>>
   setSavingsGoals: React.Dispatch<React.SetStateAction<SavingsGoal[]>>
+  setLoans: (loans: Loan[]) => void
   setAccounts: React.Dispatch<React.SetStateAction<LedgerAccount[]>>
   setWalletBalance: React.Dispatch<React.SetStateAction<number | null>>
   setAutocompleteSuggestions: React.Dispatch<React.SetStateAction<AutocompleteSuggestion[]>>
@@ -79,6 +83,7 @@ export function useLoadAll(deps: LoadAllDependencies) {
     setCategoriesList,
     setWishlist,
     setSavingsGoals,
+    setLoans,
     setAccounts,
     setWalletBalance,
     setAutocompleteSuggestions,
@@ -97,6 +102,7 @@ export function useLoadAll(deps: LoadAllDependencies) {
     isBackground = false,
     rethrowOnError = false,
     shouldCommit?: () => boolean,
+    refreshSlices?: readonly RefreshSlice[],
   ) => {
     if (!token || !isFinancialDataMountedRef.current) return
     const requestSeq = ++loadAllSeqRef.current
@@ -114,6 +120,177 @@ export function useLoadAll(deps: LoadAllDependencies) {
       setIsBackgroundSyncing(true)
     }
     try {
+      if (refreshSlices && refreshSlices.length > 0) {
+        const partial = await api.fetchBootstrapRefresh(refreshSlices, month, year, ac.signal)
+        if (isStale() || shouldCommit?.() === false) return
+
+        // The period is part of the response envelope, so reject a malformed or out-of-order
+        // answer before any slice reaches React state. An explicit period must round-trip exactly;
+        // an omitted period may resolve to the server's current selected cycle.
+        if (!MONTH_NAMES.includes(partial.month) || !Number.isInteger(partial.year) || partial.year <= 0
+          || (month !== undefined && partial.month !== month)
+          || (year !== undefined && partial.year !== year)) {
+          throw new Error('Partial refresh returned an invalid or stale period')
+        }
+
+        const hasCore = partial.dashboard !== undefined
+          && partial.insights !== undefined
+          && partial.transactions !== undefined
+          && partial.walletBalance !== undefined
+          && partial.accounts !== undefined
+          && partial.autocomplete !== undefined
+        if (refreshSlices.includes('core') && !hasCore) {
+          throw new Error('Partial core refresh response was incomplete')
+        }
+        const missingSlice = refreshSlices.find(slice => {
+          if (slice === 'core' || slice === 'investments' || slice === 'documents') return false
+          if (slice === 'recurring') return partial.recurringPayments === undefined
+          if (slice === 'categories') return partial.categories === undefined
+          if (slice === 'wishlist') return partial.wishlist === undefined
+          if (slice === 'savingsGoals') return partial.savingsGoals === undefined
+          return slice === 'loans' && partial.loans === undefined
+        })
+        if (missingSlice) {
+          throw new Error(`Partial ${missingSlice} refresh response was incomplete`)
+        }
+        // Validate every requested payload before touching React state, refs, or offline
+        // caches. A malformed investment/document response must fall back atomically rather
+        // than leaving the core slice newer than the other stores.
+        const investmentAllocation = refreshSlices.includes('investments')
+          ? partial.investments?.allocation
+          : undefined
+        if (refreshSlices.includes('investments') && !investmentAllocation) {
+          throw new Error('Partial investments refresh response was incomplete')
+        }
+        const documentOverview = refreshSlices.includes('documents')
+          ? partial.documents
+          : undefined
+        if (refreshSlices.includes('documents') && !documentOverview) {
+          throw new Error('Partial documents refresh response was incomplete')
+        }
+        // Keep the document API lazy, but resolve its module before the first state mutation so
+        // an import/preload failure has the same all-or-nothing behavior as a malformed payload.
+        const primeDocumentOverview = refreshSlices.includes('documents')
+          ? (await import('../../lib/api/documents')).primeDocumentOverview
+          : undefined
+        if (hasCore) {
+          // `hasCore` validates this group atomically above. TypeScript cannot carry the
+          // relationship from that boolean into each optional response member.
+          const dbData = partial.dashboard!
+          const insights = partial.insights!
+          const failedOpIds = new Set(getFailedOps().map(op => op.id))
+          const requestSettingOps = activeOpsAtRequestStart.filter(op => !failedOpIds.has(op.id))
+          let effectiveSetting = projectFinancialSetting(dbData.setting, [
+            ...requestSettingOps,
+            ...getActiveOps(),
+          ])
+          for (const [key, localValue] of unconfirmedSettingWritesRef.current) {
+            const serverValue = dbData.setting[key as keyof typeof dbData.setting]
+            if (Object.is(serverValue, localValue)) {
+              unconfirmedSettingWritesRef.current.delete(key)
+            } else {
+              effectiveSetting = { ...effectiveSetting, [key]: localValue }
+            }
+          }
+          const mergedDashboard: DashboardData = {
+            ...dbData,
+            setting: effectiveSetting,
+            last3CategoryBreakdown: insights.last3CategoryBreakdown,
+            last6CategoryBreakdown: insights.last6CategoryBreakdown,
+            yearlyCategoryBreakdown: insights.yearlyCategoryBreakdown,
+            availableYears: insights.availableYears,
+            stats: {
+              ...dbData.stats,
+              pastThreeMonthsRewardsAverage: insights.pastThreeMonthsRewardsAverage,
+              hasRewardsHistory: insights.hasRewardsHistory,
+            },
+          }
+          const txs = partial.transactions!
+          setWalletBalance(partial.walletBalance!)
+          setDashboardData(mergedDashboard)
+          setTransactions(txs)
+          setAccounts(partial.accounts!)
+          setAutocompleteSuggestions(partial.autocomplete!)
+          setSelectedMonth(effectiveSetting.selectedMonth)
+          setSelectedYear(effectiveSetting.selectedYear)
+          setCachedJSON(CACHE_KEYS.walletBalance, partial.walletBalance!)
+          setCachedJSON(CACHE_KEYS.dashboardData, mergedDashboard)
+          setCachedJSON(CACHE_KEYS.transactions, txs)
+          setCachedJSON(CACHE_KEYS.accounts, partial.accounts!)
+          window.setTimeout(() => {
+            if (!isStale()) {
+              setCachedCycleSnapshot(effectiveSetting.selectedMonth, effectiveSetting.selectedYear, mergedDashboard, txs)
+            }
+          }, 0)
+
+          const effectiveDarkMode = effectiveSetting.darkMode
+          if (effectiveDarkMode === true || effectiveDarkMode === false) {
+            setDarkMode(effectiveDarkMode)
+          } else {
+            const osDark = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+              ? window.matchMedia('(prefers-color-scheme: dark)').matches
+              : false
+            setDarkMode(osDark)
+          }
+          resolveHideSensitive(effectiveSetting.hideSensitive ?? true)
+          if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
+            if (notifyOnLogin) setShowLoginModal(true)
+            setHasShownModalThisSession(true)
+          }
+        }
+        if (partial.recurringPayments !== undefined) {
+          setRecurringPayments(partial.recurringPayments)
+          setCachedJSON(CACHE_KEYS.recurringPayments, partial.recurringPayments)
+        }
+        if (partial.categories !== undefined) {
+          setCategoriesList(partial.categories)
+          setCachedJSON(CACHE_KEYS.categories, partial.categories)
+        }
+        if (partial.wishlist !== undefined) {
+          setWishlist(partial.wishlist)
+          setCachedJSON(CACHE_KEYS.wishlist, partial.wishlist)
+        }
+        if (partial.savingsGoals !== undefined) {
+          setSavingsGoals(partial.savingsGoals)
+          setCachedJSON(CACHE_KEYS.savingsGoals, partial.savingsGoals)
+        }
+        if (partial.loans !== undefined) {
+          setLoans(partial.loans)
+        }
+        if (refreshSlices.includes('investments')) {
+          setCachedJSON(CACHE_KEYS.investmentAllocation, investmentAllocation!)
+        }
+        if (refreshSlices.includes('documents')) {
+          primeDocumentOverview!(documentOverview!)
+        }
+
+        const coordinatorWork: Promise<void>[] = []
+        if (partial.investments !== undefined) {
+          const acknowledgements: Promise<void>[] = []
+          window.dispatchEvent(new CustomEvent('investment-sync', {
+            detail: {
+              allocation: partial.investments.allocation,
+              acknowledge: (work: Promise<void>) => { acknowledgements.push(work) },
+            },
+          }))
+          coordinatorWork.push(...acknowledgements)
+        }
+        if (partial.documents !== undefined) {
+          const acknowledgements: Promise<void>[] = []
+          window.dispatchEvent(new CustomEvent('documents-sync', {
+            detail: {
+              overview: partial.documents,
+              acknowledge: (work: Promise<void>) => { acknowledgements.push(work) },
+            },
+          }))
+          coordinatorWork.push(...acknowledgements)
+        }
+        await Promise.all(coordinatorWork)
+        setError(null)
+        isServerAwakeRef.current = true
+        return
+      }
+
       // One request for the whole payload (see api/bootstrap.ts). The fan-out below is the
       // fallback for a server that predates /api/bootstrap — a deployed PWA can outlive the
       // API version it shipped against, and an install that only ever gets a 404 here would
@@ -305,17 +482,18 @@ export function useLoadAll(deps: LoadAllDependencies) {
     isBackground = false,
     rethrowOnError = false,
     shouldCommit?: () => boolean,
+    refreshSlices?: readonly RefreshSlice[],
   ) => {
-    const isShareable = isBackground && !rethrowOnError && !shouldCommit
+    const isShareable = isBackground && !rethrowOnError && !shouldCommit && !refreshSlices
     if (!isShareable) {
-      return loadAllInner(month, year, isBackground, rethrowOnError, shouldCommit)
+      return loadAllInner(month, year, isBackground, rethrowOnError, shouldCommit, refreshSlices)
     }
 
     const key = `${month ?? ''}:${year ?? ''}`
     const inFlight = inFlightBackgroundLoadRef.current
     if (inFlight?.key === key) return inFlight.promise
 
-    const promise = loadAllInner(month, year, true).finally(() => {
+    const promise = loadAllInner(month, year, true, false, undefined, refreshSlices).finally(() => {
       if (inFlightBackgroundLoadRef.current?.promise === promise) {
         inFlightBackgroundLoadRef.current = null
       }

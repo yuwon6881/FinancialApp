@@ -10,10 +10,12 @@ import { LoanRepaymentSheet } from '../LoanRepaymentSheet'
 import { useLoansView } from './view/useLoansView'
 import { RecurringFilterBar } from '../RecurringFilterBar'
 import { InfoHint } from '../../ui/InfoHint'
-import { useIsMobile } from '../../../lib/useIsMobile'
+import { useIsExpanded } from '../../../lib/breakpoints'
 import type { LoanLoadStatus } from '../../../app/financialData/useLoanData'
 import { useHighlightedElement } from '../../ui/useHighlightedElement'
 import { listContainerVariants, listItemVariants } from '../../../lib/animations'
+import { DataTablePagination } from '../../ui/DataTable'
+import { useClientPagination } from '../../ui/useClientPagination'
 
 interface LoansSectionProps {
   loans: Loan[]
@@ -83,8 +85,13 @@ export function LoansSection({
   }
 
   const reduceMotion = useReducedMotion()
-  const isMobile = useIsMobile()
+  const isMobile = !useIsExpanded()
   const view = useLoansView(loans, payments, activeSyncIds)
+  const highlightedIndex = highlightedLoanId
+    ? view.filteredAndSortedLoans.findIndex(loan => loan.id === highlightedLoanId)
+    : -1
+  const pagination = useClientPagination(view.filteredAndSortedLoans.length, 9, highlightedIndex)
+  const visibleLoans = view.filteredAndSortedLoans.slice(pagination.start, pagination.end)
 
   useHighlightedElement(highlightedLoanId ? `loan-card-${highlightedLoanId}` : null, onClearHighlightedLoan)
 
@@ -166,13 +173,14 @@ export function LoansSection({
           No loans match the selected filters.
         </div>
       ) : (
+        <div className="space-y-4">
         <m.div
           initial={reduceMotion ? false : 'hidden'}
           animate="show"
           variants={listContainerVariants}
-          className="space-y-4"
+          className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3"
         >
-          {view.filteredAndSortedLoans.map(loan => (
+          {visibleLoans.map(loan => (
             <m.div key={loan.id} variants={listItemVariants}>
               <LoanCard
                 loan={loan}
@@ -192,6 +200,18 @@ export function LoansSection({
             </m.div>
           ))}
         </m.div>
+        {view.filteredAndSortedLoans.length > pagination.pageSize && (
+          <DataTablePagination
+            currentPage={pagination.page}
+            pageSize={pagination.pageSize}
+            totalItems={view.filteredAndSortedLoans.length}
+            totalPages={pagination.totalPages}
+            showPageSize={false}
+            onPageChange={pagination.setPage}
+            onPageSizeChange={() => undefined}
+          />
+        )}
+        </div>
       )}
 
       <LoanFormSheet

@@ -31,7 +31,7 @@ interface TransactionDocumentsFieldProps {
   currency: string
 }
 
-const LABEL_CLASS = 'text-[10px] font-bold uppercase tracking-wider text-muted-foreground'
+const LABEL_CLASS = 'text-xs font-bold uppercase tracking-wider text-muted-foreground'
 const parseTransactionAmount = (value: string): number | undefined => {
   const trimmed = value.trim()
   if (!trimmed) return undefined
@@ -171,7 +171,7 @@ export const TransactionDocumentsField = React.forwardRef<
     return (
       <div className="flex flex-col gap-1.5">
         <span className={LABEL_CLASS}>Documents</span>
-        <p className="rounded-xl border border-border/60 bg-muted/40 px-3 py-3 text-center text-[11px] text-muted-foreground">
+        <p className="rounded-xl border border-border/60 bg-muted/40 px-3 py-3 text-center text-xs text-muted-foreground">
           Document uploads are unavailable while offline.
         </p>
       </div>
@@ -203,7 +203,7 @@ export const TransactionDocumentsField = React.forwardRef<
               >
                 {document.originalFileName}
               </button>
-              <p className="truncate text-[10px] text-muted-foreground" title={categoryName}>
+              <p className="truncate text-xs text-muted-foreground" title={categoryName}>
                 {categoryName} · YA {document.taxYear}
               </p>
             </div>
@@ -216,14 +216,14 @@ export const TransactionDocumentsField = React.forwardRef<
               aria-label={`Detach ${document.originalFileName} from this transaction`}
             >
               <Link2Off className="size-3.5" />
-              <span className="hidden text-[10px] font-bold sm:inline">Detach</span>
+              <span className="hidden text-xs font-bold sm:inline">Detach</span>
             </button>
           </div>
         )
       })}
 
       {unlinkIds.length > 0 && (
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {unlinkIds.length} document{unlinkIds.length === 1 ? '' : 's'} will be detached on save. They stay in your Document Vault.
         </p>
       )}
@@ -240,7 +240,7 @@ export const TransactionDocumentsField = React.forwardRef<
             )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-bold text-foreground" title={document.file.name}>{document.file.name}</p>
-              <p className="text-[10px] text-muted-foreground tabular-nums">Uploads on save · {(document.file.size / 1024 / 1024).toFixed(2)} MB</p>
+              <p className="text-xs text-muted-foreground tabular-nums">Uploads on save · {(document.file.size / 1024 / 1024).toFixed(2)} MB</p>
             </div>
             <button
               type="button"
@@ -287,9 +287,9 @@ export const TransactionDocumentsField = React.forwardRef<
         accept="image/*,.pdf,application/pdf,.xml,application/xml,.json,application/json"
         onChange={handleFileChange}
       />
-      {disabled && <p className="text-center text-[10px] text-muted-foreground">Attachments are unavailable while offline.</p>}
+      {disabled && <p className="text-center text-xs text-muted-foreground">Attachments are unavailable while offline.</p>}
       {!disabled && categoriesLoaded && reliefCategories.length === 0 && (
-        <p className="text-center text-[10px] text-muted-foreground">
+        <p className="text-center text-xs text-muted-foreground">
           {categoryLoadFailed
             ? 'Tax relief categories could not be loaded. Try again before attaching a document.'
             : 'Add a tax relief category in the Document Vault before attaching documents.'}

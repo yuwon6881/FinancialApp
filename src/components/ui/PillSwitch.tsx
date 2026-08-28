@@ -20,7 +20,7 @@ export function PillSwitch({ checked, onChange, ariaLabel, disabled = false }: P
           : 'border-border bg-muted/70 text-muted-foreground'
       }`}
     >
-      <span className={`absolute text-[9px] font-bold uppercase tracking-wide ${checked ? 'left-2' : 'right-2'}`}>
+      <span className={`absolute text-xs font-bold uppercase tracking-wide ${checked ? 'left-2' : 'right-2'}`}>
         {checked ? 'On' : 'Off'}
       </span>
       <span

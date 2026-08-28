@@ -82,12 +82,12 @@ export function AccountCoverageGate({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h2 id={'account-gate-' + bucket.name} className="flex items-center gap-2 text-sm font-bold text-foreground">
-                      <span className={'rounded-md border px-1.5 py-0.5 text-[10px] ' + getCategoryBadgeClass(bucket.name)}>{bucket.name}</span>
+                      <span className={'rounded-md border px-1.5 py-0.5 text-xs ' + getCategoryBadgeClass(bucket.name)}>{bucket.name}</span>
                       {complete && <CheckCircle2 className="size-4 text-emerald-500" aria-label="Complete" />}
                     </h2>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{bucket.description}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{bucket.description}</p>
                   </div>
-                  <span className="shrink-0 text-[10px] font-semibold text-muted-foreground">{live.length} open</span>
+                  <span className="shrink-0 text-xs font-semibold text-muted-foreground">{live.length} open</span>
                 </div>
 
                 <div className="mt-3 space-y-2">
@@ -97,16 +97,16 @@ export function AccountCoverageGate({
                       <div className="flex min-w-0 items-center gap-2">
                         <Wallet className="size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
                         <span className={'truncate text-xs font-semibold ' + (account.isArchived ? 'text-muted-foreground line-through' : 'text-foreground')}>{account.name}</span>
-                        {account.isArchived && <span className="shrink-0 text-[10px] text-muted-foreground">Closed</span>}
+                        {account.isArchived && <span className="shrink-0 text-xs text-muted-foreground">Closed</span>}
                       </div>
-                      <span className="shrink-0 text-[10px] font-semibold text-muted-foreground">
+                      <span className="shrink-0 text-xs font-semibold text-muted-foreground">
                         {hideSensitive ? 'Hidden' : formatSensitive(account.remaining)}
                       </span>
                     </div>
                   ))}
                 </div>
 
-                {pending && <p className="mt-2 text-[10px] font-semibold text-amber-500">Saving this account… waiting for server confirmation.</p>}
+                {pending && <p className="mt-2 text-xs font-semibold text-amber-500">Saving this account… waiting for server confirmation.</p>}
                 {!complete && rows.some(account => account.isArchived) && (
                   <Button type="button" variant="outline" size="sm" className="mt-3 min-h-11 w-full justify-center" onClick={() => openForm(bucket.name, rows.find(account => account.isArchived) ?? null)}>
                     Reopen an account
@@ -122,7 +122,7 @@ export function AccountCoverageGate({
           })}
         </div>
 
-        <div className="flex items-start gap-2 text-[11px] leading-relaxed text-muted-foreground">
+        <div className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
           <CircleAlert className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
           <p>Once all four accounts are confirmed, the rest of the app will open. Closed accounts remain available for history.</p>
         </div>

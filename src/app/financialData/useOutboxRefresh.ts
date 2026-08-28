@@ -13,6 +13,7 @@ import type {
 } from '../../types'
 import { queuedTransactionDeleteCoversTarget } from './financialDataTypes'
 import type { useLoanData } from './useLoanData'
+import type { RefreshHintSummary, RefreshSlice } from '../../lib/refreshSlices'
 
 export interface UseOutboxRefreshOptions {
   pendingTransactionDocumentsRef: React.MutableRefObject<Map<string, TransactionDocumentChanges>>
@@ -33,6 +34,7 @@ export interface UseOutboxRefreshOptions {
     isBackground?: boolean,
     rethrowOnError?: boolean,
     shouldCommit?: () => boolean,
+    refreshSlices?: readonly RefreshSlice[],
   ) => Promise<void>
   selectedMonth: string
   selectedYear: number
@@ -59,14 +61,40 @@ export function createOutboxRefreshHandler(options: UseOutboxRefreshOptions) {
     unconfirmedSettingWritesRef,
   } = options
 
-  return async (successfulOps: ReadonlyArray<{ op: QueuedOp }>) => {
+  const awaitInvestmentReconciliation = async (operationIds?: string[]) => {
+    const reconciliations: Promise<void>[] = []
+    window.dispatchEvent(new CustomEvent('investment-sync', {
+      detail: {
+        operations: operationIds,
+        acknowledge: (work: Promise<void>) => { reconciliations.push(work) },
+      },
+    }))
+    await Promise.all(reconciliations)
+  }
+
+  const awaitDocumentReconciliation = async () => {
+    const reconciliations: Promise<void>[] = []
+    window.dispatchEvent(new CustomEvent('documents-sync', {
+      detail: {
+        acknowledge: (work: Promise<void>) => { reconciliations.push(work) },
+      },
+    }))
+    await Promise.all(reconciliations)
+  }
+
+  return async (
+    successfulOps: ReadonlyArray<{ op: QueuedOp }>,
+    refreshHints?: RefreshHintSummary,
+  ) => {
     const ops = successfulOps.map(({ op }) => op)
+    let documentsNeedRefresh = false
     for (const op of ops) {
       if (op.entity !== 'transaction') continue
 
       if (op.type === 'delete') {
         const documentIds = pendingTransactionDocumentDeletesRef.current.get(op.targetId)
         if (!documentIds) continue
+        documentsNeedRefresh = true
         pendingTransactionDocumentDeletesRef.current.delete(op.targetId)
         try {
           const { deleteDocument } = await import('../../lib/api/documents')
@@ -86,6 +114,7 @@ export function createOutboxRefreshHandler(options: UseOutboxRefreshOptions) {
       if (op.type !== 'add' && op.type !== 'update') continue
       const documentChanges = pendingTransactionDocumentsRef.current.get(op.targetId)
       if (!documentChanges) continue
+      documentsNeedRefresh = true
 
       // An Undo tapped on the add's own success toast queues the delete while this refresh is
       // still running, so uploading here would attach files to a row that is about to go and
@@ -131,16 +160,43 @@ export function createOutboxRefreshHandler(options: UseOutboxRefreshOptions) {
       }
     }
 
+    // The collector is the compatibility boundary. A batch with valid server hints gets one
+    // partial bootstrap request; missing, malformed, unknown, or conservative `all` metadata uses
+    // the existing full bootstrap fallback. This must run before the legacy entity fast paths so a
+    // valid multi-slice response cannot be reduced to one store refresh.
+    if (refreshHints !== undefined) {
+      const partialSlices = refreshHints.seen && !refreshHints.requiresFull
+        ? [...refreshHints.slices]
+        : []
+      // Attached-document uploads/deletes are performed after the transaction mutation has
+      // succeeded, so their response headers are not present in the snapshot received from the
+      // outbox collector. Include the authoritative Vault slice explicitly.
+      if (documentsNeedRefresh && !refreshHints.requiresFull && !partialSlices.includes('documents')) {
+        partialSlices.push('documents')
+      }
+      if (refreshHints.seen && !refreshHints.requiresFull && partialSlices.length === 0) {
+        unconfirmedSettingWritesRef.current.clear()
+        setError(null)
+        isServerAwakeRef.current = true
+        return
+      }
+      await loadAll(
+        selectedMonth || undefined,
+        selectedYear || undefined,
+        true,
+        true,
+        undefined,
+        partialSlices.length > 0 ? partialSlices : undefined,
+      )
+      unconfirmedSettingWritesRef.current.clear()
+      setError(null)
+      isServerAwakeRef.current = true
+      return
+    }
+
     const onlyInvestments = ops.length > 0 && ops.every(op => op.entity.startsWith('investment'))
     if (onlyInvestments) {
-      const reconciliations: Promise<void>[] = []
-      window.dispatchEvent(new CustomEvent('investment-sync', {
-        detail: {
-          operations: ops.map(op => op.id),
-          acknowledge: (work: Promise<void>) => { reconciliations.push(work) },
-        },
-      }))
-      await Promise.all(reconciliations)
+      await awaitInvestmentReconciliation(ops.map(op => op.id))
       setError(null)
       isServerAwakeRef.current = true
       return
@@ -228,13 +284,31 @@ export function createOutboxRefreshHandler(options: UseOutboxRefreshOptions) {
     // full settings updates can affect multiple derived dashboard values.
     // Reconcile those together and propagate any failure so completed
     // optimistic operations remain projected until a later successful fetch.
-    await loadAll(selectedMonth || undefined, selectedYear || undefined, true, true)
-    if (loanData.hasLoadedFromServer && ops.some(op =>
-      op.entity === 'transaction' || op.entity === 'recurringPayment' || op.entity === 'recurringOccurrence')) {
+    // A defined hint summary returned through the compatibility branch above. Reaching this
+    // legacy fallback therefore proves the server supplied no usable refresh metadata.
+    const partialSlices: RefreshSlice[] = []
+    const canUsePartialRefresh = false
+    // A missing header is the mixed-version signal: the API may predate the refresh contract, so
+    // retain the established full bootstrap fallback. A malformed/unknown header is handled the
+    // same way by the parser (requiresFull=true).
+    await loadAll(
+      selectedMonth || undefined,
+      selectedYear || undefined,
+      true,
+      true,
+      undefined,
+      canUsePartialRefresh ? partialSlices : undefined,
+    )
+    if (loanData.hasLoadedFromServer
+      && !partialSlices.includes('loans')
+      && ops.some(op => op.entity === 'transaction' || op.entity === 'recurringPayment' || op.entity === 'recurringOccurrence')) {
       await loanData.refresh()
     }
-    if (ops.some(op => op.entity === 'settings' && typeof op.payload?.currency === 'string')) {
-      window.dispatchEvent(new CustomEvent('investment-sync'))
+    if (ops.some(op => op.entity.startsWith('investment')) || partialSlices.includes('investments')) {
+      await awaitInvestmentReconciliation(ops.map(op => op.id))
+    }
+    if (documentsNeedRefresh || partialSlices.includes('documents')) {
+      await awaitDocumentReconciliation()
     }
     unconfirmedSettingWritesRef.current.clear()
     setError(null)

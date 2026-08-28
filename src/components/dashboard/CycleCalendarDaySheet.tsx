@@ -38,12 +38,12 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
     <span className="flex flex-wrap items-center gap-1.5">
       <span>{formattedDateTitle}</span>
       {day.isToday && (
-        <span className="rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-bold text-blue-500">
+        <span className="rounded-full bg-blue-500/15 px-1.5 py-0.5 text-xs font-bold text-blue-500">
           Today
         </span>
       )}
       {day.isFuture && (
-        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
           Upcoming
         </span>
       )}
@@ -77,19 +77,19 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
     >
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <div className="rounded-xl border border-border/40 bg-muted/20 p-2">
-          <span className="block text-[10px] text-muted-foreground">Money in</span>
+          <span className="block text-xs text-muted-foreground">Money in</span>
           <span className="font-bold text-emerald-500">
             {day.inflow > 0 ? formatAmount(day.inflow) : '—'}
           </span>
         </div>
         <div className="rounded-xl border border-border/40 bg-muted/20 p-2">
-          <span className="block text-[10px] text-muted-foreground">Money out</span>
+          <span className="block text-xs text-muted-foreground">Money out</span>
           <span className="font-bold text-orange-500">
             {day.outflow > 0 ? formatAmount(-day.outflow) : '—'}
           </span>
         </div>
         <div className="rounded-xl border border-border/40 bg-muted/20 p-2">
-          <span className="block text-[10px] text-muted-foreground">Net</span>
+          <span className="block text-xs text-muted-foreground">Net</span>
           <span
             className={cn(
               'font-bold',
@@ -136,7 +136,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
                     </span>
                     <span
                       className={cn(
-                        'inline-flex items-center rounded px-1 py-0.5 text-[9px] font-bold',
+                        'inline-flex items-center rounded px-1 py-0.5 text-xs font-bold',
                         isSettled && 'bg-emerald-500/15 text-emerald-500',
                         isPartial && 'bg-amber-500/15 text-amber-500',
                         !isSettled && !isPartial && 'bg-blue-500/15 text-blue-500',
@@ -171,7 +171,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium text-foreground">{tx.description}</p>
-                    <p className="text-[10px] text-muted-foreground">{tx.category}</p>
+                    <p className="text-xs text-muted-foreground">{tx.category}</p>
                   </div>
                   <span
                     className={cn(

@@ -205,19 +205,19 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
           <div className="space-y-3" role="status">
             <div className={`rounded-xl border p-3 ${failedCount ? 'border-amber-500/30 bg-amber-500/8' : 'border-emerald-500/30 bg-emerald-500/8'}`}>
               <p className="text-sm font-bold text-foreground">{results.filter(result => result.uploaded).length} saved · {failedCount} failed</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">Successful files remain in your Vault. AI amounts require your review.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Successful files remain in your Vault. AI amounts require your review.</p>
             </div>
             {results.map(result => <div key={result.fileName} className="flex items-start gap-2 rounded-xl border border-border/60 p-3">
               {result.uploaded ? <CheckCircle2 className="mt-0.5 size-4 text-emerald-500" /> : <XCircle className="mt-0.5 size-4 text-destructive" />}
               <div className="min-w-0"><p className="truncate text-xs font-bold">{result.fileName}</p>
-                <p className="text-[10px] text-muted-foreground">{result.uploaded ? 'Saved. Amount extraction is ready for review.' : result.message || 'Upload failed.'}</p></div>
+                <p className="text-xs text-muted-foreground">{result.uploaded ? 'Saved. Amount extraction is ready for review.' : result.message || 'Upload failed.'}</p></div>
             </div>)}
           </div>
         ) : <>
           <FormField label="Documents" required error={validationErrors.files}>
             <Button variant="unstyled" type="button" onClick={() => inputRef.current?.click()} className="mt-1.5 flex w-full flex-col items-center rounded-xl border-2 border-dashed border-border px-4 py-7 hover:bg-muted/40 cursor-pointer">
               <UploadCloud className="mb-2 size-8 text-muted-foreground/60" /><span className="text-xs font-bold text-foreground">Choose one or multiple files</span>
-              <span className="mt-1 text-[10px] text-muted-foreground">Up to {constraints.maxBulkDocuments} files · {formatMb(constraints.maxDocumentBytes)} each</span>
+              <span className="mt-1 text-xs text-muted-foreground">Up to {constraints.maxBulkDocuments} files · {formatMb(constraints.maxDocumentBytes)} each</span>
             </Button>
             <Input ref={inputRef} type="file" multiple={!defaultTransactionId} className="hidden"
               accept="image/*,.pdf,application/pdf,.xml,application/xml,.json,application/json"
@@ -228,7 +228,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
               const tooLarge = file.size > constraints.maxDocumentBytes
               return <div key={`${file.name}-${index}`} className={`flex items-center gap-2 rounded-lg border p-2 ${tooLarge ? 'border-destructive/40 bg-destructive/5' : 'border-border/60'}`}>
                 <FileText className="size-4 shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1">
-                  <p className="truncate text-[11px] font-bold">{file.name}</p><p className={`text-[10px] ${tooLarge ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  <p className="truncate text-xs font-bold">{file.name}</p><p className={`text-xs ${tooLarge ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {formatMb(file.size)}{tooLarge ? ` · exceeds ${formatMb(constraints.maxDocumentBytes)}` : ''}</p></div>
                 <Button variant="unstyled" size="icon" type="button" aria-label={`Remove ${file.name}`} onClick={() => setFiles(current => current.filter((_, itemIndex) => itemIndex !== index))} className="size-11 cursor-pointer rounded-lg transition-colors hover:bg-muted/50 sm:size-8"><X className="size-4" /></Button>
               </div>
@@ -264,7 +264,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
             </FormField>
           </div>
           {files.length > 0 && !categoriesLoading && reliefCategories.length === 0 && (
-            <p className="-mt-2 text-[10px] leading-relaxed text-muted-foreground">
+            <p className="-mt-2 text-xs leading-relaxed text-muted-foreground">
               {categoryLoadFailed
                 ? 'Tax relief categories could not be loaded. Try again before uploading.'
                 : 'Add a tax relief category in the Document Vault tracker before uploading.'}

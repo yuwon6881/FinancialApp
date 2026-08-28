@@ -35,7 +35,7 @@ export function CategoryFlowFilter({ rows, children }: CategoryFlowFilterProps) 
         { value: 'outflow', label: 'Outflow only' },
       ]}
       controlSize="sm"
-      className="h-9 w-32 shrink-0"
+      className="w-32 shrink-0"
     />
   )
 

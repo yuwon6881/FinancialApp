@@ -1,6 +1,7 @@
 import { useRef, type KeyboardEvent } from 'react'
 import { m, useReducedMotion } from 'framer-motion'
 import { Button } from '../ui/Button'
+import { HorizontalRail } from '../ui/HorizontalRail'
 
 export type SettingsTabId = 'financial-model' | 'investment-plan' | 'categories-preferences' | 'accounts' | 'security'
 
@@ -34,8 +35,9 @@ export function SettingsTabs({ activeTab, onChange }: SettingsTabsProps) {
   }
 
   return (
-    <div role="tablist" aria-label="Settings sections" className="w-full min-w-0 grid grid-cols-2 gap-x-3 gap-y-3.5 border-b border-border/30 pb-1 select-none sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-3">
-      {SETTINGS_TABS.map(([id, label], index) => (
+    <HorizontalRail label="Settings sections" showControls className="p-0 scroll-px-0">
+      <div role="tablist" aria-label="Settings sections" className="flex min-w-max gap-3 border-b border-border/30 px-1 select-none sm:gap-6">
+        {SETTINGS_TABS.map(([id, label], index) => (
         <Button
           variant="unstyled"
           key={id}
@@ -44,11 +46,11 @@ export function SettingsTabs({ activeTab, onChange }: SettingsTabsProps) {
           type="button"
           role="tab"
           aria-selected={activeTab === id}
-          aria-controls={`settings-panel-${id}`}
+          aria-controls={activeTab === id ? `settings-panel-${id}` : undefined}
           tabIndex={activeTab === id ? 0 : -1}
           onClick={() => onChange(id)}
           onKeyDown={event => handleKeyDown(event, index)}
-          className={`relative flex min-h-11 min-w-0 cursor-pointer items-end px-1.5 pb-3 text-left text-xs font-bold transition sm:min-h-0 sm:shrink-0 sm:px-1 sm:text-center ${
+          className={`relative flex min-h-11 shrink-0 cursor-pointer items-end px-1.5 pb-3 text-left text-xs font-bold transition sm:px-1 sm:text-center ${
             activeTab === id ? 'font-extrabold text-accent-ink' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
@@ -61,7 +63,8 @@ export function SettingsTabs({ activeTab, onChange }: SettingsTabsProps) {
             />
           )}
         </Button>
-      ))}
-    </div>
+        ))}
+      </div>
+    </HorizontalRail>
   )
 }

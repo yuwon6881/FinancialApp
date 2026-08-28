@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
-import { useIsMobile } from '../../lib/useIsMobile'
+import { useIsCompact } from '../../lib/breakpoints'
 import { closeOpenSwipeableRow, isSwipeLocked } from '../../lib/swipeLock'
 import { triggerHaptic } from '../../lib/haptics'
 
@@ -21,7 +21,7 @@ const PULL_RESISTANCE = 0.72
  * viewports and only when the window is scrolled to the very top.
  */
 export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disabled = false, children }) => {
-  const isMobile = useIsMobile()
+  const isMobile = useIsCompact()
   const [pull, setPull] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -205,7 +205,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
               className={`size-4 ${refreshing ? 'animate-spin' : ''}`}
               style={refreshing ? undefined : { transform: `rotate(${progress * 270}deg)`, opacity: 0.4 + progress * 0.6 }}
             />
-            <span aria-hidden="true" className="text-[10px] font-bold text-foreground">{label}</span>
+            <span aria-hidden="true" className="text-xs font-bold text-foreground">{label}</span>
             <span className="sr-only">{refreshing ? 'Refreshing data' : progress >= 1 ? 'Release to refresh' : 'Pull down to refresh'}</span>
           </div>
         </div>

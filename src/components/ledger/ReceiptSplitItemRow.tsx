@@ -65,7 +65,7 @@ export function ReceiptSplitItemRow({
         <Button variant="unstyled"
           type="button"
           onClick={() => onRemove(index)}
-          className="flex h-full w-full items-center justify-center gap-1 bg-destructive px-3 text-[11px] font-bold text-destructive-foreground cursor-pointer rounded-r-2xl"
+          className="flex h-full w-full items-center justify-center gap-1 bg-destructive px-3 text-xs font-bold text-destructive-foreground cursor-pointer rounded-r-2xl"
           aria-label={`Delete ${itemLabel}`}
         >
           <Trash2 className="size-4" /> Delete
@@ -89,24 +89,24 @@ export function ReceiptSplitItemRow({
 
         <div className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 ${isExcluded ? 'bg-muted/30' : 'bg-accent'}`}>
           <div className="min-w-0">
-            <span className={`block text-[9px] font-bold uppercase tracking-wider ${isExcluded ? 'text-muted-foreground' : 'text-accent-ink'}`}>
+            <span className={`block text-xs font-bold uppercase tracking-wider ${isExcluded ? 'text-muted-foreground' : 'text-accent-ink'}`}>
               {isExcluded ? 'Not yours' : 'Your share for this item'}
             </span>
             <strong className="mt-0.5 block truncate text-sm font-extrabold text-foreground">
               {isExcluded ? 'Nothing to pay' : formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
             </strong>
           </div>
-          <span className="shrink-0 text-[10px] text-muted-foreground">{selected} of {maximum}</span>
+          <span className="shrink-0 text-xs text-muted-foreground">{selected} of {maximum}</span>
         </div>
 
         <details className="group rounded-xl border border-border/50 bg-muted/15">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-[11px] font-bold text-muted-foreground">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-xs font-bold text-muted-foreground">
             Price and charge breakdown
             <ChevronDown className="size-3.5 shrink-0 transition-transform group-open:rotate-180" />
           </summary>
           <div className="grid min-w-0 grid-cols-2 gap-2 border-t border-border/40 p-2.5 sm:grid-cols-3">
             <div className="min-w-0 rounded-xl border border-border/60 bg-muted/25 p-2.5">
-              <span className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Price</span>
+              <span className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">Price</span>
               <div className="mt-1 flex min-w-0 items-center gap-1">
                 <Input
                   aria-label={`Item ${index + 1} price`}
@@ -133,7 +133,7 @@ export function ReceiptSplitItemRow({
             </div>
 
             <div className="min-w-0 rounded-xl border border-border/60 bg-muted/25 p-2.5">
-              <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 <span className="min-w-0 truncate">
                   Extras{Math.abs(chargePercent) >= 0.01 ? ` (${Math.abs(chargePercent).toFixed(2).replace(/\.?0+$/, '')}%)` : ''}
                 </span>
@@ -149,7 +149,7 @@ export function ReceiptSplitItemRow({
             </div>
 
             <div className="col-span-2 min-w-0 rounded-xl border border-primary/25 bg-primary/10 p-2.5 sm:col-span-1">
-              <span className="block text-[9px] font-bold uppercase tracking-wider text-accent-ink">With extras</span>
+              <span className="block text-xs font-bold uppercase tracking-wider text-accent-ink">With extras</span>
               <span className="mt-2 block truncate text-xs font-extrabold text-accent-ink">
                 {formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
               </span>
@@ -159,8 +159,8 @@ export function ReceiptSplitItemRow({
 
         <div className="flex items-center justify-between gap-3 border-t border-border/40 pt-3">
           <div className="min-w-0">
-            <span className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground">How many are yours</span>
-            <span className="text-[10px] text-muted-foreground">{maximum} on the receipt · 0 if none is yours</span>
+            <span className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">How many are yours</span>
+            <span className="text-xs text-muted-foreground">{maximum} on the receipt · 0 if none is yours</span>
           </div>
           <div className="flex shrink-0 items-center rounded-xl border border-border bg-background p-1 shadow-xs">
             <Button variant="unstyled"

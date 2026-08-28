@@ -17,6 +17,7 @@ import { RewardsSection } from './wishlist/RewardsSection'
 import { CommitmentsRewardsSheets } from './wishlist/CommitmentsRewardsSheets'
 import { CommitmentIcon } from './semanticIcons'
 import { Sparkles } from 'lucide-react'
+import { PageHeader } from './ui/PageHeader'
 
 interface CommitmentsRewardsViewProps {
   wishlist: WishlistItem[]
@@ -285,30 +286,16 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
 
   return (
     <div className="space-y-5">
-      <header className="app-panel rounded-2xl border border-border/60 bg-card/92 p-3 sm:p-6">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-accent-ink">
-              <CommitmentIcon className="size-5" aria-hidden />
-            </div>
-            <div className="min-w-0">
-              <h2 className="flex items-center gap-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                Commitments &amp; Rewards
-                <InfoHint
-                  label="this page"
-                  text="Set money aside for commitments, then see what is free for rewards."
-                />
-              </h2>
-            </div>
-          </div>
-          {onExplainWithAi && (
+      <PageHeader
+        title={<span className="flex items-center gap-1">Commitments &amp; Rewards <InfoHint label="this page" text="Set money aside for commitments, then see what is free for rewards." /></span>}
+        icon={<span className="flex size-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-accent-ink"><CommitmentIcon className="size-5" /></span>}
+        actions={onExplainWithAi && (
             <Button variant="secondary" size="sm" type="button" onClick={onExplainWithAi} aria-label="Explain my commitments and rewards plan with Ask AI" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5">
               <Sparkles className="size-3.5" aria-hidden />
               <span className="hidden sm:inline">Explain my plan</span>
             </Button>
-          )}
-        </div>
-      </header>
+        )}
+      />
 
       <CommitmentsRewardsTabs
         activeTab={activeTab}

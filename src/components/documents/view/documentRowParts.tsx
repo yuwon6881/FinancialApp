@@ -114,7 +114,7 @@ export function AmountReview({ document, updateDocument, currency, disabled = fa
       <Button variant="unstyled" size="icon" type="button" onClick={() => void save()} disabled={disabled || saving} aria-label={`Confirm amount for ${document.originalFileName}`} title="Confirm amount" className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 sm:size-9"><Check className="size-4" strokeWidth={2.5} /></Button>
       <Button variant="unstyled" size="icon" type="button" onClick={cancel} disabled={saving} aria-label={`Stop editing the amount for ${document.originalFileName}`} title="Discard this edit" className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:size-9"><X className="size-4" /></Button>
     </div>
-    {error && <p className="mt-1 text-[10px] font-semibold text-destructive" role="alert">{error}</p>}
+    {error && <p className="mt-1 text-xs font-semibold text-destructive" role="alert">{error}</p>}
   </div>
 }
 
@@ -170,7 +170,7 @@ export function DownloadDocumentButton({ document, downloadFailed, disabled = fa
       {isDownloading
         ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
         : <Download className="size-3.5" />}
-      {className ? <span className="text-[10px] font-bold">{isDownloading ? 'Preparing…' : 'Download'}</span> : null}
+      {className ? <span className="text-xs font-bold">{isDownloading ? 'Preparing…' : 'Download'}</span> : null}
     </Button>
   )
 }
@@ -187,7 +187,7 @@ export function DeleteDocumentButton({ document, setDocToDelete, disabled = fals
       aria-label={`Delete ${document.originalFileName}`}
     >
       <Trash2 className="size-3.5" />
-      {className ? <span className="text-[10px] font-bold">Delete</span> : null}
+      {className ? <span className="text-xs font-bold">Delete</span> : null}
     </Button>
   )
 }
@@ -232,7 +232,7 @@ export function LinkedTransactionButton({
   // the surface with the most room for it.
   if (!onOpen) {
     return (
-      <span className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-lg border border-accent/30 bg-accent/10 px-2 py-1 text-[10px] font-bold text-accent-ink" title="Attached to a ledger record">
+      <span className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-lg border border-accent/30 bg-accent/10 px-2 py-1 text-xs font-bold text-accent-ink" title="Attached to a ledger record">
         <Link2 className="size-3 shrink-0" aria-hidden="true" />
         Linked
       </span>
@@ -246,7 +246,7 @@ export function LinkedTransactionButton({
       onClick={() => onOpen(document.transactionId!)}
       disabled={isOpening}
       aria-busy={isOpening}
-      className="min-h-11 shrink-0 border-accent/30 bg-accent/10 px-2 text-[10px] text-accent-ink hover:border-accent/50 hover:bg-accent/20 sm:min-h-8"
+      className="min-h-11 shrink-0 border-accent/30 bg-accent/10 px-2 text-xs text-accent-ink hover:border-accent/50 hover:bg-accent/20 sm:min-h-8"
       title="Open linked ledger transaction"
       aria-label={`Open linked transaction for ${document.originalFileName}`}
     >

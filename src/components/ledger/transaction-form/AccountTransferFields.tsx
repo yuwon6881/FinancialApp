@@ -42,7 +42,7 @@ export const AccountTransferFields: React.FC<AccountTransferFieldsProps> = ({
               onSetField('counterAccountId', temp)
             }}
             title="Swap source and destination accounts"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/20 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted/50 cursor-pointer transition"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/20 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted/50 cursor-pointer transition"
           >
             <ArrowLeftRight className="size-3" />
             Swap Accounts
@@ -104,7 +104,7 @@ export const AccountTransferFields: React.FC<AccountTransferFieldsProps> = ({
           type="button"
           onClick={onSwapTransfer}
           title="Swap transfer source and destination"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/20 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted/50 cursor-pointer transition"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/20 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted/50 cursor-pointer transition"
         >
           <ArrowLeftRight className="size-3 text-teal-500" />
           Swap Direction

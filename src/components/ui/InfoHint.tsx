@@ -68,7 +68,7 @@ export const InfoHint: React.FC<InfoHintProps> = ({ text, label, align = 'right'
         minWidth={200}
         id={id}
         role="tooltip"
-        className="z-[240] w-56 rounded-xl border border-border/70 bg-card p-3 text-[11px] font-normal leading-relaxed text-foreground shadow-xl"
+        className="z-[240] w-56 rounded-xl border border-border/70 bg-card p-3 text-xs font-normal leading-relaxed text-foreground shadow-xl"
       >
         {text}
       </AnchoredPopover>

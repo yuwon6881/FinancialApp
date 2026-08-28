@@ -117,7 +117,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
               {selectedCategories.length > 0 && (
                 <Button variant="unstyled"
                   onClick={onClearFilters}
-                  className="text-[9px] font-bold text-orange-500 hover:underline cursor-pointer"
+                  className="text-xs font-bold text-orange-500 hover:underline cursor-pointer"
                 >
                   Clear All
                 </Button>

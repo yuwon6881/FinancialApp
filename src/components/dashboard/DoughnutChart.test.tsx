@@ -28,7 +28,7 @@ describe('DoughnutChart sensitive accessibility', () => {
 
     expect(container.querySelector('svg')?.getAttribute('aria-label')).toBe('Total values hidden')
     expect(container.querySelector('svg')?.closest('[aria-hidden="true"]')).toBeTruthy()
-    expect(screen.getByRole('listitem', { name: 'Food: hidden' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Food: hidden' })).toBeTruthy()
     expect(container.textContent).not.toContain('75.0%')
     expect(container.textContent).not.toContain('$100')
   })

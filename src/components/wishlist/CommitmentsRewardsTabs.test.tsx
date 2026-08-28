@@ -128,9 +128,11 @@ describe('CommitmentsRewardsTabs', () => {
       />
     )
 
+    // Only the active panel is mounted, so only the selected tab may point at one:
+    // an aria-controls referencing an absent id is a critical axe violation.
     expect(screen.getByRole('tab', { name: /commitments/i }).getAttribute('aria-controls'))
       .toBe('commitments-rewards-panel-commitments')
     expect(screen.getByRole('tab', { name: /rewards/i }).getAttribute('aria-controls'))
-      .toBe('commitments-rewards-panel-rewards')
+      .toBeNull()
   })
 })

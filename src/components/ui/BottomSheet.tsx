@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useId, useRef, useState } from 'reac
 import { createPortal } from 'react-dom'
 import { m, AnimatePresence, useDragControls, useReducedMotion, type PanInfo } from 'framer-motion'
 import { useDialog } from '../../lib/useDialog'
-import { useIsMobile } from '../../lib/useIsMobile'
+import { useIsCompact } from '../../lib/breakpoints'
 import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
 import { Z_LAYERS } from '../../lib/zLayers'
 import { motionSafeScrollBehavior } from '../../lib/motionPreference'
@@ -49,7 +49,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const descriptionId = useId()
-  const isMobile = useIsMobile()
+  const isMobile = useIsCompact()
   const reduceMotion = useReducedMotion()
 
   // Pace the slide by measured height so a tall sheet and a short sheet travel
@@ -231,7 +231,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   // never preventDefault a scroll or a horizontal gesture.
   useEffect(() => {
     const el = panelRef.current
-    if (!isOpen || !el) return
+    if (!isOpen || !isMobile || !el) return
     let sx = 0
     let sy = 0
     let decided: 'none' | 'scroll' | 'drag' = 'none'
@@ -264,7 +264,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       el.removeEventListener('touchend', reset)
       el.removeEventListener('touchcancel', reset)
     }
-  }, [isOpen])
+  }, [isOpen, isMobile])
 
   // When mobile virtual keyboards open, ensure the focused input is scrolled into view
   useEffect(() => {
@@ -322,7 +322,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           <m.div
             key="sheet"
             ref={panelRef}
-            drag="y"
+            drag={isMobile ? 'y' : false}
             dragControls={dragControls}
             dragListener={false}
             // A real linear travel range (top locked at rest, a long free run
@@ -348,10 +348,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                 onClose()
               }
             }}
-            onPointerDown={handlePanelPointerDown}
-            onPointerMove={handlePanelPointerMove}
-            onPointerUp={clearGesture}
-            onPointerCancel={clearGesture}
+            onPointerDown={isMobile ? handlePanelPointerDown : undefined}
+            onPointerMove={isMobile ? handlePanelPointerMove : undefined}
+            onPointerUp={isMobile ? clearGesture : undefined}
+            onPointerCancel={isMobile ? clearGesture : undefined}
             role="dialog"
             aria-modal="true"
             aria-labelledby={ariaLabel ? undefined : titleId}

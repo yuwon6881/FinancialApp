@@ -62,7 +62,7 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
       </ul>
       {rest.length > 0 && (
         <details className="mt-1">
-          <summary className="cursor-pointer text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+          <summary className="cursor-pointer text-xs font-semibold text-amber-700 dark:text-amber-300">
             Show all {ordered.length} years
           </summary>
           <ul className="mt-1 space-y-1">
@@ -71,7 +71,7 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
         </details>
       )}
 
-      <p className="mt-2 text-[11px] font-semibold text-muted-foreground">
+      <p className="mt-2 text-xs font-semibold text-muted-foreground">
         Nothing is ever deleted for you. Delete them yourself once you are sure you no longer need them.
       </p>
 
@@ -93,7 +93,7 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
 function RetentionYearRow({ year }: { year: RetentionTaxYearSummary }) {
   const isPast = year.daysUntilKeepUntil < 0
   return (
-    <li className="text-[11px] text-muted-foreground">
+    <li className="text-xs text-muted-foreground">
       <span className="font-bold text-foreground">{year.taxYear}</span>
       {' — '}
       {year.documentCount} file{year.documentCount === 1 ? '' : 's'}, {formatBytes(year.totalBytes)}.{' '}

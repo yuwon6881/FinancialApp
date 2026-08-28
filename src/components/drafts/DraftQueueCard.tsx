@@ -38,8 +38,8 @@ export function DraftQueueCard({ draft, grip, issues, documentCount, currency, h
       contentClassName="rounded-2xl bg-card p-3 sm:p-4"
       actionsWidth={128}
       actions={<>
-        <Button variant="unstyled" onClick={onEdit} disabled={hideSensitive} aria-label={`Edit ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-primary text-[11px] font-bold text-primary-foreground"><Edit2 className="size-4" aria-hidden="true" />Edit</Button>
-        <Button variant="unstyled" onClick={onDelete} disabled={hideSensitive} aria-label={`Delete ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-destructive text-[11px] font-bold text-destructive-foreground"><Trash2 className="size-4" aria-hidden="true" />Delete</Button>
+        <Button variant="unstyled" onClick={onEdit} disabled={hideSensitive} aria-label={`Edit ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-primary text-xs font-bold text-primary-foreground"><Edit2 className="size-4" aria-hidden="true" />Edit</Button>
+        <Button variant="unstyled" onClick={onDelete} disabled={hideSensitive} aria-label={`Delete ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-destructive text-xs font-bold text-destructive-foreground"><Trash2 className="size-4" aria-hidden="true" />Delete</Button>
       </>}
       desktopActions={false}
     >
@@ -76,7 +76,7 @@ export function DraftQueueCard({ draft, grip, issues, documentCount, currency, h
             </span>
             <span className="shrink-0 tabular-nums">{draft.date}</span>
             <LedgerAllocationBadge ledgerCategory={draft.ledgerCategory} transactionId={draft.id} compact />
-            {!isTransfer && <span className={`min-w-0 max-w-full truncate rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${getCategoryBadgeClass(draft.category)}`} title={draft.category}>{draft.category}</span>}
+            {!isTransfer && <span className={`min-w-0 max-w-full truncate rounded-md border px-1.5 py-0.5 text-xs font-semibold ${getCategoryBadgeClass(draft.category)}`} title={draft.category}>{draft.category}</span>}
             {documentCount > 0 && <span className="inline-flex min-w-0 items-center gap-1" title={`${documentCount} attachment${documentCount === 1 ? '' : 's'}`}><Paperclip className="size-3 shrink-0" aria-hidden="true" /><span className="truncate">{documentCount}</span></span>}
           </div>
           {needsReview && (

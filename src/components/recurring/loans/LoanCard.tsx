@@ -166,7 +166,7 @@ export function LoanCard({
       ) : (
         <div className="mt-4 space-y-2">
           <div>
-            <p className="text-[11px] font-semibold text-muted-foreground">Still owed</p>
+            <p className="text-xs font-semibold text-muted-foreground">Still owed</p>
             <p className="text-2xl font-black tracking-tight text-foreground">
               {formatSensitive(loan.snapshot.outstandingBalance)}
             </p>
@@ -182,7 +182,7 @@ export function LoanCard({
                 tone="bg-primary"
                 label={`${payoffProgress.percentPaid.toFixed(0)}% of the tracked principal cleared`}
               />
-              <p className="text-[11px] font-semibold text-muted-foreground">
+              <p className="text-xs font-semibold text-muted-foreground">
                 {payoffProgress.percentPaid.toFixed(0)}% paid off ·{' '}
                 {formatSensitive(payoffProgress.clearedPrincipal)} cleared of{' '}
                 {formatSensitive(payoffProgress.trackedPrincipal)} tracked
@@ -221,13 +221,13 @@ export function LoanCard({
           variant="unstyled"
           type="button"
           aria-expanded={isScheduleOpen}
-          aria-controls={`loan-schedule-${loan.id}`}
+          aria-controls={isScheduleOpen ? `loan-schedule-${loan.id}` : undefined}
           onClick={handleScheduleToggle}
           className="flex min-h-11 w-full cursor-pointer select-none items-center justify-between gap-2 rounded-lg text-left text-xs font-bold text-foreground transition-colors hover:text-accent-ink sm:min-h-0"
         >
           <div className="flex items-center gap-2">
             <span>Payment history and planned schedule</span>
-            <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+            <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-semibold text-muted-foreground">
               {actualRows.length + scheduleRows.length}
             </span>
           </div>
@@ -258,7 +258,7 @@ export function LoanCard({
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="font-semibold text-foreground">{formatOccurrenceDate(row.occurrenceDate)}</span>
-                  <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-bold ${
+                  <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-bold ${
                     row.kind === 'Paid'
                       ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                       : 'bg-muted text-muted-foreground'
@@ -268,7 +268,7 @@ export function LoanCard({
                 </div>
                 <span className="font-bold text-foreground tabular-nums">{formatSensitive(row.payment)}</span>
               </div>
-              <div className="mt-2 flex items-center justify-between gap-2 border-t border-border/25 pt-1.5 text-[10px] text-muted-foreground">
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-border/25 pt-1.5 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2 truncate">
                   <span>Interest: <strong className="font-semibold text-muted-foreground">{formatSensitive(row.interest)}</strong></span>
                   <span>·</span>
@@ -284,7 +284,7 @@ export function LoanCard({
             <div className="mt-3 hidden max-h-72 overflow-x-auto overflow-y-auto rounded-lg border border-border/40 bg-card/60 sm:block">
           <table className="w-full min-w-[580px] text-left text-xs">
             <caption className="sr-only">Payment history and planned schedule for {loan.name}</caption>
-            <thead className="sticky top-0 z-10 border-b border-border/40 bg-card text-[11px] text-muted-foreground shadow-2xs">
+            <thead className="sticky top-0 z-10 border-b border-border/40 bg-card text-xs text-muted-foreground shadow-2xs">
               <tr>
                 <th className="px-3 py-2 font-semibold">Date</th>
                 <th className="px-3 py-2 font-semibold">Status</th>
@@ -299,7 +299,7 @@ export function LoanCard({
                 <tr key={`${row.occurrenceDate}-${row.kind}-${index}`} className="transition-colors hover:bg-muted/30">
                   <td className="px-3 py-2 font-medium text-foreground">{formatOccurrenceDate(row.occurrenceDate)}</td>
                   <td className="px-3 py-2">
-                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
+                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold ${
                       row.kind === 'Paid'
                         ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                         : 'bg-muted text-muted-foreground'
@@ -316,7 +316,7 @@ export function LoanCard({
             </tbody>
           </table>
             </div>
-            <p className="mt-2.5 text-[11px] text-muted-foreground">Amounts in {currency}. Schedule follows original bill cadence.</p>
+            <p className="mt-2.5 text-xs text-muted-foreground">Amounts in {currency}. Schedule follows original bill cadence.</p>
               </>
             )}
           </div>

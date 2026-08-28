@@ -14,6 +14,7 @@ import {
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
 import { Button } from '../ui/Button'
+import { Panel } from '../ui/Panel'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 
 export function FingerprintSection() {
@@ -114,7 +115,7 @@ export function FingerprintSection() {
   }
 
   return (
-    <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden animate-in fade-in duration-200">
+    <Panel as="section" padding="none" className="overflow-hidden shadow-sm animate-in fade-in duration-200">
       <Button variant="unstyled"
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -124,7 +125,7 @@ export function FingerprintSection() {
         <ShieldCheck className="size-5 text-emerald-500 shrink-0" />
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-foreground">Device Unlock</h3>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {enrolledHere
               ? "Use this device's screen lock, PIN, fingerprint, or face recognition."
               : enabledOnAccount
@@ -152,10 +153,10 @@ export function FingerprintSection() {
                   : 'Register this device to allow fast biometric or PIN unlock on the login screen.'}
               </p>
               {capability === 'checking' && (
-                <p className="mt-1 text-[11px] text-muted-foreground">Checking whether this device can add a credential…</p>
+                <p className="mt-1 text-xs text-muted-foreground">Checking whether this device can add a credential…</p>
               )}
               {capability === 'unsupported' && (
-                <p className="mt-1 text-[11px] text-muted-foreground">This device cannot add a local biometric or screen-lock credential. You can still manage credentials already registered to the account.</p>
+                <p className="mt-1 text-xs text-muted-foreground">This device cannot add a local biometric or screen-lock credential. You can still manage credentials already registered to the account.</p>
               )}
             </div>
             <Button
@@ -192,7 +193,7 @@ export function FingerprintSection() {
 
           {credentials.length > 0 && (
             <div className="space-y-2 pt-2 border-t border-border/40">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Registered Credentials ({credentials.length})
               </span>
               <div className="space-y-1.5">
@@ -215,12 +216,12 @@ export function FingerprintSection() {
                           <div className="font-medium text-foreground truncate flex items-center gap-1.5">
                             <span>{c.deviceLabel || 'Unnamed credential'}</span>
                             {isCurrent && (
-                              <span className="text-[10px] bg-emerald-500/10 text-emerald-500 font-semibold px-1.5 py-0.5 rounded-full">
+                              <span className="text-xs bg-emerald-500/10 text-emerald-500 font-semibold px-1.5 py-0.5 rounded-full">
                                 This device
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <span>Added {new Date(c.createdAt).toLocaleDateString()}</span>
                           </div>
                         </div>
@@ -252,6 +253,6 @@ export function FingerprintSection() {
           )}
         </div>
       </CollapsibleBody>
-    </section>
+    </Panel>
   )
 }

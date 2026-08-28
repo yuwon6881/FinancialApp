@@ -127,7 +127,7 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
                 ? <>Up to {formatSensitive(ceiling)} available from your free {bucketLabel} money.</>
                 : <>Up to {formatSensitive(ceiling)} can go back to your free {bucketLabel} money.</>)
             : undefined}
-          hintClassName="text-[11px] font-medium"
+          hintClassName="text-xs font-medium"
         >
           <SmartAmountInput
             type="text"
@@ -141,11 +141,11 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
           />
         </FormField>
 
-        <p className="text-[11px] text-muted-foreground font-medium">
+        <p className="text-xs text-muted-foreground font-medium">
           This reserves {fundingBucket} money without adding a ledger transaction.
         </p>
         {isTopUp && (
-          <p className="text-[11px] text-muted-foreground font-medium">
+          <p className="text-xs text-muted-foreground font-medium">
             If this cycle stays short, the missing amount is recalculated across the cycles left before the deadline. Once the deadline arrives, the full amount still missing is due.
           </p>
         )}

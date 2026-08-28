@@ -133,17 +133,17 @@ export function PendingSubscriptionsModal({
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                  <span className={`inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border ${getCategoryBadgeClass(noti.category)}`}>
+                  <span className={`inline-block text-xs px-1.5 py-0.5 font-bold rounded border ${getCategoryBadgeClass(noti.category)}`}>
                     {noti.category}
                   </span>
-                  <span className="text-[10px] font-medium text-muted-foreground">Due {noti.billingDate}</span>
-                  <span className="text-[10px] text-muted-foreground">Cycle {noti.cycleLabel}</span>
+                  <span className="text-xs font-medium text-muted-foreground">Due {noti.billingDate}</span>
+                  <span className="text-xs text-muted-foreground">Cycle {noti.cycleLabel}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-3 border-t border-border/30 pt-3 sm:flex-row sm:items-center sm:justify-end sm:gap-2 sm:pt-2.5">
               <div className={`w-full space-y-1.5 sm:flex sm:w-auto sm:min-w-[210px] sm:items-center sm:gap-1.5 sm:space-y-0 ${isPending ? 'pointer-events-none opacity-70' : ''}`}>
-                  <span className="block text-[10px] font-bold text-muted-foreground sm:shrink-0">Paid Date</span>
+                  <span className="block text-xs font-bold text-muted-foreground sm:shrink-0">Paid Date</span>
                   <DatePicker
                     value={paidDates[noti.id] ?? noti.billingDate}
                     onChange={value => setPaidDates(prev => ({ ...prev, [noti.id]: value }))}
@@ -155,7 +155,7 @@ export function PendingSubscriptionsModal({
               <div className={`w-full space-y-1.5 sm:w-auto sm:min-w-[170px] ${isPending ? 'pointer-events-none opacity-70' : ''}`}>
                   <label
                     htmlFor={`pending-amount-${noti.id}`}
-                    className="block text-[10px] font-bold text-muted-foreground"
+                    className="block text-xs font-bold text-muted-foreground"
                   >
                     Amount paid
                   </label>
@@ -170,7 +170,7 @@ export function PendingSubscriptionsModal({
                     aria-describedby={`pending-amount-hint-${noti.id}`}
                     className="w-full font-medium"
                   />
-                  <p id={`pending-amount-hint-${noti.id}`} className="text-[10px] leading-relaxed text-muted-foreground">
+                  <p id={`pending-amount-hint-${noti.id}`} className="text-xs leading-relaxed text-muted-foreground">
                     {partialAmountFor(noti) != null
                       ? 'Part payment — the rest stays due on this bill.'
                       : 'Leave blank to pay the full amount.'}

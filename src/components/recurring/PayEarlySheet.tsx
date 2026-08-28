@@ -114,7 +114,7 @@ export function PayEarlySheet({
       title={
         <div className="min-w-0">
           <div className="text-sm font-bold text-foreground">Pay {payment.name} early</div>
-          <p className="text-[11px] font-normal text-muted-foreground">Due on {payment.nextDueDate || 'upcoming date'}</p>
+          <p className="text-xs font-normal text-muted-foreground">Due on {payment.nextDueDate || 'upcoming date'}</p>
         </div>
       }
       maxWidthClassName="max-w-lg"
@@ -174,7 +174,7 @@ export function PayEarlySheet({
                     <span className="font-bold text-foreground">{formatCurrencyVal(alreadyPaidAmount, currency)}</span>
                   </div>
                 )}
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   Recording this full payment will add a transaction to your ledger and advance the subscription to the next cycle.
                 </p>
               </div>
@@ -210,11 +210,11 @@ export function PayEarlySheet({
                 {parsedPartialAmount != null && (
                   <div className="grid grid-cols-2 gap-2 rounded-xl border border-border/60 bg-muted/15 p-3 text-xs">
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Paying now</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">Paying now</span>
                       <span className="font-extrabold text-foreground">{formatCurrencyVal(parsedPartialAmount, currency)}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Still due</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">Still due</span>
                       <span className="font-extrabold text-blue-600 dark:text-blue-400">{formatCurrencyVal(remainingAmount, currency)}</span>
                     </div>
                   </div>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchBootstrap } from './bootstrap'
+import { fetchBootstrap, fetchBootstrapRefresh } from './bootstrap'
 import { obfuscateAmount } from './amounts'
 
 const okResponse = (payload: unknown) => ({
@@ -140,5 +140,96 @@ describe('fetchBootstrap', () => {
     // useFinancialData distinguishes this case from every other failure: a 404 means the
     // server predates the endpoint, so it retries with the eight individual GETs.
     await expect(fetchBootstrap()).rejects.toMatchObject({ status: 404 })
+  })
+})
+
+describe('fetchBootstrapRefresh', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('requests the named slices and preserves omitted data as absent', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse({
+      month: 'Jul',
+      year: 2026,
+      categories: wirePayload.categories,
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await fetchBootstrapRefresh(['categories'], 'Jul', 2026)
+
+    const url = String(fetchMock.mock.calls[0][0])
+    expect(url).toContain('/bootstrap/refresh?slices=categories&month=Jul&year=2026')
+    expect(result.categories?.[0].cycleLimit).toBe(300)
+    expect(result.dashboard).toBeUndefined()
+    expect(result.transactions).toBeUndefined()
+  })
+
+  it('decodes a core refresh with the same mappers as full bootstrap', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(okResponse({
+      month: 'Jul',
+      year: 2026,
+      dashboard: wirePayload.dashboard,
+      insights: wirePayload.insights,
+      transactions: wirePayload.transactions,
+      accounts: [],
+      autocomplete: wirePayload.autocomplete,
+      walletBalance: wirePayload.walletBalance,
+    })))
+
+    const result = await fetchBootstrapRefresh(['core'])
+
+    expect(result.dashboard?.stats.totalBalance).toBe(1234.56)
+    expect(result.transactions?.[0].amount).toBe(-12.5)
+    expect(result.walletBalance).toBe(1234.56)
+  })
+
+  it('maps investment allocation and document overview refresh slices without fetching another endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse({
+      month: 'Jul',
+      year: 2026,
+      investments: {
+        allocation: {
+          status: 'OnTrack',
+          appCurrency: 'MYR',
+          plan: {
+            usEquityTarget: 66,
+            internationalExUsTarget: 10,
+            bondsTarget: 24,
+            watchDrift: 3,
+            alertDrift: 5,
+          },
+          assignments: [],
+          sleeves: [],
+          recommendations: [],
+          incompleteReasons: [],
+          freshness: {
+            asOf: '2026-07-01T00:00:00Z',
+            isStale: false,
+            hasMissingData: false,
+            maxAgeMinutes: 1,
+            staleInputs: [],
+          },
+        },
+      },
+      documents: {
+        usage: { totalBytes: 12, documentCount: 1, quotaBytes: 1000 },
+        availableYears: [2026],
+        retention: { taxYears: [], noticeWindowDays: 180, keepYears: 7 },
+        selectedTaxYear: 2026,
+        summary: null,
+        reliefCategories: [],
+      },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await fetchBootstrapRefresh(['investments', 'documents'], 'Jul', 2026)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(result.investments?.allocation.status).toBe('OnTrack')
+    expect(result.documents?.usage.quotaBytes).toBe(1000)
+    expect(result.dashboard).toBeUndefined()
+    expect(result.investments?.allocation.freshness.staleInputs).toEqual([])
   })
 })

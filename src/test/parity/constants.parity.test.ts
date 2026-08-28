@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { chartRanges } from '../../lib/investmentChartRanges'
 import { RECURRING_LEDGER_CATEGORIES, SAVINGS_GOAL_FUNDING_BUCKETS } from '../../lib/ledgerCategories'
+import { REFRESH_HEADER_NAME, REFRESH_SLICES } from '../../lib/refreshSlices'
 
 type ConstantsFixture = {
   domain: string
@@ -28,6 +29,8 @@ const frontendConstants: Record<string, readonly string[]> = {
   LedgerBucket: RECURRING_LEDGER_CATEGORIES,
   PushChannel: ['billReminders', 'categoryAlerts'],
   InvestmentChartRange: chartRanges.map(range => range.value),
+  RefreshSlice: REFRESH_SLICES,
+  RefreshHeader: [REFRESH_HEADER_NAME],
 }
 
 function readFixture(): ConstantsFixture {

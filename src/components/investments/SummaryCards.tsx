@@ -137,15 +137,15 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
           style={index === 0 ? undefined : { animationDelay: `${index * 35}ms` }}
         >
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
             <InfoHint label={label} text={hint} />
           </div>
-          <p className="mt-2 text-[10px] text-muted-foreground">{hero.label}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{hero.label}</p>
           <strong className={`block break-words text-xl font-black leading-tight ${hero.color ?? 'text-foreground'}`}>{hero.value}</strong>
           <div className="mt-3 divide-y divide-border/40 border-t border-border/40 pt-1">
             {rows.map(row => (
               <div key={row.label} className="flex items-center justify-between gap-2 py-2">
-                <span className="flex min-w-0 items-center gap-0.5 text-[11px] text-muted-foreground">
+                <span className="flex min-w-0 items-center gap-0.5 text-xs text-muted-foreground">
                   <span className="truncate">{row.label}</span>
                   <InfoHint label={row.label} text={row.hint} />
                 </span>

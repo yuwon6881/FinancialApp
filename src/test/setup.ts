@@ -17,7 +17,7 @@ Object.defineProperty(window, 'scrollTo', {
 })
 
 // jsdom does not implement matchMedia. Modal dialogs (BottomSheet -> useDialog /
-// useIsMobile) query it, so provide a desktop-defaulting stub for every test.
+// responsive tier hooks) query it, so provide a desktop-defaulting stub for every test.
 //
 // It evaluates min-width/max-width against window.innerWidth (jsdom defaults to
 // 1024 = desktop) instead of hard-coding `matches: false`. A blanket false is not

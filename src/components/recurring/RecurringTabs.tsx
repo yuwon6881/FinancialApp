@@ -62,7 +62,7 @@ export const RecurringTabs: React.FC<RecurringTabsProps> = ({
             type="button"
             role="tab"
             aria-selected={isActive}
-            aria-controls={`recurring-panel-${tab.id}`}
+            aria-controls={isActive ? `recurring-panel-${tab.id}` : undefined}
             tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(tab.id)}
             onKeyDown={event => handleKeyDown(event, index)}
@@ -72,7 +72,7 @@ export const RecurringTabs: React.FC<RecurringTabsProps> = ({
           >
             <span>{tab.label}</span>
             {tab.count !== undefined && <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold transition-colors ${
+              className={`rounded-full px-2 py-0.5 text-xs font-extrabold transition-colors ${
                 isActive ? 'bg-primary/15 text-accent-ink' : 'bg-muted/80 text-muted-foreground'
               }`}
             >

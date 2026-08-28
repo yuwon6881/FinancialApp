@@ -47,7 +47,7 @@ export const AccountMentionMenu: React.FC<AccountMentionMenuProps> = ({
           }`}
         >
           <span className="min-w-0 flex-1 truncate font-medium text-foreground">{account.name}</span>
-          <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">{account.bucket}</span>
+          <span className="shrink-0 text-xs uppercase tracking-wide text-muted-foreground">{account.bucket}</span>
         </Button>
       </li>
     ))}

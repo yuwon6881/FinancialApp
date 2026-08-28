@@ -7,7 +7,7 @@ import { LedgerEmptyState } from './LedgerEmptyState'
 import { Skeleton } from '../ui/Skeleton'
 
 // Desktop (>= md) ledger table, including the page-total summary rows and the
-// empty/loading state. Mounted only when useIsMobile() is false, so a phone never
+// empty/loading state. Mounted only in the expanded tier, so a phone never
 // builds these 7-cell rows. Rows themselves are memoized in LedgerRows.
 export function DesktopLedgerTable({
   transactions,
@@ -45,8 +45,8 @@ export function DesktopLedgerTable({
         <DataTableHeaderCell>Description</DataTableHeaderCell>
         <DataTableHeaderCell>Category</DataTableHeaderCell>
         <DataTableHeaderCell>Ledger Allocation</DataTableHeaderCell>
-        <DataTableHeaderCell className="text-right text-orange-500/90 font-bold">Debit (Outflow)</DataTableHeaderCell>
-        <DataTableHeaderCell className="text-right text-emerald-500/90 font-bold">Credit (Inflow)</DataTableHeaderCell>
+        <DataTableHeaderCell className="text-right text-orange-600 dark:text-orange-400 font-bold">Debit (Outflow)</DataTableHeaderCell>
+        <DataTableHeaderCell className="text-right text-emerald-600 dark:text-emerald-400 font-bold">Credit (Inflow)</DataTableHeaderCell>
         <DataTableHeaderCell className="text-center">Actions</DataTableHeaderCell>
       </DataTableHeader>
           {/* The entrance is CSS (see .list-container-enter / .list-row-enter in
@@ -90,12 +90,12 @@ export function DesktopLedgerTable({
                     under each column (plain text sat ~0.6rem further right than the pill text),
                     with a ring + stronger fill to read clearly as the column total. */}
                 <td className="p-4 text-right">
-                  <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/15 ring-1 ring-inset ring-orange-500/40 text-orange-500 font-extrabold text-xs">
+                  <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/15 ring-1 ring-inset ring-orange-500/40 text-orange-600 dark:text-orange-400 font-extrabold text-xs">
                     {formatSensitive(pageTotals.outflow)}
                   </span>
                 </td>
                 <td className="p-4 text-right">
-                  <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/15 ring-1 ring-inset ring-emerald-500/40 text-emerald-500 font-extrabold text-xs">
+                  <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/15 ring-1 ring-inset ring-emerald-500/40 text-emerald-700 dark:text-emerald-400 font-extrabold text-xs">
                     {formatSensitive(pageTotals.inflow)}
                   </span>
                 </td>
@@ -112,13 +112,13 @@ export function DesktopLedgerTable({
                         <ArrowRightLeft className="size-3.5 shrink-0" />
                         <span className="font-semibold">Transferred / Allocated</span>
                         <span className="font-extrabold">{formatSensitive(pageTotals.transfer)}</span>
-                        <span className="text-[10px] font-medium text-blue-500">internal — excluded from debit &amp; credit</span>
+                        <span className="text-xs font-medium text-blue-500">internal — excluded from debit &amp; credit</span>
                       </span>
                     ) : <span />}
                     <span className="inline-flex flex-wrap items-center gap-x-4 gap-y-2">
                       {pageTotals.bucket && hasDistinctBucketMovement(pageTotals.bucketNet, net) ? (
                         <span className="inline-flex items-center gap-2">
-                          <span className="uppercase tracking-wider text-muted-foreground font-bold text-[11px]">
+                          <span className="uppercase tracking-wider text-muted-foreground font-bold text-xs">
                             {pageTotals.bucket} movement on this page
                           </span>
                           <span className={`font-extrabold text-sm ${pageTotals.bucketNet >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
@@ -127,7 +127,7 @@ export function DesktopLedgerTable({
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-2">
-                          <span className="uppercase tracking-wider text-muted-foreground font-bold text-[11px]">Net Position</span>
+                          <span className="uppercase tracking-wider text-muted-foreground font-bold text-xs">Net Position</span>
                           <span className={`font-extrabold text-sm ${net >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
                             {net >= 0 ? '+' : '-'}{formatSensitive(Math.abs(net))}
                           </span>

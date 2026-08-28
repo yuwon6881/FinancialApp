@@ -9,6 +9,7 @@ import { ForecastSummary } from './ForecastSummary'
 import { ForecastTargetSection } from './ForecastTargetSection'
 import { InvestmentForecastChart } from './InvestmentForecastChart'
 import { useInvestmentForecastView } from './useInvestmentForecastView'
+import { Panel } from '../../ui/Panel'
 
 const mask = '••••'
 
@@ -50,10 +51,10 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
 
   if (view.startValue <= 0) {
     return (
-      <section aria-labelledby="forecast-title" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+      <Panel as="section" aria-labelledby="forecast-title">
         <h2 id="forecast-title" className="text-base font-bold text-foreground">Investment forecast</h2>
         <p className="mt-2 text-xs text-muted-foreground">A complete current portfolio value is needed to calculate this.</p>
-      </section>
+      </Panel>
     )
   }
 
@@ -138,7 +139,7 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
 
           <details className="mt-3 rounded-xl border border-border/50 bg-muted/15 p-3">
             <summary className="cursor-pointer text-xs font-bold text-foreground">How this forecast was worked out</summary>
-            <div className="mt-3 space-y-2 text-[11px] leading-relaxed text-muted-foreground">
+            <div className="mt-3 space-y-2 text-xs leading-relaxed text-muted-foreground">
               <p>It tests 10,000 outcomes using your plan. The model uses {percentage(model.annualReturn)} average annual growth and about {percentage(model.annualVolatility)} annual variation. Past returns are context, not a promise.</p>
               <p>Growth and variation come from a published long-term capital-markets model, not your history. It follows today’s portfolio and plan, adding deposits at month-end.</p>
               <p>Results are hypothetical, not guaranteed, and exclude future tax, expenses, and exchange-rate changes.</p>

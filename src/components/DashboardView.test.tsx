@@ -95,6 +95,8 @@ describe('DashboardView focused Today experience', () => {
   })
 
   it('prioritizes current money, attention, and plan status', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-15T12:00:00Z'))
     render(<DashboardView {...makeProps()} />)
 
     expect(screen.getByText('Today')).toBeTruthy()
@@ -111,6 +113,7 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.queryByText('Subscriptions')).toBeNull()
     expect(screen.queryByText('Financial Plan Metrics')).toBeNull()
     expect(screen.queryByText('Carryover Rolling Ledgers')).toBeNull()
+    vi.useRealTimers()
   })
 
   it('warns about tax records before their keep-until date and keeps the manual-only promise', async () => {

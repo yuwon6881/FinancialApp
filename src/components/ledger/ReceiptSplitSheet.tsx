@@ -190,12 +190,12 @@ export function ReceiptSplitSheet({
       {receipt && calculation && (
         <div className="space-y-5">
           <section className="rounded-2xl border border-primary/25 bg-primary/10 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-accent-ink">Your share</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-accent-ink">Your share</p>
             <div className="mt-1 flex items-end justify-between gap-4">
               <strong className="text-2xl font-black tracking-tight text-foreground">
                 {formatCurrencyVal(calculation.total, currency)}
               </strong>
-              <span className="pb-0.5 text-right text-[11px] text-muted-foreground">
+              <span className="pb-0.5 text-right text-xs text-muted-foreground">
                 {calculation.selectedItemCount} selected item{calculation.selectedItemCount === 1 ? '' : 's'}
               </span>
             </div>
@@ -260,7 +260,7 @@ export function ReceiptSplitSheet({
           <section className="space-y-3">
             <div>
               <h3 className="text-sm font-bold">Items</h3>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Use −/+ for your quantity. Delete a line only if it was not on the receipt.
               </p>
             </div>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { InvestmentPortfolio, InvestmentRange } from '../../types'
+import type { InvestmentAllocationOverview, InvestmentPortfolio, InvestmentRange } from '../../types'
 import * as api from '../../lib/api'
 import { useAppSync, useAppUi } from '../../contexts/AppContext'
 
@@ -69,8 +69,15 @@ export function useInvestmentPortfolio() {
   useEffect(() => {
     const refreshAfterSync = (event: Event) => {
       const detail = (event as CustomEvent<{
+        allocation?: InvestmentAllocationOverview
         acknowledge?: (work: Promise<void>) => void
       }>).detail
+      if (event.type === 'investment-sync' && detail?.allocation) {
+        setPortfolio(current => current ? { ...current, allocation: detail.allocation! } : current)
+        setActivityRevision(value => value + 1)
+        detail.acknowledge?.(Promise.resolve())
+        return
+      }
       const work = load(range, true, Boolean(detail?.acknowledge))
       if (detail?.acknowledge) detail.acknowledge(work)
       else void work

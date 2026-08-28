@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { animate, m, useMotionValue, useReducedMotion, type PanInfo } from 'framer-motion'
 import { cn } from '../../lib/utils'
-import { useIsMobile } from '../../lib/useIsMobile'
+import { useIsCompact } from '../../lib/breakpoints'
 import { triggerHaptic } from '../../lib/haptics'
 import {
   clearSwipeRowCloser,
@@ -36,9 +36,10 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   hint = true,
   id,
 }) => {
-  const isMobile = useIsMobile()
+  const isMobile = useIsCompact()
   const reduceMotion = useReducedMotion()
   const [open, setOpen] = useState(false)
+  const [isRevealed, setIsRevealed] = useState(false)
   const x = useMotionValue(0)
   const settleAnimationRef = useRef<{ stop: () => void } | null>(null)
   const suppressNextClick = useRef(false)
@@ -63,18 +64,32 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
   const settle = useCallback((target: number) => {
     stopSettle()
-    settleAnimationRef.current = animate(x, target, transition)
+    if (target !== 0) {
+      setIsRevealed(true)
+    }
+    settleAnimationRef.current = animate(x, target, {
+      ...transition,
+      onComplete: () => {
+        if (target === 0) {
+          setIsRevealed(false)
+        }
+      },
+    })
   }, [stopSettle, transition, x])
 
   const close = useCallback(() => {
     setOpen(false)
     settle(0)
-  }, [settle])
+    if (x.get() === 0) {
+      setIsRevealed(false)
+    }
+  }, [settle, x])
 
   const openActions = useCallback((focusActions: boolean) => {
     if (disabled) return
     focusActionsOnOpenRef.current = focusActions
     if (!open) triggerHaptic(10)
+    setIsRevealed(true)
     setOpen(true)
     settle(-actionsWidth)
   }, [actionsWidth, disabled, open, settle])
@@ -190,6 +205,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
   const handleDragStart = () => {
     stopSettle()
+    setIsRevealed(true)
     setSwipeLocked(true)
   }
 
@@ -245,8 +261,13 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         id={actionsId}
         role="group"
         aria-label="Row actions"
-        className="absolute inset-y-0 right-0 z-0 flex items-stretch [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]"
-        style={{ width: actionsWidth, touchAction: 'pan-y' }}
+        className="absolute inset-y-0 right-0 z-0 flex items-stretch overflow-hidden rounded-r-2xl [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]"
+        style={{
+          width: actionsWidth,
+          touchAction: 'pan-y',
+          opacity: isRevealed || open ? 1 : 0,
+          pointerEvents: isRevealed || open ? 'auto' : 'none',
+        }}
         inert={!open}
         onClickCapture={closeForAction}
         onPointerDown={handleActionPointerDown}

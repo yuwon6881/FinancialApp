@@ -182,7 +182,7 @@ export function LoanRepaymentSheet({
       title={
         <div className="min-w-0">
           <div className="text-sm font-bold text-foreground">Pay {loan.name}</div>
-          <p className="text-[11px] font-normal text-muted-foreground">Linked bill: {loan.recurringPaymentName || 'Recurring bill'}</p>
+          <p className="text-xs font-normal text-muted-foreground">Linked bill: {loan.recurringPaymentName || 'Recurring bill'}</p>
         </div>
       }
       maxWidthClassName="max-w-xl"
@@ -232,7 +232,7 @@ export function LoanRepaymentSheet({
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-foreground">Number of instalments to pay</p>
-                      <p className="text-[11px] text-muted-foreground">Type a number from 1 to {maxAvailableCycles}, or use the step buttons.</p>
+                      <p className="text-xs text-muted-foreground">Type a number from 1 to {maxAvailableCycles}, or use the step buttons.</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       <Button
@@ -294,7 +294,7 @@ export function LoanRepaymentSheet({
                           <div key={occ.occurrenceDate} className="px-3 py-2 flex items-center justify-between">
                             <div>
                               <p className="font-semibold text-foreground">Cycle {idx + 1} · {occ.occurrenceDate}</p>
-                              <p className="text-[10px] text-muted-foreground">
+                              <p className="text-xs text-muted-foreground">
                                 Principal: {formatCurrencyVal(occ.principal, currency)} · Interest: {formatCurrencyVal(occ.interest, currency)}
                               </p>
                             </div>
@@ -356,7 +356,7 @@ export function LoanRepaymentSheet({
                 <span className="text-xs font-bold text-foreground">Lender settlement quote</span>
                 <InfoHint label="Lender settlement quote" text="Enter the exact amount your lender quoted to close the loan account in full, including any interest rebate." />
               </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 Recording a full settlement sets the loan balance to zero, stops its recurring bill schedule, and marks every remaining instalment as settled by the payoff. Any instalment still unpaid from before today has to be recorded or discarded first.
               </p>
             </div>

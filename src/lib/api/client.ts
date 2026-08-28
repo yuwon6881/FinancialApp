@@ -1,5 +1,6 @@
 export const SESSION_LOCKED_EVENT = 'financialapp:session-locked'
 import { hasWebSessionFlag, tokenStore, usesCookieAuth } from '../auth'
+import { recordRefreshHeader, REFRESH_HEADER_NAME } from '../refreshSlices'
 
 export class ApiError extends Error {
   status: number
@@ -103,6 +104,15 @@ export function cachedGet<T>(
     })
   }
   return withAbort(promise, options.signal)
+}
+
+/** Seed a GET cache with an authoritative response received through another endpoint. */
+export function primeCached<T>(key: string, value: T, staleTime = 30_000): void {
+  const promise = Promise.resolve(value)
+  cacheStore.set(key, { promise, timestamp: Date.now(), staleTime })
+  // The composite response has no ETag for this individual path. Establish a fresh validator
+  // when this seeded value expires instead of reusing a validator for an older body.
+  revalidationStore.delete(key)
 }
 
 function withAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
@@ -212,6 +222,9 @@ export async function apiFetch(path: string, init: RequestInit = {}, authenticat
     headers,
   })
   rememberCsrfToken(response)
+  if (UNSAFE_METHODS.has(method) && response.ok) {
+    recordRefreshHeader(response.headers.get(REFRESH_HEADER_NAME))
+  }
   return handleApiResponse(response, url)
 }
 

@@ -136,7 +136,12 @@ if (!fs.existsSync(distAssetsPath)) {
 // 214.75: raised from 212.5 (measured 213.12). Accepting an AI category-flow correction now uses
 // the already-eager category outbox/undo coordinator, so no lazy surface moved onto the startup
 // path. The narrowly scoped increase restores the established cross-platform gzip headroom.
-const CRITICAL_PATH_LIMIT_KB = 214.75
+// 217.25: raised from 214.75 (measured 215.80) for the server-authored refresh-slice contract.
+// Parsing mutation response metadata and selecting an atomic partial bootstrap must remain in the
+// eager outbox/data coordinator; deferring it would restore the full-bootstrap network cost this
+// work removes. The same nine chunks remain eager, and the limit keeps the established ~1.5 kB
+// Windows/Linux gzip variance margin.
+const CRITICAL_PATH_LIMIT_KB = 217.25
 const PRECACHE_RAW_LIMIT_KB = 3 * 1024
 
 function criticalPathChunks(files) {

@@ -10,6 +10,7 @@ import { Button } from './ui/Button'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
 import { getNewPasswordError } from '../lib/passwordPolicy'
+import { Panel } from './ui/Panel'
 
 interface ChangePasswordSectionProps {
   hideSensitive: boolean
@@ -69,7 +70,7 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
   }
 
   return (
-    <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden">
+    <Panel as="section" padding="none" className="overflow-hidden shadow-sm">
       <Button
         variant="unstyled"
         type="button"
@@ -80,7 +81,7 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
         <KeyRound className="size-5 text-blue-500 shrink-0" />
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-foreground">Change Password</h3>
-          <p className="text-[11px] text-muted-foreground">Changing your password logs out every other device.</p>
+          <p className="text-xs text-muted-foreground">Changing your password logs out every other device.</p>
         </div>
         {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
       </Button>
@@ -125,6 +126,6 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
       </form>
       </div>
       </CollapsibleBody>
-    </section>
+    </Panel>
   )
 }

@@ -6,6 +6,8 @@ import { getCategoryBadgeClass } from '../../../lib/categoryColors'
 import { Button } from '../../ui/Button'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { AccountRow } from './AccountRow'
+import { DataTablePagination } from '../../ui/DataTable'
+import { useClientPagination } from '../../ui/useClientPagination'
 
 export interface BucketAccountGroupProps {
   bucket: LedgerAccount['bucket']
@@ -44,6 +46,8 @@ export function BucketAccountGroup({
   onNavigateToRecurring,
   searchQuery,
 }: BucketAccountGroupProps) {
+  const pagination = useClientPagination(accounts.length, 10)
+  const visibleAccounts = accounts.slice(pagination.start, pagination.end)
   const bucketBadgeClass = getCategoryBadgeClass(bucket)
   const openCount = allBucketAccounts.filter(account => !account.isArchived).length
   const totalBalance = allBucketAccounts.reduce((sum, account) => sum + account.remaining, 0)
@@ -60,7 +64,7 @@ export function BucketAccountGroup({
         {/* Bucket header */}
         <div className="flex flex-col gap-2 border-b border-border/30 pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <span className={`rounded-md border px-2 py-0.5 text-[11px] font-bold ${bucketBadgeClass}`}>
+            <span className={`rounded-md border px-2 py-0.5 text-xs font-bold ${bucketBadgeClass}`}>
               {bucket}
             </span>
             <span className="text-xs text-muted-foreground">·</span>
@@ -77,7 +81,7 @@ export function BucketAccountGroup({
         {/* Bucket total balance */}
         <div className="flex items-baseline justify-between gap-3">
           <div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Bucket total
             </span>
             <SensitiveAmount
@@ -111,7 +115,7 @@ export function BucketAccountGroup({
           </div>
         ) : (
           <div className="space-y-2">
-            {accounts.map(account => (
+            {visibleAccounts.map(account => (
               <AccountRow
                 key={account.id}
                 account={account}
@@ -126,6 +130,17 @@ export function BucketAccountGroup({
                 onNavigateToRecurring={onNavigateToRecurring}
               />
             ))}
+            {accounts.length > pagination.pageSize && (
+              <DataTablePagination
+                currentPage={pagination.page}
+                pageSize={pagination.pageSize}
+                totalItems={accounts.length}
+                totalPages={pagination.totalPages}
+                showPageSize={false}
+                onPageChange={pagination.setPage}
+                onPageSizeChange={() => undefined}
+              />
+            )}
           </div>
         )}
       </div>

@@ -262,6 +262,7 @@ describe('DocumentList selection toolbar', () => {
   })
 
   it('keeps the filing facts behind a closed disclosure on the mobile card', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
     render(<DocumentList {...baseProps} selectedIds={new Set()} />)
 
     // The card is what a phone gets, and its filing block is collapsed by default: expanded, ten

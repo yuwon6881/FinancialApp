@@ -2,7 +2,7 @@ import React, { Suspense } from 'react'
 import type { LedgerAccount, Loan, RecurringPayment, RecurringReminderSettings, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { LoansSectionSkeleton } from './ui/skeletons/FeatureSkeletons'
-import { useIsMobile } from '../lib/useIsMobile'
+import { useIsExpanded } from '../lib/breakpoints'
 import { useAppContext } from '../contexts/AppContext'
 import { RecurringPaymentsHeader } from './recurring/RecurringPaymentsHeader'
 import { RecurringTimelineCard } from './recurring/RecurringTimelineCard'
@@ -121,7 +121,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       ? (activeSyncIdProp ? [activeSyncIdProp] : [])
       : (app.activeSyncIds?.length ? app.activeSyncIds : (app.activeSyncId ? [app.activeSyncId] : [])))
   const deletingId = deletingIdProp ?? app.deletingId
-  const isMobile = useIsMobile()
+  const isMobile = !useIsExpanded()
   const [activeTab, setActiveTab] = React.useState<RecurringTabId>(() => (highlightedLoanIdProp ? 'loans' : 'recurring'))
   const [internalHighlightedLoanId, setInternalHighlightedLoanId] = React.useState<string | null>(null)
   const [payEarlyPayment, setPayEarlyPayment] = React.useState<RecurringPayment | null>(null)
@@ -244,7 +244,12 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       />
 
       {activeTab === 'recurring' && (
-        <>
+        <div
+          id="recurring-panel-recurring"
+          role="tabpanel"
+          aria-labelledby="recurring-tab-recurring"
+          className="contents"
+        >
           {/* Visual Bill Timeline */}
           <RecurringTimelineCard
             activeRecurringPayments={activeRecurringPayments}
@@ -296,14 +301,20 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               setInternalHighlightedLoanId(loanId)
             }}
           />
-        </>
+        </div>
       )}
 
       {/* The fallback is a real skeleton, not a lone pulsing bar: it is the first thing a user
           sees when the Loans tab opens, so it should have the shape of what is about to arrive. */}
       {activeTab === 'loans' && (
-        <Suspense fallback={<LoansSectionSkeleton />}>
-          <LoansSection
+        <div
+          id="recurring-panel-loans"
+          role="tabpanel"
+          aria-labelledby="recurring-tab-loans"
+          className="contents"
+        >
+          <Suspense fallback={<LoansSectionSkeleton />}>
+            <LoansSection
             loans={loans}
             payments={payments}
             accounts={accounts}
@@ -325,8 +336,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             isAddFormOpen={isLoanFormOpen}
             onOpenAddForm={() => setIsLoanFormOpen(true)}
             onCloseAddForm={() => setIsLoanFormOpen(false)}
-          />
-        </Suspense>
+            />
+          </Suspense>
+        </div>
       )}
 
       {/* Add / Edit Subscription Modal (bottom sheet on mobile) */}

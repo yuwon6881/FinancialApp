@@ -134,7 +134,7 @@ export function InvestmentPlanPanel({
           </h3>
           <div className="mt-3 space-y-3">
             <div>
-              <div className="mb-1 flex justify-between text-[10px] text-muted-foreground"><span>Actual</span><span>100%</span></div>
+              <div className="mb-1 flex justify-between text-xs text-muted-foreground"><span>Actual</span><span>100%</span></div>
               <div className="flex h-3 overflow-hidden rounded-full bg-muted">
                 {allocation.sleeves.map((sleeve, index) => (
                   <m.div key={sleeve.sleeve} className={colors[index]} initial={reduceMotion ? false : { scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: index * 0.06 }} style={{ width: `${sleeve.currentPercentage ?? 0}%`, transformOrigin: 'left' }} />
@@ -142,7 +142,7 @@ export function InvestmentPlanPanel({
               </div>
             </div>
             <div>
-              <div className="mb-1 flex justify-between text-[10px] text-muted-foreground"><span>Target</span><span>100%</span></div>
+              <div className="mb-1 flex justify-between text-xs text-muted-foreground"><span>Target</span><span>100%</span></div>
               <div className="flex h-3 overflow-hidden rounded-full bg-muted">
                 {allocation.sleeves.map((sleeve, index) => (
                   <m.div key={sleeve.sleeve} className={`${colors[index]} opacity-80`} initial={reduceMotion ? false : { scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: 0.12 + index * 0.06 }} style={{ width: `${sleeve.targetPercentage}%`, transformOrigin: 'left' }} />
@@ -150,7 +150,7 @@ export function InvestmentPlanPanel({
               </div>
             </div>
           </div>
-          <p className="mt-3 text-[10px] text-muted-foreground">
+          <p className="mt-3 text-xs text-muted-foreground">
             {allocation.freshness.asOf
               ? `Required market data checked ${new Date(allocation.freshness.asOf).toLocaleString()}.`
               : 'Market-data freshness is not available yet.'}

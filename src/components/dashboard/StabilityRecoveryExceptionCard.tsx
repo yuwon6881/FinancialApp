@@ -85,15 +85,15 @@ export function StabilityRecoveryExceptionCard({
           </div>
 
           {aheadOfPace ? (
-            <span className="shrink-0 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+            <span className="shrink-0 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
               Ahead of plan
             </span>
           ) : recovery.isOverdue ? (
-            <span className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive">
+            <span className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-bold text-destructive">
               Plan overdue
             </span>
           ) : isFinalCycle ? (
-            <span className="shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+            <span className="shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400">
               Final cycle
             </span>
           ) : null}
@@ -130,12 +130,12 @@ export function StabilityRecoveryExceptionCard({
           disclosure because a healthy reader never needs it, and this panel already competes
           with two other exception cards for the top of the page. */}
       <details className="group mt-3">
-        <summary className="flex cursor-pointer list-none items-center gap-1 text-[11px] font-bold text-amber-700 transition hover:underline dark:text-amber-300">
+        <summary className="flex cursor-pointer list-none items-center gap-1 text-xs font-bold text-amber-700 transition hover:underline dark:text-amber-300">
           <ChevronRight className="size-3 transition-transform group-open:rotate-90" aria-hidden="true" />
           Where this figure comes from
         </summary>
         <div className="mt-2 space-y-2.5 rounded-xl border border-border/60 bg-card/60 p-3.5">
-          <dl className="space-y-1.5 text-[11px] sm:text-xs">
+          <dl className="space-y-1.5 text-xs sm:text-xs">
             {/* The first three rows are one subtraction and are kept adjacent so they read as one:
                 what is still being put back, less what has gone back, is what is still short.
                 Anything already put back in full has left all three. */}
@@ -188,13 +188,13 @@ export function StabilityRecoveryExceptionCard({
               </Button>
               {/* Said plainly rather than left to be discovered: the ledger totals it lands on
                   are per page, and the window can run to more rows than one page holds. */}
-              <p className="text-[10px] leading-snug text-muted-foreground">
+              <p className="text-xs leading-snug text-muted-foreground">
                 Opens your ledger on pending and partly put-back emergency fund reload movements since your fund was last full.
                 A long window may span more than one page.
               </p>
             </>
           ) : (
-            <p className="text-[10px] leading-relaxed text-muted-foreground">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               Your fund has not yet closed a cycle at its highest point, so there is no window of
               movements to list.
             </p>

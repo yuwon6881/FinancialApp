@@ -107,7 +107,7 @@ export function InteractiveDoughnutChart({
         {/* The hole is 62% of the box (rInner 62 / viewBox 100); cap the labels a
             little under that so long amounts never touch the ring. */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex select-none flex-col items-center justify-center px-[19%] text-center">
-          <span className="max-w-full truncate text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          <span className="max-w-full truncate text-xs font-bold uppercase tracking-wider text-muted-foreground">
             {active?.label ?? centerLabel}
           </span>
           <span className="max-w-full truncate text-lg font-black tracking-tight tabular-nums text-foreground">
@@ -116,13 +116,12 @@ export function InteractiveDoughnutChart({
         </div>
       </div>
 
-      <div role="list" className={legendClassName}>
+      <div className={legendClassName}>
         {chartSlices.map(slice => (
           <m.button
             key={slice.key}
             layout
             type="button"
-            role="listitem"
             aria-label={`${slice.label}: ${masked ? 'hidden' : `${formatValue(slice.value)}, ${(slice.percentage * 100).toFixed(1)}%`}`}
             aria-pressed={selectedKey === slice.key}
             className={`flex w-full min-w-0 cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${

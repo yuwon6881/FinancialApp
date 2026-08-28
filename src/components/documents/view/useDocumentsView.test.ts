@@ -151,6 +151,32 @@ describe('useDocumentsView', () => {
     })
   })
 
+  it('applies an authoritative overview supplied by partial bootstrap before reloading the page', async () => {
+    const { result } = renderHook(() => useDocumentsView())
+    await waitFor(() => expect(result.current.documents).toEqual([document]))
+
+    const overviewCallsBefore = api.getDocumentOverview.mock.calls.length
+    const suppliedOverview = {
+      ...documentOverview,
+      usage: { totalBytes: 24, documentCount: 2 },
+      availableYears: [2026, 2025],
+    }
+    let acknowledged: Promise<void> | undefined
+    act(() => {
+      window.dispatchEvent(new CustomEvent('documents-sync', {
+        detail: {
+          overview: suppliedOverview,
+          acknowledge: (work: Promise<void>) => { acknowledged = work },
+        },
+      }))
+    })
+    await act(async () => { await acknowledged })
+
+    expect(result.current.usage).toEqual(suppliedOverview.usage)
+    expect(api.getDocumentOverview.mock.calls.length).toBe(overviewCallsBefore)
+    expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, 0, 10, [], 'uploaded-desc')
+  })
+
   it('clamps the page and reloads after bulk deletion removes the current page', async () => {
     const { result } = renderHook(() => useDocumentsView())
     await waitFor(() => expect(api.listDocuments).toHaveBeenCalledWith(2026, undefined, 0, 10, [], 'uploaded-desc'))

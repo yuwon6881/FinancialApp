@@ -251,7 +251,7 @@ export function AccountsSection({
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground">
             <span className="rounded-lg border border-border/60 bg-background/50 px-2.5 py-1">
               {openAccountCount} open {openAccountCount === 1 ? 'account' : 'accounts'}
             </span>
@@ -309,7 +309,7 @@ export function AccountsSection({
         </div>
 
         {/* Footer info callout */}
-        <div className="flex items-start gap-2.5 rounded-xl border border-border/50 bg-muted/10 p-3 text-[11px] leading-relaxed text-muted-foreground">
+        <div className="flex items-start gap-2.5 rounded-xl border border-border/50 bg-muted/10 p-3 text-xs leading-relaxed text-muted-foreground">
           <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
           <p>
             <span className="font-semibold text-foreground">Balances are ledger-tracked.</span> Starting amounts are reviewed against bucket totals, and Stability credits automatically satisfy emergency reloads.
@@ -380,7 +380,7 @@ export function AccountsSection({
                 />
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               This records the correction on this account; a real transfer remains a separate Ledger transfer.
             </p>
           </div>

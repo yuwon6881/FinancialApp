@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useIsMobile } from './useIsMobile'
+import { useIsExpanded } from './breakpoints'
 
 /**
  * Open/closed state for a card's detail tail, defaulting to open on desktop.
@@ -16,7 +16,7 @@ export function useDetailDisclosure(): {
   setOpen: (open: boolean) => void
   isMobile: boolean
 } {
-  const isMobile = useIsMobile()
+  const isMobile = !useIsExpanded()
   const [isOpen, setOpen] = useState(!isMobile)
 
   useEffect(() => {

@@ -54,7 +54,7 @@ export const DetailDisclosure: React.FC<DetailDisclosureProps> = ({
     >
       <summary
         className={cn(
-          'flex min-h-11 cursor-pointer select-none items-center gap-2 text-[10px] font-bold uppercase',
+          'flex min-h-11 cursor-pointer select-none items-center gap-2 text-xs font-bold uppercase',
           'tracking-wider text-muted-foreground outline-none transition-colors hover:text-foreground',
           'focus-visible:ring-2 focus-visible:ring-ring/50 sm:min-h-9',
           expandedFrom === 'lg' && 'lg:hidden',

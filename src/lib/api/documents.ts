@@ -6,7 +6,16 @@ import type {
   TaxYearReliefSummary,
   DocumentRetentionReview,
 } from '../../types'
-import { API_BASE_URL, request, requestVoid, cachedGet, apiFetch, throwApiError } from './client'
+import {
+  API_BASE_URL,
+  request,
+  requestVoid,
+  cachedGet,
+  apiFetch,
+  throwApiError,
+  primeCached,
+  invalidateRevalidationPrefix,
+} from './client'
 import {
   DOCUMENT_CACHE_KEYS,
   DOCUMENT_CACHE_TTL,
@@ -70,6 +79,18 @@ export interface DocumentOverview {
   selectedTaxYear: number | null
   summary: TaxYearReliefSummary | null
   reliefCategories: TaxReliefCategoryDefinition[]
+}
+
+/** Seeds overview GETs from an authoritative partial-bootstrap response. */
+export function primeDocumentOverview(overview: DocumentOverview): void {
+  // A composite refresh has no validator for the individual overview route. Drop any older
+  // per-route ETag so the first request after this seed expires cannot resurrect stale data via
+  // a 304 response tied to the body that preceded the mutation.
+  invalidateRevalidationPrefix('/documents/overview')
+  primeCached(DOCUMENT_CACHE_KEYS.overview(), overview, DOCUMENT_CACHE_TTL.derived)
+  if (overview.selectedTaxYear !== null) {
+    primeCached(DOCUMENT_CACHE_KEYS.overview(overview.selectedTaxYear), overview, DOCUMENT_CACHE_TTL.derived)
+  }
 }
 
 export function getDocumentOverview(taxYear?: number): Promise<DocumentOverview> {

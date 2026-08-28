@@ -9,6 +9,9 @@ import { HorizontalRail } from '../ui/HorizontalRail'
 import { InfoHint } from '../ui/InfoHint'
 import { SavingsGoalCard } from './SavingsGoalCard'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
+import { useIsCompact } from '../../lib/breakpoints'
+import { DataTablePagination } from '../ui/DataTable'
+import { useClientPagination } from '../ui/useClientPagination'
 
 interface CommitmentsSectionProps {
   pool: GoalPoolSummary
@@ -51,6 +54,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
   onTopUp,
   onRelease,
 }) => {
+  const isCompact = useIsCompact()
   const isSolo = pool.activeGoals.length + completedGoals.length === 1
 
   const goalCards = pool.activeGoals.map(goal => {
@@ -91,16 +95,19 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
         <CheckCircle2 className="size-3 shrink-0" /> Done
       </span>
       <span className="text-xs font-bold text-foreground truncate">{goal.name}</span>
-      <span className={`w-fit rounded-full border px-1.5 py-0.5 text-[9px] ${getCategoryBadgeClass(goal.fundingBucket ?? 'Rewards')}`}>
+      <span className={`w-fit rounded-full border px-1.5 py-0.5 text-xs ${getCategoryBadgeClass(goal.fundingBucket ?? 'Rewards')}`}>
         {goal.fundingBucket ?? 'Rewards'}
       </span>
-      <span className="text-[10px] font-semibold text-muted-foreground">
+      <span className="text-xs font-semibold text-muted-foreground">
         {formatSensitive(goal.targetAmount)}
       </span>
     </div>
   ))
 
   const hasAny = pool.activeGoals.length > 0 || completedGoals.length > 0
+  const collection = [...goalCards, ...completedChips].filter(Boolean)
+  const pagination = useClientPagination(collection.length, 9)
+  const visibleCollection = collection.slice(pagination.start, pagination.end)
 
   return (
     /* The panel shell every other view uses. These two sections were bare headings with cards
@@ -117,7 +124,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
             <CommitmentIcon className="size-4 text-accent-ink" aria-hidden />
             Commitments
             {pool.activeGoals.length + completedGoals.length > 0 && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                 {pool.activeGoals.length + completedGoals.length}
               </span>
             )}
@@ -138,12 +145,26 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
           <Button variant="secondary" size="sm" className="mt-3" onClick={onAddGoal} disabled={hideSensitive}>Add commitment</Button>
         </div>
       ) : isSolo ? (
-        <div>{goalCards}{completedChips}</div>
-      ) : (
+        <div>{visibleCollection}</div>
+      ) : isCompact ? (
         <HorizontalRail label="Commitments" showControls>
-          {goalCards}
-          {completedChips}
+          {visibleCollection}
         </HorizontalRail>
+      ) : (
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {visibleCollection}
+        </div>
+      )}
+      {collection.length > pagination.pageSize && (
+        <DataTablePagination
+          currentPage={pagination.page}
+          pageSize={pagination.pageSize}
+          totalItems={collection.length}
+          totalPages={pagination.totalPages}
+          showPageSize={false}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={() => undefined}
+        />
       )}
     </section>
   )

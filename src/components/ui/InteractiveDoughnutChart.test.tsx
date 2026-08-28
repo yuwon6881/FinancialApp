@@ -20,7 +20,7 @@ describe('InteractiveDoughnutChart', () => {
     )
 
     expect(screen.getByText('Total')).toBeTruthy()
-    const bondsLegend = screen.getByRole('listitem', { name: 'Bonds: $25, 25.0%' })
+    const bondsLegend = screen.getByRole('button', { name: 'Bonds: $25, 25.0%' })
     fireEvent.mouseEnter(bondsLegend)
     expect(screen.getByText('25.0%')).toBeTruthy()
     fireEvent.click(bondsLegend)
@@ -48,7 +48,7 @@ describe('InteractiveDoughnutChart', () => {
 
     expect(container.querySelector('[aria-hidden="true"] path[tabindex="0"]')).toBeNull()
     expect(container.querySelectorAll('path[tabindex="-1"]')).toHaveLength(2)
-    expect(screen.getByRole('listitem', { name: 'Stocks: hidden' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Stocks: hidden' })).toBeTruthy()
     expect(container.textContent).not.toContain('$100')
     expect(container.textContent).not.toContain('75.0%')
   })

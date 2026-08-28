@@ -65,7 +65,7 @@ export function ForecastTargetSection({
       <div className="grid gap-3 sm:grid-cols-2">
         <article className="rounded-xl border border-border/50 bg-muted/15 p-3">
           <div className="flex items-center gap-1">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Chance of reaching your target</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Chance of reaching your target</p>
             <InfoHint
               label="the chance of reaching your target"
               text="Share of simulated paths that reach the target with your chosen amount."
@@ -77,7 +77,7 @@ export function ForecastTargetSection({
         </article>
         <article className="rounded-xl border border-primary/25 bg-primary/5 p-3">
           <div className="flex items-center gap-1">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Monthly amount for your target</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Monthly amount for your target</p>
             <InfoHint
               label="the monthly amount for your target"
               text="Amount for the middle outcome; markets may vary."
@@ -86,7 +86,7 @@ export function ForecastTargetSection({
           <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <strong className="block text-xl text-foreground">{isCalculating || !hasRequired ? 'Calculating…' : money(requiredContribution)}</strong>
-              <span className="text-[10px] text-muted-foreground">Middle estimate · {hasRequired ? money(requiredContribution * 12) : '—'} a year</span>
+              <span className="text-xs text-muted-foreground">Middle estimate · {hasRequired ? money(requiredContribution * 12) : '—'} a year</span>
             </div>
             <Button variant="outline" size="sm" disabled={masked || !canUseRequired} onClick={onUseRequiredAmount} className="self-end sm:self-auto">
               {requiredContribution !== undefined && requiredContribution > maxMonthlyContribution

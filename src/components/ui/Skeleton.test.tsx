@@ -28,6 +28,6 @@ describe('CycleSkeleton', () => {
 
     expect(screen.getByTestId('wishlist-header-skeleton')).toBeTruthy()
     expect(container.querySelectorAll('section')).toHaveLength(2)
-    expect(container.querySelectorAll('.app-panel')).toHaveLength(3)
+    expect(container.querySelectorAll('.app-panel')).toHaveLength(4)
   })
 })

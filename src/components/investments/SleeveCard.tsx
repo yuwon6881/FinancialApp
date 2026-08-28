@@ -39,7 +39,7 @@ export function SleeveCard({
     >
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 flex-1 truncate text-xs font-bold">{sleeve.label}</span>
-        <span className="shrink-0 rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-bold transition-transform duration-300 group-hover/sleeve:scale-105">
+        <span className="shrink-0 rounded-full bg-background/60 px-2 py-0.5 text-xs font-bold transition-transform duration-300 group-hover/sleeve:scale-105">
           {allocationStatusLabel(sleeve.status)}
         </span>
       </div>
@@ -51,7 +51,7 @@ export function SleeveCard({
             </strong>
             <span className="pb-1 text-xs text-muted-foreground">of your {sleeve.targetPercentage}% aim</span>
           </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             {money(sleeve.value)}
             {sleeve.driftPercentagePoints !== undefined
               ? ` · ${sleeve.driftPercentagePoints > 0 ? 'above' : 'below'} your aim by ${Math.abs(sleeve.driftPercentagePoints).toFixed(1)}%`
@@ -68,20 +68,20 @@ export function SleeveCard({
           </div>
         </>
       ) : (
-        <p className="mt-3 text-[10px] text-muted-foreground">
+        <p className="mt-3 text-xs text-muted-foreground">
           These are not part of your plan yet. Put each one in a basket and it will start counting towards your aim.
         </p>
       )}
 
       {constituents.length > 0 && (
         <details className="group/holdings mt-3 rounded-lg border border-current/15 bg-background/20">
-          <summary className="flex cursor-pointer select-none items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-[10px] font-bold text-muted-foreground outline-none transition-colors hover:bg-background/30 focus-visible:ring-2 focus-visible:ring-ring/50">
+          <summary className="flex cursor-pointer select-none items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-xs font-bold text-muted-foreground outline-none transition-colors hover:bg-background/30 focus-visible:ring-2 focus-visible:ring-ring/50">
             <span className="min-w-0 break-words">See the {constituents.length} fund{constituents.length === 1 ? '' : 's'} in this basket</span>
             <ChevronDown className="size-3.5 shrink-0 transition-transform duration-200 group-open/holdings:rotate-180" />
           </summary>
           <ul className="space-y-2 border-t border-current/15 px-3 py-2.5">
             {constituents.map(holding => (
-              <li key={`${holding.accountId}-${holding.instrumentId}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 text-[10px]">
+              <li key={`${holding.accountId}-${holding.instrumentId}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 text-xs">
                 <span className="truncate font-bold text-foreground">{holding.symbol} · {holding.name}</span>
                 <span className="text-right font-bold text-foreground">{money(holding.valueApp)}</span>
                 <span className="text-muted-foreground">

@@ -44,7 +44,7 @@ export function ForecastSummary({
     <div className="mt-5 grid gap-3 sm:grid-cols-3">
       <article className="rounded-xl border border-border/50 bg-muted/15 p-3 sm:col-span-3">
         <div className="flex items-center gap-1">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
             Middle estimate after {years} years
           </p>
           <InfoHint
@@ -53,13 +53,13 @@ export function ForecastSummary({
           />
         </div>
         <strong className="mt-1 block break-words text-xl text-foreground">{money(ending)}</strong>
-        <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           {ending === undefined
             ? 'Calculating…'
             : `Could reasonably range from ${money(lower)} to ${money(upper)}, based on 10,000 simulated paths.`}
         </p>
         {todayMoney && (
-          <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Shown in today’s money — what this could buy at today’s prices.
           </p>
         )}
@@ -67,7 +67,7 @@ export function ForecastSummary({
       {tiles.map(tile => (
         <article key={tile.label} className="rounded-xl border border-border/50 bg-muted/15 p-3">
           <div className="flex items-center gap-1">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{tile.label}</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{tile.label}</p>
             <InfoHint label={tile.label.toLowerCase()} text={tile.hint} />
           </div>
           <strong className="mt-1 block break-words text-base text-foreground">{tile.value}</strong>

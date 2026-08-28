@@ -91,11 +91,11 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, onClose }: {
           <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
             {rows.map(row => (
               <div key={row.label} className="rounded-xl border border-border/50 bg-muted/20 p-2.5 sm:p-3">
-                <dt className="text-[10px] leading-tight text-muted-foreground">{row.label}</dt>
+                <dt className="text-xs leading-tight text-muted-foreground">{row.label}</dt>
                 <dd className={`mt-1 break-words text-sm font-bold ${row.tone === undefined ? 'text-foreground' : row.tone >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
                   {row.value}
                 </dd>
-                <p className="mt-1 text-[9px] leading-snug text-muted-foreground">{row.hint}</p>
+                <p className="mt-1 text-xs leading-snug text-muted-foreground">{row.hint}</p>
               </div>
             ))}
           </dl>
@@ -139,7 +139,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, onClose }: {
               )}
             </div>
             {foreign && (
-              <div className="mt-3 rounded-lg bg-background/50 p-2.5 text-[10px] leading-relaxed text-muted-foreground">
+              <div className="mt-3 rounded-lg bg-background/50 p-2.5 text-xs leading-relaxed text-muted-foreground">
                 <p>
                   Prices use {holding.currency}; gains use {appCurrency}, so they may differ.
                 </p>
@@ -162,10 +162,10 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, onClose }: {
           </div>
 
           <details className="rounded-xl border border-border/50 bg-muted/20 p-3">
-            <summary className="cursor-pointer select-none text-[10px] font-bold text-muted-foreground outline-none">
+            <summary className="cursor-pointer select-none text-xs font-bold text-muted-foreground outline-none">
               How this was worked out
             </summary>
-            <div className="mt-2 space-y-1 text-[10px] text-muted-foreground">
+            <div className="mt-2 space-y-1 text-xs text-muted-foreground">
               <p>Prices in {holding.currency}, converted to {appCurrency} where the two differ.</p>
               <p>Price from {holding.priceSource ?? 'no source on record'} · {holding.priceDate ?? 'no date'}</p>
               {holding.fxSource && <p>Exchange rate from {holding.fxSource} · {holding.fxDate ?? 'no date'}</p>}

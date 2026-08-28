@@ -64,7 +64,18 @@ export function useInvestmentRefreshCoordinator(enabled: boolean, isOffline: boo
   useEffect(() => {
     if (!enabled) return
     const resume = () => void loadAndRefresh()
-    const investmentSync = () => void loadAndRefresh(true)
+    const investmentSync = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        allocation?: InvestmentAllocationOverview
+        acknowledge?: (work: Promise<void>) => void
+      }>).detail
+      if (detail?.allocation) {
+        if (mounted.current) setAllocation(detail.allocation)
+        detail.acknowledge?.(Promise.resolve())
+        return
+      }
+      void loadAndRefresh(true)
+    }
     const visible = () => {
       if (document.visibilityState === 'visible') resume()
     }

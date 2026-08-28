@@ -12,6 +12,7 @@ import { Button } from './ui/Button'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
 import { ModalActions } from './ui/ModalActions'
+import { Panel } from './ui/Panel'
 
 interface TwoFactorSectionProps {
   hideSensitive: boolean
@@ -149,7 +150,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
   }
 
   return (
-    <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden">
+    <Panel as="section" padding="none" className="overflow-hidden shadow-sm">
       <Button
         variant="unstyled"
         type="button"
@@ -160,9 +161,9 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
         {loaded && enabled ? <ShieldCheck className="size-5 text-emerald-500 shrink-0" /> : <ShieldOff className="size-5 text-muted-foreground shrink-0" />}
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-foreground">Two-Factor Authentication</h3>
-          <p className="text-[11px] text-muted-foreground">Require a code from an authenticator app (e.g. Microsoft Authenticator) at login.</p>
+          <p className="text-xs text-muted-foreground">Require a code from an authenticator app (e.g. Microsoft Authenticator) at login.</p>
         </div>
-        <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider ${loaded && enabled ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+        <span className={`shrink-0 text-xs font-bold uppercase tracking-wider ${loaded && enabled ? 'text-emerald-500' : 'text-muted-foreground'}`}>
           {loaded ? (enabled ? 'Enabled' : 'Disabled') : 'Checking…'}
         </span>
         {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
@@ -260,7 +261,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
 
       {loaded && !enabled && setupSecret && (
         <div className="space-y-3">
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Scan the QR code in your authenticator app, then enter its 6-digit code.
           </p>
           {qrDataUrl && (
@@ -269,8 +270,8 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
             </div>
           )}
           <div className="space-y-1">
-            <p className="text-[10px] text-muted-foreground text-center">Can't scan? Enter this code manually:</p>
-            <p className="text-[11px] font-mono text-center text-foreground break-all bg-muted/20 border border-border/40 rounded-lg px-2 py-1.5">{setupSecret}</p>
+            <p className="text-xs text-muted-foreground text-center">Can't scan? Enter this code manually:</p>
+            <p className="text-xs font-mono text-center text-foreground break-all bg-muted/20 border border-border/40 rounded-lg px-2 py-1.5">{setupSecret}</p>
           </div>
           <form noValidate onSubmit={handleConfirmSetup} className="space-y-2.5">
             <FormField
@@ -328,6 +329,6 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
         onClose={() => setShowRegenerateModal(false)}
         onSubmit={handleRegenerateRecoveryCodes}
       />
-    </section>
+    </Panel>
   )
 }

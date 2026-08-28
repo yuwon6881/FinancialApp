@@ -21,7 +21,7 @@ export const IncomeSplitAccountsCard: React.FC<IncomeSplitAccountsCardProps> = (
     <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/15 p-3.5 sm:col-span-2">
       <div className="space-y-0.5">
         <p className="text-xs font-semibold text-foreground">Receiving accounts per bucket</p>
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Choose which account receives each bucket&apos;s share.
         </p>
       </div>

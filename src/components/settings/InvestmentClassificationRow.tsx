@@ -67,7 +67,7 @@ export function InvestmentClassificationRow({
             <strong className="block truncate text-xs font-bold text-foreground">{value.symbol}</strong>
             <RowSyncStatus isSyncing={isSyncing} isPending={isPending} entityLabel="classification" />
           </div>
-          <span className="block truncate text-[11px] text-muted-foreground">{value.name}</span>
+          <span className="block truncate text-xs text-muted-foreground">{value.name}</span>
         </div>
       </div>
       <div className="w-full sm:w-[190px] shrink-0 min-w-0">

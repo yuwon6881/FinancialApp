@@ -287,7 +287,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               progress separately for screen readers. */}
           <span role="status" className="sr-only">{isHydrating ? 'Loading conversation…' : isSending ? 'Thinking…' : ''}</span>
           {resetError && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
               {resetError}
             </div>
           )}
@@ -297,7 +297,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
                 <Sparkles className="size-5 text-muted-foreground" />
               </div>
               <p className="font-medium text-foreground">Ready.</p>
-              {isOffline && <p className="mt-2 text-[11px] font-medium text-orange-500">Ask AI requires an internet connection.</p>}
+              {isOffline && <p className="mt-2 text-xs font-medium text-orange-500">Ask AI requires an internet connection.</p>}
               <div role="group" aria-label="Suggested questions" className="mt-4 flex w-full max-w-md flex-col items-center gap-2">
                 {suggestedPrompts.map(prompt => (
                   <Button variant="unstyled"
@@ -305,13 +305,13 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
                     type="button"
                     disabled={isOffline}
                     onClick={() => setInput(prompt)}
-                    className="min-h-11 w-auto max-w-full rounded-full border border-border/60 bg-background px-4 py-2 text-center text-[11px] leading-4 text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                    className="min-h-11 w-auto max-w-full rounded-full border border-border/60 bg-background px-4 py-2 text-center text-xs leading-4 text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
                   >
                     {prompt}
                   </Button>
                 ))}
               </div>
-              <p className="mt-4 max-w-md text-[10px] leading-relaxed text-muted-foreground">
+              <p className="mt-4 max-w-md text-xs leading-relaxed text-muted-foreground">
                 Details go to the configured AI provider.
                 {sensitiveMode ? ' Sensitive mode hides amounts and disables changes.' : ' Changes still need your confirmation.'}
               </p>
@@ -337,7 +337,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
                       type="button"
                       aria-label="Retry the last question"
                       onClick={() => void sendMessage(lastFailedTurn)}
-                      className="mt-1 flex min-h-11 items-center gap-1.5 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer sm:min-h-8"
+                      className="mt-1 flex min-h-11 items-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer sm:min-h-8"
                     >
                       <RotateCcw className="size-3" />
                       Retry

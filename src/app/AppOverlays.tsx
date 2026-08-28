@@ -361,7 +361,7 @@ export function AppOverlays({
                 animate="visible"
                 exit="hidden"
                 className="md:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
-                style={{ bottom: 'calc(164px + env(safe-area-inset-bottom, 0px))' }}
+                style={{ bottom: 'calc(var(--app-fab-offset) + 4.25rem + env(safe-area-inset-bottom, 0px))' }}
               >
                 {/* Search lives here rather than in the phone header: the header's right lane is
                     already the app's tightest space, and unlike the quick-add actions search is a
@@ -405,7 +405,7 @@ export function AppOverlays({
                     }}
                     className="flex items-center gap-2.5 group cursor-pointer"
                   >
-                    <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs">{label}</span>
+                    <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-xs font-bold text-foreground shadow-xs">{label}</span>
                     {/* Ayu's 500 steps are bright tints on a near-black surface, so a white
                         glyph on them is close to invisible; the dark surface colour is the
                         readable pairing there. Light mode keeps white on its darker fills. */}

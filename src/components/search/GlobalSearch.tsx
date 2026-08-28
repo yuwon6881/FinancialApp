@@ -155,7 +155,7 @@ export function GlobalSearch({
             <>
               {groups.map(group => (
                 <div key={group.kind} className="mb-1 last:mb-0">
-                  <p className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  <p className="px-3 pb-1 pt-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
                     {group.label}
                   </p>
                   <div className="space-y-1">
@@ -179,7 +179,7 @@ export function GlobalSearch({
                     // Says what the per-kind cap dropped. Deliberately not a selectable option:
                     // it is a fact about the list, and arrowing onto it would give Enter nothing
                     // to open.
-                    <p className="px-3 pt-1 text-[11px] text-muted-foreground">
+                    <p className="px-3 pt-1 text-xs text-muted-foreground">
                       +{group.totalMatched - group.results.length} more — keep typing to narrow this down
                     </p>
                   )}
@@ -193,7 +193,7 @@ export function GlobalSearch({
               )}
 
               {didLoansFailToLoad && (
-                <p className="mx-3 mt-2 flex items-center justify-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-500">
+                <p className="mx-3 mt-2 flex items-center justify-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
                   <span>Your loans could not be loaded, so none were searched.</span>
                   {onRetryLoans && (
                     <Button variant="unstyled" onClick={onRetryLoans} className="font-bold underline underline-offset-2 cursor-pointer">
@@ -225,7 +225,7 @@ export function GlobalSearch({
                     <span className="block truncate text-xs font-bold text-foreground">
                       Search every cycle for “{trimmedQuery}”
                     </span>
-                    <span className="block truncate text-[11px] text-muted-foreground">
+                    <span className="block truncate text-xs text-muted-foreground">
                       Opens the Ledger across all cycles
                     </span>
                   </span>
@@ -235,7 +235,7 @@ export function GlobalSearch({
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-border/40 bg-muted/15 px-4 py-2 text-[10px] text-muted-foreground select-none">
+        <div className="flex items-center justify-between border-t border-border/40 bg-muted/15 px-4 py-2 text-xs text-muted-foreground select-none">
           <span className="flex items-center gap-3">
             <span><kbd className="font-bold">↑↓</kbd> Move</span>
             <span><kbd className="font-bold">↵</kbd> Open</span>

@@ -63,7 +63,7 @@ export const CommitmentsRewardsTabs: React.FC<CommitmentsRewardsTabsProps> = ({
             type="button"
             role="tab"
             aria-selected={isActive}
-            aria-controls={`commitments-rewards-panel-${section.id}`}
+            aria-controls={isActive ? `commitments-rewards-panel-${section.id}` : undefined}
             tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(section.id)}
             onKeyDown={event => handleKeyDown(event, index)}
@@ -73,7 +73,7 @@ export const CommitmentsRewardsTabs: React.FC<CommitmentsRewardsTabsProps> = ({
           >
             <span>{section.label}</span>
             <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold transition-colors ${
+              className={`rounded-full px-2 py-0.5 text-xs font-extrabold transition-colors ${
                 isActive ? 'bg-primary/15 text-accent-ink' : 'bg-muted/80 text-muted-foreground'
               }`}
             >

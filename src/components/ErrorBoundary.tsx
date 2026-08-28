@@ -3,6 +3,7 @@ import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react'
 import { clearDisposableFinancialCaches } from '../lib/cache'
 import { isChunkLoadError } from '../lib/chunkLoadError'
 import { Button } from './ui/Button'
+import { Panel } from './ui/Panel'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -99,13 +100,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     // recovery paths that can clear the cause on screen — including in the inline
     // variant, which otherwise offers nothing but the button that just did nothing.
     const retryFailed = failedRetries > 0
+    const ErrorShell = inline ? Panel : 'div'
 
     return (
-      <div
+      <ErrorShell
         role="alert"
         className={
           inline
-            ? 'app-panel rounded-2xl border border-border/60 bg-card/92 p-8 text-center'
+            ? 'p-8 text-center'
             : 'safe-screen-inset app-shell min-h-screen min-h-dvh flex items-center justify-center text-foreground [--safe-screen-block:1.5rem] [--safe-screen-inline:1.5rem]'
         }
       >
@@ -140,10 +142,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           </div>
           {error.message && (
             <details className="w-full text-left">
-              <summary className="cursor-pointer text-[11px] font-bold text-muted-foreground">
+              <summary className="cursor-pointer text-xs font-bold text-muted-foreground">
                 What went wrong
               </summary>
-              <p className="mt-1.5 break-words rounded-lg bg-muted/60 p-2 text-[11px] leading-relaxed text-muted-foreground">
+              <p className="mt-1.5 break-words rounded-lg bg-muted/60 p-2 text-xs leading-relaxed text-muted-foreground">
                 {error.message}
               </p>
             </details>
@@ -153,13 +155,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               variant="destructiveGhost"
               size="sm"
               onClick={this.clearCacheAndReload}
-              className="text-[11px]"
+              className="text-xs"
             >
               <Trash2 className="size-3" /> Still stuck? Clear local data and reload
             </Button>
           )}
         </div>
-      </div>
+      </ErrorShell>
     )
   }
 }

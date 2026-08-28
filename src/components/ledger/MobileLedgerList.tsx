@@ -6,7 +6,7 @@ import { LedgerEmptyState } from './LedgerEmptyState'
 import { Skeleton } from '../ui/Skeleton'
 
 // Mobile (< md) ledger card list — swipe a row left to reveal Edit / Delete.
-// Mounted only when useIsMobile() is true, so the desktop table's row tree,
+// Mounted below the expanded tier, so the desktop table's row tree,
 // motion components and SwipeableRows are never instantiated alongside it.
 export function MobileLedgerList({
   transactions,
@@ -85,7 +85,7 @@ export function MobileLedgerList({
                 </span>
                 <span className="text-blue-500 font-bold text-sm">{formatSensitive(pageTotals.transfer)}</span>
               </div>
-              <p className="mt-1 text-[10px] text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Internal movement between buckets — excluded from debit and credit.
               </p>
             </div>
@@ -98,7 +98,7 @@ export function MobileLedgerList({
                   {pageTotals.bucketNet >= 0 ? '+' : '-'}{formatSensitive(Math.abs(pageTotals.bucketNet))}
                 </span>
               </div>
-              <p className="mt-1 text-[10px] text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                 What went in minus what came out, counting each row's share of this bucket.
               </p>
             </div>

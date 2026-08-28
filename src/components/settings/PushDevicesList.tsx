@@ -88,7 +88,7 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
 
   if (loading) {
     return (
-      <p className="flex items-center gap-2 text-[10px] text-muted-foreground">
+      <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <Loader2 className="size-3 animate-spin" aria-hidden="true" /> Checking which devices are set up…
       </p>
     )
@@ -96,7 +96,7 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
 
   if (failed) {
     return (
-      <div role="status" className="flex items-start gap-2 text-[10px] text-muted-foreground">
+      <div role="status" className="flex items-start gap-2 text-xs text-muted-foreground">
         <AlertCircle className="mt-0.5 size-3 shrink-0 text-amber-500" aria-hidden="true" />
         <span className="flex-1">
           {PUSH_DEVICES_UNAVAILABLE}{' '}
@@ -115,7 +115,7 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
 
   if (devices.length === 0) {
     return (
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         No device is set up to receive notifications yet.
       </p>
     )
@@ -132,14 +132,14 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
             className="flex items-center justify-between gap-2 rounded-xl border border-border/40 bg-muted/20 px-3 py-2"
           >
             <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="flex items-center gap-2 text-[11px] font-semibold text-foreground">
+              <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
                 <MonitorSmartphone className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 {device.isCurrent ? 'This device' : 'Another device'}
                 <RowSyncStatus isDeleting={isRevoking} entityLabel="device" />
               </span>
               {/* Naming what each device receives is what makes "on for another device" checkable
                   rather than something the app just asserts. */}
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {receivesLabel(device)} · set up on {enrolledOn(device.enrolledAt)}
               </span>
             </span>

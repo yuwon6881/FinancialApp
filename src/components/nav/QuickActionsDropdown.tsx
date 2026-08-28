@@ -17,8 +17,12 @@ export const QuickActionsDropdown: React.FC<QuickActionsDropdownProps> = ({
   return (
     <div className="hidden md:block border border-border/60 rounded-xl bg-background shrink-0">
       <DropdownMenu>
-        <DropdownMenuTrigger className="h-9 px-2 py-1 sm:px-2.5 text-xs font-semibold hover:bg-muted/50 rounded-lg cursor-pointer flex items-center gap-1 whitespace-nowrap">
-          <Plus className="size-3.5 text-blue-500" />
+        <DropdownMenuTrigger
+          aria-label="Quick Add"
+          title="Quick Add"
+          className="h-9 px-2 py-1 sm:px-2.5 text-xs font-semibold hover:bg-muted/50 rounded-lg cursor-pointer flex items-center gap-1 whitespace-nowrap"
+        >
+          <Plus className="size-3.5 text-blue-500" aria-hidden />
           <span className="hidden xl:inline">Quick Add</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="z-50 min-w-[160px] bg-card border border-border p-1 rounded-xl shadow-md">

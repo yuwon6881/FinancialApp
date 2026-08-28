@@ -5,6 +5,7 @@ import { createFinalId, createLocalNumericId, createLocalWishlistId, type Outbox
 import { triggerHaptic } from '../../lib/haptics'
 import type { UseOutboxResult } from '../../lib/useOutbox'
 import type { AppDialogs } from '../useAppDialogs'
+import type { RefreshSlice } from '../../lib/refreshSlices'
 
 interface WishlistSavingsActionDependencies {
   wishlist: WishlistItem[]
@@ -29,7 +30,7 @@ interface WishlistSavingsActionDependencies {
   replacePendingLedgerTransaction: (pendingId: string, transaction: Transaction) => void
   removePendingLedgerTransaction: (id: string) => void
   setDeletingTransactionId: (id: string | null) => void
-  refreshAll: () => Promise<void>
+  refreshAll: (refreshSlices?: readonly RefreshSlice[]) => Promise<void>
 }
 
 const toOutboxPayload = (value: object): OutboxPayload => ({ ...value })

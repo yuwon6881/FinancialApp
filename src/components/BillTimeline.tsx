@@ -205,16 +205,16 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               >
                 <span className={`size-2.5 rounded-full shrink-0 ${dotColor}`} />
                 <div className="flex flex-col items-center justify-center shrink-0 w-10">
-                  <span className="text-[9px] text-muted-foreground font-bold uppercase leading-none">{BILL_TIMELINE_MONTHS[d.getMonth()]}</span>
+                  <span className="text-xs text-muted-foreground font-bold uppercase leading-none">{BILL_TIMELINE_MONTHS[d.getMonth()]}</span>
                   <span className="text-lg font-black text-foreground leading-tight">{d.getDate()}</span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className={`text-xs font-bold text-foreground truncate ${allDiscarded ? 'line-through opacity-60' : ''}`}>{nameLabel}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">Due {dateLabel}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Due {dateLabel}</div>
                 </div>
                 <div className="text-right shrink-0">
                   <div className="text-xs font-extrabold text-foreground">{formatTimelineAmount(total)}</div>
-                  <span className={`inline-block mt-0.5 text-[8px] font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>{statusLabel}</span>
+                  <span className={`inline-block mt-0.5 text-xs font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>{statusLabel}</span>
                 </div>
               </Button>
             )
@@ -227,8 +227,8 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         <div className="hidden space-y-4 rounded-2xl border border-border/40 bg-muted/10 p-5 select-none sm:block">
           <div className="overflow-x-auto pb-2" data-testid="bill-timeline-scrollport">
             <div className="relative px-5 pt-7 pb-3" style={{ minWidth: denseTimelineMinWidth }}>
-              <span className="absolute left-5 top-0 text-[10px] font-bold text-muted-foreground">{startLabel}</span>
-              <span className="absolute right-5 top-0 text-[10px] font-bold text-muted-foreground">{endLabel}</span>
+              <span className="absolute left-5 top-0 text-xs font-bold text-muted-foreground">{startLabel}</span>
+              <span className="absolute right-5 top-0 text-xs font-bold text-muted-foreground">{endLabel}</span>
               <div className="relative h-1.5 rounded-full bg-muted">
               {(() => {
                 const todayTime = new Date().getTime()
@@ -271,7 +271,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                     <span className={`flex size-4 items-center justify-center rounded-full ring-4 transition-[transform,box-shadow] ${dotColor} ${
                       isHighlighted ? 'scale-125 shadow-lg' : ''
                     }`}>
-                      {node.bills.length > 1 && <span className="text-[8px] font-black leading-none text-on-vivid">{node.bills.length}</span>}
+                      {node.bills.length > 1 && <span className="text-xs font-black leading-none text-on-vivid">{node.bills.length}</span>}
                     </span>
                   </Button>
                 )
@@ -280,7 +280,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             </div>
           </div>
 
-          <p className="text-[10px] font-medium text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Hover or focus a dot to find its matching bill below. Select either one for details.
             {denseTimeline ? ` The ${timelineNodes.length} dates stay readable in a horizontally scrollable timeline and a compact list.` : ''}
           </p>
@@ -327,7 +327,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   <span className={`size-2.5 shrink-0 rounded-full ${dotColor}`} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-xs font-bold text-foreground">{nameLabel}</span>
-                    <span className="block text-[10px] text-muted-foreground">{BILL_TIMELINE_MONTHS[date.getMonth()]} {date.getDate()}</span>
+                    <span className="block text-xs text-muted-foreground">{BILL_TIMELINE_MONTHS[date.getMonth()]} {date.getDate()}</span>
                   </span>
                   <span className="shrink-0 text-xs font-extrabold text-foreground">{formatTimelineAmount(total)}</span>
                 </Button>

@@ -2,6 +2,7 @@ import { m, useReducedMotion } from 'framer-motion'
 import type { InstrumentHistory } from '../../types'
 import { polylinePoints, seriesBounds, yAt } from '../../lib/chartSeries'
 import { formatCurrencyVal } from '../../lib/utils'
+import { ResponsiveChartFrame } from '../ui/ResponsiveChartFrame'
 
 const WIDTH = 720
 const HEIGHT = 200
@@ -44,7 +45,7 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h3 id="fund-price-title" className="text-xs font-bold text-foreground">Price history</h3>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             One unit, in {history.currency}.
           </p>
         </div>
@@ -52,7 +53,7 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
           <strong className={`block text-sm ${rising ? 'text-emerald-500' : 'text-orange-500'}`}>
             {masked ? '••••' : `${rising ? '+' : '−'}${money(Math.abs(change))}`}
           </strong>
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {changePercent === undefined ? 'over this period' : masked ? 'Change hidden over this period' : `${rising ? '+' : ''}${changePercent.toFixed(1)}% over this period`}
           </span>
         </div>
@@ -72,11 +73,10 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
       )}
 
       <p className="sr-only">{masked ? 'Fund price history values are hidden.' : summary}</p>
-      <div className={`mt-3 ${masked ? 'select-none blur-md' : ''}`} aria-hidden={masked}>
+      <ResponsiveChartFrame className={`mt-3 ${masked ? 'select-none blur-md' : ''}`} aria-hidden={masked}>
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-          preserveAspectRatio="none"
-          className="h-40 w-full overflow-visible"
+          className="h-full w-full overflow-visible"
           role="img"
           aria-label={masked ? 'Fund price history values hidden' : summary}
         >
@@ -118,7 +118,7 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
             />
           )}
         </svg>
-      </div>
+      </ResponsiveChartFrame>
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-medium text-muted-foreground">
         <span className="flex items-center gap-1.5"><i className="inline-block size-2 rounded-full bg-violet-500 ring-1 ring-background" /> Price</span>

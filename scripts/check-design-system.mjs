@@ -121,6 +121,30 @@ for (const file of allSourceFiles(SRC)) {
   )
   let rawButtonCount = 0
 
+  if (/text-\[[\d.]+px\]/.test(sourceText)) {
+    errors.push(`${fileName}:1 Arbitrary pixel typography is not allowed; use the shared type scale.`)
+  }
+
+  if (fileName !== 'src/lib/breakpoints.ts') {
+    if (/\buseIsMobile\b/.test(sourceText)) {
+      errors.push(`${fileName}:1 useIsMobile is obsolete; choose useSizeClass, useIsCompact, or useIsExpanded explicitly.`)
+    }
+    if (/\b(?:window\.)?innerWidth\s*(?:<|>|<=|>=)/.test(sourceText)) {
+      errors.push(`${fileName}:1 Raw numeric viewport checks are not allowed; use the shared tier hooks.`)
+    }
+    if (/matchMedia\([^\n]*(?:min|max)-width/.test(sourceText)) {
+      errors.push(`${fileName}:1 Raw width media queries are not allowed in TypeScript; use the shared tier contract.`)
+    }
+  }
+
+  if (fileName !== 'src/components/ui/Panel.tsx' && sourceText.includes('app-panel rounded-2xl border border-border/60 bg-card/92')) {
+    errors.push(`${fileName}:1 Use the canonical Panel component instead of copying its shell classes.`)
+  }
+
+  if (/calc\((?:96|160|164|216)px|bottom:\s*['"](?:96|160|164|216)px/.test(sourceText)) {
+    errors.push(`${fileName}:1 Use --app-nav-height or --app-fab-offset instead of a hard-coded navigation offset.`)
+  }
+
   const visit = node => {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = jsxTagName(node)

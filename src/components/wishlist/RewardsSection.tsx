@@ -5,6 +5,9 @@ import { RewardIcon } from '../semanticIcons'
 import { Button } from '../ui/Button'
 import { HorizontalRail } from '../ui/HorizontalRail'
 import { RewardCard } from './RewardCard'
+import { useIsCompact } from '../../lib/breakpoints'
+import { DataTablePagination } from '../ui/DataTable'
+import { useClientPagination } from '../ui/useClientPagination'
 
 interface RewardsSectionProps {
   items: WishlistItem[]
@@ -25,6 +28,10 @@ interface RewardsSectionProps {
 }
 
 export function RewardsSection(props: RewardsSectionProps) {
+  const isCompact = useIsCompact()
+  const activeIndex = props.activeItem ? props.items.findIndex(item => item.id === props.activeItem?.id) : -1
+  const pagination = useClientPagination(props.items.length, 9, activeIndex)
+  const visibleItems = props.items.slice(pagination.start, pagination.end)
   return (
     <section aria-labelledby="commitments-rewards-rewards-heading" className="app-panel space-y-3 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/92 sm:p-5">
       <div className="flex items-center justify-between gap-3">
@@ -33,12 +40,12 @@ export function RewardsSection(props: RewardsSectionProps) {
             <RewardIcon className="size-4 text-accent-ink" aria-hidden />
             Rewards
             {props.affordableCount > 0 && (
-              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-500">
                 {props.affordableCount} claimable
               </span>
             )}
           </h3>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             From your {props.formatSensitive(props.claimableBalance)} free rewards
           </p>
         </div>
@@ -47,9 +54,9 @@ export function RewardsSection(props: RewardsSectionProps) {
         </Button>
       </div>
 
-      {props.items.length > 0 ? (
+      {props.items.length > 0 && isCompact ? (
         <HorizontalRail label="Rewards" showControls>
-          {props.items.map(item => (
+          {visibleItems.map(item => (
             <RewardCard
               key={item.id}
               elementId={`reward-card-${item.id}`}
@@ -68,15 +75,51 @@ export function RewardsSection(props: RewardsSectionProps) {
               onFocus={props.onFocus}
               onEdit={props.onEdit}
               onDelete={props.onDelete}
-              fullWidth={props.items.length === 1}
+              fullWidth={visibleItems.length === 1}
             />
           ))}
         </HorizontalRail>
+      ) : props.items.length > 0 ? (
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {visibleItems.map(item => (
+            <RewardCard
+              key={item.id}
+              elementId={`reward-card-${item.id}`}
+              item={item}
+              isFocused={props.activeItem?.id === item.id}
+              timeline={props.activeItem?.id === item.id && props.claimableBalance < item.price
+                ? props.rewardTimeline(item.price)
+                : null}
+              claimableBalance={props.claimableBalance}
+              freeAfterGoalPace={props.freeAfterGoalPace}
+              formatSensitive={props.formatSensitive}
+              hideSensitive={props.hideSensitive}
+              isSyncing={props.isSyncing(item.id)}
+              isDeleting={props.isDeleting(item.id)}
+              onClaim={props.onClaim}
+              onFocus={props.onFocus}
+              onEdit={props.onEdit}
+              onDelete={props.onDelete}
+              fullWidth
+            />
+          ))}
+        </div>
       ) : (
         <div className="rounded-xl border border-dashed border-border/60 bg-muted/15 px-4 py-6 text-center">
           <p className="text-xs text-muted-foreground">No rewards yet. Add one to save toward.</p>
           <Button variant="secondary" size="sm" className="mt-3" onClick={props.onAdd} disabled={props.hideSensitive}>Add reward</Button>
         </div>
+      )}
+      {props.items.length > pagination.pageSize && (
+        <DataTablePagination
+          currentPage={pagination.page}
+          pageSize={pagination.pageSize}
+          totalItems={props.items.length}
+          totalPages={pagination.totalPages}
+          showPageSize={false}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={() => undefined}
+        />
       )}
     </section>
   )

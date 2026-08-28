@@ -40,7 +40,22 @@ vi.mock('./dashboard/CycleFlowCards', () => ({ CycleFlowCards: () => <div>Cycle 
 vi.mock('./dashboard/SubscriptionsTimelineCard', () => ({ SubscriptionsTimelineCard: subscriptionsTimelineCard }))
 vi.mock('./dashboard/TrendLineChart', () => ({ TrendLineChart: () => <div>Trend report</div> }))
 vi.mock('./dashboard/DoughnutChart', () => ({ DoughnutChart: () => <div>Category report</div> }))
-vi.mock('./dashboard/CycleCalendar', () => ({ CycleCalendar: ({ onSelectDate }: { onSelectDate: (date: string) => void }) => <button onClick={() => onSelectDate('2026-07-30')}>Activity calendar</button> }))
+vi.mock('./dashboard/CycleCalendar', () => ({
+  CycleCalendar: ({
+    onSelectDate,
+    onSelectWeek,
+  }: {
+    onSelectDate: (date: string) => void
+    onSelectWeek?: (week: { startDate: string; endDate: string; weekNumber: number }, mode: string) => void
+  }) => (
+    <div>
+      <button onClick={() => onSelectDate('2026-07-30')}>Activity calendar</button>
+      <button onClick={() => onSelectWeek?.({ startDate: '2026-06-01', endDate: '2026-06-07', weekNumber: 1 }, 'expense')}>
+        Week 1 pacing
+      </button>
+    </div>
+  ),
+}))
 
 describe('ReportsView', () => {
   it('contains the analytical sections removed from Today', () => {
@@ -148,5 +163,56 @@ describe('ReportsView', () => {
     expect(askAi.parentElement?.className).toContain('flex-nowrap')
     // The cycle pickers now live in the shared switcher above the page, not in this header.
     expect(screen.queryByRole('combobox', { name: 'Report cycle' })).toBeNull()
+  })
+
+  it('links weekly spend pacing back to ledger with week dates and outflow filter', () => {
+    const onNavigateToLedger = vi.fn()
+    render(
+      <ReportsView
+        dashboardData={null}
+        transactions={[]}
+        hideBalanceAmounts={false}
+        onNavigateToLedger={onNavigateToLedger}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Week 1 pacing' }))
+    expect(onNavigateToLedger).toHaveBeenCalledWith({
+      startDate: '2026-06-01',
+      endDate: '2026-06-07',
+      txType: 'outflow',
+    })
+  })
+
+  it('links biggest expense card back to ledger and highlights the transaction', () => {
+    const onNavigateToLedger = vi.fn()
+    const tx = {
+      id: 'tx-biggest',
+      date: '2026-06-15',
+      description: 'Air Conditioner Repair',
+      amount: -450,
+      category: 'Home',
+      ledgerCategory: 'Essentials',
+    }
+    render(
+      <ReportsView
+        dashboardData={{
+          cycleSummaryInsights: {
+            transactionCount: 1,
+            noSpendDays: 20,
+            avgDailySpend: 15,
+            largestExpenseAmount: 450,
+            largestExpenseDescription: 'Air Conditioner Repair',
+            cycleLengthDays: 30,
+            committedSpend: 0,
+            discretionarySpend: 450,
+          },
+        } as any}
+        transactions={[tx]}
+        hideBalanceAmounts={false}
+        onNavigateToLedger={onNavigateToLedger}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /View biggest expense: Air Conditioner Repair/ }))
+    expect(onNavigateToLedger).toHaveBeenCalledWith({ highlightedTxId: 'tx-biggest' })
   })
 })

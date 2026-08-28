@@ -54,13 +54,13 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
     <form noValidate onSubmit={props.onSubmit} className="space-y-4 text-xs font-semibold">
       {isAdd && (
         <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Start with a template</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Start with a template</p>
           <div className="mt-2 flex flex-wrap gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={() => applyTemplate({ name: 'Annual insurance', bucket: 'Essentials', priority: 'High', months: 12, recurring: true })}>Annual insurance</Button>
             <Button type="button" variant="secondary" size="sm" onClick={() => applyTemplate({ name: 'Car maintenance', bucket: 'Essentials', priority: 'Medium', months: 6, recurring: true })}>Car maintenance</Button>
             <Button type="button" variant="secondary" size="sm" onClick={() => applyTemplate({ name: 'Holiday fund', bucket: 'Rewards', priority: 'Medium', months: 12, recurring: false })}>Holiday</Button>
           </div>
-          <p className="mt-2 text-[10px] text-muted-foreground">Choose a starting point, then enter the amount you need.</p>
+          <p className="mt-2 text-xs text-muted-foreground">Choose a starting point, then enter the amount you need.</p>
         </div>
       )}
       <FormField label="What are you saving for?" required error={props.errors.name}>
@@ -147,7 +147,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             className="w-full"
           />
           {!props.errors.date && props.requiredPerCycle > 0 && typeof props.formatSensitive(props.requiredPerCycle) !== 'string' && (
-            <p className="text-[11px] text-muted-foreground mt-1 font-medium">
+            <p className="text-xs text-muted-foreground mt-1 font-medium">
               Your deadline works out at about {props.formatSensitive(props.requiredPerCycle)} to set aside each cycle.
             </p>
           )}
@@ -185,7 +185,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             />
           </FormField>
         ) : (
-          <p className="text-[10px] text-muted-foreground font-medium">
+          <p className="text-xs text-muted-foreground font-medium">
             For things like a quarterly car service or annual insurance.
           </p>
         )}

@@ -13,6 +13,7 @@ import { isSystemCategoryName } from '../../../lib/categoryFlow'
 // could sit on a "Loading categories..." fallback forever, and the eager shell must not carry it.
 import { CategoryReplacementSelect } from '../../ui/CategoryReplacementSelect'
 import type { RequestDeleteCategoryOptions } from '../../../app/financialData/categoryActions'
+import { useIsCompact } from '../../../lib/breakpoints'
 
 export interface UseSettingsViewOptions {
   dashboardData: DashboardData | null
@@ -36,6 +37,7 @@ const USAGE_LOOKBACK_CYCLES = 6
 const RARELY_USED_MAX_COUNT = 2
 
 export function useSettingsView(options: UseSettingsViewOptions) {
+  const isCompact = useIsCompact()
   const {
     dashboardData,
     categoriesList,
@@ -95,7 +97,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
   const [showUsageDetails, setShowUsageDetails] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(() => {
     if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768
+      return !isCompact
     }
     return true
   })

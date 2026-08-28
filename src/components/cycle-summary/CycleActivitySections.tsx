@@ -23,13 +23,13 @@ export function CycleActivitySections({
                   <Landmark className="size-3.5 shrink-0 text-blue-500" aria-hidden />
                   <span className="text-xs font-bold text-foreground">Paid toward loans</span>
                 </div>
-                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {summary.loanPaymentCount} ledger {summary.loanPaymentCount === 1 ? 'payment' : 'payments'} across {summary.loanActivity.length} {summary.loanActivity.length === 1 ? 'loan' : 'loans'}
                 </p>
               </div>
               <div className="shrink-0 text-right">
                 <span className="block text-xs font-extrabold text-foreground">{formatSensitive(summary.loanPaymentTotal)}</span>
-                <span className="block text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Total paid</span>
+                <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total paid</span>
               </div>
             </div>
 
@@ -51,14 +51,14 @@ export function CycleActivitySections({
               {summary.loanActivity.map(loan => (
                 <div key={loan.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-background/50 px-3 py-2">
                   <div className="min-w-0">
-                    <p className="truncate text-[11px] font-bold text-foreground">{loan.name}</p>
-                    <p className="mt-0.5 text-[9px] text-muted-foreground">
+                    <p className="truncate text-xs font-bold text-foreground">{loan.name}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                       {loan.paymentCount} {loan.paymentCount === 1 ? 'payment' : 'payments'}
                       {loan.paidAheadCount > 0 ? ` · ${loan.paidAheadCount} ahead of schedule` : ''}
                       {loan.paidOffThisCycle ? ' · Paid off' : ''}
                     </p>
                   </div>
-                  <span className="shrink-0 text-[11px] font-bold text-foreground">{formatSensitive(loan.total)}</span>
+                  <span className="shrink-0 text-xs font-bold text-foreground">{formatSensitive(loan.total)}</span>
                 </div>
               ))}
             </div>
@@ -79,7 +79,7 @@ export function CycleActivitySections({
                       : `${summary.outstandingCount} ${summary.outstandingCount === 1 ? 'bill' : 'bills'} still open`}
                   </span>
                 </div>
-                <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
                   {summary.outstandingCount === 0
                     ? `${summary.clearedBillsCount} cleared${summary.discardedCount > 0 ? ` · ${summary.discardedCount} skipped` : ''}`
                     : `${formatSensitive(summary.outstandingTotal)} left to pay across open bills`}
@@ -87,10 +87,10 @@ export function CycleActivitySections({
               </div>
               <div className="shrink-0 text-right">
                 <span className="block text-xs font-extrabold text-foreground">{formatSensitive(summary.paidTotal)}</span>
-                <span className="block text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Recorded paid</span>
+                <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recorded paid</span>
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-2 text-[11px]">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-2 text-xs">
               <div className="flex flex-wrap items-center gap-1.5">
                 {summary.paidBillsCount > 0 && <StatusPill tone="emerald">{summary.paidBillsCount} Paid</StatusPill>}
                 {summary.partPaidCount > 0 && <StatusPill tone="blue">{summary.partPaidCount} Part paid</StatusPill>}
@@ -114,19 +114,19 @@ export function CycleActivitySections({
                     {summary.purchasedThisCycle.length} {summary.purchasedThisCycle.length === 1 ? 'reward claimed' : 'rewards claimed'}
                   </span>
                 </div>
-                <p className="mt-0.5 text-[10px] text-muted-foreground truncate">Rewards claimed during this cycle</p>
+                <p className="mt-0.5 text-xs text-muted-foreground truncate">Rewards claimed during this cycle</p>
               </div>
               <div className="text-right shrink-0">
                 <span className="text-xs font-extrabold text-foreground block">{formatSensitive(summary.purchasedTotal)}</span>
-                <span className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground block">Total value</span>
+                <span className="text-xs uppercase tracking-wider font-semibold text-muted-foreground block">Total value</span>
               </div>
             </div>
             <div className="space-y-1.5 pt-1">
               {summary.purchasedThisCycle.map(item => (
-                <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-background/50 px-3 py-2 text-[11px]">
+                <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-background/50 px-3 py-2 text-xs">
                   <div className="min-w-0 flex items-center gap-2">
                     <span className="font-bold text-foreground truncate">{item.name}</span>
-                    {item.priority && <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${priorityClass(item.priority)}`}>{item.priority}</span>}
+                    {item.priority && <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wider ${priorityClass(item.priority)}`}>{item.priority}</span>}
                   </div>
                   <span className="shrink-0 font-bold text-foreground">{formatSensitive(item.price)}</span>
                 </div>
@@ -140,7 +140,7 @@ export function CycleActivitySections({
 }
 
 export function Section({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
-  return <section><h3 className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{icon}{title}</h3>{children}</section>
+  return <section><h3 className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">{icon}{title}</h3>{children}</section>
 }
 
 function StatusPill({ tone, children }: { tone: 'emerald' | 'amber' | 'blue' | 'muted'; children: ReactNode }) {
@@ -158,7 +158,7 @@ function StatusPill({ tone, children }: { tone: 'emerald' | 'amber' | 'blue' | '
       : tone === 'blue'
         ? 'bg-blue-500'
         : 'bg-muted-foreground'
-  return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold text-[10px] ${classes}`}><span className={`w-1.5 h-1.5 rounded-full ${dot}`} />{children}</span>
+  return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold text-xs ${classes}`}><span className={`w-1.5 h-1.5 rounded-full ${dot}`} />{children}</span>
 }
 
 function priorityClass(priority: string) {

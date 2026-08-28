@@ -23,7 +23,7 @@ import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../lib/useReceiptSp
 import { calculateLedgerTotals } from '../lib/ledgerTotals'
 import { splitFilterSelections, type TransactionLinkFilter } from '../lib/transactionFilters'
 import type { LedgerRouteState } from '../lib/appLocation'
-import { useIsMobile } from '../lib/useIsMobile'
+import { useIsExpanded } from '../lib/breakpoints'
 import { formatCurrencyVal } from '../lib/utils'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { LedgerMoveSheet } from './ledger/LedgerMoveSheet'
@@ -146,7 +146,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
       ? (props.activeSyncId ? [props.activeSyncId] : [])
       : (app.activeSyncIds?.length ? app.activeSyncIds : (app.activeSyncId ? [app.activeSyncId] : [])))
   const deletingTxId = props.deletingTxId ?? app.deletingId
-  const isMobile = useIsMobile(1024)
+  const isMobile = !useIsExpanded()
 
   const formRef = useRef<TransactionFormSheetRef>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)

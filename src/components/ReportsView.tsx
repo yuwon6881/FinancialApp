@@ -18,6 +18,7 @@ import { SubscriptionsTimelineCard } from './dashboard/SubscriptionsTimelineCard
 import { useHighlightedElement } from './ui/useHighlightedElement'
 import { buildBillTimelineModel } from '../lib/billTimeline'
 import { CycleInsightsCard } from './reports/CycleInsightsCard'
+import { isReportableOutflow } from '../lib/transactionReportSemantics'
 
 interface ReportsViewProps {
   dashboardData: DashboardData | null
@@ -31,6 +32,8 @@ interface ReportsViewProps {
   onNavigateToLedger?: (options: {
     category?: string | null
     date?: string | null
+    startDate?: string | null
+    endDate?: string | null
     txType?: 'inflow' | 'outflow' | null
     range?: 'monthly' | '3month' | '6month' | 'yearly'
     highlightedTxId?: string | null
@@ -102,6 +105,27 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     view.activeSettings.selectedYear,
   ])
 
+  const largestExpenseTransaction = React.useMemo(() => {
+    const insights = dashboardData?.cycleSummaryInsights
+    if (insights?.largestExpenseAmount != null && insights?.largestExpenseDescription) {
+      const exactMatch = transactions.find(t =>
+        isReportableOutflow(t) &&
+        Math.abs(Math.abs(t.amount) - Math.abs(insights.largestExpenseAmount!)) < 0.005 &&
+        t.description === insights.largestExpenseDescription,
+      )
+      if (exactMatch) return exactMatch
+    }
+    let largest: Transaction | undefined
+    for (const transaction of transactions) {
+      if (!isReportableOutflow(transaction)) continue
+      const amount = Math.abs(transaction.amount)
+      if (!largest || amount > Math.abs(largest.amount)) {
+        largest = transaction
+      }
+    }
+    return largest
+  }, [transactions, dashboardData?.cycleSummaryInsights])
+
   if (isSwitchingCycle) return <CycleSkeleton variant="reports" />
 
   return (
@@ -149,7 +173,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       </header>
 
       {dashboardData?.cycleSummaryInsights && (
-        <CycleInsightsCard insights={dashboardData.cycleSummaryInsights} formatSensitive={view.formatSensitive} />
+        <CycleInsightsCard
+          insights={dashboardData.cycleSummaryInsights}
+          formatSensitive={view.formatSensitive}
+          hasLargestExpense={Boolean(largestExpenseTransaction)}
+          onSelectLargestExpense={largestExpenseTransaction ? () => onNavigateToLedger?.({ highlightedTxId: largestExpenseTransaction.id }) : undefined}
+        />
       )}
 
       <CarryoverLedgerTable
@@ -189,7 +218,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </span>
         <span className="flex items-center justify-between gap-4 border-t border-violet-500/10 pt-3 sm:shrink-0 sm:border-0 sm:pt-0 sm:text-right">
           <span>
-            <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Growth ledger balance</span>
+            <span className="block text-xs font-bold uppercase tracking-wide text-muted-foreground">Growth ledger balance</span>
             <span className="block truncate text-lg font-black text-foreground sm:mt-1">
               {view.formatSensitive(view.categories.find(category => category.name === 'Growth')?.remaining ?? 0)}
             </span>
@@ -248,6 +277,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         formatNet={view.formatCompactSensitive}
         hideSensitive={hideSensitive}
         onSelectDate={date => onNavigateToLedger?.({ date })}
+        onSelectWeek={(week, mode) => onNavigateToLedger?.({
+          startDate: week.startDate,
+          endDate: week.endDate,
+          txType: mode === 'expense' ? 'outflow' : null,
+        })}
       />
 
     </div>

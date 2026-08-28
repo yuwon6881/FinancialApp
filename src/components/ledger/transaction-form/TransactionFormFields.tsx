@@ -236,11 +236,11 @@ export function TransactionFormFields({
             label="Category"
           >
             {suggestions.isSuggestingCategory ? (
-                <span className="absolute right-0 top-0 inline-flex items-center gap-1 whitespace-nowrap text-[10px] font-semibold text-blue-500">
+                <span className="absolute right-0 top-0 inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-blue-500">
                   <Loader2 className="size-3 animate-spin" /> Suggesting
                 </span>
               ) : suggestions.categorySuggestionUnavailable ? (
-                <span className="absolute right-0 top-0 whitespace-nowrap text-[10px] font-semibold text-amber-600 dark:text-amber-500">
+                <span className="absolute right-0 top-0 whitespace-nowrap text-xs font-semibold text-amber-600 dark:text-amber-500">
                   AI unavailable
                 </span>
               ) : null}

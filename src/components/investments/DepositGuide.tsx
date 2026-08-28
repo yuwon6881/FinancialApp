@@ -75,7 +75,7 @@ export function DepositGuide({ allocation, money, colors }: DepositGuideProps) {
       </div>
 
       {!canPlan && (
-        <p className="mt-2 text-[10px] text-muted-foreground">
+        <p className="mt-2 text-xs text-muted-foreground">
           There is nothing to plan against yet — add holdings first.
         </p>
       )}
@@ -89,7 +89,7 @@ export function DepositGuide({ allocation, money, colors }: DepositGuideProps) {
           onClick={e => e.stopPropagation()}
         >
           <div className="mt-3">
-            <label htmlFor="deposit-amount" className="block text-[11px] font-semibold text-muted-foreground">
+            <label htmlFor="deposit-amount" className="block text-xs font-semibold text-muted-foreground">
               How much do you want to put in?
             </label>
             <div className="mt-1.5 flex items-center gap-2">
@@ -111,12 +111,12 @@ export function DepositGuide({ allocation, money, colors }: DepositGuideProps) {
                   <li key={sleeve.sleeve} className="rounded-lg border border-border/50 bg-background/50 p-3">
                     <div className="flex items-center gap-2">
                       <span className={`size-2 shrink-0 rounded-full ${colors[index]}`} aria-hidden="true" />
-                      <span className="min-w-0 truncate text-[11px] font-bold text-foreground">{sleeve.label}</span>
+                      <span className="min-w-0 truncate text-xs font-bold text-foreground">{sleeve.label}</span>
                     </div>
                     <strong className="mt-2 block text-lg text-foreground">
                       {sleeve.amount > 0 ? money(sleeve.amount) : 'Skip'}
                     </strong>
-                    <p className="mt-0.5 text-[10px] text-muted-foreground">
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                       {sleeve.amount > 0
                         ? `${sleeve.percentageOfDeposit.toFixed(1)}% of this deposit · leaves you at ${sleeve.projectedPercentage.toFixed(1)}%`
                         : `Already on target · stays at ${sleeve.projectedPercentage.toFixed(1)}%`}
@@ -129,10 +129,10 @@ export function DepositGuide({ allocation, money, colors }: DepositGuideProps) {
               </ul>
 
               <details className="rounded-lg border border-border/50 bg-background/40 p-3">
-                <summary className="cursor-pointer text-[11px] font-semibold text-foreground">
+                <summary className="cursor-pointer text-xs font-semibold text-foreground">
                   Why these amounts?
                 </summary>
-                <div className="mt-2 space-y-2 text-[10px] leading-relaxed text-muted-foreground">
+                <div className="mt-2 space-y-2 text-xs leading-relaxed text-muted-foreground">
                   <p>
                     Each basket gets as much of the deposit as it needs to reach its target share of
                     the new total. Whichever basket is furthest below its slice receives the most,

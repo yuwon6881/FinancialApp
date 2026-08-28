@@ -12,6 +12,8 @@
     "lint": "eslint .",
     "check:design-system": "node scripts/check-design-system.mjs",
     "deadcode": "knip --include files,dependencies,devDependencies",
+    "security:secrets": "node scripts/check-secrets.mjs",
+    "security:headers": "node scripts/check-security-headers.mjs",
     "typecheck:strict": "tsc -p tsconfig.strict.json",
     "test:fast": "vitest run --pool=threads --maxWorkers=4",
     "test:one": "vitest run --pool=threads --maxWorkers=1 --no-file-parallelism --reporter=dot",
@@ -48,6 +50,7 @@
     "web-vitals": "^5.3.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@babel/core": "^7.29.7",
     "@capacitor/cli": "^8.4.1",
     "@emnapi/core": "^1.11.3",

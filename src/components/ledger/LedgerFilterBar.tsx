@@ -120,6 +120,11 @@ export function LedgerFilterBar({
   const checkboxFilters = showAllCycles ? pendingFilters : selectedFilters
   const activeTxTypes = parseTxTypes(txType)
   const activeFilterCount = (showAllCycles ? appliedFilters.length : selectedFilters.length) + activeAdvancedFilterCount
+  // Names the filter trigger for assistive technology as well as sighted users: the visible
+  // label is hidden below the expanded tier, leaving an icon-only button behind.
+  const filterButtonLabel = showAllCycles
+    ? (appliedFilters.length === 0 ? 'Filters' : `${appliedFilters.length} filter${appliedFilters.length > 1 ? 's' : ''} applied`)
+    : (selectedFilters.length === 0 ? 'Filters' : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`)
   const draftAdvancedFilterCount =
     (startDate || endDate ? 1 : 0) +
     (minAmount || maxAmount ? 1 : 0) +
@@ -181,7 +186,7 @@ export function LedgerFilterBar({
         ? 'Exact match: "Badminton" skips "Badminton String". Tap to match anywhere in the text.'
         : 'Matching anywhere in the text: "Badminton" also finds "Badminton String". Tap to require an exact match.'}
       onClick={() => onSearchModeChange(isExactMatch ? 'contains' : 'exact')}
-      className={`mr-1.5 flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-1.5 text-[10px] font-bold transition cursor-pointer lg:w-auto ${isExactMatch
+      className={`mr-1.5 flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-1.5 text-xs font-bold transition cursor-pointer lg:w-auto ${isExactMatch
         ? 'border-primary/45 bg-primary/15 text-accent-ink'
         : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'}`}
     >
@@ -281,19 +286,16 @@ export function LedgerFilterBar({
             onClick={() => onFilterDropdownOpenChange(!isFilterDropdownOpen)}
             aria-haspopup="dialog"
             aria-expanded={isFilterDropdownOpen}
+            aria-label={filterButtonLabel}
             className="relative flex items-center justify-center lg:justify-between gap-2 shrink-0 px-3 lg:px-4 py-2.5 lg:w-60 text-xs font-semibold bg-background border border-border/60 rounded-xl hover:bg-muted transition duration-200 cursor-pointer select-none"
           >
             <span className="flex items-center gap-2 text-muted-foreground">
-              <Filter className="size-4 lg:size-3.5" />
-              <span className="hidden lg:inline truncate">
-                {showAllCycles
-                  ? (appliedFilters.length === 0 ? 'Filters' : `${appliedFilters.length} filter${appliedFilters.length > 1 ? 's' : ''} applied`)
-                  : (selectedFilters.length === 0 ? 'Filters' : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`)}
-              </span>
+              <Filter className="size-4 lg:size-3.5" aria-hidden="true" />
+              <span className="hidden lg:inline truncate">{filterButtonLabel}</span>
             </span>
             <ChevronDown className={`hidden size-3.5 text-muted-foreground transition-transform lg:block ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
             {activeFilterCount > 0 && (
-              <span className="lg:hidden absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
+              <span className="lg:hidden absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
                 {activeFilterCount}
               </span>
             )}
@@ -307,14 +309,14 @@ export function LedgerFilterBar({
             side="bottom"
             role="dialog"
             aria-label="Filter ledger entries"
-            className="ledger-filter-dropdown flex w-[42rem] flex-col overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-xl z-[200] animate-in fade-in slide-in-from-top-2 duration-150"
+            className="ledger-filter-dropdown z-[200] flex w-[min(42rem,calc(100vw-16rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
           >
             <div className="mb-3 flex shrink-0 items-center justify-between border-b border-border/40 pb-2">
               <span className="text-xs font-bold text-foreground">Filter Ledger Entries</span>
               {draftFilterCount > 0 && (
                 <Button variant="unstyled"
                   onClick={onClearFilters}
-                  className="text-[9px] font-bold text-orange-500 hover:underline cursor-pointer whitespace-nowrap"
+                  className="text-xs font-bold text-orange-500 hover:underline cursor-pointer whitespace-nowrap"
                 >
                   Clear All
                 </Button>

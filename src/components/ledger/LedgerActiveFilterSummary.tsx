@@ -139,7 +139,7 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
       {(hasAnyFilter || hasScopedRange) && (
         <Button variant="unstyled"
           onClick={onResetFilters}
-          className="flex shrink-0 items-center gap-1 whitespace-nowrap text-blue-500 hover:text-blue-500 text-[10px] font-semibold transition cursor-pointer"
+          className="flex shrink-0 items-center gap-1 whitespace-nowrap text-blue-500 hover:text-blue-500 text-xs font-semibold transition cursor-pointer"
         >
           <X className="size-3" /> Clear filters
         </Button>

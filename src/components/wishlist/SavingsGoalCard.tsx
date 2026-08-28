@@ -91,7 +91,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
     <Card
       id={elementId}
       className={`flex flex-col gap-3 p-4 transition-colors duration-300 ${
-        fullWidth ? 'w-full lg:max-w-xl' : 'snap-start shrink-0 w-[calc(100vw-3.5rem)] sm:w-[22rem]'
+        fullWidth ? 'w-full lg:max-w-xl' : 'w-[calc(100vw-3.5rem)] shrink-0 snap-start sm:w-full sm:min-w-0'
       } ${status === 'overdue' ? 'border-destructive/40' : 'border-border/60'}`}
     >
       <div className="min-w-0">
@@ -100,8 +100,8 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
           <h4 className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{goal.name}</h4>
           <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={goal.isPendingSync} entityLabel="goal" />
         </div>
-        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
-          <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${getCategoryBadgeClass(fundingBucket)}`}>
+        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <span className={`rounded-full border px-1.5 py-0.5 text-xs ${getCategoryBadgeClass(fundingBucket)}`}>
             {fundingBucket}
           </span>
           <span>{formatDeadline(goal.targetDate)}</span>
@@ -124,7 +124,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
             tone={style.bar}
             color={status === 'onPace' || status === 'needsFunding' ? bucketColor : undefined}
           />
-          <span className="shrink-0 text-[10px] font-bold tabular-nums text-muted-foreground">{pct.toFixed(0)}%</span>
+          <span className="shrink-0 text-xs font-bold tabular-nums text-muted-foreground">{pct.toFixed(0)}%</span>
         </div>
       </div>
 
@@ -151,7 +151,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
         onOpenChange={detail.setOpen}
         expandedFrom="lg"
       >
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px]">
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
           <div>
             <dt className="font-semibold text-muted-foreground">Per cycle</dt>
             <dd className="font-bold text-foreground">{formatSensitive(pace.requiredPerCycle)}</dd>

@@ -96,7 +96,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
     <Card className="space-y-3 p-3 sm:space-y-4 sm:p-5">
       <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
             {bucketLabel} pool
           </span>
           <div className="mt-1 flex items-baseline gap-2">

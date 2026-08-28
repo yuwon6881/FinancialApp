@@ -22,7 +22,7 @@ export const LedgerCategoryChecklist: React.FC<LedgerCategoryChecklistProps> = (
     <div className="space-y-4">
       {/* Section 1: Ledger Allocation Buckets */}
       <div className="space-y-2">
-        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
           Ledger Categories
         </span>
         <div className="flex flex-wrap gap-1.5">
@@ -48,7 +48,7 @@ export const LedgerCategoryChecklist: React.FC<LedgerCategoryChecklistProps> = (
 
       {/* Section 2: Transaction Categories */}
       <div className="space-y-2">
-        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
           Categories
         </span>
         <div className="flex flex-wrap gap-1.5">

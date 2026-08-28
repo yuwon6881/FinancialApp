@@ -4,7 +4,7 @@ import type { CategorySummary } from '../../types'
 import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { getCategoryBadgeClass, getCategoryDotClass } from '../../lib/categoryColors'
 import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
-import { useIsMobile } from '../../lib/useIsMobile'
+import { useIsExpanded } from '../../lib/breakpoints'
 import { Button } from '../ui/Button'
 import { BottomSheet } from '../ui/BottomSheet'
 import { AlertBanner } from '../ui/AlertBanner'
@@ -30,7 +30,7 @@ export function CarryoverLedgerTable({
   formatCurrency,
   onNavigateToAccounts,
 }: CarryoverLedgerTableProps) {
-  const isMobile = useIsMobile()
+  const isMobile = !useIsExpanded()
   const [selectedCategory, setSelectedCategory] = useState<CategorySummary | null>(null)
   const amount = (value: number) => amountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(value)
 
@@ -61,7 +61,7 @@ export function CarryoverLedgerTable({
                       variant="unstyled"
                       type="button"
                       onClick={() => setSelectedCategory(category)}
-                      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold transition cursor-pointer select-none shrink-0 ${badgeClass}`}
+                      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold transition cursor-pointer select-none shrink-0 ${badgeClass}`}
                       title={`View ${category.accounts!.length} ${category.accounts!.length === 1 ? 'account' : 'accounts'} in ${category.name}`}
                       aria-label={`View account breakdown for ${category.name}`}
                     >
@@ -75,7 +75,7 @@ export function CarryoverLedgerTable({
                 <div className="text-right text-muted-foreground font-medium">{amount(category.budget)}</div>
                 <div className={`text-right font-medium ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : ''}`}>
                   <div><SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} /></div>
-                  {pending > 0 && <div className="text-[10px] text-yellow-500 font-normal flex items-center justify-end gap-1 mt-0.5"><Clock className="size-3" />Pending: -{amount(pending)}</div>}
+                  {pending > 0 && <div className="text-xs text-yellow-500 font-normal flex items-center justify-end gap-1 mt-0.5"><Clock className="size-3" />Pending: -{amount(pending)}</div>}
                 </div>
                 <div className="text-right">
                   <Button
@@ -90,7 +90,7 @@ export function CarryoverLedgerTable({
                       <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                     </div>
                     {pending > 0 && (
-                      <div className={`text-[10px] font-semibold mt-0.5 ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
+                      <div className={`text-xs font-semibold mt-0.5 ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
                         Projected: {amount(category.remaining - pending)}
                       </div>
                     )}
@@ -122,7 +122,7 @@ export function CarryoverLedgerTable({
                       variant="unstyled"
                       type="button"
                       onClick={() => setSelectedCategory(category)}
-                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-semibold transition cursor-pointer select-none ${badgeClass}`}
+                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold transition cursor-pointer select-none ${badgeClass}`}
                       title={`View ${category.accounts!.length} ${category.accounts!.length === 1 ? 'account' : 'accounts'}`}
                       aria-label={`View account breakdown for ${category.name}`}
                     >
@@ -130,7 +130,7 @@ export function CarryoverLedgerTable({
                       <span>{category.accounts!.length}</span>
                     </Button>
                   )}
-                  <span className="text-[10px] font-semibold bg-muted px-2 py-0.5 rounded-md text-muted-foreground">Target: {(category.allocation * 100).toFixed(0)}%</span>
+                  <span className="text-xs font-semibold bg-muted px-2 py-0.5 rounded-md text-muted-foreground">Target: {(category.allocation * 100).toFixed(0)}%</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
@@ -139,7 +139,7 @@ export function CarryoverLedgerTable({
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs border-t border-border/30 pt-2.5">
                 <div className="col-start-1">
-                  <span className="text-muted-foreground text-[10px] block mb-0.5">Net Change</span>
+                  <span className="text-muted-foreground text-xs block mb-0.5">Net Change</span>
                   <div className="flex items-center h-6">
                     <span className={`font-bold truncate ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
                       <SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} />
@@ -147,7 +147,7 @@ export function CarryoverLedgerTable({
                   </div>
                 </div>
                 <div className="col-start-2">
-                  <span className="text-muted-foreground text-[10px] block mb-0.5">Remaining Balance</span>
+                  <span className="text-muted-foreground text-xs block mb-0.5">Remaining Balance</span>
                   <div className="flex items-center h-6">
                     <Button
                       variant="unstyled"
@@ -166,10 +166,10 @@ export function CarryoverLedgerTable({
                 {pending > 0 && (
                   <>
                     <div className="col-start-1">
-                      <span className="text-[10px] font-semibold text-yellow-500 block truncate">Pending: -{amount(pending)}</span>
+                      <span className="text-xs font-semibold text-yellow-500 block truncate">Pending: -{amount(pending)}</span>
                     </div>
                     <div className="col-start-2">
-                      <span className={`text-[10px] font-semibold block truncate ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</span>
+                      <span className={`text-xs font-semibold block truncate ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</span>
                     </div>
                   </>
                 )}
@@ -191,7 +191,7 @@ export function CarryoverLedgerTable({
             </div>
           }
           headerActions={
-            <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold shrink-0 ${getCategoryBadgeClass(selectedCategory.name)}`}>
+            <span className={`rounded-md border px-2 py-0.5 text-xs font-bold shrink-0 ${getCategoryBadgeClass(selectedCategory.name)}`}>
               {(selectedCategory.allocation * 100).toFixed(0)}% Allocation
             </span>
           }
@@ -243,12 +243,12 @@ export function CarryoverLedgerTable({
                             {account.name}
                           </span>
                           {account.isArchived && (
-                            <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                            <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground">
                               Closed
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
                           {account.isArchived ? 'Archived account' : 'Active ledger account'}
                         </p>
                       </div>
@@ -271,7 +271,7 @@ export function CarryoverLedgerTable({
                           }}
                           title={`Edit ${account.name} in Settings`}
                           aria-label={`Edit ${account.name} in Settings`}
-                          className="h-7 px-2.5 text-[11px] font-semibold border-border/70 hover:border-primary/40 hover:bg-primary/5 hover:text-accent-ink transition"
+                          className="h-7 px-2.5 text-xs font-semibold border-border/70 hover:border-primary/40 hover:bg-primary/5 hover:text-accent-ink transition"
                         >
                           Edit
                         </Button>
@@ -283,7 +283,7 @@ export function CarryoverLedgerTable({
               <div className="flex items-center justify-between gap-2 border-t border-border/70 bg-muted/40 px-4 py-3.5 text-xs font-bold">
                 <div className="flex min-w-0 items-center gap-2 text-foreground">
                   <span className="whitespace-nowrap">{isCurrentCycle ? 'Total accounts balance' : 'Total balance at close'}</span>
-                  <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-bold shrink-0 whitespace-nowrap ${getCategoryBadgeClass(selectedCategory.name)}`}>
+                  <span className={`rounded-md border px-1.5 py-0.5 text-xs font-bold shrink-0 whitespace-nowrap ${getCategoryBadgeClass(selectedCategory.name)}`}>
                     {selectedCategory.accounts?.length ?? 0} {selectedCategory.accounts?.length === 1 ? 'account' : 'accounts'}
                   </span>
                 </div>
@@ -303,5 +303,5 @@ export function CarryoverLedgerTable({
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
-  return <div><span className="text-muted-foreground text-[10px] block mb-0.5">{label}</span><span className="font-semibold text-foreground">{value}</span></div>
+  return <div><span className="text-muted-foreground text-xs block mb-0.5">{label}</span><span className="font-semibold text-foreground">{value}</span></div>
 }

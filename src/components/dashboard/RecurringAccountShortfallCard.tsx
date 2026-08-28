@@ -57,7 +57,7 @@ export function RecurringAccountShortfallCard({
               <h3 id="recurring-account-shortfall-title" className="text-sm font-bold text-orange-700 dark:text-orange-300">
                 {primary.name} auto-deduct shortfall
               </h3>
-              <span className="rounded-md bg-orange-500/15 px-1.5 py-0.5 text-[11px] font-semibold text-orange-700 dark:text-orange-300">
+              <span className="rounded-md bg-orange-500/15 px-1.5 py-0.5 text-xs font-semibold text-orange-700 dark:text-orange-300">
                 {dueLabel}
               </span>
             </div>

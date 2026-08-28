@@ -112,7 +112,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
             onClick={onSuggestNotes}
             disabled={suggestions.isSuggestingNote || state.description.trim().length < 2}
             title={state.description.trim().length < 2 ? 'Enter a description first' : 'Suggest better notes'}
-            className="inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
           >
             {suggestions.isSuggestingNote ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
             AI
@@ -178,7 +178,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
               className="w-full text-left px-3.5 py-2.5 text-sm flex flex-col gap-0.5 cursor-pointer transition duration-100 hover:bg-blue-500/10 first:rounded-t-xl last:rounded-b-xl"
             >
               <span className="font-semibold text-foreground">{s.note}</span>
-              <span className="text-[10px] text-muted-foreground">{s.reason}</span>
+              <span className="text-xs text-muted-foreground">{s.reason}</span>
             </Button>
           ))
         ) : suggestions.noteSuggestionUnavailable ? (
@@ -230,7 +230,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
               }`}
             >
               <span className="truncate">{rendered}</span>
-              <span className="inline-block text-[9px] px-1.5 py-0.5 font-semibold rounded border bg-slate-500/10 text-muted-foreground border-border/30 shrink-0">
+              <span className="inline-block text-xs px-1.5 py-0.5 font-semibold rounded border bg-slate-500/10 text-muted-foreground border-border/30 shrink-0">
                 {s.ledgerCategory}{'·'}{s.category}
               </span>
             </Button>
@@ -249,7 +249,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
                 autocompletedDescriptionRef.current = s.description.trim()
               }}
               onClick={() => onSelectSuggestion(s)}
-              className="shrink-0 rounded-full border border-border bg-muted/30 px-2.5 py-1 text-[10px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
+              className="shrink-0 rounded-full border border-border bg-muted/30 px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
             >
               {s.description}
             </Button>

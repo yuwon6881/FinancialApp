@@ -102,7 +102,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
               Financial Model
               <RowSyncStatus isSyncing={settingsSyncing} isPending={settingsPending} entityLabel="financial rules" />
             </h3>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Controls budget targets and cycle calculations.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Controls budget targets and cycle calculations.</p>
           </div>
         </div>
 
@@ -178,7 +178,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
           <div className="flex items-center justify-between border-b border-border/40 pb-2">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-foreground">Income Allocations</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${view.allocSum === 100 ? 'bg-blue-500/10 text-blue-500' : 'bg-destructive/15 text-destructive animate-pulse'}`}>
+              <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${view.allocSum === 100 ? 'bg-blue-500/10 text-blue-500' : 'bg-destructive/15 text-destructive animate-pulse'}`}>
                 {view.allocSum}%
               </span>
             </div>
@@ -188,7 +188,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
               type="button"
               onClick={() => view.setGlobalAllocLock(!view.globalAllocLock)}
               disabled={hideSensitive}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer sm:min-h-8"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer sm:min-h-8"
             >
               {view.globalAllocLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
               {view.globalAllocLock ? 'Locked' : 'Unlocked'}
@@ -203,7 +203,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
               ['Rewards', view.rewardsAllocInput, 'rewards', 'accent-amber-500'],
             ] as const).map(([label, value, key, accentClass]) => (
               <div key={label} className="space-y-2 block">
-                <div className="flex justify-between items-center text-[11px] font-bold">
+                <div className="flex justify-between items-center text-xs font-bold">
                   <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="ghost" size="icon" type="button" onClick={() => view.toggleLock(key)} disabled={hideSensitive} className="size-11 text-muted-foreground hover:text-foreground hover:bg-muted sm:size-8" title={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
                   <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
                 </div>
@@ -212,7 +212,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
             ))}
           </div>
           {view.errors.allocationSum && (
-            <p className="text-[10px] text-destructive font-semibold">{view.errors.allocationSum}</p>
+            <p className="text-xs text-destructive font-semibold">{view.errors.allocationSum}</p>
           )}
         </div>
 
@@ -234,7 +234,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
           <div className="flex items-center justify-between border-b border-border/40 pb-3">
             <div>
               <h3 className="text-sm font-bold text-foreground">App Preferences</h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Customize display and local storage.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Customize display and local storage.</p>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-y-3">
@@ -274,7 +274,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
                 <HardDrive className="size-4 text-muted-foreground shrink-0" />
                 <div className="flex flex-col gap-0.5">
                   <span className="font-medium text-foreground">Local Data</span>
-                  <span className="text-[10px] text-muted-foreground">Remove cached data, offline drafts and any changes still waiting to sync.</span>
+                  <span className="text-xs text-muted-foreground">Remove cached data, offline drafts and any changes still waiting to sync.</span>
                 </div>
               </div>
               <Button variant="unstyled"

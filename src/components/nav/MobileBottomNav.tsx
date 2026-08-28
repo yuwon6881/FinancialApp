@@ -29,7 +29,11 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[var(--app-shadow-nav-up)] transform-gpu"
       style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px', willChange: 'transform' }}
     >
-      <nav aria-label="Primary" className="grid grid-cols-5 w-full max-w-md md:max-w-none px-2 md:px-8 mx-auto justify-items-center">
+      <nav
+        aria-label="Primary"
+        className="mx-auto grid w-full max-w-md justify-items-center px-2"
+        style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+      >
         {navItems.map(({ tab, mobileLabel, Icon, activeClass, iconClass, dotClass }) => {
           const isActive = activeTab === tab
           return (
@@ -37,7 +41,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               key={tab}
               onClick={() => { triggerHaptic(8); onTabChange(tab) }}
               aria-current={isActive ? 'page' : undefined}
-              className={`relative flex min-w-0 flex-col items-center gap-1 text-[11px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
+              className={`relative flex min-w-0 flex-col items-center gap-1 text-xs font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
                 isActive ? 'scale-[1.03] font-bold text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >

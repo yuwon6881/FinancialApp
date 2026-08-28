@@ -67,12 +67,12 @@ export function SelectionToolbar({
                 aria-label={allVisibleSelected ? `Clear ${itemLabel} selection on this page` : `Select all ${itemLabel} on this page`}
                 className="size-4 border-primary/50 bg-card accent-primary"
               />
-              <span className="truncate text-[10px] font-black uppercase tracking-wide text-foreground">Select page</span>
+              <span className="truncate text-xs font-black uppercase tracking-wide text-foreground">Select page</span>
             </label>
             <span className="hidden h-5 w-px shrink-0 bg-border sm:block" aria-hidden="true" />
           </>
         )}
-        <p className={`truncate text-[10px] font-semibold sm:text-xs ${exceedsLimit ? 'text-destructive' : hasSelection ? 'text-accent-ink' : 'text-muted-foreground'}`} aria-live="polite">
+        <p className={`truncate text-xs font-semibold sm:text-xs ${exceedsLimit ? 'text-destructive' : hasSelection ? 'text-accent-ink' : 'text-muted-foreground'}`} aria-live="polite">
           {hasSelection ? `${selectedCount} ${selectedLabel}${atLimit ? ` · max ${selectionLimit}` : ''}` : `${itemCount} on this page`}
         </p>
       </div>

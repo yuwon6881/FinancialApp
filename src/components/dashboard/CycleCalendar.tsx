@@ -8,6 +8,7 @@ import {
   type CycleCalendarDay,
   type CycleHeatmapMode,
   type CycleMetricTone,
+  type CycleWeekSummary,
 } from '../../lib/cycleCalendar'
 import { InfoHint } from '../ui/InfoHint'
 import { Button } from '../ui/Button'
@@ -25,6 +26,7 @@ interface CycleCalendarProps {
   formatNet: (value: number) => React.ReactNode
   hideSensitive?: boolean
   onSelectDate?: (date: string) => void
+  onSelectWeek?: (week: CycleWeekSummary, mode: CycleHeatmapMode) => void
 }
 
 const HEAT_PERCENT = [0, 10, 18, 27, 38] as const
@@ -225,12 +227,12 @@ export function CycleCalendar(props: CycleCalendarProps) {
                   ...(day.isFuture && !isToday ? NOT_YET_REACHED_STYLE : {}),
                   ...heatStyle(visibleHeatLevel, mode, day.net),
                 }}
-                className={`relative flex h-11 min-w-0 cursor-pointer flex-col items-center justify-center rounded-lg border text-[10px] sm:h-14 sm:rounded-xl md:h-16 ${color}`}
+                className={`relative flex h-11 min-w-0 cursor-pointer flex-col items-center justify-center rounded-lg border text-xs sm:h-14 sm:rounded-xl md:h-16 ${color}`}
                 onClick={() => setSelectedDay(day)}
               >
                 <span
                   className={cn(
-                    'text-[11px] font-bold sm:text-sm',
+                    'text-xs font-bold sm:text-sm',
                     isToday ? 'text-blue-500' : day.isFuture ? 'text-muted-foreground/70' : 'text-foreground/90'
                   )}
                 >
@@ -242,14 +244,14 @@ export function CycleCalendar(props: CycleCalendarProps) {
                 {metric.value !== undefined ? (
                   <span
                     className={cn(
-                      'hidden max-w-full truncate text-[8px] font-bold leading-tight md:inline md:text-[10px]',
+                      'hidden max-w-full truncate text-xs font-bold leading-tight md:inline md:text-xs',
                       TONE_CLASS[metric.tone]
                     )}
                   >
                     {props.formatNet(metric.value)}
                   </span>
                 ) : day.isFuture && day.projectedBillsAmount > 0 ? (
-                  <span className="hidden max-w-full truncate text-[8px] font-medium leading-tight text-amber-500/90 md:inline md:text-[9px]">
+                  <span className="hidden max-w-full truncate text-xs font-medium leading-tight text-amber-500/90 md:inline md:text-xs">
                     ~{props.formatNet(-day.projectedBillsAmount)}
                   </span>
                 ) : null}
@@ -271,7 +273,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
                   day.recurring.length > 1 ? (
                     <span
                       className={cn(
-                        'absolute top-1 right-1 flex size-3 items-center justify-center rounded-full text-[7px] font-bold sm:size-3.5 sm:text-[8px]',
+                        'absolute top-1 right-1 flex size-3 items-center justify-center rounded-full text-xs font-bold sm:size-3.5 sm:text-xs',
                         day.hasPendingBills
                           ? 'bg-amber-500/20 text-amber-500 ring-1 ring-amber-500/40 animate-pulse'
                           : 'bg-emerald-500/20 text-emerald-500 ring-1 ring-emerald-500/40'
@@ -299,6 +301,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
         weeks={calendar.weeks}
         mode={mode}
         formatAmount={props.formatNet}
+        onSelectWeek={props.onSelectWeek}
       />
 
       {/* Day breakdown */}

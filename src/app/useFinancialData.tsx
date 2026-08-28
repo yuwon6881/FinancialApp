@@ -4,6 +4,7 @@ import { useOutbox } from '../lib/useOutbox'
 import { useStartupSync } from './useStartupSync'
 import type { EntityKind, OpType, OutboxPayload, QueuedOp } from '../lib/outbox'
 import type { SuccessfulSyncOp } from '../lib/outboxSync'
+import type { RefreshHintSummary } from '../lib/refreshSlices'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
 import { useFinancialBaseData } from './financialData/useFinancialBaseData'
 import { useSessionRestore } from './financialData/useSessionRestore'
@@ -127,7 +128,10 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const loadAllRef = useRef<ReturnType<typeof useLoadAll>>(() => Promise.resolve())
   const getPendingOpsRef = useRef<() => QueuedOp[]>(() => [])
 
-  const outboxRefresh = useCallback(async (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => {
+  const outboxRefresh = useCallback(async (
+    successfulOps: ReadonlyArray<SuccessfulSyncOp>,
+    refreshHints?: RefreshHintSummary,
+  ) => {
     const handler = createOutboxRefreshHandler({
       pendingTransactionDocumentsRef,
       pendingTransactionDocumentDeletesRef,
@@ -146,7 +150,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       selectedYear,
       unconfirmedSettingWritesRef,
     })
-    await handler(successfulOps)
+    await handler(successfulOps, refreshHints)
   }, [loanData, selectedMonth, selectedYear, setError, setWishlist, setSavingsGoals, setRecurringPayments, setAccounts, setCategoriesList, showToast])
 
   const {
@@ -257,6 +261,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setCategoriesList,
     setWishlist,
     setSavingsGoals,
+    setLoans: loanData.setAuthoritativeLoans,
     setAccounts,
     setWalletBalance,
     setAutocompleteSuggestions,

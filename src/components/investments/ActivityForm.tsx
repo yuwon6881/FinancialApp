@@ -58,7 +58,7 @@ const Field = ({ label, hint, error, className = '', required, children }: {
     error={error}
     required={required}
     className={className}
-    hintClassName="text-[10px] font-normal"
+    hintClassName="text-xs font-normal"
   >
     {children}
   </FormField>
@@ -287,8 +287,8 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
         <Field className={type === 'Dividend' ? 'sm:col-span-2' : ''} label={`Taxes${feesLabelSuffix}`}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} /></Field>
       </>}
     </div>
-    {trade && <p className="text-[10px] text-muted-foreground">Fill any two of units, unit price, and gross amount — the third is worked out for you.</p>}
-    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-[10px] text-muted-foreground">Amounts use {selectedInstrument.currency}; reports use {portfolio?.appCurrency} at that date's rate. Convert cash in "Manage cash" before trading.</p>}
+    {trade && <p className="text-xs text-muted-foreground">Fill any two of units, unit price, and gross amount — the third is worked out for you.</p>}
+    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-xs text-muted-foreground">Amounts use {selectedInstrument.currency}; reports use {portfolio?.appCurrency} at that date's rate. Convert cash in "Manage cash" before trading.</p>}
     <FormActions busy={busy} onCancel={() => { clearScan(); onCancel() }} submitLabel="Save activity" />
   </form>
 }

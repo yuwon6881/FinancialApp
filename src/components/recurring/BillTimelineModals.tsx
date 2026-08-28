@@ -62,11 +62,11 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
                   <div>
                     <div className="text-xs font-bold text-foreground">{bill.name}</div>
                     <div className="flex flex-wrap items-center gap-1 mt-1">
-                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-semibold text-[9px] ${getCategoryBadgeClass(bill.ledgerCategory)}`}>
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-semibold text-xs ${getCategoryBadgeClass(bill.ledgerCategory)}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${getCategoryDotClass(bill.ledgerCategory)}`} />
                         {bill.ledgerCategory}
                       </span>
-                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-semibold text-[9px] ${getCategoryBadgeClass(bill.category)}`}>
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-semibold text-xs ${getCategoryBadgeClass(bill.category)}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${getCategoryDotClass(bill.category)}`} />
                         {bill.category}
                       </span>
@@ -74,7 +74,7 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
                   </div>
                   <div className="text-right flex flex-col items-end gap-1 font-semibold">
                     <span className="text-xs font-extrabold text-foreground">{formatTimelineAmount(getBillTimelineAmount(bill))}</span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>
+                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>
                       {getOccurrenceStatusLabel(bill.status)}
                     </span>
                   </div>
@@ -117,15 +117,15 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
           <div className="text-xs space-y-3 font-semibold text-foreground">
             <div className="grid grid-cols-2 gap-3.5 bg-muted/30 p-3.5 rounded-xl border border-border/40">
               <div className="flex flex-col justify-between">
-                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-1">Amount</span>
+                <span className="text-xs text-muted-foreground block font-normal uppercase tracking-wider mb-1">Amount</span>
                 <div className="flex items-center min-h-[22px]">
                   <span className="text-base font-extrabold text-foreground leading-none">{selectedBill.amount == null ? 'Unavailable' : formatSensitive(Math.abs(selectedBill.amount))}</span>
                 </div>
               </div>
               <div className="flex flex-col justify-between">
-                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-1">Status</span>
+                <span className="text-xs text-muted-foreground block font-normal uppercase tracking-wider mb-1">Status</span>
                 <div className="flex items-center min-h-[22px]">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold leading-none ${
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold leading-none ${
                     selectedBill.status === 'Paid' || selectedBill.status === 'SettledByLoanPayoff'
                       ? 'bg-emerald-500/10 text-emerald-500'
                       : selectedBill.status === 'PartiallyPaid'
@@ -143,19 +143,19 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
                 </div>
               </div>
               <div className="flex flex-col justify-between pt-2.5 border-t border-border/30">
-                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-1">Due Date</span>
+                <span className="text-xs text-muted-foreground block font-normal uppercase tracking-wider mb-1">Due Date</span>
                 <div className="flex items-center min-h-[22px]">
                   <span className="text-xs font-semibold text-foreground leading-none">{selectedBill.dueDate}</span>
                 </div>
               </div>
               <div className="flex flex-col justify-between pt-2.5 border-t border-border/30">
-                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-1">Categories</span>
+                <span className="text-xs text-muted-foreground block font-normal uppercase tracking-wider mb-1">Categories</span>
                 <div className="flex flex-wrap items-center gap-1 min-h-[22px]">
-                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-semibold leading-none ${getCategoryBadgeClass(selectedBill.ledgerCategory)}`}>
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-xs font-semibold leading-none ${getCategoryBadgeClass(selectedBill.ledgerCategory)}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${getCategoryDotClass(selectedBill.ledgerCategory)}`} />
                     {selectedBill.ledgerCategory}
                   </span>
-                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-semibold leading-none ${getCategoryBadgeClass(selectedBill.category)}`}>
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-xs font-semibold leading-none ${getCategoryBadgeClass(selectedBill.category)}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${getCategoryDotClass(selectedBill.category)}`} />
                     {selectedBill.category}
                   </span>
@@ -166,11 +166,11 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
             {selectedBill.status === 'PartiallyPaid' && (
               <div className="grid grid-cols-2 gap-2 bg-blue-500/10 border border-blue-500/20 p-2.5 rounded-xl text-xs">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Paid so far</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">Paid so far</span>
                   <span className="font-extrabold text-foreground">{formatSensitive(selectedBill.paidAmount ?? 0)}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Still to pay</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">Still to pay</span>
                   <span className="font-extrabold text-blue-600 dark:text-blue-400">{formatSensitive(selectedBill.remainingAmount ?? 0)}</span>
                 </div>
               </div>
@@ -178,7 +178,7 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
 
             {selectedBill.paidDate && (
               <div className="bg-emerald-500/10 border border-emerald-500/20 p-2.5 rounded-xl text-emerald-600 dark:text-emerald-400 text-xs flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider">Paid On</span>
+                <span className="text-xs font-bold uppercase tracking-wider">Paid On</span>
                 <span className="font-extrabold">{selectedBill.paidDate}</span>
               </div>
             )}

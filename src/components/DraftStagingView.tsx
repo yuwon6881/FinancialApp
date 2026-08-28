@@ -11,6 +11,7 @@ import {
   type TransactionFormSheetRef,
 } from './ledger/TransactionFormSheet'
 import { Button } from './ui/Button'
+import { PageHeader } from './ui/PageHeader'
 import { InfoHint } from './ui/InfoHint'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { DraftQueueCard } from './drafts/DraftQueueCard'
@@ -130,19 +131,16 @@ export function DraftStagingView({
 
   return (
     <section className="mx-auto max-w-5xl space-y-4 sm:space-y-5" aria-labelledby="draft-transactions-title">
-      <header className="flex min-w-0 items-center gap-2 px-0.5 sm:gap-3">
-        <Button variant="ghost" size="icon" onClick={onCancel} aria-label="Back to Ledger" title="Back to Ledger"><ArrowLeft className="size-4" aria-hidden="true" /></Button>
-        <span className="hidden size-10 shrink-0 place-items-center rounded-xl border border-accent-ink/20 bg-accent/20 text-accent-ink sm:grid sm:size-11"><FileText className="size-5" aria-hidden="true" /></span>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <h2 id="draft-transactions-title" className="truncate text-xl font-bold text-foreground sm:text-2xl">Draft Transactions</h2>
+      <PageHeader
+        titleId="draft-transactions-title"
+        leading={<Button variant="ghost" size="icon" onClick={onCancel} aria-label="Back to Ledger" title="Back to Ledger"><ArrowLeft className="size-4" aria-hidden="true" /></Button>}
+        icon={<span className="grid size-10 place-items-center rounded-xl border border-accent-ink/20 bg-accent/20 text-accent-ink sm:size-11"><FileText className="size-5" /></span>}
+        title={<span className="flex min-w-0 items-center gap-2"><span className="truncate">Draft Transactions</span>
             <span className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-bold text-muted-foreground">{draftTransactions.length}</span>
             <InfoHint text={recordingOrderExplanation} label="draft recording order" align="left" />
-          </div>
-          <p className="text-xs text-muted-foreground">Check the details, then add everything to your Ledger.</p>
-          <p className="sr-only">{recordingOrderExplanation}</p>
-        </div>
-      </header>
+          </span>}
+        description={<><span>Check the details, then add everything to your Ledger.</span><span className="sr-only">{recordingOrderExplanation}</span></>}
+      />
 
       {draftTransactions.length === 0 ? (
         <div role="status" className="app-panel rounded-2xl border border-dashed border-border/70 bg-card/80 px-5 py-12 text-center sm:px-8">

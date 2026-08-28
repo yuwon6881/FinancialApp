@@ -19,6 +19,7 @@ import { createRecurringActions } from './recurringActions'
 import { createWishlistSavingsActions } from './wishlistSavingsActions'
 import { createLoanActions } from './loanActions'
 import { createLedgerAccountActions } from './accountActions'
+import type { RefreshSlice } from '../../lib/refreshSlices'
 
 export interface UseFinancialDomainActionsOptions {
   darkMode: boolean
@@ -48,6 +49,7 @@ export interface UseFinancialDomainActionsOptions {
     isBackground?: boolean,
     rethrowOnError?: boolean,
     shouldCommit?: () => boolean,
+    refreshSlices?: readonly RefreshSlice[],
   ) => Promise<void>
   beginDirectSync: (ids: Array<string | number>) => void
   endDirectSync: (ids: Array<string | number>) => void
@@ -214,7 +216,7 @@ export function useFinancialDomainActions(options: UseFinancialDomainActionsOpti
     replacePendingLedgerTransaction,
     removePendingLedgerTransaction,
     setDeletingTransactionId: setDeletingTxId,
-    refreshAll: () => loadAll(selectedMonth || undefined, selectedYear || undefined, true, false, () => true),
+    refreshAll: (refreshSlices) => loadAll(selectedMonth || undefined, selectedYear || undefined, true, false, () => true, refreshSlices),
   })
 
   const loanActions = createLoanActions({

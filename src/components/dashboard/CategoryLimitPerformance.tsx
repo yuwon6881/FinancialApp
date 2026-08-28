@@ -35,7 +35,7 @@ export function CategoryLimitPerformance({
             </div>
             <div className="space-y-1">
               <h4 className="text-xs font-bold text-foreground">No category spending guides configured</h4>
-              <p className="max-w-md text-[11px] text-muted-foreground leading-relaxed">
+              <p className="max-w-md text-xs text-muted-foreground leading-relaxed">
                 Set category limits to track spending pace and warnings.
               </p>
             </div>
@@ -82,7 +82,7 @@ export function CategoryLimitPerformance({
               text="Bars show spending against your limit; marker projects the cycle-end total."
             />
           </h3>
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             {exceptionCount > 0
               ? `${exceptionCount} of ${items.length} tracked categor${items.length === 1 ? 'y needs' : 'ies need'} attention.`
               : `All ${items.length} tracked categor${items.length === 1 ? 'y is' : 'ies are'} currently on plan.`}

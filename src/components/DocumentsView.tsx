@@ -16,6 +16,7 @@ import * as documentsApi from '../lib/api/documents'
 import { getErrorMessage } from '../lib/errors'
 import { buildMutationSuccessToast } from '../lib/mutationToast'
 import { Button } from './ui/Button'
+import { PageHeader } from './ui/PageHeader'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { createFinalId } from '../lib/outbox'
 import { useOptimisticList } from '../lib/useOptimisticList'
@@ -191,20 +192,11 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-lg font-black text-foreground">
-            <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink">
-              <ShieldCheck className="size-4" aria-hidden="true" />
-            </span>
-            Document Vault
-          </h2>
-          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-            Keep receipts, invoices, and tax records in one place. Nothing is deleted automatically.
-          </p>
-        </div>
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+      <PageHeader
+        title="Document Vault"
+        description="Keep receipts, invoices, and tax records in one place. Nothing is deleted automatically."
+        icon={<span className="grid size-10 place-items-center rounded-xl bg-accent text-accent-ink"><ShieldCheck className="size-5" /></span>}
+        actions={<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
           <Button
             variant="outline"
             size="lg"
@@ -235,8 +227,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             <UploadCloud className="size-4" />
             Upload
           </Button>
-        </div>
-      </div>
+        </div>}
+      />
 
       <VaultRetentionNotice review={retentionReview} />
 
@@ -291,9 +283,9 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         <div className="mb-3 flex items-end justify-between gap-3 sm:px-3">
           <div>
             <h3 id="vault-documents-heading" className="text-sm font-black text-foreground">Your documents</h3>
-            <p className="mt-0.5 text-[10px] text-muted-foreground">Filter, review, and manage the files in your Vault.</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Filter, review, and manage the files in your Vault.</p>
           </div>
-          <span className="shrink-0 rounded-lg bg-muted px-2.5 py-1.5 text-[10px] font-bold text-muted-foreground tabular-nums">
+          <span className="shrink-0 rounded-lg bg-muted px-2.5 py-1.5 text-xs font-bold text-muted-foreground tabular-nums">
             {totalCount} file{totalCount === 1 ? '' : 's'}
           </span>
         </div>
@@ -318,7 +310,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           <div className="mb-3 flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-bold">{stagedCategories.staged.size} tax relief categor{stagedCategories.staged.size === 1 ? 'y change' : 'y changes'} staged</p>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">Save them together to update the Vault in one request.</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Save them together to update the Vault in one request.</p>
             </div>
             <div className="flex shrink-0 gap-2">
               <Button
@@ -347,7 +339,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         <div className="relative" aria-busy={isLoading}>
           {isLoading && documents.length > 0 && (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-              <div className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-card/90 px-3 py-2 text-[11px] font-semibold text-muted-foreground shadow-lg backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-card/90 px-3 py-2 text-xs font-semibold text-muted-foreground shadow-lg backdrop-blur-sm">
                 <Loader2 className="size-3.5 animate-spin text-accent-ink" aria-hidden="true" />
                 Updating documents…
               </div>

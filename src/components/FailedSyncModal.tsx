@@ -132,20 +132,20 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
               <div className="min-w-0">
                 <span className="font-bold text-foreground text-xs block truncate">{describeOp(op)}</span>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                  <span className="inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border border-border/40 bg-muted/40 text-muted-foreground">
+                  <span className="inline-block text-xs px-1.5 py-0.5 font-bold rounded border border-border/40 bg-muted/40 text-muted-foreground">
                     {ENTITY_LABELS[op.entity] || 'Item'}
                   </span>
-                  <span className="inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border border-border/40 bg-muted/40 text-muted-foreground">
+                  <span className="inline-block text-xs px-1.5 py-0.5 font-bold rounded border border-border/40 bg-muted/40 text-muted-foreground">
                     {TYPE_LABELS[op.type] || 'Change'}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {op.retryCount} {op.retryCount === 1 ? 'attempt' : 'attempts'}
                   </span>
                 </div>
               </div>
             </div>
             {getPayloadEntries(op).length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 text-[10px] bg-muted/40 border border-border/30 rounded-lg px-2.5 py-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 text-xs bg-muted/40 border border-border/30 rounded-lg px-2.5 py-2">
                 {getPayloadEntries(op).map(([key, value]) => (
                   <div key={key} className="min-w-0">
                     <span className="text-muted-foreground font-semibold">{formatFieldName(key)}: </span>
@@ -155,7 +155,7 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
               </div>
             )}
             {op.lastError && (
-              <div className="text-[10px] text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-2.5 py-1.5 break-words">
+              <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-2.5 py-1.5 break-words">
                 {op.lastError}
               </div>
             )}

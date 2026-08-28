@@ -40,7 +40,7 @@ describe('investment sleeve allocation view', () => {
 
     expect(screen.getByRole('combobox', { name: 'Group by' }).textContent).toContain('Basket in your plan')
     expect(screen.getByRole('img', { name: /US shares 66\.7%, Not sorted yet 33\.3%/ })).toBeTruthy()
-    fireEvent.click(screen.getByRole('listitem', { name: /US shares:/ }))
+    fireEvent.click(screen.getByRole('button', { name: /US shares:/ }))
     expect(onSelect).toHaveBeenCalledWith({ mode: 'sleeve', key: 'USEquity' })
   })
 

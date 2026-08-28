@@ -5,6 +5,7 @@ import type { DashboardData, TrendPoint } from '../../types'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
 import { useAppPrefs } from '../../contexts/AppContext'
 import { Button } from '../ui/Button'
+import { ResponsiveChartFrame } from '../ui/ResponsiveChartFrame'
 
 type TrendRange = '3month' | '6month' | 'yearly'
 
@@ -103,17 +104,18 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
           ))}
         </div>
         {hideSensitive && <p className="sr-only">Growth balance trend values are hidden.</p>}
-        <div
+        <ResponsiveChartFrame
+          density="compact"
           aria-hidden={hideSensitive || undefined}
           onMouseMove={event => selectNearest(event.clientX)}
           onMouseLeave={() => setHoveredIndex(null)}
           onTouchStart={event => selectNearest(event.touches[0].clientX)}
           onTouchMove={event => selectNearest(event.touches[0].clientX)}
-          className={`h-40 flex flex-col justify-end w-full relative mt-2 cursor-pointer ${hideSensitive ? 'blur-xs pointer-events-none' : ''}`}
+          className={`mt-2 flex cursor-pointer flex-col justify-end ${hideSensitive ? 'blur-xs pointer-events-none' : ''}`}
         >
           {splinePath ? (
             <>
-              <svg ref={svgRef} role="img" aria-label={chartSummary} className="w-full h-[120px] overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
+              <svg ref={svgRef} role="img" aria-label={chartSummary} className="h-full w-full overflow-visible" viewBox="0 0 500 120">
                 <defs>
                   <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.28" />
@@ -178,7 +180,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                     className="absolute z-20 bg-card/95 backdrop-blur-md border border-border/80 rounded-xl p-2 shadow-xl text-center"
                     style={{ left: `clamp(4px, calc(${position.left}% - 55px), calc(100% - 114px))`, top: `clamp(4px, calc(${position.top}% - 50px), calc(100% - 46px))`, width: 110 }}
                   >
-                    <b className="block text-[11px] font-semibold text-muted-foreground">{trendLabel(point)}</b>
+                    <b className="block text-xs font-semibold text-muted-foreground">{trendLabel(point)}</b>
                     <span className="text-xs font-black tabular-nums text-blue-500">
                       {hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(point.balance, currency)}
                     </span>
@@ -205,8 +207,8 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
               </div>}
             </>
           ) : <div className="text-xs text-muted-foreground pb-12 text-center">Calculating trend points...</div>}
-        </div>
-        <div aria-hidden="true" className="flex px-[3%] mt-1.5">{points.map((point, index) => <span key={point.cycleKey || `${point.month}-${index}`} className="flex-1 min-w-0 text-center truncate text-[11px] text-muted-foreground font-medium">{axisLabel(point, points.length)}</span>)}</div>
+        </ResponsiveChartFrame>
+        <div aria-hidden="true" className="flex px-[3%] mt-1.5">{points.map((point, index) => <span key={point.cycleKey || `${point.month}-${index}`} className="flex-1 min-w-0 text-center truncate text-xs text-muted-foreground font-medium">{axisLabel(point, points.length)}</span>)}</div>
       </div>
       <div className="border-t border-border/50 pt-3 mt-3 flex justify-between text-xs text-muted-foreground">
         <span>{range === '3month' ? 'Last 3 cycles' : range === '6month' ? 'Last 6 cycles' : `${dashboardData?.setting.selectedYear || new Date().getFullYear()} full year`}</span>

@@ -35,7 +35,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-2xl font-bold tracking-tight text-foreground">Today</h2>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-500/25 bg-teal-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-teal-400">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-500/25 bg-teal-500/10 px-2.5 py-0.5 text-xs font-semibold text-teal-400">
                 <CalendarCheck2 className="size-3 text-teal-400" />
                 <span>Starts on the {ordinal(cycleDay)}</span>
               </span>
@@ -54,7 +54,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <Wallet className="size-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-blue-500">Available now</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-blue-500">Available now</p>
               <p className="truncate text-xs text-muted-foreground">Excludes long-term Growth savings</p>
             </div>
           </div>

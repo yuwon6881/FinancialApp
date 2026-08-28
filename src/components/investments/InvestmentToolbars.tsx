@@ -1,6 +1,7 @@
 import { Plus, Wallet, Building2, Search, RefreshCw, Loader2, TrendingUp } from 'lucide-react'
 import type { InvestmentPortfolio } from '../../types'
 import { Button } from '../ui/Button'
+import { Panel } from '../ui/Panel'
 
 export const ActionToolbar = ({
   portfolio,
@@ -53,7 +54,7 @@ export const EmptyState = ({
   onAddInvestment: () => void
   mutationsDisabled: boolean
 }) => (
-  <section className="app-panel rounded-2xl border border-border/60 bg-card/92 px-6 py-14 text-center">
+  <Panel as="section" padding="none" className="px-6 py-14 text-center">
     <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-500"><TrendingUp className="size-7" /></div>
     <h2 className="mt-5 text-xl font-black text-foreground">Build your investment view</h2>
     <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
@@ -63,5 +64,5 @@ export const EmptyState = ({
       <Button variant="primary" onClick={onAddAccount} disabled={mutationsDisabled}><Building2 className="size-4" /> Add account</Button>
       <Button variant="ghost" onClick={onAddInvestment} disabled={mutationsDisabled}><Search className="size-4" /> Add investment</Button>
     </div>
-  </section>
+  </Panel>
 )

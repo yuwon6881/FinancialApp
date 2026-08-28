@@ -1,5 +1,6 @@
 import React from 'react'
 import { Settings } from 'lucide-react'
+import { PageHeader } from './ui/PageHeader'
 import type {
   CategoryFlowType,
   DashboardData,
@@ -176,15 +177,11 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
 
   return (
     <div className="w-full min-w-0 space-y-6">
-      <div className="w-full min-w-0 flex flex-col gap-2 p-4 sm:p-6 bg-card rounded-2xl border border-border/60">
-        <div className="flex items-center gap-2">
-          <Settings className="size-5 text-blue-500" />
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">Settings</h2>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Manage your budget, app, and categories.
-        </p>
-      </div>
+      <PageHeader
+        title="Settings"
+        description="Manage your budget, app, and categories."
+        icon={<span className="grid size-10 place-items-center rounded-xl bg-blue-500/10 text-blue-500"><Settings className="size-5" /></span>}
+      />
 
       <SettingsTabs
         activeTab={activeTab}

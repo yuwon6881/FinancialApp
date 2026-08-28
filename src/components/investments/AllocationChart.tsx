@@ -126,20 +126,20 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
               variant="unstyled"
               type="button"
               onClick={() => onSelect(null)}
-              className="shrink-0 cursor-pointer text-[10px] font-bold text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground"
+              className="shrink-0 cursor-pointer text-xs font-bold text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground"
             >
               Show everything
             </Button>
           </div>
           {selectedHoldings.length === 0 ? (
-            <p className="mt-2 text-[10px] text-muted-foreground">
+            <p className="mt-2 text-xs text-muted-foreground">
               This slice is cash rather than funds, so there is nothing to list.
             </p>
           ) : (
             <>
               <ul className="mt-2 space-y-1.5">
                 {selectedHoldings.map(holding => (
-                  <li key={`${holding.accountId}-${holding.instrumentId}`} className="flex items-baseline justify-between gap-3 text-[10px]">
+                  <li key={`${holding.accountId}-${holding.instrumentId}`} className="flex items-baseline justify-between gap-3 text-xs">
                     <span className="min-w-0 truncate">
                       <b className="text-foreground">{holding.symbol}</b>
                       <span className="text-muted-foreground"> · {holding.accountName}</span>
@@ -150,7 +150,7 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-[10px] text-muted-foreground">
+              <p className="mt-2 text-xs text-muted-foreground">
                 The holdings table below is showing only these.
               </p>
             </>

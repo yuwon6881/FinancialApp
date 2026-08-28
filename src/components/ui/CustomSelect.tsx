@@ -242,7 +242,7 @@ export function CustomSelect<T extends string | number>({
               <>
                 <span className="min-w-0 truncate">{option.label}</span>
                 <span
-                  className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-normal ${
+                  className={`shrink-0 rounded border px-1.5 py-0.5 text-xs font-bold uppercase tracking-normal ${
                     option.value === value
                       ? 'border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground'
                       : 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-300'

@@ -1,5 +1,6 @@
 import type { HTMLAttributes } from 'react'
 import { cn } from '../../lib/utils'
+import { Panel } from './Panel'
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   /** false renders the dashed, dimmed "inactive" look used for paused/disabled entities. */
@@ -12,15 +13,16 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 // keep using motion.div directly since Card can't wrap framer-motion's props.
 export function Card({ active = true, className, children, ...props }: CardProps) {
   return (
-    <div
+    <Panel
+      padding="none"
       className={cn(
-        'p-6 rounded-2xl bg-card border transition-all duration-300',
+        'p-6 transition-all duration-300',
         active ? 'border-border/60 shadow-xs' : 'border-dashed border-border/60 opacity-60',
         className
       )}
       {...props}
     >
       {children}
-    </div>
+    </Panel>
   )
 }

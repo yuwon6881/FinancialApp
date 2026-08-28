@@ -7,6 +7,15 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    --breakpoint-sm: 40rem;
+    --breakpoint-md: 40rem;
+    --breakpoint-lg: 64rem;
+    --breakpoint-xl: 64rem;
+    --spacing: 0.25rem;
+    --text-caption: 0.75rem;
+    --text-body: 0.875rem;
+    --text-title: 1.25rem;
+    --text-page-title: 1.5rem;
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-card: var(--card);
@@ -153,6 +162,8 @@
 :root {
     color-scheme: light;
     --radius: 0.75rem;
+    --app-nav-height: 6rem;
+    --app-fab-offset: 6rem;
     /* Height of the visual viewport (area NOT covered by the on-screen keyboard).
        Kept in sync by the visualViewport listener in App.tsx; falls back to the
        full dynamic viewport before JS runs or on desktop. */
@@ -504,17 +515,16 @@ button, [role="button"] {
 }
 
 /* Bottom padding for any scroll container that sits under the floating action
-   button. The FAB is fixed at 96px + safe-area above the viewport bottom and is
-   56px tall, so a container padded to 96px still leaves its last row *behind*
-   the button — which is how the Rewards delete action and the Vault amount
-   pencil ended up unreachable. 160px clears the button with a small gap.
+   button. The FAB sits at the shared offset above the viewport bottom, so a
+   container padded only to the navigation height leaves its last row behind
+   the button. One additional 4rem target clears it with a small gap.
    Capped at lg, where the FAB gives way to the desktop rail. */
 .pb-fab-safe {
-    padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--app-fab-offset) + 4rem + env(safe-area-inset-bottom, 0px));
 }
 
 .pb-nav-safe {
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--app-nav-height) + env(safe-area-inset-bottom, 0px));
 }
 
 /* Chrome hit-tests the clipped corner of border-radius, so a click a pixel or two
@@ -884,7 +894,7 @@ html {
 
 /* Bottom-sheet behaviour for centered modals on phones. Add .sheet-backdrop to the
    overlay and .sheet-panel to the dialog; desktop keeps the centered dialog. */
-@media (max-width: 639px) {
+@media (width < 40rem) {
     .sheet-backdrop {
         top: 0;
         left: 0;
@@ -1129,12 +1139,19 @@ html {
     }
 }
 
-/* Readability floor for dense supporting copy. The visual hierarchy remains
-   intact, but no application label or status is rendered below 12 CSS pixels. */
-:is(.text-\[8px\], .text-\[9px\], .text-\[10px\], .text-\[11px\]) {
-    font-size: 0.75rem !important;
-    line-height: 1rem !important;
+/* Compact and medium tiers are both touch-capable layouts. Authored size
+   utilities may make the visible control denser, but its hit box never drops
+   below the shared 44px interaction floor until the expanded tier. */
+@media (width < 64rem) {
+    :is(button, [role="button"], [role="combobox"], input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+        min-height: 2.75rem !important;
+    }
+
+    :is(button, [role="button"]) {
+        min-width: 2.75rem !important;
+    }
 }
+
 /* Shared pointer-target floor for icon and compact actions. Larger controls
    keep their authored dimensions; only undersized buttons are expanded. */
 button {

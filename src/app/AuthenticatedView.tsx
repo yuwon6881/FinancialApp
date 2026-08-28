@@ -2,6 +2,7 @@ import { lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
 import type { AppTab, DashboardData } from '../types'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { PullToRefresh } from '../components/ui/PullToRefresh'
+import { PageContainer } from '../components/ui/PageContainer'
 import { Skeleton } from '../components/ui/Skeleton'
 import type { PageSkeletonVariant } from '../components/ui/CycleSkeleton'
 import { LaunchReady } from './LaunchReady'
@@ -192,9 +193,10 @@ export function AuthenticatedView({
         onRefresh={() => financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)}
         disabled={financial.loading || session.isLocked}
       >
-        <main
+        <PageContainer
+          as="main"
           id="main-content"
-          className={`${shouldShowMobileFab(prefs.activeTab) ? 'pb-fab-safe' : 'pb-nav-safe'} relative mx-auto w-full min-w-0 max-w-[1440px] flex-1 overflow-x-clip px-4 py-6 sm:px-6 sm:py-8 lg:px-8`}
+          className={`${shouldShowMobileFab(prefs.activeTab) ? 'pb-fab-safe' : 'pb-nav-safe'} relative flex-1 overflow-x-clip py-6 sm:py-8 md:ml-20 md:max-w-[calc(100%-5rem)] lg:ml-56 lg:max-w-[calc(100%-14rem)] 2xl:mx-auto 2xl:max-w-[1440px]`}
           aria-busy={prefs.sensitivePreferenceStatus === 'pending' || financial.loading}
         >
           <ErrorBoundary variant="inline" resetKey={prefs.activeTab}>
@@ -245,7 +247,7 @@ export function AuthenticatedView({
               </LaunchReady>
             </Suspense>
           </ErrorBoundary>
-        </main>
+        </PageContainer>
       </PullToRefresh>
     </>
   )

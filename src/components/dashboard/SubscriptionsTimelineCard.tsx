@@ -100,7 +100,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
                 <span className={`font-bold tabular-nums block ${rp.isDiscarded ? 'text-slate-500 line-through' : 'text-orange-500'}`}>
                   {rp.amount == null ? 'Unavailable' : <>-{formatSensitive(rp.amount)}</>}
                 </span>
-                <span className="text-muted-foreground text-[11px] font-medium">Due {rp.dueDate}</span>
+                <span className="text-muted-foreground text-xs font-medium">Due {rp.dueDate}</span>
               </div>
               {/* Chevron affordance: fades and slides in on hover */}
               <ChevronRight className="size-4 shrink-0 text-blue-500 opacity-70 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 sm:-translate-x-1 sm:opacity-0" aria-hidden="true" />

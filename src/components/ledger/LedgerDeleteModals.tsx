@@ -142,7 +142,7 @@ export function DeleteTransactionModal({
             </label>
           </div>
         )}
-        <p className="text-[10px] text-orange-500/90 font-medium bg-orange-500/5 p-2 rounded-lg border border-orange-500/10">
+        <p className="text-xs text-orange-500/90 font-medium bg-orange-500/5 p-2 rounded-lg border border-orange-500/10">
           Are you sure you want to delete this transaction?
         </p>
       </div>

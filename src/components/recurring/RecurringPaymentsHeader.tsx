@@ -4,7 +4,7 @@ import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
 import { BottomSheet } from '../ui/BottomSheet'
-import { useIsMobile } from '../../lib/useIsMobile'
+import { useIsCompact } from '../../lib/breakpoints'
 import type { Loan, RecurringPayment } from '../../types'
 import { StatDistributionBreakdown, type DistributionBreakdownMode } from './StatDistributionBreakdown'
 
@@ -38,7 +38,7 @@ const StatTile: React.FC<{
   className?: string
 }> = ({ label, value, tone = 'figure', title, className = '' }) => (
   <div className={`min-w-0 overflow-hidden ${className}`}>
-    <span className="block text-[9px] font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:text-[10px] sm:tracking-wider">
+    <span className="block text-xs font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:text-xs sm:tracking-wider">
       {label}
     </span>
     <span
@@ -134,10 +134,10 @@ const InteractiveStatTile: React.FC<{
         className="group/stat block w-full text-left cursor-pointer select-none rounded-lg p-1 -m-1 transition-colors hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-ring"
       >
         <div className="flex items-center gap-1">
-          <span className="block text-[9px] font-bold uppercase leading-tight tracking-wide text-muted-foreground transition-colors group-hover/stat:text-foreground sm:text-[10px] sm:tracking-wider">
+          <span className="block text-xs font-bold uppercase leading-tight tracking-wide text-muted-foreground transition-colors group-hover/stat:text-foreground sm:text-xs sm:tracking-wider">
             {label}
           </span>
-          <span className="rounded bg-muted/60 px-1 py-0.5 text-[8px] font-semibold text-muted-foreground opacity-70 group-hover/stat:opacity-100 transition-opacity">
+          <span className="rounded bg-muted/60 px-1 py-0.5 text-xs font-semibold text-muted-foreground opacity-70 group-hover/stat:opacity-100 transition-opacity">
             Breakdown
           </span>
         </div>
@@ -218,7 +218,7 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
   onAddLoan,
 }) => {
   const isLoansView = activeView === 'loans'
-  const isMobile = useIsMobile(640)
+  const isMobile = useIsCompact()
 
   return (
     <div className="w-full">

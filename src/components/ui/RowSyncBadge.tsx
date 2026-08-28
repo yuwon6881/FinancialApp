@@ -53,7 +53,7 @@ const RowSyncBadge: React.FC<{ state: RowSyncState; entityLabel: string }> = ({ 
       aria-live="polite"
       aria-atomic="true"
       aria-label={title}
-      className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 select-none ${STATE_STYLE[state]}`}
+      className={`inline-flex items-center text-xs font-bold px-1.5 py-0.5 rounded-md border shrink-0 select-none ${STATE_STYLE[state]}`}
     >
       <Icon aria-hidden="true" className={`size-2.5 shrink-0 mr-1 ${state === 'syncing' || state === 'deleting' ? 'animate-spin' : ''}`} />
       <span aria-hidden="true">{mutationBusyLabel(state)}</span>

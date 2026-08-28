@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import type { ForecastPoint } from '../../../lib/investmentForecast'
 import { bandPolygon, seriesBounds, xAt, yAt } from '../../../lib/chartSeries'
 import { formatCurrencyVal } from '../../../lib/utils'
+import { ResponsiveChartFrame } from '../../ui/ResponsiveChartFrame'
 
 export function InvestmentForecastChart({
   points,
@@ -47,7 +48,7 @@ export function InvestmentForecastChart({
   return (
     <div className="mt-5 min-w-0">
       <p className="sr-only">{masked ? 'Forecast amounts are hidden.' : summary}</p>
-      <div
+      <ResponsiveChartFrame
         className={`relative cursor-crosshair ${masked ? 'select-none blur-md pointer-events-none' : ''}`}
         aria-hidden={masked || undefined}
         onMouseMove={event => selectNearest(event.clientX)}
@@ -58,8 +59,7 @@ export function InvestmentForecastChart({
         <svg
           ref={svgRef}
           viewBox={`0 0 ${width} ${height}`}
-          preserveAspectRatio="none"
-          className="h-48 w-full overflow-visible sm:h-60"
+          className="h-full w-full overflow-visible"
           role="img"
           aria-label={summary}
         >
@@ -80,27 +80,27 @@ export function InvestmentForecastChart({
             </>
           )}
         </svg>
-        <span className="pointer-events-none absolute left-0 top-0 rounded bg-card/70 px-1 text-[10px] font-semibold text-muted-foreground">{masked ? '••••' : money(bounds.max)}</span>
+        <span className="pointer-events-none absolute left-0 top-0 rounded bg-card/70 px-1 text-xs font-semibold text-muted-foreground">{masked ? '••••' : money(bounds.max)}</span>
         {hovered && (
           <div
             aria-hidden="true"
             className="pointer-events-none absolute z-20 w-40 rounded-xl border border-border/60 bg-card/95 p-2 text-center shadow-xl backdrop-blur-md"
             style={{ left: `clamp(0px, calc(${points.length <= 1 ? 50 : hoveredX / (points.length - 1) * 100}% - 80px), calc(100% - 160px))`, top: 4 }}
           >
-            <b className="block text-[10px] text-muted-foreground">{hovered.year === 0 ? 'Today' : `In ${hovered.year} years`}</b>
+            <b className="block text-xs text-muted-foreground">{hovered.year === 0 ? 'Today' : `In ${hovered.year} years`}</b>
             <span className="mt-0.5 block text-xs font-black text-violet-500">{money(hovered.median)}</span>
-            <span className="block text-[9px] text-muted-foreground">Could be {money(hovered.lower)} to {money(hovered.upper)}</span>
+            <span className="block text-xs text-muted-foreground">Could be {money(hovered.lower)} to {money(hovered.upper)}</span>
           </div>
         )}
-      </div>
-      <div className="mt-1 flex justify-between text-[10px] font-semibold text-muted-foreground">
+      </ResponsiveChartFrame>
+      <div className="mt-1 flex justify-between text-xs font-semibold text-muted-foreground">
         <span>Today</span>
         <span>{Math.round((ending?.year ?? 0) / 2)} years</span>
         <span>In {ending?.year ?? 0} years</span>
       </div>
       {/* Swatches carry the same tokens as the marks above: a legend in a different
           hue from its own line is worse than no legend at all. */}
-      <div className="mt-3 flex flex-wrap gap-4 text-[10px] font-semibold text-muted-foreground">
+      <div className="mt-3 flex flex-wrap gap-4 text-xs font-semibold text-muted-foreground">
         <span><i className="mr-1 inline-block size-2 rounded-full align-middle" style={{ backgroundColor: 'var(--ledger-purple-500)' }} /> Middle estimate</span>
         <span><i className="mr-1 inline-block w-4 border-t border-dashed align-middle opacity-60" style={{ borderColor: 'var(--ledger-purple-500)' }} /> Range of possible outcomes</span>
         {target !== null && (

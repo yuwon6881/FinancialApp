@@ -227,6 +227,31 @@ describe('CycleCalendar component', () => {
     expect(screen.getByText('Weekly Activity Pacing')).toBeTruthy()
   })
 
+  it('triggers onSelectWeek when an active week pacing tile is clicked', () => {
+    const onSelectWeek = vi.fn()
+    render(
+      <CycleCalendar
+        selectedMonth="Jul"
+        selectedYear={2026}
+        cycleDay={1}
+        cycleLabel="Jul 1 ~ Jul 31, 2026"
+        transactions={[
+          { id: '1', date: '2026-07-02', description: 'Groceries', category: 'Food', ledgerCategory: 'Essentials', amount: -200 },
+        ]}
+        recurringPayments={[]}
+        formatNet={value => `$${value}`}
+        onSelectWeek={onSelectWeek}
+      />,
+    )
+
+    const week1Button = screen.getByRole('button', { name: /View Week 1 transactions in Ledger/ })
+    fireEvent.click(week1Button)
+    expect(onSelectWeek).toHaveBeenCalledWith(
+      expect.objectContaining({ weekNumber: 1, totalOutflow: 200 }),
+      'expense',
+    )
+  })
+
   it('marks a week the cycle has not reached instead of pacing it at zero', () => {
     render(
       <CycleCalendar

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { isCompactViewport } from './breakpoints'
 
 const FOCUSABLE_SELECTORS = [
   'a[href]',
@@ -12,9 +13,6 @@ const FOCUSABLE_SELECTOR = FOCUSABLE_SELECTORS.join(',')
 const FLOATING_FOCUSABLE_SELECTOR = FOCUSABLE_SELECTORS
   .map(selector => `[data-floating-overlay] ${selector}`)
   .join(',')
-
-const isMobileLayout = () =>
-  typeof window !== 'undefined' && window.matchMedia('(max-width: 639px), (pointer: coarse)').matches
 
 const isTextEntryElement = (el: Element) => el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
 
@@ -86,7 +84,7 @@ export function useDialog({ isOpen, onClose, ref, initialFocusRef, canClose, aut
       // is still settling. The viewport resize this triggers races the CSS
       // transition, producing a brief flash where the backdrop/panel disappear.
       // Buttons don't open a keyboard, so they're safe to auto-focus everywhere.
-      if (isMobileLayout() && isTextEntryElement(target)) {
+      if (isCompactViewport() && isTextEntryElement(target)) {
         panel.focus({ preventScroll: true })
         return
       }

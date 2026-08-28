@@ -180,6 +180,10 @@ test('destructive confirmation sheet', async ({ page }) => {
   await mockApi(page)
   await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
   await expect(page.getByText('Neighbourhood Grocer')).toBeVisible()
+  const showActions = page.getByRole('button', { name: 'Show row actions' }).first()
+  if (await showActions.isVisible()) {
+    await showActions.click()
+  }
   await page.getByRole('button', { name: 'Delete' }).first().dispatchEvent('click')
   const dialog = page.getByRole('dialog', { name: 'Confirm Deletion' })
   await expect(dialog).toBeVisible()
@@ -234,7 +238,9 @@ test('rewards rail responds to a desktop mouse wheel and releases page scrolling
 
   await establishSession(page)
   await mockApi(page, { wishlist: rewardItems })
-  await page.setViewportSize({ width: 1440, height: 600 })
+  // The rail is a compact-tier affordance: medium and expanded lay the cards out as a grid.
+  // A narrow window on a fine pointer is the case this handoff actually has to serve.
+  await page.setViewportSize({ width: 390, height: 600 })
   await page.goto('/commitments-rewards', { waitUntil: 'domcontentloaded' })
   await page.getByRole('tab', { name: /^Rewards/ }).click()
 
@@ -306,6 +312,8 @@ test('global search reveals and horizontally centers far commitment and reward c
 
   await establishSession(page)
   await mockApi(page, { wishlist: rewardItems, savingsGoals: goals })
+  // Horizontal centering is a compact-tier behaviour; above it the cards are a grid.
+  await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
   await openGlobalSearch(page)
   await page.getByRole('combobox', { name: 'Search query' }).fill('Search Commitment 5')

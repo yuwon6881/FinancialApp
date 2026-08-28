@@ -47,6 +47,7 @@ function cspMetaPlugin(apiUrl: string | undefined): Plugin {
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",
+        "frame-ancestors 'none'",
       ].join('; ')
       return {
         html,

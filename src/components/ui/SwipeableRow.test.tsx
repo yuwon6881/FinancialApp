@@ -86,6 +86,22 @@ describe('SwipeableRow closed-state opacity', () => {
     expect(drawer).not.toBeNull()
   })
 
+  it('keeps the drawer hidden and transparent when closed to prevent border and corner color bleed', async () => {
+    renderRow('rounded-2xl border border-border shadow-xs')
+    const deleteButton = screen.getByText('Delete')
+    const drawer = deleteButton.closest('[role="group"]') as HTMLElement
+    expect(drawer.style.opacity).toBe('0')
+    expect(drawer.style.pointerEvents).toBe('none')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show row actions' }))
+    expect(drawer.style.opacity).toBe('1')
+    expect(drawer.style.pointerEvents).toBe('auto')
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(drawer.style.opacity).toBe('0')
+    expect(drawer.style.pointerEvents).toBe('none')
+  })
+
   it('opens through an accessible disclosure and moves focus into the actions', async () => {
     renderRow()
     const disclosure = screen.getByRole('button', { name: 'Show row actions' })

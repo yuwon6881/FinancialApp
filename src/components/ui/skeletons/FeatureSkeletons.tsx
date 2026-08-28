@@ -1,8 +1,7 @@
 import React from 'react'
 import { Card } from '../Card'
 import { Skeleton } from '../Skeleton'
-
-export const panelClass = 'app-panel rounded-2xl border border-border/60 bg-card/92'
+import { panelClass } from '../Panel'
 
 export const CardSkeleton: React.FC = () => (
   <div className={`${panelClass} p-5`}>

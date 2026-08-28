@@ -19,7 +19,7 @@ import { PushDevicesList } from './PushDevicesList'
 // Which devices a switch changes is the thing people get wrong here, so each row says it rather
 // than leaving it to be read out of the wording.
 const ScopeChip: React.FC<{ scope: string }> = ({ scope }) => (
-  <span className="shrink-0 rounded-md border border-border/50 bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+  <span className="shrink-0 rounded-md border border-border/50 bg-muted/40 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
     {scope}
   </span>
 )
@@ -46,11 +46,11 @@ const NotificationRow: React.FC<{
     <div className="flex min-w-0 flex-1 gap-2">
       <span className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true">{icon}</span>
       <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-foreground sm:text-sm">
+        <span className="flex flex-wrap items-center gap-1.5 text-body font-medium text-foreground sm:text-sm">
           <span className="truncate">{title}</span>
           <ScopeChip scope={scope} />
         </span>
-        <span className="text-[10px] leading-snug text-muted-foreground">{description}</span>
+        <span className="text-xs leading-snug text-muted-foreground">{description}</span>
       </span>
     </div>
     <div className="flex shrink-0 items-center gap-1.5">
@@ -97,7 +97,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
     >
       <div className="border-b border-border/40 pb-2.5 sm:pb-3">
         <h3 id="settings-notifications-heading" className="text-sm font-bold text-foreground">Notifications</h3>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
+        <p className="mt-0.5 text-xs text-muted-foreground">
           Each of these is set up on the device you are using now.
         </p>
       </div>
@@ -159,7 +159,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
             rather than a permanent extra link under a working switch. */}
         {!props.hasSpendingGuides && (
           <div className="ml-6 space-y-1">
-            <p className="text-[10px] font-medium leading-snug text-muted-foreground">
+            <p className="text-xs font-medium leading-snug text-muted-foreground">
               You have not set a planned amount for any category yet, so there is nothing to alert on.
             </p>
             {props.onNavigateToCategoryLimits && (
@@ -167,7 +167,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
                 variant="unstyled"
                 type="button"
                 onClick={props.onNavigateToCategoryLimits}
-                className="inline-flex items-center gap-1 text-[10px] font-bold text-accent-ink hover:underline"
+                className="inline-flex items-center gap-1 text-xs font-bold text-accent-ink hover:underline"
               >
                 Set planned amounts per category <ChevronRight className="size-3" aria-hidden="true" />
               </Button>
@@ -183,7 +183,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
             className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-2.5 text-amber-500"
           >
             <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            <p className="flex-1 text-[11px] font-medium leading-snug sm:text-xs">{props.pushGuidance}</p>
+            <p className="flex-1 text-xs font-medium leading-snug sm:text-xs">{props.pushGuidance}</p>
           </div>
         )}
 
@@ -205,7 +205,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
             I ever turn this on in", which is a question people ask occasionally and never on the
             way to changing a setting. Left open it was the tallest thing in the panel. */}
         <details className="group border-t border-border/30 pt-3">
-          <summary className="flex cursor-pointer list-none items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground transition hover:text-foreground">
+          <summary className="flex cursor-pointer list-none items-center gap-1 text-xs font-bold uppercase tracking-wide text-muted-foreground transition hover:text-foreground">
             <ChevronRight className="size-3 transition-transform group-open:rotate-90" aria-hidden="true" />
             Devices set up
           </summary>
@@ -229,7 +229,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
 const OtherDevicesNote: React.FC<{ show: boolean; kind: string }> = ({ show, kind }) => {
   if (!show) return null
   return (
-    <p className="ml-6 text-[10px] font-medium leading-snug text-muted-foreground">
+    <p className="ml-6 text-xs font-medium leading-snug text-muted-foreground">
       {otherDevicesHaveItOn(kind)}
     </p>
   )

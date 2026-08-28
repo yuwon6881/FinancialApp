@@ -68,11 +68,11 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
     <div className="space-y-4 border-t border-border/40 pt-4 lg:border-t-0 lg:pt-0">
       {/* Date Range */}
       <div className="space-y-1.5">
-        <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+        <span className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
           <CalendarDays className="size-3 text-accent-ink" /> Date range
         </span>
         <div className="grid grid-cols-2 gap-2">
-          <FormField label="From" labelClassName="text-[10px] text-muted-foreground">
+          <FormField label="From" labelClassName="text-xs text-muted-foreground">
             <DatePicker
               value={startDate}
               max={endDate || undefined}
@@ -85,7 +85,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
               popoverClassName="ledger-filter-dropdown"
             />
           </FormField>
-          <FormField label="To" labelClassName="text-[10px] text-muted-foreground">
+          <FormField label="To" labelClassName="text-xs text-muted-foreground">
             <DatePicker
               value={endDate}
               min={startDate || undefined}
@@ -99,16 +99,16 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
             />
           </FormField>
         </div>
-        {hasInvalidDateRange && <p role="alert" className="text-[10px] font-semibold text-destructive">Start date must be before the end date.</p>}
+        {hasInvalidDateRange && <p role="alert" className="text-xs font-semibold text-destructive">Start date must be before the end date.</p>}
       </div>
 
       {/* Amount Range */}
       <div className="space-y-1.5">
-        <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+        <span className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
           <Banknote className="size-3 text-accent-ink" /> Amount range
         </span>
         <div className="grid grid-cols-2 gap-2">
-          <FormField label="Minimum" labelClassName="text-[10px] text-muted-foreground">
+          <FormField label="Minimum" labelClassName="text-xs text-muted-foreground">
             <Input
               type="number"
               min="0"
@@ -121,7 +121,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
               controlSize="sm"
             />
           </FormField>
-          <FormField label="Maximum" labelClassName="text-[10px] text-muted-foreground">
+          <FormField label="Maximum" labelClassName="text-xs text-muted-foreground">
             <Input
               type="number"
               min="0"
@@ -135,13 +135,13 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
             />
           </FormField>
         </div>
-        <p className="text-[9px] text-muted-foreground">Uses absolute amount for both inflows and outflows.</p>
-        {hasInvalidAmountRange && <p role="alert" className="text-[10px] font-semibold text-destructive">Minimum amount cannot exceed maximum amount.</p>}
+        <p className="text-xs text-muted-foreground">Uses absolute amount for both inflows and outflows.</p>
+        {hasInvalidAmountRange && <p role="alert" className="text-xs font-semibold text-destructive">Minimum amount cannot exceed maximum amount.</p>}
       </div>
 
       {/* Transaction Type Segmented Control */}
       <div className="space-y-1.5">
-        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
           Transaction type
         </span>
         <div className="grid grid-cols-4 gap-1 rounded-xl border border-border/60 bg-muted/30 p-1">
@@ -173,7 +173,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
 
       {/* Grouped Property Filters */}
       <div className="space-y-1.5">
-        <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+        <span className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
           <SlidersHorizontal className="size-3 text-accent-ink" /> Filters & Rules
         </span>
         <div className="space-y-2 rounded-xl border border-border/60 bg-background/50 p-2.5">
@@ -237,7 +237,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
       {/* Accounts List */}
       {accounts.length > 0 && (
         <fieldset className="space-y-1.5">
-          <legend className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Accounts</legend>
+          <legend className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Accounts</legend>
           <div className="max-h-44 space-y-2.5 overflow-y-auto rounded-xl border border-border/60 bg-background/50 p-2.5">
             {(['Essentials', 'Growth', 'Stability', 'Rewards'] as const).map(bucket => {
               const bucketAccounts = accounts
@@ -246,7 +246,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
               if (bucketAccounts.length === 0) return null
               return (
                 <div key={bucket} className="space-y-1">
-                  <span className="block px-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{bucket}</span>
+                  <span className="block px-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">{bucket}</span>
                   <div className="space-y-0.5">
                     {bucketAccounts.map(account => (
                       <label key={account.id} className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs hover:bg-muted/40 transition-colors">
@@ -256,7 +256,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
                           aria-label={`Filter by ${account.name}${account.isArchived ? ', closed account' : ''}`}
                         />
                         <span className="min-w-0 flex-1 truncate font-medium text-foreground">{account.name}</span>
-                        {account.isArchived && <span className="shrink-0 text-[9px] text-muted-foreground bg-muted/60 px-1 rounded">Closed</span>}
+                        {account.isArchived && <span className="shrink-0 text-xs text-muted-foreground bg-muted/60 px-1 rounded">Closed</span>}
                       </label>
                     ))}
                   </div>

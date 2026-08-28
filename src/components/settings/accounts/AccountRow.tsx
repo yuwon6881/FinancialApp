@@ -61,7 +61,7 @@ export function AccountRow({
             <p className={`truncate text-xs font-semibold sm:text-sm ${account.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
               {account.name}
             </p>
-            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
               <span>{ACCOUNT_KIND_LABELS[account.kind] ?? account.kind}</span>
               {account.isArchived && (
                 <>

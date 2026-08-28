@@ -15,6 +15,7 @@ import { getErrorMessage } from '../lib/errors'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
 import { createFinalId } from '../lib/outbox'
 import { formatCurrencyVal } from '../lib/utils'
+import { collectRefreshHints, type RefreshSlice } from '../lib/refreshSlices'
 
 type ToastTone = 'info' | 'success' | 'warning' | 'error'
 
@@ -31,7 +32,7 @@ export interface SavingsGoalActionDeps {
   replacePendingLedgerTransaction?: (pendingId: string, transaction: Transaction) => void
   removePendingLedgerTransaction?: (id: string) => void
   setDeletingTransactionId?: (id: string | null) => void
-  refreshAll: () => Promise<void>
+  refreshAll: (refreshSlices?: readonly RefreshSlice[]) => Promise<void>
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
 }
 
@@ -54,8 +55,9 @@ export async function contributeToGoal(
   const { contributeToSavingsGoal, fetchSavingsGoals } = await import('../lib/api/savingsGoals')
   deps.beginDirectSync?.([id])
   try {
-    await contributeToSavingsGoal(id, amount)
+    const { hints } = await collectRefreshHints(() => contributeToSavingsGoal(id, amount))
     deps.commitGoals(await fetchSavingsGoals())
+    await deps.refreshAll(hintedSlices(hints))
     const copy = buildMutationSuccessToast({
       entity: 'Savings Goal',
       action: 'Updated',
@@ -76,8 +78,9 @@ export async function contributeToGoal(
         void (async () => {
           try {
             const { contributeToSavingsGoal, fetchSavingsGoals } = await import('../lib/api/savingsGoals')
-            await contributeToSavingsGoal(id, undoAmount)
+            const { hints } = await collectRefreshHints(() => contributeToSavingsGoal(id, undoAmount))
             deps.commitGoals(await fetchSavingsGoals())
+            await deps.refreshAll(hintedSlices(hints))
             const undoCopy = buildUndoSuccessToast(deps.getGoalName(id) ?? 'goal', 'savings goal')
             deps.showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
           } catch (err: unknown) {
@@ -107,8 +110,9 @@ export async function fundGoalsForCycle(deps: SavingsGoalActionDeps, bucket: Sav
   const syncIds = ['savings-goals-fund', ...(deps.getActiveGoalIds?.() ?? [])]
   deps.beginDirectSync?.(syncIds)
   try {
-    const result = await fundSavingsGoalsForCycle(bucket)
+    const { value: result, hints } = await collectRefreshHints(() => fundSavingsGoalsForCycle(bucket))
     deps.commitGoals(result.goals)
+    await deps.refreshAll(hintedSlices(hints))
     const bucketLabel = bucket === 'Essentials' ? 'Essentials' : 'Rewards'
     const freeToSpend = bucket === 'Essentials' ? result.essentialsFreeToSpend : result.rewardsFreeToSpend
     const funded = result.totalGranted > 0
@@ -130,7 +134,9 @@ export async function fundGoalsForCycle(deps: SavingsGoalActionDeps, bucket: Sav
             deps.beginDirectSync?.(undoSyncIds)
             try {
               const { undoSavingsGoalsCycleFunding } = await import('../lib/api/savingsGoals')
-              deps.commitGoals(await undoSavingsGoalsCycleFunding(result.actionId!))
+              const { value: goals, hints } = await collectRefreshHints(() => undoSavingsGoalsCycleFunding(result.actionId!))
+              deps.commitGoals(goals)
+              await deps.refreshAll(hintedSlices(hints))
               const undoCopy = buildUndoSuccessToast(`${bucketLabel} commitments`, 'cycle funding')
               deps.showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
             } catch (error) {
@@ -165,7 +171,7 @@ export async function completeGoal(deps: SavingsGoalActionDeps, id: number, acco
   deps.beginDirectSync?.(syncIds)
   if (pendingTransaction) deps.addPendingLedgerTransaction?.(pendingTransaction)
   try {
-    const result = await completeSavingsGoal(id, accountId, pendingTransaction?.id, pendingTransaction?.postedAt)
+    const { value: result, hints } = await collectRefreshHints(() => completeSavingsGoal(id, accountId, pendingTransaction?.id, pendingTransaction?.postedAt))
     if (pendingTransaction) {
       deps.replacePendingLedgerTransaction?.(pendingTransaction.id, result.transaction)
     }
@@ -175,7 +181,7 @@ export async function completeGoal(deps: SavingsGoalActionDeps, id: number, acco
     // dashboard reads queued ops, not this direct row — so free-to-spend briefly claimed the
     // completed amount twice, which is long enough to claim a reward against money already gone.
     try {
-      await deps.refreshAll()
+      await deps.refreshAll(hintedSlices(hints))
     } finally {
       deps.commitGoal(result.goal)
     }
@@ -203,8 +209,8 @@ export async function completeGoal(deps: SavingsGoalActionDeps, id: number, acco
           deps.setDeletingTransactionId?.(result.transaction.id)
           try {
             const { deleteTransaction } = await import('../lib/api/transactions')
-            await deleteTransaction(result.transaction.id)
-            await deps.refreshAll()
+            const { hints } = await collectRefreshHints(() => deleteTransaction(result.transaction.id))
+            await deps.refreshAll(hintedSlices(hints))
             deps.removePendingLedgerTransaction?.(result.transaction.id)
             if (goal) deps.commitGoal(goal)
             const undoCopy = buildUndoSuccessToast(result.goal.name, 'savings goal')
@@ -228,6 +234,10 @@ export async function completeGoal(deps: SavingsGoalActionDeps, id: number, acco
 
 function isOnline(): boolean {
   return typeof navigator === 'undefined' || navigator.onLine !== false
+}
+
+function hintedSlices(hints: { seen: boolean; requiresFull: boolean; slices: RefreshSlice[] }): readonly RefreshSlice[] | undefined {
+  return hints.seen && !hints.requiresFull && hints.slices.length > 0 ? hints.slices : undefined
 }
 
 function showOnlineOnlyMessage(deps: SavingsGoalActionDeps, message: string): void {

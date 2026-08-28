@@ -6,6 +6,7 @@ import { polylinePoints, seriesBounds, xAt, yAt } from '../../lib/chartSeries'
 import { chartRanges } from '../../lib/investmentChartRanges'
 import { formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
+import { ResponsiveChartFrame } from '../ui/ResponsiveChartFrame'
 
 export type { AllocationMode, AllocationFilter } from '../../lib/investmentHoldingFilter'
 
@@ -83,7 +84,7 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
               </div>
             </div>
           )}
-          <div
+          <ResponsiveChartFrame
             className={`relative cursor-crosshair ${masked || isFetching ? 'select-none blur-md pointer-events-none transition-[filter,opacity] duration-200' : 'transition-[filter,opacity] duration-200'}`}
             aria-hidden={masked}
             onMouseMove={event => selectNearest(event.clientX)}
@@ -91,7 +92,7 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
             onTouchStart={event => selectNearest(event.touches[0].clientX)}
             onTouchMove={event => selectNearest(event.touches[0].clientX)}
           >
-            <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-48 w-full overflow-visible sm:h-60" role="img" aria-label={summary}>
+            <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} className="h-full w-full overflow-visible" role="img" aria-label={summary}>
               <defs>
                 <linearGradient id="investmentValueGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--ledger-purple-500)" stopOpacity="0.24" />
@@ -121,19 +122,19 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
                 className="pointer-events-none absolute z-20 w-36 rounded-xl border border-border/60 bg-card/95 p-2 text-center shadow-xl backdrop-blur-md"
                 style={{ left: `clamp(0px, calc(${portfolio.chart.length <= 1 ? 50 : hoveredIndex / (portfolio.chart.length - 1) * 100}% - 72px), calc(100% - 144px))`, top: 4 }}
               >
-                <b className="block text-[10px] text-muted-foreground">{portfolio.chart[hoveredIndex].date}</b>
+                <b className="block text-xs text-muted-foreground">{portfolio.chart[hoveredIndex].date}</b>
                 <span className="mt-0.5 block text-xs font-black text-violet-500">
                   {portfolio.chart[hoveredIndex].totalValue === undefined ? 'Incomplete' : money(portfolio.chart[hoveredIndex].totalValue!, portfolio.appCurrency)}
                 </span>
-                <span className="block text-[9px] text-muted-foreground">
+                <span className="block text-xs text-muted-foreground">
                   Deposits {portfolio.chart[hoveredIndex].netDeposits === undefined ? 'incomplete' : money(portfolio.chart[hoveredIndex].netDeposits!, portfolio.appCurrency)}
                 </span>
               </div>
             )}
-          </div>
+          </ResponsiveChartFrame>
         </div>
       )}
-      <div className="mt-3 flex flex-wrap gap-4 text-[10px] font-semibold text-muted-foreground">
+      <div className="mt-3 flex flex-wrap gap-4 text-xs font-semibold text-muted-foreground">
         <span><i className="mr-1 inline-block size-2 rounded-full bg-violet-500" /> Total value</span>
         <span><i className="mr-1 inline-block w-4 border-t-2 border-dashed border-amber-500 align-middle" /> Net deposits</span>
       </div>

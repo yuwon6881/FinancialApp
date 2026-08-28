@@ -82,7 +82,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
   return (
     <section className="mt-5 overflow-hidden rounded-xl border border-border/60 bg-muted/20">
       <Button type="button" variant="unstyled" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex min-h-14 w-full items-center justify-between gap-3 rounded-none px-4 py-3 text-left transition hover:bg-muted/30">
-        <span className="flex min-w-0 items-center gap-2.5"><span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/10 text-blue-500"><WalletCards className="size-4" /></span><span><strong className="block text-xs text-foreground">Plan money in or out</strong><span className="block text-[10px] text-muted-foreground">See the app-currency plan and each ETF’s trading-currency equivalent.</span></span></span>
+        <span className="flex min-w-0 items-center gap-2.5"><span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/10 text-blue-500"><WalletCards className="size-4" /></span><span><strong className="block text-xs text-foreground">Plan money in or out</strong><span className="block text-xs text-muted-foreground">See the app-currency plan and each ETF’s trading-currency equivalent.</span></span></span>
         <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
       </Button>
 
@@ -104,33 +104,33 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
           ))}
         </div>
 
-        <label className="block text-[11px] font-semibold text-muted-foreground">
+        <label className="block text-xs font-semibold text-muted-foreground">
           {mode === 'deposit' ? 'How much new money do you want to deposit?' : 'How much do you need to withdraw?'}
           <div className="mt-1.5 flex items-center gap-2"><span className="shrink-0 text-xs font-bold">{allocation.appCurrency}</span><SmartAmountInput value={amountText} onChange={event => setAmountText(event.target.value)} placeholder="0.00" aria-label={`${mode === 'deposit' ? 'Amount to deposit' : 'Amount to withdraw'} in ${allocation.appCurrency}`} /></div>
         </label>
 
-        {!canPlan && <p className="rounded-lg border border-orange-500/25 bg-orange-500/8 p-3 text-[11px] text-orange-700 dark:text-orange-300">{!valuesKnown || !cashKnown ? 'Update the missing market or cash exchange rate before using this planner.' : mode === 'deposit' ? 'Classify at least one investment into a plan basket first.' : 'There is nothing to withdraw yet.'}</p>}
+        {!canPlan && <p className="rounded-lg border border-orange-500/25 bg-orange-500/8 p-3 text-xs text-orange-700 dark:text-orange-300">{!valuesKnown || !cashKnown ? 'Update the missing market or cash exchange rate before using this planner.' : mode === 'deposit' ? 'Classify at least one investment into a plan basket first.' : 'There is nothing to withdraw yet.'}</p>}
 
         {plan && <>
-          <div className="flex flex-wrap gap-2 text-[10px]">
+          <div className="flex flex-wrap gap-2 text-xs">
             {mode === 'deposit' && <span className="rounded-full border border-blue-500/25 bg-blue-500/8 px-2 py-1 font-bold text-blue-600 dark:text-blue-400">{money(requested)} new deposit</span>}
             {plan.fromCash > 0 && <span className="rounded-full border border-emerald-500/25 bg-emerald-500/8 px-2 py-1 font-bold text-emerald-600 dark:text-emerald-400">{money(plan.fromCash)} spare broker cash</span>}
             {mode === 'withdrawal' && plan.fromHoldings > 0 && <span className="rounded-full border border-border/60 bg-background/60 px-2 py-1 font-bold text-muted-foreground">{money(plan.fromHoldings)} raised by selling</span>}
           </div>
-          {plan.shortfall > 0 && <p className="rounded-lg border border-orange-500/30 bg-orange-500/8 p-2.5 text-[11px] text-orange-700 dark:text-orange-300">You are {money(plan.shortfall)} short after using all spare cash and holdings.</p>}
+          {plan.shortfall > 0 && <p className="rounded-lg border border-orange-500/30 bg-orange-500/8 p-2.5 text-xs text-orange-700 dark:text-orange-300">You are {money(plan.shortfall)} short after using all spare cash and holdings.</p>}
           <ul className="grid gap-2 lg:grid-cols-3">
             {plan.sleeves.map((sleeve, index) => {
               const etfPlan = etfPlans.find(item => item.sleeve === sleeve.sleeve)
               return <li key={sleeve.sleeve} className="rounded-xl border border-border/50 bg-background/55 p-3">
-                <div className="flex items-center gap-2"><span className={`size-2 rounded-full ${colors[index]}`} /><strong className="text-[11px] text-foreground">{sleeve.label}</strong></div>
+                <div className="flex items-center gap-2"><span className={`size-2 rounded-full ${colors[index]}`} /><strong className="text-xs text-foreground">{sleeve.label}</strong></div>
                 <strong className="mt-2 block text-lg text-foreground">{sleeve.amount > 0 ? money(sleeve.amount) : mode === 'deposit' ? 'Skip' : 'Leave alone'}</strong>
-                <p className="text-[10px] text-muted-foreground">Leaves this basket at {sleeve.projectedPercentage.toFixed(1)}%.</p>
+                <p className="text-xs text-muted-foreground">Leaves this basket at {sleeve.projectedPercentage.toFixed(1)}%.</p>
                 {etfPlan?.requiresChoice && <CustomSelect ariaLabel={`ETF for ${sleeve.label}`} value={selections[sleeve.sleeve] ?? ''} onChange={value => setSelections(previous => ({ ...previous, [sleeve.sleeve]: String(value) }))} options={[{ value: '', label: 'Choose an ETF' }, ...etfPlan.choices.map(choice => ({ value: choice.id, label: `${choice.symbol} · ${choice.currency}` }))]} className="mt-2 w-full" />}
-                {etfPlan && etfPlan.lines.length > 0 && <ul className="mt-2 space-y-1.5 border-t border-border/40 pt-2">{etfPlan.lines.map(line => <li key={line.instrumentId} className="text-[10px]"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate font-bold text-foreground">{line.symbol}</span><span className="shrink-0 font-bold text-foreground">{masked ? '••••' : money(line.amountApp)}</span></div>{line.currency !== allocation.appCurrency.toUpperCase() && <div className="mt-0.5 flex items-start justify-between gap-2 text-muted-foreground"><span className="truncate">{line.currency}{line.fx?.asOf ? ` · FX ${line.fx.asOf}` : ''}</span><span className="shrink-0">{masked ? '••••' : line.amountNative === undefined ? 'Exchange rate unavailable' : `≈ ${formatCurrencyVal(line.amountNative, line.currency)}`}</span></div>}</li>)}</ul>}
+                {etfPlan && etfPlan.lines.length > 0 && <ul className="mt-2 space-y-1.5 border-t border-border/40 pt-2">{etfPlan.lines.map(line => <li key={line.instrumentId} className="text-xs"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate font-bold text-foreground">{line.symbol}</span><span className="shrink-0 font-bold text-foreground">{masked ? '••••' : money(line.amountApp)}</span></div>{line.currency !== allocation.appCurrency.toUpperCase() && <div className="mt-0.5 flex items-start justify-between gap-2 text-muted-foreground"><span className="truncate">{line.currency}{line.fx?.asOf ? ` · FX ${line.fx.asOf}` : ''}</span><span className="shrink-0">{masked ? '••••' : line.amountNative === undefined ? 'Exchange rate unavailable' : `≈ ${formatCurrencyVal(line.amountNative, line.currency)}`}</span></div>}</li>)}</ul>}
               </li>
             })}
           </ul>
-          <details className="rounded-lg border border-border/50 bg-background/40 p-3"><summary className="cursor-pointer text-[11px] font-semibold text-foreground">How this is calculated</summary><p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">Basket amounts rebalance toward your saved target. Multiple ETFs keep their current value proportions. Native equivalents use the latest available rate where one unit of ETF currency equals the shown rate in {allocation.appCurrency}; your broker’s execution rate remains authoritative.</p></details>
+          <details className="rounded-lg border border-border/50 bg-background/40 p-3"><summary className="cursor-pointer text-xs font-semibold text-foreground">How this is calculated</summary><p className="mt-2 text-xs leading-relaxed text-muted-foreground">Basket amounts rebalance toward your saved target. Multiple ETFs keep their current value proportions. Native equivalents use the latest available rate where one unit of ETF currency equals the shown rate in {allocation.appCurrency}; your broker’s execution rate remains authoritative.</p></details>
         </>}
       </div>}
     </section>

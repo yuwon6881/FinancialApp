@@ -13,13 +13,17 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '24'
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Secret-pattern scan
+        run: npm run security:secrets
       - name: Lint
         run: npm run lint
       - name: Design-system audit
@@ -30,6 +34,8 @@ jobs:
         run: npm run test
       - name: Build
         run: npm run build
+      - name: Web security-header contract
+        run: npm run security:headers
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Visual regression
@@ -38,7 +44,7 @@ jobs:
       # diagnosable with the actual/diff PNGs this run produced.
       - name: Upload visual regression diffs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-visual-diffs
           path: test-results

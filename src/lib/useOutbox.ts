@@ -13,6 +13,7 @@ import {
   type QueuedOp,
 } from './outbox'
 import { drainQueue, type SuccessfulSyncOp } from './outboxSync'
+import type { RefreshHintSummary } from './refreshSlices'
 import { buildUndoAction, releaseUndoSnapshot, remapUndoSnapshotTarget, snapshotForUndo, type RequestSensitiveReveal, type UndoSnapshot } from './undo'
 import { Eye } from 'lucide-react'
 import { triggerHaptic } from './haptics'
@@ -28,7 +29,7 @@ interface UseOutboxOptions {
   onLockError: () => void
   onRequestSensitiveReveal?: RequestSensitiveReveal
   shouldRefresh?: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => boolean
-  refresh: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => Promise<void>
+  refresh: (successfulOps: ReadonlyArray<SuccessfulSyncOp>, hints?: RefreshHintSummary) => Promise<void>
   onViewFailedOps?: () => void
 }
 

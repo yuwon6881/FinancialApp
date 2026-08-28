@@ -1,6 +1,6 @@
 import { RangeInput } from '../ui/RangeInput'
 import { Input } from '../ui/Input'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Reorder } from 'framer-motion'
 import { AlertCircle, Info, Loader2, Save, SlidersHorizontal, Lock, Unlock, WifiOff } from 'lucide-react'
 import type {
@@ -98,24 +98,40 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
     setPlan(projected?.plan ?? providedOverview.plan)
   }, [providedOverview])
 
-  const load = () => {
+  const load = async () => {
     if (isOffline) {
       setLoading(false)
       return
     }
     setLoading(true)
-    api.fetchInvestmentAllocation()
-      .then(value => {
-        const projected = projectQueuedChanges(value)
-        setOverview(projected)
-        setPlan(projected?.plan ?? value.plan)
-        setError('')
-      })
-      .catch(reason => setError(reason instanceof Error ? reason.message : 'Could not load the investment plan.'))
-      .finally(() => setLoading(false))
+    try {
+      const value = await api.fetchInvestmentAllocation()
+      const projected = projectQueuedChanges(value)
+      setOverview(projected)
+      setPlan(projected?.plan ?? value.plan)
+      setError('')
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not load the investment plan.')
+      throw reason
+    } finally {
+      setLoading(false)
+    }
   }
 
-  useEffect(load, [isOffline])
+  // The coordinator broadcasts an authoritative allocation after a partial refresh. Keep the
+  // event listener stable, but let it read the latest queued-operation projection and loader;
+  // otherwise a listener installed before a user edits the plan can overwrite that edit with a
+  // stale closure when the refresh response arrives.
+  const projectQueuedChangesRef = useRef(projectQueuedChanges)
+  const loadRef = useRef(load)
+  useEffect(() => {
+    projectQueuedChangesRef.current = projectQueuedChanges
+    loadRef.current = load
+  })
+
+  useEffect(() => {
+    if (!providedOverview) void load().catch(() => undefined)
+  }, [isOffline, providedOverview])
   useEffect(() => {
     const queuedPlan = [...investmentOps].reverse().find(value =>
       value.entity === 'investmentPlan' && value.type === 'update')
@@ -141,10 +157,28 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
     }
   }, [investmentOps])
   useEffect(() => {
-    const synced = () => load()
+    const synced = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        allocation?: InvestmentAllocationOverview
+        acknowledge?: (work: Promise<void>) => void
+      }>).detail
+      const allocation = detail?.allocation
+      if (allocation) {
+        const projected = projectQueuedChangesRef.current(allocation)
+        setOverview(projected)
+        setPlan(projected?.plan ?? allocation.plan)
+        setLoading(false)
+        setError('')
+        detail?.acknowledge?.(Promise.resolve())
+        return
+      }
+      const work = loadRef.current()
+      if (detail?.acknowledge) detail.acknowledge(work)
+      else void work.catch(() => undefined)
+    }
     window.addEventListener('investment-sync', synced)
     return () => window.removeEventListener('investment-sync', synced)
-  }, [isOffline])
+  }, [])
 
   const total = plan.usEquityTarget + plan.internationalExUsTarget + plan.bondsTarget
   const validation = useMemo(() => validateInvestmentPlan(plan), [plan])
@@ -270,14 +304,14 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
               <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold text-foreground">
                 Portfolio targets <RowSyncStatus isSyncing={planSyncing} isPending={planPending} entityLabel="investment plan" />
               </h3>
-              <p className="mt-1 text-[11px] text-muted-foreground break-words">Changing one sleeve automatically redistributes the other two.</p>
+              <p className="mt-1 text-xs text-muted-foreground break-words">Changing one sleeve automatically redistributes the other two.</p>
             </div>
           </div>
           <Button variant="unstyled"
             type="button"
             onClick={() => setGlobalTargetLock(!globalTargetLock)}
             disabled={hideSensitive}
-            className="mt-0.5 inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
+            className="mt-0.5 inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
           >
             {globalTargetLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
             {globalTargetLock ? 'Locked' : 'Unlocked'}
@@ -295,7 +329,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
             // name, the empty gap, or the percentage badge silently toggled the lock. The slider
             // carries its own aria-label, so the label element was contributing nothing anyway.
             <div key={key} className="space-y-2 block w-full min-w-0">
-              <div className="flex justify-between items-center text-[11px] font-bold min-w-0 w-full gap-2">
+              <div className="flex justify-between items-center text-xs font-bold min-w-0 w-full gap-2">
                 <span className="text-muted-foreground flex items-center gap-1.5 min-w-0">
                   <span className="uppercase tracking-wider truncate">{label}</span>
                   <Button variant="unstyled" size="icon" type="button" aria-label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" disabled={hideSensitive || (lockedSleeve !== null && lockedSleeve !== key)} title={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button>
@@ -316,7 +350,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
           ))}
           <div className="rounded-xl bg-muted/30 px-3 py-2 text-xs font-bold text-foreground w-full">Total: {total}%</div>
           <div className="rounded-xl border border-border/50 bg-muted/20 p-3 w-full min-w-0">
-            <p className="flex items-start gap-2 text-[10px] leading-relaxed text-muted-foreground min-w-0">
+            <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground min-w-0">
               <Info className="mt-0.5 size-3.5 shrink-0 text-blue-500" />
               <span className="min-w-0 break-words">Drift is the gap between a basket’s actual share and its target. 62% vs 66% is 4 points off.</span>
             </p>
@@ -326,7 +360,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
                 hint="Shows an early warning; guidance may use new money to correct it."
                 className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 w-full min-w-0"
                 labelClassName="text-xs text-foreground"
-                hintClassName="text-[9px] break-words"
+                hintClassName="text-xs break-words"
               >
                 <span className="relative block w-full min-w-0">
                   <Input type="number" inputMode="numeric" min="1" max="99" step="1" disabled={hideSensitive} value={plan.watchDrift} onChange={event => setPlan(value => ({ ...value, watchDrift: Number(event.target.value) }))} className="w-full pr-8" />
@@ -338,7 +372,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
                 hint="Marks a larger mismatch that may eventually require rebalancing."
                 className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-3 w-full min-w-0"
                 labelClassName="text-xs text-foreground"
-                hintClassName="text-[9px] break-words"
+                hintClassName="text-xs break-words"
               >
                 <span className="relative block w-full min-w-0">
                   <Input type="number" inputMode="numeric" min="2" max="100" step="1" disabled={hideSensitive} value={plan.alertDrift} onChange={event => setPlan(value => ({ ...value, alertDrift: Number(event.target.value) }))} className="w-full pr-8" />
@@ -357,7 +391,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
           <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold text-foreground">
             Investment classification <RowSyncStatus isSyncing={orderSyncing} isPending={orderPending} entityLabel="classification order" />
           </h3>
-          <p className="mt-1 text-[11px] text-muted-foreground break-words">Every open holding needs a basket. Drag a grip, or focus it and press Up or Down, to change the order.</p>
+          <p className="mt-1 text-xs text-muted-foreground break-words">Every open holding needs a basket. Drag a grip, or focus it and press Up or Down, to change the order.</p>
         </div>
         <Reorder.Group
           axis="y"

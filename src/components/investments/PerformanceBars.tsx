@@ -4,6 +4,7 @@ import type { InvestmentPortfolio } from '../../types'
 import { formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
+import { Panel } from '../ui/Panel'
 
 type RankMode = 'money' | 'percent'
 
@@ -40,7 +41,7 @@ export function PerformanceBars({ portfolio, masked, onSelectHolding }: {
   }
 
   return (
-    <section aria-labelledby="performance-title" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+    <Panel as="section" aria-labelledby="performance-title">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h2 id="performance-title" className="text-base font-bold text-foreground">How each fund is doing</h2>
@@ -95,6 +96,6 @@ export function PerformanceBars({ portfolio, masked, onSelectHolding }: {
           </p>
         )}
       </div>
-    </section>
+    </Panel>
   )
 }

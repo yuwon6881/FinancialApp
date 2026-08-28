@@ -37,7 +37,33 @@ export function useDocumentsView(showToast?: (message: string, title?: string, t
   const queryKeyRef = useRef<string | null>(null)
   const overviewYearRef = useRef<number | undefined>(undefined)
 
-  const loadDocuments = useCallback(async (isRefresh = false) => {
+  const applyOverview = useCallback((overview: api.DocumentOverview, requestedTaxYear?: number, initialize = false) => {
+    const matchesRequestedYear = requestedTaxYear === undefined || overview.selectedTaxYear === requestedTaxYear
+    if (initialize || matchesRequestedYear) {
+      overviewYearRef.current = initialize ? overview.selectedTaxYear ?? undefined : requestedTaxYear
+    }
+    setUsage(overview.usage)
+    setAvailableYears(overview.availableYears)
+    if (!initialize && requestedTaxYear !== undefined && !overview.availableYears.includes(requestedTaxYear)) {
+      setTaxYear(overview.availableYears[0])
+    }
+    setRetentionReview(overview.retention)
+    // A partial refresh describes the server's default tax year. Do not replace a mounted user's
+    // selected-year summary with that other year's values; fetch the requested year once below.
+    if (initialize || matchesRequestedYear || requestedTaxYear === undefined) {
+      setSummary(overview.summary)
+      setReliefCategories(overview.reliefCategories)
+      if (overview.selectedTaxYear !== null) {
+        const selectedYear = overview.selectedTaxYear
+        requestedCategoryYearsRef.current.add(selectedYear)
+        setReliefCategoriesByTaxYear(current => ({ ...current, [selectedYear]: overview.reliefCategories }))
+      }
+    }
+    if (initialize) setTaxYear(overview.selectedTaxYear ?? undefined)
+    return matchesRequestedYear
+  }, [])
+
+  const loadDocuments = useCallback(async (isRefresh = false, rethrowOnError = false) => {
     const requestId = ++requestIdRef.current
     try {
       setIsLoading(true)
@@ -55,6 +81,7 @@ export function useDocumentsView(showToast?: (message: string, title?: string, t
       if (requestId === requestIdRef.current) {
         setLoadError(getErrorMessage(err, 'Your documents could not be loaded. Check your connection and try again.'))
       }
+      if (rethrowOnError) throw err
     } finally {
       if (requestId === requestIdRef.current) {
         setIsLoading(false)
@@ -63,40 +90,27 @@ export function useDocumentsView(showToast?: (message: string, title?: string, t
     }
   }, [page, pageSize, taxYear, selectedReliefCategories, sortOrder])
 
-  const loadOverview = useCallback(async (requestedTaxYear?: number, initialize = false) => {
+  const loadOverview = useCallback(async (requestedTaxYear?: number, initialize = false, rethrowOnError = false) => {
     const requestId = ++taxInsightsRequestIdRef.current
     setIsTaxInsightsLoading(true)
     try {
       const overview = await api.getDocumentOverview(requestedTaxYear)
       if (requestId !== taxInsightsRequestIdRef.current) return
-      overviewYearRef.current = initialize ? overview.selectedTaxYear ?? undefined : requestedTaxYear
-      setUsage(overview.usage)
-      setAvailableYears(overview.availableYears)
-      if (!initialize && requestedTaxYear !== undefined && !overview.availableYears.includes(requestedTaxYear)) {
-        setTaxYear(overview.availableYears[0])
-      }
-      setRetentionReview(overview.retention)
-      setSummary(overview.summary)
-      setReliefCategories(overview.reliefCategories)
+      applyOverview(overview, requestedTaxYear, initialize)
       // Merged, never replaced. The list can show documents from several tax years at once (the
       // "All years" filter), and each row's category picker reads this map by the document's own
       // tax year — so discarding the years the overview is not about left those rows with an empty
       // picker and no way to see or change a category the document already had.
-      if (overview.selectedTaxYear !== null) {
-        const selectedYear = overview.selectedTaxYear
-        requestedCategoryYearsRef.current.add(selectedYear)
-        setReliefCategoriesByTaxYear(current => ({ ...current, [selectedYear]: overview.reliefCategories }))
-      }
-      if (initialize) setTaxYear(overview.selectedTaxYear ?? undefined)
     } catch (err) {
       console.error('Failed to load document overview:', err)
+      if (rethrowOnError) throw err
     } finally {
       if (requestId === taxInsightsRequestIdRef.current) {
         setIsTaxInsightsLoading(false)
         setHasLoadedYears(true)
       }
     }
-  }, [])
+  }, [applyOverview])
 
   useEffect(() => {
     void loadOverview(undefined, true)
@@ -125,6 +139,36 @@ export function useDocumentsView(showToast?: (message: string, title?: string, t
     if (!hasLoadedYears || overviewYearRef.current === taxYear) return
     void loadOverview(taxYear)
   }, [hasLoadedYears, loadOverview, taxYear])
+
+  // A transaction outbox batch can upload, unlink, or delete Vault documents after the ledger
+  // row is acknowledged. Refresh an already-mounted Vault without making the ledger wait for a
+  // second full bootstrap; an unmounted view simply performs its authoritative load on mount.
+  useEffect(() => {
+    const refreshAfterSync = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        overview?: api.DocumentOverview
+        acknowledge?: (work: Promise<void>) => void
+      }>).detail
+      const work = (async () => {
+        let matchesRequestedYear = true
+        if (detail?.overview) {
+          matchesRequestedYear = applyOverview(detail.overview, taxYear)
+        } else {
+          await loadOverview(taxYear, false, true)
+        }
+        if (!matchesRequestedYear && taxYear !== undefined) {
+          await loadOverview(taxYear, false, true)
+        }
+        // The partial contract intentionally carries overview data, not a paged list. Refresh the
+        // mounted page separately so document add/delete/category changes are visible immediately.
+        await loadDocuments(true, true)
+      })()
+      if (detail?.acknowledge) detail.acknowledge(work)
+      else void work.catch(() => undefined)
+    }
+    window.addEventListener('documents-sync', refreshAfterSync)
+    return () => window.removeEventListener('documents-sync', refreshAfterSync)
+  }, [applyOverview, loadDocuments, loadOverview, taxYear])
 
   // Fills in the relief categories for the other tax years on screen. Each year is asked for once
   // and the answers are cached for an hour, so an all-years list costs one request per distinct

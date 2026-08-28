@@ -7,6 +7,8 @@ const projects = [
   { name: 'medium-dark', viewport: { width: 768, height: 1024 }, colorScheme: 'dark' as const },
   { name: 'desktop-light', viewport: { width: 1440, height: 900 }, colorScheme: 'light' as const },
   { name: 'desktop-dark', viewport: { width: 1440, height: 900 }, colorScheme: 'dark' as const },
+  { name: 'compact-320-light', viewport: { width: 320, height: 844 }, colorScheme: 'light' as const, testMatch: '**/responsive-contract.spec.ts' },
+  { name: 'compact-keyboard-light', viewport: { width: 390, height: 500 }, colorScheme: 'light' as const, testMatch: '**/responsive-contract.spec.ts' },
 ]
 
 export default defineConfig({
@@ -44,11 +46,12 @@ export default defineConfig({
   },
   projects: projects.map(project => ({
     name: project.name,
+    ...('testMatch' in project ? { testMatch: project.testMatch } : {}),
     use: {
       viewport: project.viewport,
       colorScheme: project.colorScheme,
       reducedMotion: 'reduce' as const,
-      ...(project.name.startsWith('mobile') ? {
+      ...(project.name.startsWith('mobile') || project.name.startsWith('compact') ? {
         hasTouch: true,
         isMobile: true,
         serviceWorkers: 'allow' as const,

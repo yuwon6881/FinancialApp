@@ -162,12 +162,12 @@ export function AccountFormSheet({
             <div className="flex items-center gap-2">
               <p className="text-xs font-bold text-foreground">{isEditing ? 'Update this account' : 'Account connection'}</p>
               {isEditing && isArchived && (
-                <span className="rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                <span className="rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
                   Closed
                 </span>
               )}
             </div>
-            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
               {isEditing
                 ? 'Changes affect this account only. Past transactions stay as they are.'
                 : 'Name this account and choose its budget bucket.'}
@@ -213,7 +213,7 @@ export function AccountFormSheet({
             </FormField>
           </div>
 
-          <p className="-mt-1 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+          <p className="-mt-1 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
             <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
             <span>One real account can appear once in each bucket if you track its money separately.</span>
           </p>
@@ -246,7 +246,7 @@ export function AccountFormSheet({
                 />
               </FormField>
               {account && !account.isArchived && (
-                <div className="px-0.5 text-[11px]">
+                <div className="px-0.5 text-xs">
                   {!isBalanceDirty ? (
                     <span className="text-muted-foreground">Balance unchanged</span>
                   ) : (
@@ -295,12 +295,12 @@ export function AccountFormSheet({
                         Mark account as closed
                       </span>
                       {isArchived && (
-                        <span className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                        <span className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
                           Archived
                         </span>
                       )}
                     </div>
-                    <span className="block text-[11px] leading-snug text-muted-foreground">
+                    <span className="block text-xs leading-snug text-muted-foreground">
                       {isBalanceDirty
                         ? 'Closed accounts cannot change balance. Save the balance correction first.'
                         : 'Closed accounts stay in history but are hidden from new entries.'}
@@ -319,7 +319,7 @@ export function AccountFormSheet({
         </div>
 
         {/* Growth Note Callout */}
-        <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/10 px-3 py-2 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
           <Info className="size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
           <p>
             <span className="font-semibold text-foreground">Growth is kept separate.</span> Investment deposits and withdrawals remain the source of truth.

@@ -50,7 +50,7 @@ const Field = ({ label, hint, error, className = '', required, children }: {
     error={error}
     required={required}
     className={className}
-    hintClassName="text-[10px] font-normal"
+    hintClassName="text-xs font-normal"
   >
     {children}
   </FormField>
@@ -256,7 +256,7 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
       )}
       <Field label="Date" plain className="sm:col-span-2"><DatePicker value={date} onChange={setDate} max={today()} className="w-full" /></Field>
     </div>
-    <p className="text-[10px] text-muted-foreground">Use for deposits, withdrawals, and currency conversions. Trades, dividends, and fees adjust cash automatically.</p>
+    <p className="text-xs text-muted-foreground">Use for deposits, withdrawals, and currency conversions. Trades, dividends, and fees adjust cash automatically.</p>
     <FormActions busy={busy} onCancel={() => { clearScan(); onCancel() }} submitLabel={initial ? 'Save changes' : type === 'Conversion' ? 'Record conversion' : type === 'Withdrawal' ? 'Record withdrawal' : 'Record deposit'} disabled={!accountId} />
   </form>
 }
