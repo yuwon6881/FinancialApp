@@ -40,29 +40,8 @@ interface SavingsGoalFormProps {
 
 export function SavingsGoalForm(props: SavingsGoalFormProps) {
   const isAdd = props.mode === 'add'
-  const applyTemplate = (template: { name: string; bucket: SavingsGoalFundingBucket; priority: string; months: number; recurring: boolean }) => {
-    const date = new Date()
-    date.setMonth(date.getMonth() + template.months)
-    props.onNameChange(template.name)
-    props.onFundingBucketChange(template.bucket)
-    props.onPriorityChange(template.priority)
-    props.onDateChange(date.toLocaleDateString('en-CA'))
-    props.onRecurringChange(template.recurring)
-    props.onRecurrenceMonthsChange(String(template.months))
-  }
   return (
     <form noValidate onSubmit={props.onSubmit} className="space-y-4 text-xs font-semibold">
-      {isAdd && (
-        <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Start with a template</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={() => applyTemplate({ name: 'Annual insurance', bucket: 'Essentials', priority: 'High', months: 12, recurring: true })}>Annual insurance</Button>
-            <Button type="button" variant="secondary" size="sm" onClick={() => applyTemplate({ name: 'Car maintenance', bucket: 'Essentials', priority: 'Medium', months: 6, recurring: true })}>Car maintenance</Button>
-            <Button type="button" variant="secondary" size="sm" onClick={() => applyTemplate({ name: 'Holiday fund', bucket: 'Rewards', priority: 'Medium', months: 12, recurring: false })}>Holiday</Button>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">Choose a starting point, then enter the amount you need.</p>
-        </div>
-      )}
       <FormField label="What are you saving for?" required error={props.errors.name}>
         <Input
           type="text"
@@ -109,23 +88,25 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <FormField label="Where should this money come from?">
-          <div className="flex items-center gap-1.5">
-            <CustomSelect
-              ariaLabel="Commitment funding bucket"
-              value={props.fundingBucket}
-              onChange={value => props.onFundingBucketChange(value as SavingsGoalFundingBucket)}
-              options={[
-                { value: 'Essentials', label: 'Everyday money (Essentials)' },
-                { value: 'Rewards', label: 'Rewards money (Rewards)' },
-              ]}
-              className="w-full"
-            />
+        <FormField
+          label="Where should this money come from?"
+          labelAction={(
             <InfoHint
               label="commitment funding bucket"
               text="Essentials is the money your bills come out of. Rewards is the money you set aside for treats and rewards."
             />
-          </div>
+          )}
+        >
+          <CustomSelect
+            ariaLabel="Commitment funding bucket"
+            value={props.fundingBucket}
+            onChange={value => props.onFundingBucketChange(value as SavingsGoalFundingBucket)}
+            options={[
+              { value: 'Essentials', label: 'Everyday money (Essentials)' },
+              { value: 'Rewards', label: 'Rewards money (Rewards)' },
+            ]}
+            className="w-full"
+          />
         </FormField>
 
         <FormField
@@ -134,7 +115,10 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
           error={props.errors.date}
           hint={!props.errors.date
             ? (props.requiredPerCycle > 0
-              ? `Your deadline works out at about ${typeof props.formatSensitive(props.requiredPerCycle) === 'string' ? props.formatSensitive(props.requiredPerCycle) : ''} to set aside each cycle.`
+              // formatSensitive returns a node when the value is masked, so build the sentence as a
+              // node rather than interpolating — the string form used to drop the amount entirely
+              // and leave a second, duplicate line rendering below the field.
+              ? <>Your deadline works out at about {props.formatSensitive(props.requiredPerCycle)} to set aside each cycle.</>
               : 'Your deadline sets how much to set aside each cycle.')
             : undefined}
         >
@@ -146,11 +130,6 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             }}
             className="w-full"
           />
-          {!props.errors.date && props.requiredPerCycle > 0 && typeof props.formatSensitive(props.requiredPerCycle) !== 'string' && (
-            <p className="text-xs text-muted-foreground mt-1 font-medium">
-              Your deadline works out at about {props.formatSensitive(props.requiredPerCycle)} to set aside each cycle.
-            </p>
-          )}
         </FormField>
       </div>
 

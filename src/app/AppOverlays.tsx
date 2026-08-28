@@ -342,7 +342,7 @@ export function AppOverlays({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: reduceMotion ? 0 : 0.25 }}
-                className="md:hidden fixed inset-0 z-30 bg-background/45 backdrop-blur-sm cursor-pointer"
+                className="sm:hidden fixed inset-0 z-30 bg-background/45 backdrop-blur-sm cursor-pointer"
                 onClick={closeFabAndRestoreFocus}
                 aria-hidden="true"
               />
@@ -360,7 +360,7 @@ export function AppOverlays({
                 initial={reduceMotion ? false : 'hidden'}
                 animate="visible"
                 exit="hidden"
-                className="md:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
+                className="sm:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
                 style={{ bottom: 'calc(var(--app-fab-offset) + 4.25rem + env(safe-area-inset-bottom, 0px))' }}
               >
                 {/* Search lives here rather than in the phone header: the header's right lane is

@@ -35,7 +35,7 @@ export function LoanCardDetails({
   rateText,
 }: LoanCardDetailsProps) {
   return (
-        <div className="grid gap-3 border-t border-border/50 p-3 text-xs sm:grid-cols-2 lg:grid-cols-4 lg:border-t-0">
+        <div className="grid gap-3 border-t border-border/50 p-3 text-xs sm:grid-cols-3 lg:grid-cols-6 lg:border-t-0">
           <div>
             <p className="text-muted-foreground">Expected payoff</p>
             <p className="mt-1 font-semibold text-foreground">

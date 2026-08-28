@@ -37,7 +37,9 @@ const StatTile: React.FC<{
   title?: string
   className?: string
 }> = ({ label, value, tone = 'figure', title, className = '' }) => (
-  <div className={`min-w-0 overflow-hidden ${className}`}>
+  // `justify-between` pins the value to the bottom of the row so every tile's figure sits on one
+  // line, even when a neighbour's label needs two.
+  <div className={`flex h-full min-w-0 flex-col justify-between overflow-hidden ${className}`}>
     <span className="block text-xs font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:text-xs sm:tracking-wider">
       {label}
     </span>
@@ -114,7 +116,7 @@ const InteractiveStatTile: React.FC<{
       : 'Yearly Loan Distribution'
 
   return (
-    <div className={`min-w-0 overflow-hidden ${className}`}>
+    <div className={`flex h-full min-w-0 flex-col overflow-hidden ${className}`}>
       <Button
         variant="unstyled"
         ref={anchorRef}
@@ -131,13 +133,15 @@ const InteractiveStatTile: React.FC<{
         onMouseLeave={() => { if (!isMobile && !pinned) setOpen(false) }}
         onFocus={() => { if (!isMobile) setOpen(true) }}
         onBlur={() => { if (!isMobile && !pinned) setOpen(false) }}
-        className="group/stat block w-full text-left cursor-pointer select-none rounded-lg p-1 -m-1 transition-colors hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-ring"
+        className="group/stat flex h-full w-full flex-col justify-between text-left cursor-pointer select-none rounded-lg p-1 -m-1 transition-colors hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-ring"
       >
-        <div className="flex items-center gap-1">
-          <span className="block text-xs font-bold uppercase leading-tight tracking-wide text-muted-foreground transition-colors group-hover/stat:text-foreground sm:text-xs sm:tracking-wider">
+        {/* The label must not wrap: a two-line "Yearly Total" dropped its figure below the plain
+            tiles beside it. The Breakdown pill moves to its own line instead when space is tight. */}
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="block whitespace-nowrap text-xs font-bold uppercase leading-tight tracking-wide text-muted-foreground transition-colors group-hover/stat:text-foreground sm:text-xs sm:tracking-wider">
             {label}
           </span>
-          <span className="rounded bg-muted/60 px-1 py-0.5 text-xs font-semibold text-muted-foreground opacity-70 group-hover/stat:opacity-100 transition-opacity">
+          <span className="shrink-0 rounded bg-muted/60 px-1 py-0.5 text-xs font-semibold text-muted-foreground opacity-70 group-hover/stat:opacity-100 transition-opacity">
             Breakdown
           </span>
         </div>
@@ -222,8 +226,8 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
 
   return (
     <div className="w-full">
-      <Card className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="min-w-0 w-full md:flex-1">
+      <Card className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="min-w-0 w-full lg:flex-1">
           <h2 id={isLoansView ? 'loans-heading' : 'recurring-payments-heading'} className="text-xl font-bold text-foreground">
             {isLoansView ? 'Loans' : 'Recurring Bills & Subscriptions'}
           </h2>

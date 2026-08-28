@@ -18,7 +18,6 @@ interface AiAssistantPanelProps {
   onActions: (actions: AiUiAction[]) => void | Promise<void>
   sensitiveMode?: boolean
   isOffline?: boolean
-  hasPendingLocalChanges?: boolean
   invocation?: AiInvocationRequest | null
   onInvocationConsumed?: () => void
   surface?: AppTab
@@ -72,7 +71,6 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
   onActions,
   sensitiveMode = true,
   isOffline = false,
-  hasPendingLocalChanges = false,
   invocation = null,
   onInvocationConsumed = () => undefined,
   surface,
@@ -81,8 +79,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
   const [suggestedPrompts, setSuggestedPrompts] = useState(() => pickSuggestedPrompts(sensitiveMode, surface))
   const defaultContext = useMemo(() => ({
     surface: surface ?? 'dashboard',
-    hasPendingLocalChanges,
-  }), [hasPendingLocalChanges, surface])
+  }), [surface])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const composerHighlightRef = useRef<HTMLDivElement>(null)
@@ -204,11 +201,6 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
           the sheet holding it the moment the input was focused. Taking the smaller of the two keeps
           the same height with no keyboard and shrinks to what is actually visible with one. */}
       <div className="flex h-[min(55vh,calc(var(--app-vvh,100dvh)-13rem))] min-h-[220px] flex-col gap-3 sm:h-[480px]">
-        {hasPendingLocalChanges && (
-          <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-            Ask AI uses saved server data and does not include changes still syncing.
-          </p>
-        )}
         {historyRedacted && (
           <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
             Earlier replies are hidden while sensitive mode is active.

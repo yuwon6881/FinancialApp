@@ -32,8 +32,8 @@ export function LedgerToolbar({
         : 'all saved cycles'
 
   return (
-    <Card className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div className="min-w-0 w-full md:flex-1">
+    <Card className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="min-w-0 w-full lg:flex-1">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-xl font-bold text-foreground">Financial Ledger</h2>
 

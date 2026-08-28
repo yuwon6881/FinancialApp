@@ -160,6 +160,12 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
     </tr>
   )
 })
+// Between the compact and expanded tiers the card is what renders but SwipeableRow has no swipe
+// drawer, so the row actions come back inline. They have to be compact icon buttons: the drawer's
+// full-width stacked blocks were rendering inline in a non-shrinking box and pushing the whole card
+// past the viewport. 44px targets, because this only ever shows on compact and medium.
+const INLINE_ACTION_CLASS = 'inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-50'
+
 export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: LedgerRowProps & { hint: boolean }) {
   const transaction = props.transaction
   const outflow = transaction.amount < 0
@@ -181,6 +187,40 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         className="rounded-2xl border border-border shadow-xs"
         actionsWidth={props.onMove ? 192 : 128}
         actions={<><Button variant="unstyled" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button>{props.onMove && <Button variant="unstyled" onClick={() => props.onMove?.(transaction)} disabled={!canMove || props.isDeleting || props.isSyncing || props.hideSensitive} className={`flex-1 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${canMove ? 'bg-secondary text-secondary-foreground' : 'bg-muted/50 text-muted-foreground'}`}><CalendarClock className="size-4" />Move to</Button>}<Button variant="unstyled" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
+        desktopActions={<>
+          <Button
+            variant="unstyled"
+            onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)}
+            disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)}
+            aria-label={`Edit ${transaction.description}`}
+            title="Edit"
+            className={`${INLINE_ACTION_CLASS} border-primary/30 bg-primary/10 text-accent-ink hover:bg-primary/20`}
+          >
+            <Edit2 className="size-4" aria-hidden="true" />
+          </Button>
+          {props.onMove && (
+            <Button
+              variant="unstyled"
+              onClick={() => props.onMove?.(transaction)}
+              disabled={!canMove || props.isDeleting || props.isSyncing || props.hideSensitive}
+              aria-label={`Move ${transaction.description} to another cycle`}
+              title="Move to"
+              className={`${INLINE_ACTION_CLASS} border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground`}
+            >
+              <CalendarClock className="size-4" aria-hidden="true" />
+            </Button>
+          )}
+          <Button
+            variant="unstyled"
+            onClick={() => props.onDeleteClick(transaction)}
+            disabled={props.isDeleting || props.isSyncing || props.hideSensitive}
+            aria-label={`Delete ${transaction.description}`}
+            title="Delete"
+            className={`${INLINE_ACTION_CLASS} border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20`}
+          >
+            <Trash2 className="size-4" aria-hidden="true" />
+          </Button>
+        </>}
       >
         <div className={`h-0.5 w-full ${transfer ? 'bg-blue-500/60' : outflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'}`} />
         <div className="p-4 space-y-3">

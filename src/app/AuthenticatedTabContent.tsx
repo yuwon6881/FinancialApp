@@ -217,7 +217,6 @@ export function AuthenticatedTabContent({
             surface: 'reports',
             preset: 'report-review',
             cycleKey,
-            hasPendingLocalChanges,
           }, 'Explain this cycle')}
         />
       )}
@@ -280,7 +279,6 @@ export function AuthenticatedTabContent({
             surface: 'recurring',
             preset: 'loan-explain',
             loanId: loan.id,
-            hasPendingLocalChanges,
           }, 'Explain this loan')}
           aiDraft={aiRouter.state.aiRecurringDraft}
           aiEditDraft={aiRouter.state.aiRecurringEditDraft}
@@ -424,7 +422,6 @@ export function AuthenticatedTabContent({
           onExplainWithAi={() => onExplainWithAi({
             surface: 'wishlist',
             preset: 'rewards-plan',
-            hasPendingLocalChanges,
           }, 'Explain my plan')}
         />
       )}
@@ -494,7 +491,6 @@ export function AuthenticatedTabContent({
             surface: 'investments',
             preset: 'investment-explain',
             investmentRange: range,
-            hasPendingLocalChanges,
           }, 'Explain my portfolio')}
         />
       )}

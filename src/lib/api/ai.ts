@@ -90,7 +90,6 @@ export interface AiInvocationContext {
   investmentRange?: AiInvestmentRange
   savingsGoalId?: number
   loanId?: string
-  hasPendingLocalChanges: boolean
 }
 
 export interface AiChatResponse {

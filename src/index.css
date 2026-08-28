@@ -518,7 +518,7 @@ button, [role="button"] {
    button. The FAB sits at the shared offset above the viewport bottom, so a
    container padded only to the navigation height leaves its last row behind
    the button. One additional 4rem target clears it with a small gap.
-   Capped at lg, where the FAB gives way to the desktop rail. */
+   Capped at the medium tier, where the FAB gives way to the desktop rail. */
 .pb-fab-safe {
     padding-bottom: calc(var(--app-fab-offset) + 4rem + env(safe-area-inset-bottom, 0px));
 }
@@ -573,7 +573,9 @@ button, [role="button"] {
     padding-left: calc(var(--safe-screen-inline) + env(safe-area-inset-left, 0px));
 }
 
-@media (min-width: 1024px) {
+/* The bottom nav and the FAB are compact-tier only -- from the medium tier up the rail carries
+   navigation -- so the space reserved for them is released at the same 640px boundary. */
+@media (min-width: 640px) {
     .pb-fab-safe {
         padding-bottom: 2rem;
     }
@@ -1201,6 +1203,32 @@ button {
     }
 }
 
+/* The same cue drawn inside the border box. SwipeableRow's outer node clips to hide its action
+   drawer, so an outward outline-offset and a drop shadow are both cropped to nothing -- the card
+   highlight was invisible on phones while the reduced-motion fallback below, already inset, worked. */
+@keyframes search-target-highlight-inset {
+    0% {
+        outline: 1px solid color-mix(in srgb, var(--app-highlight) 30%, transparent);
+        outline-offset: -1px;
+        box-shadow: inset 0 0 0 color-mix(in srgb, var(--app-highlight) 0%, transparent);
+    }
+    18% {
+        outline: 3px solid color-mix(in srgb, var(--app-highlight) 78%, transparent);
+        outline-offset: -3px;
+        box-shadow: inset 0 0 24px color-mix(in srgb, var(--app-highlight) 26%, transparent);
+    }
+    72% {
+        outline: 2px solid color-mix(in srgb, var(--app-highlight) 55%, transparent);
+        outline-offset: -2px;
+        box-shadow: inset 0 0 18px color-mix(in srgb, var(--app-highlight) 16%, transparent);
+    }
+    100% {
+        outline: 0 solid transparent;
+        outline-offset: 0;
+        box-shadow: inset 0 0 0 transparent;
+    }
+}
+
 .search-target-highlight {
     position: relative;
     z-index: 10;
@@ -1214,7 +1242,7 @@ button {
 }
 
 .search-target-highlight > [data-swipe-content] {
-    animation: search-target-highlight 2.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: search-target-highlight-inset 2.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

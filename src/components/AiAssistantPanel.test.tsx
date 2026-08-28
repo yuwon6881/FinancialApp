@@ -133,7 +133,6 @@ describe('AiAssistantPanel', () => {
         surface: 'reports',
         preset: 'report-review',
         cycleKey: '2026-06',
-        hasPendingLocalChanges: true,
       },
       clientTurnId: 'launch-turn-7',
     }
@@ -145,7 +144,6 @@ describe('AiAssistantPanel', () => {
         onActions={vi.fn()}
         invocation={invocation}
         onInvocationConsumed={onInvocationConsumed}
-        hasPendingLocalChanges
       />,
     )
 
@@ -160,7 +158,9 @@ describe('AiAssistantPanel', () => {
     })
     expect(chatWithAi.mock.calls[0]?.[5]).toEqual(invocation.context)
     expect(onInvocationConsumed).toHaveBeenCalledTimes(1)
-    expect(screen.getByText(/saved server data/)).not.toBeNull()
+    // The panel used to head the conversation with a "saved server data" notice; it duplicated the
+    // same sentence the server prefixed onto every reply, so both were removed.
+    expect(screen.queryByText(/saved server data/)).toBeNull()
   })
 
   it('uses hidden overflow when empty and scrollable overflow once messages exist', async () => {

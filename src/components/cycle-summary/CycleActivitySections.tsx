@@ -68,8 +68,8 @@ export function CycleActivitySections({
 
       {summary.billsCount > 0 && (
         <Section title="Bills">
-          <div className="space-y-3 rounded-xl border border-border/50 bg-muted/20 p-3.5">
-            <div className="flex items-center justify-between gap-3">
+          <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <Receipt className="size-3.5 shrink-0 text-amber-500" />
@@ -84,19 +84,19 @@ export function CycleActivitySections({
                     ? `${summary.clearedBillsCount} cleared${summary.discardedCount > 0 ? ` · ${summary.discardedCount} skipped` : ''}`
                     : `${formatSensitive(summary.outstandingTotal)} left to pay across open bills`}
                 </p>
+                {/* The pills describe the bill counts above, so they sit with them rather than in a
+                    separate ruled row where a single pill dangled under a full-width border. */}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs empty:hidden">
+                  {summary.paidBillsCount > 0 && <StatusPill tone="emerald">{summary.paidBillsCount} Paid</StatusPill>}
+                  {summary.partPaidCount > 0 && <StatusPill tone="blue">{summary.partPaidCount} Part paid</StatusPill>}
+                  {summary.outstandingCount - summary.partPaidCount > 0 && <StatusPill tone="amber">{summary.outstandingCount - summary.partPaidCount} Pending</StatusPill>}
+                  {summary.paidOffBillsCount > 0 && <StatusPill tone="emerald">{summary.paidOffBillsCount} Paid off</StatusPill>}
+                  {summary.discardedCount > 0 && <StatusPill tone="muted">{summary.discardedCount} Skipped</StatusPill>}
+                </div>
               </div>
               <div className="shrink-0 text-right">
                 <span className="block text-xs font-extrabold text-foreground">{formatSensitive(summary.paidTotal)}</span>
                 <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recorded paid</span>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-2 text-xs">
-              <div className="flex flex-wrap items-center gap-1.5">
-                {summary.paidBillsCount > 0 && <StatusPill tone="emerald">{summary.paidBillsCount} Paid</StatusPill>}
-                {summary.partPaidCount > 0 && <StatusPill tone="blue">{summary.partPaidCount} Part paid</StatusPill>}
-                {summary.outstandingCount - summary.partPaidCount > 0 && <StatusPill tone="amber">{summary.outstandingCount - summary.partPaidCount} Pending</StatusPill>}
-                {summary.paidOffBillsCount > 0 && <StatusPill tone="emerald">{summary.paidOffBillsCount} Paid off</StatusPill>}
-                {summary.discardedCount > 0 && <StatusPill tone="muted">{summary.discardedCount} Skipped</StatusPill>}
               </div>
             </div>
           </div>

@@ -178,7 +178,7 @@ export function LoansSection({
           initial={reduceMotion ? false : 'hidden'}
           animate="show"
           variants={listContainerVariants}
-          className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3"
+          className="grid gap-4 2xl:grid-cols-2"
         >
           {visibleLoans.map(loan => (
             <m.div key={loan.id} variants={listItemVariants}>

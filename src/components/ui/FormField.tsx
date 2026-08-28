@@ -5,6 +5,11 @@ import { FormFieldContext } from './formFieldControl'
 export interface FormFieldProps {
   label: ReactNode
   children: ReactNode
+  /**
+   * Sits beside the label, for an InfoHint explaining the field. Kept out of the `<label>`
+   * itself so clicking it cannot forward the activation to the control it describes.
+   */
+  labelAction?: ReactNode
   id?: string
   hint?: ReactNode
   error?: ReactNode
@@ -18,6 +23,7 @@ export interface FormFieldProps {
 export function FormField({
   label,
   children,
+  labelAction,
   id,
   hint,
   error,
@@ -34,27 +40,33 @@ export function FormField({
   const errorId = error ? `${controlId}-error` : undefined
   const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined
 
+  const labelElement = (
+    <label
+      id={labelId}
+      htmlFor={controlId}
+      className={cn(
+        'block text-xs font-bold text-muted-foreground',
+        labelClassName,
+      )}
+    >
+      {label}
+      {required && (
+        <>
+          <span aria-hidden="true" className="ml-1 text-destructive">*</span>
+          <span className="sr-only"> (required)</span>
+        </>
+      )}
+    </label>
+  )
+
   return (
     <FormFieldContext.Provider
       value={{ controlId, labelledBy: labelId, describedBy, invalid: Boolean(error), required }}
     >
       <div className={cn('min-w-0 space-y-1.5', className)}>
-        <label
-          id={labelId}
-          htmlFor={controlId}
-          className={cn(
-            'block text-xs font-bold text-muted-foreground',
-            labelClassName,
-          )}
-        >
-          {label}
-          {required && (
-            <>
-              <span aria-hidden="true" className="ml-1 text-destructive">*</span>
-              <span className="sr-only"> (required)</span>
-            </>
-          )}
-        </label>
+        {labelAction
+          ? <div className="flex min-w-0 items-center gap-1">{labelElement}{labelAction}</div>
+          : labelElement}
         {children}
         {hint && (
           <p id={hintId} className={cn('text-xs leading-relaxed text-muted-foreground', hintClassName)}>

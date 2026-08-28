@@ -249,7 +249,7 @@ export function LoanCard({
               </div>
             )}
             {/* Mobile schedule: compact, full-width cards with no horizontal scrolling */}
-            <div className="mt-3 max-h-72 overflow-y-auto space-y-2 sm:hidden pr-0.5">
+            <div className="mt-3 max-h-72 overflow-y-auto space-y-2 lg:hidden pr-0.5">
           {[...actualRows, ...scheduleRows].map((row, index) => (
             <div
               key={`${row.occurrenceDate}-${row.kind}-${index}`}
@@ -281,8 +281,8 @@ export function LoanCard({
             </div>
 
             {/* Desktop schedule: tabular view */}
-            <div className="mt-3 hidden max-h-72 overflow-x-auto overflow-y-auto rounded-lg border border-border/40 bg-card/60 sm:block">
-          <table className="w-full min-w-[580px] text-left text-xs">
+            <div className="mt-3 hidden max-h-72 overflow-x-auto overflow-y-auto rounded-lg border border-border/40 bg-card/60 lg:block">
+          <table className="w-full text-left text-xs">
             <caption className="sr-only">Payment history and planned schedule for {loan.name}</caption>
             <thead className="sticky top-0 z-10 border-b border-border/40 bg-card text-xs text-muted-foreground shadow-2xs">
               <tr>

@@ -15,7 +15,7 @@ export const QuickActionsDropdown: React.FC<QuickActionsDropdownProps> = ({
   onQuickAction,
 }) => {
   return (
-    <div className="hidden md:block border border-border/60 rounded-xl bg-background shrink-0">
+    <div className="hidden sm:block border border-border/60 rounded-xl bg-background shrink-0">
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label="Quick Add"

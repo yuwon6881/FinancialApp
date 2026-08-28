@@ -192,7 +192,10 @@ const TopNav: React.FC<TopNavProps> = ({
         <PageContainer className="relative flex h-16 items-center">
         
         {/* Left Side (Logo and Brand) */}
-        <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden z-10 md:flex-initial md:shrink xl:flex-1">
+        {/* `flex-1` here and `ml-auto` on the right group are what push the two clusters apart. They
+            used to be cancelled between md and xl (`md:flex-initial`/`md:ml-0`, restored only by
+            `xl:flex-1`), which left nothing growing and bunched the whole header to the left. */}
+        <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden z-10">
           <Button
             variant="unstyled"
             type="button"
@@ -211,7 +214,7 @@ const TopNav: React.FC<TopNavProps> = ({
                 />
               )}
             </span>
-            <span className="brand-home-label hidden sm:inline md:hidden lg:inline text-base lg:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
+            <span className="brand-home-label hidden sm:inline text-base lg:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
               FinancialApp
             </span>
           </Button>
@@ -232,7 +235,7 @@ const TopNav: React.FC<TopNavProps> = ({
               onClick={onOpenSearch}
               aria-label="Search your records"
               title="Search (Ctrl+K)"
-              className="ml-2 hidden size-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-border/60 bg-background text-muted-foreground transition duration-150 cursor-pointer active:scale-95 hover:border-primary/40 hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-0 focus:outline-none md:flex 2xl:ml-3 2xl:w-52 2xl:justify-start 2xl:px-3"
+              className="ml-2 hidden size-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-border/60 bg-background text-muted-foreground transition duration-150 cursor-pointer active:scale-95 hover:border-primary/40 hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-0 focus:outline-none sm:flex 2xl:ml-3 2xl:w-52 2xl:justify-start 2xl:px-3"
             >
               <SearchIcon className="size-3.5 shrink-0" aria-hidden />
               <span className="hidden truncate text-xs font-medium 2xl:inline">Search records…</span>
@@ -249,7 +252,7 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         {/* Right Side Widgets & Actions */}
-        <div className="flex shrink-0 items-center justify-end gap-1.5 z-10 sm:gap-2.5 ml-auto md:ml-0 xl:flex-1 xl:gap-3">
+        <div className="flex shrink-0 items-center justify-end gap-1.5 z-10 ml-auto sm:gap-2.5 xl:gap-3">
           {!isPhone && (
             <>
               {failedOpsStatus}
@@ -260,7 +263,7 @@ const TopNav: React.FC<TopNavProps> = ({
           <Button variant="unstyled"
             type="button"
             onClick={onAskAI}
-            className="hidden md:flex size-9 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/8 text-blue-600 hover:border-blue-500/35 hover:bg-blue-500/14 dark:text-blue-400 select-none transition-all duration-150 cursor-pointer active:scale-95 xl:h-9 xl:w-auto xl:gap-1.5 xl:px-3"
+            className="hidden sm:flex size-9 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/8 text-blue-600 hover:border-blue-500/35 hover:bg-blue-500/14 dark:text-blue-400 select-none transition-all duration-150 cursor-pointer active:scale-95 xl:h-9 xl:w-auto xl:gap-1.5 xl:px-3"
             title="ASK AI"
             aria-label="ASK AI"
           >

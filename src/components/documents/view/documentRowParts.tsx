@@ -118,7 +118,7 @@ export function AmountReview({ document, updateDocument, currency, disabled = fa
   </div>
 }
 
-const ACTION_CLASS = 'cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50'
+const ACTION_CLASS = 'inline-flex cursor-pointer items-center justify-center rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50'
 
 /**
  * The three row actions, each exported on its own so the phone card can keep Preview on its face and
