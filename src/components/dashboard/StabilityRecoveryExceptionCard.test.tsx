@@ -66,29 +66,61 @@ describe('StabilityRecoveryExceptionCard', () => {
 
     expect(screen.getByText('Your emergency fund is below where it was')).toBeTruthy()
     expect(screen.getByText(/Nothing more is needed this cycle/)).toBeTruthy()
-    expect(screen.getByText(/\$351\.77 remains overall across 3 cycles/)).toBeTruthy()
-    expect(screen.queryByText(/Put back \$0\.00 more this cycle/)).toBeNull()
+    expect(screen.getByText(/\$351\.77 is still short in total/)).toBeTruthy()
+    expect(screen.getByText(/spreads it over 3 cycles, counting this one/)).toBeTruthy()
+    expect(screen.queryByText(/Put back \$0\.00/)).toBeNull()
   })
 
   it('says what was used and what putting it back looks like', () => {
     render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
 
     expect(screen.getByText('Your emergency fund is below where it was')).toBeTruthy()
-    expect(screen.getByText(/Put back \$1000\.00 more this cycle/)).toBeTruthy()
-    expect(screen.getByText(/\$3000\.00 remains overall across 3 cycles/)).toBeTruthy()
+    expect(screen.getByText(/Put back \$1000\.00 this cycle/)).toBeTruthy()
     expect(screen.getByText('Putting it back progress')).toBeTruthy()
     expect(screen.getByText(/0%/)).toBeTruthy()
+  })
+
+  // The reported confusion: two figures side by side read as "pay 506.64 now AND 1013.27 later".
+  // The cycle ask is a slice of the shortfall, so the sentence has to say which of the two contains
+  // the other, and the breakdown has to show the slice under the figure it comes out of.
+  it('says the cycle ask is part of the shortfall rather than money on top of it', () => {
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({
+          markedTotal: 1463.27,
+          repaidTotal: 450,
+          outstandingShortfall: 1013.27,
+          cyclesRemaining: 2,
+          requiredThisCycle: 506.64,
+          outstandingThisCycle: 506.64,
+        })}
+        formatSensitive={format}
+      />
+    )
+
+    expect(screen.getByText(
+      /Put back \$506\.64 this cycle — part of the \$1013\.27 still short, not money on top of it/
+    )).toBeTruthy()
+    expect(screen.getByText(/spreads it over 2 cycles, counting this one/)).toBeTruthy()
+    expect(screen.getByText(/This cycle.s share of that, spread over 2 cycles/)).toBeTruthy()
   })
 
   it('says so plainly on the last cycle of the plan', () => {
     render(
       <StabilityRecoveryExceptionCard
-        recovery={recovery({ cyclesRemaining: 1, outstandingThisCycle: 400 })}
+        recovery={recovery({
+          cyclesRemaining: 1,
+          outstandingShortfall: 400,
+          requiredThisCycle: 400,
+          outstandingThisCycle: 400,
+        })}
         formatSensitive={format}
       />
     )
 
-    expect(screen.getByText(/Put back \$400\.00 more this cycle/)).toBeTruthy()
+    // The final cycle asks for the whole remaining shortfall, so naming both would print the same
+    // figure twice.
+    expect(screen.getByText(/Put back \$400\.00 this cycle to clear what is still short/)).toBeTruthy()
     expect(screen.getByText(/final planned cycle/)).toBeTruthy()
   })
 
@@ -97,13 +129,20 @@ describe('StabilityRecoveryExceptionCard', () => {
   it('stops calling every cycle the last one once the window has passed', () => {
     render(
       <StabilityRecoveryExceptionCard
-        recovery={recovery({ isOverdue: true, cyclesRemaining: 1, outstandingShortfall: 746.8 })}
+        recovery={recovery({
+          isOverdue: true,
+          cyclesRemaining: 1,
+          outstandingShortfall: 746.8,
+          requiredThisCycle: 746.8,
+          outstandingThisCycle: 746.8,
+        })}
         formatSensitive={format}
       />
     )
 
     expect(screen.queryByText(/last cycle of the plan/)).toBeNull()
-    expect(screen.getByText(/\$746\.80 remains/)).toBeTruthy()
+    expect(screen.getByText(/Put back \$746\.80 this cycle to clear what is still short/)).toBeTruthy()
+    expect(screen.getByText(/planned cycles have run out/)).toBeTruthy()
   })
 
   // Putting money back happens by ticking the top-up offer on a salary, so an action here would
@@ -122,6 +161,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.getByText('Put back so far')).toBeTruthy()
     expect(screen.getByText('In it now')).toBeTruthy()
     expect(screen.getByText('Still short')).toBeTruthy()
+    expect(screen.getByText('Of that share, already back')).toBeTruthy()
   })
 
   // The reported defect showed up here: 800 asked back against 200 owed, because drawdowns already
@@ -184,7 +224,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
-    expect(screen.getByText(/remains overall/)).toBeTruthy()
+    expect(screen.getByText(/\$3000\.00 still short/)).toBeTruthy()
   })
 
   it('stays hidden once the target clears the marked obligation', () => {

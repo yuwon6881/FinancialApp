@@ -41,13 +41,13 @@ export function CycleSwitcher({
   const years = availableYears.length > 0 ? availableYears : [selectedYear]
 
   return (
-    <div className="app-panel relative z-40 flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-card/92 p-2 sm:gap-3 sm:p-3">
-      <span className="flex shrink-0 items-center gap-2 pl-1 text-xs font-bold text-muted-foreground">
-        <CalendarClock className="size-4 text-accent-ink" aria-hidden />
-        <span className="hidden sm:inline">Cycle</span>
-      </span>
-
+    <div className="app-panel relative z-40 flex flex-col gap-2 rounded-2xl border border-border/60 bg-card/92 p-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:p-3">
       <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
+        <span className="flex shrink-0 items-center gap-1.5 pl-0.5 text-xs font-bold text-muted-foreground">
+          <CalendarClock className="size-4 text-accent-ink" aria-hidden />
+          <span className="hidden sm:inline">Cycle</span>
+        </span>
+
         {periodMode === 'month-year' && (
           <CustomSelect
             ariaLabel={`${surfaceLabel} cycle`}
@@ -67,7 +67,7 @@ export function CycleSwitcher({
           onChange={year => onSelectPeriod(selectedMonth, Number(year))}
           options={years.map(year => ({ value: year, label: String(year) }))}
           disabled={disabled}
-          className={periodMode === 'month-year' ? 'w-28 shrink-0' : 'w-0 min-w-0 flex-1 sm:w-40 sm:flex-initial'}
+          className={periodMode === 'month-year' ? 'w-20 shrink-0 sm:w-28' : 'w-0 min-w-0 flex-1 sm:w-40 sm:flex-initial'}
           align="right"
         />
       </div>
@@ -80,7 +80,7 @@ export function CycleSwitcher({
           onClick={() => onSelectPeriod(currentCycleMonth, currentCycleYear)}
           disabled={disabled}
           title={`Back to ${getCycleLabelForDropdown(currentCycleMonth, currentCycleYear, cycleDay)}`}
-          className="min-h-11 shrink-0 gap-1.5 rounded-xl px-3 text-xs sm:min-h-0"
+          className="min-h-10 w-full justify-center gap-1.5 rounded-xl px-3 text-xs sm:min-h-9 sm:w-auto sm:shrink-0"
         >
           <RotateCcw className="size-3.5" aria-hidden />
           <span className="whitespace-nowrap">Back to current cycle</span>

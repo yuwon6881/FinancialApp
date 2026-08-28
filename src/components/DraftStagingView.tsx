@@ -134,8 +134,7 @@ export function DraftStagingView({
       <PageHeader
         titleId="draft-transactions-title"
         leading={<Button variant="ghost" size="icon" onClick={onCancel} aria-label="Back to Ledger" title="Back to Ledger"><ArrowLeft className="size-4" aria-hidden="true" /></Button>}
-        icon={<span className="grid size-10 place-items-center rounded-xl border border-accent-ink/20 bg-accent/20 text-accent-ink sm:size-11"><FileText className="size-5" /></span>}
-        title={<span className="flex min-w-0 items-center gap-2"><span className="truncate">Draft Transactions</span>
+        title={<span className="flex flex-wrap items-center gap-2"><span>Draft Transactions</span>
             <span className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-bold text-muted-foreground">{draftTransactions.length}</span>
             <InfoHint text={recordingOrderExplanation} label="draft recording order" align="left" />
           </span>}

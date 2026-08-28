@@ -55,6 +55,12 @@ export function StabilityRecoveryExceptionCard({
   // Overdue is checked first: past the window cyclesRemaining sits at 1 forever, so treating that
   // as "the final cycle" announced the last cycle of the plan every cycle from then on.
   const isFinalCycle = !recovery.isOverdue && recovery.cyclesRemaining <= 1
+  // Two money figures side by side read as additive unless the containment is said out loud: this
+  // cycle's ask is a slice of the shortfall, never money owed on top of it. Once the pace asks for
+  // the whole remaining shortfall -- the final cycle, and every cycle past the window -- naming both
+  // would print the same figure twice, so that case states it once.
+  const asksForWholeShortfall =
+    recovery.outstandingThisCycle >= recovery.outstandingShortfall - 0.005
   // The jump needs a window to filter on, and only the server can say when the fund was last full.
   const canShowMovements = Boolean(onNavigateToLedger && recovery.recoveryFromDate)
 
@@ -100,14 +106,24 @@ export function StabilityRecoveryExceptionCard({
         </div>
 
         <p className="text-xs leading-relaxed text-muted-foreground">
-          {aheadOfPace
-            ? <>Nothing more is needed this cycle — you are ahead of the plan.{' '}</>
-            : <>Put back {formatSensitive(recovery.outstandingThisCycle)} more this cycle.{' '}</>}
+          {aheadOfPace ? (
+            <>
+              Nothing more is needed this cycle — you are ahead of the plan.{' '}
+              {formatSensitive(recovery.outstandingShortfall)} is still short in total.{' '}
+            </>
+          ) : asksForWholeShortfall ? (
+            <>Put back {formatSensitive(recovery.outstandingThisCycle)} this cycle to clear what is still short.{' '}</>
+          ) : (
+            <>
+              Put back {formatSensitive(recovery.outstandingThisCycle)} this cycle — part of the{' '}
+              {formatSensitive(recovery.outstandingShortfall)} still short, not money on top of it.{' '}
+            </>
+          )}
           {recovery.isOverdue
-            ? <>{formatSensitive(recovery.outstandingShortfall)} remains overall and the plan is overdue.</>
+            ? <>The planned cycles have run out.</>
             : isFinalCycle
-              ? <>This is the final planned cycle; {formatSensitive(recovery.outstandingShortfall)} remains overall.</>
-              : <>{formatSensitive(recovery.outstandingShortfall)} remains overall across {recovery.cyclesRemaining} cycles.</>}
+              ? <>This is the final planned cycle.</>
+              : <>The plan spreads it over {recovery.cyclesRemaining} cycles, counting this one.</>}
         </p>
 
         <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-3.5">
@@ -153,18 +169,28 @@ export function StabilityRecoveryExceptionCard({
                 {formatSensitive(recovery.outstandingShortfall)}
               </dd>
             </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
-              <dt className="min-w-0 leading-snug text-muted-foreground">In it now</dt>
-              <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.currentBalance)}</dd>
-            </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
+            {/* One label carrying two unrelated facts left its value attached to only the second of
+                them. Split so each figure has its own line, and name the cycle share outright: it is
+                what the headline asks for, and reading it directly under "still short" is what shows
+                it to be a slice of that figure rather than an addition to it. */}
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 border-t border-border/40 pt-1.5">
               <dt className="min-w-0 leading-snug text-muted-foreground">
-                <span className="sm:hidden">Back this cycle ({recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'})</span>
+                <span className="sm:hidden">This cycle&rsquo;s share of that</span>
                 <span className="hidden sm:inline">
-                  Spread over {recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'}, already back this cycle
+                  This cycle&rsquo;s share of that, spread over {recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'}
                 </span>
               </dt>
+              <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.requiredThisCycle)}</dd>
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
+              <dt className="min-w-0 leading-snug text-muted-foreground">Of that share, already back</dt>
               <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.toppedUpThisCycle)}</dd>
+            </div>
+            {/* Context rather than part of the subtraction, so it sits below the plan rows instead
+                of between "still short" and the share taken out of it. */}
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 border-t border-border/40 pt-1.5">
+              <dt className="min-w-0 leading-snug text-muted-foreground">In it now</dt>
+              <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.currentBalance)}</dd>
             </div>
           </dl>
 

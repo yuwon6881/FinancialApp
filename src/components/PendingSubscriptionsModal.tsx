@@ -141,18 +141,19 @@ export function PendingSubscriptionsModal({
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 border-t border-border/30 pt-3 sm:flex-row sm:items-center sm:justify-end sm:gap-2 sm:pt-2.5">
-              <div className={`w-full space-y-1.5 sm:flex sm:w-auto sm:min-w-[210px] sm:items-center sm:gap-1.5 sm:space-y-0 ${isPending ? 'pointer-events-none opacity-70' : ''}`}>
-                  <span className="block text-xs font-bold text-muted-foreground sm:shrink-0">Paid Date</span>
+            <div className="space-y-3 border-t border-border/30 pt-3">
+              <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${isPending ? 'pointer-events-none opacity-70' : ''}`}>
+                <div className="space-y-1.5">
+                  <span className="block text-xs font-bold text-muted-foreground">Paid Date</span>
                   <DatePicker
                     value={paidDates[noti.id] ?? noti.billingDate}
                     onChange={value => setPaidDates(prev => ({ ...prev, [noti.id]: value }))}
                     max={financialDate()}
-                    align="right"
-                    className="w-full sm:flex-1"
+                    align="left"
+                    className="w-full"
                   />
-              </div>
-              <div className={`w-full space-y-1.5 sm:w-auto sm:min-w-[170px] ${isPending ? 'pointer-events-none opacity-70' : ''}`}>
+                </div>
+                <div className="space-y-1.5">
                   <label
                     htmlFor={`pending-amount-${noti.id}`}
                     className="block text-xs font-bold text-muted-foreground"
@@ -175,50 +176,52 @@ export function PendingSubscriptionsModal({
                       ? 'Part payment — the rest stays due on this bill.'
                       : 'Leave blank to pay the full amount.'}
                   </p>
-              </div>
-                <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
-                  <Button
-                    variant="primary"
-                    onClick={() => runSubscriptionAction(
-                      noti,
-                      'confirm',
-                      () => onConfirmSubscription(
-                        noti,
-                        paidDates[noti.id] ?? noti.billingDate,
-                        partialAmountFor(noti),
-                      ),
-                    )}
-                    disabled={hideSensitive || isPending}
-                    title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                    className="col-span-2 min-h-10 min-w-0 whitespace-nowrap rounded-xl px-4 py-2 shadow-sm disabled:cursor-wait disabled:opacity-70 sm:col-span-1 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:px-3 sm:py-1.5"
-                  >
-                    {pendingAction === 'confirm'
-                      ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Confirming…</span>
-                      : 'Confirm Paid'}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => runSubscriptionAction(noti, 'discard', () => onDiscardSubscription(noti))}
-                    disabled={hideSensitive || isPending}
-                    title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                    className="min-h-10 min-w-0 whitespace-nowrap rounded-xl border-border/50 bg-muted/30 px-3 py-2 text-muted-foreground disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
-                  >
-                    {pendingAction === 'discard'
-                      ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Discarding…</span>
-                      : 'Discard'}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    onClick={() => runSubscriptionAction(noti, 'remove', () => onRemoveSubscription(noti.recurringPaymentId))}
-                    disabled={hideSensitive || isPending}
-                    title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                    className="min-h-10 min-w-0 whitespace-nowrap rounded-xl px-3 py-2 disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
-                  >
-                    {pendingAction === 'remove'
-                      ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Removing…</span>
-                      : 'Remove'}
-                  </Button>
                 </div>
+              </div>
+
+              <div className="grid w-full grid-cols-2 gap-2 pt-1 sm:flex sm:w-auto sm:items-center sm:justify-end">
+                <Button
+                  variant="ghost"
+                  onClick={() => runSubscriptionAction(noti, 'discard', () => onDiscardSubscription(noti))}
+                  disabled={hideSensitive || isPending}
+                  title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
+                  className="min-h-10 min-w-0 whitespace-nowrap rounded-xl border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
+                >
+                  {pendingAction === 'discard'
+                    ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Discarding…</span>
+                    : 'Discard'}
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => runSubscriptionAction(noti, 'remove', () => onRemoveSubscription(noti.recurringPaymentId))}
+                  disabled={hideSensitive || isPending}
+                  title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
+                  className="min-h-10 min-w-0 whitespace-nowrap rounded-xl px-3 py-2 text-xs disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
+                >
+                  {pendingAction === 'remove'
+                    ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Removing…</span>
+                    : 'Remove'}
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => runSubscriptionAction(
+                    noti,
+                    'confirm',
+                    () => onConfirmSubscription(
+                      noti,
+                      paidDates[noti.id] ?? noti.billingDate,
+                      partialAmountFor(noti),
+                    ),
+                  )}
+                  disabled={hideSensitive || isPending}
+                  title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
+                  className="col-span-2 min-h-10 min-w-0 justify-center whitespace-nowrap rounded-xl px-4 py-2 text-xs font-bold shadow-sm disabled:cursor-wait disabled:opacity-70 sm:col-span-1 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:px-3 sm:py-1.5"
+                >
+                  {pendingAction === 'confirm'
+                    ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Confirming…</span>
+                    : 'Confirm Paid'}
+                </Button>
+              </div>
             </div>
           </div>
           )

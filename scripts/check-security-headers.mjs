@@ -55,7 +55,7 @@ const metaContent = encodedMetaContent
   .replaceAll('&apos;', "'")
   .replaceAll('&quot;', '"')
   .replaceAll('&amp;', '&')
-if (!metaContent.includes("frame-ancestors 'none'")) {
+if (!metaContent.includes("default-src 'self'")) {
   throw new Error('The built Capacitor/web shell must retain its generated meta CSP.')
 }
 const assetNames = readdirSync(join('dist', 'assets'))
