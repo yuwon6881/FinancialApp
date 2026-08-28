@@ -44,9 +44,17 @@ if (assetCache.get('cache-control') !== 'public, max-age=31536000, immutable') {
 
 const indexHtml = readFileSync(join('dist', 'index.html'), 'utf8')
 const metaTag = indexHtml.match(/<meta[^>]+http-equiv=["']Content-Security-Policy["'][^>]*>/i)?.[0] ?? ''
-const metaContent = metaTag.match(/\bcontent="([^"]*)"/i)?.[1]
+const encodedMetaContent = metaTag.match(/\bcontent="([^"]*)"/i)?.[1]
   ?? metaTag.match(/\bcontent='([^']*)'/i)?.[1]
   ?? ''
+// Vite serializes apostrophes in injected HTML attributes as numeric entities. Validate the
+// browser-equivalent policy value instead of mistaking correct escaping for a missing directive.
+const metaContent = encodedMetaContent
+  .replace(/&#(\d+);/g, (_match, code) => String.fromCodePoint(Number(code)))
+  .replace(/&#x([\da-f]+);/gi, (_match, code) => String.fromCodePoint(Number.parseInt(code, 16)))
+  .replaceAll('&apos;', "'")
+  .replaceAll('&quot;', '"')
+  .replaceAll('&amp;', '&')
 if (!metaContent.includes("frame-ancestors 'none'")) {
   throw new Error('The built Capacitor/web shell must retain its generated meta CSP.')
 }
