@@ -46,19 +46,33 @@ export function PayEarlySheet({
     if (isOpen && payment) {
       setMode('full')
       setPartialAmount('')
-      setSelectedAccountId(payment.accountId ?? '')
+      setSelectedAccountId(payment.accountId || '')
       setError(null)
     }
   }, [isOpen, payment])
 
-  const accountOptions = useMemo(() => {
-    return accounts
-      .filter(a => !a.isArchived)
-      .map(a => ({
-        value: a.id,
-        label: `${a.name} (${a.bucket})`,
-      }))
-  }, [accounts])
+  // Only open accounts in the bill's own bucket. Offering every account in every bucket made the
+  // picker a trap: the server settles a bill in the bucket it is scheduled against, so any other
+  // choice was accepted here and then refused on sync as an invalid account.
+  const bucketAccounts = useMemo(
+    () => accounts.filter(account => !account.isArchived && account.bucket === payment?.ledgerCategory),
+    [accounts, payment?.ledgerCategory],
+  )
+
+  const accountOptions = useMemo(
+    () => bucketAccounts.map(account => ({ value: account.id, label: account.name })),
+    [bucketAccounts],
+  )
+
+  // A bill that already names a live account settles there and nowhere else, so the account is
+  // shown rather than offered. Only a bill that never had one (authored before accounts existed)
+  // leaves the choice open, and then it has to be made before the payment can be recorded.
+  const assignedAccount = useMemo(
+    () => bucketAccounts.find(account => account.id === payment?.accountId) ?? null,
+    [bucketAccounts, payment?.accountId],
+  )
+  const needsAccountChoice = !assignedAccount
+  const isAccountMissing = needsAccountChoice && !selectedAccountId
 
   const parsedPartialAmount = useMemo(() => {
     if (mode !== 'partial') return undefined
@@ -77,6 +91,11 @@ export function PayEarlySheet({
     if (!payment) return
     setError(null)
 
+    if (needsAccountChoice && !selectedAccountId) {
+      setError('Choose the account this bill is paid from.')
+      return
+    }
+
     if (mode === 'partial') {
       if (parsedPartialAmount == null || parsedPartialAmount <= 0) {
         setError('Please enter a valid amount to pay.')
@@ -93,7 +112,7 @@ export function PayEarlySheet({
       await onPayEarly(
         payment.id,
         mode === 'partial' ? parsedPartialAmount : outstandingAmount,
-        selectedAccountId || undefined,
+        (assignedAccount?.id ?? selectedAccountId) || undefined,
         mode === 'full',
       )
       onClose()
@@ -222,16 +241,26 @@ export function PayEarlySheet({
               </div>
             )}
 
-            {accountOptions.length > 0 && (
-              <FormField label="Pay from account" id="pay-early-account-select">
+            {assignedAccount ? (
+              <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/20 px-3.5 py-3">
+                <span className="text-xs text-muted-foreground">Pay from account</span>
+                <span className="text-xs font-bold text-foreground">{assignedAccount.name}</span>
+              </div>
+            ) : accountOptions.length > 0 ? (
+              <FormField label="Pay from account" id="pay-early-account-select" required>
                 <CustomSelect
                   id="pay-early-account-select"
                   value={selectedAccountId}
                   onChange={setSelectedAccountId}
                   options={accountOptions}
+                  placeholder="Choose an account"
                   disabled={submitting}
                 />
               </FormField>
+            ) : (
+              <AlertBanner variant="warning" className="text-xs">
+                This bill has no account in its {payment.ledgerCategory} bucket yet. Open an account for that bucket first, then record the payment.
+              </AlertBanner>
             )}
 
             <div className="pt-2 flex items-center justify-end gap-2">
@@ -242,7 +271,7 @@ export function PayEarlySheet({
                 variant="primary"
                 type="button"
                 onClick={handleSubmit}
-                disabled={submitting || isAutoDeduct || (mode === 'partial' && (parsedPartialAmount == null || parsedPartialAmount <= 0))}
+                disabled={submitting || isAutoDeduct || isAccountMissing || (mode === 'partial' && (parsedPartialAmount == null || parsedPartialAmount <= 0))}
               >
                 {submitting ? (
                   <span className="flex items-center gap-1.5"><Loader2 className="size-3.5 animate-spin" /> Recording…</span>

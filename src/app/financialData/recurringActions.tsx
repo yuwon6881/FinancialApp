@@ -43,7 +43,13 @@ export function createRecurringActions(deps: RecurringActionDependencies) {
     // The occurrence's own frozen account wins over the schedule's current one: re-pointing a bill
     // moves its future occurrences, not one already waiting to be confirmed. The server resolves it
     // the same way, so the two agree; only a legacy occurrence with no snapshot falls back.
-    const settlementAccountId = noti.accountId ?? payment?.accountId
+    //
+    // Collapsed with `||` rather than `??`: a bill authored before account attribution carries an
+    // empty string, not null. Forwarding that empty string asked the server to settle into an
+    // account named "", which came back as "account not assigned" with nothing queued that the
+    // account review could repair. Left undefined it is a missing account, which the outbox's
+    // pre-flight placement pass fills in or asks the user about.
+    const settlementAccountId = noti.accountId || payment?.accountId || undefined
     const settleAmount = (amount != null && amount > 0) ? amount : noti.amount
     mutateQueue(prev => enqueue(prev, 'recurringOccurrence', 'settle', noti.id, {
       name: noti.name,
@@ -191,7 +197,8 @@ export function createRecurringActions(deps: RecurringActionDependencies) {
     const isPartial = settlesOccurrence === false
       || (settlesOccurrence === undefined && typeof amount === 'number' && amount > 0 && amount < Math.abs(payment.amount))
     const paidAmount = typeof amount === 'number' ? amount : Math.abs(payment.amount)
-    const targetAccountId = accountId ?? payment.accountId
+    // See handleConfirmSubscription: an empty account is "never assigned", not an account id.
+    const targetAccountId = accountId || payment.accountId || undefined
     const pendingTransactionId = createFinalId('transaction')
     const pendingTransaction: Transaction = {
       id: pendingTransactionId,

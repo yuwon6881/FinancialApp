@@ -55,6 +55,53 @@ describe('PayEarlySheet', () => {
     expect(onPayEarly).toHaveBeenCalledWith('rp-electricity', 250, 'acc-main', true)
   })
 
+  it('shows the assigned account instead of offering a choice the server would refuse', () => {
+    render(
+      <PayEarlySheet
+        isOpen={true}
+        payment={samplePayment}
+        accounts={sampleAccounts}
+        currency="MYR"
+        onClose={vi.fn()}
+        onPayEarly={vi.fn()}
+      />
+    )
+
+    // The bill settles in the account it is scheduled against; a picker here only invited a
+    // choice that syncs and then fails.
+    expect(screen.getByText('Main Checking')).toBeDefined()
+    expect(screen.queryByRole('combobox')).toBeNull()
+    expect(screen.queryByText('Savings')).toBeNull()
+  })
+
+  it('asks a bill with no account of its own to name one in its own bucket', () => {
+    const onPayEarly = vi.fn()
+    const legacyPayment: RecurringPayment = { ...samplePayment, accountId: '' }
+
+    render(
+      <PayEarlySheet
+        isOpen={true}
+        payment={legacyPayment}
+        accounts={sampleAccounts}
+        currency="MYR"
+        onClose={vi.fn()}
+        onPayEarly={onPayEarly}
+      />
+    )
+
+    // Bills authored before account attribution carry no account. The choice is real here, but
+    // only across the bill's own bucket -- Savings sits in Stability and must not be offered.
+    const button = screen.getByRole('button', { name: /Pay now/i }) as HTMLButtonElement
+    expect(button.disabled).toBe(true)
+    expect(screen.queryByText('Savings')).toBeNull()
+
+    fireEvent.click(screen.getByRole('combobox'))
+    fireEvent.click(screen.getByRole('option', { name: 'Main Checking' }))
+
+    fireEvent.click(screen.getByRole('button', { name: /Pay now/i }))
+    expect(onPayEarly).toHaveBeenCalledWith('rp-electricity', 250, 'acc-main', true)
+  })
+
   it('allows switching to part amount mode and entering partial payment', async () => {
     const onPayEarly = vi.fn()
     const onClose = vi.fn()
