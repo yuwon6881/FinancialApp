@@ -111,20 +111,29 @@ test('medium ledger rows keep their actions inside the card', async ({ page }) =
   expect(geometry.every(item => item.deleteInset != null && item.deleteInset >= 11), 'ledger delete action has no trailing padding').toBe(true)
 })
 
-test('navigation rail balances the unused space above and below its destinations', async ({ page }) => {
+test('navigation rail packs its destinations under the header and pins settings to its foot', async ({ page }) => {
   test.skip((test.info().project.use.viewport?.width ?? 0) < 640, 'The compact tier uses bottom navigation.')
   await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
   await waitForStableLayout(page)
 
-  const gaps = await page.locator('aside nav[aria-label="Primary"]').evaluate(nav => {
-    const items = Array.from(nav.querySelectorAll<HTMLElement>(':scope > button'))
+  // The rail is viewport-tall and the destinations are not. Centring them left a gap at both ends
+  // and detached the list from the header it belongs to, so the destinations are grouped and packed
+  // under the header while the utility destination holds the foot.
+  const geometry = await page.locator('aside nav[aria-label="Primary"]').evaluate(nav => {
+    const items = Array.from(nav.querySelectorAll<HTMLElement>('button'))
     const navRect = nav.getBoundingClientRect()
+    // Measured from the first rendered child, not the first button: the expanded rail puts a
+    // group label above its destinations, and that label is content rather than empty space.
+    const first = nav.firstElementChild
     return {
-      above: (items[0]?.getBoundingClientRect().top ?? navRect.top) - navRect.top,
+      above: (first?.getBoundingClientRect().top ?? navRect.top) - navRect.top,
       below: navRect.bottom - (items.at(-1)?.getBoundingClientRect().bottom ?? navRect.bottom),
+      groups: nav.querySelectorAll('[role="group"]').length,
     }
   })
-  expect(Math.abs(gaps.above - gaps.below), 'navigation destinations remain top-packed').toBeLessThanOrEqual(2)
+  expect(geometry.above, 'navigation destinations are packed under the header').toBeLessThanOrEqual(24)
+  expect(geometry.below, 'the utility destination holds the foot of the rail').toBeLessThanOrEqual(24)
+  expect(geometry.groups, 'destinations are grouped rather than one flat list').toBeGreaterThanOrEqual(2)
 })
 
 test('AI page actions stay beside their page titles', async ({ page }) => {
