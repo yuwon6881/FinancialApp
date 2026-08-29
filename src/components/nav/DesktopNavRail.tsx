@@ -46,13 +46,13 @@ export const DesktopNavRail: React.FC<DesktopNavRailProps> = ({
         title={label}
         aria-current={isActive ? 'page' : undefined}
         onClick={() => onTabChange(tab)}
-        className={`relative flex min-h-11 w-full items-center justify-center gap-2.5 rounded-xl border px-2 text-body font-semibold transition duration-150 lg:justify-start lg:px-2.5 ${
+        className={`relative flex min-h-11 w-full items-center justify-center gap-2.5 rounded-xl border px-2 text-body font-semibold transition duration-150 lg:justify-start lg:pl-3.5 lg:pr-2.5 ${
           isActive
             ? `${activeClass} font-bold shadow-sm`
             : 'border-transparent text-muted-foreground hover:bg-muted/45 hover:text-foreground'
         }`}
       >
-        {isActive && <span className={`absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full ${dotClass}`} />}
+        {isActive && <span className={`absolute left-1.5 top-1/2 h-4.5 w-1 -translate-y-1/2 rounded-full ${dotClass}`} />}
         <Icon className={`size-4.5 shrink-0 ${isActive ? iconClass : 'text-muted-foreground'}`} />
         <span className="hidden truncate lg:inline">{label}</span>
       </Button>
