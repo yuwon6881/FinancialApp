@@ -248,7 +248,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           id="recurring-panel-recurring"
           role="tabpanel"
           aria-labelledby="recurring-tab-recurring"
-          className="contents"
+          className="space-y-6"
         >
           {/* Visual Bill Timeline */}
           <RecurringTimelineCard
@@ -311,7 +311,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           id="recurring-panel-loans"
           role="tabpanel"
           aria-labelledby="recurring-tab-loans"
-          className="contents"
+          className="space-y-6"
         >
           <Suspense fallback={<LoansSectionSkeleton />}>
             <LoansSection
