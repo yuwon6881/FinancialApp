@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   fetchAuthStatus: vi.fn(),
   verifyFingerprintAssert: vi.fn(),
   invalidateCache: vi.fn(),
+  noteSessionUnlocked: vi.fn(),
   logout: vi.fn(),
   getCachedFingerprintAssertOptions: vi.fn(),
   clearCachedFingerprintAssertOptions: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock('../lib/api', () => ({
   fetchAuthStatus: mocks.fetchAuthStatus,
   verifyFingerprintAssert: mocks.verifyFingerprintAssert,
   invalidateCache: mocks.invalidateCache,
+  noteSessionUnlocked: mocks.noteSessionUnlocked,
   logout: mocks.logout,
 }))
 

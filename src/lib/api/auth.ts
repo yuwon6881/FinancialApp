@@ -125,6 +125,7 @@ export async function logout(): Promise<void> {
  * did nothing and only the second, with no lock in flight, worked. Unlocks therefore wait for any
  * lock still in flight, so the unlock is always the last write.
  */
+let lockSessionAbortController: AbortController | null = null
 let pendingSessionLock: Promise<unknown> | null = null
 
 async function afterPendingSessionLock(): Promise<void> {
@@ -134,6 +135,7 @@ async function afterPendingSessionLock(): Promise<void> {
 }
 
 export async function verifyPassword(password: string): Promise<{ verified: boolean; message?: string }> {
+  lockSessionAbortController?.abort()
   await afterPendingSessionLock()
   const data = await request<{ verified: boolean; message?: string }>('/auth/verify-password', {
     method: 'POST',
@@ -148,14 +150,21 @@ export async function verifyPassword(password: string): Promise<{ verified: bool
 }
 
 export async function lockSession(): Promise<void> {
-  const lock = apiFetch('/auth/lock', { method: 'POST' })
+  lockSessionAbortController?.abort()
+  const ac = new AbortController()
+  lockSessionAbortController = ac
+  const lock = apiFetch('/auth/lock', { method: 'POST', signal: ac.signal })
   pendingSessionLock = lock
   try {
     const response = await lock
     if (!response.ok) console.warn('Failed to lock session on server')
     else invalidateCache()
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') return
+    console.warn('Failed to lock session on server', err)
   } finally {
     if (pendingSessionLock === lock) pendingSessionLock = null
+    if (lockSessionAbortController === ac) lockSessionAbortController = null
   }
 }
 
@@ -307,6 +316,7 @@ export async function getFingerprintAssertOptions(): Promise<{ challengeId: stri
 }
 
 export async function verifyFingerprintAssert(challengeId: string, credential: unknown): Promise<{ verified: boolean }> {
+  lockSessionAbortController?.abort()
   await afterPendingSessionLock()
   const data = await request<{ verified: boolean }>('/auth/webauthn/assert/verify', {
     method: 'POST',

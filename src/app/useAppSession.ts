@@ -117,6 +117,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   }, [loadAllAbortRef])
 
   const handleUnlocked = useCallback(() => {
+    api.noteSessionUnlocked()
     lastUnlockedTimeRef.current = Date.now()
     localStorage.setItem('last_active_time', Date.now().toString())
     sessionStorage.setItem('session_locked', 'false')
