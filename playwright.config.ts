@@ -9,6 +9,10 @@ const projects = [
   { name: 'desktop-dark', viewport: { width: 1440, height: 900 }, colorScheme: 'dark' as const },
   { name: 'compact-320-light', viewport: { width: 320, height: 844 }, colorScheme: 'light' as const, testMatch: '**/responsive-contract.spec.ts' },
   { name: 'compact-keyboard-light', viewport: { width: 390, height: 500 }, colorScheme: 'light' as const, testMatch: '**/responsive-contract.spec.ts' },
+  { name: 'medium-960-light', viewport: { width: 960, height: 900 }, colorScheme: 'light' as const, testMatch: '**/responsive-contract.spec.ts' },
+  { name: 'medium-960-dark', viewport: { width: 960, height: 900 }, colorScheme: 'dark' as const, testMatch: '**/responsive-contract.spec.ts' },
+  { name: 'expanded-1024-light', viewport: { width: 1024, height: 768 }, colorScheme: 'light' as const, testMatch: '**/responsive-contract.spec.ts' },
+  { name: 'expanded-1024-dark', viewport: { width: 1024, height: 768 }, colorScheme: 'dark' as const, testMatch: '**/responsive-contract.spec.ts' },
 ]
 
 export default defineConfig({

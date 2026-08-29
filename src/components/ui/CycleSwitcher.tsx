@@ -67,7 +67,7 @@ export function CycleSwitcher({
           onChange={year => onSelectPeriod(selectedMonth, Number(year))}
           options={years.map(year => ({ value: year, label: String(year) }))}
           disabled={disabled}
-          className={periodMode === 'month-year' ? 'w-20 shrink-0 sm:w-28' : 'w-0 min-w-0 flex-1 sm:w-40 sm:flex-initial'}
+          className={periodMode === 'month-year' ? 'w-28 shrink-0' : 'w-0 min-w-0 flex-1 sm:w-40 sm:flex-initial'}
           align="right"
         />
       </div>
