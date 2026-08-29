@@ -28,7 +28,7 @@ describe('useAutoLock', () => {
     vi.useRealTimers()
   })
 
-  it('locks immediately when a restored session was already inactive for five minutes', async () => {
+  it('starts a newly opened unlocked document as active instead of counting time while it was closed', async () => {
     localStorage.setItem('last_active_time', String(Date.now() - 5 * 60 * 1000 - 1))
     const markSessionLocked = vi.fn()
 
@@ -42,8 +42,9 @@ describe('useAutoLock', () => {
 
     await act(async () => Promise.resolve())
 
-    expect(markSessionLocked).toHaveBeenCalledTimes(1)
-    expect(api.lockSession).toHaveBeenCalledTimes(1)
+    expect(Number(localStorage.getItem('last_active_time'))).toBe(Date.now())
+    expect(markSessionLocked).not.toHaveBeenCalled()
+    expect(api.lockSession).not.toHaveBeenCalled()
   })
 
   it('keeps the local inactivity lock when the server lock request is offline', async () => {

@@ -41,10 +41,10 @@ export function useAutoLock(options: UseAutoLockOptions): void {
   // Inactivity tracking - update last_active_time in localStorage
   useEffect(() => {
     if (!token || isLocked) return
-    const restoredLastActive = Number(localStorage.getItem('last_active_time'))
-    if (!Number.isFinite(restoredLastActive) || restoredLastActive <= 0) {
-      localStorage.setItem('last_active_time', Date.now().toString())
-    }
+    // A fresh document is active by definition. Do not count time while the site was closed as
+    // inactivity: the installed-mobile-PWA launch gate protects that separate startup boundary,
+    // while an actual session lock is restored through the local flags or a server 423.
+    localStorage.setItem('last_active_time', Date.now().toString())
     void api.sendSessionHeartbeat()
     const updateActivity = () => {
       localStorage.setItem('last_active_time', Date.now().toString())
