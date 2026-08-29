@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { PendingNotification } from '../types'
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
@@ -35,6 +35,8 @@ export function PendingSubscriptionsModal({
   const [paidAmounts, setPaidAmounts] = useState<Record<string, string>>({})
   const [pendingActions, setPendingActions] = useState<Record<string, 'confirm' | 'discard' | 'remove'>>({})
 
+  const prevAmountsRef = useRef<Record<string, number>>({})
+
   // Blank means "pay the whole bill", which is what almost every confirmation is. A figure below the
   // amount due records a part payment and leaves the bill open for the rest; anything at or above it
   // is the full payment, so it is sent as undefined rather than as a partial the server would refuse.
@@ -50,12 +52,37 @@ export function PendingSubscriptionsModal({
   useEffect(() => {
     if (!isOpen) {
       setPendingActions({})
+      setPaidAmounts({})
+      setPaidDates({})
+      prevAmountsRef.current = {}
       return
     }
     const visibleIds = new Set(pendingNotifications.map(notification => notification.id))
     setPendingActions(current => Object.fromEntries(
-      Object.entries(current).filter(([id]) => visibleIds.has(id)),
+      Object.entries(current).filter(([id]) => {
+        if (!visibleIds.has(id)) return false
+        const noti = pendingNotifications.find(n => n.id === id)
+        const prevAmount = prevAmountsRef.current[id]
+        if (noti && prevAmount !== undefined && prevAmount !== noti.amount) {
+          return false
+        }
+        return true
+      }),
     ))
+    setPaidAmounts(current => Object.fromEntries(
+      Object.entries(current).filter(([id]) => {
+        if (!visibleIds.has(id)) return false
+        const noti = pendingNotifications.find(n => n.id === id)
+        const prevAmount = prevAmountsRef.current[id]
+        if (noti && prevAmount !== undefined && prevAmount !== noti.amount) {
+          return false
+        }
+        return true
+      }),
+    ))
+    prevAmountsRef.current = Object.fromEntries(
+      pendingNotifications.map(n => [n.id, n.amount]),
+    )
   }, [isOpen, pendingNotifications])
 
   const runSubscriptionAction = (
@@ -63,8 +90,19 @@ export function PendingSubscriptionsModal({
     action: 'confirm' | 'discard' | 'remove',
     callback: () => void,
   ) => {
-    setPendingActions(current => ({ ...current, [noti.id]: action }))
-    callback()
+    const isPartial = action === 'confirm' && partialAmountFor(noti) !== undefined
+    if (isPartial) {
+      callback()
+      setPaidAmounts(prev => ({ ...prev, [noti.id]: '' }))
+      setPendingActions(current => {
+        const next = { ...current }
+        delete next[noti.id]
+        return next
+      })
+    } else {
+      setPendingActions(current => ({ ...current, [noti.id]: action }))
+      callback()
+    }
   }
 
   return (
@@ -179,14 +217,12 @@ export function PendingSubscriptionsModal({
                 </Button>
                 <Button
                   variant="danger"
-                  onClick={() => runSubscriptionAction(noti, 'remove', () => onRemoveSubscription(noti.recurringPaymentId))}
+                  onClick={() => onRemoveSubscription(noti.recurringPaymentId)}
                   disabled={hideSensitive || isPending}
                   title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
                   className="min-h-10 min-w-0 whitespace-nowrap rounded-xl px-3 py-2 text-xs disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
                 >
-                  {pendingAction === 'remove'
-                    ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Removing…</span>
-                    : 'Remove'}
+                  Remove
                 </Button>
                 <Button
                   variant="primary"

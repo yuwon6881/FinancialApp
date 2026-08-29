@@ -96,13 +96,21 @@ describe('PendingSubscriptionsModal', () => {
     expect(screen.getByRole('button', { name: 'Remove' }).hasAttribute('disabled')).toBe(true)
   })
 
-  it('shows removal progress and prevents duplicate actions', () => {
+  it('delegates removal to confirmation dialog without locking actions prematurely', () => {
     const { onRemoveSubscription } = renderModal()
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
 
     expect(onRemoveSubscription).toHaveBeenCalledWith('household')
-    expect(screen.getByRole('button', { name: /Removing/ }).hasAttribute('disabled')).toBe(true)
-    expect(screen.getByRole('button', { name: 'Confirm Paid' }).hasAttribute('disabled')).toBe(true)
-    expect(screen.getByRole('button', { name: 'Discard' }).hasAttribute('disabled')).toBe(true)
+  })
+
+  it('resets input and action state when a partial payment is confirmed', () => {
+    const { onConfirmSubscription } = renderModal()
+    const input = screen.getByLabelText('Amount paid')
+    fireEvent.change(input, { target: { value: '500' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Paid' }))
+
+    expect(onConfirmSubscription).toHaveBeenCalledWith(notification, '2026-07-28', 500)
+    expect(screen.getByRole('button', { name: 'Confirm Paid' }).hasAttribute('disabled')).toBe(false)
+    expect((input as HTMLInputElement).value).toBe('')
   })
 })

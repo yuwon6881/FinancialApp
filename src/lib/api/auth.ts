@@ -162,6 +162,7 @@ export async function lockSession(): Promise<void> {
   } catch (err: unknown) {
     if (err instanceof Error && err.name === 'AbortError') return
     console.warn('Failed to lock session on server', err)
+    throw err
   } finally {
     if (pendingSessionLock === lock) pendingSessionLock = null
     if (lockSessionAbortController === ac) lockSessionAbortController = null

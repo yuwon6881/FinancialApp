@@ -257,8 +257,19 @@ export function computeOptimisticDashboard(
           : null,
       }
     }
-    // A part-paid bill still needs reviewing, so its prompt stays.
-    if (status !== 'PartiallyPaid') {
+    // A part-paid bill still needs reviewing, so its prompt stays with the remaining amount.
+    if (status === 'PartiallyPaid') {
+      const notiIndex = data.pendingNotifications.findIndex(notification =>
+        notification.recurringPaymentId === paymentId && notification.billingDate === occurrenceDate)
+      if (notiIndex >= 0) {
+        const noti = data.pendingNotifications[notiIndex]
+        const remaining = Math.max(0, scheduled - (paidAmount ?? 0))
+        data.pendingNotifications[notiIndex] = {
+          ...noti,
+          amount: -remaining,
+        }
+      }
+    } else {
       data.pendingNotifications = data.pendingNotifications.filter(notification =>
         notification.recurringPaymentId !== paymentId || notification.billingDate !== occurrenceDate)
     }
