@@ -18,7 +18,6 @@ describe('useAppPreferences', () => {
       result.current.resolveHideSensitive(false)
       result.current.setHideFinancialFigures(false)
       result.current.setDarkMode(true)
-      result.current.setNotifyOnLogin(false)
     })
 
     expect(localStorage.getItem('hide_sensitive:alice')).toBe('false')
@@ -31,7 +30,6 @@ describe('useAppPreferences', () => {
     expect(result.current.sensitivePreferenceStatus).toBe('pending')
     expect(result.current.hideFinancialFigures).toBe(true)
     expect(result.current.darkMode).toBe(false)
-    expect(result.current.notifyOnLogin).toBe(true)
 
     act(() => result.current.setPreferenceOwner('alice'))
 
@@ -41,7 +39,6 @@ describe('useAppPreferences', () => {
     expect(result.current.sensitivePreferenceStatus).toBe('pending')
     expect(result.current.hideFinancialFigures).toBe(false)
     expect(result.current.darkMode).toBe(true)
-    expect(result.current.notifyOnLogin).toBe(false)
   })
 
   it('defaults local financial figures to hidden and restores the account-scoped preference', () => {

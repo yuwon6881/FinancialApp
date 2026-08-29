@@ -65,24 +65,6 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
       onRequestDeleteAccount={financial.requestDeleteAccount}
       onReconcileAccounts={financial.handleReconcileAccounts}
       isCurrentCycle={isCurrentCycle}
-      notifyOnLoginEnabled={prefs.notifyOnLogin}
-      onToggleNotifyOnLogin={(checked) => {
-        const previous = prefs.notifyOnLogin
-        prefs.setNotifyOnLogin(checked)
-        const copy = buildMutationSuccessToast({
-          entity: 'Settings',
-          action: 'Updated',
-          message: `Login notifications were ${checked ? 'enabled' : 'disabled'}.`,
-        })
-        dialogs.showToast(copy.message, copy.title, copy.tone, {
-          label: 'Undo',
-          onAction: () => {
-            prefs.setNotifyOnLogin(previous)
-            const undoCopy = buildUndoSuccessToast('Login notifications', 'settings')
-            dialogs.showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
-          },
-        })
-      }}
       pushSupported={push.supported}
       pushLoading={push.loading}
       pushBusyAction={push.busyAction}

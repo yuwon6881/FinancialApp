@@ -335,7 +335,6 @@ export async function establishSession(page: Page) {
     localStorage.setItem('auth_username', 'visual-user')
     localStorage.setItem('dark_mode:visual-user', String(dark))
     localStorage.setItem('hide_balance_amounts:visual-user', 'false')
-    localStorage.setItem('show_notifications_on_login:visual-user', 'false')
     localStorage.setItem('cached_is_registered', 'true')
     localStorage.setItem('session_locked_global', 'false')
     sessionStorage.setItem('session_locked', 'false')

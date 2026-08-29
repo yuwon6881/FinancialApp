@@ -48,8 +48,6 @@ export interface FinancialModelTabProps {
   onToggleDarkMode?: () => void
   onToggleHideSensitive?: () => void
   onClearLocalFinancialData?: () => void
-  notifyOnLoginEnabled?: boolean
-  onToggleNotifyOnLogin?: (checked: boolean) => void
   pushSupported?: boolean
   pushLoading?: boolean
   pushBusyAction?: PushBusyAction
@@ -78,8 +76,6 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
   onToggleDarkMode,
   onToggleHideSensitive,
   onClearLocalFinancialData,
-  notifyOnLoginEnabled,
-  onToggleNotifyOnLogin,
   pushSupported,
   pushLoading,
   pushBusyAction,
@@ -290,8 +286,6 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
 
         <div>
           <NotificationsCard
-            notifyOnLoginEnabled={notifyOnLoginEnabled || false}
-            onToggleNotifyOnLogin={checked => onToggleNotifyOnLogin?.(checked)}
             pushSupported={pushSupported !== false}
             pushLoading={pushLoading || false}
             pushBusyChannel={pushBusyAction ?? null}

@@ -136,8 +136,23 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-blue-500/15 bg-blue-500/10 text-blue-500">
               <BarChart3 className="size-5" />
             </div>
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground">Reports</h2>
+            <div className="min-w-0">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">Reports</h2>
+                {onExplainWithAi && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    onClick={() => onExplainWithAi(`${view.activeSettings.selectedYear}-${String(selectedMonthIndex).padStart(2, '0')}`)}
+                    aria-label="Explain this cycle with Ask AI"
+                    className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5"
+                  >
+                    <Sparkles className="size-3.5" />
+                    <span className="hidden sm:inline">Explain this cycle</span>
+                  </Button>
+                )}
+              </div>
               <p className="mt-1 text-xs text-muted-foreground">Trends, plan performance, and activity for {view.cycleLabel}.</p>
             </div>
           </div>
@@ -153,19 +168,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               >
                 <ChartNoAxesCombined className="size-3.5" />
                 <span className="hidden whitespace-nowrap text-xs font-bold sm:inline">Summary</span>
-              </Button>
-            )}
-            {onExplainWithAi && (
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                onClick={() => onExplainWithAi(`${view.activeSettings.selectedYear}-${String(selectedMonthIndex).padStart(2, '0')}`)}
-                aria-label="Explain this cycle with Ask AI"
-                className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5"
-              >
-                <Sparkles className="size-3.5" />
-                <span className="hidden sm:inline">Explain this cycle</span>
               </Button>
             )}
           </div>

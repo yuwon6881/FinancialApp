@@ -15,7 +15,7 @@ export const DesktopNavRail: React.FC<DesktopNavRailProps> = ({
   onTabChange,
 }) => (
   <aside className="fixed inset-y-0 left-0 z-40 hidden w-20 border-r border-border/40 bg-background/88 pt-[calc(4.25rem+env(safe-area-inset-top,0px))] backdrop-blur-xl sm:block lg:w-56">
-    <nav aria-label="Primary" className="flex h-full flex-col gap-1 overflow-y-auto px-2 py-3 lg:px-2.5">
+    <nav aria-label="Primary" className="flex h-full flex-col justify-center gap-1 overflow-y-auto px-2 py-3 lg:px-2.5">
       {navItems.map(({ tab, label, Icon, activeClass, iconClass, dotClass }) => {
         const isActive = tab === activeTab
         return (

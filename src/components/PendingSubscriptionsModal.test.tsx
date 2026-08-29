@@ -7,16 +7,18 @@ vi.mock('./ui/BottomSheet', () => ({
   BottomSheet: ({
     isOpen,
     children,
+    footer,
     backdropClassName,
     panelClassName,
   }: {
     isOpen: boolean
     children: React.ReactNode
+    footer?: React.ReactNode
     backdropClassName?: string
     panelClassName?: string
   }) =>
     isOpen
-      ? <div data-testid="sheet" data-backdrop-class={backdropClassName} data-panel-class={panelClassName}>{children}</div>
+      ? <div data-testid="sheet" data-backdrop-class={backdropClassName} data-panel-class={panelClassName}>{children}{footer}</div>
       : null,
 }))
 
@@ -44,8 +46,6 @@ describe('PendingSubscriptionsModal', () => {
       pendingNotifications: [notification],
       currency: 'MYR',
       hideSensitive: false,
-      showOnLoginChecked: true,
-      onToggleShowOnLogin: vi.fn(),
       onClose: vi.fn(),
       onConfirmSubscription: vi.fn(),
       onDiscardSubscription: vi.fn(),
@@ -77,6 +77,13 @@ describe('PendingSubscriptionsModal', () => {
     const confirm = screen.getByRole('button', { name: 'Confirm Paid' })
     expect(confirm.className).toContain('col-span-2')
     expect(confirm.className).toContain('justify-center')
+  })
+
+  it('offers bill review actions without an automatic-open preference', () => {
+    renderModal()
+
+    expect(screen.queryByRole('switch', { name: /notify bills/i })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
   })
 
   it('shows discard progress and prevents duplicate actions', () => {

@@ -184,7 +184,8 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         id={ledgerTransactionRowId(transaction.id, 'mobile')}
         hint={props.hint}
         disabled={props.isDeleting}
-        className="rounded-2xl border border-border shadow-xs"
+        className="relative overflow-hidden rounded-2xl border border-border shadow-xs"
+        contentClassName="pr-3"
         actionsWidth={props.onMove ? 192 : 128}
         actions={<><Button variant="unstyled" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button>{props.onMove && <Button variant="unstyled" onClick={() => props.onMove?.(transaction)} disabled={!canMove || props.isDeleting || props.isSyncing || props.hideSensitive} className={`flex-1 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${canMove ? 'bg-secondary text-secondary-foreground' : 'bg-muted/50 text-muted-foreground'}`}><CalendarClock className="size-4" />Move to</Button>}<Button variant="unstyled" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
         desktopActions={<>
@@ -222,7 +223,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
           </Button>
         </>}
       >
-        <div className={`h-0.5 w-full ${transfer ? 'bg-blue-500/60' : outflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'}`} />
+        <div className={`absolute inset-x-0 top-0 h-0.5 ${transfer ? 'bg-blue-500/60' : outflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'}`} />
         <div className="p-4 space-y-3">
           {props.isSelecting && <div className="flex items-center justify-between gap-2">
             <label className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground">

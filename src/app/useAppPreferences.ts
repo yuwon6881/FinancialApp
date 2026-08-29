@@ -20,8 +20,6 @@ export interface AppPreferences {
   maskPassiveFinancialFigures: boolean
   darkMode: boolean
   setDarkMode: (value: boolean) => void
-  notifyOnLogin: boolean
-  setNotifyOnLogin: (value: boolean) => void
   ledgerCyclesRange: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
   setLedgerCyclesRange: (range: 'monthly' | '3month' | '6month' | 'yearly' | 'all') => void
   ledgerPageSize: number
@@ -53,10 +51,6 @@ export function useAppPreferences(): AppPreferences {
       : false
   })
 
-  const [notifyOnLogin, setNotifyOnLoginState] = useState<boolean>(() => {
-    return true
-  })
-
   const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly' | 'all'>('monthly')
   const [ledgerPageSize, setLedgerPageSizeState] = useState(10)
   const [ledgerSortOrder, setLedgerSortOrderState] = useState<TransactionSort>('date-desc')
@@ -86,13 +80,6 @@ export function useAppPreferences(): AppPreferences {
     return owner ? `${key}:${owner}` : null
   }
 
-  const readBooleanPreference = (key: string, fallback: boolean) => {
-    const namespacedKey = preferenceKey(key)
-    if (!namespacedKey) return fallback
-    const stored = localStorage.getItem(namespacedKey)
-    return stored === null ? fallback : stored === 'true'
-  }
-
   const setPreferenceOwner = (username: string | null) => {
     preferenceOwnerRef.current = username
     // Sensitive mode is server-backed. Keep the safe state until the signed-in
@@ -106,7 +93,6 @@ export function useAppPreferences(): AppPreferences {
     const migratedValue = stored ?? legacy
     setHideFinancialFiguresState(migratedValue === null ? true : migratedValue === 'true')
     if (newKey && stored === null && legacy !== null) localStorage.setItem(newKey, legacy)
-    setNotifyOnLoginState(readBooleanPreference('show_notifications_on_login', true))
     const storedPageSize = Number(preferenceKey('ledger_page_size') && localStorage.getItem(preferenceKey('ledger_page_size')!))
     setLedgerPageSizeState([10, 25, 50, 100].includes(storedPageSize) ? storedPageSize : 10)
     const storedSort = preferenceKey('ledger_sort_order') && localStorage.getItem(preferenceKey('ledger_sort_order')!)
@@ -157,12 +143,6 @@ export function useAppPreferences(): AppPreferences {
     if (key) localStorage.setItem(key, value.toString())
   }
 
-  const setNotifyOnLogin = (value: boolean) => {
-    setNotifyOnLoginState(value)
-    const key = preferenceKey('show_notifications_on_login')
-    if (key) localStorage.setItem(key, value.toString())
-  }
-
   const setLedgerPageSize = (value: number) => {
     setLedgerPageSizeState(value)
     const key = preferenceKey('ledger_page_size')
@@ -189,8 +169,6 @@ export function useAppPreferences(): AppPreferences {
     maskPassiveFinancialFigures: hideSensitive || hideFinancialFigures,
     darkMode,
     setDarkMode,
-    notifyOnLogin,
-    setNotifyOnLogin,
     ledgerCyclesRange,
     setLedgerCyclesRange,
     ledgerPageSize,

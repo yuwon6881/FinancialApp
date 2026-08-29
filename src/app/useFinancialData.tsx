@@ -64,15 +64,11 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     resolveHideSensitive,
     markSensitivePreferenceUnavailable,
     setDarkMode,
-    notifyOnLogin,
     loadAllAbortRef,
     selectedMonth,
     setSelectedMonth,
     selectedYear,
     setSelectedYear,
-    setHasShownModalThisSession,
-    hasShownModalThisSession,
-    setShowLoginModal,
     setShowFailedOpsModal,
     onNavigateToLedger,
   } = options
@@ -240,8 +236,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   // Fetch initial ledger and dashboard statistics
   const loadAll = useLoadAll({
     token,
-    notifyOnLogin,
-    hasShownModalThisSession,
     getActiveOps,
     getFailedOps,
     handleLogout,
@@ -270,8 +264,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setError,
     setSelectedMonth,
     setSelectedYear,
-    setHasShownModalThisSession,
-    setShowLoginModal,
   })
   useEffect(() => {
     loadAllRef.current = loadAll

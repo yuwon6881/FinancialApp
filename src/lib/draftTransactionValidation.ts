@@ -12,6 +12,7 @@ export function getDraftTransactionIssues(
 ): string[] {
   const isAccountMove = draft.ledgerCategory.toLowerCase() === 'accountmove'
   const isTransfer = draft.ledgerCategory.startsWith('Transfer:') || isAccountMove
+  const isIncome = draft.ledgerCategory === 'Income' || draft.ledgerCategory.startsWith('IncomeSplit:')
   const transactionType = isAccountMove ? 'accountMove' : isTransfer ? 'transfer' : draft.amount < 0 ? 'outflow' : 'inflow'
   const transfer = draft.ledgerCategory.startsWith('Transfer:') ? parseTransfer(draft.ledgerCategory) : { source: '', target: '' }
   const errors = validateTransactionForm({
@@ -19,7 +20,7 @@ export function getDraftTransactionIssues(
     amount: Math.abs(draft.amount).toFixed(2),
     date: draft.date,
     transactionType,
-    ledgerCategory: isAccountMove ? 'AccountMove' : isTransfer ? '' : draft.ledgerCategory,
+    ledgerCategory: isAccountMove ? 'AccountMove' : isTransfer ? '' : isIncome ? 'Income' : draft.ledgerCategory,
     transferSource: transfer.source,
     transferTarget: transfer.target,
     accountId: draft.accountId,
@@ -36,7 +37,7 @@ export function getDraftTransactionIssues(
     const allowedLedgerCategories = transactionType === 'inflow'
       ? ['Income', 'Essentials', 'Growth', 'Stability', 'Rewards']
       : ['Essentials', 'Growth', 'Stability', 'Rewards']
-    if (!allowedLedgerCategories.includes(draft.ledgerCategory)) {
+    if (!allowedLedgerCategories.includes(draft.ledgerCategory) && !(transactionType === 'inflow' && isIncome)) {
       errors.ledgerCategory = 'Choose a valid ledger category.'
     }
   }

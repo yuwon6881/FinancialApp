@@ -1,7 +1,5 @@
 // Exact user-facing copy for the push notification feature. Centralized so the Settings rows,
 // the Recurring card editor, and their tests all reference the same source of truth.
-export const NOTIFY_ON_LOGIN_DESCRIPTION = 'Show unpaid-bill alerts when you open the app.'
-
 // The two kinds are separate settings, each opted into on the device you are holding. Neither
 // description mentions the other, and neither promises anything about your other devices.
 export const BILL_REMINDER_PUSH_TITLE = 'Bill reminders'

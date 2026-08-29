@@ -51,16 +51,12 @@ export interface UseFinancialDataOptions {
   resolveHideSensitive: (value: boolean) => void
   markSensitivePreferenceUnavailable: () => void
   setDarkMode: (value: boolean) => void
-  notifyOnLogin: boolean
   loadAllAbortRef: React.MutableRefObject<AbortController | null>
   selectedMonth: string
   setSelectedMonth: (month: string) => void
   selectedYear: number
   setSelectedYear: (year: number) => void
   setIsSwitchingCycle: (switching: boolean) => void
-  setHasShownModalThisSession: (value: boolean) => void
-  hasShownModalThisSession: boolean
-  setShowLoginModal: (value: boolean) => void
   setShowFailedOpsModal: (value: boolean) => void
   onNavigateToLedger?: (options: {
     category?: string | null
@@ -71,4 +67,3 @@ export interface UseFinancialDataOptions {
     highlightedTxId?: string | null
   }) => void
 }
-

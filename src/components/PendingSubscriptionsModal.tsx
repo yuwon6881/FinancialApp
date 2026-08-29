@@ -3,7 +3,6 @@ import type { PendingNotification } from '../types'
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { BottomSheet } from './ui/BottomSheet'
-import { ToggleButton } from './ui/ToggleButton'
 import { DatePicker } from './ui/DatePicker'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 import { SensitiveMask } from './ui/SensitiveAmount'
@@ -16,8 +15,6 @@ interface PendingSubscriptionsModalProps {
   pendingNotifications: PendingNotification[]
   currency: string
   hideSensitive: boolean
-  showOnLoginChecked: boolean
-  onToggleShowOnLogin: (checked: boolean) => void
   onClose: () => void
   onConfirmSubscription: (noti: PendingNotification, paidDate: string, amount?: number) => void
   onDiscardSubscription: (noti: PendingNotification) => void
@@ -29,8 +26,6 @@ export function PendingSubscriptionsModal({
   pendingNotifications,
   currency,
   hideSensitive,
-  showOnLoginChecked,
-  onToggleShowOnLogin,
   onClose,
   onConfirmSubscription,
   onDiscardSubscription,
@@ -87,16 +82,7 @@ export function PendingSubscriptionsModal({
         </div>
       }
       footer={
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-          <div className="flex items-center justify-between gap-3 text-xs font-medium text-foreground w-full sm:w-auto">
-            <span>Notify Bills</span>
-            <ToggleButton
-              active={showOnLoginChecked}
-              onClick={() => onToggleShowOnLogin(!showOnLoginChecked)}
-              label="Notify Bills"
-              className="size-6 shrink-0"
-            />
-          </div>
+        <div className="flex justify-end">
           <Button
             variant="secondary"
             onClick={onClose}

@@ -22,4 +22,33 @@ describe('getDraftTransactionIssues', () => {
       'Choose the account that holds this bucket money.',
     )
   })
+
+  it('accepts a reviewed IncomeSplit draft and validates it like plain Income', () => {
+    const incomeCategories: TransactionCategory[] = [{ id: 'salary', name: 'Salary', type: 'inflow' }]
+    const incomeDraft: Transaction = {
+      ...draft,
+      amount: 3400,
+      category: 'Salary',
+      ledgerCategory: 'IncomeSplit:50,20,20,10',
+      accountId: null,
+      splitAccountIds: {
+        Essentials: 'acct-essentials',
+        Growth: 'acct-growth',
+        Stability: 'acct-stability',
+        Rewards: 'acct-rewards',
+      },
+    }
+
+    expect(getDraftTransactionIssues(incomeDraft, incomeCategories)).not.toContain(
+      'Choose a valid ledger category.',
+    )
+    expect(getDraftTransactionIssues(incomeDraft, incomeCategories)).not.toContain(
+      'Choose the Essentials receiving account.',
+    )
+    const { Essentials: _essentials, ...missingEssentials } = incomeDraft.splitAccountIds!
+    expect(getDraftTransactionIssues({
+      ...incomeDraft,
+      splitAccountIds: missingEssentials,
+    }, incomeCategories)).toContain('Choose the Essentials receiving account.')
+  })
 })

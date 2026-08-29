@@ -55,7 +55,6 @@ function App() {
   // 2. Dialogs
   const dialogs = useAppDialogs()
 
-  const [hasShownModalThisSession, setHasShownModalThisSession] = useState(false)
 
   const guardSensitive = useCallback(() => {
     if (prefs.sensitivePreferenceStatus === 'pending') {
@@ -120,15 +119,11 @@ function App() {
     resolveHideSensitive: prefs.resolveHideSensitive,
     markSensitivePreferenceUnavailable: prefs.markSensitivePreferenceUnavailable,
     setDarkMode: prefs.setDarkMode,
-    notifyOnLogin: prefs.notifyOnLogin,
     loadAllAbortRef,
     selectedMonth: nav.selectedMonth,
     setSelectedMonth: nav.setSelectedMonth,
     selectedYear: nav.selectedYear,
     setSelectedYear: nav.setSelectedYear,
-    setHasShownModalThisSession,
-    hasShownModalThisSession,
-    setShowLoginModal: dialogs.setShowLoginModal,
     setShowFailedOpsModal: dialogs.setShowFailedOpsModal,
     onNavigateToLedger: nav.handleNavigateToLedger,
   })

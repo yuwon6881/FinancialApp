@@ -65,8 +65,6 @@ interface SettingsViewProps {
   onRequestDeleteAccount?: (id: string) => void
   onReconcileAccounts?: (input: LedgerAccountReconcileInput) => Promise<void> | void
   isCurrentCycle?: boolean
-  notifyOnLoginEnabled?: boolean
-  onToggleNotifyOnLogin?: (checked: boolean) => void
   activeSyncId?: string | null
   activeSyncIds?: string[]
   deletingId?: string | null
@@ -206,8 +204,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           onToggleDarkMode={props.onToggleDarkMode}
           onToggleHideSensitive={props.onToggleHideSensitive}
           onClearLocalFinancialData={props.onClearLocalFinancialData}
-          notifyOnLoginEnabled={props.notifyOnLoginEnabled}
-          onToggleNotifyOnLogin={props.onToggleNotifyOnLogin}
           pushSupported={props.pushSupported}
           pushLoading={props.pushLoading}
           pushBusyAction={props.pushBusyAction}

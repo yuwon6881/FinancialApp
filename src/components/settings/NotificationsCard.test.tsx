@@ -9,8 +9,6 @@ vi.mock('./PushDevicesList', () => ({
 
 const renderCard = (overrides: Partial<NotificationsCardProps> = {}) => {
   const props: NotificationsCardProps = {
-    notifyOnLoginEnabled: true,
-    onToggleNotifyOnLogin: vi.fn(),
     pushSupported: true,
     pushLoading: false,
     pushBusyChannel: null,
@@ -48,7 +46,7 @@ describe('NotificationsCard', () => {
     renderCard()
     // "All devices" was the old account-wide spending-alert scope, and it was the claim a desktop
     // could not honour.
-    expect(screen.getAllByText('This device').length).toBe(3)
+    expect(screen.getAllByText('This device').length).toBe(2)
     expect(screen.queryByText('All devices')).toBeNull()
   })
 

@@ -163,10 +163,6 @@ export function AppOverlays({
         pendingNotifications={currentPendingNotifications}
         currency={todayDashboardData?.setting.currency || financial.optimisticDashboardData?.setting?.currency || 'USD'}
         hideSensitive={prefs.hideSensitive}
-        showOnLoginChecked={prefs.notifyOnLogin}
-        onToggleShowOnLogin={(checked) => {
-          prefs.setNotifyOnLogin(checked)
-        }}
         onClose={() => dialogs.setShowLoginModal(false)}
         onConfirmSubscription={financial.handleConfirmSubscription}
         onDiscardSubscription={financial.handleDiscardSubscription}

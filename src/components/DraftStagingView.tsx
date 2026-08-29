@@ -215,11 +215,13 @@ export function DraftStagingView({
             </p>
             <Button
               onClick={() => void handlePrimaryAction()}
-              aria-label={firstInvalidDraft ? undefined : `Add ${draftTransactions.length} draft${draftTransactions.length === 1 ? '' : 's'} to Ledger`}
+              aria-label={firstInvalidDraft
+                ? `Review ${firstInvalidDraft.description || 'draft'}`
+                : `Add ${draftTransactions.length} draft${draftTransactions.length === 1 ? '' : 's'} to Ledger`}
               disabled={hideSensitive || Boolean(documentLoadError) || attachmentsLoading || isSubmitting}
               className="h-11 w-full rounded-xl sm:w-auto sm:min-w-44"
             >
-              {firstInvalidDraft ? 'Review first draft' : isSubmitting ? 'Adding…' : 'Add to Ledger'}
+              {firstInvalidDraft ? 'Review' : isSubmitting ? 'Adding…' : 'Add to Ledger'}
             </Button>
           </div>
         </>

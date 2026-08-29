@@ -198,12 +198,12 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
               </span>
             )}</span>}
         description="Track holdings across your brokers."
-        actions={onExplainWithAi && (
+        titleActions={onExplainWithAi && (
           <Button
             variant="secondary"
             size="sm"
             type="button"
-            className="ml-auto shrink-0"
+            className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5"
             aria-label="Explain my portfolio"
             onClick={() => onExplainWithAi(range)}
           >

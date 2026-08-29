@@ -20,8 +20,6 @@ import { MONTH_NAMES } from '../../lib/cycle'
 
 interface LoadAllDependencies {
   token: string | null
-  notifyOnLogin: boolean
-  hasShownModalThisSession: boolean
   getActiveOps: () => QueuedOp[]
   getFailedOps: () => QueuedOp[]
   handleLogout: () => Promise<void>
@@ -50,8 +48,6 @@ interface LoadAllDependencies {
   setError: React.Dispatch<React.SetStateAction<string | null>>
   setSelectedMonth: (month: string) => void
   setSelectedYear: (year: number) => void
-  setHasShownModalThisSession: (value: boolean) => void
-  setShowLoginModal: (value: boolean) => void
 }
 
 /**
@@ -62,8 +58,6 @@ interface LoadAllDependencies {
 export function useLoadAll(deps: LoadAllDependencies) {
   const {
     token,
-    notifyOnLogin,
-    hasShownModalThisSession,
     getActiveOps,
     getFailedOps,
     handleLogout,
@@ -92,8 +86,6 @@ export function useLoadAll(deps: LoadAllDependencies) {
     setError,
     setSelectedMonth,
     setSelectedYear,
-    setHasShownModalThisSession,
-    setShowLoginModal,
   } = deps
 
   const loadAllInner = useCallback(async (
@@ -233,10 +225,6 @@ export function useLoadAll(deps: LoadAllDependencies) {
             setDarkMode(osDark)
           }
           resolveHideSensitive(effectiveSetting.hideSensitive ?? true)
-          if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
-            if (notifyOnLogin) setShowLoginModal(true)
-            setHasShownModalThisSession(true)
-          }
         }
         if (partial.recurringPayments !== undefined) {
           setRecurringPayments(partial.recurringPayments)
@@ -425,12 +413,6 @@ export function useLoadAll(deps: LoadAllDependencies) {
 
       resolveHideSensitive(effectiveHideSensitive)
 
-      if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
-        if (notifyOnLogin) {
-          setShowLoginModal(true)
-        }
-        setHasShownModalThisSession(true)
-      }
     } catch (err: unknown) {
       if (getErrorName(err) === 'AbortError' || isStale() || shouldCommit?.() === false) {
         if (rethrowOnError) throw err
@@ -460,7 +442,7 @@ export function useLoadAll(deps: LoadAllDependencies) {
         setIsBackgroundSyncing(false)
       }
     }
-  }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, resolveHideSensitive, markSensitivePreferenceUnavailable, notifyOnLogin, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear, getActiveOps, getFailedOps])
+  }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, resolveHideSensitive, markSensitivePreferenceUnavailable, loadAllAbortRef, setSelectedMonth, setSelectedYear, getActiveOps, getFailedOps])
 
   /**
    * Coalesces concurrent background refreshes of the same cycle onto one request.

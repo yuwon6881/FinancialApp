@@ -166,7 +166,7 @@ describe('DraftStagingView', () => {
     })
 
     expect(screen.getAllByText('Needs review').length).toBeGreaterThan(0)
-    fireEvent.click(await screen.findByRole('button', { name: 'Review first draft' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Review Car Fuel' }))
 
     expect(await screen.findByRole('heading', { name: 'Edit Draft' })).toBeTruthy()
     expect(onSyncDraftBatch).not.toHaveBeenCalled()

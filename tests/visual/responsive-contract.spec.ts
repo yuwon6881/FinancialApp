@@ -80,7 +80,7 @@ test('medium ledger rows keep their actions inside the card', async ({ page }) =
   await waitForStableLayout(page)
 
   const rows = page.locator('[id^="tx-row-mobile-"]')
-  expect(await rows.count(), 'no ledger rows rendered to measure').toBeGreaterThan(0)
+  await expect(rows.first(), 'no ledger rows rendered to measure').toBeVisible()
 
   // The medium tier mounts the card list but SwipeableRow has no drawer, so the row falls back to
   // its inline actions. With none supplied it reused the drawer's full-colour captioned blocks,
@@ -96,6 +96,61 @@ test('medium ledger rows keep their actions inside the card', async ({ page }) =
     elements.filter(row => row.scrollWidth - row.clientWidth > 1).map(row => row.id),
   )
   expect(spilling, 'ledger row content escapes the card at the medium tier').toEqual([])
+
+  const geometry = await rows.evaluateAll(elements => elements.map(row => {
+    const card = row.getBoundingClientRect()
+    const accent = row.querySelector<HTMLElement>(':scope > div > div > div')?.getBoundingClientRect()
+    const remove = row.querySelector<HTMLElement>('button[aria-label^="Delete "]')?.getBoundingClientRect()
+    return {
+      accentLeft: accent ? Math.abs(accent.left - card.left) : null,
+      accentRight: accent ? Math.abs(accent.right - card.right) : null,
+      deleteInset: remove ? card.right - remove.right : null,
+    }
+  }))
+  expect(geometry.every(item => item.accentLeft != null && item.accentLeft <= 1 && item.accentRight != null && item.accentRight <= 1), 'ledger accent does not span the card').toBe(true)
+  expect(geometry.every(item => item.deleteInset != null && item.deleteInset >= 11), 'ledger delete action has no trailing padding').toBe(true)
+})
+
+test('navigation rail balances the unused space above and below its destinations', async ({ page }) => {
+  test.skip((test.info().project.use.viewport?.width ?? 0) < 640, 'The compact tier uses bottom navigation.')
+  await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
+  await waitForStableLayout(page)
+
+  const gaps = await page.locator('aside nav[aria-label="Primary"]').evaluate(nav => {
+    const items = Array.from(nav.querySelectorAll<HTMLElement>(':scope > button'))
+    const navRect = nav.getBoundingClientRect()
+    return {
+      above: (items[0]?.getBoundingClientRect().top ?? navRect.top) - navRect.top,
+      below: navRect.bottom - (items.at(-1)?.getBoundingClientRect().bottom ?? navRect.bottom),
+    }
+  })
+  expect(Math.abs(gaps.above - gaps.below), 'navigation destinations remain top-packed').toBeLessThanOrEqual(2)
+})
+
+test('AI page actions stay beside their page titles', async ({ page }) => {
+  for (const route of ['/reports', '/commitments-rewards', '/investments']) {
+    await page.goto(route, { waitUntil: 'domcontentloaded' })
+    await waitForStableLayout(page)
+    const button = page.getByRole('button', { name: /Explain .*Ask AI|Explain my portfolio/i }).first()
+    await expect(button).toBeVisible()
+    const aligned = await button.evaluate(element => {
+      const heading = element.closest('header')?.querySelector('h1, h2')
+      if (!heading) return false
+      return element.parentElement === heading.parentElement
+        || element.closest('[data-page-title-actions]')?.parentElement === heading.parentElement
+    })
+    expect(aligned, `${route} Ask AI action left the title row`).toBe(true)
+  }
+})
+
+test('bill review never auto-opens and exposes no automatic-open preference', async ({ page }) => {
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+  await waitForStableLayout(page)
+  await expect(page.getByText('Bills to review')).toHaveCount(0)
+
+  await page.goto('/settings', { waitUntil: 'domcontentloaded' })
+  await waitForStableLayout(page)
+  await expect(page.getByText(/Bill alerts when you open the app|Notify Bills/i)).toHaveCount(0)
 })
 
 test('the header action cluster stays pinned to the trailing edge', async ({ page }) => {

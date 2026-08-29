@@ -82,15 +82,11 @@ function renderFinancialData(guardSensitive: () => boolean = () => true) {
     resolveHideSensitive: vi.fn(),
     markSensitivePreferenceUnavailable,
     setDarkMode,
-    notifyOnLogin: false,
     loadAllAbortRef: { current: null as AbortController | null },
     selectedMonth: 'July',
     setSelectedMonth: vi.fn(),
     selectedYear: 2026,
     setSelectedYear: vi.fn(),
-    setHasShownModalThisSession: vi.fn(),
-    hasShownModalThisSession: true,
-    setShowLoginModal: vi.fn(),
   }
   const rendered = renderHook(() => useFinancialData(options as any))
   mountedFinancialDataHooks.add(rendered.unmount)

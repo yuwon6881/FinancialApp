@@ -1,11 +1,10 @@
 import React from 'react'
-import { AlertCircle, Bell, BellRing, ChevronRight, Gauge } from 'lucide-react'
+import { AlertCircle, BellRing, ChevronRight, Gauge } from 'lucide-react'
 import {
   BILL_REMINDER_PUSH_DESCRIPTION,
   BILL_REMINDER_PUSH_TITLE,
   CATEGORY_LIMIT_PUSH_DESCRIPTION,
   CATEGORY_LIMIT_PUSH_TITLE,
-  NOTIFY_ON_LOGIN_DESCRIPTION,
   otherDevicesHaveItOn,
   SCOPE_THIS_DEVICE,
 } from '../../lib/push/messages'
@@ -62,8 +61,6 @@ const NotificationRow: React.FC<{
 )
 
 export interface NotificationsCardProps {
-  notifyOnLoginEnabled: boolean
-  onToggleNotifyOnLogin: (checked: boolean) => void
   pushSupported: boolean
   pushLoading: boolean
   /** Which of the two switches is mid-flight, or null. They must not share one busy flag. */
@@ -186,20 +183,6 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
             <p className="flex-1 text-xs font-medium leading-snug sm:text-xs">{props.pushGuidance}</p>
           </div>
         )}
-
-        <NotificationRow
-          icon={<Bell className="size-4" />}
-          title="Bill alerts when you open the app"
-          scope={SCOPE_THIS_DEVICE}
-          description={NOTIFY_ON_LOGIN_DESCRIPTION}
-          control={
-            <ToggleButton
-              active={props.notifyOnLoginEnabled}
-              onClick={() => props.onToggleNotifyOnLogin(!props.notifyOnLoginEnabled)}
-              label="Bill alerts when you open the app"
-            />
-          }
-        />
 
         {/* The device roster is reference material, not a control: it answers "which browsers did
             I ever turn this on in", which is a question people ask occasionally and never on the
