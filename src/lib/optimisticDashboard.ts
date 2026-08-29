@@ -263,7 +263,7 @@ export function computeOptimisticDashboard(
         notification.recurringPaymentId === paymentId && notification.billingDate === occurrenceDate)
       if (notiIndex >= 0) {
         const noti = data.pendingNotifications[notiIndex]
-        const remaining = Math.max(0, scheduled - (paidAmount ?? 0))
+        const remaining = Math.max(0, scheduled - (alreadyPaid + (requestedAmount ?? 0)))
         data.pendingNotifications[notiIndex] = {
           ...noti,
           amount: -remaining,

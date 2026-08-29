@@ -11,7 +11,6 @@ import {
   Loader2,
   ShieldAlert,
   Search as SearchIcon,
-  ClipboardList,
   Settings,
   TrendingUp,
 } from 'lucide-react'
@@ -105,11 +104,6 @@ const navItems: NavItemConfig[] = [
     tab: 'wishlist', label: 'Commitments & Rewards', mobileLabel: 'Rewards', Icon: CommitmentIcon,
     activeClass: 'bg-pink-500/12 text-pink-600 dark:text-pink-400 border-pink-500/25 shadow-pink-500/10',
     iconClass: 'text-pink-500', dotClass: 'bg-pink-500',
-  },
-  {
-    tab: 'drafts', label: 'Drafts', mobileLabel: 'Drafts', Icon: ClipboardList,
-    activeClass: 'bg-sky-500/12 text-sky-600 dark:text-sky-400 border-sky-500/25 shadow-sky-500/10',
-    iconClass: 'text-sky-500', dotClass: 'bg-sky-500',
   },
   {
     tab: 'investments', label: 'Investments', mobileLabel: 'Invest', Icon: TrendingUp,

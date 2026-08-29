@@ -22,7 +22,7 @@ interface DesktopNavRailProps {
 const NAV_GROUPS: { id: string; label: string; tabs: AppTab[] }[] = [
   { id: 'overview', label: 'Overview', tabs: ['dashboard', 'reports'] },
   { id: 'money', label: 'Money', tabs: ['ledger', 'recurring', 'investments'] },
-  { id: 'planning', label: 'Planning', tabs: ['wishlist', 'drafts', 'documents'] },
+  { id: 'planning', label: 'Planning', tabs: ['wishlist', 'documents'] },
 ]
 
 /** Pinned to the foot of the rail rather than listed with the destinations above. */
