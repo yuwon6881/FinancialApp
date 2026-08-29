@@ -1,7 +1,7 @@
 import type { AssertionOptionsJson, CreateOptionsJson } from '../webauthn'
 import type { LoginCredentials, RegisterCredentials } from '../apiTypes'
 import type { QuestionAnswerDto, SecurityQuestionsRecoveryStartResponse } from '../../types'
-import { apiFetch, invalidateCache, jsonBody, request, requestVoid } from './client'
+import { apiFetch, invalidateCache, jsonBody, noteSessionUnlocked, request, requestVoid } from './client'
 import { tokenStore } from '../auth'
 import { getDeviceUnlockRegistrationMarker } from '../deviceUnlockRegistration'
 
@@ -117,20 +117,46 @@ export async function logout(): Promise<void> {
   }
 }
 
+/**
+ * The inactivity lock and an unlock are two writes to the same session row, and the browser gives
+ * no ordering guarantee between two requests in flight. A lock issued as the page opens (the idle
+ * check runs on the very first tick) could land *after* the unlock it raced, leaving the session
+ * locked on the server even though the password was accepted -- the user's first unlock silently
+ * did nothing and only the second, with no lock in flight, worked. Unlocks therefore wait for any
+ * lock still in flight, so the unlock is always the last write.
+ */
+let pendingSessionLock: Promise<unknown> | null = null
+
+async function afterPendingSessionLock(): Promise<void> {
+  const pending = pendingSessionLock
+  if (!pending) return
+  await pending.catch(() => undefined)
+}
+
 export async function verifyPassword(password: string): Promise<{ verified: boolean; message?: string }> {
+  await afterPendingSessionLock()
   const data = await request<{ verified: boolean; message?: string }>('/auth/verify-password', {
     method: 'POST',
     ...jsonBody({ password }),
     errorMessage: 'Password verification request failed',
   })
-  if (data.verified) invalidateCache()
+  if (data.verified) {
+    noteSessionUnlocked()
+    invalidateCache()
+  }
   return data
 }
 
 export async function lockSession(): Promise<void> {
-  const response = await apiFetch('/auth/lock', { method: 'POST' })
-  if (!response.ok) console.warn('Failed to lock session on server')
-  else invalidateCache()
+  const lock = apiFetch('/auth/lock', { method: 'POST' })
+  pendingSessionLock = lock
+  try {
+    const response = await lock
+    if (!response.ok) console.warn('Failed to lock session on server')
+    else invalidateCache()
+  } finally {
+    if (pendingSessionLock === lock) pendingSessionLock = null
+  }
 }
 
 export interface FingerprintCredentialSummary {
@@ -281,11 +307,14 @@ export async function getFingerprintAssertOptions(): Promise<{ challengeId: stri
 }
 
 export async function verifyFingerprintAssert(challengeId: string, credential: unknown): Promise<{ verified: boolean }> {
-  return request('/auth/webauthn/assert/verify', {
+  await afterPendingSessionLock()
+  const data = await request<{ verified: boolean }>('/auth/webauthn/assert/verify', {
     method: 'POST',
     ...jsonBody({ challengeId, credential }),
     errorMessage: 'Device verification failed',
   })
+  if (data.verified) noteSessionUnlocked()
+  return data
 }
 
 export async function getAvailableSecurityQuestions(): Promise<string[]> {

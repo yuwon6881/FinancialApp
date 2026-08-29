@@ -1,5 +1,6 @@
 export const SESSION_LOCKED_EVENT = 'financialapp:session-locked'
 import { hasWebSessionFlag, tokenStore, usesCookieAuth } from '../auth'
+import { STALE_LOCK_CODE } from '../errors'
 import { recordRefreshHeader, REFRESH_HEADER_NAME } from '../refreshSlices'
 
 export class ApiError extends Error {
@@ -138,7 +139,24 @@ function newAbortError(): Error {
   return new DOMException('The operation was aborted.', 'AbortError')
 }
 
-function handleApiResponse(response: Response, url: string): Response {
+/**
+ * A 423 only means "locked now" if the session has not been unlocked since the request left.
+ *
+ * The inactivity lock and an unlock overlap on a cold start: the idle check locks the session on
+ * the server while the user is already typing their password, and every request in flight across
+ * that window answers 423 afterwards. Re-locking on those replies threw the user straight back to
+ * the lock screen, which is why the first unlock never appeared to take. Each request stamps the
+ * unlock counter it started under; a reply carrying an older stamp is stale, so it neither
+ * re-locks the app nor counts as a lock error.
+ */
+let sessionUnlockEpoch = 0
+
+/** Record that the session is unlocked again, invalidating every 423 still in flight. */
+export function noteSessionUnlocked(): void {
+  sessionUnlockEpoch += 1
+}
+
+function handleApiResponse(response: Response, url: string, requestUnlockEpoch: number): Response {
   if (!response.ok) {
     const isAuthBootstrap = url.includes('/auth/login')
       || url.includes('/auth/status')
@@ -147,6 +165,9 @@ function handleApiResponse(response: Response, url: string): Response {
       throw new ApiError('401 Unauthorized', 401)
     }
     if (response.status === 423 && !isAuthBootstrap) {
+      if (requestUnlockEpoch !== sessionUnlockEpoch) {
+        throw new ApiError('423 Locked (stale)', 423, undefined, STALE_LOCK_CODE)
+      }
       window.dispatchEvent(new CustomEvent(SESSION_LOCKED_EVENT, { detail: { url } }))
       throw new ApiError('423 Locked', 423)
     }
@@ -209,6 +230,7 @@ async function ensureCsrfToken(): Promise<string | null> {
 
 export async function apiFetch(path: string, init: RequestInit = {}, authenticated = true): Promise<Response> {
   const url = apiUrl(path)
+  const requestUnlockEpoch = sessionUnlockEpoch
   const headers = new Headers(authenticated ? await getHeadersAsync(init.headers) : init.headers)
   if (!usesCookieAuth) headers.set('X-FinancialApp-Client', 'native')
   const method = (init.method ?? 'GET').toUpperCase()
@@ -225,7 +247,7 @@ export async function apiFetch(path: string, init: RequestInit = {}, authenticat
   if (UNSAFE_METHODS.has(method) && response.ok) {
     recordRefreshHeader(response.headers.get(REFRESH_HEADER_NAME))
   }
-  return handleApiResponse(response, url)
+  return handleApiResponse(response, url, requestUnlockEpoch)
 }
 
 export async function throwApiError(

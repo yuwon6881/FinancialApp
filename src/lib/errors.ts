@@ -45,6 +45,12 @@ export function getErrorCode(err: unknown): string | undefined {
 }
 
 /**
+ * Marks a 423 answered to a request that left before the session was unlocked. See
+ * lib/api/client for why an in-flight lock and an unlock can cross.
+ */
+export const STALE_LOCK_CODE = 'stale_session_lock'
+
+/**
  * Whether a refusal is "this row needs a live account named" rather than an ordinary rejection.
  * Both codes are actionable by the same fix, which is why they collapse to one question here: a
  * required account and an invalid one are answered by choosing an open account in the bucket.
@@ -75,6 +81,10 @@ export function isAuthError(err: unknown): boolean {
     || (getStatus(err) === undefined && errorMessageIncludesLower(err, 'unauthorized'))
 }
 
+/**
+ * A 423 answered to a request that left before the session was unlocked describes a lock that no
+ * longer exists. Treating it as a live lock re-locked the app moments after a successful unlock.
+ */
 export function isLockError(err: unknown): boolean {
-  return hasHttpStatus(err, 423)
+  return hasHttpStatus(err, 423) && getErrorCode(err) !== STALE_LOCK_CODE
 }

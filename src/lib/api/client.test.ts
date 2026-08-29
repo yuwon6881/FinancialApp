@@ -173,6 +173,39 @@ describe('api client transport contracts', () => {
     window.removeEventListener(SESSION_LOCKED_EVENT, locked)
   })
 
+  it('does not re-lock on a 423 answered to a request that left before the unlock', async () => {
+    const { apiFetch, noteSessionUnlocked, SESSION_LOCKED_EVENT } = await loadClient()
+    const { STALE_LOCK_CODE } = await import('../errors')
+    let answer: (response: Response) => void = () => {}
+    const pending = new Promise<Response>(resolve => { answer = resolve })
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(pending))
+    const locked = vi.fn()
+    window.addEventListener(SESSION_LOCKED_EVENT, locked)
+
+    // The inactivity lock landed on the server while this request was in flight; by the time it
+    // answers 423 the user has already unlocked, so the lock it reports no longer exists.
+    const inFlight = apiFetch('/transactions')
+    noteSessionUnlocked()
+    answer(new Response('{}', { status: 423 }))
+
+    await expect(inFlight).rejects.toMatchObject({ status: 423, code: STALE_LOCK_CODE })
+    expect(locked).not.toHaveBeenCalled()
+    window.removeEventListener(SESSION_LOCKED_EVENT, locked)
+  })
+
+  it('still locks on a 423 for a request that started after the last unlock', async () => {
+    const { apiFetch, noteSessionUnlocked, SESSION_LOCKED_EVENT } = await loadClient()
+    noteSessionUnlocked()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 423 })))
+    const locked = vi.fn()
+    window.addEventListener(SESSION_LOCKED_EVENT, locked)
+
+    await expect(apiFetch('/transactions')).rejects.toMatchObject({ status: 423, code: undefined })
+
+    expect(locked).toHaveBeenCalledOnce()
+    window.removeEventListener(SESSION_LOCKED_EVENT, locked)
+  })
+
   it('parses Retry-After into ApiError.retryAfterMs', async () => {
     const { request, parseRetryAfter } = await loadClient()
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(

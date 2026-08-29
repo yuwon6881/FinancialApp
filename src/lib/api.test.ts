@@ -167,6 +167,54 @@ describe('chatWithAi state contract', () => {
   })
 })
 
+describe('session lock and unlock ordering', () => {
+  it('sends the unlock only after an inactivity lock still in flight has answered', async () => {
+    // Both writes touch the same session row and the browser guarantees no ordering between them.
+    // A lock issued as the page opens used to land after the unlock it raced, leaving the session
+    // locked despite an accepted password -- the user's first unlock did nothing.
+    const calls: string[] = []
+    let answerLock: (response: Response) => void = () => {}
+    const pendingLock = new Promise<Response>(resolve => { answerLock = resolve })
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+      calls.push(url)
+      return url.includes('/auth/lock')
+        ? pendingLock
+        : Promise.resolve(new Response(JSON.stringify({ verified: true }), { status: 200 }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+
+    const api = await import('./api')
+    const lock = api.lockSession()
+    const verify = api.verifyPassword('correct horse')
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(calls.filter(url => url.includes('/auth/verify-password'))).toHaveLength(0)
+
+    answerLock(new Response('{}', { status: 200 }))
+    await lock
+    await expect(verify).resolves.toEqual({ verified: true })
+
+    const lockIndex = calls.findIndex(url => url.includes('/auth/lock'))
+    const verifyIndex = calls.findIndex(url => url.includes('/auth/verify-password'))
+    expect(lockIndex).toBeGreaterThanOrEqual(0)
+    expect(verifyIndex).toBeGreaterThan(lockIndex)
+  })
+
+  it('does not wait when a lock request failed outright', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => String(input).includes('/auth/lock')
+      ? Promise.reject(new Error('offline'))
+      : Promise.resolve(new Response(JSON.stringify({ verified: true }), { status: 200 })))
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+
+    const api = await import('./api')
+    await expect(api.lockSession()).rejects.toThrow('offline')
+    await expect(api.verifyPassword('correct horse')).resolves.toEqual({ verified: true })
+  })
+})
+
 describe('split API client compatibility', () => {
   it('does not attach a bearer header on the web (cookie-authenticated)', async () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response('[]', { status: 200 })))
