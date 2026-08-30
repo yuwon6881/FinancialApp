@@ -10,7 +10,7 @@ import { LoanRepaymentSheet } from '../LoanRepaymentSheet'
 import { useLoansView } from './view/useLoansView'
 import { RecurringFilterBar } from '../RecurringFilterBar'
 import { InfoHint } from '../../ui/InfoHint'
-import { useIsExpanded } from '../../../lib/breakpoints'
+import { useIsDenseContent } from '../../../lib/breakpoints'
 import type { LoanLoadStatus } from '../../../app/financialData/useLoanData'
 import { useHighlightedElement } from '../../ui/useHighlightedElement'
 import { listContainerVariants, listItemVariants } from '../../../lib/animations'
@@ -85,7 +85,7 @@ export function LoansSection({
   }
 
   const reduceMotion = useReducedMotion()
-  const isMobile = !useIsExpanded()
+  const isMobile = !useIsDenseContent()
   const view = useLoansView(loans, payments, activeSyncIds)
   const highlightedIndex = highlightedLoanId
     ? view.filteredAndSortedLoans.findIndex(loan => loan.id === highlightedLoanId)

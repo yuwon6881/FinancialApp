@@ -95,7 +95,7 @@ export function CategoryLimitPerformance({
         )}
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4 grid gap-3 md:grid-cols-2 min-[1400px]:grid-cols-3">
         {sorted.map(item => {
           const exceeded = item.status === 'Exceeded'
           const watch = item.status === 'Watch'

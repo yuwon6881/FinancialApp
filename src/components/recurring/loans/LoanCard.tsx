@@ -200,7 +200,7 @@ export function LoanCard({
       )}
 
       <details className="group/loan-details mt-3 rounded-xl border border-border/50 bg-muted/15 lg:mt-4 lg:bg-muted/20" open={isLoanDetailsOpen} onToggle={event => setIsLoanDetailsOpen(event.currentTarget.open)}>
-        <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-2.5 text-xs font-bold text-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50 lg:hidden">
+        <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-2.5 text-xs font-bold text-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50 min-[1280px]:hidden">
           <span>Loan details</span>
           <ChevronDown className="size-3.5 text-muted-foreground transition-transform group-open/loan-details:rotate-180" aria-hidden />
         </summary>
@@ -249,7 +249,7 @@ export function LoanCard({
               </div>
             )}
             {/* Mobile schedule: compact, full-width cards with no horizontal scrolling */}
-            <div className="mt-3 max-h-72 overflow-y-auto space-y-2 lg:hidden pr-0.5">
+            <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-0.5 min-[1280px]:hidden">
           {[...actualRows, ...scheduleRows].map((row, index) => (
             <div
               key={`${row.occurrenceDate}-${row.kind}-${index}`}
@@ -281,7 +281,7 @@ export function LoanCard({
             </div>
 
             {/* Desktop schedule: tabular view */}
-            <div className="mt-3 hidden max-h-72 overflow-x-auto overflow-y-auto rounded-lg border border-border/40 bg-card/60 lg:block">
+            <div className="mt-3 hidden max-h-72 overflow-x-hidden overflow-y-auto rounded-lg border border-border/40 bg-card/60 min-[1280px]:block">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Payment history and planned schedule for {loan.name}</caption>
             <thead className="sticky top-0 z-10 border-b border-border/40 bg-card text-xs text-muted-foreground shadow-2xs">

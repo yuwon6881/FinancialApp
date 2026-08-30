@@ -143,11 +143,11 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
           <CardSkeleton />
           <CardSkeleton />
         </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,2fr)]">
+        <div className="grid grid-cols-1 gap-6 min-[1280px]:grid-cols-[minmax(18rem,0.8fr)_minmax(0,2fr)]">
           <PanelSkeleton height="h-56" />
           <CategoryWatchSkeleton />
         </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 min-[1360px]:grid-cols-2">
           <PanelSkeleton height="h-64" />
           <PanelSkeleton height="h-64" />
         </div>
@@ -231,13 +231,13 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-4 w-32" />
         </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
-          <div className={`${panelClass} space-y-5 p-5 lg:col-span-2`}>
+        <div className="grid grid-cols-1 gap-6 min-[1280px]:grid-cols-3 min-[1280px]:items-start">
+          <div className={`${panelClass} space-y-5 p-5 min-[1280px]:col-span-2`}>
             <div className="space-y-2"><Skeleton className="h-5 w-36" /><Skeleton className="h-3 w-64" /></div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}</div>
             <CompactMetricGridSkeleton count={4} className="md:grid-cols-2 lg:grid-cols-2" />
           </div>
-          <div className="space-y-6 lg:col-span-1">
+          <div className="space-y-6 min-[1280px]:col-span-1">
             <div className={`${panelClass} space-y-4 p-5`}>
               <div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-3 w-full" /></div>
               {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}

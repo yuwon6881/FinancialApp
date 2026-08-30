@@ -53,7 +53,7 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
     : `Expense breakdown for ${rangeLabel}. No outflows logged.`
 
   return (
-    <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60 flex flex-col justify-between">
+    <div className="app-panel flex min-w-0 flex-col justify-between rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-6">
       <div>
         <div className="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-2">
           <div>
@@ -79,7 +79,7 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
         </div>
 
         {total > 0 ? (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 mt-2">
+          <div className="mt-2 flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
             <InteractiveDoughnutChart
               slices={slices}
               ariaLabel={chartSummary}
@@ -87,8 +87,8 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
               centerValue={formatSensitive(total)}
               formatValue={formatSensitive}
               masked={hideSensitive}
-              chartClassName="mx-auto size-52 sm:mx-0 sm:size-44 lg:size-52"
-              legendClassName="grid max-h-32 w-full min-w-0 grid-cols-1 content-start gap-x-4 gap-y-1 overflow-y-auto pr-0.5 no-scrollbar sm:max-h-40 xl:grid-cols-2"
+              chartClassName="mx-auto size-52 sm:mx-0 sm:size-44 2xl:size-52"
+              legendClassName="grid max-h-40 w-full min-w-0 grid-cols-1 content-start gap-y-1 overflow-y-auto pr-0.5 no-scrollbar"
               onActivate={slice => onNavigateToLedger?.({ category: slice.label, range: chartView })}
             />
           </div>

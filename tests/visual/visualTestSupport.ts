@@ -224,6 +224,8 @@ interface MockApiOptions {
   investmentTransactions?: InvestmentActivity[]
   /** Lets a spec give categories explicit flow types; the default fixture leaves them all `both`. */
   categories?: Array<{ id: string; name: string; type?: string }>
+  /** Adds report-specific density without replacing unrelated bootstrap fixture fields. */
+  dashboard?: Partial<typeof dashboard>
 }
 
 export async function mockApi(page: Page, options: MockApiOptions = {}) {
@@ -235,6 +237,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
     categories: options.categories ?? bootstrap.categories,
     dashboard: {
       ...bootstrap.dashboard,
+      ...options.dashboard,
       setting: { ...bootstrap.dashboard.setting, darkMode },
       ...(options.stabilityRecovery ? { stabilityRecovery: options.stabilityRecovery } : {}),
     },

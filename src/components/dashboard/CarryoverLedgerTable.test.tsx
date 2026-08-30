@@ -48,13 +48,13 @@ describe('CarryoverLedgerTable', () => {
     )
 
     expect(screen.getByText('Carryover Rolling Ledgers')).toBeTruthy()
-    expect(screen.getByText('2 accounts')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'View account breakdown for Essentials' })).toBeTruthy()
 
     // No row edit/adjust button for Remaining Balance
     expect(screen.queryByTitle('Adjust balance')).toBeNull()
 
     // Click the 2 accounts badge
-    fireEvent.click(screen.getByText('2 accounts'))
+    fireEvent.click(screen.getByRole('button', { name: 'View account breakdown for Essentials' }))
 
     // The modal opens showing the breakdown
     expect(screen.getByText('Essentials Account Balances')).toBeTruthy()
@@ -70,7 +70,7 @@ describe('CarryoverLedgerTable', () => {
     expect(onNavigateToAccounts).toHaveBeenCalledWith('acc-1')
 
     // Reopen modal and click footer button
-    fireEvent.click(screen.getByText('2 accounts'))
+    fireEvent.click(screen.getByRole('button', { name: 'View account breakdown for Essentials' }))
     fireEvent.click(screen.getByRole('button', { name: /Manage Essentials in Settings/i }))
     expect(onNavigateToAccounts).toHaveBeenCalledWith('Essentials')
   })
@@ -88,7 +88,7 @@ describe('CarryoverLedgerTable', () => {
       />
     )
 
-    fireEvent.click(screen.getByText('2 accounts'))
+    fireEvent.click(screen.getByRole('button', { name: 'View account breakdown for Essentials' }))
 
     expect(screen.getByText('Balance at close')).toBeTruthy()
     expect(screen.getByText('Total balance at close')).toBeTruthy()

@@ -144,4 +144,25 @@ describe('investments API contract', () => {
     const afterMutationHeaders = new Headers(fetchMock.mock.calls[2][1].headers)
     expect(afterMutationHeaders.has('If-None-Match')).toBe(false)
   })
+
+  it('does not let an older portfolio response overwrite the latest cached snapshot', async () => {
+    let resolveOlder!: (response: Response) => void
+    let resolveLatest!: (response: Response) => void
+    const fetchMock = vi.fn()
+      .mockReturnValueOnce(new Promise<Response>(resolve => { resolveOlder = resolve }))
+      .mockReturnValueOnce(new Promise<Response>(resolve => { resolveLatest = resolve }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const older = fetchInvestmentPortfolio('3m')
+    const latest = fetchInvestmentPortfolio('1y')
+    resolveLatest(jsonResponse({ summary: { totalValue: 300 }, allocation: { status: 'OnTrack' } }))
+    await latest
+    resolveOlder(jsonResponse({ summary: { totalValue: 100 }, allocation: { status: 'NotStarted' } }))
+    await older
+
+    expect(JSON.parse(localStorage.getItem('cached_investment_portfolio') ?? '{}'))
+      .toMatchObject({ summary: { totalValue: 300 } })
+    expect(JSON.parse(localStorage.getItem('cached_investment_allocation') ?? '{}'))
+      .toMatchObject({ status: 'OnTrack' })
+  })
 })

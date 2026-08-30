@@ -102,11 +102,11 @@ export const BillTimelineSkeleton: React.FC = () => (
 export const CarryoverLedgerSkeleton: React.FC = () => (
   <div className={`${panelClass} space-y-4 p-6`}>
     <div className="space-y-2"><Skeleton className="h-5 w-56" /><Skeleton className="h-3 w-80 max-w-full" /></div>
-    <div className="hidden overflow-x-hidden lg:block">
+    <div className="hidden overflow-x-hidden min-[1280px]:block">
       <div className="grid grid-cols-6 gap-4 border-b border-border/50 px-4 pb-2"><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-28" /></div>
       <div className="space-y-1.5 pt-2">{[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="grid grid-cols-6 items-center gap-4 rounded-xl px-4 py-3"><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-14" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-16" /><Skeleton className="h-5 w-24 justify-self-end rounded-lg" /></div>)}</div>
     </div>
-    <div className="grid grid-cols-1 gap-4 lg:hidden">{[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="space-y-3 rounded-xl border border-border bg-background/50 p-4"><div className="flex justify-between"><Skeleton className="h-4 w-28" /><Skeleton className="h-4 w-16 rounded-md" /></div><div className="grid grid-cols-2 gap-4 border-t border-border/30 pt-3"><Skeleton className="h-6 w-24" /><Skeleton className="h-6 w-24" /></div><div className="grid grid-cols-2 gap-4 border-t border-border/30 pt-3"><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-24" /></div></div>)}</div>
+    <div className="grid grid-cols-1 gap-4 min-[1280px]:hidden">{[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="space-y-3 rounded-xl border border-border bg-background/50 p-4"><div className="flex justify-between"><Skeleton className="h-4 w-28" /><Skeleton className="h-4 w-16 rounded-md" /></div><div className="grid grid-cols-2 gap-4 border-t border-border/30 pt-3"><Skeleton className="h-6 w-24" /><Skeleton className="h-6 w-24" /></div><div className="grid grid-cols-2 gap-4 border-t border-border/30 pt-3"><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-24" /></div></div>)}</div>
   </div>
 )
 
@@ -203,10 +203,10 @@ export const CycleCalendarSkeleton: React.FC = () => (
         <Skeleton className="h-3 w-32" />
         <Skeleton className="h-3 w-16" />
       </div>
-      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 min-[1280px]:grid-cols-5">
         {Array.from({ length: 5 }).map((_, index) => (
           <div key={`week-${index}`} className="space-y-2 rounded-xl border border-border/50 bg-muted/15 p-2 sm:p-2.5">
-            <div className="flex justify-between"><Skeleton className="h-3 w-12" /><Skeleton className="hidden h-2.5 w-16 lg:block" /></div>
+            <div className="flex justify-between"><Skeleton className="h-3 w-12" /><Skeleton className="hidden h-2.5 w-16 min-[1280px]:block" /></div>
             <div className="flex justify-between"><Skeleton className="h-3 w-14" /><Skeleton className="h-2.5 w-8" /></div>
           </div>
         ))}

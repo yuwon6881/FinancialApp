@@ -90,8 +90,8 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
   onNavigateToCategoryLimits,
 }) => {
   return (
-    <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="w-full grid grid-cols-1 lg:grid-cols-3 lg:items-start lg:gap-6 space-y-6 lg:space-y-0 animate-in fade-in duration-200">
-      <form noValidate onSubmit={view.handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5 lg:col-span-2">
+    <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="grid w-full grid-cols-1 space-y-6 animate-in fade-in duration-200 min-[1280px]:grid-cols-3 min-[1280px]:items-start min-[1280px]:gap-6 min-[1280px]:space-y-0">
+      <form noValidate onSubmit={view.handleSaveSettings} className="space-y-5 rounded-2xl border border-border/60 bg-card p-4 shadow-xs sm:p-6 min-[1280px]:col-span-2">
         <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
           <div>
             <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
@@ -225,7 +225,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
         </div>
       </form>
 
-      <div className="space-y-6 lg:col-span-1">
+      <div className="space-y-6 min-[1280px]:col-span-1">
         <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-border/40 pb-3">
             <div>

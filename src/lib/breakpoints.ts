@@ -5,6 +5,11 @@ export const BREAKPOINTS = {
   expanded: 1024,
 } as const
 
+// Expanded navigation starts at 1024px, but its 224px rail leaves laptop viewports with less
+// usable content than a dense table needs. Keep that separate from the three window-size classes:
+// this threshold chooses data presentation, not navigation or touch behaviour.
+export const DENSE_CONTENT_BREAKPOINT = 1280
+
 export type SizeClass = 'compact' | 'medium' | 'expanded'
 
 const mediaQuery = (breakpoint: number) => `(min-width: ${breakpoint}px)`
@@ -13,6 +18,10 @@ export function getSizeClass(width: number): SizeClass {
   if (width < BREAKPOINTS.medium) return 'compact'
   if (width < BREAKPOINTS.expanded) return 'medium'
   return 'expanded'
+}
+
+export function isDenseContentWidth(width: number): boolean {
+  return width >= DENSE_CONTENT_BREAKPOINT
 }
 
 export function isCompactViewport(): boolean {
@@ -59,4 +68,24 @@ export function useIsCompact(): boolean {
 
 export function useIsExpanded(): boolean {
   return useSizeClass() === 'expanded'
+}
+
+function readDenseContent(): boolean {
+  if (typeof window === 'undefined' || !window.matchMedia) return true
+  return window.matchMedia(mediaQuery(DENSE_CONTENT_BREAKPOINT)).matches
+}
+
+export function useIsDenseContent(): boolean {
+  const [isDenseContent, setIsDenseContent] = useState(readDenseContent)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const query = window.matchMedia(mediaQuery(DENSE_CONTENT_BREAKPOINT))
+    const sync = () => setIsDenseContent(query.matches)
+    sync()
+    query.addEventListener('change', sync)
+    return () => query.removeEventListener('change', sync)
+  }, [])
+
+  return isDenseContent
 }

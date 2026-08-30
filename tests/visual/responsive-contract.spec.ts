@@ -15,6 +15,9 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('every route obeys the window-tier containment and navigation contract', async ({ page }) => {
+  const uncaughtErrors: string[] = []
+  page.on('pageerror', error => uncaughtErrors.push(error.message))
+
   for (const route of routes) {
     await page.goto(route, { waitUntil: 'domcontentloaded' })
     await expect(page.locator('main')).toBeVisible()
@@ -45,6 +48,8 @@ test('every route obeys the window-tier containment and navigation contract', as
       expect(contract.navRails, `${route} must show one navigation rail`).toBe(1)
     }
   }
+
+  expect(uncaughtErrors, 'responsive route audit raised an uncaught application error').toEqual([])
 })
 
 test('compact route controls retain the 44px target floor', async ({ page }) => {
@@ -109,6 +114,82 @@ test('medium ledger rows keep their actions inside the card', async ({ page }) =
   }))
   expect(geometry.every(item => item.accentLeft != null && item.accentLeft <= 1 && item.accentRight != null && item.accentRight <= 1), 'ledger accent does not span the card').toBe(true)
   expect(geometry.every(item => item.deleteInset != null && item.deleteInset >= 11), 'ledger delete action has no trailing padding').toBe(true)
+})
+
+test('laptop-width Ledger and carryover views avoid horizontal data scrolling', async ({ page }) => {
+  const width = test.info().project.use.viewport?.width ?? 0
+  test.skip(width < 1024 || width >= 1280, 'The rail-constrained laptop contract is measured from 1024 through 1279px.')
+
+  await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
+  await waitForStableLayout(page)
+  await expect(page.locator('[id^="tx-row-mobile-"]').first()).toBeVisible()
+  await expect(page.locator('main table')).toHaveCount(0)
+
+  await mockApi(page, {
+    dashboard: {
+      categories: [
+        { id: 'essentials', name: 'Essentials', allocation: 0.5, target: 1_401.98, budget: 160.36, netChange: 655.55, spent: 746.43, remaining: 815.91 },
+        { id: 'growth', name: 'Growth', allocation: 0.25, target: 700.99, budget: 2_943.5, netChange: 500, spent: 200.99, remaining: 3_443.5 },
+        { id: 'stability', name: 'Stability', allocation: 0.15, target: 1_016.64, budget: 3_693.68, netChange: 1_016.64, spent: 0, remaining: 4_710.32 },
+        { id: 'rewards', name: 'Rewards', allocation: 0.1, target: 280.39, budget: 32.21, netChange: 280.39, spent: 0, remaining: 312.6 },
+      ],
+      activeRecurringPayments: [{
+        id: 'visual-pending', recurringPaymentId: 'visual-bill', name: 'Annual insurance', amount: 172.8,
+        category: 'Insurance', ledgerCategory: 'Essentials', dueDate: '2026-08-15', dueDay: 15,
+        isPaid: false, isDiscarded: false, status: 'Pending',
+      }],
+    },
+  })
+  await page.goto('/reports', { waitUntil: 'domcontentloaded' })
+  await waitForStableLayout(page)
+  const carryover = page.getByRole('heading', { name: 'Carryover Rolling Ledgers' }).locator('..')
+  await expect(carryover.locator('table')).toHaveCount(0)
+  const clippedLabels = await carryover.getByText(/^(Pending|Projected):/).evaluateAll(elements =>
+    elements.filter(element => element.scrollWidth > element.clientWidth + 1).map(element => element.textContent),
+  )
+  expect(clippedLabels).toEqual([])
+})
+
+test('dense report charts and limit cards keep every value inside its own control', async ({ page }) => {
+  const width = test.info().project.use.viewport?.width ?? 0
+  test.skip(width < 1024 || width >= 1400, 'The report density regression targets common laptop widths.')
+
+  await mockApi(page, {
+    dashboard: {
+      monthlyCategoryBreakdown: [
+        { category: 'Household', amount: 1_000 },
+        { category: 'Loan', amount: 94.29 },
+        { category: 'Health', amount: 80 },
+        { category: 'Haircut', amount: 22 },
+        { category: 'Hobbies', amount: 18 },
+        { category: 'Entertainment', amount: 12.5 },
+      ],
+      categoryLimitProgress: [
+        { category: 'Hobbies', spent: 18, limit: 400, remaining: 382, percentUsed: 0.045, projectedSpend: 227.2, status: 'OnTrack' },
+        { category: 'Food', spent: 0, limit: 400, remaining: 400, percentUsed: 0, projectedSpend: 0, status: 'OnTrack' },
+      ],
+    },
+  })
+  await page.goto('/reports', { waitUntil: 'domcontentloaded' })
+  await waitForStableLayout(page)
+
+  const outflowPanel = page.getByRole('heading', { name: 'Outflow Categories' })
+    .locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " app-panel ")]')
+  const legendButtons = outflowPanel.locator('button[aria-label*="%"]')
+  await expect(legendButtons.first()).toBeVisible()
+  const legendOverflow = await legendButtons.evaluateAll(buttons => buttons.flatMap(button => {
+    const bounds = button.getBoundingClientRect()
+    const children = Array.from(button.children).map(child => child.getBoundingClientRect())
+    return children.some(child => child.left < bounds.left - 1 || child.right > bounds.right + 1)
+      ? [button.getAttribute('aria-label')]
+      : []
+  }))
+  expect(legendOverflow).toEqual([])
+
+  const limitCards = page.locator('#report-section-category-limits button[id^="report-category-limit-"]')
+  await expect(limitCards.first()).toBeVisible()
+  const cardWidths = await limitCards.evaluateAll(cards => cards.map(card => card.getBoundingClientRect().width))
+  expect(Math.min(...cardWidths)).toBeGreaterThanOrEqual(208)
 })
 
 test('navigation rail packs its destinations under the header and pins settings to its foot', async ({ page }) => {

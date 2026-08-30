@@ -73,6 +73,9 @@ export interface InvestmentPageFilters {
   pageSize?: 10 | 25 | 50
 }
 
+let investmentDataRevision = 0
+let portfolioRequestRevision = 0
+
 export interface AccountMutation {
   id?: string
   name: string
@@ -126,13 +129,17 @@ export async function fetchInvestmentPortfolio(
   range: InvestmentRange,
   signal?: AbortSignal,
 ): Promise<InvestmentPortfolio> {
+  const dataRevision = investmentDataRevision
+  const requestRevision = ++portfolioRequestRevision
   const data = await request<Omit<InvestmentPortfolio, 'activity' | 'cashFlows'>>(`/investments/portfolio?range=${range}`, {
     signal,
     errorMessage: 'Could not load investments',
   })
   const portfolio: InvestmentPortfolio = { ...data, activity: [], cashFlows: [] }
-  setCachedJSON(CACHE_KEYS.investmentPortfolio, portfolio)
-  setCachedJSON(CACHE_KEYS.investmentAllocation, portfolio.allocation)
+  if (dataRevision === investmentDataRevision && requestRevision === portfolioRequestRevision) {
+    setCachedJSON(CACHE_KEYS.investmentPortfolio, portfolio)
+    setCachedJSON(CACHE_KEYS.investmentAllocation, portfolio.allocation)
+  }
   return portfolio
 }
 
@@ -172,12 +179,13 @@ export function fetchInvestmentActivity(
 ): Promise<PagedResult<InvestmentActivity>> {
   const query = pageQuery(filters)
   const cacheKey = `cached_investment_activity:${query}`
+  const dataRevision = investmentDataRevision
   return cachedGet(cacheKey, async () => {
     try {
       const result = await request<PagedResult<InvestmentActivity>>(`/investments/transactions?${query}`, {
         errorMessage: 'Could not load investment activity',
       })
-      setCachedJSON(cacheKey, result)
+      if (dataRevision === investmentDataRevision) setCachedJSON(cacheKey, result)
       return result
     } catch (error) {
       const cached = getCachedJSON<PagedResult<InvestmentActivity> | null>(cacheKey, null)
@@ -193,12 +201,13 @@ export function fetchInvestmentCashFlows(
 ): Promise<PagedResult<InvestmentCashFlow>> {
   const query = pageQuery(filters)
   const cacheKey = `cached_investment_cash_flows:${query}`
+  const dataRevision = investmentDataRevision
   return cachedGet(cacheKey, async () => {
     try {
       const result = await request<PagedResult<InvestmentCashFlow>>(`/investments/cash-flows?${query}`, {
         errorMessage: 'Could not load cash flow activity',
       })
-      setCachedJSON(cacheKey, result)
+      if (dataRevision === investmentDataRevision) setCachedJSON(cacheKey, result)
       return result
     } catch (error) {
       const cached = getCachedJSON<PagedResult<InvestmentCashFlow> | null>(cacheKey, null)
@@ -210,6 +219,8 @@ export function fetchInvestmentCashFlows(
 
 function invalidateAfter<T>(work: Promise<T>): Promise<T> {
   return work.then(result => {
+    investmentDataRevision += 1
+    portfolioRequestRevision += 1
     invalidateCachePrefix('cached_investment_')
     invalidateRevalidationPrefix('/investments/')
     clearCachedInvestmentPages()
@@ -353,11 +364,12 @@ export function refreshInvestmentMarketData(): Promise<MarketRefreshResponse> {
 }
 
 export function fetchInvestmentAllocation(signal?: AbortSignal): Promise<InvestmentAllocationOverview> {
+  const dataRevision = investmentDataRevision
   return cachedGet(CACHE_KEYS.investmentAllocation, async () => {
     const overview = await request<InvestmentAllocationOverview>('/investments/allocation', {
       errorMessage: 'Could not load the investment plan',
     })
-    setCachedJSON(CACHE_KEYS.investmentAllocation, overview)
+    if (dataRevision === investmentDataRevision) setCachedJSON(CACHE_KEYS.investmentAllocation, overview)
     return overview
   }, { signal, staleTime: 60_000 })
 }

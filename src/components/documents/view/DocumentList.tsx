@@ -14,7 +14,7 @@ import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { DocumentCard } from './DocumentCard'
 import { AmountReview, DocumentActions, DocumentTypeIcon, EmptyState, LinkedTransactionButton, type UpdateDocumentFn } from './documentRowParts'
 import { DOCUMENT_BULK_LIMIT } from '../../../lib/api/documents'
-import { useIsExpanded } from '../../../lib/breakpoints'
+import { useIsDenseContent } from '../../../lib/breakpoints'
 
 interface DocumentListProps {
   documents: VaultDocument[]
@@ -70,7 +70,7 @@ export function DocumentList({
 }: DocumentListProps) {
   const { showToast } = useAppUi()
   const { hideSensitive } = useAppPrefs()
-  const isExpanded = useIsExpanded()
+  const showDenseTable = useIsDenseContent()
   const [previewDocument, setPreviewDocument] = useState<VaultDocument | null>(null)
   const [openingTransactionId, setOpeningTransactionId] = useState<string | null>(null)
   const hasSelection = selectedIds.size > 0
@@ -153,8 +153,8 @@ export function DocumentList({
         </p>
       )}
       <div data-testid="document-results">
-        {!isExpanded ? (
-        <div className="space-y-3">
+        {!showDenseTable ? (
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {isLoading && documents.length === 0 ? (
             Array.from({ length: 3 }).map((_, index) => (
               <div key={index} className="rounded-xl border border-border/50 bg-muted/20 p-3">
@@ -169,7 +169,7 @@ export function DocumentList({
               </div>
             ))
           ) : documents.length === 0 ? (
-            <div className="rounded-xl border border-border/40">
+            <div className="rounded-xl border border-border/40 lg:col-span-2">
               <EmptyState isFiltered={isFiltered} />
             </div>
           ) : documents.map(document => (

@@ -239,7 +239,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         onNavigateToLedger={onNavigateToLedger}
       />
 
-      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,2fr)] lg:items-stretch">
+      <div className="grid min-w-0 grid-cols-1 gap-6 min-[1280px]:grid-cols-[minmax(18rem,0.8fr)_minmax(0,2fr)] min-[1280px]:items-stretch">
         <SubscriptionsTimelineCard
           activeRecurring={selectedCycleRecurring}
           formatSensitive={view.formatSensitive}
@@ -257,7 +257,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 min-[1360px]:grid-cols-2">
         <TrendLineChart
           dashboardData={dashboardData}
           growthBalance={view.categories.find(category => category.name === 'Growth')?.remaining ?? 0}

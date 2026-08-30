@@ -33,6 +33,9 @@ for (const directive of [
 }
 
 const permissions = headers.get('permissions-policy') ?? ''
+if (permissions.includes('attribution-reporting')) {
+  throw new Error('Permissions-Policy must not advertise unsupported attribution-reporting.')
+}
 for (const policy of ['camera=(self)', 'clipboard-write=(self)', 'geolocation=()', 'microphone=()', 'payment=()']) {
   if (!permissions.includes(policy)) throw new Error(`Permissions-Policy is missing ${policy}.`)
 }

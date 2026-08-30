@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BREAKPOINTS, getSizeClass } from './breakpoints'
+import { BREAKPOINTS, DENSE_CONTENT_BREAKPOINT, getSizeClass, isDenseContentWidth } from './breakpoints'
 
 describe('responsive window size classes', () => {
   it('uses compact, medium, and expanded at the shared boundaries', () => {
@@ -9,5 +9,11 @@ describe('responsive window size classes', () => {
     expect(getSizeClass(640)).toBe('medium')
     expect(getSizeClass(1023.999)).toBe('medium')
     expect(getSizeClass(1024)).toBe('expanded')
+  })
+
+  it('keeps data-dense tables out of laptop layouts narrowed by the navigation rail', () => {
+    expect(DENSE_CONTENT_BREAKPOINT).toBe(1280)
+    expect(isDenseContentWidth(1279.999)).toBe(false)
+    expect(isDenseContentWidth(1280)).toBe(true)
   })
 })

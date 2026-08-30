@@ -50,7 +50,7 @@ export const CycleWeeklyPacing: React.FC<CycleWeeklyPacingProps> = ({
           {weeks.length} week cycles
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 min-[1280px]:grid-cols-5">
         {weeks.map((week) => {
           const metric = cycleWeekMetric(week, mode)
           const notStarted = week.elapsedDayCount === 0
@@ -70,7 +70,7 @@ export const CycleWeeklyPacing: React.FC<CycleWeeklyPacingProps> = ({
               <div className="flex w-full items-baseline justify-between gap-1 text-xs">
                 <span className="font-bold text-foreground">Week {week.weekNumber}</span>
                 {/* Date ranges are desktop detail; a phone card only has room for the figure. */}
-                <span className="hidden text-xs text-muted-foreground lg:inline">
+                <span className="hidden text-xs text-muted-foreground min-[1280px]:inline">
                   {formatShortDate(week.startDate)} - {formatShortDate(week.endDate)}
                 </span>
               </div>

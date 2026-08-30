@@ -9,7 +9,6 @@ import type {
   AppTab,
   InvestmentActivity,
   InvestmentCashFlow,
-  InvestmentPortfolio,
   InvestmentRange,
 } from '../types'
 import { useAppContext } from '../contexts/AppContext'
@@ -85,7 +84,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   const [formKey, setFormKey] = useState(0)
   const busy = false
   const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>(null)
-  const [detailHolding, setDetailHolding] = useState<InvestmentPortfolio['holdings'][number] | null>(null)
+  const [detailHoldingKey, setDetailHoldingKey] = useState<{ accountId: string; instrumentId: string } | null>(null)
+
+  const detailHolding = useMemo(() => detailHoldingKey
+    ? portfolio?.holdings.find(holding =>
+      holding.accountId === detailHoldingKey.accountId
+      && holding.instrumentId === detailHoldingKey.instrumentId) ?? null
+    : null, [detailHoldingKey, portfolio])
 
   const setupPortfolio = useMemo(() => portfolio ? {
     ...portfolio,
@@ -153,7 +158,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
     setPanel(null)
     setEditingActivity(null)
     setEditingCashFlow(null)
-    setDetailHolding(null)
+    setDetailHoldingKey(null)
   }, [hideSensitive])
   useAutoOpenModal(autoOpenAddForm, () => openPanel('activity'), onResetAutoOpen)
   useEffect(() => {
@@ -379,13 +384,14 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
             portfolio={portfolio}
             masked={passiveMask}
           />
-          <PerformanceBars portfolio={portfolio} masked={passiveMask} onSelectHolding={setDetailHolding} />
-          <HoldingsTable portfolio={portfolio} masked={passiveMask} filter={allocationFilter} onSelectHolding={setDetailHolding} />
+          <PerformanceBars portfolio={portfolio} masked={passiveMask} onSelectHolding={holding => setDetailHoldingKey({ accountId: holding.accountId, instrumentId: holding.instrumentId })} />
+          <HoldingsTable portfolio={portfolio} masked={passiveMask} filter={allocationFilter} onSelectHolding={holding => setDetailHoldingKey({ accountId: holding.accountId, instrumentId: holding.instrumentId })} />
           <HoldingDetailSheet
             holding={detailHolding}
             appCurrency={portfolio.appCurrency}
             masked={passiveMask}
-            onClose={() => setDetailHolding(null)}
+            portfolioUpdatedAt={portfolio.pricesUpdatedAt}
+            onClose={() => setDetailHoldingKey(null)}
           />
           <PagedActivityTable
             portfolio={setupPortfolio ?? portfolio}

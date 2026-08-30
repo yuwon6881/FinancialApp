@@ -4,7 +4,7 @@ import type { CategorySummary } from '../../types'
 import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { getCategoryBadgeClass, getCategoryDotClass } from '../../lib/categoryColors'
 import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
-import { useIsExpanded } from '../../lib/breakpoints'
+import { useIsDenseContent } from '../../lib/breakpoints'
 import { Button } from '../ui/Button'
 import { BottomSheet } from '../ui/BottomSheet'
 import { AlertBanner } from '../ui/AlertBanner'
@@ -30,7 +30,7 @@ export function CarryoverLedgerTable({
   formatCurrency,
   onNavigateToAccounts,
 }: CarryoverLedgerTableProps) {
-  const isMobile = !useIsExpanded()
+  const showDenseTable = useIsDenseContent()
   const [selectedCategory, setSelectedCategory] = useState<CategorySummary | null>(null)
   const amount = (value: number) => amountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(value)
 
@@ -39,8 +39,8 @@ export function CarryoverLedgerTable({
       <h3 className="text-base font-bold text-foreground mb-1">Carryover Rolling Ledgers</h3>
       <p className="text-xs text-muted-foreground mb-4">Starting budget carries forward from the previous cycle's remaining balance.</p>
 
-      {!isMobile && (
-      <div className="overflow-x-auto">
+      {showDenseTable && (
+      <div className="overflow-x-hidden">
         <div className="min-w-[800px] text-xs space-y-1">
           <div className="grid grid-cols-[2.2fr_1fr_1.4fr_1.4fr_1.7fr_2.1fr] items-center gap-4 border-b border-border/50 text-muted-foreground font-semibold pb-2.5 px-4 mb-2">
             <div>Category</div><div>Plan Target</div><div className="text-right">Income Added</div>
@@ -75,7 +75,7 @@ export function CarryoverLedgerTable({
                 <div className="text-right text-muted-foreground font-medium">{amount(category.budget)}</div>
                 <div className={`text-right font-medium ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : ''}`}>
                   <div><SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} /></div>
-                  {pending > 0 && <div className="text-xs text-yellow-500 font-normal flex items-center justify-end gap-1 mt-0.5"><Clock className="size-3" />Pending: -{amount(pending)}</div>}
+                  {pending > 0 && <div className="mt-0.5 flex items-center justify-end gap-1 whitespace-nowrap text-xs font-normal text-yellow-500"><Clock className="size-3" />Pending: -{amount(pending)}</div>}
                 </div>
                 <div className="text-right">
                   <Button
@@ -90,7 +90,7 @@ export function CarryoverLedgerTable({
                       <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                     </div>
                     {pending > 0 && (
-                      <div className={`text-xs font-semibold mt-0.5 ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
+                      <div className={`mt-0.5 whitespace-nowrap text-xs font-semibold ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
                         Projected: {amount(category.remaining - pending)}
                       </div>
                     )}
@@ -103,8 +103,8 @@ export function CarryoverLedgerTable({
       </div>
       )}
 
-      {isMobile && (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {!showDenseTable && (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {categories.map(category => {
           const pending = pendingDeductionsByCategory[category.name] ?? 0
           const hasAccounts = Boolean(category.accounts?.length)

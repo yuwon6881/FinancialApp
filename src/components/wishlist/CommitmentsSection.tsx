@@ -151,7 +151,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
           {visibleCollection}
         </HorizontalRail>
       ) : (
-        <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2 min-[1280px]:grid-cols-3">
           {visibleCollection}
         </div>
       )}

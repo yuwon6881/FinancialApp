@@ -18,10 +18,11 @@ const figure = (value: number | undefined, currency: string, masked: boolean) =>
  * Everything about one fund in one place: what it has done, what it cost, and what
  * it has paid out. Opened from a holding row on the investments page.
  */
-export function HoldingDetailSheet({ holding, appCurrency, masked, onClose }: {
+export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpdatedAt, onClose }: {
   holding: Holding | null
   appCurrency: string
   masked: boolean
+  portfolioUpdatedAt?: string
   onClose: () => void
 }) {
   const [range, setRange] = useState<InvestmentRange>('1y')
@@ -45,7 +46,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, onClose }: {
         if (!controller.signal.aborted) setLoading(false)
       })
     return () => controller.abort()
-  }, [instrumentId, range])
+  }, [instrumentId, portfolioUpdatedAt, range])
 
   // Keep the previous fund's chart from flashing into the next one's sheet.
   useEffect(() => { setHistory(null) }, [instrumentId])

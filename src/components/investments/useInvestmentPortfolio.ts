@@ -17,16 +17,26 @@ export function useInvestmentPortfolio() {
   const [activityRevision, setActivityRevision] = useState(0)
   const cancelRefreshRef = useRef(false)
   const refreshTimerRef = useRef<number | null>(null)
+  const requestRevisionRef = useRef(0)
 
-  const load = useCallback(async (nextRange: InvestmentRange, quiet = false, rethrow = false) => {
+  const load = useCallback(async (
+    nextRange: InvestmentRange,
+    quiet = false,
+    rethrow = false,
+    signal?: AbortSignal,
+  ) => {
+    const requestRevision = ++requestRevisionRef.current
     if (!quiet) setLoading(true)
     else setIsSyncRefreshing(true)
     setLoadError('')
     try {
-      const result = await api.fetchInvestmentPortfolio(nextRange)
+      const result = await api.fetchInvestmentPortfolio(nextRange, signal)
+      if (requestRevision !== requestRevisionRef.current) return
       setPortfolio(result)
       setActivityRevision(value => value + 1)
     } catch (error) {
+      if (requestRevision !== requestRevisionRef.current) return
+      if (error instanceof DOMException && error.name === 'AbortError') return
       const cached = api.readCachedInvestmentPortfolio()
       if (cached) {
         setPortfolio(cached)
@@ -36,35 +46,21 @@ export function useInvestmentPortfolio() {
       }
       if (rethrow) throw error
     } finally {
-      setLoading(false)
-      setIsSyncRefreshing(false)
+      if (requestRevision === requestRevisionRef.current) {
+        setLoading(false)
+        setIsSyncRefreshing(false)
+      }
     }
   }, [])
 
   useEffect(() => {
     const abort = new AbortController()
-    setLoading(true)
-    setLoadError('')
-    api.fetchInvestmentPortfolio(range, abort.signal)
-      .then(result => {
-        setPortfolio(result)
-        setActivityRevision(value => value + 1)
-      })
-      .catch(error => {
-        if (error instanceof DOMException && error.name === 'AbortError') return
-        const cached = api.readCachedInvestmentPortfolio()
-        if (cached) {
-          setPortfolio(cached)
-          setLoadError('Showing the last cached investment snapshot.')
-        } else {
-          setLoadError(error instanceof Error ? error.message : 'Could not load investments.')
-        }
-      })
-      .finally(() => {
-        if (!abort.signal.aborted) setLoading(false)
-      })
-    return () => abort.abort()
-  }, [range])
+    void load(range, false, false, abort.signal)
+    return () => {
+      abort.abort()
+      requestRevisionRef.current += 1
+    }
+  }, [load, range])
 
   useEffect(() => {
     const refreshAfterSync = (event: Event) => {
@@ -74,9 +70,6 @@ export function useInvestmentPortfolio() {
       }>).detail
       if (event.type === 'investment-sync' && detail?.allocation) {
         setPortfolio(current => current ? { ...current, allocation: detail.allocation! } : current)
-        setActivityRevision(value => value + 1)
-        detail.acknowledge?.(Promise.resolve())
-        return
       }
       const work = load(range, true, Boolean(detail?.acknowledge))
       if (detail?.acknowledge) detail.acknowledge(work)

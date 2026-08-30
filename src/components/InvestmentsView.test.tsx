@@ -91,6 +91,7 @@ const renderView = (props: Partial<ComponentProps<typeof InvestmentsView>> = {})
 describe('InvestmentsView provider call boundaries', () => {
   beforeEach(() => {
     vi.mocked(api.readCachedInvestmentPortfolio).mockReturnValue(null)
+    vi.mocked(api.fetchInvestmentPortfolio).mockReset()
     vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(emptyPortfolio)
     vi.mocked(api.fetchInvestmentActivity).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 10 })
     vi.mocked(api.fetchInvestmentCashFlows).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 10 })
@@ -126,6 +127,70 @@ describe('InvestmentsView provider call boundaries', () => {
 
     resolveFetch(tradablePortfolio)
     await waitFor(() => expect(screen.queryByText('Updating prices…')).toBeNull())
+  })
+
+  it('reloads every portfolio-derived figure after an allocation-bearing investment sync', async () => {
+    const beforeSync: InvestmentPortfolio = {
+      ...tradablePortfolio,
+      summary: { ...tradablePortfolio.summary, totalValue: 100, cashValue: 25 },
+    }
+    const afterSync: InvestmentPortfolio = {
+      ...tradablePortfolio,
+      summary: { ...tradablePortfolio.summary, totalValue: 160, cashValue: 85 },
+    }
+    vi.mocked(api.fetchInvestmentPortfolio)
+      .mockResolvedValueOnce(beforeSync)
+      .mockResolvedValueOnce(afterSync)
+
+    renderView()
+    expect(await screen.findByText('$100.00')).toBeTruthy()
+    expect(screen.getByText('$25.00')).toBeTruthy()
+
+    let reconciliation: Promise<void> | undefined
+    fireEvent(window, new CustomEvent('investment-sync', {
+      detail: {
+        allocation: afterSync.allocation,
+        acknowledge: (work: Promise<void>) => { reconciliation = work },
+      },
+    }))
+
+    await waitFor(() => expect(api.fetchInvestmentPortfolio).toHaveBeenCalledTimes(2))
+    await reconciliation
+    expect(await screen.findByText('$160.00')).toBeTruthy()
+    expect(screen.getByText('$85.00')).toBeTruthy()
+  })
+
+  it('does not let an older chart-range response replace the latest portfolio', async () => {
+    const cached: InvestmentPortfolio = {
+      ...tradablePortfolio,
+      summary: { ...tradablePortfolio.summary, totalValue: 100 },
+    }
+    const latest: InvestmentPortfolio = {
+      ...tradablePortfolio,
+      summary: { ...tradablePortfolio.summary, totalValue: 300 },
+    }
+    const stale: InvestmentPortfolio = {
+      ...tradablePortfolio,
+      summary: { ...tradablePortfolio.summary, totalValue: 200 },
+    }
+    let resolveInitial!: (portfolio: InvestmentPortfolio) => void
+    let resolveLatest!: (portfolio: InvestmentPortfolio) => void
+    vi.mocked(api.readCachedInvestmentPortfolio).mockReturnValue(cached)
+    vi.mocked(api.fetchInvestmentPortfolio).mockImplementation(range => new Promise(resolve => {
+      if (range === '3m') resolveInitial = resolve
+      else resolveLatest = resolve
+    }))
+
+    renderView()
+    expect(await screen.findByText('$100.00')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '1Y' }))
+    resolveLatest(latest)
+    expect(await screen.findByText('$300.00')).toBeTruthy()
+
+    resolveInitial(stale)
+    await Promise.resolve()
+    expect(screen.queryByText('$200.00')).toBeNull()
+    expect(screen.getByText('$300.00')).toBeTruthy()
   })
 
   it('explains investment archive eligibility', async () => {
