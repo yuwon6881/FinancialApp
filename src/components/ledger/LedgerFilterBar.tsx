@@ -186,11 +186,11 @@ export function LedgerFilterBar({
         ? 'Exact match: "Badminton" skips "Badminton String". Tap to match anywhere in the text.'
         : 'Matching anywhere in the text: "Badminton" also finds "Badminton String". Tap to require an exact match.'}
       onClick={() => onSearchModeChange(isExactMatch ? 'contains' : 'exact')}
-      className={`mr-1.5 flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-1.5 text-xs font-bold transition cursor-pointer lg:w-auto ${isExactMatch
-        ? 'border-primary/45 bg-primary/15 text-accent-ink'
-        : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+      className={`mr-1.5 flex h-7 min-w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-1.5 text-xs font-bold transition cursor-pointer lg:h-7.5 lg:w-auto lg:px-2.5 ${isExactMatch
+        ? 'bg-primary/15 text-accent-ink hover:bg-primary/20'
+        : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
     >
-      <Equal className="size-4 shrink-0" aria-hidden />
+      <Equal className="size-3.5 shrink-0 lg:size-4" aria-hidden />
       <span className="hidden lg:inline whitespace-nowrap">Exact match</span>
     </Button>
   )

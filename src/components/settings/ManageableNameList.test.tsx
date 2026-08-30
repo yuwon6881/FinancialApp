@@ -82,7 +82,7 @@ describe('ManageableNameList', () => {
     expect(screen.getByRole('textbox', { name: 'New category name' })).toBeTruthy()
   })
 
-  it('keeps the search, filter, and Add actions in one compact toolbar', () => {
+  it('gives search its own row while keeping filter and Add controls aligned', () => {
     render(
       <ManageableNameList
         items={items}
@@ -95,9 +95,7 @@ describe('ManageableNameList', () => {
     )
 
     const search = screen.getByRole('searchbox')
-    const toolbar = search.parentElement?.parentElement
-    expect(toolbar?.className).toContain('flex-nowrap')
-    expect(toolbar?.className).not.toContain('flex-wrap')
+    expect(search).toBeTruthy()
     expect(screen.getByTestId('flow-filter')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Add' }).className).toContain('whitespace-nowrap')
   })

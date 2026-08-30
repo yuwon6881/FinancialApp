@@ -24,8 +24,9 @@ export function applyEntityOp<T extends ProjectionRow>(
         ? { postedAt: getOptimisticTransactionPostedAt(op.createdAt) }
         : {}),
       id: parsedId,
-      isPendingSync: !op.isCompleted
-    } as T
+      isPendingSync: !op.isCompleted,
+      pendingSyncOperationId: op.isCompleted ? undefined : op.id,
+    } as unknown as T
 
     const existingIndex = rows.findIndex(targetStr)
     if (existingIndex >= 0) {
@@ -50,7 +51,11 @@ export function applyEntityOp<T extends ProjectionRow>(
       // the visible cycle. Insert the carried row rather than dropping the operation.
       rows.rows = [
         ...rows.rows,
-        { ...op.insertFallbackPayload, isPendingSync: !op.isCompleted } as unknown as T,
+        {
+          ...op.insertFallbackPayload,
+          isPendingSync: !op.isCompleted,
+          pendingSyncOperationId: op.isCompleted ? undefined : op.id,
+        } as unknown as T,
       ]
     } else if (existingIndex >= 0) {
       if (entity === 'wishlistItem' && op.payload && op.payload.isActive === true) {
@@ -59,12 +64,13 @@ export function applyEntityOp<T extends ProjectionRow>(
             return {
               ...item,
               ...op.payload,
-              isPendingSync: !op.isCompleted
+              isPendingSync: !op.isCompleted,
+              pendingSyncOperationId: op.isCompleted ? undefined : op.id,
             } as unknown as T
           }
           return {
             ...item,
-            isActive: false
+            isActive: false,
           } as unknown as T
         })
       } else {
@@ -79,12 +85,14 @@ export function applyEntityOp<T extends ProjectionRow>(
         const projected = {
           ...rows.rows[existingIndex],
           ...op.payload,
-          isPendingSync: !op.isCompleted
+          isPendingSync: !op.isCompleted,
+          pendingSyncOperationId: op.isCompleted ? undefined : op.id,
         } as T & {
           earmarkedAmount?: number
           targetAmount?: number
           cycleFundedAmount?: number
           isPendingSync: boolean
+          pendingSyncOperationId?: string
         }
         if (entity === 'savingsGoal'
             && typeof projected.targetAmount === 'number'
@@ -124,7 +132,7 @@ export function applyEntityOp<T extends ProjectionRow>(
         rows.rows = rows.rows.map(item => {
           const wishlistItemId = (item as T & { wishlistItemId?: number | null }).wishlistItemId
           return wishlistItemId != null && String(wishlistItemId) === targetStr
-            ? { ...item, isPendingDelete: true, isPendingSync: true }
+            ? { ...item, isPendingDelete: true, isPendingSync: !op.isCompleted, pendingSyncOperationId: op.isCompleted ? undefined : op.id }
             : item
         })
       }
@@ -141,7 +149,8 @@ export function applyEntityOp<T extends ProjectionRow>(
             return {
               ...item,
               isPendingDelete: true,
-              isPendingSync: true
+              isPendingSync: !op.isCompleted,
+              pendingSyncOperationId: op.isCompleted ? undefined : op.id,
             }
           }
           return item
@@ -163,7 +172,8 @@ export function applyEntityOp<T extends ProjectionRow>(
         ...(op.payload && Object.prototype.hasOwnProperty.call(op.payload, 'nextDueDate')
           ? { nextDueDate: op.payload.nextDueDate }
           : {}),
-        isPendingSync: !op.isCompleted
+        isPendingSync: !op.isCompleted,
+        pendingSyncOperationId: op.isCompleted ? undefined : op.id,
       }
     }
   } else if (entity === 'transaction' && op.entity === 'wishlistItem' && op.type === 'purchase') {
@@ -183,14 +193,15 @@ export function applyEntityOp<T extends ProjectionRow>(
       accountId: typeof op.payload?.accountId === 'string' ? op.payload.accountId : undefined,
       wishlistItemId: Number(op.targetId),
       excludeFromAutocomplete: true,
-      isPendingSync: !op.isCompleted
+      isPendingSync: !op.isCompleted,
+      pendingSyncOperationId: op.isCompleted ? undefined : op.id,
     } as unknown as T
 
     const existingIndex = rows.findIndex(String(syntheticId))
     if (existingIndex >= 0) {
       rows.rows[existingIndex] = {
         ...rows.rows[existingIndex],
-        ...newItem
+        ...newItem,
       }
     } else {
       rows.rows = [newItem, ...rows.rows]
@@ -205,7 +216,8 @@ export function applyEntityOp<T extends ProjectionRow>(
           ? {
               ...item,
               isPendingDelete: true,
-              isPendingSync: true
+              isPendingSync: !op.isCompleted,
+              pendingSyncOperationId: op.isCompleted ? undefined : op.id,
             }
           : item)
       }
@@ -220,7 +232,8 @@ export function applyEntityOp<T extends ProjectionRow>(
         isActive: false,
         purchasedAt: op.payload?.postedAt || op.payload?.date || op.payload?.purchasedAt || new Date().toISOString(),
         purchaseTransactionId: op.payload?.purchaseTransactionId ?? item.purchaseTransactionId ?? null,
-        isPendingSync: !op.isCompleted
+        isPendingSync: !op.isCompleted,
+        pendingSyncOperationId: op.isCompleted ? undefined : op.id,
       }
       const candidates = rows.rows
         .map((candidate, index) => ({ candidate: candidate as T & { isPurchased?: boolean; createdAt?: string }, index }))
@@ -241,7 +254,8 @@ export function applyEntityOp<T extends ProjectionRow>(
         isActive: !rows.rows.some((candidate, index) => index !== existingIndex && Boolean((candidate as T & { isActive?: boolean; isPurchased?: boolean }).isActive) && !(candidate as T & { isPurchased?: boolean }).isPurchased),
         purchasedAt: undefined,
         purchaseTransactionId: null,
-        isPendingSync: !op.isCompleted
+        isPendingSync: !op.isCompleted,
+        pendingSyncOperationId: op.isCompleted ? undefined : op.id,
       }
     }
   } else if (op.type === 'restore') {
@@ -266,6 +280,7 @@ export function applyEntityOp<T extends ProjectionRow>(
         id: snapshotId,
         isPendingDelete: false,
         isPendingSync: !op.isCompleted,
+        pendingSyncOperationId: op.isCompleted ? undefined : op.id,
       } as unknown as T
       const existingIndex = rows.findIndex(snapshotId)
       if (existingIndex >= 0) rows.rows[existingIndex] = restored

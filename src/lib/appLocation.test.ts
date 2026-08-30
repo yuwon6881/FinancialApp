@@ -45,6 +45,7 @@ describe('app URL state', () => {
         commitmentId: null,
         rewardId: null,
         draftId: null,
+        section: null,
       },
     })
   })

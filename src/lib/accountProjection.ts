@@ -169,18 +169,28 @@ function applyReconciliation(
         remaining: 0,
         createdAt: new Date(operation.createdAt).toISOString(),
         updatedAt: new Date(operation.createdAt).toISOString(),
+        isPendingSync: !operation.isCompleted,
+        pendingSyncOperationId: operation.isCompleted ? undefined : operation.id,
       } as unknown as LedgerAccount
       accounts.push(account)
       accountsById.set(id, account)
     } else {
+      const isBalanceChanged = Math.abs(account.remaining - targetBalance) >= 0.005
+      const isNameChanged = account.name !== name
+      const isKindChanged = normalizedKind !== undefined && account.kind !== normalizedKind
+      const isArchivedChanged = account.isArchived !== (target.isArchived === true)
+      const hasChanged = isBalanceChanged || isNameChanged || isKindChanged || isArchivedChanged
+
       account.name = name
       if (normalizedKind) account.kind = normalizedKind
       account.isArchived = target.isArchived === true
+      if (hasChanged) {
+        account.isPendingSync = !operation.isCompleted
+        account.pendingSyncOperationId = operation.isCompleted ? undefined : operation.id
+      }
     }
 
     balances.set(id, targetBalance)
-    account.isPendingSync = true
-    account.pendingSyncOperationId = operation.id
   }
 }
 

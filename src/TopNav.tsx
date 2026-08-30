@@ -11,8 +11,6 @@ import {
   Loader2,
   ShieldAlert,
   Search as SearchIcon,
-  Settings,
-  TrendingUp,
 } from 'lucide-react'
 import { CommitmentIcon } from './components/semanticIcons'
 import { AppLogo } from './components/ui/AppLogo'
@@ -20,6 +18,7 @@ import { mutationBusyLabel } from './components/ui/rowSyncState'
 import { useIsCompact } from './lib/breakpoints'
 import type { AppTab, PendingNotification } from './types'
 import type { SensitivePreferenceStatus } from './app/useAppPreferences'
+import type { AppNavigationOptions } from './lib/appLocation'
 import { MobileBottomNav, type NavItemConfig } from './components/nav/MobileBottomNav'
 import { QuickActionsDropdown } from './components/nav/QuickActionsDropdown'
 import { UserProfileDropdown } from './components/nav/UserProfileDropdown'
@@ -28,7 +27,7 @@ import { DesktopNavRail } from './components/nav/DesktopNavRail'
 
 interface TopNavProps {
   activeTab: AppTab
-  onTabChange: (tab: AppTab) => void
+  onTabChange: (tab: AppTab, options?: AppNavigationOptions) => void
   onQuickAction?: (action: 'transaction' | 'subscription' | 'wishlist') => void
   onAskAI?: () => void
   onOpenSearch?: () => void
@@ -96,26 +95,6 @@ const compactNavItems: NavItemConfig[] = [
     iconClass: 'text-amber-500',
     dotClass: 'bg-amber-500'
   }
-]
-
-const navItems: NavItemConfig[] = [
-  ...compactNavItems.slice(0, 4),
-  {
-    tab: 'wishlist', label: 'Commitments & Rewards', mobileLabel: 'Rewards', Icon: CommitmentIcon,
-    activeClass: 'bg-pink-500/12 text-pink-600 dark:text-pink-400 border-pink-500/25 shadow-pink-500/10',
-    iconClass: 'text-pink-500', dotClass: 'bg-pink-500',
-  },
-  {
-    tab: 'investments', label: 'Investments', mobileLabel: 'Invest', Icon: TrendingUp,
-    activeClass: 'bg-violet-500/12 text-violet-600 dark:text-violet-400 border-violet-500/25 shadow-violet-500/10',
-    iconClass: 'text-violet-500', dotClass: 'bg-violet-500',
-  },
-  compactNavItems[4],
-  {
-    tab: 'settings', label: 'Settings', mobileLabel: 'Settings', Icon: Settings,
-    activeClass: 'bg-blue-500/12 text-blue-600 dark:text-blue-400 border-blue-500/25 shadow-blue-500/10',
-    iconClass: 'text-blue-500', dotClass: 'bg-blue-500',
-  },
 ]
 
 const TopNav: React.FC<TopNavProps> = ({
@@ -360,7 +339,7 @@ const TopNav: React.FC<TopNavProps> = ({
           onTabChange={onTabChange}
         />
       ) : (
-        <DesktopNavRail navItems={navItems} activeTab={activeTab} onTabChange={onTabChange} />
+        <DesktopNavRail activeTab={activeTab} onTabChange={onTabChange} />
       )}
     </>
   )

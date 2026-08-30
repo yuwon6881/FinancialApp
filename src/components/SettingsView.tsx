@@ -19,6 +19,7 @@ import type { RequestDeleteCategoryOptions } from '../app/financialData/category
 import { isSpendingGuideCategory, isSystemCategoryName } from '../lib/categoryFlow'
 import { AccountsSkeleton } from './settings/accounts/AccountsSkeleton'
 import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
+import { APP_LOCATION_CHANGED_EVENT } from '../lib/appLocation'
 import { SettingsTabs, type SettingsTabId } from './settings/SettingsTabs'
 import type { LedgerAccountInput } from '../app/financialData/accountActions'
 import type { LedgerAccountReconcileInput } from '../lib/api/accounts'
@@ -133,28 +134,27 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     if (typeof window !== 'undefined') {
       const search = window.location.search
       const hash = window.location.hash
-      if (search.includes('investment-plan') || hash.includes('investment-plan')) return 'investment-plan'
-      if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
+      if (search.includes('investment-plan') || hash.includes('investment-plan') || search.includes('section=investment-plan')) return 'investment-plan'
+      if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits') || search.includes('section=categories')) {
         return 'categories-preferences'
       }
-      if (search.includes('account') || hash.includes('account')) return 'accounts'
+      if (search.includes('account') || hash.includes('account') || search.includes('section=accounts')) return 'accounts'
+      if (search.includes('security') || hash.includes('security') || search.includes('section=security')) return 'security'
     }
     return 'financial-model'
   })
 
   React.useEffect(() => {
-    if (props.highlightedAccountId) {
-      setActiveTab('accounts')
-      return
-    }
-    if (typeof window !== 'undefined') {
-      const search = window.location.search
-      const hash = window.location.hash
-      if (search.includes('investment-plan') || hash.includes('investment-plan')) {
-        setActiveTab('investment-plan')
+    const syncFromLocation = () => {
+      if (props.highlightedAccountId) {
+        setActiveTab('accounts')
         return
       }
-      if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
+      const search = window.location.search
+      const hash = window.location.hash
+      if (search.includes('investment-plan') || hash.includes('investment-plan') || search.includes('section=investment-plan')) {
+        setActiveTab('investment-plan')
+      } else if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits') || search.includes('section=categories')) {
         setActiveTab('categories-preferences')
         requestAnimationFrame(() => {
           const el = document.getElementById('category-limits-card')
@@ -165,11 +165,19 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             }
           }
         })
-        return
-      }
-      if (search.includes('account') || hash.includes('account')) {
+      } else if (search.includes('account') || hash.includes('account') || search.includes('section=accounts')) {
         setActiveTab('accounts')
+      } else if (search.includes('security') || hash.includes('security') || search.includes('section=security')) {
+        setActiveTab('security')
+      } else if (search.includes('section=model') || search.includes('financial-model')) {
+        setActiveTab('financial-model')
       }
+    }
+    window.addEventListener(APP_LOCATION_CHANGED_EVENT, syncFromLocation)
+    window.addEventListener('popstate', syncFromLocation)
+    return () => {
+      window.removeEventListener(APP_LOCATION_CHANGED_EVENT, syncFromLocation)
+      window.removeEventListener('popstate', syncFromLocation)
     }
   }, [props.highlightedAccountId])
 

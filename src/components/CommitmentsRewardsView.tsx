@@ -17,7 +17,20 @@ import { RewardsSection } from './wishlist/RewardsSection'
 import { CommitmentsRewardsSheets } from './wishlist/CommitmentsRewardsSheets'
 import { CommitmentIcon } from './semanticIcons'
 import { Sparkles } from 'lucide-react'
+import { APP_LOCATION_CHANGED_EVENT } from '../lib/appLocation'
 import { PageHeader } from './ui/PageHeader'
+
+function parseInitialCommitmentsRewardsTab(highlightedRewardId: string | null | undefined, highlightedCommitmentId: string | null | undefined): CommitmentsRewardsTabId {
+  if (highlightedRewardId) return 'rewards'
+  if (highlightedCommitmentId) return 'commitments'
+  if (typeof window !== 'undefined') {
+    const search = window.location.search
+    const hash = window.location.hash
+    if (search.includes('reward') || hash.includes('reward') || search.includes('section=rewards')) return 'rewards'
+    if (search.includes('commitment') || hash.includes('commitment') || search.includes('section=commitments')) return 'commitments'
+  }
+  return 'commitments'
+}
 
 interface CommitmentsRewardsViewProps {
   wishlist: WishlistItem[]
@@ -148,7 +161,27 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
   const [purchaseError, setPurchaseError] = React.useState('')
   const [completingGoal, setCompletingGoal] = React.useState<SavingsGoal | null>(null)
   const [completionAccountId, setCompletionAccountId] = React.useState('')
-  const [activeTab, setActiveTab] = React.useState<CommitmentsRewardsTabId>('commitments')
+  const [activeTab, setActiveTab] = React.useState<CommitmentsRewardsTabId>(() =>
+    parseInitialCommitmentsRewardsTab(highlightedRewardId, highlightedCommitmentId),
+  )
+
+  React.useEffect(() => {
+    const syncFromLocation = () => {
+      const search = window.location.search
+      const hash = window.location.hash
+      if (search.includes('reward') || hash.includes('reward') || search.includes('section=rewards')) {
+        setActiveTab('rewards')
+      } else if (search.includes('commitment') || hash.includes('commitment') || search.includes('section=commitments')) {
+        setActiveTab('commitments')
+      }
+    }
+    window.addEventListener(APP_LOCATION_CHANGED_EVENT, syncFromLocation)
+    window.addEventListener('popstate', syncFromLocation)
+    return () => {
+      window.removeEventListener(APP_LOCATION_CHANGED_EVENT, syncFromLocation)
+      window.removeEventListener('popstate', syncFromLocation)
+    }
+  }, [])
 
   // A reward hit has to open the Rewards list before the highlight can find its row, the same
   // way a loan hit opens the Loans tab. Only an arriving highlight moves the tab; switching by

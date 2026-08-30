@@ -41,6 +41,7 @@ export interface AppLocationState {
     commitmentId: string | null
     rewardId: string | null
     draftId: string | null
+    section: string | null
   }
 }
 
@@ -50,6 +51,7 @@ export interface AppNavigationOptions {
 }
 
 export const APP_CONTEXT_WILL_CHANGE_EVENT = 'financial-app:context-will-change'
+export const APP_LOCATION_CHANGED_EVENT = 'financial-app:location-changed'
 
 const PATH_BY_TAB: Record<AppTab, string> = {
   dashboard: '/dashboard',
@@ -161,7 +163,7 @@ export const readAppLocation = (): AppLocationState => {
       tab: 'dashboard', month: '', year: 0, ledger: emptyLedgerRouteState(),
       destination: {
         recurringPaymentId: null, loanId: null, reportSection: null, reportCategory: null,
-        accountId: null, commitmentId: null, rewardId: null, draftId: null,
+        accountId: null, commitmentId: null, rewardId: null, draftId: null, section: null,
       },
     }
   }
@@ -202,6 +204,7 @@ export const readAppLocation = (): AppLocationState => {
       commitmentId: params.get('commitment'),
       rewardId: params.get('reward'),
       draftId: params.get('draft'),
+      section: params.get('section'),
     },
   }
 }
@@ -240,6 +243,7 @@ const writeUrl = (pathname: string, params: URLSearchParams, replace: boolean) =
   // a route above it, or revisiting Back/Forward can resurrect the old sheet.
   const replaceModalEntry = contextWillChange && Boolean(window.history.state?.modalId)
   window.history[replace || replaceModalEntry ? 'replaceState' : 'pushState']({}, '', nextUrl)
+  window.dispatchEvent(new Event(APP_LOCATION_CHANGED_EVENT))
 }
 
 export const navigateToAppTab = (tab: AppTab, options: AppNavigationOptions = {}) => {
@@ -264,6 +268,9 @@ export const navigateToAppTab = (tab: AppTab, options: AppNavigationOptions = {}
   if (tab !== 'drafts') params.delete('draft')
   if (tab === 'ledger' && options.search) {
     LEDGER_PARAM_KEYS.forEach(key => params.delete(key))
+  }
+  if (!options.search || options.search.section === undefined) {
+    params.delete('section')
   }
   if (options.search) applySearchUpdates(params, options.search)
   writeUrl(PATH_BY_TAB[tab], params, options.replace === true)

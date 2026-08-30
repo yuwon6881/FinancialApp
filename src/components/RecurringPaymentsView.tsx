@@ -10,12 +10,23 @@ import { RecurringPaymentFormSheet } from './recurring/RecurringPaymentFormSheet
 import { RecurringFilterBar } from './recurring/RecurringFilterBar'
 import { RecurringPaymentCards } from './recurring/RecurringPaymentCards'
 import { useRecurringPaymentsView } from './recurring/useRecurringPaymentsView'
+import { APP_LOCATION_CHANGED_EVENT } from '../lib/appLocation'
 import { RecurringTabs, type RecurringTabId } from './recurring/RecurringTabs'
 import type { LoanLoadStatus } from '../app/financialData/useLoanData'
 import { formatSensitiveAmount } from './recurring/formatters'
 
 const LoansSection = React.lazy(() => import('./recurring/loans/LoansSection').then(module => ({ default: module.LoansSection })))
 const PayEarlySheet = React.lazy(() => import('./recurring/PayEarlySheet').then(module => ({ default: module.PayEarlySheet })))
+
+function parseInitialRecurringTab(highlightedLoanId: string | null | undefined): RecurringTabId {
+  if (highlightedLoanId) return 'loans'
+  if (typeof window !== 'undefined') {
+    const search = window.location.search
+    const hash = window.location.hash
+    if (search.includes('loan') || hash.includes('loan') || search.includes('section=loans')) return 'loans'
+  }
+  return 'recurring'
+}
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
@@ -97,7 +108,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   thisDevicePushEnabled = true,
   onUpdateReminder,
   onRequestPayEarly,
-  onPayEarly,
+  onPayEarly = () => {},
   loans = [],
   onAddLoan = () => {},
   onUpdateLoan = () => {},
@@ -122,7 +133,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       : (app.activeSyncIds?.length ? app.activeSyncIds : (app.activeSyncId ? [app.activeSyncId] : [])))
   const deletingId = deletingIdProp ?? app.deletingId
   const isMobile = !useIsExpanded()
-  const [activeTab, setActiveTab] = React.useState<RecurringTabId>(() => (highlightedLoanIdProp ? 'loans' : 'recurring'))
+  const [activeTab, setActiveTab] = React.useState<RecurringTabId>(() => parseInitialRecurringTab(highlightedLoanIdProp))
   const [internalHighlightedLoanId, setInternalHighlightedLoanId] = React.useState<string | null>(null)
   const [payEarlyPayment, setPayEarlyPayment] = React.useState<RecurringPayment | null>(null)
   const payEarlyOccurrence = payEarlyPayment
@@ -142,6 +153,24 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     if (nextTab !== 'loans' && currentHighlightedLoanId) handleClearHighlightedLoan()
     setActiveTab(nextTab)
   }, [currentHighlightedLoanId, handleClearHighlightedLoan, highlightedRecurringId, onClearHighlightedRecurring])
+
+  React.useEffect(() => {
+    const syncFromLocation = () => {
+      const search = window.location.search
+      const hash = window.location.hash
+      if (search.includes('loan') || hash.includes('loan') || search.includes('section=loans')) {
+        setActiveTab('loans')
+      } else if (search.includes('section=recurring') || search.includes('subscription')) {
+        setActiveTab('recurring')
+      }
+    }
+    window.addEventListener(APP_LOCATION_CHANGED_EVENT, syncFromLocation)
+    window.addEventListener('popstate', syncFromLocation)
+    return () => {
+      window.removeEventListener(APP_LOCATION_CHANGED_EVENT, syncFromLocation)
+      window.removeEventListener('popstate', syncFromLocation)
+    }
+  }, [])
 
   React.useEffect(() => {
     if (highlightedRecurringId) {
@@ -315,33 +344,33 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         >
           <Suspense fallback={<LoansSectionSkeleton />}>
             <LoansSection
-            loans={loans}
-            payments={payments}
-            accounts={accounts}
-            currency={currency}
-            hideSensitive={hideSensitive}
-            formatSensitive={formatPassive}
-            activeSyncIds={activeSyncIds}
-            onAddLoan={onAddLoan}
-            onUpdateLoan={onUpdateLoan}
-            onRequestDeleteLoan={onRequestDeleteLoan}
-            loadStatus={loanLoadStatus}
-            onLoad={onLoadLoans}
-            onExplain={onExplainLoan}
-            onAdvanceRepayment={onAdvanceRepayment}
-            onFullSettlement={onFullSettlement}
-            onUndoRepayment={onUndoRepayment}
-            highlightedLoanId={currentHighlightedLoanId}
-            onClearHighlightedLoan={handleClearHighlightedLoan}
-            isAddFormOpen={isLoanFormOpen}
-            onOpenAddForm={() => setIsLoanFormOpen(true)}
-            onCloseAddForm={() => setIsLoanFormOpen(false)}
+              loans={loans}
+              payments={payments}
+              accounts={accounts}
+              currency={currency}
+              hideSensitive={hideSensitive}
+              formatSensitive={formatPassive}
+              activeSyncIds={activeSyncIds}
+              onAddLoan={onAddLoan}
+              onUpdateLoan={onUpdateLoan}
+              onRequestDeleteLoan={onRequestDeleteLoan}
+              loadStatus={loanLoadStatus}
+              onLoad={onLoadLoans}
+              onExplain={onExplainLoan}
+              onAdvanceRepayment={onAdvanceRepayment}
+              onFullSettlement={onFullSettlement}
+              onUndoRepayment={onUndoRepayment}
+              highlightedLoanId={currentHighlightedLoanId}
+              onClearHighlightedLoan={handleClearHighlightedLoan}
+              isAddFormOpen={isLoanFormOpen}
+              onOpenAddForm={() => setIsLoanFormOpen(true)}
+              onCloseAddForm={() => setIsLoanFormOpen(false)}
             />
           </Suspense>
         </div>
       )}
 
-      {/* Add / Edit Subscription Modal (bottom sheet on mobile) */}
+      {/* Slide-over Form for Adding / Editing a Subscription */}
       <RecurringPaymentFormSheet
         isOpen={view.showAddForm}
         editingPayment={view.editingPayment}
@@ -374,21 +403,19 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         onCancel={view.handleCancelForm}
       />
 
-      {payEarlyPayment && (
-        <Suspense fallback={null}>
+      <Suspense fallback={null}>
+        {payEarlyPayment && (
           <PayEarlySheet
-            isOpen={!!payEarlyPayment}
+            isOpen={true}
+            onClose={() => setPayEarlyPayment(null)}
             payment={payEarlyPayment}
             occurrence={payEarlyOccurrence}
             accounts={accounts}
             currency={currency}
-            onClose={() => setPayEarlyPayment(null)}
-            onPayEarly={async (id, amount, accountId, settlesOccurrence) => {
-              await onPayEarly?.(id, amount, accountId, settlesOccurrence)
-            }}
+            onPayEarly={onPayEarly}
           />
-        </Suspense>
-      )}
+        )}
+      </Suspense>
     </div>
   )
 }

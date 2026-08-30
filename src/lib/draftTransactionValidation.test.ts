@@ -45,7 +45,8 @@ describe('getDraftTransactionIssues', () => {
     expect(getDraftTransactionIssues(incomeDraft, incomeCategories)).not.toContain(
       'Choose the Essentials receiving account.',
     )
-    const { Essentials: _essentials, ...missingEssentials } = incomeDraft.splitAccountIds!
+    const { Essentials: _unused, ...missingEssentials } = incomeDraft.splitAccountIds!
+    void _unused
     expect(getDraftTransactionIssues({
       ...incomeDraft,
       splitAccountIds: missingEssentials,

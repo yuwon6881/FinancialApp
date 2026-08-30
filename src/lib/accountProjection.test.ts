@@ -18,7 +18,6 @@ const baseTransaction = (overrides: Partial<Transaction> = {}): Transaction => (
   id: 'tx-1', date: '2026-08-01', description: 'Lunch', category: 'Food',
   ledgerCategory: 'Essentials', amount: -20, accountId: 'essentials', ...overrides,
 })
-
 const op = (overrides: Partial<QueuedOp>): QueuedOp => ({
   id: 'op-1', entity: 'transaction', type: 'add', targetId: 'tx-1', createdAt: 1, retryCount: 0, ...overrides,
 })
@@ -258,5 +257,62 @@ describe('projectAccountBalances', () => {
     })])
 
     expect(result.find(account => account.id === 'essentials')?.remaining).toBe(60)
+  })
+
+  it('marks only changed accounts as pending sync during reconciliation and clears when completed', () => {
+    const bucketAccounts: LedgerAccount[] = [
+      { id: 'acc-1', name: 'Checking', bucket: 'Essentials', kind: 'Bank', isArchived: false, remaining: 100, createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+      { id: 'acc-2', name: 'Savings', bucket: 'Essentials', kind: 'Bank', isArchived: false, remaining: 200, createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+    ]
+
+    const pendingResult = projectAccountBalances(bucketAccounts, [op({
+      id: 'reconcile-op-1',
+      entity: 'ledgerAccountReconcile',
+      targetId: 'reconcile-1',
+      payload: {
+        reconciliation: {
+          operationId: 'reconcile-1',
+          bucket: 'Essentials',
+          expectedBucketTotal: 300,
+          targets: [
+            { id: 'acc-1', name: 'Checking', kind: 'Bank', isArchived: false, expectedCurrent: 100, target: 150 },
+            { id: 'acc-2', name: 'Savings', kind: 'Bank', isArchived: false, expectedCurrent: 200, target: 200 },
+          ],
+        },
+      },
+    })])
+
+    const changedAcc = pendingResult.find(a => a.id === 'acc-1')
+    const unchangedAcc = pendingResult.find(a => a.id === 'acc-2')
+    expect(changedAcc?.remaining).toBe(150)
+    expect(changedAcc?.isPendingSync).toBe(true)
+    expect(changedAcc?.pendingSyncOperationId).toBe('reconcile-op-1')
+    expect(unchangedAcc?.remaining).toBe(200)
+    expect(unchangedAcc?.isPendingSync).toBeUndefined()
+    expect(unchangedAcc?.pendingSyncOperationId).toBeUndefined()
+
+    // When completed, isPendingSync and pendingSyncOperationId are cleared
+    const completedResult = projectAccountBalances(bucketAccounts, [op({
+      id: 'reconcile-op-1',
+      entity: 'ledgerAccountReconcile',
+      targetId: 'reconcile-1',
+      isCompleted: true,
+      payload: {
+        reconciliation: {
+          operationId: 'reconcile-1',
+          bucket: 'Essentials',
+          expectedBucketTotal: 300,
+          targets: [
+            { id: 'acc-1', name: 'Checking', kind: 'Bank', isArchived: false, expectedCurrent: 100, target: 150 },
+            { id: 'acc-2', name: 'Savings', kind: 'Bank', isArchived: false, expectedCurrent: 200, target: 200 },
+          ],
+        },
+      },
+    })])
+
+    const completedChangedAcc = completedResult.find(a => a.id === 'acc-1')
+    expect(completedChangedAcc?.remaining).toBe(150)
+    expect(completedChangedAcc?.isPendingSync).toBe(false)
+    expect(completedChangedAcc?.pendingSyncOperationId).toBeUndefined()
   })
 })

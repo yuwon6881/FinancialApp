@@ -346,7 +346,7 @@ function App() {
           onOpenNotifications={() => dialogs.setShowLoginModal(true)}
           darkMode={prefs.darkMode}
           onToggleDarkMode={handleToggleDarkMode}
-          isSyncing={financial.isBackgroundSyncing || financial.pendingOps.length > 0}
+          isSyncing={financial.isBackgroundSyncing || Boolean(financial.activeSyncId) || financial.activeSyncIds.length > 0}
           isOffline={financial.isOffline}
           syncLabel={
             financial.syncCountdownMs > 0

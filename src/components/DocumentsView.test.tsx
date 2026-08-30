@@ -126,16 +126,22 @@ describe('DocumentsView', () => {
     expect(await screen.findByText('Some tax records can be cleared out soon')).toBeTruthy()
     expect(screen.getByText(/in about 5 months/)).toBeTruthy()
     expect(screen.getByText(/Nothing is ever deleted for you/)).toBeTruthy()
+
+    await waitFor(() => expect(screen.queryByText(/Save them together/i)).toBeNull())
   })
 
   it('forgets staged category edits when the filters change', async () => {
     render(<DocumentsView />)
     await waitFor(() => expect(screen.getAllByText('tax.pdf').length).toBeGreaterThan(0))
 
+    const changeButton = screen.queryByLabelText('Change tax relief category for tax.pdf')
+    if (changeButton) fireEvent.click(changeButton)
+
     // CustomSelect is a combobox/listbox, not a native <select>, so it is opened and its option
     // clicked. `fireEvent.change` on it is silently a no-op.
-    fireEvent.click(screen.getAllByLabelText('Tax relief category for tax.pdf')[0])
-    fireEvent.click(screen.getAllByRole('option', { name: 'Medical' })[0])
+    const selectButtons = await screen.findAllByLabelText('Tax relief category for tax.pdf')
+    fireEvent.click(selectButtons[0])
+    fireEvent.click((await screen.findAllByRole('option', { name: 'Medical' }))[0])
     await waitFor(() => expect(screen.getByText(/Save them together/i)).toBeTruthy())
 
     // Changing the sort re-queries the server, so the staged rows are no longer the rows on screen.

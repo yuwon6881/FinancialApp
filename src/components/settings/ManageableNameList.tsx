@@ -113,33 +113,34 @@ export function ManageableNameList<T extends ManageableNameItem>({
 
   return (
     <div className="space-y-3">
-      {/* One toolbar row: find, narrow, add. The search field may shrink on a phone, but the
-          actions stay together so Add never becomes a detached second-line control. */}
-      <div className="flex flex-nowrap items-center gap-2">
-        <label className="group relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
-          <Input
-            type="text"
-            role="searchbox"
-            value={search}
-            onChange={event => setSearch(event.target.value)}
-            placeholder={`Search ${pluralItemLabel}`}
-            aria-label={`Search ${pluralItemLabel}`}
-            className="h-9 w-full rounded-lg border border-border/70 bg-background py-2 pl-9 pr-9 text-xs transition placeholder:text-muted-foreground hover:border-border focus:border-ring/70 focus:outline-none focus:ring-2 focus:ring-ring/15"
-          />
-          {search && (
-            <Button variant="unstyled"
-              type="button"
-              onClick={() => setSearch('')}
-              aria-label={`Clear ${lowerItemLabel} search`}
-                  className="absolute right-0 top-1/2 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground sm:right-1 sm:size-8"
-            >
-              <X className="size-3.5" />
-            </Button>
-          )}
-        </label>
+      {/* Search field has its own row so it is never squeezed by action controls */}
+      <label className="group relative block w-full min-w-0">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
+        <Input
+          type="text"
+          role="searchbox"
+          value={search}
+          onChange={event => setSearch(event.target.value)}
+          placeholder={`Search ${pluralItemLabel}`}
+          aria-label={`Search ${pluralItemLabel}`}
+          className="h-9 w-full rounded-lg border border-border/70 bg-background py-2 pl-9 pr-9 text-xs transition placeholder:text-muted-foreground hover:border-border focus:border-ring/70 focus:outline-none focus:ring-2 focus:ring-ring/15"
+        />
+        {search && (
+          <Button variant="unstyled"
+            type="button"
+            onClick={() => setSearch('')}
+            aria-label={`Clear ${lowerItemLabel} search`}
+            className="absolute right-0 top-1/2 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground sm:right-1 sm:size-8"
+          >
+            <X className="size-3.5" />
+          </Button>
+        )}
+      </label>
 
-        {filterSlot}
+      <div className="flex items-center justify-between gap-2">
+        {filterSlot ? (
+          <div className="min-w-0 flex-1">{filterSlot}</div>
+        ) : <div />}
 
         <Button
           variant={isAddOpen ? 'outline' : 'primary'}

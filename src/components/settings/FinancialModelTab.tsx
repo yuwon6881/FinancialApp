@@ -266,7 +266,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
               </div>
             </div>
             <div className="flex items-center justify-between text-sm py-1">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
                 <HardDrive className="size-4 text-muted-foreground shrink-0" />
                 <div className="flex flex-col gap-0.5">
                   <span className="font-medium text-foreground">Local Data</span>
@@ -276,7 +276,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
               <Button variant="unstyled"
                 type="button"
                 onClick={onClearLocalFinancialData}
-                className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer sm:min-h-8"
+                className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer sm:min-h-8"
               >
                 <DatabaseZap className="size-3.5 text-muted-foreground" /> Clear
               </Button>

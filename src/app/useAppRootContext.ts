@@ -23,7 +23,7 @@ export function useAppRootContext(options: {
     activeSyncId: financial.activeSyncId,
     activeSyncIds: financial.activeSyncIds,
     deletingId: financial.deletingTxId,
-    isSyncing: financial.isBackgroundSyncing || financial.pendingOps.length > 0 || financial.activeSyncIds.length > 0,
+    isSyncing: financial.isBackgroundSyncing || Boolean(financial.activeSyncId) || financial.activeSyncIds.length > 0,
     isOffline: financial.isOffline,
     formatSensitive: value => prefs.maskPassiveFinancialFigures ? SENSITIVE_AMOUNT_MASK : financial.formatSensitive(value),
     showToast: dialogs.showToast,
