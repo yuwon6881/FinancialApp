@@ -37,6 +37,7 @@ const baseListProps: ListProps = {
   formatSensitive: (v) => <span>{v.toFixed(2)}</span>,
 }
 
+
 function renderList(overrides: Partial<ListProps> = {}) {
   return render(
     <LedgerTransactionList {...baseListProps} {...overrides} />,
@@ -55,8 +56,8 @@ afterEach(() => {
 })
 
 describe('LedgerTransactionList layout selection', () => {
-  it('renders only the desktop table at >= 768px', () => {
-    setViewport(1024)
+  it('renders only the desktop table at dense widths (>= 1280px)', () => {
+    setViewport(1280)
     renderList()
 
     expect(document.querySelector('table')).not.toBeNull()
@@ -66,8 +67,8 @@ describe('LedgerTransactionList layout selection', () => {
     expect(screen.queryByText('Page Total Summary')).toBeNull()
   })
 
-  it('renders only the mobile card list below 768px', () => {
-    setViewport(390)
+  it('renders only the mobile card list below 1280px', () => {
+    setViewport(1024)
     renderList()
 
     expect(document.querySelector('table')).toBeNull()
@@ -87,7 +88,7 @@ describe('LedgerTransactionList layout selection', () => {
   })
 
   it('keeps the entrance container mounted while selection mode changes', () => {
-    setViewport(1024)
+    setViewport(1280)
     const { rerender } = renderList()
     const body = document.querySelector('tbody')
 
