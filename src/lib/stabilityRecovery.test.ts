@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   isRecoveryActive,
   buildStabilityPlanPoints,
+  computeRecoveryCohortPlan,
   projectStabilityRecovery,
   projectStabilityReloadStatuses,
   replayStabilityReload,
@@ -67,6 +68,52 @@ const transaction = (overrides: Partial<Transaction>): Transaction => ({
   ledgerCategory: 'Stability',
   amount: 0,
   ...overrides,
+})
+
+describe('independent Stability recovery cohorts', () => {
+  it('gives a second-cycle drawdown its own three-cycle window', () => {
+    const plan = computeRecoveryCohortPlan({
+      cohorts: [
+        {
+          originCycleKey: '2026-06', fromDate: '2026-06-04', transactionCount: 1,
+          remainingShortfall: 600, repaidThisCycle: 0,
+        },
+        {
+          originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 1,
+          remainingShortfall: 300, repaidThisCycle: 0,
+        },
+      ],
+      currentCycleKey: '2026-07',
+      outstandingShortfall: 900,
+      toppedUpThisCycle: 0,
+    })
+
+    expect(plan.cohorts.map(cohort => cohort.cyclesRemaining)).toEqual([2, 3])
+    expect(plan.cohorts.map(cohort => cohort.requiredThisCycle)).toEqual([300, 100])
+    expect(plan.requiredThisCycle).toBe(400)
+    expect(plan.outstandingThisCycle).toBe(400)
+  })
+
+  it('credits reimbursements against the combined cohort requirement', () => {
+    const plan = computeRecoveryCohortPlan({
+      cohorts: [
+        {
+          originCycleKey: '2026-06', fromDate: '2026-06-04', transactionCount: 1,
+          remainingShortfall: 500, repaidThisCycle: 100,
+        },
+        {
+          originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 1,
+          remainingShortfall: 300, repaidThisCycle: 0,
+        },
+      ],
+      currentCycleKey: '2026-07',
+      outstandingShortfall: 800,
+      toppedUpThisCycle: 100,
+    })
+
+    expect(plan.requiredThisCycle).toBe(400)
+    expect(plan.outstandingThisCycle).toBe(300)
+  })
 })
 
 describe('isRecoveryActive', () => {

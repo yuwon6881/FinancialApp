@@ -6,7 +6,7 @@
 // module owns only the part that has to answer while the user types an amount, and the server
 // re-derives the split authoritatively on save.
 
-import type { StabilityRecovery, Transaction } from '@/types'
+import type { StabilityRecovery, StabilityRecoveryCohort, Transaction } from '@/types'
 import { getCycleYearAndMonthForDate } from './cycle'
 import {
   type StabilityReloadMovement,
@@ -88,6 +88,84 @@ function cyclesFromAnchor(anchor: string | undefined, currentCycleKey: string | 
   }
   const elapsed = (to[0] - from[0]) * 12 + to[1] - from[1]
   return horizon - Math.max(0, elapsed)
+}
+
+export interface RecoveryCohortInput {
+  originCycleKey: string
+  fromDate: string
+  transactionCount: number
+  remainingShortfall: number
+  repaidThisCycle: number
+}
+
+export interface RecoveryCohortPlan {
+  cohorts: StabilityRecoveryCohort[]
+  cyclesRemaining: number
+  requiredThisCycle: number
+  outstandingThisCycle: number
+  isOverdue: boolean
+}
+
+/** Mirrors the API's independent origin-cycle schedule and aggregate combined ask. */
+export function computeRecoveryCohortPlan(input: {
+  cohorts: RecoveryCohortInput[]
+  currentCycleKey: string
+  horizon?: number
+  outstandingShortfall: number
+  toppedUpThisCycle: number
+}): RecoveryCohortPlan {
+  const horizon = Math.max(1, input.horizon ?? 3)
+  const grouped = new Map<string, RecoveryCohortInput>()
+  for (const cohort of input.cohorts) {
+    if (cohort.remainingShortfall <= 0 && cohort.repaidThisCycle <= 0) continue
+    const existing = grouped.get(cohort.originCycleKey)
+    grouped.set(cohort.originCycleKey, {
+      originCycleKey: cohort.originCycleKey,
+      fromDate: existing && existing.fromDate < cohort.fromDate ? existing.fromDate : cohort.fromDate,
+      transactionCount: (existing?.transactionCount ?? 0) + Math.max(1, cohort.transactionCount),
+      remainingShortfall: (existing?.remainingShortfall ?? 0) + Math.max(0, cohort.remainingShortfall),
+      repaidThisCycle: (existing?.repaidThisCycle ?? 0) + Math.max(0, cohort.repaidThisCycle),
+    })
+  }
+  const cohorts = [...grouped.values()]
+    .map(cohort => {
+      const rawCyclesRemaining = cyclesFromAnchor(
+        cohort.originCycleKey,
+        input.currentCycleKey,
+        horizon,
+      )
+      const cyclesRemaining = Math.max(1, rawCyclesRemaining)
+      const anchor = Math.max(0, cohort.remainingShortfall) + Math.max(0, cohort.repaidThisCycle)
+      const requiredThisCycle = cyclesRemaining <= 1
+        ? anchor
+        : Math.ceil((anchor / cyclesRemaining) * 100) / 100
+      return {
+        originCycleKey: cohort.originCycleKey,
+        fromDate: cohort.fromDate,
+        transactionCount: Math.max(1, cohort.transactionCount),
+        remainingShortfall: Math.max(0, cohort.remainingShortfall),
+        cyclesRemaining,
+        requiredThisCycle,
+        isOverdue: rawCyclesRemaining <= 0 && cohort.remainingShortfall > 0,
+      }
+    })
+    .sort((left, right) =>
+      left.originCycleKey.localeCompare(right.originCycleKey) || left.fromDate.localeCompare(right.fromDate))
+  const open = cohorts.filter(cohort => cohort.remainingShortfall > 0)
+  const requiredThisCycle = cohorts.reduce((sum, cohort) => sum + cohort.requiredThisCycle, 0)
+  const outstandingShortfall = Math.max(0, input.outstandingShortfall)
+  return {
+    cohorts,
+    cyclesRemaining: open.length
+      ? Math.min(...open.map(cohort => cohort.cyclesRemaining))
+      : horizon,
+    requiredThisCycle,
+    outstandingThisCycle: Math.max(
+      0,
+      Math.min(requiredThisCycle - Math.max(0, input.toppedUpThisCycle), outstandingShortfall),
+    ),
+    isOverdue: open.some(cohort => cohort.isOverdue),
+  }
 }
 
 /** Applies a projected FIFO replay to each visible drawdown row. */
@@ -189,7 +267,6 @@ export function projectStabilityRecovery(input: {
     0,
     input.recovery.toppedUpThisCycle + projectedReplay.repaidThisRun - baseReplay.repaidThisRun,
   )
-  const paceAnchor = outstandingShortfall + toppedUpThisCycle
   // Anchored on the oldest drawdown that still owes money, which FIFO order puts at the head of the
   // queue. Anchoring on "did this run mark anything" let a drawdown already put back in full keep
   // driving the deadline, and reported the recovery as overdue on money that was already back.
@@ -212,9 +289,43 @@ export function projectStabilityRecovery(input: {
     input.currentCycleKey,
     3,
   )
-  const requiredThisCycle = cyclesRemaining <= 1
+  const cohortInputs = new Map<string, RecoveryCohortInput>()
+  for (const obligation of projectedReplay.obligations) {
+    const repaidThisCycle = Math.max(
+      0,
+      projectedReplay.repaidByObligationThisRun[obligation.transactionId] ?? 0,
+    )
+    if (obligation.remainingAmount <= 0 && repaidThisCycle <= 0) continue
+    if (input.cycleDay === undefined || !obligation.date) continue
+    const originCycleKey = cycleKeyForDate(obligation.date, input.cycleDay)
+    if (!originCycleKey) continue
+    const existing = cohortInputs.get(originCycleKey)
+    cohortInputs.set(originCycleKey, {
+      originCycleKey,
+      fromDate: existing && existing.fromDate < obligation.date ? existing.fromDate : obligation.date,
+      transactionCount: (existing?.transactionCount ?? 0) + 1,
+      remainingShortfall: (existing?.remainingShortfall ?? 0) + Math.max(0, obligation.remainingAmount),
+      repaidThisCycle: (existing?.repaidThisCycle ?? 0) + repaidThisCycle,
+    })
+  }
+  const hasCompleteCohortDetail = input.currentCycleKey !== undefined
+    && cohortInputs.size > 0
+    && (outstandingShortfall <= 0 || projectedReplay.obligations
+      .filter(obligation => obligation.remainingAmount > 0)
+      .every(obligation => Boolean(obligation.date)))
+  const cohortPlan = hasCompleteCohortDetail
+    ? computeRecoveryCohortPlan({
+      cohorts: [...cohortInputs.values()],
+      currentCycleKey: input.currentCycleKey!,
+      outstandingShortfall,
+      toppedUpThisCycle,
+    })
+    : undefined
+  const paceAnchor = outstandingShortfall + toppedUpThisCycle
+  const fallbackRequiredThisCycle = cyclesRemaining <= 1
     ? paceAnchor
     : Math.ceil((paceAnchor / cyclesRemaining) * 100) / 100
+  const requiredThisCycle = cohortPlan?.requiredThisCycle ?? fallbackRequiredThisCycle
 
   const effectiveTarget = input.planPoints?.length
     ? input.planPoints[input.planPoints.length - 1].target
@@ -228,11 +339,12 @@ export function projectStabilityRecovery(input: {
     currentBalance: input.projectedBalance,
     outstandingShortfall,
     lastDrawdownCycleKey,
-    cyclesRemaining,
-    isOverdue: cyclesRemaining <= 0 && outstandingShortfall > 0,
+    recoveryCohorts: cohortPlan?.cohorts ?? input.recovery.recoveryCohorts,
+    cyclesRemaining: cohortPlan?.cyclesRemaining ?? Math.max(1, cyclesRemaining),
+    isOverdue: cohortPlan?.isOverdue ?? (cyclesRemaining <= 0 && outstandingShortfall > 0),
     toppedUpThisCycle,
     requiredThisCycle,
-    outstandingThisCycle: Math.max(
+    outstandingThisCycle: cohortPlan?.outstandingThisCycle ?? Math.max(
       0,
       Math.min(requiredThisCycle - toppedUpThisCycle, outstandingShortfall),
     ),

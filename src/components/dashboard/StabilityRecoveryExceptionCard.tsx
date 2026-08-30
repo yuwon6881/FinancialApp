@@ -21,6 +21,16 @@ interface StabilityRecoveryExceptionCardProps {
   onNavigateToLedger?: (options: StabilityRecoveryLedgerJump) => void
 }
 
+function formatRecoveryCycle(cycleKey: string) {
+  const [year, month] = cycleKey.split('-').map(Number)
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return cycleKey
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString(undefined, {
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+}
+
 /**
  * Today speaks up while an explicitly marked emergency-fund obligation remains, and stops only when
  * it is gone.
@@ -48,6 +58,8 @@ export function StabilityRecoveryExceptionCard({
   if (recovery.outstandingShortfall <= 0) return null
 
   const aheadOfPace = recovery.outstandingThisCycle <= 0
+  const recoveryCohorts = recovery.recoveryCohorts ?? []
+  const hasOverlappingPlans = recoveryCohorts.length > 1
 
   const percentRepaid = recovery.markedTotal > 0
     ? Math.round(Math.min(1, Math.max(0, recovery.repaidTotal / recovery.markedTotal)) * 100)
@@ -119,11 +131,15 @@ export function StabilityRecoveryExceptionCard({
               {formatSensitive(recovery.outstandingShortfall)} still short, not money on top of it.{' '}
             </>
           )}
-          {recovery.isOverdue
-            ? <>The planned cycles have run out.</>
-            : isFinalCycle
-              ? <>This is the final planned cycle.</>
-              : <>The plan spreads it over {recovery.cyclesRemaining} cycles, counting this one.</>}
+          {hasOverlappingPlans
+            ? recovery.isOverdue
+              ? <>At least one three-cycle plan is overdue; newer spending keeps its own window.</>
+              : <>Each cycle&rsquo;s Stability spending keeps its own three-cycle plan.</>
+            : recovery.isOverdue
+              ? <>The planned cycles have run out.</>
+              : isFinalCycle
+                ? <>This is the final planned cycle.</>
+                : <>The plan spreads it over {recovery.cyclesRemaining} cycles, counting this one.</>}
         </p>
 
         <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-3.5">
@@ -177,7 +193,9 @@ export function StabilityRecoveryExceptionCard({
               <dt className="min-w-0 leading-snug text-muted-foreground">
                 <span className="sm:hidden">This cycle&rsquo;s share of that</span>
                 <span className="hidden sm:inline">
-                  This cycle&rsquo;s share of that, spread over {recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'}
+                  {hasOverlappingPlans
+                    ? 'Combined plan for this cycle'
+                    : <>This cycle&rsquo;s share of that, spread over {recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'}</>}
                 </span>
               </dt>
               <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.requiredThisCycle)}</dd>
@@ -193,6 +211,57 @@ export function StabilityRecoveryExceptionCard({
               <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.currentBalance)}</dd>
             </div>
           </dl>
+
+          {recoveryCohorts.length > 0 ? (
+            <div className="space-y-2 border-t border-border/40 pt-2.5">
+              <p className="text-xs font-semibold text-foreground">Three-cycle plans by spending cycle</p>
+              <ul className="space-y-2" aria-label="Stability recovery plans">
+                {recoveryCohorts.map(cohort => (
+                  <li
+                    key={`${cohort.originCycleKey}-${cohort.fromDate}`}
+                    className="rounded-lg border border-border/50 bg-muted/20 p-2.5 text-xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-foreground">
+                          {formatRecoveryCycle(cohort.originCycleKey)} cycle
+                        </p>
+                        <p className="mt-0.5 text-muted-foreground">
+                          {cohort.transactionCount} {cohort.transactionCount === 1 ? 'withdrawal' : 'withdrawals'} since{' '}
+                          <time dateTime={cohort.fromDate}>{cohort.fromDate}</time>
+                        </p>
+                      </div>
+                      <span className={cohort.isOverdue
+                        ? 'shrink-0 font-semibold text-destructive'
+                        : 'shrink-0 font-semibold text-muted-foreground'}
+                      >
+                        {cohort.isOverdue
+                          ? 'Overdue'
+                          : `${cohort.cyclesRemaining} ${cohort.cyclesRemaining === 1 ? 'cycle' : 'cycles'} left`}
+                      </span>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2 border-t border-border/40 pt-2">
+                      <div>
+                        <p className="text-muted-foreground">Still short</p>
+                        <p className="font-semibold tabular-nums text-foreground">
+                          {formatSensitive(cohort.remainingShortfall)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-muted-foreground">Planned this cycle</p>
+                        <p className="font-semibold tabular-nums text-foreground">
+                          {formatSensitive(cohort.requiredThisCycle)}
+                        </p>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs leading-snug text-muted-foreground">
+                Reimbursements reduce the combined plan above; Ledger completion still follows the oldest withdrawal first.
+              </p>
+            </div>
+          ) : null}
 
           {canShowMovements ? (
             <>

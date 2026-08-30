@@ -80,6 +80,64 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.getByText(/0%/)).toBeTruthy()
   })
 
+  it('explains overlapping recovery cohorts without shortening the newer plan', () => {
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({
+          outstandingShortfall: 800,
+          requiredThisCycle: 400,
+          toppedUpThisCycle: 100,
+          outstandingThisCycle: 300,
+          cyclesRemaining: 2,
+          recoveryCohorts: [
+            {
+              originCycleKey: '2026-06', fromDate: '2026-06-04', transactionCount: 1,
+              remainingShortfall: 500, cyclesRemaining: 2, requiredThisCycle: 300, isOverdue: false,
+            },
+            {
+              originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 2,
+              remainingShortfall: 300, cyclesRemaining: 3, requiredThisCycle: 100, isOverdue: false,
+            },
+          ],
+        })}
+        formatSensitive={format}
+      />
+    )
+
+    expect(screen.getByText(/Each cycle.s Stability spending keeps its own three-cycle plan/)).toBeTruthy()
+    expect(screen.getByText('Combined plan for this cycle')).toBeTruthy()
+    expect(screen.getByText('Jun 2026 cycle')).toBeTruthy()
+    expect(screen.getByText('Jul 2026 cycle')).toBeTruthy()
+    expect(screen.getByText('3 cycles left')).toBeTruthy()
+    expect(screen.getByText(/Ledger completion still follows the oldest withdrawal first/)).toBeTruthy()
+  })
+
+  it('distinguishes an overdue cohort from a newer plan that still has time', () => {
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({
+          isOverdue: true,
+          cyclesRemaining: 1,
+          recoveryCohorts: [
+            {
+              originCycleKey: '2026-04', fromDate: '2026-04-04', transactionCount: 1,
+              remainingShortfall: 200, cyclesRemaining: 1, requiredThisCycle: 200, isOverdue: true,
+            },
+            {
+              originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 1,
+              remainingShortfall: 300, cyclesRemaining: 3, requiredThisCycle: 100, isOverdue: false,
+            },
+          ],
+        })}
+        formatSensitive={format}
+      />
+    )
+
+    expect(screen.getByText(/At least one three-cycle plan is overdue/)).toBeTruthy()
+    expect(screen.getByText('Overdue')).toBeTruthy()
+    expect(screen.getByText('3 cycles left')).toBeTruthy()
+  })
+
   // The reported confusion: two figures side by side read as "pay 506.64 now AND 1013.27 later".
   // The cycle ask is a slice of the shortfall, so the sentence has to say which of the two contains
   // the other, and the breakdown has to show the slice under the figure it comes out of.

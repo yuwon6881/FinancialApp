@@ -30,6 +30,8 @@ export interface StabilityReloadReplay {
   oldestOutstandingDate?: string
   markedThisRun: number
   repaidThisRun: number
+  /** FIFO attribution used only to hold each origin-cycle cohort's current requirement stable. */
+  repaidByObligationThisRun: Record<string, number>
   /**
    * Retained after they are fully discharged so per-row status can still say "complete"; only the
    * two totals below drop them.
@@ -186,6 +188,7 @@ export function replayStabilityReload(
   let running = openingBalance
   let markedThisRun = 0
   let repaidThisRun = 0
+  const repaidByObligationThisRun = new Map<string, number>()
 
   const points = (planPoints?.length ? [...planPoints] : [{
     effectiveAt: '1970-01-01T00:00:00.000Z',
@@ -214,6 +217,7 @@ export function replayStabilityReload(
     // Attainment settles everything: nothing is owed, so nothing is reported as owed. Only
     // markedThisRun survives, as an audit total of what left the fund during this run.
     repaidThisRun = 0
+    repaidByObligationThisRun.clear()
   }
 
   const applyPlanPoint = (point: StabilityReloadPlanPoint) => {
@@ -268,6 +272,10 @@ export function replayStabilityReload(
               ...obligation,
               remainingAmount: Math.max(0, obligation.remainingAmount - discharged),
             })
+            repaidByObligationThisRun.set(
+              oldest.id,
+              (repaidByObligationThisRun.get(oldest.id) ?? 0) + discharged,
+            )
           }
           if (left > 0) queue.unshift({ ...oldest, amount: left })
         }
@@ -307,6 +315,7 @@ export function replayStabilityReload(
     oldestOutstandingDate: queue[0]?.date,
     markedThisRun,
     repaidThisRun,
+    repaidByObligationThisRun: Object.fromEntries(repaidByObligationThisRun),
     // Map iteration is insertion/FIFO order. The server's cycle cache carries open entries in this
     // exact order; sorting by id swaps same-day withdrawals and completes the wrong Ledger row.
     obligations: [...obligations.values()],

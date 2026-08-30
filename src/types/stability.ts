@@ -26,6 +26,19 @@ export interface StabilityReloadObligation {
   date?: string
 }
 
+/** One financial cycle's independent three-cycle Stability recovery schedule. */
+export interface StabilityRecoveryCohort {
+  originCycleKey: string
+  /** Earliest marked withdrawal in this cohort, as `yyyy-MM-dd`. */
+  fromDate: string
+  transactionCount: number
+  remainingShortfall: number
+  cyclesRemaining: number
+  /** This cohort's share before the cycle's combined reimbursements are credited. */
+  requiredThisCycle: number
+  isOverdue: boolean
+}
+
 /**
  * The explicit ledger obligation created by marked emergency-fund drawdowns, and the part that
  * has already been put back. Ordinary salary allocation does not repay a marked drawdown.
@@ -51,6 +64,8 @@ export interface StabilityRecovery {
    * partly-repaid carried drawdown from one already put back in full.
    */
   openingObligations?: StabilityReloadObligation[]
+  /** Origin-cycle schedules contributing this cycle or still carrying money forward. */
+  recoveryCohorts?: StabilityRecoveryCohort[]
   cyclesRemaining: number
   requiredThisCycle: number
   toppedUpThisCycle: number

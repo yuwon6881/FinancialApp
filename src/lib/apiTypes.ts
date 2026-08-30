@@ -172,9 +172,18 @@ type WireStabilityReloadObligation = Omit<
   remainingAmount: WireAmount
 }
 
+type WireStabilityRecoveryCohort = Omit<
+  NonNullable<StabilityRecovery['recoveryCohorts']>[number],
+  'remainingShortfall' | 'requiredThisCycle'
+> & {
+  remainingShortfall: WireAmount
+  requiredThisCycle: WireAmount
+}
+
 type WireStabilityRecovery = Omit<
   StabilityRecovery,
   | 'openingObligations'
+  | 'recoveryCohorts'
   | 'target'
   | 'currentBalance'
   | 'outstandingShortfall'
@@ -197,6 +206,7 @@ type WireStabilityRecovery = Omit<
   essentialsCommitted: WireAmount
   rewardsCommitted: WireAmount
   openingObligations?: WireStabilityReloadObligation[]
+  recoveryCohorts?: WireStabilityRecoveryCohort[]
 }
 
 export type WireLoanPaymentSplit = Omit<LoanPaymentSplit, 'payment' | 'interest' | 'principal' | 'balanceBefore' | 'balanceAfter' | 'surplus'> & {
