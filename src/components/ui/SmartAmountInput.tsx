@@ -105,7 +105,12 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
       />
 
       {showCalculator && (
-        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex overflow-hidden rounded-lg border border-border/80 bg-card/95 shadow-sm">
+        // Five 44px global targets consume nearly the whole compact input. Keep these
+        // keyboard-accessible compound keys dense so the amount itself remains readable.
+        <div
+          data-smart-amount-calculator
+          className="absolute right-1.5 top-1/2 flex -translate-y-1/2 overflow-hidden rounded-lg border border-border/80 bg-card/95 shadow-sm [&_button]:!min-h-8 [&_button]:!min-w-0"
+        >
           {[
             ['+', '+'],
             ['−', '-'],

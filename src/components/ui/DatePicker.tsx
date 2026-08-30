@@ -367,7 +367,9 @@ export function DatePicker({
                     }
                   }}
                   className={cn(
-                    'flex h-8 cursor-pointer items-center justify-center rounded-lg text-xs transition duration-100',
+                    // Seven global 44px targets cannot fit the fixed calendar panel; the grid
+                    // supplies spacing and keyboard navigation while each cell stays contained.
+                    'flex h-8 !min-h-8 !min-w-0 cursor-pointer items-center justify-center rounded-lg text-xs transition duration-100',
                     isDisabled && 'cursor-not-allowed text-muted-foreground/35',
                     !isDisabled && isSelected && 'bg-primary font-bold text-primary-foreground shadow-xs',
                     !isDisabled && !isSelected && isToday

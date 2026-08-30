@@ -116,6 +116,62 @@ test('medium ledger rows keep their actions inside the card', async ({ page }) =
   expect(geometry.every(item => item.deleteInset != null && item.deleteInset >= 11), 'ledger delete action has no trailing padding').toBe(true)
 })
 
+test('compact compound controls keep their buttons inside their own boundaries', async ({ page }) => {
+  test.skip((test.info().project.use.viewport?.width ?? 0) >= 640, 'Compound-control containment is compact-only.')
+
+  await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: /Post Transaction/i }).first().click()
+  const dialog = page.getByRole('dialog', { name: 'Add Transaction' })
+  await expect(dialog).toBeVisible()
+
+  const amount = dialog.getByRole('textbox', { name: /Amount/ })
+  await expect.poll(() => amount.evaluate(input => input.getBoundingClientRect().width)).toBeGreaterThanOrEqual(260)
+  await amount.focus()
+  await expect(dialog.locator('[data-smart-amount-calculator]')).toBeVisible()
+  const amountGeometry = await amount.evaluate(input => {
+    const field = input.parentElement?.parentElement
+    const toolbar = input.parentElement?.querySelector<HTMLElement>('[data-smart-amount-calculator]')
+    const fieldBounds = field?.getBoundingClientRect()
+    const toolbarBounds = toolbar?.getBoundingClientRect()
+    return {
+      field: fieldBounds && { left: fieldBounds.left, right: fieldBounds.right, top: fieldBounds.top, bottom: fieldBounds.bottom },
+      toolbar: toolbarBounds && { left: toolbarBounds.left, right: toolbarBounds.right, top: toolbarBounds.top, bottom: toolbarBounds.bottom },
+      buttonOverflow: toolbar
+        ? Array.from(toolbar.querySelectorAll('button')).some(button => {
+            const buttonBounds = button.getBoundingClientRect()
+            return buttonBounds.left < toolbarBounds!.left - 1 || buttonBounds.right > toolbarBounds!.right + 1
+              || buttonBounds.top < toolbarBounds!.top - 1 || buttonBounds.bottom > toolbarBounds!.bottom + 1
+          })
+        : null,
+    }
+  })
+  expect(amountGeometry.toolbar, 'focused amount field did not expose its calculator').toBeTruthy()
+  expect(amountGeometry.buttonOverflow, `calculator button escaped its toolbar: ${JSON.stringify(amountGeometry)}`).toBe(false)
+  expect(amountGeometry.toolbar!.left).toBeGreaterThanOrEqual(amountGeometry.field!.left - 1)
+  expect(amountGeometry.toolbar!.right).toBeLessThanOrEqual(amountGeometry.field!.right + 1)
+  expect(amountGeometry.toolbar!.top).toBeGreaterThanOrEqual(amountGeometry.field!.top - 1)
+  expect(amountGeometry.toolbar!.bottom).toBeLessThanOrEqual(amountGeometry.field!.bottom + 1)
+  const date = dialog.getByRole('button', { name: /Posting date/i })
+  await date.click()
+  const calendar = page.getByRole('dialog', { name: 'Choose date' })
+  await expect(calendar).toBeVisible()
+  const calendarGeometry = await calendar.evaluate(element => {
+    const grid = element.querySelector<HTMLElement>('[role="grid"]')
+    return {
+      panelClientWidth: element.clientWidth,
+      panelScrollWidth: element.scrollWidth,
+      gridClientWidth: grid?.clientWidth,
+      gridScrollWidth: grid?.scrollWidth,
+    }
+  })
+  expect(calendarGeometry.panelScrollWidth).toBeLessThanOrEqual(calendarGeometry.panelClientWidth + 1)
+  expect(calendarGeometry.gridScrollWidth).toBeLessThanOrEqual((calendarGeometry.gridClientWidth ?? 0) + 1)
+  expect(
+    amountGeometry.toolbar!.right - amountGeometry.toolbar!.left,
+    `calculator consumes the amount-entry area: ${JSON.stringify(amountGeometry)}`,
+  ).toBeLessThanOrEqual((amountGeometry.field!.right - amountGeometry.field!.left) * 0.6)
+})
+
 test('laptop-width Ledger and carryover views avoid horizontal data scrolling', async ({ page }) => {
   const width = test.info().project.use.viewport?.width ?? 0
   test.skip(width < 1024 || width >= 1280, 'The rail-constrained laptop contract is measured from 1024 through 1279px.')
