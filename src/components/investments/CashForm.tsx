@@ -6,12 +6,10 @@ import type {
 import type { InvestmentActivityScanResult } from '../../lib/api'
 import * as api from '../../lib/api'
 import {
-  availableCashFlow,
   type PendingInvestmentCashFlow,
   validateCashFlowBalances,
 } from '../../lib/investmentValidation'
 import { getErrorMessage } from '../../lib/errors'
-import { formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { CurrencySelect } from '../ui/CurrencySelect'
 import { CustomSelect } from '../ui/CustomSelect'
@@ -55,9 +53,6 @@ const Field = ({ label, hint, error, className = '', required, children }: {
     {children}
   </FormField>
 )
-
-const money = (value: number, currency: string) =>
-  formatCurrencyVal(value, currency)
 
 const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean; onCancel: () => void; submitLabel: string; disabled?: boolean }) => (
   <ModalActions className="border-t border-border/40 pt-4">
@@ -160,7 +155,6 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
     setActiveScanJobId(null)
   }, [activeScanJobId, activeScanJobIds, scanDraft])
   if (!accounts.length) return <div><p className="text-sm text-muted-foreground">Add an investment account before recording cash.</p><div className="mt-4 flex justify-end"><Button onClick={onNeedAccount}>Add account</Button></div></div>
-  const heldCash = availableCashFlow(portfolio, accountId, currency, pendingCashFlows ?? [], initial)
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!currency) {

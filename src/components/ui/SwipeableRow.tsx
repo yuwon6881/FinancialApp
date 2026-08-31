@@ -9,7 +9,6 @@ import {
   registerSwipeRowCloser,
   setSwipeLocked,
 } from '../../lib/swipeLock'
-import { Button } from './Button'
 import { resolveSwipeTarget } from './swipeableRowMath'
 
 interface SwipeableRowProps {
@@ -32,7 +31,6 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   className,
   contentClassName,
   disabled = false,
-  hint = true,
   id,
 }) => {
   const isMobile = useIsCompact()

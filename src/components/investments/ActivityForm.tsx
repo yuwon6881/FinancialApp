@@ -7,13 +7,10 @@ import type {
 import type { InvestmentActivityScanResult } from '../../lib/api'
 import * as api from '../../lib/api'
 import {
-  availableActivityCash,
-  availableActivityUnits,
   type PendingInvestmentActivity,
   validateActivityBalances,
 } from '../../lib/investmentValidation'
 import { getErrorMessage } from '../../lib/errors'
-import { formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
@@ -63,12 +60,6 @@ const Field = ({ label, hint, error, className = '', required, children }: {
     {children}
   </FormField>
 )
-
-const money = (value: number, currency: string) =>
-  formatCurrencyVal(value, currency)
-
-const number = (value: number, digits = 4) =>
-  new Intl.NumberFormat(undefined, { maximumFractionDigits: digits }).format(value)
 
 const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean; onCancel: () => void; submitLabel: string; disabled?: boolean }) => (
   <ModalActions className="border-t border-border/40 pt-4">
@@ -251,8 +242,6 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
     })
   }
   const feesLabelSuffix = selectedInstrument ? ` (${selectedInstrument.currency})` : ''
-  const heldUnits = availableActivityUnits(portfolio, accountId, instrumentId, pendingActivities, initial)
-  const heldCash = selectedInstrument ? availableActivityCash(portfolio, accountId, selectedInstrument.currency, pendingActivities, initial) : 0
   return <form noValidate onSubmit={submit} className="space-y-4">
     {!initial && <>
       <ReceiptScanPicker
