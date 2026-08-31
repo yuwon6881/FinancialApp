@@ -52,6 +52,75 @@ test('every route obeys the window-tier containment and navigation contract', as
   expect(uncaughtErrors, 'responsive route audit raised an uncaught application error').toEqual([])
 })
 
+test('ledger mutation status keeps row copy and geometry fixed', async ({ page }) => {
+  test.skip(test.info().project.name.endsWith('-dark'), 'Geometry is theme-independent; light projects cover every layout tier.')
+
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, 'onLine', {
+      configurable: true,
+      get: () => localStorage.getItem('visual_force_offline') !== '1',
+    })
+  })
+  // Keep amount masking identical across the online and deliberately offline
+  // renders so this test isolates mutation-status geometry.
+  await mockApi(page, { documents: vaultDocuments, setting: { hideSensitive: true } })
+  await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByText('Neighbourhood Grocer', { exact: true }).filter({ visible: true }).first()).toBeVisible()
+  await waitForStableLayout(page)
+
+  const measure = async () => page.evaluate(() => {
+    const layout = document.documentElement.clientWidth < 1280 ? 'mobile' : 'desktop'
+    const row = document.getElementById(`tx-row-${layout}-tx-visual-1`)
+    const title = row && Array.from(row.querySelectorAll<HTMLElement>('*'))
+      .find(element => element.textContent === 'Neighbourhood Grocer' && element.children.length === 0)
+    const line = title?.parentElement
+    const slot = row?.querySelector<HTMLElement>('[data-mutation-status-slot]')
+    if (!row || !title || !line || !slot) return null
+    const rect = (element: Element) => {
+      const value = element.getBoundingClientRect()
+      return { x: value.x, y: value.y, width: value.width, height: value.height }
+    }
+    return { row: rect(row), title: rect(title), line: rect(line), state: slot.dataset.mutationState }
+  })
+
+  const idle = await measure()
+  expect(idle, 'idle ledger row did not expose the stable mutation slot').not.toBeNull()
+  expect(idle?.state).toBe('idle')
+
+  await page.evaluate(() => {
+    localStorage.setItem('visual_force_offline', '1')
+    localStorage.setItem('pending_operations', JSON.stringify([{
+      id: 'visual-pending-transaction',
+      entity: 'transaction',
+      type: 'update',
+      targetId: 'tx-visual-1',
+      payload: {
+        id: 'tx-visual-1',
+        accountId: 'account-visual-essentials',
+        date: '2026-08-01',
+        description: 'Neighbourhood Grocer',
+        category: 'Food',
+        ledgerCategory: 'Essentials',
+        amount: -86.4,
+      },
+      createdAt: Date.now(),
+      retryCount: 0,
+    }]))
+  })
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.locator('[data-mutation-status-slot][data-mutation-state="pending"]').first()).toBeVisible()
+  await waitForStableLayout(page)
+
+  const pending = await measure()
+  expect(pending?.state).toBe('pending')
+  for (const region of ['row', 'title', 'line'] as const) {
+    for (const edge of ['x', 'y', 'width', 'height'] as const) {
+      expect(Math.abs((pending?.[region][edge] ?? 0) - (idle?.[region][edge] ?? 0)), `${region}.${edge} moved while pending`).toBeLessThanOrEqual(1)
+    }
+  }
+  await expect(page.getByText('Pending', { exact: true })).toHaveCount(0)
+})
+
 test('compact route controls retain the 44px target floor', async ({ page }) => {
   test.skip(test.info().project.use.viewport?.width >= 1024, 'Touch-target floor applies to compact and medium projects.')
 

@@ -11,7 +11,6 @@ import {
 import type { PushChannel } from '../../types'
 import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
-import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { ToggleButton } from '../ui/ToggleButton'
 import { PushDevicesList } from './PushDevicesList'
 
@@ -38,9 +37,8 @@ const NotificationRow: React.FC<{
   scope: string
   description: string
   hint?: React.ReactNode
-  status?: React.ReactNode
   control: React.ReactNode
-}> = ({ icon, title, scope, description, hint, status, control }) => (
+}> = ({ icon, title, scope, description, hint, control }) => (
   <div className="flex items-start justify-between gap-3">
     <div className="flex min-w-0 flex-1 gap-2">
       <span className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true">{icon}</span>
@@ -53,7 +51,6 @@ const NotificationRow: React.FC<{
       </span>
     </div>
     <div className="flex shrink-0 items-center gap-1.5">
-      {status}
       {hint}
       {control}
     </div>
@@ -109,7 +106,6 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
           title={BILL_REMINDER_PUSH_TITLE}
           scope={SCOPE_THIS_DEVICE}
           description={BILL_REMINDER_PUSH_DESCRIPTION}
-          status={<RowSyncStatus isSyncing={props.pushBusyChannel === 'billReminders'} entityLabel="bill reminders" />}
           hint={
             <InfoHint
               label="How notifications are turned on"
@@ -122,6 +118,8 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
               onClick={() => props.onToggleChannel('billReminders', !props.billRemindersEnabled)}
               label={BILL_REMINDER_PUSH_TITLE}
               disabled={anyBusy || deviceUnavailable}
+              mutationStatus={{ isSyncing: props.pushBusyChannel === 'billReminders' }}
+              mutationEntityLabel="bill reminders"
             />
           }
         />
@@ -136,13 +134,14 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
           title={CATEGORY_LIMIT_PUSH_TITLE}
           scope={SCOPE_THIS_DEVICE}
           description={CATEGORY_LIMIT_PUSH_DESCRIPTION}
-          status={<RowSyncStatus isSyncing={props.pushBusyChannel === 'categoryAlerts'} entityLabel="spending alerts" />}
           control={
             <ToggleButton
               active={props.categoryAlertsEnabled}
               onClick={() => props.onToggleChannel('categoryAlerts', !props.categoryAlertsEnabled)}
               label={CATEGORY_LIMIT_PUSH_TITLE}
               disabled={anyBusy || deviceUnavailable}
+              mutationStatus={{ isSyncing: props.pushBusyChannel === 'categoryAlerts' }}
+              mutationEntityLabel="spending alerts"
             />
           }
         />

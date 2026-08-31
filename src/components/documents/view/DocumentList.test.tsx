@@ -282,7 +282,8 @@ describe('DocumentList selection toolbar', () => {
       />,
     )
 
-    expect(screen.getAllByText('Syncing…').length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('status', { name: 'Updating document…' }).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Syncing…')).toBeNull()
     expect(screen.getAllByRole('button', { name: 'Delete tax.pdf' }).every(button => button.hasAttribute('disabled'))).toBe(true)
 
     rerender(
@@ -293,7 +294,8 @@ describe('DocumentList selection toolbar', () => {
       />,
     )
 
-    expect(screen.getAllByText('Deleting…').length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('status', { name: 'Deleting document…' }).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Deleting…')).toBeNull()
     expect(screen.getAllByRole('button', { name: 'Delete tax.pdf' }).every(button => button.hasAttribute('disabled'))).toBe(true)
   })
 })

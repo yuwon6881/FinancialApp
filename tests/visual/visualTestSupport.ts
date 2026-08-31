@@ -3,6 +3,7 @@ import type { InvestmentActivity, SavingsGoal, TaxReliefCategoryDefinition, Vaul
 
 const transaction = {
   id: 'tx-visual-1',
+  accountId: 'account-visual-essentials',
   date: '2026-08-01',
   description: 'Neighbourhood Grocer',
   category: 'Food',
@@ -232,6 +233,8 @@ interface MockApiOptions {
   categories?: Array<{ id: string; name: string; type?: string }>
   /** Adds report-specific density without replacing unrelated bootstrap fixture fields. */
   dashboard?: Partial<typeof dashboard>
+  /** Overrides account settings for tests that need one stable privacy presentation. */
+  setting?: Partial<typeof setting>
 }
 
 export async function mockApi(page: Page, options: MockApiOptions = {}) {
@@ -244,7 +247,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
     dashboard: {
       ...bootstrap.dashboard,
       ...options.dashboard,
-      setting: { ...bootstrap.dashboard.setting, darkMode },
+      setting: { ...bootstrap.dashboard.setting, ...options.setting, darkMode },
       ...(options.stabilityRecovery ? { stabilityRecovery: options.stabilityRecovery } : {}),
     },
   }

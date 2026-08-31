@@ -52,6 +52,15 @@ export function mutationBusyLabel(state: MutationBusyState): string {
   return MUTATION_BUSY_LABELS[state]
 }
 
+export function mutationStatusAnnouncement(state: MutationBusyState, entityLabel: string): string {
+  if (state === 'pending') return `Pending sync for ${entityLabel} (offline)`
+  if (state === 'failed') return `${entityLabel} sync failed; open Sync issues to retry`
+  if (state === 'deleting') return `Deleting ${entityLabel}…`
+  if (state === 'saving') return `Saving ${entityLabel}…`
+  if (state === 'undoing') return `Undoing ${entityLabel} change…`
+  return `Updating ${entityLabel}…`
+}
+
 /**
  * Maps an in-flight outbox op type onto the same vocabulary, for surfaces that
  * report one aggregate status for a whole list (Investments' activity header) as

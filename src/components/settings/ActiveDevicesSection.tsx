@@ -7,8 +7,8 @@ import { getErrorMessage } from '../../lib/errors'
 import { buildMutationSuccessToast } from '../../lib/mutationToast'
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
-import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { Panel } from '../ui/Panel'
+import { MutationButtonContent, MutationStatusAnnouncement } from '../ui/MutationButtonContent'
 
 const relativeTime = (iso: string | null): string => {
   if (!iso) return 'Never'
@@ -95,16 +95,16 @@ export function ActiveDevicesSection() {
               return (
                 <div key={session.id} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs" aria-busy={isRevoking}>
                   <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="flex min-w-0 flex-wrap items-center gap-2 font-semibold"><MonitorSmartphone className="size-3.5 shrink-0 text-blue-500" />{session.deviceName || 'Unknown Device'}{session.isCurrent && <small className="shrink-0 text-blue-500">Current</small>}<RowSyncStatus isDeleting={isRevoking} entityLabel="device session" /></span>
+                    <span className="flex min-w-0 flex-wrap items-center gap-2 font-semibold"><MonitorSmartphone className="size-3.5 shrink-0 text-blue-500" />{session.deviceName || 'Unknown Device'}{session.isCurrent && <small className="shrink-0 text-blue-500">Current</small>}</span>
                     <span className="text-xs text-muted-foreground"><CalendarDays className="inline size-3" /> Logged in: {new Date(session.createdAt).toLocaleDateString()} · Last active: {relativeTime(session.lastActiveAt)}</span>
                     {session.ipAddress && <span className="text-xs text-muted-foreground">IP: {session.ipAddress}</span>}
                   </div>
-                  {!session.isCurrent && <Button variant="unstyled" size="icon" type="button" onClick={() => void revoke(session.id)} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingSessionId === session.id} aria-label={`Revoke ${session.deviceName || 'device session'}`} className="size-11 shrink-0 rounded-lg text-muted-foreground hover:bg-muted hover:text-red-500 disabled:opacity-40 sm:size-8">{revokingSessionId === session.id ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="size-3.5" aria-hidden="true" />}</Button>}
+                  {!session.isCurrent && <Button variant="unstyled" size="icon" type="button" onClick={() => void revoke(session.id)} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingSessionId === session.id} aria-label={`Revoke ${session.deviceName || 'device session'}`} className="size-11 shrink-0 rounded-lg text-muted-foreground hover:bg-muted hover:text-red-500 disabled:opacity-40 sm:size-8">{revokingSessionId === session.id ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="size-3.5" aria-hidden="true" />}<MutationStatusAnnouncement state={revokingSessionId === session.id ? 'deleting' : null} entityLabel={session.deviceName || 'device session'} /></Button>}
                 </div>
               )
             })}
           </div>
-          {sessions.length > 1 && <Button variant="unstyled" type="button" onClick={() => void revokeOthers()} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingOthers} className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 disabled:opacity-40">{revokingOthers ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <LogOut className="size-3.5" aria-hidden="true" />} {revokingOthers ? 'Revoking…' : 'Log out all other devices'}</Button>}
+          {sessions.length > 1 && <Button variant="unstyled" type="button" onClick={() => void revokeOthers()} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingOthers} className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 disabled:opacity-40"><MutationButtonContent state={revokingOthers ? 'deleting' : null} entityLabel="other device sessions" idleLabel="Log out all other devices" busyLabel="Revoking…" idleIcon={<LogOut className="size-3.5" />} /></Button>}
         </div>
       </CollapsibleBody>
     </Panel>

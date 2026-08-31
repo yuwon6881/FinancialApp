@@ -7,7 +7,8 @@ import { DatePicker } from './ui/DatePicker'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { Button } from './ui/Button'
-import { BellRing, CheckCircle2, Loader2 } from 'lucide-react'
+import { MutationButtonContent } from './ui/MutationButtonContent'
+import { BellRing, CheckCircle2 } from 'lucide-react'
 import { financialDate } from '../lib/financialDate'
 
 interface PendingSubscriptionsModalProps {
@@ -211,9 +212,12 @@ export function PendingSubscriptionsModal({
                   title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
                   className="min-h-10 min-w-0 whitespace-nowrap rounded-xl border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
                 >
-                  {pendingAction === 'discard'
-                    ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Discarding…</span>
-                    : 'Discard'}
+                  <MutationButtonContent
+                    state={pendingAction === 'discard' ? 'syncing' : null}
+                    entityLabel={noti.name}
+                    idleLabel="Discard"
+                    busyLabel="Discarding…"
+                  />
                 </Button>
                 <Button
                   variant="danger"
@@ -239,9 +243,12 @@ export function PendingSubscriptionsModal({
                   title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
                   className="col-span-2 min-h-10 min-w-0 justify-center whitespace-nowrap rounded-xl px-4 py-2 text-xs font-bold shadow-sm disabled:cursor-wait disabled:opacity-70 sm:col-span-1 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:px-3 sm:py-1.5"
                 >
-                  {pendingAction === 'confirm'
-                    ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Confirming…</span>
-                    : 'Confirm Paid'}
+                  <MutationButtonContent
+                    state={pendingAction === 'confirm' ? 'syncing' : null}
+                    entityLabel={noti.name}
+                    idleLabel="Confirm Paid"
+                    busyLabel="Confirming…"
+                  />
                 </Button>
               </div>
             </div>

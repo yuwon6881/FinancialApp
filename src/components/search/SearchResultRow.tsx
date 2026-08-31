@@ -92,9 +92,7 @@ export function SearchResultRow({ result, id, isActive, amountText, maskAmounts,
         </span>
       </span>
 
-      {result.isPendingSync && (
-        <RowSyncStatus entityLabel={SEARCH_ENTITY_LABELS[result.kind]} isPending />
-      )}
+      <RowSyncStatus entityLabel={SEARCH_ENTITY_LABELS[result.kind]} isPending={result.isPendingSync} />
 
       {amountText && (
         <span className={`shrink-0 text-xs font-bold tabular-nums ${isOutflow ? 'text-orange-500' : 'text-foreground'}`}>

@@ -15,7 +15,7 @@ import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
 import { Button } from '../ui/Button'
 import { Panel } from '../ui/Panel'
-import { RowSyncStatus } from '../ui/RowSyncBadge'
+import { MutationButtonContent, MutationStatusAnnouncement } from '../ui/MutationButtonContent'
 
 export function FingerprintSection() {
   const { hideSensitive } = useAppPrefs()
@@ -167,18 +167,13 @@ export function FingerprintSection() {
               onClick={enroll}
               className="shrink-0"
             >
-              {busy ? (
-                <>
-                  <Loader2 className="size-3.5 animate-spin" />
-                  <span>Setting up…</span>
-                </>
-              ) : enrolledHere ? (
-                <span>Add another credential</span>
-              ) : enabledOnAccount ? (
-                <span>Set up this device</span>
-              ) : (
-                <span>Enable on this device</span>
-              )}
+              <MutationButtonContent
+                state={busy ? 'saving' : null}
+                entityLabel="device credential"
+                idleLabel={enrolledHere ? 'Add another credential' : enabledOnAccount ? 'Set up this device' : 'Enable on this device'}
+                busyLabel="Setting up…"
+                idleIcon={<ShieldCheck className="size-3.5" />}
+              />
             </Button>
           </div>
 
@@ -227,7 +222,6 @@ export function FingerprintSection() {
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-1.5">
-                        <RowSyncStatus isDeleting={isRemoving} entityLabel="credential" />
                         <Button
                           type="button"
                           variant="ghost"
@@ -237,12 +231,14 @@ export function FingerprintSection() {
                           className="size-11 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 sm:size-8"
                           title={`Remove ${c.deviceLabel || 'credential'}`}
                           aria-label={`Remove ${c.deviceLabel || 'credential'}`}
+                          aria-busy={isRemoving}
                         >
                           {isRemoving ? (
                             <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
                           ) : (
                             <Trash2 className="size-3.5" />
                           )}
+                          <MutationStatusAnnouncement state={isRemoving ? 'deleting' : null} entityLabel={c.deviceLabel || 'credential'} />
                         </Button>
                       </div>
                     </div>

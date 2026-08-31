@@ -7,6 +7,7 @@ import { CurrencySelect } from '../ui/CurrencySelect'
 import { FormField } from '../ui/FormField'
 import { Input } from '../ui/Input'
 import { ModalActions } from '../ui/ModalActions'
+import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { focusFirstInvalidField } from '../ui/formValidation'
 
 export { ActivityForm } from './ActivityForm'
@@ -41,7 +42,9 @@ const Field = ({ label, hint, error, className = '', required, children }: {
 const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean; onCancel: () => void; submitLabel: string; disabled?: boolean }) => (
   <ModalActions className="border-t border-border/40 pt-4">
     <Button type="button" variant="outline" onClick={onCancel} className="rounded-xl">Cancel</Button>
-    <Button type="submit" disabled={busy || disabled} className="rounded-xl shadow-md">{busy && <Loader2 className="size-4 animate-spin" />} {submitLabel}</Button>
+    <Button type="submit" disabled={busy || disabled} aria-busy={busy} className="rounded-xl shadow-md">
+      <MutationButtonContent state={busy ? 'saving' : null} entityLabel={submitLabel.toLocaleLowerCase()} idleLabel={submitLabel} />
+    </Button>
   </ModalActions>
 )
 
@@ -127,7 +130,9 @@ export const InstrumentForm = ({ busy, offline, existingInstruments = [], onCanc
       {alreadySaved && <p role="alert" className="text-xs font-semibold text-destructive">This investment is already saved. Pick a different one, or record activity against the existing entry.</p>}
       <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border/40 bg-card py-3">
         <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
-        <Button disabled={busy || !selected || selectedUnavailable || alreadySaved} onClick={() => selected && !selectedUnavailable && !alreadySaved && void onSave({ symbol: selected.symbol, name: selected.name, type: selected.type, currency: selected.currency, exchange: selected.exchange, mic: selected.mic, country: selected.country, providerSymbol: selected.symbol, providerMic: selected.mic, marketDataReference: selected.marketDataReference, isCustom: false })}>{busy && <Loader2 className="size-4 animate-spin" />} Save investment</Button>
+        <Button disabled={busy || !selected || selectedUnavailable || alreadySaved} aria-busy={busy} onClick={() => selected && !selectedUnavailable && !alreadySaved && void onSave({ symbol: selected.symbol, name: selected.name, type: selected.type, currency: selected.currency, exchange: selected.exchange, mic: selected.mic, country: selected.country, providerSymbol: selected.symbol, providerMic: selected.mic, marketDataReference: selected.marketDataReference, isCustom: false })}>
+          <MutationButtonContent state={busy ? 'saving' : null} entityLabel="investment" idleLabel="Save investment" />
+        </Button>
       </div>
     </>
   </div>

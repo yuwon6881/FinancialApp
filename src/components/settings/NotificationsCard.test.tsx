@@ -69,7 +69,11 @@ describe('NotificationsCard', () => {
 
   it('shows the busy state against the switch that is saving, not against both', () => {
     renderCard({ pushBusyChannel: 'categoryAlerts' })
-    // RowSyncStatus names the entity it reports on, so only one row can claim to be busy.
+    // The compact status lives inside the fixed-size switch, so it cannot take width from copy.
+    expect(alertsToggle().querySelector('[data-mutation-status-slot]')).toBeTruthy()
+    expect(billsToggle().querySelector('[data-mutation-status-slot]')).toBeTruthy()
+    expect(alertsToggle().querySelector('[data-mutation-state="syncing"]')).toBeTruthy()
+    expect(billsToggle().querySelector('[data-mutation-state="syncing"]')).toBeNull()
     expect(screen.getByTitle(/spending alerts/i)).toBeTruthy()
     expect(screen.queryByTitle(/bill reminders/i)).toBeNull()
     expect(alertsToggle().disabled).toBe(true)

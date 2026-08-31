@@ -1,8 +1,9 @@
 import React from 'react'
-import { AlertCircle, Info, Loader2 } from 'lucide-react'
+import { AlertCircle, Info } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
 import { Button } from './Button'
 import { ModalActions } from './ModalActions'
+import { MutationButtonContent } from './MutationButtonContent'
 
 interface CustomConfirmModalProps {
   isOpen: boolean
@@ -60,8 +61,12 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
             aria-busy={isConfirming}
             className="rounded-xl px-5 shadow-md"
           >
-            {isConfirming && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-            {isConfirming ? confirmingText : confirmText}
+            <MutationButtonContent
+              state={isConfirming ? 'syncing' : null}
+              entityLabel={title.replace(/^(delete|remove|discard|confirm|update|save)\s+/i, '').toLocaleLowerCase()}
+              idleLabel={confirmText}
+              busyLabel={confirmingText}
+            />
           </Button>
         </ModalActions>
       }

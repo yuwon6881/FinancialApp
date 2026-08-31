@@ -17,7 +17,7 @@ import { DatePicker } from '../ui/DatePicker'
 import { FormField } from '../ui/FormField'
 import { Input } from '../ui/Input'
 import { ModalActions } from '../ui/ModalActions'
-import { Loader2 } from 'lucide-react'
+import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { focusFirstInvalidField } from '../ui/formValidation'
 import { ReceiptScanPicker } from '../ledger/transaction-form/ReceiptScanPicker'
 import { ReceiptScanStatus } from '../ledger/transaction-form/ReceiptScanStatus'
@@ -64,7 +64,9 @@ const Field = ({ label, hint, error, className = '', required, children }: {
 const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean; onCancel: () => void; submitLabel: string; disabled?: boolean }) => (
   <ModalActions className="border-t border-border/40 pt-4">
     <Button type="button" variant="outline" onClick={onCancel} className="rounded-xl">Cancel</Button>
-    <Button type="submit" disabled={busy || disabled} className="rounded-xl shadow-md">{busy && <Loader2 className="size-4 animate-spin" />} {submitLabel}</Button>
+    <Button type="submit" disabled={busy || disabled} aria-busy={busy} className="rounded-xl shadow-md">
+      <MutationButtonContent state={busy ? 'saving' : null} entityLabel={submitLabel.toLocaleLowerCase()} idleLabel={submitLabel} />
+    </Button>
   </ModalActions>
 )
 

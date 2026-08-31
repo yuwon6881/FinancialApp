@@ -1,6 +1,7 @@
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
+import { MutationStatusAnnouncement } from '../ui/MutationButtonContent'
 import { Loader2, Lock, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -187,9 +188,11 @@ export function ManageableNameList<T extends ManageableNameItem>({
                   onClick={() => void add()}
                   disabled={!trimmedName || duplicate || Boolean(validationError) || disabled || busyId !== null}
                   aria-label={`Add ${itemLabel}`}
+                  aria-busy={busyId === 'new'}
                   className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground sm:size-9"
                 >
                   {busyId === 'new' ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+                  <MutationStatusAnnouncement state={busyId === 'new' ? 'saving' : null} entityLabel={lowerItemLabel} />
                 </Button>
               </div>
             </div>
@@ -267,9 +270,11 @@ export function ManageableNameList<T extends ManageableNameItem>({
                       }
                     }}
                     aria-label={`Delete ${item.name}`}
+                    aria-busy={busyId === item.id}
                     className="inline-grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50 sm:size-8"
                   >
                     {busyId === item.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                    <MutationStatusAnnouncement state={busyId === item.id ? 'deleting' : null} entityLabel={item.name} />
                   </Button>
                 )}
               </div>

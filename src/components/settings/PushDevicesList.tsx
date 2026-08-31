@@ -7,7 +7,7 @@ import { buildMutationSuccessToast } from '../../lib/mutationToast'
 import { PUSH_DEVICES_UNAVAILABLE } from '../../lib/push/messages'
 import { useAppUi } from '../../contexts/AppContext'
 import { Button } from '../ui/Button'
-import { RowSyncStatus } from '../ui/RowSyncBadge'
+import { MutationStatusAnnouncement } from '../ui/MutationButtonContent'
 
 const enrolledOn = (iso: string): string => new Date(iso).toLocaleDateString()
 
@@ -135,7 +135,6 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
               <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
                 <MonitorSmartphone className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 {device.isCurrent ? 'This device' : 'Another device'}
-                <RowSyncStatus isDeleting={isRevoking} entityLabel="device" />
               </span>
               {/* Naming what each device receives is what makes "on for another device" checkable
                   rather than something the app just asserts. */}
@@ -153,11 +152,13 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
                 onClick={() => void revoke(device)}
                 disabled={revokingId !== null}
                 aria-label="Stop notifications for this other device"
+                aria-busy={isRevoking}
                 className="size-11 shrink-0 rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive disabled:opacity-40 sm:size-8"
               >
                 {isRevoking
                   ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
                   : <Trash2 className="size-3.5" aria-hidden="true" />}
+                <MutationStatusAnnouncement state={isRevoking ? 'deleting' : null} entityLabel="notification device" />
               </Button>
             )}
           </li>

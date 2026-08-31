@@ -78,7 +78,7 @@ function AccountChip({ transaction, accounts }: { transaction: Transaction; acco
   return (
     <span
       title={`Account: ${account.name}${account.isArchived ? ' (Closed)' : ''}`}
-      className={`inline-flex min-w-0 max-w-[14rem] shrink items-center gap-1 text-xs font-medium text-muted-foreground/90 ${account.isArchived ? 'opacity-70' : ''}`}
+      className={`inline-flex min-w-0 max-w-[14rem] shrink items-center gap-1 text-xs font-medium text-muted-foreground ${account.isArchived ? 'opacity-70' : ''}`}
     >
       <Wallet className="size-3 shrink-0 text-accent-ink" aria-hidden="true" />
       <span className="min-w-0 truncate"><span className="sr-only">Account: </span>{account.name}{account.isArchived ? ' (Closed)' : ''}</span>

@@ -21,6 +21,7 @@ import { ManageableNameList } from './ManageableNameList'
 import { CategoryFlowFilter } from './CategoryFlowFilter'
 import { isSystemCategoryName } from '../../lib/categoryFlow'
 import { Button } from '../ui/Button'
+import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { CategoryCleanupReviewPanel } from './CategoryCleanupReviewPanel'
 
 /**
@@ -329,8 +330,13 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                     aria-busy={isSavingFlowTypes}
                     className="shrink-0"
                   >
-                    {isSavingFlowTypes ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-                    {isSavingFlowTypes ? 'Saving…' : 'Save'}
+                    <MutationButtonContent
+                      state={isSavingFlowTypes ? 'saving' : null}
+                      entityLabel="category flow types"
+                      idleLabel="Save"
+                      busyLabel="Saving…"
+                      idleIcon={<Save className="size-3.5" />}
+                    />
                   </Button>
                 </div>
               </div>

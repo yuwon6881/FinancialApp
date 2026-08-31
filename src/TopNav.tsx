@@ -195,7 +195,7 @@ const TopNav: React.FC<TopNavProps> = ({
             </span>
           </Button>
 
-          {isPhone && (isOffline || syncLabel) && (
+          {isPhone && (isOffline || syncLabel?.startsWith('Retrying')) && (
             <span
               role="status"
               className={`ml-2 shrink-0 rounded-md border px-2 py-0.5 text-xs font-bold ${isOffline ? 'border-amber-500/20 bg-amber-500/10 text-amber-500' : 'border-blue-500/20 bg-blue-500/10 text-blue-500'}`}

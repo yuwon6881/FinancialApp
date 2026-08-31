@@ -3,7 +3,6 @@ import {
   Save,
   Lock,
   Unlock,
-  Loader2,
   DatabaseZap,
   Moon,
   Sun,
@@ -14,8 +13,8 @@ import {
 import type { PushChannel } from '../../types'
 import { CustomSelect } from '../ui/CustomSelect'
 import { CurrencySelect } from '../ui/CurrencySelect'
-import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { ToggleButton } from '../ui/ToggleButton'
+import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { NotificationsCard } from './NotificationsCard'
 import type { PushBusyAction } from '../../app/usePushNotifications'
 import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
@@ -96,7 +95,6 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
           <div>
             <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
               Financial Model
-              <RowSyncStatus isSyncing={settingsSyncing} isPending={settingsPending} entityLabel="financial rules" />
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">Controls budget targets and cycle calculations.</p>
           </div>
@@ -219,8 +217,13 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
             aria-busy={settingsSyncing}
             className="rounded-xl px-4 py-2 shadow-lg shadow-primary/10 hover:shadow-primary/20"
           >
-            {settingsSyncing ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-            {settingsSyncing ? 'Saving…' : 'Save Rules'}
+            <MutationButtonContent
+              state={settingsSyncing ? 'syncing' : settingsPending ? 'pending' : null}
+              entityLabel="financial rules"
+              idleLabel="Save Rules"
+              busyLabel={settingsSyncing ? 'Saving…' : 'Pending'}
+              idleIcon={<Save className="size-3.5" />}
+            />
           </Button>
         </div>
       </form>
@@ -239,18 +242,21 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
                 {darkMode ? <Moon className="size-4 text-muted-foreground shrink-0" /> : <Sun className="size-4 text-muted-foreground shrink-0" />}
                 <span className="font-medium text-foreground truncate">Dark Mode</span>
               </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <RowSyncStatus isSyncing={darkModeSyncing} isPending={darkModePending} entityLabel="dark mode" />
-                <ToggleButton active={darkMode} onClick={onToggleDarkMode || (() => {})} disabled={darkModeSyncing || darkModePending} label="Dark mode" />
-              </div>
+              <ToggleButton
+                active={darkMode}
+                onClick={onToggleDarkMode || (() => {})}
+                disabled={darkModeSyncing || darkModePending}
+                label="Dark mode"
+                mutationStatus={{ isSyncing: darkModeSyncing, isPending: darkModePending }}
+                mutationEntityLabel="dark mode"
+              />
             </div>
             <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
               <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
                 {hideSensitive ? <EyeOff className="size-4 text-muted-foreground shrink-0" /> : <Eye className="size-4 text-muted-foreground shrink-0" />}
                 <span className="font-medium text-foreground truncate">Sensitive Mode (Masked)</span>
               </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <RowSyncStatus isSyncing={hideSensitiveSyncing} isPending={hideSensitivePending} entityLabel="sensitive mode" />
+              <div className="shrink-0">
                 <ToggleButton
                   active={hideSensitive}
                   onClick={onToggleHideSensitive || (() => {})}
@@ -262,6 +268,8 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
                         : 'Sensitive mode'
                   }
                   disabled={hideSensitiveSyncing || hideSensitivePending || (sensitivePreferenceStatus !== undefined && sensitivePreferenceStatus !== 'resolved')}
+                  mutationStatus={{ isSyncing: hideSensitiveSyncing, isPending: hideSensitivePending }}
+                  mutationEntityLabel="sensitive mode"
                 />
               </div>
             </div>

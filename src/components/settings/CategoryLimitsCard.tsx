@@ -5,7 +5,6 @@ import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { isSpendingGuideCategory, isSystemCategoryName } from '../../lib/categoryFlow'
 import { getCurrencySymbol } from '../../lib/utils'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
-import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
 import { ToggleButton } from '../ui/ToggleButton'
 import { FormField } from '../ui/FormField'
@@ -188,6 +187,8 @@ export function CategoryLimitsCard({
                         disabled={hideSensitive || isSyncing}
                         label={`Track ${category.name} cycle spending`}
                         className="size-6 shrink-0"
+                        mutationStatus={{ isSyncing, isPending: category.isPendingSync }}
+                        mutationEntityLabel="guide"
                         onClick={() => {
                           dirtyIdsRef.current.add(category.id)
                           setDrafts(previous => ({
@@ -201,7 +202,6 @@ export function CategoryLimitsCard({
                         <span className={`truncate rounded-md border px-2.5 py-0.5 text-xs font-semibold ${getCategoryBadgeClass(category.name)}`}>
                           {category.name}
                         </span>
-                        <RowSyncStatus isSyncing={isSyncing} isPending={category.isPendingSync} entityLabel="guide" />
                       </div>
                     </div>
                     <span className={`text-xs font-semibold shrink-0 ${enabled ? 'text-blue-500 font-bold' : 'text-muted-foreground'}`}>

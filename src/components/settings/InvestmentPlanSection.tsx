@@ -11,6 +11,7 @@ import type {
 import * as api from '../../lib/api'
 import { useAppContext } from '../../contexts/AppContext'
 import { Button } from '../ui/Button'
+import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { FormField } from '../ui/FormField'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { redistributeInvestmentTargets, validateInvestmentPlan } from '../../lib/investmentAllocation'
@@ -302,7 +303,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
             <div className="rounded-xl bg-violet-500/10 p-2 text-violet-500 shrink-0"><SlidersHorizontal className="size-4" /></div>
             <div className="min-w-0 flex-1">
               <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold text-foreground">
-                Portfolio targets <RowSyncStatus isSyncing={planSyncing} isPending={planPending} entityLabel="investment plan" />
+                Portfolio targets
               </h3>
               <p className="mt-1 text-xs text-muted-foreground break-words">Changing one sleeve automatically redistributes the other two.</p>
             </div>
@@ -383,7 +384,15 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
           </div>
           {(validation || error) && <p role="alert" className="flex gap-2 text-xs text-destructive"><AlertCircle className="size-4 shrink-0" />{validation || error}</p>}
           <div className="flex justify-end">
-            <Button variant="primary" disabled={hideSensitive || Boolean(validation) || planSyncing || planPending} aria-busy={planSyncing} onClick={save}>{planSyncing ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} {planSyncing ? 'Saving…' : 'Save targets'}</Button>
+            <Button variant="primary" disabled={hideSensitive || Boolean(validation) || planSyncing || planPending} aria-busy={planSyncing} onClick={save}>
+              <MutationButtonContent
+                state={planSyncing ? 'syncing' : planPending ? 'pending' : null}
+                entityLabel="investment plan"
+                idleLabel="Save targets"
+                busyLabel={planSyncing ? 'Saving…' : 'Pending'}
+                idleIcon={<Save className="size-4" />}
+              />
+            </Button>
           </div>
         </div>
       </section>

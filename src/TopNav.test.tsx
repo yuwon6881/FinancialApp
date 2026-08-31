@@ -58,7 +58,7 @@ describe('TopNav mobile primary navigation', () => {
     expect(screen.queryByText('Syncing…')).toBeNull()
   })
 
-  it('keeps sync progress visible on a phone alongside drafts', () => {
+  it('keeps mutation progress on the fixed logo indicator on a phone alongside drafts', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
     render(
       <TopNav
@@ -81,7 +81,8 @@ describe('TopNav mobile primary navigation', () => {
     )
 
     expect(screen.getByRole('button', { name: '1 Draft' })).toBeTruthy()
-    expect(screen.getByText('Refreshing')).toBeTruthy()
+    expect(screen.getByLabelText('Refreshing')).toBeTruthy()
+    expect(screen.queryByText('Refreshing')).toBeNull()
   })
 
   it('keeps synchronization feedback compact in wider headers', () => {

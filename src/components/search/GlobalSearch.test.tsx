@@ -149,7 +149,7 @@ describe('GlobalSearch', () => {
   it('labels a record that is still waiting to be saved', () => {
     setup({ data: { accounts: [{ ...account, isPendingSync: true }] } })
     type('coffee')
-    expect(screen.getByTitle('Pending sync (offline)')).toBeTruthy()
+    expect(screen.getByTitle('Pending sync for account (offline)')).toBeTruthy()
   })
 
   it('returns focus to whatever opened it', () => {
