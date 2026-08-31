@@ -217,13 +217,14 @@ test('draft attachments survive a reload before the batch is added', async ({ pa
   await waitForStableLayout(page)
 
   await expect(page.getByText('Weekend market')).toBeVisible({ timeout: 15_000 })
-  const showActions = page.getByRole('button', { name: 'Show row actions' })
-  if (await showActions.first().isVisible()) {
-    await showActions.first().click()
-    await expect(page.getByRole('button', { name: 'Hide row actions' }).first()).toBeVisible()
-  }
-  await expect(page.getByRole('button', { name: 'Edit Weekend market' }).first()).toBeVisible({ timeout: 5_000 })
-  await page.getByRole('button', { name: 'Edit Weekend market' }).first().click()
+  // Compact rows keep Edit and Delete in the swipe drawer, which stays inert and covered by the
+  // card until the row is swiped open — the bottom-right chevron disclosure that used to open it
+  // was deliberately removed. The needs-review panel's Review button is the affordance a tap can
+  // reach, and it opens the same draft editor.
+  const draftRow = page.locator('[id^="draft-row-"]').filter({ hasText: 'Weekend market' })
+  const openEditor = draftRow.getByRole('button', { name: 'Review' })
+  await expect(openEditor.first()).toBeVisible({ timeout: 5_000 })
+  await openEditor.first().click()
   const dialog = page.getByRole('dialog', { name: 'Edit Draft' })
   await expect(dialog).toBeVisible({ timeout: 15_000 })
   await dialog.locator('input[type="file"][multiple]').setInputFiles({
@@ -240,13 +241,8 @@ test('draft attachments survive a reload before the batch is added', async ({ pa
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByText('1 attachment')).toBeVisible()
   await expect(page.getByText('Weekend market')).toBeVisible({ timeout: 15_000 })
-  const reloadShowActions = page.getByRole('button', { name: 'Show row actions' }).first()
-  if (await reloadShowActions.isVisible()) {
-    await reloadShowActions.click()
-    await expect(page.getByRole('button', { name: 'Hide row actions' }).first()).toBeVisible()
-  }
-  await expect(page.getByRole('button', { name: 'Edit Weekend market' }).first()).toBeVisible({ timeout: 5_000 })
-  await page.getByRole('button', { name: 'Edit Weekend market' }).first().click()
+  await expect(openEditor.first()).toBeVisible({ timeout: 5_000 })
+  await openEditor.first().click()
   await expect(page.getByRole('dialog', { name: 'Edit Draft' }).getByText('weekend-market.pdf')).toBeVisible()
 })
 
