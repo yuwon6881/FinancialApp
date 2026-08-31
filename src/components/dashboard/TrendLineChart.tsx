@@ -155,22 +155,24 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                   animate={{ opacity: 1 }}
                   transition={{ duration: reduceMotion ? 0 : 0.4, ease: 'easeInOut' }}
                 />}
+                {positions.map((position, index) => {
+                  const isHovered = hoveredIndex === index
+                  const point = points[index]
+                  return (
+                    <m.circle
+                      key={`${range}-${point?.cycleKey || point?.month || index}-${index}`}
+                      cx={position.x}
+                      cy={position.y}
+                      r={isHovered ? 4.5 : 2.75}
+                      className={isHovered ? 'fill-blue-500 stroke-background stroke-2' : 'fill-sky-400'}
+                      initial={reduceMotion ? false : { scale: 0, opacity: 0 }}
+                      animate={{ scale: isHovered ? 1.3 : 1, opacity: 1 }}
+                      transition={{ duration: reduceMotion ? 0 : 0.2, ease: 'easeOut', delay: reduceMotion ? 0 : index * 0.03 }}
+                      aria-hidden="true"
+                    />
+                  )
+                })}
               </svg>
-              {positions.map((position, index) => {
-                const isHovered = hoveredIndex === index
-                const point = points[index]
-                return (
-                  <m.span
-                    key={`${range}-${point?.cycleKey || point?.month || index}-${index}`}
-                    initial={reduceMotion ? false : { scale: 0, opacity: 0 }}
-                    animate={{ scale: isHovered ? 1.5 : 1, opacity: 1 }}
-                    transition={{ duration: reduceMotion ? 0 : 0.2, ease: 'easeOut', delay: reduceMotion ? 0 : index * 0.03 }}
-                    aria-hidden="true"
-                    className={`absolute rounded-full shadow-xs transition-colors duration-150 ${isHovered ? 'size-2 bg-blue-500 ring-2 ring-background' : 'size-1.5 bg-blue-500/80'}`}
-                    style={{ left: `calc(${position.left}% - ${isHovered ? 4 : 3}px)`, top: `calc(${position.top}% - ${isHovered ? 4 : 3}px)` }}
-                  />
-                )
-              })}
               {hoveredIndex !== null && points[hoveredIndex] && (() => {
                 const point = points[hoveredIndex]
                 const position = positions[hoveredIndex]

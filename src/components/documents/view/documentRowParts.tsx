@@ -183,7 +183,7 @@ export function DeleteDocumentButton({ document, setDocToDelete, disabled = fals
       type="button"
       disabled={hideSensitive || disabled}
       onClick={() => setDocToDelete(document.id)}
-      className={className ?? 'cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50'}
+      className={className ?? 'inline-flex cursor-pointer items-center justify-center rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50'}
       aria-label={`Delete ${document.originalFileName}`}
     >
       <Trash2 className="size-3.5" />
