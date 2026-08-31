@@ -349,25 +349,34 @@ describe('RecurringPaymentsView characterization', () => {
     })
 
     it('clamps the due day parsed from the start date and stores the amount as a negative outlay', () => {
-      const onAddPayment = vi.fn()
-      render(<RecurringPaymentsView {...makeProps({ onAddPayment })} />)
-      fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
-      fireEvent.change(screen.getByPlaceholderText('e.g. Netflix, Spotify'), { target: { value: 'Water Bill' } })
-      fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '42.50' } })
-      fireEvent.change(screen.getAllByLabelText('billing date')[0], { target: { value: '2026-07-31' } })
-      choosePaymentMode('Manual payment')
-      chooseAccount()
-      fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
+      // The first due date is derived from today, so the expectation below only holds against a
+      // fixed clock. Left on the real one this passed until the date rolled past 2026-08-31 and
+      // then reported the next month, which is correct behaviour failing a stale assertion.
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date(2026, 7, 15, 12))
+      try {
+        const onAddPayment = vi.fn()
+        render(<RecurringPaymentsView {...makeProps({ onAddPayment })} />)
+        fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+        fireEvent.change(screen.getByPlaceholderText('e.g. Netflix, Spotify'), { target: { value: 'Water Bill' } })
+        fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '42.50' } })
+        fireEvent.change(screen.getAllByLabelText('billing date')[0], { target: { value: '2026-07-31' } })
+        choosePaymentMode('Manual payment')
+        chooseAccount()
+        fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
 
-      expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({
-        name: 'Water Bill',
-        amount: -42.5,
-        dueDate: 31,
-        startDate: '2026-07-31',
-        nextDueDate: '2026-08-31',
-        active: true,
-        endDate: undefined,
-      }))
+        expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({
+          name: 'Water Bill',
+          amount: -42.5,
+          dueDate: 31,
+          startDate: '2026-07-31',
+          nextDueDate: '2026-08-31',
+          active: true,
+          endDate: undefined,
+        }))
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it('cancel resets the form so reopening starts blank', () => {
