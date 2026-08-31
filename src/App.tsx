@@ -364,6 +364,7 @@ function App() {
           failedOpsCount={financial.failedOps.length}
           onOpenFailedOps={() => dialogs.setShowFailedOpsModal(true)}
           draftCount={financial.draftTransactions.length}
+          cycleDay={financial.optimisticDashboardData?.setting?.cycleDay}
         />
 
         <Suspense fallback={null}>

@@ -36,6 +36,18 @@ describe('DesktopNavRail', () => {
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy()
   })
 
+  it('omits the cycle block until the cycle day is known, rather than assuming a cadence', () => {
+    const { rerender } = render(<DesktopNavRail activeTab="dashboard" onTabChange={vi.fn()} />)
+    expect(screen.queryByRole('progressbar', { name: 'Cycle progress' })).toBeNull()
+
+    rerender(<DesktopNavRail activeTab="dashboard" onTabChange={vi.fn()} cycleDay={28} />)
+    const progress = screen.getByRole('progressbar', { name: 'Cycle progress' })
+    const value = Number(progress.getAttribute('aria-valuenow'))
+    expect(value).toBeGreaterThanOrEqual(0)
+    expect(value).toBeLessThanOrEqual(100)
+    expect(screen.getByText(/^Day \d+ of \d+$/)).toBeTruthy()
+  })
+
   it('navigates to subtab destinations with search options', () => {
     const onTabChange = vi.fn()
     render(<DesktopNavRail activeTab="dashboard" onTabChange={onTabChange} />)

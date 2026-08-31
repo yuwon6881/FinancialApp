@@ -3,6 +3,7 @@ import { Button } from '../ui/Button'
 import type { AppTab } from '../../types'
 import type { AppNavigationOptions } from '../../lib/appLocation'
 import { APP_LOCATION_CHANGED_EVENT } from '../../lib/appLocation'
+import { getCurrentCycleYearAndMonth, getCycleProgress } from '../../lib/cycle'
 import {
   CalendarCheck2,
   BarChart3,
@@ -23,9 +24,6 @@ export interface DesktopNavItem {
   search?: Record<string, string | number | boolean | null | undefined>
   label: string
   Icon: React.ComponentType<{ className?: string }>
-  activeClass: string
-  iconClass: string
-  dotClass: string
 }
 
 export interface DesktopNavGroup {
@@ -37,6 +35,9 @@ export interface DesktopNavGroup {
 interface DesktopNavRailProps {
   activeTab: AppTab
   onTabChange: (tab: AppTab, options?: AppNavigationOptions) => void
+  /** Configured cycle start day. Absent until the dashboard settings load, in which
+      case the rail simply omits the cycle block rather than guessing a cadence. */
+  cycleDay?: number
 }
 
 const DESKTOP_NAV_GROUPS: DesktopNavGroup[] = [
@@ -44,39 +45,15 @@ const DESKTOP_NAV_GROUPS: DesktopNavGroup[] = [
     id: 'overview',
     label: 'Overview',
     items: [
-      {
-        id: 'today',
-        tab: 'dashboard',
-        label: 'Today',
-        Icon: CalendarCheck2,
-        activeClass: 'bg-blue-500/12 text-blue-600 dark:text-blue-400 border-blue-500/25 shadow-blue-500/10',
-        iconClass: 'text-blue-500',
-        dotClass: 'bg-blue-500',
-      },
-      {
-        id: 'reports',
-        tab: 'reports',
-        label: 'Reports',
-        Icon: BarChart3,
-        activeClass: 'bg-indigo-500/12 text-indigo-600 dark:text-indigo-400 border-indigo-500/25 shadow-indigo-500/10',
-        iconClass: 'text-indigo-500',
-        dotClass: 'bg-indigo-500',
-      },
+      { id: 'today', tab: 'dashboard', label: 'Today', Icon: CalendarCheck2 },
+      { id: 'reports', tab: 'reports', label: 'Reports', Icon: BarChart3 },
     ],
   },
   {
     id: 'cash-expenses',
     label: 'Cash & Expenses',
     items: [
-      {
-        id: 'ledger',
-        tab: 'ledger',
-        label: 'Ledger',
-        Icon: Wallet,
-        activeClass: 'bg-teal-500/12 text-teal-600 dark:text-teal-400 border-teal-500/25 shadow-teal-500/10',
-        iconClass: 'text-teal-500',
-        dotClass: 'bg-teal-500',
-      },
+      { id: 'ledger', tab: 'ledger', label: 'Ledger', Icon: Wallet },
       {
         id: 'accounts',
         tab: 'settings',
@@ -84,9 +61,6 @@ const DESKTOP_NAV_GROUPS: DesktopNavGroup[] = [
         search: { section: 'accounts' },
         label: 'Accounts',
         Icon: Landmark,
-        activeClass: 'bg-cyan-500/12 text-cyan-600 dark:text-cyan-400 border-cyan-500/25 shadow-cyan-500/10',
-        iconClass: 'text-cyan-500',
-        dotClass: 'bg-cyan-500',
       },
       {
         id: 'recurring-bills',
@@ -95,9 +69,6 @@ const DESKTOP_NAV_GROUPS: DesktopNavGroup[] = [
         search: { section: 'recurring' },
         label: 'Recurring Bills',
         Icon: CreditCard,
-        activeClass: 'bg-violet-500/12 text-violet-600 dark:text-violet-400 border-violet-500/25 shadow-violet-500/10',
-        iconClass: 'text-violet-500',
-        dotClass: 'bg-violet-500',
       },
       {
         id: 'loans',
@@ -106,9 +77,6 @@ const DESKTOP_NAV_GROUPS: DesktopNavGroup[] = [
         search: { section: 'loans' },
         label: 'Loans',
         Icon: Receipt,
-        activeClass: 'bg-amber-500/12 text-amber-600 dark:text-amber-400 border-amber-500/25 shadow-amber-500/10',
-        iconClass: 'text-amber-500',
-        dotClass: 'bg-amber-500',
       },
     ],
   },
@@ -116,15 +84,7 @@ const DESKTOP_NAV_GROUPS: DesktopNavGroup[] = [
     id: 'wealth-goals',
     label: 'Wealth & Goals',
     items: [
-      {
-        id: 'investments',
-        tab: 'investments',
-        label: 'Investments',
-        Icon: TrendingUp,
-        activeClass: 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400 border-emerald-500/25 shadow-emerald-500/10',
-        iconClass: 'text-emerald-500',
-        dotClass: 'bg-emerald-500',
-      },
+      { id: 'investments', tab: 'investments', label: 'Investments', Icon: TrendingUp },
       {
         id: 'commitments',
         tab: 'wishlist',
@@ -132,9 +92,6 @@ const DESKTOP_NAV_GROUPS: DesktopNavGroup[] = [
         search: { section: 'commitments' },
         label: 'Commitments',
         Icon: CommitmentIcon,
-        activeClass: 'bg-purple-500/12 text-purple-600 dark:text-purple-400 border-purple-500/25 shadow-purple-500/10',
-        iconClass: 'text-purple-500',
-        dotClass: 'bg-purple-500',
       },
       {
         id: 'rewards',
@@ -143,19 +100,8 @@ const DESKTOP_NAV_GROUPS: DesktopNavGroup[] = [
         search: { section: 'rewards' },
         label: 'Rewards',
         Icon: RewardIcon,
-        activeClass: 'bg-pink-500/12 text-pink-600 dark:text-pink-400 border-pink-500/25 shadow-pink-500/10',
-        iconClass: 'text-pink-500',
-        dotClass: 'bg-pink-500',
       },
-      {
-        id: 'documents',
-        tab: 'documents',
-        label: 'Vault',
-        Icon: FileText,
-        activeClass: 'bg-orange-500/12 text-orange-600 dark:text-orange-400 border-orange-500/25 shadow-orange-500/10',
-        iconClass: 'text-orange-500',
-        dotClass: 'bg-orange-500',
-      },
+      { id: 'documents', tab: 'documents', label: 'Vault', Icon: FileText },
     ],
   },
 ]
@@ -168,9 +114,6 @@ const FOOTER_ITEMS: DesktopNavItem[] = [
     search: { section: 'model' },
     label: 'Settings',
     Icon: Settings,
-    activeClass: 'bg-slate-500/12 text-slate-600 dark:text-slate-400 border-slate-500/25 shadow-slate-500/10',
-    iconClass: 'text-slate-500',
-    dotClass: 'bg-slate-500',
   },
 ]
 
@@ -201,9 +144,46 @@ function isItemActive(item: DesktopNavItem, activeTab: AppTab, locationSearch: s
   return true
 }
 
+/** Cycle position, shown only on the expanded rail — the collapsed rail has no room for
+    a figure and a bar, and a bar with no numbers beside it explains nothing. */
+const CycleBlock: React.FC<{ cycleDay: number }> = ({ cycleDay }) => {
+  const progress = React.useMemo(() => {
+    const { year, monthIndex } = getCurrentCycleYearAndMonth(cycleDay)
+    return getCycleProgress(year, monthIndex, cycleDay)
+  }, [cycleDay])
+
+  const headline = progress.phase === 'upcoming'
+    ? `Starts in ${progress.daysUntilStart} ${progress.daysUntilStart === 1 ? 'day' : 'days'}`
+    : `Day ${progress.dayNumber} of ${progress.totalDays}`
+  const detail = progress.phase === 'ended'
+    ? 'Cycle closed'
+    : progress.phase === 'upcoming'
+      ? `${progress.totalDays} days long`
+      : `${progress.daysLeft} ${progress.daysLeft === 1 ? 'day' : 'days'} left`
+
+  return (
+    <div className="mb-3 hidden rounded-xl border border-primary/25 bg-linear-to-br from-primary/12 to-primary/4 px-3 py-2.5 lg:block">
+      <p className="text-[0.625rem] font-bold uppercase tracking-widest text-accent-ink/85">This cycle</p>
+      <p className="mt-1 text-body font-bold tabular-nums text-foreground">{headline}</p>
+      <div
+        className="mt-2 h-1 overflow-hidden rounded-full bg-foreground/10"
+        role="progressbar"
+        aria-label="Cycle progress"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(progress.progressPct)}
+      >
+        <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.max(0, progress.progressPct))}%` }} />
+      </div>
+      <p className="mt-1.5 text-caption font-medium text-muted-foreground">{detail}</p>
+    </div>
+  )
+}
+
 export const DesktopNavRail: React.FC<DesktopNavRailProps> = ({
   activeTab,
   onTabChange,
+  cycleDay,
 }) => {
   const [locationSearch, setLocationSearch] = React.useState(() => typeof window !== 'undefined' ? window.location.search : '')
   const [locationHash, setLocationHash] = React.useState(() => typeof window !== 'undefined' ? window.location.hash : '')
@@ -222,7 +202,7 @@ export const DesktopNavRail: React.FC<DesktopNavRailProps> = ({
   }, [])
 
   const renderItem = (item: DesktopNavItem) => {
-    const { id, label, Icon, activeClass, iconClass, dotClass } = item
+    const { id, label, Icon } = item
     const isActive = isItemActive(item, activeTab, locationSearch, locationHash)
 
     return (
@@ -233,39 +213,53 @@ export const DesktopNavRail: React.FC<DesktopNavRailProps> = ({
         title={label}
         aria-current={isActive ? 'page' : undefined}
         onClick={() => onTabChange(item.tab, item.search ? { search: item.search } : undefined)}
-        className={`group relative flex min-h-11 w-full items-center justify-center gap-2.5 rounded-xl border px-2 text-body font-semibold transition duration-150 lg:justify-start lg:pl-3.5 lg:pr-2.5 ${
+        className={`group relative flex min-h-11 w-full items-center justify-center gap-2.5 rounded-xl px-1.5 text-body transition-colors duration-150 lg:min-h-9 lg:justify-start lg:px-2 ${
           isActive
-            ? `${activeClass} font-bold shadow-sm`
-            : 'border-transparent text-muted-foreground hover:bg-primary/5 hover:text-foreground'
+            ? 'bg-muted font-bold text-foreground shadow-[inset_0_1px_0_var(--app-inner-highlight)]'
+            : 'font-semibold text-muted-foreground hover:bg-muted/70 hover:text-foreground'
         }`}
       >
-        {isActive && <span className={`absolute left-1.5 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-full ${dotClass}`} />}
-        <Icon className={`size-4.5 shrink-0 transition-transform duration-150 ${isActive ? iconClass : 'text-muted-foreground group-hover:scale-105'}`} />
+        {/* One accent carries the active state: the icon tile fills gold. It survives the
+            collapsed rail, where a label cannot, so the cue never depends on the words. */}
+        <span
+          className={`flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-150 ${
+            isActive
+              ? 'bg-primary text-primary-foreground ring-1 ring-primary/40'
+              : 'bg-foreground/6 text-muted-foreground group-hover:bg-foreground/10 group-hover:text-foreground'
+          }`}
+        >
+          <Icon className="size-4" />
+        </span>
         <span className="hidden truncate lg:inline">{label}</span>
       </Button>
     )
   }
 
   return (
-    <aside className="glass-rail fixed inset-y-0 left-0 z-40 hidden w-20 border-r border-border/30 pt-[calc(4.25rem+env(safe-area-inset-top,0px))] backdrop-blur-xl sm:block lg:w-56">
-      <nav aria-label="Primary" className="flex h-full flex-col overflow-y-auto px-2 py-3 lg:px-2.5">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-20 px-2 pb-2 pt-[calc(4.25rem+env(safe-area-inset-top,0px))] sm:block lg:w-56 lg:px-2.5 lg:pb-2.5">
+      <nav
+        aria-label="Primary"
+        className="app-panel flex h-full flex-col overflow-y-auto rounded-2xl border border-border/60 bg-card/80 px-2 py-3 lg:px-2.5"
+      >
+        {cycleDay !== undefined && <CycleBlock cycleDay={cycleDay} />}
+
         {DESKTOP_NAV_GROUPS.map((group, index) => (
-          <div key={group.id} role="group" aria-label={group.label} className={index > 0 ? 'mt-2' : undefined}>
+          <div key={group.id} role="group" aria-label={group.label} className={index > 0 ? 'mt-4' : undefined}>
             {/* The written label carries the grouping on the expanded rail; the icon-only rail has
                 no room for words, so a rule carries it there instead. Both are decorative — the
                 group's accessible name comes from aria-label above. */}
-            {index > 0 && <div aria-hidden="true" className="mx-2 mb-2 h-px bg-border/50 lg:hidden" />}
-            <div aria-hidden="true" className="hidden px-2.5 pb-1.5 text-[0.6875rem] font-semibold tracking-wide text-muted-foreground/80 lg:block">
+            {index > 0 && <div aria-hidden="true" className="mx-2 mb-3 h-px bg-border/60 lg:hidden" />}
+            <div aria-hidden="true" className="hidden px-2 pb-1.5 text-[0.625rem] font-bold uppercase tracking-widest text-muted-foreground/70 lg:block">
               {group.label}
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-0.5">
               {group.items.map(renderItem)}
             </div>
           </div>
         ))}
 
         {FOOTER_ITEMS.length > 0 && (
-          <div className="mt-auto flex flex-col gap-1 border-t border-border/25 pt-4">
+          <div className="mt-auto flex flex-col gap-0.5 border-t border-border/50 pt-3">
             {FOOTER_ITEMS.map(renderItem)}
           </div>
         )}

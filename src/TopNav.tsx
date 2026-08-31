@@ -47,6 +47,8 @@ interface TopNavProps {
   draftCount?: number
   failedOpsCount?: number
   onOpenFailedOps?: () => void
+  /** Cycle start day, forwarded to the desktop rail's cycle block. */
+  cycleDay?: number
 }
 
 const compactNavItems: NavItemConfig[] = [
@@ -118,7 +120,8 @@ const TopNav: React.FC<TopNavProps> = ({
   isOffline = false,
   draftCount = 0,
   failedOpsCount = 0,
-  onOpenFailedOps
+  onOpenFailedOps,
+  cycleDay
 }) => {
   const hasAlerts = pendingNotifications.length > 0
   const isPhone = useIsCompact()
@@ -339,7 +342,7 @@ const TopNav: React.FC<TopNavProps> = ({
           onTabChange={onTabChange}
         />
       ) : (
-        <DesktopNavRail activeTab={activeTab} onTabChange={onTabChange} />
+        <DesktopNavRail activeTab={activeTab} onTabChange={onTabChange} cycleDay={cycleDay} />
       )}
     </>
   )
