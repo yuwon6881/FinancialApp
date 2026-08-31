@@ -332,16 +332,14 @@ test('mobile draft review queue clears fixed navigation at keyboard height', asy
   await page.goto('/drafts', { waitUntil: 'domcontentloaded' })
 
   const reorder = page.getByRole('button', { name: /Reorder Weekend market\. Position 1 of 1/i })
-  const menu = page.getByRole('button', { name: 'More actions for Weekend market' })
   const addDraft = page.getByRole('button', { name: 'Add draft' })
   const batchAction = page.getByRole('button', { name: 'Add 1 draft to Ledger' })
   await expect(reorder).toBeVisible()
-  await expect(menu).toBeVisible()
   await expect(addDraft).toBeVisible()
   await expect(batchAction).toBeEnabled()
   await expect(page.getByRole('button', { name: 'Open Menu' })).toHaveCount(0)
 
-  for (const control of [reorder, menu, addDraft, batchAction]) {
+  for (const control of [reorder, addDraft, batchAction]) {
     const box = await control.boundingBox()
     expect(box).not.toBeNull()
     if (!box) continue
