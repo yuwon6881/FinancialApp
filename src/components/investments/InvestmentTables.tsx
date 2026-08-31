@@ -147,18 +147,30 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
       ))}
     </div>
     <div className="hidden lg:block">
-      <DataTable embedded horizontalOverflow="auto" tableClassName="min-w-[900px]">
+      <DataTable embedded horizontalOverflow="hidden" tableClassName="table-fixed">
+        <colgroup>
+          <col className="w-[15%]" />
+          <col className="w-[9%]" />
+          <col className="w-[7%]" />
+          <col className="w-[10%]" />
+          <col className="w-[9%]" />
+          <col className="w-[11%]" />
+          <col className="w-[10%]" />
+          <col className="w-[11%]" />
+          <col className="w-[10%]" />
+          <col className="w-[8%]" />
+        </colgroup>
         <DataTableHeader className="text-xs uppercase tracking-wide">
-          <DataTableHeaderCell className="min-w-44">Investment</DataTableHeaderCell>
-          <DataTableHeaderCell className="min-w-28">Account</DataTableHeaderCell>
-          <DataTableHeaderCell className="min-w-20 text-right">Units</DataTableHeaderCell>
-          <DataTableHeaderCell className="min-w-28 text-right">Avg price paid</DataTableHeaderCell>
-          <DataTableHeaderCell className="min-w-24 text-right">Latest price</DataTableHeaderCell>
-          <DataTableHeaderCell className="min-w-32 text-right">Latest value ({portfolio.appCurrency})</DataTableHeaderCell>
-          <DataTableHeaderCell className="min-w-24 text-right">Latest move</DataTableHeaderCell>
-          <DataTableHeaderCell className="min-w-32 text-right">Gain on paper</DataTableHeaderCell>
-          <DataTableHeaderCell className="min-w-28 text-right">Already banked</DataTableHeaderCell>
-          <DataTableHeaderCell className="min-w-24 text-right">Dividends</DataTableHeaderCell>
+          <DataTableHeaderCell>Investment</DataTableHeaderCell>
+          <DataTableHeaderCell>Account</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Units</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Avg price paid</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Latest price</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Latest value ({portfolio.appCurrency})</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Latest move</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Gain on paper</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Already banked</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Dividends</DataTableHeaderCell>
         </DataTableHeader>
         <DataTableBody>
           {paginatedHoldings.map(holding => (
