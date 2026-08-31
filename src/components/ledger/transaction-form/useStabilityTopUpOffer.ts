@@ -86,6 +86,10 @@ export function useStabilityTopUpOffer(options: UseStabilityTopUpOfferOptions) {
         projectedBalance: recoveryForOffer.currentBalance - originalStabilityContribution,
         planPoints: stabilityTopUpContext?.planPoints,
         currentCycleKey: stabilityTopUpContext?.currentCycleKey,
+        // Required for the origin-cycle cohort plan. Without it projectStabilityRecovery cannot
+        // place an obligation in its cycle and silently falls back to the pre-cohort single
+        // window, so this offer would ask for more than the dashboard's combined plan.
+        cycleDay: stabilityTopUpContext?.cycleDay,
       })
     }
 

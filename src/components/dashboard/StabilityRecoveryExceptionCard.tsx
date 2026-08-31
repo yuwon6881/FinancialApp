@@ -66,7 +66,11 @@ export function StabilityRecoveryExceptionCard({
     : 0
   // Overdue is checked first: past the window cyclesRemaining sits at 1 forever, so treating that
   // as "the final cycle" announced the last cycle of the plan every cycle from then on.
-  const isFinalCycle = !recovery.isOverdue && recovery.cyclesRemaining <= 1
+  //
+  // Overlapping plans are excluded too. The aggregate counts down the *most urgent* cohort, so an
+  // older plan on its last cycle set this while a newer cohort still had all three -- and the card
+  // called the whole recovery final while the list below it said "3 cycles left".
+  const isFinalCycle = !recovery.isOverdue && !hasOverlappingPlans && recovery.cyclesRemaining <= 1
   // Two money figures side by side read as additive unless the containment is said out loud: this
   // cycle's ask is a slice of the shortfall, never money owed on top of it. Once the pace asks for
   // the whole remaining shortfall -- the final cycle, and every cycle past the window -- naming both
@@ -191,7 +195,14 @@ export function StabilityRecoveryExceptionCard({
                 it to be a slice of that figure rather than an addition to it. */}
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 border-t border-border/40 pt-1.5">
               <dt className="min-w-0 leading-snug text-muted-foreground">
-                <span className="sm:hidden">This cycle&rsquo;s share of that</span>
+                {/* Compact drops only the "spread over N cycles" tail, never the containment
+                    wording itself. With overlapping plans the figure is the sum of several
+                    cohorts' shares and can exceed the shortfall above it once a cohort has been
+                    repaid in full this cycle, so calling it "this cycle's share of that" on a
+                    phone described arithmetic that does not add up. */}
+                <span className="sm:hidden">
+                  {hasOverlappingPlans ? 'Combined plan for this cycle' : <>This cycle&rsquo;s share of that</>}
+                </span>
                 <span className="hidden sm:inline">
                   {hasOverlappingPlans
                     ? 'Combined plan for this cycle'

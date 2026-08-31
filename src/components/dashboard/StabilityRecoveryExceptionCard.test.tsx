@@ -105,7 +105,8 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     expect(screen.getByText(/Each cycle.s Stability spending keeps its own three-cycle plan/)).toBeTruthy()
-    expect(screen.getByText('Combined plan for this cycle')).toBeTruthy()
+    // Both responsive copies of the label, compact and expanded.
+    expect(screen.getAllByText('Combined plan for this cycle')).toHaveLength(2)
     expect(screen.getByText('Jun 2026 cycle')).toBeTruthy()
     expect(screen.getByText('Jul 2026 cycle')).toBeTruthy()
     expect(screen.getByText('3 cycles left')).toBeTruthy()
@@ -294,5 +295,88 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     expect(container.innerHTML).toBe('')
+  })
+
+  // The aggregate counts down the most urgent cohort, so an older plan on its last cycle used to
+  // stamp "Final cycle" on the whole card while the list below it offered a newer plan three more.
+  it('does not call the recovery final while a newer cohort still has its whole window', () => {
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({
+          outstandingShortfall: 900,
+          requiredThisCycle: 700,
+          outstandingThisCycle: 700,
+          cyclesRemaining: 1,
+          recoveryCohorts: [
+            {
+              originCycleKey: '2026-06', fromDate: '2026-06-04', transactionCount: 1,
+              remainingShortfall: 600, cyclesRemaining: 1, requiredThisCycle: 600, isOverdue: false,
+            },
+            {
+              originCycleKey: '2026-08', fromDate: '2026-08-04', transactionCount: 1,
+              remainingShortfall: 300, cyclesRemaining: 3, requiredThisCycle: 100, isOverdue: false,
+            },
+          ],
+        })}
+        formatSensitive={format}
+      />
+    )
+
+    expect(screen.queryByText('Final cycle')).toBeNull()
+    expect(screen.queryByText(/This is the final planned cycle/)).toBeNull()
+    expect(screen.getByText(/Each cycle.s Stability spending keeps its own three-cycle plan/)).toBeTruthy()
+    expect(screen.getByText('1 cycle left')).toBeTruthy()
+    expect(screen.getByText('3 cycles left')).toBeTruthy()
+  })
+
+  // A single plan is still the last one when its window runs down to this cycle.
+  it('still names the final cycle when only one plan is open', () => {
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({
+          cyclesRemaining: 1,
+          requiredThisCycle: 3000,
+          outstandingThisCycle: 3000,
+          recoveryCohorts: [
+            {
+              originCycleKey: '2026-06', fromDate: '2026-06-04', transactionCount: 1,
+              remainingShortfall: 3000, cyclesRemaining: 1, requiredThisCycle: 3000, isOverdue: false,
+            },
+          ],
+        })}
+        formatSensitive={format}
+      />
+    )
+
+    expect(screen.getByText('Final cycle')).toBeTruthy()
+    expect(screen.getByText(/This is the final planned cycle/)).toBeTruthy()
+  })
+
+  // Compact renders its own copy of the label. Calling a sum of cohort shares "this cycle's share
+  // of that" describes arithmetic the card does not show, so both tiers say "combined" together.
+  it('names the combined plan on compact as well as expanded', () => {
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({
+          requiredThisCycle: 400,
+          outstandingThisCycle: 400,
+          cyclesRemaining: 2,
+          recoveryCohorts: [
+            {
+              originCycleKey: '2026-06', fromDate: '2026-06-04', transactionCount: 1,
+              remainingShortfall: 500, cyclesRemaining: 2, requiredThisCycle: 300, isOverdue: false,
+            },
+            {
+              originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 1,
+              remainingShortfall: 300, cyclesRemaining: 3, requiredThisCycle: 100, isOverdue: false,
+            },
+          ],
+        })}
+        formatSensitive={format}
+      />
+    )
+
+    expect(screen.getAllByText('Combined plan for this cycle')).toHaveLength(2)
+    expect(screen.queryByText(/^This cycle.s share of that$/)).toBeNull()
   })
 })

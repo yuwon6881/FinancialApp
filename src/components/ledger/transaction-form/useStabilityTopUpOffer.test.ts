@@ -141,4 +141,77 @@ describe('useStabilityTopUpOffer', () => {
     expect(withoutPoints.current.topUpOffer?.proposedTopUp).toBeGreaterThan(0)
     expect(withPoints.current.topUpOffer).toBeNull()
   })
+
+  // The offer used to project without a cycleDay, which silently disabled the origin-cycle cohort
+  // plan and fell back to the pre-cohort single window anchored on the oldest drawdown. June's 600
+  // is on its last cycle (600 due) while August's 300 keeps all three (100 due), so the combined
+  // ask is 700 -- the fallback asked for the whole 900 and a blank amount box would have saved it.
+  it('paces the offer on the combined cohort plan, not the oldest drawdown alone', () => {
+    const originalSalary = {
+      id: 'salary-1',
+      date: '2026-08-30',
+      description: 'Salary',
+      category: 'Income',
+      ledgerCategory: 'Income',
+      amount: 2000,
+    }
+    const stabilityChild = {
+      id: 'salary-1-split-Stability',
+      date: '2026-08-30',
+      description: 'Stability split',
+      category: 'Transfer',
+      ledgerCategory: 'Transfer:Income->Stability',
+      amount: 300,
+    }
+    const augustDrawdown = {
+      id: 'drawdown-aug',
+      date: '2026-08-30',
+      description: 'Car repair',
+      category: 'Stability',
+      ledgerCategory: 'Stability',
+      amount: -300,
+      stabilityReloadIntent: 'Required' as const,
+    }
+
+    const state = {
+      ...getInitialState('2026-08-30', 'Salary'),
+      mode: 'edit' as const,
+      editingId: 'salary-1',
+      transactionType: 'inflow' as const,
+      ledgerCategory: 'Income' as const,
+      amount: '2000',
+      date: '2026-08-30',
+    }
+
+    const { result } = renderHook(() =>
+      useStabilityTopUpOffer({
+        state,
+        transactions: [originalSalary, stabilityChild, augustDrawdown],
+        cycleDay: 28,
+        stabilityTopUpContext: {
+          ...context,
+          currentCycleKey: '2026-08',
+          recovery: {
+            ...recovery,
+            target: 20000,
+            currentBalance: 9000,
+            markedTotal: 900,
+            outstandingShortfall: 900,
+            lastDrawdownCycleKey: '2026-06',
+            openingOutstanding: 600,
+            openingOldestDate: '2026-06-30',
+            openingObligations: [{
+              transactionId: 'drawdown-jun',
+              originalAmount: 600,
+              remainingAmount: 600,
+              date: '2026-06-30',
+            }],
+          },
+        },
+      }),
+    )
+
+    expect(result.current.topUpOffer?.requestedTopUp).toBe(700)
+    expect(result.current.topUpOffer?.proposedTopUp).toBe(700)
+  })
 })
