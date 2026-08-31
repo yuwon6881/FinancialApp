@@ -92,7 +92,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
   const income = transaction.ledgerCategory === 'Income' || transaction.ledgerCategory.startsWith('IncomeSplit:')
   const split = transaction.id.includes('-split-')
   const completion = transaction.savingsGoalId != null
-  const editBlocked = split || completion
+  const editBlocked = split || completion || transaction.wishlistItemId != null
   const transfer = transaction.ledgerCategory.startsWith('Transfer:') || transaction.ledgerCategory.toLowerCase() === 'accountmove'
   const moveReason = transactionMoveIneligibility(transaction)
   const canMove = !editBlocked && !moveReason && Boolean(props.onMove)
@@ -171,7 +171,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
   const outflow = transaction.amount < 0
   const transfer = transaction.ledgerCategory.startsWith('Transfer:') || transaction.ledgerCategory.toLowerCase() === 'accountmove'
   const split = transaction.id.includes('-split-')
-  const editBlocked = split || transaction.savingsGoalId != null
+  const editBlocked = split || transaction.savingsGoalId != null || transaction.wishlistItemId != null
   const moveReason = transactionMoveIneligibility(transaction)
   const canMove = !editBlocked && !moveReason && Boolean(props.onMove)
   const reloadDrawdown = isStabilityReloadDrawdown(transaction)

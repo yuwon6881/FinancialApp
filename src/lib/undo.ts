@@ -291,12 +291,20 @@ export function buildUndoAction(
       const purchaseTransactionId = purchase?.item?.purchaseTransactionId || purchase?.transaction?.id
       return action('wishlistItem', 'unpurchase', id, { purchaseTransactionId, name: op.payload?.name })
     }
-    case 'wishlistItem:unpurchase':
+    case 'wishlistItem:unpurchase': {
+      const restoredItem = result && typeof result === 'object' && 'name' in result && 'price' in result
+        ? result as WishlistItem & { undoTransaction?: Transaction }
+        : undefined
+      const transaction = restoredItem?.undoTransaction
       return action('wishlistItem', 'purchase', String(op.targetId), {
-        name: op.payload?.name,
-        price: op.payload?.price,
-        date: op.payload?.date,
+        name: restoredItem?.name ?? op.payload?.name,
+        price: restoredItem?.price ?? op.payload?.price,
+        date: transaction?.date ?? op.payload?.date,
+        postedAt: transaction?.postedAt ?? op.payload?.postedAt,
+        purchaseTransactionId: transaction?.id ?? op.payload?.purchaseTransactionId,
+        accountId: transaction?.accountId ?? op.payload?.accountId,
       })
+    }
     case 'recurringPayment:toggle': {
       if (!op.payload || typeof op.payload.active !== 'boolean') return undefined
       const restored = before as RecurringPayment | undefined

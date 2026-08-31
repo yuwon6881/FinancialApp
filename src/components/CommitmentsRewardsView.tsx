@@ -434,6 +434,7 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
         goalPacePreview={goalPacePreview}
         currency={currency}
         hideSensitive={hideSensitive}
+        isOffline={isOffline}
         sensitivePreferenceStatus={app.sensitivePreferenceStatus}
         todayKey={todayKey}
         formatSensitive={formatSensitive}

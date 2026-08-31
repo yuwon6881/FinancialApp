@@ -43,6 +43,44 @@ describe('undo helpers', () => {
     expect(enqueue).toHaveBeenCalledWith('wishlistItem', 'delete', '42', undefined)
   })
 
+  it('restores an unclaimed reward with the authoritative deleted transaction identity', () => {
+    const enqueue = vi.fn()
+    const undoTransaction = {
+      id: 'reward-claim-1',
+      date: '2026-08-24',
+      postedAt: '2026-08-24T03:04:05.000Z',
+      description: 'Purchased: Headphones (Wish List)',
+      category: 'Other',
+      ledgerCategory: 'Rewards',
+      amount: -200,
+      wishlistItemId: 7,
+      accountId: 'rewards-wallet',
+    }
+    const result = {
+      id: 7,
+      name: 'Headphones',
+      price: 200,
+      isPurchased: false,
+      undoTransaction,
+    }
+
+    buildUndoAction(
+      new Map(),
+      op('wishlistItem', 'unpurchase', '7', { name: 'stale', price: 1 }),
+      result as never,
+      enqueue,
+    )?.onAction()
+
+    expect(enqueue).toHaveBeenCalledWith('wishlistItem', 'purchase', '7', {
+      name: 'Headphones',
+      price: 200,
+      date: '2026-08-24',
+      postedAt: '2026-08-24T03:04:05.000Z',
+      purchaseTransactionId: 'reward-claim-1',
+      accountId: 'rewards-wallet',
+    })
+  })
+
   it('does not offer category-delete undo when replacement migration was requested', () => {
     const snapshots = new Map<string, UndoSnapshot>()
     snapshotForUndo(snapshots, 'category', '1', { id: '1', name: 'Food' })

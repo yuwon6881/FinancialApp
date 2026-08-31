@@ -111,6 +111,14 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
 
   const handlePurchaseWishlistItem = (id: number, customDate?: string, accountId?: string) => {
     if (!guardSensitive()) return
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      showToast(
+        'Reward claims need a live balance check. Reconnect, then claim this reward again.',
+        'Available online only',
+        'warning',
+      )
+      return
+    }
     const item = allWishlist.find(wish => String(wish.id) === String(id))
     const now = new Date()
     const date = customDate || now.toLocaleDateString('en-CA')

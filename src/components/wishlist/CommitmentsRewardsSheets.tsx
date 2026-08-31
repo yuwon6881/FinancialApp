@@ -40,6 +40,7 @@ interface Props {
   goalPacePreview: number
   currency: string
   hideSensitive: boolean
+  isOffline?: boolean
   sensitivePreferenceStatus?: SensitivePreferenceStatus
   todayKey: string
   formatSensitive: (value: number) => ReactNode
@@ -81,9 +82,14 @@ export function CommitmentsRewardsSheets(props: Props) {
                 Buying this leaves your commitments <span className="font-bold text-amber-500">{props.formatSensitive(Math.max(0, props.purchasingItem.price - props.freeAfterGoalPace))}</span> short this cycle.
               </p>
             )}
+            {props.isOffline && (
+              <p className="text-xs font-medium text-muted-foreground">
+                Reconnect to claim this reward. Its available balance must be checked live.
+              </p>
+            )}
             <ModalActions className="pt-4">
               <Button variant="outline" className="rounded-xl" onClick={() => props.setPurchasingItem(null)}>Cancel</Button>
-              <Button variant="primary" className="rounded-xl font-bold shadow-md" onClick={props.onConfirmPurchase} disabled={props.hideSensitive}>Claim &amp; Log to Ledger</Button>
+              <Button variant="primary" className="rounded-xl font-bold shadow-md" onClick={props.onConfirmPurchase} disabled={props.hideSensitive || props.isOffline}>Claim &amp; Log to Ledger</Button>
             </ModalActions>
           </div>
         </BottomSheet>

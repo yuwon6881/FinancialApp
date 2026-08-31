@@ -37,6 +37,7 @@ export function DeleteTransactionModal({
   const isSplitSubRecord = transaction.id.includes('-split-')
   const isIncomeMain = transaction.ledgerCategory === 'Income' || (transaction.ledgerCategory || '').startsWith('IncomeSplit:')
   const isCommitmentCompletion = transaction.savingsGoalId != null
+  const isRewardClaim = transaction.wishlistItemId != null
   return (
     <BottomSheet
       isOpen={isOpen}
@@ -85,6 +86,22 @@ export function DeleteTransactionModal({
             <div className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-2.5">
               <div className="flex items-start justify-between gap-4">
                 <span className="font-semibold text-foreground shrink-0">Commitment</span>
+                <span className="break-words text-right min-w-0">{transaction.description}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="font-semibold text-foreground shrink-0">Restore</span>
+                <span className="font-bold text-foreground whitespace-nowrap">{formatSensitive(Math.abs(transaction.amount))}</span>
+              </div>
+            </div>
+          </div>
+        ) : isRewardClaim ? (
+          <div className="space-y-2">
+            <p>
+              Deleting this entry restores the reward so it can be claimed again.
+            </p>
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-2.5">
+              <div className="flex items-start justify-between gap-4">
+                <span className="font-semibold text-foreground shrink-0">Reward</span>
                 <span className="break-words text-right min-w-0">{transaction.description}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
@@ -160,6 +177,7 @@ interface EditDisabledModalProps {
 export function EditDisabledModal({ isOpen, transaction, onClose }: EditDisabledModalProps) {
   if (!isOpen) return null
   const isCommitmentCompletion = transaction?.savingsGoalId != null
+  const isRewardClaim = transaction?.wishlistItemId != null
   return (
     <BottomSheet
       isOpen={isOpen}
@@ -189,6 +207,15 @@ export function EditDisabledModal({ isOpen, transaction, onClose }: EditDisabled
             </p>
             <p>
               Edit the commitment, then complete it again.
+            </p>
+          </>
+        ) : isRewardClaim ? (
+          <>
+            <p>
+              This reward-claim entry must stay linked to its saved reward, amount, account, and date.
+            </p>
+            <p>
+              Delete it to restore the reward, then claim it again.
             </p>
           </>
         ) : (

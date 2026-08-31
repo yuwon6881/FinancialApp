@@ -77,6 +77,8 @@ export interface AiNavigationTarget {
   /** Transaction to scroll to and highlight in the ledger list. */
   ledgerTxId?: string | null
   cycleKey?: string | null
+  /** Reward to scroll to and highlight so account selection can continue in its Claim sheet. */
+  wishlistItemId?: string | null
 }
 
 /**
@@ -195,7 +197,7 @@ export interface AiActionsDeps {
   }) => void
   handleDiscardSubscription: (noti: PendingNotification) => void
   handleConfirmSubscription: (noti: PendingNotification, paidDate: string) => void
-  handlePurchaseWishlistItem: (id: number) => void
+  handlePurchaseWishlistItem: (id: number, customDate?: string, accountId?: string) => void
   handleUnpurchaseWishlistItem: (id: number) => void
 }
 
@@ -466,16 +468,21 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
           continue
         }
       }
+      const rewardsAccounts = deps.ledgerAccounts.filter(account =>
+        !account.isArchived && account.bucket === 'Rewards')
+      const claimAccount = rewardsAccounts.length === 1 ? rewardsAccounts[0] : undefined
       deps.setConfirmModalData({
-        title: undoPurchase ? 'Undo Reward Claim' : 'Claim Reward',
+        title: undoPurchase ? 'Undo Reward Claim' : claimAccount ? 'Claim Reward' : 'Choose Reward Account',
         message: undoPurchase
           ? `Undo the purchase of "${item.name}" and remove its linked ledger transaction?`
-          : `Claim "${item.name}" and create its linked Rewards transaction?`,
-        confirmText: undoPurchase ? 'Undo Purchase' : 'Claim',
+          : claimAccount
+            ? `Claim "${item.name}" from ${claimAccount.name} and create its linked Rewards transaction?`
+            : `Open "${item.name}" to choose the Rewards account for its linked transaction.`,
+        confirmText: undoPurchase ? 'Undo Purchase' : claimAccount ? 'Claim' : 'Open Reward',
         onConfirm: () => {
           if (undoPurchase) deps.handleUnpurchaseWishlistItem(item.id)
-          else deps.handlePurchaseWishlistItem(item.id)
-          deps.navigate({ tab: 'wishlist' })
+          else if (claimAccount) deps.handlePurchaseWishlistItem(item.id, undefined, claimAccount.id)
+          deps.navigate({ tab: 'wishlist', wishlistItemId: String(item.id) })
         },
       })
       setDestination({ tab: 'wishlist' })

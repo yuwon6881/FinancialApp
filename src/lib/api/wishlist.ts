@@ -54,11 +54,16 @@ export async function purchaseWishlistItem(id: number, date?: string, transactio
   }
 }
 
-export async function unpurchaseWishlistItem(id: number): Promise<WishlistItem> {
+export type WishlistUnpurchaseResult = WishlistItem & { undoTransaction?: Transaction }
+
+export async function unpurchaseWishlistItem(id: number): Promise<WishlistUnpurchaseResult> {
   const data = await request<WireWishlistItem>(`/wishlist/${id}/purchase`, {
     method: 'DELETE',
     errorMessage: 'Failed to undo wishlist purchase',
   })
   invalidateCache()
-  return deobfuscateWishlistItem(data)
+  return {
+    ...deobfuscateWishlistItem(data),
+    ...(data.undoTransaction ? { undoTransaction: deobfuscateTransaction(data.undoTransaction) } : {}),
+  }
 }

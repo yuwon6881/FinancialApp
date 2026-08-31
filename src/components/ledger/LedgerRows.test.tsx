@@ -70,6 +70,16 @@ describe('LedgerRows move action', () => {
     expect(rowProps.onMove).toHaveBeenCalledWith(rowProps.transaction)
   })
 
+  it('routes editing a reward claim to the protected-record explanation', () => {
+    const rowProps = props({ ...transaction('NotRequired'), wishlistItemId: 7 })
+    render(<table><tbody><DesktopLedgerRow {...rowProps} /></tbody></table>)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+
+    expect(rowProps.onEditBlocked).toHaveBeenCalledWith(rowProps.transaction)
+    expect(rowProps.onStartEdit).not.toHaveBeenCalled()
+  })
+
   it.each([
     ['split row', { id: 'tx-split-1' }],
     ['commitment completion', { savingsGoalId: 4 }],

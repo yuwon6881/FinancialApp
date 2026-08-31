@@ -63,6 +63,7 @@ export type WireRecurringPayment = Omit<RecurringPayment, 'amount'> & {
 
 export type WireWishlistItem = Omit<WishlistItem, 'price'> & {
   price: WireAmount
+  undoTransaction?: WireTransaction | null
 }
 
 export type WireSavingsGoal = Omit<SavingsGoal, 'targetAmount' | 'earmarkedAmount' | 'cycleFundedAmount'> & {

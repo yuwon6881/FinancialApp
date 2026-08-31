@@ -106,6 +106,7 @@ export type DispatchResult =
   | import('../types').LoanRepaymentActionResult
   | { id: string }
   | { item: WishlistItem; transaction: Transaction; id?: undefined }
+  | (WishlistItem & { undoTransaction?: Transaction })
   | void
 
 export function getOptimisticTransactionPostedAt(createdAt: number): string {

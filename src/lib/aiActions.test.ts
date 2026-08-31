@@ -349,9 +349,25 @@ describe('dispatchAiActions — wishlist claim', () => {
   const item = { id: 7, name: 'Headphones', price: 200, isPurchased: false } as AiActionsDeps['allWishlist'][number]
 
   it('opens the claim confirmation when Rewards covers the price', async () => {
-    const d = makeDeps({ allWishlist: [item], getRewardsBalance: () => 250 })
+    const d = makeDeps({
+      allWishlist: [item],
+      getRewardsBalance: () => 250,
+      ledgerAccounts: [{ id: 'reward-wallet', name: 'Wallet', bucket: 'Rewards', kind: 'EWallet', isArchived: false } as never],
+    })
     await dispatchAiActions([{ type: 'requestPurchaseWishlist', payload: { id: 7 } }], d)
     expect(d.setConfirmModalData).toHaveBeenCalledOnce()
+    vi.mocked(d.setConfirmModalData).mock.calls[0]?.[0].onConfirm()
+    expect(d.handlePurchaseWishlistItem).toHaveBeenCalledWith(7, undefined, 'reward-wallet')
+  })
+
+  it('opens the exact reward instead of claiming when an account still needs choosing', async () => {
+    const d = makeDeps({ allWishlist: [item], getRewardsBalance: () => 250 })
+    await dispatchAiActions([{ type: 'requestPurchaseWishlist', payload: { id: 7 } }], d)
+
+    expect(d.setConfirmModalData).toHaveBeenCalledOnce()
+    vi.mocked(d.setConfirmModalData).mock.calls[0]?.[0].onConfirm()
+    expect(d.handlePurchaseWishlistItem).not.toHaveBeenCalled()
+    expect(d.navigate).toHaveBeenCalledWith({ tab: 'wishlist', wishlistItemId: '7' })
   })
 
   it('refuses the claim when Rewards is short', async () => {

@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import type { Transaction } from '../../types'
 import { DeleteTransactionModal, EditDisabledModal } from './LedgerDeleteModals'
 
 describe('DeleteTransactionModal document safety', () => {
@@ -102,5 +103,32 @@ describe('DeleteTransactionModal document safety', () => {
 
     render(<EditDisabledModal isOpen transaction={completion} onClose={vi.fn()} />)
     expect(screen.getByText(/edit the commitment, then complete it again/i)).toBeTruthy()
+  })
+
+  it('explains that deleting a protected reward claim restores the reward', () => {
+    const claim: Transaction = {
+      id: 'reward-claim',
+      date: '2026-08-01',
+      description: 'Purchased: Camera (Wish List)',
+      category: 'Other',
+      ledgerCategory: 'Rewards',
+      amount: -800,
+      wishlistItemId: 9,
+    }
+
+    const { unmount } = render(
+      <DeleteTransactionModal
+        isOpen
+        transaction={claim}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        formatSensitive={value => `MYR ${value.toFixed(2)}`}
+      />,
+    )
+    expect(screen.getByText(/restores the reward so it can be claimed again/i)).toBeTruthy()
+    unmount()
+
+    render(<EditDisabledModal isOpen transaction={claim} onClose={vi.fn()} />)
+    expect(screen.getByText(/delete it to restore the reward, then claim it again/i)).toBeTruthy()
   })
 })

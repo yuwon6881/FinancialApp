@@ -63,7 +63,7 @@ export interface UseAiActionRouterOptions {
   optimisticDashboardData: any
   handleDiscardSubscription: (noti: any) => void
   handleConfirmSubscription: (noti: any, paidDate: string) => void
-  handlePurchaseWishlistItem: (id: number) => void
+  handlePurchaseWishlistItem: (id: number, customDate?: string, accountId?: string) => void
   handleUnpurchaseWishlistItem: (id: number) => void
   requestDeletePayment: (id: string) => void
   requestDeleteWishlistItem: (id: number) => void
