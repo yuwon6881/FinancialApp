@@ -86,75 +86,18 @@ describe('SwipeableRow closed-state opacity', () => {
     expect(drawer).not.toBeNull()
   })
 
-  it('keeps the drawer hidden and transparent when closed to prevent border and corner color bleed', async () => {
+  it('keeps the drawer hidden and transparent when closed to prevent border and corner color bleed', () => {
     renderRow('rounded-2xl border border-border shadow-xs')
     const deleteButton = screen.getByText('Delete')
     const drawer = deleteButton.closest('[role="group"]') as HTMLElement
     expect(drawer.style.opacity).toBe('0')
     expect(drawer.style.pointerEvents).toBe('none')
-
-    fireEvent.click(screen.getByRole('button', { name: 'Show row actions' }))
-    expect(drawer.style.opacity).toBe('1')
-    expect(drawer.style.pointerEvents).toBe('auto')
-
-    fireEvent.keyDown(document, { key: 'Escape' })
-    expect(drawer.style.opacity).toBe('0')
-    expect(drawer.style.pointerEvents).toBe('none')
+    expect(screen.queryByRole('button', { name: 'Show row actions' })).toBeNull()
   })
 
-  it('opens through an accessible disclosure and moves focus into the actions', async () => {
+  it('does not render the bottom-right chevron disclosure button', () => {
     renderRow()
-    const disclosure = screen.getByRole('button', { name: 'Show row actions' })
-    const actionsId = disclosure.getAttribute('aria-controls')
-
-    expect(disclosure.getAttribute('aria-expanded')).toBe('false')
-    expect(actionsId).toBeTruthy()
-    fireEvent.click(disclosure)
-
-    const drawer = document.getElementById(actionsId as string)
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Delete' })))
-    expect(disclosure.getAttribute('aria-expanded')).toBe('true')
-    expect(drawer?.hasAttribute('inert')).toBe(false)
-  })
-
-  it('closes on Escape and restores focus to the disclosure', async () => {
-    renderRow()
-    fireEvent.click(screen.getByRole('button', { name: 'Show row actions' }))
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Delete' })))
-
-    fireEvent.keyDown(document, { key: 'Escape' })
-
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Show row actions' })))
-    expect(screen.getByText('Delete').closest('[inert]')).not.toBeNull()
-  })
-
-  it('closes an open row before a global refresh gesture moves the page', async () => {
-    renderRow()
-    const disclosure = screen.getByRole('button', { name: 'Show row actions' })
-    fireEvent.click(disclosure)
-    await waitFor(() => expect(disclosure.getAttribute('aria-expanded')).toBe('true'))
-
-    act(() => closeOpenSwipeableRow())
-
-    await waitFor(() => expect(disclosure.getAttribute('aria-expanded')).toBe('false'))
-    expect(screen.getByText('Delete').closest('[inert]')).not.toBeNull()
-  })
-
-  it('closes when swiping right on the exposed action buttons', async () => {
-    renderRow()
-    const disclosure = screen.getByRole('button', { name: 'Show row actions' })
-    fireEvent.click(disclosure)
-    await waitFor(() => expect(disclosure.getAttribute('aria-expanded')).toBe('true'))
-
-    const deleteBtn = screen.getByRole('button', { name: 'Delete' })
-    const drawer = deleteBtn.closest('[role="group"]')!
-
-    // User touches the action button and swipes right
-    fireEvent.pointerDown(drawer, { pointerType: 'touch', clientX: 200, clientY: 50 })
-    fireEvent.pointerMove(drawer, { pointerType: 'touch', clientX: 240, clientY: 50 })
-    fireEvent.pointerUp(drawer, { pointerType: 'touch', clientX: 250, clientY: 50 })
-
-    await waitFor(() => expect(disclosure.getAttribute('aria-expanded')).toBe('false'))
-    expect(screen.getByText('Delete').closest('[inert]')).not.toBeNull()
+    expect(screen.queryByRole('button', { name: 'Show row actions' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Hide row actions' })).toBeNull()
   })
 })

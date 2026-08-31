@@ -375,7 +375,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
               </ul>
             </details>
           )}
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="grid gap-6 grid-cols-1 2xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
             <ValueChart portfolio={portfolio} masked={passiveMask} range={range} isFetching={loading} onRangeChange={setRange} />
             <AllocationChart portfolio={portfolio} masked={passiveMask} selected={allocationFilter} onSelect={setAllocationFilter} />
           </div>

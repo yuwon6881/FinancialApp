@@ -135,14 +135,7 @@ export function DocumentCard({
             />
           </>
         }
-        // Between md and lg the card is still what renders but there is no swipe drawer, so the two
-        // actions come back inline — as the compact icon buttons, not the drawer's full-colour blocks.
-        desktopActions={
-          <>
-            <DownloadDocumentButton document={document} downloadFailed={downloadFailed} disabled={isBusy} />
-            <DeleteDocumentButton document={document} setDocToDelete={setDocToDelete} disabled={isBusy} />
-          </>
-        }
+        desktopActions={false}
       >
         <div onClick={dismissPickerOnBodyTap}>
           {/* The name gets the full width of its own line. Sharing a flex row with three action
@@ -178,7 +171,13 @@ export function DocumentCard({
                 />
               </div>
             </div>
-            <PreviewDocumentButton document={document} onPreview={onPreview} disabled={isBusy} />
+            <div className="flex shrink-0 items-center gap-1">
+              <PreviewDocumentButton document={document} onPreview={onPreview} disabled={isBusy} />
+              <div className="hidden shrink-0 items-center gap-1 sm:flex">
+                <DownloadDocumentButton document={document} downloadFailed={downloadFailed} disabled={isBusy} />
+                <DeleteDocumentButton document={document} setDocToDelete={setDocToDelete} disabled={isBusy} />
+              </div>
+            </div>
           </div>
 
           <div className="mt-3 flex flex-col items-stretch gap-2 min-[360px]:flex-row min-[360px]:items-end min-[360px]:justify-between sm:gap-3">

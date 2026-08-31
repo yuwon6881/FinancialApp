@@ -98,7 +98,7 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
           />
         </div>
       </div>
-      <div className="mt-5 flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden sm:flex-row lg:flex-col lg:justify-start">
+      <div className="mt-5 flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden sm:flex-row 2xl:flex-col 2xl:justify-start">
         {groups.length > 0 ? (
           <InteractiveDoughnutChart
             key={mode}
@@ -110,8 +110,8 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
             masked={masked}
             selectedKey={selectedLabel}
             onActivate={slice => selectSlice(slice.label)}
-            chartClassName="mx-auto aspect-square w-full max-w-52 sm:mx-0 sm:w-48 lg:mx-auto lg:w-56 lg:max-w-56"
-            legendClassName="w-full min-w-0 flex-1 overflow-hidden space-y-1 lg:flex-none"
+            chartClassName="mx-auto aspect-square w-full max-w-52 sm:mx-0 sm:w-48 2xl:mx-auto 2xl:w-56 2xl:max-w-56"
+            legendClassName="w-full min-w-0 flex-1 overflow-hidden space-y-1 2xl:flex-none"
           />
         ) : <p className="text-xs text-muted-foreground">Add prices to see what you hold.</p>}
       </div>

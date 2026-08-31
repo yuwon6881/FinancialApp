@@ -175,14 +175,10 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
           />
         </FormField>
 
-        {/* The explanation is a FormField hint rather than an InfoHint: the label is this
-            control's accessible name, so a popover button inside it would be read out as part
-            of the name, and a hint is wired to aria-describedby instead. */}
         <FormField
           label="How it's paid"
           required
           error={errors.paymentMode}
-          hint="Auto deduct bills leave your account automatically. Manual bills can be paid early."
         >
           <CustomSelect
             ariaLabel="How it's paid"
@@ -204,7 +200,6 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
           label="Recurring start date"
           required
           error={errors.startDate}
-          hint="Bills recur on this day each month or year."
         >
           <DatePicker
             value={startDateInput}

@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { animate, m, useMotionValue, useReducedMotion, type PanInfo } from 'framer-motion'
 import { cn } from '../../lib/utils'
 import { useIsCompact } from '../../lib/breakpoints'
@@ -43,7 +42,6 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   const x = useMotionValue(0)
   const settleAnimationRef = useRef<{ stop: () => void } | null>(null)
   const suppressNextClick = useRef(false)
-  const disclosureRef = useRef<HTMLButtonElement>(null)
   const actionDrawerRef = useRef<HTMLDivElement>(null)
   const focusActionsOnOpenRef = useRef(false)
   const generatedActionsId = useId().replace(/:/g, '')
@@ -109,7 +107,6 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
       if (event.key !== 'Escape') return
       event.preventDefault()
       close()
-      window.requestAnimationFrame(() => disclosureRef.current?.focus({ preventScroll: true }))
     }
     document.addEventListener('keydown', closeOnEscape)
     return () => document.removeEventListener('keydown', closeOnEscape)
@@ -303,33 +300,6 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         }}
       >
         {children}
-
-        {/* The first visible hint keeps the established swipe affordance. Every row
-            still exposes the same control to keyboard and assistive technology. */}
-        <Button
-          ref={disclosureRef}
-          variant="unstyled"
-          type="button"
-          disabled={disabled}
-          aria-expanded={open}
-          aria-controls={actionsId}
-          aria-label={open ? 'Hide row actions' : 'Show row actions'}
-          onClick={event => {
-            event.stopPropagation()
-            if (open) close()
-            else openActions(true)
-          }}
-          className={cn(
-            'absolute bottom-0 right-0 z-10 inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground/45 transition-opacity focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring',
-            hint || open
-              ? 'opacity-100'
-              : 'pointer-events-none opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100',
-          )}
-        >
-          {open
-            ? <ChevronsRight className="size-3.5" aria-hidden="true" />
-            : <ChevronsLeft className={cn('size-3.5', hint && 'swipe-hint')} aria-hidden="true" />}
-        </Button>
       </m.div>
     </div>
   )

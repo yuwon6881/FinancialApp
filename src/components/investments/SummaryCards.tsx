@@ -129,7 +129,7 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
   ]
 
   return (
-    <section aria-label="Investment summary" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <section aria-label="Investment summary" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
       {cards.map(({ label, hint, hero, rows, bg }, index) => (
         <article
           key={label}

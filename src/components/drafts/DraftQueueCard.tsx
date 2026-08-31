@@ -5,7 +5,6 @@ import { formatCurrencyVal } from '../../lib/utils'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { LedgerAllocationBadge } from '../ledger/LedgerAllocationBadge'
 import { Button } from '../ui/Button'
-import { OverflowMenu } from '../ui/OverflowMenu'
 import { SensitiveMask } from '../ui/SensitiveAmount'
 import { SwipeableRow } from '../ui/SwipeableRow'
 
@@ -51,16 +50,7 @@ export function DraftQueueCard({ draft, grip, issues, documentCount, currency, h
             <span className={`max-w-[45%] shrink-0 whitespace-nowrap text-right text-sm font-extrabold tabular-nums ${amountClass}`}>
               {hideSensitive ? <SensitiveMask /> : <>{amountPrefix}{formatCurrencyVal(Math.abs(draft.amount), currency)}</>}
             </span>
-            <OverflowMenu
-              entityLabel={draft.description}
-              disabled={hideSensitive}
-              className="-mr-2 -mt-2 lg:hidden"
-              items={[
-                { label: 'Edit draft', icon: Edit2, onSelect: onEdit, disabled: hideSensitive, hint: actionHint },
-                { label: 'Delete draft', icon: Trash2, onSelect: onDelete, disabled: hideSensitive, hint: actionHint, tone: 'danger' },
-              ]}
-            />
-            <div className="hidden shrink-0 items-center gap-1 lg:flex">
+            <div className="hidden shrink-0 items-center gap-1 sm:flex">
               <Button variant="ghost" size="icon" onClick={onEdit} disabled={hideSensitive} aria-label={`Edit ${draft.description}`} title={hideSensitive ? actionHint : 'Edit draft'}>
                 <Edit2 className="size-4" aria-hidden="true" />
               </Button>

@@ -76,7 +76,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             className="font-medium [appearance:textfield]"
           />
         </FormField>
-        <FormField label="Priority" hint="Funded first when money is short.">
+        <FormField label="Priority">
           <CustomSelect
             ariaLabel="Commitment priority"
             value={props.priority}
@@ -89,7 +89,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField
-          label="Where should this money come from?"
+          label="Funding source"
           labelAction={(
             <InfoHint
               label="commitment funding bucket"
@@ -113,14 +113,6 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
           label="Needed by"
           required
           error={props.errors.date}
-          hint={!props.errors.date
-            ? (props.requiredPerCycle > 0
-              // formatSensitive returns a node when the value is masked, so build the sentence as a
-              // node rather than interpolating — the string form used to drop the amount entirely
-              // and leave a second, duplicate line rendering below the field.
-              ? <>Your deadline works out at about {props.formatSensitive(props.requiredPerCycle)} to set aside each cycle.</>
-              : 'Your deadline sets how much to set aside each cycle.')
-            : undefined}
         >
           <DatePicker
             value={props.date}

@@ -181,7 +181,7 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
               className="w-full"
             />
           </FormField>
-          <FormField label="Amount owed when tracking starts" required>
+          <FormField label="Starting amount owed" required>
             <SmartAmountInput value={openingPrincipal} onChange={event => setOpeningPrincipal(event.target.value)} placeholder="0.00" className="w-full" />
           </FormField>
           <FormField label="Include payments from" required>

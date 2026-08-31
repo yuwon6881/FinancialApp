@@ -14,7 +14,7 @@ const chartPosition = (points: TrendPoint[], index: number) => {
   const max = Math.max(...points.map(point => point.balance), 1000)
   const x = points.length === 1 ? 250 : 15 + (index / (points.length - 1)) * 470
   const y = 105 - ((points[index].balance - min) / (max - min || 1)) * 90
-  return { x, y, left: (x / 500) * 100, top: (y / 120) * 75 + 25 }
+  return { x, y, left: (x / 500) * 100, top: (y / 120) * 100 }
 }
 
 const trendLabel = (point: TrendPoint) => {

@@ -58,7 +58,7 @@ describe('DraftStagingView', () => {
   it('opens the shared transaction sheet in draft mode', async () => {
     renderView()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Car Fuel' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit Car Fuel' })[0])
 
     expect(await screen.findByRole('heading', { name: 'Edit Draft' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Save Draft' })).toBeTruthy()
@@ -122,7 +122,7 @@ describe('DraftStagingView', () => {
     expect(screen.getByText(/same-day drafts appear in reverse order/i)).toBeTruthy()
   })
 
-  it('summarizes readiness and exposes mobile actions without requiring a swipe', async () => {
+  it('summarizes readiness and exposes edit and delete actions on the card', async () => {
     window.innerWidth = 500
     renderView()
 
@@ -131,8 +131,8 @@ describe('DraftStagingView', () => {
     expect(screen.getByText('Ready')).toBeTruthy()
     await screen.findByText('No attachments')
 
-    fireEvent.click(screen.getByRole('button', { name: 'More actions for Car Fuel' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit draft' }))
+    expect(screen.queryByRole('button', { name: 'More actions for Car Fuel' })).toBeNull()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit Car Fuel' })[0])
     expect(await screen.findByRole('heading', { name: 'Edit Draft' })).toBeTruthy()
   })
 
