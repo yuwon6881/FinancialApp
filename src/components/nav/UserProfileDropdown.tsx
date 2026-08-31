@@ -7,7 +7,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  TrendingUp,
   Settings,
   Eye,
   EyeOff,
@@ -65,14 +64,6 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           </div>
 
           <DropdownMenuSeparator className="my-1 border-t border-border/30" />
-
-          <DropdownMenuItem
-            onSelect={() => onTabChange('investments')}
-            className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
-          >
-            <TrendingUp className="size-3.5 text-violet-500" />
-            <span>Investments</span>
-          </DropdownMenuItem>
 
           <DropdownMenuItem
             onSelect={() => onTabChange('settings')}

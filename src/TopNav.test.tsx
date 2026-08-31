@@ -264,6 +264,7 @@ describe('TopNav mobile primary navigation', () => {
     expect(screen.getByText('Test User')).toBeTruthy()
     expect(screen.queryByText('Premium Account')).toBeNull()
     expect(screen.queryByRole('menuitem', { name: /commands/i })).toBeNull()
+    expect(screen.queryByRole('menuitem', { name: 'Investments' })).toBeNull()
   })
 
   it('uses the same plus symbol for every Quick Add action', () => {
