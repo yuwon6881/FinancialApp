@@ -24,12 +24,6 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 // See lib/motionFeatures for why the bundle is not imported from the package root.
 const loadMotionFeatures = () => import('./lib/motionFeatures').then(mod => mod.default)
 
-// Web-vitals console logging is a dev-only aid; keep it out of the production
-// bundle entirely via a dynamic dev-gated import.
-if (import.meta.env.DEV) {
-  import('./lib/vitals').then(({ startTrackingVitals }) => startTrackingVitals())
-}
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary variant="screen">
