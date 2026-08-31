@@ -111,7 +111,11 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
             selectedKey={selectedLabel}
             onActivate={slice => selectSlice(slice.label)}
             chartClassName="mx-auto aspect-square w-full max-w-52 sm:mx-0 sm:w-48 2xl:mx-auto 2xl:w-56 2xl:max-w-56"
-            legendClassName="w-full min-w-0 flex-1 overflow-hidden space-y-1 2xl:flex-none"
+            // Scrolls rather than clips. "Individual fund" mode lists one row per holding, and
+            // under overflow-hidden the rows past the panel's height were unreachable, so the
+            // shared arc-hover reveal had nowhere to scroll either. Matches the outflow legend's
+            // bounded, scrollbar-less box.
+            legendClassName="w-full min-w-0 flex-1 max-h-56 space-y-1 overflow-y-auto no-scrollbar 2xl:max-h-64 2xl:flex-none"
           />
         ) : <p className="text-xs text-muted-foreground">Add prices to see what you hold.</p>}
       </div>

@@ -222,6 +222,12 @@ interface MockApiOptions {
   documents?: VaultDocument[]
   reliefCategories?: TaxReliefCategoryDefinition[]
   investmentTransactions?: InvestmentActivity[]
+  /**
+   * Overrides merged onto the empty portfolio. Opt-in so every existing investments baseline keeps
+   * rendering the empty state; a test that needs holdings (the allocation chart only mounts when
+   * there are some) asks for them.
+   */
+  investmentPortfolio?: Record<string, unknown>
   /** Lets a spec give categories explicit flow types; the default fixture leaves them all `both`. */
   categories?: Array<{ id: string; name: string; type?: string }>
   /** Adds report-specific density without replacing unrelated bootstrap fixture fields. */
@@ -313,7 +319,11 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
         : [transaction])
     }
     if (pathname.endsWith('/investments/portfolio')) {
-      return fulfill(route, { ...emptyInvestmentPortfolio, activityCount: (options.investmentTransactions ?? []).length })
+      return fulfill(route, {
+        ...emptyInvestmentPortfolio,
+        activityCount: (options.investmentTransactions ?? []).length,
+        ...options.investmentPortfolio,
+      })
     }
     if (pathname.endsWith('/investments/cash-flows')) return fulfill(route, { items: [], total: 0, page: 1, pageSize: 10 })
     if (pathname.endsWith('/investments/allocation')) return fulfill(route, emptyInvestmentAllocation)

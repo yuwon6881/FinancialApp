@@ -1,8 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { InteractiveDoughnutChart } from './InteractiveDoughnutChart'
+import { revealWithinScrollParent } from '../../lib/scrollContainment'
+
+vi.mock('../../lib/scrollContainment', () => ({ revealWithinScrollParent: vi.fn() }))
 
 describe('InteractiveDoughnutChart', () => {
+  beforeEach(() => { (revealWithinScrollParent as Mock).mockClear() })
+
   it('shares hover, keyboard, and activation behavior between the chart and legend', () => {
     const onActivate = vi.fn()
     const { container } = render(
@@ -51,5 +56,51 @@ describe('InteractiveDoughnutChart', () => {
     expect(screen.getByRole('button', { name: 'Stocks: hidden' })).toBeTruthy()
     expect(container.textContent).not.toContain('$100')
     expect(container.textContent).not.toContain('75.0%')
+  })
+
+  // jsdom has no layout, so the reveal itself cannot be proven here (that is a Playwright job).
+  // What this pins is which interactions ask for it: an arc highlights a legend row the user may
+  // not be able to see, while the legend is already under the pointer and must not move.
+  it('reveals the highlighted legend row from the arc but never from the legend itself', () => {
+    const { container } = render(
+      <InteractiveDoughnutChart
+        ariaLabel="Allocation"
+        slices={[
+          { key: 'stocks', label: 'Stocks', value: 75, color: '#2563eb' },
+          { key: 'bonds', label: 'Bonds', value: 25, color: '#10b981' },
+        ]}
+        centerLabel="Total"
+        centerValue="$100"
+        formatValue={value => `$${value}`}
+      />,
+    )
+
+    const arcs = container.querySelectorAll('path[tabindex="0"]')
+    fireEvent.mouseEnter(arcs[1])
+    expect(revealWithinScrollParent).toHaveBeenCalledTimes(1)
+    expect((revealWithinScrollParent as Mock).mock.calls[0][0])
+      .toBe(screen.getByRole('button', { name: 'Bonds: $25, 25.0%' }))
+
+    fireEvent.focus(arcs[0])
+    expect(revealWithinScrollParent).toHaveBeenCalledTimes(2)
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'Stocks: $75, 75.0%' }))
+    expect(revealWithinScrollParent).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not reach for the legend while values are masked', () => {
+    const { container } = render(
+      <InteractiveDoughnutChart
+        ariaLabel="Allocation"
+        slices={[{ key: 'stocks', label: 'Stocks', value: 75, color: '#2563eb' }]}
+        centerLabel="Total"
+        centerValue="$100"
+        formatValue={value => `$${value}`}
+        masked
+      />,
+    )
+
+    fireEvent.mouseEnter(container.querySelectorAll('path')[0])
+    expect(revealWithinScrollParent).not.toHaveBeenCalled()
   })
 })

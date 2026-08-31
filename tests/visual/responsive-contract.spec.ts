@@ -323,3 +323,132 @@ test('the header action cluster stays pinned to the trailing edge', async ({ pag
   expect(gap, 'header did not expose its account control').not.toBeNull()
   expect(gap!, 'header actions are not pinned to the trailing edge').toBeLessThanOrEqual(4)
 })
+
+// The legend is a scrolling box (max-h-40). Highlighting a row the user cannot see is no feedback
+// at all, so hovering an arc brings its row into the legend's own view. jsdom reports every box as
+// zero-sized, so this behaviour can only be proven with real layout.
+test('hovering an outflow arc scrolls its legend row into the legend view', async ({ page }) => {
+  await mockApi(page, {
+    dashboard: {
+      monthlyCategoryBreakdown: [
+        { category: 'Household', amount: 1_400 },
+        { category: 'Groceries', amount: 900 },
+        { category: 'Transport', amount: 620 },
+        { category: 'Loan', amount: 480 },
+        { category: 'Health', amount: 300 },
+        { category: 'Insurance', amount: 260 },
+        { category: 'Utilities', amount: 210 },
+        { category: 'Haircut', amount: 160 },
+        { category: 'Hobbies', amount: 120 },
+        { category: 'Entertainment', amount: 90 },
+        { category: 'Subscriptions', amount: 60 },
+        { category: 'Stationery', amount: 40 },
+      ],
+    },
+  })
+  await page.goto('/reports', { waitUntil: 'domcontentloaded' })
+  await waitForStableLayout(page)
+
+  const outflowPanel = page.getByRole('heading', { name: 'Outflow Categories' })
+    .locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " app-panel ")]')
+  const legendButtons = outflowPanel.locator('button[aria-label*="%"]')
+  await expect(legendButtons.first()).toBeVisible()
+
+  const lastRow = legendButtons.last()
+  const arcs = outflowPanel.locator('svg path[tabindex="0"]')
+  await expect(arcs).toHaveCount(await legendButtons.count())
+
+  // Read the row's position relative to its own scroll box rather than the viewport: the panel
+  // itself may sit anywhere on the page, and only the legend's clipping is under test.
+  const containment = () => lastRow.evaluate(row => {
+    const box = row.parentElement!
+    const rowRect = row.getBoundingClientRect()
+    const boxRect = box.getBoundingClientRect()
+    return {
+      scrollTop: box.scrollTop,
+      scrolls: box.scrollHeight > box.clientHeight + 1,
+      visible: rowRect.top >= boxRect.top - 1 && rowRect.bottom <= boxRect.bottom + 1,
+    }
+  })
+
+  const before = await containment()
+  expect(before.scrolls, 'the seeded categories overflow the legend box').toBe(true)
+  expect(before.scrollTop).toBe(0)
+  expect(before.visible, 'the last row starts out of view').toBe(false)
+
+  // dispatchEvent rather than hover(): the smallest slice is a sliver whose bounding-box centre is
+  // not on the path, so a real pointer move would land on a neighbour. It must be `mouseover` —
+  // React synthesises onMouseEnter from delegated mouseover/mouseout at the root, so a native
+  // non-bubbling `mouseenter` reaches no React handler at all.
+  await arcs.last().dispatchEvent('mouseover')
+  await expect.poll(async () => (await containment()).visible).toBe(true)
+  expect((await containment()).scrollTop).toBeGreaterThan(0)
+
+  // The highlight is what the scroll exists to show, so the row must actually be marked active.
+  await expect(lastRow).toHaveClass(/bg-muted\/60/)
+})
+
+// The allocation legend used to be `overflow-hidden`, so in "Individual fund" mode every holding
+// past the panel height was unreachable and the shared arc-hover reveal had nowhere to scroll. It is
+// now a bounded scroll box, which only real layout can confirm.
+test('hovering an allocation arc scrolls its legend row into the legend view', async ({ page }) => {
+  const holding = (symbol: string, value: number) => ({
+    accountId: 'acct-1',
+    accountName: 'Broker',
+    instrumentId: `inst-${symbol}`,
+    symbol,
+    name: `${symbol} Fund`,
+    type: 'Etf',
+    currency: 'MYR',
+    units: 10,
+    averageCostNative: value / 10,
+    valueApp: value,
+    fxIncomplete: false,
+  })
+  const holdings = [
+    'AAA', 'BBB', 'CCC', 'DDD', 'EEE', 'FFF',
+    'GGG', 'HHH', 'III', 'JJJ', 'KKK', 'LLL',
+  ].map((symbol, index) => holding(symbol, 5_000 - index * 300))
+
+  await mockApi(page, {
+    investmentPortfolio: {
+      holdings,
+      accounts: [{ id: 'acct-1', name: 'Broker', currency: 'MYR' }],
+      marketDataConfigured: true,
+      summary: { growthLedgerBalance: 40_000, marketValue: 40_000, totalValue: 40_000 },
+    },
+  })
+  await page.goto('/investments', { waitUntil: 'domcontentloaded' })
+  await waitForStableLayout(page)
+
+  const panel = page.getByRole('heading', { name: 'Where your money sits' })
+    .locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " app-panel ")]')
+
+  // The default "basket" grouping folds unclassified holdings into a single slice. Individual-fund
+  // mode is the case this change exists for: one legend row per holding, more than the box can show.
+  await panel.getByRole('combobox', { name: 'Group by' }).click()
+  await page.getByRole('option', { name: 'Individual fund' }).click()
+
+  const legendButtons = panel.locator('button[aria-label*="%"]')
+  await expect.poll(() => legendButtons.count()).toBeGreaterThan(6)
+
+  const lastRow = legendButtons.last()
+  const containment = () => lastRow.evaluate(row => {
+    const box = row.parentElement!
+    const rowRect = row.getBoundingClientRect()
+    const boxRect = box.getBoundingClientRect()
+    return {
+      scrollTop: box.scrollTop,
+      scrolls: box.scrollHeight > box.clientHeight + 1,
+      visible: rowRect.top >= boxRect.top - 1 && rowRect.bottom <= boxRect.bottom + 1,
+    }
+  })
+
+  const before = await containment()
+  expect(before.scrolls, 'the legend is a bounded scroll box, not a clipped one').toBe(true)
+  expect(before.visible, 'the last holding starts out of view').toBe(false)
+
+  await panel.locator('svg path[tabindex="0"]').last().dispatchEvent('mouseover')
+  await expect.poll(async () => (await containment()).visible).toBe(true)
+  expect((await containment()).scrollTop).toBeGreaterThan(0)
+})

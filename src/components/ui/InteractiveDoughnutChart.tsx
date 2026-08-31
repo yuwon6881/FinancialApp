@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { m, useReducedMotion } from 'framer-motion'
+import { motionSafeScrollBehavior } from '../../lib/motionPreference'
+import { revealWithinScrollParent } from '../../lib/scrollContainment'
 
 export interface DoughnutSlice {
   key: string
@@ -58,11 +60,27 @@ export function InteractiveDoughnutChart({
   const activeKey = hoveredKey ?? selectedKey ?? null
   const active = chartSlices.find(slice => slice.key === activeKey)
 
+  const legendRefs = useRef(new Map<string, HTMLButtonElement | null>())
+
+  /**
+   * Hovering an arc highlights its legend row, which is invisible feedback when the legend is a
+   * scrolling list and the row sits below the fold. Bring the row to the user rather than leaving
+   * the highlight to happen off-screen.
+   *
+   * Only arc interaction triggers this. Hovering the legend itself already puts the pointer on the
+   * row, and scrolling underneath a moving pointer would swap which row is hovered.
+   */
+  const hoverArc = useCallback((key: string) => {
+    setHoveredKey(key)
+    const target = legendRefs.current.get(key)
+    if (target) revealWithinScrollParent(target, motionSafeScrollBehavior())
+  }, [])
+
   const activateArc = (slice: DoughnutSlice) => {
     // Mouse users have already hovered the slice, while the first tap on a touch
     // screen reveals its details. A second tap performs the associated action.
     if (hoveredKey === slice.key || selectedKey === slice.key) onActivate?.(slice)
-    else setHoveredKey(slice.key)
+    else hoverArc(slice.key)
   }
 
   return (
@@ -89,9 +107,9 @@ export function InteractiveDoughnutChart({
                 transition={{ duration: 0.4, ease: 'easeOut', delay: reduceMotion ? 0 : index * 0.04 }}
                 style={{ transformOrigin: '100px 100px' }}
                 tabIndex={masked ? -1 : 0}
-                onMouseEnter={() => { if (!masked) setHoveredKey(slice.key) }}
+                onMouseEnter={() => { if (!masked) hoverArc(slice.key) }}
                 onMouseLeave={() => setHoveredKey(null)}
-                onFocus={() => { if (!masked) setHoveredKey(slice.key) }}
+                onFocus={() => { if (!masked) hoverArc(slice.key) }}
                 onBlur={() => setHoveredKey(null)}
                 onClick={() => { if (!masked) activateArc(slice) }}
                 onKeyDown={event => {
@@ -120,6 +138,10 @@ export function InteractiveDoughnutChart({
         {chartSlices.map(slice => (
           <m.button
             key={slice.key}
+            ref={node => {
+              if (node) legendRefs.current.set(slice.key, node)
+              else legendRefs.current.delete(slice.key)
+            }}
             layout
             type="button"
             aria-label={`${slice.label}: ${masked ? 'hidden' : `${formatValue(slice.value)}, ${(slice.percentage * 100).toFixed(1)}%`}`}
