@@ -50,6 +50,7 @@ export function createRecurringActions(deps: RecurringActionDependencies) {
     // account review could repair. Left undefined it is a missing account, which the outbox's
     // pre-flight placement pass fills in or asks the user about.
     const settlementAccountId = noti.accountId || payment?.accountId || undefined
+    const isPartial = typeof amount === 'number' && amount > 0 && amount < Math.abs(noti.amount)
     const settleAmount = (amount != null && amount > 0) ? amount : noti.amount
     mutateQueue(prev => enqueue(prev, 'recurringOccurrence', 'settle', noti.id, {
       name: noti.name,
@@ -59,7 +60,7 @@ export function createRecurringActions(deps: RecurringActionDependencies) {
       status: 'Paid',
       paidDate,
       accountId: settlementAccountId,
-      optimisticNextOccurrenceDate: payment ? computeNextOccurrenceDate(payment) ?? undefined : undefined,
+      optimisticNextOccurrenceDate: isPartial ? undefined : (payment ? computeNextOccurrenceDate(payment) ?? undefined : undefined),
       optimisticTransaction: {
         id: transactionId,
         date: paidDate,

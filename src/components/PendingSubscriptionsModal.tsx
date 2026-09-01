@@ -206,11 +206,11 @@ export function PendingSubscriptionsModal({
 
               <div className="grid w-full grid-cols-2 gap-2 pt-1 sm:flex sm:w-auto sm:items-center sm:justify-end">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   onClick={() => runSubscriptionAction(noti, 'discard', () => onDiscardSubscription(noti))}
                   disabled={hideSensitive || isPending}
                   title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                  className="min-h-10 min-w-0 whitespace-nowrap rounded-xl border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
+                  className="min-h-10 min-w-0 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
                 >
                   <MutationButtonContent
                     state={pendingAction === 'discard' ? 'syncing' : null}

@@ -215,16 +215,22 @@ export const DesktopNavRail: React.FC<DesktopNavRailProps> = ({
         onClick={() => onTabChange(item.tab, item.search ? { search: item.search } : undefined)}
         className={`group relative flex min-h-11 w-full items-center justify-center gap-2.5 rounded-xl px-1.5 text-body transition-colors duration-150 lg:min-h-9 lg:justify-start lg:px-2 ${
           isActive
-            ? 'bg-muted font-bold text-foreground shadow-[inset_0_1px_0_var(--app-inner-highlight)]'
+            ? 'bg-primary/10 font-bold text-accent-ink'
             : 'font-semibold text-muted-foreground hover:bg-muted/70 hover:text-foreground'
         }`}
       >
-        {/* One accent carries the active state: the icon tile fills gold. It survives the
-            collapsed rail, where a label cannot, so the cue never depends on the words. */}
+        {isActive && (
+          <span
+            aria-hidden="true"
+            className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary"
+          />
+        )}
+        {/* The marker and warm wash carry the active state. The icon tile stays quiet so the
+            selected destination reads as one cue instead of several stacked effects. */}
         <span
           className={`flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-150 ${
             isActive
-              ? 'bg-primary text-primary-foreground ring-1 ring-primary/40'
+              ? 'bg-primary/15 text-accent-ink'
               : 'bg-foreground/6 text-muted-foreground group-hover:bg-foreground/10 group-hover:text-foreground'
           }`}
         >
@@ -236,10 +242,10 @@ export const DesktopNavRail: React.FC<DesktopNavRailProps> = ({
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-20 px-2 pb-2 pt-[calc(4.25rem+env(safe-area-inset-top,0px))] sm:block lg:w-56 lg:px-2.5 lg:pb-2.5">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-20 border-r border-border/50 bg-background/72 pt-[calc(4.25rem+env(safe-area-inset-top,0px))] backdrop-blur-xl sm:block lg:w-56">
       <nav
         aria-label="Primary"
-        className="app-panel flex h-full flex-col overflow-y-auto rounded-2xl border border-border/60 bg-card/80 px-2 py-3 lg:px-2.5"
+        className="flex h-full flex-col overflow-y-auto px-3 py-3 lg:px-3.5 lg:pb-2.5"
       >
         {cycleDay !== undefined && <CycleBlock cycleDay={cycleDay} />}
 

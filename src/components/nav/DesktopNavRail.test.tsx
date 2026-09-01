@@ -36,6 +36,20 @@ describe('DesktopNavRail', () => {
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy()
   })
 
+  it('renders as app chrome with one restrained active treatment', () => {
+    render(<DesktopNavRail activeTab="dashboard" onTabChange={vi.fn()} />)
+
+    const nav = screen.getByRole('navigation', { name: 'Primary' })
+    const activeItem = screen.getByRole('button', { name: 'Today' })
+
+    expect(nav.className).not.toContain('app-panel')
+    expect(nav.className).not.toContain('bg-card')
+    expect(nav.className).not.toContain('rounded-2xl')
+    expect(activeItem.className).toContain('bg-primary/10')
+    expect(activeItem.className).toContain('text-accent-ink')
+    expect(activeItem.className).not.toContain('shadow-')
+  })
+
   it('omits the cycle block until the cycle day is known, rather than assuming a cadence', () => {
     const { rerender } = render(<DesktopNavRail activeTab="dashboard" onTabChange={vi.fn()} />)
     expect(screen.queryByRole('progressbar', { name: 'Cycle progress' })).toBeNull()

@@ -84,4 +84,16 @@ describe('recurring settlement account attribution', () => {
 
     expect((queued[0].payload as Record<string, unknown>).accountId).toBe('acc-main')
   })
+
+  it('omits optimisticNextOccurrenceDate on partial payment and sets it on full payment', () => {
+    const { actions, queued } = createHarness([legacyBill])
+
+    actions.handleConfirmSubscription(notification, '2026-09-01', 40)
+    expect((queued[0].payload as Record<string, unknown>).optimisticNextOccurrenceDate).toBeUndefined()
+    expect((queued[0].payload as Record<string, unknown>).amount).toBe(40)
+
+    actions.handleConfirmSubscription(notification, '2026-09-01')
+    expect((queued[1].payload as Record<string, unknown>).optimisticNextOccurrenceDate).toBeDefined()
+    expect((queued[1].payload as Record<string, unknown>).amount).toBeUndefined()
+  })
 })
