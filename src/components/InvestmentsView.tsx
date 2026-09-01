@@ -161,7 +161,17 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
     setEditingCashFlow(null)
     setDetailHoldingKey(null)
   }, [hideSensitive])
-  useAutoOpenModal(autoOpenAddForm, () => openPanel('activity'), onResetAutoOpen)
+  useAutoOpenModal(
+    autoOpenAddForm,
+    () => {
+      if (investmentScanDraft && isCashMovementScan(investmentScanDraft.result.type)) {
+        openCashPanel()
+      } else {
+        openPanel('activity')
+      }
+    },
+    onResetAutoOpen
+  )
   useEffect(() => {
     if (!investmentScanDraft || !isCashMovementScan(investmentScanDraft.result.type)) return
     if (panel === null) return

@@ -87,28 +87,41 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
 }) => {
   const accounts = portfolio?.accounts.filter(value => !value.isArchived) ?? []
   const instruments = portfolio?.instruments.filter(value => !value.isArchived) ?? []
-  const [type, setType] = useState<InvestmentTransactionType>(initial?.type ?? 'Buy')
-  const [accountId, setAccountId] = useState(initial?.accountId ?? accounts[0]?.id ?? '')
-  const [instrumentId, setInstrumentId] = useState(initial?.instrumentId ?? instruments[0]?.id ?? '')
-  const [tradeDate, setTradeDate] = useState(initial?.tradeDate ?? today())
-  const [units, setUnits] = useState(initial?.units ? String(initial.units) : '')
-  const [unitPrice, setUnitPrice] = useState(initial?.unitPrice ? String(initial.unitPrice) : '')
-  const [cashAmount, setCashAmount] = useState(initial?.cashAmount ? String(initial.cashAmount) : '')
+  const initialScan = scanDraft && activityTypes.some(value => value.value === scanDraft.result.type) ? scanDraft.result : null
+  const [type, setType] = useState<InvestmentTransactionType>(initial?.type ?? (initialScan?.type as InvestmentTransactionType) ?? 'Buy')
+  const [accountId, setAccountId] = useState(initial?.accountId ?? (initialScan?.accountId && accounts.some(value => value.id === initialScan.accountId) ? initialScan.accountId : accounts[0]?.id ?? ''))
+  const [instrumentId, setInstrumentId] = useState(initial?.instrumentId ?? (initialScan?.instrumentId && instruments.some(value => value.id === initialScan.instrumentId) ? initialScan.instrumentId : instruments[0]?.id ?? ''))
+  const [tradeDate, setTradeDate] = useState(initial?.tradeDate ?? initialScan?.tradeDate ?? today())
+  const [units, setUnits] = useState(initial?.units ? String(initial.units) : initialScan?.units != null ? String(initialScan.units) : '')
+  const [unitPrice, setUnitPrice] = useState(initial?.unitPrice ? String(initial.unitPrice) : initialScan?.unitPrice != null ? String(initialScan.unitPrice) : '')
+  const initialGross = initial?.cashAmount
+    ? String(initial.cashAmount)
+    : initialScan?.cashAmount != null
+      ? String(initialScan.cashAmount)
+      : initialScan?.units != null && initialScan?.unitPrice != null
+        ? (initialScan.units * initialScan.unitPrice).toFixed(6).replace(/\.?0+$/, '')
+        : ''
+  const [cashAmount, setCashAmount] = useState(initialGross)
   const [fees, setFees] = useState(String(initial?.fees ?? 0))
   const [taxes, setTaxes] = useState(String(initial?.taxes ?? 0))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isScanning, setIsScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
-  const [showScanBanner, setShowScanBanner] = useState(false)
+  const [showScanBanner, setShowScanBanner] = useState(Boolean(initialScan))
   const [showScanPicker, setShowScanPicker] = useState(false)
-  const [activeScanJobId, setActiveScanJobId] = useState<string | null>(null)
+  const [activeScanJobId, setActiveScanJobId] = useState<string | null>(scanDraft?.jobId ?? null)
   const scanFileInputRef = useRef<HTMLInputElement>(null)
   const scanGalleryInputRef = useRef<HTMLInputElement>(null)
-  const appliedScanJobRef = useRef<string | null>(null)
+  const appliedScanJobRef = useRef<string | null>(scanDraft?.jobId ?? null)
   const trackedScanJobsRef = useRef<Set<string>>(new Set())
   const selectedInstrument = instruments.find(value => value.id === instrumentId)
 
-  const editOrder = useRef<Array<'units' | 'price' | 'gross'>>([])
+  const supplied = initialScan ? [
+    initialScan.units != null ? 'units' as const : null,
+    initialScan.unitPrice != null ? 'price' as const : null,
+    initialScan.cashAmount != null ? 'gross' as const : null,
+  ].filter((value): value is 'units' | 'price' | 'gross' => value !== null) : []
+  const editOrder = useRef<Array<'units' | 'price' | 'gross'>>(supplied.length === 2 ? supplied : [])
   const noteEdit = (field: 'units' | 'price' | 'gross') => {
     editOrder.current = [field, ...editOrder.current.filter(value => value !== field)]
   }

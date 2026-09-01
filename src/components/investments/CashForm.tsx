@@ -79,22 +79,23 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
   onNeedAccount: () => void
 }) => {
   const accounts = portfolio?.accounts.filter(value => !value.isArchived) ?? []
-  const [accountId, setAccountId] = useState(initial?.accountId ?? accounts[0]?.id ?? '')
-  const [type, setType] = useState<'Deposit' | 'Withdrawal' | 'Conversion'>(initial?.type ?? 'Deposit')
-  const [currency, setCurrency] = useState(initial?.currency ?? accounts[0]?.baseCurrency ?? portfolio?.appCurrency ?? '')
-  const [amount, setAmount] = useState(initial?.amount ? String(Math.abs(initial.amount)) : '')
-  const [toCurrency, setToCurrency] = useState(initial?.toCurrency ?? currency)
-  const [toAmount, setToAmount] = useState(initial?.toAmount ? String(initial.toAmount) : '')
-  const [date, setDate] = useState(initial?.date ?? today())
+  const initialScan = scanDraft && isCashMovementScan(scanDraft.result.type) ? scanDraft.result : null
+  const [accountId, setAccountId] = useState(initial?.accountId ?? (initialScan?.accountId && accounts.some(value => value.id === initialScan.accountId) ? initialScan.accountId : accounts[0]?.id ?? ''))
+  const [type, setType] = useState<'Deposit' | 'Withdrawal' | 'Conversion'>(initial?.type ?? (initialScan?.type as 'Deposit' | 'Withdrawal' | 'Conversion') ?? 'Deposit')
+  const [currency, setCurrency] = useState(initial?.currency ?? initialScan?.currency ?? accounts[0]?.baseCurrency ?? portfolio?.appCurrency ?? '')
+  const [amount, setAmount] = useState(initial?.amount ? String(Math.abs(initial.amount)) : initialScan?.cashAmount != null ? String(initialScan.cashAmount) : '')
+  const [toCurrency, setToCurrency] = useState(initial?.toCurrency ?? initialScan?.toCurrency ?? (initialScan?.type === 'Conversion' ? '' : currency))
+  const [toAmount, setToAmount] = useState(initial?.toAmount ? String(initial.toAmount) : initialScan?.toAmount != null ? String(initialScan.toAmount) : '')
+  const [date, setDate] = useState(initial?.date ?? initialScan?.tradeDate ?? today())
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isScanning, setIsScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
-  const [showScanBanner, setShowScanBanner] = useState(false)
+  const [showScanBanner, setShowScanBanner] = useState(Boolean(initialScan))
   const [showScanPicker, setShowScanPicker] = useState(false)
-  const [activeScanJobId, setActiveScanJobId] = useState<string | null>(null)
+  const [activeScanJobId, setActiveScanJobId] = useState<string | null>(scanDraft?.jobId ?? null)
   const scanFileInputRef = useRef<HTMLInputElement>(null)
   const scanGalleryInputRef = useRef<HTMLInputElement>(null)
-  const appliedScanJobRef = useRef<string | null>(null)
+  const appliedScanJobRef = useRef<string | null>(scanDraft?.jobId ?? null)
   const trackedScanJobsRef = useRef<Set<string>>(new Set())
   const clearScan = () => {
     const jobId = activeScanJobId
