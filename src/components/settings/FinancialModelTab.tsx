@@ -172,7 +172,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
           <div className="flex items-center justify-between border-b border-border/40 pb-2">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-foreground">Income Allocations</span>
-              <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${view.allocSum === 100 ? 'bg-blue-500/10 text-blue-500' : 'bg-destructive/15 text-destructive animate-pulse'}`}>
+              <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${view.allocSum === 100 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-destructive/15 text-destructive animate-pulse'}`}>
                 {view.allocSum}%
               </span>
             </div>

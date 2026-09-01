@@ -136,7 +136,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                 </span>
               )}
               {view.categoryUsage && view.unusedCategoryCount > 0 && (
-                <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-semibold text-orange-500">
+                <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-semibold text-orange-600 dark:text-orange-400">
                   {view.unusedCategoryCount} unused
                 </span>
               )}
@@ -146,7 +146,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                 </span>
               )}
               {view.categoryUsage && view.unusedCategoryCount === 0 && view.rarelyUsedCategoryCount === 0 && view.visibleCategories.length > 0 && (
-                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-500">
+                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-600 dark:text-emerald-400">
                   all used recently
                 </span>
               )}

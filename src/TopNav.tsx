@@ -132,7 +132,7 @@ const TopNav: React.FC<TopNavProps> = ({
     <Button variant="unstyled"
       type="button"
       onClick={() => onTabChange('drafts')}
-      className="ml-2.5 flex items-center gap-1 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-xs font-bold text-amber-500 cursor-pointer select-none shrink-0 hover:bg-amber-500/25 transition duration-150 animate-in fade-in zoom-in-95"
+      className="ml-2.5 flex items-center gap-1 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-xs font-bold text-amber-600 dark:text-amber-400 cursor-pointer select-none shrink-0 hover:bg-amber-500/25 transition duration-150 animate-in fade-in zoom-in-95"
       title="Draft transactions waiting to be synced to the server"
     >
       <FileText className="size-3" />
@@ -198,7 +198,7 @@ const TopNav: React.FC<TopNavProps> = ({
           {isPhone && (isOffline || syncLabel?.startsWith('Retrying')) && (
             <span
               role="status"
-              className={`ml-2 shrink-0 rounded-md border px-2 py-0.5 text-xs font-bold ${isOffline ? 'border-amber-500/20 bg-amber-500/10 text-amber-500' : 'border-blue-500/20 bg-blue-500/10 text-blue-500'}`}
+              className={`ml-2 shrink-0 rounded-md border px-2 py-0.5 text-xs font-bold ${isOffline ? 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400'}`}
             >
               {isOffline ? 'Offline' : syncStatusLabel}
             </span>
