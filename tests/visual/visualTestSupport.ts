@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
-import type { InvestmentActivity, SavingsGoal, TaxReliefCategoryDefinition, VaultDocument, WishlistItem } from '../../src/types'
+import type { InvestmentActivity, PendingNotification, SavingsGoal, TaxReliefCategoryDefinition, VaultDocument, WishlistItem } from '../../src/types'
 
 const transaction = {
   id: 'tx-visual-1',
@@ -233,6 +233,7 @@ interface MockApiOptions {
   categories?: Array<{ id: string; name: string; type?: string }>
   /** Adds report-specific density without replacing unrelated bootstrap fixture fields. */
   dashboard?: Partial<typeof dashboard>
+  pendingNotifications?: PendingNotification[]
   /** Overrides account settings for tests that need one stable privacy presentation. */
   setting?: Partial<typeof setting>
 }
@@ -247,6 +248,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
     dashboard: {
       ...bootstrap.dashboard,
       ...options.dashboard,
+      pendingNotifications: options.pendingNotifications ?? bootstrap.dashboard.pendingNotifications,
       setting: { ...bootstrap.dashboard.setting, ...options.setting, darkMode },
       ...(options.stabilityRecovery ? { stabilityRecovery: options.stabilityRecovery } : {}),
     },

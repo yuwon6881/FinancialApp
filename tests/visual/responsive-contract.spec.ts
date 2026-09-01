@@ -368,6 +368,53 @@ test('bill review never auto-opens and exposes no automatic-open preference', as
   await expect(page.getByText(/Bill alerts when you open the app|Notify Bills/i)).toHaveCount(0)
 })
 
+test('bill review centers text-only actions and explains the full-payment default', async ({ page }) => {
+  test.skip(
+    !['mobile-light', 'desktop-light'].includes(test.info().project.name),
+    'One compact and one desktop project cover this shared modal contract.',
+  )
+
+  await mockApi(page, {
+    pendingNotifications: [{
+      id: 'gym-2026-09',
+      recurringPaymentId: 'gym',
+      name: 'Gym',
+      amount: 172.8,
+      category: 'Hobbies',
+      ledgerCategory: 'Rewards',
+      billingDate: '2026-09-01',
+      year: 2026,
+      month: 9,
+      cycleLabel: 'Aug 28th ~ Sep 27th, 2026',
+    }],
+  })
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'Review 1 pending bills' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Bills to review' })
+  await expect(dialog).toBeVisible()
+
+  for (const name of ['Discard', 'Confirm Paid']) {
+    const button = dialog.getByRole('button', { name })
+    const content = button.locator('[data-mutation-visible-content]')
+    await expect(content.locator('[data-mutation-visible-icon]')).toHaveCount(0)
+    const centers = await Promise.all([button.boundingBox(), content.boundingBox()])
+    expect(centers[0]).not.toBeNull()
+    expect(centers[1]).not.toBeNull()
+    expect(Math.abs((centers[0]!.x + centers[0]!.width / 2) - (centers[1]!.x + centers[1]!.width / 2))).toBeLessThanOrEqual(1)
+  }
+
+  const amount = dialog.getByLabel('Amount paid')
+  await expect(dialog.getByRole('status')).toContainText('Full payment selected')
+  await expect(dialog.getByRole('status')).toContainText('172.80')
+  await amount.fill('100')
+  await expect(dialog.getByRole('status')).toContainText('Part payment')
+  await expect(dialog.getByRole('status')).toContainText('72.80 remains due')
+  await amount.fill('0')
+  await expect(dialog.getByRole('button', { name: 'Confirm Paid' })).toBeDisabled()
+  await expect(dialog.getByRole('button', { name: 'Discard' })).toBeEnabled()
+  await expect(dialog.getByRole('button', { name: 'Remove' })).toBeEnabled()
+})
+
 test('the header action cluster stays pinned to the trailing edge', async ({ page }) => {
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
   await expect(page.locator('main')).toBeVisible()

@@ -60,9 +60,13 @@ describe('PendingSubscriptionsModal', () => {
 
   it('shows confirmation progress and prevents duplicate actions', () => {
     const { onConfirmSubscription } = renderModal()
+    const fullPaymentSummary = screen.getByRole('status')
+    expect(fullPaymentSummary.textContent).toContain('Full payment selected')
+    expect(fullPaymentSummary.textContent).toContain('870.00')
+    expect(screen.getByPlaceholderText('Enter part payment')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Paid' }))
 
-    expect(onConfirmSubscription).toHaveBeenCalledOnce()
+    expect(onConfirmSubscription).toHaveBeenCalledWith(notification, '2026-07-28', undefined)
     expect(screen.getByRole('button', { name: /Confirming/ }).hasAttribute('disabled')).toBe(true)
     expect(screen.getByRole('button', { name: 'Discard' }).hasAttribute('disabled')).toBe(true)
     expect(screen.getByRole('button', { name: 'Remove' }).hasAttribute('disabled')).toBe(true)
@@ -107,10 +111,36 @@ describe('PendingSubscriptionsModal', () => {
     const { onConfirmSubscription } = renderModal()
     const input = screen.getByLabelText('Amount paid')
     fireEvent.change(input, { target: { value: '500' } })
+    const partPaymentSummary = screen.getByRole('status')
+    expect(partPaymentSummary.textContent).toContain('Part payment')
+    expect(partPaymentSummary.textContent).toContain('500.00')
+    expect(partPaymentSummary.textContent).toContain('370.00 remains due')
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Paid' }))
 
     expect(onConfirmSubscription).toHaveBeenCalledWith(notification, '2026-07-28', 500)
     expect(screen.getByRole('button', { name: 'Confirm Paid' }).hasAttribute('disabled')).toBe(false)
     expect((input as HTMLInputElement).value).toBe('')
+  })
+
+  it('blocks an invalid nonblank amount without blocking discard or remove', () => {
+    renderModal()
+    const input = screen.getByLabelText('Amount paid')
+    fireEvent.change(input, { target: { value: '0' } })
+
+    expect(input.getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByText(/Enter an amount greater than zero/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Confirm Paid' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Discard' }).hasAttribute('disabled')).toBe(false)
+    expect(screen.getByRole('button', { name: 'Remove' }).hasAttribute('disabled')).toBe(false)
+  })
+
+  it('keeps the full-payment summary private while sensitive mode is active', () => {
+    renderModal({ hideSensitive: true })
+
+    const summary = screen.getByRole('status')
+    expect(summary.textContent).toContain('Full payment selected')
+    expect(summary.textContent).toContain('Amounts are hidden')
+    expect(summary.textContent).not.toContain('870.00')
+    expect((screen.getByLabelText('Amount paid') as HTMLInputElement).disabled).toBe(true)
   })
 })

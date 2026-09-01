@@ -19,4 +19,20 @@ describe('MutationButtonContent', () => {
     expect(content?.getAttribute('data-mutation-state')).toBe('saving')
     expect(screen.getByRole('status').textContent).toContain('Saving targets…')
   })
+
+  it('centers a text-only idle label without rendering an empty leading icon slot', () => {
+    const { container, rerender } = render(
+      <MutationButtonContent state={null} entityLabel="bill" idleLabel="Confirm Paid" busyLabel="Confirming…" />,
+    )
+
+    const visibleContent = container.querySelector('[data-mutation-visible-content]')
+    expect(visibleContent?.querySelector('[data-mutation-visible-icon]')).toBeNull()
+    expect(visibleContent?.textContent).toBe('Confirm Paid')
+
+    rerender(
+      <MutationButtonContent state="syncing" entityLabel="bill" idleLabel="Confirm Paid" busyLabel="Confirming…" />,
+    )
+    expect(visibleContent?.querySelector('[data-mutation-visible-icon]')).not.toBeNull()
+    expect(visibleContent?.textContent).toBe('Confirming…')
+  })
 })

@@ -42,15 +42,23 @@ export function MutationButtonContent({
       data-mutation-state={state ?? 'idle'}
     >
       <span aria-hidden="true" className="invisible col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5">
-        <span className="inline-grid size-4 shrink-0 place-items-center">{idleIcon}</span>
+        {idleIcon && <span className="inline-grid size-4 shrink-0 place-items-center">{idleIcon}</span>}
         <span>{idleLabel}</span>
       </span>
       <span aria-hidden="true" className="invisible col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5">
         <span className="inline-grid size-4 shrink-0 place-items-center" />
         <span>{busyLabel}</span>
       </span>
-      <span className="col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5" aria-hidden={busy ? 'true' : undefined}>
-        <span className="inline-grid size-4 shrink-0 place-items-center">{busy && state ? stateIcon(state) : idleIcon}</span>
+      <span
+        data-mutation-visible-content=""
+        className="col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5"
+        aria-hidden={busy ? 'true' : undefined}
+      >
+        {(busy || idleIcon) && (
+          <span data-mutation-visible-icon="" className="inline-grid size-4 shrink-0 place-items-center">
+            {busy && state ? stateIcon(state) : idleIcon}
+          </span>
+        )}
         <span>{busy ? busyLabel : idleLabel}</span>
       </span>
       {announcement && (

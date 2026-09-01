@@ -8,7 +8,7 @@ import { SmartAmountInput } from './ui/SmartAmountInput'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { Button } from './ui/Button'
 import { MutationButtonContent } from './ui/MutationButtonContent'
-import { BellRing, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, BellRing, CheckCircle2, CircleDollarSign } from 'lucide-react'
 import { financialDate } from '../lib/financialDate'
 
 interface PendingSubscriptionsModalProps {
@@ -21,6 +21,11 @@ interface PendingSubscriptionsModalProps {
   onDiscardSubscription: (noti: PendingNotification) => void
   onRemoveSubscription: (recurringPaymentId: string) => void
 }
+
+type PaymentAmountState =
+  | { kind: 'full'; due: number; explicitlyEntered: boolean }
+  | { kind: 'partial'; amount: number; remaining: number }
+  | { kind: 'invalid' }
 
 export function PendingSubscriptionsModal({
   isOpen,
@@ -38,16 +43,21 @@ export function PendingSubscriptionsModal({
 
   const prevAmountsRef = useRef<Record<string, number>>({})
 
-  // Blank means "pay the whole bill", which is what almost every confirmation is. A figure below the
-  // amount due records a part payment and leaves the bill open for the rest; anything at or above it
-  // is the full payment, so it is sent as undefined rather than as a partial the server would refuse.
-  const partialAmountFor = (noti: PendingNotification): number | undefined => {
+  const paymentAmountStateFor = (noti: PendingNotification): PaymentAmountState => {
     const raw = (paidAmounts[noti.id] ?? '').trim()
-    if (raw === '') return undefined
-    const parsed = Number(raw)
-    if (!Number.isFinite(parsed) || parsed <= 0) return undefined
     const due = Math.abs(noti.amount)
-    return due > 0 && parsed >= due ? undefined : parsed
+    if (raw === '') return { kind: 'full', due, explicitlyEntered: false }
+    const parsed = Number(raw)
+    if (!Number.isFinite(parsed) || parsed <= 0) return { kind: 'invalid' }
+    if (due <= 0 || parsed >= due) return { kind: 'full', due, explicitlyEntered: true }
+    return { kind: 'partial', amount: parsed, remaining: due - parsed }
+  }
+
+  // Only a genuine part payment is sent as an amount. Blank or a figure at/above the bill total
+  // retains the established server contract where undefined means settle the full occurrence.
+  const partialAmountFor = (noti: PendingNotification): number | undefined => {
+    const amountState = paymentAmountStateFor(noti)
+    return amountState.kind === 'partial' ? amountState.amount : undefined
   }
 
   useEffect(() => {
@@ -85,6 +95,10 @@ export function PendingSubscriptionsModal({
       pendingNotifications.map(n => [n.id, n.amount]),
     )
   }, [isOpen, pendingNotifications])
+
+  useEffect(() => {
+    if (hideSensitive) setPaidAmounts({})
+  }, [hideSensitive])
 
   const runSubscriptionAction = (
     noti: PendingNotification,
@@ -148,6 +162,7 @@ export function PendingSubscriptionsModal({
         {pendingNotifications.map((noti) => {
           const pendingAction = pendingActions[noti.id]
           const isPending = pendingAction !== undefined
+          const amountState = paymentAmountStateFor(noti)
           return (
           <div key={noti.id} className="flex flex-col gap-4 rounded-2xl border border-border/50 bg-muted/25 p-4 shadow-xs sm:gap-3">
             <div className="space-y-2">
@@ -179,28 +194,66 @@ export function PendingSubscriptionsModal({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label
-                    htmlFor={`pending-amount-${noti.id}`}
-                    className="block text-xs font-bold text-muted-foreground"
-                  >
-                    Amount paid
-                  </label>
+                  <div className="flex items-center justify-between gap-2">
+                    <label
+                      htmlFor={`pending-amount-${noti.id}`}
+                      className="block text-xs font-bold text-muted-foreground"
+                    >
+                      Amount paid
+                    </label>
+                    <span className="text-xs font-medium text-muted-foreground">Optional</span>
+                  </div>
                   <SmartAmountInput
                     id={`pending-amount-${noti.id}`}
                     type="text"
                     inputMode="decimal"
                     value={paidAmounts[noti.id] ?? ''}
                     onChange={event => setPaidAmounts(prev => ({ ...prev, [noti.id]: event.target.value }))}
-                    placeholder={hideSensitive ? '' : formatCurrencyVal(Math.abs(noti.amount), currency)}
+                    placeholder={hideSensitive ? '' : 'Enter part payment'}
                     disabled={hideSensitive}
+                    aria-invalid={amountState.kind === 'invalid' || undefined}
                     aria-describedby={`pending-amount-hint-${noti.id}`}
                     className="w-full font-medium"
                   />
-                  <p id={`pending-amount-hint-${noti.id}`} className="text-xs leading-relaxed text-muted-foreground">
-                    {partialAmountFor(noti) != null
-                      ? 'Part payment — the rest stays due on this bill.'
-                      : 'Leave blank to pay the full amount.'}
-                  </p>
+                  <div
+                    id={`pending-amount-hint-${noti.id}`}
+                    role="status"
+                    aria-live="polite"
+                    className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 text-xs leading-relaxed ${
+                      amountState.kind === 'invalid'
+                        ? 'border-destructive/20 bg-destructive/10 text-destructive'
+                        : 'border-border/60 bg-muted/20 text-muted-foreground'
+                    }`}
+                  >
+                    {amountState.kind === 'full' ? (
+                      <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
+                    ) : amountState.kind === 'partial' ? (
+                      <CircleDollarSign className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
+                    ) : (
+                      <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                    )}
+                    <span>
+                      {amountState.kind === 'full' ? (
+                        <>
+                          <strong className="font-bold text-foreground">Full payment selected{hideSensitive ? '' : ` · ${formatCurrencyVal(amountState.due, currency)}`}.</strong>{' '}
+                          {hideSensitive
+                            ? 'Amounts are hidden while sensitive mode is on.'
+                            : amountState.explicitlyEntered
+                            ? 'Amounts at or above the bill total are recorded as full payment.'
+                            : 'Enter a smaller amount only to record a part payment.'}
+                        </>
+                      ) : amountState.kind === 'partial' ? (
+                        <>
+                          <strong className="font-bold text-foreground">Part payment{hideSensitive ? '' : ` · ${formatCurrencyVal(amountState.amount, currency)}`}.</strong>{' '}
+                          {hideSensitive
+                            ? 'Amounts are hidden while sensitive mode is on.'
+                            : `${formatCurrencyVal(amountState.remaining, currency)} remains due.`}
+                        </>
+                      ) : (
+                        <strong className="font-bold">Enter an amount greater than zero, or clear the field to pay in full.</strong>
+                      )}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -239,7 +292,7 @@ export function PendingSubscriptionsModal({
                       partialAmountFor(noti),
                     ),
                   )}
-                  disabled={hideSensitive || isPending}
+                  disabled={hideSensitive || isPending || amountState.kind === 'invalid'}
                   title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
                   className="col-span-2 min-h-10 min-w-0 justify-center whitespace-nowrap rounded-xl px-4 py-2 text-xs font-bold shadow-sm disabled:cursor-wait disabled:opacity-70 sm:col-span-1 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:px-3 sm:py-1.5"
                 >
