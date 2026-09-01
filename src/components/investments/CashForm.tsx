@@ -15,7 +15,7 @@ import { CurrencySelect } from '../ui/CurrencySelect'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
 import { FormField } from '../ui/FormField'
-import { Input } from '../ui/Input'
+import { SmartAmountInput } from '../ui/SmartAmountInput'
 import { ModalActions } from '../ui/ModalActions'
 import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { focusFirstInvalidField } from '../ui/formValidation'
@@ -95,7 +95,7 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
   const [activeScanJobId, setActiveScanJobId] = useState<string | null>(scanDraft?.jobId ?? null)
   const scanFileInputRef = useRef<HTMLInputElement>(null)
   const scanGalleryInputRef = useRef<HTMLInputElement>(null)
-  const appliedScanJobRef = useRef<string | null>(scanDraft?.jobId ?? null)
+  const appliedScanJobRef = useRef<string | null>(null)
   const trackedScanJobsRef = useRef<Set<string>>(new Set())
   const clearScan = () => {
     const jobId = activeScanJobId
@@ -252,14 +252,14 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
       <Field label="Cash movement type" plain><CustomSelect value={type} onChange={v => setType(v as 'Deposit' | 'Withdrawal' | 'Conversion')} options={[{ value: 'Deposit', label: 'Deposit (cash in)' }, { value: 'Withdrawal', label: 'Withdrawal (cash out)' }, { value: 'Conversion', label: 'Convert currency' }]} ariaLabel="Cash movement type" className="w-full" /></Field>
       {type === 'Conversion' ? (
         <>
-          <Field label="From amount" required error={errors.amount}><Input type="number" inputMode="decimal" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
+          <Field label="From amount" required error={errors.amount}><SmartAmountInput min="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
           <Field label="From currency" required error={errors.currency}><CurrencySelect value={currency} onChange={value => { setCurrency(value); setErrors(previous => ({ ...previous, currency: '' })) }} className="w-full" ariaLabel="From currency" /></Field>
-          <Field label="To amount" required error={errors.toAmount}><Input type="number" inputMode="decimal" min="0.0000000001" step="0.0000000001" value={toAmount} onChange={event => { setToAmount(event.target.value); setErrors(prev => ({ ...prev, toAmount: '' })) }} /></Field>
+          <Field label="To amount" required error={errors.toAmount}><SmartAmountInput min="0.0000000001" value={toAmount} onChange={event => { setToAmount(event.target.value); setErrors(prev => ({ ...prev, toAmount: '' })) }} /></Field>
           <Field label="To currency" required error={errors.toCurrency} plain><CurrencySelect value={toCurrency} onChange={value => { setToCurrency(value); setErrors(prev => ({ ...prev, toCurrency: '' })) }} className="w-full" ariaLabel="To currency" /></Field>
         </>
       ) : (
         <>
-          <Field label={`Amount (${currency})`} required error={errors.amount}><Input type="number" inputMode="decimal" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
+          <Field label={`Amount (${currency})`} required error={errors.amount}><SmartAmountInput min="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
           <Field label="Currency" required error={errors.currency}><CurrencySelect value={currency} onChange={value => { setCurrency(value); setErrors(previous => ({ ...previous, currency: '' })) }} className="w-full" ariaLabel="Cash currency" /></Field>
         </>
       )}

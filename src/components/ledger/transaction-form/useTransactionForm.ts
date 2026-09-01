@@ -185,16 +185,22 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     const ledgerCategory = result.ledgerCategory && ['Essentials', 'Growth', 'Stability', 'Rewards'].includes(result.ledgerCategory)
       ? result.ledgerCategory as SelectableLedgerCategory
       : undefined
+    const selectableCategories = categories.filter(category => isSelectableTransactionCategory(category, 'outflow'))
+    const category = selectableCategories.find(candidate =>
+      candidate.name.trim().toLowerCase() === result.category?.trim().toLowerCase())?.name
+      ?? selectableCategories.find(candidate => candidate.name.trim().toLowerCase() === 'other')?.name
+      ?? selectableCategories[0]?.name
+      ?? defaultCategory
     dispatch({
       type: 'APPLY_RECEIPT',
-      payload: { ...result, ledgerCategory },
+      payload: { ...result, category, ledgerCategory, txType: 'outflow' },
       todayDate,
     })
     window.setTimeout(() => {
       firstInputRef.current?.focus()
       firstInputRef.current?.select()
     }, 450)
-  }, [todayDate])
+  }, [categories, defaultCategory, todayDate])
 
   const scanner = useReceiptScanDraft({
     autoOpenAddForm,

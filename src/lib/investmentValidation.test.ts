@@ -48,27 +48,22 @@ describe('validateActivityBalances', () => {
     expect(validateActivityBalances(portfolio, buy(500))).toBeNull()
   })
 
-  it('rejects a buy whose cost plus fees exceeds the account cash', () => {
-    const issue = validateActivityBalances(portfolio, buy(500, 1))
-    expect(issue?.field).toBe('cashAmount')
-    expect(issue?.message).toContain('available in Moomoo')
+  it('allows a buy whose cost plus fees temporarily overdraws account cash', () => {
+    expect(validateActivityBalances(portfolio, buy(500, 1))).toBeNull()
   })
 
-  it('derives the gross cost when a buy supplies units and unit price', () => {
-    const issue = validateActivityBalances(portfolio, {
+  it('allows a temporarily overdrawn buy supplied as units and unit price', () => {
+    expect(validateActivityBalances(portfolio, {
       type: 'Buy',
       accountId: 'a1',
       instrumentId: 'i1',
       units: 2,
       unitPrice: 251,
       fees: 0,
-    })
-
-    expect(issue?.field).toBe('cashAmount')
-    expect(issue?.message).toMatch(/needs (?:US)?\$502\.00/)
+    })).toBeNull()
   })
 
-  it('counts a queued units-and-price buy before validating the next activity', () => {
+  it('allows consecutive queued buys to overdraw until settlement funding arrives', () => {
     const pendingBuy = {
       id: 'pending-derived-buy',
       accountId: 'a1',
@@ -82,28 +77,7 @@ describe('validateActivityBalances', () => {
       createdAt: '',
     }
 
-    expect(validateActivityBalances(portfolio, buy(101), undefined, [pendingBuy])?.field).toBe('cashAmount')
-  })
-
-  it('counts a queued buy before validating another buy in the same account and currency', () => {
-    const pendingBuy = {
-      id: 'pending-buy',
-      accountId: 'a1',
-      instrumentId: 'i1',
-      type: 'Buy' as const,
-      tradeDate: '2026-06-01',
-      units: 1,
-      unitPrice: 400,
-      cashAmount: 400,
-      fees: 0,
-      taxes: 0,
-      createdAt: '',
-    }
-
-    const issue = validateActivityBalances(portfolio, buy(101), undefined, [pendingBuy])
-
-    expect(issue?.field).toBe('cashAmount')
-    expect(issue?.message).toMatch(/needs (?:US)?\$101\.00/)
+    expect(validateActivityBalances(portfolio, buy(101), undefined, [pendingBuy])).toBeNull()
   })
 
   it('applies only the net effect of an offline edit', () => {
@@ -135,11 +109,10 @@ describe('validateActivityBalances', () => {
       },
     }
 
-    // The server's 500 cash and 4 units include the original buy. The queued
-    // edit releases 600 cash and 2 units, so the projected availability is
-    // 1,100 cash and 2 units—not the current edited row applied on top again.
+    // The server's 4 units include the original buy. The queued edit releases
+    // 2 units; cash can temporarily overdraw while unit availability cannot.
     expect(validateActivityBalances(portfolio, buy(1_100), undefined, [pendingEdit])).toBeNull()
-    expect(validateActivityBalances(portfolio, buy(1_101), undefined, [pendingEdit])?.field).toBe('cashAmount')
+    expect(validateActivityBalances(portfolio, buy(1_101), undefined, [pendingEdit])).toBeNull()
     expect(validateActivityBalances(portfolio, sell(2), undefined, [pendingEdit])).toBeNull()
     expect(validateActivityBalances(portfolio, sell(3), undefined, [pendingEdit])?.field).toBe('units')
   })
@@ -151,11 +124,10 @@ describe('validateActivityBalances', () => {
     expect(issue?.message).toContain('4 units of VOO')
   })
 
-  it('measures an edit against the balance without the record being replaced', () => {
+  it('allows an edited buy to overdraw broker cash', () => {
     const initial = { id: 't1', accountId: 'a1', instrumentId: 'i1', type: 'Buy' as const, tradeDate: '2026-01-01', units: 1, cashAmount: 400, fees: 0, taxes: 0, createdAt: '' }
-    // Cash is 500 with the original 400 buy already applied, so up to 900 is spendable.
     expect(validateActivityBalances(portfolio, buy(900), initial)).toBeNull()
-    expect(validateActivityBalances(portfolio, buy(901), initial)?.field).toBe('cashAmount')
+    expect(validateActivityBalances(portfolio, buy(901), initial)).toBeNull()
   })
 
   it('rejects a dividend smaller than its fees and taxes', () => {

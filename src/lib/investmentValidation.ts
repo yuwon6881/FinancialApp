@@ -7,11 +7,12 @@ import type {
 
 /**
  * Client-side mirror of the backend's investment guards
- * (`InvestmentsController.ValidateCashHistoryAsync` and
- * `InvestmentAccountingService.RequireAvailableUnits`): a record may never push an
- * account's cash balance below zero, and units can only be sold if they are
- * actually held. The server stays the source of truth; these checks
- * exist so the user is told before the record is queued, not after it is rejected.
+ * (`InvestmentHistoryValidationService` and
+ * `InvestmentAccountingService.RequireAvailableUnits`): explicit cash movements
+ * cannot spend unavailable cash, and units can only be sold if they are held.
+ * Broker executions may temporarily overdraw a currency until settlement funding
+ * is recorded. The server stays the source of truth; these checks provide early
+ * feedback before a record is queued.
  */
 
 /** Decimal noise from derived values (gross = units x price) must not trip a check. */
@@ -170,9 +171,9 @@ export const availableActivityUnits = (
 }
 
 /**
- * Checks a new or edited activity against the account's cash and units. `initial`
- * is the record being replaced, whose own effect is added back so an edit is
- * measured against the balance without it.
+ * Checks a new or edited activity against held units and activity-specific rules.
+ * Buy and fee activity may temporarily overdraw broker cash; explicit withdrawals
+ * and conversions remain guarded by `validateCashFlowBalances` below.
  */
 export function validateActivityBalances(
   portfolio: InvestmentPortfolio | null,
@@ -184,19 +185,6 @@ export function validateActivityBalances(
   const account = portfolio.accounts.find(value => value.id === draft.accountId)
   const instrument = portfolio.instruments.find(value => value.id === draft.instrumentId)
   if (!account || !instrument) return null
-
-  const needed = -activityCashEffect(draft)
-  if (needed > tolerance) {
-    const heldCash = availableActivityCash(portfolio, draft.accountId, instrument.currency, pendingActivities, initial)
-    if (needed > heldCash + tolerance) {
-      return {
-        field: 'cashAmount',
-        message: `Only ${money(Math.max(heldCash, 0), instrument.currency)} is available in ${account.name}. ` +
-          `This needs ${money(needed, instrument.currency)} — deposit or convert cash first, ` +
-          'or sell a holding to raise it.',
-      }
-    }
-  }
 
   const removed = -activityUnitsEffect(draft)
   if (removed > tolerance) {

@@ -353,8 +353,9 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(await screen.findByText(/Investment activity scanned/)).toBeTruthy()
     expect(screen.getByRole('combobox', { name: 'Activity type' }).textContent).toContain('Sell')
     await waitFor(() => {
-      const values = screen.getAllByRole('spinbutton').map(input => (input as HTMLInputElement).value)
-      expect(values).toEqual(expect.arrayContaining(['2', '25', '50']))
+      expect((screen.getByLabelText('Units') as HTMLInputElement).value).toBe('2')
+      expect((screen.getByLabelText(/Unit price/) as HTMLInputElement).value).toBe('25')
+      expect((screen.getByLabelText(/Gross amount/) as HTMLInputElement).value).toBe('50')
     })
     expect(onResetAutoOpen).toHaveBeenCalled()
   })
@@ -386,8 +387,8 @@ describe('InvestmentsView provider call boundaries', () => {
 
     expect(await screen.findByText(/Cash movement scanned/)).toBeTruthy()
     expect(screen.getByRole('combobox', { name: 'Cash movement type' }).textContent).toContain('Convert currency')
-    expect(screen.getAllByRole('spinbutton').map(input => (input as HTMLInputElement).value))
-      .toEqual(expect.arrayContaining(['100', '430']))
+    expect((screen.getByLabelText(/^From amount/) as HTMLInputElement).value).toBe('100')
+    expect((screen.getByLabelText(/^To amount/) as HTMLInputElement).value).toBe('430')
     expect(context.queueMutation).not.toHaveBeenCalled()
   })
 
@@ -396,7 +397,7 @@ describe('InvestmentsView provider call boundaries', () => {
     fireEvent.click(screen.getByRole('option', { name: option }))
   }
 
-  it('refuses a buy the account has no cash for', async () => {
+  it('queues a buy that temporarily overdraws broker cash', async () => {
     vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
     renderView()
     fireEvent.click(await screen.findByRole('button', { name: 'Add activity' }))
@@ -407,8 +408,8 @@ describe('InvestmentsView provider call boundaries', () => {
     await waitFor(() => expect((screen.getByLabelText(/Gross amount/) as HTMLInputElement).value).toBe('100'))
     fireEvent.click(screen.getByRole('button', { name: 'Save activity' }))
 
-    expect(await screen.findByText(/is available in Broker/)).toBeTruthy()
-    expect(context.queueMutation).not.toHaveBeenCalled()
+    await waitFor(() => expect(context.queueMutation).toHaveBeenCalledOnce())
+    expect(screen.queryByText(/is available in Broker/)).toBeNull()
   })
 
   it('refuses a withdrawal the account has no cash for', async () => {

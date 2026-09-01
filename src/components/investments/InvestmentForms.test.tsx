@@ -29,6 +29,7 @@ const portfolio = (appCurrency?: string): InvestmentPortfolio => ({
 } as unknown as InvestmentPortfolio)
 
 const noop = () => undefined
+const inputFor = (label: string) => screen.getByText(label).parentElement!.querySelector('input') as HTMLInputElement
 
 describe('investment forms', () => {
   it('requires an explicitly selected account currency instead of accepting an empty fallback', () => {
@@ -58,6 +59,11 @@ describe('investment forms', () => {
 
     expect(screen.getByLabelText('Unit price (EUR)')).toBeTruthy()
     expect(screen.getByLabelText('Gross amount (EUR)')).toBeTruthy()
+    expect(inputFor('Units').type).toBe('number')
+    expect(inputFor('Unit price (EUR)').type).toBe('text')
+    expect(inputFor('Gross amount (EUR)').type).toBe('text')
+    expect(inputFor('Fees (EUR)').type).toBe('text')
+    expect(inputFor('Taxes (EUR)').type).toBe('text')
   })
 
   it('uses the account currency for cash entry when the app currency is unavailable', () => {
@@ -71,11 +77,45 @@ describe('investment forms', () => {
       />,
     )
 
-    expect(screen.getAllByRole('spinbutton')).toHaveLength(1)
+    expect(inputFor('Amount (GBP)').type).toBe('text')
     expect(screen.getByRole('button', { name: /Currency/ }).textContent).toContain('GBP')
   })
 
-  it('applies the queued edit delta instead of adding the edited row twice', () => {
+  it('prefills scanned fees and taxes on the first activity review render', () => {
+    render(
+      <ActivityForm
+        portfolio={portfolio('USD')}
+        initial={null}
+        pendingActivities={[]}
+        busy={false}
+        onCancel={noop}
+        onSave={vi.fn().mockResolvedValue(true)}
+        onNeedAccount={noop}
+        onNeedInstrument={noop}
+        scanDraft={{
+          jobId: 'trade-with-costs',
+          result: {
+            type: 'Buy',
+            accountId: 'account',
+            instrumentId: 'instrument',
+            tradeDate: '2026-01-01',
+            units: 2,
+            unitPrice: 100,
+            cashAmount: 200,
+            fees: 1.25,
+            taxes: 0.75,
+            currency: 'EUR',
+            confidence: 0.9,
+          },
+        }}
+      />,
+    )
+
+    expect(inputFor('Fees (EUR)').value).toBe('1.25')
+    expect(inputFor('Taxes (EUR)').value).toBe('0.75')
+  })
+
+  it('allows an investment execution to temporarily overdraw broker cash', () => {
     const onSave = vi.fn().mockResolvedValue(true)
     render(
       <ActivityForm
@@ -101,8 +141,8 @@ describe('investment forms', () => {
     fireEvent.change(screen.getByLabelText('Gross amount (EUR)'), { target: { value: '1101' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save activity' }))
 
-    expect(document.body.textContent).toMatch(/Only .* available in Broker/)
-    expect(onSave).not.toHaveBeenCalled()
+    expect(document.body.textContent).not.toMatch(/Only .* available in Broker/)
+    expect(onSave).toHaveBeenCalledOnce()
   })
 
   it('stops scanning spinner and shows redirect message when scan on CashForm is a trade', () => {

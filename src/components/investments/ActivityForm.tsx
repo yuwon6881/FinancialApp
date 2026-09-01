@@ -16,6 +16,7 @@ import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
 import { FormField } from '../ui/FormField'
 import { Input } from '../ui/Input'
+import { SmartAmountInput } from '../ui/SmartAmountInput'
 import { ModalActions } from '../ui/ModalActions'
 import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { focusFirstInvalidField } from '../ui/formValidation'
@@ -102,8 +103,8 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
         ? (initialScan.units * initialScan.unitPrice).toFixed(6).replace(/\.?0+$/, '')
         : ''
   const [cashAmount, setCashAmount] = useState(initialGross)
-  const [fees, setFees] = useState(String(initial?.fees ?? 0))
-  const [taxes, setTaxes] = useState(String(initial?.taxes ?? 0))
+  const [fees, setFees] = useState(String(initial?.fees ?? initialScan?.fees ?? 0))
+  const [taxes, setTaxes] = useState(String(initial?.taxes ?? initialScan?.taxes ?? 0))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isScanning, setIsScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
@@ -112,7 +113,7 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
   const [activeScanJobId, setActiveScanJobId] = useState<string | null>(scanDraft?.jobId ?? null)
   const scanFileInputRef = useRef<HTMLInputElement>(null)
   const scanGalleryInputRef = useRef<HTMLInputElement>(null)
-  const appliedScanJobRef = useRef<string | null>(scanDraft?.jobId ?? null)
+  const appliedScanJobRef = useRef<string | null>(null)
   const trackedScanJobsRef = useRef<Set<string>>(new Set())
   const selectedInstrument = instruments.find(value => value.id === instrumentId)
 
@@ -287,11 +288,11 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
       <Field label="Account" plain><CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
       <Field label="Investment" plain><CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: `${i.symbol} · ${i.name}` }))} ariaLabel="Investment" className="w-full" /></Field>
       {needsUnits && <Field label="Units" error={errors.units}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value); setErrors(prev => ({ ...prev, units: '', form: '' })) }} /></Field>}
-      {trade && <Field label={`Unit price (${selectedInstrument?.currency})`} error={errors.unitPrice}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value); setErrors(prev => ({ ...prev, unitPrice: '', form: '' })) }} /></Field>}
-      <Field className={type === 'FeeTax' ? 'sm:col-span-2' : ''} required={type === 'Dividend'} label={`${type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`} error={errors.cashAmount}><Input type="number" inputMode="decimal" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} /></Field>
+      {trade && <Field label={`Unit price (${selectedInstrument?.currency})`} error={errors.unitPrice}><SmartAmountInput min="0" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value); setErrors(prev => ({ ...prev, unitPrice: '', form: '' })) }} /></Field>}
+      <Field className={type === 'FeeTax' ? 'sm:col-span-2' : ''} required={type === 'Dividend'} label={`${type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`} error={errors.cashAmount}><SmartAmountInput min={type === 'Dividend' ? '0.0000000001' : '0'} value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} /></Field>
       {type !== 'FeeTax' && <>
-        <Field label={`Fees${feesLabelSuffix}`}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} /></Field>
-        <Field className={type === 'Dividend' ? 'sm:col-span-2' : ''} label={`Taxes${feesLabelSuffix}`}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} /></Field>
+        <Field label={`Fees${feesLabelSuffix}`}><SmartAmountInput min="0" value={fees} onChange={event => setFees(event.target.value)} /></Field>
+        <Field className={type === 'Dividend' ? 'sm:col-span-2' : ''} label={`Taxes${feesLabelSuffix}`}><SmartAmountInput min="0" value={taxes} onChange={event => setTaxes(event.target.value)} /></Field>
       </>}
     </div>
     {trade && <p className="text-xs text-muted-foreground">Fill any two of units, unit price, and gross amount — the third is worked out for you.</p>}

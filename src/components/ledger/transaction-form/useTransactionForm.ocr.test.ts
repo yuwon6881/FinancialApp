@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTransactionForm, type UseTransactionFormOptions } from './useTransactionForm'
 
@@ -90,6 +90,29 @@ describe('useTransactionForm receipt cleanup', () => {
     expect(result.current.state.ledgerCategory).toBe('Essentials')
     expect(result.current.state.transactionType).toBe('outflow')
     expect(result.current.state.accountId).toBe('essentials-card')
+  })
+
+  it('replaces a reserved category from a completed receipt scan before staging', async () => {
+    const { result } = renderHook(() => useTransactionForm(createOptions({
+      autoOpenAddForm: true,
+      categories: [
+        { id: 'transfer', name: 'Transfer' },
+        { id: 'food', name: 'Food' },
+        { id: 'other', name: 'Other' },
+      ],
+      receiptScanDraft: {
+        jobId: 'legacy-scan',
+        result: {
+          description: 'Lunch', amount: 12, date: '2026-07-28', category: 'Transfer',
+          ledgerCategory: 'Income' as any, txType: 'transfer' as any, confidence: 0.9,
+        },
+      },
+    })))
+
+    await waitFor(() => expect(result.current.state.showAddForm).toBe(true))
+    expect(result.current.state.transactionType).toBe('outflow')
+    expect(result.current.state.category).toBe('Other')
+    expect(result.current.state.ledgerCategory).toBe('Essentials')
   })
 
   it('opens the blank editor while the server privacy preference is pending', () => {
