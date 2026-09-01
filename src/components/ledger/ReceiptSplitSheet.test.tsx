@@ -176,4 +176,49 @@ describe('ReceiptSplitSheet', () => {
 
     expect((screen.getByRole('button', { name: 'Use This Amount' }) as HTMLButtonElement).disabled).toBe(true)
   })
+
+  it('calculates the per-row share using the chosen quantity', () => {
+    const scanResult = result()
+    scanResult.items = [
+      { name: 'Food', quantity: 3, unitPrice: 10, lineTotal: 30, confidence: 1 },
+    ]
+    scanResult.charges = [
+      { label: 'Tax', kind: 'tax', operation: 'add', basis: 'subtotal', amount: null, ratePercent: 10, sequence: 0, eligibleItemIndexes: [], confidence: 1 },
+    ]
+    renderSheet(scanResult)
+
+    // Initial: 3 of 3 -> share is 30 + 3 = 33.00
+    expect(screen.getAllByText('RM 33.00').length).toBeGreaterThanOrEqual(1)
+
+    // Decrease to 2 of 3 -> share should be 20 + 2 = 22.00
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease quantity for item 1' }))
+    expect(screen.getByLabelText('Quantity for item 1').textContent).toBe('2')
+    expect(screen.getAllByText('RM 22.00').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('drops item-exclusive charges and remaps indexes when an item is deleted', () => {
+    const scanResult = result()
+    scanResult.items = [
+      { name: 'Food', quantity: 1, unitPrice: 16, lineTotal: 16, confidence: 1 },
+      { name: 'Water', quantity: 1, unitPrice: 4, lineTotal: 4, confidence: 1 },
+      { name: 'Coffee', quantity: 1, unitPrice: 5, lineTotal: 5, confidence: 1 },
+    ]
+    scanResult.charges = [
+      { label: 'Water Tax', kind: 'tax', operation: 'add', basis: 'subtotal', amount: null, ratePercent: 10, sequence: 0, eligibleItemIndexes: [1], confidence: 1 },
+      { label: 'Coffee Fee', kind: 'other', operation: 'add', basis: 'subtotal', amount: null, ratePercent: 20, sequence: 1, eligibleItemIndexes: [2], confidence: 1 },
+    ]
+    const { onUseResult } = renderSheet(scanResult)
+
+    // Delete Water (index 1)
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Water' }))
+
+    expect(screen.queryByRole('heading', { name: 'Water' })).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Food' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Coffee' })).toBeTruthy()
+
+    // Food (16) + Coffee (5) + Coffee Fee (20% of 5 = 1) = 22.00.
+    // Water Tax was exclusive to Water, so it was dropped and NOT applied globally.
+    fireEvent.click(screen.getByRole('button', { name: 'Use This Amount' }))
+    expect(onUseResult).toHaveBeenCalledWith(expect.objectContaining({ amount: 22 }))
+  })
 })

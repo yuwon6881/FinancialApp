@@ -16,6 +16,13 @@ import { ModalActions } from '../ui/ModalActions'
 import { mapServerErrorToField, type ServerFieldRule } from '../../lib/formErrors'
 import { revealFirstFieldError } from '../ui/formValidation'
 
+import {
+  FALLBACK_ACCEPTED_UPLOAD_TYPES,
+  UNSUPPORTED_DOCUMENT_TYPE_MESSAGE,
+  buildDocumentAcceptAttribute,
+  isSupportedDocumentUpload,
+} from '../../lib/documentUploadTypes'
+
 interface Props {
   isOpen: boolean
   onClose: () => void
@@ -25,7 +32,12 @@ interface Props {
   currency: string
 }
 
-const FALLBACK_CONSTRAINTS: DocumentVaultConstraints = { maxDocumentBytes: 20 * 1024 * 1024, maxBulkDocuments: 10, maxTotalBytesPerUser: 2 * 1024 * 1024 * 1024 }
+const FALLBACK_CONSTRAINTS: DocumentVaultConstraints = {
+  maxDocumentBytes: 20 * 1024 * 1024,
+  maxBulkDocuments: 10,
+  maxTotalBytesPerUser: 2 * 1024 * 1024 * 1024,
+  acceptedUploadTypes: FALLBACK_ACCEPTED_UPLOAD_TYPES,
+}
 const TAX_YEAR_LOOKBACK = 7
 const formatMb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(2)} MB`
 type UploadValidationErrors = { taxYear?: string; reliefCategory?: string; files?: string }
@@ -33,7 +45,7 @@ type UploadValidationErrors = { taxYear?: string; reliefCategory?: string; files
 const UPLOAD_ERROR_RULES: ServerFieldRule<'taxYear' | 'reliefCategory' | 'files'>[] = [
   { field: 'taxYear', match: ['tax year must be between'] },
   { field: 'reliefCategory', match: ['tax relief category is required', 'category is not configured'] },
-  { field: 'files', match: ['exceeds the maximum allowed size', 'unsupported file type', 'storage quota exceeded'] },
+  { field: 'files', match: ['exceeds the maximum allowed size', 'unsupported file type', 'storage quota exceeded', 'upload a photo or a pdf'] },
 ]
 
 export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear, defaultTransactionId, currency }: Props) {
@@ -96,11 +108,19 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
   const chooseFiles = async (selected: File[]) => {
     setResults(null)
     setValidationErrors({})
+    const unsupported = selected.find(file => !isSupportedDocumentUpload(file, constraints.acceptedUploadTypes))
+    if (unsupported) {
+      setValidationErrors({ files: UNSUPPORTED_DOCUMENT_TYPE_MESSAGE })
+      revealFirstFieldError(sheetBodyRef)
+      return
+    }
     const limited = selected.slice(0, constraints.maxBulkDocuments)
     setIsPreparing(true)
     try {
       const prepared = await Promise.all(limited.map(file =>
-        file.size > constraints.maxDocumentBytes ? Promise.resolve(file) : compressImageFile(file, { maxEdge: 2000, quality: 0.8 })))
+        file.size > constraints.maxDocumentBytes
+          ? compressImageFile(file, { maxEdge: 2000, quality: 0.8 })
+          : Promise.resolve(file)))
       setFiles(prepared)
       if (selected.length > constraints.maxBulkDocuments) {
         showToast(`Only the first ${constraints.maxBulkDocuments} documents were selected.`, 'Bulk Limit', 'info')
@@ -220,7 +240,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
               <span className="mt-1 text-xs text-muted-foreground">Up to {constraints.maxBulkDocuments} files · {formatMb(constraints.maxDocumentBytes)} each</span>
             </Button>
             <Input ref={inputRef} type="file" multiple={!defaultTransactionId} className="hidden"
-              accept="image/*,.pdf,application/pdf,.xml,application/xml,.json,application/json"
+              accept={buildDocumentAcceptAttribute(constraints.acceptedUploadTypes)}
               onChange={event => void chooseFiles(Array.from(event.target.files ?? []))} />
           </FormField>
           {files.length > 0 && <div className="max-h-40 space-y-1.5 overflow-y-auto">

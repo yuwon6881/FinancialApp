@@ -196,4 +196,46 @@ describe('calculateReceiptShare', () => {
     expect(result.receiptComputedTotal).toBe(4.4)
     expect(result.hasMismatch).toBe(false)
   })
+
+  it('prefers a rate when proration base is incomplete for a mixed charge', () => {
+    const input = receipt({
+      subtotal: 100,
+      total: 110,
+      items: [
+        { name: 'Mine', quantity: 1, unitPrice: 20, lineTotal: 20, confidence: 1 },
+        { name: 'Unreadable', quantity: 1, unitPrice: null, lineTotal: null, confidence: 0.2 },
+      ],
+      charges: [
+        { label: 'Tax', kind: 'tax', operation: 'add', basis: 'subtotal', amount: 10, ratePercent: 10, sequence: 0, eligibleItemIndexes: [], confidence: 1 },
+      ],
+    })
+
+    const result = calculateReceiptShare(input, [1, 0])
+
+    // With unpriced lines, proration base is broken. Since ratePercent (10%) is available,
+    // it calculates 10% of 20 = 2, rather than attributing the entire 10 flat charge.
+    expect(result.chargeLines[0].amount).toBe(2)
+    expect(result.total).toBe(22)
+    expect(result.chargeBaseIncomplete).toBe(false)
+  })
+
+  it('clamps running total base at zero when prior discount exceeds subtotal', () => {
+    const input = receipt({
+      subtotal: 20,
+      total: 10,
+      items: [
+        { name: 'Mine', quantity: 1, unitPrice: 20, lineTotal: 20, confidence: 1 },
+      ],
+      charges: [
+        { label: 'Big voucher', kind: 'discount', operation: 'subtract', basis: 'subtotal', amount: 30, ratePercent: null, sequence: 0, eligibleItemIndexes: [], confidence: 1 },
+        { label: 'Tax', kind: 'tax', operation: 'add', basis: 'runningTotal', amount: null, ratePercent: 10, sequence: 1, eligibleItemIndexes: [], confidence: 1 },
+      ],
+    })
+
+    const result = calculateReceiptShare(input, [1])
+
+    // Running subtotal is 20 - 30 = -10. Tax rate 10% applied to clamped 0 base should yield 0, not -1.
+    expect(result.chargeLines[1].amount).toBe(0)
+    expect(result.total).toBe(-10)
+  })
 })

@@ -143,6 +143,12 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
 
     const documentValidationError = documentsFieldRef.current?.getValidationError()
     if (documentValidationError) {
+      dispatch({
+        type: 'SET_ERRORS',
+        errors: {
+          submit: documentValidationError,
+        },
+      })
       focusFirstInvalidField(e.currentTarget)
       return
     }

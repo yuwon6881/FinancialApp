@@ -96,13 +96,102 @@ describe('investment forms', () => {
         onNeedInstrument={noop}
       />,
     )
-
     fireEvent.change(screen.getByLabelText('Units'), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText('Unit price (EUR)'), { target: { value: '1101' } })
     fireEvent.change(screen.getByLabelText('Gross amount (EUR)'), { target: { value: '1101' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save activity' }))
 
     expect(document.body.textContent).toMatch(/Only .* available in Broker/)
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('stops scanning spinner and shows redirect message when scan on CashForm is a trade', () => {
+    render(
+      <CashForm
+        portfolio={portfolio('USD')}
+        busy={false}
+        onCancel={noop}
+        onSave={vi.fn().mockResolvedValue(true)}
+        onNeedAccount={noop}
+        scanDraft={{
+          jobId: 'trade-scan',
+          result: {
+            type: 'Buy',
+            accountId: 'account',
+            instrumentId: 'instrument',
+            tradeDate: '2026-01-01',
+            units: 10,
+            unitPrice: 100,
+            cashAmount: 1000,
+            fees: 0,
+            taxes: 0,
+            confidence: 0.9,
+          },
+        }}
+      />,
+    )
+
+    expect(screen.getByText('This looks like a trade, not a cash movement — record it under Activity')).toBeTruthy()
+  })
+
+  it('stops scanning spinner and shows redirect message when scan on ActivityForm is a cash flow', () => {
+    render(
+      <ActivityForm
+        portfolio={portfolio('USD')}
+        initial={null}
+        pendingActivities={[]}
+        busy={false}
+        onCancel={noop}
+        onSave={vi.fn().mockResolvedValue(true)}
+        onNeedAccount={noop}
+        onNeedInstrument={noop}
+        scanDraft={{
+          jobId: 'cash-scan',
+          result: {
+            type: 'Deposit' as any,
+            accountId: 'account',
+            instrumentId: null,
+            tradeDate: '2026-01-01',
+            units: null,
+            unitPrice: null,
+            cashAmount: 500,
+            fees: null,
+            taxes: null,
+            currency: 'USD',
+            confidence: 0.9,
+          },
+        }}
+      />,
+    )
+
+    expect(screen.getByText('This looks like a cash movement, not a trade — record it under Cash')).toBeTruthy()
+  })
+
+  it('rejects same-currency conversion in CashForm', () => {
+    const onSave = vi.fn().mockResolvedValue(true)
+    render(
+      <CashForm
+        portfolio={portfolio('USD')}
+        busy={false}
+        onCancel={noop}
+        onSave={onSave}
+        onNeedAccount={noop}
+        initial={{
+          id: 'cf-1',
+          accountId: 'account',
+          type: 'Conversion',
+          currency: 'USD',
+          amount: 100,
+          toCurrency: 'USD',
+          toAmount: 100,
+          date: '2026-01-01',
+          createdAt: '',
+        }}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(screen.getByText('Choose a different currency to receive.')).toBeTruthy()
     expect(onSave).not.toHaveBeenCalled()
   })
 })

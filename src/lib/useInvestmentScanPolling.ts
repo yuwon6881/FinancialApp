@@ -133,8 +133,12 @@ export function useInvestmentScanPolling(options: Options) {
             }
           } catch (error: unknown) {
             if (errorMessageIncludes(error, '401') || errorMessageIncludes(error, '423')) continue
-            if (errorMessageIncludesLower(error, 'not found'))
+            if (errorMessageIncludesLower(error, 'not found')) {
               updateJobIds(current => current.filter(id => id !== jobId))
+              setNotifiedIds(current => current.filter(id => id !== jobId))
+              setDraft(current => current?.jobId === jobId ? null : current)
+              setFailure(current => current?.jobId === jobId ? null : current)
+            }
           }
         }
       } finally {

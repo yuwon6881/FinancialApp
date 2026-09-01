@@ -135,4 +135,45 @@ describe('useTransactionForm bucket outflow warnings', () => {
 
     expect(result.current.bucketOutflowWarning).toBeNull()
   })
+
+  it('surfaces document validation error into form submit error state', async () => {
+    const onAddTransaction = vi.fn()
+    const options = createOptions({
+      onAddTransaction,
+      accounts: [
+        { id: 'acc-1', name: 'Main', bucket: 'Essentials', remaining: 1000, isArchived: false },
+      ] as UseTransactionFormOptions['accounts'],
+    })
+
+    const { result } = renderHook(() => useTransactionForm(options))
+
+    act(() => {
+      result.current.openFresh('outflow')
+      result.current.dispatch({ type: 'SET_FIELD', field: 'description', value: 'Grocery' })
+      result.current.dispatch({ type: 'SET_FIELD', field: 'amount', value: '50' })
+      result.current.dispatch({ type: 'SET_FIELD', field: 'category', value: 'Food' })
+      result.current.dispatch({ type: 'SET_FIELD', field: 'accountId', value: 'acc-1' })
+    })
+
+    // Mock document field ref returning validation error
+    result.current.documentsFieldRef.current = {
+      getChanges: () => ({ pending: [], unlinkIds: [] }),
+      getValidationError: () => 'Upload a photo or a PDF. Other kinds of file cannot be kept as tax evidence.',
+      reset: vi.fn(),
+    }
+
+    const fakeEvent = {
+      preventDefault: vi.fn(),
+      currentTarget: document.createElement('form'),
+    } as unknown as React.FormEvent<HTMLFormElement>
+
+    await act(async () => {
+      await result.current.handleSubmit(fakeEvent)
+    })
+
+    expect(result.current.state.errors.submit).toBe(
+      'Upload a photo or a PDF. Other kinds of file cannot be kept as tax evidence.',
+    )
+    expect(onAddTransaction).not.toHaveBeenCalled()
+  })
 })

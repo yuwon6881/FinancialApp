@@ -47,6 +47,9 @@ function selectedBaseForCharge(
   /** Lines with no readable amount that the user did not take, per index. */
   unpricedOtherLines: boolean[],
 ): { selected: bigint; full: bigint; missingFromBase: boolean } {
+  // Note: an empty eligibleItemIndexes array is the scan's encoding for "applies to all items".
+  // Sentinel collision with an item-exclusive charge whose target items were deleted is prevented
+  // by dropping the charge in removeItem.
   const eligible = charge.eligibleItemIndexes.length > 0
     ? new Set(charge.eligibleItemIndexes)
     : null
@@ -119,14 +122,19 @@ export function calculateReceiptShare(
       const selectedBase = bases.selected + (charge.basis === 'runningTotal' ? runningImpact : 0n)
       const fullBase = bases.full
       let allocation = 0n
-      if (charge.amount != null && Number.isFinite(charge.amount)) {
-        const printed = scaled(Math.abs(charge.amount))
+      const hasPrintedAmount = charge.amount != null && Number.isFinite(charge.amount)
+      const hasRatePercent = charge.ratePercent != null && Number.isFinite(charge.ratePercent)
+
+      if (hasPrintedAmount && (useFullReceipt || !bases.missingFromBase || !hasRatePercent)) {
+        // Printed amounts use bases.selected and fullBase; basis: 'runningTotal' is intentionally ignored for printed amounts.
+        const printed = scaled(Math.abs(charge.amount!))
         allocation = useFullReceipt
           ? printed
           : fullBase === 0n ? 0n : roundedDivide(printed * bases.selected, fullBase)
         if (!useFullReceipt && bases.missingFromBase && bases.selected > 0n) prorationBaseIncomplete = true
-      } else if (charge.ratePercent != null && Number.isFinite(charge.ratePercent)) {
-        allocation = roundedDivide(selectedBase * scaled(Math.abs(charge.ratePercent)), SCALE * 100n)
+      } else if (hasRatePercent) {
+        const clampedBase = selectedBase < 0n ? 0n : selectedBase
+        allocation = roundedDivide(clampedBase * scaled(Math.abs(charge.ratePercent!)), SCALE * 100n)
       }
       if (charge.operation === 'add') runningImpact += allocation
       if (charge.operation === 'subtract') runningImpact -= allocation

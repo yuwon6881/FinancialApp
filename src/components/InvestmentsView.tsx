@@ -29,6 +29,7 @@ import { HoldingDetailSheet } from './investments/HoldingDetailSheet'
 import { InvestmentForecastPanel } from './investments/forecast/InvestmentForecastPanel'
 import { AccountForm, ActivityForm, CashForm, InstrumentForm } from './investments/InvestmentForms'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
+import { isActivityScan, isCashMovementScan } from '../lib/investmentScanKind'
 import type { InvestmentActivityScanResult } from '../lib/api'
 import { SummaryCards } from './investments/SummaryCards'
 import { AccountsAndInstruments } from './investments/AccountsAndInstruments'
@@ -162,12 +163,20 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   }, [hideSensitive])
   useAutoOpenModal(autoOpenAddForm, () => openPanel('activity'), onResetAutoOpen)
   useEffect(() => {
-    if (!investmentScanDraft || !['Deposit', 'Withdrawal', 'Conversion'].includes(investmentScanDraft.result.type ?? '')) return
+    if (!investmentScanDraft || !isCashMovementScan(investmentScanDraft.result.type)) return
     if (panel === null) return
     if (panel === 'cash' && !editingCashFlow) return
     if (editingActivity || editingCashFlow) return
     setFormKey(value => value + 1)
     setPanel('cash')
+  }, [investmentScanDraft, panel, editingActivity, editingCashFlow])
+  useEffect(() => {
+    if (!investmentScanDraft || !isActivityScan(investmentScanDraft.result.type)) return
+    if (panel === null) return
+    if (panel === 'activity' && !editingActivity) return
+    if (editingActivity || editingCashFlow) return
+    setFormKey(value => value + 1)
+    setPanel('activity')
   }, [investmentScanDraft, panel, editingActivity, editingCashFlow])
   useEffect(() => {
     onAddFormOpenChange?.((panel === 'activity' && !editingActivity) || (panel === 'cash' && !editingCashFlow))
@@ -229,7 +238,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
               type="button"
               variant="secondary"
               size="sm"
-              onClick={() => ['Deposit', 'Withdrawal', 'Conversion'].includes(investmentScanDraft.result.type ?? '') ? openCashPanel() : openPanel('activity')}
+              onClick={() => isCashMovementScan(investmentScanDraft.result.type) ? openCashPanel() : openPanel('activity')}
             >
               Review scan
             </Button>

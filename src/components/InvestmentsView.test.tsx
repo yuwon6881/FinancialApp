@@ -517,4 +517,41 @@ describe('InvestmentsView money-sent-to-broker card', () => {
     expect(screen.queryByText('Total today')).toBeNull()
     expect(screen.queryByText('Change today')).toBeNull()
   })
+
+  it('switches panel from cash to activity when a trade draft arrives', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
+    const { rerender } = renderView({ activeScanJobIds: ['trade-scan-1'] })
+
+    // Open cash panel
+    fireEvent.click(await screen.findByRole('button', { name: 'Manage cash' }))
+    expect(screen.getByRole('heading', { name: 'Record cash movement' })).toBeTruthy()
+
+    // Receive a trade draft
+    rerender(
+      <AppProvider value={context}>
+        <InvestmentsView
+          onNavigate={vi.fn()}
+          activeScanJobIds={['trade-scan-1']}
+          investmentScanDraft={{
+            jobId: 'trade-scan-1',
+            result: {
+              type: 'Buy',
+              accountId: 'a1',
+              instrumentId: 'i1',
+              tradeDate: '2026-07-20',
+              units: 2,
+              unitPrice: 25,
+              cashAmount: null,
+              fees: null,
+              taxes: null,
+              confidence: 0.93,
+            },
+          }}
+        />
+      </AppProvider>,
+    )
+
+    // Should switch to Activity panel
+    expect(await screen.findByRole('heading', { name: 'Add activity' })).toBeTruthy()
+  })
 })

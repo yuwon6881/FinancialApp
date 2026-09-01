@@ -247,4 +247,28 @@ describe('TaxReliefOverview sensitive accessibility', () => {
     expect(progress.getAttribute('aria-valuemax')).toBeNull()
     expect(progress.getAttribute('aria-valuemin')).toBeNull()
   })
+
+  it('renders other-currency count note on category card and in delete blocked reason', () => {
+    const summary: TaxYearReliefSummary = {
+      taxYear: CURRENT_YEAR,
+      confirmedAmount: 0,
+      pendingReviewAmount: 0,
+      documentCount: 2,
+      categories: [{
+        ...category,
+        confirmedAmount: 0,
+        pendingReviewAmount: 0,
+        documentCount: 2,
+        pendingReviewCount: 0,
+        otherCurrencyDocumentCount: 2,
+      }],
+    }
+
+    renderOverview({ summary })
+    expect(screen.getByText('2 not in MYR')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Manage limits' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Education' }))
+    expect(screen.getByRole('alert').textContent).toContain('2 documents (2 in other currencies)')
+  })
 })

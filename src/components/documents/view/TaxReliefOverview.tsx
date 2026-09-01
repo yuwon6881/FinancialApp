@@ -46,11 +46,16 @@ interface TaxReliefOverviewProps {
   deletingId?: string | number | null
 }
 
-function blockedDeleteReason(documentCount: number | undefined): string | null {
-  if (!documentCount) return null
-  return documentCount === 1
-    ? 'Move the 1 document filed under this category to another one before deleting it.'
-    : `Move the ${documentCount} documents filed under this category to another one before deleting it.`
+function blockedDeleteReason(summary: TaxReliefCategorySummary | undefined): string | null {
+  if (!summary || !summary.documentCount) return null
+  const count = summary.documentCount
+  const otherCount = summary.otherCurrencyDocumentCount ?? 0
+  const otherNote = otherCount > 0
+    ? ` (${otherCount} in other ${otherCount === 1 ? 'currency' : 'currencies'})`
+    : ''
+  return count === 1
+    ? `Move the 1 document${otherNote} filed under this category to another one before deleting it.`
+    : `Move the ${count} documents${otherNote} filed under this category to another one before deleting it.`
 }
 
 function zeroSummary(category: TaxReliefCategoryDefinition): TaxReliefCategorySummary {
@@ -60,6 +65,7 @@ function zeroSummary(category: TaxReliefCategoryDefinition): TaxReliefCategorySu
     pendingReviewAmount: 0,
     documentCount: 0,
     pendingReviewCount: 0,
+    otherCurrencyDocumentCount: 0,
   }
 }
 
@@ -122,10 +128,7 @@ export function TaxReliefOverview({
     activeSyncIds,
     activeDeletingId,
   )
-  const documentCountByCategory = new Map(
-    (summary?.categories ?? []).map(category => [category.id, category.documentCount]),
-  )
-  const deleteBlockedById = new Map(categories.map(category => [category.id, blockedDeleteReason(documentCountByCategory.get(category.id))]))
+  const deleteBlockedById = new Map(categories.map(category => [category.id, blockedDeleteReason(summaryByCategory.get(category.id))]))
   const inheritedDefaults = categories.length > 0 && categories.every(category => category.isInherited)
   const money = (value: number) => hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(value, currency)
 
@@ -335,7 +338,14 @@ export function TaxReliefOverview({
                     <span className={full ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
                       {full ? 'Limit reached' : `${money(Math.max(0, category.limit - category.confirmedAmount))} room left`}
                     </span>
-                    {category.pendingReviewAmount > 0 && <span className="text-right font-semibold text-amber-600 dark:text-amber-400">+{money(category.pendingReviewAmount)} review</span>}
+                    <span className="flex flex-col items-end gap-0.5">
+                      {category.pendingReviewAmount > 0 && <span className="text-right font-semibold text-amber-600 dark:text-amber-400">+{money(category.pendingReviewAmount)} review</span>}
+                      {Boolean(category.otherCurrencyDocumentCount && category.otherCurrencyDocumentCount > 0) && (
+                        <span className="text-right text-muted-foreground">
+                          {category.otherCurrencyDocumentCount} not in {currency}
+                        </span>
+                      )}
+                    </span>
                   </div>
                 </Button>
               )

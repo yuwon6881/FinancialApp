@@ -12,6 +12,12 @@ import { Input } from '../../ui/Input'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { FormField } from '../../ui/FormField'
 
+import {
+  UNSUPPORTED_DOCUMENT_TYPE_MESSAGE,
+  buildDocumentAcceptAttribute,
+  isSupportedDocumentUpload,
+} from '../../../lib/documentUploadTypes'
+
 interface PendingDocument extends PendingVaultDocument {
   previewUrl: string | null
 }
@@ -52,6 +58,7 @@ export const TransactionDocumentsField = React.forwardRef<
   const [reliefCategories, setReliefCategories] = useState<TaxReliefCategoryDefinition[]>([])
   const [categoriesLoaded, setCategoriesLoaded] = useState(false)
   const [categoryLoadFailed, setCategoryLoadFailed] = useState(false)
+  const [attachError, setAttachError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pendingDocsRef = useRef<PendingDocument[]>([])
 
@@ -102,6 +109,8 @@ export const TransactionDocumentsField = React.forwardRef<
         unlinkIds,
       }),
       getValidationError: () => {
+        const unsupported = pendingDocs.find(document => !isSupportedDocumentUpload(document.file))
+        if (unsupported) return `${unsupported.file.name}: ${UNSUPPORTED_DOCUMENT_TYPE_MESSAGE}`
         const missingCategory = pendingDocs.find(document => !document.reliefCategory)
         if (missingCategory) return `Choose a tax relief category for ${missingCategory.file.name}.`
         if (pendingDocs.length > 0 && (!categoriesLoaded || categoryLoadFailed)) {
@@ -129,7 +138,18 @@ export const TransactionDocumentsField = React.forwardRef<
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return
 
-    const newDocs: PendingDocument[] = Array.from(event.target.files).map(file => ({
+    const selected = Array.from(event.target.files)
+    // The accept attribute is only a hint the OS dialog lets the user override, so the type has to
+    // be checked here too. Refusing at attach time beats listing a file that only fails on save.
+    const unsupported = selected.filter(file => !isSupportedDocumentUpload(file))
+    if (unsupported.length > 0) {
+      setAttachError(`${unsupported.map(file => file.name).join(', ')}: ${UNSUPPORTED_DOCUMENT_TYPE_MESSAGE}`)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+    setAttachError(null)
+
+    const newDocs: PendingDocument[] = selected.map(file => ({
       file,
       previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
       taxYear: defaultTaxYear,
@@ -284,9 +304,10 @@ export const TransactionDocumentsField = React.forwardRef<
         multiple
         ref={fileInputRef}
         className="hidden"
-        accept="image/*,.pdf,application/pdf,.xml,application/xml,.json,application/json"
+        accept={buildDocumentAcceptAttribute()}
         onChange={handleFileChange}
       />
+      {attachError && <p className="text-center text-xs text-destructive" role="alert">{attachError}</p>}
       {disabled && <p className="text-center text-xs text-muted-foreground">Attachments are unavailable while offline.</p>}
       {!disabled && categoriesLoaded && reliefCategories.length === 0 && (
         <p className="text-center text-xs text-muted-foreground">

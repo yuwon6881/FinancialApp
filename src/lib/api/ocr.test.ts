@@ -88,4 +88,12 @@ describe('OCR API client', () => {
     )
     expect((fetchMock.mock.calls[0][1].body as FormData).get('image')).toBe(downscaled)
   })
+
+  it('rejects an image that exceeds 10MB after compression with server wording', async () => {
+    const photo = new File(['x'], 'giant.jpg', { type: 'image/jpeg' })
+    const oversized = new File([new Uint8Array(11 * 1024 * 1024)], 'giant.webp', { type: 'image/webp' })
+    compressionMocks.compressImageFile.mockResolvedValue(oversized)
+
+    await expect(startReceiptScan(photo)).rejects.toThrow('Receipt image is too large. Please use an image under 10 MB.')
+  })
 })

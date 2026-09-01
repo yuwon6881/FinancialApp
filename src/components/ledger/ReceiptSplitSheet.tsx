@@ -75,10 +75,12 @@ export function ReceiptSplitSheet({
   const itemCalculations = useMemo(() => {
     if (!receipt) return []
     return receipt.items.map((_, itemIndex) => {
-      const quantities = receipt.items.map((__, index) => index === itemIndex ? 1 : 0)
+      const selected = selectedQuantities[itemIndex] ?? 0
+      const qty = selected > 0 ? selected : 1
+      const quantities = receipt.items.map((__, index) => index === itemIndex ? qty : 0)
       return calculateReceiptShare(receipt, quantities)
     })
-  }, [receipt])
+  }, [receipt, selectedQuantities])
 
   const canUse = Boolean(
     receipt
@@ -127,16 +129,29 @@ export function ReceiptSplitSheet({
   }
 
   const removeItem = (index: number) => {
-    setReceipt(current => current ? {
-      ...current,
-      items: current.items.filter((_, itemIndex) => itemIndex !== index),
-      charges: current.charges.map(charge => ({
-        ...charge,
-        eligibleItemIndexes: charge.eligibleItemIndexes
-          .filter(itemIndex => itemIndex !== index)
-          .map(itemIndex => itemIndex > index ? itemIndex - 1 : itemIndex),
-      })),
-    } : current)
+    setReceipt(current => {
+      if (!current) return current
+      const nextCharges = current.charges
+        .filter(charge => {
+          if (charge.eligibleItemIndexes.length > 0) {
+            const remaining = charge.eligibleItemIndexes.filter(itemIndex => itemIndex !== index)
+            if (remaining.length === 0) return false
+          }
+          return true
+        })
+        .map(charge => ({
+          ...charge,
+          eligibleItemIndexes: charge.eligibleItemIndexes
+            .filter(itemIndex => itemIndex !== index)
+            .map(itemIndex => itemIndex > index ? itemIndex - 1 : itemIndex),
+        }))
+
+      return {
+        ...current,
+        items: current.items.filter((_, itemIndex) => itemIndex !== index),
+        charges: nextCharges,
+      }
+    })
     setSelectedQuantities(current => current.filter((_, itemIndex) => itemIndex !== index))
     setUnlockedPriceIndexes(current => new Set(
       [...current]

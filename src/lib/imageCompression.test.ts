@@ -12,16 +12,37 @@ describe('compressImageFile', () => {
     expect(result).toBe(pdf)
   })
 
-  it('passes through HEIC files unchanged', async () => {
-    const heic = new File(['heic content'], 'photo.heic', { type: 'image/heic' })
+  it('passes through HEIC files when createImageBitmap is not supported or throws', async () => {
+    vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(new Error('HEIC not supported')))
+    const heic = new File([new Uint8Array(400 * 1024)], 'photo.heic', { type: 'image/heic' })
     const result = await compressImageFile(heic)
     expect(result).toBe(heic)
   })
 
-  it('passes through HEIF files unchanged', async () => {
-    const heif = new File(['heif content'], 'photo.heif', { type: 'image/heif' })
-    const result = await compressImageFile(heif)
-    expect(result).toBe(heif)
+  it('compresses HEIC files when createImageBitmap succeeds', async () => {
+    const close = vi.fn()
+    const drawImage = vi.fn()
+    vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({
+      width: 4000,
+      height: 2000,
+      close,
+    }))
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: () => ({ drawImage }),
+      toBlob: (callback: BlobCallback) => callback(new Blob([new Uint8Array(50)], { type: 'image/webp' })),
+    } as unknown as HTMLCanvasElement
+    const realCreateElement = document.createElement.bind(document)
+    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) =>
+      tagName === 'canvas' ? canvas : realCreateElement(tagName)) as typeof document.createElement)
+    const heic = new File([new Uint8Array(400 * 1024)], 'photo.heic', { type: 'image/heic' })
+
+    const result = await compressImageFile(heic)
+
+    expect(result).not.toBe(heic)
+    expect(result.type).toBe('image/webp')
+    expect(result.name).toBe('photo.webp')
   })
 
   it('passes through small images under 300KB', async () => {

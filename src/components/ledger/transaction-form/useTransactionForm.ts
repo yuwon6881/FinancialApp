@@ -254,13 +254,34 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     }
   }, [state.transactionType, suggestions])
 
-  // Cycle Category default side effects
+  // The defaults effect below reads these through a ref rather than depending on them. Depending
+  // on them would re-run it on every edit and snap the user's own choice back to the default: an
+  // inflow could then never be filed under a non-Salary category, nor as a direct bucket deposit.
+  const defaultsStateRef = useRef(state)
+  // Declared before the defaults effect so the ref is already current when that effect runs.
+  useEffect(() => {
+    defaultsStateRef.current = state
+  }, [state])
+
+  // Cycle Category default side effects. These are a one-time seed keyed on the transaction type;
+  // once seeded, both fields belong to the user. Each dispatch is guarded against a no-op so an
+  // unstable `categories` identity cannot drive a render loop.
   useEffect(() => {
     if (state.transactionType === 'inflow') {
       if (!state.editingId) {
-        dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: 'Income' })
-        const hasSalary = categories.some(c => c.name === 'Salary')
-        dispatch({ type: 'SET_FIELD', field: 'category', value: hasSalary ? 'Salary' : defaultCategory })
+        if (defaultsStateRef.current.ledgerCategory !== 'Income') {
+          dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: 'Income' })
+        }
+        // A scan already supplied a category; overwriting it here would discard what was read off
+        // the receipt. APPLY_RECEIPT sets the type and the flag in one dispatch, so the flag is
+        // current by the time this effect runs for that type change.
+        if (!defaultsStateRef.current.categoryFromReceipt) {
+          const hasSalary = categories.some(c => c.name === 'Salary')
+          const seeded = hasSalary ? 'Salary' : defaultCategory
+          if (defaultsStateRef.current.category !== seeded) {
+            dispatch({ type: 'SET_FIELD', field: 'category', value: seeded })
+          }
+        }
       } else if (state.ledgerCategory.startsWith('Transfer:')) {
         dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: 'Income' })
       }

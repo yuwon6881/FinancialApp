@@ -127,4 +127,17 @@ describe('DocumentUploadSheet validation', () => {
     undo.onAction()
     await waitFor(() => expect(deleteDocument).toHaveBeenCalledWith(42))
   })
+
+  it('rejects unsupported file types client-side with server explanation', async () => {
+    renderSheet()
+    await waitFor(() => expect(getTaxReliefCategories).toHaveBeenCalled())
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    const file = new File(['<xml></xml>'], 'export.xml', { type: 'application/xml' })
+    Object.defineProperty(input, 'files', { value: [file], configurable: true })
+    fireEvent.change(input)
+
+    expect(await screen.findByText('Upload a photo or a PDF. Other kinds of file cannot be kept as tax evidence.')).toBeTruthy()
+    expect(screen.queryByText('export.xml')).toBeNull()
+  })
 })

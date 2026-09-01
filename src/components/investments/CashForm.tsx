@@ -21,6 +21,7 @@ import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { focusFirstInvalidField } from '../ui/formValidation'
 import { ReceiptScanPicker } from '../ledger/transaction-form/ReceiptScanPicker'
 import { ReceiptScanStatus } from '../ledger/transaction-form/ReceiptScanStatus'
+import { isCashMovementScan } from '../../lib/investmentScanKind'
 
 const today = () => {
   const value = new Date()
@@ -124,17 +125,21 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
   }
   useEffect(() => {
     if (!scanDraft || appliedScanJobRef.current === scanDraft.jobId) return
-    const result = scanDraft.result
-    if (!result.type || !['Deposit', 'Withdrawal', 'Conversion'].includes(result.type)) return
     appliedScanJobRef.current = scanDraft.jobId
     setActiveScanJobId(scanDraft.jobId)
     setIsScanning(false)
+    const result = scanDraft.result
+    if (!isCashMovementScan(result.type)) {
+      setScanError('This looks like a trade, not a cash movement — record it under Activity')
+      return
+    }
     setShowScanBanner(true)
     setType(result.type as 'Deposit' | 'Withdrawal' | 'Conversion')
     if (result.accountId && accounts.some(value => value.id === result.accountId)) setAccountId(result.accountId)
     if (result.currency) setCurrency(result.currency)
     if (result.cashAmount != null) setAmount(String(result.cashAmount))
     if (result.toCurrency) setToCurrency(result.toCurrency)
+    else if (result.type === 'Conversion') setToCurrency('')
     if (result.toAmount != null) setToAmount(String(result.toAmount))
     if (result.tradeDate) setDate(result.tradeDate)
   }, [scanDraft, accounts])
@@ -164,12 +169,19 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
       focusFirstInvalidField(event.currentTarget)
       return
     }
-    if (type === 'Conversion' && !toCurrency) {
-      setErrors({ toCurrency: 'Choose the currency to receive.' })
-      focusFirstInvalidField(event.currentTarget)
-      return
-    }
     if (type === 'Conversion') {
+      if (!toCurrency) {
+        setErrors({ toCurrency: 'Choose the currency to receive.' })
+        focusFirstInvalidField(event.currentTarget)
+        return
+      }
+      // The server rejects a same-currency conversion outright, and a scan that read only one
+      // side of the pair leaves the two equal by default.
+      if (toCurrency === currency) {
+        setErrors({ toCurrency: 'Choose a different currency to receive.' })
+        focusFirstInvalidField(event.currentTarget)
+        return
+      }
       if (!(numberOrUndefined(amount)! > 0)) {
         setErrors({ amount: 'Enter a positive from amount.' })
         focusFirstInvalidField(event.currentTarget)

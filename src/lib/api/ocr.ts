@@ -109,17 +109,28 @@ type WireReceiptScanJob = Omit<ReceiptScanJob, 'result'> & {
   result: (Omit<ReceiptScanResult, 'amount'> & { amount: string | number | null }) | null
 }
 
+/** Mirrors `SupabaseReceiptImageStore.MaxImageBytes`; the endpoints also cap the request at 11 MiB. */
+const MAX_SCAN_IMAGE_BYTES = 10 * 1024 * 1024
+
 /**
  * A camera photo routinely lands well past the 10 MB the scan endpoints accept, and the whole
  * file has to cross a phone connection before the job can even start. Downscale it the way the
  * document vault does, but with a longer edge and less loss, because small print on a receipt is
- * the thing being read. Non-images, HEIC, already-small files and any decode failure come back
+ * the thing being read. Non-images, already-small files and any decode failure come back
  * untouched, so this can only ever shrink a real photo.
+ *
+ * What survives compression still has to fit. Rejecting it here keeps the reason truthful: past
+ * the request cap the server answers 413 with a non-JSON body, and the generic start-scan
+ * fallback would tell the user to try a clearer photo when the problem is the file size.
  */
 async function scanFormData(imageFile: File): Promise<FormData> {
   const { compressImageFile } = await import('../imageCompression')
+  const compressed = await compressImageFile(imageFile, { maxEdge: 2400, quality: 0.85 })
+  if (compressed.size > MAX_SCAN_IMAGE_BYTES) {
+    throw new Error('Receipt image is too large. Please use an image under 10 MB.')
+  }
   const formData = new FormData()
-  formData.append('image', await compressImageFile(imageFile, { maxEdge: 2400, quality: 0.85 }))
+  formData.append('image', compressed)
   return formData
 }
 

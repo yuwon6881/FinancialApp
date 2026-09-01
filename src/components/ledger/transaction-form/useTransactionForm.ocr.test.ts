@@ -105,4 +105,71 @@ describe('useTransactionForm receipt cleanup', () => {
     expect(result.current.state.showAddForm).toBe(true)
     expect(result.current.state.transactionType).toBe('outflow')
   })
+
+  it('preserves scanned category on inflow receipt instead of overwriting with Salary', () => {
+    const { result } = renderHook(() => useTransactionForm(createOptions({
+      categories: [
+        { id: 'salary', name: 'Salary' },
+        { id: 'refund', name: 'Refund' },
+      ],
+    })))
+
+    act(() => {
+      result.current.dispatch({
+        type: 'APPLY_RECEIPT',
+        payload: {
+          description: 'Store Refund',
+          amount: 50,
+          txType: 'inflow',
+          category: 'Refund',
+          date: '2026-07-28',
+        },
+        todayDate: '2026-07-28',
+      })
+    })
+
+    expect(result.current.state.transactionType).toBe('inflow')
+    expect(result.current.state.category).toBe('Refund')
+    expect(result.current.state.ledgerCategory).toBe('Income')
+  })
+
+  // The inflow defaults are a one-time seed. Re-deriving them from the current category or ledger
+  // category would make both fields impossible to change, which also takes direct bucket deposits
+  // (an inflow filed straight to a bucket) off the table entirely.
+  it('keeps a manually chosen category on an inflow', () => {
+    const options = createOptions({
+      categories: [
+        { id: 'salary', name: 'Salary' },
+        { id: 'bonus', name: 'Bonus' },
+      ],
+    })
+    const { result } = renderHook(() => useTransactionForm(options))
+
+    act(() => {
+      result.current.openFresh('inflow')
+    })
+    expect(result.current.state.category).toBe('Salary')
+
+    act(() => {
+      result.current.dispatch({ type: 'SET_FIELD', field: 'category', value: 'Bonus' })
+    })
+
+    expect(result.current.state.category).toBe('Bonus')
+  })
+
+  it('keeps a direct bucket deposit ledger category on an inflow', () => {
+    const options = createOptions()
+    const { result } = renderHook(() => useTransactionForm(options))
+
+    act(() => {
+      result.current.openFresh('inflow')
+    })
+    expect(result.current.state.ledgerCategory).toBe('Income')
+
+    act(() => {
+      result.current.dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: 'Rewards' })
+    })
+
+    expect(result.current.state.ledgerCategory).toBe('Rewards')
+  })
 })

@@ -40,6 +40,8 @@ export interface TransactionFormState {
   stabilityTopUpAmount: string
   /** Required only when the transaction takes money out of Stability. */
   stabilityReloadIntent: StabilityReloadIntent
+  /** True when category was explicitly supplied by an OCR scan or AI draft. */
+  categoryFromReceipt: boolean
   errors: Record<string, string>
 }
 
@@ -65,6 +67,7 @@ export const getInitialState = (todayDate: string, defaultCategory: string): Tra
   amount: '',
   transactionType: 'outflow',
   category: defaultCategory,
+  categoryFromReceipt: false,
   ledgerCategory: 'Essentials',
   transferSource: 'Essentials',
   transferTarget: 'Rewards',
@@ -114,6 +117,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         },
         date: action.payload?.todayDate ?? state.date,
         category: action.payload?.defaultCategory ?? state.category,
+        categoryFromReceipt: false,
         stabilityTopUpAccepted: false,
         stabilityTopUpAmount: '',
         stabilityReloadIntent: 'Unanswered',
@@ -132,6 +136,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         date: action.payload.date,
         transactionType: action.payload.txType,
         category: action.payload.category,
+        categoryFromReceipt: false,
         ledgerCategory: normalizeIncomeLedgerCategory(action.payload.ledgerCategory),
         transferSource: action.payload.transferSource ?? state.transferSource,
         transferTarget: action.payload.transferTarget ?? state.transferTarget,
@@ -154,6 +159,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
       return {
         ...state,
         [action.field]: action.value,
+        categoryFromReceipt: action.field === 'category' || action.field === 'transactionType' ? false : state.categoryFromReceipt,
         errors: { ...state.errors, [action.field]: '' }, // clear error when typing
       }
     case 'SET_SPLIT_ACCOUNT':
@@ -191,6 +197,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         transactionType: txType ?? state.transactionType,
         ledgerCategory: ledgerCategory ?? state.ledgerCategory,
         category: category ?? state.category,
+        categoryFromReceipt: Boolean(category),
         accountId: null,
         counterAccountId: null,
         stabilityTopUpAccepted: false,
@@ -230,6 +237,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         amount: nextAmount !== null ? Math.abs(nextAmount).toFixed(2) : state.amount,
         date: nextDate !== null ? nextDate : state.date,
         category: nextCategory !== null ? nextCategory : state.category,
+        categoryFromReceipt: Boolean(nextCategory),
         ledgerCategory: (nextLedgerCategory && ['Income', 'Essentials', 'Growth', 'Stability', 'Rewards'].includes(nextLedgerCategory))
           ? (nextLedgerCategory as SelectableLedgerCategory)
           : state.ledgerCategory,

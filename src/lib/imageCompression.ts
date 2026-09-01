@@ -9,17 +9,6 @@ export async function compressImageFile(file: File, options: CompressOptions = {
   // Skip non-images (PDF, JSON, XML etc)
   if (!file.type.startsWith('image/')) return file
 
-  // Browsers cannot reliably decode HEIC via createImageBitmap; attempting it throws.
-  if (
-    file.type === 'image/heic' ||
-    file.type === 'image/heif' ||
-    file.type === 'image/heic-sequence' ||
-    file.type === 'image/heif-sequence' ||
-    /\.(heic|heif)$/i.test(file.name)
-  ) {
-    return file
-  }
-
   // Skip when already under ~300 KB
   if (file.size <= 300 * 1024) return file
 

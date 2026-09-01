@@ -141,12 +141,15 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
   }
   useEffect(() => {
     if (!scanDraft || appliedScanJobRef.current === scanDraft.jobId) return
-    const result = scanDraft.result
-    const scannedActivityType = activityTypes.find(value => value.value === result.type)?.value
-    if (result.type && !scannedActivityType) return
     appliedScanJobRef.current = scanDraft.jobId
     setActiveScanJobId(scanDraft.jobId)
     setIsScanning(false)
+    const result = scanDraft.result
+    const scannedActivityType = activityTypes.find(value => value.value === result.type)?.value
+    if (result.type && !scannedActivityType) {
+      setScanError('This looks like a cash movement, not a trade — record it under Cash')
+      return
+    }
     setShowScanBanner(true)
     if (scannedActivityType) setType(scannedActivityType)
     if (result.accountId && accounts.some(value => value.id === result.accountId)) setAccountId(result.accountId)

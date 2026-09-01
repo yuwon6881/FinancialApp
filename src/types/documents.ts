@@ -29,6 +29,7 @@ export interface DocumentVaultConstraints {
   maxDocumentBytes: number
   maxBulkDocuments: number
   maxTotalBytesPerUser: number
+  acceptedUploadTypes?: string[]
 }
 
 export interface TaxReliefCategoryDefinition {
@@ -46,6 +47,7 @@ export interface TaxReliefCategorySummary extends TaxReliefCategoryDefinition {
   pendingReviewAmount: number
   documentCount: number
   pendingReviewCount: number
+  otherCurrencyDocumentCount?: number
 }
 
 export interface TaxYearReliefSummary {

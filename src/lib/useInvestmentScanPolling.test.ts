@@ -92,4 +92,16 @@ describe('useInvestmentScanPolling', () => {
     expect(scanOptions.setAutoOpenInvestmentAdd).toHaveBeenCalledWith(true)
     unmount()
   })
+
+  it('clears draft, notified IDs, and tracked job IDs when job returns not found', async () => {
+    localStorage.setItem('investment_scan_job_ids', JSON.stringify(['investment-missing']))
+    localStorage.setItem('investment_scan_notified_ids', JSON.stringify(['investment-missing']))
+    apiMocks.fetchInvestmentScanJob.mockRejectedValue(new Error('Job not found (404)'))
+    const scanOptions = options(false)
+    const { result, unmount } = renderHook(() => useInvestmentScanPolling(scanOptions))
+
+    await waitFor(() => expect(result.current.investmentScanJobIds).toEqual([]))
+    expect(result.current.activeInvestmentScanDraft).toBeNull()
+    unmount()
+  })
 })
