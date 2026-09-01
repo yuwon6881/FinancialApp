@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DashboardData, Loan, Transaction, WishlistItem } from '../types'
-import { buildCycleSummary, formatRate, formatRateChange } from '../lib/cycleSummary'
+import { buildCycleSummary, formatRate, formatRateChange, savingsRatePointChange } from '../lib/cycleSummary'
 
 function dashboard(overrides: Partial<DashboardData> = {}): DashboardData {
   return {
@@ -70,6 +70,17 @@ describe('buildCycleSummary', () => {
     expect(formatRateChange(0)).toBe('No change')
   })
 
+  // The card prints whole percentages on both sides, so its arrow and colour have to come from the
+  // same rounding. Taking the raw difference instead turned a 0.8pt move between two rates that
+  // both print as "40%" into a green rise above the words "Was 40% last cycle".
+  it('measures the savings-rate move between the printed percentages, not the raw rates', () => {
+    expect(savingsRatePointChange(0.404, 0.396)).toBe(0)
+    expect(savingsRatePointChange(0.406, 0.394)).toBe(2)
+    expect(savingsRatePointChange(0.2, 0.4)).toBe(-20)
+    expect(savingsRatePointChange(0.4, null)).toBeNull()
+    expect(savingsRatePointChange(null, 0.4)).toBeNull()
+  })
+
   it('uses true envelope outflows instead of treating net change as spending', () => {
     const summary = buildCycleSummary(dashboard(), null, [], 2026, 7, 1)
 
@@ -79,6 +90,34 @@ describe('buildCycleSummary', () => {
       ['Stability', 0],
       ['Rewards', 25],
     ])
+  })
+
+  // Spent and carry-forward alone never said what the cycle put into the bucket, so a bucket that
+  // simply received less read as one that had been overspent.
+  it('reports the income each envelope was actually allocated', () => {
+    const summary = buildCycleSummary(dashboard(), null, [], 2026, 7, 1)
+
+    expect(summary.envelopes.map(envelope => [envelope.name, envelope.allocated])).toEqual([
+      ['Essentials', 500],
+      ['Growth', 200],
+      ['Stability', 100],
+      ['Rewards', 200],
+    ])
+  })
+
+  // The percentage bar clamps at 100%; the balance behind it must not, or a fund past its target
+  // reports less money than it holds.
+  it('carries the stability balance behind the funded percentage', () => {
+    expect(buildCycleSummary(dashboard(), null, [], 2026, 7, 1).stabilityBalance).toBe(100)
+
+    const overshot = dashboard({
+      categories: dashboard().categories.map(category => category.name === 'Stability' ? { ...category, remaining: 1400 } : category),
+      stats: { ...dashboard().stats, stabilityPercentReached: 1.4 },
+    })
+    const summary = buildCycleSummary(overshot, null, [], 2026, 7, 1)
+
+    expect(summary.stabilityBalance).toBe(1400)
+    expect(summary.stabilityPct).toBe(1)
   })
 
   it('keeps the account-level closing balances behind each ledger bucket', () => {
@@ -154,6 +193,17 @@ describe('buildCycleSummary', () => {
 
     expect(summary.topCategories).toHaveLength(8)
     expect(summary.topCategories.map(category => category.amount)).toEqual([10, 9, 8, 7, 6, 5, 4, 3])
+    // The two the chart cannot fit used to vanish, leaving a breakdown that did not add up to the
+    // spending reported above it.
+    expect(summary.otherCategoriesCount).toBe(2)
+    expect(summary.otherCategoriesTotal).toBe(3)
+  })
+
+  it('leaves no remainder to report when every category fits in the chart', () => {
+    const summary = buildCycleSummary(dashboard(), null, [], 2026, 7, 1)
+
+    expect(summary.otherCategoriesCount).toBe(0)
+    expect(summary.otherCategoriesTotal).toBe(0)
   })
 
   it('includes only wishlist items purchased inside the summarized cycle', () => {
@@ -208,6 +258,9 @@ describe('buildCycleSummary', () => {
     expect(summary.previousSavingsRate).toBeCloseTo(650 / 900)
     expect(summary.biggestCategoryShift).toEqual({ category: 'Food', delta: -75 })
     expect(summary.growthDelta).toBe(40)
+    // The Growth card shows the movement; its detail line names the balance that movement ended
+    // at, so the two figures have to travel together.
+    expect(summary.growthEnding).toBe(160)
   })
 
   it('recognizes a truly empty cycle instead of presenting zero as a positive result', () => {

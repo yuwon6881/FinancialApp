@@ -8,16 +8,17 @@ import {
   LoaderCircle,
   TrendingDown,
   TrendingUp,
+  Wallet,
   Zap,
 } from 'lucide-react'
 import type { DashboardData, Loan, Transaction, WishlistItem } from '../types'
 import { useAppPrefs } from '../contexts/AppContext'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
-import { buildCycleSummary, formatRate } from '../lib/cycleSummary'
+import { buildCycleSummary, formatRate, savingsRatePointChange } from '../lib/cycleSummary'
 import { BottomSheet } from './ui/BottomSheet'
 import { Button } from './ui/Button'
 import { InfoHint } from './ui/InfoHint'
-import { CycleActivitySections, Section } from './cycle-summary/CycleActivitySections'
+import { CycleActivitySections, Section, StabilityFundSection } from './cycle-summary/CycleActivitySections'
 import { InsightCard, StatTile } from './cycle-summary/CycleSummaryCards'
 import { changeTone } from '../lib/cycleSummaryTone'
 
@@ -61,12 +62,7 @@ export function CycleSummaryModal({
     [data, previousData, wishlist, year, monthIndex, cycleDay, transactions, loans],
   )
 
-  // Rounded to whole percentage points, which is the unit the card reports in: a change of
-  // 0.4pt reads as "Same as last cycle" in the detail line, so it must not colour as a move.
-  // `null` means there is no previous rate to have changed from, not a change of zero.
-  const savingsRateChange = summary?.savingsRate == null || summary.previousSavingsRate == null
-    ? null
-    : Math.round((summary.savingsRate - summary.previousSavingsRate) * 100)
+  const savingsRateChange = savingsRatePointChange(summary?.savingsRate ?? null, summary?.previousSavingsRate ?? null)
 
   return (
     <BottomSheet
@@ -142,6 +138,12 @@ export function CycleSummaryModal({
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-1">
               <StatTile icon={<ArrowDownRight className="size-3.5 text-emerald-500" />} label="In" value={formatSensitive(summary.inflow)} />
               <StatTile icon={<ArrowUpRight className="size-3.5 text-orange-500" />} label="Out" value={formatSensitive(summary.expenses)} />
+              {/* Only when it differs from total inflow: the savings rate divides by income, not
+                  by everything that came in, and with refunds or transfers in the mix the two
+                  figures disagree. Showing just "In" left that rate impossible to reconcile. */}
+              {Math.abs(summary.income - summary.inflow) > 0.005 && (
+                <StatTile icon={<Wallet className="size-3.5 text-blue-500" />} label="Income" value={formatSensitive(summary.income)} />
+              )}
             </div>
           </div>
 
@@ -159,7 +161,11 @@ export function CycleSummaryModal({
                       </span>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col gap-0.5 rounded-lg bg-muted/40 px-2.5 py-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Allocated</span>
+                      <span className="truncate text-xs font-bold text-foreground">{formatSensitive(envelope.allocated)}</span>
+                    </div>
                     <div className="flex flex-col gap-0.5 rounded-lg bg-muted/40 px-2.5 py-2">
                       <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Spent</span>
                       <span className={`text-xs font-bold ${envelope.overspent ? 'text-orange-500' : 'text-foreground'}`}>
@@ -311,7 +317,11 @@ export function CycleSummaryModal({
                     value={`${summary.growthDelta < 0 ? '−' : '+'}${formatSensitive(Math.abs(summary.growthDelta))}`}
                     tone={changeTone(summary.growthDelta, true)}
                     trendUp={summary.growthDelta === 0 ? undefined : summary.growthDelta > 0}
-                    detail="Ending balance this cycle"
+                    // The value is the movement between the two cycles. The old line called it
+                    // the ending balance, which named a different number entirely.
+                    detail={summary.growthEnding === null
+                      ? (summary.growthDelta === 0 ? 'Same as last cycle' : summary.growthDelta > 0 ? 'More than last cycle' : 'Less than last cycle')
+                      : <>Ended at {formatSensitive(summary.growthEnding)}</>}
                   />
                 )}
               </div>
@@ -423,21 +433,21 @@ export function CycleSummaryModal({
                         </span>
                       </div>
                     ))}
+                    {summary.otherCategoriesCount > 0 && (
+                      <div className="flex items-center justify-between gap-2 border-t border-border/40 pt-2.5 text-xs text-muted-foreground">
+                        <span className="min-w-0 truncate">
+                          {summary.otherCategoriesCount} smaller {summary.otherCategoriesCount === 1 ? 'category' : 'categories'}
+                        </span>
+                        <span className="w-20 shrink-0 text-right font-bold">{formatSensitive(summary.otherCategoriesTotal)}</span>
+                      </div>
+                    )}
                   </div>
                 </Section>
               </div>
 
               <div className="space-y-6">
                 {summary.stabilityTarget > 0 && (
-                  <Section title="Stability fund">
-                    <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-foreground">Funded</span>
-                        <span className="font-bold text-foreground">{Math.round(summary.stabilityPct * 100)}%</span>
-                      </div>
-                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-cyan-500" style={{ width: `${summary.stabilityPct * 100}%` }} /></div>
-                    </div>
-                  </Section>
+                  <StabilityFundSection summary={summary} formatSensitive={formatSensitive} />
                 )}
 
                 <CycleActivitySections summary={summary} formatSensitive={formatSensitive} />
@@ -446,15 +456,7 @@ export function CycleSummaryModal({
           ) : (
             <div className="grid gap-6 sm:grid-cols-2">
               {summary.stabilityTarget > 0 && (
-                <Section title="Stability fund">
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-foreground">Funded</span>
-                      <span className="font-bold text-foreground">{Math.round(summary.stabilityPct * 100)}%</span>
-                    </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-cyan-500" style={{ width: `${summary.stabilityPct * 100}%` }} /></div>
-                  </div>
-                </Section>
+                <StabilityFundSection summary={summary} formatSensitive={formatSensitive} />
               )}
 
               <CycleActivitySections summary={summary} formatSensitive={formatSensitive} />

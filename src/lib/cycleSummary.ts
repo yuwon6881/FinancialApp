@@ -17,6 +17,19 @@ export function formatRateChange(value: number): string {
   return `${points} ${points === 1 ? 'point' : 'points'} ${value > 0 ? 'higher' : 'lower'}`
 }
 
+/**
+ * The savings-rate card's change, in whole percentage points -- the unit the card prints.
+ *
+ * Measured between the two *printed* percentages rather than between the raw rates: rounding the
+ * raw difference let 39.6% -> 40.4% round to a one-point rise, so the card drew a green up arrow
+ * on "40%" directly above the words "Was 40% last cycle". `null` means there is no previous rate
+ * to have moved from, which is not the same as a change of zero.
+ */
+export function savingsRatePointChange(rate: number | null, previousRate: number | null): number | null {
+  if (rate === null || previousRate === null) return null
+  return Math.round(rate * 100) - Math.round(previousRate * 100)
+}
+
 export function buildCycleSummary(
   data: DashboardData,
   previousData: DashboardData | null,
@@ -35,6 +48,10 @@ export function buildCycleSummary(
     const category = data.categories.find(item => item.name === name)
     return {
       name,
+      // What this cycle's income actually put into the bucket. Without it the card stated an
+      // outflow and a closing balance but never what came in, so a bucket that ended lower read
+      // as overspending even when it had simply been allocated less.
+      allocated: category?.incomeAllocated ?? 0,
       spent: category?.spent ?? Math.max(0, -(category?.netChange ?? 0)),
       remaining: category?.remaining ?? 0,
       overspent: (category?.remaining ?? 0) < -EPSILON,
@@ -43,11 +60,15 @@ export function buildCycleSummary(
     }
   })
 
-  const topCategories = [...(data.monthlyCategoryBreakdown || [])]
+  const rankedCategories = [...(data.monthlyCategoryBreakdown || [])]
     .filter(category => category.amount > 0)
     .sort((a, b) => b.amount - a.amount)
-    .slice(0, 8)
+  const topCategories = rankedCategories.slice(0, 8)
   const topMax = topCategories.reduce((max, category) => Math.max(max, category.amount), 0)
+  // "Where it went" charts the top eight. The rest used to disappear without a trace, so a cycle
+  // spread over more categories showed a breakdown that did not add up to the spending the
+  // header above it reported.
+  const otherCategories = rankedCategories.slice(8)
   const bills = data.activeRecurringPayments || []
   const paidBills = bills.filter(bill => bill.status === 'Paid')
   const partPaidBills = bills.filter(bill => bill.status === 'PartiallyPaid')
@@ -170,11 +191,17 @@ export function buildCycleSummary(
       ? biggestCategoryShift
       : null,
     growthDelta,
+    growthEnding: growthNow,
     envelopes,
     stabilityPct: Math.max(0, Math.min(1, data.stats.stabilityPercentReached)),
     stabilityTarget: data.setting.targetStabilityFund,
+    // The percentage is clamped so the bar cannot overflow; the balance behind it is not, so a
+    // fund that has overshot its target still reports what it actually holds.
+    stabilityBalance: data.categories.find(category => category.name === 'Stability')?.remaining ?? 0,
     topCategories,
     topMax,
+    otherCategoriesCount: otherCategories.length,
+    otherCategoriesTotal: otherCategories.reduce((sum, category) => sum + category.amount, 0),
     paidBillsCount: paidBills.length,
     paidTotal: [...paidBills, ...partPaidBills, ...paidOffBills].reduce(
       (sum, bill) => sum + Math.abs(bill.paidAmount ?? (bill.status === 'Paid' ? bill.amount ?? 0 : 0)),

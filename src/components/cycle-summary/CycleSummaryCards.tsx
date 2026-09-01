@@ -15,7 +15,9 @@ const INSIGHT_TONE_TEXT: Record<InsightTone, string> = {
 export function InsightCard({ title, value, detail, tone, trendUp, tooltipHint }: {
   title: string
   value: ReactNode
-  detail: string
+  // A node, not a string: some detail lines quote a figure and have to route it through
+  // formatSensitive so the masked state holds here too.
+  detail: ReactNode
   tone: InsightTone
   trendUp?: boolean
   tooltipHint?: string

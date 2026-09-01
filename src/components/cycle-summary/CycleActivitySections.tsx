@@ -139,6 +139,41 @@ export function CycleActivitySections({
   )
 }
 
+/**
+ * The stability card renders from two places in the modal -- the layout branches on whether there
+ * is a "Where it went" chart to sit beside -- so it lives in one component rather than as two
+ * copies that can drift apart.
+ */
+export function StabilityFundSection({
+  summary,
+  formatSensitive,
+}: {
+  summary: Summary
+  formatSensitive: (value: number) => ReactNode
+}) {
+  return (
+    <Section title="Stability fund">
+      <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-semibold text-foreground">Funded</span>
+          <span className="font-bold text-foreground">{Math.round(summary.stabilityPct * 100)}%</span>
+        </div>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-cyan-500" style={{ width: `${summary.stabilityPct * 100}%` }} /></div>
+        {/* The percentage on its own never said how much money that was, nor how much of the
+            target is still to go -- the two figures the fund is actually about. */}
+        <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span className="min-w-0 truncate">{formatSensitive(summary.stabilityBalance)} of {formatSensitive(summary.stabilityTarget)}</span>
+          <span className="shrink-0 font-semibold">
+            {summary.stabilityBalance >= summary.stabilityTarget
+              ? 'Target reached'
+              : <>{formatSensitive(summary.stabilityTarget - summary.stabilityBalance)} to go</>}
+          </span>
+        </div>
+      </div>
+    </Section>
+  )
+}
+
 export function Section({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
   return <section><h3 className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">{icon}{title}</h3>{children}</section>
 }
