@@ -35,7 +35,7 @@ describe('renewFcmToken', () => {
     firebase.getToken.mockResolvedValue('renewed-token')
   })
 
-  it('deletes the cached registration before requesting a replacement token', async () => {
+  it('binds Firebase to the app worker before deleting and replacing the cached token', async () => {
     const registration = {
       pushManager: { getSubscription: vi.fn() },
     } as unknown as ServiceWorkerRegistration
@@ -44,9 +44,22 @@ describe('renewFcmToken', () => {
 
     expect(firebase.deleteToken).toHaveBeenCalledTimes(1)
     expect(registration.pushManager.getSubscription).not.toHaveBeenCalled()
-    expect(firebase.getToken).toHaveBeenCalledWith(
+    expect(firebase.getToken).toHaveBeenCalledTimes(2)
+    expect(firebase.getToken).toHaveBeenNthCalledWith(
+      1,
       expect.anything(),
       { vapidKey: 'vapid-key', serviceWorkerRegistration: registration },
+    )
+    expect(firebase.getToken).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      { vapidKey: 'vapid-key', serviceWorkerRegistration: registration },
+    )
+    expect(firebase.getToken.mock.invocationCallOrder[0]).toBeLessThan(
+      firebase.deleteToken.mock.invocationCallOrder[0],
+    )
+    expect(firebase.deleteToken.mock.invocationCallOrder[0]).toBeLessThan(
+      firebase.getToken.mock.invocationCallOrder[1],
     )
   })
 
@@ -57,9 +70,12 @@ describe('renewFcmToken', () => {
     } as unknown as ServiceWorkerRegistration
     firebase.deleteToken.mockRejectedValue(new Error('token is unregistered'))
 
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
     await expect(renewFcmToken(registration)).resolves.toBe('renewed-token')
 
     expect(unsubscribe).toHaveBeenCalledTimes(1)
-    expect(firebase.getToken).toHaveBeenCalledTimes(1)
+    expect(firebase.getToken).toHaveBeenCalledTimes(2)
+    expect(warn).not.toHaveBeenCalled()
   })
 })

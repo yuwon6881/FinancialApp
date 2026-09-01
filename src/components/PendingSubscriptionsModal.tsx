@@ -3,7 +3,9 @@ import type { PendingNotification } from '../types'
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { BottomSheet } from './ui/BottomSheet'
+import { Checkbox } from './ui/Checkbox'
 import { DatePicker } from './ui/DatePicker'
+import { InfoHint } from './ui/InfoHint'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { Button } from './ui/Button'
@@ -23,9 +25,9 @@ interface PendingSubscriptionsModalProps {
 }
 
 type PaymentAmountState =
-  | { kind: 'full'; due: number; explicitlyEntered: boolean }
-  | { kind: 'partial'; amount: number; remaining: number }
-  | { kind: 'invalid' }
+  | { kind: 'full'; due: number }
+  | { kind: 'partial'; amount: number; remaining: number; due: number }
+  | { kind: 'invalid'; error: string; due: number }
 
 export function PendingSubscriptionsModal({
   isOpen,
@@ -39,23 +41,51 @@ export function PendingSubscriptionsModal({
 }: PendingSubscriptionsModalProps) {
   const [paidDates, setPaidDates] = useState<Record<string, string>>({})
   const [paidAmounts, setPaidAmounts] = useState<Record<string, string>>({})
+  const [partialModes, setPartialModes] = useState<Record<string, boolean>>({})
   const [pendingActions, setPendingActions] = useState<Record<string, 'confirm' | 'discard' | 'remove'>>({})
 
   const prevAmountsRef = useRef<Record<string, number>>({})
 
   const paymentAmountStateFor = (noti: PendingNotification): PaymentAmountState => {
-    const raw = (paidAmounts[noti.id] ?? '').trim()
     const due = Math.abs(noti.amount)
-    if (raw === '') return { kind: 'full', due, explicitlyEntered: false }
+    const isPartial = Boolean(partialModes[noti.id])
+    if (!isPartial) {
+      return { kind: 'full', due }
+    }
+    const raw = (paidAmounts[noti.id] ?? '').trim()
+    if (raw === '') {
+      return {
+        kind: 'invalid',
+        due,
+        error: hideSensitive
+          ? 'Enter a part payment amount.'
+          : `Enter an amount less than ${formatCurrencyVal(due, currency)}.`
+      }
+    }
     const parsed = Number(raw)
-    if (!Number.isFinite(parsed) || parsed <= 0) return { kind: 'invalid' }
-    if (due <= 0 || parsed >= due) return { kind: 'full', due, explicitlyEntered: true }
-    return { kind: 'partial', amount: parsed, remaining: due - parsed }
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return {
+        kind: 'invalid',
+        due,
+        error: 'Enter an amount greater than zero, or uncheck to pay in full.'
+      }
+    }
+    if (parsed >= due) {
+      return {
+        kind: 'invalid',
+        due,
+        error: hideSensitive
+          ? 'Part payment must be less than the bill total. Uncheck to pay in full.'
+          : `Part payment must be less than ${formatCurrencyVal(due, currency)}. Uncheck to pay in full.`
+      }
+    }
+    return { kind: 'partial', amount: parsed, remaining: due - parsed, due }
   }
 
-  // Only a genuine part payment is sent as an amount. Blank or a figure at/above the bill total
-  // retains the established server contract where undefined means settle the full occurrence.
+  // Only a genuine part payment is sent as an amount when partial mode is actively chosen.
+  // Full mode or undefined amount settles the full occurrence.
   const partialAmountFor = (noti: PendingNotification): number | undefined => {
+    if (!partialModes[noti.id]) return undefined
     const amountState = paymentAmountStateFor(noti)
     return amountState.kind === 'partial' ? amountState.amount : undefined
   }
@@ -64,6 +94,7 @@ export function PendingSubscriptionsModal({
     if (!isOpen) {
       setPendingActions({})
       setPaidAmounts({})
+      setPartialModes({})
       setPaidDates({})
       prevAmountsRef.current = {}
       return
@@ -91,13 +122,27 @@ export function PendingSubscriptionsModal({
         return true
       }),
     ))
+    setPartialModes(current => Object.fromEntries(
+      Object.entries(current).filter(([id]) => {
+        if (!visibleIds.has(id)) return false
+        const noti = pendingNotifications.find(n => n.id === id)
+        const prevAmount = prevAmountsRef.current[id]
+        if (noti && prevAmount !== undefined && prevAmount !== noti.amount) {
+          return false
+        }
+        return true
+      }),
+    ))
     prevAmountsRef.current = Object.fromEntries(
       pendingNotifications.map(n => [n.id, n.amount]),
     )
   }, [isOpen, pendingNotifications])
 
   useEffect(() => {
-    if (hideSensitive) setPaidAmounts({})
+    if (hideSensitive) {
+      setPaidAmounts({})
+      setPartialModes({})
+    }
   }, [hideSensitive])
 
   const runSubscriptionAction = (
@@ -109,6 +154,7 @@ export function PendingSubscriptionsModal({
     if (isPartial) {
       callback()
       setPaidAmounts(prev => ({ ...prev, [noti.id]: '' }))
+      setPartialModes(prev => ({ ...prev, [noti.id]: false }))
       setPendingActions(current => {
         const next = { ...current }
         delete next[noti.id]
@@ -193,28 +239,60 @@ export function PendingSubscriptionsModal({
                     className="w-full"
                   />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <label
-                      htmlFor={`pending-amount-${noti.id}`}
-                      className="block text-xs font-bold text-muted-foreground"
+                      htmlFor={`partial-toggle-${noti.id}`}
+                      className="flex cursor-pointer items-center gap-2 select-none"
                     >
-                      Amount paid
+                      <Checkbox
+                        id={`partial-toggle-${noti.id}`}
+                        checked={Boolean(partialModes[noti.id])}
+                        onChange={event => {
+                          const checked = event.target.checked
+                          setPartialModes(prev => ({ ...prev, [noti.id]: checked }))
+                          if (!checked) {
+                            setPaidAmounts(prev => ({ ...prev, [noti.id]: '' }))
+                          }
+                        }}
+                        disabled={hideSensitive || isPending}
+                      />
+                      <span className="text-xs font-bold text-foreground">Pay partial amount</span>
                     </label>
-                    <span className="text-xs font-medium text-muted-foreground">Optional</span>
+                    <InfoHint
+                      label="Part payment info"
+                      text="By default bills are paid in full. Check this to record a smaller part payment now; the remainder stays due."
+                    />
                   </div>
-                  <SmartAmountInput
-                    id={`pending-amount-${noti.id}`}
-                    type="text"
-                    inputMode="decimal"
-                    value={paidAmounts[noti.id] ?? ''}
-                    onChange={event => setPaidAmounts(prev => ({ ...prev, [noti.id]: event.target.value }))}
-                    placeholder={hideSensitive ? '' : 'Enter part payment'}
-                    disabled={hideSensitive}
-                    aria-invalid={amountState.kind === 'invalid' || undefined}
-                    aria-describedby={`pending-amount-hint-${noti.id}`}
-                    className="w-full font-medium"
-                  />
+
+                  {partialModes[noti.id] && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <label
+                          htmlFor={`pending-amount-${noti.id}`}
+                          className="block text-xs font-semibold text-muted-foreground"
+                        >
+                          Amount paid
+                        </label>
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Max {hideSensitive ? '•••' : `< ${formatCurrencyVal(amountState.due, currency)}`}
+                        </span>
+                      </div>
+                      <SmartAmountInput
+                        id={`pending-amount-${noti.id}`}
+                        type="text"
+                        inputMode="decimal"
+                        value={paidAmounts[noti.id] ?? ''}
+                        onChange={event => setPaidAmounts(prev => ({ ...prev, [noti.id]: event.target.value }))}
+                        placeholder={hideSensitive ? '' : '0.00'}
+                        disabled={hideSensitive}
+                        aria-invalid={amountState.kind === 'invalid' || undefined}
+                        aria-describedby={`pending-amount-hint-${noti.id}`}
+                        className="w-full font-medium"
+                      />
+                    </div>
+                  )}
+
                   <div
                     id={`pending-amount-hint-${noti.id}`}
                     role="status"
@@ -238,9 +316,7 @@ export function PendingSubscriptionsModal({
                           <strong className="font-bold text-foreground">Full payment selected{hideSensitive ? '' : ` · ${formatCurrencyVal(amountState.due, currency)}`}.</strong>{' '}
                           {hideSensitive
                             ? 'Amounts are hidden while sensitive mode is on.'
-                            : amountState.explicitlyEntered
-                            ? 'Amounts at or above the bill total are recorded as full payment.'
-                            : 'Enter a smaller amount only to record a part payment.'}
+                            : 'Settles this bill in full and advances to the next cycle.'}
                         </>
                       ) : amountState.kind === 'partial' ? (
                         <>
@@ -250,7 +326,7 @@ export function PendingSubscriptionsModal({
                             : `${formatCurrencyVal(amountState.remaining, currency)} remains due.`}
                         </>
                       ) : (
-                        <strong className="font-bold">Enter an amount greater than zero, or clear the field to pay in full.</strong>
+                        <strong className="font-bold">{amountState.error}</strong>
                       )}
                     </span>
                   </div>

@@ -63,7 +63,7 @@ describe('PendingSubscriptionsModal', () => {
     const fullPaymentSummary = screen.getByRole('status')
     expect(fullPaymentSummary.textContent).toContain('Full payment selected')
     expect(fullPaymentSummary.textContent).toContain('870.00')
-    expect(screen.getByPlaceholderText('Enter part payment')).toBeTruthy()
+    expect(screen.queryByLabelText('Amount paid')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Paid' }))
 
     expect(onConfirmSubscription).toHaveBeenCalledWith(notification, '2026-07-28', undefined)
@@ -109,6 +109,9 @@ describe('PendingSubscriptionsModal', () => {
 
   it('resets input and action state when a partial payment is confirmed', () => {
     const { onConfirmSubscription } = renderModal()
+    const toggle = screen.getByLabelText('Pay partial amount')
+    fireEvent.click(toggle)
+
     const input = screen.getByLabelText('Amount paid')
     fireEvent.change(input, { target: { value: '500' } })
     const partPaymentSummary = screen.getByRole('status')
@@ -119,11 +122,14 @@ describe('PendingSubscriptionsModal', () => {
 
     expect(onConfirmSubscription).toHaveBeenCalledWith(notification, '2026-07-28', 500)
     expect(screen.getByRole('button', { name: 'Confirm Paid' }).hasAttribute('disabled')).toBe(false)
-    expect((input as HTMLInputElement).value).toBe('')
+    expect(screen.queryByLabelText('Amount paid')).toBeNull()
+    expect((toggle as HTMLInputElement).checked).toBe(false)
   })
 
   it('blocks an invalid nonblank amount without blocking discard or remove', () => {
     renderModal()
+    fireEvent.click(screen.getByLabelText('Pay partial amount'))
+
     const input = screen.getByLabelText('Amount paid')
     fireEvent.change(input, { target: { value: '0' } })
 
@@ -134,6 +140,51 @@ describe('PendingSubscriptionsModal', () => {
     expect(screen.getByRole('button', { name: 'Remove' }).hasAttribute('disabled')).toBe(false)
   })
 
+  it('blocks a partial amount that is greater than or equal to the full bill amount', () => {
+    const { onConfirmSubscription } = renderModal()
+    fireEvent.click(screen.getByLabelText('Pay partial amount'))
+
+    const input = screen.getByLabelText('Amount paid')
+
+    // Equal to full amount
+    fireEvent.change(input, { target: { value: '870' } })
+    expect(input.getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByText(/Part payment must be less than RM 870\.00/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Confirm Paid' }).hasAttribute('disabled')).toBe(true)
+
+    // Greater than full amount
+    fireEvent.change(input, { target: { value: '1000' } })
+    expect(input.getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByText(/Part payment must be less than RM 870\.00/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Confirm Paid' }).hasAttribute('disabled')).toBe(true)
+
+    // Valid partial amount strictly less than full amount
+    fireEvent.change(input, { target: { value: '869.99' } })
+    expect(input.getAttribute('aria-invalid')).toBeNull()
+    expect(screen.getByRole('status').textContent).toContain('0.01 remains due')
+    expect(screen.getByRole('button', { name: 'Confirm Paid' }).hasAttribute('disabled')).toBe(false)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Paid' }))
+    expect(onConfirmSubscription).toHaveBeenCalledWith(notification, '2026-07-28', 869.99)
+  })
+
+  it('reverts to full payment when partial checkbox is unchecked', () => {
+    const { onConfirmSubscription } = renderModal()
+    const toggle = screen.getByLabelText('Pay partial amount')
+    fireEvent.click(toggle)
+
+    const input = screen.getByLabelText('Amount paid')
+    fireEvent.change(input, { target: { value: '300' } })
+    expect(screen.getByRole('status').textContent).toContain('Part payment')
+
+    fireEvent.click(toggle)
+    expect(screen.queryByLabelText('Amount paid')).toBeNull()
+    expect(screen.getByRole('status').textContent).toContain('Full payment selected')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Paid' }))
+    expect(onConfirmSubscription).toHaveBeenCalledWith(notification, '2026-07-28', undefined)
+  })
+
   it('keeps the full-payment summary private while sensitive mode is active', () => {
     renderModal({ hideSensitive: true })
 
@@ -141,6 +192,6 @@ describe('PendingSubscriptionsModal', () => {
     expect(summary.textContent).toContain('Full payment selected')
     expect(summary.textContent).toContain('Amounts are hidden')
     expect(summary.textContent).not.toContain('870.00')
-    expect((screen.getByLabelText('Amount paid') as HTMLInputElement).disabled).toBe(true)
+    expect((screen.getByLabelText('Pay partial amount') as HTMLInputElement).disabled).toBe(true)
   })
 })

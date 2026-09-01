@@ -17,9 +17,9 @@ const stateIcon = (state: MutationBusyState): ReactNode => {
 }
 
 /**
- * Stable content for mutation buttons. Both the idle and busy variants take part
- * in intrinsic sizing, while only the active variant is painted. This prevents
- * neighbouring controls from moving when a label changes to "Saving…" or similar.
+ * Stable content for mutation buttons. Icon-and-label buttons reserve their widest
+ * variant. Text-only buttons keep their natural idle width and replace the label
+ * with a centered state icon while busy, avoiding oversized idle actions.
  */
 export function MutationButtonContent({
   state,
@@ -45,21 +45,31 @@ export function MutationButtonContent({
         {idleIcon && <span className="inline-grid size-4 shrink-0 place-items-center">{idleIcon}</span>}
         <span>{idleLabel}</span>
       </span>
-      <span aria-hidden="true" className="invisible col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5">
-        <span className="inline-grid size-4 shrink-0 place-items-center" />
-        <span>{busyLabel}</span>
-      </span>
+      {idleIcon && (
+        <span aria-hidden="true" className="invisible col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5">
+          <span className="inline-grid size-4 shrink-0 place-items-center" />
+          <span>{busyLabel}</span>
+        </span>
+      )}
       <span
         data-mutation-visible-content=""
         className="col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5"
         aria-hidden={busy ? 'true' : undefined}
       >
-        {(busy || idleIcon) && (
+        {busy && !idleIcon ? (
           <span data-mutation-visible-icon="" className="inline-grid size-4 shrink-0 place-items-center">
-            {busy && state ? stateIcon(state) : idleIcon}
+            {state ? stateIcon(state) : null}
           </span>
+        ) : (
+          <>
+            {(busy || idleIcon) && (
+              <span data-mutation-visible-icon="" className="inline-grid size-4 shrink-0 place-items-center">
+                {busy && state ? stateIcon(state) : idleIcon}
+              </span>
+            )}
+            <span>{busy ? busyLabel : idleLabel}</span>
+          </>
         )}
-        <span>{busy ? busyLabel : idleLabel}</span>
       </span>
       {announcement && (
         <span className="sr-only" role="status" aria-label={announcement} aria-live="polite" aria-atomic="true">

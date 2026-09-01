@@ -403,9 +403,19 @@ test('bill review centers text-only actions and explains the full-payment defaul
     expect(Math.abs((centers[0]!.x + centers[0]!.width / 2) - (centers[1]!.x + centers[1]!.width / 2))).toBeLessThanOrEqual(1)
   }
 
-  const amount = dialog.getByLabel('Amount paid')
+  const discardBox = await dialog.getByRole('button', { name: 'Discard' }).boundingBox()
+  const removeBox = await dialog.getByRole('button', { name: 'Remove' }).boundingBox()
+  expect(discardBox).not.toBeNull()
+  expect(removeBox).not.toBeNull()
+  expect(
+    Math.abs(discardBox!.width - removeBox!.width),
+    'Discard should use its natural idle width rather than reserving the longer busy label',
+  ).toBeLessThanOrEqual(12)
+
   await expect(dialog.getByRole('status')).toContainText('Full payment selected')
   await expect(dialog.getByRole('status')).toContainText('172.80')
+  await dialog.getByRole('checkbox', { name: 'Pay partial amount' }).check()
+  const amount = dialog.getByLabel('Amount paid')
   await amount.fill('100')
   await expect(dialog.getByRole('status')).toContainText('Part payment')
   await expect(dialog.getByRole('status')).toContainText('72.80 remains due')
@@ -413,6 +423,43 @@ test('bill review centers text-only actions and explains the full-payment defaul
   await expect(dialog.getByRole('button', { name: 'Confirm Paid' })).toBeDisabled()
   await expect(dialog.getByRole('button', { name: 'Discard' })).toBeEnabled()
   await expect(dialog.getByRole('button', { name: 'Remove' })).toBeEnabled()
+})
+
+test('vault keeps the linked-ledger action adjacent to its document name', async ({ page }) => {
+  test.skip(
+    test.info().project.name !== 'desktop-light',
+    'The linked Ledger action is part of the expanded Vault table.',
+  )
+
+  await mockApi(page, {
+    documents: [
+      { ...vaultDocuments[0], transactionId: 'tx-visual-1' },
+      ...vaultDocuments.slice(1),
+    ],
+  })
+  await page.goto('/vault', { waitUntil: 'domcontentloaded' })
+  await waitForStableLayout(page)
+
+  const linked = page.getByRole('button', { name: 'Open linked transaction for 2026-tax-return.pdf' })
+  await expect(linked).toBeVisible()
+  const geometry = await linked.evaluate(button => {
+    const row = button.closest('tr')
+    const title = row?.querySelector<HTMLElement>('p[title="2026-tax-return.pdf"]')
+    const slot = row?.querySelector<HTMLElement>('[data-mutation-status-slot]')
+    if (!title || !slot) return null
+    const titleRect = title.getBoundingClientRect()
+    const buttonRect = button.getBoundingClientRect()
+    return {
+      gap: buttonRect.left - titleRect.right,
+      sameLine: Math.abs(buttonRect.top + buttonRect.height / 2 - (titleRect.top + titleRect.height / 2)),
+      statusFollowsAction: button.nextElementSibling === slot,
+    }
+  })
+
+  expect(geometry).not.toBeNull()
+  expect(geometry?.gap, 'the idle status slot should not separate the filename and Ledger action').toBeLessThanOrEqual(7)
+  expect(geometry?.sameLine).toBeLessThanOrEqual(1)
+  expect(geometry?.statusFollowsAction).toBe(true)
 })
 
 test('the header action cluster stays pinned to the trailing edge', async ({ page }) => {

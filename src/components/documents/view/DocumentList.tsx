@@ -250,12 +250,12 @@ export function DocumentList({
                             <p className="truncate font-bold text-foreground" title={document.originalFileName}>
                               {document.originalFileName}
                             </p>
-                            <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isFailed={failedDocumentIds.has(document.id)} isPending={document.isPendingSync} entityLabel="document" />
                             <LinkedTransactionButton
                               document={document}
                               openingTransactionId={openingTransactionId}
                               onOpen={onOpenLinkedTransaction}
                             />
+                            <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isFailed={failedDocumentIds.has(document.id)} isPending={document.isPendingSync} entityLabel="document" />
                           </div>
                         </div>
                       </div>

@@ -20,7 +20,7 @@ describe('MutationButtonContent', () => {
     expect(screen.getByRole('status').textContent).toContain('Saving targets…')
   })
 
-  it('centers a text-only idle label without rendering an empty leading icon slot', () => {
+  it('keeps a text-only action compact and replaces its busy label with a centered icon', () => {
     const { container, rerender } = render(
       <MutationButtonContent state={null} entityLabel="bill" idleLabel="Confirm Paid" busyLabel="Confirming…" />,
     )
@@ -33,6 +33,7 @@ describe('MutationButtonContent', () => {
       <MutationButtonContent state="syncing" entityLabel="bill" idleLabel="Confirm Paid" busyLabel="Confirming…" />,
     )
     expect(visibleContent?.querySelector('[data-mutation-visible-icon]')).not.toBeNull()
-    expect(visibleContent?.textContent).toBe('Confirming…')
+    expect(visibleContent?.textContent).toBe('')
+    expect(screen.getByRole('status').textContent).toContain('Confirming bill…')
   })
 })

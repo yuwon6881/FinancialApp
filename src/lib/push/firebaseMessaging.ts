@@ -44,18 +44,29 @@ export async function renewFcmToken(registration: ServiceWorkerRegistration): Pr
   if (!messaging || !vapidKey) return null
   try {
     const { deleteToken, getToken } = await import('firebase/messaging')
+    const tokenOptions = { vapidKey, serviceWorkerRegistration: registration }
+
+    // deleteToken() has no service-worker option. On a fresh page-side Messaging instance it
+    // otherwise tries Firebase's default /firebase-messaging-sw.js before touching the cached
+    // token. Calling getToken() with our existing registration first binds the SDK to the app's
+    // single PWA worker. A retired cached token may make this read fail, but the binding happens
+    // before Firebase performs token I/O, so renewal can still continue below.
+    try {
+      await getToken(messaging, tokenOptions)
+    } catch {
+      // The authoritative renewal attempt and its user-visible result happen below.
+    }
     try {
       await deleteToken(messaging)
-    } catch (err) {
+    } catch {
       // FCM commonly rejects deletion for the same reason it rejected delivery: the remote token
       // is already gone. Firebase then leaves its IndexedDB token and PushSubscription intact,
       // so getToken() would return the same dead value. Unsubscribing locally forces its mismatch
       // path to mint a new registration while keeping notification permission unchanged.
-      console.warn('Could not revoke the retired FCM token remotely; replacing it locally.', err)
       const subscription = await registration.pushManager.getSubscription()
       await subscription?.unsubscribe()
     }
-    const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration })
+    const token = await getToken(messaging, tokenOptions)
     return token || null
   } catch (err) {
     console.warn('Could not renew the FCM token.', err)
