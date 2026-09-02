@@ -77,6 +77,14 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
 
   const startTimer = useCallback((toast: ToastMessage) => {
     if (timersRef.current.has(toast.id) || pausedIdsRef.current.has(toast.id)) return
+    // A background scan finishing while the phone is locked raises its toast against an
+    // already-hidden document, and visibilitychange only fires on the *next* change. Parking
+    // it as paused now is what makes the return to the app grant it a full reading window
+    // instead of showing nothing at all.
+    if (document.hidden) {
+      pausedIdsRef.current.add(toast.id)
+      return
+    }
     timersRef.current.set(
       toast.id,
       window.setTimeout(() => onDismissRef.current(toast.id), durationFor(toast)),

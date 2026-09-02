@@ -84,8 +84,11 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
   const [type, setType] = useState<'Deposit' | 'Withdrawal' | 'Conversion'>(initial?.type ?? (initialScan?.type as 'Deposit' | 'Withdrawal' | 'Conversion') ?? 'Deposit')
   const [currency, setCurrency] = useState(initial?.currency ?? initialScan?.currency ?? accounts[0]?.baseCurrency ?? portfolio?.appCurrency ?? '')
   const [amount, setAmount] = useState(initial?.amount ? String(Math.abs(initial.amount)) : initialScan?.cashAmount != null ? String(initialScan.cashAmount) : '')
-  const [toCurrency, setToCurrency] = useState(initial?.toCurrency ?? initialScan?.toCurrency ?? (initialScan?.type === 'Conversion' ? '' : currency))
-  const [toAmount, setToAmount] = useState(initial?.toAmount ? String(initial.toAmount) : initialScan?.toAmount != null ? String(initialScan.toAmount) : '')
+  // The destination leg belongs to a conversion alone; for anything else it mirrors the source.
+  const initialScanConversion = initialScan?.type === 'Conversion' ? initialScan : null
+  const [toCurrency, setToCurrency] = useState(initial?.toCurrency
+    ?? (initialScanConversion ? initialScanConversion.toCurrency ?? '' : currency))
+  const [toAmount, setToAmount] = useState(initial?.toAmount ? String(initial.toAmount) : initialScanConversion?.toAmount != null ? String(initialScanConversion.toAmount) : '')
   const [date, setDate] = useState(initial?.date ?? initialScan?.tradeDate ?? today())
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isScanning, setIsScanning] = useState(false)
@@ -97,6 +100,16 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
   const scanGalleryInputRef = useRef<HTMLInputElement>(null)
   const appliedScanJobRef = useRef<string | null>(null)
   const trackedScanJobsRef = useRef<Set<string>>(new Set())
+  const changeType = (next: 'Deposit' | 'Withdrawal' | 'Conversion') => {
+    setType(next)
+    // The destination leg only exists for a conversion. Carrying a value across the switch would
+    // submit a rate nobody entered against this movement.
+    if (next !== 'Conversion') {
+      setToCurrency(currency)
+      setToAmount('')
+      setErrors(previous => ({ ...previous, toCurrency: '', toAmount: '' }))
+    }
+  }
   const clearScan = () => {
     const jobId = activeScanJobId
     setActiveScanJobId(null)
@@ -135,13 +148,20 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
       return
     }
     setShowScanBanner(true)
-    setType(result.type as 'Deposit' | 'Withdrawal' | 'Conversion')
+    const scannedType = result.type as 'Deposit' | 'Withdrawal' | 'Conversion'
+    setType(scannedType)
     if (result.accountId && accounts.some(value => value.id === result.accountId)) setAccountId(result.accountId)
     if (result.currency) setCurrency(result.currency)
     if (result.cashAmount != null) setAmount(String(result.cashAmount))
-    if (result.toCurrency) setToCurrency(result.toCurrency)
-    else if (result.type === 'Conversion') setToCurrency('')
-    if (result.toAmount != null) setToAmount(String(result.toAmount))
+    // A deposit or withdrawal has no destination leg. Filling one from what the model happened
+    // to read would hand the user a pre-filled rate the moment they switch to Conversion.
+    if (scannedType === 'Conversion') {
+      setToCurrency(result.toCurrency ?? '')
+      if (result.toAmount != null) setToAmount(String(result.toAmount))
+    } else {
+      setToCurrency(result.currency ?? currency)
+      setToAmount('')
+    }
     if (result.tradeDate) setDate(result.tradeDate)
   }, [scanDraft, accounts])
   useEffect(() => {
@@ -249,7 +269,7 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
     </>}
     <div className={formGridClass}>
       <Field label="Account" plain><CustomSelect value={accountId} onChange={v => { const id = v as string; setAccountId(id); const next = accounts.find(value => value.id === id); if (next) { setCurrency(next.baseCurrency); if (!initial) setToCurrency(next.baseCurrency) } }} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
-      <Field label="Cash movement type" plain><CustomSelect value={type} onChange={v => setType(v as 'Deposit' | 'Withdrawal' | 'Conversion')} options={[{ value: 'Deposit', label: 'Deposit (cash in)' }, { value: 'Withdrawal', label: 'Withdrawal (cash out)' }, { value: 'Conversion', label: 'Convert currency' }]} ariaLabel="Cash movement type" className="w-full" /></Field>
+      <Field label="Cash movement type" plain><CustomSelect value={type} onChange={v => changeType(v as 'Deposit' | 'Withdrawal' | 'Conversion')} options={[{ value: 'Deposit', label: 'Deposit (cash in)' }, { value: 'Withdrawal', label: 'Withdrawal (cash out)' }, { value: 'Conversion', label: 'Convert currency' }]} ariaLabel="Cash movement type" className="w-full" /></Field>
       {type === 'Conversion' ? (
         <>
           <Field label="From amount" required error={errors.amount}><SmartAmountInput min="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>

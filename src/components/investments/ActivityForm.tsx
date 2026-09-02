@@ -39,6 +39,13 @@ const today = () => {
 }
 
 const numberOrUndefined = (value: string) => value.trim() === '' ? undefined : Number(value)
+
+// Which inputs an activity type actually puts in front of the user. A value left behind in a
+// field the current type hides is still submitted, so nothing — a scan least of all — may write
+// to one of these unless the type it belongs to shows it.
+const showsUnits = (type: InvestmentTransactionType) => !['Dividend', 'FeeTax'].includes(type)
+const showsUnitPrice = (type: InvestmentTransactionType) => ['Buy', 'Sell'].includes(type)
+const showsFeesAndTaxes = (type: InvestmentTransactionType) => type !== 'FeeTax'
 const formGridClass = 'grid items-start gap-4 sm:grid-cols-2'
 
 const Field = ({ label, hint, error, className = '', required, children }: {
@@ -93,18 +100,22 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
   const [accountId, setAccountId] = useState(initial?.accountId ?? (initialScan?.accountId && accounts.some(value => value.id === initialScan.accountId) ? initialScan.accountId : accounts[0]?.id ?? ''))
   const [instrumentId, setInstrumentId] = useState(initial?.instrumentId ?? (initialScan?.instrumentId && instruments.some(value => value.id === initialScan.instrumentId) ? initialScan.instrumentId : instruments[0]?.id ?? ''))
   const [tradeDate, setTradeDate] = useState(initial?.tradeDate ?? initialScan?.tradeDate ?? today())
-  const [units, setUnits] = useState(initial?.units ? String(initial.units) : initialScan?.units != null ? String(initialScan.units) : '')
-  const [unitPrice, setUnitPrice] = useState(initial?.unitPrice ? String(initial.unitPrice) : initialScan?.unitPrice != null ? String(initialScan.unitPrice) : '')
+  const initialScanType = (initialScan?.type ?? 'Buy') as InvestmentTransactionType
+  const initialScanUnits = initialScan && showsUnits(initialScanType) ? initialScan.units : null
+  const initialScanUnitPrice = initialScan && showsUnitPrice(initialScanType) ? initialScan.unitPrice : null
+  const initialScanCosts = initialScan && showsFeesAndTaxes(initialScanType) ? initialScan : null
+  const [units, setUnits] = useState(initial?.units ? String(initial.units) : initialScanUnits != null ? String(initialScanUnits) : '')
+  const [unitPrice, setUnitPrice] = useState(initial?.unitPrice ? String(initial.unitPrice) : initialScanUnitPrice != null ? String(initialScanUnitPrice) : '')
   const initialGross = initial?.cashAmount
     ? String(initial.cashAmount)
     : initialScan?.cashAmount != null
       ? String(initialScan.cashAmount)
-      : initialScan?.units != null && initialScan?.unitPrice != null
-        ? (initialScan.units * initialScan.unitPrice).toFixed(6).replace(/\.?0+$/, '')
+      : initialScanUnits != null && initialScanUnitPrice != null
+        ? (initialScanUnits * initialScanUnitPrice).toFixed(6).replace(/\.?0+$/, '')
         : ''
   const [cashAmount, setCashAmount] = useState(initialGross)
-  const [fees, setFees] = useState(String(initial?.fees ?? initialScan?.fees ?? 0))
-  const [taxes, setTaxes] = useState(String(initial?.taxes ?? initialScan?.taxes ?? 0))
+  const [fees, setFees] = useState(String(initial?.fees ?? initialScanCosts?.fees ?? 0))
+  const [taxes, setTaxes] = useState(String(initial?.taxes ?? initialScanCosts?.taxes ?? 0))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isScanning, setIsScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
@@ -118,13 +129,23 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
   const selectedInstrument = instruments.find(value => value.id === instrumentId)
 
   const supplied = initialScan ? [
-    initialScan.units != null ? 'units' as const : null,
-    initialScan.unitPrice != null ? 'price' as const : null,
+    initialScanUnits != null ? 'units' as const : null,
+    initialScanUnitPrice != null ? 'price' as const : null,
     initialScan.cashAmount != null ? 'gross' as const : null,
   ].filter((value): value is 'units' | 'price' | 'gross' => value !== null) : []
   const editOrder = useRef<Array<'units' | 'price' | 'gross'>>(supplied.length === 2 ? supplied : [])
   const noteEdit = (field: 'units' | 'price' | 'gross') => {
     editOrder.current = [field, ...editOrder.current.filter(value => value !== field)]
+  }
+  // Read by the scan effect to resolve field exposure when the scan itself named no type.
+  // A ref rather than a dependency so a plain type change cannot re-run that effect.
+  const typeRef = useRef(type)
+  useEffect(() => { typeRef.current = type }, [type])
+  const changeType = (next: InvestmentTransactionType) => {
+    setType(next)
+    if (!showsUnits(next)) { setUnits(''); editOrder.current = [] }
+    if (!showsUnitPrice(next)) setUnitPrice('')
+    if (!showsFeesAndTaxes(next)) { setFees('0'); setTaxes('0') }
   }
   const clearScan = () => {
     const jobId = activeScanJobId
@@ -165,18 +186,26 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
       return
     }
     setShowScanBanner(true)
-    if (scannedActivityType) setType(scannedActivityType)
+    // A dividend or standalone-charge scan can still report a holding size or a per-unit price.
+    // Those inputs do not exist for those types, so applying them would save numbers the
+    // reviewer never saw and has no way to correct.
+    const appliedType = scannedActivityType ?? typeRef.current
+    if (scannedActivityType) changeType(scannedActivityType)
     if (result.accountId && accounts.some(value => value.id === result.accountId)) setAccountId(result.accountId)
     if (result.instrumentId && instruments.some(value => value.id === result.instrumentId)) setInstrumentId(result.instrumentId)
     if (result.tradeDate) setTradeDate(result.tradeDate)
-    if (result.units != null) setUnits(String(result.units))
-    if (result.unitPrice != null) setUnitPrice(String(result.unitPrice))
+    const scannedUnits = showsUnits(appliedType) ? result.units : null
+    const scannedUnitPrice = showsUnitPrice(appliedType) ? result.unitPrice : null
+    if (scannedUnits != null) setUnits(String(scannedUnits))
+    if (scannedUnitPrice != null) setUnitPrice(String(scannedUnitPrice))
     if (result.cashAmount != null) setCashAmount(String(result.cashAmount))
-    if (result.fees != null) setFees(String(result.fees))
-    if (result.taxes != null) setTaxes(String(result.taxes))
+    if (showsFeesAndTaxes(appliedType)) {
+      if (result.fees != null) setFees(String(result.fees))
+      if (result.taxes != null) setTaxes(String(result.taxes))
+    }
     const supplied = [
-      result.units != null ? 'units' as const : null,
-      result.unitPrice != null ? 'price' as const : null,
+      scannedUnits != null ? 'units' as const : null,
+      scannedUnitPrice != null ? 'price' as const : null,
       result.cashAmount != null ? 'gross' as const : null,
     ].filter((value): value is 'units' | 'price' | 'gross' => value !== null)
     editOrder.current = supplied.length === 2 ? supplied : []
@@ -254,8 +283,11 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
     setErrors({})
     void onSave({
       accountId, instrumentId, type, tradeDate,
-      units: numberOrUndefined(units), unitPrice: numberOrUndefined(unitPrice), cashAmount: numberOrUndefined(cashAmount),
-      fees: Number(fees || 0), taxes: Number(taxes || 0),
+      units: needsUnits ? numberOrUndefined(units) : undefined,
+      unitPrice: trade ? numberOrUndefined(unitPrice) : undefined,
+      cashAmount: numberOrUndefined(cashAmount),
+      fees: showsFeesAndTaxes(type) ? Number(fees || 0) : 0,
+      taxes: showsFeesAndTaxes(type) ? Number(taxes || 0) : 0,
     }).then(saved => {
       if (saved) clearScan()
     })
@@ -283,7 +315,7 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
       />
     </>}
     <div className={formGridClass}>
-      <Field label="Activity type" plain><CustomSelect value={type} onChange={v => setType(v as InvestmentTransactionType)} options={activityTypes.map(t => ({ value: t.value, label: t.label }))} ariaLabel="Activity type" className="w-full" /></Field>
+      <Field label="Activity type" plain><CustomSelect value={type} onChange={v => changeType(v as InvestmentTransactionType)} options={activityTypes.map(t => ({ value: t.value, label: t.label }))} ariaLabel="Activity type" className="w-full" /></Field>
       <Field label="Trade date" plain><DatePicker value={tradeDate} onChange={setTradeDate} max={today()} className="w-full" /></Field>
       <Field label="Account" plain><CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
       <Field label="Investment" plain><CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: `${i.symbol} · ${i.name}` }))} ariaLabel="Investment" className="w-full" /></Field>

@@ -7,7 +7,6 @@ import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
 import { scanReviewAction } from './scanReviewAction'
 
 const JOB_IDS_KEY = 'receipt_split_scan_job_ids'
-const NOTIFIED_IDS_KEY = 'receipt_split_scan_notified_ids'
 
 function readStoredIds(key: string): string[] {
   try {
@@ -54,7 +53,13 @@ export function useReceiptSplitPolling(options: Options) {
   } = options
   const [jobIds, setJobIds] = useState<string[]>(() => readStoredIds(JOB_IDS_KEY))
   const jobIdsRef = useRef(jobIds)
-  const [notifiedIds, setNotifiedIds] = useState<string[]>(() => readStoredIds(NOTIFIED_IDS_KEY))
+  /**
+   * One-shot record of the completion toasts already raised. Two finished scans take turns being
+   * the active draft, so without it the same toast fires on every poll tick. It is deliberately
+   * per-session: the toast is the only route back to an unconsumed result on a fresh start, so a
+   * record that outlived the session left a finished scan stranded until retention deleted it.
+   */
+  const [notifiedIds, setNotifiedIds] = useState<string[]>([])
   const [activeDraft, setActiveDraft] = useState<ReceiptSplitDraft | null>(null)
   const [failedJob, setFailedJob] = useState<ReceiptSplitFailure | null>(null)
   const pollInFlightRef = useRef(false)
@@ -66,10 +71,6 @@ export function useReceiptSplitPolling(options: Options) {
     setJobIds(next)
     storeIds(JOB_IDS_KEY, next)
   }, [])
-
-  useEffect(() => {
-    storeIds(NOTIFIED_IDS_KEY, notifiedIds)
-  }, [notifiedIds])
 
   const handleStarted = useCallback((scanId: string) => {
     setFailedJob(null)
@@ -119,8 +120,6 @@ export function useReceiptSplitPolling(options: Options) {
             }
             if (job.status === 'completed' && job.result) {
               setActiveDraft({ jobId: scanId, result: job.result })
-              // Two finished scans take turns being the active draft, so without a
-              // one-shot record the same completion toast would fire on every tick.
               if (!isReceiptSplitOpenRef.current && !notifiedIds.includes(scanId)) {
                 setNotifiedIds(current => current.includes(scanId) ? current : [...current, scanId])
                 showToast('Receipt items were prepared for review.', 'Receipt Split Completed', 'success', scanReviewAction(setActiveTab, setAutoOpenReceiptSplit, 'ledger'))

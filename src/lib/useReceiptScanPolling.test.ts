@@ -78,6 +78,38 @@ describe('useReceiptScanPolling', () => {
     restarted.unmount()
   })
 
+  // A scan the user was told about but never got back to must announce itself again on the next
+  // launch. The completed job is the only route to the review form on a fresh start, so a
+  // notification record that outlives the session strands the result until retention deletes it.
+  it('announces an unconsumed completed scan again after the app is relaunched', async () => {
+    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(['scan-complete']))
+    apiMocks.fetchReceiptScanJob.mockResolvedValue({
+      scanId: 'scan-complete',
+      status: 'completed',
+      result: {
+        description: 'Lunch',
+        amount: 12.5,
+        date: '2026-07-16',
+        category: 'Food',
+        ledgerCategory: 'Essentials',
+        txType: 'outflow',
+        confidence: 0.95,
+      },
+      createdAt: '2026-07-16T00:00:00Z',
+      updatedAt: '2026-07-16T00:00:01Z',
+    })
+
+    const first = createOptions(false)
+    const firstLaunch = renderHook(() => useReceiptScanPolling(first))
+    await waitFor(() => expect(first.showToast).toHaveBeenCalledTimes(1))
+    firstLaunch.unmount()
+
+    const second = createOptions(false)
+    renderHook(() => useReceiptScanPolling(second))
+    await waitFor(() => expect(second.showToast).toHaveBeenCalledTimes(1))
+    expect(second.showToast.mock.calls[0][1]).toBe('Receipt Scan Completed')
+  })
+
   it('keeps an in-modal failure available after removing and deleting the failed job', async () => {
     localStorage.setItem('receipt_scan_job_ids', JSON.stringify(['scan-failed']))
     apiMocks.fetchReceiptScanJob.mockResolvedValue({

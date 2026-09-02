@@ -5,6 +5,8 @@ import { getErrorMessage } from '../../../lib/errors'
 
 export interface UseReceiptScanDraftOptions {
   autoOpenAddForm?: boolean
+  /** Whether a blank create form may be opened at all; see the draft effect below. */
+  canOpenForm?: boolean
   receiptScanDraft?: { jobId: string; result: ReceiptScanResult } | null
   activeScanJobIds?: string[]
   failedScanJob?: { jobId: string; errorMessage: string } | null
@@ -18,6 +20,7 @@ export interface UseReceiptScanDraftOptions {
 export function useReceiptScanDraft(options: UseReceiptScanDraftOptions) {
   const {
     autoOpenAddForm,
+    canOpenForm = true,
     receiptScanDraft,
     activeScanJobIds = [],
     failedScanJob,
@@ -88,6 +91,10 @@ export function useReceiptScanDraft(options: UseReceiptScanDraftOptions) {
     // A draft only opens the form for the tab that started the scan, or when the app was
     // explicitly asked to open it (the completion toast's review action).
     if (!isLocallyStarted && !autoOpenAddForm) return
+    // Privacy mode closes any create-mode form on the next commit, and closing one clears its
+    // scan job. Applying here would flash the scanned amount past the mask and then delete the
+    // scan, so the draft waits — deliberately without recording itself as applied.
+    if (!canOpenForm) return
 
     appliedReceiptScanJobRef.current = receiptScanDraft.jobId
     // Keep the completed job id until the user submits or cancels so that
@@ -100,7 +107,7 @@ export function useReceiptScanDraft(options: UseReceiptScanDraftOptions) {
     openTransactionForm()
     applyReceiptScanResult(receiptScanDraft.result)
     setShowScanBanner(true)
-  }, [receiptScanDraft, autoOpenAddForm, openTransactionForm, applyReceiptScanResult, onStartEditPending, setActiveReceiptScanJobId])
+  }, [receiptScanDraft, autoOpenAddForm, canOpenForm, openTransactionForm, applyReceiptScanResult, onStartEditPending, setActiveReceiptScanJobId])
 
   useEffect(() => {
     if (failedScanJob && (

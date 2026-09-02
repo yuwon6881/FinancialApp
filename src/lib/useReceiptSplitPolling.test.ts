@@ -115,10 +115,9 @@ describe('useReceiptSplitPolling', () => {
     await waitFor(() => {
       expect(options.showToast).toHaveBeenCalledTimes(2)
     })
-    await waitFor(() => {
-      expect(JSON.parse(localStorage.getItem('receipt_split_scan_notified_ids') || '[]'))
-        .toEqual(['split-a', 'split-b'])
-    })
+    // Each announcement changes the notified record and the active draft, which restarts the
+    // poll effect with an immediate pass. Both jobs are still tracked and still complete, so a
+    // missing one-shot record shows up here as a third toast.
     expect(result.current.receiptSplitJobIds).toEqual(['split-a', 'split-b'])
     expect(options.showToast).toHaveBeenCalledTimes(2)
     unmount()

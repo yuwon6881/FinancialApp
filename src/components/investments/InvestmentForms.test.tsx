@@ -30,6 +30,10 @@ const portfolio = (appCurrency?: string): InvestmentPortfolio => ({
 
 const noop = () => undefined
 const inputFor = (label: string) => screen.getByText(label).parentElement!.querySelector('input') as HTMLInputElement
+const chooseOption = (selectLabel: string, optionLabel: string) => {
+  fireEvent.click(screen.getByRole('combobox', { name: selectLabel }))
+  fireEvent.click(screen.getByRole('option', { name: optionLabel }))
+}
 
 describe('investment forms', () => {
   it('requires an explicitly selected account currency instead of accepting an empty fallback', () => {
@@ -113,6 +117,113 @@ describe('investment forms', () => {
 
     expect(inputFor('Fees (EUR)').value).toBe('1.25')
     expect(inputFor('Taxes (EUR)').value).toBe('0.75')
+  })
+
+  // Units and unit price belong to Buy/Sell only. A scanned dividend that also reported a
+  // holding size must not save numbers into fields this activity type never shows.
+  it('does not save units or unit price a scanned dividend hides', () => {
+    const onSave = vi.fn().mockResolvedValue(true)
+    render(
+      <ActivityForm
+        portfolio={portfolio('USD')}
+        initial={null}
+        pendingActivities={[]}
+        busy={false}
+        onCancel={noop}
+        onSave={onSave}
+        onNeedAccount={noop}
+        onNeedInstrument={noop}
+        scanDraft={{
+          jobId: 'dividend-with-units',
+          result: {
+            type: 'Dividend',
+            accountId: 'account',
+            instrumentId: 'instrument',
+            tradeDate: '2026-01-01',
+            units: 40,
+            unitPrice: 2,
+            cashAmount: 80,
+            fees: null,
+            taxes: null,
+            currency: 'EUR',
+            confidence: 0.9,
+          },
+        }}
+      />,
+    )
+
+    expect(screen.queryByLabelText('Units')).toBeNull()
+    expect(screen.queryByLabelText('Unit price (EUR)')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save activity' }))
+    expect(onSave).toHaveBeenCalledOnce()
+    expect(onSave.mock.calls[0][0]).toMatchObject({ type: 'Dividend', cashAmount: 80 })
+    expect(onSave.mock.calls[0][0].units).toBeUndefined()
+    expect(onSave.mock.calls[0][0].unitPrice).toBeUndefined()
+  })
+
+  // Switching activity type is the only way to reach a field set from another type. Values
+  // left behind in the hidden inputs would be saved without ever having been visible.
+  it('drops units and unit price when the activity type stops showing them', () => {
+    const onSave = vi.fn().mockResolvedValue(true)
+    render(
+      <ActivityForm
+        portfolio={portfolio('USD')}
+        initial={null}
+        pendingActivities={[]}
+        busy={false}
+        onCancel={noop}
+        onSave={onSave}
+        onNeedAccount={noop}
+        onNeedInstrument={noop}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('Units'), { target: { value: '3' } })
+    fireEvent.change(screen.getByLabelText('Unit price (EUR)'), { target: { value: '10' } })
+    chooseOption('Activity type', 'Dividend')
+    fireEvent.change(inputFor('Gross dividend (EUR)'), { target: { value: '12' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save activity' }))
+
+    expect(onSave).toHaveBeenCalledOnce()
+    expect(onSave.mock.calls[0][0].units).toBeUndefined()
+    expect(onSave.mock.calls[0][0].unitPrice).toBeUndefined()
+  })
+
+  // The conversion legs are the Conversion type's own fields. A scanned deposit must not
+  // pre-load them, or switching to Conversion later offers a rate nobody read off anything.
+  it('leaves the conversion legs alone for a scanned deposit', () => {
+    render(
+      <CashForm
+        portfolio={portfolio('USD')}
+        busy={false}
+        onCancel={noop}
+        onSave={vi.fn().mockResolvedValue(true)}
+        onNeedAccount={noop}
+        scanDraft={{
+          jobId: 'deposit-with-legs',
+          result: {
+            type: 'Deposit',
+            accountId: 'account',
+            instrumentId: null,
+            tradeDate: '2026-01-01',
+            units: null,
+            unitPrice: null,
+            cashAmount: 250,
+            fees: null,
+            taxes: null,
+            currency: 'GBP',
+            toCurrency: 'JPY',
+            toAmount: 48000,
+            confidence: 0.9,
+          },
+        }}
+      />,
+    )
+
+    chooseOption('Cash movement type', 'Convert currency')
+    expect(inputFor('To amount').value).toBe('')
+    expect(screen.getByRole('button', { name: /To currency/ }).textContent).not.toContain('JPY')
   })
 
   it('allows an investment execution to temporarily overdraw broker cash', () => {

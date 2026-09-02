@@ -50,6 +50,37 @@ describe('ToastViewport dismissal timers', () => {
     vi.advanceTimersByTime(4000)
     expect(onDismiss).toHaveBeenCalledWith('toast-1')
   })
+
+  // A scan finishing while the phone is locked or the app is in the background raises its
+  // toast against a hidden document. Starting the dismiss timer there burns the whole
+  // reading window before anyone can see it, so the user comes back to an empty screen.
+  it('holds a toast raised while the app is in the background until it is visible again', () => {
+    const onDismiss = vi.fn()
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
+    render(
+      <ToastViewport
+        toasts={[{
+          id: 'toast-1',
+          title: 'Receipt Scan Completed',
+          message: 'Receipt was scanned successfully.',
+          tone: 'success',
+          action: { label: 'Review', onAction: vi.fn() },
+        }]}
+        onDismiss={onDismiss}
+      />,
+    )
+
+    vi.advanceTimersByTime(30_000)
+    expect(onDismiss).not.toHaveBeenCalled()
+
+    hidden.mockReturnValue(false)
+    fireEvent(document, new Event('visibilitychange'))
+    vi.advanceTimersByTime(6000)
+    expect(onDismiss).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(2000)
+    expect(onDismiss).toHaveBeenCalledWith('toast-1')
+    hidden.mockRestore()
+  })
 })
 
 describe('ToastViewport overlay host', () => {

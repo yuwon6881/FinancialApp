@@ -7,7 +7,6 @@ import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
 import { scanReviewAction } from './scanReviewAction'
 
 const JOB_IDS_KEY = 'investment_scan_job_ids'
-const NOTIFIED_IDS_KEY = 'investment_scan_notified_ids'
 
 const readIds = (key: string): string[] => {
   try {
@@ -56,7 +55,13 @@ export function useInvestmentScanPolling(options: Options) {
   } = options
   const [jobIds, setJobIds] = useState<string[]>(() => readIds(JOB_IDS_KEY))
   const jobIdsRef = useRef(jobIds)
-  const [notifiedIds, setNotifiedIds] = useState<string[]>(() => readIds(NOTIFIED_IDS_KEY))
+  /**
+   * One-shot record of the completion toasts already raised. Two finished scans take turns being
+   * the active draft, so without it the same toast fires on every poll tick. It is deliberately
+   * per-session: the toast is the only route back to an unconsumed result on a fresh start, so a
+   * record that outlived the session left a finished scan stranded until retention deleted it.
+   */
+  const [notifiedIds, setNotifiedIds] = useState<string[]>([])
   const [draft, setDraft] = useState<InvestmentScanDraft | null>(null)
   const [failure, setFailure] = useState<InvestmentScanFailure | null>(null)
   const pollInFlightRef = useRef(false)
@@ -69,8 +74,6 @@ export function useInvestmentScanPolling(options: Options) {
     setJobIds(next)
     storeIds(JOB_IDS_KEY, next)
   }, [])
-
-  useEffect(() => storeIds(NOTIFIED_IDS_KEY, notifiedIds), [notifiedIds])
 
   const deleteOnce = useCallback((jobId: string): Promise<void> => {
     if (deletedIdsRef.current.has(jobId)) return Promise.resolve()

@@ -15,6 +15,7 @@ import type { TransactionDocumentsFieldRef } from './TransactionDocumentsField'
 import type { ReceiptScanResult } from '../../../lib/api'
 import type { UseTransactionFormOptions } from './useTransactionFormOptions'
 import { isSelectableTransactionCategory } from '../../../lib/categoryFlow'
+import { canOpenBlankMutationForm } from '../../../lib/quickAddAvailability'
 import { useTransactionFormAccountEffects } from './useTransactionFormAccountEffects'
 import { useTransactionOutflowWarning } from './useTransactionOutflowWarning'
 import { useTransactionFormLifecycle } from './useTransactionFormLifecycle'
@@ -204,6 +205,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
 
   const scanner = useReceiptScanDraft({
     autoOpenAddForm,
+    canOpenForm: canOpenBlankMutationForm(Boolean(hideSensitive), sensitivePreferenceStatus),
     receiptScanDraft,
     activeScanJobIds,
     failedScanJob,
@@ -347,7 +349,18 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     deriveIncomeSplitAccountIds,
   })
 
-  useAutoOpenModal(autoOpenAddForm, () => lifecycle.openFresh(autoOpenTxType || undefined), onResetAutoOpen)
+  // The scan-completion toast's review action raises autoOpenAddForm, which is also what
+  // lets a scan started on another tab (or before the app was closed) populate the form.
+  // openFresh is deferred by a frame, so without this guard the blank create would land on
+  // top of the receipt the very same flag just applied and the review would open empty.
+  useAutoOpenModal(
+    autoOpenAddForm,
+    () => {
+      if (receiptScanDraft && scanner.appliedReceiptScanJobRef.current === receiptScanDraft.jobId) return
+      lifecycle.openFresh(autoOpenTxType || undefined)
+    },
+    onResetAutoOpen,
+  )
 
   const changeTransactionType = (type: 'inflow' | 'outflow' | 'transfer') => {
     if (state.mode === 'create') {

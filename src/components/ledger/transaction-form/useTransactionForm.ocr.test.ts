@@ -115,6 +115,67 @@ describe('useTransactionForm receipt cleanup', () => {
     expect(result.current.state.ledgerCategory).toBe('Essentials')
   })
 
+  // The completion toast's "Review" action flags autoOpenAddForm, which schedules a
+  // deferred openFresh() on the next frame. That blank-create dispatch must not land on
+  // top of the scan the same flag just caused to be applied.
+  it('keeps a scanned receipt applied after the deferred auto-open frame runs', async () => {
+    const { result } = renderHook(() => useTransactionForm(createOptions({
+      autoOpenAddForm: true,
+      categories: [
+        { id: 'food', name: 'Food' },
+        { id: 'other', name: 'Other' },
+      ],
+      receiptScanDraft: {
+        jobId: 'toast-review-scan',
+        result: {
+          description: 'Corner Cafe', amount: 42.5, date: '2026-07-28', category: 'Food',
+          ledgerCategory: 'Essentials', txType: 'outflow', confidence: 0.9,
+        },
+      },
+    })))
+
+    await waitFor(() => expect(result.current.state.showAddForm).toBe(true))
+    await act(async () => {
+      await new Promise(resolve => requestAnimationFrame(() => resolve(null)))
+    })
+
+    expect(result.current.state.showAddForm).toBe(true)
+    expect(result.current.state.description).toBe('Corner Cafe')
+    expect(result.current.state.amount).toBe('42.50')
+    expect(result.current.state.category).toBe('Food')
+  })
+
+  // Privacy mode closes any create-mode form on the next commit, and closing one clears its
+  // scan job. Applying a draft while masked therefore both flashed the scanned amount and
+  // destroyed the scan; it has to wait for the mask to come off instead.
+  it('holds a scanned receipt back while sensitive mode is on, then applies it', async () => {
+    const onReceiptScanCleared = vi.fn()
+    const options = createOptions({
+      hideSensitive: true,
+      autoOpenAddForm: true,
+      onReceiptScanCleared,
+      receiptScanDraft: {
+        jobId: 'masked-scan',
+        result: {
+          description: 'Corner Cafe', amount: 42.5, date: '2026-07-28', category: 'Food',
+          ledgerCategory: 'Essentials', txType: 'outflow', confidence: 0.9,
+        },
+      },
+    })
+    const { result, rerender } = renderHook(props => useTransactionForm(props), { initialProps: options })
+
+    await act(async () => {
+      await new Promise(resolve => requestAnimationFrame(() => resolve(null)))
+    })
+    expect(result.current.state.showAddForm).toBe(false)
+    expect(result.current.state.description).toBe('')
+    expect(onReceiptScanCleared).not.toHaveBeenCalled()
+
+    rerender({ ...options, hideSensitive: false })
+    await waitFor(() => expect(result.current.state.showAddForm).toBe(true))
+    expect(result.current.state.description).toBe('Corner Cafe')
+  })
+
   it('opens the blank editor while the server privacy preference is pending', () => {
     const { result } = renderHook(() => useTransactionForm(createOptions({
       hideSensitive: true,

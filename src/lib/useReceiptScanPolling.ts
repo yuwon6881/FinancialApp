@@ -7,7 +7,6 @@ import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
 import { scanReviewAction } from './scanReviewAction'
 
 const RECEIPT_SCAN_JOB_IDS_KEY = 'receipt_scan_job_ids'
-const RECEIPT_SCAN_NOTIFIED_IDS_KEY = 'receipt_scan_notified_ids'
 
 function readStoredIds(key: string): string[] {
   try {
@@ -68,7 +67,13 @@ export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): Us
 
   const [receiptScanJobIds, setReceiptScanJobIds] = useState<string[]>(() => readStoredIds(RECEIPT_SCAN_JOB_IDS_KEY))
   const receiptScanJobIdsRef = useRef(receiptScanJobIds)
-  const [notifiedReceiptScanJobIds, setNotifiedReceiptScanJobIds] = useState<string[]>(() => readStoredIds(RECEIPT_SCAN_NOTIFIED_IDS_KEY))
+  /**
+   * One-shot record of the completion toasts already raised. Two finished scans take turns being
+   * the active draft, so without it the same toast fires on every poll tick. It is deliberately
+   * per-session: the toast is the only route back to an unconsumed result on a fresh start, so a
+   * record that outlived the session left a finished scan stranded until retention deleted it.
+   */
+  const [notifiedReceiptScanJobIds, setNotifiedReceiptScanJobIds] = useState<string[]>([])
   const [activeReceiptScanDraft, setActiveReceiptScanDraft] = useState<ReceiptScanDraft | null>(null)
   const [failedScanJob, setFailedScanJob] = useState<FailedScanJob | null>(null)
   const receiptScanDeletePromisesRef = useRef<Map<string, Promise<void>>>(new Map())
@@ -82,10 +87,6 @@ export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): Us
     // closes before React has a chance to run a persistence effect.
     storeIds(RECEIPT_SCAN_JOB_IDS_KEY, next)
   }, [])
-
-  useEffect(() => {
-    storeIds(RECEIPT_SCAN_NOTIFIED_IDS_KEY, notifiedReceiptScanJobIds)
-  }, [notifiedReceiptScanJobIds])
 
   const handleReceiptScanStarted = useCallback((scanId: string) => {
     deletedReceiptScanJobIdsRef.current.delete(scanId)
