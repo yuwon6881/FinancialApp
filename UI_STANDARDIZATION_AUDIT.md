@@ -51,7 +51,7 @@ Raw buttons are limited to the three shared primitives where the element is the 
 
 | Primitive | Feature importers | Competing hand-rolled implementations |
 | --- | ---: | --- |
-| `IconButton` | 0 (referenced only by the specimen and its test) | 17 files hand-roll row icon-action clusters |
+| `IconButton` | **19 — closed.** All 28 icon-only call sites adopted it; the primitive layer (`HorizontalRail`, `OverflowMenu`, `ToastViewport`, `ToggleButton`) still composes `Button` directly as the implementation boundary | none |
 | `EmptyState` | 1 | 18 files hand-roll dashed empty shells |
 | `SectionHeader` | 1 | ~48 `font-bold uppercase tracking-wide` labels across 31 files |
 | `Toolbar` | 2 | 5 further filter/action bars; it is the only `role="toolbar"` in the tree |
@@ -94,7 +94,7 @@ The specimen page is snapshotted at mobile, medium, and desktop in both themes, 
 
 Measured on 2026-09-03 against the standardization commit plus the enforcement changes made in this pass (not yet committed):
 
-- ESLint, `check:design-system`, `typecheck:strict`, and `deadcode`: pass.
+- ESLint, `check:design-system`, `typecheck:strict`, and `deadcode`: pass. Note what `typecheck:strict` is: its `include` is only `src/lib/api.ts`, `src/lib/apiTypes.ts`, and `src/lib/outbox.ts`, so it is a targeted `strictNullChecks` gate for the API and outbox layer, **not** a project typecheck. Whole-project type checking is `tsc -b`, which runs inside `npm run build` — so a green `typecheck:strict` on its own is not evidence that the application compiles, and any report should cite the build for that.
 - Production build: pass. Budget headroom is very small and is now the binding constraint on the remaining surface work. The panel consolidation moved the eager critical path from 219.29 kB to 219.44 kB, leaving 0.06 kB, so the limit was raised to 221.0 kB under the documented convention. **The precache ceiling cannot be raised the same way — it is fixed by invariant PERF-02 at 3 MiB and stands at 3070.18 kB, about 1.8 kB spare.** Adopting `EmptyState`, `SectionHeader`, `Badge`, `IconButton`, `Meter` and the skeleton consolidation touches roughly 110 more call sites; each should remove more duplicated markup than it adds, but the precache figure must be read after every area and an offsetting reduction found if it stops falling.
 - Full Vitest: 292 files, 2,174 tests, all passing.
 - Playwright: 324 passed, 156 intentional project skips, across the whole 14-project matrix. The 44px floor assertion passes at all eight sub-1024px projects, including 320px and 390×500.
