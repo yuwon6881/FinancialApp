@@ -14,6 +14,7 @@ import {
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
 import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { Panel } from '../ui/Panel'
 import { MutationButtonContent, MutationStatusAnnouncement } from '../ui/MutationButtonContent'
 
@@ -222,15 +223,13 @@ export function FingerprintSection() {
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-1.5">
-                        <Button
+                        <IconButton
                           type="button"
-                          variant="tertiary"
-                          size="icon"
                           disabled={busy || removingCredentialId !== null || hideSensitive}
                           onClick={() => remove(c.id)}
                           className="size-11 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 sm:size-8"
-                          title={`Remove ${c.deviceLabel || 'credential'}`}
-                          aria-label={`Remove ${c.deviceLabel || 'credential'}`}
+                          tooltip={`Remove ${c.deviceLabel || 'credential'}`}
+                          label={`Remove ${c.deviceLabel || 'credential'}`}
                           aria-busy={isRemoving}
                         >
                           {isRemoving ? (
@@ -239,7 +238,7 @@ export function FingerprintSection() {
                             <Trash2 className="size-3.5" />
                           )}
                           <MutationStatusAnnouncement state={isRemoving ? 'deleting' : null} entityLabel={c.deviceLabel || 'credential'} />
-                        </Button>
+                        </IconButton>
                       </div>
                     </div>
                   )

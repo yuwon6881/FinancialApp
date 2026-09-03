@@ -20,6 +20,7 @@ import type { PushBusyAction } from '../../app/usePushNotifications'
 import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
 import { FormField } from '../ui/FormField'
 import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { SensitiveMask } from '../ui/SensitiveAmount'
 import { Input } from '../ui/Input'
 import { RangeInput } from '../ui/RangeInput'
@@ -198,7 +199,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
             ] as const).map(([label, value, key, accentClass]) => (
               <div key={label} className="space-y-2 block">
                 <div className="flex justify-between items-center text-xs font-bold">
-                  <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="tertiary" size="icon" type="button" onClick={() => view.toggleLock(key)} disabled={hideSensitive} className="size-11 text-muted-foreground hover:text-foreground hover:bg-muted sm:size-8" title={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
+                  <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><IconButton type="button" onClick={() => view.toggleLock(key)} disabled={hideSensitive} className="size-11 text-muted-foreground hover:text-foreground hover:bg-muted sm:size-8" label={`${view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'} the ${label} allocation`} tooltip={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</IconButton></span>
                   <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
                 </div>
                 <RangeInput aria-label={`${label} allocation percentage`} min="0" max="100" step="5" disabled={hideSensitive || view.globalAllocLock || view.lockedAllocations.includes(key)} value={value} onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))} className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`} />

@@ -6,6 +6,7 @@ import type { SecurityQuestion } from '../types'
 import { AlertBanner } from './ui/AlertBanner'
 import { AuthCard, AuthHeader, AuthShell } from './ui/AuthLayout'
 import { Button } from './ui/Button'
+import { IconButton } from './ui/IconButton'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
 import { getNewPasswordError } from '../lib/passwordPolicy'
@@ -265,16 +266,14 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                       autoFocus
                     />
                     {newPassword.length > 0 && (
-                      <Button
+                      <IconButton
                         type="button"
-                        variant="tertiary"
-                        size="icon"
                         onClick={() => setShowPassword(p => !p)}
                         className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        label={showPassword ? 'Hide password' : 'Show password'}
                       >
                         {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                      </Button>
+                      </IconButton>
                     )}
                   </div>
                 </FormField>

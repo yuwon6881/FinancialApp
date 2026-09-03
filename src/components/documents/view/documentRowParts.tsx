@@ -7,6 +7,7 @@ import { useAppPrefs } from '../../../contexts/AppContext'
 import { formatCurrencyVal, getCurrencySymbol } from '../../../lib/utils'
 import { Input } from '../../ui/Input'
 import { Button } from '../../ui/Button'
+import { IconButton } from '../../ui/IconButton'
 import { SensitiveMask } from '../../ui/SensitiveAmount'
 
 /**
@@ -111,8 +112,8 @@ export function AmountReview({ document, updateDocument, currency, disabled = fa
     <div className="flex items-center gap-1.5" onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); cancel() } }}>
       <span className="text-xs font-bold text-foreground">{getCurrencySymbol(activeCurrency)}</span>
       <Input value={value} onChange={event => { setValue(event.target.value); setError(null) }} disabled={disabled || saving} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} aria-invalid={error ? true : undefined} className="h-9 w-20 rounded-lg border-border bg-background px-2 text-xs tabular-nums" />
-      <Button variant="tertiary" size="icon" type="button" onClick={() => void save()} disabled={disabled || saving} aria-label={`Confirm amount for ${document.originalFileName}`} title="Confirm amount" className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:size-9"><Check className="size-4" strokeWidth={2.5} /></Button>
-      <Button variant="tertiary" size="icon" type="button" onClick={cancel} disabled={saving} aria-label={`Stop editing the amount for ${document.originalFileName}`} title="Discard this edit" className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 sm:size-9"><X className="size-4" /></Button>
+      <IconButton type="button" onClick={() => void save()} disabled={disabled || saving} label={`Confirm amount for ${document.originalFileName}`} tooltip="Confirm amount" className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:size-9"><Check className="size-4" strokeWidth={2.5} /></IconButton>
+      <IconButton type="button" onClick={cancel} disabled={saving} label={`Stop editing the amount for ${document.originalFileName}`} tooltip="Discard this edit" className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 sm:size-9"><X className="size-4" /></IconButton>
     </div>
     {error && <p className="mt-1 text-xs font-semibold text-destructive" role="alert">{error}</p>}
   </div>

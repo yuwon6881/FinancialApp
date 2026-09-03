@@ -1,4 +1,5 @@
 import { Button } from './components/ui/Button'
+import { IconButton } from './components/ui/IconButton'
 import React from 'react'
 import { 
   CalendarCheck2,
@@ -247,13 +248,12 @@ const TopNav: React.FC<TopNavProps> = ({
             <span className="hidden xl:inline text-xs font-extrabold tracking-wide">ASK AI</span>
           </Button>
 
-          <Button variant="tertiary"
+          <IconButton
             type="button"
-            size="icon"
             onClick={() => onTabChange('wishlist')}
-            aria-label="Commitments and Rewards"
+            label="Commitments and Rewards"
             aria-current={activeTab === 'wishlist' ? 'page' : undefined}
-            title="Commitments and Rewards"
+            tooltip="Commitments and Rewards"
             className={`flex items-center justify-center rounded-xl border transition duration-150 cursor-pointer active:scale-95 ${
               activeTab === 'wishlist'
                 ? 'border-violet-500/40 bg-violet-500/20 text-violet-400 shadow-sm'
@@ -261,22 +261,21 @@ const TopNav: React.FC<TopNavProps> = ({
             }`}
           >
             <CommitmentIcon className="size-4" aria-hidden />
-          </Button>
+          </IconButton>
 
           <div className="relative">
-            <Button variant="tertiary"
+            <IconButton
               type="button"
-              size="icon"
               onClick={onOpenNotifications}
               className="relative flex items-center justify-center rounded-xl border border-amber-500/10 bg-amber-500/5 text-amber-500 hover:border-amber-500/20 hover:bg-amber-500/10 cursor-pointer transition duration-150 active:scale-95"
-              title={hasAlerts ? `${pendingNotifications.length} bills need review` : 'No bills need review'}
-              aria-label={hasAlerts ? `Review ${pendingNotifications.length} pending bills` : 'Bills: all caught up'}
+              tooltip={hasAlerts ? `${pendingNotifications.length} bills need review` : 'No bills need review'}
+              label={hasAlerts ? `Review ${pendingNotifications.length} pending bills` : 'Bills: all caught up'}
             >
               <Bell className="size-4 text-amber-500" />
               {hasAlerts && (
                 <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-amber-500 ring-2 ring-background animate-pulse" />
               )}
-            </Button>
+            </IconButton>
           </div>
 
           <QuickActionsDropdown onQuickAction={onQuickAction} />

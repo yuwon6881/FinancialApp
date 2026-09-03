@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { Send, Sparkles, X, RotateCcw, SquarePen, Square } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
 import { Button } from './ui/Button'
+import { IconButton } from './ui/IconButton'
 import { PerimeterBeam } from './ui/PerimeterBeam'
 import type { AiUiAction } from '../lib/api/ai'
 import type { AppTab, LedgerAccount } from '../types'
@@ -184,15 +185,15 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               <span>{isResetting ? 'Clearing…' : 'New chat'}</span>
             </Button>
           )}
-          <Button variant="tertiary" size="icon"
+          <IconButton
             type="button"
             onClick={handleClose}
             className="inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer sm:size-9"
-            title="Close"
-            aria-label="Close Ask AI"
+            tooltip="Close"
+            label="Close Ask AI"
           >
             <X className="size-4" />
-          </Button>
+          </IconButton>
         </>
       }
     >
@@ -224,16 +225,14 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               <RotateCcw className="size-3" />
               Ask again
             </Button>
-            <Button
-              variant="tertiary"
-              size="icon"
+            <IconButton
               className="size-11 shrink-0 p-0 sm:size-7"
               onClick={dismissStoppedTurn}
-              title="Dismiss"
-              aria-label="Dismiss the stopped question"
+              tooltip="Dismiss"
+              label="Dismiss the stopped question"
             >
               <X className="size-3.5" />
-            </Button>
+            </IconButton>
           </div>
         )}
         {pendingActionBatches[0] && (
@@ -253,17 +252,15 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             >
               Resume review
             </Button>
-            <Button
-              variant="tertiary"
-              size="icon"
+            <IconButton
               className="size-11 shrink-0 p-0 sm:size-7"
               disabled={isSending || isOffline}
               onClick={() => void dismissActionBatch(pendingActionBatches[0].batchId)}
-              title="Dismiss prepared review"
-              aria-label="Dismiss prepared review"
+              tooltip="Dismiss prepared review"
+              label="Dismiss prepared review"
             >
               <X className="size-3.5" />
-            </Button>
+            </IconButton>
           </div>
         )}
         {/* The non-scrolling wrapper owns a subtle perimeter-only activity trace. */}
@@ -393,18 +390,17 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
           </div>
           {/* While a turn is in flight the primary control becomes Stop, so a slow
               answer is never a dead end with a disabled button. */}
-          <Button
+          <IconButton
             variant="primary"
-            size="icon"
             type={isSending ? 'button' : 'submit'}
             onClick={isSending ? () => cancelInFlight({ recoverable: true }) : undefined}
             disabled={isSending ? false : (!input.trim() || isOffline || isHydrating || isResetting)}
             className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl shadow-xs"
-            title={isSending ? 'Stop' : 'Send'}
-            aria-label={isSending ? 'Stop generating' : 'Send message'}
+            tooltip={isSending ? 'Stop' : 'Send'}
+            label={isSending ? 'Stop generating' : 'Send message'}
           >
             {isSending ? <Square className="size-3.5 fill-current" /> : <Send className="size-4" />}
-          </Button>
+          </IconButton>
         </form>
       </div>
     </BottomSheet>

@@ -1,6 +1,7 @@
 import React, { useRef } from 'react'
 import { Layers, Search, X } from 'lucide-react'
 import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { Input } from '../ui/Input'
 import { SearchResultRow } from './SearchResultRow'
 import { useGlobalSearch } from './useGlobalSearch'
@@ -123,18 +124,16 @@ export function GlobalSearch({
             className="w-full border-0 bg-transparent text-sm font-semibold text-foreground shadow-none outline-hidden placeholder:text-muted-foreground focus-visible:ring-0"
           />
           {hasQuery && (
-            <Button
-              variant="tertiary"
-              size="icon"
+            <IconButton
               onClick={() => {
                 updateQuery('')
                 inputRef.current?.focus()
               }}
-              aria-label="Clear search"
+              label="Clear search"
               className="size-7 shrink-0 rounded-lg text-muted-foreground hover:text-foreground"
             >
               <X className="size-3.5" />
-            </Button>
+            </IconButton>
           )}
         </div>
 

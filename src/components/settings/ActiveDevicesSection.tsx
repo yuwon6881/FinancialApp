@@ -1,5 +1,6 @@
 import { CalendarDays, ChevronDown, ChevronUp, Loader2, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
 import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { useEffect, useState } from 'react'
 import * as api from '../../lib/api'
 import type { SessionSummary } from '../../lib/api'
@@ -99,7 +100,7 @@ export function ActiveDevicesSection() {
                     <span className="text-xs text-muted-foreground"><CalendarDays className="inline size-3" /> Logged in: {new Date(session.createdAt).toLocaleDateString()} · Last active: {relativeTime(session.lastActiveAt)}</span>
                     {session.ipAddress && <span className="text-xs text-muted-foreground">IP: {session.ipAddress}</span>}
                   </div>
-                  {!session.isCurrent && <Button variant="tertiary" size="icon" type="button" onClick={() => void revoke(session.id)} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingSessionId === session.id} aria-label={`Revoke ${session.deviceName || 'device session'}`} className="size-11 shrink-0 rounded-lg text-muted-foreground hover:bg-muted hover:text-red-500 disabled:opacity-40 sm:size-8">{revokingSessionId === session.id ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="size-3.5" aria-hidden="true" />}<MutationStatusAnnouncement state={revokingSessionId === session.id ? 'deleting' : null} entityLabel={session.deviceName || 'device session'} /></Button>}
+                  {!session.isCurrent && <IconButton type="button" onClick={() => void revoke(session.id)} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingSessionId === session.id} label={`Revoke ${session.deviceName || 'device session'}`} className="size-11 shrink-0 rounded-lg text-muted-foreground hover:bg-muted hover:text-red-500 disabled:opacity-40 sm:size-8">{revokingSessionId === session.id ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="size-3.5" aria-hidden="true" />}<MutationStatusAnnouncement state={revokingSessionId === session.id ? 'deleting' : null} entityLabel={session.deviceName || 'device session'} /></IconButton>}
                 </div>
               )
             })}

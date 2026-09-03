@@ -5,6 +5,7 @@ import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
 import { formatCurrencyVal } from '../../../lib/utils'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { Button } from '../../ui/Button'
+import { IconButton } from '../../ui/IconButton'
 import { CustomConfirmModal } from '../../ui/CustomConfirmModal'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { FormField } from '../../ui/FormField'
@@ -71,9 +72,9 @@ function NewAccountRow({
           <p className="text-xs font-bold text-foreground">New account row</p>
           <p className="mt-0.5 text-xs text-muted-foreground">Add a real account where this bucket’s money lives.</p>
         </div>
-        <Button variant="tertiary" size="icon" type="button" onClick={onRemove} aria-label={`Remove ${draft.name || 'new account row'}`}>
+        <IconButton type="button" onClick={onRemove} label={`Remove ${draft.name || 'new account row'}`}>
           <Trash2 className="size-4 text-destructive" aria-hidden="true" />
-        </Button>
+        </IconButton>
       </div>
       <FormField label="Account name" required error={error}>
         <Input value={draft.name} onChange={event => onChange({ name: event.target.value })} maxLength={200} autoComplete="off" placeholder="e.g. Main bank account" />

@@ -11,6 +11,7 @@ import type {
 import * as api from '../../lib/api'
 import { useAppContext } from '../../contexts/AppContext'
 import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { FormField } from '../ui/FormField'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
@@ -333,7 +334,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
               <div className="flex justify-between items-center text-xs font-bold min-w-0 w-full gap-2">
                 <span className="text-muted-foreground flex items-center gap-1.5 min-w-0">
                   <span className="uppercase tracking-wider truncate">{label}</span>
-                  <Button variant="tertiary" size="icon" type="button" aria-label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" disabled={hideSensitive || (lockedSleeve !== null && lockedSleeve !== key)} title={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button>
+                  <IconButton type="button" label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" disabled={hideSensitive || (lockedSleeve !== null && lockedSleeve !== key)} tooltip={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</IconButton>
                 </span>
                 <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md shrink-0">{plan[key]}%</span>
               </div>

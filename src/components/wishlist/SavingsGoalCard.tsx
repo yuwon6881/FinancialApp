@@ -6,6 +6,7 @@ import { MONTH_NAMES } from '../../lib/cycle'
 import { parseGoalDate } from '../../lib/savingsGoals'
 import { useDetailDisclosure } from '../../lib/useDetailDisclosure'
 import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { Card } from '../ui/Card'
 import { DetailDisclosure } from '../ui/DetailDisclosure'
 import { Meter } from '../ui/Meter'
@@ -191,17 +192,16 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
       </DetailDisclosure>
 
       <div className="mt-auto flex items-center gap-1.5 border-t border-border/30 pt-3">
-        <Button
+        <IconButton
           variant="secondary"
-          size="icon"
           className="shrink-0"
           onClick={() => onTopUp(goal)}
           disabled={isBusy || hideSensitive || pace.isFunded}
-          aria-label={`Add money to ${goal.name}`}
-          title={pace.isFunded ? 'This goal already has everything it needs' : `Move free ${fundingBucket.toLowerCase()} money into this goal`}
+          label={`Add money to ${goal.name}`}
+          tooltip={pace.isFunded ? 'This goal already has everything it needs' : `Move free ${fundingBucket.toLowerCase()} money into this goal`}
         >
           <Plus className="size-3.5" />
-        </Button>
+        </IconButton>
         <Button
           variant="secondary"
           size="sm"

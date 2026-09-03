@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CheckCircle2, FileText, UploadCloud, X, XCircle } from 'lucide-react'
 import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { CustomSelect } from '../ui/CustomSelect'
 import { compressImageFile } from '../../lib/imageCompression'
 import { getErrorMessage } from '../../lib/errors'
@@ -250,7 +251,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
                 <FileText className="size-4 shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-bold">{file.name}</p><p className={`text-xs ${tooLarge ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {formatMb(file.size)}{tooLarge ? ` · exceeds ${formatMb(constraints.maxDocumentBytes)}` : ''}</p></div>
-                <Button variant="tertiary" size="icon" type="button" aria-label={`Remove ${file.name}`} onClick={() => setFiles(current => current.filter((_, itemIndex) => itemIndex !== index))} className="size-11 cursor-pointer rounded-lg transition-colors hover:bg-muted/50 sm:size-8"><X className="size-4" /></Button>
+                <IconButton type="button" label={`Remove ${file.name}`} onClick={() => setFiles(current => current.filter((_, itemIndex) => itemIndex !== index))} className="size-11 cursor-pointer rounded-lg transition-colors hover:bg-muted/50 sm:size-8"><X className="size-4" /></IconButton>
               </div>
             })}
           </div>}

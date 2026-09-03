@@ -11,6 +11,7 @@ import {
   type TransactionFormSheetRef,
 } from './ledger/TransactionFormSheet'
 import { Button } from './ui/Button'
+import { IconButton } from './ui/IconButton'
 import { PageHeader } from './ui/PageHeader'
 import { InfoHint } from './ui/InfoHint'
 import { SensitiveMask } from './ui/SensitiveAmount'
@@ -136,7 +137,7 @@ export function DraftStagingView({
     <section className="mx-auto max-w-5xl space-y-4 sm:space-y-5" aria-labelledby="draft-transactions-title">
       <PageHeader
         titleId="draft-transactions-title"
-        leading={<Button variant="tertiary" size="icon" onClick={onCancel} aria-label="Back to Ledger" title="Back to Ledger"><ArrowLeft className="size-4" aria-hidden="true" /></Button>}
+        leading={<IconButton onClick={onCancel} label="Back to Ledger" tooltip="Back to Ledger"><ArrowLeft className="size-4" aria-hidden="true" /></IconButton>}
         title={<span className="flex items-center gap-2 min-w-0"><span className="truncate">Draft Transactions</span>
             <span className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-bold text-muted-foreground">{draftTransactions.length}</span>
             <InfoHint text={recordingOrderExplanation} label="draft recording order" align="left" className="shrink-0" />

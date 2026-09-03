@@ -2,7 +2,7 @@ import React from 'react'
 import { CalendarCheck2, Eye, EyeOff, Wallet } from 'lucide-react'
 import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { ordinal } from '../../lib/cycleLabels'
-import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { Badge } from '../ui/Badge'
 import { PageHeader } from '../ui/PageHeader'
 
@@ -47,15 +47,15 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <p className="truncate text-xs text-muted-foreground">Excludes long-term Growth savings</p>
             </div>
           </div>
-          <Button variant="secondary" size="icon"
+          <IconButton variant="secondary"
             type="button"
             onClick={onToggleBalanceAmounts}
             className="shrink-0 text-muted-foreground hover:text-blue-500"
-            title={hideBalanceAmounts ? 'Show available balance' : 'Hide available balance'}
-            aria-label={hideBalanceAmounts ? 'Show available balance' : 'Hide available balance'}
+            tooltip={hideBalanceAmounts ? 'Show available balance' : 'Hide available balance'}
+            label={hideBalanceAmounts ? 'Show available balance' : 'Hide available balance'}
           >
             {hideBalanceAmounts ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-          </Button>
+          </IconButton>
         </div>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-1 border-t border-border/40 pt-3">
           <div className="min-w-0 truncate text-2xl sm:text-3xl font-black tracking-tight text-foreground tabular-nums">

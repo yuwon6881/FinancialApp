@@ -6,6 +6,7 @@ import { usesCookieAuth } from '../../../lib/auth'
 import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { Button } from '../../ui/Button'
+import { IconButton } from '../../ui/IconButton'
 import { PdfDocumentPreview } from './PdfDocumentPreview'
 
 interface DocumentPreviewSheetProps {
@@ -203,16 +204,14 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
 
         {isZoomable && !isLoading && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 rounded-full border border-border/60 bg-card/90 px-3 py-1.5 backdrop-blur-md shadow-lg text-xs">
-            <Button
-              variant="tertiary"
-              size="icon"
+            <IconButton
               className="size-11 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40 sm:size-8"
               onClick={handleZoomOut}
               disabled={zoomScale <= MIN_ZOOM}
-              aria-label="Zoom out preview"
+              label="Zoom out preview"
             >
               <ZoomOut className="size-4" />
-            </Button>
+            </IconButton>
 
             <Button
               variant="tertiary"
@@ -224,29 +223,25 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
               {Math.round(zoomScale * 100)}%
             </Button>
 
-            <Button
-              variant="tertiary"
-              size="icon"
+            <IconButton
               className="size-11 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40 sm:size-8"
               onClick={handleZoomIn}
               disabled={zoomScale >= MAX_ZOOM}
-              aria-label="Zoom in preview"
+              label="Zoom in preview"
             >
               <ZoomIn className="size-4" />
-            </Button>
+            </IconButton>
 
             <div className="h-4 w-px bg-border/60 mx-1" aria-hidden="true" />
 
-            <Button
-              variant="tertiary"
-              size="icon"
+            <IconButton
               className="size-11 rounded-full text-muted-foreground hover:text-foreground sm:size-8"
               onClick={handleResetZoom}
-              aria-label="Fit document to screen"
-              title="Fit to screen"
+              label="Fit document to screen"
+              tooltip="Fit to screen"
             >
               <Maximize2 className="size-3.5" />
-            </Button>
+            </IconButton>
           </div>
         )}
       </div>

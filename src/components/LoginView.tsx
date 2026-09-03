@@ -16,6 +16,7 @@ import { ForgotPassword } from './ForgotPassword'
 import { AlertBanner } from './ui/AlertBanner'
 import { AuthCard, AuthHeader, AuthLoadingState, AuthShell } from './ui/AuthLayout'
 import { Button } from './ui/Button'
+import { IconButton } from './ui/IconButton'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
 import { TwoFactorVerification } from './auth/TwoFactorVerification'
@@ -355,16 +356,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 className="no-native-reveal pl-10 pr-10"
               />
               {password.length > 0 && (
-                <Button
+                <IconButton
                   type="button"
-                  variant="tertiary"
-                  size="icon"
                   onClick={() => setShowPassword(p => !p)}
                   className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </Button>
+                </IconButton>
               )}
             </div>
               {!registering && loginStep === 2 && (

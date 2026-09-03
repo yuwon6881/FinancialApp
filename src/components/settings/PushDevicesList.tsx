@@ -7,6 +7,7 @@ import { buildMutationSuccessToast } from '../../lib/mutationToast'
 import { PUSH_DEVICES_UNAVAILABLE } from '../../lib/push/messages'
 import { useAppUi } from '../../contexts/AppContext'
 import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { MutationStatusAnnouncement } from '../ui/MutationButtonContent'
 
 const enrolledOn = (iso: string): string => new Date(iso).toLocaleDateString()
@@ -145,13 +146,11 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
             {/* The current device is switched off with the switches above, so a second control for
                 the same thing would be one more way to reach the same state, worded differently. */}
             {!device.isCurrent && (
-              <Button
-                variant="tertiary"
-                size="icon"
+              <IconButton
                 type="button"
                 onClick={() => void revoke(device)}
                 disabled={revokingId !== null}
-                aria-label="Stop notifications for this other device"
+                label="Stop notifications for this other device"
                 aria-busy={isRevoking}
                 className="size-11 shrink-0 rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive disabled:opacity-40 sm:size-8"
               >
@@ -159,7 +158,7 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
                   ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
                   : <Trash2 className="size-3.5" aria-hidden="true" />}
                 <MutationStatusAnnouncement state={isRevoking ? 'deleting' : null} entityLabel="notification device" />
-              </Button>
+              </IconButton>
             )}
           </li>
         )

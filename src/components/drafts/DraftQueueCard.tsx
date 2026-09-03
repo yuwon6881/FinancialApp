@@ -5,6 +5,7 @@ import { formatCurrencyVal } from '../../lib/utils'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { LedgerAllocationBadge } from '../ledger/LedgerAllocationBadge'
 import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { SensitiveMask } from '../ui/SensitiveAmount'
 import { SwipeableRow } from '../ui/SwipeableRow'
 
@@ -51,12 +52,12 @@ export function DraftQueueCard({ draft, grip, issues, documentCount, currency, h
               {hideSensitive ? <SensitiveMask /> : <>{amountPrefix}{formatCurrencyVal(Math.abs(draft.amount), currency)}</>}
             </span>
             <div className="hidden shrink-0 items-center gap-1 sm:flex">
-              <Button variant="tertiary" size="icon" onClick={onEdit} disabled={hideSensitive} aria-label={`Edit ${draft.description}`} title={hideSensitive ? actionHint : 'Edit draft'}>
+              <IconButton onClick={onEdit} disabled={hideSensitive} label={`Edit ${draft.description}`} tooltip={hideSensitive ? actionHint : 'Edit draft'}>
                 <Edit2 className="size-4" aria-hidden="true" />
-              </Button>
-              <Button variant="tertiary" size="icon" onClick={onDelete} disabled={hideSensitive} aria-label={`Delete ${draft.description}`} title={hideSensitive ? actionHint : 'Delete draft'} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+              </IconButton>
+              <IconButton onClick={onDelete} disabled={hideSensitive} label={`Delete ${draft.description}`} tooltip={hideSensitive ? actionHint : 'Delete draft'} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
                 <Trash2 className="size-4" aria-hidden="true" />
-              </Button>
+              </IconButton>
             </div>
           </div>
           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">

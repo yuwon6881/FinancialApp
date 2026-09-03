@@ -1,6 +1,6 @@
 import { CheckCircle2, X, AlertCircle } from 'lucide-react'
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
-import { Button } from '../../ui/Button'
+import { IconButton } from '../../ui/IconButton'
 
 interface ReceiptScanStatusProps {
   showScanBanner: boolean
@@ -37,16 +37,14 @@ export function ReceiptScanStatus({
               <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
               {successMessage}
             </div>
-            <Button
-              variant="tertiary"
-              size="icon"
+            <IconButton
               type="button"
               onClick={() => setShowScanBanner(false)}
-              aria-label="Dismiss receipt scan success"
+              label="Dismiss receipt scan success"
               className="-my-2 -mr-2 shrink-0 rounded-lg text-emerald-600 transition hover:bg-emerald-500/10 dark:text-emerald-400"
             >
               <X className="size-4" aria-hidden="true" />
-            </Button>
+            </IconButton>
           </m.div>
         )}
       </AnimatePresence>
@@ -66,16 +64,14 @@ export function ReceiptScanStatus({
               <AlertCircle className="size-4 shrink-0" aria-hidden="true" />
               <span className="break-words">{scanError}</span>
             </div>
-            <Button
-              variant="tertiary"
-              size="icon"
+            <IconButton
               type="button"
               onClick={() => setScanError(null)}
-              aria-label="Dismiss receipt scan error"
+              label="Dismiss receipt scan error"
               className="-my-2 -mr-2 shrink-0 rounded-lg text-destructive transition hover:bg-destructive/10"
             >
               <X className="size-4" aria-hidden="true" />
-            </Button>
+            </IconButton>
           </m.div>
         )}
       </AnimatePresence>
