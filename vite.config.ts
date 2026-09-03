@@ -100,8 +100,12 @@ export default defineConfig(({ mode }) => {
         display: 'standalone',
         // Android uses this fixed value behind its generated install splash.
         background_color: '#0b0e14',
-        // The document updates this pre-paint for the user's saved app theme.
-        theme_color: '#fcfcfc',
+        // Read when the WebAPK is installed and then used for Android's system
+        // bars, so it has to be the dark surface rather than the light one --
+        // Chromium does not apply the document's live theme-color updates there.
+        // Matches the static fallback in index.html. Changing it needs a reinstall
+        // (or Chrome's periodic WebAPK update) before installed devices pick it up.
+        theme_color: '#0b0e14',
         orientation: 'portrait-primary',
         icons: [
           {
@@ -134,7 +138,9 @@ export default defineConfig(({ mode }) => {
         rollupFormat: 'iife',
         // Precache only the latin Inter subsets for offline first paint; the other
         // unicode-range subsets are never requested for this app's English UI.
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}', '**/inter-latin-opsz-normal-*.woff2']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}', '**/inter-latin-opsz-normal-*.woff2'],
+        // Browser-only design specimen: it is a visual-test surface, not an offline app route.
+        globIgnores: ['**/UiSpecimen-*.js'],
       }
     }),
     // Opt-in bundle breakdown: ANALYZE=1 npm run build -> stats.html (not emitted otherwise).

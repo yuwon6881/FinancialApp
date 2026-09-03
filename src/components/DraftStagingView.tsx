@@ -16,6 +16,7 @@ import { InfoHint } from './ui/InfoHint'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { DraftQueueCard } from './drafts/DraftQueueCard'
 import { DraftReorderItem } from './drafts/DraftReorderItem'
+import { EmptyState } from './ui/EmptyState'
 
 type EditorProps = Omit<TransactionFormSheetProps,
   | 'categories'
@@ -133,24 +134,24 @@ export function DraftStagingView({
     <section className="mx-auto max-w-5xl space-y-4 sm:space-y-5" aria-labelledby="draft-transactions-title">
       <PageHeader
         titleId="draft-transactions-title"
-        leading={<Button variant="ghost" size="icon" onClick={onCancel} aria-label="Back to Ledger" title="Back to Ledger"><ArrowLeft className="size-4" aria-hidden="true" /></Button>}
-        title={<span className="flex flex-wrap items-center gap-2"><span>Draft Transactions</span>
+        leading={<Button variant="tertiary" size="icon" onClick={onCancel} aria-label="Back to Ledger" title="Back to Ledger"><ArrowLeft className="size-4" aria-hidden="true" /></Button>}
+        title={<span className="flex items-center gap-2 min-w-0"><span className="truncate">Draft Transactions</span>
             <span className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-bold text-muted-foreground">{draftTransactions.length}</span>
-            <InfoHint text={recordingOrderExplanation} label="draft recording order" align="left" />
+            <InfoHint text={recordingOrderExplanation} label="draft recording order" align="left" className="shrink-0" />
           </span>}
         description={<><span>Check the details, then add everything to your Ledger.</span><span className="sr-only">{recordingOrderExplanation}</span></>}
       />
 
       {draftTransactions.length === 0 ? (
-        <div role="status" className="app-panel rounded-2xl border border-dashed border-border/70 bg-card/80 px-5 py-12 text-center sm:px-8">
-          <span className="mx-auto grid size-12 place-items-center rounded-2xl border border-border/60 bg-muted/35 text-muted-foreground"><FileText className="size-5" aria-hidden="true" /></span>
-          <h3 className="mt-4 text-base font-bold text-foreground">Your draft queue is clear</h3>
-          <p className="mx-auto mt-1 max-w-sm text-sm leading-relaxed text-muted-foreground">Start a transaction to review it here before adding it to the Ledger.</p>
-          <div className="mx-auto mt-5 flex max-w-sm flex-col-reverse gap-2 sm:flex-row sm:justify-center">
-            <Button variant="outline" onClick={onCancel}>Back to Ledger</Button>
+        <EmptyState
+          icon={<FileText className="size-5" aria-hidden="true" />}
+          title="Your draft queue is clear"
+          description="Start a transaction to review it here before adding it to the Ledger."
+          actions={<>
+            <Button variant="secondary" onClick={onCancel}>Back to Ledger</Button>
             {onAddAnother && <Button onClick={onAddAnother} disabled={hideSensitive}>Post Transaction</Button>}
-          </div>
-        </div>
+          </>}
+        />
       ) : (
         <>
           <section
@@ -181,14 +182,14 @@ export function DraftStagingView({
             </span>
           </section>
 
-          {documentLoadError && <div className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between" role="alert"><span>{documentLoadError}</span><Button variant="outline" size="sm" onClick={() => setAttachmentRevision(revision => revision + 1)} className="shrink-0">Retry</Button></div>}
+          {documentLoadError && <div className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between" role="alert"><span>{documentLoadError}</span><Button variant="secondary" size="sm" onClick={() => setAttachmentRevision(revision => revision + 1)} className="shrink-0">Retry</Button></div>}
 
           <section aria-labelledby="draft-review-queue-title">
             <div className="mb-2.5 flex min-h-11 items-center justify-between gap-3 px-0.5 sm:min-h-9">
               <h3 id="draft-review-queue-title" className="text-sm font-bold text-foreground">Review drafts</h3>
               {onAddAnother && (
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={onAddAnother}
                   disabled={hideSensitive}
                   className="h-11 shrink-0 gap-1.5 px-3 sm:h-9"

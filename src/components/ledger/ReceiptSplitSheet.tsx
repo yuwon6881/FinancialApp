@@ -187,7 +187,7 @@ export function ReceiptSplitSheet({
       maxWidthClassName="max-w-3xl"
       footer={receipt ? (
         <ModalActions>
-          <Button variant="outline" type="button" onClick={closeAndClear} className="rounded-xl py-2.5">
+          <Button variant="secondary" type="button" onClick={closeAndClear} className="rounded-xl py-2.5">
             Cancel
           </Button>
           <Button

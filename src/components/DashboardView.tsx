@@ -7,8 +7,9 @@ import { DashboardHeader } from './dashboard/DashboardHeader'
 import { TodayFocusCards } from './dashboard/TodayFocusCards'
 import { CategoryWatchExceptionCard } from './dashboard/CategoryWatchExceptionCard'
 import { useDashboardView } from './dashboard/useDashboardView'
-import { AlertCircle, BarChart3, ShieldCheck } from 'lucide-react'
+import { AlertCircle, BarChart3, ChevronRight, ShieldCheck } from 'lucide-react'
 import { Button } from './ui/Button'
+import { InteractiveCard } from './ui/InteractiveCard'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
 import { InvestmentPlanExceptionCard } from './dashboard/InvestmentPlanExceptionCard'
 import { StabilityRecoveryExceptionCard } from './dashboard/StabilityRecoveryExceptionCard'
@@ -113,14 +114,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Attention panels are exception-only: a clear day should show nothing here rather
           than a card whose whole message is that it has no message. */}
       {pendingNotificationCount > 0 && (
-        <section aria-labelledby="attention-heading" className="app-panel rounded-2xl border border-amber-500/25 bg-amber-500/8 p-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <section aria-labelledby="attention-heading" className="app-panel rounded-2xl border border-amber-500/30 bg-card/92 p-4 sm:p-5 shadow-xs">
+          <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3 min-w-0 flex-1">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/12 text-amber-600 dark:text-amber-400">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/12 text-amber-600 dark:text-amber-400">
                 <AlertCircle className="size-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 id="attention-heading" className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                <h3 id="attention-heading" className="text-sm font-bold text-amber-700 dark:text-amber-300">
                   {pendingNotificationCount} bill{pendingNotificationCount === 1 ? '' : 's'} need review
                 </h3>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
@@ -128,8 +129,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </p>
               </div>
             </div>
-            <Button variant="primary" onClick={onOpenNotifications} className="w-full justify-center sm:w-auto shrink-0">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onOpenNotifications}
+              className="w-full justify-center sm:w-auto shrink-0 border-amber-500/30 bg-card/60 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
+            >
               Review bills
+              <ChevronRight className="size-3.5 ml-1" />
             </Button>
           </div>
         </section>
@@ -180,16 +187,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <ShieldCheck className="size-5 shrink-0 text-blue-500" />
           </div>
           <div className="mt-5 grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2">
-            <button type="button" onClick={() => onNavigateToLedger?.({ category: 'Essentials' })} className="interactive-card rounded-xl border border-border/50 bg-muted/25 p-4 text-left cursor-pointer">
+            <InteractiveCard onClick={() => onNavigateToLedger?.({ category: 'Essentials' })} className="rounded-xl border-border/50 bg-muted/25 p-4">
               <span className="text-xs font-semibold text-muted-foreground">Essentials remaining</span>
               <span className="mt-1 block text-xl font-black text-foreground">{view.formatSensitive(view.essentialsMetric.projectedRemaining)}</span>
               <span className="mt-1 block text-xs text-muted-foreground">After pending bills</span>
-            </button>
-            <button type="button" onClick={() => onNavigateToLedger?.({ category: 'Stability', showAllCycles: true })} className="interactive-card rounded-xl border border-border/50 bg-muted/25 p-4 text-left cursor-pointer">
+            </InteractiveCard>
+            <InteractiveCard onClick={() => onNavigateToLedger?.({ category: 'Stability', showAllCycles: true })} className="rounded-xl border-border/50 bg-muted/25 p-4">
               <span className="text-xs font-semibold text-muted-foreground">Emergency fund progress</span>
               <span className="mt-1 block text-xl font-black text-foreground">{(view.stabilityMetric.projectedPct * 100).toFixed(0)}%</span>
               <span className="mt-1 block text-xs text-muted-foreground">{view.formatSensitive(view.stabilityMetric.projectedBalance)} saved</span>
-            </button>
+            </InteractiveCard>
             <div className="rounded-xl border border-border/50 bg-muted/25 p-4">
               <span className="text-xs font-semibold text-muted-foreground">{hasEndedCycle ? 'Essentials left' : 'Daily spending room'}</span>
               <span className="mt-1 block text-xl font-black text-foreground">
@@ -203,11 +210,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
 
-            <button
-              type="button"
+            <InteractiveCard
               onClick={() => onNavigate('recurring')}
               disabled={view.todayPlanInsights.unpaidRecurringCount === 0}
-              className="interactive-card rounded-xl border border-border/50 bg-muted/25 p-4 text-left cursor-pointer disabled:cursor-default"
+              className="rounded-xl border-border/50 bg-muted/25 p-4 disabled:cursor-default"
             >
               <span className="text-xs font-semibold text-muted-foreground">Unpaid recurring bills</span>
               <span className="mt-1 block text-xl font-black text-foreground">
@@ -218,12 +224,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   ? 'No bills are awaiting payment.'
                   : `${view.todayPlanInsights.unpaidRecurringCount} bill${view.todayPlanInsights.unpaidRecurringCount === 1 ? '' : 's'} pending.`}
               </span>
-            </button>
+            </InteractiveCard>
 
-            <button
-              type="button"
+            <InteractiveCard
               onClick={() => onNavigateToLedger?.({ category: 'Essentials', txType: 'outflow' })}
-              className="interactive-card rounded-xl border border-border/50 bg-muted/25 p-4 text-left cursor-pointer"
+              className="rounded-xl border-border/50 bg-muted/25 p-4"
             >
               <span className="text-xs font-semibold text-muted-foreground">Essentials spending pace</span>
               <span className="mt-1 block text-xl font-black text-foreground">
@@ -239,12 +244,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       : `${Math.round(paceDifference * 100)}% faster than your remaining daily allowance.`
                     : 'Within your remaining daily allowance.'}
               </span>
-            </button>
+            </InteractiveCard>
 
-            <button
-              type="button"
+            <InteractiveCard
               onClick={() => onNavigateToLedger?.({ category: 'Essentials' })}
-              className={`interactive-card rounded-xl border p-4 text-left cursor-pointer ${view.todayPlanInsights.projectedEssentialsEndingBalance < 0 ? 'border-orange-500/30 bg-orange-500/5' : 'border-border/50 bg-muted/25'}`}
+              className={`rounded-xl p-4 ${view.todayPlanInsights.projectedEssentialsEndingBalance < 0 ? 'border-orange-500/30 bg-orange-500/5' : 'border-border/50 bg-muted/25'}`}
             >
               <span className="text-xs font-semibold text-muted-foreground">{hasEndedCycle ? 'Cycle-end Essentials' : 'Projected cycle finish'}</span>
               <span className={`mt-1 block text-xl font-black ${view.todayPlanInsights.projectedEssentialsEndingBalance < 0 ? 'text-orange-500' : 'text-foreground'}`}>
@@ -253,10 +257,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="mt-1 block text-xs text-muted-foreground">
                 {hasEndedCycle ? 'Actual Essentials balance at close.' : 'After unpaid bills and the current pace.'}
               </span>
-            </button>
+            </InteractiveCard>
           </div>
           <div className="mt-4 flex justify-end">
-            <Button variant="ghost" onClick={() => onNavigate('reports')}>
+            <Button variant="tertiary" onClick={() => onNavigate('reports')}>
               <BarChart3 className="size-4" /> View full reports
             </Button>
           </div>

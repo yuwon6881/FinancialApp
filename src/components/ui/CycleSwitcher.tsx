@@ -74,7 +74,7 @@ export function CycleSwitcher({
 
       {!isCurrentCycle && (
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           type="button"
           onClick={() => onSelectPeriod(currentCycleMonth, currentCycleYear)}

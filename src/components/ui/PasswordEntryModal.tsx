@@ -80,7 +80,7 @@ export const PasswordEntryModal: React.FC<PasswordEntryModalProps> = ({
         <ModalActions>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={handleClose}
             className="rounded-xl"
           >

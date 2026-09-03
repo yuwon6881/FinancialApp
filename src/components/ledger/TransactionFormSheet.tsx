@@ -255,7 +255,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             <p className="basis-full text-sm text-destructive" role="alert">{form.state.errors.submit}</p>
           )}
           <Button
-            variant="outline"
+            variant="secondary"
             type="button"
             onClick={form.handleCloseForm}
             className="rounded-xl py-2.5"

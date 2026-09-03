@@ -26,13 +26,13 @@ export const ActionToolbar = ({
 }) => (
   <section aria-label="Investment actions" className="app-panel flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/92 p-4 lg:flex-row lg:items-center lg:justify-between">
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:flex lg:flex-wrap">
-      <Button variant="ghost" disabled={mutationsDisabled || portfolio.accounts.length === 0 || portfolio.instruments.length === 0} onClick={onAddActivity}><Plus className="size-4" /> Add activity</Button>
-      <Button variant="ghost" disabled={mutationsDisabled || portfolio.accounts.length === 0} onClick={onManageCash}><Wallet className="size-4" /> Manage cash</Button>
-      <Button variant="ghost" disabled={mutationsDisabled} onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>
-      <Button variant="ghost" disabled={mutationsDisabled} onClick={onAddInvestment}><Search className="size-4" /> Add investment</Button>
+      <Button variant="tertiary" disabled={mutationsDisabled || portfolio.accounts.length === 0 || portfolio.instruments.length === 0} onClick={onAddActivity}><Plus className="size-4" /> Add activity</Button>
+      <Button variant="tertiary" disabled={mutationsDisabled || portfolio.accounts.length === 0} onClick={onManageCash}><Wallet className="size-4" /> Manage cash</Button>
+      <Button variant="tertiary" disabled={mutationsDisabled} onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>
+      <Button variant="tertiary" disabled={mutationsDisabled} onClick={onAddInvestment}><Search className="size-4" /> Add investment</Button>
     </div>
     <Button
-      variant="ghost"
+      variant="tertiary"
       className="justify-center lg:w-auto"
       disabled={isOffline || refreshing || !portfolio.marketDataConfigured || !portfolio.holdings.length}
       aria-busy={refreshing}
@@ -62,7 +62,7 @@ export const EmptyState = ({
     </p>
     <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
       <Button variant="primary" onClick={onAddAccount} disabled={mutationsDisabled}><Building2 className="size-4" /> Add account</Button>
-      <Button variant="ghost" onClick={onAddInvestment} disabled={mutationsDisabled}><Search className="size-4" /> Add investment</Button>
+      <Button variant="tertiary" onClick={onAddInvestment} disabled={mutationsDisabled}><Search className="size-4" /> Add investment</Button>
     </div>
   </Panel>
 )

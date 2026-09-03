@@ -127,7 +127,7 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
           <div className="flex items-baseline justify-between gap-2">
             <h3 className="min-w-0 truncate text-xs font-bold text-foreground">Inside {selectedLabel}</h3>
             <Button
-              variant="unstyled"
+              variant="tertiary"
               type="button"
               onClick={() => onSelect(null)}
               className="shrink-0 cursor-pointer text-xs font-bold text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground"

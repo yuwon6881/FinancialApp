@@ -129,7 +129,7 @@ export function HorizontalRail({ children, className, label, showControls = fals
 
       {showControls && scrollState.canScrollBack && (
         <Button
-          variant="outline"
+          variant="secondary"
           size="icon"
           type="button"
           onClick={() => scrollByPage(-1)}
@@ -141,7 +141,7 @@ export function HorizontalRail({ children, className, label, showControls = fals
       )}
       {showControls && scrollState.canScrollForward && (
         <Button
-          variant="outline"
+          variant="secondary"
           size="icon"
           type="button"
           onClick={() => scrollByPage(1)}

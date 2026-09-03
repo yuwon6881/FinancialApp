@@ -37,7 +37,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         {navItems.map(({ tab, mobileLabel, Icon, activeClass, iconClass, dotClass }) => {
           const isActive = activeTab === tab
           return (
-            <Button variant="unstyled"
+            <Button variant="tertiary"
               key={tab}
               onClick={() => { triggerHaptic(8); onTabChange(tab) }}
               aria-current={isActive ? 'page' : undefined}

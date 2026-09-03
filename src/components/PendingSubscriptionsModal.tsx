@@ -335,7 +335,7 @@ export function PendingSubscriptionsModal({
 
               <div className="grid w-full grid-cols-2 gap-2 pt-1 sm:flex sm:w-auto sm:items-center sm:justify-end">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => runSubscriptionAction(noti, 'discard', () => onDiscardSubscription(noti))}
                   disabled={hideSensitive || isPending}
                   title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
@@ -349,7 +349,7 @@ export function PendingSubscriptionsModal({
                   />
                 </Button>
                 <Button
-                  variant="danger"
+                  variant="destructive"
                   onClick={() => onRemoveSubscription(noti.recurringPaymentId)}
                   disabled={hideSensitive || isPending}
                   title={hideSensitive ? 'Show sensitive information to change bills' : undefined}

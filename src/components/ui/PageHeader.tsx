@@ -34,7 +34,7 @@ export function PageHeader({
           <div className="min-w-0">
             <div className="flex min-w-0 flex-nowrap items-center gap-2">
               <h1 id={titleId} className="min-w-0 flex-1 text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">{title}</h1>
-              {titleActions && <div data-page-title-actions className="flex shrink-0 items-center gap-2">{titleActions}</div>}
+              {titleActions && <div data-page-title-actions className="flex shrink-0 flex-wrap items-center gap-2">{titleActions}</div>}
             </div>
             {description && <div className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</div>}
           </div>

@@ -157,8 +157,8 @@ export function createCategoryActions(deps: CategoryActionDependencies) {
                     </span>
                     {(transactionCount > 0 || usageLookupFailed) && onNavigateToLedger && (
                       <Button
-                        variant="outline"
-                        size="xs"
+                        variant="secondary"
+                        size="sm"
                         type="button"
                         onClick={() => {
                           setConfirmModalData(null)

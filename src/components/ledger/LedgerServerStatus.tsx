@@ -32,7 +32,7 @@ export function LedgerServerStatus({
               <p className="mt-0.5 text-xs text-muted-foreground">{error}</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={onRetry} disabled={isFetching} className="shrink-0 rounded-xl">
+          <Button variant="secondary" size="sm" onClick={onRetry} disabled={isFetching} className="shrink-0 rounded-xl">
             <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
             Try again
           </Button>

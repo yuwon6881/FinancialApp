@@ -47,7 +47,7 @@ export function InvestmentClassificationRow({
     >
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <Button
-          variant="unstyled"
+          variant="tertiary"
           type="button"
           aria-label={`Reorder ${value.symbol}. Position ${position} of ${count}. Use Up or Down arrow keys.`}
           aria-keyshortcuts="ArrowUp ArrowDown"

@@ -115,7 +115,7 @@ export function DocumentList({
         itemLabel="documents"
         actions={hasSelection && <>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             type="button"
             disabled={hideSensitive || isDownloadingSelected || exceedsSelectionLimit}

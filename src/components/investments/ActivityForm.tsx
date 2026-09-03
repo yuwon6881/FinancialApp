@@ -71,7 +71,7 @@ const Field = ({ label, hint, error, className = '', required, children }: {
 
 const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean; onCancel: () => void; submitLabel: string; disabled?: boolean }) => (
   <ModalActions className="border-t border-border/40 pt-4">
-    <Button type="button" variant="outline" onClick={onCancel} className="rounded-xl">Cancel</Button>
+    <Button type="button" variant="secondary" onClick={onCancel} className="rounded-xl">Cancel</Button>
     <Button type="submit" disabled={busy || disabled} aria-busy={busy} className="rounded-xl shadow-md">
       <MutationButtonContent state={busy ? 'saving' : null} entityLabel={submitLabel.toLocaleLowerCase()} idleLabel={submitLabel} />
     </Button>
@@ -241,7 +241,7 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
     else if (derive === 'units' && c && p) setUnits(fmt(c / p))
     else if (derive === 'price' && c && u) setUnitPrice(fmt(c / u))
   }, [units, unitPrice, cashAmount, type])
-  if (!accounts.length || !instruments.length) return <div><p className="text-sm text-muted-foreground">Add both an account and an investment before recording activity.</p><div className="mt-4 flex justify-end gap-2">{!accounts.length && <Button onClick={onNeedAccount}>Add account</Button>}{!instruments.length && <Button variant="ghost" onClick={onNeedInstrument}>Add investment</Button>}</div></div>
+  if (!accounts.length || !instruments.length) return <div><p className="text-sm text-muted-foreground">Add both an account and an investment before recording activity.</p><div className="mt-4 flex justify-end gap-2">{!accounts.length && <Button onClick={onNeedAccount}>Add account</Button>}{!instruments.length && <Button variant="tertiary" onClick={onNeedInstrument}>Add investment</Button>}</div></div>
   const needsUnits = !['Dividend', 'FeeTax'].includes(type)
   const trade = ['Buy', 'Sell'].includes(type)
   const submit = (event: React.FormEvent<HTMLFormElement>) => {

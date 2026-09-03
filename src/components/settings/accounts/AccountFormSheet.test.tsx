@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { LedgerAccount } from '../../../types'
 import { AccountFormSheet } from './AccountFormSheet'
-
 const mockAccount: LedgerAccount = {
   id: 'acct-1',
   name: 'Checking',
@@ -150,5 +149,33 @@ describe('AccountFormSheet', () => {
     const balanceInput = screen.getByLabelText(/Balance today \(MYR\)/i) as HTMLInputElement
     expect(balanceInput.disabled).toBe(true)
     expect(screen.getByText('Reopen this account to correct its balance.')).toBeDefined()
+  })
+
+  it('renders Growth separation note only when bucket is Growth', () => {
+    const { rerender } = render(
+      <AccountFormSheet
+        isOpen={true}
+        account={null}
+        defaultBucket="Essentials"
+        currency="MYR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByText(/Growth is kept separate/i)).toBeNull()
+
+    rerender(
+      <AccountFormSheet
+        isOpen={true}
+        account={null}
+        defaultBucket="Growth"
+        currency="MYR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/Growth is kept separate/i)).toBeDefined()
   })
 })

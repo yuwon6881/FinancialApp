@@ -150,7 +150,7 @@ export function BucketAccountGroup({
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/30 pt-3">
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => onAdd(bucket)}
             disabled={disabled || hideSensitive}
@@ -161,7 +161,7 @@ export function BucketAccountGroup({
           {openCount >= 2 && (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => onMoveMoney(bucket)}
               disabled={disabled || hideSensitive}

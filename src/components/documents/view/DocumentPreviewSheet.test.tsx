@@ -1,3 +1,4 @@
+import { Button } from '../../ui/Button'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { VaultDocument } from '../../../types'
@@ -15,7 +16,7 @@ vi.mock('../../../lib/api/documents', () => ({
 
 vi.mock('./PdfDocumentPreview', () => ({
   PdfDocumentPreview: ({ onReady }: { onReady: () => void }) => (
-    <button type="button" onClick={onReady}>Rendered PDF pages</button>
+    <Button variant="tertiary" type="button" onClick={onReady}>Rendered PDF pages</Button>
   ),
 }))
 

@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, ChevronRight } from 'lucide-react'
 import type { DocumentRetentionReview, RetentionTaxYearSummary } from '../../types'
 import {
   describeKeepUntil,
@@ -19,14 +19,8 @@ interface VaultRetentionNoticeProps {
 }
 
 /**
- * The single retention notice, shared by the Vault and the Dashboard. It used to be two inline
- * blocks with two different wordings for the same fact, which is how the same records came to be
- * described two ways depending on where you saw them.
- *
- * Amber is correct here and is not a raw palette colour: `index.css` maps `amber-*` onto
- * `--ledger-pending-*`, the app's needs-attention token. `ui/AlertBanner`'s `warning` variant is
- * deliberately **not** reused — it maps to `--ledger-expense-*`, so a retention notice would render
- * in the spending colour.
+ * Today and the Vault surface tax-document retention as an advisory exception only.
+ * Nothing is automatically pruned; the user decides what stays and what goes.
  */
 export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoticeProps) {
   // Nothing to say means nothing on screen: a notice whose whole message is "all is well" costs a
@@ -41,10 +35,10 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
   return (
     <section
       aria-labelledby="vault-retention-notice-heading"
-      className="app-panel rounded-2xl border border-amber-500/30 bg-amber-500/8 p-5"
+      className="app-panel rounded-2xl border border-amber-500/30 bg-card/92 p-4 sm:p-5 shadow-xs"
     >
       <div className="flex items-start gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/15 text-amber-600 dark:text-amber-400">
           <AlertTriangle className="size-5" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
@@ -77,13 +71,14 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
 
       {onOpenVault && (
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           type="button"
           onClick={onOpenVault}
-          className="mt-3 bg-card text-xs"
+          className="mt-3 border-amber-500/30 bg-card/60 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 text-xs"
         >
           Review in the Vault
+          <ChevronRight className="size-3.5 ml-1" />
         </Button>
       )}
     </section>

@@ -3,6 +3,8 @@ import { CalendarCheck2, Eye, EyeOff, Wallet } from 'lucide-react'
 import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { ordinal } from '../../lib/cycleLabels'
 import { Button } from '../ui/Button'
+import { Badge } from '../ui/Badge'
+import { PageHeader } from '../ui/PageHeader'
 
 interface DashboardHeaderProps {
   cycleLabel: string
@@ -25,28 +27,15 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   formatCurrency,
   onToggleBalanceAmounts,
 }) => (
-  <header className="app-panel overflow-hidden rounded-2xl border border-blue-500/15 bg-card/90">
-    <div className="grid gap-5 rounded-2xl bg-linear-to-br from-blue-500/10 via-transparent to-teal-500/10 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,25rem)] lg:items-center">
-      <div className="min-w-0">
-        <div className="flex items-start gap-3 sm:items-center">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-blue-500/15 bg-blue-500/10 text-blue-500">
-            <CalendarCheck2 className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-2xl font-bold tracking-tight text-foreground">Today</h2>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-500/25 bg-teal-500/10 px-2.5 py-0.5 text-xs font-semibold text-teal-400">
-                <CalendarCheck2 className="size-3 text-teal-400" />
-                <span>Starts on the {ordinal(cycleDay)}</span>
-              </span>
-            </div>
-            <p className="mt-1 truncate text-xs text-muted-foreground">
-              Current cycle · <span className="font-semibold text-blue-500">{cycleLabel}</span>
-            </p>
-          </div>
-        </div>
-      </div>
-
+  <PageHeader
+    className="overflow-hidden border-blue-500/15 bg-linear-to-br from-blue-500/10 via-card/90 to-teal-500/10"
+    title="Today"
+    icon={<span className="flex size-10 items-center justify-center rounded-xl border border-blue-500/15 bg-blue-500/10 text-blue-500"><CalendarCheck2 className="size-5" /></span>}
+    titleActions={<Badge tone="success"><CalendarCheck2 className="mr-1 size-3" />Starts on the {ordinal(cycleDay)}</Badge>}
+    description={<>Current cycle · <span className="font-semibold text-blue-500">{cycleLabel}</span></>}
+  >
+    <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,25rem)] lg:items-center">
+      <div aria-hidden="true" />
       <div className="min-w-0 w-full rounded-2xl border border-blue-500/15 bg-background/65 p-4 shadow-sm backdrop-blur-sm">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2">
@@ -58,10 +47,10 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <p className="truncate text-xs text-muted-foreground">Excludes long-term Growth savings</p>
             </div>
           </div>
-          <Button variant="unstyled" size="icon"
+          <Button variant="secondary" size="icon"
             type="button"
             onClick={onToggleBalanceAmounts}
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-card/80 text-muted-foreground transition hover:border-blue-500/35 hover:bg-blue-500/10 hover:text-blue-500 cursor-pointer sm:size-9"
+            className="shrink-0 text-muted-foreground hover:text-blue-500"
             title={hideBalanceAmounts ? 'Show available balance' : 'Hide available balance'}
             aria-label={hideBalanceAmounts ? 'Show available balance' : 'Hide available balance'}
           >
@@ -78,5 +67,5 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         </div>
       </div>
     </div>
-  </header>
+  </PageHeader>
 )

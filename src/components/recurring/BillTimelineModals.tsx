@@ -50,7 +50,7 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
                     : 'text-amber-500 bg-amber-500/10'
 
               return (
-                <Button variant="unstyled"
+                <Button variant="tertiary"
                   key={bill.id}
                   type="button"
                   onClick={() => {

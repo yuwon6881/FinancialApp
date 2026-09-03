@@ -197,7 +197,7 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
                 {toast.action && (() => {
                   const ActionIcon = toast.action.icon ?? Undo2
                   return (
-                  <Button variant="unstyled"
+                  <Button variant="tertiary"
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation() // prevent drag interfering
@@ -212,7 +212,7 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
                   )
                 })()}
               </div>
-              <Button variant="unstyled"
+              <Button variant="tertiary"
                 size="icon"
                 type="button"
                 onClick={(e) => {

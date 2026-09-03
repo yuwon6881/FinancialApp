@@ -78,7 +78,7 @@ export const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
 
           <Button
             type="button"
-            variant="unstyled"
+            variant="tertiary"
             onClick={onBackToLogin}
             className="w-full text-center text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
           >

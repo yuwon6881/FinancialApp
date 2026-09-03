@@ -189,7 +189,7 @@ export function DocumentCard({
                 nothing rather than an empty chip claiming the document has no category. */}
             {!showReliefPicker && reliefName && (
               <Button
-                variant="unstyled"
+                variant="tertiary"
                 type="button"
                 disabled={hideSensitive || isBusy}
                 onClick={() => setEditingRelief(true)}
@@ -216,7 +216,7 @@ export function DocumentCard({
                 </p>
                 {canCancelRelief && (
                   <Button
-                    variant="unstyled"
+                    variant="tertiary"
                     type="button"
                     onClick={() => setEditingRelief(false)}
                     aria-label={`Keep ${reliefName} as the tax relief category for ${document.originalFileName}`}

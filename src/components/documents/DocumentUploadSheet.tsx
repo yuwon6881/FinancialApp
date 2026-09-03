@@ -212,7 +212,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
     <BottomSheet isOpen={isOpen} onClose={onClose} maxWidthClassName="max-w-2xl"
       title={<span className="flex items-center gap-2"><UploadCloud className="size-4" />Upload tax documents</span>}
       footer={<ModalActions>
-        <Button variant="outline" type="button" onClick={onClose} className="rounded-xl px-4">{results ? 'Done' : 'Cancel'}</Button>
+        <Button variant="secondary" type="button" onClick={onClose} className="rounded-xl px-4">{results ? 'Done' : 'Cancel'}</Button>
         {/* Deliberately not disabled on missing files/category: an inert button
             explains nothing, while submitting surfaces the reason on the field. */}
         {!results && <Button type="button" onClick={upload} disabled={isPreparing || isUploading}
@@ -235,7 +235,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
           </div>
         ) : <>
           <FormField label="Documents" required error={validationErrors.files}>
-            <Button variant="unstyled" type="button" onClick={() => inputRef.current?.click()} className="mt-1.5 flex w-full flex-col items-center rounded-xl border-2 border-dashed border-border px-4 py-7 hover:bg-muted/40 cursor-pointer">
+            <Button variant="tertiary" type="button" onClick={() => inputRef.current?.click()} className="mt-1.5 flex w-full flex-col items-center rounded-xl border-2 border-dashed border-border px-4 py-7 hover:bg-muted/40 cursor-pointer">
               <UploadCloud className="mb-2 size-8 text-muted-foreground/60" /><span className="text-xs font-bold text-foreground">Choose one or multiple files</span>
               <span className="mt-1 text-xs text-muted-foreground">Up to {constraints.maxBulkDocuments} files · {formatMb(constraints.maxDocumentBytes)} each</span>
             </Button>
@@ -250,7 +250,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
                 <FileText className="size-4 shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-bold">{file.name}</p><p className={`text-xs ${tooLarge ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {formatMb(file.size)}{tooLarge ? ` · exceeds ${formatMb(constraints.maxDocumentBytes)}` : ''}</p></div>
-                <Button variant="unstyled" size="icon" type="button" aria-label={`Remove ${file.name}`} onClick={() => setFiles(current => current.filter((_, itemIndex) => itemIndex !== index))} className="size-11 cursor-pointer rounded-lg transition-colors hover:bg-muted/50 sm:size-8"><X className="size-4" /></Button>
+                <Button variant="tertiary" size="icon" type="button" aria-label={`Remove ${file.name}`} onClick={() => setFiles(current => current.filter((_, itemIndex) => itemIndex !== index))} className="size-11 cursor-pointer rounded-lg transition-colors hover:bg-muted/50 sm:size-8"><X className="size-4" /></Button>
               </div>
             })}
           </div>}

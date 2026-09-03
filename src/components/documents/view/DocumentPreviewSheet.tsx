@@ -120,7 +120,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
       panelClassName="h-[90vh]"
       headerActions={document ? (
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => void downloadDocument(document.id, document.originalFileName)
             .catch(() => showToast('The document could not be downloaded.', 'Download Failed', 'error'))}
@@ -204,7 +204,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
         {isZoomable && !isLoading && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 rounded-full border border-border/60 bg-card/90 px-3 py-1.5 backdrop-blur-md shadow-lg text-xs">
             <Button
-              variant="ghost"
+              variant="tertiary"
               size="icon"
               className="size-11 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40 sm:size-8"
               onClick={handleZoomOut}
@@ -215,7 +215,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
             </Button>
 
             <Button
-              variant="ghost"
+              variant="tertiary"
               size="sm"
               onClick={handleResetZoom}
               className="h-11 min-w-14 px-2 text-xs font-bold text-foreground hover:bg-muted/50 transition sm:h-8 sm:min-w-12"
@@ -225,7 +225,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
             </Button>
 
             <Button
-              variant="ghost"
+              variant="tertiary"
               size="icon"
               className="size-11 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40 sm:size-8"
               onClick={handleZoomIn}
@@ -238,7 +238,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
             <div className="h-4 w-px bg-border/60 mx-1" aria-hidden="true" />
 
             <Button
-              variant="ghost"
+              variant="tertiary"
               size="icon"
               className="size-11 rounded-full text-muted-foreground hover:text-foreground sm:size-8"
               onClick={handleResetZoom}

@@ -60,7 +60,6 @@ interface RecurringPaymentsViewProps {
   globalPushEnabled?: boolean
   thisDevicePushEnabled?: boolean
   onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
-  onRequestPayEarly?: (id: string) => void
   onPayEarly?: (id: string, amount?: number, accountId?: string, settlesOccurrence?: boolean) => Promise<void> | void
   loans?: Loan[]
   onAddLoan?: (loan: Partial<Loan>) => void
@@ -107,7 +106,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   globalPushEnabled = false,
   thisDevicePushEnabled = true,
   onUpdateReminder,
-  onRequestPayEarly,
   onPayEarly = () => {},
   loans = [],
   onAddLoan = () => {},
@@ -323,7 +321,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             onRequestPayEarly={(id) => {
               const payment = payments.find(p => p.id === id)
               if (payment) setPayEarlyPayment(payment)
-              onRequestPayEarly?.(id)
             }}
             onNavigateToLoan={(loanId) => {
               setActiveTab('loans')

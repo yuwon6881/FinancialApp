@@ -6,6 +6,7 @@ import { BottomSheet } from '../ui/BottomSheet'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
 import { getCategoryDotClass, getCategoryFilterClass } from '../../lib/categoryColors'
 import { ChevronDown } from 'lucide-react'
+import { Toolbar } from '../ui/Toolbar'
 
 interface RecurringFilterBarProps {
   isMobile: boolean
@@ -67,7 +68,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
   }, [isFilterDropdownOpen, isMobile, setIsFilterDropdownOpen])
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs select-none">
+    <Toolbar aria-label="Recurring filters" className="flex-col items-center justify-between gap-4 bg-card p-4 shadow-xs sm:flex-row">
       {/* Category Multi-select dropdown */}
       <div
         ref={filterContainerRef}
@@ -81,7 +82,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
           }
         }}
       >
-        <Button variant="unstyled"
+        <Button variant="tertiary"
           ref={filterButtonRef}
           onClick={() => setIsFilterDropdownOpen(prev => !prev)}
           aria-haspopup="dialog"
@@ -115,7 +116,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
             <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
               <span className="text-xs font-bold text-foreground">Filter Categories</span>
               {selectedCategories.length > 0 && (
-                <Button variant="unstyled"
+                <Button variant="tertiary"
                   onClick={onClearFilters}
                   className="text-xs font-bold text-orange-500 hover:underline cursor-pointer"
                 >
@@ -154,7 +155,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
             <div className="recurring-filter-dropdown space-y-4 pr-1">
               {selectedCategories.length > 0 && (
                 <div className="flex justify-end">
-                  <Button variant="unstyled"
+                  <Button variant="tertiary"
                     onClick={onClearFilters}
                     className="text-xs font-bold text-orange-500 hover:underline cursor-pointer"
                   >
@@ -196,6 +197,6 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
           className="w-full"
         />
       </div>
-    </div>
+    </Toolbar>
   )
 }

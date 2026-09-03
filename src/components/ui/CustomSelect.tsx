@@ -179,7 +179,7 @@ export function CustomSelect<T extends string | number>({
         }
       }}
     >
-      <Button variant="unstyled"
+      <Button variant="tertiary"
         type="button"
         id={accessibleProps.id}
         ref={triggerRef}
@@ -220,7 +220,7 @@ export function CustomSelect<T extends string | number>({
         className={`bg-popover text-popover-foreground border border-border rounded-xl shadow-xl p-1 z-[200] overflow-y-auto overscroll-contain animate-in fade-in ${direction === 'up' ? 'slide-in-from-bottom-1' : 'slide-in-from-top-1'} duration-100 space-y-0.5`}
       >
         {options.map((option, index) => (
-          <Button variant="unstyled"
+          <Button variant="tertiary"
             key={option.value}
             id={`${listboxId}-option-${index}`}
             type="button"

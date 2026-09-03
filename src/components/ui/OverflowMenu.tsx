@@ -111,7 +111,7 @@ export const OverflowMenu: React.FC<OverflowMenuProps> = ({
     <>
       <Button
         ref={triggerRef}
-        variant="ghost"
+        variant="tertiary"
         size="icon"
         disabled={disabled}
         aria-haspopup="menu"
@@ -139,7 +139,7 @@ export const OverflowMenu: React.FC<OverflowMenuProps> = ({
           return (
             <Button
               key={item.label}
-              variant="unstyled"
+              variant="tertiary"
               role="menuitem"
               aria-disabled={item.disabled ? true : undefined}
               title={item.disabled ? item.hint : undefined}

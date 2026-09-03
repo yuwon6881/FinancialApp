@@ -114,8 +114,8 @@ export function CycleCalendar(props: CycleCalendarProps) {
           {MODES.map(entry => (
             <Button
               key={entry.mode}
-              size="xs"
-              variant={mode === entry.mode ? 'primary' : 'ghost'}
+              size="sm"
+              variant={mode === entry.mode ? 'primary' : 'tertiary'}
               className={cn('h-7 flex-1 px-2.5 text-xs font-semibold sm:h-7 sm:flex-none', mode !== entry.mode && 'text-muted-foreground hover:text-foreground')}
               onClick={() => setMode(entry.mode)}
               aria-pressed={mode === entry.mode}

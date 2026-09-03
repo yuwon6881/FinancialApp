@@ -203,7 +203,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
     <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
       <PageHeader
         leading={<Button
-          variant="unstyled"
+          variant="tertiary"
           type="button"
           onClick={back}
           className="mt-0.5 inline-flex size-9 cursor-pointer items-center justify-center rounded-xl border border-border/60 p-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"

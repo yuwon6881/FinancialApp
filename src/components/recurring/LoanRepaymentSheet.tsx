@@ -191,7 +191,7 @@ export function LoanRepaymentSheet({
         {/* Mode switcher tabs */}
         <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted/60 p-1 text-xs font-semibold">
           <Button
-            variant="unstyled"
+            variant="tertiary"
             type="button"
             onClick={() => { setTab('advance'); setActionError(null) }}
             className={`rounded-lg py-2 transition-all cursor-pointer text-center ${
@@ -203,7 +203,7 @@ export function LoanRepaymentSheet({
             Advance cycles
           </Button>
           <Button
-            variant="unstyled"
+            variant="tertiary"
             type="button"
             onClick={() => { setTab('settlement'); setActionError(null) }}
             className={`rounded-lg py-2 transition-all cursor-pointer text-center ${
@@ -327,7 +327,7 @@ export function LoanRepaymentSheet({
                 )}
 
                 <ModalActions className="pt-2">
-                  <Button variant="outline" type="button" onClick={onClose} disabled={submitting} className="rounded-xl">
+                  <Button variant="secondary" type="button" onClick={onClose} disabled={submitting} className="rounded-xl">
                     Cancel
                   </Button>
                   <Button
@@ -386,7 +386,7 @@ export function LoanRepaymentSheet({
             </div>
 
             <ModalActions className="pt-2">
-              <Button variant="outline" type="button" onClick={onClose} disabled={submitting} className="rounded-xl">
+              <Button variant="secondary" type="button" onClick={onClose} disabled={submitting} className="rounded-xl">
                 Cancel
               </Button>
               <Button

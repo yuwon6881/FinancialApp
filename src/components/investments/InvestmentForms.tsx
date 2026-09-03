@@ -41,7 +41,7 @@ const Field = ({ label, hint, error, className = '', required, children }: {
 
 const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean; onCancel: () => void; submitLabel: string; disabled?: boolean }) => (
   <ModalActions className="border-t border-border/40 pt-4">
-    <Button type="button" variant="outline" onClick={onCancel} className="rounded-xl">Cancel</Button>
+    <Button type="button" variant="secondary" onClick={onCancel} className="rounded-xl">Cancel</Button>
     <Button type="submit" disabled={busy || disabled} aria-busy={busy} className="rounded-xl shadow-md">
       <MutationButtonContent state={busy ? 'saving' : null} entityLabel={submitLabel.toLocaleLowerCase()} idleLabel={submitLabel} />
     </Button>
@@ -117,10 +117,10 @@ export const InstrumentForm = ({ busy, offline, existingInstruments = [], onCanc
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
       {selected ? (
         <div className="rounded-xl border border-blue-500 bg-blue-500/5 p-3">
-          <div className="flex items-start justify-between gap-3"><span className="min-w-0"><strong className="block text-sm">{selected.symbol} · {selected.name}</strong><span className="mt-1 block text-xs text-muted-foreground">{[selected.exchange, selected.mic, selected.currency, selected.country].filter(Boolean).join(' · ')}</span></span><Button type="button" variant="ghost" size="sm" onClick={() => setSelected(null)}>Change</Button></div>
+          <div className="flex items-start justify-between gap-3"><span className="min-w-0"><strong className="block text-sm">{selected.symbol} · {selected.name}</strong><span className="mt-1 block text-xs text-muted-foreground">{[selected.exchange, selected.mic, selected.currency, selected.country].filter(Boolean).join(' · ')}</span></span><Button type="button" variant="tertiary" size="sm" onClick={() => setSelected(null)}>Change</Button></div>
         </div>
       ) : <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
-        {results.map(result => <Button type="button" variant="unstyled" key={`${result.symbol}-${result.mic ?? result.exchange}`} onClick={() => setSelected(result)} className="block w-full cursor-pointer rounded-xl border border-border/50 p-3 text-left transition-colors hover:bg-muted/30">
+        {results.map(result => <Button type="button" variant="tertiary" key={`${result.symbol}-${result.mic ?? result.exchange}`} onClick={() => setSelected(result)} className="block w-full cursor-pointer rounded-xl border border-border/50 p-3 text-left transition-colors hover:bg-muted/30">
           <span className="flex flex-wrap items-center gap-2"><strong className="text-sm text-foreground">{result.symbol}</strong><span className="rounded bg-muted px-1.5 py-0.5 text-xs font-bold">{result.type}</span><span className={`rounded px-1.5 py-0.5 text-xs font-bold ${marketAvailability(result) === 'Available' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>{marketAvailability(result) === 'Available' ? 'Market data available' : marketAvailability(result) === 'Unavailable' ? 'Market data unavailable' : 'Availability not confirmed'}</span></span>
           <span className="mt-1 block text-xs text-muted-foreground">{result.name}</span>
           <span className="mt-1 block text-xs text-muted-foreground">{[result.exchange, result.mic, result.currency, result.country].filter(Boolean).join(' · ')}</span>
@@ -129,7 +129,7 @@ export const InstrumentForm = ({ busy, offline, existingInstruments = [], onCanc
       </div>}
       {alreadySaved && <p role="alert" className="text-xs font-semibold text-destructive">This investment is already saved. Pick a different one, or record activity against the existing entry.</p>}
       <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border/40 bg-card py-3">
-        <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+        <Button type="button" variant="tertiary" onClick={onCancel}>Cancel</Button>
         <Button disabled={busy || !selected || selectedUnavailable || alreadySaved} aria-busy={busy} onClick={() => selected && !selectedUnavailable && !alreadySaved && void onSave({ symbol: selected.symbol, name: selected.name, type: selected.type, currency: selected.currency, exchange: selected.exchange, mic: selected.mic, country: selected.country, providerSymbol: selected.symbol, providerMic: selected.mic, marketDataReference: selected.marketDataReference, isCustom: false })}>
           <MutationButtonContent state={busy ? 'saving' : null} entityLabel="investment" idleLabel="Save investment" />
         </Button>

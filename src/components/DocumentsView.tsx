@@ -20,6 +20,8 @@ import { PageHeader } from './ui/PageHeader'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { createFinalId } from '../lib/outbox'
 import { useOptimisticList } from '../lib/useOptimisticList'
+import { Badge } from './ui/Badge'
+import { SectionHeader } from './ui/SectionHeader'
 
 interface DocumentsViewProps {
   onNavigateToTransaction?: (transactionId: string) => Promise<void> | void
@@ -198,7 +200,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         icon={<span className="grid size-10 place-items-center rounded-xl bg-accent text-accent-ink"><ShieldCheck className="size-5" /></span>}
         actions={<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
           <Button
-            variant="outline"
+            variant="secondary"
             size="lg"
             type="button"
             disabled={hideSensitive || isDownloadingArchive || availableYears.length === 0}
@@ -280,15 +282,13 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
       {/* Documents */}
       <section className="rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card sm:p-4 sm:shadow-xs" aria-labelledby="vault-documents-heading">
-        <div className="mb-3 flex items-end justify-between gap-3 sm:px-3">
-          <div>
-            <h3 id="vault-documents-heading" className="text-sm font-black text-foreground">Your documents</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">Filter, review, and manage the files in your Vault.</p>
-          </div>
-          <span className="shrink-0 rounded-lg bg-muted px-2.5 py-1.5 text-xs font-bold text-muted-foreground tabular-nums">
-            {totalCount} file{totalCount === 1 ? '' : 's'}
-          </span>
-        </div>
+        <SectionHeader
+          title="Your documents"
+          titleId="vault-documents-heading"
+          description="Filter, review, and manage the files in your Vault."
+          meta={<Badge>{totalCount} file{totalCount === 1 ? '' : 's'}</Badge>}
+          className="mb-3 sm:px-3"
+        />
 
         <DocumentFilterBar
           taxYear={taxYear}
@@ -314,7 +314,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             </div>
             <div className="flex shrink-0 gap-2">
               <Button
-                variant="unstyled"
+                variant="tertiary"
                 type="button"
                 disabled={stagedCategories.isSaving}
                 onClick={() => stagedCategories.clear()}
@@ -323,7 +323,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 Discard
               </Button>
               <Button
-                variant="unstyled"
+                variant="tertiary"
                 type="button"
                 disabled={stagedCategories.isSaving}
                 aria-busy={stagedCategories.isSaving}

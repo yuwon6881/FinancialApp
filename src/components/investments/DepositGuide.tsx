@@ -61,7 +61,7 @@ export function DepositGuide({ allocation, money, colors }: DepositGuideProps) {
         </h3>
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            variant="ghost"
+            variant="tertiary"
             size="sm"
             aria-expanded={open}
             onClick={e => { e.stopPropagation(); handleToggle() }}

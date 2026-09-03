@@ -152,7 +152,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
   return (
     <Panel as="section" padding="none" className="overflow-hidden shadow-sm">
       <Button
-        variant="unstyled"
+        variant="tertiary"
         type="button"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
@@ -179,7 +179,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
       {loaded && enabled && !showDisableForm && (
         <div className="space-y-2">
           <Button
-            variant="outline"
+            variant="secondary"
             type="button"
             onClick={() => setShowRegenerateModal(true)}
             disabled={hideSensitive}
@@ -188,7 +188,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
             <KeyRound className="size-3.5" /> Regenerate recovery codes
           </Button>
           <Button
-            variant="destructiveGhost"
+            variant="destructive"
             type="button"
             onClick={() => setShowDisableForm(true)}
             disabled={hideSensitive}
@@ -220,7 +220,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
           </FormField>
           <ModalActions>
             <Button
-              variant="outline"
+              variant="secondary"
               type="button"
               onClick={() => { setShowDisableForm(false); setDisableErrors({}) }}
               className="press-scale flex-1 rounded-xl py-2.5"
@@ -242,7 +242,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
 
       {loaded && !enabled && !setupSecret && (
         <Button
-          variant="success"
+          variant="primary"
           type="button"
           onClick={handleStartSetup}
           disabled={setupBusy || hideSensitive}
@@ -292,7 +292,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
             </FormField>
             <ModalActions>
               <Button
-                variant="outline"
+                variant="secondary"
                 type="button"
                 onClick={handleCancelSetup}
                 className="press-scale flex-1 rounded-xl py-2.5"

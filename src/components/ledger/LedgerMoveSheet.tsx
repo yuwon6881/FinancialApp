@@ -40,7 +40,7 @@ export function LedgerMoveSheet({ transactions, cycleDay, isOpen, onClose, onMov
     title={`Move ${transactions.length} transaction${transactions.length === 1 ? '' : 's'}`}
     onClose={onClose}
     footer={<div className="flex gap-2">
-      <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
+      <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
       <Button
         variant="primary"
         className="flex-1"

@@ -129,7 +129,7 @@ const TopNav: React.FC<TopNavProps> = ({
   const isBusy = !isOffline && (isSyncing || Boolean(syncLabel))
 
   const draftStatus = draftCount > 0 ? (
-    <Button variant="unstyled"
+    <Button variant="tertiary"
       type="button"
       onClick={() => onTabChange('drafts')}
       className="ml-2.5 flex items-center gap-1 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-xs font-bold text-amber-600 dark:text-amber-400 cursor-pointer select-none shrink-0 hover:bg-amber-500/25 transition duration-150 animate-in fade-in zoom-in-95"
@@ -141,7 +141,7 @@ const TopNav: React.FC<TopNavProps> = ({
   ) : null
 
   const failedOpsStatus = failedOpsCount > 0 ? (
-    <Button variant="unstyled"
+    <Button variant="tertiary"
       type="button"
       role="status"
       aria-label={`${failedOpsCount} failed sync ${failedOpsCount === 1 ? 'item' : 'items'}`}
@@ -173,7 +173,7 @@ const TopNav: React.FC<TopNavProps> = ({
             `xl:flex-1`), which left nothing growing and bunched the whole header to the left. */}
         <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden z-10">
           <Button
-            variant="unstyled"
+            variant="tertiary"
             type="button"
             aria-label="Go to Today"
             onClick={() => onTabChange('dashboard')}
@@ -206,7 +206,7 @@ const TopNav: React.FC<TopNavProps> = ({
 
           {onOpenSearch && (
             <Button
-              variant="unstyled"
+              variant="tertiary"
               type="button"
               onClick={onOpenSearch}
               aria-label="Search your records"
@@ -236,7 +236,7 @@ const TopNav: React.FC<TopNavProps> = ({
             </>
           )}
           
-          <Button variant="unstyled"
+          <Button variant="tertiary"
             type="button"
             onClick={onAskAI}
             className="hidden sm:flex size-9 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/8 text-blue-600 hover:border-blue-500/35 hover:bg-blue-500/14 dark:text-blue-400 select-none transition-all duration-150 cursor-pointer active:scale-95 xl:h-9 xl:w-auto xl:gap-1.5 xl:px-3"
@@ -247,7 +247,7 @@ const TopNav: React.FC<TopNavProps> = ({
             <span className="hidden xl:inline text-xs font-extrabold tracking-wide">ASK AI</span>
           </Button>
 
-          <Button variant="unstyled"
+          <Button variant="tertiary"
             type="button"
             size="icon"
             onClick={() => onTabChange('wishlist')}
@@ -264,7 +264,7 @@ const TopNav: React.FC<TopNavProps> = ({
           </Button>
 
           <div className="relative">
-            <Button variant="unstyled"
+            <Button variant="tertiary"
               type="button"
               size="icon"
               onClick={onOpenNotifications}
@@ -321,7 +321,7 @@ const TopNav: React.FC<TopNavProps> = ({
                     <div className="text-sm font-bold text-foreground">Amounts remain protected</div>
                     <div className="text-body leading-relaxed text-muted-foreground mt-0.5">Privacy settings couldn't be verified.</div>
                   </div>
-                  <Button variant="unstyled"
+                  <Button variant="tertiary"
                     type="button"
                     onClick={onRetrySensitivePreference}
                     className="ml-2 shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition cursor-pointer self-center"

@@ -112,7 +112,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
 
               <div role="radiogroup" aria-label={`Reminder frequency for ${payment.name}`} className="flex gap-1.5">
                 {(['Once', 'Daily'] as RecurringReminderMode[]).map(mode => (
-                  <Button variant="unstyled"
+                  <Button variant="tertiary"
                     key={mode}
                     type="button"
                     role="radio"
@@ -130,7 +130,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
 
               <div role="radiogroup" aria-label={`Lead time for ${payment.name}`} className="mt-2 flex gap-1.5">
                 {REMINDER_LEAD_DAY_OPTIONS.map(leadDays => (
-                  <Button variant="unstyled"
+                  <Button variant="tertiary"
                     key={leadDays}
                     type="button"
                     role="radio"
@@ -162,29 +162,33 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
             className="overflow-hidden"
           >
             <div className="pt-2 border-t border-border/20 flex items-center justify-between gap-2">
-              <span className="text-xs text-amber-500 font-semibold flex items-center gap-1">
-                <span className="size-1.5 rounded-full bg-amber-500 inline-block animate-pulse" />
-                Unsaved changes
+              <span role="status" aria-label="Unsaved changes" title="Unsaved changes" className="flex items-center">
+                <span className="size-2 rounded-full bg-amber-500 inline-block animate-pulse shrink-0" />
+                <span className="sr-only">Unsaved changes</span>
               </span>
-              <div className="flex items-center gap-1.5">
-                <Button variant="unstyled"
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  variant="tertiary"
+                  size="sm"
                   type="button"
                   disabled={disabled || isSyncing}
                   onClick={handleCancel}
-                  className="px-2 py-1 rounded-md text-xs font-medium text-muted-foreground hover:bg-muted transition cursor-pointer disabled:opacity-40"
+                  className="h-8 px-2.5 text-xs text-muted-foreground hover:bg-muted transition cursor-pointer disabled:opacity-40 whitespace-nowrap"
                 >
                   Cancel
                 </Button>
-                <Button variant="unstyled"
+                <Button
+                  variant="primary"
+                  size="sm"
                   type="button"
                   disabled={disabled || isSyncing}
                   onClick={handleSave}
-                  className="px-2.5 py-1 rounded-md text-xs font-bold bg-primary hover:bg-primary/90 active:bg-primary/90 text-primary-foreground flex items-center gap-1 transition cursor-pointer shadow-xs disabled:opacity-50"
+                  className="h-8 px-2.5 text-xs whitespace-nowrap"
                 >
                   {isSyncing ? (
-                    <Loader2 className="size-3 animate-spin" />
+                    <Loader2 className="size-3 animate-spin mr-1" />
                   ) : (
-                    <Check className="size-3" />
+                    <Check className="size-3 mr-1" />
                   )}
                   Save Reminder
                 </Button>

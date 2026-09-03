@@ -208,7 +208,7 @@ export const DesktopNavRail: React.FC<DesktopNavRailProps> = ({
     return (
       <Button
         key={id}
-        variant="unstyled"
+        variant="tertiary"
         type="button"
         title={label}
         aria-current={isActive ? 'page' : undefined}

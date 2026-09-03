@@ -1,6 +1,6 @@
 import React from 'react'
 import { m, useReducedMotion } from 'framer-motion'
-import { AlertTriangle, Gauge } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Gauge } from 'lucide-react'
 import type { CategoryLimitProgress } from '../../types'
 import { Button } from '../ui/Button'
 
@@ -39,11 +39,11 @@ export function CategoryWatchExceptionCard({
       initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       aria-labelledby="category-watch-exception"
-      className={`app-panel rounded-2xl border p-5 ${anyExceeded ? 'border-orange-500/30 bg-orange-500/8' : 'border-amber-500/30 bg-amber-500/8'}`}
+      className={`app-panel rounded-2xl border p-4 sm:p-5 shadow-xs ${anyExceeded ? 'border-orange-500/30 bg-card/92 text-card-foreground' : 'border-amber-500/30 bg-card/92 text-card-foreground'}`}
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3 min-w-0 flex-1">
-          <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${anyExceeded ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'}`}>
+          <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl border ${anyExceeded ? 'border-orange-500/25 bg-orange-500/15 text-orange-600 dark:text-orange-400' : 'border-amber-500/25 bg-amber-500/15 text-amber-600 dark:text-amber-400'}`}>
             {anyExceeded ? <AlertTriangle className="size-5" /> : <Gauge className="size-5" />}
           </div>
           <div className="min-w-0 flex-1">
@@ -62,8 +62,14 @@ export function CategoryWatchExceptionCard({
             </p>
           </div>
         </div>
-        <Button variant="ghost" onClick={() => onOpenCategoryLimits(worst.category)} className="w-full justify-center sm:w-auto shrink-0">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => onOpenCategoryLimits(worst.category)}
+          className={`w-full justify-center sm:w-auto shrink-0 ${anyExceeded ? 'border-orange-500/30 bg-card/60 text-orange-700 hover:bg-orange-500/10 dark:text-orange-300' : 'border-amber-500/30 bg-card/60 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300'}`}
+        >
           See categories
+          <ChevronRight className="size-3.5 ml-1" />
         </Button>
       </div>
     </m.section>

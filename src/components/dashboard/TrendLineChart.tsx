@@ -98,7 +98,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
         </div>
         <div role="group" aria-label="Trend range" className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-xs mb-3 w-fit">
           {(['3month', '6month', 'yearly'] as const).map(value => (
-            <Button variant="unstyled" key={value} type="button" onClick={() => setRange(value)} aria-pressed={range === value} aria-label={value === '3month' ? 'Last 3 months' : value === '6month' ? 'Last 6 months' : 'Full year'} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2.5 py-1 text-xs font-bold transition cursor-pointer sm:min-h-8 sm:min-w-8 ${range === value ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
+            <Button variant="tertiary" key={value} type="button" onClick={() => setRange(value)} aria-pressed={range === value} aria-label={value === '3month' ? 'Last 3 months' : value === '6month' ? 'Last 6 months' : 'Full year'} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2.5 py-1 text-xs font-bold transition cursor-pointer sm:min-h-8 sm:min-w-8 ${range === value ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
               {value === '3month' ? '3M' : value === '6month' ? '6M' : 'Year'}
             </Button>
           ))}

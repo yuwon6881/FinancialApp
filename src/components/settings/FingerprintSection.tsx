@@ -116,7 +116,7 @@ export function FingerprintSection() {
 
   return (
     <Panel as="section" padding="none" className="overflow-hidden shadow-sm animate-in fade-in duration-200">
-      <Button variant="unstyled"
+      <Button variant="tertiary"
         type="button"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
@@ -161,7 +161,7 @@ export function FingerprintSection() {
             </div>
             <Button
               type="button"
-              variant={enrolledHere ? 'outline' : 'primary'}
+              variant={enrolledHere ? 'secondary' : 'primary'}
               size="sm"
               disabled={busy || hideSensitive || capability !== 'supported'}
               onClick={enroll}
@@ -180,7 +180,7 @@ export function FingerprintSection() {
           {credentialsError && (
             <div role="alert" className="flex flex-col gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive sm:flex-row sm:items-center sm:justify-between">
               <span>{credentialsError}</span>
-              <Button type="button" variant="outline" size="sm" onClick={() => void load()} disabled={!credentialsLoaded}>
+              <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={!credentialsLoaded}>
                 Retry
               </Button>
             </div>
@@ -224,7 +224,7 @@ export function FingerprintSection() {
                       <div className="flex shrink-0 items-center gap-1.5">
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="tertiary"
                           size="icon"
                           disabled={busy || removingCredentialId !== null || hideSensitive}
                           onClick={() => remove(c.id)}

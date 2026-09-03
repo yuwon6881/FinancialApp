@@ -62,7 +62,7 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
           </div>
           <div role="group" aria-label="Breakdown range" className="grid w-full grid-cols-4 items-center rounded-lg border border-border/40 bg-muted/40 p-0.5 text-xs sm:flex sm:w-auto sm:shrink-0">
             {(['monthly', '3month', '6month', 'yearly'] as const).map(view => (
-              <Button variant="unstyled"
+              <Button variant="tertiary"
                 key={view}
                 type="button"
                 onClick={() => setChartView(view)}

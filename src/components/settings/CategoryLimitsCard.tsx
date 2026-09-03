@@ -245,7 +245,7 @@ export function CategoryLimitsCard({
                       </div>
                       )}
                       {!hideSensitive && suggested != null && suggested > 0 && (
-                        <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={() => {
+                        <Button type="button" variant="tertiary" size="sm" className="mt-2" onClick={() => {
                           dirtyIdsRef.current.add(category.id)
                           setDrafts(previous => ({ ...previous, [category.id]: suggested.toFixed(2) }))
                           setErrors(previous => ({ ...previous, [category.id]: '' }))

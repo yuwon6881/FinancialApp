@@ -26,7 +26,7 @@ export function DraftReorderItem({
 
   const grip = (
     <Button
-      variant="unstyled"
+      variant="tertiary"
       type="button"
       aria-label={`Reorder ${value.description}. Position ${position} of ${count}. Use Up or Down arrow keys.`}
       aria-keyshortcuts="ArrowUp ArrowDown"

@@ -145,7 +145,7 @@ export function AccountFormSheet({
       maxWidthClassName="max-w-xl"
       footer={(
         <ModalActions>
-          <Button variant="outline" type="button" onClick={onClose} disabled={isSaving} className="rounded-xl">Cancel</Button>
+          <Button variant="secondary" type="button" onClick={onClose} disabled={isSaving} className="rounded-xl">Cancel</Button>
           <Button variant="primary" type="submit" form="ledger-account-form" disabled={isSaving} className="rounded-xl shadow-md">
             {isSaving ? 'Saving…' : isEditing ? 'Save changes' : 'Add account'}
           </Button>
@@ -154,20 +154,20 @@ export function AccountFormSheet({
     >
       <form id="ledger-account-form" noValidate onSubmit={submit} className="space-y-4">
         {/* Header summary banner */}
-        <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/15 p-3.5">
+        <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/15 p-3.5">
           <div className={`grid size-10 shrink-0 place-items-center rounded-xl border ${bucketBadgeClass}`} aria-hidden="true">
             <AccountIcon className="size-5" />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs font-bold text-foreground">{isEditing ? 'Update this account' : 'Account connection'}</p>
               {isEditing && isArchived && (
-                <span className="rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Closed
                 </span>
               )}
             </div>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               {isEditing
                 ? 'Changes affect this account only. Past transactions stay as they are.'
                 : 'Name this account and choose its budget bucket.'}
@@ -261,9 +261,9 @@ export function AccountFormSheet({
         </div>
 
         {/* Options Section: Lifecycle Status */}
-        <div className="space-y-3 pt-1">
-          {/* Account Status / Archive Card */}
-          {isEditing && (
+        {isEditing && (
+          <div className="space-y-3 pt-1">
+            {/* Account Status / Archive Card */}
             <div
               className={`rounded-2xl border transition duration-150 ${
                 isArchived
@@ -272,15 +272,15 @@ export function AccountFormSheet({
               }`}
             >
               <label
-                className={`flex items-center justify-between gap-3 p-3.5 ${
+                className={`flex items-start justify-between gap-3 p-3.5 ${
                   isBalanceDirty
                     ? 'cursor-not-allowed opacity-60'
                     : 'cursor-pointer'
                 }`}
               >
-                <div className="flex min-w-0 items-center gap-3">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
                   <div
-                    className={`grid size-8 shrink-0 place-items-center rounded-xl border transition duration-150 ${
+                    className={`grid size-9 shrink-0 place-items-center rounded-xl border mt-0.5 transition duration-150 ${
                       isArchived
                         ? 'border-border bg-muted/60 text-foreground'
                         : 'border-border/60 bg-muted/30 text-muted-foreground'
@@ -289,22 +289,22 @@ export function AccountFormSheet({
                   >
                     <Archive className="size-4" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs font-semibold text-foreground sm:text-sm">
                         Mark account as closed
                       </span>
                       {isArchived && (
-                        <span className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          Archived
+                        <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                          Closed
                         </span>
                       )}
                     </div>
-                    <span className="block text-xs leading-snug text-muted-foreground">
+                    <p className="text-xs leading-relaxed text-muted-foreground">
                       {isBalanceDirty
                         ? 'Closed accounts cannot change balance. Save the balance correction first.'
                         : 'Closed accounts stay in history but are hidden from new entries.'}
-                    </span>
+                    </p>
                   </div>
                 </div>
                 <Checkbox
@@ -312,19 +312,22 @@ export function AccountFormSheet({
                   onChange={event => setIsArchived(event.target.checked)}
                   disabled={isBalanceDirty}
                   aria-label="Mark account as closed"
+                  className="mt-1"
                 />
               </label>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Growth Note Callout */}
-        <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
-          <Info className="size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-          <p>
-            <span className="font-semibold text-foreground">Growth is kept separate.</span> Investment deposits and withdrawals remain the source of truth.
-          </p>
-        </div>
+        {/* Growth Note Callout - only rendered for Growth bucket */}
+        {bucket === 'Growth' && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-border/40 bg-muted/10 px-3 py-2.5 text-xs text-muted-foreground">
+            <Info className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
+            <p className="leading-relaxed">
+              <span className="font-semibold text-foreground">Growth is kept separate.</span> Investment deposits and withdrawals remain the source of truth.
+            </p>
+          </div>
+        )}
       </form>
     </BottomSheet>
   )

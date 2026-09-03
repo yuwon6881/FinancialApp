@@ -259,7 +259,7 @@ export function TaxReliefOverview({
         </div>
         {selectedYear !== undefined && (
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             type="button"
             disabled={hideSensitive}
@@ -296,7 +296,7 @@ export function TaxReliefOverview({
               const selected = selectedReliefCategories.includes(category.id)
               return (
                 <Button
-                  variant="unstyled"
+                  variant="tertiary"
                   key={category.id}
                   type="button"
                   onClick={() => onToggleReliefCategory(category.id)}

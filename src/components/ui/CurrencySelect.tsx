@@ -154,7 +154,7 @@ export function CurrencySelect({
         }
       }}
     >
-      <Button variant="unstyled"
+      <Button variant="tertiary"
         ref={triggerRef}
         type="button"
         id={accessibleProps.id}
@@ -217,11 +217,11 @@ export function CurrencySelect({
           {loadFailed && !catalog.length && (
             <div className="p-3 text-xs text-amber-600 dark:text-amber-300">
               <p className="flex items-start gap-2"><AlertCircle className="mt-0.5 size-3.5 shrink-0" /> Currency list unavailable. Reconnect and try again.</p>
-              <Button variant="unstyled" type="button" onClick={() => load()} className="mt-2 font-bold text-blue-600 dark:text-blue-400">Retry</Button>
+              <Button variant="tertiary" type="button" onClick={() => load()} className="mt-2 font-bold text-blue-600 dark:text-blue-400">Retry</Button>
             </div>
           )}
           {results.map((item, index) => (
-            <Button variant="unstyled"
+            <Button variant="tertiary"
               key={item.code}
               id={`${listboxId}-option-${index}`}
               type="button"

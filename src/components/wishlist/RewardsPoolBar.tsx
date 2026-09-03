@@ -109,11 +109,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
           </div>
         </div>
         <div className="flex items-center justify-end gap-2 sm:flex-wrap">
-          {showFundAction && (cycleDone && !isFunding ? (
-            <span className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-500">
-              <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Funded this cycle
-            </span>
-          ) : (
+          {showFundAction && !cycleDone && (
             <Button
               size="sm"
               onClick={onFundCycle}
@@ -124,7 +120,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
               {isFunding ? <Loader2 className="size-3 animate-spin" /> : <CommitmentIcon className="size-3" aria-hidden />}
               {isFunding ? 'Setting aside…' : <>Set aside {formatSensitive(fundableNow)}</>}
             </Button>
-          ))}
+          )}
           {onViewRewardsHistory && (
             <OverflowMenu
               entityLabel={`your ${bucketLabel.toLowerCase()} pool`}

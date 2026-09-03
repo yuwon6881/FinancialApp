@@ -92,7 +92,7 @@ export function AccountRow({
           <div className="flex shrink-0 items-center gap-1.5">
             <Button
               type="button"
-              variant="ghost"
+              variant="tertiary"
               size="sm"
               onClick={() => onEdit(account)}
               disabled={disabled || isDeleting}
@@ -102,7 +102,7 @@ export function AccountRow({
             </Button>
             <Button
               type="button"
-              variant="danger"
+              variant="destructive"
               size="sm"
               onClick={() => onDelete(account.id)}
               disabled={disabled || isDeleting}

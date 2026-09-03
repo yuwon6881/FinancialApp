@@ -388,7 +388,7 @@ function App() {
           >
             <div className="flex items-center justify-center gap-2">
             <span className="select-none">{financial.error}</span>
-            <Button variant="unstyled"
+            <Button variant="tertiary"
               type="button"
               onClick={() => financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)}
               disabled={financial.isBackgroundSyncing}

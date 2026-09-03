@@ -70,7 +70,7 @@ export function PerformanceBars({ portfolio, masked, onSelectHolding }: {
           return (
             <div key={`${holding.accountId}-${holding.instrumentId}`} className="grid grid-cols-[64px_minmax(0,1fr)_auto] items-center gap-3 text-xs">
               <Button
-                variant="unstyled"
+                variant="tertiary"
                 onClick={() => onSelectHolding(holding)}
                 className="min-w-0 cursor-pointer truncate text-left font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-accent-ink"
               >

@@ -267,7 +267,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                     {newPassword.length > 0 && (
                       <Button
                         type="button"
-                        variant="unstyled"
+                        variant="tertiary"
                         size="icon"
                         onClick={() => setShowPassword(p => !p)}
                         className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
@@ -318,7 +318,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
 
             <Button
               type="button"
-              variant="unstyled"
+              variant="tertiary"
               onClick={onBackToLogin}
               className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
             >

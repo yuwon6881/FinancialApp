@@ -33,8 +33,8 @@ export const AccountTransferFields: React.FC<AccountTransferFieldsProps> = ({
         <div className="sm:col-span-2 flex items-center justify-between pt-1">
           <span className="text-xs font-semibold text-muted-foreground">Account Transfer</span>
           <Button
-            variant="outline"
-            size="xs"
+            variant="secondary"
+            size="sm"
             type="button"
             onClick={() => {
               const temp = state.accountId
@@ -99,8 +99,8 @@ export const AccountTransferFields: React.FC<AccountTransferFieldsProps> = ({
       <div className="sm:col-span-2 flex items-center justify-between pt-1">
         <span className="text-xs font-semibold text-muted-foreground">Transfer Route</span>
         <Button
-          variant="outline"
-          size="xs"
+          variant="secondary"
+          size="sm"
           type="button"
           onClick={onSwapTransfer}
           title="Swap transfer source and destination"

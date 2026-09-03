@@ -19,6 +19,8 @@ import { useHighlightedElement } from './ui/useHighlightedElement'
 import { buildBillTimelineModel } from '../lib/billTimeline'
 import { CycleInsightsCard } from './reports/CycleInsightsCard'
 import { isReportableOutflow } from '../lib/transactionReportSemantics'
+import { PageHeader } from './ui/PageHeader'
+import { InteractiveCard } from './ui/InteractiveCard'
 
 interface ReportsViewProps {
   dashboardData: DashboardData | null
@@ -130,49 +132,34 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
   return (
     <div className="min-w-0 space-y-6 overflow-x-hidden">
-      <header className="app-panel relative z-40 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-blue-500/15 bg-blue-500/10 text-blue-500">
-              <BarChart3 className="size-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">Reports</h2>
-                {onExplainWithAi && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    type="button"
-                    onClick={() => onExplainWithAi(`${view.activeSettings.selectedYear}-${String(selectedMonthIndex).padStart(2, '0')}`)}
-                    aria-label="Explain this cycle with Ask AI"
-                    className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5"
-                  >
-                    <Sparkles className="size-3.5" />
-                    <span className="hidden sm:inline">Explain this cycle</span>
-                  </Button>
-                )}
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">Trends, plan performance, and activity for {view.cycleLabel}.</p>
-            </div>
-          </div>
-          {/* The cycle pickers live in the shared switcher above every cycle-dependent page. */}
-          <div className="flex w-full min-w-0 flex-nowrap items-center justify-end gap-1.5 sm:gap-2 lg:w-auto">
-            {selectedCycleEnded && onViewCycleSummary && (
-              <Button variant="unstyled"
-                type="button"
-                onClick={() => onViewCycleSummary(selectedMonthIndex, view.activeSettings.selectedYear)}
-                aria-label="View cycle summary"
-                title="View cycle summary"
-                className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/10 px-2.5 text-blue-500 transition hover:bg-blue-500/20 cursor-pointer sm:min-h-0 sm:min-w-0 sm:gap-1.5 sm:px-3 sm:py-2"
-              >
-                <ChartNoAxesCombined className="size-3.5" />
-                <span className="hidden whitespace-nowrap text-xs font-bold sm:inline">Summary</span>
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Reports"
+        description={<>Trends, plan performance, and activity for {view.cycleLabel}.</>}
+        icon={<span className="flex size-10 items-center justify-center rounded-xl border border-blue-500/15 bg-blue-500/10 text-blue-500"><BarChart3 className="size-5" /></span>}
+        titleActions={onExplainWithAi && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onExplainWithAi(`${view.activeSettings.selectedYear}-${String(selectedMonthIndex).padStart(2, '0')}`)}
+            aria-label="Explain this cycle with Ask AI"
+            className="size-11 shrink-0 p-0 sm:size-auto sm:px-3"
+          >
+            <Sparkles className="size-3.5" />
+            <span className="hidden sm:inline">Explain this cycle</span>
+          </Button>
+        )}
+        actions={selectedCycleEnded && onViewCycleSummary && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onViewCycleSummary(selectedMonthIndex, view.activeSettings.selectedYear)}
+            aria-label="View cycle summary"
+          >
+            <ChartNoAxesCombined className="size-3.5" />
+            Summary
+          </Button>
+        )}
+      />
 
       {dashboardData?.cycleSummaryInsights && (
         <CycleInsightsCard
@@ -204,10 +191,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         onNavigateToLedger={onNavigateToLedger}
       />
 
-      <Button variant="unstyled"
-        type="button"
+      <InteractiveCard
         onClick={() => onNavigate('investments')}
-        className="interactive-card app-panel group flex w-full flex-col gap-3 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4 text-left sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-5"
+        className="group flex flex-col gap-3 border-violet-500/20 bg-violet-500/5 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-5"
       >
         <span className="flex min-w-0 items-center gap-3 sm:gap-4">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/12 text-violet-500 transition-transform duration-200 group-hover:scale-105 sm:size-11">
@@ -227,7 +213,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </span>
           <ChevronRight className="size-4 text-violet-500 transition-transform duration-200 group-hover:translate-x-1" />
         </span>
-      </Button>
+      </InteractiveCard>
 
       {/* Cycle inflow / outflow summary — moved here from the Today tab so the
           dashboard stays focused on daily status while Reports holds analysis. */}

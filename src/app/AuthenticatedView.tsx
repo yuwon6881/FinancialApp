@@ -28,6 +28,7 @@ import type { AiInvocationContext } from '../lib/api/ai'
 import { AuthenticatedTabContent } from './AuthenticatedTabContent'
 
 const CycleSkeleton = lazy(() => import('../components/ui/CycleSkeleton').then(module => ({ default: module.CycleSkeleton })))
+const UiSpecimen = lazy(() => import('../components/ui/UiSpecimen').then(module => ({ default: module.UiSpecimen })))
 
 const getPageSkeletonVariant = (tab: AppTab): PageSkeletonVariant => tab
 
@@ -112,6 +113,9 @@ export function AuthenticatedView({
   alert,
   onExplainWithAi,
 }: AuthenticatedViewProps) {
+  const showUiSpecimen = typeof navigator !== 'undefined'
+    && navigator.webdriver
+    && window.location.pathname === '/ui-specimen'
   const handleOutsideCycleSave = (date: string) => {
     const cycleDay = financial.optimisticDashboardData?.setting?.cycleDay || 28
     const placement = getTransactionCyclePlacement(date, cycleDay)
@@ -202,7 +206,7 @@ export function AuthenticatedView({
           <ErrorBoundary variant="inline" resetKey={prefs.activeTab}>
             <Suspense fallback={<ContentViewFallback tab={prefs.activeTab} />}>
               <LaunchReady>
-                <AuthenticatedTabContent
+                {showUiSpecimen ? <UiSpecimen /> : <AuthenticatedTabContent
                   prefs={prefs}
                   financial={financial}
                   nav={nav}
@@ -243,7 +247,7 @@ export function AuthenticatedView({
                   draftCount={draftCount}
                   handleOutsideCycleSave={handleOutsideCycleSave}
                   openLinkedVaultTransaction={openLinkedVaultTransaction}
-                />
+                />}
               </LaunchReady>
             </Suspense>
           </ErrorBoundary>

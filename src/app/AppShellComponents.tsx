@@ -72,7 +72,7 @@ export const MobileFabTrigger = ({
 }) => visible ? (
   <Button
     ref={triggerRef}
-    variant="unstyled"
+    variant="tertiary"
     type="button"
     aria-label={isOpen ? 'Close Menu' : 'Open Menu'}
     title={isOpen ? 'Close Menu' : 'Open Menu'}

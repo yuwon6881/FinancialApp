@@ -88,7 +88,7 @@ export function CommitmentsRewardsSheets(props: Props) {
               </p>
             )}
             <ModalActions className="pt-4">
-              <Button variant="outline" className="rounded-xl" onClick={() => props.setPurchasingItem(null)}>Cancel</Button>
+              <Button variant="secondary" className="rounded-xl" onClick={() => props.setPurchasingItem(null)}>Cancel</Button>
               <Button variant="primary" className="rounded-xl font-bold shadow-md" onClick={props.onConfirmPurchase} disabled={props.hideSensitive || props.isOffline}>Claim &amp; Log to Ledger</Button>
             </ModalActions>
           </div>
@@ -116,7 +116,7 @@ export function CommitmentsRewardsSheets(props: Props) {
               />
             </FormField>
             <ModalActions className="pt-2">
-              <Button variant="outline" className="rounded-xl" onClick={() => props.setCompletingGoal(null)}>Cancel</Button>
+              <Button variant="secondary" className="rounded-xl" onClick={() => props.setCompletingGoal(null)}>Cancel</Button>
               <Button variant="primary" className="rounded-xl font-bold shadow-md" onClick={props.onConfirmCompletion} disabled={props.hideSensitive || !props.completionAccountId}>
                 Complete &amp; Log to Ledger
               </Button>

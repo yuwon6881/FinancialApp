@@ -160,7 +160,7 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
       maxWidthClassName="max-w-xl"
       footer={(
         <ModalActions>
-          <Button variant="outline" type="button" onClick={onClose} className="rounded-xl">Cancel</Button>
+          <Button variant="secondary" type="button" onClick={onClose} className="rounded-xl">Cancel</Button>
           <Button variant="primary" type="submit" form="loan-form" className="rounded-xl shadow-md">{editingLoan ? 'Save changes' : 'Add loan'}</Button>
         </ModalActions>
       )}

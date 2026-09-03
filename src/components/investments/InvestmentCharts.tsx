@@ -56,7 +56,7 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
             <Button
               key={item.value}
               type="button"
-              variant="unstyled"
+              variant="tertiary"
               onClick={() => onRangeChange(item.value)}
               className={`cursor-pointer whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${range === item.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
               aria-pressed={range === item.value}

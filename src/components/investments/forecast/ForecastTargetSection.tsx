@@ -45,7 +45,7 @@ export function ForecastTargetSection({
           <p className="text-xs font-bold text-foreground">Want to aim for a number?</p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Add a target to see the chance of reaching it and the required monthly amount.</p>
         </div>
-        <Button variant="outline" size="sm" disabled={masked} onClick={onAdd} className="shrink-0 self-end sm:self-auto">Add a target</Button>
+        <Button variant="secondary" size="sm" disabled={masked} onClick={onAdd} className="shrink-0 self-end sm:self-auto">Add a target</Button>
       </div>
     )
   }
@@ -88,7 +88,7 @@ export function ForecastTargetSection({
               <strong className="block text-xl text-foreground">{isCalculating || !hasRequired ? 'Calculating…' : money(requiredContribution)}</strong>
               <span className="text-xs text-muted-foreground">Middle estimate · {hasRequired ? money(requiredContribution * 12) : '—'} a year</span>
             </div>
-            <Button variant="outline" size="sm" disabled={masked || !canUseRequired} onClick={onUseRequiredAmount} className="self-end sm:self-auto">
+            <Button variant="secondary" size="sm" disabled={masked || !canUseRequired} onClick={onUseRequiredAmount} className="self-end sm:self-auto">
               {requiredContribution !== undefined && requiredContribution > maxMonthlyContribution
                 ? 'Above slider limit'
                 : 'Use this amount'}
@@ -98,7 +98,7 @@ export function ForecastTargetSection({
       </div>
 
       <div className="flex justify-end">
-        <Button variant="ghost" size="sm" onClick={onRemove}>Remove target</Button>
+        <Button variant="tertiary" size="sm" onClick={onRemove}>Remove target</Button>
       </div>
     </div>
   )

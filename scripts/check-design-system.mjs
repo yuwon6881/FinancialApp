@@ -13,53 +13,8 @@ const CONTROL_IMPLEMENTATIONS = new Set([
   'src/components/ui/RangeInput.tsx',
 ])
 
-// Existing composite controls are an explicit migration baseline. Counts may go
-// down as composites adopt Button, but may never increase and new files cannot
-// introduce raw action buttons.
-const RAW_BUTTON_BASELINE = {
-  'src/TopNav.tsx': 8,
-  'src/App.tsx': 1,
-  'src/components/AiAssistantPanel.tsx': 5,
-  'src/components/BillTimeline.tsx': 5,
-  'src/components/CycleSummaryModal.tsx': 2,
-  'src/components/DashboardView.tsx': 5,
-  'src/components/DocumentsView.tsx': 6,
-  'src/components/dashboard/CarryoverLedgerTable.tsx': 1,
-  'src/components/DraftStagingView.tsx': 8,
-  'src/components/documents/DocumentUploadSheet.tsx': 4,
-  'src/components/dashboard/CategoryLimitPerformance.tsx': 2,
-  'src/components/FailedSyncModal.tsx': 3,
-  'src/components/dashboard/DashboardHeader.tsx': 1,
-  'src/components/dashboard/TrendLineChart.tsx': 1,
-  'src/components/dashboard/SubscriptionsTimelineCard.tsx': 1,
-  'src/components/documents/view/DocumentList.tsx': 0,
-  'src/components/investments/InvestmentPlanPanel.tsx': 2,
-  'src/components/LedgerView.tsx': 1,
-  'src/components/InvestmentsView.tsx': 7,
-  'src/components/ledger/LedgerExportModal.tsx': 3,
-  'src/components/ledger/LedgerFilterBar.tsx': 9,
-  'src/components/ledger/LedgerPagination.tsx': 5,
-  'src/components/ledger/LedgerRows.tsx': 2,
-  'src/components/ledger/LedgerDeleteModals.tsx': 3,
-  'src/components/ledger/ReceiptSplitSheet.tsx': 7,
-  'src/components/ledger/view/LedgerToolbar.tsx': 1,
-  'src/components/dashboard/DoughnutChart.tsx': 1,
-  'src/components/ledger/transaction-form/ReceiptScanPicker.tsx': 8,
-  'src/components/PendingSubscriptionsModal.tsx': 4,
-  'src/components/ledger/transaction-form/ReceiptScanStatus.tsx': 2,
-  'src/components/ledger/transaction-form/TransactionDocumentsField.tsx': 4,
-  'src/components/ledger/transaction-form/TransactionFormFields.tsx': 3,
-  'src/components/ledger/transaction-form/TransactionTypeFields.tsx': 3,
-  'src/components/recurring/RecurringFilterBar.tsx': 3,
-  'src/components/recurring/ReminderControls.tsx': 4,
-  'src/components/SettingsView.tsx': 8,
-  'src/components/ReportsView.tsx': 2,
-  'src/components/settings/ActiveDevicesSection.tsx': 3,
-  'src/components/WishlistView.tsx': 6,
-  'src/components/settings/InvestmentPlanSection.tsx': 3,
-  'src/components/settings/FingerprintSection.tsx': 1,
-  'src/components/settings/ManageableNameList.tsx': 3,
-}
+const BUTTON_VARIANTS = new Set(['primary', 'secondary', 'tertiary', 'destructive'])
+const BUTTON_SIZES = new Set(['sm', 'md', 'lg', 'icon'])
 
 // A <label> forwards its activation to the first *labelable* descendant, and `button` is
 // labelable. So a button standing ahead of the real control inside a label silently steals every
@@ -119,8 +74,6 @@ for (const file of allSourceFiles(SRC)) {
     true,
     file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   )
-  let rawButtonCount = 0
-
   if (/text-\[[\d.]+px\]/.test(sourceText)) {
     errors.push(`${fileName}:1 Arbitrary pixel typography is not allowed; use the shared type scale.`)
   }
@@ -159,7 +112,19 @@ for (const file of allSourceFiles(SRC)) {
       if (tag === 'form' && !attribute(node, 'noValidate')) {
         report(file, sourceFile, node, 'Submit forms must use noValidate and application validation.')
       }
-      if (tag === 'button') rawButtonCount += 1
+      if (tag === 'button' && !fileName.startsWith('src/components/ui/')) {
+        report(file, sourceFile, node, 'Use Button, IconButton, or InteractiveCard instead of a raw feature button.')
+      }
+      if (tag === 'Button') {
+        const variant = stringAttributeValue(node, 'variant')
+        const size = stringAttributeValue(node, 'size')
+        if (variant && !BUTTON_VARIANTS.has(variant)) {
+          report(file, sourceFile, node, `Unsupported Button variant "${variant}"; use the canonical action hierarchy.`)
+        }
+        if (size && !BUTTON_SIZES.has(size)) {
+          report(file, sourceFile, node, `Unsupported Button size "${size}"; use the shared control scale.`)
+        }
+      }
 
       if ((tag === 'button' || tag === 'Button') && !LABEL_WRAPPED_BUTTON_EXCEPTIONS.has(fileName)) {
         for (let parent = node.parent; parent; parent = parent.parent) {
@@ -182,13 +147,6 @@ for (const file of allSourceFiles(SRC)) {
     ts.forEachChild(node, visit)
   }
   visit(sourceFile)
-
-  if (!fileName.startsWith('src/components/ui/')) {
-    const maximum = RAW_BUTTON_BASELINE[fileName] ?? 0
-    if (rawButtonCount > maximum) {
-      errors.push(`${fileName}:1 Raw action buttons increased from ${maximum} to ${rawButtonCount}; use Button or an approved composite.`)
-    }
-  }
 
   let themeText = sourceText
   for (const exception of THEME_EXCEPTIONS.get(fileName) ?? []) {

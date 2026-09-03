@@ -137,7 +137,7 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
         <span className="min-w-0 break-words">{label}</span>
       </div>
       {(hasAnyFilter || hasScopedRange) && (
-        <Button variant="unstyled"
+        <Button variant="tertiary"
           onClick={onResetFilters}
           className="flex shrink-0 items-center gap-1 whitespace-nowrap text-blue-500 hover:text-blue-500 text-xs font-semibold transition cursor-pointer"
         >

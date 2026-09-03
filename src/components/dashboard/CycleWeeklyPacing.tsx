@@ -101,7 +101,7 @@ export const CycleWeeklyPacing: React.FC<CycleWeeklyPacingProps> = ({
             return (
               <Button
                 key={week.weekNumber}
-                variant="unstyled"
+                variant="tertiary"
                 type="button"
                 disabled={isDisabled}
                 onClick={() => onSelectWeek?.(week, mode)}

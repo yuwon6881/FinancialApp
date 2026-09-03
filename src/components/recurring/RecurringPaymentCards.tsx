@@ -100,7 +100,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                     </span>
                     {rp.linkedLoanId && (
                       <Button
-                        variant="unstyled"
+                        variant="tertiary"
                         type="button"
                         onClick={() => onNavigateToLoan?.(rp.linkedLoanId!)}
                         className="inline-flex items-center justify-center h-5 box-border gap-1 rounded border border-accent-ink/25 bg-accent/30 hover:bg-accent/50 text-accent-ink px-1.5 py-0 text-xs font-semibold leading-none transition cursor-pointer shrink-0"
@@ -191,7 +191,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
               <div className="mt-4 flex items-center justify-between border-t border-border/30 pt-4 gap-2">
                 {isEligibleForPayEarly(rp) ? (
                   <Button
-                    variant="ghost"
+                    variant="tertiary"
                     onClick={() => onRequestPayEarly?.(rp.id)}
                     disabled={isBusy || hideSensitive}
                     aria-label={`Pay Early for ${rp.name}`}
@@ -202,7 +202,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                 ) : <span />}
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="ghost"
+                    variant="tertiary"
                     onClick={() => onEditPayment(rp)}
                     disabled={isBusy || hideSensitive}
                     aria-label={`Edit ${rp.name}`}
@@ -211,7 +211,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                     <Edit className="size-3.5 shrink-0" /> <span className="max-[420px]:hidden">Edit</span>
                   </Button>
                   <Button
-                    variant="danger"
+                    variant="destructive"
                     onClick={() => { if (!hideSensitive) onDeletePayment(rp.id) }}
                     disabled={isBusy || hideSensitive || Boolean(rp.linkedLoanId)}
                     aria-label={`Delete ${rp.name}`}

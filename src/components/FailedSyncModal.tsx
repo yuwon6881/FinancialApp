@@ -353,7 +353,7 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
                   </div>
                 )}
                 {op.needsAccountReview && onOpenAccountReview && (
-                  <Button variant="outline" size="sm" onClick={onOpenAccountReview} className="w-full">
+                  <Button variant="secondary" size="sm" onClick={onOpenAccountReview} className="w-full">
                     Review account setup
                   </Button>
                 )}
@@ -364,7 +364,7 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
                     </Button>
                   )}
                   <Button
-                    variant="danger"
+                    variant="destructive"
                     size="sm"
                     onClick={() => onDiscard(op.id)}
                   >

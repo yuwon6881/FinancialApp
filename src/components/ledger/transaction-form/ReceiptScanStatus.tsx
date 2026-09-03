@@ -38,7 +38,7 @@ export function ReceiptScanStatus({
               {successMessage}
             </div>
             <Button
-              variant="unstyled"
+              variant="tertiary"
               size="icon"
               type="button"
               onClick={() => setShowScanBanner(false)}
@@ -67,7 +67,7 @@ export function ReceiptScanStatus({
               <span className="break-words">{scanError}</span>
             </div>
             <Button
-              variant="unstyled"
+              variant="tertiary"
               size="icon"
               type="button"
               onClick={() => setScanError(null)}

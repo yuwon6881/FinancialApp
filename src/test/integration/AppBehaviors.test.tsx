@@ -1,3 +1,4 @@
+import { Button } from '../../components/ui/Button'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react'
 import App from '@/App'
@@ -139,7 +140,7 @@ vi.mock('@/lib/api', async () => {
 vi.mock('@/components/LoginView', () => ({
   LoginView: ({ onLoginSuccess }: any) => (
     <div data-testid="login-view">
-      <button onClick={() => onLoginSuccess('test-token-abc', 'alice')}>Log In</button>
+      <Button variant="tertiary" onClick={() => onLoginSuccess('test-token-abc', 'alice')}>Log In</Button>
     </div>
   )
 }))

@@ -38,7 +38,7 @@ export function LedgerExportModal({
       footer={
         <ModalActions>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={onClose}
             disabled={exportIsFetching}
             className="rounded-xl px-4 py-2 text-xs font-semibold"
@@ -46,7 +46,7 @@ export function LedgerExportModal({
             Cancel
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={onExportPage}
             disabled={exportIsFetching}
             className="rounded-xl px-4 py-2 text-xs font-semibold"

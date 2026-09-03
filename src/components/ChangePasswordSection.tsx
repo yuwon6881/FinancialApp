@@ -72,7 +72,7 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
   return (
     <Panel as="section" padding="none" className="overflow-hidden shadow-sm">
       <Button
-        variant="unstyled"
+        variant="tertiary"
         type="button"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}

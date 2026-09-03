@@ -62,7 +62,7 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
     <>
       <Button
         ref={triggerRef}
-        variant="unstyled"
+        variant="tertiary"
         onClick={() => setIsOpen(true)}
         aria-expanded={isOpen}
         className="app-panel group flex w-full cursor-pointer items-center justify-between rounded-2xl border border-border/60 bg-card/92 p-5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"

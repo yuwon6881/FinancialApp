@@ -148,7 +148,7 @@ export function PayEarlySheet({
             {/* Full vs Partial switcher */}
             <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted/60 p-1 text-xs font-semibold">
               <Button
-                variant="unstyled"
+                variant="tertiary"
                 type="button"
                 onClick={() => { setMode('full'); setError(null) }}
                 className={`rounded-lg py-2 transition-all cursor-pointer text-center ${
@@ -160,7 +160,7 @@ export function PayEarlySheet({
                 Pay in full
               </Button>
               <Button
-                variant="unstyled"
+                variant="tertiary"
                 type="button"
                 onClick={() => { setMode('partial'); setError(null) }}
                 className={`rounded-lg py-2 transition-all cursor-pointer text-center ${
@@ -264,7 +264,7 @@ export function PayEarlySheet({
             )}
 
             <div className="pt-2 flex items-center justify-end gap-2">
-              <Button variant="ghost" type="button" onClick={onClose} disabled={submitting}>
+              <Button variant="tertiary" type="button" onClick={onClose} disabled={submitting}>
                 Cancel
               </Button>
               <Button

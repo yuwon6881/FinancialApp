@@ -127,7 +127,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
           className="h-9 w-full rounded-lg border border-border/70 bg-background py-2 pl-9 pr-9 text-xs transition placeholder:text-muted-foreground hover:border-border focus:border-ring/70 focus:outline-none focus:ring-2 focus:ring-ring/15"
         />
         {search && (
-          <Button variant="unstyled"
+          <Button variant="tertiary"
             type="button"
             onClick={() => setSearch('')}
             aria-label={`Clear ${lowerItemLabel} search`}
@@ -144,7 +144,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
         ) : <div />}
 
         <Button
-          variant={isAddOpen ? 'outline' : 'primary'}
+          variant={isAddOpen ? 'secondary' : 'primary'}
           size="sm"
           type="button"
           onClick={onAddClick ?? toggleAdd}
@@ -183,7 +183,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
                   maxLength={40}
                   className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
                 />
-                <Button variant="unstyled"
+                <Button variant="tertiary"
                   type="button"
                   onClick={() => void add()}
                   disabled={!trimmedName || duplicate || Boolean(validationError) || disabled || busyId !== null}
@@ -238,7 +238,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
               <div className={`flex shrink-0 items-center gap-2 ${stackActionsOnMobile ? 'self-end sm:self-auto' : ''}`}>
                 {renderStatus?.(item)}
                 {onEdit && !itemReadOnly && (
-                  <Button variant="unstyled"
+                  <Button variant="tertiary"
                     type="button"
                     disabled={disabled || busyId !== null}
                     onClick={() => onEdit(item)}
@@ -258,7 +258,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
                     <Lock className="size-3.5" aria-hidden="true" />
                   </span>
                 ) : (
-                  <Button variant="unstyled"
+                  <Button variant="tertiary"
                     type="button"
                     disabled={disabled || busyId !== null}
                     onClick={async () => {

@@ -81,7 +81,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
 
   return (
     <section className="mt-5 overflow-hidden rounded-xl border border-border/60 bg-muted/20">
-      <Button type="button" variant="unstyled" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex min-h-14 w-full items-center justify-between gap-3 rounded-none px-4 py-3 text-left transition hover:bg-muted/30">
+      <Button type="button" variant="tertiary" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex min-h-14 w-full items-center justify-between gap-3 rounded-none px-4 py-3 text-left transition hover:bg-muted/30">
         <span className="flex min-w-0 items-center gap-2.5"><span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/10 text-blue-500"><WalletCards className="size-4" /></span><span><strong className="block text-xs text-foreground">Plan money in or out</strong><span className="block text-xs text-muted-foreground">See the app-currency plan and each ETF’s trading-currency equivalent.</span></span></span>
         <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
       </Button>
@@ -92,7 +92,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
             <Button
               key={value}
               type="button"
-              variant={mode === value ? 'secondary' : 'ghost'}
+              variant={mode === value ? 'secondary' : 'tertiary'}
               size="sm"
               aria-pressed={mode === value}
               onClick={() => { setMode(value); setAmountText('') }}

@@ -101,7 +101,8 @@ export function StabilityRecoveryExceptionCard({
               <InfoHint
                 label="How putting money back is worked out"
                 text="Only money you mark as needing to go back creates this reminder. Your normal salary share does not count as putting it back; reaching your target clears it."
-                className="inline-flex align-middle ml-0.5"
+                inline
+                className="ml-1"
               />
             </h3>
           </div>

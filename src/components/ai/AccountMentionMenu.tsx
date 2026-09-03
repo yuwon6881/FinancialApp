@@ -34,7 +34,7 @@ export const AccountMentionMenu: React.FC<AccountMentionMenuProps> = ({
     {accounts.map((account, index) => (
       <li key={account.id} role="none">
         <Button
-          variant="unstyled"
+          variant="tertiary"
           type="button"
           id={`ai-account-mention-${account.id}`}
           role="option"

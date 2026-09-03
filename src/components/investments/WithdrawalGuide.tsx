@@ -72,7 +72,7 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
           />
         </h3>
         <Button
-          variant="ghost"
+          variant="tertiary"
           size="sm"
           aria-expanded={open}
           onClick={e => { e.stopPropagation(); handleToggle() }}

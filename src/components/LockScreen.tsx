@@ -180,7 +180,7 @@ export function LockScreen({
         {fingerprintAvailable && (
           <Button
             type="button"
-            variant="successGhost"
+            variant="secondary"
             size="lg"
             onClick={handleFingerprintUnlock}
             disabled={fingerprintVerifying || passwordVerifying}
@@ -257,7 +257,7 @@ export function LockScreen({
           </Button>
         </form>
         <Button
-          variant="unstyled"
+          variant="tertiary"
           onClick={onSignOut}
           className="text-xs text-muted-foreground hover:text-foreground transition cursor-pointer underline"
         >

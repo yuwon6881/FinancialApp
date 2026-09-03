@@ -61,7 +61,7 @@ export function LedgerBulkSelectionLayer({
         itemLabel="transactions"
         actions={bulk.selectedCount > 0 && (
           <div className="flex gap-2"><Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             type="button"
             disabled={listProps.hideSensitive || bulk.selectedTransactions.some(transaction => transactionMoveIneligibility(transaction) != null)}

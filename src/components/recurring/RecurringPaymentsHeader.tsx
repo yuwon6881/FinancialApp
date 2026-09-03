@@ -1,12 +1,12 @@
 import React from 'react'
 import { Plus, X } from 'lucide-react'
 import { Button } from '../ui/Button'
-import { Card } from '../ui/Card'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
 import { BottomSheet } from '../ui/BottomSheet'
 import { useIsCompact } from '../../lib/breakpoints'
 import type { Loan, RecurringPayment } from '../../types'
 import { StatDistributionBreakdown, type DistributionBreakdownMode } from './StatDistributionBreakdown'
+import { PageHeader } from '../ui/PageHeader'
 
 interface RecurringPaymentsHeaderProps {
   activeView: 'recurring' | 'loans'
@@ -118,7 +118,7 @@ const InteractiveStatTile: React.FC<{
   return (
     <div className={`flex h-full min-w-0 flex-col overflow-hidden ${className}`}>
       <Button
-        variant="unstyled"
+        variant="tertiary"
         ref={anchorRef}
         type="button"
         aria-haspopup="dialog"
@@ -226,14 +226,21 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
 
   return (
     <div className="w-full">
-      <Card className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="min-w-0 w-full lg:flex-1">
-          <h2 id={isLoansView ? 'loans-heading' : 'recurring-payments-heading'} className="text-xl font-bold text-foreground">
-            {isLoansView ? 'Loans' : 'Recurring Bills & Subscriptions'}
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {isLoansView ? 'Track what is still owed from linked bill history.' : 'Manage your recurring bills.'}
-          </p>
+      <PageHeader
+        titleId={isLoansView ? 'loans-heading' : 'recurring-payments-heading'}
+        title={isLoansView ? 'Loans' : 'Recurring Bills & Subscriptions'}
+        description={isLoansView ? 'Track what is still owed from linked bill history.' : 'Manage your recurring bills.'}
+        actions={isLoansView ? (
+          <Button variant="primary" size="lg" onClick={onAddLoan} disabled={hideSensitive || !onAddLoan} title={hideSensitive ? 'Unhide balances to add a loan' : undefined}>
+            <Plus className="size-4" />New Loan
+          </Button>
+        ) : (
+          <Button variant="primary" size="lg" onClick={onToggleForm} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a subscription' : undefined}>
+            {showAddForm ? <X className="size-4" /> : <Plus className="size-4" />}
+            {showAddForm ? 'Cancel' : 'New Subscription'}
+          </Button>
+        )}
+      >
           <div className="mt-4 grid min-w-0 grid-cols-2 gap-x-2 gap-y-3 sm:grid-cols-3 sm:gap-y-0">
             {isLoansView ? (
               <>
@@ -289,33 +296,7 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
               </>
             )}
           </div>
-        </div>
-        {isLoansView ? (
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={onAddLoan}
-            disabled={hideSensitive || !onAddLoan}
-            title={hideSensitive ? 'Unhide balances to add a loan' : undefined}
-            className="rounded-xl shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 duration-200 self-start md:self-center"
-          >
-            <Plus className="size-4" />
-            New Loan
-          </Button>
-        ) : (
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={onToggleForm}
-            disabled={hideSensitive}
-            title={hideSensitive ? 'Unhide balances to add a subscription' : undefined}
-            className="rounded-xl shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 duration-200 self-start md:self-center"
-          >
-            {showAddForm ? <X className="size-4" /> : <Plus className="size-4" />}
-            {showAddForm ? 'Cancel' : 'New Subscription'}
-          </Button>
-        )}
-      </Card>
+      </PageHeader>
     </div>
   )
 }

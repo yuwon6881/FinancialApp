@@ -152,7 +152,7 @@ export function LoansSection({
       ) : loadStatus === 'error' && loans.length === 0 ? (
         <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-5 text-center text-xs text-destructive">
           <p className="font-semibold">{navigator.onLine === false ? 'Loans are not available offline until loaded once.' : 'Could not load loans.'}</p>
-          <Button variant="ghost" size="sm" className="mt-3" onClick={() => void onLoad()}>Retry</Button>
+          <Button variant="tertiary" size="sm" className="mt-3" onClick={() => void onLoad()}>Retry</Button>
         </div>
       ) : loans.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border/70 bg-card/40 p-6 text-center sm:p-8">

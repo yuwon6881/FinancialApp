@@ -322,7 +322,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   <p className="text-sm font-bold text-foreground truncate">{username}</p>
                 </div>
               </div>
-              <Button variant="outline" size="sm" onClick={() => { setLoginStep(1); setPassword(''); setError(null) }} className="shrink-0 text-muted-foreground shadow-sm">
+              <Button variant="secondary" size="sm" onClick={() => { setLoginStep(1); setPassword(''); setError(null) }} className="shrink-0 text-muted-foreground shadow-sm">
                 Change
               </Button>
             </div>
@@ -357,7 +357,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               {password.length > 0 && (
                 <Button
                   type="button"
-                  variant="unstyled"
+                  variant="tertiary"
                   size="icon"
                   onClick={() => setShowPassword(p => !p)}
                   className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
@@ -371,7 +371,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 <div className="flex justify-end mt-1">
                   <Button
                     type="button"
-                    variant="unstyled"
+                    variant="tertiary"
                     onClick={() => setForgotPassword(true)}
                     className="text-xs font-semibold text-blue-500 hover:text-blue-600 focus:outline-none focus:underline"
                   >
@@ -435,7 +435,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         {isRegistered && registrationOpen && loginStep === 1 && (
           <Button
             type="button"
-            variant="unstyled"
+            variant="tertiary"
             onClick={toggleRegisterMode}
             disabled={loading}
             className="w-full text-center text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer disabled:opacity-50"
@@ -447,7 +447,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         {!registering && isRegistered && hasFingerprint && platformAuthAvailable && loginStep === 2 && (
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="lg"
             onClick={handleFingerprintLogin}
             disabled={fingerprintLoading}

@@ -113,7 +113,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
       </div>
 
       <Button
-        variant="unstyled"
+        variant="tertiary"
         onClick={() => onNavigate('recurring')}
         className="mt-4 min-h-11 w-full shrink-0 rounded-xl border border-blue-500/10 bg-blue-500/5 py-2 text-center text-xs font-semibold text-blue-500 transition duration-200 cursor-pointer hover:border-blue-500/20 hover:bg-blue-500/10 hover:text-blue-600"
       >

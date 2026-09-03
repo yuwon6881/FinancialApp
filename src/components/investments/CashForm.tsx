@@ -57,7 +57,7 @@ const Field = ({ label, hint, error, className = '', required, children }: {
 
 const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean; onCancel: () => void; submitLabel: string; disabled?: boolean }) => (
   <ModalActions className="border-t border-border/40 pt-4">
-    <Button type="button" variant="outline" onClick={onCancel} className="rounded-xl">Cancel</Button>
+    <Button type="button" variant="secondary" onClick={onCancel} className="rounded-xl">Cancel</Button>
     <Button type="submit" disabled={busy || disabled} aria-busy={busy} className="rounded-xl shadow-md">
       <MutationButtonContent state={busy ? 'saving' : null} entityLabel={submitLabel.toLocaleLowerCase()} idleLabel={submitLabel} />
     </Button>

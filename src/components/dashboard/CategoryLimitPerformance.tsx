@@ -1,3 +1,4 @@
+import { Button } from '../ui/Button'
 import React from 'react'
 import { AlertTriangle, ArrowRight, CheckCircle2, Gauge, SlidersHorizontal, TrendingUp } from 'lucide-react'
 import type { CategoryLimitProgress, AppTab } from '../../types'
@@ -41,7 +42,7 @@ export function CategoryLimitPerformance({
             </div>
           </div>
           {onNavigate && (
-            <button
+            <Button variant="tertiary"
               type="button"
               onClick={() => {
                 if (typeof window !== 'undefined') {
@@ -55,7 +56,7 @@ export function CategoryLimitPerformance({
             >
               <span>Set Up Limits</span>
               <ArrowRight className="size-3.5" />
-            </button>
+            </Button>
           )}
         </div>
       </section>
@@ -102,7 +103,7 @@ export function CategoryLimitPerformance({
           const usedPct = Math.max(0, item.percentUsed * 100)
           const projectedPct = item.limit > 0 ? Math.max(0, item.projectedSpend / item.limit * 100) : 0
           return (
-            <button
+            <Button variant="tertiary"
               key={item.category}
               id={getCategoryLimitCardId(item.category)}
               type="button"
@@ -156,7 +157,7 @@ export function CategoryLimitPerformance({
                   <span className="text-muted-foreground tabular-nums">{formatSensitive(item.pendingCommitted)} committed</span>
                 )}
               </div>
-            </button>
+            </Button>
           )
         })}
       </div>

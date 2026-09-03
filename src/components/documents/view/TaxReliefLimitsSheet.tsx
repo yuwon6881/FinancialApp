@@ -94,7 +94,7 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
             <p className="mt-0.5 text-xs text-muted-foreground">Only this year changes. Amounts marked for review are never counted as confirmed.</p>
           </div>
           {!isAdding && (
-            <Button variant="outline" size="sm" type="button" onClick={() => setIsAdding(true)} className="shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <Button variant="secondary" size="sm" type="button" onClick={() => setIsAdding(true)} className="shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground">
               <Plus className="size-3.5" /> Add category
             </Button>
           )}
@@ -130,7 +130,7 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
                         </span>
                       )}
                       <Button variant="primary" size="sm" type="button" onClick={() => void onSaveEdit(category.id)} disabled={savingId === category.id} className="py-2"><Save className="size-3.5" /> Save</Button>
-                      <Button variant="unstyled" type="button" onClick={() => setEditingId(null)} aria-label="Close category editor" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button>
+                      <Button variant="tertiary" type="button" onClick={() => setEditingId(null)} aria-label="Close category editor" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button>
                     </div>
                   </div>
                 ) : confirmingDeleteId === category.id ? (
@@ -150,7 +150,7 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
                         >
                           <Trash2 className="size-3" /> Delete
                         </Button>
-                        <Button variant="outline" size="sm" type="button" onClick={() => { setConfirmingDeleteId(null); setDeleteError(null) }} className="text-muted-foreground hover:bg-muted hover:text-foreground">Cancel</Button>
+                        <Button variant="secondary" size="sm" type="button" onClick={() => { setConfirmingDeleteId(null); setDeleteError(null) }} className="text-muted-foreground hover:bg-muted hover:text-foreground">Cancel</Button>
                       </div>
                     </div>
                     {(deleteError?.id === category.id ? deleteError.message : deleteBlockedById.get(category.id)) && (
@@ -174,8 +174,8 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
                       <p className="mt-0.5 text-xs text-muted-foreground">{money(category.limit)} limit{category.isInherited ? ' · inherited default' : ''}</p>
                     </div>
                     <div className="flex shrink-0 gap-1.5">
-                      <Button variant="outline" size="sm" type="button" onClick={() => onBeginEdit(category)} className="text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="size-3" /> Edit</Button>
-                      <Button variant="unstyled" type="button" onClick={() => { setEditingId(null); setDeleteError(null); setConfirmingDeleteId(category.id) }} aria-label={`Delete ${category.name}`} title={`Delete ${category.name}`} className="rounded-lg border border-border p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-3" /></Button>
+                      <Button variant="secondary" size="sm" type="button" onClick={() => onBeginEdit(category)} className="text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="size-3" /> Edit</Button>
+                      <Button variant="tertiary" type="button" onClick={() => { setEditingId(null); setDeleteError(null); setConfirmingDeleteId(category.id) }} aria-label={`Delete ${category.name}`} title={`Delete ${category.name}`} className="rounded-lg border border-border p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-3" /></Button>
                     </div>
                   </div>
                 )}
@@ -190,7 +190,7 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
               <FormField label="Category" required error={newCategoryErrors.name}><Input autoFocus value={newCategory.name} onChange={event => { setNewCategory(current => ({ ...current, name: event.target.value })); setNewCategoryErrors(current => ({ ...current, name: undefined })) }} placeholder="e.g. Education" controlSize="sm" /></FormField>
               <FormField label={`Limit (${currency})`} required error={newCategoryErrors.limit}><Input type="number" min="0" step="0.01" value={newCategory.limit} onChange={event => { setNewCategory(current => ({ ...current, limit: event.target.value })); setNewCategoryErrors(current => ({ ...current, limit: undefined })) }} controlSize="sm" className="tabular-nums" /></FormField>
               {newCategoryErrors.form && <p role="alert" className="text-xs font-semibold text-destructive sm:col-span-2">{newCategoryErrors.form}</p>}
-              <div className="flex justify-end gap-1.5 sm:col-span-2"><Button variant="primary" size="sm" type="button" onClick={() => void onAddCategory()} disabled={isAddingBusy} className="py-2"><Check className="size-3.5" /> Add</Button><Button variant="unstyled" type="button" onClick={() => { setIsAdding(false); setNewCategory(EMPTY_CATEGORY_DRAFT); setNewCategoryErrors({}) }} aria-label="Close add category form" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
+              <div className="flex justify-end gap-1.5 sm:col-span-2"><Button variant="primary" size="sm" type="button" onClick={() => void onAddCategory()} disabled={isAddingBusy} className="py-2"><Check className="size-3.5" /> Add</Button><Button variant="tertiary" type="button" onClick={() => { setIsAdding(false); setNewCategory(EMPTY_CATEGORY_DRAFT); setNewCategoryErrors({}) }} aria-label="Close add category form" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
             </div>
           </div>
         )}

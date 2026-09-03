@@ -213,7 +213,7 @@ export function DatePicker({
           isInvalid && 'focus-within:border-destructive focus-within:ring-destructive/25',
         )}
       >
-        <Button variant="unstyled"
+        <Button variant="tertiary"
           ref={triggerRef}
           type="button"
           id={accessibleProps.id}
@@ -235,7 +235,7 @@ export function DatePicker({
           <Calendar className="size-3.5 shrink-0 text-muted-foreground/80" aria-hidden="true" />
         </Button>
         {clearable && value && (
-          <Button variant="unstyled"
+          <Button variant="tertiary"
             type="button"
             disabled={disabled}
             aria-label={clearAriaLabel}
@@ -275,7 +275,7 @@ export function DatePicker({
         }}
       >
         <div className="mb-2.5 flex items-center justify-between">
-          <Button variant="unstyled"
+          <Button variant="tertiary"
             type="button"
             onClick={() => goToMonth(-1)}
             className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted/80 hover:text-foreground"
@@ -286,7 +286,7 @@ export function DatePicker({
           <span aria-live="polite" className="text-xs font-bold text-foreground select-none">
             {MONTHS[viewDate.month]} {viewDate.year}
           </span>
-          <Button variant="unstyled"
+          <Button variant="tertiary"
             type="button"
             onClick={() => goToMonth(1)}
             className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted/80 hover:text-foreground"
@@ -319,7 +319,7 @@ export function DatePicker({
               const isDisabled = Boolean((min && cellISO < min) || (max && cellISO > max))
 
               return (
-                <Button variant="unstyled"
+                <Button variant="tertiary"
                   key={cellISO}
                   ref={node => {
                     if (node) dayRefs.current.set(cellISO, node)
@@ -387,7 +387,7 @@ export function DatePicker({
         </div>
 
         <div className="mt-2.5 flex justify-end gap-1 border-t border-border/40 pt-2.5">
-          <Button variant="unstyled"
+          <Button variant="tertiary"
             type="button"
             disabled={Boolean((min && yesterdayISO < min) || (max && yesterdayISO > max))}
             onClick={() => select(yesterdayISO)}
@@ -395,7 +395,7 @@ export function DatePicker({
           >
             Yesterday
           </Button>
-          <Button variant="unstyled"
+          <Button variant="tertiary"
             type="button"
             disabled={Boolean((min && todayISO < min) || (max && todayISO > max))}
             onClick={() => select(todayISO)}

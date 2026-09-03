@@ -53,7 +53,7 @@ export function DeleteTransactionModal({
       }
       footer={
         <ModalActions>
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="secondary" onClick={onCancel}>
             Cancel
           </Button>
           {/* Confirming only queues the delete, so there is no busy state to show: the row's own

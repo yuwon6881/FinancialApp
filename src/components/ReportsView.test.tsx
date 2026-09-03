@@ -1,3 +1,4 @@
+import { Button } from './ui/Button'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ReportsView } from './ReportsView'
@@ -49,10 +50,10 @@ vi.mock('./dashboard/CycleCalendar', () => ({
     onSelectWeek?: (week: { startDate: string; endDate: string; weekNumber: number }, mode: string) => void
   }) => (
     <div>
-      <button onClick={() => onSelectDate('2026-07-30')}>Activity calendar</button>
-      <button onClick={() => onSelectWeek?.({ startDate: '2026-06-01', endDate: '2026-06-07', weekNumber: 1 }, 'expense')}>
+      <Button variant="tertiary" onClick={() => onSelectDate('2026-07-30')}>Activity calendar</Button>
+      <Button variant="tertiary" onClick={() => onSelectWeek?.({ startDate: '2026-06-01', endDate: '2026-06-07', weekNumber: 1 }, 'expense')}>
         Week 1 pacing
-      </button>
+      </Button>
     </div>
   ),
 }))

@@ -3,7 +3,6 @@ import { AlertCircle, Info } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
 import { Button } from './Button'
 import { ModalActions } from './ModalActions'
-import { MutationButtonContent } from './MutationButtonContent'
 
 interface CustomConfirmModalProps {
   isOpen: boolean
@@ -51,22 +50,18 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
       }
       footer={
         <ModalActions>
-          <Button variant="outline" onClick={onCancel} disabled={isConfirming} className="rounded-xl px-4">
+          <Button variant="secondary" onClick={onCancel} disabled={isConfirming} className="rounded-xl px-4">
             {cancelText}
           </Button>
           <Button
             variant={isPrimary ? 'primary' : 'destructive'}
             onClick={onConfirm}
             disabled={confirmDisabled || isConfirming}
-            aria-busy={isConfirming}
+            loading={isConfirming}
+            loadingLabel={confirmingText}
             className="rounded-xl px-5 shadow-md"
           >
-            <MutationButtonContent
-              state={isConfirming ? 'syncing' : null}
-              entityLabel={title.replace(/^(delete|remove|discard|confirm|update|save)\s+/i, '').toLocaleLowerCase()}
-              idleLabel={confirmText}
-              busyLabel={confirmingText}
-            />
+            {confirmText}
           </Button>
         </ModalActions>
       }

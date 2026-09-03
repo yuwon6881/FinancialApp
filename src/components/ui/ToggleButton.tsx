@@ -25,7 +25,7 @@ export function ToggleButton({
 }: ToggleButtonProps) {
   return (
     <Button
-      variant="unstyled"
+      variant="tertiary"
       size="icon"
       type="button"
       role="switch"

@@ -1,3 +1,4 @@
+import { Button } from '../../ui/Button'
 import React, { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { FileText, Link2Off, UploadCloud, X } from 'lucide-react'
 import {
@@ -212,7 +213,7 @@ export const TransactionDocumentsField = React.forwardRef<
               <FileText className="size-4" aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
-              <button
+              <Button variant="tertiary"
                 type="button"
                 onClick={() => {
                   void import('../../../lib/api/documents').then(({ downloadDocument }) =>
@@ -222,12 +223,12 @@ export const TransactionDocumentsField = React.forwardRef<
                 title={`Download ${document.originalFileName}`}
               >
                 {document.originalFileName}
-              </button>
+              </Button>
               <p className="truncate text-xs text-muted-foreground" title={categoryName}>
                 {categoryName} · YA {document.taxYear}
               </p>
             </div>
-            <button
+            <Button variant="tertiary"
               type="button"
               onClick={() => setUnlinkIds(ids => [...ids, document.id])}
               disabled={disabled}
@@ -237,7 +238,7 @@ export const TransactionDocumentsField = React.forwardRef<
             >
               <Link2Off className="size-3.5" />
               <span className="hidden text-xs font-bold sm:inline">Detach</span>
-            </button>
+            </Button>
           </div>
         )
       })}
@@ -262,14 +263,14 @@ export const TransactionDocumentsField = React.forwardRef<
               <p className="truncate text-xs font-bold text-foreground" title={document.file.name}>{document.file.name}</p>
               <p className="text-xs text-muted-foreground tabular-nums">Uploads on save · {(document.file.size / 1024 / 1024).toFixed(2)} MB</p>
             </div>
-            <button
+            <Button variant="tertiary"
               type="button"
               onClick={() => removePending(index)}
               aria-label={`Remove ${document.file.name}`}
               className="cursor-pointer rounded-lg p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
             >
               <X className="size-3.5" />
-            </button>
+            </Button>
           </div>
           <FormField
             label="Tax relief category"
@@ -290,7 +291,7 @@ export const TransactionDocumentsField = React.forwardRef<
         </div>
       ))}
 
-      <button
+      <Button variant="tertiary"
         type="button"
         disabled={disabled || !categoriesLoaded || reliefCategories.length === 0}
         onClick={() => fileInputRef.current?.click()}
@@ -298,7 +299,7 @@ export const TransactionDocumentsField = React.forwardRef<
       >
         <UploadCloud className="size-4" aria-hidden="true" />
         Attach Document
-      </button>
+      </Button>
       <Input
         type="file"
         multiple

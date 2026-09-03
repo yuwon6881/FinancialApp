@@ -151,7 +151,7 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
         )}
 
         <ModalActions className="pt-2">
-          <Button variant="outline" className="rounded-xl py-2.5" onClick={onClose} disabled={busy}>
+          <Button variant="secondary" className="rounded-xl py-2.5" onClick={onClose} disabled={busy}>
             Cancel
           </Button>
           <Button

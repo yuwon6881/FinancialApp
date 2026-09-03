@@ -218,23 +218,23 @@ export function LoanCard({
 
       <div className="mt-3 rounded-xl border border-border/50 bg-background/40 p-3 sm:p-3.5">
         <Button
-          variant="unstyled"
+          variant="tertiary"
           type="button"
           aria-expanded={isScheduleOpen}
           aria-controls={isScheduleOpen ? `loan-schedule-${loan.id}` : undefined}
           onClick={handleScheduleToggle}
           className="flex min-h-11 w-full cursor-pointer select-none items-center justify-between gap-2 rounded-lg text-left text-xs font-bold text-foreground transition-colors hover:text-accent-ink sm:min-h-0"
         >
-          <div className="flex items-center gap-2">
-            <span>Payment history and planned schedule</span>
-            <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="truncate">Payment history and planned schedule</span>
+            <span className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-semibold text-muted-foreground">
               {actualRows.length + scheduleRows.length}
             </span>
           </div>
-          <ChevronDown className={`size-3.5 text-muted-foreground transition-transform ${isScheduleOpen ? 'rotate-180' : ''}`} aria-hidden />
+          <ChevronDown className={`size-3.5 text-muted-foreground transition-transform shrink-0 ${isScheduleOpen ? 'rotate-180' : ''}`} aria-hidden />
         </Button>
         {isScheduleOpen && (
-          <div id={`loan-schedule-${loan.id}`}>
+          <div id={`loan-schedule-${loan.id}`} className="min-w-0 max-w-full overflow-hidden">
             {scheduleLoadingKey === scheduleKey ? (
               <div className="mt-3 flex min-h-28 items-center justify-center gap-2 rounded-lg border border-border/40 bg-card/40 text-xs font-semibold text-muted-foreground" role="status">
                 <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
@@ -245,20 +245,20 @@ export function LoanCard({
             {scheduleErrorKey === scheduleKey && (
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <span>The full planned schedule could not be loaded.</span>
-                <Button variant="ghost" size="sm" onClick={() => void loadSchedule()}>Retry</Button>
+                <Button variant="tertiary" size="sm" onClick={() => void loadSchedule()}>Retry</Button>
               </div>
             )}
-            {/* Mobile schedule: compact, full-width cards with no horizontal scrolling */}
-            <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-0.5 min-[1280px]:hidden">
+            {/* Mobile schedule: compact, full-width cards with responsive wrapping */}
+            <div className="mt-3 max-h-72 space-y-2 overflow-x-hidden overflow-y-auto pr-0.5 min-[1280px]:hidden min-w-0 max-w-full">
           {[...actualRows, ...scheduleRows].map((row, index) => (
             <div
               key={`${row.occurrenceDate}-${row.kind}-${index}`}
-              className="rounded-lg border border-border/40 bg-card/60 p-2.5 text-xs transition-colors hover:bg-muted/20"
+              className="rounded-lg border border-border/40 bg-card/60 p-2.5 text-xs transition-colors hover:bg-muted/20 min-w-0"
             >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold text-foreground">{formatOccurrenceDate(row.occurrenceDate)}</span>
-                  <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-bold ${
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span className="font-semibold text-foreground truncate">{formatOccurrenceDate(row.occurrenceDate)}</span>
+                  <span className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-xs font-bold ${
                     row.kind === 'Paid'
                       ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                       : 'bg-muted text-muted-foreground'
@@ -266,15 +266,15 @@ export function LoanCard({
                     {row.kind === 'Paid' ? 'Recorded' : 'Planned'}
                   </span>
                 </div>
-                <span className="font-bold text-foreground tabular-nums">{formatSensitive(row.payment)}</span>
+                <span className="font-bold text-foreground tabular-nums shrink-0">{formatSensitive(row.payment)}</span>
               </div>
-              <div className="mt-2 flex items-center justify-between gap-2 border-t border-border/25 pt-1.5 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2 truncate">
-                  <span>Interest: <strong className="font-semibold text-muted-foreground">{formatSensitive(row.interest)}</strong></span>
-                  <span>·</span>
-                  <span>Clears: <strong className="font-semibold text-foreground">{formatSensitive(row.principal)}</strong></span>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-border/25 pt-1.5 text-xs text-muted-foreground min-w-0">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
+                  <span className="whitespace-nowrap">Interest: <strong className="font-semibold text-muted-foreground">{formatSensitive(row.interest)}</strong></span>
+                  <span className="text-border/60">·</span>
+                  <span className="whitespace-nowrap">Clears: <strong className="font-semibold text-foreground">{formatSensitive(row.principal)}</strong></span>
                 </div>
-                <span className="shrink-0 font-medium text-foreground">Owed: <strong className="font-semibold text-foreground">{formatSensitive(row.balanceAfter)}</strong></span>
+                <span className="font-medium text-foreground whitespace-nowrap">Owed: <strong className="font-semibold text-foreground">{formatSensitive(row.balanceAfter)}</strong></span>
               </div>
             </div>
           ))}
@@ -369,7 +369,7 @@ export function LoanCard({
         </div>
         <div className="flex items-center justify-end gap-1.5 pt-1 sm:pt-0 border-t border-border/20 sm:border-t-0">
           <Button
-            variant="ghost"
+            variant="tertiary"
             size="sm"
             aria-label={`Edit ${loan.name}`}
             title={hideSensitive ? 'Unhide balances to edit' : 'Edit loan'}
@@ -380,7 +380,7 @@ export function LoanCard({
             <span>Edit</span>
           </Button>
           <Button
-            variant="danger"
+            variant="destructive"
             size="sm"
             aria-label={`Delete ${loan.name}`}
             title={hideSensitive ? 'Unhide balances to delete' : 'Delete loan'}

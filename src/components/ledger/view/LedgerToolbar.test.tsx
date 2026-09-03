@@ -19,8 +19,8 @@ describe('LedgerToolbar', () => {
     const onShowAllCyclesChange = vi.fn()
     renderToolbar(false, onShowAllCyclesChange)
 
-    expect(screen.getByRole('button', { name: 'Current cycle' }).getAttribute('aria-pressed')).toBe('true')
-    fireEvent.click(screen.getByRole('button', { name: 'All cycles' }))
+    expect(screen.getByRole('tab', { name: 'Current cycle' }).getAttribute('aria-selected')).toBe('true')
+    fireEvent.click(screen.getByRole('tab', { name: 'All cycles' }))
     expect(onShowAllCyclesChange).toHaveBeenCalledWith(true)
   })
 

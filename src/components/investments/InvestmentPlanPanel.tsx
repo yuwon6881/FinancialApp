@@ -89,7 +89,7 @@ export function InvestmentPlanPanel({
             </p>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={configure} className="group/configure">
+        <Button variant="tertiary" size="sm" onClick={configure} className="group/configure">
           <Settings2 className="size-4 transition-transform duration-300 group-hover/configure:rotate-45" /> Configure
         </Button>
       </div>
@@ -176,7 +176,7 @@ export function InvestmentPlanPanel({
           </ul>
           {classificationIncomplete && (
             <div className="mt-3 flex justify-end">
-              <Button variant="ghost" size="sm" onClick={configure}>
+              <Button variant="tertiary" size="sm" onClick={configure}>
                 Finish classification <ArrowRight className="size-4" />
               </Button>
             </div>

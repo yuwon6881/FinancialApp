@@ -1,3 +1,4 @@
+import { Button } from '../../ui/Button'
 import { MinusCircle, PlusCircle, RefreshCw } from 'lucide-react'
 import type { TransactionType } from './transactionFormReducer'
 
@@ -24,7 +25,7 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
         className="flex flex-wrap sm:flex-nowrap gap-2"
         title={disabled ? 'Transaction type cannot be changed while editing. Delete and re-add to change it.' : undefined}
       >
-        <button
+        <Button variant="tertiary"
           type="button"
           role="radio"
           aria-checked={txType === 'outflow'}
@@ -37,8 +38,8 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
           }`}
         >
           <MinusCircle className="size-3.5" /> Outflow <span className="hidden sm:inline">(Debit)</span>
-        </button>
-        <button
+        </Button>
+        <Button variant="tertiary"
           type="button"
           role="radio"
           aria-checked={txType === 'inflow'}
@@ -51,8 +52,8 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
           }`}
         >
           <PlusCircle className="size-3.5" /> Inflow <span className="hidden sm:inline">(Credit)</span>
-        </button>
-        <button
+        </Button>
+        <Button variant="tertiary"
           type="button"
           role="radio"
           aria-checked={txType === 'transfer'}
@@ -65,7 +66,7 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
           }`}
         >
           <RefreshCw className="size-3.5" /> Transfer
-        </button>
+        </Button>
       </div>
     </fieldset>
   )

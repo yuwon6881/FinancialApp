@@ -17,8 +17,10 @@ describe('CustomConfirmModal pending state', () => {
       />,
     )
 
-    const button = screen.getByRole('button', { name: 'Deleting document…' })
+    const button = screen.getByRole('button', { name: 'Delete' })
     expect(button.hasAttribute('disabled')).toBe(true)
+    expect(button.getAttribute('aria-busy')).toBe('true')
+    expect(screen.getByText('Deleting…')).toBeTruthy()
     expect(button.querySelector('.animate-spin')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled')).toBe(true)
   })

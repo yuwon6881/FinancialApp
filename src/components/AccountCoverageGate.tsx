@@ -60,7 +60,7 @@ export function AccountCoverageGate({
         {error && (
           <div className="space-y-3">
             <AlertBanner variant="error">{error}</AlertBanner>
-            <Button type="button" variant="outline" className="w-full" onClick={onRetry}>
+            <Button type="button" variant="secondary" className="w-full" onClick={onRetry}>
               <RotateCcw className="size-4" aria-hidden="true" /> Try again
             </Button>
           </div>
@@ -108,7 +108,7 @@ export function AccountCoverageGate({
 
                 {pending && <p className="mt-2 text-xs font-semibold text-amber-500">Saving this account… waiting for server confirmation.</p>}
                 {!complete && rows.some(account => account.isArchived) && (
-                  <Button type="button" variant="outline" size="sm" className="mt-3 min-h-11 w-full justify-center" onClick={() => openForm(bucket.name, rows.find(account => account.isArchived) ?? null)}>
+                  <Button type="button" variant="secondary" size="sm" className="mt-3 min-h-11 w-full justify-center" onClick={() => openForm(bucket.name, rows.find(account => account.isArchived) ?? null)}>
                     Reopen an account
                   </Button>
                 )}

@@ -37,7 +37,7 @@ export const StabilityReloadIntentCard: React.FC<StabilityReloadIntentCardProps>
           return (
             <Button
               key={value}
-              variant="unstyled"
+              variant="tertiary"
               role="radio"
               aria-checked={selected}
               onClick={() => onSetField('stabilityReloadIntent', value)}

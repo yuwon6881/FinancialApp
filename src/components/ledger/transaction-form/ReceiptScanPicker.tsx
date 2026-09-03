@@ -1,3 +1,4 @@
+import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import React from 'react'
 import { Calculator, Camera, Image, X, Loader2 } from 'lucide-react'
@@ -108,7 +109,7 @@ export function ReceiptScanPicker({
 
       {!pickingSource && (
         <div className={splitEnabled ? 'grid grid-cols-1 gap-2 sm:grid-cols-2' : ''}>
-          <button
+          <Button variant="tertiary"
             type="button"
             disabled={busy}
             onClick={() => {
@@ -127,9 +128,9 @@ export function ReceiptScanPicker({
             ) : (
               <><Camera className="size-3.5" /><span>{label}</span></>
             )}
-          </button>
+          </Button>
           {splitEnabled && (
-            <button
+            <Button variant="tertiary"
               type="button"
               disabled={busy}
               onClick={() => {
@@ -148,62 +149,62 @@ export function ReceiptScanPicker({
               ) : (
                 <><Calculator className="size-3.5" /> Calculate My Share</>
               )}
-            </button>
+            </Button>
           )}
         </div>
       )}
 
       {pickingSource && showScanPicker && (
         <div className="flex gap-2">
-          <button
+          <Button variant="tertiary"
             type="button"
             onClick={() => scanFileInputRef.current?.click()}
             className={SOURCE_BUTTON}
           >
             <Camera className="size-3.5" /> Take Photo
-          </button>
-          <button
+          </Button>
+          <Button variant="tertiary"
             type="button"
             onClick={() => scanGalleryInputRef.current?.click()}
             className={SOURCE_BUTTON}
           >
             <Image className="size-3.5" /> Upload Photo
-          </button>
-          <button
+          </Button>
+          <Button variant="tertiary"
             type="button"
             onClick={() => setShowScanPicker(false)}
             aria-label="Cancel"
             className={CANCEL_BUTTON}
           >
             <X className="size-3.5" />
-          </button>
+          </Button>
         </div>
       )}
 
       {pickingSource && !showScanPicker && showSplitPicker && (
         <div className="flex gap-2">
-          <button
+          <Button variant="tertiary"
             type="button"
             onClick={() => splitCameraInputRef?.current?.click()}
             className={SOURCE_BUTTON}
           >
             <Camera className="size-3.5" /> Take Photo
-          </button>
-          <button
+          </Button>
+          <Button variant="tertiary"
             type="button"
             onClick={() => splitGalleryInputRef?.current?.click()}
             className={SOURCE_BUTTON}
           >
             <Image className="size-3.5" /> Upload Photo
-          </button>
-          <button
+          </Button>
+          <Button variant="tertiary"
             type="button"
             onClick={() => setShowSplitPicker?.(false)}
             aria-label="Cancel"
             className={CANCEL_BUTTON}
           >
             <X className="size-3.5" />
-          </button>
+          </Button>
         </div>
       )}
     </div>

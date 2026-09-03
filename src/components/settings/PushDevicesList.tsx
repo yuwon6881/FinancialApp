@@ -101,7 +101,7 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
         <span className="flex-1">
           {PUSH_DEVICES_UNAVAILABLE}{' '}
           <Button
-            variant="unstyled"
+            variant="tertiary"
             type="button"
             onClick={() => { setLoading(true); void load() }}
             className="inline-flex items-center gap-1 font-bold text-accent-ink hover:underline"
@@ -146,7 +146,7 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
                 the same thing would be one more way to reach the same state, worded differently. */}
             {!device.isCurrent && (
               <Button
-                variant="unstyled"
+                variant="tertiary"
                 size="icon"
                 type="button"
                 onClick={() => void revoke(device)}

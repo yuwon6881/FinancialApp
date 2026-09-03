@@ -45,11 +45,11 @@ export function RecurringAccountShortfallCard({
       initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       aria-labelledby="recurring-account-shortfall-title"
-      className="app-panel rounded-2xl border border-orange-500/30 bg-orange-500/8 p-5"
+      className="app-panel rounded-2xl border border-orange-500/30 bg-card/92 p-4 sm:p-5 shadow-xs"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3.5 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 min-w-0 flex-1">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/15 text-orange-600 dark:text-orange-400">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-orange-500/25 bg-orange-500/15 text-orange-600 dark:text-orange-400">
             <AlertCircle className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
@@ -71,7 +71,7 @@ export function RecurringAccountShortfallCard({
         <div className="flex flex-wrap items-center gap-2 pt-1 sm:pt-0 shrink-0">
           {onTransferMoney && (
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={onTransferMoney}
               className="flex-1 justify-center sm:flex-initial"
@@ -82,10 +82,10 @@ export function RecurringAccountShortfallCard({
           )}
           {onNavigateToRecurring && (
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onClick={() => onNavigateToRecurring(primary.recurringPaymentId)}
-              className="flex-1 justify-center sm:flex-initial"
+              className="flex-1 justify-center sm:flex-initial border-orange-500/30 bg-card/60 text-orange-700 hover:bg-orange-500/10 dark:text-orange-300"
             >
               <Calendar className="mr-1.5 size-3.5" />
               View bill

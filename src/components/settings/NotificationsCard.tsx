@@ -160,7 +160,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
             </p>
             {props.onNavigateToCategoryLimits && (
               <Button
-                variant="unstyled"
+                variant="tertiary"
                 type="button"
                 onClick={props.onNavigateToCategoryLimits}
                 className="inline-flex items-center gap-1 text-xs font-bold text-accent-ink hover:underline"

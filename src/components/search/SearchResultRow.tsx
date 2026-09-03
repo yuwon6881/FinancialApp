@@ -66,7 +66,7 @@ export function SearchResultRow({ result, id, isActive, amountText, maskAmounts,
 
   return (
     <Button
-      variant="unstyled"
+      variant="tertiary"
       id={id}
       role="option"
       aria-selected={isActive}

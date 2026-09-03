@@ -58,7 +58,7 @@ export function CarryoverLedgerTable({
                   <span className="truncate">{category.name}</span>
                   {hasAccounts && (
                     <Button
-                      variant="unstyled"
+                      variant="tertiary"
                       type="button"
                       onClick={() => setSelectedCategory(category)}
                       className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold transition cursor-pointer select-none shrink-0 ${badgeClass}`}
@@ -78,23 +78,14 @@ export function CarryoverLedgerTable({
                   {pending > 0 && <div className="mt-0.5 flex items-center justify-end gap-1 whitespace-nowrap text-xs font-normal text-yellow-500"><Clock className="size-3" />Pending: -{amount(pending)}</div>}
                 </div>
                 <div className="text-right">
-                  <Button
-                    variant="unstyled"
-                    type="button"
-                    onClick={() => onNavigateToAccounts ? onNavigateToAccounts(category.name) : undefined}
-                    className="group inline-flex flex-col items-end cursor-pointer select-none rounded-lg p-1.5 -m-1.5 hover:bg-primary/10 transition-colors"
-                    title={onNavigateToAccounts ? `Manage ${category.name} in Settings` : undefined}
-                    aria-label={`Remaining balance for ${category.name}: ${formatCurrency(category.remaining)}. Manage in Settings`}
-                  >
-                    <div className={`font-bold transition-colors group-hover:text-accent-ink ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
-                      <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
+                  <div className={`font-bold ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
+                    <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
+                  </div>
+                  {pending > 0 && (
+                    <div className={`mt-0.5 whitespace-nowrap text-xs font-semibold ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
+                      Projected: {amount(category.remaining - pending)}
                     </div>
-                    {pending > 0 && (
-                      <div className={`mt-0.5 whitespace-nowrap text-xs font-semibold ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
-                        Projected: {amount(category.remaining - pending)}
-                      </div>
-                    )}
-                  </Button>
+                  )}
                 </div>
               </div>
             )
@@ -119,7 +110,7 @@ export function CarryoverLedgerTable({
                 <div className="flex items-center gap-1.5">
                   {hasAccounts && (
                     <Button
-                      variant="unstyled"
+                      variant="tertiary"
                       type="button"
                       onClick={() => setSelectedCategory(category)}
                       className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold transition cursor-pointer select-none ${badgeClass}`}
@@ -149,18 +140,9 @@ export function CarryoverLedgerTable({
                 <div className="col-start-2">
                   <span className="text-muted-foreground text-xs block mb-0.5">Remaining Balance</span>
                   <div className="flex items-center h-6">
-                    <Button
-                      variant="unstyled"
-                      type="button"
-                      onClick={() => onNavigateToAccounts ? onNavigateToAccounts(category.name) : undefined}
-                      className="group inline-flex items-center gap-1.5 cursor-pointer select-none rounded-md px-1.5 -mx-1.5 py-0.5 hover:bg-primary/10 transition-colors"
-                      title={onNavigateToAccounts ? `Manage ${category.name} in Settings` : undefined}
-                      aria-label={`Remaining balance for ${category.name}: ${formatCurrency(category.remaining)}. Manage in Settings`}
-                    >
-                      <span className={`font-bold truncate transition-colors group-hover:text-accent-ink ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
-                        <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
-                      </span>
-                    </Button>
+                    <span className={`font-bold truncate ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
+                      <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
+                    </span>
                   </div>
                 </div>
                 {pending > 0 && (
@@ -200,7 +182,7 @@ export function CarryoverLedgerTable({
             <div className="flex flex-wrap items-center justify-between gap-2 w-full">
               {onNavigateToAccounts && (
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   type="button"
                   onClick={() => {
@@ -262,7 +244,7 @@ export function CarryoverLedgerTable({
                       />
                       {onNavigateToAccounts && (
                         <Button
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
                           type="button"
                           onClick={() => {

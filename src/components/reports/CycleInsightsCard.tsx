@@ -33,7 +33,7 @@ export function CycleInsightsCard({
         <div className="rounded-xl bg-muted/25 p-3"><dt className="text-xs font-bold uppercase text-muted-foreground">Average per day</dt><dd className="mt-1 text-sm font-black text-foreground">{insights.avgDailySpend == null ? 'Unavailable' : formatSensitive(insights.avgDailySpend)}</dd></div>
         {canSelectExpense ? (
           <Button
-            variant="unstyled"
+            variant="tertiary"
             type="button"
             onClick={onSelectLargestExpense}
             aria-label={`View biggest expense: ${insights.largestExpenseDescription || 'transaction'} in Ledger`}

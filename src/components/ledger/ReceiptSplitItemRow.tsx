@@ -62,7 +62,7 @@ export function ReceiptSplitItemRow({
     <SwipeableRow
       actionsWidth={88}
       actions={(
-        <Button variant="unstyled"
+        <Button variant="tertiary"
           type="button"
           onClick={() => onRemove(index)}
           className="flex h-full w-full items-center justify-center gap-1 bg-destructive px-3 text-xs font-bold text-destructive-foreground cursor-pointer rounded-r-2xl"
@@ -72,7 +72,7 @@ export function ReceiptSplitItemRow({
         </Button>
       )}
       desktopActions={(
-        <Button variant="unstyled"
+        <Button variant="tertiary"
           type="button"
           onClick={() => onRemove(index)}
           className="rounded-lg p-2 text-destructive hover:bg-destructive/10 cursor-pointer"
@@ -120,7 +120,7 @@ export function ReceiptSplitItemRow({
                   controlSize="sm"
                   className="min-w-0 flex-1 font-bold"
                 />
-                <Button variant="unstyled"
+                <Button variant="tertiary"
                   type="button"
                   onClick={() => onTogglePriceLock(index)}
                   className="p-1 inline-flex shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
@@ -163,7 +163,7 @@ export function ReceiptSplitItemRow({
             <span className="text-xs text-muted-foreground">{maximum} on the receipt · 0 if none is yours</span>
           </div>
           <div className="flex shrink-0 items-center rounded-xl border border-border bg-background p-1 shadow-xs">
-            <Button variant="unstyled"
+            <Button variant="tertiary"
               type="button"
               onClick={() => onChangeQuantity(index, -1)}
               disabled={selected <= 0}
@@ -175,7 +175,7 @@ export function ReceiptSplitItemRow({
             <span className="min-w-9 text-center text-sm font-extrabold text-foreground" aria-label={`Quantity for item ${index + 1}`}>
               {selected}
             </span>
-            <Button variant="unstyled"
+            <Button variant="tertiary"
               type="button"
               onClick={() => onChangeQuantity(index, 1)}
               disabled={selected >= maximum}

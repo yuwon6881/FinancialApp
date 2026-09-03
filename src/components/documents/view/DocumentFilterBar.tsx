@@ -64,7 +64,7 @@ export function DocumentFilterBar({
           {selectedReliefCategories.map(category => (
             <Button
               key={category.id}
-              variant="unstyled"
+              variant="tertiary"
               type="button"
               onClick={() => onClearReliefCategory(category.id)}
               aria-label={`Clear ${category.name} relief filter`}
@@ -76,7 +76,7 @@ export function DocumentFilterBar({
           ))}
           {selectedReliefCategories.length > 1 && (
             <Button
-              variant="unstyled"
+              variant="tertiary"
               type="button"
               onClick={onClearAllReliefCategories}
               className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1 rounded-xl border border-border/60 px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-muted sm:min-h-9"

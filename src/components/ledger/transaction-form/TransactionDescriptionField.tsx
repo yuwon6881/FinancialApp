@@ -105,8 +105,8 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
         <span className="text-xs font-semibold text-muted-foreground">Description</span>
         {state.transactionType !== 'transfer' && (
           <Button
-            variant="ghost"
-            size="xs"
+            variant="tertiary"
+            size="sm"
             type="button"
             onMouseDown={e => e.preventDefault()}
             onClick={onSuggestNotes}
@@ -166,7 +166,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
         ) : suggestions.noteSuggestions.length > 0 ? (
           suggestions.noteSuggestions.map((s: any) => (
             <Button
-              variant="unstyled"
+              variant="tertiary"
               key={s.note}
               type="button"
               onMouseDown={e => e.preventDefault()}
@@ -212,7 +212,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
           }
           return (
             <Button
-              variant="unstyled"
+              variant="tertiary"
               key={s.description}
               data-suggestion
               type="button"
@@ -242,7 +242,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
         <HorizontalRail label="Quick transaction suggestions" className="gap-1.5 pt-1 pb-0.5">
           {quickSuggestionEntries.map(s => (
             <Button
-              variant="unstyled"
+              variant="tertiary"
               key={s.description}
               type="button"
               onMouseDown={() => {

@@ -14,7 +14,7 @@ export function DocumentsLoadError({ message, isLoading, onRetry }: DocumentsLoa
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="min-w-0 break-words">{message}</p>
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           type="button"
           disabled={isLoading}

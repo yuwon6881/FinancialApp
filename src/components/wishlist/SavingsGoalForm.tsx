@@ -163,7 +163,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
       </div>
 
       <ModalActions className="border-t border-border/30 pt-4 mt-6">
-        <Button variant="outline" type="button" onClick={props.onCancel} className="rounded-xl py-2.5">
+        <Button variant="secondary" type="button" onClick={props.onCancel} className="rounded-xl py-2.5">
           Cancel
         </Button>
         <Button

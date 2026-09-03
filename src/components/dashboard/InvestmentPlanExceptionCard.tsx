@@ -1,5 +1,5 @@
 import { m, useReducedMotion } from 'framer-motion'
-import { AlertTriangle, PieChart } from 'lucide-react'
+import { AlertTriangle, ChevronRight, PieChart } from 'lucide-react'
 import type { AppTab, InvestmentAllocationOverview } from '../../types'
 import { Button } from '../ui/Button'
 
@@ -35,11 +35,11 @@ export function InvestmentPlanExceptionCard({
       initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       aria-labelledby="investment-plan-exception"
-      className="app-panel rounded-2xl border border-amber-500/30 bg-amber-500/8 p-5"
+      className="app-panel rounded-2xl border border-amber-500/30 bg-card/92 p-4 sm:p-5 shadow-xs"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3 min-w-0 flex-1">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/15 text-amber-600 dark:text-amber-400">
             {incomplete ? <PieChart className="size-5" /> : <AlertTriangle className="size-5" />}
           </div>
           <div className="min-w-0 flex-1">
@@ -53,8 +53,14 @@ export function InvestmentPlanExceptionCard({
             </p>
           </div>
         </div>
-        <Button variant="ghost" onClick={open} className="w-full justify-center sm:w-auto shrink-0">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={open}
+          className="w-full justify-center sm:w-auto shrink-0 border-amber-500/30 bg-card/60 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
+        >
           {incomplete ? 'Finish setup' : 'Review plan'}
+          <ChevronRight className="size-3.5 ml-1" />
         </Button>
       </div>
     </m.section>

@@ -200,7 +200,7 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(await screen.findByText('Manage portfolio')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: /Manage portfolio/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'Investments (1)' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Investments (1)' }))
     expect(screen.getByText(/Delete only unused investments/)).toBeTruthy()
   })
 

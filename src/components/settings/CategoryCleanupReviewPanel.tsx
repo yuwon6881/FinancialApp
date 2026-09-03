@@ -52,7 +52,7 @@ export function CategoryCleanupReviewPanel({
           </h4>
           <p className="mt-0.5 text-xs text-muted-foreground">Review category purpose, flow, and recent usage before applying anything.</p>
         </div>
-        <Button variant="unstyled" type="button" onClick={onClose} className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-background hover:text-foreground sm:size-8" aria-label="Close AI category review">
+        <Button variant="tertiary" type="button" onClick={onClose} className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-background hover:text-foreground sm:size-8" aria-label="Close AI category review">
           <ChevronUp className="size-3.5" />
         </Button>
       </header>
@@ -84,16 +84,16 @@ export function CategoryCleanupReviewPanel({
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{suggestion.summary}</p>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
-                {suggestion.categories.map(name => <Button variant="unstyled" key={name} type="button" onClick={() => onNavigateToLedger?.({ category: name, showAllCycles: true })} className={`press-scale inline-flex min-h-8 items-center rounded-md border px-2 text-xs font-semibold ${getCategoryBadgeClass(name)}`}>{name}</Button>)}
+                {suggestion.categories.map(name => <Button variant="tertiary" key={name} type="button" onClick={() => onNavigateToLedger?.({ category: name, showAllCycles: true })} className={`press-scale inline-flex min-h-8 items-center rounded-md border px-2 text-xs font-semibold ${getCategoryBadgeClass(name)}`}>{name}</Button>)}
                 {suggestion.type === 'changeFlow' && <span className="inline-flex min-h-8 items-center gap-1 rounded-md border border-border/60 bg-muted/30 px-2 text-xs font-semibold text-muted-foreground"><ArrowLeftRight className="size-3" />{flowLabel(suggestion.sourceFlow)} → <strong className="text-foreground">{flowLabel(suggestion.targetFlow)}</strong></span>}
               </div>
               {suggestion.type === 'consolidate' && <label className="block space-y-1 text-xs font-semibold text-muted-foreground">Move its entries to:<CustomSelect ariaLabel="Category consolidation target" value={target} onChange={value => setConsolidateTargets(previous => ({ ...previous, [suggestion.id]: String(value) }))} options={[{ value: '', label: 'Choose a category' }, ...consolidateOptions.map(category => ({ value: category.name, label: category.name }))]} className="w-full" /></label>}
             </div>
             <footer className="flex items-center justify-between gap-2 border-t border-border/50 bg-muted/15 px-3 py-2.5">
-              <Button variant="unstyled" type="button" disabled={suggestion.affectedTransactionCount === 0 || !onNavigateToLedger} onClick={() => onNavigateToLedger?.({ category: suggestion.categories[0], txType: incompatibleType, showAllCycles: true })} className="min-h-11 min-w-0 rounded-lg px-2 text-left text-xs font-bold uppercase text-orange-600 disabled:text-muted-foreground sm:min-h-8">
+              <Button variant="tertiary" type="button" disabled={suggestion.affectedTransactionCount === 0 || !onNavigateToLedger} onClick={() => onNavigateToLedger?.({ category: suggestion.categories[0], txType: incompatibleType, showAllCycles: true })} className="min-h-11 min-w-0 rounded-lg px-2 text-left text-xs font-bold uppercase text-orange-600 disabled:text-muted-foreground sm:min-h-8">
                 {suggestion.affectedTransactionCount > 0 ? `${suggestion.affectedTransactionCount} ledger ${suggestion.affectedTransactionCount === 1 ? 'entry' : 'entries'} need validation` : 'No ledger entries affected'}
               </Button>
-              <Button variant="outline" size="sm" type="button" onClick={() => onApply(suggestion)} disabled={!canApply || applyingId !== null || disabled} title={disabled ? 'Choose a category first' : 'Accept suggestion'} className="w-20 shrink-0">
+              <Button variant="secondary" size="sm" type="button" onClick={() => onApply(suggestion)} disabled={!canApply || applyingId !== null || disabled} title={disabled ? 'Choose a category first' : 'Accept suggestion'} className="w-20 shrink-0">
                 {applyingId === suggestion.id ? <Loader2 className="size-3 animate-spin" /> : 'Accept'}
               </Button>
             </footer>

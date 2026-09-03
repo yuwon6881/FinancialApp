@@ -154,7 +154,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
             const isSelected = value === null ? activeTxTypes.length === 0 : activeTxTypes.includes(value)
             return (
               <Button
-                variant="unstyled"
+                variant="tertiary"
                 type="button"
                 key={label}
                 onClick={() => onTxTypeChange(value)}

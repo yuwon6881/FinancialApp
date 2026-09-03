@@ -117,7 +117,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
             ['×', '×'],
             ['÷', '÷'],
           ].map(([label, operator]) => (
-            <Button variant="unstyled"
+            <Button variant="tertiary"
               key={operator}
               type="button"
               onMouseDown={event => { event.preventDefault(); appendOperator(operator) }}
@@ -126,7 +126,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
               {label}
             </Button>
           ))}
-          <Button variant="unstyled"
+          <Button variant="tertiary"
             type="button"
             onMouseDown={event => { event.preventDefault(); evaluate() }}
             className="bg-primary/10 px-2.5 py-1.5 text-xs font-bold text-accent-ink hover:bg-primary/20"

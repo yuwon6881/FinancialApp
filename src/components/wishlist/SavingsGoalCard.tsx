@@ -203,7 +203,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
           <Plus className="size-3.5" />
         </Button>
         <Button
-          variant="successGhost"
+          variant="secondary"
           size="sm"
           className="h-11 sm:h-9 shrink-0"
           onClick={() => onComplete(goal.id)}

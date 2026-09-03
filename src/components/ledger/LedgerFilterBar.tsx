@@ -18,6 +18,7 @@ import {
 import type { TransactionSort } from '../../lib/transactionOrdering'
 import { LedgerAdvancedFilterControls } from './LedgerAdvancedFilterControls'
 import { LedgerCategoryChecklist } from './LedgerCategoryChecklist'
+import { Toolbar } from '../ui/Toolbar'
 
 const SORT_OPTIONS: { value: TransactionSort; label: string }[] = [
   { value: 'date-desc', label: 'Newest' },
@@ -178,7 +179,7 @@ export function LedgerFilterBar({
   // The match-mode switch lives inside the field it changes, the way a find bar puts it beside
   // the query; on its own the icon would be ambiguous and disconnected from the search it changes.
   const searchModeToggle = (
-    <Button variant="unstyled"
+    <Button variant="tertiary"
       type="button"
       aria-pressed={isExactMatch}
       aria-label={isExactMatch ? 'Matching complete fields exactly' : 'Matching anywhere in the text'}
@@ -196,7 +197,7 @@ export function LedgerFilterBar({
   )
 
   return (
-    <div className="top-[calc(4rem+env(safe-area-inset-top,0px))] sticky z-30 flex flex-wrap items-center gap-2 lg:gap-4 p-2 lg:p-4 bg-card lg:bg-card/90 lg:supports-[backdrop-filter]:bg-card/75 lg:backdrop-blur-md border border-border/60 rounded-xl lg:rounded-2xl shadow-sm">
+    <Toolbar aria-label="Ledger filters" className="top-[calc(4rem+env(safe-area-inset-top,0px))] sticky z-30 gap-2 rounded-2xl bg-card p-2 shadow-sm lg:gap-4 lg:bg-card/90 lg:p-4 lg:supports-[backdrop-filter]:bg-card/75 lg:backdrop-blur-md">
       {/* The search field takes a phone row of its own: sharing one row with the sort and filter
           controls squeezed it down to little more than its own magnifier icon. */}
       <div className="w-full min-w-0 lg:w-auto lg:flex-1">
@@ -213,7 +214,7 @@ export function LedgerFilterBar({
                 className="min-w-0 flex-1 rounded-none border-0 bg-transparent px-2.5 py-2.5 text-xs text-foreground shadow-none outline-none placeholder:text-foreground/60 focus:border-transparent focus:ring-0"
               />
               {pendingSearchTerm && (
-                <Button variant="unstyled"
+                <Button variant="tertiary"
                   type="button"
                   onClick={onClearServerSearch}
                   aria-label="Clear search"
@@ -224,7 +225,7 @@ export function LedgerFilterBar({
               )}
               {searchModeToggle}
             </div>
-            <Button variant="unstyled"
+            <Button variant="tertiary"
               onClick={onServerSearch}
               disabled={serverIsFetching}
               className="flex min-h-11 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground whitespace-nowrap transition-colors duration-200 hover:bg-primary/90 active:bg-primary/80 disabled:cursor-wait cursor-pointer lg:px-5"
@@ -246,7 +247,7 @@ export function LedgerFilterBar({
               className="min-w-0 flex-1 rounded-none border-0 bg-transparent px-2 py-2.5 text-xs shadow-none outline-none focus:border-transparent focus:ring-0"
             />
             {searchTerm && (
-              <Button variant="unstyled"
+              <Button variant="tertiary"
                 type="button"
                 onClick={() => onSearchTermChange('')}
                 aria-label="Clear search"
@@ -281,7 +282,7 @@ export function LedgerFilterBar({
             }
           }}
         >
-          <Button variant="unstyled"
+          <Button variant="tertiary"
             ref={filterButtonRef}
             onClick={() => onFilterDropdownOpenChange(!isFilterDropdownOpen)}
             aria-haspopup="dialog"
@@ -314,7 +315,7 @@ export function LedgerFilterBar({
             <div className="mb-3 flex shrink-0 items-center justify-between border-b border-border/40 pb-2">
               <span className="text-xs font-bold text-foreground">Filter Ledger Entries</span>
               {draftFilterCount > 0 && (
-                <Button variant="unstyled"
+                <Button variant="tertiary"
                   onClick={onClearFilters}
                   className="text-xs font-bold text-orange-500 hover:underline cursor-pointer whitespace-nowrap"
                 >
@@ -337,7 +338,7 @@ export function LedgerFilterBar({
 
             {showAllCycles && (
               <div className="pt-3 mt-3 border-t border-border/40">
-                <Button variant="unstyled"
+                <Button variant="tertiary"
                   onClick={onApplyFilters}
                   disabled={serverIsFetching || hasInvalidRange}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs cursor-pointer transition duration-200 disabled:opacity-50
@@ -359,7 +360,7 @@ export function LedgerFilterBar({
               title="Filter Ledger Entries"
               onClose={() => onFilterDropdownOpenChange(false)}
               footer={showAllCycles ? (
-                <Button variant="unstyled"
+                <Button variant="tertiary"
                   onClick={() => {
                     onApplyFilters()
                     onFilterDropdownOpenChange(false)
@@ -379,7 +380,7 @@ export function LedgerFilterBar({
               <div className="ledger-filter-dropdown space-y-4 pr-1">
                 {draftFilterCount > 0 && (
                   <div className="flex justify-end">
-                    <Button variant="unstyled"
+                    <Button variant="tertiary"
                       onClick={onClearFilters}
                       className="text-xs font-bold text-orange-500 hover:underline cursor-pointer"
                     >
@@ -399,6 +400,6 @@ export function LedgerFilterBar({
           )}
         </div>
       </div>
-    </div>
+    </Toolbar>
   )
 }

@@ -100,7 +100,7 @@ function BillItemRow({
 
         <Button
           type="button"
-          variant="ghost"
+          variant="tertiary"
           size="sm"
           onClick={() => onNavigate(payment.id)}
           aria-label={`View ${payment.name} in recurring bills`}

@@ -62,7 +62,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
       maxWidthClassName="max-w-md"
       footer={onViewInLedger ? (
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           className="w-full gap-1.5 text-xs font-bold"
           onClick={() => {

@@ -125,7 +125,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           </div>
           <div className="flex items-center gap-2.5">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={this.reset}
               className="rounded-xl px-4"
             >
@@ -152,7 +152,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           )}
           {(!inline || retryFailed) && (
             <Button
-              variant="destructiveGhost"
+              variant="destructive"
               size="sm"
               onClick={this.clearCacheAndReload}
               className="text-xs"

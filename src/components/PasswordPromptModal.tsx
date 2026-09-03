@@ -56,7 +56,7 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
       {onTryFingerprint && (
         <Button
           type="button"
-          variant="successGhost"
+          variant="secondary"
           onClick={handleTryFingerprint}
           disabled={fingerprintBusy}
           className="w-full rounded-xl py-2.5"
@@ -112,7 +112,7 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
         <ModalActions>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={handleClose}
             className="rounded-xl px-4"
           >

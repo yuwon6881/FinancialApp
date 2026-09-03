@@ -119,7 +119,7 @@ export function AccountPlacementReviewSheet({
       description="Choose the live account for each affected bucket. The original operation, date, identity and attachments stay unchanged."
       footer={(
         <ModalActions>
-          <Button type="button" variant="outline" onClick={onClose} className="rounded-xl">
+          <Button type="button" variant="secondary" onClick={onClose} className="rounded-xl">
             Close
           </Button>
         </ModalActions>

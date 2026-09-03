@@ -23,7 +23,7 @@ describe('BottomSheet HCI contract', () => {
         onClose={onClose}
         footer={(
           <ModalActions>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="secondary">Cancel</Button>
             <Button>Save</Button>
           </ModalActions>
         )}

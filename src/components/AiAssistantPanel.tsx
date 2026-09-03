@@ -172,7 +172,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
       headerActions={
         <>
           {(hasConversation || messages.length > 0) && (
-            <Button variant="unstyled"
+            <Button variant="tertiary"
               type="button"
               onClick={() => void handleNewChat()}
               disabled={isResetting}
@@ -184,7 +184,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               <span>{isResetting ? 'Clearing…' : 'New chat'}</span>
             </Button>
           )}
-          <Button variant="unstyled" size="icon"
+          <Button variant="tertiary" size="icon"
             type="button"
             onClick={handleClose}
             className="inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer sm:size-9"
@@ -215,7 +215,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               A stopped question may already have been answered. Ask it again to get anything it prepared.
             </span>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               className="min-h-11 shrink-0 sm:min-h-0"
               disabled={isSending || isOffline || isHydrating || isResetting}
@@ -225,7 +225,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               Ask again
             </Button>
             <Button
-              variant="ghost"
+              variant="tertiary"
               size="icon"
               className="size-11 shrink-0 p-0 sm:size-7"
               onClick={dismissStoppedTurn}
@@ -245,7 +245,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               {pendingActionBatches.length > 1 ? ` ${pendingActionBatches.length - 1} older batch${pendingActionBatches.length === 2 ? '' : 'es'} will remain.` : ''}
             </span>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               className="min-h-11 shrink-0 sm:min-h-0"
               disabled={isSending || isOffline || isHydrating || isResetting}
@@ -254,7 +254,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               Resume review
             </Button>
             <Button
-              variant="ghost"
+              variant="tertiary"
               size="icon"
               className="size-11 shrink-0 p-0 sm:size-7"
               disabled={isSending || isOffline}
@@ -292,7 +292,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               {isOffline && <p className="mt-2 text-xs font-medium text-orange-500">Ask AI requires an internet connection.</p>}
               <div role="group" aria-label="Suggested questions" className="mt-4 flex w-full max-w-md flex-col items-center gap-2">
                 {suggestedPrompts.map(prompt => (
-                  <Button variant="unstyled"
+                  <Button variant="tertiary"
                     key={prompt}
                     type="button"
                     disabled={isOffline}
@@ -325,7 +325,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
                     <AiMessageContent content={message.content} accounts={accounts} role={message.role} />
                   </div>
                   {message.role === 'assistant' && index === messages.length - 1 && lastFailedTurn && (
-                    <Button variant="unstyled"
+                    <Button variant="tertiary"
                       type="button"
                       aria-label="Retry the last question"
                       onClick={() => void sendMessage(lastFailedTurn)}

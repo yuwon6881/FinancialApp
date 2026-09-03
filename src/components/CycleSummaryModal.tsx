@@ -87,11 +87,11 @@ export function CycleSummaryModal({
       footer={
         <div className="flex gap-2 sm:justify-end">
           {onViewLedger && summary?.hasActivity && (
-            <Button variant="unstyled" onClick={onViewLedger} className="flex-1 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs font-bold text-foreground transition hover:bg-muted/70 sm:flex-none">
+            <Button variant="tertiary" onClick={onViewLedger} className="flex-1 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs font-bold text-foreground transition hover:bg-muted/70 sm:flex-none">
               View ledger
             </Button>
           )}
-          <Button ref={closeButtonRef} variant="unstyled" onClick={onClose} className="flex-1 rounded-lg bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:bg-foreground/90 sm:flex-none">
+          <Button ref={closeButtonRef} variant="tertiary" onClick={onClose} className="flex-1 rounded-lg bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:bg-foreground/90 sm:flex-none">
             {variant === 'auto' ? 'Got it' : 'Close'}
           </Button>
         </div>

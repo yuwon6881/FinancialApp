@@ -153,7 +153,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button variant="unstyled"
+            <Button variant="tertiary"
               type="button"
               onClick={e => { e.stopPropagation(); void view.handleAiCleanupReview() }}
               disabled={hideSensitive || view.isReviewingCleanup || view.visibleCategories.length === 0}
@@ -247,7 +247,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                           {CATEGORY_FLOW_SEGMENTS.map(segment => {
                             const isActive = activeType === segment.value
                             return (
-                              <Button variant="unstyled"
+                              <Button variant="tertiary"
                                 key={segment.value}
                                 type="button"
                                 disabled={hideSensitive}
@@ -300,7 +300,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                 </span>
                 <div className="flex shrink-0 items-center justify-end gap-1.5">
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     type="button"
                     onClick={() => setFlowTypeDrafts({})}

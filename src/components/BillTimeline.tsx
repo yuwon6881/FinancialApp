@@ -97,7 +97,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         className="relative p-4 flex items-center justify-between hover:bg-muted/30 transition duration-200 select-none flex-wrap gap-2"
       >
         <Button
-          variant="unstyled"
+          variant="tertiary"
           type="button"
           aria-label={`Expand ${displayTitle}`}
           aria-expanded="false"
@@ -130,7 +130,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         className="relative flex items-center justify-between border-b border-border/30 pb-3 gap-2 hover:bg-muted/20 -mx-3 -mt-2 p-3 rounded-xl transition duration-150 select-none"
       >
         <Button
-          variant="unstyled"
+          variant="tertiary"
           type="button"
           aria-label={`Collapse ${displayTitle}`}
           aria-expanded="true"
@@ -203,7 +203,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   : 'text-amber-500 bg-amber-500/10'
 
             return (
-              <Button variant="unstyled"
+              <Button variant="tertiary"
                 key={node.dueDate}
                 type="button"
                 onClick={() => handleNodeClick(node)}
@@ -258,7 +258,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                 const isHighlighted = highlightedNodeDate === node.dueDate
                 return (
                   <Button
-                    variant="unstyled"
+                    variant="tertiary"
                     key={node.dueDate}
                     type="button"
                     onClick={() => handleNodeClick(node)}
@@ -310,7 +310,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               const isHighlighted = highlightedNodeDate === node.dueDate
               return (
                 <Button
-                  variant="unstyled"
+                  variant="tertiary"
                   key={`key-${node.dueDate}`}
                   type="button"
                   ref={(element) => {

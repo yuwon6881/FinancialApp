@@ -45,6 +45,15 @@ test('representative dashboard', async ({ page }) => {
   await expect(page).toHaveScreenshot('dashboard.png', { fullPage: true })
 })
 
+test('canonical Ayu interface specimen', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page)
+  await page.goto('/ui-specimen', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByRole('heading', { name: 'Ayu interface' })).toBeVisible()
+  await waitForStableLayout(page)
+  await expect(page).toHaveScreenshot('ayu-interface-specimen.png', { fullPage: true })
+})
+
 // The three reported figures are one subtraction and are only legible if they read as adjacent
 // rows. jsdom can assert the labels exist but not that the panel lays them out that way, nor that
 // the disclosure opens to a contained block at phone width.

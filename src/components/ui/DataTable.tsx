@@ -158,7 +158,7 @@ export function DataTablePagination({
 
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
             disabled={previousDisabled}
@@ -172,7 +172,7 @@ export function DataTablePagination({
           </span>
           <div className="hidden items-center gap-1 sm:flex">
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
               disabled={previousDisabled}
@@ -185,7 +185,7 @@ export function DataTablePagination({
             ) : (
               <Button
                 key={`page-${page}`}
-                variant={currentPage === page ? 'primary' : 'outline'}
+                variant={currentPage === page ? 'primary' : 'secondary'}
                 size="sm"
                 onClick={() => onPageChange(page)}
                 disabled={serverIsFetching}
@@ -196,7 +196,7 @@ export function DataTablePagination({
               </Button>
             ))}
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => onPageChange(Math.min(currentPage + 1, safeTotalPages))}
               disabled={nextDisabled}
@@ -206,7 +206,7 @@ export function DataTablePagination({
             </Button>
           </div>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => onPageChange(Math.min(currentPage + 1, safeTotalPages))}
             disabled={nextDisabled}
