@@ -52,7 +52,7 @@ Raw buttons are limited to the three shared primitives where the element is the 
 | Primitive | Feature importers | Competing hand-rolled implementations |
 | --- | ---: | --- |
 | `IconButton` | **19 — closed.** All 28 icon-only call sites adopted it; the primitive layer (`HorizontalRail`, `OverflowMenu`, `ToastViewport`, `ToggleButton`) still composes `Button` directly as the implementation boundary | none |
-| `EmptyState` | 1 | 18 files hand-roll dashed empty shells |
+| `EmptyState` | **9 — closed.** 8 sites converted, using the new `compact` density for the one-line notes that sit inside an already-titled panel | none. The earlier "18 files" figure was wrong: it counted every `border-dashed`, most of which are chart legend dashes, archived/disabled row states or drop zones. Only 10 were empty states, and `dashboard/CategoryLimitPerformance` stays hand-rolled as an approved exception — it is a horizontal icon/text/action card, not this centered anatomy |
 | `SectionHeader` | 1 | ~48 `font-bold uppercase tracking-wide` labels across 31 files |
 | `Toolbar` | 2 | 5 further filter/action bars; it is the only `role="toolbar"` in the tree |
 | `Badge`/`StatusBadge` | 3 | `RowSyncBadge` (15 consumers, undeclared second badge system) plus pills in 14 files |
@@ -98,5 +98,11 @@ Measured on 2026-09-03 against the standardization commit plus the enforcement c
 - Production build: pass. Budget headroom is very small and is now the binding constraint on the remaining surface work. The panel consolidation moved the eager critical path from 219.29 kB to 219.44 kB, leaving 0.06 kB, so the limit was raised to 221.0 kB under the documented convention. **The precache ceiling cannot be raised the same way — it is fixed by invariant PERF-02 at 3 MiB and stands at 3070.18 kB, about 1.8 kB spare.** Adopting `EmptyState`, `SectionHeader`, `Badge`, `IconButton`, `Meter` and the skeleton consolidation touches roughly 110 more call sites; each should remove more duplicated markup than it adds, but the precache figure must be read after every area and an offsetting reduction found if it stops falling.
 - Full Vitest: 292 files, 2,174 tests, all passing.
 - Playwright: 324 passed, 156 intentional project skips, across the whole 14-project matrix. The 44px floor assertion passes at all eight sub-1024px projects, including 320px and 390×500.
+
+## Why snapshot diffs are reviewed one at a time
+
+The `EmptyState` migration is the standing example. Adopting the shared anatomy replaced hand-tuned compact sizing with desktop-first sizing, which grew the Loans empty state tall enough that its own "Add your first loan" button ended up behind the fixed bottom navigation on a 390px phone. Every gate was green — typecheck, lint, audit, 2,174 unit tests — and the only signal was two changed images. Bulk-accepting them would have shipped an empty state whose call to action could not be reached.
+
+The fix belonged in the primitive, not the call site: the section-level empty state now steps down at compact (`size-11`/`text-sm`/`text-xs`/`max-w-sm`) and grows from `sm:` upward, matching how the rest of the system treats tiers. Eight baselines were then refreshed deliberately — two for Loans, six for the specimen — each inspected before acceptance.
 
 Standardization work is releasable only after focused tests, strict TypeScript, ESLint, design-system audit, dead-code analysis, full Vitest, production build/budgets, and the applicable Playwright matrix pass. Snapshot updates must be reviewed individually; semantic, keyboard, overflow, privacy, and hit-target assertions take precedence over image acceptance.

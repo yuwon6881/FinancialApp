@@ -10,6 +10,7 @@ import { DataTablePagination } from '../ui/DataTable'
 import { useClientPagination } from '../ui/useClientPagination'
 import { cn } from '../../lib/utils'
 import { panelFromMediumClass } from '../ui/panelStyles'
+import { EmptyState } from '../ui/EmptyState'
 
 interface RewardsSectionProps {
   items: WishlistItem[]
@@ -107,10 +108,11 @@ export function RewardsSection(props: RewardsSectionProps) {
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border/60 bg-muted/15 px-4 py-6 text-center">
-          <p className="text-xs text-muted-foreground">No rewards yet. Add one to save toward.</p>
-          <Button variant="secondary" size="sm" className="mt-3" onClick={props.onAdd} disabled={props.hideSensitive}>Add reward</Button>
-        </div>
+        <EmptyState
+          density="compact"
+          title="No rewards yet. Add one to save toward."
+          actions={<Button variant="secondary" size="sm" onClick={props.onAdd} disabled={props.hideSensitive}>Add reward</Button>}
+        />
       )}
       {props.items.length > pagination.pageSize && (
         <DataTablePagination

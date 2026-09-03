@@ -11,6 +11,7 @@ import { mapServerErrorToField, type ServerFieldRule } from '../../../lib/formEr
 import { revealFirstFieldError } from '../../ui/formValidation'
 import { useSyncStatus } from '../../../lib/useOptimisticList'
 import { TaxReliefLimitsSheet } from './TaxReliefLimitsSheet'
+import { EmptyState } from '../../ui/EmptyState'
 
 type CategoryInput = { name: string; limit: number }
 type CategoryDraft = { name: string; limit: string }
@@ -285,9 +286,11 @@ export function TaxReliefOverview({
             Loading tax relief tracker…
           </div>
         ) : trackerCategories.length === 0 ? (
-          <p className="flex min-h-[8.25rem] items-center justify-center rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-            No categories are configured for this year yet. Use Manage limits to add the limits you want to track.
-          </p>
+          <EmptyState
+            density="compact"
+            className="flex min-h-[8.25rem] items-center justify-center bg-transparent p-4"
+            title="No categories are configured for this year yet. Use Manage limits to add the limits you want to track."
+          />
         ) : (
           <HorizontalRail label="Tax relief categories" className="items-stretch" showControls>
             {orderedTrackerCategories.map(category => {

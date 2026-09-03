@@ -18,6 +18,7 @@ import { DataTablePagination } from '../../ui/DataTable'
 import { useClientPagination } from '../../ui/useClientPagination'
 import { cn } from '../../../lib/utils'
 import { panelFromMediumClass } from '../../ui/panelStyles'
+import { EmptyState } from '../../ui/EmptyState'
 
 interface LoansSectionProps {
   loans: Loan[]
@@ -157,23 +158,20 @@ export function LoansSection({
           <Button variant="tertiary" size="sm" className="mt-3" onClick={() => void onLoad()}>Retry</Button>
         </div>
       ) : loans.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border/70 bg-card/40 p-6 text-center sm:p-8">
-          <div className="mx-auto grid size-11 place-items-center rounded-2xl border border-accent-ink/20 bg-accent/30 text-accent-ink">
-            <Landmark className="size-5" aria-hidden="true" />
-          </div>
-          <h4 className="mt-3 text-sm font-bold text-foreground">No loans tracked yet</h4>
-          <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
-            Link a recurring bill to see your real repayment progress, interest paid, and estimated payoff timeline.
-          </p>
-          <Button variant="primary" size="sm" className="mt-4" onClick={openAdd}>
-            <Plus className="size-3.5" aria-hidden="true" />
-            Add your first loan
-          </Button>
-        </div>
+        <EmptyState
+          className="bg-card/40 sm:p-8"
+          icon={<Landmark className="size-5" aria-hidden="true" />}
+          title="No loans tracked yet"
+          description="Link a recurring bill to see your real repayment progress, interest paid, and estimated payoff timeline."
+          actions={(
+            <Button variant="primary" size="sm" onClick={openAdd}>
+              <Plus className="size-3.5" aria-hidden="true" />
+              Add your first loan
+            </Button>
+          )}
+        />
       ) : view.filteredAndSortedLoans.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border/70 bg-muted/10 p-6 text-center text-xs text-muted-foreground">
-          No loans match the selected filters.
-        </div>
+        <EmptyState density="compact" className="rounded-2xl p-6" title="No loans match the selected filters." />
       ) : (
         <div className="space-y-4">
         <m.div

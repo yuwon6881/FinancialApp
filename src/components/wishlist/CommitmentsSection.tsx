@@ -14,6 +14,7 @@ import { DataTablePagination } from '../ui/DataTable'
 import { useClientPagination } from '../ui/useClientPagination'
 import { cn } from '../../lib/utils'
 import { panelFromMediumClass } from '../ui/panelStyles'
+import { EmptyState } from '../ui/EmptyState'
 
 interface CommitmentsSectionProps {
   pool: GoalPoolSummary
@@ -142,10 +143,11 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
       </div>
 
       {!hasAny ? (
-        <div className="rounded-xl border border-dashed border-border/60 bg-muted/15 px-4 py-6 text-center">
-          <p className="text-xs text-muted-foreground">No commitments yet. Add one to save a set amount each cycle.</p>
-          <Button variant="secondary" size="sm" className="mt-3" onClick={onAddGoal} disabled={hideSensitive}>Add commitment</Button>
-        </div>
+        <EmptyState
+          density="compact"
+          title="No commitments yet. Add one to save a set amount each cycle."
+          actions={<Button variant="secondary" size="sm" onClick={onAddGoal} disabled={hideSensitive}>Add commitment</Button>}
+        />
       ) : isSolo ? (
         <div>{visibleCollection}</div>
       ) : isCompact ? (

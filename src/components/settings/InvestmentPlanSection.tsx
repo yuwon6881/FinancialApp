@@ -17,6 +17,7 @@ import { FormField } from '../ui/FormField'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { redistributeInvestmentTargets, validateInvestmentPlan } from '../../lib/investmentAllocation'
 import { InvestmentClassificationRow } from './InvestmentClassificationRow'
+import { EmptyState } from '../ui/EmptyState'
 
 type TargetKey = 'usEquityTarget' | 'internationalExUsTarget' | 'bondsTarget'
 
@@ -432,9 +433,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
             />
           ))}
           {!overview?.assignments.length && (
-            <p className="rounded-xl border border-dashed border-border/60 p-5 text-center text-xs text-muted-foreground">
-              Add investments first, then return here to classify them.
-            </p>
+            <EmptyState density="compact" className="bg-transparent p-5" title="Add investments first, then return here to classify them." />
           )}
         </Reorder.Group>
       </section>

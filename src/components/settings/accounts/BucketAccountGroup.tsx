@@ -8,6 +8,7 @@ import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { AccountRow } from './AccountRow'
 import { DataTablePagination } from '../../ui/DataTable'
 import { useClientPagination } from '../../ui/useClientPagination'
+import { EmptyState } from '../../ui/EmptyState'
 
 export interface BucketAccountGroupProps {
   bucket: LedgerAccount['bucket']
@@ -95,20 +96,23 @@ export function BucketAccountGroup({
 
         {/* Account list or empty state */}
         {!hasAnyAccounts ? (
-          <div className="rounded-xl border border-dashed border-border/70 bg-card/40 px-4 py-6 text-center">
-            <p className="text-xs text-muted-foreground">No accounts added for {bucket} yet.</p>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="mt-3"
-              onClick={() => onAdd(bucket)}
-              disabled={disabled || hideSensitive}
-            >
-              <Plus className="size-3.5" aria-hidden="true" />
-              Add the first account
-            </Button>
-          </div>
+          <EmptyState
+            density="compact"
+            className="bg-card/40"
+            title={`No accounts added for ${bucket} yet.`}
+            actions={(
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => onAdd(bucket)}
+                disabled={disabled || hideSensitive}
+              >
+                <Plus className="size-3.5" aria-hidden="true" />
+                Add the first account
+              </Button>
+            )}
+          />
         ) : accounts.length === 0 ? (
           <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-4 text-center text-xs text-muted-foreground">
             {searchQuery ? `No accounts in ${bucket} match "${searchQuery}".` : `No accounts in ${bucket}.`}

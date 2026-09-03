@@ -19,6 +19,7 @@ import {
   type BucketSetupDraftAccount,
   type BucketSetupPrefill,
 } from './view/useBucketAccountSetupView'
+import { EmptyState } from '../../ui/EmptyState'
 
 interface BucketAccountSetupSheetProps {
   isOpen: boolean
@@ -171,7 +172,7 @@ export function BucketAccountSetupSheet({
             <div className="flex items-center justify-between gap-3"><div><h4 className="text-sm font-bold text-foreground">Accounts in {bucket}</h4><p className="mt-0.5 text-xs text-muted-foreground">Closed accounts stay visible for history.</p></div><Button variant="secondary" size="sm" type="button" onClick={view.addDraft} disabled={isBusy}><Plus className="size-3.5" aria-hidden="true" />Add account</Button></div>
             {view.bucketAccounts.map(account => <div key={account.id} className="grid grid-cols-1 items-center gap-2.5 rounded-2xl border border-border/60 bg-card/70 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,12rem)] sm:gap-3"><div className="min-w-0"><p className={`truncate text-xs font-semibold ${account.isArchived ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{account.name}</p><p className="mt-0.5 text-xs text-muted-foreground">{account.isArchived ? 'Closed account · kept for history' : 'Open account'}</p></div>{account.isArchived ? <div className="text-right text-xs">{formatAmount(account.remaining)}</div> : <FormField label={`Current balance for ${account.name}`} error={view.errors[account.id]}><SmartAmountInput value={view.targetInputs[account.id] ?? ''} onChange={event => view.updateTarget(account.id, event.target.value)} placeholder="0.00" /></FormField>}</div>)}
             {view.drafts.map(draft => <NewAccountRow key={draft.id} draft={draft} currency={currency} error={view.errors[draft.id]} targetError={view.errors[`${draft.id}-target`]} onChange={change => view.updateDraft(draft.id, change)} onTargetChange={value => view.updateDraftTarget(draft.id, value)} onRemove={() => view.removeDraft(draft.id)} />)}
-            {view.bucketAccounts.length === 0 && view.drafts.length === 0 && <div className="rounded-2xl border border-dashed border-border/70 bg-card/40 px-4 py-6 text-center text-xs text-muted-foreground">Add at least one account row to start this bucket.</div>}
+            {view.bucketAccounts.length === 0 && view.drafts.length === 0 && <EmptyState density="compact" className="rounded-2xl bg-card/40" title="Add at least one account row to start this bucket." />}
           </div>
           {view.preview && view.preview.accountAdjustments.length > 0 && <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/15 p-3.5"><div className="flex items-center gap-2 text-xs font-bold text-foreground"><CheckCircle2 className="size-4 text-accent-ink" aria-hidden="true" />Planned balance changes</div>{view.preview.accountAdjustments.map(account => <div key={account.id} className="flex items-center justify-between gap-3 text-xs"><span className="min-w-0 truncate">{account.name}</span><SignedAmount value={account.diff} currency={currency} hideSensitive={hideSensitive} /></div>)}</div>}
         </div>

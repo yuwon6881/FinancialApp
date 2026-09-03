@@ -9,6 +9,7 @@ import { navigateToAppTab } from '../../../lib/appLocation'
 import { Button } from '../../ui/Button'
 import { InfoHint } from '../../ui/InfoHint'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
+import { EmptyState } from '../../ui/EmptyState'
 
 export interface AccountBillRosterProps {
   roster?: AccountBillRosterType
@@ -173,9 +174,7 @@ export function AccountBillRoster({
 
       <div className="mt-2.5 space-y-3 pt-1">
         {totalCount === 0 ? (
-          <div className="rounded-xl border border-dashed border-border/60 bg-muted/15 px-3 py-3 text-center text-xs text-muted-foreground">
-            No recurring bills paid from this account.
-          </div>
+          <EmptyState density="compact" className="px-3 py-3" title="No recurring bills paid from this account." />
         ) : (
           <>
             {activeBills.length > 0 && (
