@@ -4,7 +4,7 @@ import type { InvestmentActivity, InvestmentCashFlow, InvestmentPortfolio, Inves
 import * as api from '../../lib/api'
 import { applyOpsToList, type QueuedOp } from '../../lib/outbox'
 import { sortActivityNewestFirst, sortCashFlowsNewestFirst } from '../../lib/investmentOrdering'
-import { formatCurrencyVal } from '../../lib/utils'
+import { cn, formatCurrencyVal } from '../../lib/utils'
 import { buildSleeveIndex, sleeveLabelFor } from '../../lib/investmentAllocation'
 import { filterHoldings } from '../../lib/investmentHoldingFilter'
 import { investmentActivityCashAfterCharges, investmentActivityCharges } from '../../lib/investmentActivityDisplay'
@@ -15,6 +15,7 @@ import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { resolveMutationBusyLabel } from '../ui/rowSyncState'
 import { DataTable, DataTableBody, DataTableFooter, DataTableHeader, DataTableHeaderCell, DataTablePagination } from '../ui/DataTable'
 import type { AllocationFilter } from './InvestmentCharts'
+import { panelClass } from '../ui/Panel'
 
 const activityTypes: Array<{ value: InvestmentTransactionType; label: string }> = [
   { value: 'Buy', label: 'Buy' },
@@ -93,7 +94,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
     })
     .filter(group => group.holdings.length > 0 || group.cash.length > 0)
   return (
-  <section aria-labelledby="holdings-title" className="app-panel overflow-hidden rounded-2xl border border-border/60 bg-card/92">
+  <section aria-labelledby="holdings-title" className={cn(panelClass, 'overflow-hidden')}>
     <div className="p-4 sm:p-5"><h2 id="holdings-title" className="text-base font-bold text-foreground">What you hold</h2><p className="mt-1 text-xs text-muted-foreground">Every fund you own, grouped by the account holding it.{filter ? ` Showing only ${filterLabel}.` : ''}</p></div>
     <div className="grid gap-3 px-4 pb-4 sm:px-5 sm:pb-5 sm:grid-cols-2 lg:grid-cols-3">
       {accountGroups.map(({ account, holdings: accountHoldings, cash, total }) => (
@@ -317,7 +318,7 @@ export const PagedActivityTable = ({
     : [{ value: '', label: 'All types' }, { value: 'Deposit', label: 'Deposit' }, { value: 'Withdrawal', label: 'Withdrawal' }, { value: 'Conversion', label: 'Conversion' }]
 
   return (
-    <section aria-labelledby="activity-title" className="app-panel min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-card/92">
+    <section aria-labelledby="activity-title" className={cn(panelClass, 'min-w-0 overflow-hidden')}>
       <div className="space-y-4 p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><h2 id="activity-title" className="text-base font-bold text-foreground">Activity</h2><p className="mt-1 text-xs text-muted-foreground">{total} matching record{total === 1 ? '' : 's'}{activeLabel ? ` · ${activeLabel}` : ''}</p></div>

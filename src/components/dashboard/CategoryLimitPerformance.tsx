@@ -5,6 +5,8 @@ import type { CategoryLimitProgress, AppTab } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { InfoHint } from '../ui/InfoHint'
 import { getCategoryLimitCardId, type NavigateToLedgerOptions } from './types'
+import { cn } from '../../lib/utils'
+import { panelClass } from '../ui/Panel'
 
 interface CategoryLimitPerformanceProps {
   items: CategoryLimitProgress[]
@@ -23,7 +25,7 @@ export function CategoryLimitPerformance({
 }: CategoryLimitPerformanceProps) {
   if (items.length === 0) {
     return (
-      <section className="app-panel flex h-full flex-col justify-between rounded-2xl border border-border/60 bg-card/92 p-5">
+      <section className={cn(panelClass, 'flex h-full flex-col justify-between p-5')}>
         <div className="flex items-center justify-between gap-3">
           <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
             <Gauge className="size-4 text-blue-500" /> Category limit performance
@@ -73,7 +75,7 @@ export function CategoryLimitPerformance({
     item.status !== 'Exceeded' && item.limit > 0 && item.projectedSpend / item.limit > Math.max(0, item.percentUsed))
 
   return (
-    <section className="app-panel h-full rounded-2xl border border-border/60 bg-card/92 p-5">
+    <section className={cn(panelClass, 'h-full p-5')}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">

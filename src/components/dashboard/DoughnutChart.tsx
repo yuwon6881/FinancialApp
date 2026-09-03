@@ -4,6 +4,8 @@ import { useAppPrefs } from '../../contexts/AppContext'
 import { getCategoryChartColor } from '../../lib/categoryColors'
 import { InteractiveDoughnutChart } from '../ui/InteractiveDoughnutChart'
 import { Button } from '../ui/Button'
+import { cn } from '../../lib/utils'
+import { panelClass } from '../ui/Panel'
 
 type ChartRange = 'monthly' | '3month' | '6month' | 'yearly'
 
@@ -53,7 +55,7 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
     : `Expense breakdown for ${rangeLabel}. No outflows logged.`
 
   return (
-    <div className="app-panel flex min-w-0 flex-col justify-between rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-6">
+    <div className={cn(panelClass, 'flex min-w-0 flex-col justify-between p-4 sm:p-6')}>
       <div>
         <div className="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-2">
           <div>

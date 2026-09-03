@@ -3,6 +3,8 @@ import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { activateOnKeyboard } from './activateOnKeyboard'
 import type { NavigateToLedgerOptions } from './types'
+import { cn } from '../../lib/utils'
+import { panelClass } from '../ui/Panel'
 
 interface CycleFlowStats {
   monthlyIncome: number
@@ -34,7 +36,7 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
         onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ txType: 'inflow' }))}
         role="button"
         tabIndex={0}
-        className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60 hover:border-teal-500/30 transition-all duration-300 group cursor-pointer"
+        className={cn('metric-card interactive-card', panelClass, 'group cursor-pointer p-6 transition-all duration-300 hover:border-teal-500/30')}
       >
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-muted-foreground">Cycle Inflow</span>
@@ -56,7 +58,7 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
         onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ txType: 'outflow' }))}
         role="button"
         tabIndex={0}
-        className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60 hover:border-orange-500/30 transition-all duration-300 group cursor-pointer"
+        className={cn('metric-card interactive-card', panelClass, 'group cursor-pointer p-6 transition-all duration-300 hover:border-orange-500/30')}
       >
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-muted-foreground">Cycle Outflow</span>

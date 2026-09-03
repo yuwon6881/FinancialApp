@@ -3,7 +3,7 @@ import { Building2, CircleHelp } from 'lucide-react'
 import type { LedgerAccount, RecurringPayment } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
-import { formatCurrencyVal } from '../../../lib/utils'
+import { cn, formatCurrencyVal } from '../../../lib/utils'
 import { roundMoney } from '../../../lib/money'
 import { CustomConfirmModal } from '../../ui/CustomConfirmModal'
 import { Input } from '../../ui/Input'
@@ -20,6 +20,7 @@ import {
 } from './view/useBucketAccountSetupView'
 import { useAccountsView } from './view/useAccountsView'
 import { AlertBanner } from '../../ui/AlertBanner'
+import { panelClass } from '../../ui/Panel'
 
 interface AccountsSectionProps {
   accounts: LedgerAccount[]
@@ -236,7 +237,7 @@ export function AccountsSection({
         id="settings-panel-accounts"
         role="tabpanel"
         aria-labelledby="settings-tab-accounts"
-        className="app-panel space-y-6 rounded-2xl border border-border/60 bg-card/92 p-4 animate-in fade-in duration-200 sm:p-5"
+        className={cn(panelClass, 'space-y-6 p-4 animate-in fade-in duration-200 sm:p-5')}
       >
         {/* Panel Header */}
         <div className="flex flex-col gap-3 border-b border-border/40 pb-5 sm:flex-row sm:items-center sm:justify-between">

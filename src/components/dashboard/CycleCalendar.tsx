@@ -15,6 +15,7 @@ import { Button } from '../ui/Button'
 import { CycleCalendarDaySheet } from './CycleCalendarDaySheet'
 import { CycleWeeklyPacing } from './CycleWeeklyPacing'
 import { cn } from '../../lib/utils'
+import { panelClass } from '../ui/Panel'
 
 interface CycleCalendarProps {
   selectedMonth: string
@@ -95,7 +96,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
   const today = formatCalendarDate(new Date())
 
   return (
-    <div className="app-panel h-full rounded-2xl border border-border/60 bg-card/92 p-3 sm:p-6">
+    <div className={cn(panelClass, 'h-full p-3 sm:p-6')}>
       {/* Header */}
       <div className="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div>

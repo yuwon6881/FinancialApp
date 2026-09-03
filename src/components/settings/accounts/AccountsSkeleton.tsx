@@ -1,9 +1,11 @@
 import { Skeleton } from '../../ui/Skeleton'
+import { cn } from '../../../lib/utils'
+import { panelClass } from '../../ui/Panel'
 
 /** Mirrors the account panel's header, search bar, four bucket group cards, and note while it loads. */
 export function AccountsSkeleton({ isCurrentCycle = true }: { isCurrentCycle?: boolean }) {
   return (
-    <div data-testid="accounts-skeleton" className="app-panel space-y-6 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5">
+    <div data-testid="accounts-skeleton" className={cn(panelClass, 'space-y-6 p-4 sm:p-5')}>
       {/* Panel header */}
       <div className="flex flex-col gap-3 border-b border-border/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">

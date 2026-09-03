@@ -13,6 +13,8 @@ import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
 import { ToggleButton } from '../ui/ToggleButton'
 import { PushDevicesList } from './PushDevicesList'
+import { cn } from '../../lib/utils'
+import { panelClass } from '../ui/Panel'
 
 // Which devices a switch changes is the thing people get wrong here, so each row says it rather
 // than leaving it to be read out of the wording.
@@ -87,7 +89,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
   return (
     <section
       aria-labelledby="settings-notifications-heading"
-      className="app-panel space-y-3 rounded-2xl border border-border/60 bg-card/92 p-4 sm:space-y-4 sm:p-5"
+      className={cn(panelClass, 'space-y-3 p-4 sm:space-y-4 sm:p-5')}
     >
       <div className="border-b border-border/40 pb-2.5 sm:pb-3">
         <h3 id="settings-notifications-heading" className="text-sm font-bold text-foreground">Notifications</h3>

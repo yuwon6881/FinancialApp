@@ -1,6 +1,8 @@
 import React from 'react'
 import { activateOnKeyboard } from './activateOnKeyboard'
 import type { NavigateToLedgerOptions } from './types'
+import { cn } from '../../lib/utils'
+import { panelClass } from '../ui/Panel'
 
 interface GrowthMetric {
   target: number
@@ -59,7 +61,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
   }
 
   return (
-    <div className="app-panel p-6 bg-card/92 border border-border/60 rounded-2xl">
+    <div className={cn(panelClass, 'p-6')}>
       <h3 className="text-base font-bold text-foreground mb-1">Financial Plan Metrics</h3>
       <p className="text-xs text-muted-foreground mb-1">Cycle-wide constraint evaluation across allocation categories and targets.</p>
       {/* Legend -- protan-safe: blue (current) + orange (pending) */}

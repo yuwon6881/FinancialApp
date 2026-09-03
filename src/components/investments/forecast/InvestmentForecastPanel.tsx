@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { InvestmentPortfolio } from '../../../types'
-import { formatCurrencyVal } from '../../../lib/utils'
+import { cn, formatCurrencyVal } from '../../../lib/utils'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { Button } from '../../ui/Button'
 import { ChevronDown } from 'lucide-react'
@@ -10,6 +10,7 @@ import { ForecastTargetSection } from './ForecastTargetSection'
 import { InvestmentForecastChart } from './InvestmentForecastChart'
 import { useInvestmentForecastView } from './useInvestmentForecastView'
 import { Panel } from '../../ui/Panel'
+import { panelClass } from '../../ui/Panel'
 
 const mask = '••••'
 
@@ -65,7 +66,7 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
         variant="tertiary"
         onClick={() => setIsOpen(true)}
         aria-expanded={isOpen}
-        className="app-panel group flex w-full cursor-pointer items-center justify-between rounded-2xl border border-border/60 bg-card/92 p-5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className={cn(panelClass, 'group flex w-full cursor-pointer items-center justify-between p-5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring')}
       >
         <div>
           <h2 id="forecast-title" className="text-base font-bold text-foreground">Investment forecast</h2>

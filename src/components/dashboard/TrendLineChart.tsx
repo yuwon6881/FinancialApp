@@ -2,10 +2,11 @@ import { m, useReducedMotion } from 'framer-motion'
 import { TrendingUp } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import type { DashboardData, TrendPoint } from '../../types'
-import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
+import { cn, formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
 import { useAppPrefs } from '../../contexts/AppContext'
 import { Button } from '../ui/Button'
 import { ResponsiveChartFrame } from '../ui/ResponsiveChartFrame'
+import { panelClass } from '../ui/Panel'
 
 type TrendRange = '3month' | '6month' | 'yearly'
 
@@ -85,7 +86,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
   }
 
   return (
-    <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60 flex flex-col justify-between">
+    <div className={cn(panelClass, 'flex flex-col justify-between p-6')}>
       <div>
         <div className="flex items-center justify-between mb-3">
           <div>

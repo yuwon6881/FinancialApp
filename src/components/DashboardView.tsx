@@ -18,6 +18,8 @@ import { getDocumentRetentionReview } from '../lib/api/documents'
 import { EMPTY_RETENTION_REVIEW } from '../lib/documentRetention'
 import { VaultRetentionNotice } from './documents/VaultRetentionNotice'
 import type { DocumentRetentionReview } from '../types'
+import { cn } from '../lib/utils'
+import { panelClass } from './ui/Panel'
 
 interface DashboardViewProps {
   dashboardData: DashboardData | null
@@ -178,7 +180,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       />
 
       <div data-testid="today-plan-grid">
-        <section aria-labelledby="plan-snapshot-heading" className="app-panel flex flex-col rounded-2xl border border-border/60 bg-card/92 p-5">
+        <section aria-labelledby="plan-snapshot-heading" className={cn(panelClass, 'flex flex-col p-5')}>
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 id="plan-snapshot-heading" className="text-base font-bold text-foreground">Plan snapshot</h3>

@@ -3,6 +3,8 @@ import { Button } from './Button'
 import { CustomSelect } from './CustomSelect'
 import { getCycleLabelForDropdown } from '../../lib/cycleLabels'
 import { MONTH_NAMES } from '../../lib/cycle'
+import { cn } from '../../lib/utils'
+import { panelClass } from './Panel'
 
 export interface CycleSwitcherProps {
   selectedMonth: string
@@ -41,7 +43,7 @@ export function CycleSwitcher({
   const years = availableYears.length > 0 ? availableYears : [selectedYear]
 
   return (
-    <div className="app-panel relative z-40 flex flex-col gap-2 rounded-2xl border border-border/60 bg-card/92 p-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:p-3">
+    <div className={cn(panelClass, 'relative z-40 flex flex-col gap-2 p-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:p-3')}>
       <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
         <span className="flex shrink-0 items-center gap-1.5 pl-0.5 text-xs font-bold text-muted-foreground">
           <CalendarClock className="size-4 text-accent-ink" aria-hidden />

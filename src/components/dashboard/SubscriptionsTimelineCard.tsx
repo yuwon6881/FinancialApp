@@ -4,6 +4,8 @@ import { Calendar, ChevronRight, CheckCircle2, Clock, Minus } from 'lucide-react
 import type { ActiveRecurringPayment } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { Button } from '../ui/Button'
+import { cn } from '../../lib/utils'
+import { panelClass } from '../ui/Panel'
 
 interface SubscriptionsTimelineCardProps {
   activeRecurring: ActiveRecurringPayment[]
@@ -42,7 +44,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
   const containerKey = cycleKey || activeRecurring.map(r => r.id).join(',')
 
   return (
-    <div data-testid="subscriptions-timeline-card" className="app-panel flex h-full min-w-0 flex-col rounded-2xl border border-border/60 bg-card/92 p-6 lg:max-h-[24rem]">
+    <div data-testid="subscriptions-timeline-card" className={cn(panelClass, 'flex h-full min-w-0 flex-col p-6 lg:max-h-[24rem]')}>
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between mb-2">
           <div>

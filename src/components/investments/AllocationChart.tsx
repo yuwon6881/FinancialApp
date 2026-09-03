@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react'
 import type { InvestmentPortfolio } from '../../types'
 import { buildSleeveIndex, sleeveOf } from '../../lib/investmentAllocation'
 import { filterHoldings, type AllocationFilter, type AllocationMode } from '../../lib/investmentHoldingFilter'
-import { formatCurrencyVal } from '../../lib/utils'
+import { cn, formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { InteractiveDoughnutChart } from '../ui/InteractiveDoughnutChart'
+import { panelClass } from '../ui/Panel'
 
 const money = (value: number, currency: string) => formatCurrencyVal(value, currency)
 
@@ -84,7 +85,7 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
   }
 
   return (
-    <section aria-labelledby="allocation-title" className="app-panel min-w-0 flex flex-col rounded-2xl border border-border/60 bg-card/92 p-5">
+    <section aria-labelledby="allocation-title" className={cn(panelClass, 'flex min-w-0 flex-col p-5')}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0"><h2 id="allocation-title" className="text-base font-bold text-foreground">Where your money sits</h2><p className="mt-1 text-xs text-muted-foreground">See holdings and cash by basket; select a slice to filter below.</p></div>
         <div className="w-full shrink-0 sm:w-auto">

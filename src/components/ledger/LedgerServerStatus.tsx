@@ -3,6 +3,8 @@ import type { Transaction } from '../../types'
 import { Button } from '../ui/Button'
 import { LedgerTransactionList } from './LedgerTransactionList'
 import type { LedgerListProps } from './ledgerListShared'
+import { cn } from '../../lib/utils'
+import { panelClass } from '../ui/Panel'
 
 interface LedgerServerStatusProps {
   currentPage: number
@@ -40,7 +42,7 @@ export function LedgerServerStatus({
       )}
 
       {syncingTransactions.length > 0 && currentPage === 1 && (
-        <section className="app-panel space-y-3 rounded-2xl border border-border/60 bg-card/92 p-4" aria-labelledby="ledger-syncing-heading">
+        <section className={cn(panelClass, 'space-y-3 p-4')} aria-labelledby="ledger-syncing-heading">
           <div className="flex items-start gap-2">
             <UploadCloud className="mt-0.5 size-4 shrink-0 text-accent-ink" />
             <div>

@@ -6,6 +6,8 @@ import { AnimatedNumber } from '../ui/AnimatedNumber'
 import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { getCycleProgress, MONTH_NAMES } from '../../lib/cycle'
 import { activateOnKeyboard } from './activateOnKeyboard'
+import { cn } from '../../lib/utils'
+import { panelClass } from '../ui/Panel'
 
 interface WishlistGoal {
   item: WishlistItem
@@ -62,7 +64,7 @@ export const TodayFocusCards: React.FC<TodayFocusCardsProps> = ({
   return (
     <div className={`grid grid-cols-1 ${wishlistGoal ? 'md:grid-cols-2' : ''} gap-4`}>
       {/* Cycle progress */}
-      <div className="metric-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60">
+      <div className={cn('metric-card', panelClass, 'p-6')}>
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-muted-foreground">Cycle progress</span>
           <div className="flex size-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20">
@@ -86,11 +88,11 @@ export const TodayFocusCards: React.FC<TodayFocusCardsProps> = ({
           onKeyDown={(event) => activateOnKeyboard(event, () => onNavigate('wishlist'))}
           role="button"
           tabIndex={0}
-          className={`metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border transition-all duration-300 group cursor-pointer ${
+          className={cn('metric-card interactive-card', panelClass, 'group cursor-pointer p-6 transition-all duration-300',
             wishlistGoal.canAfford
               ? 'border-blue-500/50 hover:border-blue-500/70 shadow-md shadow-blue-500/5 ring-1 ring-blue-500/10'
-              : 'border-border/60 hover:border-blue-500/30'
-          }`}
+              : 'border-border/60 hover:border-blue-500/30',
+          )}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground truncate max-w-[70%]">Reward: {wishlistGoal.item.name}</span>

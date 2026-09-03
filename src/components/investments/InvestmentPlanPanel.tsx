@@ -3,12 +3,13 @@ import { m, useReducedMotion } from 'framer-motion'
 import type { AppTab, InvestmentAllocationOverview, InvestmentAllocationStatus, InvestmentPortfolio } from '../../types'
 import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
-import { formatCurrencyVal } from '../../lib/utils'
+import { cn, formatCurrencyVal } from '../../lib/utils'
 import { useMemo } from 'react'
 import { allocationStatusLabel, buildSleeveIndex, UNASSIGNED_SLEEVE_KEY } from '../../lib/investmentAllocation'
 import { breakdownBySleeve } from '../../lib/investmentSleeveBreakdown'
 import { SleeveCard } from './SleeveCard'
 import { InvestmentMovementPlanner } from './InvestmentMovementPlanner'
+import { panelClass } from '../ui/Panel'
 
 const tone: Record<InvestmentAllocationStatus, string> = {
   NotStarted: 'border-border/60 bg-muted/20 text-muted-foreground',
@@ -68,7 +69,7 @@ export function InvestmentPlanPanel({
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: 'easeOut' }}
-      className="app-panel group/plan rounded-2xl border border-border/60 bg-card/92 p-5 transition-[border-color,box-shadow] duration-300 hover:border-primary/25 hover:shadow-lg hover:shadow-primary/5"
+      className={cn(panelClass, 'group/plan p-5 transition-[border-color,box-shadow] duration-300 hover:border-primary/25 hover:shadow-lg hover:shadow-primary/5')}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">

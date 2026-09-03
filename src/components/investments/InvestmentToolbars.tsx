@@ -2,6 +2,8 @@ import { Plus, Wallet, Building2, Search, RefreshCw, Loader2, TrendingUp } from 
 import type { InvestmentPortfolio } from '../../types'
 import { Button } from '../ui/Button'
 import { Panel } from '../ui/Panel'
+import { cn } from '../../lib/utils'
+import { panelClass } from '../ui/Panel'
 
 export const ActionToolbar = ({
   portfolio,
@@ -24,7 +26,7 @@ export const ActionToolbar = ({
   onAddInvestment: () => void
   onUpdatePrices: () => void
 }) => (
-  <section aria-label="Investment actions" className="app-panel flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/92 p-4 lg:flex-row lg:items-center lg:justify-between">
+  <section aria-label="Investment actions" className={cn(panelClass, 'flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between')}>
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:flex lg:flex-wrap">
       <Button variant="tertiary" disabled={mutationsDisabled || portfolio.accounts.length === 0 || portfolio.instruments.length === 0} onClick={onAddActivity}><Plus className="size-4" /> Add activity</Button>
       <Button variant="tertiary" disabled={mutationsDisabled || portfolio.accounts.length === 0} onClick={onManageCash}><Wallet className="size-4" /> Manage cash</Button>

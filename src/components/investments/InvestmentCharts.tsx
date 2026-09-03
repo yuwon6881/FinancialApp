@@ -4,9 +4,10 @@ import { Loader2 } from 'lucide-react'
 import type { InvestmentPortfolio, InvestmentRange } from '../../types'
 import { polylinePoints, seriesBounds, xAt, yAt } from '../../lib/chartSeries'
 import { chartRanges } from '../../lib/investmentChartRanges'
-import { formatCurrencyVal } from '../../lib/utils'
+import { cn, formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { ResponsiveChartFrame } from '../ui/ResponsiveChartFrame'
+import { panelClass } from '../ui/Panel'
 
 export type { AllocationMode, AllocationFilter } from '../../lib/investmentHoldingFilter'
 
@@ -45,7 +46,7 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
     : 'No chart data is available.'
 
   return (
-    <section aria-labelledby="value-chart-title" className="app-panel min-w-0 rounded-2xl border border-border/60 bg-card/92 p-5">
+    <section aria-labelledby="value-chart-title" className={cn(panelClass, 'min-w-0 p-5')}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 id="value-chart-title" className="text-base font-bold text-foreground">Portfolio value</h2>

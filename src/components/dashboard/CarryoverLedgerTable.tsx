@@ -3,11 +3,12 @@ import { useState } from 'react'
 import type { CategorySummary } from '../../types'
 import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { getCategoryBadgeClass, getCategoryDotClass } from '../../lib/categoryColors'
-import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
+import { cn, SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
 import { useIsDenseContent } from '../../lib/breakpoints'
 import { Button } from '../ui/Button'
 import { BottomSheet } from '../ui/BottomSheet'
 import { AlertBanner } from '../ui/AlertBanner'
+import { panelClass } from '../ui/Panel'
 
 interface CarryoverLedgerTableProps {
   categories: CategorySummary[]
@@ -35,7 +36,7 @@ export function CarryoverLedgerTable({
   const amount = (value: number) => amountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(value)
 
   return (
-    <div className="app-panel p-6 bg-card/92 border border-border/60 rounded-2xl">
+    <div className={cn(panelClass, 'p-6')}>
       <h3 className="text-base font-bold text-foreground mb-1">Carryover Rolling Ledgers</h3>
       <p className="text-xs text-muted-foreground mb-4">Starting budget carries forward from the previous cycle's remaining balance.</p>
 
