@@ -9,7 +9,7 @@ import { allocationStatusLabel, buildSleeveIndex, UNASSIGNED_SLEEVE_KEY } from '
 import { breakdownBySleeve } from '../../lib/investmentSleeveBreakdown'
 import { SleeveCard } from './SleeveCard'
 import { InvestmentMovementPlanner } from './InvestmentMovementPlanner'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 const tone: Record<InvestmentAllocationStatus, string> = {
   NotStarted: 'border-border/60 bg-muted/20 text-muted-foreground',

@@ -3,7 +3,7 @@ import type { InvestmentPortfolio } from '../../types'
 import { Button } from '../ui/Button'
 import { Panel } from '../ui/Panel'
 import { cn } from '../../lib/utils'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 export const ActionToolbar = ({
   portfolio,

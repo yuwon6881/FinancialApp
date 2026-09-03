@@ -15,7 +15,7 @@ import { Button } from '../ui/Button'
 import { CycleCalendarDaySheet } from './CycleCalendarDaySheet'
 import { CycleWeeklyPacing } from './CycleWeeklyPacing'
 import { cn } from '../../lib/utils'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 interface CycleCalendarProps {
   selectedMonth: string

@@ -148,8 +148,12 @@ for (const file of allSourceFiles(SRC)) {
     }
   }
 
-  if (fileName !== 'src/components/ui/Panel.tsx' && sourceText.includes('app-panel rounded-2xl border border-border/60 bg-card/92')) {
-    errors.push(`${fileName}:1 Use the canonical Panel component instead of copying its shell classes.`)
+  // The old form of this rule matched one exact spelling of the shell, so reordering the classes or
+  // dropping the /92 from bg-card slipped past it -- which is how 39 hand-rolled copies accumulated.
+  // Matching the `app-panel` marker itself catches every spelling, and is only possible now that
+  // those copies are gone.
+  if (fileName !== 'src/components/ui/panelStyles.ts' && /\bapp-panel\b/.test(sourceText)) {
+    errors.push(`${fileName}:1 Use Panel, or compose panelClass/panelFromMediumClass from ui/panelStyles, instead of writing the panel shell by hand.`)
   }
 
   if (/calc\((?:96|160|164|216)px|bottom:\s*['"](?:96|160|164|216)px/.test(sourceText)) {

@@ -4,7 +4,7 @@ import { CustomSelect } from './CustomSelect'
 import { getCycleLabelForDropdown } from '../../lib/cycleLabels'
 import { MONTH_NAMES } from '../../lib/cycle'
 import { cn } from '../../lib/utils'
-import { panelClass } from './Panel'
+import { panelClass } from './panelStyles'
 
 export interface CycleSwitcherProps {
   selectedMonth: string

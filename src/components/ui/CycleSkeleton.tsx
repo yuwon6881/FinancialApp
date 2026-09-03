@@ -16,7 +16,7 @@ import {
   InvestmentSummarySkeleton,
   CycleCalendarSkeleton,
 } from './skeletons/FeatureSkeletons'
-import { panelClass } from './Panel'
+import { panelClass } from './panelStyles'
 
 const LedgerToolbarSkeleton: React.FC = () => (
   <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center rounded-2xl border border-border/60 bg-card p-5">

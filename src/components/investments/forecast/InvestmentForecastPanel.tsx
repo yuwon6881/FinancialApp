@@ -10,7 +10,7 @@ import { ForecastTargetSection } from './ForecastTargetSection'
 import { InvestmentForecastChart } from './InvestmentForecastChart'
 import { useInvestmentForecastView } from './useInvestmentForecastView'
 import { Panel } from '../../ui/Panel'
-import { panelClass } from '../../ui/Panel'
+import { panelClass } from '../../ui/panelStyles'
 
 const mask = '••••'
 

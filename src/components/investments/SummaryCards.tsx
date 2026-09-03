@@ -1,6 +1,8 @@
 import type { InvestmentPortfolio } from '../../types'
 import { InfoHint } from '../ui/InfoHint'
 import { formatCurrencyVal } from '../../lib/utils'
+import { cn } from '../../lib/utils'
+import { panelClass } from '../ui/panelStyles'
 
 const money = (value: number, currency: string) =>
   formatCurrencyVal(value, currency)
@@ -133,7 +135,7 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
       {cards.map(({ label, hint, hero, rows, bg }, index) => (
         <article
           key={label}
-          className={`list-card-enter interactive-card app-panel flex flex-col rounded-2xl border p-4 ${bg}`}
+          className={cn('list-card-enter interactive-card', panelClass, 'flex flex-col p-4', bg)}
           style={index === 0 ? undefined : { animationDelay: `${index * 35}ms` }}
         >
           <div className="flex items-center justify-between gap-2">

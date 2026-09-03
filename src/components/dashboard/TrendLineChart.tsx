@@ -6,7 +6,7 @@ import { cn, formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
 import { useAppPrefs } from '../../contexts/AppContext'
 import { Button } from '../ui/Button'
 import { ResponsiveChartFrame } from '../ui/ResponsiveChartFrame'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 type TrendRange = '3month' | '6month' | 'yearly'
 

@@ -3,6 +3,8 @@ import { m, useReducedMotion } from 'framer-motion'
 import { AlertCircle, ArrowRightLeft, Calendar } from 'lucide-react'
 import type { RecurringAccountShortfall } from '../../types'
 import { Button } from '../ui/Button'
+import { cn } from '../../lib/utils'
+import { PANEL_TONES, panelClass } from '../ui/panelStyles'
 
 interface RecurringAccountShortfallCardProps {
   shortfalls: RecurringAccountShortfall[] | undefined
@@ -45,7 +47,7 @@ export function RecurringAccountShortfallCard({
       initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       aria-labelledby="recurring-account-shortfall-title"
-      className="app-panel rounded-2xl border border-orange-500/30 bg-card/92 p-4 sm:p-5 shadow-xs"
+      className={cn(panelClass, PANEL_TONES.urgent, 'p-4 shadow-xs sm:p-5')}
     >
       <div className="flex flex-col gap-3.5 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 min-w-0 flex-1">

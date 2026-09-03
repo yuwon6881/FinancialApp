@@ -12,6 +12,8 @@ import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { useIsCompact } from '../../lib/breakpoints'
 import { DataTablePagination } from '../ui/DataTable'
 import { useClientPagination } from '../ui/useClientPagination'
+import { cn } from '../../lib/utils'
+import { panelFromMediumClass } from '../ui/panelStyles'
 
 interface CommitmentsSectionProps {
   pool: GoalPoolSummary
@@ -116,7 +118,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
        application from the rest of the app. */
     <section
       aria-labelledby="commitments-rewards-commitments-heading"
-      className="app-panel space-y-3 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/92 sm:p-5"
+      className={cn(panelFromMediumClass, 'space-y-3')}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">

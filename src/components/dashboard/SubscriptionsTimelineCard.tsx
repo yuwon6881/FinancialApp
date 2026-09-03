@@ -5,7 +5,7 @@ import type { ActiveRecurringPayment } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { Button } from '../ui/Button'
 import { cn } from '../../lib/utils'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 interface SubscriptionsTimelineCardProps {
   activeRecurring: ActiveRecurringPayment[]

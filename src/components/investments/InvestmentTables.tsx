@@ -15,7 +15,7 @@ import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { resolveMutationBusyLabel } from '../ui/rowSyncState'
 import { DataTable, DataTableBody, DataTableFooter, DataTableHeader, DataTableHeaderCell, DataTablePagination } from '../ui/DataTable'
 import type { AllocationFilter } from './InvestmentCharts'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 const activityTypes: Array<{ value: InvestmentTransactionType; label: string }> = [
   { value: 'Buy', label: 'Buy' },

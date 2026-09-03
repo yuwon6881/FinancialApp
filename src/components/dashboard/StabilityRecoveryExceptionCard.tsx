@@ -4,6 +4,8 @@ import { ChevronRight, ShieldAlert } from 'lucide-react'
 import type { StabilityRecovery, StabilityReloadFilter } from '../../types'
 import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
+import { cn } from '../../lib/utils'
+import { PANEL_TONES, panelClass } from '../ui/panelStyles'
 
 export interface StabilityRecoveryLedgerJump {
   category?: string | null
@@ -85,7 +87,7 @@ export function StabilityRecoveryExceptionCard({
       initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       aria-labelledby="stability-recovery-exception"
-      className="app-panel rounded-2xl border border-amber-500/30 bg-card/92 p-4 sm:p-5 shadow-xs relative overflow-hidden"
+      className={cn(panelClass, PANEL_TONES.warning, 'relative overflow-hidden p-4 shadow-xs sm:p-5')}
     >
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-2.5">

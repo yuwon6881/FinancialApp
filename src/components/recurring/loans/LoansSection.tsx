@@ -16,6 +16,8 @@ import { useHighlightedElement } from '../../ui/useHighlightedElement'
 import { listContainerVariants, listItemVariants } from '../../../lib/animations'
 import { DataTablePagination } from '../../ui/DataTable'
 import { useClientPagination } from '../../ui/useClientPagination'
+import { cn } from '../../../lib/utils'
+import { panelFromMediumClass } from '../../ui/panelStyles'
 
 interface LoansSectionProps {
   loans: Loan[]
@@ -106,7 +108,7 @@ export function LoansSection({
   }, [onLoad])
 
   return (
-    <section className="app-panel space-y-4 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/92 sm:p-5" aria-label="Loans list">
+    <section className={cn(panelFromMediumClass, 'space-y-4')} aria-label="Loans list">
       {/* Adding a loan is the summary card's New Loan button, matching where New Subscription sits
           on the bills tab. Only the empty state repeats the action, where there is nothing else to do. */}
       <div>

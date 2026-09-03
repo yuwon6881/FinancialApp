@@ -143,7 +143,15 @@ if (!fs.existsSync(distAssetsPath)) {
 // Windows/Linux gzip variance margin.
 // 219.5: raised from 217.25 (measured 217.83). The same nine chunks remain eager; restores the
 // established ~1.5 kB headroom for cross-platform gzip variance.
-const CRITICAL_PATH_LIMIT_KB = 219.5
+// 221.0: raised from 219.5 (measured 219.44, i.e. 0.06 kB of slack, well inside the toolchain's own
+// variance). The panel shell had 39 hand-rolled copies; consolidating them onto one helper let the
+// design-system audit finally reject the shell by its marker instead of one exact spelling. The cost
+// is the `ui/panelStyles` module boundary plus its tone map, reached from four already-eager ui
+// files (CycleSwitcher, InteractiveCard, CycleSkeleton, FeatureSkeletons). The same nine chunks
+// remain eager -- nothing lazy moved onto the startup path -- and the limit restores the established
+// ~1.5 kB margin. Note the precache ceiling is a fixed invariant (PERF-02) with ~1.8 kB left, so
+// further shared-primitive adoption needs an offsetting reduction rather than another raise.
+const CRITICAL_PATH_LIMIT_KB = 221.0
 const PRECACHE_RAW_LIMIT_KB = 3 * 1024
 
 function criticalPathChunks(files) {

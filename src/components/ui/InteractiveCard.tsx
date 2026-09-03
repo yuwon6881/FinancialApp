@@ -1,6 +1,6 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
 import { cn } from '../../lib/utils'
-import { panelClass } from './Panel'
+import { panelClass } from './panelStyles'
 
 export const InteractiveCard = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(
   ({ className, type = 'button', ...props }, ref) => (

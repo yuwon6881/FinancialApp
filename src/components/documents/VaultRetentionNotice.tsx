@@ -8,6 +8,8 @@ import {
 } from '../../lib/documentRetention'
 import { formatBytes, formatDate } from './view/formatters'
 import { Button } from '../ui/Button'
+import { cn } from '../../lib/utils'
+import { PANEL_TONES, panelClass } from '../ui/panelStyles'
 
 /** Shown inline before the rest go behind a disclosure, so eight years cannot dominate a screen. */
 const INLINE_YEAR_LIMIT = 3
@@ -35,7 +37,7 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
   return (
     <section
       aria-labelledby="vault-retention-notice-heading"
-      className="app-panel rounded-2xl border border-amber-500/30 bg-card/92 p-4 sm:p-5 shadow-xs"
+      className={cn(panelClass, PANEL_TONES.warning, 'p-4 shadow-xs sm:p-5')}
     >
       <div className="flex items-start gap-3">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/15 text-amber-600 dark:text-amber-400">

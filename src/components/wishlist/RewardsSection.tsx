@@ -8,6 +8,8 @@ import { RewardCard } from './RewardCard'
 import { useIsCompact } from '../../lib/breakpoints'
 import { DataTablePagination } from '../ui/DataTable'
 import { useClientPagination } from '../ui/useClientPagination'
+import { cn } from '../../lib/utils'
+import { panelFromMediumClass } from '../ui/panelStyles'
 
 interface RewardsSectionProps {
   items: WishlistItem[]
@@ -33,7 +35,7 @@ export function RewardsSection(props: RewardsSectionProps) {
   const pagination = useClientPagination(props.items.length, 9, activeIndex)
   const visibleItems = props.items.slice(pagination.start, pagination.end)
   return (
-    <section aria-labelledby="commitments-rewards-rewards-heading" className="app-panel space-y-3 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/92 sm:p-5">
+    <section aria-labelledby="commitments-rewards-rewards-heading" className={cn(panelFromMediumClass, 'space-y-3')}>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h3 id="commitments-rewards-rewards-heading" className="flex items-center gap-1.5 text-sm font-bold text-foreground">

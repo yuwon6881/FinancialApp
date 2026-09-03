@@ -20,7 +20,7 @@ import {
 } from './view/useBucketAccountSetupView'
 import { useAccountsView } from './view/useAccountsView'
 import { AlertBanner } from '../../ui/AlertBanner'
-import { panelClass } from '../../ui/Panel'
+import { panelClass } from '../../ui/panelStyles'
 
 interface AccountsSectionProps {
   accounts: LedgerAccount[]

@@ -1,6 +1,6 @@
 import { Skeleton } from '../../ui/Skeleton'
 import { cn } from '../../../lib/utils'
-import { panelClass } from '../../ui/Panel'
+import { panelClass } from '../../ui/panelStyles'
 
 /** Mirrors the account panel's header, search bar, four bucket group cards, and note while it loads. */
 export function AccountsSkeleton({ isCurrentCycle = true }: { isCurrentCycle?: boolean }) {

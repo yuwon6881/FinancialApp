@@ -5,7 +5,7 @@ import { getCategoryChartColor } from '../../lib/categoryColors'
 import { InteractiveDoughnutChart } from '../ui/InteractiveDoughnutChart'
 import { Button } from '../ui/Button'
 import { cn } from '../../lib/utils'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 type ChartRange = 'monthly' | '3month' | '6month' | 'yearly'
 

@@ -3,6 +3,8 @@ import { m, useReducedMotion } from 'framer-motion'
 import { AlertTriangle, ChevronRight, Gauge } from 'lucide-react'
 import type { CategoryLimitProgress } from '../../types'
 import { Button } from '../ui/Button'
+import { cn } from '../../lib/utils'
+import { PANEL_TONES, panelClass } from '../ui/panelStyles'
 
 interface CategoryWatchExceptionCardProps {
   items: CategoryLimitProgress[]
@@ -39,7 +41,7 @@ export function CategoryWatchExceptionCard({
       initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       aria-labelledby="category-watch-exception"
-      className={`app-panel rounded-2xl border p-4 sm:p-5 shadow-xs ${anyExceeded ? 'border-orange-500/30 bg-card/92 text-card-foreground' : 'border-amber-500/30 bg-card/92 text-card-foreground'}`}
+      className={cn(panelClass, anyExceeded ? PANEL_TONES.urgent : PANEL_TONES.warning, 'p-4 text-card-foreground shadow-xs sm:p-5')}
     >
       <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3 min-w-0 flex-1">

@@ -1,5 +1,7 @@
 import { FileCheck2 } from 'lucide-react'
 import { Button } from '../ui/Button'
+import { cn } from '../../lib/utils'
+import { PANEL_TONES, panelClass } from '../ui/panelStyles'
 
 interface LedgerPendingReviewsProps {
   receiptReady: boolean
@@ -12,7 +14,7 @@ export function LedgerPendingReviews({ receiptReady, receiptSplitReady, onReview
   if (!receiptReady && !receiptSplitReady) return null
 
   return (
-    <section aria-labelledby="ledger-scan-ready-title" className="app-panel rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4">
+    <section aria-labelledby="ledger-scan-ready-title" className={cn(panelClass, PANEL_TONES.info, 'p-4')}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/12 text-blue-500">

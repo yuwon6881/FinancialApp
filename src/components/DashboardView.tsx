@@ -19,7 +19,7 @@ import { EMPTY_RETENTION_REVIEW } from '../lib/documentRetention'
 import { VaultRetentionNotice } from './documents/VaultRetentionNotice'
 import type { DocumentRetentionReview } from '../types'
 import { cn } from '../lib/utils'
-import { panelClass } from './ui/Panel'
+import { PANEL_TONES, panelClass } from './ui/panelStyles'
 
 interface DashboardViewProps {
   dashboardData: DashboardData | null
@@ -116,7 +116,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Attention panels are exception-only: a clear day should show nothing here rather
           than a card whose whole message is that it has no message. */}
       {pendingNotificationCount > 0 && (
-        <section aria-labelledby="attention-heading" className="app-panel rounded-2xl border border-amber-500/30 bg-card/92 p-4 sm:p-5 shadow-xs">
+        <section aria-labelledby="attention-heading" className={cn(panelClass, PANEL_TONES.warning, 'p-4 shadow-xs sm:p-5')}>
           <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3 min-w-0 flex-1">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/12 text-amber-600 dark:text-amber-400">

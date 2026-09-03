@@ -4,7 +4,7 @@ import { Button } from '../ui/Button'
 import { LedgerTransactionList } from './LedgerTransactionList'
 import type { LedgerListProps } from './ledgerListShared'
 import { cn } from '../../lib/utils'
-import { panelClass } from '../ui/Panel'
+import { PANEL_TONES, panelClass } from '../ui/panelStyles'
 
 interface LedgerServerStatusProps {
   currentPage: number
@@ -26,7 +26,7 @@ export function LedgerServerStatus({
   return (
     <div className="space-y-3">
       {error && (
-        <section className="app-panel flex flex-col gap-3 rounded-2xl border border-orange-500/30 bg-card/92 p-4 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="ledger-load-error">
+        <section className={cn(panelClass, PANEL_TONES.urgent, 'flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between')} aria-labelledby="ledger-load-error">
           <div className="flex items-start gap-2">
             <AlertCircle className="mt-0.5 size-4 shrink-0 text-orange-500" />
             <div>

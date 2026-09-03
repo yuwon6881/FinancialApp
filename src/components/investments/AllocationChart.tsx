@@ -6,7 +6,7 @@ import { cn, formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { InteractiveDoughnutChart } from '../ui/InteractiveDoughnutChart'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 const money = (value: number, currency: string) => formatCurrencyVal(value, currency)
 

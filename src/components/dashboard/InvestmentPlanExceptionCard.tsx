@@ -2,6 +2,8 @@ import { m, useReducedMotion } from 'framer-motion'
 import { AlertTriangle, ChevronRight, PieChart } from 'lucide-react'
 import type { AppTab, InvestmentAllocationOverview } from '../../types'
 import { Button } from '../ui/Button'
+import { cn } from '../../lib/utils'
+import { PANEL_TONES, panelClass } from '../ui/panelStyles'
 
 interface InvestmentPlanExceptionCardProps {
   allocation: InvestmentAllocationOverview | null
@@ -35,7 +37,7 @@ export function InvestmentPlanExceptionCard({
       initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       aria-labelledby="investment-plan-exception"
-      className="app-panel rounded-2xl border border-amber-500/30 bg-card/92 p-4 sm:p-5 shadow-xs"
+      className={cn(panelClass, PANEL_TONES.warning, 'p-4 shadow-xs sm:p-5')}
     >
       <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3 min-w-0 flex-1">

@@ -14,7 +14,7 @@ import { InfoHint } from '../ui/InfoHint'
 import { ToggleButton } from '../ui/ToggleButton'
 import { PushDevicesList } from './PushDevicesList'
 import { cn } from '../../lib/utils'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 // Which devices a switch changes is the thing people get wrong here, so each row says it rather
 // than leaving it to be read out of the wording.

@@ -17,6 +17,8 @@ import { SensitiveMask } from './ui/SensitiveAmount'
 import { DraftQueueCard } from './drafts/DraftQueueCard'
 import { DraftReorderItem } from './drafts/DraftReorderItem'
 import { EmptyState } from './ui/EmptyState'
+import { cn } from '../lib/utils'
+import { panelClass } from './ui/panelStyles'
 
 type EditorProps = Omit<TransactionFormSheetProps,
   | 'categories'
@@ -155,7 +157,7 @@ export function DraftStagingView({
       ) : (
         <>
           <section
-            className="app-panel flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-border/60 bg-card/80 px-4 py-3 sm:px-5"
+            className={cn(panelClass, 'flex flex-wrap items-center gap-x-5 gap-y-2 bg-card/80 px-4 py-3 sm:px-5')}
             aria-label="Batch overview"
           >
             <div className="mr-auto min-w-0">

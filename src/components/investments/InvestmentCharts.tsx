@@ -7,7 +7,7 @@ import { chartRanges } from '../../lib/investmentChartRanges'
 import { cn, formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { ResponsiveChartFrame } from '../ui/ResponsiveChartFrame'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 export type { AllocationMode, AllocationFilter } from '../../lib/investmentHoldingFilter'
 

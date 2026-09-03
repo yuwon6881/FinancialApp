@@ -7,7 +7,7 @@ import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { getCycleProgress, MONTH_NAMES } from '../../lib/cycle'
 import { activateOnKeyboard } from './activateOnKeyboard'
 import { cn } from '../../lib/utils'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 interface WishlistGoal {
   item: WishlistItem

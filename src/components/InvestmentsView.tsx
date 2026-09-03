@@ -34,6 +34,8 @@ import type { InvestmentActivityScanResult } from '../lib/api'
 import { SummaryCards } from './investments/SummaryCards'
 import { AccountsAndInstruments } from './investments/AccountsAndInstruments'
 import { ActionToolbar, EmptyState } from './investments/InvestmentToolbars'
+import { cn } from '../lib/utils'
+import { PANEL_TONES, panelClass } from './ui/panelStyles'
 
 interface InvestmentsViewProps {
   onNavigate: (tab: AppTab) => void
@@ -238,7 +240,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
       />
 
       {investmentScanDraft && panel === null && (
-        <section aria-labelledby="investment-scan-ready-title" className="app-panel rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4">
+        <section aria-labelledby="investment-scan-ready-title" className={cn(panelClass, PANEL_TONES.info, 'p-4')}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 id="investment-scan-ready-title" className="text-sm font-bold text-foreground">Investment scan ready for review</h2>

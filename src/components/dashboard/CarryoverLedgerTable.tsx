@@ -8,7 +8,7 @@ import { useIsDenseContent } from '../../lib/breakpoints'
 import { Button } from '../ui/Button'
 import { BottomSheet } from '../ui/BottomSheet'
 import { AlertBanner } from '../ui/AlertBanner'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 interface CarryoverLedgerTableProps {
   categories: CategorySummary[]

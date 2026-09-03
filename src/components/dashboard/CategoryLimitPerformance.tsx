@@ -6,7 +6,7 @@ import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { InfoHint } from '../ui/InfoHint'
 import { getCategoryLimitCardId, type NavigateToLedgerOptions } from './types'
 import { cn } from '../../lib/utils'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 interface CategoryLimitPerformanceProps {
   items: CategoryLimitProgress[]

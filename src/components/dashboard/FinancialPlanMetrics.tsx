@@ -2,7 +2,7 @@ import React from 'react'
 import { activateOnKeyboard } from './activateOnKeyboard'
 import type { NavigateToLedgerOptions } from './types'
 import { cn } from '../../lib/utils'
-import { panelClass } from '../ui/Panel'
+import { panelClass } from '../ui/panelStyles'
 
 interface GrowthMetric {
   target: number
