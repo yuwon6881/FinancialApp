@@ -221,7 +221,7 @@ export function DocumentCard({
                     onClick={() => setEditingRelief(false)}
                     aria-label={`Keep ${reliefName} as the tax relief category for ${document.originalFileName}`}
                     title="Keep the current category"
-                    className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:size-7"
+                    className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted sm:size-7"
                   >
                     <X className="size-3.5" />
                   </Button>

@@ -373,7 +373,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     type="button"
                     variant="tertiary"
                     onClick={() => setForgotPassword(true)}
-                    className="text-xs font-semibold text-blue-500 hover:text-blue-600 focus:outline-none focus:underline"
+                    className="text-xs font-semibold text-blue-500 hover:text-blue-600 focus-visible:underline"
                   >
                     Forgot Password?
                   </Button>

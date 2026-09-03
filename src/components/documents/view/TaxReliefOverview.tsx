@@ -303,7 +303,7 @@ export function TaxReliefOverview({
                   aria-pressed={selected}
                   aria-label={selected ? `Remove ${category.name} from the documents filter` : `Add ${category.name} to the documents filter`}
                   title={selected ? `Remove ${category.name} from the document filter` : `Filter documents by ${category.name}`}
-                  className={`group flex min-h-32 w-full sm:w-[22rem] shrink-0 cursor-pointer snap-start flex-col gap-3 rounded-2xl border p-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+                  className={`group flex min-h-32 w-full sm:w-[22rem] shrink-0 cursor-pointer snap-start flex-col gap-3 rounded-2xl border p-4 text-left transition duration-200 ${
                     full
                       ? 'border-emerald-500/45 bg-emerald-500/10 hover:border-emerald-500/70 hover:bg-emerald-500/14'
                       : 'border-border/60 bg-card hover:border-primary/45 hover:bg-muted/60'

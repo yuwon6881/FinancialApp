@@ -211,7 +211,7 @@ const TopNav: React.FC<TopNavProps> = ({
               onClick={onOpenSearch}
               aria-label="Search your records"
               title="Search (Ctrl+K)"
-              className="ml-2 hidden size-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-border/60 bg-background text-muted-foreground transition duration-150 cursor-pointer active:scale-95 hover:border-primary/40 hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-0 focus:outline-none sm:flex 2xl:ml-3 2xl:w-52 2xl:justify-start 2xl:px-3"
+              className="ml-2 hidden size-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-border/60 bg-background text-muted-foreground transition duration-150 cursor-pointer active:scale-95 hover:border-primary/40 hover:bg-muted/50 hover:text-foreground sm:flex lg:size-9 2xl:ml-3 2xl:w-52 2xl:justify-start 2xl:px-3"
             >
               <SearchIcon className="size-3.5 shrink-0" aria-hidden />
               <span className="hidden truncate text-xs font-medium 2xl:inline">Search records…</span>

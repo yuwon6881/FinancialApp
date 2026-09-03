@@ -16,6 +16,43 @@ const CONTROL_IMPLEMENTATIONS = new Set([
 const BUTTON_VARIANTS = new Set(['primary', 'secondary', 'tertiary', 'destructive'])
 const BUTTON_SIZES = new Set(['sm', 'md', 'lg', 'icon'])
 
+// The three primitives where a raw <button> *is* the implementation boundary. Named explicitly
+// rather than exempting all of src/components/ui/, so a new shared component cannot quietly
+// hand-roll its own button element instead of composing Button.
+const RAW_BUTTON_IMPLEMENTATIONS = new Set([
+  'src/components/ui/Button.tsx',
+  'src/components/ui/InteractiveCard.tsx',
+  'src/components/ui/PillSwitch.tsx',
+])
+
+// Shared primitives own their own focus treatment: an outline for actions, a border+ring for text
+// entry, both keyed to --ring. A call site that cancels it leaves keyboard users relying on the
+// `!important` net in index.css, and the several ad-hoc replacement rings this rule replaced had
+// drifted to four different colours. Feature code cannot render a focusable control any other way,
+// because raw <button>/<input>/<textarea> are already rejected above.
+const FOCUS_OWNING_PRIMITIVES = new Set([
+  'Button', 'IconButton', 'InteractiveCard', 'Tabs', 'Input', 'Textarea', 'Checkbox',
+  'RangeInput', 'CustomSelect', 'DatePicker', 'CurrencySelect', 'SmartAmountInput', 'ToggleButton',
+])
+const FOCUS_SUPPRESSION = /\b(?:[a-z-]+:)*(?:outline-none|outline-hidden|ring-0)\b/
+// Every entry needs a stated reason, and the two kinds are not equivalent.
+//
+// Composition (permanent): a borderless field composed inside a shell that carries the border and
+// focus treatment for the pair. Giving the inner field its own ring would paint two nested
+// indicators. `AiAssistantPanel` is the extreme case -- its textarea is deliberately transparent
+// and sits over a highlighted mirror, so the field itself has no visible surface at all. This
+// pattern is now hand-rolled four times and should become a shared field-in-shell primitive.
+//
+// Tracked debt (temporary): re-implements the control contract instead of composing it. Listed so
+// the rule can hold the line today, and scheduled for the control-contract migration, which will
+// move its baselines.
+const FOCUS_OVERRIDE_EXCEPTIONS = new Map([
+  ['src/components/search/GlobalSearch.tsx', 'composition: field delegates focus styling to its shell'],
+  ['src/components/ledger/LedgerFilterBar.tsx', 'composition: field delegates focus styling to its shell'],
+  ['src/components/AiAssistantPanel.tsx', 'composition: transparent textarea over a highlighted mirror'],
+  ['src/components/settings/ManageableNameList.tsx', 'tracked debt: hand-rolled control styling, pending control-contract migration'],
+])
+
 // A <label> forwards its activation to the first *labelable* descendant, and `button` is
 // labelable. So a button standing ahead of the real control inside a label silently steals every
 // click on the label's whole box -- that is how clicking a slider's name or its percentage badge
@@ -25,8 +62,12 @@ const LABEL_WRAPPED_BUTTON_EXCEPTIONS = new Set([
   'src/components/settings/ManageableNameList.tsx',
 ])
 
+// Each entry is a literal that this file is allowed to contain despite the theme-colour rule.
+// Every occurrence is stripped before the rule runs, so an exception covers a repeated literal
+// rather than only its first use.
 const THEME_EXCEPTIONS = new Map([
-  ['src/App.tsx', ['#0b0e14', '#fcfcfc']],
+  // The installed-PWA system bars need real hex: they are baked into the WebAPK and cannot read a
+  // CSS variable. See INVARIANTS.md DS-07.
   ['src/lib/nativeUi.ts', ['#0b0e14', '#fcfcfc']],
   ['src/components/TwoFactorSection.tsx', ['bg-white']],
   ['src/components/ui/BottomSheet.tsx', ['bg-black/70']],
@@ -62,6 +103,23 @@ function stringAttributeValue(node, name) {
   const property = attribute(node, name)
   if (!property || !ts.isJsxAttribute(property) || !property.initializer) return undefined
   return ts.isStringLiteral(property.initializer) ? property.initializer.text : undefined
+}
+
+// Overrides are rarely a plain string: most are template literals with a conditional inside. Gather
+// every literal chunk of the expression so a class hidden in a ternary branch is still seen.
+function classNameLiterals(node) {
+  const property = attribute(node, 'className')
+  if (!property || !ts.isJsxAttribute(property) || !property.initializer) return ''
+  const chunks = []
+  const collect = current => {
+    if (ts.isStringLiteral(current) || ts.isNoSubstitutionTemplateLiteral(current)
+      || ts.isTemplateHead(current) || ts.isTemplateMiddle(current) || ts.isTemplateTail(current)) {
+      chunks.push(current.text)
+    }
+    ts.forEachChild(current, collect)
+  }
+  collect(property.initializer)
+  return chunks.join(' ')
 }
 
 for (const file of allSourceFiles(SRC)) {
@@ -112,9 +170,17 @@ for (const file of allSourceFiles(SRC)) {
       if (tag === 'form' && !attribute(node, 'noValidate')) {
         report(file, sourceFile, node, 'Submit forms must use noValidate and application validation.')
       }
-      if (tag === 'button' && !fileName.startsWith('src/components/ui/')) {
+      if (tag === 'button' && !RAW_BUTTON_IMPLEMENTATIONS.has(fileName)) {
         report(file, sourceFile, node, 'Use Button, IconButton, or InteractiveCard instead of a raw feature button.')
       }
+      if (FOCUS_OWNING_PRIMITIVES.has(tag)
+        && !fileName.startsWith('src/components/ui/')
+        && !FOCUS_OVERRIDE_EXCEPTIONS.has(fileName)
+        && FOCUS_SUPPRESSION.test(classNameLiterals(node))) {
+        report(file, sourceFile, node,
+          `<${tag}> may not cancel its own focus treatment; remove the outline-none/ring-0 utility and let the primitive supply it.`)
+      }
+
       if (tag === 'Button') {
         const variant = stringAttributeValue(node, 'variant')
         const size = stringAttributeValue(node, 'size')
@@ -150,7 +216,7 @@ for (const file of allSourceFiles(SRC)) {
 
   let themeText = sourceText
   for (const exception of THEME_EXCEPTIONS.get(fileName) ?? []) {
-    themeText = themeText.replace(exception, '')
+    themeText = themeText.replaceAll(exception, '')
   }
   const literalThemePattern = /\b(?:bg|text|border|shadow|ring|outline|fill|stroke)-(?:black|white)(?:\/\d+)?\b|#[\da-fA-F]{6}(?:[\da-fA-F]{2})?\b|rgba?\s*\(/g
   for (const match of themeText.matchAll(literalThemePattern)) {
