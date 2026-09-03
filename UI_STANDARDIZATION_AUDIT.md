@@ -56,7 +56,7 @@ Raw buttons are limited to the three shared primitives where the element is the 
 | `SectionHeader` | 1 | ~48 `font-bold uppercase tracking-wide` labels across 31 files |
 | `Toolbar` | 2 | 5 further filter/action bars; it is the only `role="toolbar"` in the tree |
 | `Badge`/`StatusBadge` | 3 | `RowSyncBadge` (15 consumers, undeclared second badge system) plus pills in 14 files |
-| `Panel`/`Card` | 10 / 4 | 39 raw `app-panel` or `border-border/60 bg-card` shells across 33 files |
+| `Panel`/`Card` | 10 / 4 | **none — closed.** All 39 hand-rolled shells now compose `panelClass`, `PANEL_TONES` or `panelFromMediumClass` from `ui/panelStyles`, and the audit rejects the `app-panel` marker outside that module |
 | `Meter` | 4 | 15 files hand-roll progress tracks; 3 independent `role="progressbar"` |
 | `Skeleton` | 8 | 4 further skeleton systems; 10 files still on raw `animate-pulse` |
 | `Tabs` | 5 | none — the one genuinely consolidated pattern |
@@ -95,7 +95,7 @@ The specimen page is snapshotted at mobile, medium, and desktop in both themes, 
 Measured on 2026-09-03 against the standardization commit plus the enforcement changes made in this pass (not yet committed):
 
 - ESLint, `check:design-system`, `typecheck:strict`, and `deadcode`: pass.
-- Production build: pass. Budget headroom is very small — eager critical path 219.29 kB against 219.5 kB, and PWA precache 3069.63 kB against 3072 kB, both under 0.1% spare. Broad primitive adoption will require a deliberate budget raise or an offsetting reduction; it cannot be absorbed.
+- Production build: pass. Budget headroom is very small and is now the binding constraint on the remaining surface work. The panel consolidation moved the eager critical path from 219.29 kB to 219.44 kB, leaving 0.06 kB, so the limit was raised to 221.0 kB under the documented convention. **The precache ceiling cannot be raised the same way — it is fixed by invariant PERF-02 at 3 MiB and stands at 3070.18 kB, about 1.8 kB spare.** Adopting `EmptyState`, `SectionHeader`, `Badge`, `IconButton`, `Meter` and the skeleton consolidation touches roughly 110 more call sites; each should remove more duplicated markup than it adds, but the precache figure must be read after every area and an offsetting reduction found if it stops falling.
 - Full Vitest: 292 files, 2,174 tests, all passing.
 - Playwright: 324 passed, 156 intentional project skips, across the whole 14-project matrix. The 44px floor assertion passes at all eight sub-1024px projects, including 320px and 390×500.
 
