@@ -58,7 +58,7 @@ Raw buttons are limited to the three shared primitives where the element is the 
 | `Badge`/`StatusBadge` | 17 | 19 of 31 hand-rolled pills converted. `RowSyncBadge` (15 consumers) is still an undeclared second badge system, and 12 pills remain — see below |
 | `Panel`/`Card` | 10 / 4 | **none — closed.** All 39 hand-rolled shells now compose `panelClass`, `PANEL_TONES` or `panelFromMediumClass` from `ui/panelStyles`, and the audit rejects the `app-panel` marker outside that module |
 | `Meter` | 11 | **All four `role="progressbar"` implementations are now one.** ~12 multi-segment and marker bars remain, which `Meter` structurally cannot express — see below |
-| `Skeleton` | 8 | 4 further skeleton systems; 10 files still on raw `animate-pulse` |
+| `Skeleton` | 8 | **none — the claim was wrong.** See below |
 | `Tabs` | 5 | none — the one genuinely consolidated pattern |
 
 ### Badge tones, and the twelve pills left
@@ -78,6 +78,22 @@ It also produced the clearest evidence yet for why the test net matters. `TaxRel
 `Meter` therefore gained `valueHidden`, the masking signal is threaded to the three money-derived bars that gained ARIA (`CycleSummaryModal`, `StatDistributionBreakdown`, `StabilityFundSection`), and the guard is now asserted on the primitive in `designContract.test.tsx` rather than in one feature's test — so the next consolidation cannot reintroduce it. The bars that measure time rather than money (cycle progress in the nav rail and Today card) and storage bytes announce their value normally.
 
 **A segmented bar is the missing primitive.** The ~12 remaining tracks are not single-value: `FinancialPlanMetrics` (three), `TodayFocusCards`, `CycleSummaryModal` (two), `InvestmentPlanPanel` (two) and `RewardsPoolBar` are flex containers with several fills, and `PerformanceBars`, `BillTimeline`, `CategoryLimitPerformance` and `StabilityRecoveryExceptionCard` overlay a threshold marker. Forcing them through `Meter` would mean losing the segments. They want their own primitive, and until it exists they are correctly hand-rolled.
+
+### Skeletons were never duplicated, and the pulses are not skeletons
+
+This entry previously read "4 further skeleton systems; 10 files still on raw `animate-pulse`". Both halves were wrong, and checking took one command each.
+
+`CycleSkeleton`, `FeatureSkeletons` and `AccountsSkeleton` compose the shared `Skeleton` atom — 78, 74 and 20 uses respectively, with **zero** hand-rolled `skeleton-shimmer` and zero `animate-pulse` between them. There is one loading animation and one atom, with per-route layout compositions on top. That is the architecture `Skeleton`'s own comment describes ("Page-specific layouts live in CycleSkeleton so they do not inflate the eager shell"), and splitting layouts per route is what keeps them out of the eager bundle. Nothing to consolidate.
+
+The twelve `animate-pulse` uses are not loading placeholders at all. They are attention and status pulses: a "due soon" clock, a pending-bills marker on the calendar, the live dot on the active-filter strip, the sync badge on the logo, the notification dot, an icon that pulses while a download runs. Converting those to shimmer would replace a deliberate signal with a placeholder animation.
+
+### Where these bad counts came from
+
+Five entries in this document have now been corrected the same way — "18 dashed empty shells" (really 10, mostly drop zones and archived rows), "~48 uppercase labels competing with SectionHeader" (really eyebrow labels on `<p>`/`<span>`/`<dt>`), "68 headings at five sizes" (really two legitimate levels), "15 progress tracks" (12 of them multi-segment or marker bars `Meter` cannot express), and now skeletons.
+
+The cause is consistent: the counts came from grepping for a *class pattern* and assuming every match was the same component. `border-dashed` matched chart legend dashes; `rounded-full px-2` matched interactive chips; `animate-pulse` matched status indicators. Reading intent at each site reduced every figure, sometimes to zero.
+
+The number that survived scrutiny is the override count — 219 radius, 180 surface-colour, 120 geometry, 70 shadow — because an override *is* defined by its class, not by what the element means. Treat that figure as the debt, and treat any "N files hand-roll X" claim in this document as a hypothesis until the sites have been read.
 
 ### Toolbar: deliberately not migrated
 
