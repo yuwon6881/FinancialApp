@@ -3,9 +3,9 @@ import { cn } from '../../lib/utils'
 export type ControlSize = 'sm' | 'md' | 'lg'
 
 const CONTROL_SIZES: Record<ControlSize, string> = {
-  sm: 'h-11 rounded-lg px-3 text-xs lg:h-9',
-  md: 'h-11 rounded-xl px-3.5 text-sm lg:h-10',
-  lg: 'h-12 rounded-xl px-4 text-sm',
+  sm: 'h-11 rounded-control px-3 text-xs lg:h-9',
+  md: 'h-11 rounded-control px-3.5 text-sm lg:h-10',
+  lg: 'h-12 rounded-control px-4 text-sm',
 }
 
 export function controlClassName({

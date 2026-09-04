@@ -47,6 +47,13 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    /* Semantic radii, so the contract is written in the class name rather than in a t-shirt size
+       that has to be mentally multiplied. --radius is 0.75rem and the scale multiplies it, so these
+       compute to 16.8px and 21.6px -- not the 12px/16px earlier drafts of the audit claimed. Every
+       button, input, select, date picker and segmented control is rounded-control; every panel is
+       rounded-panel; rounded-full stays for badges, counts, avatars and switches. */
+    --radius-control: calc(var(--radius) * 1.4);
+    --radius-panel: calc(var(--radius) * 1.8);
     --color-sidebar: var(--sidebar);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);

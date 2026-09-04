@@ -12,7 +12,7 @@ describe('canonical UI primitives', () => {
     variant => {
       render(<Button variant={variant}>Continue</Button>)
       const button = screen.getByRole('button', { name: 'Continue' })
-      expect(button.className).toContain('rounded-xl')
+      expect(button.className).toContain('rounded-control')
       expect(button.className).toContain('min-h-11')
     },
   )

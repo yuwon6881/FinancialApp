@@ -4,12 +4,12 @@
  * can compose the same shell without becoming a `Panel` element. Same split as `controlStyles.ts`.
  */
 
-export const panelClass = 'app-panel rounded-2xl border border-border/60 bg-card/92'
+export const panelClass = 'app-panel rounded-panel border border-border/60 bg-card/92'
 
 export const panelVariantClasses = {
   default: panelClass,
-  subtle: 'rounded-2xl border border-border/50 bg-muted/20',
-  dashed: 'rounded-2xl border border-dashed border-border/70 bg-card/75',
+  subtle: 'rounded-panel border border-border/50 bg-muted/20',
+  dashed: 'rounded-panel border border-dashed border-border/70 bg-card/75',
 } as const
 
 export const panelPaddingClasses = {
@@ -47,4 +47,4 @@ export type PanelTone = keyof typeof PANEL_TONES
  * class constant rather than a variant the `padding` prop would fight with.
  */
 export const panelFromMediumClass =
-  'app-panel rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/92 sm:p-5'
+  'app-panel rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-panel sm:border sm:border-border/60 sm:bg-card/92 sm:p-5'

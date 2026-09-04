@@ -40,7 +40,7 @@ export function EmptyState({
         'text-center',
         // A nested note is a control-scale surface rather than a page-level panel, so it keeps the
         // smaller radius; the section-level state uses the panel radius it inherits.
-        compact ? 'rounded-xl bg-muted/15 px-4 py-6' : 'p-4 sm:p-6',
+        compact ? 'rounded-control bg-muted/15 px-4 py-6' : 'p-4 sm:p-6',
         className,
       )}
       {...props}

@@ -35,7 +35,7 @@ Figures are re-derived from the tree, not carried over from earlier drafts. Two 
 
 - Buttons use `primary`, `secondary`, `tertiary`, or `destructive`; sizes are `sm`, `md`, `lg`, or `icon`. Status colour never encodes action rank.
 - Compact and medium actions retain a 44px minimum target. Expanded actions use explicit 36–40px sizes where appropriate.
-- Controls use the `rounded-xl` token and panels use `rounded-2xl`. State the contract in tokens, not pixels: `--radius` is `0.75rem` and the scale multiplies it, so `rounded-xl` computes to **16.8px** and `rounded-2xl` to **21.6px**. Earlier drafts claimed 12px and 16px, which no theme value produces; `src/index.css` documents the same trap for `PerimeterBeam`.
+- Controls use `rounded-control` and panels use `rounded-panel`. These are semantic tokens in `src/index.css`, so the contract is written in the class name instead of a t-shirt size that has to be mentally multiplied: `--radius` is `0.75rem` and the scale multiplies it, so they compute to **16.8px** and **21.6px**. Earlier drafts claimed 12px and 16px, which no theme value produces; `src/index.css` documents the same trap for `PerimeterBeam`. Overlay surfaces — popovers, menus, sheets, toasts — are a separate family still on the t-shirt scale and want their own token before they are converted.
 - Full pills are reserved for badges, counts, avatars, and switches.
 - `IconButton` owns icon-only accessible names and tooltips. `Tabs` owns tab roles, selection, keyboard movement, counts, panel relationships, and optional horizontal overflow. `Badge` and `StatusBadge` own the six state tones. `PageHeader`, `Panel`, `SectionHeader`, `Toolbar`, `EmptyState`, and `InteractiveCard` own repeated layout anatomy.
 - Forms continue to use `FormField` and the canonical input, textarea, select, date, checkbox, range, and amount controls.
@@ -98,6 +98,16 @@ Measured on 2026-09-03 against the standardization commit plus the enforcement c
 - Production build: pass. Budget headroom is very small and is now the binding constraint on the remaining surface work. The panel consolidation moved the eager critical path from 219.29 kB to 219.44 kB, leaving 0.06 kB, so the limit was raised to 221.0 kB under the documented convention. **The precache ceiling cannot be raised the same way — it is fixed by invariant PERF-02 at 3 MiB and stands at 3070.18 kB, about 1.8 kB spare.** Adopting `EmptyState`, `SectionHeader`, `Badge`, `IconButton`, `Meter` and the skeleton consolidation touches roughly 110 more call sites; each should remove more duplicated markup than it adds, but the precache figure must be read after every area and an offsetting reduction found if it stops falling.
 - Full Vitest: 292 files, 2,174 tests, all passing.
 - Playwright: 324 passed, 156 intentional project skips, across the whole 14-project matrix. The 44px floor assertion passes at all eight sub-1024px projects, including 320px and 390×500.
+
+## How the contract is enforced
+
+Three layers, and they catch different things:
+
+1. **`npm run check:design-system`** — a TypeScript-AST linter over `src/`. It rejects raw feature buttons, non-canonical `Button` variants and sizes, native form controls, `text-[Npx]`, focus suppression on shared primitives, hand-rolled panel shells (matched by the `app-panel` marker, not one spelling), literal colours, unmapped palette steps and raw viewport checks. This is what stops a *new* violation entering.
+2. **`src/components/ui/designContract.test.tsx`** — asserts the contract *between* primitives: that a button and a field of the same size round identically, that both keep the 44px floor and step down only at `lg:`, that each family's focus treatment is present and uncancelled, and that no primitive surface falls back to the t-shirt radius scale. Single-component tests cannot catch these; the `sm` radius mismatch it was written for had every component internally consistent and every test passing.
+3. **The Playwright matrix** — the only layer that sees what a user sees. It caught the empty-state call to action disappearing behind the bottom navigation when nothing else did.
+
+A rule may only be added once its area is migrated. Adding one first fails CI across every unmigrated file, which is why the four remaining override rules (radius, surface colour, geometry, shadow — roughly 500 sites across 110 files) trail the migrations rather than leading them.
 
 ## Why snapshot diffs are reviewed one at a time
 

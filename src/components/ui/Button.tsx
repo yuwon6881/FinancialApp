@@ -40,7 +40,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       aria-busy={loading || ariaBusy || undefined}
       disabled={disabled || loading}
       className={cn(
-        'relative inline-flex select-none items-center justify-center rounded-xl font-bold transition duration-150',
+        'relative inline-flex select-none items-center justify-center rounded-control font-bold transition duration-150',
         'cursor-pointer active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
         VARIANT_CLASSES[variant],
