@@ -163,7 +163,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
           <h3 className="text-sm font-bold text-foreground">Two-Factor Authentication</h3>
           <p className="text-xs text-muted-foreground">Require a code from an authenticator app (e.g. Microsoft Authenticator) at login.</p>
         </div>
-        <span className={`shrink-0 text-xs font-bold uppercase tracking-wider ${loaded && enabled ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+        <span className={`shrink-0 text-eyebrow uppercase ${loaded && enabled ? 'text-emerald-500' : 'text-muted-foreground'}`}>
           {loaded ? (enabled ? 'Enabled' : 'Disabled') : 'Checking…'}
         </span>
         {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}

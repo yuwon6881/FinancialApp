@@ -154,7 +154,7 @@ export function GlobalSearch({
             <>
               {groups.map(group => (
                 <div key={group.kind} className="mb-1 last:mb-0">
-                  <p className="px-3 pb-1 pt-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  <p className="px-3 pb-1 pt-2 text-eyebrow uppercase text-muted-foreground">
                     {group.label}
                   </p>
                   <div className="space-y-1">

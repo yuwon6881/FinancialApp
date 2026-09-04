@@ -108,7 +108,7 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
             ]
             return (
               <div key={item.id} className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <div className="flex items-center gap-2 text-eyebrow uppercase text-muted-foreground">
                   <span className="flex size-5 items-center justify-center rounded-md bg-blue-500/10 text-xs font-black text-blue-500">
                     {idx + 1}
                   </span>

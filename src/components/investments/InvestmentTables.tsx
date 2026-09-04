@@ -129,7 +129,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
             <div><dt className="text-muted-foreground">Dividends</dt><dd className={`break-words font-semibold ${holding.netDividendsApp === undefined ? '' : holding.netDividendsApp >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.netDividendsApp === undefined ? '—' : money(holding.netDividendsApp, portfolio.appCurrency)}</dd></div>
           </dl>
           <details className="mt-3 group rounded-lg border border-border/50 bg-muted/20">
-            <summary className="flex cursor-pointer select-none items-center justify-between p-2.5 text-xs font-bold uppercase tracking-wide text-muted-foreground outline-none transition-colors hover:bg-muted/30">
+            <summary className="flex cursor-pointer select-none items-center justify-between p-2.5 text-eyebrow uppercase text-muted-foreground outline-none transition-colors hover:bg-muted/30">
               <span>How this was worked out</span>
               <ChevronDown className="size-3.5 transition-transform duration-200 group-open:rotate-180" />
             </summary>

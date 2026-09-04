@@ -193,7 +193,7 @@ export function AccountBillRoster({
 
             {pausedBills.length > 0 && (
               <div className="space-y-1.5 pt-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="text-eyebrow uppercase text-muted-foreground">
                   Paused or ended bills ({pausedBills.length})
                 </p>
                 {pausedBills.map(summary => (

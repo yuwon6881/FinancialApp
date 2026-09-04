@@ -205,7 +205,7 @@ export function ReceiptSplitSheet({
       {receipt && calculation && (
         <div className="space-y-5">
           <section className="rounded-2xl border border-primary/25 bg-primary/10 p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-accent-ink">Your share</p>
+            <p className="text-eyebrow uppercase text-accent-ink">Your share</p>
             <div className="mt-1 flex items-end justify-between gap-4">
               <strong className="text-2xl font-black tracking-tight text-foreground">
                 {formatCurrencyVal(calculation.total, currency)}

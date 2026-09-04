@@ -163,7 +163,7 @@ const CycleBlock: React.FC<{ cycleDay: number }> = ({ cycleDay }) => {
 
   return (
     <div className="mb-3 hidden rounded-xl border border-primary/25 bg-linear-to-br from-primary/12 to-primary/4 px-3 py-2.5 lg:block">
-      <p className="text-[0.625rem] font-bold uppercase tracking-widest text-accent-ink/85">This cycle</p>
+      <p className="text-eyebrow uppercase text-accent-ink/85">This cycle</p>
       <p className="mt-1 text-body font-bold tabular-nums text-foreground">{headline}</p>
       <div
         className="mt-2 h-1 overflow-hidden rounded-full bg-foreground/10"
@@ -255,7 +255,7 @@ export const DesktopNavRail: React.FC<DesktopNavRailProps> = ({
                 no room for words, so a rule carries it there instead. Both are decorative — the
                 group's accessible name comes from aria-label above. */}
             {index > 0 && <div aria-hidden="true" className="mx-2 mb-3 h-px bg-border/60 lg:hidden" />}
-            <div aria-hidden="true" className="hidden px-2 pb-1.5 text-[0.625rem] font-bold uppercase tracking-widest text-muted-foreground/70 lg:block">
+            <div aria-hidden="true" className="hidden px-2 pb-1.5 text-eyebrow uppercase text-muted-foreground/70 lg:block">
               {group.label}
             </div>
             <div className="flex flex-col gap-0.5">

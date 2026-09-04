@@ -22,17 +22,17 @@ export function LedgerBalanceReconciliation({ category, cycleLabel, formatSensit
       </div>
       <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center">
         <div className="rounded-xl border border-border/50 bg-muted/25 p-3">
-          <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">At cycle start</dt>
+          <dt className="text-eyebrow uppercase text-muted-foreground">At cycle start</dt>
           <dd className="mt-1 text-base font-extrabold tabular-nums text-foreground">{formatSensitive(category.budget)}</dd>
         </div>
         <span className="hidden text-muted-foreground sm:block" aria-hidden="true">+</span>
         <div className="rounded-xl border border-border/50 bg-muted/25 p-3">
-          <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Movement this cycle</dt>
+          <dt className="text-eyebrow uppercase text-muted-foreground">Movement this cycle</dt>
           <dd className={`mt-1 text-base font-extrabold tabular-nums ${category.netChange >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{movementPrefix}{formatSensitive(Math.abs(category.netChange))}</dd>
         </div>
         <span className="hidden text-muted-foreground sm:block" aria-hidden="true">=</span>
         <div className="rounded-xl border border-blue-500/25 bg-blue-500/8 p-3">
-          <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Left after movement</dt>
+          <dt className="text-eyebrow uppercase text-muted-foreground">Left after movement</dt>
           <dd className="mt-1 text-base font-black tabular-nums text-foreground">{formatSensitive(category.remaining)}</dd>
         </div>
       </dl>

@@ -229,11 +229,11 @@ export function PayEarlySheet({
                 {parsedPartialAmount != null && (
                   <div className="grid grid-cols-2 gap-2 rounded-xl border border-border/60 bg-muted/15 p-3 text-xs">
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">Paying now</span>
+                      <span className="text-eyebrow uppercase text-muted-foreground block">Paying now</span>
                       <span className="font-extrabold text-foreground">{formatCurrencyVal(parsedPartialAmount, currency)}</span>
                     </div>
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">Still due</span>
+                      <span className="text-eyebrow uppercase text-muted-foreground block">Still due</span>
                       <span className="font-extrabold text-blue-600 dark:text-blue-400">{formatCurrencyVal(remainingAmount, currency)}</span>
                     </div>
                   </div>

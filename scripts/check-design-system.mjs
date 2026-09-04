@@ -132,8 +132,18 @@ for (const file of allSourceFiles(SRC)) {
     true,
     file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   )
-  if (/text-\[[\d.]+px\]/.test(sourceText)) {
-    errors.push(`${fileName}:1 Arbitrary pixel typography is not allowed; use the shared type scale.`)
+  // Any unit, not just px: two nav labels sat at text-[0.625rem] (10px) and one at
+  // text-[0.6875rem] (11px), under the 12px minimum, because the rule only looked for px.
+  if (/text-\[[\d.]+(?:px|rem|em|pt|%)\]/.test(sourceText)) {
+    errors.push(`${fileName}:1 Arbitrary typography sizes are not allowed; use a role from the shared type scale.`)
+  }
+
+  // The eyebrow label -- the small uppercase caption over a metric, a definition term or a filter
+  // group -- had been spelled five ways: bold or semibold, crossed with tracking-wide, wider or
+  // normal. `text-eyebrow` carries size, weight and tracking, so the role is one decision.
+  const eyebrowByHand = /\bfont-(?:bold|semibold|medium)\s+uppercase\s+tracking-|\buppercase\s+font-(?:bold|semibold|medium)\s+tracking-/
+  if (eyebrowByHand.test(sourceText)) {
+    errors.push(`${fileName}:1 Compose the eyebrow label with "text-eyebrow uppercase" instead of a size, weight and tracking by hand.`)
   }
 
   if (fileName !== 'src/lib/breakpoints.ts') {

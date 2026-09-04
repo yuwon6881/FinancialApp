@@ -82,7 +82,7 @@ export function BucketAccountGroup({
         {/* Bucket total balance */}
         <div className="flex items-baseline justify-between gap-3">
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-eyebrow uppercase text-muted-foreground">
               Bucket total
             </span>
             <SensitiveAmount

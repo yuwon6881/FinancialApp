@@ -206,7 +206,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </span>
         <span className="flex items-center justify-between gap-4 border-t border-violet-500/10 pt-3 sm:shrink-0 sm:border-0 sm:pt-0 sm:text-right">
           <span>
-            <span className="block text-xs font-bold uppercase tracking-wide text-muted-foreground">Growth ledger balance</span>
+            <span className="block text-eyebrow uppercase text-muted-foreground">Growth ledger balance</span>
             <span className="block truncate text-lg font-black text-foreground sm:mt-1">
               {view.formatSensitive(view.categories.find(category => category.name === 'Growth')?.remaining ?? 0)}
             </span>

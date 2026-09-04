@@ -29,7 +29,7 @@ export function CycleActivitySections({
               </div>
               <div className="shrink-0 text-right">
                 <span className="block text-xs font-extrabold text-foreground">{formatSensitive(summary.loanPaymentTotal)}</span>
-                <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total paid</span>
+                <span className="block text-eyebrow uppercase text-muted-foreground">Total paid</span>
               </div>
             </div>
 
@@ -96,7 +96,7 @@ export function CycleActivitySections({
               </div>
               <div className="shrink-0 text-right">
                 <span className="block text-xs font-extrabold text-foreground">{formatSensitive(summary.paidTotal)}</span>
-                <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recorded paid</span>
+                <span className="block text-eyebrow uppercase text-muted-foreground">Recorded paid</span>
               </div>
             </div>
           </div>
@@ -126,7 +126,7 @@ export function CycleActivitySections({
                 <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-background/50 px-3 py-2 text-xs">
                   <div className="min-w-0 flex items-center gap-2">
                     <span className="font-bold text-foreground truncate">{item.name}</span>
-                    {item.priority && <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wider ${priorityClass(item.priority)}`}>{item.priority}</span>}
+                    {item.priority && <span className={`shrink-0 rounded px-1.5 py-0.5 text-eyebrow uppercase ${priorityClass(item.priority)}`}>{item.priority}</span>}
                   </div>
                   <span className="shrink-0 font-bold text-foreground">{formatSensitive(item.price)}</span>
                 </div>
@@ -175,7 +175,7 @@ export function StabilityFundSection({
 }
 
 export function Section({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
-  return <section><h3 className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">{icon}{title}</h3>{children}</section>
+  return <section><h3 className="mb-3 flex items-center gap-1.5 text-eyebrow uppercase text-muted-foreground">{icon}{title}</h3>{children}</section>
 }
 
 function StatusPill({ tone, children }: { tone: 'emerald' | 'amber' | 'blue' | 'muted'; children: ReactNode }) {

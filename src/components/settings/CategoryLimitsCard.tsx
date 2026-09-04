@@ -152,7 +152,7 @@ export function CategoryLimitsCard({
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="rounded-full bg-blue-500/10 px-2 py-1 text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-400">
+          <span className="rounded-full bg-blue-500/10 px-2 py-1 text-eyebrow uppercase text-blue-600 dark:text-blue-400">
             {spendingCategories.filter(category => category.cycleLimit != null).length} tracked
           </span>
           {isOpen ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}

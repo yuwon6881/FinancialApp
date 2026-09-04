@@ -123,7 +123,7 @@ export function CategoryLimitPerformance({
                 <span className={`min-w-0 truncate rounded-md border px-2 py-0.5 text-xs font-semibold ${getCategoryBadgeClass(item.category)}`}>
                   {item.category}
                 </span>
-                <span className={`shrink-0 text-xs font-bold uppercase tracking-wider ${exceeded ? 'text-orange-500' : watch ? 'text-amber-500' : 'text-emerald-500'}`}>
+                <span className={`shrink-0 text-eyebrow uppercase ${exceeded ? 'text-orange-500' : watch ? 'text-amber-500' : 'text-emerald-500'}`}>
                   {exceeded ? 'Exceeded' : watch ? 'Watch' : 'On track'}
                 </span>
               </div>

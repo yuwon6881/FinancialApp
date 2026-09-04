@@ -14,7 +14,7 @@ export function SectionHeader({ title, titleId, description, meta, actions, clas
     <div className={cn('flex min-w-0 flex-wrap items-start justify-between gap-3', className)} {...props}>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
-          <h2 id={titleId} className="min-w-0 text-base font-bold text-foreground">{title}</h2>
+          <h2 id={titleId} className="min-w-0 text-section text-foreground">{title}</h2>
           {meta}
         </div>
         {description && <div className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</div>}

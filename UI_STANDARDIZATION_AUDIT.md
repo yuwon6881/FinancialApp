@@ -69,9 +69,18 @@ Call sites still override the primitives they use: **219 radius overrides across
 
 `src/index.css` carries two `!important` rules — a `@media (width < 64rem)` `min-height`/`min-width` of `2.75rem`, and a `:focus-visible` outline that outranks any `focus:outline-none`. They work: `responsive-contract.spec.ts` asserts the 44px floor across every route at every viewport under 1024px and passes. But **76 call sites author a sub-44px step-down at `sm:` (the start of the medium tier) where only 6 correctly step down at `lg:`**, so the authored classes contradict the contract and the nets cannot be removed until those sites are normalized. This is the same maintainability trap the pre-refactor audit recorded for `text-[10px]` utilities.
 
-### The type hierarchy is flat
+### The type hierarchy is flat — scale in place, migration started
 
-The 573 arbitrary `8px`–`13px` utilities are gone, but they collapsed into one size rather than a scale: **1,092 `text-xs` against 157 `text-sm`**, while the semantic tokens `--text-caption`, `--text-body`, `--text-title`, and `--text-page-title` are used 7 times in total. Nearly all application text now renders at 12px, so role and hierarchy are no longer expressed.
+The 573 arbitrary `8px`–`13px` utilities are gone, but they collapsed into one size rather than a scale: **1,092 `text-xs` against 157 `text-sm`**. Nearly all application text renders at 12px, so role and hierarchy are still not expressed.
+
+The scale now exists to migrate onto. `src/index.css` declares seven roles — `eyebrow`, `caption`, `control-label`, `body`, `section`, `title`, `page-title` — each carrying its own size, leading and weight, so "this is a section heading" is one decision rather than three utilities that drift apart. `SectionHeader` and `PageHeader` use them; their values were chosen to match what those primitives already rendered, so adopting a role is inert and only feature call sites change.
+
+Two roles are migrated:
+
+- **Eyebrow — done.** The small uppercase caption over a metric, definition term or filter group had been authored **six ways**: `font-bold`/`font-semibold`/`font-medium` crossed with `tracking-wide`/`wider`/`widest`/`normal`, at `text-xs` or inherited, across 70 sites in 37 files. All now use `text-eyebrow uppercase`, and the audit rejects composing it by hand.
+- **Section heading — not started.** 68 `h2`/`h3` across 55 feature files render the same role at five sizes and three weights (`text-base font-bold`, `text-sm font-bold`, `text-xs font-bold`, `text-sm font-semibold sm:text-base`, `text-xl font-black`). This is the next migration, and it is what makes `SectionHeader` adoption meaningful — the component cannot unify headings while every caller picks its own size.
+
+**Corrections.** An earlier entry here claimed `SectionHeader` had "~48 uppercase labels across 31 files" as competing implementations. Those were eyebrow labels on `<p>`, `<span>`, `<dt>` and `<summary>`, not section headings; routing them through `SectionHeader`'s `h2` would have wrecked the document outline. And the acceptance line "nothing renders below 12px" was false: `text-[0.625rem]` twice in the desktop nav rail (10px) and `text-[0.6875rem]` in loan details (11px) rendered under the floor, because the arbitrary-typography rule only matched `px`. It now matches `rem`, `em`, `pt` and `%`, and those three sites use a role.
 
 ### Smaller items
 
@@ -106,6 +115,8 @@ Three layers, and they catch different things:
 1. **`npm run check:design-system`** — a TypeScript-AST linter over `src/`. It rejects raw feature buttons, non-canonical `Button` variants and sizes, native form controls, `text-[Npx]`, focus suppression on shared primitives, hand-rolled panel shells (matched by the `app-panel` marker, not one spelling), literal colours, unmapped palette steps and raw viewport checks. This is what stops a *new* violation entering.
 2. **`src/components/ui/designContract.test.tsx`** — asserts the contract *between* primitives: that a button and a field of the same size round identically, that both keep the 44px floor and step down only at `lg:`, that each family's focus treatment is present and uncancelled, and that no primitive surface falls back to the t-shirt radius scale. Single-component tests cannot catch these; the `sm` radius mismatch it was written for had every component internally consistent and every test passing.
 3. **The Playwright matrix** — the only layer that sees what a user sees. It caught the empty-state call to action disappearing behind the bottom navigation when nothing else did.
+
+What layer 3 does *not* do is fine-grained typography. `maxDiffPixelRatio` is 0.02, and 2% of a full-page desktop capture is roughly 38,000 pixels, so a few small labels changing size or tracking passes without a baseline update. The eyebrow migration moved the desktop nav rail's group labels from 10px with `tracking-widest` to 12px with the role's tracking — a change plainly visible to a person — and every snapshot still passed. Read "no baseline moved" as *below threshold*, never as *unchanged*, and lean on layers 1 and 2 for anything the eye would have to hunt for.
 
 A rule may only be added once its area is migrated. Adding one first fails CI across every unmigrated file, which is why the four remaining override rules (radius, surface colour, geometry, shadow — roughly 500 sites across 110 files) trail the migrations rather than leading them.
 

@@ -43,7 +43,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <Wallet className="size-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-wider text-blue-500">Available now</p>
+              <p className="text-eyebrow uppercase text-blue-500">Available now</p>
               <p className="truncate text-xs text-muted-foreground">Excludes long-term Growth savings</p>
             </div>
           </div>

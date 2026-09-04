@@ -166,11 +166,11 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
             {selectedBill.status === 'PartiallyPaid' && (
               <div className="grid grid-cols-2 gap-2 bg-blue-500/10 border border-blue-500/20 p-2.5 rounded-xl text-xs">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">Paid so far</span>
+                  <span className="text-eyebrow uppercase text-muted-foreground block">Paid so far</span>
                   <span className="font-extrabold text-foreground">{formatSensitive(selectedBill.paidAmount ?? 0)}</span>
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">Still to pay</span>
+                  <span className="text-eyebrow uppercase text-muted-foreground block">Still to pay</span>
                   <span className="font-extrabold text-blue-600 dark:text-blue-400">{formatSensitive(selectedBill.remainingAmount ?? 0)}</span>
                 </div>
               </div>
@@ -178,7 +178,7 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
 
             {selectedBill.paidDate && (
               <div className="bg-emerald-500/10 border border-emerald-500/20 p-2.5 rounded-xl text-emerald-600 dark:text-emerald-400 text-xs flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider">Paid On</span>
+                <span className="text-eyebrow uppercase">Paid On</span>
                 <span className="font-extrabold">{selectedBill.paidDate}</span>
               </div>
             )}

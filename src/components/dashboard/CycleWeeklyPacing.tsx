@@ -43,7 +43,7 @@ export const CycleWeeklyPacing: React.FC<CycleWeeklyPacingProps> = ({
   return (
     <div className="mt-4 border-t border-border/50 pt-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:text-xs">
+        <h4 className="text-eyebrow uppercase text-muted-foreground sm:text-xs">
           {HEADINGS[mode]}
         </h4>
         <span className="text-xs text-muted-foreground">

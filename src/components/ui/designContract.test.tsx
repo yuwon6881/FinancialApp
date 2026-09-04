@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest'
 import { Button, type ButtonSize, type ButtonVariant } from './Button'
 import { controlClassName, controlTriggerClassName, type ControlSize } from './controlStyles'
 import { panelClass, panelFromMediumClass, panelVariantClasses } from './panelStyles'
+import { PageHeader } from './PageHeader'
+import { SectionHeader } from './SectionHeader'
 
 /**
  * These assert the contract *between* primitives, not the look of any one of them.
@@ -74,6 +76,33 @@ describe('radius contract', () => {
     ] as Array<[string, string]>) {
       expect(value, `${name} should use rounded-control/rounded-panel`).not.toMatch(TSHIRT_RADIUS)
     }
+  })
+})
+
+describe('type role contract', () => {
+  const ROLES = ['eyebrow', 'caption', 'control-label', 'body', 'section', 'title', 'page-title']
+
+  it.each(ROLES)('declares the %s role', role => {
+    const css = fs.readFileSync(path.join(process.cwd(), 'src/index.css'), 'utf8')
+    expect(css).toMatch(new RegExp(`--text-${role}:`))
+  })
+
+  it('gives a section heading its role rather than a size and a weight', () => {
+    render(<SectionHeader title="Accounts" />)
+    const heading = screen.getByRole('heading', { level: 2, name: 'Accounts' })
+    expect(heading.className).toContain('text-section')
+    // The role carries the weight, so re-specifying one is how the five different
+    // heading treatments this replaced came about.
+    expect(heading.className).not.toMatch(/\bfont-(?:bold|semibold|black|extrabold)\b/)
+    expect(heading.className).not.toMatch(/\btext-(?:xs|sm|base|lg|xl|2xl)\b/)
+  })
+
+  it('gives a page heading the page-title role at every tier', () => {
+    render(<PageHeader title="Vault" />)
+    const heading = screen.getByRole('heading', { level: 1, name: 'Vault' })
+    expect(heading.className).toContain('text-title')
+    expect(heading.className).toContain('sm:text-page-title')
+    expect(heading.className).not.toMatch(/\btext-(?:xs|sm|base|lg|xl|2xl)\b/)
   })
 })
 

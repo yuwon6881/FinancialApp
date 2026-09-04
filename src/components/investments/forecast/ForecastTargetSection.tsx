@@ -65,7 +65,7 @@ export function ForecastTargetSection({
       <div className="grid gap-3 sm:grid-cols-2">
         <article className="rounded-xl border border-border/50 bg-muted/15 p-3">
           <div className="flex items-center gap-1">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Chance of reaching your target</p>
+            <p className="text-eyebrow uppercase text-muted-foreground">Chance of reaching your target</p>
             <InfoHint
               label="the chance of reaching your target"
               text="Share of simulated paths that reach the target with your chosen amount."
@@ -77,7 +77,7 @@ export function ForecastTargetSection({
         </article>
         <article className="rounded-xl border border-primary/25 bg-primary/5 p-3">
           <div className="flex items-center gap-1">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Monthly amount for your target</p>
+            <p className="text-eyebrow uppercase text-muted-foreground">Monthly amount for your target</p>
             <InfoHint
               label="the monthly amount for your target"
               text="Amount for the middle outcome; markets may vary."

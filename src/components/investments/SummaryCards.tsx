@@ -139,7 +139,7 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
           style={index === 0 ? undefined : { animationDelay: `${index * 35}ms` }}
         >
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
+            <p className="text-eyebrow uppercase text-muted-foreground">{label}</p>
             <InfoHint label={label} text={hint} />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">{hero.label}</p>

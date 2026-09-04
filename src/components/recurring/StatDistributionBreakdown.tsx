@@ -154,7 +154,7 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
         </div>
         <div className="text-right shrink-0">
           <span className="text-xs font-extrabold text-blue-500 sm:text-sm">{totalFormatted}</span>
-          <span className="block text-xs uppercase font-bold tracking-wide text-muted-foreground">
+          <span className="block text-eyebrow uppercase text-muted-foreground">
             {mode === 'loan-owed' ? 'total owed' : 'total / year'}
           </span>
         </div>

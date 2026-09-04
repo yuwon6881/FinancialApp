@@ -210,7 +210,7 @@ export function DocumentCard({
           {showReliefPicker && (
             <div className="mt-3" onKeyDown={event => { if (event.key === 'Escape' && canCancelRelief) { event.stopPropagation(); setEditingRelief(false) } }}>
               <div className="mb-1.5 flex items-center justify-between gap-2">
-                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="flex items-center gap-1.5 text-eyebrow uppercase text-muted-foreground">
                   Tax relief category <span className="text-destructive">*</span>
                   {isReliefDraftChanged && <span className="inline-block size-1.5 rounded-full bg-blue-500" title="Unsaved change" />}
                 </p>
@@ -245,7 +245,7 @@ export function DocumentCard({
           )}
 
           <details className="group/filing mt-3 border-t border-border/40">
-            <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-0 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
+            <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-0 py-2 text-eyebrow uppercase text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
               <span>Filing details</span>
               <ChevronDown className="size-3.5 transition-transform duration-200 group-open/filing:rotate-180" aria-hidden="true" />
             </summary>
@@ -254,19 +254,19 @@ export function DocumentCard({
                 below it. */}
             <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border/30 py-2.5 text-xs">
               <div>
-                <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Tax year</dt>
+                <dt className="text-eyebrow uppercase text-muted-foreground">Tax year</dt>
                 <dd className="mt-0.5 font-bold text-foreground tabular-nums">{document.taxYear}</dd>
               </div>
               <div>
-                <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Size</dt>
+                <dt className="text-eyebrow uppercase text-muted-foreground">Size</dt>
                 <dd className="mt-0.5 font-semibold text-foreground tabular-nums">{formatBytes(document.sizeBytes)}</dd>
               </div>
               <div>
-                <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Uploaded</dt>
+                <dt className="text-eyebrow uppercase text-muted-foreground">Uploaded</dt>
                 <dd className="mt-0.5 font-semibold text-foreground">{formatDate(document.uploadedAt)}</dd>
               </div>
               <div>
-                <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Keep until</dt>
+                <dt className="text-eyebrow uppercase text-muted-foreground">Keep until</dt>
                 <dd className="mt-0.5 font-semibold text-foreground">{formatDate(document.retentionUntil)}</dd>
               </div>
             </dl>

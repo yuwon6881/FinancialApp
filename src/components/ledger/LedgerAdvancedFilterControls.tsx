@@ -246,7 +246,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
               if (bucketAccounts.length === 0) return null
               return (
                 <div key={bucket} className="space-y-1">
-                  <span className="block px-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">{bucket}</span>
+                  <span className="block px-1 text-eyebrow uppercase text-muted-foreground">{bucket}</span>
                   <div className="space-y-0.5">
                     {bucketAccounts.map(account => (
                       <label key={account.id} className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs hover:bg-muted/40 transition-colors">

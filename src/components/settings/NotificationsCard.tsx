@@ -19,7 +19,7 @@ import { panelClass } from '../ui/panelStyles'
 // Which devices a switch changes is the thing people get wrong here, so each row says it rather
 // than leaving it to be read out of the wording.
 const ScopeChip: React.FC<{ scope: string }> = ({ scope }) => (
-  <span className="shrink-0 rounded-md border border-border/50 bg-muted/40 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+  <span className="shrink-0 rounded-md border border-border/50 bg-muted/40 px-1.5 py-0.5 text-eyebrow uppercase text-muted-foreground">
     {scope}
   </span>
 )
@@ -189,7 +189,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
             I ever turn this on in", which is a question people ask occasionally and never on the
             way to changing a setting. Left open it was the tallest thing in the panel. */}
         <details className="group border-t border-border/30 pt-3">
-          <summary className="flex cursor-pointer list-none items-center gap-1 text-xs font-bold uppercase tracking-wide text-muted-foreground transition hover:text-foreground">
+          <summary className="flex cursor-pointer list-none items-center gap-1 text-eyebrow uppercase text-muted-foreground transition hover:text-foreground">
             <ChevronRight className="size-3 transition-transform group-open:rotate-90" aria-hidden="true" />
             Devices set up
           </summary>

@@ -21,7 +21,7 @@ function DetailCell({ label, hint, children }: { label: string; hint?: string; c
   return (
     <div className="rounded-lg bg-muted/20 px-3 py-2.5">
       <div className="flex items-center gap-1.5">
-        <p className="text-[0.6875rem] font-medium text-muted-foreground">{label}</p>
+        <p className="text-caption font-medium text-muted-foreground">{label}</p>
         {hint && <InfoHint label={label} text={hint} />}
       </div>
       <p className="mt-1 text-xs font-semibold text-foreground">{children}</p>

@@ -3,7 +3,7 @@ import { TrendingDown, TrendingUp } from 'lucide-react'
 import type { InsightTone } from '../../lib/cycleSummaryTone'
 
 export function StatTile({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
-  return <div className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-border/50 bg-muted/20 px-2 py-2.5 sm:flex-row sm:justify-between sm:px-3"><div className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-muted-foreground sm:text-xs">{icon}{label}</div><div className="mt-1 max-w-full truncate text-xs font-bold text-foreground sm:mt-0 sm:text-sm">{value}</div></div>
+  return <div className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-border/50 bg-muted/20 px-2 py-2.5 sm:flex-row sm:justify-between sm:px-3"><div className="flex items-center gap-1 text-eyebrow uppercase text-muted-foreground sm:text-xs">{icon}{label}</div><div className="mt-1 max-w-full truncate text-xs font-bold text-foreground sm:mt-0 sm:text-sm">{value}</div></div>
 }
 
 const INSIGHT_TONE_TEXT: Record<InsightTone, string> = {

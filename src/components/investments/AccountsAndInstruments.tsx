@@ -78,7 +78,7 @@ export const AccountsAndInstruments: React.FC<AccountsAndInstrumentsProps> = ({
             <Input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${tab}`} />
           </FormField>
           {tab === 'accounts' && <div id="portfolio-panel-accounts" role="tabpanel" aria-labelledby="portfolio-tab-accounts">
-            <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Accounts</h3>
+            <h3 className="text-eyebrow uppercase text-muted-foreground">Accounts</h3>
             <div className="mt-2 space-y-2">
               {portfolio.accounts.filter(value => matches(`${value.name} ${value.baseCurrency}`)).map(value => (
                 <div key={value.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/25 p-3">
@@ -128,7 +128,7 @@ export const AccountsAndInstruments: React.FC<AccountsAndInstrumentsProps> = ({
             <p className="mt-3 text-xs text-muted-foreground">Archive preserves closed-account history.</p>
           </div>}
           {tab === 'investments' && <div id="portfolio-panel-investments" role="tabpanel" aria-labelledby="portfolio-tab-investments">
-            <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Investments</h3>
+            <h3 className="text-eyebrow uppercase text-muted-foreground">Investments</h3>
             <div className="mt-2 space-y-2">
               {portfolio.instruments.filter(value => matches(`${value.symbol} ${value.name} ${value.currency}`)).map(value => (
                 <div key={value.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/25 p-3" aria-busy={value.isPendingSync || value.isPendingDelete || activeSyncIds.includes(value.id)}>

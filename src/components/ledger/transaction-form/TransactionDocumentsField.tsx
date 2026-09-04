@@ -38,7 +38,7 @@ interface TransactionDocumentsFieldProps {
   currency: string
 }
 
-const LABEL_CLASS = 'text-xs font-bold uppercase tracking-wider text-muted-foreground'
+const LABEL_CLASS = 'text-eyebrow uppercase text-muted-foreground'
 const parseTransactionAmount = (value: string): number | undefined => {
   const trimmed = value.trim()
   if (!trimmed) return undefined

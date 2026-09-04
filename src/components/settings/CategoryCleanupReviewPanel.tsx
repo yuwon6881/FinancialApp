@@ -74,7 +74,7 @@ export function CategoryCleanupReviewPanel({
           <article key={suggestion.id} className="overflow-hidden rounded-xl border border-border/60 bg-background/75">
             <div className="space-y-2.5 p-3">
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="rounded-full border border-blue-500/25 bg-blue-500/10 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                <span className="rounded-full border border-blue-500/25 bg-blue-500/10 px-2 py-0.5 text-eyebrow uppercase text-blue-600 dark:text-blue-400">
                   {suggestion.type === 'changeFlow' ? 'Flow correction' : suggestion.type}
                 </span>
                 <span className="text-xs font-semibold text-muted-foreground">{confidence}% confidence</span>

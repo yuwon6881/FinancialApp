@@ -162,7 +162,7 @@ export function AccountFormSheet({
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs font-bold text-foreground">{isEditing ? 'Update this account' : 'Account connection'}</p>
               {isEditing && isArchived && (
-                <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-eyebrow uppercase text-muted-foreground">
                   Closed
                 </span>
               )}
@@ -295,7 +295,7 @@ export function AccountFormSheet({
                         Mark account as closed
                       </span>
                       {isArchived && (
-                        <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 text-eyebrow uppercase text-muted-foreground">
                           Closed
                         </span>
                       )}
