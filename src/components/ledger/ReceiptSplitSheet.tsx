@@ -274,7 +274,7 @@ export function ReceiptSplitSheet({
 
           <section className="space-y-3">
             <div>
-              <h3 className="text-sm font-bold">Items</h3>
+              <h3 className="text-subsection">Items</h3>
               <p className="text-xs text-muted-foreground">
                 Use −/+ for your quantity. Delete a line only if it was not on the receipt.
               </p>

@@ -138,7 +138,7 @@ export function AccountPlacementReviewSheet({
             return (
               <section key={operation.id} className="space-y-3 rounded-2xl border border-border/60 bg-card/92 p-4" aria-labelledby={`account-review-${operation.id}`}>
                 <div>
-                  <h2 id={`account-review-${operation.id}`} className="text-sm font-bold text-foreground">
+                  <h2 id={`account-review-${operation.id}`} className="text-subsection text-foreground">
                     {operation.payload?.description || operation.payload?.name || 'Offline change'}
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">

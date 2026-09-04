@@ -27,7 +27,7 @@ export function CategoryLimitPerformance({
     return (
       <section className={cn(panelClass, 'flex h-full flex-col justify-between p-5')}>
         <div className="flex items-center justify-between gap-3">
-          <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+          <h3 className="flex items-center gap-1.5 text-subsection text-foreground">
             <Gauge className="size-4 text-blue-500" /> Category limit performance
           </h3>
         </div>
@@ -78,7 +78,7 @@ export function CategoryLimitPerformance({
     <section className={cn(panelClass, 'h-full p-5')}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+          <h3 className="flex items-center gap-1.5 text-subsection text-foreground">
             <Gauge className="size-4 text-blue-500" /> Category limit performance
             <InfoHint
               label="category limit performance"

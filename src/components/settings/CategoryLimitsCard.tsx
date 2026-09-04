@@ -144,7 +144,7 @@ export function CategoryLimitsCard({
         className="flex items-center justify-between gap-3 select-none cursor-pointer"
       >
         <div className="min-w-0">
-          <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+          <h3 className="flex items-center gap-1.5 text-subsection text-foreground">
             <Gauge className="size-4 text-blue-500" /> Cycle Spending Guides
           </h3>
           <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">

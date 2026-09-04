@@ -48,7 +48,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h3 className="text-base font-bold text-foreground">Subscriptions</h3>
+            <h3 className="text-section text-foreground">Subscriptions</h3>
             <p className="text-xs text-muted-foreground">Bills for this selected cycle</p>
           </div>
           <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 shrink-0">

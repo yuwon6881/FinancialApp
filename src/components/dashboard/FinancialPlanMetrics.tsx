@@ -62,7 +62,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
 
   return (
     <div className={cn(panelClass, 'p-6')}>
-      <h3 className="text-base font-bold text-foreground mb-1">Financial Plan Metrics</h3>
+      <h3 className="text-section text-foreground mb-1">Financial Plan Metrics</h3>
       <p className="text-xs text-muted-foreground mb-1">Cycle-wide constraint evaluation across allocation categories and targets.</p>
       {/* Legend -- protan-safe: blue (current) + orange (pending) */}
       <div className="flex items-center gap-4 mb-4">

@@ -113,7 +113,7 @@ export function LoansSection({
       {/* Adding a loan is the summary card's New Loan button, matching where New Subscription sits
           on the bills tab. Only the empty state repeats the action, where there is nothing else to do. */}
       <div>
-        <h3 className="flex items-center gap-1 text-sm font-bold text-foreground sm:text-base">
+        <h3 className="flex items-center gap-1 text-subsection text-foreground sm:text-section">
           Tracked loans
           <InfoHint
             label="tracked loans"

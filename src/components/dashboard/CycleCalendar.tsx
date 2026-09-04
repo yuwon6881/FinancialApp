@@ -101,7 +101,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
       <div className="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div>
           <div className="flex items-center gap-1">
-            <h3 className="text-sm font-semibold text-foreground sm:text-base">Cycle Calendar</h3>
+            <h3 className="text-subsection text-foreground sm:text-section">Cycle Calendar</h3>
             <InfoHint
               label="cycle calendar shading"
               text="Shows cashflow rhythms across this billing cycle. Toggle between Spending, Net Flow, and Gross Activity to spot trends and upcoming bills. Tap any day for its full breakdown."

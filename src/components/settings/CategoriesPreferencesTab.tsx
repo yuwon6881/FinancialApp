@@ -122,7 +122,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
           }`}
         >
           <div className="min-w-0">
-            <h3 className="text-sm font-bold text-foreground">Transaction Categories</h3>
+            <h3 className="text-subsection text-foreground">Transaction Categories</h3>
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
               <span>
                 {isCategoryListLoading

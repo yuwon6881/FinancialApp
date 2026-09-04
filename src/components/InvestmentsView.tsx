@@ -243,7 +243,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
         <section aria-labelledby="investment-scan-ready-title" className={cn(panelClass, PANEL_TONES.info, 'p-4')}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 id="investment-scan-ready-title" className="text-sm font-bold text-foreground">Investment scan ready for review</h2>
+              <h2 id="investment-scan-ready-title" className="text-subsection text-foreground">Investment scan ready for review</h2>
               <p className="mt-0.5 text-xs text-muted-foreground">Nothing opens until you choose to review the scanned record.</p>
             </div>
             <Button

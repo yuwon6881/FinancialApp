@@ -94,7 +94,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
       <form noValidate onSubmit={view.handleSaveSettings} className="space-y-5 rounded-2xl border border-border/60 bg-card p-4 shadow-xs sm:p-6 min-[1280px]:col-span-2">
         <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
           <div>
-            <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
+            <h3 className="flex items-center gap-2 text-subsection text-foreground">
               Financial Model
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">Controls budget targets and cycle calculations.</p>
@@ -233,7 +233,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
         <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-border/40 pb-3">
             <div>
-              <h3 className="text-sm font-bold text-foreground">App Preferences</h3>
+              <h3 className="text-subsection text-foreground">App Preferences</h3>
               <p className="text-xs text-muted-foreground mt-0.5">Customize display and local storage.</p>
             </div>
           </div>

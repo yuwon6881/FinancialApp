@@ -15,7 +15,7 @@ export function LedgerBalanceReconciliation({ category, cycleLabel, formatSensit
     <Panel as="section" aria-labelledby="ledger-balance-reconciliation-title">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 id="ledger-balance-reconciliation-title" className="text-sm font-bold text-foreground">{category.name} balance for {cycleLabel}</h3>
+          <h3 id="ledger-balance-reconciliation-title" className="text-subsection text-foreground">{category.name} balance for {cycleLabel}</h3>
           <p className="mt-1 text-xs text-muted-foreground">How this cycle’s activity arrives at the amount left.</p>
         </div>
         <InfoHint label={`${category.name} balance calculation`} text="Debit and credit below cover the visible page and leave out internal transfers. This balance uses the complete cycle and includes your bucket’s share of allocations and transfers." />

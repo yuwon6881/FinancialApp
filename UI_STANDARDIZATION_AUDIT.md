@@ -78,7 +78,15 @@ The scale now exists to migrate onto. `src/index.css` declares seven roles — `
 Two roles are migrated:
 
 - **Eyebrow — done.** The small uppercase caption over a metric, definition term or filter group had been authored **six ways**: `font-bold`/`font-semibold`/`font-medium` crossed with `tracking-wide`/`wider`/`widest`/`normal`, at `text-xs` or inherited, across 70 sites in 37 files. All now use `text-eyebrow uppercase`, and the audit rejects composing it by hand.
-- **Section heading — not started.** 68 `h2`/`h3` across 55 feature files render the same role at five sizes and three weights (`text-base font-bold`, `text-sm font-bold`, `text-xs font-bold`, `text-sm font-semibold sm:text-base`, `text-xl font-black`). This is the next migration, and it is what makes `SectionHeader` adoption meaningful — the component cannot unify headings while every caller picks its own size.
+- **Section heading — done, at two levels.** 56 of the 68 feature `h2`/`h3` now use a role, across 47 files.
+
+  The important finding is what *not* to do. The naive reading was one heading role, and 30 of the headings sat at `text-sm` against 14 at `text-base` — so collapsing them onto the single `section` role would have promoted every in-panel heading to panel weight and made every card, sheet and notice heavier. Those two sizes are a real hierarchy: `section` heads a whole panel, `subsection` heads a block inside one. Both roles now exist, and 52 of the 56 conversions are size-neutral because they were already at the right level.
+
+  What was genuinely inconsistent was the **weight at each level** — `font-semibold`, `font-bold` and `font-black` appeared on sibling headings — so four sites changed weight deliberately (`CycleCalendar`, `LedgerServerStatus` twice, `TaxReliefOverview`) and the roles now decide it.
+
+  Twelve are deliberately left, and they are the open question rather than an oversight: six `text-xs font-bold` headings inside dense investment panels (`AllocationChart`, `DepositGuide`, `WithdrawalGuide`, `FundPriceChart`, `InvestmentPlanPanel` twice) are either a legitimate third level or are really labels rather than headings, and three page-level titles sit on special surfaces (`ErrorBoundary`, `LockScreen`, `InvestmentToolbars`) where `PageHeader` already owns the page-title role. Deciding those needs a look at the surfaces, not a codemod. Until they are resolved, a rule rejecting a size-plus-weight on `h2`/`h3` cannot land.
+
+  `SectionHeader` itself still has one importer. Its adoption is now unblocked — the sizes agree — but swapping a heading for the component restructures JSX, so it is separate work from giving the heading its role.
 
 **Corrections.** An earlier entry here claimed `SectionHeader` had "~48 uppercase labels across 31 files" as competing implementations. Those were eyebrow labels on `<p>`, `<span>`, `<dt>` and `<summary>`, not section headings; routing them through `SectionHeader`'s `h2` would have wrecked the document outline. And the acceptance line "nothing renders below 12px" was false: `text-[0.625rem]` twice in the desktop nav rail (10px) and `text-[0.6875rem]` in loan details (11px) rendered under the floor, because the arbitrary-typography rule only matched `px`. It now matches `rem`, `em`, `pt` and `%`, and those three sites use a role.
 

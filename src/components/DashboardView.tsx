@@ -123,7 +123,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <AlertCircle className="size-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 id="attention-heading" className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                <h3 id="attention-heading" className="text-subsection text-amber-700 dark:text-amber-300">
                   {pendingNotificationCount} bill{pendingNotificationCount === 1 ? '' : 's'} need review
                 </h3>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
@@ -183,7 +183,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <section aria-labelledby="plan-snapshot-heading" className={cn(panelClass, 'flex flex-col p-5')}>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 id="plan-snapshot-heading" className="text-base font-bold text-foreground">Plan snapshot</h3>
+              <h3 id="plan-snapshot-heading" className="text-section text-foreground">Plan snapshot</h3>
               <p className="mt-1 text-xs text-muted-foreground">Current-cycle spending room, committed bills, and emergency savings.</p>
             </div>
             <ShieldCheck className="size-5 shrink-0 text-blue-500" />

@@ -44,7 +44,7 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
           <AlertTriangle className="size-5" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 id="vault-retention-notice-heading" className="text-sm font-bold text-amber-700 dark:text-amber-300">
+          <h3 id="vault-retention-notice-heading" className="text-subsection text-amber-700 dark:text-amber-300">
             {retentionNoticeHeading(groups)}
           </h3>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">

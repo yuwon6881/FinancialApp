@@ -195,7 +195,7 @@ export function PendingSubscriptionsModal({
       {pendingNotifications.length === 0 ? (
         <div className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-8 text-center">
           <CheckCircle2 className="size-9 text-emerald-500" />
-          <h3 className="mt-3 text-sm font-bold text-foreground">All caught up</h3>
+          <h3 className="mt-3 text-subsection text-foreground">All caught up</h3>
           <p className="mt-1 max-w-sm text-xs text-muted-foreground">No subscription payments are waiting for confirmation.</p>
         </div>
       ) : (

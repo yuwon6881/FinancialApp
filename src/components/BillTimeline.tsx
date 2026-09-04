@@ -140,7 +140,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
           <span className="sr-only">Collapse {displayTitle}</span>
         </Button>
         <div>
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+          <h3 className="text-subsection text-foreground flex items-center gap-2">
             <Calendar className="size-5 text-blue-500" />
             <span>{displayTitle}</span>
           </h3>

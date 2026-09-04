@@ -81,7 +81,7 @@ export function AccountCoverageGate({
               <section key={bucket.name} className={complete ? 'rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4' : 'rounded-2xl border border-border/60 bg-muted/10 p-4'} aria-labelledby={'account-gate-' + bucket.name}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 id={'account-gate-' + bucket.name} className="flex items-center gap-2 text-sm font-bold text-foreground">
+                    <h2 id={'account-gate-' + bucket.name} className="flex items-center gap-2 text-subsection text-foreground">
                       <span className={'rounded-md border px-1.5 py-0.5 text-xs ' + getCategoryBadgeClass(bucket.name)}>{bucket.name}</span>
                       {complete && <CheckCircle2 className="size-4 text-emerald-500" aria-label="Complete" />}
                     </h2>

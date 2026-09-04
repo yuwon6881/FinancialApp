@@ -77,7 +77,7 @@ export function InvestmentPlanPanel({
             <StatusIcon className="size-4" />
           </div>
           <div>
-            <h2 id="investment-plan-heading" className="flex items-center gap-1 text-base font-bold text-foreground">
+            <h2 id="investment-plan-heading" className="flex items-center gap-1 text-section text-foreground">
               Three-fund investment plan
               <InfoHint
                 label="the three-fund plan"

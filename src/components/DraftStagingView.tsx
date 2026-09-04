@@ -189,7 +189,7 @@ export function DraftStagingView({
 
           <section aria-labelledby="draft-review-queue-title">
             <div className="mb-2.5 flex min-h-11 items-center justify-between gap-3 px-0.5 sm:min-h-9">
-              <h3 id="draft-review-queue-title" className="text-sm font-bold text-foreground">Review drafts</h3>
+              <h3 id="draft-review-queue-title" className="text-subsection text-foreground">Review drafts</h3>
               {onAddAnother && (
                 <Button
                   variant="secondary"

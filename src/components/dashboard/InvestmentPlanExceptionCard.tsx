@@ -45,7 +45,7 @@ export function InvestmentPlanExceptionCard({
             {incomplete ? <PieChart className="size-5" /> : <AlertTriangle className="size-5" />}
           </div>
           <div className="min-w-0 flex-1">
-            <h3 id="investment-plan-exception" className="text-sm font-bold text-amber-700 dark:text-amber-300">
+            <h3 id="investment-plan-exception" className="text-subsection text-amber-700 dark:text-amber-300">
               {incomplete ? 'Investment plan needs setup' : 'Investment allocation needs attention'}
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">

@@ -125,7 +125,7 @@ export function FingerprintSection() {
       >
         <ShieldCheck className="size-5 text-emerald-500 shrink-0" />
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-foreground">Device Unlock</h3>
+          <h3 className="text-subsection text-foreground">Device Unlock</h3>
           <p className="text-xs text-muted-foreground">
             {enrolledHere
               ? "Use this device's screen lock, PIN, fingerprint, or face recognition."

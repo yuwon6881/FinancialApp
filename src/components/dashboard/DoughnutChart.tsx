@@ -59,7 +59,7 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
       <div>
         <div className="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-2">
           <div>
-            <h3 className="text-base font-bold text-foreground">Outflow Categories</h3>
+            <h3 className="text-section text-foreground">Outflow Categories</h3>
             <p className="text-xs text-muted-foreground">Expense breakdown by category</p>
           </div>
           <div role="group" aria-label="Breakdown range" className="grid w-full grid-cols-4 items-center rounded-lg border border-border/40 bg-muted/40 p-0.5 text-xs sm:flex sm:w-auto sm:shrink-0">

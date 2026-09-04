@@ -97,7 +97,7 @@ export function StabilityRecoveryExceptionCard({
             </div>
             <h3
               id="stability-recovery-exception"
-              className="text-sm font-bold leading-snug text-amber-700 dark:text-amber-300"
+              className="text-subsection leading-snug text-amber-700 dark:text-amber-300"
             >
               Your emergency fund is below where it was
               <InfoHint

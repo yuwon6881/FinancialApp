@@ -92,7 +92,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
       className={cn(panelClass, 'space-y-3 p-4 sm:space-y-4 sm:p-5')}
     >
       <div className="border-b border-border/40 pb-2.5 sm:pb-3">
-        <h3 id="settings-notifications-heading" className="text-sm font-bold text-foreground">Notifications</h3>
+        <h3 id="settings-notifications-heading" className="text-subsection text-foreground">Notifications</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
           Each of these is set up on the device you are using now.
         </p>

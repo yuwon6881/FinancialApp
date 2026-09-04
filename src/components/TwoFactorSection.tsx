@@ -160,7 +160,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
       >
         {loaded && enabled ? <ShieldCheck className="size-5 text-emerald-500 shrink-0" /> : <ShieldOff className="size-5 text-muted-foreground shrink-0" />}
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-foreground">Two-Factor Authentication</h3>
+          <h3 className="text-subsection text-foreground">Two-Factor Authentication</h3>
           <p className="text-xs text-muted-foreground">Require a code from an authenticator app (e.g. Microsoft Authenticator) at login.</p>
         </div>
         <span className={`shrink-0 text-eyebrow uppercase ${loaded && enabled ? 'text-emerald-500' : 'text-muted-foreground'}`}>

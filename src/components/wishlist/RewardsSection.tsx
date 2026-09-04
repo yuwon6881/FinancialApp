@@ -39,7 +39,7 @@ export function RewardsSection(props: RewardsSectionProps) {
     <section aria-labelledby="commitments-rewards-rewards-heading" className={cn(panelFromMediumClass, 'space-y-3')}>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h3 id="commitments-rewards-rewards-heading" className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+          <h3 id="commitments-rewards-rewards-heading" className="flex items-center gap-1.5 text-subsection text-foreground">
             <RewardIcon className="size-4 text-accent-ink" aria-hidden />
             Rewards
             {props.affordableCount > 0 && (

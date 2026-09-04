@@ -53,7 +53,7 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
   if (view.startValue <= 0) {
     return (
       <Panel as="section" aria-labelledby="forecast-title">
-        <h2 id="forecast-title" className="text-base font-bold text-foreground">Investment forecast</h2>
+        <h2 id="forecast-title" className="text-section text-foreground">Investment forecast</h2>
         <p className="mt-2 text-xs text-muted-foreground">A complete current portfolio value is needed to calculate this.</p>
       </Panel>
     )
@@ -69,7 +69,7 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
         className={cn(panelClass, 'group flex w-full cursor-pointer items-center justify-between p-5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring')}
       >
         <div>
-          <h2 id="forecast-title" className="text-base font-bold text-foreground">Investment forecast</h2>
+          <h2 id="forecast-title" className="text-section text-foreground">Investment forecast</h2>
           <p className="mt-1 text-xs text-muted-foreground">Explore long-term outcomes without changing your records.</p>
         </div>
         <ChevronDown className="size-4 -rotate-90 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-foreground" />

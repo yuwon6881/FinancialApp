@@ -28,6 +28,14 @@
     --text-control-label--font-weight: 600;
     --text-body: 0.875rem;
     --text-body--line-height: 1.25rem;
+    /* Two heading levels, because the application genuinely has two: `section` heads a whole panel
+       and `subsection` heads a block inside one. Collapsing them onto a single role would have
+       promoted about thirty in-panel headings to panel weight and made every card and sheet
+       heavier. What was actually inconsistent was the weight at each level -- semibold, bold and
+       black all appeared on sibling headings -- which the roles now decide. */
+    --text-subsection: 0.875rem;
+    --text-subsection--line-height: 1.25rem;
+    --text-subsection--font-weight: 700;
     --text-section: 1rem;
     --text-section--line-height: 1.5rem;
     --text-section--font-weight: 700;

@@ -123,7 +123,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h3 id="commitments-rewards-commitments-heading" className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+          <h3 id="commitments-rewards-commitments-heading" className="flex items-center gap-1.5 text-subsection text-foreground">
             <CommitmentIcon className="size-4 text-accent-ink" aria-hidden />
             Commitments
             {pool.activeGoals.length + completedGoals.length > 0 && (

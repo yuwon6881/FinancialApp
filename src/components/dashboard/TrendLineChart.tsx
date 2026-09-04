@@ -90,7 +90,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
       <div>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-base font-bold text-foreground">Growth ledger balance</h3>
+            <h3 className="text-section text-foreground">Growth ledger balance</h3>
             <p className="text-xs text-muted-foreground">Growth balance carried across budget cycles</p>
           </div>
           <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">

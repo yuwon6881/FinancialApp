@@ -248,7 +248,7 @@ export function TaxReliefOverview({
     <section className="mb-4 rounded-2xl border border-border/60 bg-muted/20 p-4" aria-labelledby="tax-relief-overview">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 id="tax-relief-overview" className="flex items-center gap-2 text-sm font-black">
+          <h3 id="tax-relief-overview" className="flex items-center gap-2 text-subsection">
             <CircleDollarSign className="size-4 text-accent-ink" />
             {selectedYear ? `${selectedYear} tax relief tracker` : 'Tax relief tracker'}
           </h3>

@@ -49,7 +49,7 @@ export function CategoryWatchExceptionCard({
             {anyExceeded ? <AlertTriangle className="size-5" /> : <Gauge className="size-5" />}
           </div>
           <div className="min-w-0 flex-1">
-            <h3 id="category-watch-exception" className={`text-sm font-bold ${anyExceeded ? 'text-orange-700 dark:text-orange-300' : 'text-amber-700 dark:text-amber-300'}`}>
+            <h3 id="category-watch-exception" className={`text-subsection ${anyExceeded ? 'text-orange-700 dark:text-orange-300' : 'text-amber-700 dark:text-amber-300'}`}>
               {anyExceeded
                 ? `${worst.category} is over its budget`
                 : `${worst.category} is close to its budget`}

@@ -80,7 +80,7 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
       >
         <KeyRound className="size-5 text-blue-500 shrink-0" />
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-foreground">Change Password</h3>
+          <h3 className="text-subsection text-foreground">Change Password</h3>
           <p className="text-xs text-muted-foreground">Changing your password logs out every other device.</p>
         </div>
         {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}

@@ -304,7 +304,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
           <div className="flex items-start gap-3 min-w-0 flex-1">
             <div className="rounded-xl bg-violet-500/10 p-2 text-violet-500 shrink-0"><SlidersHorizontal className="size-4" /></div>
             <div className="min-w-0 flex-1">
-              <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold text-foreground">
+              <h3 className="flex flex-wrap items-center gap-2 text-subsection text-foreground">
                 Portfolio targets
               </h3>
               <p className="mt-1 text-xs text-muted-foreground break-words">Changing one sleeve automatically redistributes the other two.</p>
@@ -401,7 +401,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
 
       <section className="w-full min-w-0 rounded-2xl border border-border/60 bg-card p-4 sm:p-6 shadow-xs">
         <div className="min-w-0">
-          <h3 className="flex flex-wrap items-center gap-2 text-sm font-bold text-foreground">
+          <h3 className="flex flex-wrap items-center gap-2 text-subsection text-foreground">
             Investment classification <RowSyncStatus isSyncing={orderSyncing} isPending={orderPending} entityLabel="classification order" />
           </h3>
           <p className="mt-1 text-xs text-muted-foreground break-words">Every open holding needs a basket. Drag a grip, or focus it and press Up or Down, to change the order.</p>

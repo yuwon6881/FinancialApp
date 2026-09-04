@@ -95,12 +95,12 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
     .filter(group => group.holdings.length > 0 || group.cash.length > 0)
   return (
   <section aria-labelledby="holdings-title" className={cn(panelClass, 'overflow-hidden')}>
-    <div className="p-4 sm:p-5"><h2 id="holdings-title" className="text-base font-bold text-foreground">What you hold</h2><p className="mt-1 text-xs text-muted-foreground">Every fund you own, grouped by the account holding it.{filter ? ` Showing only ${filterLabel}.` : ''}</p></div>
+    <div className="p-4 sm:p-5"><h2 id="holdings-title" className="text-section text-foreground">What you hold</h2><p className="mt-1 text-xs text-muted-foreground">Every fund you own, grouped by the account holding it.{filter ? ` Showing only ${filterLabel}.` : ''}</p></div>
     <div className="grid gap-3 px-4 pb-4 sm:px-5 sm:pb-5 sm:grid-cols-2 lg:grid-cols-3">
       {accountGroups.map(({ account, holdings: accountHoldings, cash, total }) => (
         <article key={account.id} className="interactive-card rounded-xl border border-border/50 bg-muted/15 p-4">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0"><h3 className="truncate text-sm font-bold">{account.name}</h3><p className="text-xs text-muted-foreground">Base currency {account.baseCurrency} · {accountHoldings.length} holding{accountHoldings.length === 1 ? '' : 's'}</p></div>
+            <div className="min-w-0"><h3 className="truncate text-subsection">{account.name}</h3><p className="text-xs text-muted-foreground">Base currency {account.baseCurrency} · {accountHoldings.length} holding{accountHoldings.length === 1 ? '' : 's'}</p></div>
             <strong className="shrink-0 text-xs">{masked ? '••••' : total === undefined ? 'Exchange rate missing' : money(total, portfolio.appCurrency)}</strong>
           </div>
           {cash.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{cash.map(balance => (
@@ -321,7 +321,7 @@ export const PagedActivityTable = ({
     <section aria-labelledby="activity-title" className={cn(panelClass, 'min-w-0 overflow-hidden')}>
       <div className="space-y-4 p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><h2 id="activity-title" className="text-base font-bold text-foreground">Activity</h2><p className="mt-1 text-xs text-muted-foreground">{total} matching record{total === 1 ? '' : 's'}{activeLabel ? ` · ${activeLabel}` : ''}</p></div>
+          <div><h2 id="activity-title" className="text-section text-foreground">Activity</h2><p className="mt-1 text-xs text-muted-foreground">{total} matching record{total === 1 ? '' : 's'}{activeLabel ? ` · ${activeLabel}` : ''}</p></div>
           <div className="flex rounded-xl bg-muted/40 p-1">
             <Button variant="tertiary" onClick={() => resetPage(() => { setMode('investments'); setType(''); setAppliedFilters(value => ({ ...value, type: '' })) })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'investments' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>Investments</Button>
             <Button variant="tertiary" onClick={() => resetPage(() => { setMode('cash'); setType(''); setInstrumentId(''); setAppliedFilters(value => ({ ...value, type: '', instrumentId: '' })) })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'cash' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>Cash flow</Button>

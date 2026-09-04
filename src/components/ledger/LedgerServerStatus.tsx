@@ -30,7 +30,7 @@ export function LedgerServerStatus({
           <div className="flex items-start gap-2">
             <AlertCircle className="mt-0.5 size-4 shrink-0 text-orange-500" />
             <div>
-              <h3 id="ledger-load-error" className="text-sm font-semibold text-foreground">Saved transactions are unavailable</h3>
+              <h3 id="ledger-load-error" className="text-subsection text-foreground">Saved transactions are unavailable</h3>
               <p className="mt-0.5 text-xs text-muted-foreground">{error}</p>
             </div>
           </div>
@@ -46,7 +46,7 @@ export function LedgerServerStatus({
           <div className="flex items-start gap-2">
             <UploadCloud className="mt-0.5 size-4 shrink-0 text-accent-ink" />
             <div>
-              <h3 id="ledger-syncing-heading" className="text-sm font-semibold text-foreground">Syncing changes</h3>
+              <h3 id="ledger-syncing-heading" className="text-subsection text-foreground">Syncing changes</h3>
               <p className="text-xs text-muted-foreground">These matching entries appear once here until the server confirms them. Saved result totals and pages stay authoritative.</p>
             </div>
           </div>

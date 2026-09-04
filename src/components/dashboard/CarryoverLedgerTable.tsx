@@ -37,7 +37,7 @@ export function CarryoverLedgerTable({
 
   return (
     <div className={cn(panelClass, 'p-6')}>
-      <h3 className="text-base font-bold text-foreground mb-1">Carryover Rolling Ledgers</h3>
+      <h3 className="text-section text-foreground mb-1">Carryover Rolling Ledgers</h3>
       <p className="text-xs text-muted-foreground mb-4">Starting budget carries forward from the previous cycle's remaining balance.</p>
 
       {showDenseTable && (

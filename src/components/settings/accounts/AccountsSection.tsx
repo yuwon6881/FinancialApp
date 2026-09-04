@@ -246,7 +246,7 @@ export function AccountsSection({
               <Building2 className="size-5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-base font-bold text-foreground">Accounts</h3>
+              <h3 className="text-section text-foreground">Accounts</h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Connect where your money lives to the four budget buckets.
               </p>

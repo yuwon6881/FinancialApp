@@ -85,7 +85,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
             <div>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <h3 className="flex min-w-0 flex-wrap items-center gap-1.5 text-base font-bold text-foreground">
+                  <h3 className="flex min-w-0 flex-wrap items-center gap-1.5 text-section text-foreground">
                     <span className="min-w-0 break-words">{rp.name}</span>
                     {(!rp.active || isEnded) && (
                       <span className="text-xs font-semibold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">

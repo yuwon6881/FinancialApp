@@ -49,7 +49,7 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
     <section aria-labelledby="value-chart-title" className={cn(panelClass, 'min-w-0 p-5')}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 id="value-chart-title" className="text-base font-bold text-foreground">Portfolio value</h2>
+          <h2 id="value-chart-title" className="text-section text-foreground">Portfolio value</h2>
           <p className="mt-1 text-xs text-muted-foreground">Your investments plus cash, over time.</p>
         </div>
         <div className="flex max-w-full flex-wrap gap-1 self-start rounded-xl bg-muted/40 p-1" role="group" aria-label="Chart range">

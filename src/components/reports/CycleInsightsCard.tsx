@@ -23,7 +23,7 @@ export function CycleInsightsCard({
       <div className="flex items-start gap-3">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500"><CalendarDays className="size-5" aria-hidden /></div>
         <div>
-          <h2 id="cycle-insights-title" className="text-sm font-bold text-foreground">This cycle at a glance</h2>
+          <h2 id="cycle-insights-title" className="text-subsection text-foreground">This cycle at a glance</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">Useful patterns from the cycle you selected.</p>
         </div>
       </div>

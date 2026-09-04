@@ -107,7 +107,7 @@ export function CycleSummaryModal({
           <span className="flex size-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-500">
             <FileBarChart className="size-6" />
           </span>
-          <h3 className="mt-4 text-sm font-bold text-foreground">Summary unavailable</h3>
+          <h3 className="mt-4 text-subsection text-foreground">Summary unavailable</h3>
           <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
             {loadError || 'Could not load this cycle. Please close the summary and try again.'}
           </p>
@@ -117,7 +117,7 @@ export function CycleSummaryModal({
           <span className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
             <FileBarChart className="size-6" />
           </span>
-          <h3 className="mt-4 text-sm font-bold text-foreground">No activity recorded</h3>
+          <h3 className="mt-4 text-subsection text-foreground">No activity recorded</h3>
           <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
             This cycle has no cash activity, bill updates, or claimed rewards to summarize.
           </p>

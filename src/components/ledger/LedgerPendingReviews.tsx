@@ -21,7 +21,7 @@ export function LedgerPendingReviews({ receiptReady, receiptSplitReady, onReview
             <FileCheck2 className="size-5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <h3 id="ledger-scan-ready-title" className="text-sm font-bold text-foreground">Scan ready for review</h3>
+            <h3 id="ledger-scan-ready-title" className="text-subsection text-foreground">Scan ready for review</h3>
             <p className="mt-0.5 text-xs text-muted-foreground">Your current page stays open until you choose what to review.</p>
           </div>
         </div>

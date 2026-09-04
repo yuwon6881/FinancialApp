@@ -44,7 +44,7 @@ export function PerformanceBars({ portfolio, masked, onSelectHolding }: {
     <Panel as="section" aria-labelledby="performance-title">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h2 id="performance-title" className="text-base font-bold text-foreground">How each fund is doing</h2>
+          <h2 id="performance-title" className="text-section text-foreground">How each fund is doing</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             {mode === 'money'
               ? 'Gain or loss on paper, in money. Pick a fund to see its history.'
