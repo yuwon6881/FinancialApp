@@ -54,7 +54,7 @@ Raw buttons are limited to the three shared primitives where the element is the 
 | `IconButton` | **19 — closed.** All 28 icon-only call sites adopted it; the primitive layer (`HorizontalRail`, `OverflowMenu`, `ToastViewport`, `ToggleButton`) still composes `Button` directly as the implementation boundary | none |
 | `EmptyState` | **9 — closed.** 8 sites converted, using the new `compact` density for the one-line notes that sit inside an already-titled panel | none. The earlier "18 files" figure was wrong: it counted every `border-dashed`, most of which are chart legend dashes, archived/disabled row states or drop zones. Only 10 were empty states, and `dashboard/CategoryLimitPerformance` stays hand-rolled as an approved exception — it is a horizontal icon/text/action card, not this centered anatomy |
 | `SectionHeader` | 1 | ~48 `font-bold uppercase tracking-wide` labels across 31 files |
-| `Toolbar` | 2 | 5 further filter/action bars; it is the only `role="toolbar"` in the tree |
+| `Toolbar` | 2 | Adoption is **blocked on a question, not on effort** — see below |
 | `Badge`/`StatusBadge` | 17 | 19 of 31 hand-rolled pills converted. `RowSyncBadge` (15 consumers) is still an undeclared second badge system, and 12 pills remain — see below |
 | `Panel`/`Card` | 10 / 4 | **none — closed.** All 39 hand-rolled shells now compose `panelClass`, `PANEL_TONES` or `panelFromMediumClass` from `ui/panelStyles`, and the audit rejects the `app-panel` marker outside that module |
 | `Meter` | 11 | **All four `role="progressbar"` implementations are now one.** ~12 multi-segment and marker bars remain, which `Meter` structurally cannot express — see below |
@@ -78,6 +78,17 @@ It also produced the clearest evidence yet for why the test net matters. `TaxRel
 `Meter` therefore gained `valueHidden`, the masking signal is threaded to the three money-derived bars that gained ARIA (`CycleSummaryModal`, `StatDistributionBreakdown`, `StabilityFundSection`), and the guard is now asserted on the primitive in `designContract.test.tsx` rather than in one feature's test — so the next consolidation cannot reintroduce it. The bars that measure time rather than money (cycle progress in the nav rail and Today card) and storage bytes announce their value normally.
 
 **A segmented bar is the missing primitive.** The ~12 remaining tracks are not single-value: `FinancialPlanMetrics` (three), `TodayFocusCards`, `CycleSummaryModal` (two), `InvestmentPlanPanel` (two) and `RewardsPoolBar` are flex containers with several fills, and `PerformanceBars`, `BillTimeline`, `CategoryLimitPerformance` and `StabilityRecoveryExceptionCard` overlay a threshold marker. Forcing them through `Meter` would mean losing the segments. They want their own primitive, and until it exists they are correctly hand-rolled.
+
+### Toolbar: deliberately not migrated
+
+`Toolbar` sets `role="toolbar"`. In ARIA that role carries an expectation the component does not meet: a toolbar should be a single tab stop and move focus between its controls with the arrow keys. `Toolbar` manages no `tabIndex` and binds no arrow keys, its two consumers' only `onKeyDown` handlers are Enter-to-search and dropdown handling, no test asserts toolbar keyboard behaviour, and axe will not catch it because this is a specification expectation rather than an automated rule.
+
+Adopting it across five more bars would therefore spread a promise the code does not keep. That needs deciding first, and either answer is defensible:
+
+- **Implement roving focus** in `Toolbar`, making the role honest, then adopt widely.
+- **Drop the role** and let it be a styled container. A filter bar with three or four controls gains little from a single tab stop, and each control is individually focusable today — which is the behaviour users actually get.
+
+Separately, the five bars are not all toolbars, so this was never a straight five-site migration: `InvestmentToolbars` is a 2/4-column grid, `LedgerAdvancedFilterControls` is a stacked filter section with its own separator, `LedgerActiveFilterSummary` is a tinted status strip closer to `Panel tone="info"`, and only `DocumentFilterBar` is a bordered control bar of the shape `Toolbar` describes.
 
 ### Local re-styling of shared primitives
 
