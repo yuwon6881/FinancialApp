@@ -15,6 +15,7 @@ import { useClientPagination } from '../ui/useClientPagination'
 import { cn } from '../../lib/utils'
 import { panelFromMediumClass } from '../ui/panelStyles'
 import { EmptyState } from '../ui/EmptyState'
+import { Badge } from '../ui/Badge'
 
 interface CommitmentsSectionProps {
   pool: GoalPoolSummary
@@ -127,9 +128,9 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
             <CommitmentIcon className="size-4 text-accent-ink" aria-hidden />
             Commitments
             {pool.activeGoals.length + completedGoals.length > 0 && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+              <Badge tone="neutral">
                 {pool.activeGoals.length + completedGoals.length}
-              </span>
+              </Badge>
             )}
             <InfoHint
               label="a commitment"

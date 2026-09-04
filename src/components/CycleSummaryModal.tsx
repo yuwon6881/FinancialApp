@@ -21,6 +21,7 @@ import { InfoHint } from './ui/InfoHint'
 import { CycleActivitySections, Section, StabilityFundSection } from './cycle-summary/CycleActivitySections'
 import { InsightCard, StatTile } from './cycle-summary/CycleSummaryCards'
 import { changeTone } from '../lib/cycleSummaryTone'
+import { Badge } from './ui/Badge'
 
 interface CycleSummaryModalProps {
   isOpen: boolean
@@ -156,9 +157,9 @@ export function CycleSummaryModal({
                   <div className="mb-2.5 flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-foreground">{envelope.name}</span>
                     {envelope.overspent && (
-                      <span className="shrink-0 rounded-full bg-orange-500/15 px-1.5 py-0.5 text-eyebrow uppercase text-orange-500">
+                      <Badge tone="urgent">
                         Overspent
-                      </span>
+                      </Badge>
                     )}
                   </div>
                   <div className="grid grid-cols-3 gap-2">

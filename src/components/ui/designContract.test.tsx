@@ -4,7 +4,8 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { Button, type ButtonSize, type ButtonVariant } from './Button'
 import { controlClassName, controlTriggerClassName, type ControlSize } from './controlStyles'
-import { panelClass, panelFromMediumClass, panelVariantClasses } from './panelStyles'
+import { PANEL_TONES, panelClass, panelFromMediumClass, panelVariantClasses, type PanelTone } from './panelStyles'
+import { Badge, type BadgeTone } from './Badge'
 import { PageHeader } from './PageHeader'
 import { SectionHeader } from './SectionHeader'
 
@@ -103,6 +104,32 @@ describe('type role contract', () => {
     expect(heading.className).toContain('text-title')
     expect(heading.className).toContain('sm:text-page-title')
     expect(heading.className).not.toMatch(/\btext-(?:xs|sm|base|lg|xl|2xl)\b/)
+  })
+})
+
+describe('tone vocabulary contract', () => {
+  // A reader should not have to learn "orange means already over" twice. Where a badge and a panel
+  // name the same state, they must reach for the same colour family -- hand-rolled pills had used
+  // amber and orange on sibling elements with nothing recording which meant what.
+  const SHARED: Array<[BadgeTone & PanelTone, string]> = [
+    ['warning', 'amber'],
+    ['urgent', 'orange'],
+    ['info', 'blue'],
+  ]
+
+  it.each(SHARED)('the %s tone is %s in both a badge and a panel', (tone, family) => {
+    render(<Badge tone={tone}>Label</Badge>)
+    const badge = screen.getByText('Label').className
+    expect(badge, `Badge ${tone}`).toContain(`-${family}-`)
+    expect(PANEL_TONES[tone], `PANEL_TONES.${tone}`).toContain(`-${family}-`)
+  })
+
+  it('keeps every badge tone on a rounded-full pill', () => {
+    for (const tone of ['neutral', 'accent', 'info', 'success', 'warning', 'urgent', 'danger'] as BadgeTone[]) {
+      const { unmount } = render(<Badge tone={tone}>{tone}</Badge>)
+      expect(screen.getByText(tone).className).toContain('rounded-full')
+      unmount()
+    }
   })
 })
 

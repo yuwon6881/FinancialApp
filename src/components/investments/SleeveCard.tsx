@@ -3,6 +3,7 @@ import { m, useReducedMotion } from 'framer-motion'
 import type { InvestmentAllocationOverview, InvestmentAllocationStatus } from '../../types'
 import type { SleeveConstituent } from '../../lib/investmentSleeveBreakdown'
 import { allocationStatusLabel } from '../../lib/investmentAllocation'
+import { Badge } from '../ui/Badge'
 
 /** A basket that is part of the plan, or the catch-all for funds not sorted into one. */
 type SleeveSummary =
@@ -39,9 +40,9 @@ export function SleeveCard({
     >
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 flex-1 truncate text-xs font-bold">{sleeve.label}</span>
-        <span className="shrink-0 rounded-full bg-background/60 px-2 py-0.5 text-xs font-bold transition-transform duration-300 group-hover/sleeve:scale-105">
+        <Badge tone="neutral" className="transition-transform duration-300 group-hover/sleeve:scale-105">
           {allocationStatusLabel(sleeve.status)}
-        </span>
+        </Badge>
       </div>
       {isPlannedBasket ? (
         <>

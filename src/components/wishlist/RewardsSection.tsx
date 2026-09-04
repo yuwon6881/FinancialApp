@@ -11,6 +11,7 @@ import { useClientPagination } from '../ui/useClientPagination'
 import { cn } from '../../lib/utils'
 import { panelFromMediumClass } from '../ui/panelStyles'
 import { EmptyState } from '../ui/EmptyState'
+import { Badge } from '../ui/Badge'
 
 interface RewardsSectionProps {
   items: WishlistItem[]
@@ -43,9 +44,9 @@ export function RewardsSection(props: RewardsSectionProps) {
             <RewardIcon className="size-4 text-accent-ink" aria-hidden />
             Rewards
             {props.affordableCount > 0 && (
-              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-500">
+              <Badge tone="success">
                 {props.affordableCount} claimable
-              </span>
+              </Badge>
             )}
           </h3>
           <p className="mt-0.5 text-xs text-muted-foreground">

@@ -23,6 +23,7 @@ import { isSystemCategoryName } from '../../lib/categoryFlow'
 import { Button } from '../ui/Button'
 import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { CategoryCleanupReviewPanel } from './CategoryCleanupReviewPanel'
+import { Badge } from '../ui/Badge'
 
 /**
  * One segment per flow type, so a specific type is a single click. The control used to be one pill
@@ -136,19 +137,19 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                 </span>
               )}
               {view.categoryUsage && view.unusedCategoryCount > 0 && (
-                <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-semibold text-orange-600 dark:text-orange-400">
+                <Badge tone="urgent">
                   {view.unusedCategoryCount} unused
-                </span>
+                </Badge>
               )}
               {view.categoryUsage && view.rarelyUsedCategoryCount > 0 && (
-                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-600 dark:text-amber-500">
+                <Badge tone="warning">
                   {view.rarelyUsedCategoryCount} rarely used
-                </span>
+                </Badge>
               )}
               {view.categoryUsage && view.unusedCategoryCount === 0 && view.rarelyUsedCategoryCount === 0 && view.visibleCategories.length > 0 && (
-                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-600 dark:text-emerald-400">
+                <Badge tone="success">
                   all used recently
-                </span>
+                </Badge>
               )}
             </div>
           </div>

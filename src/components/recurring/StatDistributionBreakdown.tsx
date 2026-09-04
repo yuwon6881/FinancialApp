@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import type { Loan, RecurringPayment } from '../../types'
 import { hasBillingEnded, normalizeRecurringFrequency } from '../../lib/recurringPayments'
 import { getCategoryBadgeClass, getCategoryDotClass } from '../../lib/categoryColors'
+import { Badge } from '../ui/Badge'
 
 export type DistributionBreakdownMode = 'recurring-annual' | 'loan-owed' | 'loan-annual'
 
@@ -199,9 +200,9 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
                     <span className="text-xs font-bold text-foreground">
                       {formatSensitive(row.primaryAmount)}
                     </span>
-                    <span className="rounded-full bg-muted/60 px-1.5 py-0.5 text-xs font-bold text-muted-foreground">
+                    <Badge tone="neutral">
                       {row.percentage.toFixed(1)}%
-                    </span>
+                    </Badge>
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {mode === 'loan-owed' ? 'outstanding' : 'per year'}

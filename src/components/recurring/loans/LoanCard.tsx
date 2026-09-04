@@ -9,6 +9,7 @@ import { Meter } from '../../ui/Meter'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { formatOccurrenceDate } from '../formatters'
 import { LoanCardDetails } from './LoanCardDetails'
+import { Badge } from '../../ui/Badge'
 
 interface LoanCardProps {
   loan: Loan
@@ -227,9 +228,9 @@ export function LoanCard({
         >
           <div className="flex items-center gap-2 min-w-0">
             <span className="truncate">Payment history and planned schedule</span>
-            <span className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+            <Badge tone="neutral">
               {actualRows.length + scheduleRows.length}
-            </span>
+            </Badge>
           </div>
           <ChevronDown className={`size-3.5 text-muted-foreground transition-transform shrink-0 ${isScheduleOpen ? 'rotate-180' : ''}`} aria-hidden />
         </Button>

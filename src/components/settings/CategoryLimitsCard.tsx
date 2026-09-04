@@ -12,6 +12,7 @@ import { focusFirstInvalidField } from '../ui/formValidation'
 import { Button } from '../ui/Button'
 import { SensitiveMask } from '../ui/SensitiveAmount'
 import { useIsCompact } from '../../lib/breakpoints'
+import { Badge } from '../ui/Badge'
 
 interface CategoryLimitsCardProps {
   categories: TransactionCategory[]
@@ -152,9 +153,9 @@ export function CategoryLimitsCard({
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="rounded-full bg-blue-500/10 px-2 py-1 text-eyebrow uppercase text-blue-600 dark:text-blue-400">
+          <Badge tone="info">
             {spendingCategories.filter(category => category.cycleLimit != null).length} tracked
-          </span>
+          </Badge>
           {isOpen ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
         </div>
       </div>

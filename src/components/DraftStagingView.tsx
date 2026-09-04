@@ -20,6 +20,7 @@ import { DraftReorderItem } from './drafts/DraftReorderItem'
 import { EmptyState } from './ui/EmptyState'
 import { cn } from '../lib/utils'
 import { panelClass } from './ui/panelStyles'
+import { Badge } from './ui/Badge'
 
 type EditorProps = Omit<TransactionFormSheetProps,
   | 'categories'
@@ -139,7 +140,7 @@ export function DraftStagingView({
         titleId="draft-transactions-title"
         leading={<IconButton onClick={onCancel} label="Back to Ledger" tooltip="Back to Ledger"><ArrowLeft className="size-4" aria-hidden="true" /></IconButton>}
         title={<span className="flex items-center gap-2 min-w-0"><span className="truncate">Draft Transactions</span>
-            <span className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-bold text-muted-foreground">{draftTransactions.length}</span>
+            <Badge tone="neutral">{draftTransactions.length}</Badge>
             <InfoHint text={recordingOrderExplanation} label="draft recording order" align="left" className="shrink-0" />
           </span>}
         description={<><span>Check the details, then add everything to your Ledger.</span><span className="sr-only">{recordingOrderExplanation}</span></>}

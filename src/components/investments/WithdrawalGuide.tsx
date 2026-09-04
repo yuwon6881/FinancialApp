@@ -7,6 +7,7 @@ import { InfoHint } from '../ui/InfoHint'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
 import { planWithdrawal, type WithdrawalSleeveInput } from '../../lib/investmentWithdrawal'
 import type { SleeveConstituent } from '../../lib/investmentSleeveBreakdown'
+import { Badge } from '../ui/Badge'
 
 interface WithdrawalGuideProps {
   allocation: InvestmentAllocationOverview
@@ -118,14 +119,14 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
             <div className="mt-4 space-y-3">
               <div className="flex flex-wrap gap-2 text-xs">
                 {plan.fromCash > 0 && (
-                  <span className="rounded-full border border-emerald-500/25 bg-emerald-500/8 px-2 py-0.5 font-bold text-emerald-600 dark:text-emerald-400">
+                  <Badge tone="success">
                     {money(plan.fromCash)} from spare cash — nothing to sell
-                  </span>
+                  </Badge>
                 )}
                 {plan.fromHoldings > 0 && (
-                  <span className="rounded-full border border-border/60 bg-background/60 px-2 py-0.5 font-bold text-muted-foreground">
+                  <Badge tone="neutral">
                     {money(plan.fromHoldings)} raised by selling
-                  </span>
+                  </Badge>
                 )}
               </div>
 

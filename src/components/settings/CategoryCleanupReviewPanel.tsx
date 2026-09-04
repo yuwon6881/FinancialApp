@@ -6,6 +6,7 @@ import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { PerimeterBeam } from '../ui/PerimeterBeam'
+import { Badge } from '../ui/Badge'
 
 const flowLabel = (flow?: CategoryFlowType | null) => flow === 'inflow'
   ? 'Money in'
@@ -74,9 +75,9 @@ export function CategoryCleanupReviewPanel({
           <article key={suggestion.id} className="overflow-hidden rounded-xl border border-border/60 bg-background/75">
             <div className="space-y-2.5 p-3">
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="rounded-full border border-blue-500/25 bg-blue-500/10 px-2 py-0.5 text-eyebrow uppercase text-blue-600 dark:text-blue-400">
+                <Badge tone="info">
                   {suggestion.type === 'changeFlow' ? 'Flow correction' : suggestion.type}
-                </span>
+                </Badge>
                 <span className="text-xs font-semibold text-muted-foreground">{confidence}% confidence</span>
               </div>
               <div>

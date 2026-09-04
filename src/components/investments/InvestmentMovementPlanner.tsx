@@ -8,6 +8,7 @@ import { buildEtfPlan } from '../../lib/investmentEtfPlan'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
+import { Badge } from '../ui/Badge'
 
 interface Props {
   allocation: InvestmentAllocationOverview
@@ -113,9 +114,9 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
 
         {plan && <>
           <div className="flex flex-wrap gap-2 text-xs">
-            {mode === 'deposit' && <span className="rounded-full border border-blue-500/25 bg-blue-500/8 px-2 py-1 font-bold text-blue-600 dark:text-blue-400">{money(requested)} new deposit</span>}
-            {plan.fromCash > 0 && <span className="rounded-full border border-emerald-500/25 bg-emerald-500/8 px-2 py-1 font-bold text-emerald-600 dark:text-emerald-400">{money(plan.fromCash)} spare broker cash</span>}
-            {mode === 'withdrawal' && plan.fromHoldings > 0 && <span className="rounded-full border border-border/60 bg-background/60 px-2 py-1 font-bold text-muted-foreground">{money(plan.fromHoldings)} raised by selling</span>}
+            {mode === 'deposit' && <Badge tone="info">{money(requested)} new deposit</Badge>}
+            {plan.fromCash > 0 && <Badge tone="success">{money(plan.fromCash)} spare broker cash</Badge>}
+            {mode === 'withdrawal' && plan.fromHoldings > 0 && <Badge tone="neutral">{money(plan.fromHoldings)} raised by selling</Badge>}
           </div>
           {plan.shortfall > 0 && <p className="rounded-lg border border-orange-500/30 bg-orange-500/8 p-2.5 text-xs text-orange-700 dark:text-orange-300">You are {money(plan.shortfall)} short after using all spare cash and holdings.</p>}
           <ul className="grid gap-2 lg:grid-cols-3">

@@ -55,11 +55,19 @@ Raw buttons are limited to the three shared primitives where the element is the 
 | `EmptyState` | **9 — closed.** 8 sites converted, using the new `compact` density for the one-line notes that sit inside an already-titled panel | none. The earlier "18 files" figure was wrong: it counted every `border-dashed`, most of which are chart legend dashes, archived/disabled row states or drop zones. Only 10 were empty states, and `dashboard/CategoryLimitPerformance` stays hand-rolled as an approved exception — it is a horizontal icon/text/action card, not this centered anatomy |
 | `SectionHeader` | 1 | ~48 `font-bold uppercase tracking-wide` labels across 31 files |
 | `Toolbar` | 2 | 5 further filter/action bars; it is the only `role="toolbar"` in the tree |
-| `Badge`/`StatusBadge` | 3 | `RowSyncBadge` (15 consumers, undeclared second badge system) plus pills in 14 files |
+| `Badge`/`StatusBadge` | 17 | 19 of 31 hand-rolled pills converted. `RowSyncBadge` (15 consumers) is still an undeclared second badge system, and 12 pills remain — see below |
 | `Panel`/`Card` | 10 / 4 | **none — closed.** All 39 hand-rolled shells now compose `panelClass`, `PANEL_TONES` or `panelFromMediumClass` from `ui/panelStyles`, and the audit rejects the `app-panel` marker outside that module |
 | `Meter` | 4 | 15 files hand-roll progress tracks; 3 independent `role="progressbar"` |
 | `Skeleton` | 8 | 4 further skeleton systems; 10 files still on raw `animate-pulse` |
 | `Tabs` | 5 | none — the one genuinely consolidated pattern |
+
+### Badge tones, and the twelve pills left
+
+19 of 31 hand-rolled pills now use `Badge` with a named tone. The tone was chosen per site by hand rather than inferred from its colour, because inferring would have flattened a distinction the pills were actually carrying: in Settings, two adjacent pills used orange and amber for *different* states, and nothing in the code recorded which meant what.
+
+`Badge` therefore gained an `urgent` tone, and it is deliberately the same word and the same colour `PANEL_TONES` already uses — amber for "needs attention eventually", orange for "already over". The contract test asserts the two vocabularies agree, so a reader never learns the same colour twice. That assertion is the reason to add a tone rather than a one-off orange class.
+
+Twelve are left, and each for a reason: an interactive suggestion chip in `TransactionDescriptionField` and a pill-shaped composer button in `AiAssistantPanel` are actions, not badges, so a `<span>` primitive is the wrong home; the `DocumentPreviewSheet` zoom control is a floating toolbar; and `InvestmentsView`'s purple marker uses the colour the Ledger already gives transfers, so recolouring it to a generic tone would cost meaning. `RowSyncBadge` remains a separate system — it needs a decision (rebuild on `Badge`, or declare it distinct), not a conversion.
 
 ### Local re-styling of shared primitives
 

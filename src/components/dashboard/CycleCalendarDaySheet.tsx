@@ -4,6 +4,7 @@ import type { CycleCalendarDay } from '../../lib/cycleCalendar'
 import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
 import { cn } from '../../lib/utils'
+import { Badge } from '../ui/Badge'
 
 interface CycleCalendarDaySheetProps {
   day: CycleCalendarDay | null
@@ -38,14 +39,14 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
     <span className="flex flex-wrap items-center gap-1.5">
       <span>{formattedDateTitle}</span>
       {day.isToday && (
-        <span className="rounded-full bg-blue-500/15 px-1.5 py-0.5 text-xs font-bold text-blue-500">
+        <Badge tone="info">
           Today
-        </span>
+        </Badge>
       )}
       {day.isFuture && (
-        <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
+        <Badge tone="neutral">
           Upcoming
-        </span>
+        </Badge>
       )}
     </span>
   )
