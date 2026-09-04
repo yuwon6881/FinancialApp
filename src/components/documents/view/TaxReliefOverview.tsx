@@ -12,6 +12,7 @@ import { revealFirstFieldError } from '../../ui/formValidation'
 import { useSyncStatus } from '../../../lib/useOptimisticList'
 import { TaxReliefLimitsSheet } from './TaxReliefLimitsSheet'
 import { EmptyState } from '../../ui/EmptyState'
+import { Meter } from '../../ui/Meter'
 
 type CategoryInput = { name: string; limit: number }
 type CategoryDraft = { name: string; limit: string }
@@ -333,9 +334,13 @@ export function TaxReliefOverview({
                       <span className="font-semibold text-foreground">{money(category.confirmedAmount)} used</span>
                       <span className="text-muted-foreground">{money(category.limit)} limit</span>
                     </div>
-                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-label={hideSensitive ? `${category.name} confirmed amount hidden` : `${category.name} confirmed amount`} aria-valuemin={hideSensitive ? undefined : 0} aria-valuemax={hideSensitive ? undefined : category.limit} aria-valuenow={hideSensitive ? undefined : Math.min(category.confirmedAmount, category.limit)}>
-                      <div className={`h-full rounded-full transition-all duration-500 ${full ? 'bg-emerald-500' : 'bg-primary'}`} style={{ width: `${progress}%` }} />
-                    </div>
+                    <Meter
+                      className="mt-1.5"
+                      percent={progress}
+                      tone={full ? 'bg-emerald-500' : 'bg-primary'}
+                      valueHidden={hideSensitive}
+                      label={hideSensitive ? `${category.name} confirmed amount hidden` : `${category.name} confirmed amount`}
+                    />
                   </div>
                   <div className="mt-auto flex items-start justify-between gap-2 text-xs">
                     <span className={full ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>

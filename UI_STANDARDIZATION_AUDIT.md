@@ -57,7 +57,7 @@ Raw buttons are limited to the three shared primitives where the element is the 
 | `Toolbar` | 2 | 5 further filter/action bars; it is the only `role="toolbar"` in the tree |
 | `Badge`/`StatusBadge` | 17 | 19 of 31 hand-rolled pills converted. `RowSyncBadge` (15 consumers) is still an undeclared second badge system, and 12 pills remain — see below |
 | `Panel`/`Card` | 10 / 4 | **none — closed.** All 39 hand-rolled shells now compose `panelClass`, `PANEL_TONES` or `panelFromMediumClass` from `ui/panelStyles`, and the audit rejects the `app-panel` marker outside that module |
-| `Meter` | 4 | 15 files hand-roll progress tracks; 3 independent `role="progressbar"` |
+| `Meter` | 11 | **All four `role="progressbar"` implementations are now one.** ~12 multi-segment and marker bars remain, which `Meter` structurally cannot express — see below |
 | `Skeleton` | 8 | 4 further skeleton systems; 10 files still on raw `animate-pulse` |
 | `Tabs` | 5 | none — the one genuinely consolidated pattern |
 
@@ -68,6 +68,16 @@ Raw buttons are limited to the three shared primitives where the element is the 
 `Badge` therefore gained an `urgent` tone, and it is deliberately the same word and the same colour `PANEL_TONES` already uses — amber for "needs attention eventually", orange for "already over". The contract test asserts the two vocabularies agree, so a reader never learns the same colour twice. That assertion is the reason to add a tone rather than a one-off orange class.
 
 Twelve are left, and each for a reason: an interactive suggestion chip in `TransactionDescriptionField` and a pill-shaped composer button in `AiAssistantPanel` are actions, not badges, so a `<span>` primitive is the wrong home; the `DocumentPreviewSheet` zoom control is a floating toolbar; and `InvestmentsView`'s purple marker uses the colour the Ledger already gives transfers, so recolouring it to a generic tone would cost meaning. `RowSyncBadge` remains a separate system — it needs a decision (rebuild on `Badge`, or declare it distinct), not a conversion.
+
+### Progress bars, and a privacy guard that caught a real regression
+
+Seven bars now use `Meter`, and the four independent `role="progressbar"` implementations are one. Four of the seven previously had **no ARIA at all** — decorative bars conveying a proportion that a screen reader could not see — so this slice added progress semantics rather than merely relocating them.
+
+It also produced the clearest evidence yet for why the test net matters. `TaxReliefOverview`'s bar deliberately dropped `aria-valuenow`/`min`/`max` under sensitive mode, guarded by a test named *"omits exact progress values while amounts are masked"*. Consolidating it onto `Meter` broke that test, because the primitive had no way to express "draw the width, announce nothing". The reasoning that led there was wrong in a specific, instructive way: the bar's width already shows the proportion on screen, so announcing a percentage looked harmless — but the project had already decided otherwise and written a test to hold the line.
+
+`Meter` therefore gained `valueHidden`, the masking signal is threaded to the three money-derived bars that gained ARIA (`CycleSummaryModal`, `StatDistributionBreakdown`, `StabilityFundSection`), and the guard is now asserted on the primitive in `designContract.test.tsx` rather than in one feature's test — so the next consolidation cannot reintroduce it. The bars that measure time rather than money (cycle progress in the nav rail and Today card) and storage bytes announce their value normally.
+
+**A segmented bar is the missing primitive.** The ~12 remaining tracks are not single-value: `FinancialPlanMetrics` (three), `TodayFocusCards`, `CycleSummaryModal` (two), `InvestmentPlanPanel` (two) and `RewardsPoolBar` are flex containers with several fills, and `PerformanceBars`, `BillTimeline`, `CategoryLimitPerformance` and `StabilityRecoveryExceptionCard` overlay a threshold marker. Forcing them through `Meter` would mean losing the segments. They want their own primitive, and until it exists they are correctly hand-rolled.
 
 ### Local re-styling of shared primitives
 

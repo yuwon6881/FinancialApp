@@ -3,6 +3,7 @@ import type { Loan, RecurringPayment } from '../../types'
 import { hasBillingEnded, normalizeRecurringFrequency } from '../../lib/recurringPayments'
 import { getCategoryBadgeClass, getCategoryDotClass } from '../../lib/categoryColors'
 import { Badge } from '../ui/Badge'
+import { Meter } from '../ui/Meter'
 
 export type DistributionBreakdownMode = 'recurring-annual' | 'loan-owed' | 'loan-annual'
 
@@ -37,6 +38,7 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
   loanTotalOutstanding = null,
   loanTotalAnnual = null,
   formatSensitive,
+  hideSensitive,
   className = '',
 }) => {
   const { title, subtitle, rows, totalFormatted } = useMemo(() => {
@@ -211,12 +213,13 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
               </div>
 
               {/* Proportional visual bar */}
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted/50">
-                <div
-                  className="h-full rounded-full bg-blue-500 transition-all duration-300 group-hover:bg-blue-400"
-                  style={{ width: `${Math.min(100, Math.max(0, row.percentage))}%` }}
-                />
-              </div>
+              <Meter
+                className="mt-2 bg-muted/50"
+                percent={row.percentage}
+                tone="bg-blue-500"
+                valueHidden={hideSensitive}
+                label={`${row.name} share of the total`}
+              />
             </div>
           ))}
         </div>

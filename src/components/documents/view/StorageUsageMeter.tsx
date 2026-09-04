@@ -1,6 +1,7 @@
 import { HardDrive } from 'lucide-react'
 import { formatBytes } from './formatters'
 import type { DocumentVaultUsage } from '../../../types'
+import { Meter } from '../../ui/Meter'
 
 // The bar turns amber then destructive as the quota fills. Thresholds match the
 // storage warnings elsewhere in the app: informational until 70%, then escalating.
@@ -33,19 +34,12 @@ export function StorageUsageMeter({ usage }: { usage: DocumentVaultUsage | null 
         </span>
       </div>
       {quotaBytes && (
-        <div
-          className="h-1.5 overflow-hidden rounded-full bg-border/60"
-          role="progressbar"
-          aria-valuenow={Math.round(percentUsed)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="Document vault storage used"
-        >
-          <div
-            className={`h-full rounded-full transition-[width] duration-500 ${barToneFor(percentUsed)}`}
-            style={{ width: `${percentUsed}%` }}
-          />
-        </div>
+        <Meter
+          className="bg-border/60"
+          percent={percentUsed}
+          tone={barToneFor(percentUsed)}
+          label="Document vault storage used"
+        />
       )}
     </div>
   )

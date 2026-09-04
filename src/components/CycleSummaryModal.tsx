@@ -22,6 +22,7 @@ import { CycleActivitySections, Section, StabilityFundSection } from './cycle-su
 import { InsightCard, StatTile } from './cycle-summary/CycleSummaryCards'
 import { changeTone } from '../lib/cycleSummaryTone'
 import { Badge } from './ui/Badge'
+import { Meter } from './ui/Meter'
 
 interface CycleSummaryModalProps {
   isOpen: boolean
@@ -56,7 +57,7 @@ export function CycleSummaryModal({
   variant,
   onViewLedger,
 }: CycleSummaryModalProps) {
-  const { formatSensitive } = useAppPrefs()
+  const { formatSensitive, hideSensitive } = useAppPrefs()
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const summary = useMemo(
     () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay, transactions, loans) : null,
@@ -246,12 +247,13 @@ export function CycleSummaryModal({
                               : <>{formatSensitive(limit.remaining)} left</>}
                           </span>
                         </div>
-                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className={`h-full rounded-full ${exceeded ? 'bg-orange-500' : 'bg-blue-500'}`}
-                            style={{ width: `${Math.min(100, Math.max(0, limit.percentUsed * 100))}%` }}
-                          />
-                        </div>
+                        <Meter
+                          className="mt-1.5"
+                          percent={limit.percentUsed * 100}
+                          tone={exceeded ? 'bg-orange-500' : 'bg-blue-500'}
+                          valueHidden={hideSensitive}
+                          label={`${limit.category} limit used`}
+                        />
                         <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
                           <span>{formatSensitive(limit.spent)} spent</span>
                           <span>{formatSensitive(limit.limit)} guide</span>
@@ -448,7 +450,7 @@ export function CycleSummaryModal({
 
               <div className="space-y-6">
                 {summary.stabilityTarget > 0 && (
-                  <StabilityFundSection summary={summary} formatSensitive={formatSensitive} />
+                  <StabilityFundSection summary={summary} formatSensitive={formatSensitive} hideSensitive={hideSensitive} />
                 )}
 
                 <CycleActivitySections summary={summary} formatSensitive={formatSensitive} />
@@ -457,7 +459,7 @@ export function CycleSummaryModal({
           ) : (
             <div className="grid gap-6 sm:grid-cols-2">
               {summary.stabilityTarget > 0 && (
-                <StabilityFundSection summary={summary} formatSensitive={formatSensitive} />
+                <StabilityFundSection summary={summary} formatSensitive={formatSensitive} hideSensitive={hideSensitive} />
               )}
 
               <CycleActivitySections summary={summary} formatSensitive={formatSensitive} />

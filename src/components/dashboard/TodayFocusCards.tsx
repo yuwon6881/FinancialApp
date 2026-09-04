@@ -8,6 +8,7 @@ import { getCycleProgress, MONTH_NAMES } from '../../lib/cycle'
 import { activateOnKeyboard } from './activateOnKeyboard'
 import { cn } from '../../lib/utils'
 import { panelClass } from '../ui/panelStyles'
+import { Meter } from '../ui/Meter'
 
 interface WishlistGoal {
   item: WishlistItem
@@ -72,12 +73,7 @@ export const TodayFocusCards: React.FC<TodayFocusCardsProps> = ({
           </div>
         </div>
         <div className="text-2xl font-black tracking-tight text-foreground">{progressHeadline}</div>
-        <div className="w-full bg-muted rounded-full h-2 mt-3 overflow-hidden">
-          <div
-            className="h-full bg-blue-500 rounded-full transition-all duration-700 ease-out"
-            style={{ width: `${cycle.progressPct}%` }}
-          />
-        </div>
+        <Meter className="mt-3 h-2" percent={cycle.progressPct} tone="bg-blue-500" label="Cycle progress" />
         <p className="text-xs mt-2.5 text-muted-foreground font-medium">{progressCaption}</p>
       </div>
 

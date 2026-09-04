@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { FastForward, Landmark, Receipt } from 'lucide-react'
 import { RewardIcon } from '../semanticIcons'
 import type { buildCycleSummary } from '../../lib/cycleSummary'
+import { Meter } from '../ui/Meter'
 
 type Summary = ReturnType<typeof buildCycleSummary>
 
@@ -147,9 +148,11 @@ export function CycleActivitySections({
 export function StabilityFundSection({
   summary,
   formatSensitive,
+  hideSensitive,
 }: {
   summary: Summary
   formatSensitive: (value: number) => ReactNode
+  hideSensitive?: boolean
 }) {
   return (
     <Section title="Stability fund">
@@ -158,7 +161,7 @@ export function StabilityFundSection({
           <span className="font-semibold text-foreground">Funded</span>
           <span className="font-bold text-foreground">{Math.round(summary.stabilityPct * 100)}%</span>
         </div>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-cyan-500" style={{ width: `${summary.stabilityPct * 100}%` }} /></div>
+        <Meter className="mt-2 h-2" percent={summary.stabilityPct * 100} tone="bg-cyan-500" valueHidden={hideSensitive} label="Stability fund funded against its target" />
         {/* The percentage on its own never said how much money that was, nor how much of the
             target is still to go -- the two figures the fund is actually about. */}
         <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">

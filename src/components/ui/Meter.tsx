@@ -18,6 +18,13 @@ interface MeterProps {
   color?: string
   /** Track height: `sm` for a figure inside a detail row, `md` for a card's headline. */
   size?: 'sm' | 'md'
+  /**
+   * Omits `aria-value*` so a figure derived from a masked amount is not announced. The bar still
+   * draws its width, which is what sensitive mode already shows on screen; what it must not do is
+   * hand the number to a screen reader. Pass the caller's `hideSensitive` here, and give `label`
+   * wording that does not contain the amount either.
+   */
+  valueHidden?: boolean
   className?: string
 }
 
@@ -35,6 +42,7 @@ export const Meter: React.FC<MeterProps> = ({
   tone = 'bg-primary',
   color,
   size = 'md',
+  valueHidden = false,
   className,
 }) => {
   const clamped = Number.isFinite(percent) ? Math.min(100, Math.max(0, percent)) : 0
@@ -47,9 +55,11 @@ export const Meter: React.FC<MeterProps> = ({
         className,
       )}
       role="progressbar"
-      aria-valuenow={Math.round(clamped)}
-      aria-valuemin={0}
-      aria-valuemax={100}
+      {...(valueHidden ? {} : {
+        'aria-valuenow': Math.round(clamped),
+        'aria-valuemin': 0,
+        'aria-valuemax': 100,
+      })}
       aria-label={label}
     >
       <div

@@ -16,6 +16,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { CommitmentIcon, RewardIcon } from '../semanticIcons'
+import { Meter } from '../ui/Meter'
 
 export interface DesktopNavItem {
   id: string
@@ -165,16 +166,11 @@ const CycleBlock: React.FC<{ cycleDay: number }> = ({ cycleDay }) => {
     <div className="mb-3 hidden rounded-xl border border-primary/25 bg-linear-to-br from-primary/12 to-primary/4 px-3 py-2.5 lg:block">
       <p className="text-eyebrow uppercase text-accent-ink/85">This cycle</p>
       <p className="mt-1 text-body font-bold tabular-nums text-foreground">{headline}</p>
-      <div
-        className="mt-2 h-1 overflow-hidden rounded-full bg-foreground/10"
-        role="progressbar"
-        aria-label="Cycle progress"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(progress.progressPct)}
-      >
-        <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.max(0, progress.progressPct))}%` }} />
-      </div>
+      <Meter
+        className="mt-2 h-1 bg-foreground/10"
+        percent={progress.progressPct}
+        label="Cycle progress"
+      />
       <p className="mt-1.5 text-caption font-medium text-muted-foreground">{detail}</p>
     </div>
   )

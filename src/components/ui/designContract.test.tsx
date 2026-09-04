@@ -6,6 +6,7 @@ import { Button, type ButtonSize, type ButtonVariant } from './Button'
 import { controlClassName, controlTriggerClassName, type ControlSize } from './controlStyles'
 import { PANEL_TONES, panelClass, panelFromMediumClass, panelVariantClasses, type PanelTone } from './panelStyles'
 import { Badge, type BadgeTone } from './Badge'
+import { Meter } from './Meter'
 import { PageHeader } from './PageHeader'
 import { SectionHeader } from './SectionHeader'
 
@@ -149,6 +150,28 @@ describe('interaction floor contract', () => {
     const classes = controlClassName({ size })
     expect(classes).toMatch(/\bh-1[12]\b/)
     expect(classes).not.toMatch(/\bsm:h-(?:[0-9]|10)\b/)
+  })
+})
+
+describe('masked-value contract', () => {
+  // A figure derived from a masked amount must not reach a screen reader. This lived only in one
+  // feature's test, which is why consolidating that feature's hand-rolled bar onto `Meter` broke it:
+  // the primitive had no way to express "draw the width, announce nothing". Asserting it here means
+  // the next consolidation cannot reintroduce the leak.
+  it('announces a progress value by default', () => {
+    render(<Meter percent={42} label="Growth funded" />)
+    const bar = screen.getByRole('progressbar', { name: 'Growth funded' })
+    expect(bar.getAttribute('aria-valuenow')).toBe('42')
+    expect(bar.getAttribute('aria-valuemin')).toBe('0')
+    expect(bar.getAttribute('aria-valuemax')).toBe('100')
+  })
+
+  it('omits every value when the figure behind it is masked', () => {
+    render(<Meter percent={42} valueHidden label="Growth funded, amount hidden" />)
+    const bar = screen.getByRole('progressbar', { name: 'Growth funded, amount hidden' })
+    expect(bar.getAttribute('aria-valuenow')).toBeNull()
+    expect(bar.getAttribute('aria-valuemin')).toBeNull()
+    expect(bar.getAttribute('aria-valuemax')).toBeNull()
   })
 })
 
