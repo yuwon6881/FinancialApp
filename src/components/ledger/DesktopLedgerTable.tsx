@@ -82,7 +82,7 @@ export function DesktopLedgerTable({
             {hasRows && (
               <tr className="bg-muted/25 font-bold border-t-2 border-border text-xs select-none">
                 <td className="p-4 align-middle" colSpan={isSelecting ? 5 : 4}>
-                  <span className="uppercase tracking-wider text-foreground font-extrabold">
+                  <span className="text-eyebrow uppercase text-foreground">
                     Page Total <span className="text-muted-foreground font-bold normal-case tracking-normal">({transactions.length} items)</span>
                   </span>
                 </td>
@@ -118,7 +118,7 @@ export function DesktopLedgerTable({
                     <span className="inline-flex flex-wrap items-center gap-x-4 gap-y-2">
                       {pageTotals.bucket && hasDistinctBucketMovement(pageTotals.bucketNet, net) ? (
                         <span className="inline-flex items-center gap-2">
-                          <span className="uppercase tracking-wider text-muted-foreground font-bold text-xs">
+                          <span className="text-eyebrow uppercase text-muted-foreground">
                             {pageTotals.bucket} movement on this page
                           </span>
                           <span className={`font-extrabold text-sm ${pageTotals.bucketNet >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
@@ -127,7 +127,7 @@ export function DesktopLedgerTable({
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-2">
-                          <span className="uppercase tracking-wider text-muted-foreground font-bold text-xs">Net Position</span>
+                          <span className="text-eyebrow uppercase text-muted-foreground">Net Position</span>
                           <span className={`font-extrabold text-sm ${net >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
                             {net >= 0 ? '+' : '-'}{formatSensitive(Math.abs(net))}
                           </span>

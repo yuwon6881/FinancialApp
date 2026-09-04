@@ -68,7 +68,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
     <div className="space-y-4 border-t border-border/40 pt-4 lg:border-t-0 lg:pt-0">
       {/* Date Range */}
       <div className="space-y-1.5">
-        <span className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+        <span className="text-eyebrow uppercase flex items-center gap-1.5 text-muted-foreground">
           <CalendarDays className="size-3 text-accent-ink" /> Date range
         </span>
         <div className="grid grid-cols-2 gap-2">
@@ -104,7 +104,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
 
       {/* Amount Range */}
       <div className="space-y-1.5">
-        <span className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+        <span className="text-eyebrow uppercase flex items-center gap-1.5 text-muted-foreground">
           <Banknote className="size-3 text-accent-ink" /> Amount range
         </span>
         <div className="grid grid-cols-2 gap-2">
@@ -141,7 +141,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
 
       {/* Transaction Type Segmented Control */}
       <div className="space-y-1.5">
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+        <span className="text-eyebrow uppercase text-muted-foreground block">
           Transaction type
         </span>
         <div className="grid grid-cols-4 gap-1 rounded-xl border border-border/60 bg-muted/30 p-1">
@@ -173,7 +173,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
 
       {/* Grouped Property Filters */}
       <div className="space-y-1.5">
-        <span className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+        <span className="text-eyebrow uppercase flex items-center gap-1.5 text-muted-foreground">
           <SlidersHorizontal className="size-3 text-accent-ink" /> Filters & Rules
         </span>
         <div className="space-y-2 rounded-xl border border-border/60 bg-background/50 p-2.5">
@@ -237,7 +237,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
       {/* Accounts List */}
       {accounts.length > 0 && (
         <fieldset className="space-y-1.5">
-          <legend className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Accounts</legend>
+          <legend className="text-eyebrow uppercase text-muted-foreground">Accounts</legend>
           <div className="max-h-44 space-y-2.5 overflow-y-auto rounded-xl border border-border/60 bg-background/50 p-2.5">
             {(['Essentials', 'Growth', 'Stability', 'Rewards'] as const).map(bucket => {
               const bucketAccounts = accounts

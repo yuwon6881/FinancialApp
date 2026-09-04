@@ -189,7 +189,7 @@ export function FingerprintSection() {
 
           {credentials.length > 0 && (
             <div className="space-y-2 pt-2 border-t border-border/40">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <span className="text-eyebrow uppercase text-muted-foreground">
                 Registered Credentials ({credentials.length})
               </span>
               <div className="space-y-1.5">

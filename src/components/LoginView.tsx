@@ -319,7 +319,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   {username.trim().charAt(0) || <User className="size-4" />}
                 </div>
                 <div className="min-w-0 leading-tight">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Signing in as</p>
+                  <p className="text-eyebrow uppercase text-muted-foreground">Signing in as</p>
                   <p className="text-sm font-bold text-foreground truncate">{username}</p>
                 </div>
               </div>

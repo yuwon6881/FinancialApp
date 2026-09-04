@@ -142,7 +142,14 @@ Two roles are migrated:
 
 - **Eyebrow — done, 79 sites.** The small uppercase caption over a metric, definition term or filter group had been authored **seven ways**: `font-bold`/`font-semibold`/`font-medium` crossed with `tracking-wide`/`wider`/`widest`/`normal` *or no tracking at all*, at `text-xs` or inherited. All now use `text-eyebrow uppercase`.
 
-  The first pass reached 70 and declared the area closed. It had missed nine sites, because both the codemod and the audit rule required a `tracking-` class to be present — so `text-xs font-bold uppercase` on its own passed straight through a rule written to catch exactly that. Widening the rule to `weight + uppercase` regardless of tracking found the nine, and then a tenth in `BillTimeline` where the classes were in yet another order. A rule is only as good as the narrowest spelling it accepts.
+  Reaching 93 took **four** attempts at the rule, and the sequence is the lesson:
+
+  1. Declared closed at 70. The codemod and the rule both required a `tracking-` class, so `text-xs font-bold uppercase` on its own passed straight through a rule written to catch exactly that.
+  2. Dropped the tracking requirement — found 9 more, and then a 10th in `BillTimeline` with the classes in a different order.
+  3. Still matched a *sequence*, requiring the weight and `uppercase` to be adjacent. `font-bold text-muted-foreground uppercase`, with a colour between them, was invisible to it.
+  4. Matched the **set** of classes instead. That immediately found 7 more files and 14 more sites, in the ledger, login, settings, wishlist and cycle-summary.
+
+  Ordering carries no meaning in a class list, so a rule that depends on it is guessing. The final rule tokenises each quoted class list and asks whether `uppercase` and a weight are both present, and the migration rebuilds the list from its tokens — dropping size, weight, tracking and transform, inserting the role, keeping every layout class where it was. `font-black` is deliberately excluded from the weight set: `LoginView`'s circular avatar initial is uppercase bold text and is not a label, and a broader set would have converted it.
 - **Section heading — done, at two levels.** 56 of the 68 feature `h2`/`h3` now use a role, across 47 files.
 
   The important finding is what *not* to do. The naive reading was one heading role, and 30 of the headings sat at `text-sm` against 14 at `text-base` — so collapsing them onto the single `section` role would have promoted every in-panel heading to panel weight and made every card, sheet and notice heavier. Those two sizes are a real hierarchy: `section` heads a whole panel, `subsection` heads a block inside one. Both roles now exist, and 52 of the 56 conversions are size-neutral because they were already at the right level.

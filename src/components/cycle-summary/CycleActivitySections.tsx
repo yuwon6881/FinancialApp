@@ -119,7 +119,7 @@ export function CycleActivitySections({
               </div>
               <div className="text-right shrink-0">
                 <span className="text-xs font-extrabold text-foreground block">{formatSensitive(summary.purchasedTotal)}</span>
-                <span className="text-xs uppercase tracking-wider font-semibold text-muted-foreground block">Total value</span>
+                <span className="text-eyebrow uppercase text-muted-foreground block">Total value</span>
               </div>
             </div>
             <div className="space-y-1.5 pt-1">

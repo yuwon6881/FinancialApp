@@ -73,6 +73,15 @@ const THEME_EXCEPTIONS = new Map([
   ['src/components/ui/BottomSheet.tsx', ['bg-black/70']],
 ])
 
+// Every quoted string that plausibly holds a Tailwind class list, so a rule can test the set of
+// classes rather than their order. Deliberately loose: a false positive costs one extra check, a
+// missed class list costs a rule that looks enforced and is not.
+const CLASS_LIST = /["'`]([^"'`\r\n]*\b(?:uppercase|font-(?:bold|semibold|medium))\b[^"'`\r\n]*)["'`]/g
+
+function quotedClassLists(text) {
+  return [...text.matchAll(CLASS_LIST)].map(match => match[1])
+}
+
 const errors = []
 const relative = file => path.relative(ROOT, file).replaceAll('\\', '/')
 const lineOf = (sourceFile, node) => sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
@@ -139,11 +148,22 @@ for (const file of allSourceFiles(SRC)) {
   }
 
   // The eyebrow label -- the small uppercase caption over a metric, a definition term or a filter
-  // group -- had been spelled five ways: bold or semibold, crossed with tracking-wide, wider or
-  // normal. `text-eyebrow` carries size, weight and tracking, so the role is one decision.
-  const eyebrowByHand = /\bfont-(?:bold|semibold|medium)\s+uppercase|\buppercase\s+font-(?:bold|semibold|medium)/
-  if (eyebrowByHand.test(sourceText)) {
-    errors.push(`${fileName}:1 Compose the eyebrow label with "text-eyebrow uppercase" instead of a size, weight and tracking by hand.`)
+  // group -- had been spelled eight ways: bold, semibold or medium, crossed with tracking-wide,
+  // wider, widest or none, in any order, at text-xs or inheriting its size. `text-eyebrow` carries
+  // size, weight and tracking, so the role is one decision.
+  //
+  // Matched as a *set* of classes rather than a sequence. Three earlier versions of this rule
+  // matched sequences and each one missed a spelling: first the ones without `tracking-`, then one
+  // whose classes were in a different order, then `font-bold text-muted-foreground uppercase`,
+  // where a colour sits between the weight and the transform. Ordering is not meaningful in a
+  // class list, so the rule should not depend on it.
+  for (const literal of quotedClassLists(sourceText)) {
+    const tokens = new Set(literal.split(/\s+/))
+    const hasWeight = ['font-bold', 'font-semibold', 'font-medium'].some(token => tokens.has(token))
+    if (tokens.has('uppercase') && hasWeight) {
+      errors.push(`${fileName}:1 Compose the eyebrow label with "text-eyebrow uppercase" instead of a size, weight and tracking by hand.`)
+      break
+    }
   }
 
   if (fileName !== 'src/lib/breakpoints.ts') {
