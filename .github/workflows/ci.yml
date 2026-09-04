@@ -20,8 +20,31 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
+      # `npm audit` fails the same way whether a dependency is vulnerable or npmjs.org is simply
+      # unreachable, and the advisories bulk endpoint times out often enough to have failed this
+      # pipeline on its own. Retry only the endpoint failures, and keep failing immediately on a
+      # real finding: an outage must not fail the build, and must not silently pass a vulnerability
+      # either, so the two cases are told apart by the error text rather than by exit code alone.
       - name: Production dependency audit
-        run: npm audit --omit=dev --audit-level=high
+        shell: bash
+        run: |
+          set -uo pipefail
+          transient='audit endpoint returned an error|network timeout|ENOTFOUND|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|registry returned 5[0-9][0-9]'
+          for attempt in 1 2 3; do
+            if output=$(npm audit --omit=dev --audit-level=high --fetch-retries=5 --fetch-retry-maxtimeout=120000 2>&1); then
+              echo "$output"
+              exit 0
+            fi
+            echo "$output"
+            if grep -qiE "$transient" <<<"$output"; then
+              echo "::warning::npm audit endpoint unreachable (attempt ${attempt}/3); retrying"
+              sleep $((attempt * 20))
+              continue
+            fi
+            echo "::error::npm audit reported a production vulnerability at high severity or above"
+            exit 1
+          done
+          echo "::warning::npm audit endpoint stayed unreachable after 3 attempts; treating this run as advisory"
       - name: Secret-pattern scan
         run: npm run security:secrets
       - name: Lint
