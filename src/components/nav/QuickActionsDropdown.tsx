@@ -20,7 +20,7 @@ export const QuickActionsDropdown: React.FC<QuickActionsDropdownProps> = ({
         <DropdownMenuTrigger
           aria-label="Quick Add"
           title="Quick Add"
-          className="h-9 px-2 py-1 sm:px-2.5 text-xs font-semibold hover:bg-muted/50 rounded-lg cursor-pointer flex items-center gap-1 whitespace-nowrap"
+          className="h-9 px-2 py-1 sm:px-2.5 text-label hover:bg-muted/50 rounded-lg cursor-pointer flex items-center gap-1 whitespace-nowrap"
         >
           <Plus className="size-3.5 text-blue-500" aria-hidden />
           <span className="hidden xl:inline">Quick Add</span>
@@ -28,19 +28,19 @@ export const QuickActionsDropdown: React.FC<QuickActionsDropdownProps> = ({
         <DropdownMenuContent className="z-50 min-w-[160px] bg-card border border-border p-1 rounded-xl shadow-md">
           <DropdownMenuItem
             onSelect={() => onQuickAction?.('transaction')}
-            className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
+            className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-caption rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
           >
             Post Transaction <Plus className="size-3 text-blue-500" />
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => onQuickAction?.('subscription')}
-            className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
+            className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-caption rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
           >
             New Subscription <Plus className="size-3 text-violet-500" />
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => onQuickAction?.('wishlist')}
-            className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
+            className="flex min-h-11 items-center justify-between px-2.5 py-1.5 text-caption rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
           >
             Add Reward <Plus className="size-3 text-pink-500" aria-hidden />
           </DropdownMenuItem>

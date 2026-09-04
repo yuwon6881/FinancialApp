@@ -40,7 +40,7 @@ const StatTile: React.FC<{
   // `justify-between` pins the value to the bottom of the row so every tile's figure sits on one
   // line, even when a neighbour's label needs two.
   <div className={`flex h-full min-w-0 flex-col justify-between overflow-hidden ${className}`}>
-    <span className="block text-xs font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:text-xs sm:tracking-wider">
+    <span className="block text-eyebrow uppercase leading-tight tracking-wide text-muted-foreground sm:text-xs sm:tracking-wider">
       {label}
     </span>
     <span
@@ -138,7 +138,7 @@ const InteractiveStatTile: React.FC<{
         {/* The label must not wrap: a two-line "Yearly Total" dropped its figure below the plain
             tiles beside it. The Breakdown pill moves to its own line instead when space is tight. */}
         <div className="flex flex-wrap items-center gap-1">
-          <span className="block whitespace-nowrap text-xs font-bold uppercase leading-tight tracking-wide text-muted-foreground transition-colors group-hover/stat:text-foreground sm:text-xs sm:tracking-wider">
+          <span className="block whitespace-nowrap text-eyebrow uppercase leading-tight tracking-wide text-muted-foreground transition-colors group-hover/stat:text-foreground sm:text-xs sm:tracking-wider">
             {label}
           </span>
           <span className="shrink-0 rounded bg-muted/60 px-1 py-0.5 text-xs font-semibold text-muted-foreground opacity-70 group-hover/stat:opacity-100 transition-opacity">

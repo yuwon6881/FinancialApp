@@ -211,7 +211,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               >
                 <span className={`size-2.5 rounded-full shrink-0 ${dotColor}`} />
                 <div className="flex flex-col items-center justify-center shrink-0 w-10">
-                  <span className="text-xs text-muted-foreground font-bold uppercase leading-none">{BILL_TIMELINE_MONTHS[d.getMonth()]}</span>
+                  <span className="text-eyebrow uppercase leading-none text-muted-foreground">{BILL_TIMELINE_MONTHS[d.getMonth()]}</span>
                   <span className="text-lg font-black text-foreground leading-tight">{d.getDate()}</span>
                 </div>
                 <div className="min-w-0 flex-1">

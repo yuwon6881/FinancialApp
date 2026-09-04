@@ -132,11 +132,17 @@ Call sites still override the primitives they use: **219 radius overrides across
 
 The 573 arbitrary `8px`–`13px` utilities are gone, but they collapsed into one size rather than a scale: **1,092 `text-xs` against 157 `text-sm`**. Nearly all application text renders at 12px, so role and hierarchy are still not expressed.
 
+**Caption and body — five areas migrated, eight routes to go.** Vault, Drafts, Reports, global search and the navigation shell are done: 75 caption, 11 body, 2 label, no `text-xs` left between them. The split is a judgement per site, not a rename — **identity text becomes body, text *about* the content stays caption** — so a document's name, a search result's title and the signed-in username are now visibly larger than the metadata beside them. Renaming every `text-xs` to `text-caption` would be a no-op at 12px and would cement the flat hierarchy in new vocabulary while looking like progress, so it is deliberately not being done that way.
+
+Roughly 960 `text-xs` remain, concentrated in investments (153), the `components` root (149), ledger (140), settings (135), dashboard (119) and recurring (97).
+
 The scale now exists to migrate onto. `src/index.css` declares seven roles — `eyebrow`, `caption`, `control-label`, `body`, `section`, `title`, `page-title` — each carrying its own size, leading and weight, so "this is a section heading" is one decision rather than three utilities that drift apart. `SectionHeader` and `PageHeader` use them; their values were chosen to match what those primitives already rendered, so adopting a role is inert and only feature call sites change.
 
 Two roles are migrated:
 
-- **Eyebrow — done.** The small uppercase caption over a metric, definition term or filter group had been authored **six ways**: `font-bold`/`font-semibold`/`font-medium` crossed with `tracking-wide`/`wider`/`widest`/`normal`, at `text-xs` or inherited, across 70 sites in 37 files. All now use `text-eyebrow uppercase`, and the audit rejects composing it by hand.
+- **Eyebrow — done, 79 sites.** The small uppercase caption over a metric, definition term or filter group had been authored **seven ways**: `font-bold`/`font-semibold`/`font-medium` crossed with `tracking-wide`/`wider`/`widest`/`normal` *or no tracking at all*, at `text-xs` or inherited. All now use `text-eyebrow uppercase`.
+
+  The first pass reached 70 and declared the area closed. It had missed nine sites, because both the codemod and the audit rule required a `tracking-` class to be present — so `text-xs font-bold uppercase` on its own passed straight through a rule written to catch exactly that. Widening the rule to `weight + uppercase` regardless of tracking found the nine, and then a tenth in `BillTimeline` where the classes were in yet another order. A rule is only as good as the narrowest spelling it accepts.
 - **Section heading — done, at two levels.** 56 of the 68 feature `h2`/`h3` now use a role, across 47 files.
 
   The important finding is what *not* to do. The naive reading was one heading role, and 30 of the headings sat at `text-sm` against 14 at `text-base` — so collapsing them onto the single `section` role would have promoted every in-panel heading to panel weight and made every card, sheet and notice heavier. Those two sizes are a real hierarchy: `section` heads a whole panel, `subsection` heads a block inside one. Both roles now exist, and 52 of the 56 conversions are size-neutral because they were already at the right level.

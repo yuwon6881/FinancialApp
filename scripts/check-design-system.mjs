@@ -141,7 +141,7 @@ for (const file of allSourceFiles(SRC)) {
   // The eyebrow label -- the small uppercase caption over a metric, a definition term or a filter
   // group -- had been spelled five ways: bold or semibold, crossed with tracking-wide, wider or
   // normal. `text-eyebrow` carries size, weight and tracking, so the role is one decision.
-  const eyebrowByHand = /\bfont-(?:bold|semibold|medium)\s+uppercase\s+tracking-|\buppercase\s+font-(?:bold|semibold|medium)\s+tracking-/
+  const eyebrowByHand = /\bfont-(?:bold|semibold|medium)\s+uppercase|\buppercase\s+font-(?:bold|semibold|medium)/
   if (eyebrowByHand.test(sourceText)) {
     errors.push(`${fileName}:1 Compose the eyebrow label with "text-eyebrow uppercase" instead of a size, weight and tracking by hand.`)
   }

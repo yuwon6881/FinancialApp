@@ -38,8 +38,8 @@ export function DraftQueueCard({ draft, grip, issues, documentCount, currency, h
       contentClassName="rounded-2xl bg-card p-3 sm:p-4"
       actionsWidth={128}
       actions={<>
-        <Button variant="tertiary" onClick={onEdit} disabled={hideSensitive} aria-label={`Edit ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-primary text-xs font-bold text-primary-foreground"><Edit2 className="size-4" aria-hidden="true" />Edit</Button>
-        <Button variant="tertiary" onClick={onDelete} disabled={hideSensitive} aria-label={`Delete ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-destructive text-xs font-bold text-destructive-foreground"><Trash2 className="size-4" aria-hidden="true" />Delete</Button>
+        <Button variant="tertiary" onClick={onEdit} disabled={hideSensitive} aria-label={`Edit ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-primary text-caption font-bold text-primary-foreground"><Edit2 className="size-4" aria-hidden="true" />Edit</Button>
+        <Button variant="tertiary" onClick={onDelete} disabled={hideSensitive} aria-label={`Delete ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-destructive text-caption font-bold text-destructive-foreground"><Trash2 className="size-4" aria-hidden="true" />Delete</Button>
       </>}
       desktopActions={false}
     >
@@ -60,7 +60,7 @@ export function DraftQueueCard({ draft, grip, issues, documentCount, currency, h
               </IconButton>
             </div>
           </div>
-          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted-foreground">
             <span className={`inline-flex items-center gap-1 font-bold ${needsReview ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
               {needsReview ? <AlertTriangle className="size-3" aria-hidden="true" /> : <CheckCircle2 className="size-3" aria-hidden="true" />}
               {needsReview ? 'Needs review' : 'Ready'}
@@ -68,13 +68,13 @@ export function DraftQueueCard({ draft, grip, issues, documentCount, currency, h
             <span className="shrink-0 tabular-nums">{draft.date}</span>
             {documentCount > 0 && <span className="inline-flex min-w-0 items-center gap-1" title={`${documentCount} attachment${documentCount === 1 ? '' : 's'}`}><Paperclip className="size-3 shrink-0" aria-hidden="true" /><span className="truncate">{documentCount}</span></span>}
           </div>
-          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5 text-xs">
+          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5 text-caption">
             <LedgerAllocationBadge ledgerCategory={draft.ledgerCategory} transactionId={draft.id} compact />
-            {!isTransfer && <span className={`min-w-0 max-w-full truncate rounded-md border px-1.5 py-0.5 text-xs font-semibold ${getCategoryBadgeClass(draft.category)}`} title={draft.category}>{draft.category}</span>}
+            {!isTransfer && <span className={`min-w-0 max-w-full truncate rounded-md border px-1.5 py-0.5 text-caption font-semibold ${getCategoryBadgeClass(draft.category)}`} title={draft.category}>{draft.category}</span>}
           </div>
           {needsReview && (
             <div className="mt-3 flex flex-col gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 p-2.5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="min-w-0 text-xs leading-relaxed text-amber-700 dark:text-amber-300">{issues.join(' ')}</p>
+              <p className="min-w-0 text-caption leading-relaxed text-amber-700 dark:text-amber-300">{issues.join(' ')}</p>
               <Button variant="secondary" size="sm" onClick={onEdit} disabled={hideSensitive} className="min-h-11 shrink-0 border-amber-500/30 bg-card text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 sm:min-h-9">Review</Button>
             </div>
           )}

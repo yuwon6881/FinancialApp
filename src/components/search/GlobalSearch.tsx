@@ -145,7 +145,7 @@ export function GlobalSearch({
           className="flex-1 overflow-y-auto overscroll-contain p-2"
         >
           {!hasQuery ? (
-            <p className="px-3 py-8 text-center text-xs text-muted-foreground">
+            <p className="px-3 py-8 text-center text-caption text-muted-foreground">
               {isLoadingLoans
                 ? 'Loading loan records…'
                 : 'Start typing to find a transaction, draft, account, bill, loan, commitment, or reward.'}
@@ -178,7 +178,7 @@ export function GlobalSearch({
                     // Says what the per-kind cap dropped. Deliberately not a selectable option:
                     // it is a fact about the list, and arrowing onto it would give Enter nothing
                     // to open.
-                    <p className="px-3 pt-1 text-xs text-muted-foreground">
+                    <p className="px-3 pt-1 text-caption text-muted-foreground">
                       +{group.totalMatched - group.results.length} more — keep typing to narrow this down
                     </p>
                   )}
@@ -186,13 +186,13 @@ export function GlobalSearch({
               ))}
 
               {results.length === 0 && (
-                <p className="px-3 pb-1 pt-6 text-center text-xs text-muted-foreground">
+                <p className="px-3 pb-1 pt-6 text-center text-caption text-muted-foreground">
                   {isLoadingLoans ? 'Loading loan records…' : <>Nothing in this cycle matches “{trimmedQuery}”.</>}
                 </p>
               )}
 
               {didLoansFailToLoad && (
-                <p className="mx-3 mt-2 flex items-center justify-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
+                <p className="mx-3 mt-2 flex items-center justify-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-caption text-amber-500">
                   <span>Your loans could not be loaded, so none were searched.</span>
                   {onRetryLoans && (
                     <Button variant="tertiary" onClick={onRetryLoans} className="font-bold underline underline-offset-2 cursor-pointer">
@@ -221,10 +221,10 @@ export function GlobalSearch({
                     <Layers className="size-4" aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-bold text-foreground">
+                    <span className="block truncate text-body font-bold text-foreground">
                       Search every cycle for “{trimmedQuery}”
                     </span>
-                    <span className="block truncate text-xs text-muted-foreground">
+                    <span className="block truncate text-caption text-muted-foreground">
                       Opens the Ledger across all cycles
                     </span>
                   </span>
@@ -234,7 +234,7 @@ export function GlobalSearch({
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-border/40 bg-muted/15 px-4 py-2 text-xs text-muted-foreground select-none">
+        <div className="flex items-center justify-between border-t border-border/40 bg-muted/15 px-4 py-2 text-caption text-muted-foreground select-none">
           <span className="flex items-center gap-3">
             <span><kbd className="font-bold">↑↓</kbd> Move</span>
             <span><kbd className="font-bold">↵</kbd> Open</span>

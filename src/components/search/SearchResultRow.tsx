@@ -85,8 +85,8 @@ export function SearchResultRow({ result, id, isActive, amountText, maskAmounts,
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-bold text-foreground">{result.title}</span>
-        <span className="block truncate text-xs text-muted-foreground">
+        <span className="block truncate text-body font-bold text-foreground">{result.title}</span>
+        <span className="block truncate text-caption text-muted-foreground">
           {result.subtitle}
           {result.meta ? ` · ${result.meta}` : ''}
         </span>
@@ -95,7 +95,7 @@ export function SearchResultRow({ result, id, isActive, amountText, maskAmounts,
       <RowSyncStatus entityLabel={SEARCH_ENTITY_LABELS[result.kind]} isPending={result.isPendingSync} />
 
       {amountText && (
-        <span className={`shrink-0 text-xs font-bold tabular-nums ${isOutflow ? 'text-orange-500' : 'text-foreground'}`}>
+        <span className={`shrink-0 text-caption font-bold tabular-nums ${isOutflow ? 'text-orange-500' : 'text-foreground'}`}>
           {amountText}
         </span>
       )}
