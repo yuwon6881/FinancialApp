@@ -90,8 +90,8 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
       <div className="space-y-3" ref={sheetBodyRef}>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h4 className="text-xs font-black">Categories and limits for YA {selectedYear}</h4>
-            <p className="mt-0.5 text-xs text-muted-foreground">Only this year changes. Amounts marked for review are never counted as confirmed.</p>
+            <h4 className="text-subsection">Categories and limits for YA {selectedYear}</h4>
+            <p className="mt-0.5 text-caption text-muted-foreground">Only this year changes. Amounts marked for review are never counted as confirmed.</p>
           </div>
           {!isAdding && (
             <Button variant="secondary" size="sm" type="button" onClick={() => setIsAdding(true)} className="shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground">
@@ -121,10 +121,10 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
                   <div className="grid gap-2 sm:grid-cols-2">
                     <FormField label="Category" required error={draftErrors.name}><Input value={draft.name} onChange={event => { setDraft(current => ({ ...current, name: event.target.value })); setDraftErrors(current => ({ ...current, name: undefined })) }} controlSize="sm" /></FormField>
                     <FormField label={`Limit (${currency})`} required error={draftErrors.limit}><Input type="number" min="0" step="0.01" value={draft.limit} onChange={event => { setDraft(current => ({ ...current, limit: event.target.value })); setDraftErrors(current => ({ ...current, limit: undefined })) }} controlSize="sm" className="tabular-nums" /></FormField>
-                    {draftErrors.form && <p role="alert" className="text-xs font-semibold text-destructive sm:col-span-2">{draftErrors.form}</p>}
+                    {draftErrors.form && <p role="alert" className="text-caption font-semibold text-destructive sm:col-span-2">{draftErrors.form}</p>}
                     <div className="flex items-center justify-end gap-1.5 sm:col-span-2">
                       {isDraftChanged && (
-                        <span className="mr-auto flex items-center gap-1 text-xs font-semibold text-blue-500">
+                        <span className="mr-auto flex items-center gap-1 text-caption font-semibold text-blue-500">
                           <span className="inline-block size-1.5 rounded-full bg-blue-500" title="Unsaved change" />
                           Unsaved changes
                         </span>
@@ -136,7 +136,7 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
                 ) : confirmingDeleteId === category.id ? (
                   <div className="space-y-1.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+                      <p className="min-w-0 flex-1 text-caption text-muted-foreground">
                         Delete <span className="font-bold text-foreground">{category.name}</span> from YA {selectedYear}? Documents already filed under it must be moved first.
                       </p>
                       <div className="flex shrink-0 gap-1.5">
@@ -154,7 +154,7 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
                       </div>
                     </div>
                     {(deleteError?.id === category.id ? deleteError.message : deleteBlockedById.get(category.id)) && (
-                      <p role="alert" className="text-xs font-semibold text-destructive">
+                      <p role="alert" className="text-caption font-semibold text-destructive">
                         {deleteError?.id === category.id ? deleteError.message : deleteBlockedById.get(category.id)}
                       </p>
                     )}
@@ -163,7 +163,7 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
                   <div className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-center gap-2">
-                        <p className="truncate text-xs font-bold">{category.name}</p>
+                        <p className="truncate text-body font-bold">{category.name}</p>
                         <RowSyncStatus
                           entityLabel="tax relief category"
                           isDeleting={isCategoryDeleting(category.id)}
@@ -171,7 +171,7 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
                           isPending={category.isPendingSync && !isCategorySyncing(category.id)}
                         />
                       </div>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{money(category.limit)} limit{category.isInherited ? ' · inherited default' : ''}</p>
+                      <p className="mt-0.5 text-caption text-muted-foreground">{money(category.limit)} limit{category.isInherited ? ' · inherited default' : ''}</p>
                     </div>
                     <div className="flex shrink-0 gap-1.5">
                       <Button variant="secondary" size="sm" type="button" onClick={() => onBeginEdit(category)} className="text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="size-3" /> Edit</Button>
@@ -189,7 +189,7 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
             <div className="grid gap-2 sm:grid-cols-2">
               <FormField label="Category" required error={newCategoryErrors.name}><Input autoFocus value={newCategory.name} onChange={event => { setNewCategory(current => ({ ...current, name: event.target.value })); setNewCategoryErrors(current => ({ ...current, name: undefined })) }} placeholder="e.g. Education" controlSize="sm" /></FormField>
               <FormField label={`Limit (${currency})`} required error={newCategoryErrors.limit}><Input type="number" min="0" step="0.01" value={newCategory.limit} onChange={event => { setNewCategory(current => ({ ...current, limit: event.target.value })); setNewCategoryErrors(current => ({ ...current, limit: undefined })) }} controlSize="sm" className="tabular-nums" /></FormField>
-              {newCategoryErrors.form && <p role="alert" className="text-xs font-semibold text-destructive sm:col-span-2">{newCategoryErrors.form}</p>}
+              {newCategoryErrors.form && <p role="alert" className="text-caption font-semibold text-destructive sm:col-span-2">{newCategoryErrors.form}</p>}
               <div className="flex justify-end gap-1.5 sm:col-span-2"><Button variant="primary" size="sm" type="button" onClick={() => void onAddCategory()} disabled={isAddingBusy} className="py-2"><Check className="size-3.5" /> Add</Button><Button variant="tertiary" type="button" onClick={() => { setIsAdding(false); setNewCategory(EMPTY_CATEGORY_DRAFT); setNewCategoryErrors({}) }} aria-label="Close add category form" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
             </div>
           </div>

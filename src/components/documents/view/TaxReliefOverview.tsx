@@ -253,7 +253,7 @@ export function TaxReliefOverview({
             <CircleDollarSign className="size-4 text-accent-ink" />
             {selectedYear ? `${selectedYear} tax relief tracker` : 'Tax relief tracker'}
           </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-caption text-muted-foreground">
             {summary
               ? `${money(summary.confirmedAmount)} confirmed${summary.pendingReviewAmount > 0 ? ` · ${money(summary.pendingReviewAmount)} waiting for review` : ''}`
               : 'Set your own categories and limits for the selected tax year.'}
@@ -275,14 +275,14 @@ export function TaxReliefOverview({
       </div>
 
       {inheritedDefaults && (
-        <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2 text-xs text-muted-foreground">
+        <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2 text-caption text-muted-foreground">
           These are editable defaults inherited from the prior configured tax year. Your first change for YA {selectedYear} creates an independent copy.
         </p>
       )}
 
       <div className="mt-4 min-h-[8.25rem]" aria-busy={isLoading}>
         {isLoading ? (
-          <div className="flex min-h-[8.25rem] items-center justify-center gap-2 rounded-xl border border-border/50 bg-card/60 text-xs font-semibold text-muted-foreground" role="status">
+          <div className="flex min-h-[8.25rem] items-center justify-center gap-2 rounded-xl border border-border/50 bg-card/60 text-caption font-semibold text-muted-foreground" role="status">
             <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
             Loading tax relief tracker…
           </div>
@@ -319,7 +319,7 @@ export function TaxReliefOverview({
                     <p className="min-w-0 truncate text-sm font-bold text-foreground" title={category.name}>{category.name}</p>
                     <span className="flex shrink-0 items-center gap-1.5 transition">
                       {selected && (
-                        <span className="flex items-center gap-1 rounded-md border border-primary/40 bg-primary/15 px-1.5 py-0.5 text-xs font-bold text-accent-ink">
+                        <span className="flex items-center gap-1 rounded-md border border-primary/40 bg-primary/15 px-1.5 py-0.5 text-caption font-bold text-accent-ink">
                           <Filter className="size-2.5" aria-hidden="true" />
                           Filtering
                         </span>
@@ -330,7 +330,7 @@ export function TaxReliefOverview({
                     </span>
                   </div>
                   <div>
-                    <div className="flex items-baseline justify-between gap-2 text-xs tabular-nums">
+                    <div className="flex items-baseline justify-between gap-2 text-caption tabular-nums">
                       <span className="font-semibold text-foreground">{money(category.confirmedAmount)} used</span>
                       <span className="text-muted-foreground">{money(category.limit)} limit</span>
                     </div>
@@ -342,7 +342,7 @@ export function TaxReliefOverview({
                       label={hideSensitive ? `${category.name} confirmed amount hidden` : `${category.name} confirmed amount`}
                     />
                   </div>
-                  <div className="mt-auto flex items-start justify-between gap-2 text-xs">
+                  <div className="mt-auto flex items-start justify-between gap-2 text-caption">
                     <span className={full ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
                       {full ? 'Limit reached' : `${money(Math.max(0, category.limit - category.confirmedAmount))} room left`}
                     </span>
@@ -410,7 +410,7 @@ export function TaxReliefOverview({
         />
       )}
 
-      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+      <p className="mt-3 text-caption leading-relaxed text-muted-foreground">
         Confirmed document amounts are tracking aids, not an eligibility determination. Sub-limits and personal conditions may apply.
       </p>
     </section>

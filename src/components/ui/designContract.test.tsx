@@ -82,11 +82,22 @@ describe('radius contract', () => {
 })
 
 describe('type role contract', () => {
-  const ROLES = ['eyebrow', 'caption', 'control-label', 'body', 'section', 'title', 'page-title']
+  const ROLES = ['eyebrow', 'caption', 'label', 'body', 'subsection', 'section', 'title', 'display']
 
   it.each(ROLES)('declares the %s role', role => {
     const css = fs.readFileSync(path.join(process.cwd(), 'src/index.css'), 'utf8')
     expect(css).toMatch(new RegExp(`--text-${role}:`))
+  })
+
+  // A hyphenated key in the `--text-*` namespace collides with Tailwind's
+  // `--text-{name}--{property}` convention and resolves to nothing: no utility is emitted, the
+  // class is inert, and the text silently falls back to whatever it inherits. That is exactly what
+  // `--text-page-title` did -- it shrank every page heading from 24px to 20px above the medium tier
+  // and passed the type check, the unit suite and all 324 visual snapshots, because a 4px change on
+  // one line of text sits under the 2% pixel tolerance. Declaring the token is not evidence the
+  // utility exists, so the shape that guarantees it is asserted here instead.
+  it.each(ROLES)('names the %s role with a single word so Tailwind emits it', role => {
+    expect(role, `--text-${role} must not contain a hyphen`).not.toContain('-')
   })
 
   it('gives a section heading its role rather than a size and a weight', () => {
@@ -103,7 +114,7 @@ describe('type role contract', () => {
     render(<PageHeader title="Vault" />)
     const heading = screen.getByRole('heading', { level: 1, name: 'Vault' })
     expect(heading.className).toContain('text-title')
-    expect(heading.className).toContain('sm:text-page-title')
+    expect(heading.className).toContain('sm:text-display')
     expect(heading.className).not.toMatch(/\btext-(?:xs|sm|base|lg|xl|2xl)\b/)
   })
 })

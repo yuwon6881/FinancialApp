@@ -87,6 +87,20 @@ This entry previously read "4 further skeleton systems; 10 files still on raw `a
 
 The twelve `animate-pulse` uses are not loading placeholders at all. They are attention and status pulses: a "due soon" clock, a pending-bills marker on the calendar, the live dot on the active-filter strip, the sync badge on the logo, the notification dot, an icon that pulses while a download runs. Converting those to shimmer would replace a deliberate signal with a placeholder animation.
 
+### A hyphenated type-role key emits nothing, silently
+
+`--text-page-title` and `--text-control-label` were declared in `@theme` and never produced a utility. Tailwind's `--text-*` namespace uses `--text-{name}--{property}` for paired values, and a name containing its own hyphen does not resolve; every single-word role emitted correctly. `sm:text-page-title` was therefore inert, so `PageHeader`'s heading rendered at `text-title` (20px) at every width instead of stepping to 24px above the medium tier.
+
+**It passed everything.** `tsc -b`, ESLint, the design-system audit, 2,241 unit tests and all 324 visual snapshots. The contract test even asserted `--text-page-title:` was declared — which it was; declaring a token is not evidence a utility exists. The roles are now `display` and `label`, and the contract test asserts role names contain no hyphen, since that shape is what guarantees emission.
+
+This is the sharpest example of the tolerance limit recorded above: a 4px change on one line of heading text, on nine routes, at two of three tiers, moved too few pixels to breach 2%. `responsive-contract.spec.ts` now asserts the heading's **computed font size** per tier, which no pixel budget can absorb. That test was itself wrong on the first attempt — it read `main h1` before the lazy route rendered, found nothing, skipped all nine routes and reported a pass with the regression still in place. It now waits for layout and asserts that every route was actually checked, because a loop that can skip its way to green is worse than no test.
+
+### Open: an intermittent contrast violation in Settings
+
+One run reported `"/settings [serious] color-contrast: .rounded"` from axe, in an invocation where three specs shared two workers. It does not reproduce when `accessibility.spec.ts` runs alone, and the cause is **not** established — an earlier theory that `animate-in` was fading during the scan is wrong, because the reduced-motion kill-switch already covers that class.
+
+The selector narrows it to three dynamically-coloured badges, none of them touched by this initiative: `accounts/AccountBillRoster.tsx:55` (colour from `getCategoryBadgeClass`, so the pair varies per category), `CategoriesPreferencesTab.tsx:214`, and `FinancialModelTab.tsx:176` (colour conditional on the allocation summing to 100). All three are `text-xs`, so they need 4.5:1 rather than 3:1. A category whose badge colour is close to its background would fail only when that category is on screen, which fits an intermittent finding. Worth reproducing deliberately by rendering every category colour against both themes rather than waiting for it to reappear.
+
 ### Where these bad counts came from
 
 Five entries in this document have now been corrected the same way — "18 dashed empty shells" (really 10, mostly drop zones and archived rows), "~48 uppercase labels competing with SectionHeader" (really eyebrow labels on `<p>`/`<span>`/`<dt>`), "68 headings at five sizes" (really two legitimate levels), "15 progress tracks" (12 of them multi-segment or marker bars `Meter` cannot express), and now skeletons.

@@ -21,7 +21,7 @@ export function StorageUsageMeter({ usage }: { usage: DocumentVaultUsage | null 
 
   return (
     <div className="mb-4 space-y-2 rounded-xl border border-border/40 bg-muted/40 px-3 py-2.5 sm:px-4 sm:py-3">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-caption">
         <div className="flex items-center gap-2 text-muted-foreground">
           <HardDrive className="size-4 shrink-0" aria-hidden="true" />
           <span className="font-semibold">

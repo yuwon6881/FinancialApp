@@ -47,7 +47,7 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
           <h3 id="vault-retention-notice-heading" className="text-subsection text-amber-700 dark:text-amber-300">
             {retentionNoticeHeading(groups)}
           </h3>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          <p className="mt-1 text-caption leading-relaxed text-muted-foreground">
             Tax records are worth keeping for {review.keepYears} years after their tax year ends.
           </p>
         </div>
@@ -58,7 +58,7 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
       </ul>
       {rest.length > 0 && (
         <details className="mt-1">
-          <summary className="cursor-pointer text-xs font-semibold text-amber-700 dark:text-amber-300">
+          <summary className="cursor-pointer text-caption font-semibold text-amber-700 dark:text-amber-300">
             Show all {ordered.length} years
           </summary>
           <ul className="mt-1 space-y-1">
@@ -67,7 +67,7 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
         </details>
       )}
 
-      <p className="mt-2 text-xs font-semibold text-muted-foreground">
+      <p className="mt-2 text-caption font-semibold text-muted-foreground">
         Nothing is ever deleted for you. Delete them yourself once you are sure you no longer need them.
       </p>
 
@@ -77,7 +77,7 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
           size="sm"
           type="button"
           onClick={onOpenVault}
-          className="mt-3 border-amber-500/30 bg-card/60 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 text-xs"
+          className="mt-3 border-amber-500/30 bg-card/60 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 text-caption"
         >
           Review in the Vault
           <ChevronRight className="size-3.5 ml-1" />
@@ -90,7 +90,7 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
 function RetentionYearRow({ year }: { year: RetentionTaxYearSummary }) {
   const isPast = year.daysUntilKeepUntil < 0
   return (
-    <li className="text-xs text-muted-foreground">
+    <li className="text-caption text-muted-foreground">
       <span className="font-bold text-foreground">{year.taxYear}</span>
       {' — '}
       {year.documentCount} file{year.documentCount === 1 ? '' : 's'}, {formatBytes(year.totalBytes)}.{' '}

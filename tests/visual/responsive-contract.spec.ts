@@ -615,3 +615,33 @@ test('hovering an allocation arc scrolls its legend row into the legend view', a
   await expect.poll(async () => (await containment()).visible).toBe(true)
   expect((await containment()).scrollTop).toBeGreaterThan(0)
 })
+
+/**
+ * Typography is the one contract a screenshot cannot police. `maxDiffPixelRatio` is 0.02, and 2% of
+ * a full-page capture is tens of thousands of pixels, so a heading changing size alters far too few
+ * to register: an inert `sm:text-page-title` shrank every page heading from 24px to 20px above the
+ * medium tier and passed all 324 snapshots, the type check and the unit suite. A computed-style
+ * assertion is immune to that, because it reads the number rather than counting pixels.
+ */
+test('the page heading keeps its type role at every tier', async ({ page }) => {
+  const width = page.viewportSize()?.width ?? 0
+  // The role steps up once, at the medium tier boundary the shared breakpoints define.
+  const expected = width >= 640 ? 24 : 20
+
+  let checked = 0
+  for (const route of routes) {
+    await page.goto(route, { waitUntil: 'domcontentloaded' })
+    await expect(page.locator('main')).toBeVisible()
+    // The route content is lazy, so `main` becomes visible before its heading exists. Without this
+    // wait the loop found no h1 on any route, skipped all nine, and reported a pass having asserted
+    // nothing at all -- it stayed green with the regression above reintroduced.
+    await waitForStableLayout(page)
+    const heading = page.locator('main h1').first()
+    await expect(heading, `${route} renders a page heading`).toBeVisible()
+    const size = await heading.evaluate(node => Number.parseFloat(getComputedStyle(node).fontSize))
+    expect(size, `${route} page heading at ${width}px`).toBeCloseTo(expected, 1)
+    checked++
+  }
+  // A loop that can skip its way to green is worse than no test.
+  expect(checked, 'routes with a page heading').toBe(routes.length)
+})

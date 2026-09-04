@@ -134,7 +134,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
     >
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background" aria-busy={isLoading}>
         {isLoading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-background p-8 text-xs font-semibold text-muted-foreground" role="status">
+          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-background p-8 text-caption font-semibold text-muted-foreground" role="status">
             <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
             Loading preview…
           </div>
@@ -184,7 +184,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
           )}
 
           {preview.status === 'ready' && preview.text !== undefined && (
-            <pre className="max-h-full min-h-full w-full overflow-auto whitespace-pre-wrap break-words p-4 text-xs leading-relaxed text-foreground">
+            <pre className="max-h-full min-h-full w-full overflow-auto whitespace-pre-wrap break-words p-4 text-caption leading-relaxed text-foreground">
               {preview.text}
             </pre>
           )}
@@ -193,7 +193,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
             <div className="m-auto max-w-sm p-8 text-center">
               <FileWarning className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
               <p className="mt-3 text-sm font-bold text-foreground">Preview unavailable</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              <p className="mt-1 text-caption leading-relaxed text-muted-foreground">
                 {preview.status === 'unsupported'
                   ? 'This file format is not supported by the preview. Download it to open it with another app.'
                   : 'The stored file could not be shown. You can try downloading it instead.'}
@@ -203,7 +203,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
         </div>
 
         {isZoomable && !isLoading && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 rounded-full border border-border/60 bg-card/90 px-3 py-1.5 backdrop-blur-md shadow-lg text-xs">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 rounded-full border border-border/60 bg-card/90 px-3 py-1.5 backdrop-blur-md shadow-lg text-caption">
             <IconButton
               className="size-11 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40 sm:size-8"
               onClick={handleZoomOut}
@@ -217,7 +217,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
               variant="tertiary"
               size="sm"
               onClick={handleResetZoom}
-              className="h-11 min-w-14 px-2 text-xs font-bold text-foreground hover:bg-muted/50 transition sm:h-8 sm:min-w-12"
+              className="h-11 min-w-14 px-2 text-caption font-bold text-foreground hover:bg-muted/50 transition sm:h-8 sm:min-w-12"
               title="Reset zoom to fit screen"
             >
               {Math.round(zoomScale * 100)}%

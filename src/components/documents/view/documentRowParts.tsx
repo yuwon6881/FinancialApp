@@ -39,10 +39,10 @@ export function EmptyState({ isFiltered = false }: { isFiltered?: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
       <FileArchive className="mb-3 size-10 text-muted-foreground/30" aria-hidden="true" />
-      <p className="text-xs font-bold text-foreground">
+      <p className="text-body font-bold text-foreground">
         {isFiltered ? 'No documents match your filters' : 'No documents yet'}
       </p>
-      <p className="mt-1 text-xs text-muted-foreground">
+      <p className="mt-1 text-caption text-muted-foreground">
         {isFiltered
           ? 'Try adjusting your tax year or category filters above.'
           : 'Upload receipts, invoices or statements to keep them for your tax records.'}
@@ -105,17 +105,17 @@ export function AmountReview({ document, updateDocument, currency, disabled = fa
   if (hideSensitive) return <SensitiveMask />
   // An unreviewed suggestion is outlined rather than left as plain text, because it no longer opens by
   // itself: something has to say "this figure is a guess and still needs you".
-  if (!editing) return <Button variant="tertiary" type="button" onClick={() => setEditing(true)} disabled={disabled} aria-label={needsReview ? `Review the suggested amount for ${document.originalFileName}` : undefined} className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-1 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-8 ${needsReview ? 'border border-amber-500/40 bg-amber-500/10 px-2 text-amber-600 hover:bg-amber-500/20' : 'text-accent-ink hover:bg-accent/60'}`}>
+  if (!editing) return <Button variant="tertiary" type="button" onClick={() => setEditing(true)} disabled={disabled} aria-label={needsReview ? `Review the suggested amount for ${document.originalFileName}` : undefined} className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-1 text-caption font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-8 ${needsReview ? 'border border-amber-500/40 bg-amber-500/10 px-2 text-amber-600 hover:bg-amber-500/20' : 'text-accent-ink hover:bg-accent/60'}`}>
     {document.amount != null ? formatCurrencyVal(document.amount, activeCurrency) : 'Add amount'}<Pencil className="size-3.5" />
   </Button>
   return <div>
     <div className="flex items-center gap-1.5" onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); cancel() } }}>
-      <span className="text-xs font-bold text-foreground">{getCurrencySymbol(activeCurrency)}</span>
-      <Input value={value} onChange={event => { setValue(event.target.value); setError(null) }} disabled={disabled || saving} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} aria-invalid={error ? true : undefined} className="h-9 w-20 rounded-lg border-border bg-background px-2 text-xs tabular-nums" />
+      <span className="text-caption font-bold text-foreground">{getCurrencySymbol(activeCurrency)}</span>
+      <Input value={value} onChange={event => { setValue(event.target.value); setError(null) }} disabled={disabled || saving} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} aria-invalid={error ? true : undefined} className="h-9 w-20 rounded-lg border-border bg-background px-2 text-caption tabular-nums" />
       <IconButton type="button" onClick={() => void save()} disabled={disabled || saving} label={`Confirm amount for ${document.originalFileName}`} tooltip="Confirm amount" className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:size-9"><Check className="size-4" strokeWidth={2.5} /></IconButton>
       <IconButton type="button" onClick={cancel} disabled={saving} label={`Stop editing the amount for ${document.originalFileName}`} tooltip="Discard this edit" className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 sm:size-9"><X className="size-4" /></IconButton>
     </div>
-    {error && <p className="mt-1 text-xs font-semibold text-destructive" role="alert">{error}</p>}
+    {error && <p className="mt-1 text-caption font-semibold text-destructive" role="alert">{error}</p>}
   </div>
 }
 
@@ -171,7 +171,7 @@ export function DownloadDocumentButton({ document, downloadFailed, disabled = fa
       {isDownloading
         ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
         : <Download className="size-3.5" />}
-      {className ? <span className="text-xs font-bold">{isDownloading ? 'Preparing…' : 'Download'}</span> : null}
+      {className ? <span className="text-caption font-bold">{isDownloading ? 'Preparing…' : 'Download'}</span> : null}
     </Button>
   )
 }
@@ -188,7 +188,7 @@ export function DeleteDocumentButton({ document, setDocToDelete, disabled = fals
       aria-label={`Delete ${document.originalFileName}`}
     >
       <Trash2 className="size-3.5" />
-      {className ? <span className="text-xs font-bold">Delete</span> : null}
+      {className ? <span className="text-caption font-bold">Delete</span> : null}
     </Button>
   )
 }
@@ -233,7 +233,7 @@ export function LinkedTransactionButton({
   // the surface with the most room for it.
   if (!onOpen) {
     return (
-      <span className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-lg border border-accent/30 bg-accent/10 px-2 py-1 text-xs font-bold text-accent-ink" title="Attached to a ledger record">
+      <span className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-lg border border-accent/30 bg-accent/10 px-2 py-1 text-caption font-bold text-accent-ink" title="Attached to a ledger record">
         <Link2 className="size-3 shrink-0" aria-hidden="true" />
         Linked
       </span>
@@ -247,7 +247,7 @@ export function LinkedTransactionButton({
       onClick={() => onOpen(document.transactionId!)}
       disabled={isOpening}
       aria-busy={isOpening}
-      className="min-h-11 shrink-0 border-accent/30 bg-accent/10 px-2 text-xs text-accent-ink hover:border-accent/50 hover:bg-accent/20 sm:min-h-8"
+      className="min-h-11 shrink-0 border-accent/30 bg-accent/10 px-2 text-caption text-accent-ink hover:border-accent/50 hover:bg-accent/20 sm:min-h-8"
       title="Open linked ledger transaction"
       aria-label={`Open linked transaction for ${document.originalFileName}`}
     >
