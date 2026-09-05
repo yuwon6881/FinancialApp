@@ -20,6 +20,9 @@ const noSafeInverse = 'No stale-safe inverse exists for this server mutation.'
  * Undo-or-exemption semantics fails CI.
  */
 export const QUEUED_MUTATION_POLICIES: Record<string, MutationPolicy> = {
+  // Wire-only: never enqueued. The drain loop coalesces consecutive transaction:add ops into
+  // this synthetic op, so it inherits transaction:add semantics and each row stays undoable.
+  'transaction:bulkAdd': queued('supported'),
   'transaction:bulkDelete': queued('supported'), 'transaction:bulkRestore': queued('exempt', noSafeInverse),
   'transaction:bulkMove': queued('supported'), 'transaction:add': queued('supported'),
   'transaction:update': queued('supported'), 'transaction:delete': queued('supported'),
