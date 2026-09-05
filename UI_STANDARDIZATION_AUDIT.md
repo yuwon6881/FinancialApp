@@ -37,7 +37,7 @@ Figures are re-derived from the tree, not carried over from earlier drafts. Two 
 - Compact and medium actions retain a 44px minimum target. Expanded actions use explicit 36–40px sizes where appropriate.
 - Controls use `rounded-control` and panels use `rounded-panel`. These are semantic tokens in `src/index.css`, so the contract is written in the class name instead of a t-shirt size that has to be mentally multiplied: `--radius` is `0.75rem` and the scale multiplies it, so they compute to **16.8px** and **21.6px**. Earlier drafts claimed 12px and 16px, which no theme value produces; `src/index.css` documents the same trap for `PerimeterBeam`. Overlay surfaces — popovers, menus, sheets, toasts — are a separate family still on the t-shirt scale and want their own token before they are converted.
 - Full pills are reserved for badges, counts, avatars, and switches.
-- `IconButton` owns icon-only accessible names and tooltips. `Tabs` owns tab roles, selection, keyboard movement, counts, panel relationships, and optional horizontal overflow. `Badge` and `StatusBadge` own the six state tones. `PageHeader`, `Panel`, `SectionHeader`, `Toolbar`, `EmptyState`, and `InteractiveCard` own repeated layout anatomy.
+- `IconButton` owns icon-only accessible names and tooltips. `Tabs` owns tab roles, selection, keyboard movement, counts, panel relationships, and optional horizontal overflow. `Badge` and `StatusBadge` own the seven state tones. `PageHeader`, `Panel`, `SectionHeader`, `Toolbar`, `EmptyState`, and `InteractiveCard` own repeated layout anatomy.
 - Forms continue to use `FormField` and the canonical input, textarea, select, date, checkbox, range, and amount controls.
 - Shared primitives own their focus treatment. A call site may position a primitive but may not cancel its focus, and the audit rejects `outline-none`, `outline-hidden`, and `ring-0` on them.
 
@@ -53,7 +53,7 @@ Raw buttons are limited to the three shared primitives where the element is the 
 | --- | ---: | --- |
 | `IconButton` | **19 — closed.** All 28 icon-only call sites adopted it; the primitive layer (`HorizontalRail`, `OverflowMenu`, `ToastViewport`, `ToggleButton`) still composes `Button` directly as the implementation boundary | none |
 | `EmptyState` | **9 — closed.** 8 sites converted, using the new `compact` density for the one-line notes that sit inside an already-titled panel | none. The earlier "18 files" figure was wrong: it counted every `border-dashed`, most of which are chart legend dashes, archived/disabled row states or drop zones. Only 10 were empty states, and `dashboard/CategoryLimitPerformance` stays hand-rolled as an approved exception — it is a horizontal icon/text/action card, not this centered anatomy |
-| `SectionHeader` | 1 | ~48 `font-bold uppercase tracking-wide` labels across 31 files |
+| `SectionHeader` | 1 | none. The "~48 uppercase labels" once recorded here were eyebrow labels on `<p>`/`<span>`/`<dt>`, not headings; they now use `text-eyebrow`. Adoption of the component itself is unblocked but is separate work, since swapping a heading for it restructures JSX |
 | `Toolbar` | 2 | Adoption is **blocked on a question, not on effort** — see below |
 | `Badge`/`StatusBadge` | 17 | 19 of 31 hand-rolled pills converted. `RowSyncBadge` (15 consumers) is still an undeclared second badge system, and 12 pills remain — see below |
 | `Panel`/`Card` | 10 / 4 | **none — closed.** All 39 hand-rolled shells now compose `panelClass`, `PANEL_TONES` or `panelFromMediumClass` from `ui/panelStyles`, and the audit rejects the `app-panel` marker outside that module |
@@ -86,6 +86,18 @@ This entry previously read "4 further skeleton systems; 10 files still on raw `a
 `CycleSkeleton`, `FeatureSkeletons` and `AccountsSkeleton` compose the shared `Skeleton` atom — 78, 74 and 20 uses respectively, with **zero** hand-rolled `skeleton-shimmer` and zero `animate-pulse` between them. There is one loading animation and one atom, with per-route layout compositions on top. That is the architecture `Skeleton`'s own comment describes ("Page-specific layouts live in CycleSkeleton so they do not inflate the eager shell"), and splitting layouts per route is what keeps them out of the eager bundle. Nothing to consolidate.
 
 The twelve `animate-pulse` uses are not loading placeholders at all. They are attention and status pulses: a "due soon" clock, a pending-bills marker on the calendar, the live dot on the active-filter strip, the sync badge on the logo, the notification dot, an icon that pulses while a download runs. Converting those to shimmer would replace a deliberate signal with a placeholder animation.
+
+### The class merger deleted the roles, and nothing noticed
+
+The worst defect this effort produced was invisible to every gate, and a final adversarial audit is what surfaced it.
+
+`cn` is `twMerge(clsx(...))`, and a stock tailwind-merge knows nothing about the semantic scales. It does not ignore an unknown class — it **guesses**, and it read `text-eyebrow` as a `text-*` colour. So `cn('text-eyebrow', 'text-muted-foreground')` looked like one conflict with two candidates and resolved it by **deleting the role**, taking the size and the weight with it. `rounded-control` and `rounded-panel` had the mirror-image problem: unrecognised, so neither could override the other, and a composed surface silently kept both radii while stylesheet order picked the winner — which is why a `compact` `EmptyState` rendered at the panel radius its own comment said it must not use.
+
+**206 class lists in this codebase pair a role with a colour**, so every one was exposed the moment it passed through `cn`. Type-checking, ESLint, the design-system audit, 2,252 unit tests, the 78 contract assertions and all 338 visual snapshots were green throughout.
+
+`src/lib/utils.ts` now declares both scales to `extendTailwindMerge`, which fixes both halves at the root: a role conflicts only with another size or another radius, exactly as a built-in would. The contract test asserts both directions — that a role survives a colour, and that same-group classes still resolve last-wins — because the failure mode is silent and a future edit to `cn` would otherwise reintroduce it unnoticed.
+
+The general lesson is worth more than the fix: **adding a custom scale to Tailwind is not complete until the class merger is told about it.** A design token that the merge layer cannot classify is a token that disappears under composition.
 
 ### A hyphenated type-role key emits nothing, silently
 
@@ -140,7 +152,7 @@ The scale now exists to migrate onto. `src/index.css` declares seven roles — `
 
 Two roles are migrated:
 
-- **Eyebrow — done, 79 sites.** The small uppercase caption over a metric, definition term or filter group had been authored **seven ways**: `font-bold`/`font-semibold`/`font-medium` crossed with `tracking-wide`/`wider`/`widest`/`normal` *or no tracking at all*, at `text-xs` or inherited. All now use `text-eyebrow uppercase`.
+- **Eyebrow — done, 93 sites.** The small uppercase caption over a metric, definition term or filter group had been authored **eight ways**: `font-bold`/`font-semibold`/`font-medium` crossed with `tracking-wide`/`wider`/`widest`/`normal` *or no tracking at all*, at `text-xs` or inherited. All now use `text-eyebrow uppercase`.
 
   Reaching 93 took **four** attempts at the rule, and the sequence is the lesson:
 
@@ -181,7 +193,7 @@ The specimen page is snapshotted at mobile, medium, and desktop in both themes, 
 
 ## Gate status
 
-Measured on 2026-09-03 against the standardization commit plus the enforcement changes made in this pass (not yet committed):
+Measured on 2026-09-05 against the full standardization, all of it committed:
 
 - ESLint, `check:design-system`, `typecheck:strict`, and `deadcode`: pass. Note what `typecheck:strict` is: its `include` is only `src/lib/api.ts`, `src/lib/apiTypes.ts`, and `src/lib/outbox.ts`, so it is a targeted `strictNullChecks` gate for the API and outbox layer, **not** a project typecheck. Whole-project type checking is `tsc -b`, which runs inside `npm run build` — so a green `typecheck:strict` on its own is not evidence that the application compiles, and any report should cite the build for that.
 - Production build: pass. Budget headroom is very small and is now the binding constraint on the remaining surface work. The panel consolidation moved the eager critical path from 219.29 kB to 219.44 kB, leaving 0.06 kB, so the limit was raised to 221.0 kB under the documented convention. **The precache ceiling cannot be raised the same way — it is fixed by invariant PERF-02 at 3 MiB and stands at 3070.18 kB, about 1.8 kB spare.** Adopting `EmptyState`, `SectionHeader`, `Badge`, `IconButton`, `Meter` and the skeleton consolidation touches roughly 110 more call sites; each should remove more duplicated markup than it adds, but the precache figure must be read after every area and an offsetting reduction found if it stops falling.

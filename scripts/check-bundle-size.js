@@ -151,7 +151,13 @@ if (!fs.existsSync(distAssetsPath)) {
 // remain eager -- nothing lazy moved onto the startup path -- and the limit restores the established
 // ~1.5 kB margin. Note the precache ceiling is a fixed invariant (PERF-02) with ~1.8 kB left, so
 // further shared-primitive adoption needs an offsetting reduction rather than another raise.
-const CRITICAL_PATH_LIMIT_KB = 221.0
+// 222.0: raised from 221.0 (measured 220.47, i.e. 0.53 kB of slack, under the toolchain's own
+// variance). `cn` now uses extendTailwindMerge to declare the semantic type and radius scales, and
+// that configuration is eager because `cn` is. It buys back a real defect: a stock tailwind-merge
+// reads `text-eyebrow` as a `text-*` colour, so `cn('text-eyebrow', 'text-muted-foreground')`
+// resolved them as one conflict and deleted the role -- 206 class lists were exposed to losing their
+// size and weight. The same nine chunks remain eager and the limit restores the ~1.5 kB margin.
+const CRITICAL_PATH_LIMIT_KB = 222.0
 const PRECACHE_RAW_LIMIT_KB = 3 * 1024
 
 function criticalPathChunks(files) {

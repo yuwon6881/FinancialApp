@@ -1,5 +1,27 @@
 import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { extendTailwindMerge } from "tailwind-merge"
+
+/**
+ * The semantic scales in `src/index.css` are invisible to a stock tailwind-merge, and it does not
+ * fail safe. `text-eyebrow` looks like a `text-*` colour to it, so `cn('text-eyebrow', 'text-muted-foreground')`
+ * resolved the two as one conflict and **deleted the role**, silently dropping the size and weight
+ * from any label whose colour arrived in a different argument. `rounded-control` and `rounded-panel`
+ * had the mirror-image problem: unrecognised, so neither could override the other and stylesheet
+ * order decided which radius a composed surface got.
+ *
+ * Declaring the scales fixes both — a role now conflicts only with another size or another radius,
+ * exactly as a built-in would.
+ */
+const twMerge = extendTailwindMerge({
+    extend: {
+        classGroups: {
+            'font-size': [{
+                text: ['eyebrow', 'caption', 'label', 'body', 'subsection', 'section', 'title', 'display'],
+            }],
+            rounded: [{ rounded: ['control', 'panel'] }],
+        },
+    },
+})
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))

@@ -1,7 +1,8 @@
 import React from 'react'
 import { Card } from '../Card'
 import { Skeleton } from '../Skeleton'
-import { panelClass } from '../panelStyles'
+import { cn } from '../../../lib/utils'
+import { panelClass, panelFromMediumClass } from '../panelStyles'
 
 export const CardSkeleton: React.FC = () => (
   <div className={`${panelClass} p-5`}>
@@ -111,7 +112,7 @@ export const CarryoverLedgerSkeleton: React.FC = () => (
 )
 
 export const HorizontalRailSkeleton: React.FC<{ kind: 'commitments' | 'rewards'; cards?: number }> = ({ kind, cards = 3 }) => (
-  <section className={`${panelClass} space-y-3 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:bg-card/92 sm:p-5 sm:shadow-xs`}>
+  <section className={cn(panelFromMediumClass, 'space-y-3 sm:shadow-xs')}>
     <div className="flex items-center justify-between gap-3 px-1">
       <div className="space-y-1.5"><Skeleton className="h-4 w-28" /><Skeleton className="h-2.5 w-64 max-w-full" /></div>
       <Skeleton className="h-8 w-24 rounded-lg" />
@@ -160,7 +161,7 @@ export const LoanCardSkeleton: React.FC = () => (
 )
 
 export const LoansSectionSkeleton: React.FC<{ cards?: number }> = ({ cards = 3 }) => (
-  <section className={`${panelClass} space-y-4 rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/92 sm:p-5`}>
+  <section className={cn(panelFromMediumClass, 'space-y-4')}>
     <Skeleton className="h-4 w-32" />
     <div className="space-y-3">
       {Array.from({ length: cards }, (_, index) => <LoanCardSkeleton key={index} />)}

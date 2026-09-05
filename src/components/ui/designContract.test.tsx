@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { Button, type ButtonSize, type ButtonVariant } from './Button'
 import { controlClassName, controlTriggerClassName, type ControlSize } from './controlStyles'
 import { PANEL_TONES, panelClass, panelFromMediumClass, panelVariantClasses, type PanelTone } from './panelStyles'
+import { cn } from '../../lib/utils'
 import { Badge, type BadgeTone } from './Badge'
 import { Meter } from './Meter'
 import { PageHeader } from './PageHeader'
@@ -116,6 +117,38 @@ describe('type role contract', () => {
     expect(heading.className).toContain('text-title')
     expect(heading.className).toContain('sm:text-display')
     expect(heading.className).not.toMatch(/\btext-(?:xs|sm|base|lg|xl|2xl)\b/)
+  })
+})
+
+describe('class-merge contract', () => {
+  // The semantic scales are invisible to a stock tailwind-merge, and it does not fail safe: it read
+  // `text-eyebrow` as a `text-*` colour, so `cn('text-eyebrow', 'text-muted-foreground')` treated the
+  // two as one conflict and DELETED the role, dropping the size and weight wherever a colour arrived
+  // in a different argument. 206 class lists in this codebase were exposed to that. `cn` now declares
+  // the scales; these assertions are what stop a future edit to `cn` from silently undoing it.
+  const ROLES = ['eyebrow', 'caption', 'label', 'body', 'subsection', 'section', 'title', 'display']
+
+  it.each(ROLES)('cn keeps text-%s when a text colour is merged alongside it', role => {
+    expect(cn(`text-${role} uppercase`, 'text-muted-foreground')).toContain(`text-${role}`)
+    expect(cn(`text-${role}`, 'text-foreground')).toContain(`text-${role}`)
+  })
+
+  it.each([['rounded-control'], ['rounded-panel']])('cn keeps %s alongside a border colour', radius => {
+    expect(cn(radius, 'border-border/60 bg-card/92')).toContain(radius)
+  })
+
+  // The other half of declaring a scale: same-group classes must still resolve last-wins, or a
+  // composed surface silently keeps two radii and stylesheet order picks the winner.
+  it('resolves one role against another, last one winning', () => {
+    expect(cn('text-caption', 'text-body')).toBe('text-body')
+    expect(cn('rounded-panel', 'rounded-control')).toBe('rounded-control')
+  })
+
+  it('resolves a role against a t-shirt class in both directions', () => {
+    expect(cn('text-sm', 'text-caption')).toBe('text-caption')
+    expect(cn('text-caption', 'text-sm')).toBe('text-sm')
+    expect(cn('rounded-xl', 'rounded-panel')).toBe('rounded-panel')
+    expect(cn('rounded-panel', 'rounded-xl')).toBe('rounded-xl')
   })
 })
 
