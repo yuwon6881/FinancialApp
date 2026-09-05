@@ -15,6 +15,7 @@ async function dispatchBulkTransaction(op: QueuedOp): Promise<BulkTransactionMut
 }
 
 const HANDLERS: Record<string, (op: QueuedOp) => Promise<DispatchResult>> = {
+  'transaction:bulkAdd': dispatchBulkTransaction,
   'transaction:bulkDelete': dispatchBulkTransaction,
   'transaction:bulkRestore': dispatchBulkTransaction,
   'transaction:bulkMove': dispatchBulkTransaction,

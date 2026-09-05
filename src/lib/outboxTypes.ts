@@ -17,7 +17,7 @@ export type EntityKind = 'transaction' | 'recurringPayment' | 'recurringOccurren
   | 'ledgerAccount' | 'ledgerAccountReconcile'
   | 'vaultDocument'
 export type OpType = 'add' | 'update' | 'delete' | 'restore' | 'toggle' | 'purchase' | 'unpurchase'
-  | 'reminder' | 'payEarly' | 'settle' | 'cleanup' | 'bulkDelete' | 'bulkRestore' | 'bulkMove'
+  | 'reminder' | 'payEarly' | 'settle' | 'cleanup' | 'bulkAdd' | 'bulkDelete' | 'bulkRestore' | 'bulkMove'
   | 'advanceRepayment' | 'fullSettlement' | 'undoRepayment'
 export interface OutboxPayload {
   [key: string]: unknown

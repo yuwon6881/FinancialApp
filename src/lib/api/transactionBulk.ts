@@ -8,6 +8,7 @@ export interface BulkTransactionMutationResult {
   deleted: Transaction[]
   restored: Transaction[]
   moved?: Transaction[]
+  created?: Transaction[]
 }
 
 export async function bulkDeleteTransactions(ids: string[]): Promise<BulkTransactionMutationResult> {
@@ -46,6 +47,26 @@ export async function bulkMoveTransactions(moves: { id: string; targetDate: stri
   return { deleted: [], restored: [], moved: (data.moved || []).map(deobfuscateTransaction) }
 }
 
+export async function bulkCreateTransactions(
+  transactions: Array<Partial<Transaction>>,
+): Promise<BulkTransactionMutationResult> {
+  const data = await request<{ created: WireTransaction[] }>('/transactions/bulk-create', {
+    method: 'POST',
+    ...jsonBody({
+      transactions: transactions.map(t => ({
+        ...t,
+        amount: obfuscateAmount(t.amount ?? 0),
+        stabilityRecoveryTopUpAmount: t.stabilityRecoveryTopUpAmount == null
+          ? t.stabilityRecoveryTopUpAmount
+          : obfuscateAmount(t.stabilityRecoveryTopUpAmount),
+      })),
+    }),
+    errorMessage: 'Failed to create transactions',
+  })
+  invalidateCache()
+  return { deleted: [], restored: [], created: (data.created || []).map(deobfuscateTransaction) }
+}
+
 export async function dispatchBulkTransaction(op: Pick<QueuedOp, 'type' | 'payload'>): Promise<BulkTransactionMutationResult> {
   if (op.type === 'bulkDelete') {
     const ids = Array.isArray(op.payload?.transactionIds) ? op.payload.transactionIds.map(String) : []
@@ -58,6 +79,13 @@ export async function dispatchBulkTransaction(op: Pick<QueuedOp, 'type' | 'paylo
         )).map(move => ({ id: String(move.id), targetDate: String(move.targetDate) }))
       : []
     return bulkMoveTransactions(moves)
+  }
+  if (op.type === 'bulkAdd') {
+    const txs = Array.isArray(op.payload?.transactions)
+      ? op.payload.transactions
+        .filter((item): item is Partial<Transaction> => Boolean(item && typeof item === 'object'))
+      : []
+    return bulkCreateTransactions(txs)
   }
   const snapshots = Array.isArray(op.payload?.transactions)
     ? op.payload.transactions

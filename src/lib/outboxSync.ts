@@ -12,7 +12,7 @@
 // backs this with a synchronous ref, not React state) so an op enqueued during
 // an `await dispatch` -- e.g. an Undo tap -- is preserved rather than clobbered.
 
-import type { QueuedOp, DispatchResult, ToastCopy } from './outbox'
+import type { QueuedOp, DispatchResult, ToastCopy, OpType } from './outbox'
 import type { ToastAction } from '../components/ui/ToastViewport'
 import {
   getErrorMessage,
@@ -176,6 +176,62 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           deps.setError(null)
           deps.setActiveSyncOpId?.(null)
           continue
+        }
+
+        // --- Batch consecutive transaction:add ops into a single bulk call ---
+        if (nextOp.entity === 'transaction' && nextOp.type === 'add') {
+          const batchOps: QueuedOp[] = [nextOp]
+          for (let i = 1; i < queue.length; i++) {
+            const candidate = queue[i]
+            if (candidate.entity !== 'transaction' || candidate.type !== 'add') break
+            if (candidate.targetId === editingId || candidate.id === editingId) break
+            batchOps.push(candidate)
+          }
+
+          if (batchOps.length > 1) {
+            const bulkDispatchFn = deps.resolveDispatch({
+              ...nextOp, type: 'bulkAdd' as OpType,
+            })
+            if (bulkDispatchFn) {
+              try {
+                const syntheticOp: QueuedOp = {
+                  ...nextOp,
+                  type: 'bulkAdd' as OpType,
+                  payload: {
+                    transactions: batchOps.map(o => ({
+                      ...(o.payload ?? {}),
+                      id: o.targetId,
+                    })),
+                  },
+                }
+                await bulkDispatchFn(syntheticOp)
+
+                // Success: remove all constituent ops from the queue.
+                const batchIds = new Set(batchOps.map(o => o.id))
+                deps.mutateQueue(prev => prev.filter(item => !batchIds.has(item.id)))
+
+                for (const batchedOp of batchOps) {
+                  deps.addRecentlyCompleted({ ...batchedOp, isCompleted: true })
+                  successfulOps.push({ op: batchedOp, result: undefined })
+                }
+
+                clearBackoffAttempts()
+                deps.setError(null)
+                processedAny = true
+                deps.setActiveSyncId(null)
+
+                const toastMsg = deps.getSyncSuccessToast(syntheticOp)
+                if (toastMsg) {
+                  deps.emitToast(toastMsg, undefined)
+                }
+                continue
+              } catch {
+                // Bulk call failed — fall through to dispatch the head op individually.
+                // Items already committed server-side are idempotent (return Existing/200),
+                // so the individual retry path handles partial success gracefully.
+              }
+            }
+          }
         }
 
         const result = await dispatchFn(nextOp)

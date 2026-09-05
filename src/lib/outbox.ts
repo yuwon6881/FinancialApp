@@ -22,11 +22,11 @@ export * from './outboxSanitize'
 
 export function expandBulkTransactionProjection(ops: QueuedOp[]): QueuedOp[] {
   return ops.flatMap(op => {
-    if (op.entity !== 'transaction' || !['bulkDelete', 'bulkRestore', 'bulkMove'].includes(op.type)) return [op]
+    if (op.entity !== 'transaction' || !['bulkDelete', 'bulkRestore', 'bulkMove', 'bulkAdd'].includes(op.type)) return [op]
     const snapshots = Array.isArray(op.payload?.transactions)
       ? op.payload.transactions.filter((item): item is Partial<Transaction> & { id: string | number } => Boolean(item && typeof item === 'object' && 'id' in item))
       : []
-    if (op.type === 'bulkRestore') {
+    if (op.type === 'bulkRestore' || op.type === 'bulkAdd') {
       return snapshots.map(snapshot => ({
         ...op,
         type: 'add' as const,

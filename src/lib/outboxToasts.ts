@@ -163,7 +163,12 @@ const SUCCESS_TOAST_OVERRIDES: Partial<Record<string, (op: QueuedOp) => ToastCop
  * rows that all just snapped back to their old dates, with no clue why.
  */
 export function describeFailedOp(op: QueuedOp): string {
-  if (op.entity === 'transaction' && (op.type === 'bulkMove' || op.type === 'bulkDelete')) {
+  if (op.entity === 'transaction' && (op.type === 'bulkMove' || op.type === 'bulkDelete' || op.type === 'bulkAdd')) {
+    if (op.type === 'bulkAdd') {
+      const txs = op.payload?.transactions
+      const count = Array.isArray(txs) ? txs.length : 0
+      return `the creation of ${count} transaction${count === 1 ? '' : 's'}`
+    }
     const items = op.type === 'bulkMove' ? op.payload?.moves : op.payload?.transactionIds
     const count = Array.isArray(items) ? items.length : 0
     const verb = op.type === 'bulkMove' ? 'move' : 'deletion'
@@ -191,6 +196,16 @@ export function getSyncSuccessToast(op: QueuedOp): ToastCopy | null {
       entity: 'Transactions',
       action: 'Deleted',
       message: `${count} transaction${count === 1 ? '' : 's'} were deleted.`,
+    })
+  }
+
+  if (op.entity === 'transaction' && op.type === 'bulkAdd') {
+    const txs = op.payload?.transactions
+    const count = Array.isArray(txs) ? txs.length : 0
+    return buildMutationSuccessToast({
+      entity: 'Transactions',
+      action: 'Synced',
+      message: `${count} transaction${count === 1 ? '' : 's'} synced.`,
     })
   }
 

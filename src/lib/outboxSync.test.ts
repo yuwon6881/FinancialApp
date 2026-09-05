@@ -74,7 +74,7 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
       queue.length = 0
       queue.push(...next)
     },
-    resolveDispatch: () => defaultDispatch,
+    resolveDispatch: (o) => (o.type === 'bulkAdd' ? undefined : defaultDispatch),
     setSyncing: (v) => { syncing.value = v },
     setActiveSyncId: (id) => { activeSyncIds.push(id) },
     setError: (message) => { errors.push(message) },
@@ -276,7 +276,7 @@ describe('drainQueue — success path', () => {
   it('drains multiple ops in queue order', async () => {
     const order: string[] = []
     const dispatch = vi.fn(async (o: QueuedOp): Promise<DispatchResult> => { order.push(o.id); return undefined })
-    const h = makeHarness({ resolveDispatch: () => dispatch }, [op({ id: 'a' }), op({ id: 'b' }), op({ id: 'c' })])
+    const h = makeHarness({ resolveDispatch: (o) => (o.type === 'bulkAdd' ? undefined : dispatch) }, [op({ id: 'a' }), op({ id: 'b' }), op({ id: 'c' })])
     await drainQueue(h.deps)
     expect(order).toEqual(['a', 'b', 'c'])
     expect(h.queue).toHaveLength(0)
@@ -581,7 +581,7 @@ describe('drainQueue — error taxonomy', () => {
     err.status = 400
     const dispatch = vi.fn(async (): Promise<DispatchResult> => { throw err })
     const h = makeHarness(
-      { resolveDispatch: () => dispatch },
+      { resolveDispatch: (o) => (o.type === 'bulkAdd' ? undefined : dispatch) },
       [op({ id: 'a', retryCount: 0 }), op({ id: 'b', retryCount: 0 })]
     )
     await drainQueue(h.deps)
@@ -773,5 +773,128 @@ describe('drainQueue — settle', () => {
     await drainQueue(h.deps)
     expect(h.calls.reTrigger).toBe(0)
     expect(h.calls.onSettled).toBe(1)
+  })
+
+  // --- Bulk transaction:add batching ---
+
+  it('batches consecutive transaction:add ops into a single bulkAdd dispatch', async () => {
+    const dispatchCalls: string[] = []
+    const h = makeHarness({
+      resolveDispatch: (o) => {
+        const key = `${o.entity}:${o.type}`
+        return async () => {
+          dispatchCalls.push(key)
+          return undefined
+        }
+      },
+    }, [
+      op({ id: 'a', targetId: 'tx-1', payload: { description: 'One' } }),
+      op({ id: 'b', targetId: 'tx-2', payload: { description: 'Two' } }),
+      op({ id: 'c', targetId: 'tx-3', payload: { description: 'Three' } }),
+    ])
+    await drainQueue(h.deps)
+    // Should have dispatched one bulkAdd call instead of three individual adds
+    expect(dispatchCalls).toEqual(['transaction:bulkAdd'])
+    expect(h.queue).toHaveLength(0)
+    expect(h.refreshArgs[0]).toHaveLength(3)
+    // Only one toast (the bulk toast)
+    expect(h.emittedToasts).toHaveLength(1)
+  })
+
+  it('dispatches a single transaction:add individually without batching', async () => {
+    const dispatchCalls: string[] = []
+    const h = makeHarness({
+      resolveDispatch: (o) => {
+        const key = `${o.entity}:${o.type}`
+        return async () => {
+          dispatchCalls.push(key)
+          return undefined
+        }
+      },
+    }, [
+      op({ id: 'a', targetId: 'tx-1', payload: { description: 'One' } }),
+    ])
+    await drainQueue(h.deps)
+    // Single add should dispatch individually, not as bulkAdd
+    expect(dispatchCalls).toEqual(['transaction:add'])
+    expect(h.queue).toHaveLength(0)
+    expect(h.refreshArgs[0]).toHaveLength(1)
+  })
+
+  it('batches only the consecutive transaction:add prefix before a non-add op', async () => {
+    const dispatchCalls: string[] = []
+    const h = makeHarness({
+      resolveDispatch: (o) => {
+        const key = `${o.entity}:${o.type}`
+        return async () => {
+          dispatchCalls.push(key)
+          return undefined
+        }
+      },
+    }, [
+      op({ id: 'a', targetId: 'tx-1', type: 'add', payload: { description: 'Add 1' } }),
+      op({ id: 'b', targetId: 'tx-2', type: 'add', payload: { description: 'Add 2' } }),
+      op({ id: 'c', targetId: 'tx-3', type: 'update', payload: { description: 'Update' } }),
+      op({ id: 'd', targetId: 'tx-4', type: 'add', payload: { description: 'Add 3' } }),
+    ])
+    await drainQueue(h.deps)
+    // First two adds batched, then update individually, then last add individually
+    expect(dispatchCalls).toEqual([
+      'transaction:bulkAdd',
+      'transaction:update',
+      'transaction:add',
+    ])
+    expect(h.queue).toHaveLength(0)
+  })
+
+  it('falls back to individual dispatch when bulk call fails', async () => {
+    let bulkCallCount = 0
+    let addCallCount = 0
+    const h = makeHarness({
+      resolveDispatch: (o) => {
+        const key = `${o.entity}:${o.type}`
+        if (key === 'transaction:bulkAdd') {
+          return async () => {
+            bulkCallCount++
+            throw new Error('Server error')
+          }
+        }
+        return async () => {
+          if (key === 'transaction:add') addCallCount++
+          return undefined
+        }
+      },
+    }, [
+      op({ id: 'a', targetId: 'tx-1', payload: { description: 'One' } }),
+      op({ id: 'b', targetId: 'tx-2', payload: { description: 'Two' } }),
+    ])
+    await drainQueue(h.deps)
+    // Bulk was attempted and failed, then individual dispatch succeeded
+    expect(bulkCallCount).toBe(1)
+    expect(addCallCount).toBe(2)
+    expect(h.queue).toHaveLength(0)
+  })
+
+  it('does not include an op being edited in the batch', async () => {
+    const dispatchCalls: string[] = []
+    const h = makeHarness({
+      getEditingPendingId: () => 'tx-2',
+      resolveDispatch: (o) => {
+        const key = `${o.entity}:${o.type}`
+        return async () => {
+          dispatchCalls.push(key)
+          return undefined
+        }
+      },
+    }, [
+      op({ id: 'a', targetId: 'tx-1', payload: { description: 'One' } }),
+      op({ id: 'b', targetId: 'tx-2', payload: { description: 'Two' } }),
+      op({ id: 'c', targetId: 'tx-3', payload: { description: 'Three' } }),
+    ])
+    await drainQueue(h.deps)
+    // tx-1 dispatched individually since tx-2 (editing) breaks the batch to just 1
+    expect(dispatchCalls).toEqual(['transaction:add'])
+    // tx-2 and tx-3 remain (tx-2 is being edited, loop breaks)
+    expect(h.queue).toHaveLength(2)
   })
 })
