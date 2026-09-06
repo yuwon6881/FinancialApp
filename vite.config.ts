@@ -140,7 +140,10 @@ export default defineConfig(({ mode }) => {
         // unicode-range subsets are never requested for this app's English UI.
         globPatterns: ['**/*.{js,css,html,ico,png,svg}', '**/inter-latin-opsz-normal-*.woff2'],
         // Browser-only design specimen: it is a visual-test surface, not an offline app route.
-        globIgnores: ['**/UiSpecimen-*.js'],
+        // pdfjs-dist renders a vault document fetched from object storage, so the preview can
+        // never work offline regardless; precaching 417 kB of renderer for it buys nothing. It
+        // stays a lazy import in PdfDocumentPreview and is fetched on demand when online.
+        globIgnores: ['**/UiSpecimen-*.js', '**/pdf-*.js'],
       }
     }),
     // Opt-in bundle breakdown: ANALYZE=1 npm run build -> stats.html (not emitted otherwise).
