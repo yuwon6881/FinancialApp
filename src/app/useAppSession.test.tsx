@@ -155,6 +155,41 @@ describe('useAppSession', () => {
     await waitFor(() => expect(mocks.fetchAuthStatus).toHaveBeenCalledTimes(2))
   })
 
+  it('still offers device unlock when the first status check loses the race with a waking backend', async () => {
+    mocks.isPlatformAuthenticatorAvailable.mockResolvedValue(true)
+    mocks.fetchAuthStatus
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValue({
+        hasFingerprintOnDevice: true,
+        hasFingerprint: true,
+        isRegistered: true,
+        registrationOpen: false,
+      })
+
+    const { result } = renderHook(() => useAppSession(createOptions()))
+
+    await waitFor(() => expect(result.current.hasFingerprintSetup).toBe(true), { timeout: 3000 })
+    // Sensitive mode is on, so the challenge is fetched before the user can tap anything.
+    await waitFor(() => expect(mocks.prefetchFingerprintAssertOptions).toHaveBeenCalled(), { timeout: 3000 })
+  })
+
+  it('retries the assert-options prefetch until the waking backend hands over a challenge', async () => {
+    mocks.isPlatformAuthenticatorAvailable.mockResolvedValue(true)
+    mocks.fetchAuthStatus.mockResolvedValue({
+      hasFingerprintOnDevice: true,
+      hasFingerprint: true,
+      isRegistered: true,
+      registrationOpen: false,
+    })
+    mocks.prefetchFingerprintAssertOptions
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValue({ challengeId: 'challenge-1', options: { challenge: 'AQID' } })
+
+    renderHook(() => useAppSession(createOptions()))
+
+    await waitFor(() => expect(mocks.prefetchFingerprintAssertOptions).toHaveBeenCalledTimes(2), { timeout: 3000 })
+  })
+
   it('persists a successful fingerprint reveal through the session callback contract', async () => {
     mocks.isPlatformAuthenticatorAvailable.mockResolvedValue(false)
     mocks.getCachedFingerprintAssertOptions.mockResolvedValue({

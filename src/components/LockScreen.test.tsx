@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LockScreen } from './LockScreen'
 import * as api from '../lib/api'
 import { isPlatformAuthenticatorAvailable } from '../lib/webauthn'
+import { prefetchFingerprintAssertOptions } from '../lib/fingerprintOptionsCache'
 
 vi.mock('../lib/api', () => ({
   fetchAuthStatus: vi.fn(),
@@ -21,6 +22,10 @@ vi.mock('../lib/fingerprintOptionsCache', () => ({
   getCachedFingerprintAssertOptions: vi.fn(),
   prefetchFingerprintAssertOptions: vi.fn(async () => undefined),
 }))
+
+/** The prefetch resolves the challenge it fetched; nothing here reads it, but the shape is the
+    contract, and `undefined` would type-check only against a mock that lies about the signature. */
+const assertOptions = { challengeId: 'challenge-1', options: { challenge: 'Y2hhbGxlbmdl' } }
 
 describe('LockScreen device unlock availability', () => {
   beforeEach(() => {
@@ -53,6 +58,38 @@ describe('LockScreen device unlock availability', () => {
     render(<LockScreen isOpen username="alice" onUnlocked={vi.fn()} onSignOut={vi.fn()} />)
 
     expect(await screen.findByRole('button', { name: 'Unlock with device' })).toBeTruthy()
+  })
+
+  it('offers device unlock once a waking backend finally answers the status check', async () => {
+    vi.mocked(api.fetchAuthStatus)
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValue({
+        isRegistered: true,
+        registrationOpen: false,
+        hasFingerprint: true,
+        hasFingerprintOnDevice: true,
+      })
+
+    render(<LockScreen isOpen username="alice" onUnlocked={vi.fn()} onSignOut={vi.fn()} />)
+
+    expect(await screen.findByRole('button', { name: 'Unlock with device' }, { timeout: 3000 })).toBeTruthy()
+    await waitFor(() => expect(prefetchFingerprintAssertOptions).toHaveBeenCalled(), { timeout: 3000 })
+  })
+
+  it('keeps asking for the unlock challenge until the backend hands one over', async () => {
+    vi.mocked(api.fetchAuthStatus).mockResolvedValue({
+      isRegistered: true,
+      registrationOpen: false,
+      hasFingerprint: true,
+      hasFingerprintOnDevice: true,
+    })
+    vi.mocked(prefetchFingerprintAssertOptions)
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValue(assertOptions)
+
+    render(<LockScreen isOpen username="alice" onUnlocked={vi.fn()} onSignOut={vi.fn()} />)
+
+    await waitFor(() => expect(prefetchFingerprintAssertOptions).toHaveBeenCalledTimes(2), { timeout: 3000 })
   })
 
   it('automatically requests the local PWA gate exactly once and never repeats on resume', async () => {

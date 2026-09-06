@@ -18,6 +18,7 @@ import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
 import { useDialog } from '../lib/useDialog'
 import { rememberDeviceUnlockCredential } from '../lib/deviceUnlockRegistration'
+import { retryWhileServerWakes } from '../lib/serverWakeRetry'
 
 type LockScreenMode = 'session-timeout' | 'pwa-launch'
 
@@ -72,22 +73,30 @@ export function LockScreen({
 
     setFingerprintAvailable(false)
     let cancelled = false
-    ;(async () => {
+    // The lock screen is exactly where a scaled-to-zero backend is most likely to be cold, and
+    // asking once meant a lost race hid device unlock for as long as the screen stayed up -- with
+    // the password as the only way back in. Keep asking until the server actually answers, and hold
+    // the challenge ready so the tap itself never waits on the network.
+    const stopProbing = retryWhileServerWakes(async () => {
       const [platformAvailable, status] = await Promise.all([
         isPlatformAuthenticatorAvailable(),
         api.fetchAuthStatus(username).catch(() => null),
       ])
-      if (!platformAvailable || cancelled || !status?.hasFingerprintOnDevice) return
+      if (cancelled || !platformAvailable) return true
+      if (!status) return false
+      if (!status.hasFingerprintOnDevice) return true
+      setFingerprintAvailable(true)
       try {
-        setFingerprintAvailable(true)
-        void prefetchFingerprintAssertOptions().catch(() => undefined)
+        await prefetchFingerprintAssertOptions()
+        return true
       } catch {
-        // Backend unreachable - fall through to password unlock only.
+        return false
       }
-    })()
+    })
 
     return () => {
       cancelled = true
+      stopProbing()
       clearCachedFingerprintAssertOptions()
     }
   }, [isOpen, mode, username])

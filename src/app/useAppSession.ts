@@ -14,6 +14,7 @@ import {
   rememberDeviceUnlockCredential,
 } from '../lib/deviceUnlockRegistration'
 import { useAutoLock } from '../lib/useAutoLock'
+import { retryWhileServerWakes } from '../lib/serverWakeRetry'
 
 export interface UseAppSessionOptions {
   onLogoutBackupAndCleanup: (username: string) => void | Promise<void>
@@ -171,38 +172,54 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
     }
 
     let cancelled = false
-    ;(async () => {
+    // A backend that is still waking must not cost this session its fingerprint option. Only a real
+    // answer decides whether device unlock is offered; an unanswered status check is retried, so the
+    // button arrives a few seconds late instead of never.
+    const stopProbing = retryWhileServerWakes(async () => {
       const platformAvailable = await isPlatformAuthenticatorAvailable().catch(() => false)
-      if (cancelled) return
+      if (cancelled) return true
 
       if (!platformAvailable) {
         setHasFingerprintSetup(false)
         clearCachedFingerprintAssertOptions()
-        return
+        return true
       }
 
       const status = await api.fetchAuthStatus(username).catch(() => null)
-      if (cancelled) return
+      if (cancelled) return true
+      if (!status) return false
 
-      const hasFingerprint = !!status?.hasFingerprintOnDevice
+      const hasFingerprint = !!status.hasFingerprintOnDevice
       setHasFingerprintSetup(hasFingerprint)
       const exactCredentialId = getRegisteredDeviceCredentialId(username)
-      if (status && exactCredentialId && !hasFingerprint) {
+      if (exactCredentialId && !hasFingerprint) {
         forgetDeviceUnlockCredential(username, exactCredentialId)
       }
       if (!hasFingerprint) {
         clearCachedFingerprintAssertOptions()
       }
-    })()
+      return true
+    })
 
     return () => {
       cancelled = true
+      stopProbing()
     }
   }, [token, username, deviceUnlockRevision])
 
+  // The challenge has to be in hand before the user taps. Fetching it inside the tap spends the
+  // user-activation window a waking backend can easily outlast, and the browser then refuses the
+  // authenticator prompt outright -- the tap looks like it did nothing at all.
   useEffect(() => {
     if (!token || isLocked || !hideSensitive || !hasFingerprintSetup) return
-    void prefetchFingerprintAssertOptions().catch(() => undefined)
+    return retryWhileServerWakes(async () => {
+      try {
+        await prefetchFingerprintAssertOptions()
+        return true
+      } catch {
+        return false
+      }
+    })
   }, [token, isLocked, hideSensitive, hasFingerprintSetup])
 
   async function handleLogout() {
