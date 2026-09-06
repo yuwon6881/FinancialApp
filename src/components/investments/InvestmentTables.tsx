@@ -180,45 +180,60 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
         </article>
       ))}
     </div>
+    {/* Seven columns, not ten. The three that moved into each row's own disclosure -- the average
+        price paid and the two banked-return figures -- are history rather than today's position,
+        and holding all ten meant every money column was about seventy pixels wide at the narrow
+        end of the expanded tier: headings broke over three lines, figures lost their cell padding,
+        and the last column ran off the panel. Nothing is hidden; the row opens onto it. */}
     <div className="hidden lg:block">
       <DataTable embedded horizontalOverflow="hidden" tableClassName="table-fixed">
         <colgroup>
+          <col className="w-[24%]" />
+          <col className="w-[13%]" />
+          <col className="w-[9%]" />
+          <col className="w-[12%]" />
+          <col className="w-[16%]" />
+          <col className="w-[11%]" />
           <col className="w-[15%]" />
-          <col className="w-[9%]" />
-          <col className="w-[7%]" />
-          <col className="w-[10%]" />
-          <col className="w-[9%]" />
-          <col className="w-[11%]" />
-          <col className="w-[10%]" />
-          <col className="w-[11%]" />
-          <col className="w-[10%]" />
-          <col className="w-[8%]" />
         </colgroup>
         <DataTableHeader className="text-xs uppercase tracking-wide">
           <DataTableHeaderCell>Investment</DataTableHeaderCell>
           <DataTableHeaderCell>Account</DataTableHeaderCell>
           <DataTableHeaderCell className="text-right">Units</DataTableHeaderCell>
-          <DataTableHeaderCell className="text-right">Avg price paid</DataTableHeaderCell>
           <DataTableHeaderCell className="text-right">Latest price</DataTableHeaderCell>
           <DataTableHeaderCell className="text-right">Latest value ({portfolio.appCurrency})</DataTableHeaderCell>
           <DataTableHeaderCell className="text-right">Latest move</DataTableHeaderCell>
           <DataTableHeaderCell className="text-right">Gain on paper</DataTableHeaderCell>
-          <DataTableHeaderCell className="text-right">Already banked</DataTableHeaderCell>
-          <DataTableHeaderCell className="text-right">Dividends</DataTableHeaderCell>
         </DataTableHeader>
         <DataTableBody>
           {paginatedHoldings.map(holding => (
             <tr key={`${holding.accountId}-${holding.instrumentId}`} className="hover:bg-muted/20">
-              <td className="px-4 py-3"><Button variant="tertiary" onClick={() => onSelectHolding(holding)} className="cursor-pointer font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-accent-ink">{holding.symbol}</Button><span className="ml-2 text-xs text-muted-foreground">{holding.type}</span><span className="block max-w-44 truncate text-xs text-muted-foreground">{holding.name}</span><details className="group/valuation mt-2 rounded border border-border/50 bg-muted/10"><summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-xs font-semibold text-muted-foreground outline-none transition-colors hover:bg-muted/20 hover:text-foreground"><span>How this was worked out</span><ChevronDown className="size-3 transition-transform duration-200 group-open/valuation:rotate-180" /></summary><div className="border-t border-border/50 px-2 py-1.5 text-xs"><div className="flex flex-col gap-1 text-muted-foreground"><div className="flex justify-between gap-2"><span className="opacity-80">Fund worth</span><span className="font-medium text-foreground/90">{masked || holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)}</span></div><div className="flex justify-between gap-2"><span className="opacity-80">Price date</span><span className="font-medium text-foreground/90">{holding.priceDate ?? 'None'}</span></div></div></div></details></td>
-              <td className="px-4 py-3 text-muted-foreground">{holding.accountName}</td>
-              <td className="px-4 py-3 text-right font-medium">{masked ? '••••' : number(holding.units, 8)}</td>
-              <td className="px-4 py-3 text-right">{masked ? '••••' : money(holding.averageCostNative, holding.currency)}</td>
-              <td className="px-4 py-3 text-right">{masked ? '••••' : holding.latestPriceNative === undefined ? 'Unavailable' : money(holding.latestPriceNative, holding.currency)}</td>
-              <td className="px-4 py-3 text-right font-bold">{masked ? '••••' : holding.valueApp === undefined ? 'Exchange rate missing' : money(holding.valueApp, portfolio.appCurrency)}</td>
-              <td className="px-4 py-3 text-right">{masked ? '••••' : holding.dailyChangeApp === undefined ? '—' : money(holding.dailyChangeApp, portfolio.appCurrency)}</td>
-              <td className={`px-4 py-3 text-right font-bold ${(holding.unrealisedProfitLossApp ?? 0) >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.unrealisedProfitLossApp === undefined ? '—' : `${money(holding.unrealisedProfitLossApp, portfolio.appCurrency)} (${(holding.unrealisedPercent ?? 0).toFixed(1)}%)`}</td>
-              <td className={`px-4 py-3 text-right font-bold ${holding.realisedProfitLossApp === undefined ? '' : holding.realisedProfitLossApp >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.realisedProfitLossApp === undefined ? '—' : money(holding.realisedProfitLossApp, portfolio.appCurrency)}</td>
-              <td className={`px-4 py-3 text-right font-bold ${holding.netDividendsApp === undefined ? '' : holding.netDividendsApp >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.netDividendsApp === undefined ? '—' : money(holding.netDividendsApp, portfolio.appCurrency)}</td>
+              <td className="px-3 py-3">
+                <Button variant="tertiary" onClick={() => onSelectHolding(holding)} className="cursor-pointer font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-accent-ink">{holding.symbol}</Button>
+                <span className="ml-2 text-xs text-muted-foreground">{holding.type}</span>
+                <span className="block truncate text-xs text-muted-foreground" title={holding.name}>{holding.name}</span>
+                <details className="group/valuation mt-2 rounded border border-border/50 bg-muted/10">
+                  <summary className="flex cursor-pointer select-none items-center justify-between gap-1 px-2 py-1.5 text-xs font-semibold text-muted-foreground outline-none transition-colors hover:bg-muted/20 hover:text-foreground">
+                    <span className="leading-tight">How this was worked out</span>
+                    <ChevronDown className="size-3 shrink-0 transition-transform duration-200 group-open/valuation:rotate-180" />
+                  </summary>
+                  <div className="border-t border-border/50 px-2 py-1.5 text-xs">
+                    <div className="flex flex-col gap-1 text-muted-foreground">
+                      <div className="flex justify-between gap-2"><span className="opacity-80">Fund worth</span><span className="font-medium text-foreground/90">{masked || holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)}</span></div>
+                      <div className="flex justify-between gap-2"><span className="opacity-80">Avg price paid</span><span className="font-medium text-foreground/90">{masked ? '••••' : money(holding.averageCostNative, holding.currency)}</span></div>
+                      <div className="flex justify-between gap-2"><span className="opacity-80">Already banked</span><span className="font-medium text-foreground/90">{masked ? '••••' : holding.realisedProfitLossApp === undefined ? '—' : money(holding.realisedProfitLossApp, portfolio.appCurrency)}</span></div>
+                      <div className="flex justify-between gap-2"><span className="opacity-80">Dividends</span><span className="font-medium text-foreground/90">{masked ? '••••' : holding.netDividendsApp === undefined ? '—' : money(holding.netDividendsApp, portfolio.appCurrency)}</span></div>
+                      <div className="flex justify-between gap-2"><span className="opacity-80">Price date</span><span className="font-medium text-foreground/90">{holding.priceDate ?? 'None'}</span></div>
+                    </div>
+                  </div>
+                </details>
+              </td>
+              <td className="px-3 py-3 text-muted-foreground"><span className="block truncate" title={holding.accountName}>{holding.accountName}</span></td>
+              <td className="px-3 py-3 text-right font-medium">{masked ? '••••' : number(holding.units, 8)}</td>
+              <td className="px-3 py-3 text-right">{masked ? '••••' : holding.latestPriceNative === undefined ? 'Unavailable' : money(holding.latestPriceNative, holding.currency)}</td>
+              <td className="px-3 py-3 text-right font-bold">{masked ? '••••' : holding.valueApp === undefined ? 'Exchange rate missing' : money(holding.valueApp, portfolio.appCurrency)}</td>
+              <td className="px-3 py-3 text-right">{masked ? '••••' : holding.dailyChangeApp === undefined ? '—' : money(holding.dailyChangeApp, portfolio.appCurrency)}</td>
+              <td className={`px-3 py-3 text-right font-bold ${(holding.unrealisedProfitLossApp ?? 0) >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.unrealisedProfitLossApp === undefined ? '—' : `${money(holding.unrealisedProfitLossApp, portfolio.appCurrency)} (${(holding.unrealisedPercent ?? 0).toFixed(1)}%)`}</td>
             </tr>
           ))}
         </DataTableBody>
@@ -360,17 +375,21 @@ export const PagedActivityTable = ({
             <Button variant="tertiary" onClick={() => resetPage(() => { setMode('cash'); setType(''); setInstrumentId(''); setAppliedFilters(value => ({ ...value, type: '', instrumentId: '' })) })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'cash' ? 'bg-background hover:bg-background shadow-sm' : 'text-muted-foreground'}`}>Cash flow</Button>
           </div>
         </div>
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-end" onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); applySearch() } }}>
-          <div className="grid min-w-0 flex-1 gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+        {/* Three filters to a row at the widest tier, not five. `xl` is an alias of `lg` in this
+            theme, so the five-across row started at 1024px and left every control about 130px --
+            enough for "All a…" and a clipped date. The actions sit on their own line instead of
+            competing with the filters for that width. */}
+        <div className="flex flex-col gap-3" onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); applySearch() } }}>
+          <div className="grid min-w-0 flex-1 gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             <CustomSelect value={accountId} onChange={value => setAccountId(String(value))} options={[{ value: '', label: 'All accounts' }, ...portfolio.accounts.map(value => ({ value: value.id, label: value.name }))]} ariaLabel="Filter by account" className="min-w-0 w-full" />
             {mode === 'investments' && <CustomSelect value={instrumentId} onChange={value => setInstrumentId(String(value))} options={[{ value: '', label: 'All investments' }, ...portfolio.instruments.map(value => ({ value: value.id, label: value.symbol }))]} ariaLabel="Filter by investment" className="min-w-0 w-full" />}
             <CustomSelect value={type} onChange={value => setType(String(value))} options={typeOptions} ariaLabel="Filter by type" className="min-w-0 w-full" />
             <DatePicker value={from} onChange={setFrom} placeholder="From date" clearable clearAriaLabel="Clear from date" className="min-w-0 w-full" />
             <DatePicker value={to} onChange={setTo} placeholder="To date" clearable clearAriaLabel="Clear to date" className="min-w-0 w-full" />
           </div>
-          <div className="grid w-full shrink-0 grid-cols-2 gap-2 sm:w-auto xl:flex xl:self-auto">
-            <Button variant="primary" className="h-10 px-3 text-xs" onClick={applySearch}><Search className="size-3.5" /> Search</Button>
-            <Button variant="tertiary" className="h-10 px-3 text-xs" onClick={clearAll}>Clear all</Button>
+          <div className="grid w-full shrink-0 grid-cols-2 gap-2 sm:ml-auto sm:w-auto sm:flex">
+            <Button variant="primary" className="px-3 text-xs" onClick={applySearch}><Search className="size-3.5" /> Search</Button>
+            <Button variant="tertiary" className="px-3 text-xs" onClick={clearAll}>Clear all</Button>
           </div>
         </div>
       </div>

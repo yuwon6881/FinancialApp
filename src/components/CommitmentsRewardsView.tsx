@@ -17,7 +17,7 @@ import { RewardsSection } from './wishlist/RewardsSection'
 import { CommitmentsRewardsSheets } from './wishlist/CommitmentsRewardsSheets'
 import { CommitmentIcon } from './semanticIcons'
 import { Sparkles } from 'lucide-react'
-import { APP_LOCATION_CHANGED_EVENT } from '../lib/appLocation'
+import { APP_LOCATION_CHANGED_EVENT, updateAppSearch } from '../lib/appLocation'
 import { PageHeader } from './ui/PageHeader'
 
 function parseInitialCommitmentsRewardsTab(highlightedRewardId: string | null | undefined, highlightedCommitmentId: string | null | undefined): CommitmentsRewardsTabId {
@@ -195,6 +195,9 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
     if (nextTab !== 'commitments' && highlightedCommitmentId) onClearHighlightedCommitment?.()
     if (nextTab !== 'rewards' && highlightedRewardId) onClearHighlightedReward?.()
     setActiveTab(nextTab)
+    // Commitments and Rewards are separate rail destinations: the address follows the tab so the
+    // rail's marker, a reload and a shared link all agree with what is on screen.
+    updateAppSearch({ section: nextTab })
   }, [highlightedCommitmentId, highlightedRewardId, onClearHighlightedCommitment, onClearHighlightedReward])
 
   useHighlightedElement(

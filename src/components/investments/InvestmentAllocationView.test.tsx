@@ -53,7 +53,12 @@ describe('investment sleeve allocation view', () => {
     expect(table.className).toContain('table-fixed')
     expect(table.className).not.toContain('min-w-')
     expect(table.parentElement?.className).toContain('overflow-x-hidden')
-    expect(table.querySelectorAll('col')).toHaveLength(10)
-    expect(table.querySelector('col:last-child')?.className).toContain('w-[8%]')
+    // Seven columns whose widths total 100%: the table never scrolls sideways, so every column has
+    // to be wide enough to hold a currency figure with its cell padding intact.
+    const columns = [...table.querySelectorAll('col')]
+    expect(columns).toHaveLength(7)
+    const widths = columns.map(column => Number(/w-\[(\d+)%\]/.exec(column.className)?.[1]))
+    expect(widths.every(Number.isFinite)).toBe(true)
+    expect(widths.reduce((sum, width) => sum + width, 0)).toBe(100)
   })
 })

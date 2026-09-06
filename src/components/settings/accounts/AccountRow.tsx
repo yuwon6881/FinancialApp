@@ -52,8 +52,13 @@ export function AccountRow({
         account.isArchived ? 'border-dashed border-border/70 bg-card/40 opacity-75' : 'border-border/60 bg-card/70'
       }`}
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+      {/* Wraps on the row's own width rather than the window's. Inside a bucket card the row is
+          about 300px wide at the narrow end of the expanded tier, where the media-query row put the
+          name, the balance and both actions on one line: the name collapsed to a single letter with
+          the balance printed against it. The name keeps a floor width, so the balance and actions
+          drop to their own line instead of squeezing it out. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="flex min-w-[9rem] flex-1 items-center gap-3">
           <div className={`grid size-9 shrink-0 place-items-center rounded-xl border ${bucketClass}`} aria-hidden="true">
             <AccountIcon className="size-4" />
           </div>
@@ -73,7 +78,7 @@ export function AccountRow({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:flex-nowrap sm:justify-end">
+        <div className="flex shrink-0 items-center gap-x-3 gap-y-2 sm:ml-auto">
           <div className="flex shrink-0 items-center gap-2">
             <SensitiveAmount
               value={account.remaining}

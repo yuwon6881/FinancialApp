@@ -275,3 +275,34 @@ describe('RecurringPaymentsView pay early', () => {
     await waitFor(() => expect(onPayEarly).toHaveBeenCalledWith('bill-essential', 100, 'acct-essentials', true))
   })
 })
+
+// The navigation rail treats Recurring Bills and Loans as two destinations and reads which one is
+// showing from the address. A tab switch that only moved local state left the rail pointing at the
+// section the reader had just left, and a reload reopened the wrong tab.
+describe('RecurringPaymentsView addressing', () => {
+  it('writes the section it switched to into the address', () => {
+    window.history.replaceState({}, '', '/recurring?section=recurring')
+
+    render(
+      <RecurringPaymentsView
+        payments={[]}
+        accounts={accounts}
+        activeRecurringPayments={[]}
+        selectedMonth="Jul"
+        selectedYear={2026}
+        cycleDay={1}
+        onAddPayment={vi.fn()}
+        onToggleActive={vi.fn()}
+        onDeletePayment={vi.fn()}
+        onUpdatePayment={vi.fn()}
+        categories={[{ id: 'bills', name: 'Bills' }]}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('tab', { name: /Loans/ }))
+    expect(new URLSearchParams(window.location.search).get('section')).toBe('loans')
+
+    fireEvent.click(screen.getByRole('tab', { name: /Recurring Bills/ }))
+    expect(new URLSearchParams(window.location.search).get('section')).toBe('recurring')
+  })
+})

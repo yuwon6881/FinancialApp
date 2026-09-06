@@ -108,8 +108,11 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
     view.categoryUsage ?? view.visibleCategories.map(category => ({ category, count: null }))
   const isCategoryListLoading = categoryRows.length === 0 && view.isLoadingUsage
 
+  // One card per row. Both panels are dense rows of chips, selects and figures; side by side they
+  // each had about a third of the window to lay that out in, and every row inside them wrapped.
+  // Stacked, each gets the full measure and the rows read as single lines.
   return (
-    <div id="settings-panel-categories-preferences" role="tabpanel" aria-labelledby="settings-tab-categories-preferences" className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-in fade-in duration-200">
+    <div id="settings-panel-categories-preferences" role="tabpanel" aria-labelledby="settings-tab-categories-preferences" className="grid grid-cols-1 gap-6 items-start animate-in fade-in duration-200">
       {/* Transaction Categories */}
       <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs order-2 lg:order-1">
         <div

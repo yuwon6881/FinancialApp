@@ -19,7 +19,7 @@ import type { RequestDeleteCategoryOptions } from '../app/financialData/category
 import { isSpendingGuideCategory, isSystemCategoryName } from '../lib/categoryFlow'
 import { AccountsSkeleton } from './settings/accounts/AccountsSkeleton'
 import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
-import { APP_LOCATION_CHANGED_EVENT } from '../lib/appLocation'
+import { APP_LOCATION_CHANGED_EVENT, updateAppSearch } from '../lib/appLocation'
 import { SettingsTabs, type SettingsTabId } from './settings/SettingsTabs'
 import type { LedgerAccountInput } from '../app/financialData/accountActions'
 import type { LedgerAccountReconcileInput } from '../lib/api/accounts'
@@ -32,6 +32,15 @@ import { FingerprintSection } from './settings/FingerprintSection'
 import { InvestmentPlanSection } from './settings/InvestmentPlanSection'
 
 const AccountsSection = React.lazy(() => import('./settings/accounts/AccountsSection').then(m => ({ default: m.AccountsSection })))
+
+/** The `section` value each tab is addressed by, matching what the navigation rail links to. */
+const SECTION_BY_SETTINGS_TAB: Record<SettingsTabId, string> = {
+  'financial-model': 'model',
+  'investment-plan': 'investment-plan',
+  'categories-preferences': 'categories',
+  accounts: 'accounts',
+  security: 'security',
+}
 
 interface SettingsViewProps {
   investmentAllocation?: InvestmentAllocationOverview | null
@@ -144,6 +153,21 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     return 'financial-model'
   })
 
+  // A tab pressed on this page writes the address itself, so the limits card must not be scrolled
+  // to as if the reader had arrived from a link. Set synchronously before the address changes,
+  // which dispatches the location event in the same call.
+  const cameFromTabPress = React.useRef(false)
+
+  const handleTabChange = React.useCallback((nextTab: SettingsTabId) => {
+    if (nextTab !== 'accounts' && props.highlightedAccountId) props.onClearHighlightedAccount?.()
+    setActiveTab(nextTab)
+    cameFromTabPress.current = true
+    // Accounts and Settings are separate destinations on the navigation rail, and every section is
+    // linkable, so the address follows the tab rather than lagging a section behind it.
+    updateAppSearch({ section: SECTION_BY_SETTINGS_TAB[nextTab] })
+    cameFromTabPress.current = false
+  }, [props])
+
   React.useEffect(() => {
     const syncFromLocation = () => {
       if (props.highlightedAccountId) {
@@ -156,6 +180,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         setActiveTab('investment-plan')
       } else if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits') || search.includes('section=categories')) {
         setActiveTab('categories-preferences')
+        if (cameFromTabPress.current) return
         requestAnimationFrame(() => {
           const el = document.getElementById('category-limits-card')
           if (el) {
@@ -189,13 +214,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         icon={<span className="grid size-10 place-items-center rounded-xl bg-blue-500/10 text-blue-500"><Settings className="size-5" /></span>}
       />
 
-      <SettingsTabs
-        activeTab={activeTab}
-        onChange={nextTab => {
-          if (nextTab !== 'accounts' && props.highlightedAccountId) props.onClearHighlightedAccount?.()
-          setActiveTab(nextTab)
-        }}
-      />
+      <SettingsTabs activeTab={activeTab} onChange={handleTabChange} />
 
       {activeTab === 'financial-model' && (
         <FinancialModelTab
@@ -223,7 +242,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           onToggleChannel={props.onToggleChannel}
           pushEnrolmentRevision={props.pushEnrolmentRevision}
           hasSpendingGuides={hasSpendingGuides}
-          onNavigateToCategoryLimits={() => setActiveTab('categories-preferences')}
+          onNavigateToCategoryLimits={() => handleTabChange('categories-preferences')}
         />
       )}
 
@@ -269,16 +288,15 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         </React.Suspense>
       )}
 
+      {/* Four cards in one grid, not two stacked columns. As columns, each side grew to its own
+          content height and the pairs stopped lining up -- a one-line card sat beside a three-line
+          one with a ragged gap between them. In one grid each row shares a height. */}
       {activeTab === 'security' && (
-        <div id="settings-panel-security" role="tabpanel" aria-labelledby="settings-tab-security" className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-in fade-in duration-200">
-          <div className="space-y-6">
-            <ActiveDevicesSection />
-            <ChangePasswordSection hideSensitive={hideSensitive} />
-          </div>
-          <div className="space-y-6">
-            <TwoFactorSection hideSensitive={hideSensitive} />
-            <FingerprintSection />
-          </div>
+        <div id="settings-panel-security" role="tabpanel" aria-labelledby="settings-tab-security" className="grid grid-cols-1 gap-6 lg:grid-cols-2 animate-in fade-in duration-200">
+          <ActiveDevicesSection />
+          <TwoFactorSection hideSensitive={hideSensitive} />
+          <ChangePasswordSection hideSensitive={hideSensitive} />
+          <FingerprintSection />
         </div>
       )}
     </div>

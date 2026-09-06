@@ -43,9 +43,13 @@ export function InvestmentClassificationRow({
       layout="position"
       transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 38 }}
       whileDrag={reduceMotion ? undefined : { scale: 1.015, boxShadow: 'var(--app-shadow)' }}
-      className="flex flex-col gap-2.5 rounded-xl border border-border/50 bg-card/60 p-3 shadow-2xs transition-colors hover:border-border/80 sm:flex-row sm:items-center sm:gap-3 w-full min-w-0 overflow-hidden"
+      // Wraps on the row's own width. The media-query row put a fixed 190px select beside the name
+      // from 640px of *window* up, but this card sits in a half-width column, so the name was left
+      // with about thirty pixels and showed one letter. Both parts keep a floor width and the
+      // select drops below the name when the row cannot hold them side by side.
+      className="flex flex-wrap items-center gap-x-3 gap-y-2.5 rounded-xl border border-border/50 bg-card/60 p-3 shadow-2xs transition-colors hover:border-border/80 w-full min-w-0 overflow-hidden"
     >
-      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+      <div className="flex min-w-[10rem] flex-1 items-center gap-2.5">
         <Button size="icon"
           variant="tertiary"
           type="button"
@@ -70,7 +74,7 @@ export function InvestmentClassificationRow({
           <span className="block truncate text-xs text-muted-foreground">{value.name}</span>
         </div>
       </div>
-      <div className="w-full sm:w-[190px] shrink-0 min-w-0">
+      <div className="w-full min-w-[10rem] flex-1 sm:w-auto sm:max-w-[190px]">
         <CustomSelect
           ariaLabel={`Classify ${value.symbol}`}
           value={value.sleeve ?? ''}

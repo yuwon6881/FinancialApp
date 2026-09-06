@@ -10,7 +10,7 @@ import { RecurringPaymentFormSheet } from './recurring/RecurringPaymentFormSheet
 import { RecurringFilterBar } from './recurring/RecurringFilterBar'
 import { RecurringPaymentCards } from './recurring/RecurringPaymentCards'
 import { useRecurringPaymentsView } from './recurring/useRecurringPaymentsView'
-import { APP_LOCATION_CHANGED_EVENT } from '../lib/appLocation'
+import { APP_LOCATION_CHANGED_EVENT, updateAppSearch } from '../lib/appLocation'
 import { RecurringTabs, type RecurringTabId } from './recurring/RecurringTabs'
 import type { LoanLoadStatus } from '../app/financialData/useLoanData'
 import { formatSensitiveAmount } from './recurring/formatters'
@@ -180,6 +180,10 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     if (nextTab !== 'recurring' && highlightedRecurringId) onClearHighlightedRecurring?.()
     if (nextTab !== 'loans' && currentHighlightedLoanId) handleClearHighlightedLoan()
     setActiveTab(nextTab)
+    // Recurring Bills and Loans are two destinations on the navigation rail, so switching between
+    // them by tab has to move the address too -- otherwise the rail keeps pointing at the section
+    // the reader just left, and a reload or a shared link reopens the wrong one.
+    updateAppSearch({ section: nextTab })
   }, [currentHighlightedLoanId, handleClearHighlightedLoan, highlightedRecurringId, onClearHighlightedRecurring])
 
   React.useEffect(() => {

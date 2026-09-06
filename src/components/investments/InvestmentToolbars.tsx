@@ -26,16 +26,19 @@ export const ActionToolbar = ({
   onAddInvestment: () => void
   onUpdatePrices: () => void
 }) => (
-  <section aria-label="Investment actions" className={cn(panelClass, 'flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between')}>
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:flex lg:flex-wrap">
-      <Button variant="tertiary" disabled={mutationsDisabled || portfolio.accounts.length === 0 || portfolio.instruments.length === 0} onClick={onAddActivity}><Plus className="size-4" /> Add activity</Button>
-      <Button variant="tertiary" disabled={mutationsDisabled || portfolio.accounts.length === 0} onClick={onManageCash}><Wallet className="size-4" /> Manage cash</Button>
-      <Button variant="tertiary" disabled={mutationsDisabled} onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>
-      <Button variant="tertiary" disabled={mutationsDisabled} onClick={onAddInvestment}><Search className="size-4" /> Add investment</Button>
+  <section aria-label="Investment actions" className={cn(panelClass, 'flex flex-col gap-2 p-4 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-3')}>
+    {/* Two columns until the row can hold all five actions side by side. Four columns at the
+        medium tier squeezed "Add investment" onto two lines and left the refresh action stranded
+        on a row of its own at a quarter of the width. */}
+    <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-wrap">
+      <Button variant="tertiary" className="whitespace-nowrap" disabled={mutationsDisabled || portfolio.accounts.length === 0 || portfolio.instruments.length === 0} onClick={onAddActivity}><Plus className="size-4" /> Add activity</Button>
+      <Button variant="tertiary" className="whitespace-nowrap" disabled={mutationsDisabled || portfolio.accounts.length === 0} onClick={onManageCash}><Wallet className="size-4" /> Manage cash</Button>
+      <Button variant="tertiary" className="whitespace-nowrap" disabled={mutationsDisabled} onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>
+      <Button variant="tertiary" className="whitespace-nowrap" disabled={mutationsDisabled} onClick={onAddInvestment}><Search className="size-4" /> Add investment</Button>
     </div>
     <Button
       variant="tertiary"
-      className="justify-center lg:w-auto"
+      className="justify-center whitespace-nowrap lg:w-auto"
       disabled={isOffline || refreshing || !portfolio.marketDataConfigured || !portfolio.holdings.length}
       aria-busy={refreshing}
       onClick={onUpdatePrices}

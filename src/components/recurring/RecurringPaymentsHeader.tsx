@@ -46,7 +46,7 @@ const StatTile: React.FC<{
     </span>
     <span
       title={title}
-      className={`block truncate text-base font-extrabold sm:text-2xl ${tone === 'figure' ? 'text-blue-500' : 'text-foreground'}`}
+      className={`block truncate text-base font-extrabold sm:text-xl ${tone === 'figure' ? 'text-blue-500' : 'text-foreground'}`}
     >
       {value}
     </span>
@@ -134,10 +134,10 @@ const InteractiveStatTile: React.FC<{
         onMouseLeave={() => { if (!isMobile && !pinned) setOpen(false) }}
         onFocus={() => { if (!isMobile) setOpen(true) }}
         onBlur={() => { if (!isMobile && !pinned) setOpen(false) }}
-        // The hover surface bleeds sideways only. `p-1 -m-1` also inflated the tile vertically,
-        // and the wrapper clips its overflow, so the last line of the figure was cut off the
-        // moment the Breakdown pill wrapped onto its own row.
-        className="group/stat flex h-full w-full flex-col items-start justify-between text-left cursor-pointer select-none rounded-lg px-1 -mx-1 py-0 transition-colors hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-ring"
+        // The hover surface covers the tile exactly. It used to bleed 4px sideways (`px-1 -mx-1`),
+        // which put the truncation edge of a long figure right on the neighbour's divider -- the
+        // yearly total and the count beside it read as one run-on number.
+        className="group/stat flex h-full w-full flex-col items-start justify-between text-left cursor-pointer select-none rounded-lg p-0 transition-colors hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-ring"
       >
         {/* The label must not wrap: a two-line "Yearly Total" dropped its figure below the plain
             tiles beside it. The Breakdown pill moves to its own line instead when space is tight. */}
@@ -151,7 +151,7 @@ const InteractiveStatTile: React.FC<{
         </div>
         <span
           title={title}
-          className={`block truncate text-base font-extrabold sm:text-2xl ${tone === 'figure' ? 'text-blue-500' : 'text-foreground'}`}
+          className={`block truncate text-base font-extrabold sm:text-xl ${tone === 'figure' ? 'text-blue-500' : 'text-foreground'}`}
         >
           {value}
         </span>
@@ -246,7 +246,10 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
           </Button>
         )}
       >
-          <div className="mt-4 grid min-w-0 grid-cols-2 gap-x-2 gap-y-3 sm:grid-cols-4 sm:gap-y-0">
+          {/* Two figures per row until the rail-narrowed page can hold four. At the medium tier a
+              four-column row gave each currency figure about a hundred pixels, so neighbouring
+              totals ran into the divider between them. */}
+          <div className="mt-4 grid min-w-0 grid-cols-2 gap-x-2 gap-y-3 lg:grid-cols-4 lg:gap-y-0">
             {isLoansView ? (
               <>
                 <InteractiveStatTile
@@ -269,13 +272,13 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
                   formatSensitive={formatSensitive}
                   hideSensitive={hideSensitive}
                   isMobile={isMobile}
-                  className="border-l border-border/60 pl-2 pr-1 sm:px-2"
+                  className="border-l border-border/60 pl-2 pr-1 lg:px-2"
                 />
                 <StatTile
                   label="Loans tracked"
                   value={loanCount}
                   tone="count"
-                  className="col-span-2 border-t border-border/60 pt-2 sm:col-span-1 sm:border-t-0 sm:border-l sm:pl-2 sm:pt-0"
+                  className="col-span-2 border-t border-border/60 pt-3 lg:col-span-1 lg:border-t-0 lg:border-l lg:pl-2 lg:pt-0"
                 />
               </>
             ) : (
@@ -290,18 +293,18 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
                   formatSensitive={formatSensitive}
                   hideSensitive={hideSensitive}
                   isMobile={isMobile}
-                  className="border-l border-border/60 pl-2 pr-1 sm:px-2"
+                  className="border-l border-border/60 pl-2 pr-1 lg:px-2"
                 />
                 <StatTile
                   label="Daily Cost"
                   value={formatSensitive(totalCommittedDaily)}
-                  className="border-l border-border/60 pl-2 pr-1 sm:px-2"
+                  className="border-t border-border/60 pr-2 pt-3 lg:border-t-0 lg:border-l lg:px-2 lg:pt-0"
                 />
                 <StatTile
                   label="Active bills"
                   value={`${activeCount} / ${totalCount}`}
                   tone="count"
-                  className="border-t border-border/60 pt-2 sm:border-t-0 sm:border-l sm:pl-2 sm:pt-0"
+                  className="border-l border-t border-border/60 pl-2 pt-3 lg:border-t-0 lg:px-2 lg:pt-0"
                 />
               </>
             )}
