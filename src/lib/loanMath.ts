@@ -295,7 +295,7 @@ function hasValidCadence(frequency: string | null | undefined, dueDay: number | 
 
 function findOccurrenceOnOrAfter(start: string, frequency: string, dueDay: number, date: string) {
   const [startYear, startMonth] = start.split('-').map(Number)
-  const [dateYear, dateMonth] = date.split('-').map(Number)
+  const [dateYear] = date.split('-').map(Number)
   const annual = frequency.toLowerCase() === 'annually'
   if (annual) {
     const year = Math.max(startYear, dateYear)
@@ -304,8 +304,13 @@ function findOccurrenceOnOrAfter(start: string, frequency: string, dueDay: numbe
     return candidate
   }
 
-  let year = Math.max(startYear, dateYear)
-  let month = year === startYear ? Math.max(startMonth, dateMonth) : dateMonth
+  // Search from the later of the two bounds. Mirrors LoanReplay.FindOccurrenceOnOrAfter: picking
+  // the month with Math.max(startMonth, dateMonth) went wrong whenever tracking started in a year
+  // before the schedule did, which put the projected amortisation on a schedule that
+  // loanTermSchedule.ts (walking forward from tracking start) would never agree with.
+  const floor = date > start ? date : start
+  let year = Number(floor.slice(0, 4))
+  let month = Number(floor.slice(5, 7))
   let candidate = anchoredDate(year, month, dueDay)
   if (candidate < start || candidate < date) {
     month += 1

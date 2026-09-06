@@ -74,11 +74,11 @@ function BillItemRow({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-          {/* Both modes are the same fact about the bill, so both are the same badge. The tone is
-              what differs: auto-deduct is the one mode the bank moves on its own, and the only one
-              that can overdraw this account without the user acting. Styling only that one and
-              leaving the other as bare text made the pair read as two unrelated things. */}
-          <Badge tone={payment.paymentMode === 'AutoDeduct' && !isPaused ? 'info' : 'neutral'}>
+          {/* Both modes are the same fact about the bill -- how it gets paid -- so both wear the
+              same badge in the same tone, and the words carry the distinction. Colouring only
+              auto-deduct made the manual rows read as unstyled leftovers rather than a stated
+              mode. A paused bill has no active mode, so it drops back to neutral. */}
+          <Badge tone={isPaused ? 'neutral' : 'info'}>
             {modeLabel}
           </Badge>
           {dueFormatted && (

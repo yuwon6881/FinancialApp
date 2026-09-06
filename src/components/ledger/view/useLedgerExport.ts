@@ -4,7 +4,15 @@ import type { PagedTransactionResult } from '../../../lib/api'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../../../lib/csvExport'
 import { getCycleLabelForDropdown } from '../../../lib/cycleLabels'
 import type { TransactionSort } from '../../../lib/transactionOrdering'
-import type { TransactionLinkFilter, TransactionSearchMode } from '../../../lib/transactionFilters'
+import {
+  parseTxTypes,
+  type TransactionLinkFilter,
+  type TransactionSearchMode,
+  type TransactionTypeFilterOption,
+} from '../../../lib/transactionFilters'
+
+const TX_TYPE_LABELS = (type: TransactionTypeFilterOption): string =>
+  type === 'inflow' ? 'Inflows' : type === 'outflow' ? 'Outflows' : 'Transfers'
 import {
   splitFilterSelections,
   parseAmountFilter,
@@ -108,8 +116,12 @@ export function useLedgerExport(options: UseLedgerExportOptions) {
       const label = categoryFilters.join(' + ')
       parts.push(`${label} ${categoryFilters.length > 1 ? 'Categories' : 'Category'}`)
     }
-    if (appliedTxTypeFilter) {
-      parts.push(appliedTxTypeFilter === 'inflow' ? 'Inflows' : appliedTxTypeFilter === 'outflow' ? 'Outflows' : 'Transfers')
+    // Through the canonical parser, not a scalar comparison: this filter is a list of selected
+    // types. An empty list is truthy, and never equals 'inflow' or 'outflow', so comparing it
+    // directly stamped "Transfers" on the filename of every unfiltered export.
+    const activeTxTypes = parseTxTypes(appliedTxTypeFilter)
+    if (activeTxTypes.length > 0) {
+      parts.push(activeTxTypes.map(TX_TYPE_LABELS).join(' + '))
     }
     if (appliedStartDate || appliedEndDate) {
       parts.push(`Dates ${appliedStartDate || 'Any'} to ${appliedEndDate || 'Any'}`)

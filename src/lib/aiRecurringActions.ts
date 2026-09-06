@@ -1,6 +1,6 @@
 import type { AiUiAction } from './api/ai'
 import type { AiActionsDeps } from './aiActions'
-import { REMINDER_LEAD_DAY_OPTIONS } from './recurringPayments'
+import { DEFAULT_REMINDER_SETTINGS, REMINDER_LEAD_DAY_OPTIONS } from './recurringPayments'
 
 type RecurringActionDeps = Pick<
   AiActionsDeps,
@@ -63,10 +63,10 @@ export function dispatchAiRecurringSettingAction(action: AiUiAction, deps: Recur
     mode: requestedMode === 'Once' || requestedMode === 'Daily' ? requestedMode : (payment.reminderMode ?? 'Once'),
     leadDays: requestedLeadDays != null && REMINDER_LEAD_DAY_OPTIONS.includes(requestedLeadDays)
       ? requestedLeadDays
-      : (payment.reminderLeadDays ?? 3),
+      : (payment.reminderLeadDays ?? DEFAULT_REMINDER_SETTINGS.leadDays),
   } as const
   const unchanged = (payment.reminderEnabled ?? false) === settings.enabled &&
-    (!settings.enabled || ((payment.reminderMode ?? 'Once') === settings.mode && (payment.reminderLeadDays ?? 3) === settings.leadDays))
+    (!settings.enabled || ((payment.reminderMode ?? 'Once') === settings.mode && (payment.reminderLeadDays ?? DEFAULT_REMINDER_SETTINGS.leadDays) === settings.leadDays))
   if (unchanged) {
     deps.showToast(`"${payment.name}" already uses those reminder settings.`, 'No change needed', 'info')
     return payment.id

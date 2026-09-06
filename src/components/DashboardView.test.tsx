@@ -278,6 +278,15 @@ describe('DashboardView focused Today experience', () => {
     expect(props.onNavigateToLedger).toHaveBeenCalledWith({ category: 'Essentials' })
   })
 
+  it('navigates to Essentials outflows when Review Essentials spending is clicked', () => {
+    const props = makeProps()
+    render(<DashboardView {...props} />)
+
+    const reviewButton = screen.getByRole('button', { name: /Review Essentials spending/i })
+    fireEvent.click(reviewButton)
+    expect(props.onNavigateToLedger).toHaveBeenCalledWith({ category: 'Essentials', txType: 'outflow' })
+  })
+
   it('keeps long-term Growth Investments out of the Today view', () => {
     render(<DashboardView {...makeProps()} />)
 

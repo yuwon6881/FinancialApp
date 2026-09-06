@@ -29,4 +29,25 @@ describe('buildCsvContent', () => {
     expect(csv).toContain('Salary,Salary,Income,,1000.00,')
     expect(csv).toContain('Transfer,Income -> Essentials,,,500.00')
   })
+
+  it('classifies a lower-cased transfer as internal movement, as the server export does', () => {
+    const csv = buildCsvContent([
+      row({ description: 'Move', ledgerCategory: 'transfer:Essentials->Rewards', amount: -50 }),
+    ])
+
+    expect(csv).toContain('Essentials -> Rewards,,,50.00')
+  })
+
+  it('leaves the account column blank rather than writing an opaque account id', () => {
+    const namedCsv = buildCsvContent(
+      [row({ accountId: 'acc-1' })],
+      [{ id: 'acc-1', name: 'Everyday' }],
+    )
+    expect(namedCsv.trim().endsWith('Everyday')).toBe(true)
+
+    // The account list is optional and omits archived accounts; the server writes "" here.
+    const unknownCsv = buildCsvContent([row({ accountId: 'acc-missing' })], [])
+    expect(unknownCsv).not.toContain('acc-missing')
+    expect(unknownCsv.trim().endsWith(',')).toBe(true)
+  })
 })

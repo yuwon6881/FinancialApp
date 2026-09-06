@@ -94,13 +94,6 @@ const USAGE_ON_TRACK = 1.05
 /** Over by more than this share of the cycle's Essentials money is over by a lot. */
 const OVERSPEND_HEAVY_RATIO = 0.1
 
-/**
- * A projection divides by how much of the cycle has run, so the opening days would otherwise
- * swing the rank on a single purchase — one ordinary shop on day one of thirty projects to thirty
- * of them. Ranking treats the cycle as at least a tenth gone, which damps that without touching
- * the elapsed share the card draws its pace marker from.
- */
-const EARLY_CYCLE_FLOOR = 0.1
 
 /**
  * Two bands that never overlap, because being inside the budget must always outrank being outside
@@ -136,12 +129,16 @@ export function evaluateEssentialsChallenge(input: EssentialsChallengeInput): Es
     cycle,
   } = input
 
+  // When a cycle ends, use the server's final closing balance rather than re-subtracting unpaid bills.
+  const effectiveRemaining = cycle.phase === 'ended' ? projectedEndingBalance : projectedRemaining
+  const overspend = Math.max(0, -effectiveRemaining)
+
   // Mirrors the plan snapshot's daily figures so Today states one allowance, not two: an upcoming
   // cycle spreads across every day it has, and an ended one is a single closing figure.
   const spendDays = Math.max(1, cycle.phase === 'active'
     ? cycle.daysLeft
     : cycle.phase === 'upcoming' ? cycle.totalDays : 1)
-  const dailyAllowance = Math.max(0, projectedRemaining) / spendDays
+  const dailyAllowance = Math.max(0, effectiveRemaining) / spendDays
   const paceDifference = dailyAllowance > 0
     ? (currentDailyPace - dailyAllowance) / dailyAllowance
     : currentDailyPace > 0 ? 1 : 0
@@ -152,11 +149,12 @@ export function evaluateEssentialsChallenge(input: EssentialsChallengeInput): Es
     : cycle.phase === 'ended'
       ? 1
       : clamp(cycle.dayNumber / Math.max(1, cycle.totalDays), 0, 1)
-  const usedRatio = funded ? 1 - projectedRemaining / totalAvailable : 0
-  const drift = usedRatio - paceRatio
-  const projectedUsage = funded ? usedRatio / Math.max(paceRatio, EARLY_CYCLE_FLOOR) : 0
-  const overspend = Math.max(0, -projectedRemaining)
-  const paceGap = funded ? -drift * totalAvailable : 0
+  const usedRatio = funded ? 1 - effectiveRemaining / totalAvailable : 0
+  // Derived from the server's forecast (projectedEndingBalance), which treats committed bills and
+  // non-recurring daily pace distinctly rather than extrapolating bills at a daily rate.
+  const projectedUsage = funded ? (totalAvailable - projectedEndingBalance) / totalAvailable : 0
+  const drift = projectedUsage - 1
+  const paceGap = funded ? projectedEndingBalance : 0
 
   let tier: EssentialsChallengeTier
   if (!funded) tier = 'unfunded'
@@ -165,7 +163,7 @@ export function evaluateEssentialsChallenge(input: EssentialsChallengeInput): Es
   else if (projectedEndingBalance < 0) tier = 'off-track'
   else if (projectedUsage <= USAGE_FAR_AHEAD) tier = 'far-ahead'
   else if (projectedUsage <= USAGE_AHEAD) tier = 'ahead'
-  else if (projectedUsage <= USAGE_ON_TRACK) tier = 'on-track'
+  else if (projectedUsage <= USAGE_ON_TRACK && paceDifference <= 0.05) tier = 'on-track'
   else tier = 'near-limit'
 
   const score = isUnrankedTier(tier)
@@ -174,11 +172,12 @@ export function evaluateEssentialsChallenge(input: EssentialsChallengeInput): Es
       ? Math.round(clamp(OVER_BUDGET_CEILING - (overspend / totalAvailable) * OVER_BUDGET_SLOPE, 0, OVER_BUDGET_CEILING))
       : Math.round(clamp(ON_PLAN_SCORE + (1 - projectedUsage) * USAGE_SCORE_SLOPE, IN_BUDGET_FLOOR, 100))
 
+  const isStarted = funded && cycle.phase !== 'upcoming'
   const badges: EssentialsChallengeBadge[] = [
-    { id: 'under-pace', earned: funded && drift <= 0 },
-    { id: 'buffer-held', earned: funded && projectedEndingBalance > 0 },
-    { id: 'bills-clear', earned: unpaidRecurringCount === 0 },
-    { id: 'limits-clean', earned: exceededCategoryLimits === 0 },
+    { id: 'under-pace', earned: isStarted && drift <= 0 },
+    { id: 'buffer-held', earned: isStarted && projectedEndingBalance > 0 },
+    { id: 'bills-clear', earned: isStarted && unpaidRecurringCount === 0 },
+    { id: 'limits-clean', earned: isStarted && exceededCategoryLimits === 0 },
   ]
 
   return {
@@ -189,7 +188,7 @@ export function evaluateEssentialsChallenge(input: EssentialsChallengeInput): Es
     projectedUsage,
     drift,
     totalAvailable,
-    projectedRemaining,
+    projectedRemaining: effectiveRemaining,
     projectedEndingBalance,
     overspend,
     paceGap,

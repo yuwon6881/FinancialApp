@@ -20,7 +20,7 @@ export const EMPTY_PUSH: UsePushNotificationsResult = {
 
 export const EMPTY_SCANS: ScanPollingResults = {
   receiptScan: { activeReceiptScanDraft: null, failedScanJob: null, receiptScanJobIds: [], handleReceiptScanStarted: () => undefined, clearReceiptScanJob: async () => undefined },
-  receiptSplit: { activeReceiptSplitDraft: null, failedReceiptSplitJob: null, receiptSplitJobIds: [], handleReceiptSplitStarted: () => undefined, clearReceiptSplitJob: async () => undefined },
+  receiptSplit: { activeReceiptSplitDraft: null, failedReceiptSplitJob: null, receiptSplitJobIds: [], handleReceiptSplitStarted: () => undefined, releaseReceiptSplitReview: () => undefined, clearReceiptSplitJob: async () => undefined },
   investmentScan: { activeInvestmentScanDraft: null, failedInvestmentScanJob: null, investmentScanJobIds: [], handleInvestmentScanStarted: () => undefined, clearInvestmentScanJob: async () => undefined },
 }
 

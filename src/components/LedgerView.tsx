@@ -35,6 +35,7 @@ import { LedgerPendingReviews } from './ledger/LedgerPendingReviews'
 import { LedgerBalanceReconciliation } from './ledger/LedgerBalanceReconciliation'
 import { LedgerServerStatus } from './ledger/LedgerServerStatus'
 import { LedgerActiveFilterSummary } from './ledger/LedgerActiveFilterSummary'
+import { hasEffectiveAmountFilter } from './ledger/view/ledgerViewTypes'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
 import type { StabilityTopUpContext } from './ledger/transaction-form/useTransactionFormOptions'
 
@@ -129,6 +130,7 @@ interface LedgerViewProps {
   failedReceiptSplitJob?: ReceiptSplitFailure | null
   onReceiptSplitStarted?: (scanId: string) => void
   onReceiptSplitCleared?: (scanId: string) => void | Promise<void>
+  onReceiptSplitReviewReleased?: (scanId: string) => void
   onReceiptSplitOpenChange?: (open: boolean) => void
   preferredPageSize?: number
   preferredSortOrder?: import('../lib/transactionOrdering').TransactionSort
@@ -151,7 +153,14 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
 
   const formRef = useRef<TransactionFormSheetRef>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  // The review banner is a way back to a scan that is not on screen; while the editor is open it
+  // is neither reachable (the sheet covers it) nor true.
+  const [isSplitEditorOpen, setIsSplitEditorOpen] = useState(false)
   const [moveTransactions, setMoveTransactions] = useState<Transaction[]>([])
+  const handleSplitEditorOpenChange = useCallback((open: boolean) => {
+    setIsSplitEditorOpen(open)
+    props.onReceiptSplitOpenChange?.(open)
+  }, [props.onReceiptSplitOpenChange])
   const handleAddFormOpenChange = useCallback((open: boolean) => {
     setIsFormOpen(open)
     props.onAddFormOpenChange?.(open)
@@ -238,7 +247,9 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   const activeFilters = props.showAllCycles ? ledger.appliedFilters : ledger.selectedFilters
   const activeAdvancedFilterCount =
     (activeStartDate || activeEndDate ? 1 : 0) +
-    (activeMinAmount || activeMaxAmount ? 1 : 0) +
+    // Only a bound the predicate can actually use. A negative one is dropped, and counting it made
+    // the summary and the badge claim a filter that was narrowing nothing.
+    (hasEffectiveAmountFilter(activeMinAmount, activeMaxAmount) ? 1 : 0) +
     (activeRecurringFilter !== 'all' ? 1 : 0) +
     (activeWishlistFilter !== 'all' ? 1 : 0) +
     (activeReloadFilter !== 'all' ? 1 : 0) +
@@ -299,7 +310,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
 
       <LedgerPendingReviews
         receiptReady={!hideSensitive && Boolean(props.receiptScanDraft) && !isFormOpen}
-        receiptSplitReady={!hideSensitive && Boolean(props.receiptSplitDraft)}
+        receiptSplitReady={!hideSensitive && Boolean(props.receiptSplitDraft) && !isSplitEditorOpen}
         onReviewReceipt={props.onReviewReceiptScan}
         onReviewReceiptSplit={props.onReviewReceiptSplit}
       />
@@ -381,9 +392,10 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         failedReceiptSplitJob={props.failedReceiptSplitJob}
         onReceiptSplitStarted={props.onReceiptSplitStarted}
         onReceiptSplitCleared={props.onReceiptSplitCleared}
+        onReceiptSplitReviewReleased={props.onReceiptSplitReviewReleased}
         autoOpenReceiptSplit={props.autoOpenReceiptSplit}
         onResetAutoOpenReceiptSplit={props.onResetAutoOpenReceiptSplit}
-        onReceiptSplitOpenChange={props.onReceiptSplitOpenChange}
+        onReceiptSplitOpenChange={handleSplitEditorOpenChange}
       />
 
       <LedgerFilterBar
@@ -464,7 +476,9 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onPageChange={ledger.setCurrentPage}
         onPageSizeChange={(size) => {
           ledger.setPageSize(size)
-          if (!props.showAllCycles) props.onPreferredPageSizeChange?.(size)
+          // Remembered from either mode. Skipping the all-cycles one left that view resetting to
+          // ten rows on every entry, with no way to make the choice stick.
+          props.onPreferredPageSizeChange?.(size)
           ledger.setCurrentPage(1)
         }}
       />

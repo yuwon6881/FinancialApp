@@ -1,5 +1,5 @@
 import type React from 'react'
-import type { Dispatch, RefObject } from 'react'
+import { useState, type Dispatch, type RefObject } from 'react'
 import type { TransactionFormAction, TransactionFormState } from './transactionFormReducer'
 import { validateTransactionForm } from './transactionFormValidation'
 import { mapFormToTransaction } from './transactionFormMapping'
@@ -79,8 +79,13 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
     scanner,
   } = options
 
+  // Saving is not always instant — attached documents upload before the transaction resolves — and
+  // the submit button carried no busy state, so a second tap posted the whole transaction again.
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (isSubmitting) return
     if (hideSensitive || sensitivePreferenceStatus === 'pending') {
       dispatch({
         type: 'SET_ERRORS',
@@ -168,6 +173,7 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
 
     const documentChanges = documentsFieldRef.current?.getChanges() ?? { pending: [], unlinkIds: [] }
 
+    setIsSubmitting(true)
     try {
       if (state.mode === 'edit' && state.editingId) {
         await onUpdateTransaction?.(state.editingId, mapped, documentChanges)
@@ -188,10 +194,12 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
         errors: { submit: getErrorMessage(error, 'This transaction could not be saved. Please try again.') },
       })
       return
+    } finally {
+      setIsSubmitting(false)
     }
 
     documentsFieldRef.current?.reset()
   }
 
-  return { handleSubmit }
+  return { handleSubmit, isSubmitting }
 }

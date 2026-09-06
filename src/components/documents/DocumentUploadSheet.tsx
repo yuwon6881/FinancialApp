@@ -11,17 +11,19 @@ import { buildMutationSuccessToast, buildUndoSuccessToast } from '../../lib/muta
 import * as api from '../../lib/api/documents'
 import { useAppUi } from '../../contexts/AppContext'
 import { formatCurrencyVal } from '../../lib/utils'
-import type { DocumentVaultConstraints, TaxReliefCategoryDefinition } from '../../types'
+import type { TaxReliefCategoryDefinition } from '../../types'
 import { FormField } from '../ui/FormField'
 import { ModalActions } from '../ui/ModalActions'
 import { mapServerErrorToField, type ServerFieldRule } from '../../lib/formErrors'
 import { revealFirstFieldError } from '../ui/formValidation'
 
 import {
-  FALLBACK_ACCEPTED_UPLOAD_TYPES,
+  FALLBACK_DOCUMENT_CONSTRAINTS as FALLBACK_CONSTRAINTS,
   UNSUPPORTED_DOCUMENT_TYPE_MESSAGE,
   buildDocumentAcceptAttribute,
+  formatUploadMegabytes as formatMb,
   isSupportedDocumentUpload,
+  normalizeDocumentConstraints,
 } from '../../lib/documentUploadTypes'
 
 interface Props {
@@ -33,14 +35,7 @@ interface Props {
   currency: string
 }
 
-const FALLBACK_CONSTRAINTS: DocumentVaultConstraints = {
-  maxDocumentBytes: 20 * 1024 * 1024,
-  maxBulkDocuments: 10,
-  maxTotalBytesPerUser: 2 * 1024 * 1024 * 1024,
-  acceptedUploadTypes: FALLBACK_ACCEPTED_UPLOAD_TYPES,
-}
 const TAX_YEAR_LOOKBACK = 7
-const formatMb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(2)} MB`
 type UploadValidationErrors = { taxYear?: string; reliefCategory?: string; files?: string }
 
 const UPLOAD_ERROR_RULES: ServerFieldRule<'taxYear' | 'reliefCategory' | 'files'>[] = [
@@ -78,7 +73,9 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
     setResults(null)
     setValidationErrors({})
     api.getDocumentConstraints()
-      .then(setConstraints)
+      // Normalized, not taken as-is: a response missing `maxDocumentBytes` made every
+      // `file.size > max` comparison false, so the size guard below silently passed everything.
+      .then(loaded => setConstraints(normalizeDocumentConstraints(loaded)))
       .catch(() => setConstraints(FALLBACK_CONSTRAINTS))
   }, [isOpen, safeInitialTaxYear])
 

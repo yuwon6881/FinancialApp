@@ -174,6 +174,52 @@ describe('useLedgerView mode parity', () => {
     expect(result.current.pageSize).toBe(25)
   })
 
+  it('refetches when the scoped range narrows the window without changing a filter', async () => {
+    const onFetchPagedTransactions = vi.fn().mockResolvedValue({
+      items: [], total: 0, page: 1, pageSize: 10,
+    })
+    const { rerender } = renderHook(
+      ({ cyclesRange }: { cyclesRange: '3month' | '6month' }) => useLedgerView({
+        transactions: [], categories: [], selectedMonth: 'Aug', selectedYear: 2026,
+        cycleDay: 28, isMobile: false, showAllCycles: true, cyclesRange,
+        onFetchPagedTransactions, onDeleteTransaction: vi.fn(),
+        hideSensitive: false, formRef: { current: null },
+      }),
+      { initialProps: { cyclesRange: '3month' } },
+    )
+
+    await waitFor(() => expect(onFetchPagedTransactions).toHaveBeenCalledTimes(1))
+    const threeCycleStart = onFetchPagedTransactions.mock.calls[0][0].startDate
+
+    rerender({ cyclesRange: '6month' })
+
+    await waitFor(() => expect(onFetchPagedTransactions).toHaveBeenCalledTimes(2))
+    expect(onFetchPagedTransactions.mock.calls[1][0].startDate).not.toBe(threeCycleStart)
+  })
+
+  it('refetches when the selected cycle moves the window in a scoped range', async () => {
+    const onFetchPagedTransactions = vi.fn().mockResolvedValue({
+      items: [], total: 0, page: 1, pageSize: 10,
+    })
+    const { rerender } = renderHook(
+      ({ selectedYear }) => useLedgerView({
+        transactions: [], categories: [], selectedMonth: 'Aug', selectedYear,
+        cycleDay: 28, isMobile: false, showAllCycles: true, cyclesRange: 'yearly',
+        onFetchPagedTransactions, onDeleteTransaction: vi.fn(),
+        hideSensitive: false, formRef: { current: null },
+      }),
+      { initialProps: { selectedYear: 2026 } },
+    )
+
+    await waitFor(() => expect(onFetchPagedTransactions).toHaveBeenCalledTimes(1))
+    expect(onFetchPagedTransactions.mock.calls[0][0].startDate).toContain('2026')
+
+    rerender({ selectedYear: 2025 })
+
+    await waitFor(() => expect(onFetchPagedTransactions).toHaveBeenCalledTimes(2))
+    expect(onFetchPagedTransactions.mock.calls[1][0].startDate).toContain('2025')
+  })
+
   it('shows matching unsynced entries separately and keeps saved rows authoritative', async () => {
     const pending = baseTransaction('pending', true)
     const saved = baseTransaction('saved')

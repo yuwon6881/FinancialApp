@@ -227,6 +227,7 @@ export function useFinancialDomainActions(options: UseFinancialDomainActionsOpti
     mutateQueue,
     snapshotForUndo,
     setConfirmModalData,
+    showToast,
   })
 
   const accountActions = createLedgerAccountActions({

@@ -195,6 +195,12 @@ const HOVER_BACKGROUND = /(^|\s)hover:bg-/
 const VARIANT_BACKGROUND = { primary: 'bg-primary', secondary: 'bg-background', tertiary: null, destructive: 'bg-destructive' }
 // `Button` centres its label, which is right for an action and wrong for a row. A call site that
 // says `text-left` and stops there gets a left-aligned *text run* inside a centred flex line.
+// A control stretched over the content it activates -- the clickable face of a card, a bill node,
+// a metric tile. Its own hover fill paints *on top of* that content, so the variant's muted sheet
+// washed the text underneath it out; the host element owns the hover feedback instead.
+const IS_FULL_BLEED_OVERLAY = /(^|\s)absolute(\s|$)/
+const COVERS_ITS_HOST = /(^|\s)inset-0(\s|$)/
+const HOVER_TRANSPARENT = /(^|\s)hover:bg-transparent(\s|$)/
 const SAYS_TEXT_LEFT = /(^|\s)text-left(\s|$)/
 const SAYS_JUSTIFY = /(^|\s|:)justify-/
 const SAYS_BLOCK_FLOW = /(^|\s|:)(block|grid|contents)(\s|$)/
@@ -329,6 +335,11 @@ for (const file of allSourceFiles(SRC)) {
         if (size !== 'icon' && AUTHORED_BOX.test(classes) && !AUTHORED_PADDING.test(classes)) {
           report(file, sourceFile, node,
             'A control that sizes its own square box must use size="icon", the one size with no horizontal padding; otherwise the control scale\'s padding collapses its icon to nothing.')
+        }
+
+        if (IS_FULL_BLEED_OVERLAY.test(classes) && COVERS_ITS_HOST.test(classes) && !HOVER_TRANSPARENT.test(classes)) {
+          report(file, sourceFile, node,
+            'A control stretched over its host (absolute inset-0) must set hover:bg-transparent; its own hover fill paints over the content it covers.')
         }
 
         if (SAYS_TEXT_LEFT.test(classes) && !SAYS_JUSTIFY.test(classes) && !SAYS_BLOCK_FLOW.test(classes)) {

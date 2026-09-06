@@ -446,7 +446,9 @@ describe('RecurringPaymentsView characterization', () => {
 
       const netflix = getCard('Netflix')
       expect(within(netflix).queryByText('$15.99')).toBeNull()
-      expect(within(netflix).getByRole('img', { name: 'Sensitive amount hidden' })).toBeTruthy()
+      // The card now carries a per-day equivalent beside the headline amount, so both render the
+      // mask. What matters is that no figure escapes it, which the queryByText above already pins.
+      expect(within(netflix).getAllByRole('img', { name: 'Sensitive amount hidden' }).length).toBeGreaterThan(0)
 
       const editButton = within(netflix).getByRole('button', { name: /Edit/ }) as HTMLButtonElement
       const deleteButton = within(netflix).getByRole('button', { name: /Delete/ }) as HTMLButtonElement

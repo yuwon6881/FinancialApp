@@ -26,6 +26,7 @@ interface BreakdownRow {
   primaryAmount: number
   secondaryLabel?: string
   monthlyAmount?: number
+  dailyAmount?: number
   originalPrincipal?: number
   percentage: number
 }
@@ -58,6 +59,7 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
           primaryAmount: annualAmt,
           secondaryLabel: `${isAnnual ? 'Billed annually' : 'Billed monthly'} · approx. / mo`,
           monthlyAmount: monthlyAmt,
+          dailyAmount: annualAmt / 365,
           percentage: pct,
         }
       }).sort((a, b) => b.primaryAmount - a.primaryAmount)
@@ -193,7 +195,12 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
                     {mode === 'loan-owed' && row.originalPrincipal !== undefined ? (
                       <span>Original principal: {formatSensitive(row.originalPrincipal)}</span>
                     ) : row.monthlyAmount !== undefined ? (
-                      <span>{formatSensitive(row.monthlyAmount)} / month</span>
+                      <span>
+                        {formatSensitive(row.monthlyAmount)} / month
+                        {row.dailyAmount !== undefined && (
+                          <span className="ml-1 text-muted-foreground/70">· {formatSensitive(row.dailyAmount)} / day</span>
+                        )}
+                      </span>
                     ) : null}
                   </div>
                 </div>

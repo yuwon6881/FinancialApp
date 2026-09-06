@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import { AlertCircle, RefreshCw, UploadCloud } from 'lucide-react'
 import type { Transaction } from '../../types'
+import { calculateLedgerTotals } from '../../lib/ledgerTotals'
 import { Button } from '../ui/Button'
 import { LedgerTransactionList } from './LedgerTransactionList'
 import type { LedgerListProps } from './ledgerListShared'
@@ -23,6 +25,12 @@ export function LedgerServerStatus({
   listProps,
   onRetry,
 }: LedgerServerStatusProps) {
+  // The bucket travels on the server page's totals because it comes from the active filter, not
+  // from the rows; only the amounts have to be re-derived.
+  const syncingTotals = useMemo(
+    () => calculateLedgerTotals(syncingTransactions, listProps.pageTotals.bucket),
+    [syncingTransactions, listProps.pageTotals.bucket])
+
   return (
     <div className="space-y-3">
       {error && (
@@ -51,10 +59,13 @@ export function LedgerServerStatus({
             </div>
           </div>
           {/* Locally queued rows are already in hand, so a server page fetch must not replace them
-              with placeholders. */}
+              with placeholders. The totals are recomputed over these rows: the list footer labels
+              itself "Page Total (N items)", and inheriting the server page's figures put that
+              count and those amounts on two different sets of rows. */}
           <LedgerTransactionList
             {...listProps}
             transactions={syncingTransactions}
+            pageTotals={syncingTotals}
             serverIsLoadingRows={false}
             listKey={`${listProps.listKey}-syncing`}
           />

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Loan } from '../types'
 import { addPeriod, applyPayment, replayLoan, scheduledPayment, totalScheduledInterest } from './loanMath'
+import { loanEndDate } from './loanTermSchedule'
 
 function loan(overrides: Partial<Loan> = {}): Loan {
   return {
@@ -174,6 +175,27 @@ describe('loanAmortization', () => {
     expect(replay.futureSchedule).toHaveLength(3)
     expect(replay.payoffDate).toBeNull()
     expect(replay.nextPayment).not.toBeNull()
+  })
+
+  // Tracking can start before the linked bill does -- the loan form defaults it to today and puts no
+  // floor at the bill's start date. When that put the search in an earlier year the schedule walk
+  // jumped months, and the projection then disagreed with loanTermSchedule, which walks forward from
+  // tracking start to convert between term length and the bill's end date (LOAN-05).
+  it('starts the schedule on the first instalment when tracking begins in an earlier year', () => {
+    const value = loan({
+      annualRatePercent: 0,
+      termPeriods: 6,
+      trackingStartDate: '2026-09-06',
+      scheduleFrequency: 'Monthly',
+      scheduleDueDay: 10,
+      scheduleStartDate: '2027-01-10',
+      scheduleStatus: 'Complete',
+    })
+
+    const replay = replayLoan(value, undefined, [])
+
+    expect(replay.futureSchedule[0].occurrenceDate).toBe('2027-01-10')
+    expect(loanEndDate({ ...value, termPeriods: 1 })).toBe(replay.futureSchedule[0].occurrenceDate)
   })
 
   it('keeps discarded days in the next daily-rest window', () => {

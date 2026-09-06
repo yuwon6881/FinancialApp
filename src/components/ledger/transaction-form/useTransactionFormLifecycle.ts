@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type Dispatch, type SetStateAction, type MutableRefObject, type RefObject } from 'react'
+import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction, type MutableRefObject, type RefObject } from 'react'
 import type { LedgerAccount, Transaction, TransactionDocumentChanges, VaultDocument } from '../../../types'
 import type { TransactionFormAction, TransactionFormState, TransferBucket, SelectableLedgerCategory } from './transactionFormReducer'
 import type { TransactionPrefillDraft } from '../TransactionFormSheet'
@@ -67,6 +67,16 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
     deriveIncomeSplitAccountIds,
   } = options
 
+  /**
+   * Invalidation token for the attached-document lookup.
+   *
+   * Detach unlinks by document id, so a response that arrives after the sheet has moved on is not
+   * merely stale: listing transaction A's documents under transaction B lets Save detach a file
+   * from A while the user is looking at B. Every entry point that repoints the sheet bumps this,
+   * and only the newest lookup may write.
+   */
+  const documentLookupRef = useRef(0)
+
   const handleStartEdit = useCallback((t: Transaction) => {
     if (hideSensitive) return
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
@@ -105,11 +115,18 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
     if (onStartEditPending) {
       onStartEditPending(t.id)
     }
+    const lookupId = ++documentLookupRef.current
     setExistingDocuments([])
     void import('../../../lib/api/documents')
       .then(({ listAllDocumentsForTransaction }) => listAllDocumentsForTransaction(t.id))
-      .then(setExistingDocuments)
-      .catch(() => onShowAlert?.('Attached documents could not be loaded.', 'Document Vault'))
+      .then(documents => {
+        if (documentLookupRef.current === lookupId) setExistingDocuments(documents)
+      })
+      .catch(() => {
+        if (documentLookupRef.current === lookupId) {
+          onShowAlert?.('Attached documents could not be loaded.', 'Document Vault')
+        }
+      })
     openTransactionForm()
   }, [accounts, deriveIncomeSplitAccountIds, hideSensitive, suggestions, onStartEditPending, onShowAlert, openTransactionForm, setExistingDocuments, setInitialDocumentChanges, setDocumentFieldRevision, dispatch, descriptionRef, autocompletedDescriptionRef])
 
@@ -119,6 +136,7 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
     if (onLoadDraftDocumentChanges) {
       changes = await onLoadDraftDocumentChanges(draft.id)
     }
+    documentLookupRef.current += 1
     setExistingDocuments([])
     setInitialDocumentChanges(changes)
     setDocumentFieldRevision(revision => revision + 1)
@@ -187,6 +205,7 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
 
   const openFresh = useCallback((initialTxType?: 'inflow' | 'outflow' | 'transfer') => {
     if (!canOpenBlankMutationForm(Boolean(hideSensitive), sensitivePreferenceStatus)) return
+    documentLookupRef.current += 1
     setExistingDocuments([])
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
     setDocumentFieldRevision(revision => revision + 1)
@@ -225,6 +244,7 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
 
   const openWithDraft = (draft: TransactionPrefillDraft) => {
     if (hideSensitive) return
+    documentLookupRef.current += 1
     setExistingDocuments([])
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
     setDocumentFieldRevision(revision => revision + 1)
@@ -259,8 +279,17 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
     openTransactionForm()
   }
 
+  /**
+   * Take a computed draft (today: the shared-receipt split's "your share") into the sheet.
+   *
+   * A create form is replaced wholesale, but an open edit or draft is edited in place. Both already
+   * point at a saved row, and routing them through openWithDraft reopened the sheet as a blank
+   * create: the row was left untouched on the server while every change the user had made to it
+   * disappeared, with no warning and nothing to undo.
+   */
   const applyPrefill = (draft: TransactionPrefillDraft) => {
-    if (state.mode !== 'draft') {
+    const editsInPlace = state.showAddForm && (state.mode === 'draft' || state.mode === 'edit')
+    if (!editsInPlace) {
       openWithDraft(draft)
       return
     }
@@ -274,7 +303,10 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
         ledgerCategory: draft.ledgerCategory && ['Essentials', 'Growth', 'Stability', 'Rewards'].includes(draft.ledgerCategory)
           ? draft.ledgerCategory as SelectableLedgerCategory
           : undefined,
-        txType: draft.txType,
+        // A saved row's direction is fixed for its lifetime — the type control is disabled in edit
+        // mode for the same reason — so the split's outflow must not retype it. The amount is a
+        // magnitude; the sign comes from the type that is already there.
+        txType: state.mode === 'edit' ? undefined : draft.txType,
       },
       todayDate,
     })
@@ -282,6 +314,7 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
 
   const handleCloseForm = useCallback(() => {
     documentsFieldRef.current?.reset()
+    documentLookupRef.current += 1
     setExistingDocuments([])
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
     dispatch({ type: 'CLOSE' })

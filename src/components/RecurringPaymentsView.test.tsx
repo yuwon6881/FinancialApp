@@ -213,3 +213,65 @@ describe('RecurringPaymentsView form', () => {
     expect(screen.getByRole('button', { name: /all categories/i })).toBeTruthy()
   })
 })
+
+describe('RecurringPaymentsView pay early', () => {
+  const payment = {
+    id: 'bill-essential', name: 'Insurance', amount: -100, frequency: 'Monthly' as const,
+    category: 'Bills', ledgerCategory: 'Essentials', accountId: 'acct-essentials',
+    nextDueDate: '2099-01-20', dueDate: 20, startDate: '2026-01-20', active: true,
+    paymentMode: 'Manual' as const,
+  }
+
+  function renderView(overrides: Partial<React.ComponentProps<typeof RecurringPaymentsView>> = {}) {
+    return render(
+      <RecurringPaymentsView
+        payments={[payment]}
+        accounts={accounts}
+        activeRecurringPayments={[]}
+        selectedMonth="Jul"
+        selectedYear={2026}
+        cycleDay={1}
+        onAddPayment={vi.fn()}
+        onToggleActive={vi.fn()}
+        onDeletePayment={vi.fn()}
+        onUpdatePayment={vi.fn()}
+        categories={[{ id: 'bills', name: 'Bills' }]}
+        {...overrides}
+      />,
+    )
+  }
+
+  // Pay Early only ever targets a future occurrence, and the pending-due list only holds ones due
+  // today or earlier -- so the sheet never found the occurrence and quoted the bill's full price.
+  // Paying part of a bill early and then opening the sheet again is exactly how that goes wrong.
+  it('charges only what is still due after an earlier part payment', async () => {
+    const onPayEarly = vi.fn()
+    renderView({
+      onPayEarly,
+      transactions: [{
+        id: 'tx-part', date: '2026-07-01', description: 'Insurance', amount: -60,
+        category: 'Bills', ledgerCategory: 'Essentials', accountId: 'acct-essentials',
+        recurringPaymentId: 'bill-essential', recurringOccurrenceDate: '2099-01-20',
+      }] as React.ComponentProps<typeof RecurringPaymentsView>['transactions'],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pay Early for Insurance' }))
+    const payNow = await screen.findByRole('button', { name: /Pay now/ })
+    expect(screen.getByText('Already recorded')).toBeTruthy()
+
+    fireEvent.click(payNow)
+    await waitFor(() => expect(onPayEarly).toHaveBeenCalledWith('bill-essential', 40, 'acct-essentials', true))
+  })
+
+  it('charges the whole bill when nothing has been recorded against the occurrence', async () => {
+    const onPayEarly = vi.fn()
+    renderView({ onPayEarly, transactions: [] })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pay Early for Insurance' }))
+    const payNow = await screen.findByRole('button', { name: /Pay now/ })
+    expect(screen.queryByText('Already recorded')).toBeNull()
+
+    fireEvent.click(payNow)
+    await waitFor(() => expect(onPayEarly).toHaveBeenCalledWith('bill-essential', 100, 'acct-essentials', true))
+  })
+})

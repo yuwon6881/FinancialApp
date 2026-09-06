@@ -5,6 +5,7 @@ import { RecurringPaymentsHeader } from './RecurringPaymentsHeader'
 const baseProps = {
   totalCommittedMonthly: 420,
   totalCommittedAnnual: 5040,
+  totalCommittedDaily: 13.81,
   activeCount: 2,
   totalCount: 3,
   showAddForm: false,
@@ -54,6 +55,8 @@ describe('RecurringPaymentsHeader', () => {
     expect(screen.getByText('Monthly Total')).not.toBeNull()
     expect(screen.getByText('Yearly Total')).not.toBeNull()
     expect(screen.getByText('$5040')).not.toBeNull()
+    expect(screen.getByText('Daily Cost')).not.toBeNull()
+    expect(screen.getByText('$13.81')).not.toBeNull()
     expect(screen.getByRole('button', { name: /new subscription/i })).not.toBeNull()
     expect(screen.queryByRole('button', { name: /new loan/i })).toBeNull()
   })

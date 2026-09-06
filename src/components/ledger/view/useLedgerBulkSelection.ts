@@ -67,8 +67,8 @@ export function useLedgerBulkSelection({ transactions, allTransactions = transac
   const selectedVisibleCount = visibleIds.filter(id => selectedIds.has(id)).length
   const allVisibleSelected = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length
   const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected
-  // Both toggles stop adding at the limit, so the old "exceeds" flag was unreachable and hitting
-  // the cap was silent. Surface having reached it instead.
+  // Both toggles stop adding at the limit, so the old "exceeds" flag was unreachable. Reaching the
+  // cap is reported by SelectionToolbar, which is handed LEDGER_BULK_LIMIT as its selectionLimit.
   const isAtLimit = selectedCount >= LEDGER_BULK_LIMIT
 
   useEffect(() => {
@@ -153,7 +153,6 @@ export function useLedgerBulkSelection({ transactions, allTransactions = transac
     selectedCount,
     visibleIds,
     eligibleVisibleCount: visibleIds.length,
-    protectedVisibleCount: transactions.filter(transaction => transaction.savingsGoalId != null).length,
     allVisibleSelected,
     someVisibleSelected,
     isAtLimit,

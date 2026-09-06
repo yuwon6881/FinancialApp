@@ -19,6 +19,7 @@ import { RecurringAccountShortfallCard } from './dashboard/RecurringAccountShort
 import { getDocumentRetentionReview } from '../lib/api/documents'
 import { EMPTY_RETENTION_REVIEW } from '../lib/documentRetention'
 import { VaultRetentionNotice } from './documents/VaultRetentionNotice'
+import { NetWorthCard } from './dashboard/NetWorthCard'
 import type { DocumentRetentionReview } from '../types'
 import { cn } from '../lib/utils'
 import { PANEL_TONES, panelClass } from './ui/panelStyles'
@@ -50,6 +51,12 @@ interface DashboardViewProps {
   onNavigateToCategoryLimits?: (category: string) => void
   onNavigateToTransfer?: () => void
   onNavigateToRecurring?: (recurringId: string) => void
+  /** Total balance across all ledger accounts (all 4 buckets). */
+  totalAccountBalance?: number
+  /** Investment portfolio total value (market + cash). undefined = not loaded/configured */
+  investmentValue?: number
+  /** Total outstanding loan balance. null = not yet loaded; 0 = no loans */
+  loanDebt?: number | null
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -68,6 +75,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToCategoryLimits,
   onNavigateToTransfer,
   onNavigateToRecurring,
+  totalAccountBalance,
+  investmentValue,
+  loanDebt = null,
 }) => {
   const [retentionReview, setRetentionReview] = React.useState<DocumentRetentionReview>(EMPTY_RETENTION_REVIEW)
   React.useEffect(() => {
@@ -178,6 +188,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onNavigateToRecurring={onNavigateToRecurring ?? (() => onNavigate?.('recurring'))}
       />
 
+      {/* Net Worth snapshot: overarching position before daily cycle focus */}
+      <NetWorthCard
+        totalAccountBalance={totalAccountBalance ?? 0}
+        investmentValue={investmentValue}
+        loanDebt={loanDebt}
+        isMasked={view.areBalanceAmountsMasked}
+        formatCurrency={view.formatCurrency}
+        onNavigate={onNavigate}
+        onNavigateToLedger={() => onNavigateToLedger?.({ showAllCycles: true })}
+      />
+
       {/* Today-focused metric cards: cycle progress, safe-to-spend, and the active wish goal */}
       <TodayFocusCards
         selectedMonth={view.activeSettings.selectedMonth}
@@ -197,6 +218,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         challenge={challenge}
         cycle={cycleProgress}
         formatSensitive={view.formatSensitive}
+        onReviewEssentials={onNavigateToLedger ? () => onNavigateToLedger({ category: 'Essentials', txType: 'outflow' }) : undefined}
       />
 
       <div data-testid="today-plan-grid">

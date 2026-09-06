@@ -1,6 +1,9 @@
 import type { LedgerAccount, Transaction } from '../types'
 import { displayLedgerCategory } from './utils'
 
+/** Excel reads a BOM-less UTF-8 CSV as the system codepage; the server export writes one too. */
+const UTF8_BOM = '\ufeff'
+
 function escapeCsvField(val: string | number): string {
   const str = String(val)
   // Wrap in quotes if it contains comma, quote, or newline
@@ -33,13 +36,16 @@ export function buildCsvContent(rows: Transaction[], accounts: ReadonlyArray<Pic
   const headers = ['Date', 'Description', 'Category', 'Ledger Allocation', 'Debit (Outflow)', 'Credit (Inflow)', 'Internal Movement', 'Account']
   const dataRows = rows.map(t => {
     const isOutflow = t.amount < 0
-    const isAccountMove = (t.ledgerCategory || '').toLowerCase() === 'accountmove'
-    const isTransfer = (t.ledgerCategory || '').startsWith('Transfer:') || isAccountMove
+    const ledgerCategory = t.ledgerCategory || ''
+    const isAccountMove = ledgerCategory.toLowerCase() === 'accountmove'
+    // Case-insensitive, matching the server export and `ledgerTotals`. A case-only difference put
+    // the same row in the movement column on one path and in debit/credit on the other.
+    const isTransfer = ledgerCategory.toLowerCase().startsWith('transfer:') || isAccountMove
     const ledgerAllocation = isAccountMove
       ? 'Between accounts'
       : isTransfer
-      ? t.ledgerCategory.substring('Transfer:'.length).replace('->', ' -> ')
-      : displayLedgerCategory(t.ledgerCategory)
+      ? ledgerCategory.substring('Transfer:'.length).replace('->', ' -> ')
+      : displayLedgerCategory(ledgerCategory)
     return [
       escapeCsvField(t.date),
       escapeCsvTextField(t.description),
@@ -48,7 +54,10 @@ export function buildCsvContent(rows: Transaction[], accounts: ReadonlyArray<Pic
       !isTransfer && isOutflow ? escapeCsvField(Math.abs(t.amount).toFixed(2)) : '',
       !isTransfer && !isOutflow ? escapeCsvField(t.amount.toFixed(2)) : '',
       isTransfer ? escapeCsvField(Math.abs(t.amount).toFixed(2)) : '',
-      t.accountId ? escapeCsvTextField(accountNames.get(t.accountId) ?? t.accountId) : '',
+      // The name or nothing — never the id. The account list is optional here and omits archived
+      // accounts, so falling back to the id spilled opaque identifiers into a column the server
+      // export leaves blank in exactly the same situation.
+      escapeCsvTextField((t.accountId && accountNames.get(t.accountId)) || ''),
     ]
   })
   return [headers.join(','), ...dataRows.map(e => e.join(','))].join('\n')
@@ -67,6 +76,8 @@ export function downloadCsvBlob(blob: Blob, filename: string): void {
 
 export function downloadCsvRows(rows: Transaction[], filename: string, accounts: ReadonlyArray<Pick<LedgerAccount, 'id' | 'name'>> = []): void {
   const csvContent = buildCsvContent(rows, accounts)
-  const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  // Byte-order mark, as the server export writes: without it Excel reads the UTF-8 bytes as the
+  // system codepage, so a page exported from here mangled non-ASCII text that the full export kept.
+  const csvBlob = new Blob([UTF8_BOM, csvContent], { type: 'text/csv;charset=utf-8;' })
   downloadCsvBlob(csvBlob, filename)
 }

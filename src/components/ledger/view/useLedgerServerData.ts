@@ -41,8 +41,17 @@ interface ServerFetchCriteria {
  * Arrays are joined rather than stringified so a reordered but equivalent selection does not read
  * as a change. background is deliberately absent: it changes how a fetch is presented, not what it
  * asks for, so a background revalidation must not be mistaken for new criteria.
+ *
+ * The dates signed are the *effective* bounds the request will carry, not the raw filter fields.
+ * The scoped range ('3month'/'6month'/'yearly') and the selected cycle narrow those bounds without
+ * touching any filter, so signing the raw fields made a year change — or a jump from the last 3
+ * cycles to the last 6 — read as identical criteria and skip the refetch, leaving the previous
+ * window's rows, total and page count on screen.
  */
-function serverFetchSignature(criteria: ServerFetchCriteria): string {
+function serverFetchSignature(
+  criteria: ServerFetchCriteria,
+  allCyclesRange: { startDate: string; endDate: string } | null,
+): string {
   return JSON.stringify([
     criteria.page,
     criteria.pSize,
@@ -53,8 +62,8 @@ function serverFetchSignature(criteria: ServerFetchCriteria): string {
     parseTxTypes(criteria.txType).slice().sort().join(","),
     criteria.reloadFilter ?? "all",
     [...criteria.accountIds].sort().join(","),
-    criteria.startDate,
-    criteria.endDate,
+    laterDate(allCyclesRange?.startDate, criteria.startDate) ?? "",
+    earlierDate(allCyclesRange?.endDate, criteria.endDate) ?? "",
     criteria.minAmount,
     criteria.maxAmount,
     criteria.recurringFilter,
@@ -252,7 +261,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
     background?: boolean
   }) => {
     if (!onFetchPagedTransactions) return
-    lastFetchSignatureRef.current = serverFetchSignature(opts)
+    lastFetchSignatureRef.current = serverFetchSignature(opts, allCyclesRange)
     const sequence = ++fetchSequenceRef.current
     fetchAbortRef.current?.abort()
     const controller = new AbortController()
@@ -384,7 +393,7 @@ export function useLedgerServerData(options: UseLedgerServerDataOptions) {
       sort: sortOrder,
       pSize: pageSize,
     }
-    if (serverFetchSignature(criteria) !== lastFetchSignatureRef.current) {
+    if (serverFetchSignature(criteria, allCyclesRange) !== lastFetchSignatureRef.current) {
       runServerFetch(criteria)
     }
   }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, runServerFetch, appliedSearch, appliedSearchMode, appliedFilters, appliedTxTypeFilter, appliedReloadFilter, appliedAccountIds, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, allCyclesRange, sortOrder])

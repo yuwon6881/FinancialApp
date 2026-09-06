@@ -6,6 +6,8 @@
  * list and is used before the constraints response arrives.
  */
 
+import type { DocumentVaultConstraints } from '../types'
+
 /** MIME type to the extensions a file dialog may present it under. */
 const UPLOAD_TYPE_EXTENSIONS: Record<string, readonly string[]> = {
   'image/jpeg': ['.jpg', '.jpeg'],
@@ -17,6 +19,45 @@ const UPLOAD_TYPE_EXTENSIONS: Record<string, readonly string[]> = {
 }
 
 export const FALLBACK_ACCEPTED_UPLOAD_TYPES = Object.keys(UPLOAD_TYPE_EXTENSIONS)
+
+/**
+ * What to assume before `/documents/constraints` answers, mirroring `DocumentVaultOptions`. Shared
+ * by every picker so the vault sheet and the transaction form cannot advertise different limits.
+ */
+export const FALLBACK_DOCUMENT_CONSTRAINTS: DocumentVaultConstraints = {
+  maxDocumentBytes: 20 * 1024 * 1024,
+  maxBulkDocuments: 10,
+  maxTotalBytesPerUser: 2 * 1024 * 1024 * 1024,
+  acceptedUploadTypes: FALLBACK_ACCEPTED_UPLOAD_TYPES,
+}
+
+/**
+ * Fill in anything `/documents/constraints` did not supply.
+ *
+ * A malformed or empty response is not a licence to stop enforcing: an undefined `maxDocumentBytes`
+ * makes `file.size > max` false for every file, so the size guard quietly passes everything, and it
+ * renders as "NaN MB" wherever the limit is shown. Each field falls back to the mirrored server
+ * default instead.
+ */
+export function normalizeDocumentConstraints(
+  loaded: Partial<DocumentVaultConstraints> | null | undefined,
+): DocumentVaultConstraints {
+  const positive = (value: unknown, fallback: number): number =>
+    typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
+  return {
+    maxDocumentBytes: positive(loaded?.maxDocumentBytes, FALLBACK_DOCUMENT_CONSTRAINTS.maxDocumentBytes),
+    maxBulkDocuments: positive(loaded?.maxBulkDocuments, FALLBACK_DOCUMENT_CONSTRAINTS.maxBulkDocuments),
+    maxTotalBytesPerUser: positive(loaded?.maxTotalBytesPerUser, FALLBACK_DOCUMENT_CONSTRAINTS.maxTotalBytesPerUser),
+    acceptedUploadTypes: loaded?.acceptedUploadTypes?.length
+      ? loaded.acceptedUploadTypes
+      : FALLBACK_ACCEPTED_UPLOAD_TYPES,
+  }
+}
+
+export const formatUploadMegabytes = (bytes: number): string => `${(bytes / 1024 / 1024).toFixed(2)} MB`
+
+export const oversizeUploadMessage = (fileName: string, maxDocumentBytes: number): string =>
+  `${fileName}: exceeds the ${formatUploadMegabytes(maxDocumentBytes)} limit for a single document.`
 
 export const UNSUPPORTED_DOCUMENT_TYPE_MESSAGE =
   'Upload a photo or a PDF. Other kinds of file cannot be kept as tax evidence.'

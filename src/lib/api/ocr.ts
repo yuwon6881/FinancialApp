@@ -1,5 +1,6 @@
 import { deobfuscateAmount } from './amounts'
-import { apiFetch, request, requestVoid, throwApiError } from './client'
+import type { ScanUploadKind } from '../scanUploadStore'
+import { request, requestVoid } from './client'
 
 export interface ReceiptScanResult {
   description: string
@@ -109,36 +110,29 @@ type WireReceiptScanJob = Omit<ReceiptScanJob, 'result'> & {
   result: (Omit<ReceiptScanResult, 'amount'> & { amount: string | number | null }) | null
 }
 
-/** Mirrors `SupabaseReceiptImageStore.MaxImageBytes`; the endpoints also cap the request at 11 MiB. */
-const MAX_SCAN_IMAGE_BYTES = 10 * 1024 * 1024
-
 /**
- * A camera photo routinely lands well past the 10 MB the scan endpoints accept, and the whole
- * file has to cross a phone connection before the job can even start. Downscale it the way the
- * document vault does, but with a longer edge and less loss, because small print on a receipt is
- * the thing being read. Non-images, already-small files and any decode failure come back
- * untouched, so this can only ever shrink a real photo.
+ * Every scan starts through the durable upload queue rather than a bare fetch: the picked image
+ * is written down before the request leaves, so a phone that sleeps, drops signal or is swiped
+ * away mid-upload retries on its own instead of losing the photo. See `scanUploadQueue`.
  *
- * What survives compression still has to fit. Rejecting it here keeps the reason truthful: past
- * the request cap the server answers 413 with a non-JSON body, and the generic start-scan
- * fallback would tell the user to try a clearer photo when the problem is the file size.
+ * Imported lazily to keep the queue and its IndexedDB store off the eager critical path this
+ * barrel sits on; starting a scan is already an async, user-initiated action.
  */
-async function scanFormData(imageFile: File): Promise<FormData> {
-  const { compressImageFile } = await import('../imageCompression')
-  const compressed = await compressImageFile(imageFile, { maxEdge: 2400, quality: 0.85 })
-  if (compressed.size > MAX_SCAN_IMAGE_BYTES) {
-    throw new Error('Receipt image is too large. Please use an image under 10 MB.')
-  }
-  const formData = new FormData()
-  formData.append('image', compressed)
-  return formData
+async function startScan(kind: ScanUploadKind, imageFile: File): Promise<{ scanId: string; status: string }> {
+  const { startScanUpload } = await import('./scanUploadQueue')
+  return startScanUpload(kind, imageFile)
 }
 
-export async function startReceiptScan(imageFile: File): Promise<{ scanId: string; status: string }> {
-  const formData = await scanFormData(imageFile)
-  const response = await apiFetch('/ocr/scan-receipt/jobs', { method: 'POST', body: formData })
-  if (!response.ok) await throwApiError(response, 'Could not start receipt scan. Please try again.')
-  return response.json()
+export function startReceiptScan(imageFile: File): Promise<{ scanId: string; status: string }> {
+  return startScan('receipt', imageFile)
+}
+
+export function startReceiptSplitScan(imageFile: File): Promise<{ scanId: string; status: string }> {
+  return startScan('receipt-split', imageFile)
+}
+
+export function startInvestmentScan(imageFile: File): Promise<{ scanId: string; status: string }> {
+  return startScan('investment', imageFile)
 }
 
 export async function fetchReceiptScanJob(scanId: string): Promise<ReceiptScanJob> {
@@ -158,13 +152,6 @@ export async function deleteReceiptScanJob(scanId: string): Promise<void> {
     method: 'DELETE',
     errorMessage: 'Could not clear receipt scan job.',
   })
-}
-
-export async function startReceiptSplitScan(imageFile: File): Promise<{ scanId: string; status: string }> {
-  const formData = await scanFormData(imageFile)
-  const response = await apiFetch('/ocr/scan-receipt-split/jobs', { method: 'POST', body: formData })
-  if (!response.ok) await throwApiError(response, 'Could not start receipt split scan. Please try again.')
-  return response.json()
 }
 
 type ObfuscatedAmount = string | number | null
@@ -202,13 +189,6 @@ export async function fetchReceiptSplitScanJob(scanId: string): Promise<ReceiptS
       })),
     } : null,
   }
-}
-
-export async function startInvestmentScan(imageFile: File): Promise<{ scanId: string; status: string }> {
-  const formData = await scanFormData(imageFile)
-  const response = await apiFetch('/ocr/scan-investment/jobs', { method: 'POST', body: formData })
-  if (!response.ok) await throwApiError(response, 'Could not start investment scan. Please try again.')
-  return response.json()
 }
 
 type WireInvestmentScanJob = Omit<InvestmentScanJob, 'result'> & {

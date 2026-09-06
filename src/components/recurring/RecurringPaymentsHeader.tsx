@@ -12,6 +12,7 @@ interface RecurringPaymentsHeaderProps {
   activeView: 'recurring' | 'loans'
   totalCommittedMonthly: number
   totalCommittedAnnual: number
+  totalCommittedDaily: number
   activeCount: number
   totalCount: number
   loanTotalOutstanding?: number | null
@@ -211,6 +212,7 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
   activeView,
   totalCommittedMonthly,
   totalCommittedAnnual,
+  totalCommittedDaily,
   activeCount,
   totalCount,
   loanTotalOutstanding = null,
@@ -244,7 +246,7 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
           </Button>
         )}
       >
-          <div className="mt-4 grid min-w-0 grid-cols-2 gap-x-2 gap-y-3 sm:grid-cols-3 sm:gap-y-0">
+          <div className="mt-4 grid min-w-0 grid-cols-2 gap-x-2 gap-y-3 sm:grid-cols-4 sm:gap-y-0">
             {isLoansView ? (
               <>
                 <InteractiveStatTile
@@ -291,10 +293,15 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
                   className="border-l border-border/60 pl-2 pr-1 sm:px-2"
                 />
                 <StatTile
+                  label="Daily Cost"
+                  value={formatSensitive(totalCommittedDaily)}
+                  className="border-l border-border/60 pl-2 pr-1 sm:px-2"
+                />
+                <StatTile
                   label="Active bills"
                   value={`${activeCount} / ${totalCount}`}
                   tone="count"
-                  className="col-span-2 border-t border-border/60 pt-2 sm:col-span-1 sm:border-t-0 sm:border-l sm:pl-2 sm:pt-0"
+                  className="border-t border-border/60 pt-2 sm:border-t-0 sm:border-l sm:pl-2 sm:pt-0"
                 />
               </>
             )}

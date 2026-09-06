@@ -65,7 +65,7 @@ describe('LedgerRows move action', () => {
     const rowProps = props(transaction('NotRequired'))
     render(<table><tbody><DesktopLedgerRow {...rowProps} /></tbody></table>)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move to' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }))
 
     expect(rowProps.onMove).toHaveBeenCalledWith(rowProps.transaction)
   })
@@ -83,9 +83,9 @@ describe('LedgerRows move action', () => {
   it.each([
     ['split row', { id: 'tx-split-1' }],
     ['commitment completion', { savingsGoalId: 4 }],
-  ])('disables Move to for a %s', (_label, changes) => {
+  ])('disables Move for a %s', (_label, changes) => {
     render(<table><tbody><DesktopLedgerRow {...props({ ...transaction('NotRequired'), ...changes })} /></tbody></table>)
-    const moveBtn = screen.getByRole('button', { name: 'Move to' })
+    const moveBtn = screen.getByRole('button', { name: 'Move' })
     expect(moveBtn).toBeDefined()
     expect(moveBtn.hasAttribute('disabled')).toBe(true)
   })

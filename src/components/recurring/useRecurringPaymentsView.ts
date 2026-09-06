@@ -262,6 +262,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     .filter(p => p.active && !hasBillingEnded(p))
     .reduce((acc, p) => acc + Math.abs(p.amount) / (normalizeRecurringFrequency(p.frequency) === 'Annually' ? 12 : 1), 0)
   const totalCommittedAnnual = totalCommittedMonthly * 12
+  const totalCommittedDaily = totalCommittedAnnual / 365
 
   const activeCount = payments.filter(p => p.active && !hasBillingEnded(p)).length
 
@@ -488,6 +489,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     // derived stats
     totalCommittedMonthly,
     totalCommittedAnnual,
+    totalCommittedDaily,
     activeCount,
     // formatters
     formatCurrency,

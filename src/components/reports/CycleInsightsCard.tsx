@@ -55,7 +55,7 @@ export function CycleInsightsCard({
               type="button"
               onClick={onSelectLargestExpense}
               aria-label={`View biggest expense: ${insights.largestExpenseDescription || 'transaction'} in Ledger`}
-              className="absolute inset-0 size-full rounded-xl p-0"
+              className="absolute inset-0 size-full rounded-xl p-0 hover:bg-transparent"
             />
           )}
         </div>

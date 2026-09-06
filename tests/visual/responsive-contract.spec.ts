@@ -169,7 +169,9 @@ test('the ranked Essentials challenge stays inside its card at every width', asy
   })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
-  const card = page.getByRole('heading', { name: 'Ahead of plan' }).locator('xpath=ancestor::section[1]')
+  // Located by the card's own landmark rather than by a rank string: which rank this fixture earns
+  // depends on the tier thresholds, so naming one couples a containment test to their tuning.
+  const card = page.locator('section[aria-labelledby="essentials-challenge-heading"]')
   await expect(card).toBeVisible()
   await waitForStableLayout(page)
 

@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { CycleProgress } from '../../lib/cycle'
 import { evaluateEssentialsChallenge, type EssentialsChallengeInput } from '../../lib/essentialsChallenge'
 import { EssentialsChallengeCard } from './EssentialsChallengeCard'
@@ -30,22 +30,24 @@ const baseInput: EssentialsChallengeInput = {
 const renderCard = (
   input: Partial<EssentialsChallengeInput> = {},
   cycle: CycleProgress = activeCycle,
+  onReviewEssentials?: () => void,
 ) => render(
   <EssentialsChallengeCard
     challenge={evaluateEssentialsChallenge({ ...baseInput, ...input, cycle })}
     cycle={cycle}
     formatSensitive={formatSensitive}
+    onReviewEssentials={onReviewEssentials}
   />,
 )
 
 describe('EssentialsChallengeCard ranks', () => {
   it('names the rank, shows the score, and places the pace marker at the elapsed share', () => {
-    const { container } = renderCard({ projectedRemaining: 1600 })
+    const { container } = renderCard({ projectedRemaining: 1600, projectedEndingBalance: 1200 })
 
     expect(screen.getByRole('heading', { name: 'Cruising' })).toBeTruthy()
     expect(screen.getByText('100')).toBeTruthy()
     expect(screen.getByText(/20% committed with 50% of the cycle gone/)).toBeTruthy()
-    expect(screen.getByText(/\$600\.00 ahead of where the plan expects you/)).toBeTruthy()
+    expect(screen.getByText(/\$1,?200\.00 ahead of where the plan expects you/)).toBeTruthy()
 
     const marker = container.querySelector('[style*="left: 50%"]')
     expect(marker).toBeTruthy()
@@ -76,8 +78,9 @@ describe('EssentialsChallengeCard ranks', () => {
 })
 
 describe('EssentialsChallengeCard guidance', () => {
-  it('offers the daily allowance that keeps the cycle inside the plan', () => {
-    renderCard({ projectedRemaining: 1600, currentDailyPace: 10 })
+  it('offers the daily allowance that keeps the cycle inside the plan and displays the daily spending target', () => {
+    renderCard({ projectedRemaining: 1600, currentDailyPace: 10, projectedEndingBalance: 1200 })
+    expect(screen.getByText('Daily spending target')).toBeTruthy()
     expect(screen.getByText(/Staying under \$100\.00 a day for the last 16 days/)).toBeTruthy()
   })
 
@@ -86,9 +89,19 @@ describe('EssentialsChallengeCard guidance', () => {
     expect(screen.getByText(/spending \$60\.00 a day against the \$20\.00 a day that is left/)).toBeTruthy()
   })
 
-  it('does not suggest a daily allowance for a cycle with no money left to give', () => {
+  it('does not suggest a daily allowance for a cycle with no money left to give and clarifies deficit recovery', () => {
     renderCard({ projectedRemaining: -150, projectedEndingBalance: -150 })
-    expect(screen.getByText(/putting \$150\.00 back, clears the red/)).toBeTruthy()
+    expect(screen.getByText(/putting \$150\.00 back clears the red/)).toBeTruthy()
+  })
+
+  it('renders a direct link to review Essentials spending when provided', () => {
+    const onReview = vi.fn()
+    renderCard({ projectedRemaining: 1600, projectedEndingBalance: 1200 }, activeCycle, onReview)
+
+    const reviewButton = screen.getByRole('button', { name: /Review Essentials spending/i })
+    expect(reviewButton).toBeTruthy()
+    reviewButton.click()
+    expect(onReview).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -99,6 +112,7 @@ describe('EssentialsChallengeCard states without a rank', () => {
     expect(screen.getByRole('heading', { name: 'Waiting on funding' })).toBeTruthy()
     expect(screen.queryByRole('progressbar')).toBeNull()
     expect(screen.queryByText('Badges')).toBeNull()
+    expect(screen.queryByText('Daily spending target')).toBeNull()
     expect(screen.getByText(/starts as soon as income is split into Essentials/)).toBeTruthy()
   })
 
@@ -121,12 +135,14 @@ describe('EssentialsChallengeCard states without a rank', () => {
 })
 
 describe('EssentialsChallengeCard badges', () => {
-  it('marks each badge with a state screen readers can read', () => {
-    renderCard({ projectedRemaining: 1600 })
+  it('marks each badge with a state screen readers can read and provides touch/keyboard InfoHint', () => {
+    renderCard({ projectedRemaining: 1600, projectedEndingBalance: 1200 })
 
     const badges = screen.getByRole('list')
     expect(within(badges).getByText(/Earned: no bill is waiting to be paid/)).toBeTruthy()
     expect(screen.getByText('4 of 4')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'What is Bills clear?' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'What is Under pace?' })).toBeTruthy()
   })
 
   it('withholds the badges whose conditions are not met', () => {
@@ -148,7 +164,7 @@ describe('EssentialsChallengeCard sensitive mode', () => {
   it('masks every amount while keeping the rank and the shares readable', () => {
     render(
       <EssentialsChallengeCard
-        challenge={evaluateEssentialsChallenge({ ...baseInput, projectedRemaining: 1600 })}
+        challenge={evaluateEssentialsChallenge({ ...baseInput, projectedRemaining: 1600, projectedEndingBalance: 1200 })}
         cycle={activeCycle}
         formatSensitive={() => '•••'}
       />,

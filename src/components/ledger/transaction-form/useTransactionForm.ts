@@ -367,7 +367,10 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       dispatch({ type: 'RESET', todayDate, defaultCategory })
       dispatch({ type: 'SET_FIELD', field: 'showAddForm', value: true })
     }
-    if (state.mode === 'draft') {
+    // Attachments clear with the rest of the form. Create mode relied on the field unmounting when
+    // the type stopped being an outflow, so re-picking the type it already had blanked every other
+    // field and left the attached files behind.
+    if (state.mode === 'create' || state.mode === 'draft') {
       documentsFieldRef.current?.reset()
       setInitialDocumentChanges({ pending: [], unlinkIds: [] })
       setDocumentFieldRevision(revision => revision + 1)
@@ -380,7 +383,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     if (state.mode === 'create') lifecycle.handleCloseForm()
   }, [lifecycle.handleCloseForm, hideSensitive, sensitivePreferenceStatus, state.mode, state.showAddForm])
 
-  const { handleSubmit } = useTransactionFormSubmit({
+  const { handleSubmit, isSubmitting } = useTransactionFormSubmit({
     state,
     dispatch,
     accountsLoading,
@@ -428,6 +431,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     handleStartEdit: lifecycle.handleStartEdit,
     handleStartDraft: lifecycle.handleStartDraft,
     handleSubmit,
+    isSubmitting,
     changeTransactionType,
     scanner,
     suggestions,

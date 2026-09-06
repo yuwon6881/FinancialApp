@@ -2,6 +2,7 @@ import React from 'react'
 import { m, useReducedMotion } from 'framer-motion'
 import {
   AlertTriangle,
+  ArrowRight,
   CalendarClock,
   Check,
   Flame,
@@ -23,6 +24,7 @@ import {
 } from '../../lib/essentialsChallenge'
 import { AnimatedNumber } from '../ui/AnimatedNumber'
 import { Badge } from '../ui/Badge'
+import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
 import { Meter } from '../ui/Meter'
 import { cn } from '../../lib/utils'
@@ -180,6 +182,7 @@ interface EssentialsChallengeCardProps {
   challenge: EssentialsChallenge
   cycle: CycleProgress
   formatSensitive: (value: number) => React.ReactNode
+  onReviewEssentials?: () => void
 }
 
 /**
@@ -196,6 +199,7 @@ export function EssentialsChallengeCard({
   challenge,
   cycle,
   formatSensitive,
+  onReviewEssentials,
 }: EssentialsChallengeCardProps) {
   const reduceMotion = useReducedMotion()
   const presentation = TIER_PRESENTATION[challenge.tier]
@@ -264,8 +268,7 @@ export function EssentialsChallengeCard({
     if (overBudget) {
       return (
         <>
-          Nothing more can come out of Essentials without going deeper. Holding off for {remainingDays},
-          or putting {formatSensitive(challenge.overspend)} back, clears the red.
+          Nothing more can come out of Essentials without going deeper. Holding off for {remainingDays} prevents further overspend; putting {formatSensitive(challenge.overspend)} back clears the red.
         </>
       )
     }
@@ -380,6 +383,34 @@ export function EssentialsChallengeCard({
         </div>
       )}
 
+      {!unranked && (
+        <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5">
+          <div className="min-w-0">
+            <span className="text-xs font-semibold text-muted-foreground">Daily spending target</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-sm font-bold tabular-nums text-foreground sm:text-base">
+                {formatSensitive(challenge.dailyAllowance)}
+                <span className="text-xs font-medium text-muted-foreground">/day</span>
+              </span>
+              <span className="text-xs text-muted-foreground">
+                ({challenge.spendDays} {challenge.spendDays === 1 ? 'day' : 'days'} {ended ? 'total' : 'left'})
+              </span>
+            </div>
+          </div>
+          {onReviewEssentials && (
+            <Button
+              variant="tertiary"
+              size="sm"
+              onClick={onReviewEssentials}
+              className="gap-1 px-2.5 text-xs font-semibold text-foreground"
+            >
+              Review Essentials spending
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </Button>
+          )}
+        </div>
+      )}
+
       {nextStep && (
         <p className={cn(
           'mt-3.5 rounded-xl border border-border/50 bg-muted/25 px-3 py-2.5 text-xs leading-relaxed',
@@ -400,26 +431,35 @@ export function EssentialsChallengeCard({
           <ul className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
             {challenge.badges.map(badge => {
               const copy = BADGE_COPY[badge.id]
+              const explanation = badge.earned ? copy.earned : copy.pending
               return (
                 <li
                   key={badge.id}
                   className={cn(
-                    'flex items-center gap-2 rounded-xl border px-2.5 py-2 text-xs font-semibold',
+                    'flex items-center justify-between gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-semibold',
                     badge.earned
                       ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                       : 'border-border/50 bg-muted/25 text-muted-foreground',
                   )}
                 >
-                  <span
-                    className={cn(
-                      'flex size-4 shrink-0 items-center justify-center rounded-full border',
-                      badge.earned ? 'border-emerald-500/40 bg-emerald-500/20' : 'border-dashed border-border/70',
-                    )}
-                  >
-                    {badge.earned && <Check className="size-2.5" aria-hidden />}
-                  </span>
-                  <span className="truncate">{copy.label}</span>
-                  <span className="sr-only">{badge.earned ? copy.earned : copy.pending}</span>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className={cn(
+                        'flex size-4 shrink-0 items-center justify-center rounded-full border',
+                        badge.earned ? 'border-emerald-500/40 bg-emerald-500/20' : 'border-dashed border-border/70',
+                      )}
+                    >
+                      {badge.earned && <Check className="size-2.5" aria-hidden />}
+                    </span>
+                    <span className="truncate">{copy.label}</span>
+                    <span className="sr-only">{explanation}</span>
+                  </div>
+                  <InfoHint
+                    inline
+                    label={copy.label}
+                    text={explanation}
+                    align="right"
+                  />
                 </li>
               )
             })}

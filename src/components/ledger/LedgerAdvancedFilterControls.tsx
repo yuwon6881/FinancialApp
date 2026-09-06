@@ -14,6 +14,7 @@ import {
   type StabilityReloadFilter,
   parseTxTypes,
 } from '../../lib/transactionFilters'
+import { isUnusableAmountFilter } from './view/ledgerViewTypes'
 
 export interface LedgerAdvancedFilterControlsProps {
   startDate: string
@@ -26,6 +27,8 @@ export interface LedgerAdvancedFilterControlsProps {
   maxAmount: string
   onMaxAmountChange: (value: string) => void
   hasInvalidAmountRange: boolean
+  /** A typed bound the predicate cannot use, so it would otherwise filter nothing in silence. */
+  hasUnusableAmount?: boolean
   txType: TxTypeFilter
   onTxTypeChange: (value: TransactionTypeFilterOption | null) => void
   recurringFilter: TransactionLinkFilter
@@ -50,6 +53,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
   maxAmount,
   onMaxAmountChange,
   hasInvalidAmountRange,
+  hasUnusableAmount = false,
   txType,
   onTxTypeChange,
   recurringFilter,
@@ -117,7 +121,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
               placeholder="0.00"
               value={minAmount}
               onChange={event => onMinAmountChange(event.target.value)}
-              invalid={hasInvalidAmountRange}
+              invalid={hasInvalidAmountRange || isUnusableAmountFilter(minAmount)}
               controlSize="sm"
             />
           </FormField>
@@ -130,13 +134,14 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
               placeholder="Any"
               value={maxAmount}
               onChange={event => onMaxAmountChange(event.target.value)}
-              invalid={hasInvalidAmountRange}
+              invalid={hasInvalidAmountRange || isUnusableAmountFilter(maxAmount)}
               controlSize="sm"
             />
           </FormField>
         </div>
         <p className="text-xs text-muted-foreground">Uses absolute amount for both inflows and outflows.</p>
         {hasInvalidAmountRange && <p role="alert" className="text-xs font-semibold text-destructive">Minimum amount cannot exceed maximum amount.</p>}
+        {hasUnusableAmount && <p role="alert" className="text-xs font-semibold text-destructive">Enter a positive amount. A negative bound cannot match anything and is ignored.</p>}
       </div>
 
       {/* Transaction Type Segmented Control */}

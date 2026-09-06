@@ -30,6 +30,20 @@ export const parseAmountFilter = (value: string): number | undefined => {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined
 }
 
+/**
+ * A bound the user typed that the predicate will silently ignore — negative, or not a number.
+ *
+ * The bounds are absolute amounts, so a negative one cannot match anything and is dropped. Callers
+ * use this to say so: counting a dropped bound as an active filter made the chip, the badge and the
+ * URL all claim a filter was narrowing the list while every row was still coming back.
+ */
+export const isUnusableAmountFilter = (value: string): boolean =>
+  value.trim().length > 0 && parseAmountFilter(value) === undefined
+
+/** Whether an amount range will actually narrow the result. */
+export const hasEffectiveAmountFilter = (minAmount: string, maxAmount: string): boolean =>
+  parseAmountFilter(minAmount) !== undefined || parseAmountFilter(maxAmount) !== undefined
+
 export const laterDate = (first?: string | null, second?: string | null) => {
   if (!first) return second || undefined
   if (!second) return first

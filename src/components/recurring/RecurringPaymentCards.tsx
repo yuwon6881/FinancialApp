@@ -128,6 +128,11 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                 <span className="text-2xl font-extrabold text-foreground">{formatSensitive(Math.abs(rp.amount))}</span>
                 <span className="text-xs text-muted-foreground">{normalizeRecurringFrequency(rp.frequency) === 'Annually' ? '/yr' : '/mo'}</span>
               </div>
+              {rp.active && !isEnded && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  ≈ {formatSensitive(Math.abs(rp.amount) * (normalizeRecurringFrequency(rp.frequency) === 'Annually' ? 1 : 12) / 365)} / day
+                </p>
+              )}
 
               <div className="mt-6 space-y-2 border-t border-border/30 pt-4 text-xs">
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">

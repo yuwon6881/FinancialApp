@@ -71,17 +71,37 @@ const ReloadIntentChip = ({
   )
 }
 
+const accountLabel = (account: LedgerAccount) => `${account.name}${account.isArchived ? ' (Closed)' : ''}`
+
+/** Whether AccountChip has anything to draw, so a caller does not open an empty chip row for it. */
+function hasNamedAccount(transaction: Transaction, accounts?: LedgerAccount[]): boolean {
+  return Boolean(transaction.accountId && accounts?.some(item => item.id === transaction.accountId))
+}
+
 function AccountChip({ transaction, accounts }: { transaction: Transaction; accounts?: LedgerAccount[] }) {
   if (!transaction.accountId) return null
   const account = accounts?.find(item => item.id === transaction.accountId)
   if (!account) return null
+  // An internal move has a destination as well as a source, and naming only the source left the
+  // row saying money left an account without saying where it went.
+  const counterAccount = transaction.counterAccountId
+    ? accounts?.find(item => item.id === transaction.counterAccountId)
+    : undefined
+  const title = counterAccount
+    ? `Account: ${accountLabel(account)} to ${accountLabel(counterAccount)}`
+    : `Account: ${accountLabel(account)}`
+  const isArchived = account.isArchived || Boolean(counterAccount?.isArchived)
   return (
     <span
-      title={`Account: ${account.name}${account.isArchived ? ' (Closed)' : ''}`}
-      className={`inline-flex min-w-0 max-w-[14rem] shrink items-center gap-1 text-xs font-medium text-muted-foreground ${account.isArchived ? 'opacity-70' : ''}`}
+      title={title}
+      className={`inline-flex min-w-0 max-w-[14rem] shrink items-center gap-1 text-xs font-medium text-muted-foreground ${isArchived ? 'opacity-70' : ''}`}
     >
       <Wallet className="size-3 shrink-0 text-accent-ink" aria-hidden="true" />
-      <span className="min-w-0 truncate"><span className="sr-only">Account: </span>{account.name}{account.isArchived ? ' (Closed)' : ''}</span>
+      <span className="min-w-0 truncate">
+        <span className="sr-only">Account: </span>
+        {accountLabel(account)}
+        {counterAccount && <><span aria-hidden="true"> → </span><span className="sr-only"> to </span>{accountLabel(counterAccount)}</>}
+      </span>
     </span>
   )
 }
@@ -97,7 +117,9 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
   const moveReason = transactionMoveIneligibility(transaction)
   const canMove = !editBlocked && !moveReason && Boolean(props.onMove)
   const reloadDrawdown = isStabilityReloadDrawdown(transaction)
-  const hasAccount = Boolean(transaction.accountId)
+  // The chip renders nothing for an account missing from the list, so gating on the raw id
+  // opened an empty chip row under the description.
+  const hasAccount = hasNamedAccount(transaction, props.accounts)
   const money = (value: number) => <Amount value={formatCurrencyVal(value, props.currency)} hidden={props.maskFinancialFigures ?? props.hideSensitive} />
   return (
     <tr
@@ -153,7 +175,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
       <td className="p-4 text-center whitespace-nowrap">
         <div className="flex items-center justify-center gap-2">
           <Button variant="tertiary" size="sm" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.hideSensitive)}>Edit</Button>
-          {props.onMove && <Button variant="tertiary" size="sm" title={moveReason ?? undefined} onClick={() => canMove ? props.onMove?.(transaction) : undefined} disabled={!canMove || props.isDeleting || props.hideSensitive} className={canMove ? 'border border-primary/30 text-accent-ink hover:bg-primary/10' : 'border border-border/50 text-muted-foreground'}>Move to</Button>}
+          {props.onMove && <Button variant="tertiary" size="sm" title={moveReason ?? undefined} onClick={() => canMove ? props.onMove?.(transaction) : undefined} disabled={!canMove || props.isDeleting || props.hideSensitive} className={canMove ? 'border border-primary/30 text-accent-ink hover:bg-primary/10' : 'border border-border/50 text-muted-foreground'}>Move</Button>}
           <Button variant="destructive" size="sm" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.hideSensitive}>Delete</Button>
         </div>
       </td>
@@ -175,7 +197,9 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
   const moveReason = transactionMoveIneligibility(transaction)
   const canMove = !editBlocked && !moveReason && Boolean(props.onMove)
   const reloadDrawdown = isStabilityReloadDrawdown(transaction)
-  const hasAccount = Boolean(transaction.accountId)
+  // The chip renders nothing for an account missing from the list, so gating on the raw id
+  // opened an empty chip row under the description.
+  const hasAccount = hasNamedAccount(transaction, props.accounts)
   const formatted = formatCurrencyVal(outflow ? Math.abs(transaction.amount) : transaction.amount, props.currency)
 
   return (
@@ -187,7 +211,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         className="relative overflow-hidden rounded-2xl border border-border shadow-xs"
         contentClassName="pr-3"
         actionsWidth={props.onMove ? 192 : 128}
-        actions={<><Button variant="tertiary" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button>{props.onMove && <Button variant="tertiary" onClick={() => props.onMove?.(transaction)} disabled={!canMove || props.isDeleting || props.isSyncing || props.hideSensitive} className={`flex-1 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${canMove ? 'bg-secondary hover:bg-secondary/80 text-secondary-foreground' : 'bg-muted/50 hover:bg-muted/50 text-muted-foreground'}`}><CalendarClock className="size-4" />Move to</Button>}<Button variant="tertiary" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
+        actions={<><Button variant="tertiary" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button>{props.onMove && <Button variant="tertiary" onClick={() => props.onMove?.(transaction)} disabled={!canMove || props.isDeleting || props.isSyncing || props.hideSensitive} title={moveReason ?? undefined} aria-label={moveReason ? `Cannot move ${transaction.description}: ${moveReason}` : `Move ${transaction.description} to another cycle`} className={`flex-1 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${canMove ? 'bg-blue-600 hover:bg-blue-700 text-on-vivid' : 'bg-muted/50 hover:bg-muted/50 text-muted-foreground'}`}><CalendarClock className="size-4" />Move</Button>}<Button variant="tertiary" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
         desktopActions={<>
           <Button size="icon"
             variant="tertiary"
@@ -204,8 +228,8 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
               variant="tertiary"
               onClick={() => props.onMove?.(transaction)}
               disabled={!canMove || props.isDeleting || props.isSyncing || props.hideSensitive}
-              aria-label={`Move ${transaction.description} to another cycle`}
-              title="Move to"
+              aria-label={moveReason ? `Cannot move ${transaction.description}: ${moveReason}` : `Move ${transaction.description} to another cycle`}
+              title={moveReason ?? 'Move'}
               className={`${INLINE_ACTION_CLASS} border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground`}
             >
               <CalendarClock className="size-4" aria-hidden="true" />

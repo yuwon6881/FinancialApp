@@ -334,6 +334,7 @@ describe('dispatchAiActions — recurring reminders', () => {
       id: 'rp1', enabled: true, reminderMode: 'Once', leadDays: 5,
     } }], d)
     vi.mocked(d.setConfirmModalData).mock.calls[0]?.[0].onConfirm()
+    // Falls back to the lead time already saved on this bill (3), not to the global default.
     expect(d.handleUpdateReminder).toHaveBeenCalledWith('rp1', { enabled: true, mode: 'Once', leadDays: 3 })
   })
 

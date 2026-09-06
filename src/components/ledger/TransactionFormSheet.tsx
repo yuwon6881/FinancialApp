@@ -89,6 +89,8 @@ export interface TransactionFormSheetProps {
   failedReceiptSplitJob?: ReceiptSplitFailure | null
   onReceiptSplitStarted?: (scanId: string) => void
   onReceiptSplitCleared?: (scanId: string) => void | Promise<void>
+  /** Hands a still-running split scan back to the completion toast when this form goes away. */
+  onReceiptSplitReviewReleased?: (scanId: string) => void
   autoOpenReceiptSplit?: boolean
   onResetAutoOpenReceiptSplit?: () => void
   onReceiptSplitOpenChange?: (open: boolean) => void
@@ -117,16 +119,29 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
   const form = useTransactionForm(props)
   const accountsLoading = props.accountsLoading ?? props.accounts === undefined
   const securityPending = props.sensitivePreferenceStatus === 'pending'
-  const saveDisabled = props.hideSensitive || securityPending || accountsLoading
+  const saveDisabled = props.hideSensitive || securityPending || accountsLoading || form.isSubmitting
   const [isReceiptSplitOpen, setIsReceiptSplitOpen] = useState(false)
   const setReceiptSplitOpen = useCallback((open: boolean) => {
     setIsReceiptSplitOpen(open)
     props.onReceiptSplitOpenChange?.(open)
   }, [props.onReceiptSplitOpenChange])
+  const hideSensitive = props.hideSensitive
+  const onShowAlert = props.onShowAlert
+  // The scan this form is spinning on opens its editor here rather than waiting to be found: the
+  // completion toast lasts seconds, and the Ledger's review banner is behind this very sheet.
+  const reviewSplitDraft = useCallback(() => {
+    if (hideSensitive) {
+      onShowAlert?.('Reveal sensitive data to review the scanned receipt.', 'Split Receipt')
+      return
+    }
+    setReceiptSplitOpen(true)
+  }, [hideSensitive, onShowAlert, setReceiptSplitOpen])
   const splitScan = useReceiptSplitScan({
     receiptSplitDraft: props.receiptSplitDraft,
     failedReceiptSplitJob: props.failedReceiptSplitJob,
     onReceiptSplitStarted: props.onReceiptSplitStarted,
+    onReviewDraft: reviewSplitDraft,
+    onReleaseReview: props.onReceiptSplitReviewReleased,
     onError: form.scanner.setScanError,
   })
 
@@ -140,9 +155,10 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
 
   useEffect(() => {
     if (!props.autoOpenReceiptSplit) return
-    if (!props.hideSensitive) setReceiptSplitOpen(true)
+    // Consuming the flag while masked used to make Review do nothing at all, with no explanation.
+    reviewSplitDraft()
     props.onResetAutoOpenReceiptSplit?.()
-  }, [props.autoOpenReceiptSplit, props.hideSensitive, props.onResetAutoOpenReceiptSplit, setReceiptSplitOpen])
+  }, [props.autoOpenReceiptSplit, props.onResetAutoOpenReceiptSplit, reviewSplitDraft])
 
   useEffect(() => {
     if (props.hideSensitive) setReceiptSplitOpen(false)
@@ -271,7 +287,9 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
                 : accountsLoading ? 'Loading accounts…' : undefined}
             className="rounded-xl py-2.5 shadow-lg shadow-primary/10"
           >
-            {form.state.mode === 'edit' ? 'Save Changes' : form.state.mode === 'draft' ? 'Save Draft' : 'Add Transaction'}
+            {form.isSubmitting
+              ? 'Saving…'
+              : form.state.mode === 'edit' ? 'Save Changes' : form.state.mode === 'draft' ? 'Save Draft' : 'Add Transaction'}
           </Button>
         </ModalActions>
       </form>

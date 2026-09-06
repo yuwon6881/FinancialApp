@@ -19,6 +19,9 @@ interface LoanReplayCase {
     lastOccurrenceDate: string | null
     paymentCount: number
     futureScheduleCount: number
+    // Optional: only cases that turn on where the schedule *starts* need to pin it, and every other
+    // assertion here is blind to a schedule shifted wholesale by a whole number of months.
+    firstFutureOccurrenceDate?: string
   }
 }
 
@@ -37,6 +40,9 @@ describe('loan replay parity', () => {
       expect(result.lastOccurrenceDate ?? null).toBe(expected.lastOccurrenceDate)
       expect(result.payments.length).toBe(expected.paymentCount)
       expect(result.futureSchedule.length).toBe(expected.futureScheduleCount)
+      if (expected.firstFutureOccurrenceDate !== undefined) {
+        expect(result.futureSchedule[0].occurrenceDate).toBe(expected.firstFutureOccurrenceDate)
+      }
     })
   }
 })

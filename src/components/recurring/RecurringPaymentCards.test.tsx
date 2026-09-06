@@ -52,13 +52,13 @@ describe('RecurringPaymentCards reminder controls', () => {
     expect(screen.queryByRole('radiogroup', { name: 'Reminder frequency for Netflix' })).toBeNull()
   })
 
-  it('enables the reminder with default Once/3-day settings when saved', () => {
+  it('enables the reminder with the Once/1-day defaults the server stores', () => {
     const onUpdateReminder = vi.fn()
     renderCards([basePayment], { onUpdateReminder })
     fireEvent.click(screen.getByRole('switch', { name: 'Turn on payment reminder for Netflix' }))
     expect(screen.getByRole('button', { name: 'Save Reminder' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Save Reminder' }))
-    expect(onUpdateReminder).toHaveBeenCalledWith('rp-1', { enabled: true, mode: 'Once', leadDays: 3 })
+    expect(onUpdateReminder).toHaveBeenCalledWith('rp-1', { enabled: true, mode: 'Once', leadDays: 1 })
   })
 
   it('shows the editor with mode/lead chips and a live preview once a reminder is enabled', () => {

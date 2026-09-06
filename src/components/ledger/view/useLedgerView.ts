@@ -68,14 +68,37 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
+  // Both modes start from the one remembered rows-per-page. They stay independent once the user
+  // picks a size, because a server page and a cycle page hold very different volumes, but the
+  // all-cycles size used to be hard-coded to 10 and never persisted, so it reset on every entry.
   const [currentCyclePageSize, setCurrentCyclePageSize] = useState(preferredPageSize ?? 10)
-  const [allCyclesPageSize, setAllCyclesPageSize] = useState(10)
+  const [allCyclesPageSize, setAllCyclesPageSize] = useState(preferredPageSize ?? 10)
   const pageSize = showAllCycles ? allCyclesPageSize : currentCyclePageSize
+  // Preferences hydrate from storage in an effect, so they can land after this view has mounted
+  // with the defaults. A late arrival is adopted, but only until the user chooses for themselves.
+  const pageSizeChosenRef = useRef(false)
+  const sortOrderChosenRef = useRef(false)
   const setPageSize = useCallback((size: number) => {
+    pageSizeChosenRef.current = true
     if (showAllCycles) setAllCyclesPageSize(size)
     else setCurrentCyclePageSize(size)
   }, [showAllCycles])
-  const [sortOrder, setSortOrder] = useState<TransactionSort>(preferredSortOrder ?? 'date-desc')
+  const [sortOrder, setSortOrderState] = useState<TransactionSort>(preferredSortOrder ?? 'date-desc')
+  const setSortOrder = useCallback((sort: TransactionSort) => {
+    sortOrderChosenRef.current = true
+    setSortOrderState(sort)
+  }, [])
+
+  useEffect(() => {
+    if (pageSizeChosenRef.current || preferredPageSize === undefined) return
+    setCurrentCyclePageSize(preferredPageSize)
+    setAllCyclesPageSize(preferredPageSize)
+  }, [preferredPageSize])
+
+  useEffect(() => {
+    if (sortOrderChosenRef.current || preferredSortOrder === undefined) return
+    setSortOrderState(preferredSortOrder)
+  }, [preferredSortOrder])
 
   const filterState = useLedgerFilters({
     categories,

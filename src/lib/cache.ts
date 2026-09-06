@@ -266,6 +266,10 @@ export function clearDisposableFinancialCaches(): void {
 export function clearLocalFinancialData(): void {
   void import('./draftTransactionDocuments').then(({ clearDraftTransactionDocuments }) =>
     clearDraftTransactionDocuments())
+  // Images picked for a scan that never finished uploading are unsynced local work, so they are
+  // treated exactly like the draft attachment files above: kept across relaunches and sign-out,
+  // and removed only by this explicit wipe.
+  void import('./scanUploadStore').then(({ clearPendingScanUploads }) => clearPendingScanUploads())
   for (const key of [...Object.values(CACHE_KEYS), CYCLE_SNAPSHOTS_KEY]) {
     try {
       removeCachedKey(key)

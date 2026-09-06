@@ -5,7 +5,7 @@ import { CustomConfirmModal } from '../ui/CustomConfirmModal'
 import { SelectionToolbar } from '../ui/SelectionToolbar'
 import { Button } from '../ui/Button'
 import { LedgerTransactionList } from './LedgerTransactionList'
-import { useLedgerBulkSelection } from './view/useLedgerBulkSelection'
+import { LEDGER_BULK_LIMIT, useLedgerBulkSelection } from './view/useLedgerBulkSelection'
 import type { LedgerListProps } from './ledgerListShared'
 import { buildBulkTransactionDeleteRequest } from '../../app/financialData/transactionBulkActions'
 import { LedgerMoveSheet } from './LedgerMoveSheet'
@@ -45,10 +45,17 @@ export function LedgerBulkSelectionLayer({
     bulk.leaveSelection()
   }
 
+  const blockedMoveReason = bulk.selectedTransactions
+    .map(transactionMoveIneligibility)
+    .find(reason => reason != null) ?? null
+
   return (
     <>
       <SelectionToolbar
         testId="ledger-selection-toolbar"
+        // The enforced cap, not the toolbar's own default: the two happened to agree at 100, so
+        // changing one would have left the "max N" message describing a limit nothing applies.
+        selectionLimit={LEDGER_BULK_LIMIT}
         itemCount={bulk.eligibleVisibleCount}
         selectedCount={bulk.selectedCount}
         allVisibleSelected={bulk.allVisibleSelected}
@@ -64,12 +71,16 @@ export function LedgerBulkSelectionLayer({
             variant="secondary"
             size="sm"
             type="button"
-            disabled={listProps.hideSensitive || bulk.selectedTransactions.some(transaction => transactionMoveIneligibility(transaction) != null)}
+            disabled={listProps.hideSensitive || blockedMoveReason != null}
+            // The sheet already explains why a row cannot move; without this the bulk button was
+            // simply dead, with nothing on screen saying which selection was blocking it.
+            title={blockedMoveReason ?? undefined}
+            aria-label={blockedMoveReason ? `Cannot move the selected transactions: ${blockedMoveReason}` : undefined}
             onClick={() => {
               if (!app.guardSensitive()) return
               setIsMoveOpen(true)
             }}
-          >Move to</Button><Button
+          >Move</Button><Button
             variant="destructive"
             size="sm"
             type="button"

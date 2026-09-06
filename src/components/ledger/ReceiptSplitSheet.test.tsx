@@ -5,17 +5,28 @@ import type { ReceiptSplitScanResult } from '../../lib/api'
 import { ReceiptSplitSheet } from './ReceiptSplitSheet'
 
 vi.mock('../ui/BottomSheet', () => ({
+  // The real sheet routes a swipe-down, the back button, Escape and any tab navigation to onClose,
+  // so the mock exposes it as a plain dismiss control.
   BottomSheet: ({
     isOpen,
     title,
     children,
     footer,
+    onClose,
   }: {
     isOpen: boolean
     title: React.ReactNode
     children: React.ReactNode
     footer?: React.ReactNode
-  }) => isOpen ? <section><h1>{title}</h1>{children}{footer}</section> : null,
+    onClose: () => void
+  }) => isOpen ? (
+    <section>
+      <h1>{title}</h1>
+      <button type="button" onClick={onClose}>dismiss sheet</button>
+      {children}
+      {footer}
+    </section>
+  ) : null,
 }))
 
 vi.mock('../ui/DatePicker', () => ({
@@ -52,20 +63,21 @@ function result(): ReceiptSplitScanResult {
   }
 }
 
-function renderSheet(scanResult = result()) {
+function renderSheet(scanResult = result(), currency = 'MYR') {
   const onUseResult = vi.fn()
   const onClear = vi.fn()
+  const onClose = vi.fn()
   render(
     <ReceiptSplitSheet
       isOpen
-      currency="MYR"
+      currency={currency}
       draft={{ jobId: 'split-1', result: scanResult }}
       onClear={onClear}
-      onClose={vi.fn()}
+      onClose={onClose}
       onUseResult={onUseResult}
     />,
   )
-  return { onUseResult, onClear }
+  return { onUseResult, onClear, onClose }
 }
 
 describe('ReceiptSplitSheet', () => {
@@ -220,5 +232,39 @@ describe('ReceiptSplitSheet', () => {
     // Water Tax was exclusive to Water, so it was dropped and NOT applied globally.
     fireEvent.click(screen.getByRole('button', { name: 'Use This Amount' }))
     expect(onUseResult).toHaveBeenCalledWith(expect.objectContaining({ amount: 22 }))
+  })
+
+  // A downward flick anywhere on the sheet, the Android back button and any tab navigation all
+  // reach onClose. Deleting the scan there threw away the whole itemised receipt on a mis-swipe.
+  it('keeps the scan when the sheet is dismissed rather than discarded', () => {
+    const { onClear, onClose } = renderSheet()
+
+    fireEvent.click(screen.getByRole('button', { name: 'dismiss sheet' }))
+
+    expect(onClose).toHaveBeenCalled()
+    expect(onClear).not.toHaveBeenCalled()
+  })
+
+  it('clears the scan only when it is explicitly discarded', () => {
+    const { onClear, onClose } = renderSheet()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
+
+    expect(onClear).toHaveBeenCalledWith('split-1')
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  // Nothing here converts, so a foreign receipt read as local money would overstate or understate
+  // every figure on the sheet without ever saying so.
+  it('says when the receipt is printed in another currency', () => {
+    renderSheet({ ...result(), currency: 'THB' }, 'MYR')
+
+    expect(screen.getByText(/printed in THB/)).toBeTruthy()
+  })
+
+  it('stays quiet when the receipt currency matches the account', () => {
+    renderSheet({ ...result(), currency: 'myr' }, 'MYR')
+
+    expect(screen.queryByText(/printed in/)).toBeNull()
   })
 })

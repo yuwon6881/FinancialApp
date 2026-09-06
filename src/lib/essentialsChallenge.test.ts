@@ -8,12 +8,12 @@ import {
 
 const activeCycle = { phase: 'active' as const, dayNumber: 15, totalDays: 30, daysLeft: 16 }
 
-/** A funded cycle exactly halfway through with exactly half its Essentials money left. */
+/** A funded cycle projected to finish exactly on its budget. */
 const onPlan: EssentialsChallengeInput = {
   totalAvailable: 2000,
   projectedRemaining: 1000,
-  projectedEndingBalance: 200,
-  currentDailyPace: 60,
+  projectedEndingBalance: 0,
+  currentDailyPace: 40,
   unpaidRecurringCount: 0,
   exceededCategoryLimits: 0,
   cycle: activeCycle,
@@ -32,46 +32,43 @@ describe('evaluateEssentialsChallenge tiers', () => {
   })
 
   it('ranks money that is outlasting the clock by a wide margin as far ahead', () => {
-    // 20% used at the halfway mark projects to 40% of the budget by cycle end.
-    const result = withRemaining(1600)
+    // 40% of the budget used by cycle end projects to $1,200 ending balance.
+    const result = withRemaining(1600, { projectedEndingBalance: 1200 })
     expect(result.tier).toBe('far-ahead')
     expect(result.projectedUsage).toBeCloseTo(0.4, 10)
-    expect(result.paceGap).toBeCloseTo(600, 10)
+    expect(result.paceGap).toBeCloseTo(1200, 10)
     expect(result.score).toBe(100)
   })
 
   it('separates comfortably ahead from far ahead', () => {
-    // 45% used at the halfway mark projects to 90% of the budget.
-    const result = withRemaining(1100)
+    // 90% of the budget used by cycle end projects to $200 ending balance.
+    const result = withRemaining(1100, { projectedEndingBalance: 200 })
     expect(result.tier).toBe('ahead')
     expect(result.score).toBe(90)
   })
 
   it('ranks spending that outruns the clock but still fits as cutting it fine', () => {
-    // 70% used at the halfway mark, and the projection still lands above zero.
-    const result = withRemaining(600, { projectedEndingBalance: 40 })
+    // Spending pace outruns the daily allowance, but projection still lands above zero.
+    const result = withRemaining(600, { currentDailyPace: 80, projectedEndingBalance: 40 })
     expect(result.tier).toBe('near-limit')
-    expect(result.projectedUsage).toBeCloseTo(1.4, 10)
-    expect(result.score).toBe(41)
+    expect(result.projectedUsage).toBeCloseTo(0.98, 10)
+    expect(result.score).toBe(74)
   })
 
   it('can rank the opening days of a cycle, which a plain clock comparison cannot', () => {
     const dayTwo = { phase: 'active' as const, dayNumber: 2, totalDays: 30, daysLeft: 29 }
-    // Nothing committed yet. Measured against the clock this is only 7% ahead, which no
-    // "comfortably ahead" threshold could ever reach this early.
-    const untouched = evaluateEssentialsChallenge({ ...onPlan, projectedRemaining: 2000, cycle: dayTwo })
+    // Nothing committed yet.
+    const untouched = evaluateEssentialsChallenge({ ...onPlan, projectedRemaining: 2000, projectedEndingBalance: 2000, cycle: dayTwo })
     expect(untouched.tier).toBe('far-ahead')
     expect(untouched.score).toBe(100)
 
-    // An ordinary early shop is damped rather than projected across the whole cycle: 8% of the
-    // budget on day two would read as 20% over if two days were treated as a full sample.
-    const ordinaryDay = evaluateEssentialsChallenge({ ...onPlan, projectedRemaining: 1840, cycle: dayTwo })
+    // An ordinary early spend with strong forecast buffer.
+    const ordinaryDay = evaluateEssentialsChallenge({ ...onPlan, projectedRemaining: 1840, projectedEndingBalance: 400, cycle: dayTwo })
     expect(ordinaryDay.projectedUsage).toBeCloseTo(0.8, 10)
     expect(ordinaryDay.tier).toBe('far-ahead')
 
-    // Damped, not silenced: genuinely heavy early spending still ranks as a warning.
-    const heavyDay = evaluateEssentialsChallenge({ ...onPlan, projectedRemaining: 1400, cycle: dayTwo })
-    expect(heavyDay.projectedUsage).toBeCloseTo(3, 10)
+    // Spending faster than allowance early on.
+    const heavyDay = evaluateEssentialsChallenge({ ...onPlan, projectedRemaining: 1400, currentDailyPace: 100, projectedEndingBalance: 40, cycle: dayTwo })
     expect(heavyDay.tier).toBe('near-limit')
   })
 
@@ -90,11 +87,11 @@ describe('evaluateEssentialsChallenge tiers', () => {
   })
 
   it('keeps every in-budget score above every over-budget score', () => {
-    // The worst in-budget case: nearly all of the money committed on day one.
+    // The worst in-budget case: projected heavy shortfall at cycle close.
     const worstInBudget = evaluateEssentialsChallenge({
       ...onPlan,
       projectedRemaining: 20,
-      projectedEndingBalance: 20,
+      projectedEndingBalance: -500,
       cycle: { phase: 'active', dayNumber: 1, totalDays: 30, daysLeft: 30 },
     })
     const mildestOver = withRemaining(-1, { projectedEndingBalance: -1 })
@@ -172,7 +169,7 @@ describe('evaluateEssentialsChallenge daily figures', () => {
 
 describe('evaluateEssentialsChallenge badges', () => {
   it('awards every badge for a clean, ahead-of-pace cycle', () => {
-    const result = withRemaining(1600)
+    const result = withRemaining(1600, { projectedEndingBalance: 1200 })
     expect(result.earnedBadgeCount).toBe(4)
     expect(result.badges.every(badge => badge.earned)).toBe(true)
   })

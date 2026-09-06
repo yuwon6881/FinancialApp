@@ -10,6 +10,7 @@ import {
   parseTxTypes,
   splitFilterSelections,
 } from '../../lib/transactionFilters'
+import { parseAmountFilter } from './view/ledgerViewTypes'
 
 export interface LedgerActiveFilterSummaryProps {
   showAllCycles: boolean
@@ -92,8 +93,12 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
       filterDetails.push(`dates ${activeStartDate || 'any'} to ${activeEndDate || 'any'}`)
     }
   }
-  if (activeMinAmount || activeMaxAmount) {
-    filterDetails.push(`absolute amount ${activeMinAmount || '0'} to ${activeMaxAmount || 'any'}`)
+  // Only bounds the predicate keeps: a negative one is dropped, and describing it here claimed a
+  // narrowing that never happened.
+  const usableMinAmount = parseAmountFilter(activeMinAmount)
+  const usableMaxAmount = parseAmountFilter(activeMaxAmount)
+  if (usableMinAmount !== undefined || usableMaxAmount !== undefined) {
+    filterDetails.push(`absolute amount ${usableMinAmount ?? '0'} to ${usableMaxAmount ?? 'any'}`)
   }
   const activeTxTypes = parseTxTypes(activeTxType)
   if (activeTxTypes.length === 1) {

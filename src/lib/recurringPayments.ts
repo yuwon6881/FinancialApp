@@ -1,4 +1,10 @@
-import type { RecurringFrequency, RecurringPayment, RecurringPaymentMode, RecurringReminderMode, RecurringReminderSettings } from '../types'
+import type { RecurringFrequency, RecurringPayment, RecurringPaymentMode, RecurringReminderMode, RecurringReminderSettings, Transaction } from '../types'
+
+/** The only fields the occurrence arithmetic below reads off a ledger row. */
+export type OccurrenceTransaction = Pick<
+  Transaction,
+  'amount' | 'ledgerCategory' | 'recurringPaymentId' | 'recurringOccurrenceDate'
+>
 
 export function normalizeRecurringFrequency(value: unknown): RecurringFrequency {
   return value === 'Annually' ? 'Annually' : 'Monthly'
@@ -6,10 +12,15 @@ export function normalizeRecurringFrequency(value: unknown): RecurringFrequency 
 
 // Default reminder configuration for a subscription that has never had one saved --
 // new and previously-migrated recurring payments start disabled (opt-in only).
+//
+// These must be the values the server stores for a bill that has never had a reminder saved
+// (RecurringPayment's PushReminderMode/PushReminderLeadDays defaults, and the matching column
+// defaults). A different lead day here is only ever seen before the first sync, which made a newly
+// added bill advertise a reminder window the server was never going to use.
 export const DEFAULT_REMINDER_SETTINGS: RecurringReminderSettings = {
   enabled: false,
   mode: 'Once',
-  leadDays: 3,
+  leadDays: 1,
 }
 
 export const REMINDER_LEAD_DAY_OPTIONS: readonly number[] = [7, 3, 2, 1]
@@ -56,10 +67,12 @@ export function computeOccurrenceOnOrAfter(
   const target = parseDateOnly(date)
   const dueDay = Math.max(1, Math.min(31, payment.dueDate))
   const annual = payment.frequency === 'Annually'
-  let year = Math.max(start.getFullYear(), target.getFullYear())
-  let month = annual
-    ? start.getMonth()
-    : year === start.getFullYear() ? Math.max(start.getMonth(), target.getMonth()) : target.getMonth()
+  // Monthly searches from whichever bound is later; deriving the month from the two month numbers
+  // looked equivalent but skipped ahead whenever the target fell in a year before the start.
+  // Mirrors RecurringOccurrenceService.FindOccurrenceOnOrAfter.
+  const floor = target > start ? target : start
+  let year = annual ? Math.max(start.getFullYear(), target.getFullYear()) : floor.getFullYear()
+  let month = annual ? start.getMonth() : floor.getMonth()
 
   const anchoredDate = () => {
     const lastDay = new Date(year, month + 1, 0).getDate()
@@ -73,6 +86,30 @@ export function computeOccurrenceOnOrAfter(
   }
   const result = formatDateOnly(candidate)
   return payment.endDate && result > payment.endDate ? null : result
+}
+
+/**
+ * What one occurrence has already taken, and what it still owes.
+ *
+ * Mirrors the server's `RecurringOccurrenceAmounts`, and has to keep its two rules: a row in the
+ * `Discarded` bucket is a marker carrying no money, and the sign of a stored amount is not a
+ * contract, so magnitudes are summed rather than signed values.
+ */
+export function occurrencePaidSoFar(
+  transactions: readonly OccurrenceTransaction[],
+  recurringPaymentId: string,
+  occurrenceDate: string,
+): number {
+  return transactions.reduce((total, transaction) => {
+    if (transaction.recurringPaymentId !== recurringPaymentId) return total
+    if (transaction.recurringOccurrenceDate !== occurrenceDate) return total
+    if ((transaction.ledgerCategory || '').toLowerCase() === 'discarded') return total
+    return total + Math.abs(transaction.amount)
+  }, 0)
+}
+
+export function occurrenceRemaining(scheduledAmount: number, paidSoFar: number): number {
+  return Math.max(0, Math.abs(scheduledAmount) - paidSoFar)
 }
 
 // True once a subscription's end date has passed. Such a row can stay flagged `active` (the

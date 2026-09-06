@@ -102,7 +102,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
           aria-label={`Expand ${displayTitle}`}
           aria-expanded="false"
           onClick={() => setIsExpanded(true)}
-          className="absolute inset-0 z-10 rounded-2xl cursor-pointer focus-visible:outline-offset-2"
+          className="absolute inset-0 z-10 rounded-2xl cursor-pointer hover:bg-transparent focus-visible:outline-offset-2"
         >
           <span className="sr-only">Expand {displayTitle}</span>
         </Button>
@@ -135,7 +135,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
           aria-label={`Collapse ${displayTitle}`}
           aria-expanded="true"
           onClick={() => setIsExpanded(false)}
-          className="absolute inset-0 z-10 rounded-xl cursor-pointer"
+          className="absolute inset-0 z-10 rounded-xl cursor-pointer hover:bg-transparent"
         >
           <span className="sr-only">Collapse {displayTitle}</span>
         </Button>

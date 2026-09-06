@@ -3,6 +3,7 @@ import { createFinalId, type OutboxPayload } from '../../lib/outbox'
 import { triggerHaptic } from '../../lib/haptics'
 import type { UseOutboxResult } from '../../lib/useOutbox'
 import type { AppDialogs } from '../useAppDialogs'
+import type { ToastAction, ToastTone } from '../../components/ui/ToastViewport'
 
 interface LoanActionDependencies {
   loans: Loan[]
@@ -12,6 +13,7 @@ interface LoanActionDependencies {
   mutateQueue: UseOutboxResult['mutateQueue']
   snapshotForUndo: UseOutboxResult['snapshotForUndo']
   setConfirmModalData: AppDialogs['setConfirmModalData']
+  showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
 }
 
 const emptySnapshot = {
@@ -35,6 +37,7 @@ export function createLoanActions(deps: LoanActionDependencies) {
     mutateQueue,
     snapshotForUndo,
     setConfirmModalData,
+    showToast,
   } = deps
 
   const handleAddLoan = (value: Partial<Loan>) => {
@@ -97,6 +100,17 @@ export function createLoanActions(deps: LoanActionDependencies) {
   const requestDeleteLoan = (id: string) => {
     if (!guardSensitive()) return
     const loan = loans.find(item => item.id === id)
+    // A settled loan owns the state its payoff left behind: the bill is closed and every occurrence
+    // is marked SettledByLoanPayoff, and only this loan's Undo puts that back. The server refuses
+    // the delete for the same reason; this keeps the user from queueing one that cannot succeed.
+    if (loan?.settlementActionId) {
+      showToast(
+        `“${loan.name}” has been settled. Undo the settlement first so its bill and occurrences are put back.`,
+        'Loan kept',
+        'warning',
+      )
+      return
+    }
     setConfirmModalData({
       title: 'Delete loan',
       message: `Delete “${loan?.name || 'this loan'}”? The linked bill and its past ledger entries stay in place.`,

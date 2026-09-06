@@ -14,9 +14,10 @@ import { APP_LOCATION_CHANGED_EVENT } from '../lib/appLocation'
 import { RecurringTabs, type RecurringTabId } from './recurring/RecurringTabs'
 import type { LoanLoadStatus } from '../app/financialData/useLoanData'
 import { formatSensitiveAmount } from './recurring/formatters'
+import { occurrencePaidSoFar, occurrenceRemaining } from '../lib/recurringPayments'
 
 const LoansSection = React.lazy(() => import('./recurring/loans/LoansSection').then(module => ({ default: module.LoansSection })))
-const PayEarlySheet = React.lazy(() => import('./recurring/PayEarlySheet').then(module => ({ default: module.PayEarlySheet })))
+import { PayEarlySheet } from './recurring/PayEarlySheet'
 
 function parseInitialRecurringTab(highlightedLoanId: string | null | undefined): RecurringTabId {
   if (highlightedLoanId) return 'loans'
@@ -134,11 +135,40 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const [activeTab, setActiveTab] = React.useState<RecurringTabId>(() => parseInitialRecurringTab(highlightedLoanIdProp))
   const [internalHighlightedLoanId, setInternalHighlightedLoanId] = React.useState<string | null>(null)
   const [payEarlyPayment, setPayEarlyPayment] = React.useState<RecurringPayment | null>(null)
-  const payEarlyOccurrence = payEarlyPayment
-    ? activeRecurringPayments.find(occurrence =>
-        occurrence.recurringPaymentId === payEarlyPayment.id
-        && occurrence.dueDate === payEarlyPayment.nextDueDate) ?? null
-    : null
+  // Pay Early always targets an occurrence that is still in the future, and the pending-due list
+  // only ever holds occurrences due today or earlier -- so the lookup below never matched and the
+  // sheet fell back to the bill's full price. That is only wrong once the occurrence already has a
+  // part payment against it, which is exactly what paying part of it early creates: the second
+  // sheet then quoted the whole bill again and posted an optimistic row for it, and the amount
+  // visibly dropped to the real remainder after the server answered.
+  const payEarlyOccurrence = React.useMemo<ActiveRecurringPayment | null>(() => {
+    if (!payEarlyPayment?.nextDueDate) return null
+    const dueOccurrence = activeRecurringPayments.find(occurrence =>
+      occurrence.recurringPaymentId === payEarlyPayment.id
+      && occurrence.dueDate === payEarlyPayment.nextDueDate)
+    if (dueOccurrence) return dueOccurrence
+
+    const scheduledAmount = Math.abs(payEarlyPayment.amount)
+    const paidAmount = occurrencePaidSoFar(transactions, payEarlyPayment.id, payEarlyPayment.nextDueDate)
+    // Nothing recorded yet: leave it to the sheet's own fallback rather than inventing an occurrence
+    // the ledger has no rows for.
+    if (paidAmount <= 0) return null
+    return {
+      id: `${payEarlyPayment.id}-${payEarlyPayment.nextDueDate}`,
+      recurringPaymentId: payEarlyPayment.id,
+      name: payEarlyPayment.name,
+      amount: scheduledAmount,
+      scheduledAmount,
+      paidAmount,
+      remainingAmount: occurrenceRemaining(scheduledAmount, paidAmount),
+      category: payEarlyPayment.category,
+      ledgerCategory: payEarlyPayment.ledgerCategory,
+      dueDate: payEarlyPayment.nextDueDate,
+      isPaid: false,
+      isDiscarded: false,
+      status: 'PartiallyPaid',
+    }
+  }, [activeRecurringPayments, payEarlyPayment, transactions])
   const currentHighlightedLoanId = highlightedLoanIdProp || internalHighlightedLoanId
 
   const handleClearHighlightedLoan = React.useCallback(() => {
@@ -248,6 +278,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         activeView={activeTab}
         totalCommittedMonthly={view.totalCommittedMonthly}
         totalCommittedAnnual={view.totalCommittedAnnual}
+        totalCommittedDaily={view.totalCommittedDaily}
         activeCount={view.activeCount}
         totalCount={payments.length}
         loanTotalOutstanding={loanTotalOutstanding}

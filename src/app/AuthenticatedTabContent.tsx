@@ -1,4 +1,4 @@
-import { lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
+import { lazy, Suspense, useMemo, type Dispatch, type SetStateAction } from 'react'
 import type { DashboardData } from '../types'
 import type { useAiActionRouter } from './useAiActionRouter'
 import type { useAppDialogs } from './useAppDialogs'
@@ -127,6 +127,7 @@ export function AuthenticatedTabContent({
     activeReceiptSplitDraft,
     failedReceiptSplitJob,
     handleReceiptSplitStarted,
+    releaseReceiptSplitReview,
     clearReceiptSplitJob,
   } = receiptSplit
 
@@ -147,6 +148,25 @@ export function AuthenticatedTabContent({
     && nav.ledgerShowAllCycles
     && prefs.ledgerCyclesRange === 'all'
   const showCycleSwitcher = (CYCLE_DEPENDENT_TABS as readonly string[]).includes(prefs.activeTab)
+
+  const totalAccountBalance = useMemo(() => {
+    return (financial.allAccounts ?? []).reduce((sum, acc) => sum + (acc.remaining ?? 0), 0)
+  }, [financial.allAccounts])
+
+  const cachedPortfolio = useMemo(() => {
+    return apiClient.readCachedInvestmentPortfolio?.() ?? null
+  }, [apiClient, investmentAllocation])
+  const investmentValue = cachedPortfolio?.summary?.totalValue
+
+  const loanDebt = useMemo(() => {
+    const isLoansKnown = financial.hasLoadedLoans || financial.loanLoadStatus === 'cached' || financial.loanLoadStatus === 'ready'
+    if (!isLoansKnown) return null
+    const loans = financial.allLoans ?? []
+    if (loans.some(loan => loan.scheduleStatus === 'Incomplete' || loan.isRecalculating)) {
+      return null
+    }
+    return loans.reduce((sum, loan) => sum + Math.max(0, loan.snapshot.outstandingBalance), 0)
+  }, [financial.allLoans, financial.hasLoadedLoans, financial.loanLoadStatus])
 
   return (
     <div key={prefs.activeTab} className="w-full view-enter">
@@ -195,6 +215,9 @@ export function AuthenticatedTabContent({
             nav.setAutoOpenLedgerTxType('transfer')
           }}
           onNavigateToRecurring={nav.handleNavigateToRecurring}
+          totalAccountBalance={totalAccountBalance}
+          investmentValue={investmentValue}
+          loanDebt={loanDebt}
         />
       )}
 
@@ -370,6 +393,7 @@ export function AuthenticatedTabContent({
           failedReceiptSplitJob={failedReceiptSplitJob}
           onReceiptSplitStarted={handleReceiptSplitStarted}
           onReceiptSplitCleared={clearReceiptSplitJob}
+          onReceiptSplitReviewReleased={releaseReceiptSplitReview}
           onReceiptSplitOpenChange={setIsReceiptSplitOpen}
           aiEditDraft={aiRouter.state.aiLedgerEditDraft}
           aiExportRequest={aiRouter.state.aiLedgerExportRequest}
@@ -472,6 +496,7 @@ export function AuthenticatedTabContent({
             failedReceiptSplitJob,
             onReceiptSplitStarted: handleReceiptSplitStarted,
             onReceiptSplitCleared: clearReceiptSplitJob,
+            onReceiptSplitReviewReleased: releaseReceiptSplitReview,
             onReceiptSplitOpenChange: setIsReceiptSplitOpen,
           }}
         />

@@ -9,6 +9,8 @@ import {
   hasBillingEnded,
   isEligibleForPayEarly,
   normalizeRecurringFrequency,
+  occurrencePaidSoFar,
+  occurrenceRemaining,
   REMINDER_LEAD_DAY_OPTIONS,
 } from './recurringPayments'
 
@@ -78,6 +80,62 @@ describe('computeOccurrenceOnOrAfter', () => {
     expect(computeOccurrenceOnOrAfter({
       startDate: '2026-01-15', dueDate: 15, frequency: 'Monthly', endDate: '2026-08-10',
     }, '2026-08-09')).toBeNull()
+  })
+
+  // A bill that starts in a later year than the date being searched from. The month used to come
+  // from Math.max(start.month, target.month) whenever the resolved year equalled the start year --
+  // which is also true when the target sits in an earlier year -- so the card's optimistic next due
+  // date jumped months and then silently corrected itself once the server answered.
+  it('answers the first scheduled date when the schedule starts in a later year', () => {
+    expect(computeOccurrenceOnOrAfter({
+      startDate: '2027-01-10', dueDate: 10, frequency: 'Monthly', endDate: undefined,
+    }, '2026-09-06')).toBe('2027-01-10')
+  })
+
+  it('clamps the due day inside a later-year start month', () => {
+    expect(computeOccurrenceOnOrAfter({
+      startDate: '2027-02-28', dueDate: 31, frequency: 'Monthly', endDate: undefined,
+    }, '2026-12-31')).toBe('2027-02-28')
+  })
+
+  it('answers the first scheduled date for an annual schedule starting in a later year', () => {
+    expect(computeOccurrenceOnOrAfter({
+      startDate: '2027-03-15', dueDate: 15, frequency: 'Annually', endDate: undefined,
+    }, '2026-11-01')).toBe('2027-03-15')
+  })
+})
+
+describe('occurrencePaidSoFar', () => {
+  const rows = [
+    { amount: -40, ledgerCategory: 'Essentials', recurringPaymentId: 'rp-1', recurringOccurrenceDate: '2026-12-10' },
+    { amount: -20, ledgerCategory: 'Essentials', recurringPaymentId: 'rp-1', recurringOccurrenceDate: '2026-12-10' },
+    { amount: -99, ledgerCategory: 'Essentials', recurringPaymentId: 'rp-1', recurringOccurrenceDate: '2027-01-10' },
+    { amount: -99, ledgerCategory: 'Essentials', recurringPaymentId: 'rp-2', recurringOccurrenceDate: '2026-12-10' },
+  ]
+
+  it('sums only the rows tagged to that bill and occurrence', () => {
+    expect(occurrencePaidSoFar(rows, 'rp-1', '2026-12-10')).toBe(60)
+  })
+
+  it('ignores a discarded marker, which carries no money', () => {
+    expect(occurrencePaidSoFar(
+      [...rows, { amount: 0, ledgerCategory: 'Discarded', recurringPaymentId: 'rp-1', recurringOccurrenceDate: '2026-12-10' }],
+      'rp-1',
+      '2026-12-10',
+    )).toBe(60)
+  })
+
+  it('compares magnitudes, because the stored sign is not a contract', () => {
+    expect(occurrencePaidSoFar(
+      [{ amount: 40, ledgerCategory: 'Essentials', recurringPaymentId: 'rp-1', recurringOccurrenceDate: '2026-12-10' }],
+      'rp-1',
+      '2026-12-10',
+    )).toBe(40)
+  })
+
+  it('never reports a negative remainder once the occurrence is covered', () => {
+    expect(occurrenceRemaining(-100, 60)).toBe(40)
+    expect(occurrenceRemaining(100, 140)).toBe(0)
   })
 })
 

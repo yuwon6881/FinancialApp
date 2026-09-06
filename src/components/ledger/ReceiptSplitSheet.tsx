@@ -23,6 +23,13 @@ interface Props {
   onUseResult: (draft: TransactionPrefillDraft) => void
 }
 
+/** A receipt printed in one currency and priced in another is not a conversion we can make. */
+function foreignCurrency(receipt: ReceiptSplitScanResult | null, accountCurrency: string): string | null {
+  const printed = receipt?.currency?.trim().toUpperCase()
+  if (!printed) return null
+  return printed === accountCurrency.trim().toUpperCase() ? null : printed
+}
+
 function receiptQuantity(item: ReceiptSplitItem): number {
   return Math.max(1, Math.floor(item.quantity))
 }
@@ -72,6 +79,8 @@ export function ReceiptSplitSheet({
     [receipt, selectedQuantities],
   )
 
+  const printedCurrency = foreignCurrency(receipt, currency)
+
   const itemCalculations = useMemo(() => {
     if (!receipt) return []
     return receipt.items.map((_, itemIndex) => {
@@ -90,13 +99,15 @@ export function ReceiptSplitSheet({
     && calculation.total >= 0,
   )
 
-  const closeAndClear = () => {
+  /**
+   * Dismissing is not discarding. This sheet closes on a downward flick from anywhere on it, on
+   * the browser/Android back button, and on any tab navigation — deleting the scan on those would
+   * throw away a whole itemised receipt, and the photo and AI call behind it, on a mis-swipe. A
+   * dismissed scan stays on the Ledger's "Scan ready for review" banner; only the explicit
+   * Discard below, and consuming the result, clear it.
+   */
+  const discardAndClose = () => {
     if (activeJobId) void onClear(activeJobId)
-    setReceipt(null)
-    setSelectedQuantities([])
-    setUnlockedPriceIndexes(new Set())
-    setActiveJobId(null)
-    appliedJobRef.current = null
     onClose()
   }
 
@@ -110,7 +121,7 @@ export function ReceiptSplitSheet({
       ledgerCategory: receipt.ledgerCategory,
       txType: 'outflow',
     })
-    closeAndClear()
+    discardAndClose()
   }
 
   const updatePrice = (index: number, value: string) => {
@@ -182,13 +193,13 @@ export function ReceiptSplitSheet({
   return (
     <BottomSheet
       isOpen={isOpen}
-      onClose={closeAndClear}
+      onClose={onClose}
       title="Split Receipt"
       maxWidthClassName="max-w-3xl"
       footer={receipt ? (
         <ModalActions>
-          <Button variant="secondary" type="button" onClick={closeAndClear} className="rounded-xl py-2.5">
-            Cancel
+          <Button variant="secondary" type="button" onClick={discardAndClose} className="rounded-xl py-2.5">
+            Discard
           </Button>
           <Button
             variant="primary"
@@ -247,12 +258,20 @@ export function ReceiptSplitSheet({
           </details>
 
           {(receipt.truncated || receipt.warnings.length > 0 || receipt.confidence < 0.7
-            || calculation.hasMismatch || calculation.chargeBaseIncomplete) && (
+            || calculation.hasMismatch || calculation.chargeBaseIncomplete || printedCurrency) && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
               <div className="flex items-center gap-2 font-bold">
                 <AlertTriangle className="size-4" /> Review the extracted receipt
               </div>
               {receipt.truncated && <p className="mt-1">Some visible receipt lines may be missing.</p>}
+              {/* Nothing here converts: the figures are the receipt's own numbers, and saving one
+                  records it as {currency}. Say so rather than relabel a foreign total silently. */}
+              {printedCurrency && (
+                <p className="mt-1">
+                  This receipt is printed in {printedCurrency}, but every amount here is shown and
+                  saved as {currency}. Convert your share yourself before saving it.
+                </p>
+              )}
               {receipt.warnings.map((warning, index) => <p key={index} className="mt-1">{warning}</p>)}
               {/* The lines and charges we read add up to something the receipt itself does not
                   print, so at least one of them is wrong — and your share is built from them. */}
@@ -325,6 +344,14 @@ export function ReceiptSplitSheet({
           {calculation.invalidSelectedItemIndexes.length > 0 && (
             <div className="rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-xs text-destructive">
               Unlock and correct the price for every selected item without a readable amount.
+            </div>
+          )}
+
+          {/* Use This Amount is disabled below zero; without this the button was simply dead. */}
+          {calculation.total < 0 && calculation.selectedItemCount > 0 && (
+            <div className="rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              The discounts read off this receipt come to more than the items you picked, so your
+              share works out below zero. Check the discount lines before using this amount.
             </div>
           )}
         </div>

@@ -16,6 +16,7 @@ import {
   parseTxTypes,
 } from '../../lib/transactionFilters'
 import type { TransactionSort } from '../../lib/transactionOrdering'
+import { hasEffectiveAmountFilter, isUnusableAmountFilter } from './view/ledgerViewTypes'
 import { LedgerAdvancedFilterControls } from './LedgerAdvancedFilterControls'
 import { LedgerCategoryChecklist } from './LedgerCategoryChecklist'
 import { Toolbar } from '../ui/Toolbar'
@@ -128,7 +129,7 @@ export function LedgerFilterBar({
     : (selectedFilters.length === 0 ? 'Filters' : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`)
   const draftAdvancedFilterCount =
     (startDate || endDate ? 1 : 0) +
-    (minAmount || maxAmount ? 1 : 0) +
+    (hasEffectiveAmountFilter(minAmount, maxAmount) ? 1 : 0) +
     (recurringFilter !== 'all' ? 1 : 0) +
     (wishlistFilter !== 'all' ? 1 : 0) +
     (reloadFilter && reloadFilter !== 'all' ? 1 : 0) +
@@ -138,8 +139,11 @@ export function LedgerFilterBar({
   const parsedMin = minAmount === '' ? undefined : Number(minAmount)
   const parsedMax = maxAmount === '' ? undefined : Number(maxAmount)
   const hasInvalidAmountRange = parsedMin !== undefined && parsedMax !== undefined && parsedMin > parsedMax
+  // A bound the predicate drops has to say so, the same way an inverted range does. Left silent it
+  // read as an applied filter that changed nothing.
+  const hasUnusableAmount = isUnusableAmountFilter(minAmount) || isUnusableAmountFilter(maxAmount)
   const hasInvalidDateRange = !!startDate && !!endDate && startDate > endDate
-  const hasInvalidRange = hasInvalidAmountRange || hasInvalidDateRange
+  const hasInvalidRange = hasInvalidAmountRange || hasUnusableAmount || hasInvalidDateRange
 
   const availableCategories = useMemo(() => {
     return categories.filter(c => {
@@ -162,6 +166,7 @@ export function LedgerFilterBar({
     maxAmount,
     onMaxAmountChange,
     hasInvalidAmountRange,
+    hasUnusableAmount,
     txType,
     onTxTypeChange,
     recurringFilter,

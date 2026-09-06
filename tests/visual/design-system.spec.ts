@@ -92,7 +92,7 @@ const fundedEssentials = (remaining: number, endingBalance: number) => ({
 
 test('essentials challenge ranks a cycle that is holding its plan', async ({ page }) => {
   await establishSession(page)
-  await mockApi(page, { setting: essentialsCycle, dashboard: fundedEssentials(1_320, 480) })
+  await mockApi(page, { setting: essentialsCycle, dashboard: fundedEssentials(1_320, 240) })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
   const card = page.getByRole('heading', { name: 'Ahead of plan' }).locator('xpath=ancestor::section[1]')

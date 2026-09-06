@@ -51,7 +51,7 @@ export const LedgerCategoryChecklist: React.FC<LedgerCategoryChecklistProps> = (
         <span className="text-eyebrow uppercase text-muted-foreground block">
           Categories
         </span>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex max-h-56 flex-col gap-1.5 overflow-y-auto overscroll-contain pr-1">
           {availableCategories.map(c => {
             const isChecked = checkboxFilters.includes(c.name)
             return (

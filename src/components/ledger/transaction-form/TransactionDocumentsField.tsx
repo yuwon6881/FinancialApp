@@ -7,16 +7,20 @@ import {
   type TransactionDocumentChanges,
   type VaultDocument,
 } from '../../../types'
-import { getTaxReliefCategories } from '../../../lib/api/documents'
+import { getDocumentConstraints, getTaxReliefCategories } from '../../../lib/api/documents'
 import { formatCurrencyVal } from '../../../lib/utils'
 import { Input } from '../../ui/Input'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { FormField } from '../../ui/FormField'
 
 import {
+  FALLBACK_DOCUMENT_CONSTRAINTS,
   UNSUPPORTED_DOCUMENT_TYPE_MESSAGE,
   buildDocumentAcceptAttribute,
+  formatUploadMegabytes,
   isSupportedDocumentUpload,
+  normalizeDocumentConstraints,
+  oversizeUploadMessage,
 } from '../../../lib/documentUploadTypes'
 
 interface PendingDocument extends PendingVaultDocument {
@@ -60,8 +64,26 @@ export const TransactionDocumentsField = React.forwardRef<
   const [categoriesLoaded, setCategoriesLoaded] = useState(false)
   const [categoryLoadFailed, setCategoryLoadFailed] = useState(false)
   const [attachError, setAttachError] = useState<string | null>(null)
+  // The vault sheet checks size and type against what the server advertises; this picker used the
+  // hard-coded fallback list and no size check at all, so an oversized or newly-disallowed receipt
+  // was accepted here and only rejected when the whole transaction was saved.
+  const [constraints, setConstraints] = useState(FALLBACK_DOCUMENT_CONSTRAINTS)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pendingDocsRef = useRef<PendingDocument[]>([])
+
+  useEffect(() => {
+    let active = true
+    void getDocumentConstraints()
+      .then(loaded => {
+        if (active) setConstraints(normalizeDocumentConstraints(loaded))
+      })
+      .catch(() => {
+        if (active) setConstraints(FALLBACK_DOCUMENT_CONSTRAINTS)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     pendingDocsRef.current = pendingDocs
@@ -110,8 +132,13 @@ export const TransactionDocumentsField = React.forwardRef<
         unlinkIds,
       }),
       getValidationError: () => {
-        const unsupported = pendingDocs.find(document => !isSupportedDocumentUpload(document.file))
+        const unsupported = pendingDocs.find(document =>
+          !isSupportedDocumentUpload(document.file, constraints.acceptedUploadTypes))
         if (unsupported) return `${unsupported.file.name}: ${UNSUPPORTED_DOCUMENT_TYPE_MESSAGE}`
+        // Re-checked on save as well as on attach: a file picked before the advertised limits
+        // arrived was measured against the fallback.
+        const oversized = pendingDocs.find(document => document.file.size > constraints.maxDocumentBytes)
+        if (oversized) return oversizeUploadMessage(oversized.file.name, constraints.maxDocumentBytes)
         const missingCategory = pendingDocs.find(document => !document.reliefCategory)
         if (missingCategory) return `Choose a tax relief category for ${missingCategory.file.name}.`
         if (pendingDocs.length > 0 && (!categoriesLoaded || categoryLoadFailed)) {
@@ -127,7 +154,7 @@ export const TransactionDocumentsField = React.forwardRef<
         setUnlinkIds([])
       },
     }),
-    [categoriesLoaded, categoryLoadFailed, defaultTaxYear, pendingDocs, unlinkIds],
+    [categoriesLoaded, categoryLoadFailed, constraints, defaultTaxYear, pendingDocs, unlinkIds],
   )
 
   useEffect(() => () => {
@@ -142,9 +169,15 @@ export const TransactionDocumentsField = React.forwardRef<
     const selected = Array.from(event.target.files)
     // The accept attribute is only a hint the OS dialog lets the user override, so the type has to
     // be checked here too. Refusing at attach time beats listing a file that only fails on save.
-    const unsupported = selected.filter(file => !isSupportedDocumentUpload(file))
+    const unsupported = selected.filter(file => !isSupportedDocumentUpload(file, constraints.acceptedUploadTypes))
     if (unsupported.length > 0) {
       setAttachError(`${unsupported.map(file => file.name).join(', ')}: ${UNSUPPORTED_DOCUMENT_TYPE_MESSAGE}`)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+    const oversized = selected.find(file => file.size > constraints.maxDocumentBytes)
+    if (oversized) {
+      setAttachError(oversizeUploadMessage(oversized.name, constraints.maxDocumentBytes))
       if (fileInputRef.current) fileInputRef.current.value = ''
       return
     }
@@ -300,12 +333,17 @@ export const TransactionDocumentsField = React.forwardRef<
         <UploadCloud className="size-4" aria-hidden="true" />
         Attach Document
       </Button>
+      {!disabled && (
+        <p className="text-center text-xs text-muted-foreground">
+          Photo or PDF · up to {formatUploadMegabytes(constraints.maxDocumentBytes)} each
+        </p>
+      )}
       <Input
         type="file"
         multiple
         ref={fileInputRef}
         className="hidden"
-        accept={buildDocumentAcceptAttribute()}
+        accept={buildDocumentAcceptAttribute(constraints.acceptedUploadTypes)}
         onChange={handleFileChange}
       />
       {attachError && <p className="text-center text-xs text-destructive" role="alert">{attachError}</p>}

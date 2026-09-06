@@ -1,8 +1,5 @@
 import type { PendingVaultDocument, TransactionDocumentChanges } from '../types'
-
-const DATABASE_NAME = 'financial-app-draft-files'
-const DATABASE_VERSION = 1
-const STORE_NAME = 'transaction-documents'
+import { DRAFT_DOCUMENTS_STORE, requestResult, withStore } from './localFileStore'
 
 interface StoredPendingDocument {
   id: string
@@ -27,53 +24,8 @@ interface StoredTransactionDocumentChanges {
 
 const recordKey = (owner: string, targetId: string) => `${owner}\u0000${targetId}`
 
-function openDatabase(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    if (!globalThis.indexedDB) {
-      reject(new Error('Local draft file storage is unavailable in this browser.'))
-      return
-    }
-
-    const request = globalThis.indexedDB.open(DATABASE_NAME, DATABASE_VERSION)
-    request.onupgradeneeded = () => {
-      const database = request.result
-      if (!database.objectStoreNames.contains(STORE_NAME)) {
-        const store = database.createObjectStore(STORE_NAME, { keyPath: 'key' })
-        store.createIndex('owner', 'owner', { unique: false })
-      }
-    }
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error ?? new Error('Could not open local draft file storage.'))
-    request.onblocked = () => reject(new Error('Local draft file storage is blocked by another app window.'))
-  })
-}
-
-function requestResult<T>(request: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error ?? new Error('Local draft file storage failed.'))
-  })
-}
-
-async function withStore<T>(
-  mode: IDBTransactionMode,
-  action: (store: IDBObjectStore) => Promise<T>,
-): Promise<T> {
-  const database = await openDatabase()
-  try {
-    const transaction = database.transaction(STORE_NAME, mode)
-    const completed = new Promise<void>((resolve, reject) => {
-      transaction.oncomplete = () => resolve()
-      transaction.onerror = () => reject(transaction.error ?? new Error('Local draft file storage failed.'))
-      transaction.onabort = () => reject(transaction.error ?? new Error('Local draft file storage was cancelled.'))
-    })
-    const result = await action(transaction.objectStore(STORE_NAME))
-    await completed
-    return result
-  } finally {
-    database.close()
-  }
-}
+const withDocumentStore = <T>(mode: IDBTransactionMode, action: (store: IDBObjectStore) => Promise<T>) =>
+  withStore(DRAFT_DOCUMENTS_STORE, mode, action)
 
 function toStoredDocument(document: PendingVaultDocument, index: number): StoredPendingDocument {
   return {
@@ -121,7 +73,7 @@ export async function saveDraftTransactionDocumentChanges(
     unlinkIds: [...new Set(changes.unlinkIds)],
     updatedAt: Date.now(),
   }
-  await withStore('readwrite', async store => {
+  await withDocumentStore('readwrite', async store => {
     await requestResult(store.put(record))
   })
 }
@@ -131,7 +83,7 @@ export async function loadDraftTransactionDocumentChanges(
   targetId: string,
 ): Promise<TransactionDocumentChanges> {
   if (!owner || !targetId || !globalThis.indexedDB) return { pending: [], unlinkIds: [] }
-  const record = await withStore('readonly', store =>
+  const record = await withDocumentStore('readonly', store =>
     requestResult(store.get(recordKey(owner, targetId))) as Promise<StoredTransactionDocumentChanges | undefined>)
   return record
     ? { pending: record.pending.map(fromStoredDocument), unlinkIds: [...record.unlinkIds] }
@@ -140,14 +92,14 @@ export async function loadDraftTransactionDocumentChanges(
 
 export async function deleteDraftTransactionDocumentChanges(owner: string, targetId: string): Promise<void> {
   if (!owner || !targetId || !globalThis.indexedDB) return
-  await withStore('readwrite', async store => {
+  await withDocumentStore('readwrite', async store => {
     await requestResult(store.delete(recordKey(owner, targetId)))
   })
 }
 
 export async function clearDraftTransactionDocuments(): Promise<void> {
   if (!globalThis.indexedDB) return
-  await withStore('readwrite', async store => {
+  await withDocumentStore('readwrite', async store => {
     await requestResult(store.clear())
   })
 }
