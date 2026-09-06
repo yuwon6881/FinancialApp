@@ -1,5 +1,4 @@
 import { RangeInput } from '../ui/RangeInput'
-import { Input } from '../ui/Input'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Reorder } from 'framer-motion'
 import { AlertCircle, Info, Loader2, Save, SlidersHorizontal, Lock, Unlock, WifiOff } from 'lucide-react'
@@ -13,13 +12,50 @@ import { useAppContext } from '../../contexts/AppContext'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
 import { MutationButtonContent } from '../ui/MutationButtonContent'
-import { FormField } from '../ui/FormField'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { redistributeInvestmentTargets, validateInvestmentPlan } from '../../lib/investmentAllocation'
 import { InvestmentClassificationRow } from './InvestmentClassificationRow'
 import { EmptyState } from '../ui/EmptyState'
 
 type TargetKey = 'usEquityTarget' | 'internationalExUsTarget' | 'bondsTarget'
+type DriftKey = 'watchDrift' | 'alertDrift'
+
+/**
+ * The two drift thresholds, as one pair on a shared scale. Colour carries which is which -- the
+ * same amber/orange pair `PANEL_TONES` uses for "worth a look" and "already past it" -- because the
+ * two sliders are otherwise identical controls sitting one above the other.
+ */
+const DRIFT_BANDS: ReadonlyArray<{
+  key: DriftKey
+  label: string
+  hint: string
+  surface: string
+  badge: string
+  accent: string
+}> = [
+  {
+    key: 'watchDrift',
+    label: 'Watch when off by',
+    hint: 'Shows an early warning; guidance may use new money to correct it.',
+    surface: 'border-amber-500/25 bg-amber-500/5',
+    badge: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+    accent: 'accent-amber-500',
+  },
+  {
+    key: 'alertDrift',
+    label: 'Alert when off by',
+    hint: 'Marks a larger mismatch that may eventually require rebalancing.',
+    surface: 'border-orange-500/25 bg-orange-500/5',
+    badge: 'bg-orange-500/15 text-orange-700 dark:text-orange-300',
+    accent: 'accent-orange-500',
+  },
+]
+
+/** Thresholds past thirty points are theoretical, so the scale stops there unless a saved plan
+    already sits above it. Taken from the loaded plan rather than the live one, so the axis cannot
+    move under the handle mid-drag. */
+const driftScaleMax = (plan?: InvestmentPlan | null) =>
+  Math.max(30, plan?.watchDrift ?? 0, plan?.alertDrift ?? 0)
 
 const defaults: InvestmentPlan = {
   usEquityTarget: 66,
@@ -194,6 +230,20 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
     }))
   }
 
+  const driftMax = driftScaleMax(overview?.plan)
+
+  // The plan is only valid while Alert sits above Watch, so dragging one past the other pushes the
+  // other along instead of parking the form on a validation error the slider caused.
+  const changeDrift = (key: DriftKey, value: number) => {
+    if (hideSensitive) return
+    const next = key === 'watchDrift'
+      ? Math.max(1, Math.min(driftMax - 1, Math.round(value)))
+      : Math.max(2, Math.min(driftMax, Math.round(value)))
+    setPlan(previous => key === 'watchDrift'
+      ? { ...previous, watchDrift: next, alertDrift: Math.max(previous.alertDrift, Math.min(driftMax, next + 1)) }
+      : { ...previous, alertDrift: next, watchDrift: Math.min(previous.watchDrift, Math.max(1, next - 1)) })
+  }
+
   const toggleSleeveLock = (key: TargetKey) => {
     if (hideSensitive) return
     setLockedSleeve(current => {
@@ -357,31 +407,33 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
               <Info className="mt-0.5 size-3.5 shrink-0 text-blue-500" />
               <span className="min-w-0 break-words">Drift is the gap between a basket’s actual share and its target. 62% vs 66% is 4 points off.</span>
             </p>
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 w-full min-w-0">
-              <FormField
-                label="Watch when off by"
-                hint="Shows an early warning; guidance may use new money to correct it."
-                className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 w-full min-w-0"
-                labelClassName="text-xs text-foreground"
-                hintClassName="text-xs break-words"
-              >
-                <span className="relative block w-full min-w-0">
-                  <Input type="number" inputMode="numeric" min="1" max="99" step="1" disabled={hideSensitive} value={plan.watchDrift} onChange={event => setPlan(value => ({ ...value, watchDrift: Number(event.target.value) }))} className="w-full pr-8" />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">pp</span>
-                </span>
-              </FormField>
-              <FormField
-                label="Alert when off by"
-                hint="Marks a larger mismatch that may eventually require rebalancing."
-                className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-3 w-full min-w-0"
-                labelClassName="text-xs text-foreground"
-                hintClassName="text-xs break-words"
-              >
-                <span className="relative block w-full min-w-0">
-                  <Input type="number" inputMode="numeric" min="2" max="100" step="1" disabled={hideSensitive} value={plan.alertDrift} onChange={event => setPlan(value => ({ ...value, alertDrift: Number(event.target.value) }))} className="w-full pr-8" />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">pp</span>
-                </span>
-              </FormField>
+            {/* Two sliders on one shared scale, stacked. A drift band is a threshold on the same
+                axis the sleeve targets above already use, and typing it into a number box gave no
+                sense of how far apart the two bands were. Each keeps its own colour -- amber for
+                the early warning, orange for the one that means rebalance -- and the handler holds
+                Alert above Watch, so the pair cannot be dragged into an invalid plan. */}
+            <div className="mt-3 space-y-2.5 w-full min-w-0">
+              {DRIFT_BANDS.map(band => (
+                <div key={band.key} className={`rounded-xl border p-3 w-full min-w-0 ${band.surface}`}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+                    <span className="text-xs font-bold text-foreground">{band.label}</span>
+                    <span className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-black tabular-nums ${band.badge}`}>
+                      {plan[band.key]} pp
+                    </span>
+                  </div>
+                  <RangeInput
+                    aria-label={`${band.label}, in percentage points`}
+                    min={band.key === 'watchDrift' ? 1 : 2}
+                    max={band.key === 'watchDrift' ? driftMax - 1 : driftMax}
+                    step="1"
+                    disabled={hideSensitive}
+                    value={plan[band.key]}
+                    onChange={event => changeDrift(band.key, Number(event.target.value))}
+                    className={`mt-2.5 h-2 rounded-full bg-border ${band.accent}`}
+                  />
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground break-words">{band.hint}</p>
+                </div>
+              ))}
             </div>
           </div>
           {(validation || error) && <p role="alert" className="flex gap-2 text-xs text-destructive"><AlertCircle className="size-4 shrink-0" />{validation || error}</p>}
