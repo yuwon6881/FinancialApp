@@ -50,8 +50,12 @@ export function LedgerToolbar({
         ? `Transactions across ${scopeLabel}. Search, filters, sorting, and paging run on the server.`
         : 'Transactions in the selected cycle. Search, filters, sorting, and paging run on this device.'}
       actions={<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
+        {/* `lg`, like the action beside it: at the default size this button dropped to 40px on a
+            desktop while "Post Transaction" stayed at 44, so the pair sat at two heights and the
+            wider of the two was the shorter one. */}
         <Button
           variant="secondary"
+          size="lg"
           onClick={onOpenExport}
           disabled={hideSensitive}
           className="flex-1 whitespace-nowrap lg:flex-initial"

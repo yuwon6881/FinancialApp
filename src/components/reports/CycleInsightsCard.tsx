@@ -29,8 +29,8 @@ export function CycleInsightsCard({
         </div>
       </div>
       <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-xl bg-muted/25 p-3"><dt className="text-eyebrow uppercase text-muted-foreground">Transactions</dt><dd className="mt-1 text-lg font-black text-foreground">{insights.transactionCount}</dd></div>
-        <div className="rounded-xl bg-muted/25 p-3"><dt className="text-eyebrow uppercase text-muted-foreground">No-spend days</dt><dd className="mt-1 text-lg font-black text-foreground">{insights.noSpendDays}</dd></div>
+        <div className="rounded-xl bg-muted/25 p-3"><dt className="text-eyebrow uppercase text-muted-foreground">Transactions</dt><dd className="mt-1 text-sm font-black text-foreground">{insights.transactionCount}</dd></div>
+        <div className="rounded-xl bg-muted/25 p-3"><dt className="text-eyebrow uppercase text-muted-foreground">No-spend days</dt><dd className="mt-1 text-sm font-black text-foreground">{insights.noSpendDays}</dd></div>
         <div className="rounded-xl bg-muted/25 p-3"><dt className="text-eyebrow uppercase text-muted-foreground">Average per day</dt><dd className="mt-1 text-sm font-black text-foreground">{insights.avgDailySpend == null ? 'Unavailable' : formatSensitive(insights.avgDailySpend)}</dd></div>
         {/* The tile stays the same `<div>` its three neighbours are, so it lines up with them and
             `<dt>`/`<dd>` stay legal children of the list. The action is a full-bleed overlay --
