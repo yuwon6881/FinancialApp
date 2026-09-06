@@ -172,8 +172,10 @@ const SCORE_EXPLANATION =
   'The score weighs how much of the cycle’s Essentials money is already committed against how much of the cycle has passed. '
   + '41 to 100 means the money is still holding; 40 or less means it has already run out. It is worked out on this device from the figures on this page.'
 
-const RING_SIZE = 88
-const RING_RADIUS = 36
+// A smaller medallion than the card first shipped with: the rank and the bar carry the message,
+// and the ring is the badge on top of them rather than the card's centrepiece.
+const RING_SIZE = 64
+const RING_RADIUS = 26
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
 
 const percentText = (ratio: number) => `${Math.round(Math.max(0, Math.min(9.99, ratio)) * 100)}%`
@@ -191,6 +193,10 @@ interface EssentialsChallengeCardProps {
  * Everything shown is derived on this device from the selected cycle's own numbers. No run of past
  * cycles is claimed: the Today payload carries no per-cycle Essentials history, and a streak
  * invented from what it does carry would be a guess dressed as an achievement.
+ *
+ * Kept to a glance: rank, headline, the committed bar against the pace marker, and the badge row.
+ * The daily allowance, the current pace and the projected finish are not repeated here -- the plan
+ * snapshot directly below states all three, and saying them twice was most of this card's height.
  *
  * Percentages and the score stay visible in sensitive mode -- they are ratios, and masking them
  * would leave the card saying nothing -- while every amount goes through `formatSensitive`.
@@ -218,7 +224,6 @@ export function EssentialsChallengeCard({
     : cycle.phase === 'upcoming'
       ? `Starts in ${cycle.daysUntilStart} day${cycle.daysUntilStart === 1 ? '' : 's'}`
       : 'Cycle closed'
-  const remainingDays = `the last ${challenge.spendDays} day${challenge.spendDays === 1 ? '' : 's'}`
 
   const headline = (() => {
     if (challenge.tier === 'unfunded') {
@@ -262,33 +267,6 @@ export function EssentialsChallengeCard({
     )
   })()
 
-  const nextStep = (() => {
-    if (challenge.tier === 'unfunded') return <>The challenge starts as soon as income is split into Essentials.</>
-    if (challenge.tier === 'not-started' || ended) return null
-    if (overBudget) {
-      return (
-        <>
-          Nothing more can come out of Essentials without going deeper. Holding off for {remainingDays} prevents further overspend; putting {formatSensitive(challenge.overspend)} back clears the red.
-        </>
-      )
-    }
-    if (challenge.paceDifference > 0.05) {
-      return (
-        <>
-          You are spending {formatSensitive(challenge.currentDailyPace)} a day against the{' '}
-          {formatSensitive(challenge.dailyAllowance)} a day that is left. Easing to that holds the plan
-          together over {remainingDays}.
-        </>
-      )
-    }
-    return (
-      <>
-        Staying under {formatSensitive(challenge.dailyAllowance)} a day for {remainingDays} finishes the
-        cycle inside the plan.
-      </>
-    )
-  })()
-
   const result = ended && !unranked
     ? overBudget
       ? <>Essentials closed {formatSensitive(challenge.overspend)} past its money.</>
@@ -300,7 +278,7 @@ export function EssentialsChallengeCard({
       aria-labelledby="essentials-challenge-heading"
       initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn(panelClass, PANEL_TONES[presentation.panelTone], 'p-4 text-card-foreground shadow-xs sm:p-5')}
+      className={cn(panelClass, PANEL_TONES[presentation.panelTone], 'px-4 py-3.5 text-card-foreground shadow-xs sm:px-5')}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1.5">
@@ -310,63 +288,59 @@ export function EssentialsChallengeCard({
         <Badge tone="neutral" className="shrink-0">{dayLabel}</Badge>
       </div>
 
-      <div className="mt-3.5 flex items-center gap-4 sm:gap-5">
-        <div className="relative shrink-0" style={{ width: RING_SIZE, height: RING_SIZE }}>
-          <svg viewBox="0 0 88 88" className="size-full -rotate-90" aria-hidden focusable="false">
-            <circle cx="44" cy="44" r={RING_RADIUS} className="fill-none stroke-muted" strokeWidth="7" />
-            {challenge.score !== null && (
+      <div className="mt-2 flex items-center gap-3.5">
+        {/* No ring for a cycle with no rank: an empty dial saying nothing cost as much height as
+            the scored one. The tier chip beside the rank still names the state. */}
+        {challenge.score !== null && (
+          <div className="relative shrink-0" style={{ width: RING_SIZE, height: RING_SIZE }}>
+            <svg viewBox="0 0 64 64" className="size-full -rotate-90" aria-hidden focusable="false">
+              <circle cx="32" cy="32" r={RING_RADIUS} className="fill-none stroke-muted" strokeWidth="6" />
               <circle
-                cx="44"
-                cy="44"
+                cx="32"
+                cy="32"
                 r={RING_RADIUS}
                 className={cn('fill-none transition-[stroke-dashoffset] duration-700', presentation.stroke)}
-                strokeWidth="7"
+                strokeWidth="6"
                 strokeLinecap="round"
                 strokeDasharray={RING_CIRCUMFERENCE}
                 strokeDashoffset={RING_CIRCUMFERENCE * (1 - challenge.score / 100)}
               />
-            )}
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            {challenge.score === null ? (
-              <Icon className={cn('size-7', presentation.accent)} aria-hidden />
-            ) : (
-              <>
-                <AnimatedNumber
-                  value={challenge.score}
-                  formatFn={value => Math.round(value).toString()}
-                  className={cn('text-2xl font-black leading-none', presentation.accent)}
-                />
-                <span className="text-eyebrow mt-0.5 uppercase text-muted-foreground">score</span>
-              </>
-            )}
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <AnimatedNumber
+                value={challenge.score}
+                formatFn={value => Math.round(value).toString()}
+                className={cn('text-lg font-black leading-none', presentation.accent)}
+              />
+              <span className="text-eyebrow uppercase text-muted-foreground">score</span>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg border', presentation.chip, presentation.accent)}>
-              <Icon className="size-4" aria-hidden />
+            <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-lg border', presentation.chip, presentation.accent)}>
+              <Icon className="size-3.5" aria-hidden />
             </span>
             <h3 id="essentials-challenge-heading" className={cn('text-section truncate', presentation.accent)}>{rank}</h3>
           </div>
-          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{headline}</p>
-          {result && <p className="mt-1 text-xs font-semibold leading-relaxed text-foreground">{result}</p>}
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{headline}</p>
+          {result && <p className="mt-0.5 text-xs font-semibold leading-relaxed text-foreground">{result}</p>}
         </div>
       </div>
 
       {!unranked && (
-        <div className="mt-4">
+        <div className="mt-3">
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-xs font-semibold text-muted-foreground">Essentials money committed</span>
             <span className="text-xs font-bold tabular-nums text-foreground">{usedPercent}</span>
           </div>
-          <div className="relative mt-2">
+          <div className="relative mt-1.5">
             <Meter
               percent={barPercent}
               tone={presentation.fill}
               size="md"
-              className="h-2.5"
+              className="h-2"
               label="Share of this cycle's Essentials money already committed"
             />
             {/* The pace line: where the clock says the bar should stand today. Staying left of it is
@@ -377,93 +351,52 @@ export function EssentialsChallengeCard({
               style={{ left: `${paceMarkerPercent}%` }}
             />
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground">
+          <p className="mt-1 text-caption text-muted-foreground">
             The marker sits at {pacePercent} — {ended ? 'where a full cycle ends' : "where today's plan expects the bar"}.
           </p>
         </div>
       )}
 
       {!unranked && (
-        <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5">
-          <div className="min-w-0">
-            <span className="text-xs font-semibold text-muted-foreground">Daily spending target</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-sm font-bold tabular-nums text-foreground sm:text-base">
-                {formatSensitive(challenge.dailyAllowance)}
-                <span className="text-xs font-medium text-muted-foreground">/day</span>
-              </span>
-              <span className="text-xs text-muted-foreground">
-                ({challenge.spendDays} {challenge.spendDays === 1 ? 'day' : 'days'} {ended ? 'total' : 'left'})
-              </span>
-            </div>
-          </div>
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+          <span className="text-xs font-semibold text-muted-foreground">Badges</span>
+          <span className="text-xs font-bold tabular-nums text-muted-foreground">
+            {challenge.earnedBadgeCount} of {challenge.badges.length}
+          </span>
+          {/* One wrapped row of chips rather than a grid of tiles: the badge set is a checklist of
+              four short states, and the tiles cost more height than the states are worth. Each chip
+              carries its own earned/not-yet sentence for screen readers. */}
+          <ul className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {challenge.badges.map(badge => {
+              const copy = BADGE_COPY[badge.id]
+              return (
+                <li
+                  key={badge.id}
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold',
+                    badge.earned
+                      ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                      : 'border-dashed border-border/70 bg-muted/25 text-muted-foreground',
+                  )}
+                >
+                  {badge.earned && <Check className="size-3 shrink-0" aria-hidden />}
+                  <span className="truncate">{copy.label}</span>
+                  <span className="sr-only">{badge.earned ? copy.earned : copy.pending}</span>
+                </li>
+              )
+            })}
+          </ul>
           {onReviewEssentials && (
             <Button
               variant="tertiary"
               size="sm"
               onClick={onReviewEssentials}
-              className="gap-1 px-2.5 text-xs font-semibold text-foreground"
+              className="ml-auto gap-1 px-2 text-xs font-semibold text-foreground"
             >
               Review Essentials spending
               <ArrowRight className="size-3.5" aria-hidden="true" />
             </Button>
           )}
-        </div>
-      )}
-
-      {nextStep && (
-        <p className={cn(
-          'mt-3.5 rounded-xl border border-border/50 bg-muted/25 px-3 py-2.5 text-xs leading-relaxed',
-          overBudget ? 'text-foreground' : 'text-muted-foreground',
-        )}>
-          {nextStep}
-        </p>
-      )}
-
-      {!unranked && (
-        <div className="mt-4">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-muted-foreground">Badges</span>
-            <span className="text-xs font-bold tabular-nums text-muted-foreground">
-              {challenge.earnedBadgeCount} of {challenge.badges.length}
-            </span>
-          </div>
-          <ul className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
-            {challenge.badges.map(badge => {
-              const copy = BADGE_COPY[badge.id]
-              const explanation = badge.earned ? copy.earned : copy.pending
-              return (
-                <li
-                  key={badge.id}
-                  className={cn(
-                    'flex items-center justify-between gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-semibold',
-                    badge.earned
-                      ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                      : 'border-border/50 bg-muted/25 text-muted-foreground',
-                  )}
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span
-                      className={cn(
-                        'flex size-4 shrink-0 items-center justify-center rounded-full border',
-                        badge.earned ? 'border-emerald-500/40 bg-emerald-500/20' : 'border-dashed border-border/70',
-                      )}
-                    >
-                      {badge.earned && <Check className="size-2.5" aria-hidden />}
-                    </span>
-                    <span className="truncate">{copy.label}</span>
-                    <span className="sr-only">{explanation}</span>
-                  </div>
-                  <InfoHint
-                    inline
-                    label={copy.label}
-                    text={explanation}
-                    align="right"
-                  />
-                </li>
-              )
-            })}
-          </ul>
         </div>
       )}
     </m.section>

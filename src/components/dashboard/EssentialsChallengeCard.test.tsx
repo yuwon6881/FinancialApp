@@ -78,20 +78,19 @@ describe('EssentialsChallengeCard ranks', () => {
 })
 
 describe('EssentialsChallengeCard guidance', () => {
-  it('offers the daily allowance that keeps the cycle inside the plan and displays the daily spending target', () => {
+  // The daily allowance, the current pace and the projected finish all belong to the plan snapshot
+  // directly below this card. Repeating them here is what made the card too tall to glance at.
+  it('leaves the daily allowance and the pace advice to the plan snapshot', () => {
     renderCard({ projectedRemaining: 1600, currentDailyPace: 10, projectedEndingBalance: 1200 })
-    expect(screen.getByText('Daily spending target')).toBeTruthy()
-    expect(screen.getByText(/Staying under \$100\.00 a day for the last 16 days/)).toBeTruthy()
+
+    expect(screen.queryByText('Daily spending target')).toBeNull()
+    expect(screen.queryByText(/a day for the last 16 days/)).toBeNull()
+    expect(screen.queryByText(/a day that is left/)).toBeNull()
   })
 
-  it('names the gap when the current pace outruns the allowance', () => {
-    renderCard({ projectedRemaining: 320, projectedEndingBalance: 10, currentDailyPace: 60 })
-    expect(screen.getByText(/spending \$60\.00 a day against the \$20\.00 a day that is left/)).toBeTruthy()
-  })
-
-  it('does not suggest a daily allowance for a cycle with no money left to give and clarifies deficit recovery', () => {
+  it('still names the shortfall in the headline when the cycle has run past its money', () => {
     renderCard({ projectedRemaining: -150, projectedEndingBalance: -150 })
-    expect(screen.getByText(/putting \$150\.00 back clears the red/)).toBeTruthy()
+    expect(screen.getByText(/Essentials is \$150\.00 past its money/)).toBeTruthy()
   })
 
   it('renders a direct link to review Essentials spending when provided', () => {
@@ -112,8 +111,7 @@ describe('EssentialsChallengeCard states without a rank', () => {
     expect(screen.getByRole('heading', { name: 'Waiting on funding' })).toBeTruthy()
     expect(screen.queryByRole('progressbar')).toBeNull()
     expect(screen.queryByText('Badges')).toBeNull()
-    expect(screen.queryByText('Daily spending target')).toBeNull()
-    expect(screen.getByText(/starts as soon as income is split into Essentials/)).toBeTruthy()
+    expect(screen.getByText(/No Essentials money is allocated to this cycle yet/)).toBeTruthy()
   })
 
   it('holds the rank back until an upcoming cycle begins', () => {
@@ -135,14 +133,14 @@ describe('EssentialsChallengeCard states without a rank', () => {
 })
 
 describe('EssentialsChallengeCard badges', () => {
-  it('marks each badge with a state screen readers can read and provides touch/keyboard InfoHint', () => {
+  it('marks each badge with a state screen readers can read', () => {
     renderCard({ projectedRemaining: 1600, projectedEndingBalance: 1200 })
 
     const badges = screen.getByRole('list')
     expect(within(badges).getByText(/Earned: no bill is waiting to be paid/)).toBeTruthy()
+    expect(within(badges).getByText('Bills clear')).toBeTruthy()
+    expect(within(badges).getByText('Under pace')).toBeTruthy()
     expect(screen.getByText('4 of 4')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'What is Bills clear?' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'What is Under pace?' })).toBeTruthy()
   })
 
   it('withholds the badges whose conditions are not met', () => {

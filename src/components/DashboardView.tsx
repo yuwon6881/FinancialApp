@@ -195,8 +195,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         loanDebt={loanDebt}
         isMasked={view.areBalanceAmountsMasked}
         formatCurrency={view.formatCurrency}
-        onNavigate={onNavigate}
-        onNavigateToLedger={() => onNavigateToLedger?.({ showAllCycles: true })}
       />
 
       {/* Today-focused metric cards: cycle progress, safe-to-spend, and the active wish goal */}
