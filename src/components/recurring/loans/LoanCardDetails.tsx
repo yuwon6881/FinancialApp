@@ -20,9 +20,13 @@ interface LoanCardDetailsProps {
 function DetailCell({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="rounded-lg bg-muted/20 px-3 py-2.5">
-      <div className="flex items-center gap-1.5">
+      {/* Every label row is the same 28px, hint or no hint. A hint is a button, and the unlayered
+          `button` floor in index.css gives it a 28px minimum whatever size it authors, so the three
+          cells carrying one used to stand taller and push their value a line below the cells beside
+          them -- the grid stopped reading as rows. `inline` keeps the hint inside the text run. */}
+      <div className="flex h-7 items-center gap-1.5">
         <p className="text-caption font-medium text-muted-foreground">{label}</p>
-        {hint && <InfoHint label={label} text={hint} />}
+        {hint && <InfoHint inline label={label} text={hint} />}
       </div>
       <p className="mt-1 text-xs font-semibold text-foreground">{children}</p>
     </div>

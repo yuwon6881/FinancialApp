@@ -224,8 +224,13 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
               </span>
               {' '}of {formatSensitive(requiredPerCycleTotal)} set aside
             </p>
+            {/* The thin track, matching the identical per-cycle bar on every commitment card. The
+                page was stacking four full-weight bars with no hierarchy between them; the pool's
+                split and a commitment's progress are the headlines, and "this cycle" is the
+                footnote under each of them. */}
             <Meter
               percent={cyclePct}
+              size="sm"
               color={cycleDone ? undefined : committedColor}
               tone={cycleDone ? 'bg-emerald-500' : undefined}
               label={cycleDone

@@ -128,10 +128,14 @@ export function createOutboxRefreshHandler(options: UseOutboxRefreshOptions) {
         // Both imported lazily: this hook sits on the eager critical path, while the
         // vault API and the canvas compression helper are only needed once a queued
         // document change actually drains.
-        const { updateDocument, uploadDocument } = await import('../../lib/api/documents')
+        const { bulkUpdateDocumentTransactionLinks, uploadDocument } = await import('../../lib/api/documents')
 
-        for (const documentId of documentChanges.unlinkIds) {
-          await updateDocument(documentId, { transactionId: null })
+        // One call for every detach on this transaction, not a PATCH per document. Uploads below
+        // stay per file because each carries its own bytes; a link change carries one column.
+        if (documentChanges.unlinkIds.length > 0) {
+          await bulkUpdateDocumentTransactionLinks(
+            documentChanges.unlinkIds.map(documentId => ({ id: documentId, transactionId: null })),
+          )
         }
         if (documentChanges.pending.length > 0) {
           const { compressImageFile } = await import('../../lib/imageCompression')

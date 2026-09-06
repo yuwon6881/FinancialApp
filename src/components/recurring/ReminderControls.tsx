@@ -120,7 +120,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                     disabled={disabled || paused || isSyncing}
                     onClick={() => handleModeChange(mode)}
                     className={`px-2 py-1 rounded-lg text-xs font-semibold border transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                      draftSettings.mode === mode ? 'bg-blue-500/10 border-blue-500/40 text-blue-500' : 'border-border text-muted-foreground hover:bg-muted'
+                      draftSettings.mode === mode ? 'bg-blue-500/10 hover:bg-blue-500/10 border-blue-500/40 text-blue-500' : 'border-border text-muted-foreground hover:bg-muted'
                     }`}
                   >
                     {mode}
@@ -132,13 +132,16 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                 {REMINDER_LEAD_DAY_OPTIONS.map(leadDays => (
                   <Button variant="tertiary"
                     key={leadDays}
+                    // The icon size is the padding-free one; the control scale's px-4 leaves a
+                    // 28px square no room for its own label.
+                    size="icon"
                     type="button"
                     role="radio"
                     aria-checked={draftSettings.leadDays === leadDays}
                     disabled={disabled || paused || isSyncing}
                     onClick={() => handleLeadDaysChange(leadDays)}
-                    className={`size-7 rounded-lg text-xs font-semibold border transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                      draftSettings.leadDays === leadDays ? 'bg-blue-500/10 border-blue-500/40 text-blue-500' : 'border-border text-muted-foreground hover:bg-muted'
+                    className={`size-7 lg:size-7 rounded-lg text-xs font-semibold border transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                      draftSettings.leadDays === leadDays ? 'bg-blue-500/10 hover:bg-blue-500/10 border-blue-500/40 text-blue-500' : 'border-border text-muted-foreground hover:bg-muted'
                     }`}
                   >
                     {leadDays}d

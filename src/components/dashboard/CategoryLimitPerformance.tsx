@@ -7,6 +7,7 @@ import { InfoHint } from '../ui/InfoHint'
 import { getCategoryLimitCardId, type NavigateToLedgerOptions } from './types'
 import { cn } from '../../lib/utils'
 import { panelClass } from '../ui/panelStyles'
+import { InteractiveCard } from '../ui/InteractiveCard'
 
 interface CategoryLimitPerformanceProps {
   items: CategoryLimitProgress[]
@@ -105,19 +106,23 @@ export function CategoryLimitPerformance({
           const usedPct = Math.max(0, item.percentUsed * 100)
           const projectedPct = item.limit > 0 ? Math.max(0, item.projectedSpend / item.limit * 100) : 0
           return (
-            <Button variant="tertiary"
+            <InteractiveCard
               key={item.category}
+              surface="plain"
               id={getCategoryLimitCardId(item.category)}
-              type="button"
               onClick={() => onNavigateToLedger?.({ category: item.category })}
               disabled={!onNavigateToLedger}
-              className={`rounded-xl border p-3 text-left transition ${onNavigateToLedger ? 'interactive-card cursor-pointer' : 'cursor-default'} ${
+              className={cn(
+                'rounded-xl border p-3',
+                // A card with nowhere to navigate is inert, not unavailable: it must keep its
+                // status colour rather than fade out under the primitive's disabled treatment.
+                !onNavigateToLedger && 'disabled:cursor-default disabled:opacity-100',
                 exceeded
                   ? 'border-orange-500/30 bg-orange-500/5'
                   : watch
                     ? 'border-amber-500/30 bg-amber-500/5'
-                    : 'border-border/50 bg-muted/20'
-              }`}
+                    : 'border-border/50 bg-muted/20',
+              )}
             >
               <div className="flex items-center justify-between gap-2">
                 <span className={`min-w-0 truncate rounded-md border px-2 py-0.5 text-xs font-semibold ${getCategoryBadgeClass(item.category)}`}>
@@ -159,7 +164,7 @@ export function CategoryLimitPerformance({
                   <span className="text-muted-foreground tabular-nums">{formatSensitive(item.pendingCommitted)} committed</span>
                 )}
               </div>
-            </Button>
+            </InteractiveCard>
           )
         })}
       </div>

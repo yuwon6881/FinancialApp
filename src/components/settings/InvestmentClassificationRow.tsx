@@ -46,7 +46,7 @@ export function InvestmentClassificationRow({
       className="flex flex-col gap-2.5 rounded-xl border border-border/50 bg-card/60 p-3 shadow-2xs transition-colors hover:border-border/80 sm:flex-row sm:items-center sm:gap-3 w-full min-w-0 overflow-hidden"
     >
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
-        <Button
+        <Button size="icon"
           variant="tertiary"
           type="button"
           aria-label={`Reorder ${value.symbol}. Position ${position} of ${count}. Use Up or Down arrow keys.`}
@@ -58,7 +58,7 @@ export function InvestmentClassificationRow({
             onMove(event.key === 'ArrowUp' ? -1 : 1)
           }}
           disabled={isBusy}
-          className="inline-flex size-8 shrink-0 touch-none cursor-grab items-center justify-center rounded-lg text-muted-foreground/70 transition hover:bg-muted/40 hover:text-foreground active:cursor-grabbing"
+          className="inline-flex size-8 shrink-0 touch-none lg:size-8 cursor-grab items-center justify-center rounded-lg text-muted-foreground/70 transition hover:bg-muted/40 hover:text-foreground active:cursor-grabbing"
         >
           <GripVertical className="size-4" />
         </Button>

@@ -86,3 +86,14 @@ export function isPayEarlyResult(result: DispatchResult): result is PayEarlyResu
 export function isRecurringSettlementResult(result: DispatchResult): result is RecurringSettlementResult {
   return Boolean(result && typeof result === 'object' && 'occurrence' in result)
 }
+
+/**
+ * The most `transaction:add` ops the drain loop folds into one `bulk-create` call.
+ *
+ * This mirrors the server's own ceiling: `POST /transactions/bulk-create` rejects a larger list
+ * outright. Without the cap, a queue built up offline past that ceiling made every drain send one
+ * doomed oversized request, fall back to the single-op path, and then send the same oversized
+ * request again on the next iteration -- so the batching that was meant to save round trips
+ * doubled them, permanently, for exactly the backlog it exists to serve.
+ */
+export const MAX_BULK_ADD_BATCH = 100

@@ -47,8 +47,8 @@ export function LedgerToolbar({
         variant="segmented"
       />}
       description={showAllCycles
-        ? `Saved transactions across ${scopeLabel}. Filters, sorting, paging, and full export are handled by the server.`
-        : 'Transactions in the selected cycle. Search, filters, sorting, and paging update instantly on this device.'}
+        ? `Transactions across ${scopeLabel}. Search, filters, sorting, and paging run on the server.`
+        : 'Transactions in the selected cycle. Search, filters, sorting, and paging run on this device.'}
       actions={<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
         <Button
           variant="secondary"

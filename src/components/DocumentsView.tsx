@@ -211,7 +211,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 showToast(getErrorMessage(error, 'The ZIP archive could not be prepared.'), 'Download Failed', 'error'))
                 .finally(() => setIsDownloadingArchive(false))
             }}
-            className="w-full justify-center rounded-xl bg-card text-xs sm:w-auto"
+            className="w-full justify-center rounded-xl bg-card hover:bg-card text-xs sm:w-auto"
           >
             <Download className="size-4" /> {isDownloadingArchive ? 'Preparing ZIP…' : taxYear ? `Download ${taxYear}` : 'Download all'}
           </Button>
@@ -318,7 +318,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 type="button"
                 disabled={stagedCategories.isSaving}
                 onClick={() => stagedCategories.clear()}
-                className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-muted-foreground disabled:opacity-50"
+                className="rounded-lg border border-border bg-card hover:bg-card px-3 py-2 text-xs font-semibold text-muted-foreground disabled:opacity-50"
               >
                 Discard
               </Button>
@@ -328,7 +328,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 disabled={stagedCategories.isSaving}
                 aria-busy={stagedCategories.isSaving}
                 onClick={() => void stagedCategories.save()}
-                className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
+                className="rounded-lg bg-primary hover:bg-primary/90 px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
               >
                 {stagedCategories.isSaving ? 'Saving…' : 'Save categories'}
               </Button>

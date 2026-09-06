@@ -122,7 +122,7 @@ export function DocumentList({
             onClick={onDownloadSelected}
             aria-label={isDownloadingSelected ? 'Preparing selected document download' : 'Download selected documents'}
             title="Download selected"
-            className="size-11 shrink-0 bg-card p-0 sm:size-auto sm:px-3"
+            className="size-11 shrink-0 bg-card hover:bg-card p-0 sm:size-auto sm:px-3"
           >
             <Download className={`size-3.5 ${isDownloadingSelected ? 'animate-pulse' : ''}`} aria-hidden="true" />
             <span className="hidden sm:inline">{isDownloadingSelected ? 'Preparing…' : 'Download'}</span>

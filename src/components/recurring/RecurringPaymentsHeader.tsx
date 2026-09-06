@@ -133,7 +133,10 @@ const InteractiveStatTile: React.FC<{
         onMouseLeave={() => { if (!isMobile && !pinned) setOpen(false) }}
         onFocus={() => { if (!isMobile) setOpen(true) }}
         onBlur={() => { if (!isMobile && !pinned) setOpen(false) }}
-        className="group/stat flex h-full w-full flex-col justify-between text-left cursor-pointer select-none rounded-lg p-1 -m-1 transition-colors hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-ring"
+        // The hover surface bleeds sideways only. `p-1 -m-1` also inflated the tile vertically,
+        // and the wrapper clips its overflow, so the last line of the figure was cut off the
+        // moment the Breakdown pill wrapped onto its own row.
+        className="group/stat flex h-full w-full flex-col items-start justify-between text-left cursor-pointer select-none rounded-lg px-1 -mx-1 py-0 transition-colors hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-ring"
       >
         {/* The label must not wrap: a two-line "Yearly Total" dropped its figure below the plain
             tiles beside it. The Breakdown pill moves to its own line instead when space is tight. */}

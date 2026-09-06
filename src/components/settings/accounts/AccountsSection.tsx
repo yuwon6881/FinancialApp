@@ -322,6 +322,7 @@ export function AccountsSection({
       <AccountFormSheet
         isOpen={isFormOpen && !pendingBalanceCorrection}
         account={editingAccount}
+        existingAccounts={accounts}
         bucketAccounts={activeGroup?.allBucketAccounts}
         bucketTotal={activeGroup?.balance}
         defaultBucket={formDefaultBucket}

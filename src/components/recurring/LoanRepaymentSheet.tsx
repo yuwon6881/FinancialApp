@@ -196,7 +196,7 @@ export function LoanRepaymentSheet({
             onClick={() => { setTab('advance'); setActionError(null) }}
             className={`rounded-lg py-2 transition-all cursor-pointer text-center ${
               tab === 'advance'
-                ? 'bg-card text-foreground shadow-xs font-bold'
+                ? 'bg-card hover:bg-card text-foreground shadow-xs font-bold'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -208,7 +208,7 @@ export function LoanRepaymentSheet({
             onClick={() => { setTab('settlement'); setActionError(null) }}
             className={`rounded-lg py-2 transition-all cursor-pointer text-center ${
               tab === 'settlement'
-                ? 'bg-card text-foreground shadow-xs font-bold'
+                ? 'bg-card hover:bg-card text-foreground shadow-xs font-bold'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >

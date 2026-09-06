@@ -33,7 +33,7 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
           onClick={() => onChangeTxType('outflow')}
           className={`${base} ${
             txType === 'outflow'
-              ? 'bg-orange-500/10 border-orange-500/30 text-orange-500'
+              ? 'bg-orange-500/10 hover:bg-orange-500/10 border-orange-500/30 text-orange-500'
               : `border-border text-muted-foreground ${disabled ? 'opacity-45' : 'hover:bg-muted/50'}`
           }`}
         >
@@ -47,7 +47,7 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
           onClick={() => onChangeTxType('inflow')}
           className={`${base} ${
             txType === 'inflow'
-              ? 'bg-blue-500/10 border-blue-500/30 text-blue-500'
+              ? 'bg-blue-500/10 hover:bg-blue-500/10 border-blue-500/30 text-blue-500'
               : `border-border text-muted-foreground ${disabled ? 'opacity-45' : 'hover:bg-muted/50'}`
           }`}
         >
@@ -61,7 +61,7 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
           onClick={() => onChangeTxType('transfer')}
           className={`${base} ${
             txType === 'transfer'
-              ? 'bg-blue-500/10 border-blue-500/30 text-blue-500'
+              ? 'bg-blue-500/10 hover:bg-blue-500/10 border-blue-500/30 text-blue-500'
               : `border-border text-muted-foreground ${disabled ? 'opacity-45' : 'hover:bg-muted/50'}`
           }`}
         >

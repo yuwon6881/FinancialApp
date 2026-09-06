@@ -29,6 +29,12 @@ export interface AccountFormSaveInput extends LedgerAccountInput {
 interface AccountFormSheetProps {
   isOpen: boolean
   account: LedgerAccount | null
+  /**
+   * Every account the user already has, in any bucket and including closed ones. The server holds
+   * account names unique per user across the whole ledger, so the name check needs the full list,
+   * not `bucketAccounts`.
+   */
+  existingAccounts?: readonly LedgerAccount[]
   bucketAccounts?: LedgerAccount[]
   bucketTotal?: number
   defaultBucket?: LedgerAccount['bucket']
@@ -49,6 +55,7 @@ const KIND_ICONS: Record<LedgerAccountKind, LucideIcon> = {
 export function AccountFormSheet({
   isOpen,
   account,
+  existingAccounts,
   bucketAccounts,
   bucketTotal,
   defaultBucket = 'Essentials',
@@ -100,6 +107,20 @@ export function AccountFormSheet({
     const trimmedName = name.trim()
     if (!trimmedName) {
       setError('Enter an account name.')
+      return
+    }
+
+    // The server holds names unique per user and answers a clash with a 409. Account writes go
+    // through the outbox, so that 409 arrives long after this sheet has closed -- and during the
+    // first-run coverage gate there is no toast surface mounted to carry it at all. Answering it
+    // here keeps the verdict on the field that caused it, and works offline besides.
+    const duplicate = existingAccounts?.find(candidate =>
+      candidate.id !== account?.id
+      && candidate.name.trim().toLowerCase() === trimmedName.toLowerCase())
+    if (duplicate) {
+      setError(duplicate.isArchived
+        ? `"${duplicate.name}" already exists as a closed account. Reopen it instead, or pick another name.`
+        : 'An account with this name already exists. Pick another name.')
       return
     }
 
@@ -215,7 +236,7 @@ export function AccountFormSheet({
 
           <p className="-mt-1 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
             <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-            <span>One real account can appear once in each bucket if you track its money separately.</span>
+            <span>Account names are unique across every bucket. To track one real account in two buckets, give each a name of its own.</span>
           </p>
 
           {/* Balance Field */}

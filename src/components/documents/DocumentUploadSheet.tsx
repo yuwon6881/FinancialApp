@@ -175,10 +175,24 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
                 return
               }
               try {
-                await Promise.all(uploadedIds.map(id => api.deleteDocument(id)))
+                // One bulk call, not a delete per file: this undoes a batch upload, so the
+                // fan-out was a burst of requests the vault already has a single endpoint for.
+                // It also reports per-file outcomes, so a partial removal is stated rather than
+                // hidden behind whichever promise happened to reject first.
+                const results = await api.bulkDeleteDocuments(uploadedIds)
+                const removed = results.filter(result => result.deleted)
                 onSuccess()
-                const undoCopy = buildUndoSuccessToast(`${uploadedIds.length} document${uploadedIds.length === 1 ? '' : 's'}`, 'Vault upload')
-                showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
+                if (removed.length === uploadedIds.length) {
+                  const undoCopy = buildUndoSuccessToast(`${uploadedIds.length} document${uploadedIds.length === 1 ? '' : 's'}`, 'Vault upload')
+                  showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
+                } else {
+                  const failed = results.find(result => !result.deleted)
+                  showToast(
+                    `${removed.length} of ${uploadedIds.length} documents were removed; the rest are still in the Vault.${failed?.message ? ` ${failed.message}` : ''}`,
+                    'Undo Incomplete',
+                    'error',
+                  )
+                }
               } catch (error) {
                 showToast(getErrorMessage(error, 'The uploaded documents could not be removed.'), 'Undo Failed', 'error')
               }

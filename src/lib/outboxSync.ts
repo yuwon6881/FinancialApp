@@ -31,6 +31,7 @@ import {
   computeBackoffMs,
 } from './outboxRetryConstants'
 import {
+  MAX_BULK_ADD_BATCH,
   type SuccessfulSyncOp,
   accountReviewFlags,
   isNetworkFailure,
@@ -181,7 +182,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         // --- Batch consecutive transaction:add ops into a single bulk call ---
         if (nextOp.entity === 'transaction' && nextOp.type === 'add') {
           const batchOps: QueuedOp[] = [nextOp]
-          for (let i = 1; i < queue.length; i++) {
+          for (let i = 1; i < queue.length && batchOps.length < MAX_BULK_ADD_BATCH; i++) {
             const candidate = queue[i]
             if (candidate.entity !== 'transaction' || candidate.type !== 'add') break
             if (candidate.targetId === editingId || candidate.id === editingId) break
@@ -198,10 +199,16 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
                   ...nextOp,
                   type: 'bulkAdd' as OpType,
                   payload: {
-                    transactions: batchOps.map(o => ({
-                      ...(o.payload ?? {}),
-                      id: o.targetId,
-                    })),
+                    // `undoSnapshot` is stripped per item rather than by the dispatch boundary
+                    // that normally guarantees it: that boundary only sees this synthetic op's own
+                    // top-level payload, so a snapshot nested one level down inside `transactions`
+                    // sails past it and puts the cleartext amount on the wire beside the
+                    // obfuscated one.
+                    transactions: batchOps.map(o => {
+                      const itemPayload = { ...(o.payload ?? {}) }
+                      delete itemPayload.undoSnapshot
+                      return { ...itemPayload, id: o.targetId }
+                    }),
                   },
                 }
                 await bulkDispatchFn(syntheticOp)
@@ -226,9 +233,15 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
                 }
                 continue
               } catch {
-                // Bulk call failed — fall through to dispatch the head op individually.
-                // Items already committed server-side are idempotent (return Existing/200),
-                // so the individual retry path handles partial success gracefully.
+                // Deliberately swallows every failure and falls through to dispatch the head op
+                // individually. Batching is an optimisation layered over a path that already
+                // works, so it must never be able to strand a change the per-op path could have
+                // synced: a 5xx or a deploy skew that only `bulk-create` hits would otherwise
+                // retry the same doomed batch until the queue gave up on valid work. Anything
+                // already committed server-side is idempotent -- client-authored ids come back as
+                // Existing/200 -- so a partially applied batch replays without duplicating rows,
+                // and a failure that is genuinely about auth, the lock or the network simply
+                // recurs on the single op and lands in the taxonomy below.
               }
             }
           }

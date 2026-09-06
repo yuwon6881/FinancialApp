@@ -256,7 +256,7 @@ const TopNav: React.FC<TopNavProps> = ({
             tooltip="Commitments and Rewards"
             className={`flex items-center justify-center rounded-xl border transition duration-150 cursor-pointer active:scale-95 ${
               activeTab === 'wishlist'
-                ? 'border-violet-500/40 bg-violet-500/20 text-violet-400 shadow-sm'
+                ? 'border-violet-500/40 bg-violet-500/20 hover:bg-violet-500/20 text-violet-400 shadow-sm'
                 : 'border-border/40 bg-muted/30 text-muted-foreground hover:border-violet-500/30 hover:bg-violet-500/10 hover:text-violet-400'
             }`}
           >

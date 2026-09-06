@@ -25,13 +25,13 @@ export const LedgerCategoryChecklist: React.FC<LedgerCategoryChecklistProps> = (
         <span className="text-eyebrow uppercase text-muted-foreground block">
           Ledger Categories
         </span>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-col gap-1.5">
           {LEDGER_BUCKETS.map(bucket => {
             const isChecked = checkboxFilters.includes(bucket)
             return (
               <label
                 key={bucket}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition active:scale-95 ${getCategoryFilterClass(bucket, isChecked)}`}
+                className={`flex w-full items-center gap-2 px-2.5 py-2 rounded-lg border text-xs cursor-pointer select-none transition active:scale-[0.99] ${getCategoryFilterClass(bucket, isChecked)}`}
               >
                 <Checkbox
                   checked={isChecked}
@@ -39,7 +39,7 @@ export const LedgerCategoryChecklist: React.FC<LedgerCategoryChecklistProps> = (
                   className="rounded border-border text-blue-500 focus:ring-ring size-3.5"
                 />
                 <span className={`size-2 shrink-0 rounded-full ${getCategoryDotClass(bucket)}`} />
-                <span className="font-semibold">{bucket}</span>
+                <span className="min-w-0 flex-1 truncate font-semibold">{bucket}</span>
               </label>
             )
           })}
@@ -51,13 +51,13 @@ export const LedgerCategoryChecklist: React.FC<LedgerCategoryChecklistProps> = (
         <span className="text-eyebrow uppercase text-muted-foreground block">
           Categories
         </span>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-col gap-1.5">
           {availableCategories.map(c => {
             const isChecked = checkboxFilters.includes(c.name)
             return (
               <label
                 key={c.id}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition active:scale-95 ${getCategoryFilterClass(c.name, isChecked)}`}
+                className={`flex w-full items-center gap-2 px-2.5 py-2 rounded-lg border text-xs cursor-pointer select-none transition active:scale-[0.99] ${getCategoryFilterClass(c.name, isChecked)}`}
               >
                 <Checkbox
                   checked={isChecked}
@@ -65,7 +65,7 @@ export const LedgerCategoryChecklist: React.FC<LedgerCategoryChecklistProps> = (
                   className="rounded border-border text-blue-500 focus:ring-ring size-3.5"
                 />
                 <span className={`size-2 shrink-0 rounded-full ${getCategoryDotClass(c.name)}`} />
-                <span className="font-semibold truncate max-w-[120px]">{c.name}</span>
+                <span className="min-w-0 flex-1 truncate font-semibold">{c.name}</span>
               </label>
             )
           })}

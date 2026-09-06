@@ -80,9 +80,12 @@ export function ActiveDevicesSection() {
 
   return (
     <Panel as="section" padding="none" className="overflow-hidden shadow-sm">
-      <Button variant="tertiary" type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex w-full min-w-0 items-center gap-3 p-5 text-left cursor-pointer">
-        <div className="shrink-0 rounded-xl bg-blue-500/10 p-2"><MonitorSmartphone className="size-4 text-blue-500" /></div>
-        <div className="min-w-0 flex-1"><h3 className="truncate text-subsection">Active Devices</h3><p className="truncate text-xs text-muted-foreground">Manage devices currently logged into your account.</p></div>
+      {/* Same header shape as the other three Security panels: a bare 20px icon, one gap, then the
+          title block. This one carried a boxed icon, which made its row the odd one out in the
+          grid. */}
+      <Button variant="tertiary" type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex w-full min-w-0 items-center gap-2.5 p-5 justify-start text-left cursor-pointer">
+        <MonitorSmartphone className="size-5 shrink-0 text-blue-500" />
+        <div className="min-w-0 flex-1"><h3 className="truncate text-subsection text-foreground">Active Devices</h3><p className="truncate text-xs text-muted-foreground">Manage devices currently logged into your account.</p></div>
         <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-muted-foreground">
           {loading ? <><Loader2 className="size-3 animate-spin" /> Checking…</> : sessions.length}
         </span>

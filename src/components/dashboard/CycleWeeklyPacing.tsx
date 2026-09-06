@@ -1,7 +1,7 @@
 import React from 'react'
 import { cycleWeekMetric, type CycleHeatmapMode, type CycleMetricTone, type CycleWeekSummary } from '../../lib/cycleCalendar'
 import { cn } from '../../lib/utils'
-import { Button } from '../ui/Button'
+import { InteractiveCard } from '../ui/InteractiveCard'
 
 interface CycleWeeklyPacingProps {
   weeks: CycleWeekSummary[]
@@ -89,27 +89,25 @@ export const CycleWeeklyPacing: React.FC<CycleWeeklyPacingProps> = ({
 
           const containerClass = cn(
             'flex flex-col justify-between rounded-xl border border-border/50 p-2 text-left transition-colors sm:p-2.5',
-            'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
             isDisabled
-              ? 'border-dashed bg-transparent cursor-not-allowed opacity-75'
-              : isInteractive
-                ? 'bg-muted/15 hover:bg-muted/30 hover:border-primary/40 active:scale-[0.99] cursor-pointer'
-                : 'bg-muted/15 hover:bg-muted/30',
+              ? 'border-dashed bg-transparent opacity-75'
+              : 'bg-muted/15 hover:border-primary/40 hover:bg-muted/30',
           )
 
           if (isInteractive) {
             return (
-              <Button
+              <InteractiveCard
                 key={week.weekNumber}
-                variant="tertiary"
-                type="button"
+                surface="plain"
                 disabled={isDisabled}
                 onClick={() => onSelectWeek?.(week, mode)}
                 aria-label={`View Week ${week.weekNumber} transactions in Ledger (${formatShortDate(week.startDate)} to ${formatShortDate(week.endDate)})`}
-                className={containerClass}
+                // A week that has not started yet is dimmed by its own dashed treatment above, so
+                // the primitive's stronger disabled fade would double it.
+                className={cn(containerClass, isDisabled && 'disabled:opacity-75')}
               >
                 {content}
-              </Button>
+              </InteractiveCard>
             )
           }
 

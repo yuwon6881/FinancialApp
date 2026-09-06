@@ -164,7 +164,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
 // drawer, so the row actions come back inline. They have to be compact icon buttons: the drawer's
 // full-width stacked blocks were rendering inline in a non-shrinking box and pushing the whole card
 // past the viewport. 44px targets, because this only ever shows on compact and medium.
-const INLINE_ACTION_CLASS = 'inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-50'
+const INLINE_ACTION_CLASS = 'inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-50 lg:size-11'
 
 export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: LedgerRowProps & { hint: boolean }) {
   const transaction = props.transaction
@@ -187,9 +187,9 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         className="relative overflow-hidden rounded-2xl border border-border shadow-xs"
         contentClassName="pr-3"
         actionsWidth={props.onMove ? 192 : 128}
-        actions={<><Button variant="tertiary" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button>{props.onMove && <Button variant="tertiary" onClick={() => props.onMove?.(transaction)} disabled={!canMove || props.isDeleting || props.isSyncing || props.hideSensitive} className={`flex-1 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${canMove ? 'bg-secondary text-secondary-foreground' : 'bg-muted/50 text-muted-foreground'}`}><CalendarClock className="size-4" />Move to</Button>}<Button variant="tertiary" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
+        actions={<><Button variant="tertiary" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button>{props.onMove && <Button variant="tertiary" onClick={() => props.onMove?.(transaction)} disabled={!canMove || props.isDeleting || props.isSyncing || props.hideSensitive} className={`flex-1 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${canMove ? 'bg-secondary hover:bg-secondary/80 text-secondary-foreground' : 'bg-muted/50 hover:bg-muted/50 text-muted-foreground'}`}><CalendarClock className="size-4" />Move to</Button>}<Button variant="tertiary" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
         desktopActions={<>
-          <Button
+          <Button size="icon"
             variant="tertiary"
             onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)}
             disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)}
@@ -200,7 +200,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
             <Edit2 className="size-4" aria-hidden="true" />
           </Button>
           {props.onMove && (
-            <Button
+            <Button size="icon"
               variant="tertiary"
               onClick={() => props.onMove?.(transaction)}
               disabled={!canMove || props.isDeleting || props.isSyncing || props.hideSensitive}
@@ -211,7 +211,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
               <CalendarClock className="size-4" aria-hidden="true" />
             </Button>
           )}
-          <Button
+          <Button size="icon"
             variant="tertiary"
             onClick={() => props.onDeleteClick(transaction)}
             disabled={props.isDeleting || props.isSyncing || props.hideSensitive}

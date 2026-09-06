@@ -6,6 +6,7 @@ import { hasBillingEnded, RECURRING_PAYMENT_MODE_LABELS } from '../../../lib/rec
 import { formatCurrencyVal } from '../../../lib/utils'
 import { getCategoryBadgeClass } from '../../../lib/categoryColors'
 import { navigateToAppTab } from '../../../lib/appLocation'
+import { Badge } from '../../ui/Badge'
 import { Button } from '../../ui/Button'
 import { InfoHint } from '../../ui/InfoHint'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
@@ -73,11 +74,13 @@ function BillItemRow({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-          {/* Auto-deduct is the one mode the bank moves on its own, and the only one that can
-              overdraw this account without the user acting, so it is the mode worth a colour. */}
-          <span className={payment.paymentMode === 'AutoDeduct' && !isPaused ? 'font-semibold text-blue-500' : ''}>
+          {/* Both modes are the same fact about the bill, so both are the same badge. The tone is
+              what differs: auto-deduct is the one mode the bank moves on its own, and the only one
+              that can overdraw this account without the user acting. Styling only that one and
+              leaving the other as bare text made the pair read as two unrelated things. */}
+          <Badge tone={payment.paymentMode === 'AutoDeduct' && !isPaused ? 'info' : 'neutral'}>
             {modeLabel}
-          </span>
+          </Badge>
           {dueFormatted && (
             <>
               <span aria-hidden="true">·</span>

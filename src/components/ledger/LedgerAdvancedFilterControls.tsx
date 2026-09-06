@@ -160,7 +160,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
                 onClick={() => onTxTypeChange(value)}
                 className={`rounded-lg py-1.5 text-center text-xs font-semibold transition cursor-pointer select-none ${
                   isSelected
-                    ? 'bg-card text-blue-500 shadow-xs border border-border/80 font-bold'
+                    ? 'bg-card hover:bg-card text-blue-500 shadow-xs border border-border/80 font-bold'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
                 }`}
               >

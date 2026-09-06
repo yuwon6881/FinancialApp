@@ -202,9 +202,9 @@ export function LedgerFilterBar({
           controls squeezed it down to little more than its own magnifier icon. */}
       <div className="w-full min-w-0 lg:w-auto lg:flex-1">
         {showAllCycles ? (
-          <div className="group flex min-w-0 items-stretch overflow-hidden rounded-xl border border-border bg-card shadow-sm transition duration-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-ring/25 hover:border-blue-500/50 lg:max-w-xl">
+          <div className="group flex min-w-0 items-stretch overflow-hidden rounded-xl border border-border bg-card shadow-sm transition duration-200 focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/25 hover:border-border lg:max-w-xl">
             <div className="flex min-w-0 flex-1 items-center">
-              <Search className="ml-3 size-4 shrink-0 text-foreground transition-colors group-focus-within:text-blue-500" />
+              <Search className="ml-3 size-4 shrink-0 text-foreground transition-colors group-focus-within:text-accent-ink" />
               <Input
                 type="text"
                 placeholder="Search all transactions..."
@@ -214,11 +214,11 @@ export function LedgerFilterBar({
                 className="min-w-0 flex-1 rounded-none border-0 bg-transparent px-2.5 py-2.5 text-xs text-foreground shadow-none outline-none placeholder:text-foreground/60 focus:border-transparent focus:ring-0"
               />
               {pendingSearchTerm && (
-                <Button variant="tertiary"
+                <Button size="icon" variant="tertiary"
                   type="button"
                   onClick={onClearServerSearch}
                   aria-label="Clear search"
-                  className="mr-1 flex size-8 shrink-0 items-center justify-center rounded-md text-foreground hover:bg-muted transition cursor-pointer"
+                  className="mr-1 flex size-8 shrink-0 lg:size-8 items-center justify-center rounded-md text-foreground hover:bg-muted transition cursor-pointer"
                 >
                   <X className="size-3.5" />
                 </Button>
@@ -238,7 +238,7 @@ export function LedgerFilterBar({
           </div>
         ) : (
           <div className="group flex min-w-0 items-center gap-1 rounded-xl border border-border/70 bg-background pl-3 shadow-sm transition duration-200 hover:border-border focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/25 lg:max-w-md">
-            <Search className="size-4 shrink-0 text-muted-foreground transition-colors group-focus-within:text-blue-500" />
+            <Search className="size-4 shrink-0 text-muted-foreground transition-colors group-focus-within:text-accent-ink" />
             <Input
               type="text"
               placeholder="Search description, category..."
@@ -247,11 +247,11 @@ export function LedgerFilterBar({
               className="min-w-0 flex-1 rounded-none border-0 bg-transparent px-2 py-2.5 text-xs shadow-none outline-none focus:border-transparent focus:ring-0"
             />
             {searchTerm && (
-              <Button variant="tertiary"
+              <Button size="icon" variant="tertiary"
                 type="button"
                 onClick={() => onSearchTermChange('')}
                 aria-label="Clear search"
-                className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
+                className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground lg:size-8 hover:bg-muted hover:text-foreground transition cursor-pointer"
               >
                 <X className="size-3.5" />
               </Button>

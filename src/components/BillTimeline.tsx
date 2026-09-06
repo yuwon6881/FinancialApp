@@ -207,7 +207,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                 key={node.dueDate}
                 type="button"
                 onClick={() => handleNodeClick(node)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-card hover:bg-muted/30 active:scale-[0.99] transition text-left cursor-pointer"
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-card hover:bg-muted/30 active:scale-[0.99] transition justify-start text-left cursor-pointer"
               >
                 <span className={`size-2.5 rounded-full shrink-0 ${dotColor}`} />
                 <div className="flex flex-col items-center justify-center shrink-0 w-10">
@@ -270,7 +270,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                     aria-describedby={`${timelineId}-description-${node.dueDate}`}
                     title={`${node.dueDate}: ${labelText}`}
                     style={{ left: `${node.percent}%` }}
-                    className={`absolute top-1/2 z-10 flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full p-0 transition-opacity ${
+                    className={`absolute top-1/2 z-10 flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full p-0 transition-opacity hover:bg-transparent ${
                       highlightedNodeDate && !isHighlighted ? 'opacity-45' : ''
                     }`}
                   >
@@ -324,9 +324,9 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   onBlur={() => highlightNode(null)}
                   id={`${timelineId}-description-${node.dueDate}`}
                   data-highlighted={isHighlighted || undefined}
-                  className={`flex min-w-0 items-center gap-2.5 rounded-xl border bg-card/60 p-2.5 text-left transition-[background-color,border-color,box-shadow,opacity] hover:bg-muted/35 ${
+                  className={`flex min-w-0 items-center gap-2.5 rounded-xl border bg-card/60 p-2.5 justify-start text-left transition-[background-color,border-color,box-shadow,opacity] hover:bg-muted/35 ${
                     isHighlighted
-                      ? 'border-accent/60 bg-accent/10 shadow-sm'
+                      ? 'border-accent/60 bg-accent/10 hover:bg-accent/10 shadow-sm'
                       : highlightedNodeDate ? 'border-border/35 opacity-55' : 'border-border/45'
                   }`}
                 >

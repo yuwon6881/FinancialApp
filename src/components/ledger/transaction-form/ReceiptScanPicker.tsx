@@ -118,7 +118,7 @@ export function ReceiptScanPicker({
             }}
             className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
               isScanning
-                ? 'perimeter-beam-host border-primary/20 bg-primary/5 text-accent-ink cursor-not-allowed relative overflow-hidden'
+                ? 'perimeter-beam-host border-primary/20 bg-primary/5 hover:bg-primary/5 text-accent-ink cursor-not-allowed relative overflow-hidden'
                 : 'border-primary/40 bg-primary/5 hover:bg-primary/10 text-accent-ink disabled:opacity-45 disabled:cursor-not-allowed'
             }`}
           >
@@ -139,7 +139,7 @@ export function ReceiptScanPicker({
               }}
               className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
                 isSplitScanning
-                  ? 'perimeter-beam-host border-primary/20 bg-primary/5 text-accent-ink cursor-not-allowed relative overflow-hidden'
+                  ? 'perimeter-beam-host border-primary/20 bg-primary/5 hover:bg-primary/5 text-accent-ink cursor-not-allowed relative overflow-hidden'
                   : 'border-primary/40 bg-primary/5 hover:bg-primary/10 text-accent-ink disabled:opacity-45 disabled:cursor-not-allowed'
               }`}
             >

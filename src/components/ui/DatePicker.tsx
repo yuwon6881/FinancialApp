@@ -235,7 +235,7 @@ export function DatePicker({
           <Calendar className="size-3.5 shrink-0 text-muted-foreground/80" aria-hidden="true" />
         </Button>
         {clearable && value && (
-          <Button variant="tertiary"
+          <Button size="icon" variant="tertiary"
             type="button"
             disabled={disabled}
             aria-label={clearAriaLabel}
@@ -244,7 +244,7 @@ export function DatePicker({
               close()
               triggerRef.current?.focus()
             }}
-            className="mr-1 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground outline-none transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed"
+            className="mr-1 flex size-8 shrink-0 cursor-pointer lg:size-8 items-center justify-center rounded-lg text-muted-foreground outline-none transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed"
           >
             <X className="size-3.5" aria-hidden="true" />
           </Button>
@@ -371,7 +371,7 @@ export function DatePicker({
                     // supplies spacing and keyboard navigation while each cell stays contained.
                     'flex h-8 !min-h-8 !min-w-0 cursor-pointer items-center justify-center rounded-lg text-xs transition duration-100',
                     isDisabled && 'cursor-not-allowed text-muted-foreground/35',
-                    !isDisabled && isSelected && 'bg-primary font-bold text-primary-foreground shadow-xs',
+                    !isDisabled && isSelected && 'bg-primary hover:bg-primary font-bold text-primary-foreground shadow-xs',
                     !isDisabled && !isSelected && isToday
                       && 'font-bold text-blue-600 hover:bg-muted/80 dark:text-blue-400',
                     !isDisabled && !isSelected && !isToday

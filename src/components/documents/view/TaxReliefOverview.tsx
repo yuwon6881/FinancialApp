@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CheckCircle2, CircleDollarSign, Filter, Loader2, Pencil } from 'lucide-react'
 import type { TaxReliefCategoryDefinition, TaxReliefCategorySummary, TaxYearReliefSummary } from '../../../types'
 import { Button } from '../../ui/Button'
+import { InteractiveCard } from '../../ui/InteractiveCard'
 import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
 import { getErrorMessage } from '../../../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
@@ -299,10 +300,9 @@ export function TaxReliefOverview({
               const full = category.limit > 0 && progress >= 100
               const selected = selectedReliefCategories.includes(category.id)
               return (
-                <Button
-                  variant="tertiary"
+                <InteractiveCard
+                  surface="plain"
                   key={category.id}
-                  type="button"
                   onClick={() => onToggleReliefCategory(category.id)}
                   aria-pressed={selected}
                   aria-label={selected ? `Remove ${category.name} from the documents filter` : `Add ${category.name} to the documents filter`}
@@ -355,7 +355,7 @@ export function TaxReliefOverview({
                       )}
                     </span>
                   </div>
-                </Button>
+                </InteractiveCard>
               )
             })}
           </HorizontalRail>

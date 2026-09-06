@@ -112,7 +112,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
                   variant="tertiary"
                   onClick={() => setRange(item.value)}
                   aria-pressed={range === item.value}
-                  className={`cursor-pointer whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${range === item.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`cursor-pointer whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${range === item.value ? 'bg-background hover:bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                 >
                   {item.label}
                 </Button>

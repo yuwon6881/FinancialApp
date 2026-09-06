@@ -76,8 +76,8 @@ export function SearchResultRow({ result, id, isActive, amountText, maskAmounts,
       // drive it, and mouseenter fires on the row that arrives beneath the pointer, yanking the
       // selection away from the key press.
       onMouseMove={onHover}
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left cursor-pointer border transition-colors duration-100 ${
-        isActive ? 'bg-muted/80 border-border/60 shadow-xs' : 'border-transparent hover:bg-muted/40'
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl justify-start text-left cursor-pointer border transition-colors duration-100 ${
+        isActive ? 'bg-muted/80 hover:bg-muted/80 border-border/60 shadow-xs' : 'border-transparent hover:bg-muted/40'
       }`}
     >
       <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg border ${tileClassFor(result)}`}>

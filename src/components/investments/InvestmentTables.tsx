@@ -8,6 +8,7 @@ import { cn, formatCurrencyVal } from '../../lib/utils'
 import { buildSleeveIndex, sleeveLabelFor } from '../../lib/investmentAllocation'
 import { filterHoldings } from '../../lib/investmentHoldingFilter'
 import { investmentActivityCashAfterCharges, investmentActivityCharges } from '../../lib/investmentActivityDisplay'
+import { Badge, type BadgeTone } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
@@ -23,6 +24,38 @@ const activityTypes: Array<{ value: InvestmentTransactionType; label: string }> 
   { value: 'Dividend', label: 'Dividend' },
   { value: 'FeeTax', label: 'Fee / tax' },
 ]
+
+/**
+ * The activity list was a grid of same-weight grey text, so the kind of a row -- the one field
+ * that changes how every other figure on it should be read -- was the hardest thing on it to see.
+ * The tones are the shared badge tones, in the meanings they already carry elsewhere: money going
+ * out to buy, money coming back from a sale, income, and a charge.
+ */
+const ACTIVITY_TONES: Record<InvestmentTransactionType, BadgeTone> = {
+  Buy: 'info',
+  Sell: 'accent',
+  Dividend: 'success',
+  FeeTax: 'warning',
+}
+
+const CASH_FLOW_TONES: Record<string, BadgeTone> = {
+  Deposit: 'success',
+  Withdrawal: 'urgent',
+  Conversion: 'info',
+}
+
+const activityLabel = (type: InvestmentTransactionType) =>
+  activityTypes.find(item => item.value === type)?.label ?? type
+
+/** The instrument's ticker, in the same bordered-chip shape a category wears in the Ledger. */
+function InstrumentChip({ symbol }: { symbol?: string }) {
+  if (!symbol) return <span className="text-muted-foreground">—</span>
+  return (
+    <span className="inline-flex max-w-full items-center truncate rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-xs font-bold text-foreground">
+      {symbol}
+    </span>
+  )
+}
 
 const money = (value: number, currency: string) =>
   formatCurrencyVal(value, currency)
@@ -323,8 +356,8 @@ export const PagedActivityTable = ({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><h2 id="activity-title" className="text-section text-foreground">Activity</h2><p className="mt-1 text-xs text-muted-foreground">{total} matching record{total === 1 ? '' : 's'}{activeLabel ? ` · ${activeLabel}` : ''}</p></div>
           <div className="flex rounded-xl bg-muted/40 p-1">
-            <Button variant="tertiary" onClick={() => resetPage(() => { setMode('investments'); setType(''); setAppliedFilters(value => ({ ...value, type: '' })) })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'investments' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>Investments</Button>
-            <Button variant="tertiary" onClick={() => resetPage(() => { setMode('cash'); setType(''); setInstrumentId(''); setAppliedFilters(value => ({ ...value, type: '', instrumentId: '' })) })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'cash' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>Cash flow</Button>
+            <Button variant="tertiary" onClick={() => resetPage(() => { setMode('investments'); setType(''); setAppliedFilters(value => ({ ...value, type: '' })) })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'investments' ? 'bg-background hover:bg-background shadow-sm' : 'text-muted-foreground'}`}>Investments</Button>
+            <Button variant="tertiary" onClick={() => resetPage(() => { setMode('cash'); setType(''); setInstrumentId(''); setAppliedFilters(value => ({ ...value, type: '', instrumentId: '' })) })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'cash' ? 'bg-background hover:bg-background shadow-sm' : 'text-muted-foreground'}`}>Cash flow</Button>
           </div>
         </div>
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end" onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); applySearch() } }}>
@@ -365,7 +398,7 @@ export const PagedActivityTable = ({
                 const isActive = isActiveRecord(value.id, 'investmentActivity')
                 const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
                 return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
-                  <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><div className="flex min-w-0 items-center gap-1.5"><strong className="truncate text-xs">{activityTypes.find(item => item.value === value.type)?.label} · {instrument?.symbol}</strong><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="text-xs text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span></div><InvestmentActivityAmount activity={value} currency={instrument?.currency ?? portfolio.appCurrency} masked={masked} mobile /></div>
+                  <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-1.5"><Badge tone={ACTIVITY_TONES[value.type]}>{activityLabel(value.type)}</Badge><InstrumentChip symbol={instrument?.symbol} /><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="text-xs text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span></div><InvestmentActivityAmount activity={value} currency={instrument?.currency ?? portfolio.appCurrency} masked={masked} mobile /></div>
                   <div className="mt-2 flex items-center justify-end gap-1">
                     <Button variant="tertiary" size="sm" disabled={isBusy || masked} onClick={() => onEdit(value)}>Edit</Button>
                     <Button variant="destructive" size="sm" disabled={isBusy || masked} onClick={() => onDelete(value)}>Delete</Button>
@@ -375,7 +408,7 @@ export const PagedActivityTable = ({
                 const isActive = isActiveRecord(value.id, 'investmentCashFlow')
                 const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
                 return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
-                  <div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex min-w-0 items-center gap-1.5"><strong className="truncate text-xs">{value.type} · {accounts.get(value.accountId)}</strong><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="text-xs text-muted-foreground">{value.date}</span></div><strong className={`shrink-0 text-xs font-bold ${value.type === 'Conversion' ? '' : value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}`}>{cashFlowAmount(value, masked)}</strong></div>
+                  <div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-1.5"><Badge tone={CASH_FLOW_TONES[value.type] ?? 'neutral'}>{value.type}</Badge><span className="truncate text-xs font-semibold text-foreground">{accounts.get(value.accountId)}</span><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="text-xs text-muted-foreground">{value.date}</span></div><strong className={`shrink-0 text-xs font-bold ${value.type === 'Conversion' ? '' : value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}`}>{cashFlowAmount(value, masked)}</strong></div>
                   <div className="mt-2 flex items-center justify-end gap-1">
                     <Button variant="tertiary" size="sm" disabled={isBusy || masked} onClick={() => onEditCashFlow(value)}>Edit</Button>
                     <Button variant="destructive" size="sm" disabled={isBusy || masked} onClick={() => onDeleteCashFlow(value)}>Delete</Button>
@@ -396,11 +429,11 @@ export const PagedActivityTable = ({
                   <DataTableBody>{mode === 'investments' ? displayTransactions.map(value => {
                     const isActive = isActiveRecord(value.id, 'investmentActivity')
                     const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-                    return <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{activityTypes.find(item => item.value === value.type)?.label}<RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right"><InvestmentActivityAmount activity={value} currency={instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency} masked={masked} /></td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="tertiary" size="sm" disabled={isBusy || masked} onClick={() => onEdit(value)}>Edit</Button><Button variant="destructive" size="sm" disabled={isBusy || masked} onClick={() => onDelete(value)}>Delete</Button></span></td></tr>
+                    return <tr key={value.id} className="transition-colors hover:bg-muted/25"><td className="px-4 py-3 tabular-nums text-muted-foreground">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2"><Badge tone={ACTIVITY_TONES[value.type]}>{activityLabel(value.type)}</Badge><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3 text-muted-foreground">{accounts.get(value.accountId)}</td><td className="px-4 py-3"><InstrumentChip symbol={instruments.get(value.instrumentId)?.symbol} /></td><td className="px-4 py-3 text-right"><InvestmentActivityAmount activity={value} currency={instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency} masked={masked} /></td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="tertiary" size="sm" disabled={isBusy || masked} onClick={() => onEdit(value)}>Edit</Button><Button variant="destructive" size="sm" disabled={isBusy || masked} onClick={() => onDelete(value)}>Delete</Button></span></td></tr>
                   }) : displayCashFlows.map(value => {
                     const isActive = isActiveRecord(value.id, 'investmentCashFlow')
                     const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-                    return <tr key={value.id}><td className="px-4 py-3">{value.date}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{value.type}<RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3 text-right">{cashFlowAmount(value, masked)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="tertiary" size="sm" disabled={isBusy || masked} onClick={() => onEditCashFlow(value)}>Edit</Button><Button variant="destructive" size="sm" disabled={isBusy || masked} onClick={() => onDeleteCashFlow(value)}>Delete</Button></span></td></tr>
+                    return <tr key={value.id} className="transition-colors hover:bg-muted/25"><td className="px-4 py-3 tabular-nums text-muted-foreground">{value.date}</td><td className="px-4 py-3"><span className="flex items-center gap-2"><Badge tone={CASH_FLOW_TONES[value.type] ?? 'neutral'}>{value.type}</Badge><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3 text-muted-foreground">{accounts.get(value.accountId)}</td><td className={`px-4 py-3 text-right font-bold tabular-nums ${value.type === 'Conversion' ? 'text-foreground' : value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}`}>{cashFlowAmount(value, masked)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="tertiary" size="sm" disabled={isBusy || masked} onClick={() => onEditCashFlow(value)}>Edit</Button><Button variant="destructive" size="sm" disabled={isBusy || masked} onClick={() => onDeleteCashFlow(value)}>Delete</Button></span></td></tr>
                   })}</DataTableBody>
                 </DataTable>
               </div>

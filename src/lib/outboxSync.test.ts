@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   computeBackoffMs,
   drainQueue,
+  MAX_BULK_ADD_BATCH,
   MAX_RETRIES,
   AUTH_RACE_BACKOFF_MS,
   MAX_SYNC_BACKOFF_MS,
@@ -896,5 +897,57 @@ describe('drainQueue — settle', () => {
     expect(dispatchCalls).toEqual(['transaction:add'])
     // tx-2 and tx-3 remain (tx-2 is being edited, loop breaks)
     expect(h.queue).toHaveLength(2)
+  })
+
+  it('caps a batch at the size the bulk endpoint accepts', async () => {
+    const batchSizes: number[] = []
+    const total = MAX_BULK_ADD_BATCH + 30
+    const h = makeHarness({
+      resolveDispatch: (o) => {
+        if (o.type !== 'bulkAdd') return async () => undefined
+        return async (bulkOp) => {
+          batchSizes.push((bulkOp.payload?.transactions as unknown[]).length)
+          return undefined
+        }
+      },
+    }, Array.from({ length: total }, (_, index) => op({
+      id: `op-${index}`,
+      targetId: `tx-${index}`,
+      payload: { description: `Draft ${index}` },
+    })))
+
+    await drainQueue(h.deps)
+
+    // A backlog past the ceiling must split into batches the server accepts, not one oversized
+    // request it refuses -- that rejection was retried unchanged on every drain iteration, so the
+    // batching meant to save round trips doubled them for exactly the backlog it exists to serve.
+    expect(batchSizes).toEqual([MAX_BULK_ADD_BATCH, total - MAX_BULK_ADD_BATCH])
+    expect(h.queue).toHaveLength(0)
+  })
+
+  it('keeps the undo snapshot of a batched add off the wire', async () => {
+    let sent: Array<Record<string, unknown>> = []
+    const h = makeHarness({
+      resolveDispatch: (o) => {
+        if (o.type !== 'bulkAdd') return async () => undefined
+        return async (bulkOp) => {
+          sent = bulkOp.payload?.transactions as Array<Record<string, unknown>>
+          return undefined
+        }
+      },
+    }, [
+      op({ id: 'a', targetId: 'tx-1', payload: { description: 'One', amount: -12.5, undoSnapshot: { amount: -12.5 } } }),
+      op({ id: 'b', targetId: 'tx-2', payload: { description: 'Two', amount: -30 } }),
+    ])
+
+    await drainQueue(h.deps)
+
+    // The dispatch boundary only sanitises the synthetic op's own top-level payload, so a snapshot
+    // nested inside `transactions` would ship the cleartext amount beside the obfuscated one.
+    expect(sent).toHaveLength(2)
+    expect(sent[0]).not.toHaveProperty('undoSnapshot')
+    expect(sent[0]).toMatchObject({ id: 'tx-1', description: 'One', amount: -12.5 })
+    // The queued op keeps its snapshot: it is still projection and Undo input locally.
+    expect(h.refreshArgs[0][0].op.payload?.undoSnapshot).toEqual({ amount: -12.5 })
   })
 })

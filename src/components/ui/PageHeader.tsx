@@ -39,7 +39,7 @@ export function PageHeader({
             {description && <div className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</div>}
           </div>
         </div>
-        {actions && <div className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end">{actions}</div>}
+        {actions && <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-2 lg:justify-end">{actions}</div>}
       </div>
       {children}
     </Panel>

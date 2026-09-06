@@ -47,10 +47,29 @@ const TYPE_LABELS: Record<string, string> = {
   advanceRepayment: 'Advance repayment',
   fullSettlement: 'Full settlement',
   undoRepayment: 'Undo repayment',
+  reminder: 'Reminder',
+  cleanup: 'Cleanup',
+  // A queued bulk op can reach this list, and 'Change' told the user nothing about how much the
+  // card in front of them covers -- discarding one of these discards every row inside it.
+  bulkAdd: 'Add several',
+  bulkDelete: 'Delete several',
+  bulkRestore: 'Restore several',
+  bulkMove: 'Move several',
+}
+
+/** How many records a bulk op carries, or null when the op is not a bulk one. */
+function bulkItemCount(op: QueuedOp): number | null {
+  const items = op.payload?.transactionIds ?? op.payload?.moves ?? op.payload?.transactions
+  return Array.isArray(items) ? items.length : null
 }
 
 function describeOp(op: QueuedOp): string {
-  return op.payload?.description || op.payload?.name || ENTITY_LABELS[op.entity] || 'Item'
+  const entityLabel = ENTITY_LABELS[op.entity] || 'Item'
+  // A bulk op has no single description to show, and naming the entity alone made a failed batch
+  // of eight look exactly like one failed row.
+  const count = bulkItemCount(op)
+  if (count !== null) return `${count} ${count === 1 ? entityLabel.toLowerCase() : `${entityLabel.toLowerCase()}s`}`
+  return op.payload?.description || op.payload?.name || entityLabel
 }
 
 // Keys that are always suppressed — internal sync/projection artifacts, identifiers,

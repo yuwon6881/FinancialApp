@@ -128,6 +128,13 @@ export const AppGateways: React.FC<AppGatewaysProps> = ({
   if (!hasCompleteAccountCoverage(financial.allAccounts)) {
     return (
       <LaunchReady>
+        {/*
+          * The gate is a full return, so nothing below it is mounted -- including the toast
+          * surface the outbox reports a rejected mutation through. Account writes are queued, so
+          * their verdict always arrives after the sheet has closed; without this the first-run
+          * user whose account the server refused watched the row vanish and was told nothing.
+          */}
+        <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
         <Suspense fallback={<ViewFallback />}>
           <AccountCoverageGate
             accounts={financial.allAccounts}

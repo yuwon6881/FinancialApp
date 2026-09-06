@@ -49,7 +49,9 @@ export const InfoHint: React.FC<InfoHintProps> = ({ text, label, align = 'right'
     <>
       <Button
         variant="tertiary"
-        size={inline ? undefined : 'icon'}
+        // Always the icon size, in both forms: it is the only one with no horizontal padding, and
+        // the control scale's `px-4` collapses a `size-5` glyph to zero width.
+        size="icon"
         ref={anchorRef}
         type="button"
         aria-label={`What is ${label}?`}
@@ -62,9 +64,12 @@ export const InfoHint: React.FC<InfoHintProps> = ({ text, label, align = 'right'
         onBlur={() => { if (!pinned) setOpen(false) }}
         className={cn(
           'shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring',
+          // The inline form sits in a heading's text run, so it keeps a glyph-sized box at every
+          // tier -- including expanded, which the icon size would otherwise take back to 36px --
+          // and buys its 44px target from the invisible `before` overlay instead.
           inline
-            ? 'relative inline-flex size-5 sm:size-5 align-middle before:absolute before:-inset-2.5'
-            : 'inline-flex size-11 sm:size-7',
+            ? 'relative inline-flex size-5 align-middle before:absolute before:-inset-2.5 sm:size-5 lg:size-5'
+            : 'inline-flex size-11 sm:size-7 lg:size-7',
           className
         )}
       >

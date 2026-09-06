@@ -103,7 +103,10 @@ export function GlobalSearch({
         onClick={event => event.stopPropagation()}
         // Capped against --app-vvh, not vh: vh does not shrink for the on-screen keyboard, and
         // this panel is opened by typing, so the keyboard is always up on a phone.
-        className="flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-2xl max-h-[min(80vh,calc(var(--app-vvh,100dvh)-6rem))] animate-in zoom-in-95 duration-150"
+        // Wider from the expanded tier up: a 36rem palette on a desktop screen left a result row
+        // mostly empty space between its description and its amount, and the surrounding page was
+        // three times the width of the panel searching it.
+        className="flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-2xl max-h-[min(80vh,calc(var(--app-vvh,100dvh)-6rem))] animate-in zoom-in-95 duration-150 lg:max-w-3xl"
       >
         <div className="flex items-center gap-3 border-b border-border/50 bg-muted/20 px-4 py-3">
           <Search className="size-4.5 shrink-0 text-muted-foreground" aria-hidden />
@@ -213,8 +216,8 @@ export function GlobalSearch({
                   data-active={isAllCyclesActive}
                   onClick={() => openIndex(allCyclesIndex)}
                   onMouseMove={() => setActiveIndex(allCyclesIndex)}
-                  className={`mt-2 flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left cursor-pointer transition-colors duration-100 ${
-                    isAllCyclesActive ? 'bg-muted/80 border-border/60 shadow-xs' : 'border-border/40 hover:bg-muted/40'
+                  className={`mt-2 flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 justify-start text-left cursor-pointer transition-colors duration-100 ${
+                    isAllCyclesActive ? 'bg-muted/80 hover:bg-muted/80 border-border/60 shadow-xs' : 'border-border/40 hover:bg-muted/40'
                   }`}
                 >
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/40 bg-muted/40 text-muted-foreground">

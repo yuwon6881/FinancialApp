@@ -25,7 +25,7 @@ export function DraftReorderItem({
   const reduceMotion = useReducedMotion()
 
   const grip = (
-    <Button
+    <Button size="icon"
       variant="tertiary"
       type="button"
       aria-label={`Reorder ${value.description}. Position ${position} of ${count}. Use Up or Down arrow keys.`}

@@ -21,6 +21,73 @@ const mockArchivedAccount: LedgerAccount = {
 }
 
 describe('AccountFormSheet', () => {
+  // The server holds account names unique per user and answers a clash with a 409. Account writes
+  // are queued, so that verdict lands long after this sheet has closed -- and during the first-run
+  // coverage gate there is no toast surface mounted to carry it at all, which is how a duplicate
+  // name became a form that appeared to do nothing.
+  it('refuses a name another account already uses, without dispatching a save', () => {
+    const onSave = vi.fn()
+    const onClose = vi.fn()
+    render(
+      <AccountFormSheet
+        isOpen={true}
+        account={null}
+        existingAccounts={[mockAccount]}
+        currency="MYR"
+        onClose={onClose}
+        onSave={onSave}
+      />,
+    )
+
+    // Case and surrounding space must not sneak past a check the server makes case-insensitively.
+    fireEvent.change(screen.getByPlaceholderText('Name this account'), { target: { value: '  checking ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add account' }))
+
+    expect(screen.getByText('An account with this name already exists. Pick another name.')).toBeDefined()
+    expect(onSave).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('points a clash with a closed account at reopening it', () => {
+    const onSave = vi.fn()
+    render(
+      <AccountFormSheet
+        isOpen={true}
+        account={null}
+        existingAccounts={[mockArchivedAccount]}
+        currency="MYR"
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    )
+
+    fireEvent.change(screen.getByPlaceholderText('Name this account'), { target: { value: 'Closed Checking' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add account' }))
+
+    // A closed account still owns its name server-side, so "pick another name" would be a dead end
+    // when the thing the user actually wants is the Reopen path the gate already offers.
+    expect(screen.getByText(/already exists as a closed account/)).toBeDefined()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('lets an account keep its own name while editing', async () => {
+    const onSave = vi.fn()
+    render(
+      <AccountFormSheet
+        isOpen={true}
+        account={mockAccount}
+        existingAccounts={[mockAccount]}
+        currency="MYR"
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled())
+  })
+
   it('validates required name field before submitting', () => {
     const onSave = vi.fn()
     render(

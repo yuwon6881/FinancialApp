@@ -2,6 +2,7 @@
 import { invalidateAllDocumentCaches } from './documentsCache'
 import {
   bulkUpdateDocumentCategories,
+  bulkUpdateDocumentTransactionLinks,
   addTaxReliefCategory,
   deleteDocument,
   downloadDocument,
@@ -91,6 +92,53 @@ describe('documents API', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)).updates).toHaveLength(100)
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)).updates).toHaveLength(1)
+  })
+
+  it('relinks documents to transactions in one request', async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => okJson({
+      results: [{ id: 1, updated: true }, { id: 2, updated: true }],
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const results = await bulkUpdateDocumentTransactionLinks([
+      { id: 1, transactionId: null },
+      { id: 2, transactionId: 'tx-9' },
+    ])
+
+    expect(results.every(result => result.updated)).toBe(true)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/documents/bulk-update-transaction-links')
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({
+      updates: [
+        { id: 1, transactionId: null },
+        { id: 2, transactionId: 'tx-9' },
+      ],
+    }))
+  })
+
+  it('chunks link changes at the server limit', async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { updates: { id: number }[] }
+      return okJson({ results: body.updates.map(update => ({ id: update.id, updated: true })) })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const updates = Array.from({ length: 101 }, (_, id) => ({ id: id + 1, transactionId: null }))
+    const results = await bulkUpdateDocumentTransactionLinks(updates)
+
+    expect(results).toHaveLength(101)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)).updates).toHaveLength(100)
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)).updates).toHaveLength(1)
+  })
+
+  it('sends nothing when there are no links to change', async () => {
+    // Post-sync reconciliation calls this for every synced transaction, and most carry no detaches.
+    const fetchMock = vi.fn(async () => okJson({ results: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await bulkUpdateDocumentTransactionLinks([])).toEqual([])
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('invalidates cached relief categories after a category mutation', async () => {

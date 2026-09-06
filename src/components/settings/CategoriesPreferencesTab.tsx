@@ -161,7 +161,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
               title={hideSensitive ? 'Unhide balances to review' : 'AI category review'}
               className={`inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer sm:min-h-8 ${
                 view.isReviewingCleanup
-                  ? 'border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
+                  ? 'border-blue-500/35 bg-blue-500/5 hover:bg-blue-500/5 text-blue-600 dark:text-blue-400'
                   : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed'
               }`}
             >
@@ -248,7 +248,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                           {CATEGORY_FLOW_SEGMENTS.map(segment => {
                             const isActive = activeType === segment.value
                             return (
-                              <Button variant="tertiary"
+                              <Button size="icon" variant="tertiary"
                                 key={segment.value}
                                 type="button"
                                 disabled={hideSensitive}
@@ -258,11 +258,11 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                                 title={segment.title}
                                 // `size-*`, not `min-h-*`: the unlayered `button` floor in index.css
                                 // outranks layered utilities, so a min-height of 44px never applied.
-                                className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 sm:size-7 ${
+                                className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 sm:size-7 lg:size-7 ${
                                   isActive ? segment.activeClass : 'text-muted-foreground hover:text-foreground'
                                 }`}
                               >
-                                <segment.Icon className="size-3" aria-hidden="true" />
+                                <segment.Icon className="size-4" aria-hidden="true" />
                               </Button>
                             )
                           })}
@@ -306,7 +306,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                     type="button"
                     onClick={() => setFlowTypeDrafts({})}
                     disabled={isSavingFlowTypes || hideSensitive}
-                    className="bg-card"
+                    className="bg-card hover:bg-card"
                   >
                     Discard
                   </Button>

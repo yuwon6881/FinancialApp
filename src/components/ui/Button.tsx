@@ -50,14 +50,24 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       {...props}
     >
       {loading && <span className="sr-only">{children}</span>}
-      <span className="inline-grid min-w-0 items-center justify-center">
-        <span
-          aria-hidden={loading || undefined}
-          className={cn('col-start-1 row-start-1 inline-flex min-w-0 items-center justify-center gap-2', loading && 'invisible')}
-        >
+      {loadingLabel === undefined ? (
+        // `contents`, not a grid cell: the wrapper must not become a layout box of its own. The
+        // overlay version below reserves the wider of the two labels, which every caller that
+        // stacks or spreads its own content -- a nav item, a metric tile, a menu row -- then had
+        // squeezed into one centred inline row, because those children were laid out by the
+        // wrapper instead of by the button's own `className`. Visibility is inherited, so it still
+        // hides the children under the spinner while they keep reserving the button's size.
+        <span aria-hidden={loading || undefined} className={cn('contents', loading && 'invisible')}>
           {children}
         </span>
-        {loadingLabel !== undefined && (
+      ) : (
+        <span className="inline-grid min-w-0 items-center justify-center">
+          <span
+            aria-hidden={loading || undefined}
+            className={cn('col-start-1 row-start-1 inline-flex min-w-0 items-center justify-center gap-2', loading && 'invisible')}
+          >
+            {children}
+          </span>
           <span
             aria-hidden="true"
             className={cn('col-start-1 row-start-1 inline-flex items-center justify-center gap-2', !loading && 'invisible')}
@@ -65,8 +75,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             <LoaderCircle className="size-4 animate-spin" />
             {loadingLabel}
           </span>
-        )}
-      </span>
+        </span>
+      )}
       {loading && loadingLabel === undefined && (
         <span className="absolute inset-0 inline-flex items-center justify-center" aria-hidden="true">
           <LoaderCircle className="size-4 animate-spin" />

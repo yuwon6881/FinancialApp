@@ -127,11 +127,11 @@ export function ManageableNameList<T extends ManageableNameItem>({
           className="h-9 w-full rounded-lg border border-border/70 bg-background py-2 pl-9 pr-9 text-xs transition placeholder:text-muted-foreground hover:border-border focus:border-ring/70 focus:outline-none focus:ring-2 focus:ring-ring/15"
         />
         {search && (
-          <Button variant="tertiary"
+          <Button size="icon" variant="tertiary"
             type="button"
             onClick={() => setSearch('')}
             aria-label={`Clear ${lowerItemLabel} search`}
-            className="absolute right-0 top-1/2 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground sm:right-1 sm:size-8"
+            className="absolute right-0 top-1/2 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground sm:right-1 sm:size-8 lg:size-8"
           >
             <X className="size-3.5" />
           </Button>
@@ -183,13 +183,13 @@ export function ManageableNameList<T extends ManageableNameItem>({
                   maxLength={40}
                   className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
                 />
-                <Button variant="tertiary"
+                <Button size="icon" variant="tertiary"
                   type="button"
                   onClick={() => void add()}
                   disabled={!trimmedName || duplicate || Boolean(validationError) || disabled || busyId !== null}
                   aria-label={`Add ${itemLabel}`}
                   aria-busy={busyId === 'new'}
-                  className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground sm:size-9"
+                  className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground sm:size-9 lg:size-9"
                 >
                   {busyId === 'new' ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
                   <MutationStatusAnnouncement state={busyId === 'new' ? 'saving' : null} entityLabel={lowerItemLabel} />
@@ -238,12 +238,12 @@ export function ManageableNameList<T extends ManageableNameItem>({
               <div className={`flex shrink-0 items-center gap-2 ${stackActionsOnMobile ? 'self-end sm:self-auto' : ''}`}>
                 {renderStatus?.(item)}
                 {onEdit && !itemReadOnly && (
-                  <Button variant="tertiary"
+                  <Button size="icon" variant="tertiary"
                     type="button"
                     disabled={disabled || busyId !== null}
                     onClick={() => onEdit(item)}
                     aria-label={`Edit ${item.name}`}
-                    className="inline-grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 sm:size-8"
+                    className="inline-grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 sm:size-8 lg:size-8"
                   >
                     <Pencil className="size-3.5" />
                   </Button>
@@ -258,7 +258,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
                     <Lock className="size-3.5" aria-hidden="true" />
                   </span>
                 ) : (
-                  <Button variant="tertiary"
+                  <Button size="icon" variant="tertiary"
                     type="button"
                     disabled={disabled || busyId !== null}
                     onClick={async () => {
@@ -271,7 +271,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
                     }}
                     aria-label={`Delete ${item.name}`}
                     aria-busy={busyId === item.id}
-                    className="inline-grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50 sm:size-8"
+                    className="inline-grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50 sm:size-8 lg:size-8"
                   >
                     {busyId === item.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
                     <MutationStatusAnnouncement state={busyId === item.id ? 'deleting' : null} entityLabel={item.name} />

@@ -196,8 +196,8 @@ export function DocumentCard({
                 aria-label={`Change tax relief category for ${document.originalFileName}`}
                 className={`inline-flex min-h-11 max-w-full shrink-0 self-end items-center gap-1.5 rounded-lg border px-2 py-1 text-caption font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-8 sm:self-auto ${
                   isReliefDraftChanged
-                    ? 'border-blue-500/40 bg-blue-500/10 ring-2 ring-blue-500/50'
-                    : 'border-border/60 bg-muted/40'
+                    ? 'border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/10 ring-2 ring-blue-500/50'
+                    : 'border-border/60 bg-muted/40 hover:bg-muted/40'
                 }`}
               >
                 <span className="max-w-32 truncate">{reliefName}</span>
@@ -215,13 +215,13 @@ export function DocumentCard({
                   {isReliefDraftChanged && <span className="inline-block size-1.5 rounded-full bg-blue-500" title="Unsaved change" />}
                 </p>
                 {canCancelRelief && (
-                  <Button
+                  <Button size="icon"
                     variant="tertiary"
                     type="button"
                     onClick={() => setEditingRelief(false)}
                     aria-label={`Keep ${reliefName} as the tax relief category for ${document.originalFileName}`}
                     title="Keep the current category"
-                    className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted sm:size-7"
+                    className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted sm:size-7 lg:size-7"
                   >
                     <X className="size-3.5" />
                   </Button>

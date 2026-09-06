@@ -139,13 +139,14 @@ export function AuthenticatedTabContent({
   } = investmentScan
 
   const cycleDay = financial.optimisticDashboardData?.setting?.cycleDay || 28
-  // The Ledger's all-cycles scope spans every saved cycle, so a single-cycle picker would claim
-  // to filter rows it does not reach; its own scope toggle is the way back to one cycle.
+  // The Ledger's all-cycles scope spans every saved cycle, so a single-cycle picker would claim to
+  // filter rows it does not reach. It is disabled and says so rather than unmounted: taking it out
+  // of the document moved every row on the page up by its own height on each toggle, which made
+  // the scope switch hard to aim at twice in a row.
   const ledgerSpansAllCycles = prefs.activeTab === 'ledger'
     && nav.ledgerShowAllCycles
     && prefs.ledgerCyclesRange === 'all'
   const showCycleSwitcher = (CYCLE_DEPENDENT_TABS as readonly string[]).includes(prefs.activeTab)
-    && !ledgerSpansAllCycles
 
   return (
     <div key={prefs.activeTab} className="w-full view-enter">
@@ -165,6 +166,7 @@ export function AuthenticatedTabContent({
               : 'month-year'}
             surfaceLabel={prefs.activeTab === 'ledger' ? 'Ledger' : prefs.activeTab === 'reports' ? 'Report' : 'Recurring'}
             disabled={nav.isSwitchingCycle}
+            unavailableReason={ledgerSpansAllCycles ? 'Showing every saved cycle — switch back to Current cycle to pick one.' : undefined}
           />
         </div>
         </Suspense>

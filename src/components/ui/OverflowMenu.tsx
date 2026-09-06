@@ -129,10 +129,12 @@ export const OverflowMenu: React.FC<OverflowMenuProps> = ({
         open={open}
         anchorRef={triggerRef}
         align={align}
-        minWidth={180}
+        minWidth={168}
         role="menu"
         aria-label={`Actions for ${entityLabel}`}
-        className="z-[240] w-48 overflow-hidden rounded-xl border border-border/70 bg-card p-1 shadow-xl"
+        // Sized to the labels these menus actually carry ("Release money" is the longest), not to
+        // a 12rem default that left a card-sized gap to the right of every item.
+        className="z-[240] w-44 overflow-hidden rounded-xl border border-border/70 bg-card p-1 shadow-xl"
       >
         {items.map(item => {
           const Icon = item.icon
@@ -151,7 +153,8 @@ export const OverflowMenu: React.FC<OverflowMenuProps> = ({
                 item.onSelect()
               }}
               className={cn(
-                'flex min-h-11 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs font-bold',
+                // `justify-start`: a menu row is a list item, not a centred action label.
+                'flex min-h-11 w-full items-center justify-start gap-2 rounded-lg px-2.5 text-left text-xs font-bold',
                 'transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 sm:min-h-10',
                 item.disabled
                   ? 'cursor-not-allowed text-muted-foreground/60'

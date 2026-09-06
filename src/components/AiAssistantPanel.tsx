@@ -294,7 +294,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
                     type="button"
                     disabled={isOffline}
                     onClick={() => setInput(prompt)}
-                    className="min-h-11 w-auto max-w-full rounded-full border border-border/60 bg-background px-4 py-2 text-center text-xs leading-4 text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                    className="min-h-11 w-auto max-w-full rounded-full border border-border/60 bg-background hover:bg-background px-4 py-2 text-center text-xs leading-4 text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
                   >
                     {prompt}
                   </Button>
@@ -340,7 +340,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
           </div>
         </div>
 
-        <form noValidate onSubmit={event => { event.preventDefault(); void sendMessage() }} className="relative flex items-center gap-2 rounded-xl border border-border bg-card p-1.5 shadow-xs transition-[border-color,box-shadow] focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10">
+        <form noValidate onSubmit={event => { event.preventDefault(); void sendMessage() }} className="relative flex items-center gap-2 rounded-xl border border-border bg-card p-1.5 shadow-xs transition-[border-color,box-shadow] focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/25">
           {mentions.isOpen && (
             <AccountMentionMenu
               accounts={mentions.options}

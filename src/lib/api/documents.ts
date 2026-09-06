@@ -286,6 +286,49 @@ export function getDocumentRetentionReview(): Promise<DocumentRetentionReview> {
  */
 export const DOCUMENT_BULK_LIMIT = 100
 
+export interface BulkDocumentTransactionLink {
+  id: number
+  /** Null detaches the document from the transaction it currently has. */
+  transactionId: string | null
+}
+
+export interface BulkDocumentTransactionLinkResult {
+  id: number
+  updated: boolean
+  message?: string | null
+}
+
+/**
+ * Re-points or detaches several documents' owning transaction in one call.
+ *
+ * Chunked to the same ceiling the server enforces, for the same reason `bulkUpdateDocumentCategories`
+ * is: post-sync reconciliation walks every synced transaction's document changes at once, so a batch
+ * of drafts pushed together can carry more link changes than one request may hold.
+ */
+export async function bulkUpdateDocumentTransactionLinks(
+  updates: BulkDocumentTransactionLink[],
+): Promise<BulkDocumentTransactionLinkResult[]> {
+  const results: BulkDocumentTransactionLinkResult[] = []
+  if (updates.length === 0) return results
+  try {
+    for (let index = 0; index < updates.length; index += DOCUMENT_BULK_LIMIT) {
+      const batch = updates.slice(index, index + DOCUMENT_BULK_LIMIT)
+      const result = await request<{ results: BulkDocumentTransactionLinkResult[] }>('/documents/bulk-update-transaction-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates: batch }),
+        errorMessage: 'Failed to update document links',
+      })
+      results.push(...result.results)
+    }
+  } finally {
+    // Earlier chunks are committed even when a later one throws, so the list and summary caches
+    // would otherwise keep serving links that no longer exist.
+    invalidateDocumentDerivedData()
+  }
+  return results
+}
+
 export async function bulkDeleteDocuments(ids: number[]): Promise<{ id: number; deleted: boolean; message?: string | null }[]> {
   const result = await request<{ results: { id: number; deleted: boolean; message?: string | null }[] }>('/documents/bulk-delete', {
     method: 'POST',

@@ -65,7 +65,7 @@ export function ReceiptSplitItemRow({
         <Button variant="tertiary"
           type="button"
           onClick={() => onRemove(index)}
-          className="flex h-full w-full items-center justify-center gap-1 bg-destructive px-3 text-xs font-bold text-destructive-foreground cursor-pointer rounded-r-2xl"
+          className="flex h-full w-full items-center justify-center gap-1 bg-destructive hover:bg-destructive/90 px-3 text-xs font-bold text-destructive-foreground cursor-pointer rounded-r-2xl"
           aria-label={`Delete ${itemLabel}`}
         >
           <Trash2 className="size-4" /> Delete
@@ -163,11 +163,11 @@ export function ReceiptSplitItemRow({
             <span className="text-xs text-muted-foreground">{maximum} on the receipt · 0 if none is yours</span>
           </div>
           <div className="flex shrink-0 items-center rounded-xl border border-border bg-background p-1 shadow-xs">
-            <Button variant="tertiary"
+            <Button size="icon" variant="tertiary"
               type="button"
               onClick={() => onChangeQuantity(index, -1)}
               disabled={selected <= 0}
-              className="flex size-8 items-center justify-center rounded-lg text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
+              className="flex size-8 items-center justify-center rounded-lg text-foreground lg:size-8 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
               aria-label={`Decrease quantity for item ${index + 1}`}
             >
               <Minus className="size-3.5" />
@@ -175,11 +175,11 @@ export function ReceiptSplitItemRow({
             <span className="min-w-9 text-center text-sm font-extrabold text-foreground" aria-label={`Quantity for item ${index + 1}`}>
               {selected}
             </span>
-            <Button variant="tertiary"
+            <Button size="icon" variant="tertiary"
               type="button"
               onClick={() => onChangeQuantity(index, 1)}
               disabled={selected >= maximum}
-              className="flex size-8 items-center justify-center rounded-lg text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
+              className="flex size-8 items-center justify-center rounded-lg text-foreground lg:size-8 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
               aria-label={`Increase quantity for item ${index + 1}`}
             >
               <Plus className="size-3.5" />

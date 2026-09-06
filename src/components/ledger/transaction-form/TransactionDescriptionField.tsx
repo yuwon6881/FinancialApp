@@ -175,7 +175,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
                 descriptionRef.current = s.note
                 suggestions.setShowNoteSuggestions(false)
               }}
-              className="w-full text-left px-3.5 py-2.5 text-sm flex flex-col gap-0.5 cursor-pointer transition duration-100 hover:bg-blue-500/10 first:rounded-t-xl last:rounded-b-xl"
+              className="w-full items-start justify-start text-left px-3.5 py-2.5 text-sm flex flex-col gap-0.5 cursor-pointer transition duration-100 hover:bg-blue-500/10 first:rounded-t-xl last:rounded-b-xl"
             >
               <span className="font-semibold text-foreground">{s.note}</span>
               <span className="text-xs text-muted-foreground">{s.reason}</span>
@@ -225,7 +225,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
               }}
               className={`w-full text-left px-3.5 py-2 text-sm flex items-center justify-between gap-2 cursor-pointer transition duration-100 first:rounded-t-xl last:rounded-b-xl ${
                 idx === selectedSuggestionIndex
-                  ? 'bg-blue-500/10 text-foreground'
+                  ? 'bg-blue-500/10 hover:bg-blue-500/10 text-foreground'
                   : 'hover:bg-muted/50 text-foreground'
               }`}
             >

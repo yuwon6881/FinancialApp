@@ -134,7 +134,7 @@ export function HorizontalRail({ children, className, label, showControls = fals
           type="button"
           onClick={() => scrollByPage(-1)}
           aria-label={`Scroll ${label} left`}
-          className="horizontal-rail-control absolute left-2 top-1/2 z-10 size-8 -translate-y-1/2 rounded-full bg-card/95 shadow-lg backdrop-blur-sm"
+          className="horizontal-rail-control absolute left-2 top-1/2 z-10 size-8 -translate-y-1/2 rounded-full bg-card/95 hover:bg-card/95 shadow-lg backdrop-blur-sm"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
         </Button>
@@ -146,7 +146,7 @@ export function HorizontalRail({ children, className, label, showControls = fals
           type="button"
           onClick={() => scrollByPage(1)}
           aria-label={`Scroll ${label} right`}
-          className="horizontal-rail-control absolute right-2 top-1/2 z-10 size-8 -translate-y-1/2 rounded-full bg-card/95 shadow-lg backdrop-blur-sm"
+          className="horizontal-rail-control absolute right-2 top-1/2 z-10 size-8 -translate-y-1/2 rounded-full bg-card/95 hover:bg-card/95 shadow-lg backdrop-blur-sm"
         >
           <ChevronRight className="size-4" aria-hidden="true" />
         </Button>

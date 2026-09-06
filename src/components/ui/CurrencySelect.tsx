@@ -229,7 +229,7 @@ export function CurrencySelect({
               aria-selected={item.code === value}
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => choose(item)}
-              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs ${index === activeIndex ? 'bg-muted' : 'hover:bg-muted'}`}
+              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 justify-start text-left text-xs ${index === activeIndex ? 'bg-muted hover:bg-muted' : 'hover:bg-muted'}`}
             >
               <span className="w-16 shrink-0 font-bold">{item.code} <span className="font-normal text-muted-foreground">{item.symbol}</span></span>
               <span className="min-w-0 flex-1 truncate text-muted-foreground">{item.name}</span>

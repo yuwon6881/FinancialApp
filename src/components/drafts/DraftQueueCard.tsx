@@ -38,8 +38,8 @@ export function DraftQueueCard({ draft, grip, issues, documentCount, currency, h
       contentClassName="rounded-2xl bg-card p-3 sm:p-4"
       actionsWidth={128}
       actions={<>
-        <Button variant="tertiary" onClick={onEdit} disabled={hideSensitive} aria-label={`Edit ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-primary text-caption font-bold text-primary-foreground"><Edit2 className="size-4" aria-hidden="true" />Edit</Button>
-        <Button variant="tertiary" onClick={onDelete} disabled={hideSensitive} aria-label={`Delete ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-destructive text-caption font-bold text-destructive-foreground"><Trash2 className="size-4" aria-hidden="true" />Delete</Button>
+        <Button variant="tertiary" onClick={onEdit} disabled={hideSensitive} aria-label={`Edit ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-primary hover:bg-primary/90 text-caption font-bold text-primary-foreground"><Edit2 className="size-4" aria-hidden="true" />Edit</Button>
+        <Button variant="tertiary" onClick={onDelete} disabled={hideSensitive} aria-label={`Delete ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-destructive hover:bg-destructive/90 text-caption font-bold text-destructive-foreground"><Trash2 className="size-4" aria-hidden="true" />Delete</Button>
       </>}
       desktopActions={false}
     >

@@ -70,14 +70,14 @@ export const MobileFabTrigger = ({
   onToggle: () => void
   triggerRef: RefObject<HTMLButtonElement | null>
 }) => visible ? (
-  <Button
+  <Button size="icon"
     ref={triggerRef}
     variant="tertiary"
     type="button"
     aria-label={isOpen ? 'Close Menu' : 'Open Menu'}
     title={isOpen ? 'Close Menu' : 'Open Menu'}
     onClick={onToggle}
-    className="fixed right-6 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/25 cursor-pointer sm:hidden"
+    className="fixed right-6 z-40 flex size-14 items-center justify-center rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/25 cursor-pointer sm:hidden"
     style={{ bottom: 'calc(var(--app-fab-offset) + env(safe-area-inset-bottom, 0px))' }}
     aria-expanded={isOpen}
     aria-controls={isOpen ? "mobile-fab-actions" : undefined}

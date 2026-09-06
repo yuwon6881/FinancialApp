@@ -19,6 +19,7 @@ const getTaxReliefCategories = vi.fn(async () => [
 const uploadDocuments = vi.fn()
 const uploadDocument = vi.fn()
 const deleteDocument = vi.fn()
+const bulkDeleteDocuments = vi.fn()
 
 vi.mock('../../lib/api/documents', () => ({
   getDocumentConstraints: (...args: unknown[]) => getDocumentConstraints(...(args as [])),
@@ -26,6 +27,7 @@ vi.mock('../../lib/api/documents', () => ({
   uploadDocuments: (...args: unknown[]) => uploadDocuments(...(args as [])),
   uploadDocument: (...args: unknown[]) => uploadDocument(...(args as [])),
   deleteDocument: (...args: unknown[]) => deleteDocument(...(args as [])),
+  bulkDeleteDocuments: (...args: unknown[]) => bulkDeleteDocuments(...(args as [])),
 }))
 
 const renderSheet = () => render(
@@ -55,6 +57,7 @@ describe('DocumentUploadSheet validation', () => {
     showToast.mockClear()
     uploadDocuments.mockReset()
     deleteDocument.mockReset()
+    bulkDeleteDocuments.mockReset()
   })
 
   it('reports a missing file on the field rather than through a toast', async () => {
@@ -113,7 +116,7 @@ describe('DocumentUploadSheet validation', () => {
 
   it('offers Undo only when every uploaded document id is known', async () => {
     uploadDocuments.mockResolvedValue([{ fileName: 'receipt.pdf', uploaded: true, id: 42 }])
-    deleteDocument.mockResolvedValue(undefined)
+    bulkDeleteDocuments.mockResolvedValue([{ id: 42, deleted: true }])
     renderSheet()
     await waitFor(() => expect(getTaxReliefCategories).toHaveBeenCalled())
     await chooseFile()
@@ -125,7 +128,37 @@ describe('DocumentUploadSheet validation', () => {
     const undo = showToast.mock.calls[0][3]
     expect(undo?.label).toBe('Undo')
     undo.onAction()
-    await waitFor(() => expect(deleteDocument).toHaveBeenCalledWith(42))
+    // Undoing a batch upload removes the batch in one call, rather than a delete per file.
+    await waitFor(() => expect(bulkDeleteDocuments).toHaveBeenCalledWith([42]))
+    expect(deleteDocument).not.toHaveBeenCalled()
+  })
+
+  it('says so when Undo removes only some of the uploaded documents', async () => {
+    // The bulk endpoint answers per file, so a partial removal is stated instead of being hidden
+    // behind whichever request happened to reject first.
+    uploadDocuments.mockResolvedValue([
+      { fileName: 'receipt.pdf', uploaded: true, id: 42 },
+      { fileName: 'invoice.pdf', uploaded: true, id: 43 },
+    ])
+    bulkDeleteDocuments.mockResolvedValue([
+      { id: 42, deleted: true },
+      { id: 43, deleted: false, message: 'That document is no longer in your Vault.' },
+    ])
+    renderSheet()
+    await waitFor(() => expect(getTaxReliefCategories).toHaveBeenCalled())
+    await chooseFile()
+    await chooseCategory()
+
+    fireEvent.click(screen.getByRole('button', { name: /^Upload/ }))
+
+    await waitFor(() => expect(showToast).toHaveBeenCalled())
+    showToast.mock.calls[0][3].onAction()
+
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(
+      expect.stringContaining('1 of 2 documents were removed'),
+      'Undo Incomplete',
+      'error',
+    ))
   })
 
   it('rejects unsupported file types client-side with server explanation', async () => {

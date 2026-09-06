@@ -11,6 +11,8 @@ import { AlertCircle, BarChart3, ChevronRight, ShieldCheck } from 'lucide-react'
 import { Button } from './ui/Button'
 import { InteractiveCard } from './ui/InteractiveCard'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
+import { evaluateEssentialsChallenge } from '../lib/essentialsChallenge'
+import { EssentialsChallengeCard } from './dashboard/EssentialsChallengeCard'
 import { InvestmentPlanExceptionCard } from './dashboard/InvestmentPlanExceptionCard'
 import { StabilityRecoveryExceptionCard } from './dashboard/StabilityRecoveryExceptionCard'
 import { RecurringAccountShortfallCard } from './dashboard/RecurringAccountShortfallCard'
@@ -87,13 +89,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const safeMonthIndex = monthIndex > 0 ? monthIndex : new Date().getMonth() + 1
     return getCycleProgress(view.activeSettings.selectedYear || new Date().getFullYear(), safeMonthIndex, view.activeSettings.cycleDay || 28)
   }, [view.activeSettings.cycleDay, view.activeSettings.selectedMonth, view.activeSettings.selectedYear])
-  const spendDays = cycleProgress.phase === 'active' ? cycleProgress.daysLeft : cycleProgress.phase === 'upcoming' ? cycleProgress.totalDays : 1
+  // One evaluation feeds both the challenge card and the plan snapshot's daily figures, so Today
+  // cannot quote two different allowances for the same money.
+  const challenge = React.useMemo(() => evaluateEssentialsChallenge({
+    totalAvailable: view.essentialsMetric.totalAvailable,
+    projectedRemaining: view.essentialsMetric.projectedRemaining,
+    projectedEndingBalance: view.todayPlanInsights.projectedEssentialsEndingBalance,
+    currentDailyPace: view.todayPlanInsights.nonRecurringEssentialsDailyAverage,
+    unpaidRecurringCount: view.todayPlanInsights.unpaidRecurringCount,
+    exceededCategoryLimits: view.categoryLimitProgress.filter(item => item.status === 'Exceeded').length,
+    cycle: cycleProgress,
+  }), [cycleProgress, view.categoryLimitProgress, view.essentialsMetric, view.todayPlanInsights])
   const hasEndedCycle = cycleProgress.phase === 'ended'
-  const dailySpendingRoom = Math.max(0, view.essentialsMetric.projectedRemaining) / spendDays
-  const currentDailyPace = view.todayPlanInsights.nonRecurringEssentialsDailyAverage
-  const paceDifference = dailySpendingRoom > 0
-    ? (currentDailyPace - dailySpendingRoom) / dailySpendingRoom
-    : currentDailyPace > 0 ? 1 : 0
+  const spendDays = challenge.spendDays
+  const dailySpendingRoom = challenge.dailyAllowance
+  const currentDailyPace = challenge.currentDailyPace
+  const paceDifference = challenge.paceDifference
 
   if (isSwitchingCycle) {
     return <CycleSkeleton variant="dashboard" />
@@ -177,6 +188,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         formatCurrency={view.formatCurrency}
         formatSensitive={view.formatSensitive}
         onNavigate={onNavigate}
+      />
+
+      {/* Where the cycle's Essentials spending actually stands, as one rank rather than a figure
+          the reader has to interpret. It sits above the plan snapshot because it answers the
+          question the snapshot's six numbers are evidence for. */}
+      <EssentialsChallengeCard
+        challenge={challenge}
+        cycle={cycleProgress}
+        formatSensitive={view.formatSensitive}
       />
 
       <div data-testid="today-plan-grid">

@@ -59,8 +59,8 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
                   }}
                   className="w-full flex items-center justify-between p-3 rounded-xl border border-border/60 bg-muted/20 hover:bg-muted/40 transition text-left cursor-pointer"
                 >
-                  <div>
-                    <div className="text-xs font-bold text-foreground">{bill.name}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-xs font-bold text-foreground">{bill.name}</div>
                     <div className="flex flex-wrap items-center gap-1 mt-1">
                       <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-semibold text-xs ${getCategoryBadgeClass(bill.ledgerCategory)}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${getCategoryDotClass(bill.ledgerCategory)}`} />
@@ -72,7 +72,7 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
                       </span>
                     </div>
                   </div>
-                  <div className="text-right flex flex-col items-end gap-1 font-semibold">
+                  <div className="flex shrink-0 flex-col items-end gap-1 text-right font-semibold">
                     <span className="text-xs font-extrabold text-foreground">{formatTimelineAmount(getBillTimelineAmount(bill))}</span>
                     <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>
                       {getOccurrenceStatusLabel(bill.status)}

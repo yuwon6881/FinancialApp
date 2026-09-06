@@ -71,7 +71,7 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
                 aria-pressed={chartView === view}
                 aria-label={view === 'monthly' ? 'Selected cycle' : view === '3month' ? 'Last 3 months' : view === '6month' ? 'Last 6 months' : 'Full year'}
                 className={`inline-flex min-h-11 min-w-0 items-center justify-center rounded-md px-2.5 py-1 font-bold transition cursor-pointer sm:min-h-8 ${
-                  chartView === view ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                  chartView === view ? 'bg-background hover:bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {view === 'monthly' ? '1M' : view === '3month' ? '3M' : view === '6month' ? '6M' : 'Year'}

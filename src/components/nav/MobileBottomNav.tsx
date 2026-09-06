@@ -41,7 +41,9 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               key={tab}
               onClick={() => { triggerHaptic(8); onTabChange(tab) }}
               aria-current={isActive ? 'page' : undefined}
-              className={`relative flex min-w-0 flex-col items-center gap-1 text-label cursor-pointer transition-all duration-200 w-full text-center ${
+              // `px-1`: the control scale's 16px side padding is meant for a label beside an icon,
+              // and five of those in a phone's width left each nav label about two characters.
+              className={`relative flex min-w-0 flex-col items-center gap-1 px-1 text-label cursor-pointer transition-all duration-200 w-full text-center ${
                 isActive ? 'scale-[1.03] font-bold text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >

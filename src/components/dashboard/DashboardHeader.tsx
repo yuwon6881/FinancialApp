@@ -33,10 +33,11 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     icon={<span className="flex size-10 items-center justify-center rounded-xl border border-blue-500/15 bg-blue-500/10 text-blue-500"><CalendarCheck2 className="size-5" /></span>}
     titleActions={<Badge tone="success"><CalendarCheck2 className="mr-1 size-3" />Starts on the {ordinal(cycleDay)}</Badge>}
     description={<>Current cycle · <span className="font-semibold text-blue-500">{cycleLabel}</span></>}
-  >
-    <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,25rem)] lg:items-center">
-      <div aria-hidden="true" />
-      <div className="min-w-0 w-full rounded-2xl border border-blue-500/15 bg-background/65 p-4 shadow-sm backdrop-blur-sm">
+    // The wallet is the header's action, so it belongs on the header's own row. It used to sit in
+    // a two-column grid below, whose first column was an empty spacer -- which is what put a card
+    // in the far corner with a screen's width of nothing beside it.
+    actions={
+      <div className="min-w-0 w-full rounded-2xl border border-blue-500/15 bg-background/65 p-4 shadow-sm backdrop-blur-sm lg:w-[25rem]">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
@@ -66,6 +67,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           </p>
         </div>
       </div>
-    </div>
-  </PageHeader>
+    }
+  />
 )

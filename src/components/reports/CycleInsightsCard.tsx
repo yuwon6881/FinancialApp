@@ -1,6 +1,7 @@
 import { CalendarDays, ReceiptText } from 'lucide-react'
 import type { DashboardData } from '../../types'
 import { Button } from '../ui/Button'
+import { cn } from '../../lib/utils'
 import { Panel } from '../ui/Panel'
 
 interface CycleInsightsCardProps {
@@ -31,41 +32,33 @@ export function CycleInsightsCard({
         <div className="rounded-xl bg-muted/25 p-3"><dt className="text-eyebrow uppercase text-muted-foreground">Transactions</dt><dd className="mt-1 text-lg font-black text-foreground">{insights.transactionCount}</dd></div>
         <div className="rounded-xl bg-muted/25 p-3"><dt className="text-eyebrow uppercase text-muted-foreground">No-spend days</dt><dd className="mt-1 text-lg font-black text-foreground">{insights.noSpendDays}</dd></div>
         <div className="rounded-xl bg-muted/25 p-3"><dt className="text-eyebrow uppercase text-muted-foreground">Average per day</dt><dd className="mt-1 text-sm font-black text-foreground">{insights.avgDailySpend == null ? 'Unavailable' : formatSensitive(insights.avgDailySpend)}</dd></div>
-        {canSelectExpense ? (
-          <Button
-            variant="tertiary"
-            type="button"
-            onClick={onSelectLargestExpense}
-            aria-label={`View biggest expense: ${insights.largestExpenseDescription || 'transaction'} in Ledger`}
-            className="group rounded-xl border border-transparent bg-muted/25 p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/35 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring cursor-pointer"
-          >
-            <dt className="text-eyebrow uppercase text-muted-foreground group-hover:text-foreground transition-colors">
-              Biggest expense
-            </dt>
-            <dd className="mt-1 flex items-center gap-1 text-sm font-black text-foreground">
-              <ReceiptText className="size-3.5 text-orange-500" aria-hidden />
-              {formatSensitive(Math.abs(insights.largestExpenseAmount!))}
-            </dd>
-            {insights.largestExpenseDescription && (
-              <p className="mt-1 truncate text-caption text-muted-foreground" title={insights.largestExpenseDescription}>
-                {insights.largestExpenseDescription}
-              </p>
-            )}
-          </Button>
-        ) : (
-          <div className="rounded-xl bg-muted/25 p-3">
-            <dt className="text-eyebrow uppercase text-muted-foreground">Biggest expense</dt>
-            <dd className="mt-1 flex items-center gap-1 text-sm font-black text-foreground">
-              <ReceiptText className="size-3.5" aria-hidden />
-              {insights.largestExpenseAmount == null ? 'None' : formatSensitive(Math.abs(insights.largestExpenseAmount))}
-            </dd>
-            {insights.largestExpenseDescription && (
-              <p className="mt-1 truncate text-caption text-muted-foreground" title={insights.largestExpenseDescription}>
-                {insights.largestExpenseDescription}
-              </p>
-            )}
-          </div>
-        )}
+        {/* The tile stays the same `<div>` its three neighbours are, so it lines up with them and
+            `<dt>`/`<dd>` stay legal children of the list. The action is a full-bleed overlay --
+            the same way a bill node on the timeline is made clickable -- rather than a button
+            wrapped around the definition pair. */}
+        <div className={cn('relative rounded-xl bg-muted/25 p-3', canSelectExpense && 'group border border-transparent transition-colors focus-within:border-primary/40 hover:border-primary/40 hover:bg-muted/35')}>
+          <dt className={cn('text-eyebrow uppercase text-muted-foreground', canSelectExpense && 'transition-colors group-hover:text-foreground')}>
+            Biggest expense
+          </dt>
+          <dd className="mt-1 flex items-center gap-1 text-sm font-black text-foreground">
+            <ReceiptText className={cn('size-3.5', canSelectExpense && 'text-orange-500')} aria-hidden />
+            {insights.largestExpenseAmount == null ? 'None' : formatSensitive(Math.abs(insights.largestExpenseAmount))}
+          </dd>
+          {insights.largestExpenseDescription && (
+            <p className="mt-1 truncate text-caption text-muted-foreground" title={insights.largestExpenseDescription}>
+              {insights.largestExpenseDescription}
+            </p>
+          )}
+          {canSelectExpense && (
+            <Button
+              variant="tertiary"
+              type="button"
+              onClick={onSelectLargestExpense}
+              aria-label={`View biggest expense: ${insights.largestExpenseDescription || 'transaction'} in Ledger`}
+              className="absolute inset-0 size-full rounded-xl p-0"
+            />
+          )}
+        </div>
       </dl>
     </Panel>
   )

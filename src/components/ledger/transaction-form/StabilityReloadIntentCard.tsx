@@ -41,9 +41,9 @@ export const StabilityReloadIntentCard: React.FC<StabilityReloadIntentCardProps>
               role="radio"
               aria-checked={selected}
               onClick={() => onSetField('stabilityReloadIntent', value)}
-              className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-xs font-semibold transition ${
+              className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2.5 justify-start text-left text-xs font-semibold transition ${
                 selected
-                  ? 'border-amber-500/50 bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                  ? 'border-amber-500/50 bg-amber-500/15 hover:bg-amber-500/15 text-amber-700 dark:text-amber-300'
                   : 'border-border/60 bg-card/60 text-foreground hover:bg-muted/40'
               }`}
             >

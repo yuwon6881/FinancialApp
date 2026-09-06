@@ -217,14 +217,17 @@ export function LoanCard({
         />
       </details>
 
-      <div className="mt-3 rounded-xl border border-border/50 bg-background/40 p-3 sm:p-3.5">
+      {/* The whole panel is the toggle, the same way the Loan details disclosure above it is: the
+          padding belongs to the control, not to a wrapper around it, so the hover surface covers
+          the box a reader is already pointing at instead of a text-sized strip inside it. */}
+      <div className="mt-3 overflow-hidden rounded-xl border border-border/50 bg-background/40">
         <Button
           variant="tertiary"
           type="button"
           aria-expanded={isScheduleOpen}
           aria-controls={isScheduleOpen ? `loan-schedule-${loan.id}` : undefined}
           onClick={handleScheduleToggle}
-          className="flex min-h-11 w-full cursor-pointer select-none items-center justify-between gap-2 rounded-lg text-left text-xs font-bold text-foreground transition-colors hover:text-accent-ink sm:min-h-0"
+          className="flex min-h-11 w-full cursor-pointer select-none items-center justify-between gap-3 rounded-none px-3 py-2.5 text-left text-xs font-bold text-foreground transition-colors hover:bg-muted/30 hover:text-accent-ink sm:min-h-0 sm:px-3.5"
         >
           <div className="flex items-center gap-2 min-w-0">
             <span className="truncate">Payment history and planned schedule</span>
@@ -235,7 +238,7 @@ export function LoanCard({
           <ChevronDown className={`size-3.5 text-muted-foreground transition-transform shrink-0 ${isScheduleOpen ? 'rotate-180' : ''}`} aria-hidden />
         </Button>
         {isScheduleOpen && (
-          <div id={`loan-schedule-${loan.id}`} className="min-w-0 max-w-full overflow-hidden">
+          <div id={`loan-schedule-${loan.id}`} className="min-w-0 max-w-full overflow-hidden px-3 pb-3 sm:px-3.5 sm:pb-3.5">
             {scheduleLoadingKey === scheduleKey ? (
               <div className="mt-3 flex min-h-28 items-center justify-center gap-2 rounded-lg border border-border/40 bg-card/40 text-xs font-semibold text-muted-foreground" role="status">
                 <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />

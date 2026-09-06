@@ -43,7 +43,7 @@ export const AccountMentionMenu: React.FC<AccountMentionMenuProps> = ({
           onMouseDown={event => { event.preventDefault(); onPick(account) }}
           onMouseEnter={() => onHoverIndex(index)}
           className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-xs transition-colors cursor-pointer sm:min-h-9 ${
-            index === activeIndex ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/60'
+            index === activeIndex ? 'bg-muted hover:bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/60'
           }`}
         >
           <span className="min-w-0 flex-1 truncate font-medium text-foreground">{account.name}</span>

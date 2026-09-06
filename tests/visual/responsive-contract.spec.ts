@@ -145,6 +145,53 @@ test('compact route controls retain the 44px target floor', async ({ page }) => 
   }
 })
 
+// The route sweep above only ever sees the Essentials challenge in its unranked state, because the
+// shared fixture allocates nothing to Essentials. The ranked layout is the wider one -- a score
+// ring beside a rank line, a bar carrying a pace marker, and a badge grid -- and 320px is where it
+// would break first.
+test('the ranked Essentials challenge stays inside its card at every width', async ({ page }) => {
+  await mockApi(page, {
+    setting: { cycleDay: 15 },
+    dashboard: {
+      categories: [
+        { id: 'essentials', name: 'Essentials', allocation: 0.5, target: 2_400, incomeAllocated: 2_400, budget: 0, netChange: -1_080, spent: 1_080, remaining: 1_320 },
+        { id: 'salary', name: 'Salary', allocation: 0, target: 0, incomeAllocated: 0, budget: 0, netChange: 5_500, spent: 0, remaining: 5_500 },
+      ],
+      todayPlanInsights: {
+        unpaidRecurringCount: 1,
+        unpaidRecurringTotal: 120,
+        unpaidEssentialsTotal: 0,
+        nonRecurringEssentialsSpent: 1_080,
+        nonRecurringEssentialsDailyAverage: 55,
+        projectedEssentialsEndingBalance: 480,
+      },
+    },
+  })
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+
+  const card = page.getByRole('heading', { name: 'Ahead of plan' }).locator('xpath=ancestor::section[1]')
+  await expect(card).toBeVisible()
+  await waitForStableLayout(page)
+
+  const overflow = await card.evaluate(element => {
+    const card = element.getBoundingClientRect()
+    return {
+      pageWidth: document.documentElement.scrollWidth,
+      viewport: document.documentElement.clientWidth,
+      escaping: Array.from(element.querySelectorAll<HTMLElement>('*'))
+        .filter(child => {
+          const rect = child.getBoundingClientRect()
+          if (rect.width === 0 || rect.height === 0) return false
+          return rect.left < card.left - 1 || rect.right > card.right + 1
+        })
+        .map(child => child.textContent?.trim().slice(0, 40) || child.tagName),
+    }
+  })
+
+  expect(overflow.escaping, 'challenge card content escapes its own box').toEqual([])
+  expect(overflow.pageWidth, 'the ranked challenge card overflows the page').toBeLessThanOrEqual(overflow.viewport + 1)
+})
+
 test('medium ledger rows keep their actions inside the card', async ({ page }) => {
   const width = test.info().project.use.viewport?.width ?? 0
   test.skip(width < 640 || width >= 1024, 'The inline row actions only render on the medium tier.')

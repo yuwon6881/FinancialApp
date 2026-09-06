@@ -188,6 +188,7 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
             <DatePicker value={trackingStartDate} onChange={setTrackingStartDate} className="w-full" required />
           </FormField>
           <FormField
+            id="loan-rate-entry"
             label="Interest rate"
             hint={rateBasis === 'Monthly' && Number.isFinite(annualRatePercent) ? `That's ${formatRatePercent(annualRatePercent)} a year.` : undefined}
             required
@@ -218,7 +219,7 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
               />
             </div>
           </FormField>
-          <FormField label="Loan length" required>
+          <FormField id="loan-term-length" label="Loan length" required>
             <div className="flex min-w-0 gap-2">
               <Input
                 id="loan-term-length"

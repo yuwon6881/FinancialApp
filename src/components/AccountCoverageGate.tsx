@@ -130,6 +130,7 @@ export function AccountCoverageGate({
         <AccountFormSheet
           isOpen={formBucket !== null}
           account={editingAccount}
+          existingAccounts={accounts}
           defaultBucket={formBucket ?? 'Essentials'}
           currency={currency}
           onClose={closeForm}

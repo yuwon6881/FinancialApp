@@ -114,22 +114,99 @@ function stringAttributeValue(node, name) {
   return ts.isStringLiteral(property.initializer) ? property.initializer.text : undefined
 }
 
+const isClassLiteral = node => ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)
+  || ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)
+
+// Every module-level `const NAME = 'classes'`, so a class list a call site interpolates rather than
+// spells out is still visible to these rules. Three squeezed ledger actions hid behind one.
+function stringConstants(sourceFile) {
+  const table = new Map()
+  const visit = node => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer
+      && (ts.isStringLiteral(node.initializer) || ts.isNoSubstitutionTemplateLiteral(node.initializer))) {
+      table.set(node.name.text, node.initializer.text)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+  return table
+}
+
 // Overrides are rarely a plain string: most are template literals with a conditional inside. Gather
 // every literal chunk of the expression so a class hidden in a ternary branch is still seen.
-function classNameLiterals(node) {
+function classNameLiterals(node, constants) {
   const property = attribute(node, 'className')
   if (!property || !ts.isJsxAttribute(property) || !property.initializer) return ''
   const chunks = []
   const collect = current => {
-    if (ts.isStringLiteral(current) || ts.isNoSubstitutionTemplateLiteral(current)
-      || ts.isTemplateHead(current) || ts.isTemplateMiddle(current) || ts.isTemplateTail(current)) {
-      chunks.push(current.text)
+    if (isClassLiteral(current)) { chunks.push(current.text); return }
+    if (constants && ts.isIdentifier(current) && constants.has(current.text)) {
+      chunks.push(constants.get(current.text))
+      return
     }
     ts.forEachChild(current, collect)
   }
   collect(property.initializer)
   return chunks.join(' ')
 }
+
+/**
+ * One class list per branch a className expression can produce. A rule about what a *state* paints
+ * -- the selected option, the checked segment -- has to see that state on its own; folding every
+ * ternary branch into one string makes a missing `hover:` in one of them invisible.
+ */
+function classNameBranches(node, constants) {
+  const property = attribute(node, 'className')
+  if (!property || !ts.isJsxAttribute(property) || !property.initializer) return []
+  const branches = []
+  const walk = (current, carried) => {
+    if (!current) return
+    if (isClassLiteral(current)) { branches.push([...carried, current.text].join(' ')); return }
+    if (constants && ts.isIdentifier(current) && constants.has(current.text)) {
+      branches.push([...carried, constants.get(current.text)].join(' '))
+      return
+    }
+    if (ts.isConditionalExpression(current)) {
+      walk(current.whenTrue, carried)
+      walk(current.whenFalse, carried)
+      return
+    }
+    if (ts.isBinaryExpression(current) && current.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+      walk(current.right, carried)
+      return
+    }
+    ts.forEachChild(current, child => walk(child, carried))
+  }
+  walk(property.initializer, [])
+  return branches
+}
+
+// A square box the call site sizes itself, with no padding of its own. Every Button size but `icon`
+// carries horizontal padding, and `size-7` minus `px-4` leaves a negative content box: the icon
+// inside then shrinks to zero and the control renders as an empty pill. This is how the category
+// flow segments, the reorder grips and the inline ledger actions all lost their icons at once.
+const AUTHORED_BOX = /(^|\s|:)(size-\d|size-\[|aspect-square|place-items-center)/
+const AUTHORED_PADDING = /(^|\s|:)(p-\d|px-\d|pl-\d|pr-\d|p-0|px-0)/
+// A `:hover` rule outranks a plain `bg-*`, so a variant's hover background replaces any surface the
+// call site paints -- taking a foreground colour chosen for that surface with it. A selected
+// dropdown option turned dark-on-dark exactly this way.
+const AUTHORED_BACKGROUND = /(^|\s)bg-(?!transparent(?:\s|$))[\w./[\]-]+/
+const HOVER_BACKGROUND = /(^|\s)hover:bg-/
+const VARIANT_BACKGROUND = { primary: 'bg-primary', secondary: 'bg-background', tertiary: null, destructive: 'bg-destructive' }
+// `Button` centres its label, which is right for an action and wrong for a row. A call site that
+// says `text-left` and stops there gets a left-aligned *text run* inside a centred flex line.
+const SAYS_TEXT_LEFT = /(^|\s)text-left(\s|$)/
+const SAYS_JUSTIFY = /(^|\s|:)justify-/
+const SAYS_BLOCK_FLOW = /(^|\s|:)(block|grid|contents)(\s|$)/
+
+// FormField renders <label for={controlId}> and hands controlId down through context; only a
+// control that reads that context adopts it. A control that sets its own id inside a FormField
+// that did not name one therefore leaves the label pointing at an id no element has -- which is
+// what the two loan-form fields that pair two controls were doing.
+const FORM_FIELD_CONTROLS = new Set([
+  'Input', 'Textarea', 'Checkbox', 'RangeInput', 'CustomSelect', 'DatePicker',
+  'CurrencySelect', 'SmartAmountInput', 'CategoryReplacementSelect',
+])
 
 for (const file of allSourceFiles(SRC)) {
   const fileName = relative(file)
@@ -190,6 +267,7 @@ for (const file of allSourceFiles(SRC)) {
     errors.push(`${fileName}:1 Use --app-nav-height or --app-fab-offset instead of a hard-coded navigation offset.`)
   }
 
+  const constants = stringConstants(sourceFile)
   const visit = node => {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = jsxTagName(node)
@@ -210,7 +288,7 @@ for (const file of allSourceFiles(SRC)) {
       if (FOCUS_OWNING_PRIMITIVES.has(tag)
         && !fileName.startsWith('src/components/ui/')
         && !FOCUS_OVERRIDE_EXCEPTIONS.has(fileName)
-        && FOCUS_SUPPRESSION.test(classNameLiterals(node))) {
+        && FOCUS_SUPPRESSION.test(classNameLiterals(node, constants))) {
         report(file, sourceFile, node,
           `<${tag}> may not cancel its own focus treatment; remove the outline-none/ring-0 utility and let the primitive supply it.`)
       }
@@ -223,6 +301,49 @@ for (const file of allSourceFiles(SRC)) {
         }
         if (size && !BUTTON_SIZES.has(size)) {
           report(file, sourceFile, node, `Unsupported Button size "${size}"; use the shared control scale.`)
+        }
+      }
+
+      if (tag === 'FormField' && ts.isJsxOpeningElement(node) && !attribute(node, 'id')) {
+        const element = node.parent
+        const stray = []
+        const scan = current => {
+          if ((ts.isJsxOpeningElement(current) || ts.isJsxSelfClosingElement(current))
+            && FORM_FIELD_CONTROLS.has(jsxTagName(current)) && attribute(current, 'id')) {
+            stray.push(jsxTagName(current))
+          }
+          ts.forEachChild(current, scan)
+        }
+        if (ts.isJsxElement(element)) element.children.forEach(scan)
+        if (stray.length > 0) {
+          report(file, sourceFile, node,
+            `FormField labels an id nothing adopts: <${stray[0]}> inside it sets its own id. Give the FormField that id so its <label for> resolves.`)
+        }
+      }
+
+      if (tag === 'Button' || tag === 'IconButton') {
+        const classes = classNameLiterals(node, constants)
+        const size = stringAttributeValue(node, 'size') ?? (tag === 'IconButton' ? 'icon' : undefined)
+        const variant = stringAttributeValue(node, 'variant') ?? (tag === 'IconButton' ? 'tertiary' : 'primary')
+
+        if (size !== 'icon' && AUTHORED_BOX.test(classes) && !AUTHORED_PADDING.test(classes)) {
+          report(file, sourceFile, node,
+            'A control that sizes its own square box must use size="icon", the one size with no horizontal padding; otherwise the control scale\'s padding collapses its icon to nothing.')
+        }
+
+        if (SAYS_TEXT_LEFT.test(classes) && !SAYS_JUSTIFY.test(classes) && !SAYS_BLOCK_FLOW.test(classes)) {
+          report(file, sourceFile, node,
+            'A left-aligned control must state its own justification (justify-start/between) or a block flow; the action default centres its content.')
+        }
+
+        const ownBackground = VARIANT_BACKGROUND[variant]
+        for (const branch of classNameBranches(node, constants)) {
+          const match = branch.match(AUTHORED_BACKGROUND)
+          if (!match || HOVER_BACKGROUND.test(branch)) continue
+          if (ownBackground && match[0].trim() === ownBackground) continue
+          report(file, sourceFile, node,
+            `Background "${match[0].trim()}" has no hover: pair, so the ${variant} variant's hover background replaces it under the pointer.`)
+          break
         }
       }
 

@@ -79,13 +79,13 @@ export function SelectionToolbar({
 
       <div data-testid={actionsTestId ?? `${testId}-actions`} className="flex shrink-0 items-center justify-end gap-1.5">
         {!isSelecting ? (
-          <Button variant="secondary" size="sm" type="button" disabled={disabled || itemCount === 0} onClick={onStartSelection} className="min-h-11 bg-card sm:min-h-0">
+          <Button variant="secondary" size="sm" type="button" disabled={disabled || itemCount === 0} onClick={onStartSelection} className="min-h-11 bg-card hover:bg-card sm:min-h-0">
             Select
           </Button>
         ) : (
           <>
             {actions}
-            <Button variant="secondary" size="sm" type="button" onClick={onLeaveSelection} aria-label="Leave selection mode" className="min-h-11 shrink-0 bg-card sm:min-h-0">
+            <Button variant="secondary" size="sm" type="button" onClick={onLeaveSelection} aria-label="Leave selection mode" className="min-h-11 shrink-0 bg-card hover:bg-card sm:min-h-0">
               Done
             </Button>
           </>

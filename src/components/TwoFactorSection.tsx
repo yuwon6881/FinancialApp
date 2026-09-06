@@ -156,7 +156,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
         type="button"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
-        className="w-full flex items-center gap-2.5 p-5 text-left cursor-pointer"
+        className="w-full flex items-center gap-2.5 p-5 justify-start text-left cursor-pointer"
       >
         {loaded && enabled ? <ShieldCheck className="size-5 text-emerald-500 shrink-0" /> : <ShieldOff className="size-5 text-muted-foreground shrink-0" />}
         <div className="flex-1 min-w-0">

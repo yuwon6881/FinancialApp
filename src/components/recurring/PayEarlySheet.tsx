@@ -153,7 +153,7 @@ export function PayEarlySheet({
                 onClick={() => { setMode('full'); setError(null) }}
                 className={`rounded-lg py-2 transition-all cursor-pointer text-center ${
                   mode === 'full'
-                    ? 'bg-card text-foreground shadow-xs font-bold'
+                    ? 'bg-card hover:bg-card text-foreground shadow-xs font-bold'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -165,7 +165,7 @@ export function PayEarlySheet({
                 onClick={() => { setMode('partial'); setError(null) }}
                 className={`rounded-lg py-2 transition-all cursor-pointer text-center ${
                   mode === 'partial'
-                    ? 'bg-card text-foreground shadow-xs font-bold'
+                    ? 'bg-card hover:bg-card text-foreground shadow-xs font-bold'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >

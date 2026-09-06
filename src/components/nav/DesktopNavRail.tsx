@@ -211,7 +211,7 @@ export const DesktopNavRail: React.FC<DesktopNavRailProps> = ({
         onClick={() => onTabChange(item.tab, item.search ? { search: item.search } : undefined)}
         className={`group relative flex min-h-11 w-full items-center justify-center gap-2.5 rounded-xl px-1.5 text-body transition-colors duration-150 lg:min-h-9 lg:justify-start lg:px-2 ${
           isActive
-            ? 'bg-primary/10 font-bold text-accent-ink'
+            ? 'bg-primary/10 hover:bg-primary/10 font-bold text-accent-ink'
             : 'font-semibold text-muted-foreground hover:bg-muted/70 hover:text-foreground'
         }`}
       >

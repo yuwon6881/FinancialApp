@@ -67,8 +67,10 @@ const dashboard = {
   setting,
   cycleLabel: 'Jul 2026',
   categories: [
-    { id: 'food', name: 'Food', allocation: 0.5, target: 800, budget: 800, netChange: -86.4, spent: 86.4, remaining: 713.6 },
-    { id: 'salary', name: 'Salary', allocation: 0, target: 0, budget: 0, netChange: 5_500, spent: 0, remaining: 5_500 },
+    // `incomeAllocated` is spelled out because the API layer resolves a missing amount to 0, not to
+    // `target`, and the Essentials figures a spec overrides read it directly.
+    { id: 'food', name: 'Food', allocation: 0.5, target: 800, incomeAllocated: 0, budget: 800, netChange: -86.4, spent: 86.4, remaining: 713.6 },
+    { id: 'salary', name: 'Salary', allocation: 0, target: 0, incomeAllocated: 0, budget: 0, netChange: 5_500, spent: 0, remaining: 5_500 },
   ],
   stats: {
     totalBalance: 12_480.25,
@@ -236,12 +238,18 @@ interface MockApiOptions {
   pendingNotifications?: PendingNotification[]
   /** Overrides account settings for tests that need one stable privacy presentation. */
   setting?: Partial<typeof setting>
+  /**
+   * Replaces the four seeded ledger accounts. Pass `[]` to render the first-run account coverage
+   * gate, which is otherwise unreachable: the shell only mounts it when no bucket has a live account.
+   */
+  accounts?: typeof accounts
 }
 
 export async function mockApi(page: Page, options: MockApiOptions = {}) {
   const darkMode = test.info().project.name.endsWith('-dark')
   const themedBootstrap = {
     ...bootstrap,
+    accounts: options.accounts ?? bootstrap.accounts,
     wishlist: options.wishlist ?? bootstrap.wishlist,
     savingsGoals: options.savingsGoals ?? bootstrap.savingsGoals,
     categories: options.categories ?? bootstrap.categories,

@@ -20,6 +20,12 @@ export interface CycleSwitcherProps {
   /** Names the surface these cycles belong to, for the selects' accessible names. */
   surfaceLabel: string
   disabled?: boolean
+  /**
+   * Why the picker cannot be used right now. Shown in place of the "back to current cycle" action,
+   * so a scope that spans every cycle disables the picker rather than unmounting it -- removing it
+   * moved the whole page up by the switcher's height on every toggle.
+   */
+  unavailableReason?: string
 }
 
 /**
@@ -38,7 +44,9 @@ export function CycleSwitcher({
   periodMode = 'month-year',
   surfaceLabel,
   disabled = false,
+  unavailableReason,
 }: CycleSwitcherProps) {
+  const isDisabled = disabled || Boolean(unavailableReason)
   const isCurrentCycle = selectedMonth === currentCycleMonth && selectedYear === currentCycleYear
   const years = availableYears.length > 0 ? availableYears : [selectedYear]
 
@@ -59,7 +67,7 @@ export function CycleSwitcher({
               value: month,
               label: getCycleLabelForDropdown(month, selectedYear, cycleDay),
             }))}
-            disabled={disabled}
+            disabled={isDisabled}
             className="w-0 min-w-0 flex-1 sm:w-56 sm:flex-initial"
           />
         )}
@@ -68,19 +76,21 @@ export function CycleSwitcher({
           value={selectedYear}
           onChange={year => onSelectPeriod(selectedMonth, Number(year))}
           options={years.map(year => ({ value: year, label: String(year) }))}
-          disabled={disabled}
+          disabled={isDisabled}
           className={periodMode === 'month-year' ? 'w-28 shrink-0' : 'w-0 min-w-0 flex-1 sm:w-40 sm:flex-initial'}
           align="right"
         />
       </div>
 
-      {!isCurrentCycle && (
+      {unavailableReason ? (
+        <p className="min-w-0 text-xs font-medium text-muted-foreground sm:shrink-0 sm:text-right">{unavailableReason}</p>
+      ) : !isCurrentCycle && (
         <Button
           variant="secondary"
           size="sm"
           type="button"
           onClick={() => onSelectPeriod(currentCycleMonth, currentCycleYear)}
-          disabled={disabled}
+          disabled={isDisabled}
           title={`Back to ${getCycleLabelForDropdown(currentCycleMonth, currentCycleYear, cycleDay)}`}
           className="min-h-10 w-full justify-center gap-1.5 rounded-xl px-3 text-xs sm:min-h-9 sm:w-auto sm:shrink-0"
         >
