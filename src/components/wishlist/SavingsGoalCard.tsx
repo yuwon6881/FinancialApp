@@ -171,21 +171,14 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
               <dd className="font-bold text-foreground">Every {goal.recurrenceMonths} months</dd>
             </div>
           )}
-          <div className="col-span-2 space-y-1">
-            <dt className="font-semibold text-muted-foreground">
-              This cycle: <span className={`font-extrabold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
-                {formatSensitive(pace.fundedThisCycle)}
-              </span>{' '}of {formatSensitive(pace.requiredPerCycle)}
-            </dt>
-            <dd>
-              <Meter
-                percent={cyclePct}
-                size="sm"
-                tone={cycleDone ? 'bg-emerald-500' : style.bar}
-                label={cycleDone
-                  ? "This cycle's share is set aside"
-                  : `${cyclePct.toFixed(0)}% of this cycle's share set aside`}
-              />
+          {/* Figures, not a second bar. The headline bar above already draws this commitment's
+              progress; a thin track under it for the cycle's own share made every card carry two
+              bars, and a page of commitments read as a stack of tracks with no hierarchy. */}
+          <div>
+            <dt className="font-semibold text-muted-foreground">This cycle</dt>
+            <dd className={`font-bold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
+              {formatSensitive(pace.fundedThisCycle)}
+              <span className="font-semibold text-muted-foreground"> of {formatSensitive(pace.requiredPerCycle)} · {cyclePct.toFixed(0)}%</span>
             </dd>
           </div>
         </dl>

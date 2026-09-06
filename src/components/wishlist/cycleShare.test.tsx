@@ -182,21 +182,23 @@ describe('RewardsPoolBar cycle share', () => {
     expect(rewardsSegments[0].style.backgroundColor).not.toBe(rewardsSegments[1].style.backgroundColor)
   })
 
-  it('shows funded against required, and a full meter, once the cycle is paced', () => {
+  // The pool's split bar is the only track on this card. The cycle's pacing reports as a figure
+  // and a share, so the page does not stack a second bar here and a third on every goal card.
+  it('shows funded against required, and its share, once the cycle is paced', () => {
     renderBar()
     openDetails()
     expect(screen.getByText(/of RM 175\.00 set aside/)).toBeTruthy()
-    const meter = screen.getByRole('progressbar', { name: 'Every commitment has its share for this cycle' })
-    expect((meter.firstElementChild as HTMLElement).style.width).toBe('100%')
+    expect(screen.getByText(/· 100%/)).toBeTruthy()
+    expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
-  it('reports what is still owed and part-fills the meter when the cycle is short', () => {
+  it('reports what is still owed and the share reached when the cycle is short', () => {
     renderBar({ fundedThisCycleTotal: 70, outstandingThisCycleTotal: 105 })
-    // The shortfall is the visible status line; the meter behind it is a detail.
+    // The shortfall is the visible status line; the figures behind it are a detail.
     expect(screen.getByText(/still to set aside across 2 commitments/)).toBeTruthy()
     openDetails()
-    const meter = screen.getByRole('progressbar', { name: "40% of this cycle's commitments set aside" })
-    expect((meter.firstElementChild as HTMLElement).style.width).toBe('40%')
+    expect(screen.getByText(/of RM 175\.00 set aside/)).toBeTruthy()
+    expect(screen.getByText(/· 40%/)).toBeTruthy()
   })
 
   it('says there is nothing committed instead of rendering an empty cycle block', () => {
@@ -307,14 +309,15 @@ describe('RewardsPoolBar cycle share', () => {
 })
 
 describe('SavingsGoalCard cycle share', () => {
-  it('leads with what this cycle still owes and keeps the meter in the tail', () => {
+  it('leads with what this cycle still owes and keeps the figures in the tail', () => {
     renderCard({ fundedThisCycle: 70, outstandingThisCycle: 105 })
     expect(screen.getByText(/RM 105\.00 still to set aside this cycle/)).toBeTruthy()
 
     openDetails()
-    const meter = screen.getByRole('progressbar', { name: "40% of this cycle's share set aside" })
-    expect((meter.firstElementChild as HTMLElement).style.width).toBe('40%')
-    expect(screen.getByText(/of RM 175\.00/)).toBeTruthy()
+    // One bar per card: the commitment's own progress. This cycle's share is a figure beside it,
+    // not a second track under it.
+    expect(screen.getAllByRole('progressbar').length).toBe(1)
+    expect(screen.getByText(/of RM 175\.00 · 40%/)).toBeTruthy()
   })
 
   it('marks a paced cycle done on the always-visible status line', () => {
@@ -322,7 +325,7 @@ describe('SavingsGoalCard cycle share', () => {
     // Asserted without opening the tail: this is the one line the card must always show.
     expect(screen.getByText('Done for this cycle')).toBeTruthy()
     openDetails()
-    expect(screen.getByRole('progressbar', { name: "This cycle's share is set aside" })).toBeTruthy()
+    expect(screen.getByText(/of RM 175\.00 · 100%/)).toBeTruthy()
   })
 
   it('says the commitment is ready once it is fully funded', () => {

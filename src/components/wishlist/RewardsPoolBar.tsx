@@ -4,7 +4,6 @@ import { CommitmentIcon } from '../semanticIcons'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { DetailDisclosure } from '../ui/DetailDisclosure'
-import { Meter } from '../ui/Meter'
 import { OverflowMenu } from '../ui/OverflowMenu'
 import { useDetailDisclosure } from '../../lib/useDetailDisclosure'
 import type { GoalPoolSummary } from '../../lib/savingsGoals'
@@ -215,29 +214,18 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
           ))}
         </div>
 
+        {/* A figure and a share, not another track. The pool's split bar above is the headline;
+            this cycle's pacing is a footnote, and drawing it as a second bar here -- with a third
+            on every commitment card below -- was what made the page read as a stack of bars. */}
         {cycleTarget > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold text-muted-foreground">
-              This cycle:{' '}
-              <span className={`font-extrabold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
-                {formatSensitive(fundedThisCycleTotal)}
-              </span>
-              {' '}of {formatSensitive(requiredPerCycleTotal)} set aside
-            </p>
-            {/* The thin track, matching the identical per-cycle bar on every commitment card. The
-                page was stacking four full-weight bars with no hierarchy between them; the pool's
-                split and a commitment's progress are the headlines, and "this cycle" is the
-                footnote under each of them. */}
-            <Meter
-              percent={cyclePct}
-              size="sm"
-              color={cycleDone ? undefined : committedColor}
-              tone={cycleDone ? 'bg-emerald-500' : undefined}
-              label={cycleDone
-                ? 'Every commitment has its share for this cycle'
-                : `${cyclePct.toFixed(0)}% of this cycle's commitments set aside`}
-            />
-          </div>
+          <p className="text-xs font-semibold text-muted-foreground">
+            This cycle:{' '}
+            <span className={`font-extrabold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
+              {formatSensitive(fundedThisCycleTotal)}
+            </span>
+            {' '}of {formatSensitive(requiredPerCycleTotal)} set aside
+            {' '}<span className="font-bold tabular-nums text-foreground">· {cyclePct.toFixed(0)}%</span>
+          </p>
         )}
 
         {overCommitted > 0 && (
