@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, type Dispatch, type SetStateAction } from 'react'
+import { lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
 import type { DashboardData } from '../types'
 import type { useAiActionRouter } from './useAiActionRouter'
 import type { useAppDialogs } from './useAppDialogs'
@@ -14,7 +14,6 @@ import type { useReceiptScanPolling } from '../lib/useReceiptScanPolling'
 import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
 import type { AiInvocationContext } from '../lib/api/ai'
 import { AuthenticatedSettingsRoute } from './AuthenticatedSettingsRoute'
-import { resolveInvestmentTotalValue } from '../lib/investmentTotalValue'
 // Lazy like the views it sits above: the picker's select control is not part of the eager
 // critical path, and the pages that need it are lazily loaded anyway.
 const CycleSwitcher = lazy(() => import('../components/ui/CycleSwitcher').then(module => ({ default: module.CycleSwitcher })))
@@ -150,40 +149,6 @@ export function AuthenticatedTabContent({
     && prefs.ledgerCyclesRange === 'all'
   const showCycleSwitcher = (CYCLE_DEPENDENT_TABS as readonly string[]).includes(prefs.activeTab)
 
-  const totalAccountBalance = useMemo(() => {
-    return (financial.allAccounts ?? []).reduce((sum, acc) => sum + (acc.remaining ?? 0), 0)
-  }, [financial.allAccounts])
-
-  // Today must not pull the whole portfolio just to show one figure, so the figure is resolved from
-  // whichever source has already loaded. See `resolveInvestmentTotalValue`.
-  const investmentValue = useMemo(
-    () => resolveInvestmentTotalValue(
-      apiClient.readCachedInvestmentPortfolio?.()?.summary?.totalValue,
-      investmentAllocation,
-    ),
-    [apiClient, investmentAllocation],
-  )
-
-  // Today reports what is owed, so Today asks for the loans. No other part of this tab loads them,
-  // and waiting for the user to open Recurring or Search left the liability uncounted for the whole
-  // session.
-  useEffect(() => {
-    if (prefs.activeTab !== 'dashboard' || !session.token) return
-    if (financial.loanLoadStatus !== 'idle' && financial.loanLoadStatus !== 'cached') return
-    void financial.loadLoans().catch(error => {
-      console.warn('Could not load loans for the net worth figure', error)
-    })
-  }, [financial.loadLoans, financial.loanLoadStatus, prefs.activeTab, session.token])
-
-  const loanDebt = useMemo(() => {
-    const isLoansKnown = financial.hasLoadedLoans || financial.loanLoadStatus === 'cached' || financial.loanLoadStatus === 'ready'
-    if (!isLoansKnown) return null
-    const loans = financial.allLoans ?? []
-    if (loans.some(loan => loan.scheduleStatus === 'Incomplete' || loan.isRecalculating)) {
-      return null
-    }
-    return loans.reduce((sum, loan) => sum + Math.max(0, loan.snapshot.outstandingBalance), 0)
-  }, [financial.allLoans, financial.hasLoadedLoans, financial.loanLoadStatus])
 
   return (
     <div key={prefs.activeTab} className="w-full view-enter">
@@ -232,9 +197,6 @@ export function AuthenticatedTabContent({
             nav.setAutoOpenLedgerTxType('transfer')
           }}
           onNavigateToRecurring={nav.handleNavigateToRecurring}
-          totalAccountBalance={totalAccountBalance}
-          investmentValue={investmentValue}
-          loanDebt={loanDebt}
         />
       )}
 

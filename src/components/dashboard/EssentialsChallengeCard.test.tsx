@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { CycleProgress } from '../../lib/cycle'
 import { evaluateEssentialsChallenge, type EssentialsChallengeInput } from '../../lib/essentialsChallenge'
@@ -31,35 +31,61 @@ const renderCard = (
   input: Partial<EssentialsChallengeInput> = {},
   cycle: CycleProgress = activeCycle,
   onReviewEssentials?: () => void,
-) => render(
-  <EssentialsChallengeCard
-    challenge={evaluateEssentialsChallenge({ ...baseInput, ...input, cycle })}
-    cycle={cycle}
-    formatSensitive={formatSensitive}
-    onReviewEssentials={onReviewEssentials}
-  />,
-)
+  open = true,
+) => {
+  const result = render(
+    <EssentialsChallengeCard
+      challenge={evaluateEssentialsChallenge({ ...baseInput, ...input, cycle })}
+      cycle={cycle}
+      formatSensitive={formatSensitive}
+      onReviewEssentials={onReviewEssentials}
+    />,
+  )
+  if (open) {
+    fireEvent.click(screen.getAllByRole('button', { name: /Essentials challenge/i })[0])
+  }
+  return result
+}
+
+describe('EssentialsChallengeCard embedded trigger', () => {
+  it('only shows the score button initially and opens details on click', () => {
+    renderCard({ projectedRemaining: 1600, projectedEndingBalance: 1200 }, activeCycle, undefined, false)
+
+    expect(screen.getByRole('button', { name: /Essentials challenge score: 100/i })).toBeTruthy()
+    expect(screen.getByText('Score 100')).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Cruising' })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /Essentials challenge score: 100/i }))
+    expect(screen.getByRole('heading', { name: 'Cruising' })).toBeTruthy()
+  })
+
+  it('displays Score -- when unranked', () => {
+    renderCard({ totalAvailable: 0, projectedRemaining: 0, projectedEndingBalance: 0 }, activeCycle, undefined, false)
+
+    expect(screen.getByText('Score --')).toBeTruthy()
+  })
+})
 
 describe('EssentialsChallengeCard ranks', () => {
   it('names the rank, shows the score, and places the pace marker at the elapsed share', () => {
-    const { container } = renderCard({ projectedRemaining: 1600, projectedEndingBalance: 1200 })
+    renderCard({ projectedRemaining: 1600, projectedEndingBalance: 1200 })
 
     expect(screen.getByRole('heading', { name: 'Cruising' })).toBeTruthy()
     expect(screen.getByText('100')).toBeTruthy()
     expect(screen.getByText(/20% committed with 50% of the cycle gone/)).toBeTruthy()
     expect(screen.getByText(/\$1,?200\.00 ahead of where the plan expects you/)).toBeTruthy()
 
-    const marker = container.querySelector('[style*="left: 50%"]')
+    const marker = document.body.querySelector('[style*="left: 50%"]')
     expect(marker).toBeTruthy()
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('20')
   })
 
   it('separates being over by a little from being over by a lot', () => {
-    renderCard({ projectedRemaining: -150, projectedEndingBalance: -150 })
+    const { unmount } = renderCard({ projectedRemaining: -150, projectedEndingBalance: -150 })
     expect(screen.getByRole('heading', { name: 'Just over' })).toBeTruthy()
     expect(screen.getByText(/Essentials is \$150\.00 past its money/)).toBeTruthy()
 
-    screen.getByRole('heading', { name: 'Just over' })
+    unmount()
     renderCard({ projectedRemaining: -400, projectedEndingBalance: -400 })
     expect(screen.getByRole('heading', { name: 'Well over' })).toBeTruthy()
   })
@@ -167,6 +193,7 @@ describe('EssentialsChallengeCard sensitive mode', () => {
         formatSensitive={() => '•••'}
       />,
     )
+    fireEvent.click(screen.getByRole('button', { name: /Essentials challenge/i }))
 
     expect(screen.getByRole('heading', { name: 'Cruising' })).toBeTruthy()
     expect(screen.getByText('20%')).toBeTruthy()

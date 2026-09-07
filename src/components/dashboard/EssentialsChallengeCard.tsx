@@ -1,5 +1,4 @@
-import React from 'react'
-import { m, useReducedMotion } from 'framer-motion'
+import React, { useState } from 'react'
 import {
   AlertTriangle,
   ArrowRight,
@@ -12,6 +11,7 @@ import {
   Target,
   TrendingUp,
   Wallet,
+  X,
   type LucideIcon,
 } from 'lucide-react'
 import type { CycleProgress } from '../../lib/cycle'
@@ -24,7 +24,9 @@ import {
 } from '../../lib/essentialsChallenge'
 import { AnimatedNumber } from '../ui/AnimatedNumber'
 import { Badge } from '../ui/Badge'
+import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { InfoHint } from '../ui/InfoHint'
 import { Meter } from '../ui/Meter'
 import { cn } from '../../lib/utils'
@@ -207,7 +209,7 @@ export function EssentialsChallengeCard({
   formatSensitive,
   onReviewEssentials,
 }: EssentialsChallengeCardProps) {
-  const reduceMotion = useReducedMotion()
+  const [isOpen, setIsOpen] = useState(false)
   const presentation = TIER_PRESENTATION[challenge.tier]
   const { Icon } = presentation
   const ended = cycle.phase === 'ended'
@@ -224,6 +226,8 @@ export function EssentialsChallengeCard({
     : cycle.phase === 'upcoming'
       ? `Starts in ${cycle.daysUntilStart} day${cycle.daysUntilStart === 1 ? '' : 's'}`
       : 'Cycle closed'
+
+  const scoreText = challenge.score !== null ? Math.round(challenge.score).toString() : '--'
 
   const headline = (() => {
     if (challenge.tier === 'unfunded') {
@@ -274,131 +278,169 @@ export function EssentialsChallengeCard({
     : null
 
   return (
-    <m.section
-      aria-labelledby="essentials-challenge-heading"
-      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={cn(panelClass, PANEL_TONES[presentation.panelTone], 'px-4 py-3.5 text-card-foreground shadow-xs sm:px-5')}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <p className="text-eyebrow uppercase text-muted-foreground">Essentials challenge</p>
-          <InfoHint inline label="How the Essentials score is worked out" text={SCORE_EXPLANATION} />
-        </div>
-        <Badge tone="neutral" className="shrink-0">{dayLabel}</Badge>
-      </div>
-
-      <div className="mt-2 flex items-center gap-3.5">
-        {/* No ring for a cycle with no rank: an empty dial saying nothing cost as much height as
-            the scored one. The tier chip beside the rank still names the state. */}
-        {challenge.score !== null && (
-          <div className="relative shrink-0" style={{ width: RING_SIZE, height: RING_SIZE }}>
-            <svg viewBox="0 0 64 64" className="size-full -rotate-90" aria-hidden focusable="false">
-              <circle cx="32" cy="32" r={RING_RADIUS} className="fill-none stroke-muted" strokeWidth="6" />
-              <circle
-                cx="32"
-                cy="32"
-                r={RING_RADIUS}
-                className={cn('fill-none transition-[stroke-dashoffset] duration-700', presentation.stroke)}
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={RING_CIRCUMFERENCE}
-                strokeDashoffset={RING_CIRCUMFERENCE * (1 - challenge.score / 100)}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <AnimatedNumber
-                value={challenge.score}
-                formatFn={value => Math.round(value).toString()}
-                className={cn('text-lg font-black leading-none', presentation.accent)}
-              />
-              <span className="text-eyebrow uppercase text-muted-foreground">score</span>
-            </div>
-          </div>
+    <>
+      <Button
+        variant="secondary"
+        size="sm"
+        type="button"
+        onClick={() => setIsOpen(true)}
+        aria-label={challenge.score !== null
+          ? `Essentials challenge score: ${scoreText}. Click to view details`
+          : 'Essentials challenge. Click to view details'}
+        className={cn(
+          'rounded-full font-bold tabular-nums shrink-0 gap-1.5 border shadow-xs',
+          challenge.score !== null ? presentation.chip : 'border-border/60 bg-muted/40 hover:bg-muted/60 text-muted-foreground',
+          challenge.score !== null ? presentation.accent : '',
         )}
+      >
+        <Icon className="size-3.5 shrink-0" aria-hidden />
+        <span>Score {scoreText}</span>
+      </Button>
 
-        <div className="min-w-0 flex-1">
+      <BottomSheet
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        maxWidthClassName="max-w-lg"
+        title={
+          <div className="flex items-center gap-1.5">
+            <span className="text-base font-bold text-foreground">Essentials challenge</span>
+            <InfoHint inline label="How the Essentials score is worked out" text={SCORE_EXPLANATION} />
+          </div>
+        }
+        headerActions={
           <div className="flex items-center gap-2">
-            <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-lg border', presentation.chip, presentation.accent)}>
-              <Icon className="size-3.5" aria-hidden />
-            </span>
-            <h3 id="essentials-challenge-heading" className={cn('text-section truncate', presentation.accent)}>{rank}</h3>
-          </div>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{headline}</p>
-          {result && <p className="mt-0.5 text-xs font-semibold leading-relaxed text-foreground">{result}</p>}
-        </div>
-      </div>
-
-      {!unranked && (
-        <div className="mt-3">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-xs font-semibold text-muted-foreground">Essentials money committed</span>
-            <span className="text-xs font-bold tabular-nums text-foreground">{usedPercent}</span>
-          </div>
-          <div className="relative mt-1.5">
-            <Meter
-              percent={barPercent}
-              tone={presentation.fill}
-              size="md"
-              className="h-2"
-              label="Share of this cycle's Essentials money already committed"
-            />
-            {/* The pace line: where the clock says the bar should stand today. Staying left of it is
-                the whole game, so it is drawn on the track rather than described beside it. */}
-            <span
-              aria-hidden
-              className="absolute inset-y-0 w-0.5 -translate-x-1/2 rounded-full bg-foreground/70"
-              style={{ left: `${paceMarkerPercent}%` }}
-            />
-          </div>
-          <p className="mt-1 text-caption text-muted-foreground">
-            The marker sits at {pacePercent} — {ended ? 'where a full cycle ends' : "where today's plan expects the bar"}.
-          </p>
-        </div>
-      )}
-
-      {!unranked && (
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-          <span className="text-xs font-semibold text-muted-foreground">Badges</span>
-          <span className="text-xs font-bold tabular-nums text-muted-foreground">
-            {challenge.earnedBadgeCount} of {challenge.badges.length}
-          </span>
-          {/* One wrapped row of chips rather than a grid of tiles: the badge set is a checklist of
-              four short states, and the tiles cost more height than the states are worth. Each chip
-              carries its own earned/not-yet sentence for screen readers. */}
-          <ul className="flex min-w-0 flex-wrap items-center gap-1.5">
-            {challenge.badges.map(badge => {
-              const copy = BADGE_COPY[badge.id]
-              return (
-                <li
-                  key={badge.id}
-                  className={cn(
-                    'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold',
-                    badge.earned
-                      ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                      : 'border-dashed border-border/70 bg-muted/25 text-muted-foreground',
-                  )}
-                >
-                  {badge.earned && <Check className="size-3 shrink-0" aria-hidden />}
-                  <span className="truncate">{copy.label}</span>
-                  <span className="sr-only">{badge.earned ? copy.earned : copy.pending}</span>
-                </li>
-              )
-            })}
-          </ul>
-          {onReviewEssentials && (
-            <Button
+            <Badge tone="neutral" className="shrink-0">{dayLabel}</Badge>
+            <IconButton
               variant="tertiary"
-              size="sm"
-              onClick={onReviewEssentials}
-              className="ml-auto gap-1 px-2 text-xs font-semibold text-foreground"
+              type="button"
+              onClick={() => setIsOpen(false)}
+              label="Close Essentials challenge details"
+              tooltip="Close"
             >
-              Review Essentials spending
-              <ArrowRight className="size-3.5" aria-hidden="true" />
-            </Button>
+              <X className="size-4" />
+            </IconButton>
+          </div>
+        }
+      >
+        <section aria-labelledby="essentials-challenge-heading" className="space-y-4">
+          <div className={cn(panelClass, PANEL_TONES[presentation.panelTone], 'p-4')}>
+            <div className="flex items-center gap-4">
+              {challenge.score !== null && (
+                <div className="relative shrink-0" style={{ width: RING_SIZE, height: RING_SIZE }}>
+                  <svg viewBox="0 0 64 64" className="size-full -rotate-90" aria-hidden focusable="false">
+                    <circle cx="32" cy="32" r={RING_RADIUS} className="fill-none stroke-muted" strokeWidth="6" />
+                    <circle
+                      cx="32"
+                      cy="32"
+                      r={RING_RADIUS}
+                      className={cn('fill-none transition-[stroke-dashoffset] duration-700', presentation.stroke)}
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeDasharray={RING_CIRCUMFERENCE}
+                      strokeDashoffset={RING_CIRCUMFERENCE * (1 - challenge.score / 100)}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <AnimatedNumber
+                      value={challenge.score}
+                      formatFn={value => Math.round(value).toString()}
+                      className={cn('text-lg font-black leading-none', presentation.accent)}
+                    />
+                    <span className="text-eyebrow uppercase text-muted-foreground">score</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-lg border', presentation.chip, presentation.accent)}>
+                    <Icon className="size-3.5" aria-hidden />
+                  </span>
+                  <h3 id="essentials-challenge-heading" className={cn('text-section truncate', presentation.accent)}>
+                    {rank}
+                  </h3>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{headline}</p>
+                {result && <p className="mt-0.5 text-xs font-semibold leading-relaxed text-foreground">{result}</p>}
+              </div>
+            </div>
+
+            {!unranked && (
+              <div className="mt-3.5 border-t border-border/40 pt-3">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-xs font-semibold text-muted-foreground">Essentials money committed</span>
+                  <span className="text-xs font-bold tabular-nums text-foreground">{usedPercent}</span>
+                </div>
+                <div className="relative mt-1.5">
+                  <Meter
+                    percent={barPercent}
+                    tone={presentation.fill}
+                    size="md"
+                    className="h-2"
+                    label="Share of this cycle's Essentials money already committed"
+                  />
+                  <span
+                    aria-hidden
+                    className="absolute inset-y-0 w-0.5 -translate-x-1/2 rounded-full bg-foreground/70"
+                    style={{ left: `${paceMarkerPercent}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-caption text-muted-foreground">
+                  The marker sits at {pacePercent} — {ended ? 'where a full cycle ends' : "where today's plan expects the bar"}.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {!unranked && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted-foreground">Badges</span>
+                <span className="text-xs font-bold tabular-nums text-muted-foreground">
+                  {challenge.earnedBadgeCount} of {challenge.badges.length}
+                </span>
+              </div>
+              <ul className="flex min-w-0 flex-wrap items-center gap-1.5">
+                {challenge.badges.map(badge => {
+                  const copy = BADGE_COPY[badge.id]
+                  return (
+                    <li
+                      key={badge.id}
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold',
+                        badge.earned
+                          ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                          : 'border-dashed border-border/70 bg-muted/25 text-muted-foreground',
+                      )}
+                    >
+                      {badge.earned && <Check className="size-3 shrink-0" aria-hidden />}
+                      <span className="truncate">{copy.label}</span>
+                      <span className="sr-only">{badge.earned ? copy.earned : copy.pending}</span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
           )}
-        </div>
-      )}
-    </m.section>
+
+          {onReviewEssentials && (
+            <div className="pt-2">
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  setIsOpen(false)
+                  onReviewEssentials()
+                }}
+                className="w-full justify-center gap-1.5 font-semibold text-foreground"
+              >
+                Review Essentials spending
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Button>
+            </div>
+          )}
+        </section>
+      </BottomSheet>
+    </>
   )
 }

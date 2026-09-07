@@ -95,6 +95,7 @@ test('essentials challenge ranks a cycle that is holding its plan', async ({ pag
   await mockApi(page, { setting: essentialsCycle, dashboard: fundedEssentials(1_320, 240) })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
+  await page.getByRole('button', { name: /Essentials challenge/i }).click()
   const card = page.getByRole('heading', { name: 'Ahead of plan' }).locator('xpath=ancestor::section[1]')
   await expect(card).toBeVisible()
   await waitForStableLayout(page)
@@ -107,6 +108,7 @@ test('essentials challenge ranks a cycle that has run past its money', async ({ 
   await mockApi(page, { setting: essentialsCycle, dashboard: fundedEssentials(-300, -300) })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
+  await page.getByRole('button', { name: /Essentials challenge/i }).click()
   const card = page.getByRole('heading', { name: 'Well over' }).locator('xpath=ancestor::section[1]')
   await expect(card).toBeVisible()
   await waitForStableLayout(page)

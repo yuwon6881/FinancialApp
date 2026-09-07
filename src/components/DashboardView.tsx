@@ -7,7 +7,7 @@ import { DashboardHeader } from './dashboard/DashboardHeader'
 import { TodayFocusCards } from './dashboard/TodayFocusCards'
 import { CategoryWatchExceptionCard } from './dashboard/CategoryWatchExceptionCard'
 import { useDashboardView } from './dashboard/useDashboardView'
-import { AlertCircle, BarChart3, ChevronRight, ShieldCheck } from 'lucide-react'
+import { AlertCircle, BarChart3, ChevronRight } from 'lucide-react'
 import { Button } from './ui/Button'
 import { InteractiveCard } from './ui/InteractiveCard'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
@@ -19,7 +19,6 @@ import { RecurringAccountShortfallCard } from './dashboard/RecurringAccountShort
 import { getDocumentRetentionReview } from '../lib/api/documents'
 import { EMPTY_RETENTION_REVIEW } from '../lib/documentRetention'
 import { VaultRetentionNotice } from './documents/VaultRetentionNotice'
-import { NetWorthCard } from './dashboard/NetWorthCard'
 import type { DocumentRetentionReview } from '../types'
 import { cn } from '../lib/utils'
 import { PANEL_TONES, panelClass } from './ui/panelStyles'
@@ -51,12 +50,6 @@ interface DashboardViewProps {
   onNavigateToCategoryLimits?: (category: string) => void
   onNavigateToTransfer?: () => void
   onNavigateToRecurring?: (recurringId: string) => void
-  /** Total balance across all ledger accounts (all 4 buckets). */
-  totalAccountBalance?: number
-  /** Investment portfolio total value (market + cash). undefined = not loaded/configured */
-  investmentValue?: number
-  /** Total outstanding loan balance. null = not yet loaded; 0 = no loans */
-  loanDebt?: number | null
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -75,9 +68,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToCategoryLimits,
   onNavigateToTransfer,
   onNavigateToRecurring,
-  totalAccountBalance,
-  investmentValue,
-  loanDebt = null,
 }) => {
   const [retentionReview, setRetentionReview] = React.useState<DocumentRetentionReview>(EMPTY_RETENTION_REVIEW)
   React.useEffect(() => {
@@ -188,15 +178,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onNavigateToRecurring={onNavigateToRecurring ?? (() => onNavigate?.('recurring'))}
       />
 
-      {/* Net Worth snapshot: overarching position before daily cycle focus */}
-      <NetWorthCard
-        totalAccountBalance={totalAccountBalance ?? 0}
-        investmentValue={investmentValue}
-        loanDebt={loanDebt}
-        isMasked={view.areBalanceAmountsMasked}
-        formatCurrency={view.formatCurrency}
-      />
-
       {/* Today-focused metric cards: cycle progress, safe-to-spend, and the active wish goal */}
       <TodayFocusCards
         selectedMonth={view.activeSettings.selectedMonth}
@@ -209,16 +190,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onNavigate={onNavigate}
       />
 
-      {/* Where the cycle's Essentials spending actually stands, as one rank rather than a figure
-          the reader has to interpret. It sits above the plan snapshot because it answers the
-          question the snapshot's six numbers are evidence for. */}
-      <EssentialsChallengeCard
-        challenge={challenge}
-        cycle={cycleProgress}
-        formatSensitive={view.formatSensitive}
-        onReviewEssentials={onNavigateToLedger ? () => onNavigateToLedger({ category: 'Essentials', txType: 'outflow' }) : undefined}
-      />
-
       <div data-testid="today-plan-grid">
         <section aria-labelledby="plan-snapshot-heading" className={cn(panelClass, 'flex flex-col p-5')}>
           <div className="flex items-start justify-between gap-4">
@@ -226,7 +197,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <h3 id="plan-snapshot-heading" className="text-section text-foreground">Plan snapshot</h3>
               <p className="mt-1 text-xs text-muted-foreground">Current-cycle spending room, committed bills, and emergency savings.</p>
             </div>
-            <ShieldCheck className="size-5 shrink-0 text-blue-500" />
+            <EssentialsChallengeCard
+              challenge={challenge}
+              cycle={cycleProgress}
+              formatSensitive={view.formatSensitive}
+              onReviewEssentials={onNavigateToLedger ? () => onNavigateToLedger({ category: 'Essentials', txType: 'outflow' }) : undefined}
+            />
           </div>
           <div className="mt-5 grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2">
             <InteractiveCard onClick={() => onNavigateToLedger?.({ category: 'Essentials' })} className="rounded-xl border-border/50 bg-muted/25 p-4">

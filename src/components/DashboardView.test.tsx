@@ -282,6 +282,7 @@ describe('DashboardView focused Today experience', () => {
     const props = makeProps()
     render(<DashboardView {...props} />)
 
+    fireEvent.click(screen.getByRole('button', { name: /Essentials challenge/i }))
     const reviewButton = screen.getByRole('button', { name: /Review Essentials spending/i })
     fireEvent.click(reviewButton)
     expect(props.onNavigateToLedger).toHaveBeenCalledWith({ category: 'Essentials', txType: 'outflow' })

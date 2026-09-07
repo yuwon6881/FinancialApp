@@ -169,6 +169,7 @@ test('the ranked Essentials challenge stays inside its card at every width', asy
   })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
+  await page.getByRole('button', { name: /Essentials challenge/i }).click()
   // Located by the card's own landmark rather than by a rank string: which rank this fixture earns
   // depends on the tier thresholds, so naming one couples a containment test to their tuning.
   const card = page.locator('section[aria-labelledby="essentials-challenge-heading"]')
