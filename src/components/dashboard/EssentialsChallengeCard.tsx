@@ -176,8 +176,8 @@ const SCORE_EXPLANATION =
 
 // A smaller medallion than the card first shipped with: the rank and the bar carry the message,
 // and the ring is the badge on top of them rather than the card's centrepiece.
-const RING_SIZE = 64
-const RING_RADIUS = 26
+const RING_SIZE = 72
+const RING_RADIUS = 30
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
 
 const percentText = (ratio: number) => `${Math.round(Math.max(0, Math.min(9.99, ratio)) * 100)}%`
@@ -329,11 +329,11 @@ export function EssentialsChallengeCard({
             <div className="flex items-start gap-4">
               {challenge.score !== null && (
                 <div className="relative shrink-0" style={{ width: RING_SIZE, height: RING_SIZE }}>
-                  <svg viewBox="0 0 64 64" className="size-full -rotate-90" aria-hidden focusable="false">
-                    <circle cx="32" cy="32" r={RING_RADIUS} className="fill-none stroke-muted" strokeWidth="6" />
+                  <svg viewBox="0 0 72 72" className="size-full -rotate-90" aria-hidden focusable="false">
+                    <circle cx="36" cy="36" r={RING_RADIUS} className="fill-none stroke-muted" strokeWidth="6" />
                     <circle
-                      cx="32"
-                      cy="32"
+                      cx="36"
+                      cy="36"
                       r={RING_RADIUS}
                       className={cn('fill-none transition-[stroke-dashoffset] duration-700', presentation.stroke)}
                       strokeWidth="6"
@@ -346,7 +346,7 @@ export function EssentialsChallengeCard({
                     <AnimatedNumber
                       value={challenge.score}
                       formatFn={value => Math.round(value).toString()}
-                      className={cn('text-lg font-black leading-none', presentation.accent)}
+                      className={cn('text-xl font-black leading-none', presentation.accent)}
                     />
                     <span className="text-eyebrow uppercase text-muted-foreground">score</span>
                   </div>
