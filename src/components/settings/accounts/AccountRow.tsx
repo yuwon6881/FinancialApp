@@ -78,10 +78,13 @@ export function AccountRow({
           </div>
         </div>
 
-        {/* `ml-auto` at every width. Held back to `sm:`, a compact row that wrapped left the
-            balance and both actions starting at the card's left edge with the whole right half
-            empty; the trailing edge is where a row's actions belong on a phone too. */}
-        <div className="ml-auto flex shrink-0 items-center gap-x-3 gap-y-2">
+        {/* Compact takes the whole line and spreads it: the balance is a figure, so it belongs on
+            the reading edge under the account name, while Edit and Delete belong on the trailing
+            edge. Bunching all three at the right left the balance floating mid-row with nothing
+            under the name. From `sm:` the group hugs the trailing edge again -- there it usually
+            shares a line with the name, and `ml-auto` is what keeps it off the left when a narrow
+            bucket card forces it onto its own. */}
+        <div className="flex w-full items-center justify-between gap-x-3 gap-y-2 sm:ml-auto sm:w-auto sm:shrink-0 sm:justify-end">
           <div className="flex shrink-0 items-center gap-2">
             <SensitiveAmount
               value={account.remaining}

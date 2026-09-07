@@ -176,27 +176,40 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
             <div><dt className="text-muted-foreground">Dividends</dt><dd className={`break-words font-semibold ${holding.netDividendsApp === undefined ? '' : holding.netDividendsApp >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.netDividendsApp === undefined ? '—' : money(holding.netDividendsApp, portfolio.appCurrency)}</dd></div>
           </dl>
           {/* The summary is a 44px row of its own: it used to be a 2.5-step box whose uppercase
-              label and chevron sat tight against the top and bottom edges, reading as a squeezed
-              strip rather than the row the dl above it establishes. Inside, the source lines get a
-              two-column grid instead of `justify-between` -- a wrapped source name pushed its date
-              out of line with the row above it, so the right-hand column was never straight. */}
+              label and chevron sat tight against the top and bottom edges.
+              The body is three stacked blocks, not a grid. On a phone the working ran to two lines
+              and the two source rows put a right-aligned value hard against its own label, so the
+              whole panel read as one ragged grey mass: nothing marked where the sum ended and the
+              provenance began, and neither column had a straight edge. Now the sum sits in its own
+              inset with room to wrap, and each source is a labelled block whose name and date share
+              a baseline and wrap under it when they cannot. */}
           <details className="mt-3 group min-w-0 rounded-xl border border-border/50 bg-muted/20">
             <summary className="flex min-h-11 cursor-pointer select-none items-center justify-between gap-2 px-3 py-2 text-eyebrow uppercase text-muted-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50">
               <span>How this was worked out</span>
               <ChevronDown className="size-3.5 shrink-0 transition-transform duration-200 group-open:rotate-180" aria-hidden="true" />
             </summary>
-            <div className="border-t border-border/50 px-3 py-2.5 text-xs text-muted-foreground">
-              <p className="break-words font-medium text-foreground">
+            <div className="space-y-3 border-t border-border/50 p-3 text-xs text-muted-foreground">
+              <p className="break-words rounded-lg bg-background/70 px-2.5 py-2 font-semibold leading-relaxed tabular-nums text-foreground">
                 {holding.latestPriceNative === undefined ? 'Closing price unavailable' : `${number(holding.units, 8)} × ${number(holding.latestPriceNative, 8)} ${holding.currency}`}
                 {holding.currency !== portfolio.appCurrency ? ` × ${holding.fxRate === undefined ? 'missing FX' : number(holding.fxRate, 8)} = ${holding.valueApp === undefined ? 'incomplete' : money(holding.valueApp, portfolio.appCurrency)}` : ''}
               </p>
-              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-                <dt className="opacity-70">Price from</dt>
-                <dd className="min-w-0 break-words text-right">{holding.priceSource ?? 'Price source unavailable'} · {holding.priceDate ?? 'No date'}</dd>
-                {holding.fxSource && <>
-                  <dt className="opacity-70">Rate from</dt>
-                  <dd className="min-w-0 break-words text-right">{holding.fxSource} · {holding.fxDate ?? 'No date'}</dd>
-                </>}
+              <dl className="grid gap-2.5 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <dt className="text-eyebrow uppercase text-muted-foreground">Price from</dt>
+                  <dd className="mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-1.5">
+                    <span className="min-w-0 break-words font-semibold text-foreground/90">{holding.priceSource ?? 'Price source unavailable'}</span>
+                    <span className="tabular-nums">{holding.priceDate ?? 'No date'}</span>
+                  </dd>
+                </div>
+                {holding.fxSource && (
+                  <div className="min-w-0">
+                    <dt className="text-eyebrow uppercase text-muted-foreground">Rate from</dt>
+                    <dd className="mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-1.5">
+                      <span className="min-w-0 break-words font-semibold text-foreground/90">{holding.fxSource}</span>
+                      <span className="tabular-nums">{holding.fxDate ?? 'No date'}</span>
+                    </dd>
+                  </div>
+                )}
               </dl>
             </div>
           </details>

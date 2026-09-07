@@ -299,6 +299,15 @@ export function ReceiptSplitSheet({
               </p>
             </div>
 
+            {/* A receipt with nothing left on it is a dead end otherwise: the total reads zero,
+                Use This Amount is disabled, and nothing says why or what to do about it. */}
+            {receipt.items.length === 0 && (
+              <p className="rounded-xl border border-border/60 bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
+                No lines were read off this receipt, so there is nothing to split. Discard the scan
+                and enter the amount yourself, or scan the receipt again.
+              </p>
+            )}
+
             {receipt.items.map((item, index) => (
               <ReceiptSplitItemRow
                 key={index}

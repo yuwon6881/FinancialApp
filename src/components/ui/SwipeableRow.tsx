@@ -242,7 +242,9 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
       <div id={id} className={cn('bg-card', className)}>
         <div className={cn('flex items-center gap-3', contentClassName)}>
           <div className="min-w-0 flex-1">{children}</div>
-          <div className="shrink-0 flex items-center gap-1.5">{desktopActions ?? actions}</div>
+          {/* `empty:hidden` so a row that renders its own inline actions and passes
+              `desktopActions={false}` does not still pay this slot's gap as dead trailing space. */}
+          <div className="shrink-0 flex items-center gap-1.5 empty:hidden">{desktopActions ?? actions}</div>
         </div>
       </div>
     )

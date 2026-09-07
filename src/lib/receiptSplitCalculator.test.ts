@@ -180,6 +180,43 @@ describe('calculateReceiptShare', () => {
     expect(result.receiptComputedTotal).toBe(23.2)
   })
 
+  it('reconciles against the lines it read rather than the printed subtotal', () => {
+    // The printed subtotal covers a line whose price the scan could not read. Folding it into the
+    // reconciliation quoted a figure built partly from a number the sheet never shows and that no
+    // selection can reproduce, so "these lines add up to" named an amount the lines do not.
+    const input = receipt({
+      subtotal: 100,
+      total: 110,
+      items: [
+        { name: 'Read', quantity: 1, unitPrice: 60, lineTotal: 60, confidence: 1 },
+        { name: 'Unreadable', quantity: 1, unitPrice: null, lineTotal: null, confidence: 0.2 },
+      ],
+      charges: [
+        { label: 'Tax', kind: 'tax', operation: 'add', basis: 'subtotal', amount: null, ratePercent: 10, sequence: 0, eligibleItemIndexes: [], confidence: 1 },
+      ],
+    })
+
+    const result = calculateReceiptShare(input, [1, 0])
+
+    expect(result.receiptComputedTotal).toBe(66)
+    expect(result.hasMismatch).toBe(true)
+  })
+
+  it('makes taking the whole receipt come to the reconciliation figure', () => {
+    const input = receipt({
+      subtotal: 100,
+      total: 110,
+      items: [
+        { name: 'Food', quantity: 2, unitPrice: 16, lineTotal: 32, confidence: 1 },
+        { name: 'Water', quantity: 1, unitPrice: 4, lineTotal: 4, confidence: 1 },
+      ],
+    })
+
+    const result = calculateReceiptShare(input, [2, 1])
+
+    expect(result.total).toBe(result.receiptComputedTotal)
+  })
+
   it('removes a deleted line from the proration base', () => {
     const input = receipt({
       items: [{ name: 'Mine', quantity: 1, unitPrice: 4, lineTotal: 4, confidence: 1 }],

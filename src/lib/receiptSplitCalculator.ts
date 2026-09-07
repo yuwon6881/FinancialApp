@@ -146,9 +146,12 @@ export function calculateReceiptShare(
   const selectedSubtotal = itemShares.reduce((sum, value) => sum + value, 0n)
   const selectedCharges = calculateCharges(itemShares, false)
   const fullShares = fullLines.map(value => value ?? 0n)
-  const fullSubtotal = receipt.subtotal == null
-    ? fullShares.reduce((sum, value) => sum + value, 0n)
-    : scaled(receipt.subtotal)
+  // The reconciliation is built from the lines, never from the receipt's printed subtotal. Your
+  // share is derived entirely from these lines, so a check that quietly swapped in a printed
+  // number could report the receipt as adding up while the share behind it was short a line the
+  // scan could not read -- and the figure it quoted was one nothing on the sheet could reproduce.
+  // Reading it from the lines also makes taking the whole receipt come to exactly this total.
+  const fullSubtotal = fullShares.reduce((sum, value) => sum + value, 0n)
   const fullCharges = calculateCharges(fullShares, true)
   const receiptComputed = fullSubtotal + fullCharges.impact
   const difference = receipt.total == null ? null : toMoney(receiptComputed - scaled(receipt.total))
