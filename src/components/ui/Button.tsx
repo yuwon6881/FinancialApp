@@ -18,8 +18,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
   sm: 'min-h-11 px-3 text-xs gap-1.5 lg:min-h-9',
-  md: 'min-h-11 px-4 text-sm gap-2',
-  lg: 'min-h-11 px-5 text-sm gap-2',
+  md: 'min-h-12 px-4 text-sm gap-2',
+  lg: 'min-h-13 px-5 text-sm gap-2.5',
   icon: 'size-11 p-0 lg:size-9',
 }
 

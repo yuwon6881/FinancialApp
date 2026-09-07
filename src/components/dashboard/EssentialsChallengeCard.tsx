@@ -176,8 +176,8 @@ const SCORE_EXPLANATION =
 
 // A smaller medallion than the card first shipped with: the rank and the bar carry the message,
 // and the ring is the badge on top of them rather than the card's centrepiece.
-const RING_SIZE = 72
-const RING_RADIUS = 30
+const RING_SIZE = 96
+const RING_RADIUS = 40
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
 
 const percentText = (ratio: number) => `${Math.round(Math.max(0, Math.min(9.99, ratio)) * 100)}%`
@@ -329,14 +329,14 @@ export function EssentialsChallengeCard({
             <div className="flex items-start gap-4">
               {challenge.score !== null && (
                 <div className="relative shrink-0" style={{ width: RING_SIZE, height: RING_SIZE }}>
-                  <svg viewBox="0 0 72 72" className="size-full -rotate-90" aria-hidden focusable="false">
-                    <circle cx="36" cy="36" r={RING_RADIUS} className="fill-none stroke-muted" strokeWidth="6" />
+                  <svg viewBox="0 0 96 96" className="size-full -rotate-90" aria-hidden focusable="false">
+                    <circle cx="48" cy="48" r={RING_RADIUS} className="fill-none stroke-muted" strokeWidth="7" />
                     <circle
-                      cx="36"
-                      cy="36"
+                      cx="48"
+                      cy="48"
                       r={RING_RADIUS}
                       className={cn('fill-none transition-[stroke-dashoffset] duration-700', presentation.stroke)}
-                      strokeWidth="6"
+                      strokeWidth="7"
                       strokeLinecap="round"
                       strokeDasharray={RING_CIRCUMFERENCE}
                       strokeDashoffset={RING_CIRCUMFERENCE * (1 - challenge.score / 100)}
@@ -346,9 +346,9 @@ export function EssentialsChallengeCard({
                     <AnimatedNumber
                       value={challenge.score}
                       formatFn={value => Math.round(value).toString()}
-                      className={cn('text-xl font-black leading-none', presentation.accent)}
+                      className={cn('text-3xl font-black leading-none', presentation.accent)}
                     />
-                    <span className="text-eyebrow uppercase text-muted-foreground">score</span>
+                    <span className="mt-1 text-eyebrow uppercase text-muted-foreground">score</span>
                   </div>
                 </div>
               )}
@@ -429,7 +429,7 @@ export function EssentialsChallengeCard({
             <div className="pt-2">
               <Button
                 variant="secondary"
-                size="md"
+                size="lg"
                 onClick={() => {
                   setIsOpen(false)
                   onReviewEssentials()

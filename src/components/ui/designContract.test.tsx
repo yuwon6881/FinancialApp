@@ -185,7 +185,7 @@ describe('interaction floor contract', () => {
       const classes = buttonClasses(variant, size)
       // `icon` is square, the rest are height-constrained; either way the authored floor is 44px and
       // any step down must be keyed to `lg:` (the expanded tier), never `sm:` (the medium tier).
-      expect(classes).toMatch(size === 'icon' ? /\bsize-11\b/ : /\bmin-h-11\b/)
+      expect(classes).toMatch(size === 'icon' ? /\bsize-11\b/ : /\bmin-h-1[123]\b/)
       expect(classes).not.toMatch(/\bsm:(?:min-h|size|h)-(?:[0-9]|10)\b/)
     },
   )
