@@ -78,7 +78,10 @@ export function AccountRow({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-x-3 gap-y-2 sm:ml-auto">
+        {/* `ml-auto` at every width. Held back to `sm:`, a compact row that wrapped left the
+            balance and both actions starting at the card's left edge with the whole right half
+            empty; the trailing edge is where a row's actions belong on a phone too. */}
+        <div className="ml-auto flex shrink-0 items-center gap-x-3 gap-y-2">
           <div className="flex shrink-0 items-center gap-2">
             <SensitiveAmount
               value={account.remaining}

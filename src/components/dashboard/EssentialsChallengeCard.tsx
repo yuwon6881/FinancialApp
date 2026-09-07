@@ -4,6 +4,7 @@ import {
   ArrowRight,
   CalendarClock,
   Check,
+  Circle,
   Flame,
   Gauge,
   Rocket,
@@ -402,20 +403,29 @@ export function EssentialsChallengeCard({
                   {challenge.earnedBadgeCount} of {challenge.badges.length}
                 </span>
               </div>
-              <ul className="flex min-w-0 flex-wrap items-center gap-1.5">
+              {/* Compact reads the four badges as a checklist -- one full-width row each, every
+                  label starting on the same x. Wrapped pills left a ragged two-line block whose
+                  second row started under the middle of the first, and a phone has the vertical
+                  room for four short rows. From the medium tier the pills fit on one line again,
+                  so they go back to being pills. */}
+              <ul className="grid min-w-0 grid-cols-1 gap-1.5 sm:flex sm:flex-wrap sm:items-center">
                 {challenge.badges.map(badge => {
                   const copy = BADGE_COPY[badge.id]
                   return (
                     <li
                       key={badge.id}
                       className={cn(
-                        'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold',
+                        'flex w-full min-w-0 items-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-semibold sm:w-auto sm:rounded-full sm:py-1',
                         badge.earned
                           ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                           : 'border-dashed border-border/70 bg-muted/25 text-muted-foreground',
                       )}
                     >
-                      {badge.earned && <Check className="size-3 shrink-0" aria-hidden />}
+                      {/* An icon slot on both states, so the labels line up down the compact
+                          column instead of the earned ones sitting one glyph further right. */}
+                      {badge.earned
+                        ? <Check className="size-3 shrink-0" aria-hidden />
+                        : <Circle className="size-3 shrink-0 opacity-60" aria-hidden />}
                       <span className="truncate">{copy.label}</span>
                       <span className="sr-only">{badge.earned ? copy.earned : copy.pending}</span>
                     </li>

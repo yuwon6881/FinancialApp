@@ -149,8 +149,22 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
     <div className="space-y-3 px-4 pb-4 sm:px-5 sm:pb-5 lg:hidden">
       {paginatedHoldings.map(holding => (
         <article key={`${holding.accountId}-${holding.instrumentId}`} className="interactive-card min-w-0 rounded-xl border border-border/50 p-4">
-          <div className="flex min-w-0 items-start justify-between gap-3">
-            <div className="min-w-0"><Button variant="tertiary" onClick={() => onSelectHolding(holding)} className="block max-w-full cursor-pointer truncate text-left text-sm font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-accent-ink">{holding.symbol} · {holding.name}</Button><span className="text-xs text-muted-foreground">{holding.accountName} · {holding.type}</span></div>
+          {/* The name and the line under it are one button. Below the expanded tier every button
+              carries a 44px floor, so a title-only button was a 48px box holding one 20px line: the
+              name sat against its top edge with a finger's worth of blank card between it and the
+              account line, and the button's own `px-4` pushed the name four steps right of
+              everything else in the card. Wrapping both lines fills that height honestly, widens
+              the tap target to the whole title block, and `px-0` puts the name back on the card's
+              own left edge. */}
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <Button
+              variant="tertiary"
+              onClick={() => onSelectHolding(holding)}
+              className="group/holding flex min-w-0 flex-1 cursor-pointer flex-col items-start justify-center gap-0.5 rounded-lg px-0 py-0 text-left hover:bg-transparent"
+            >
+              <span className="max-w-full truncate text-sm font-bold text-foreground underline decoration-dotted underline-offset-4 transition-colors group-hover/holding:text-accent-ink">{holding.symbol} · {holding.name}</span>
+              <span className="max-w-full truncate text-xs font-medium text-muted-foreground">{holding.accountName} · {holding.type}</span>
+            </Button>
             <strong className="shrink-0 text-sm">{masked ? '••••' : holding.valueApp === undefined ? 'Exchange rate missing' : money(holding.valueApp, portfolio.appCurrency)}</strong>
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -161,20 +175,29 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
             <div><dt className="text-muted-foreground">Already banked</dt><dd className={`break-words font-semibold ${holding.realisedProfitLossApp === undefined ? '' : holding.realisedProfitLossApp >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.realisedProfitLossApp === undefined ? '—' : money(holding.realisedProfitLossApp, portfolio.appCurrency)}</dd></div>
             <div><dt className="text-muted-foreground">Dividends</dt><dd className={`break-words font-semibold ${holding.netDividendsApp === undefined ? '' : holding.netDividendsApp >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.netDividendsApp === undefined ? '—' : money(holding.netDividendsApp, portfolio.appCurrency)}</dd></div>
           </dl>
-          <details className="mt-3 group rounded-lg border border-border/50 bg-muted/20">
-            <summary className="flex cursor-pointer select-none items-center justify-between p-2.5 text-eyebrow uppercase text-muted-foreground outline-none transition-colors hover:bg-muted/30">
+          {/* The summary is a 44px row of its own: it used to be a 2.5-step box whose uppercase
+              label and chevron sat tight against the top and bottom edges, reading as a squeezed
+              strip rather than the row the dl above it establishes. Inside, the source lines get a
+              two-column grid instead of `justify-between` -- a wrapped source name pushed its date
+              out of line with the row above it, so the right-hand column was never straight. */}
+          <details className="mt-3 group min-w-0 rounded-xl border border-border/50 bg-muted/20">
+            <summary className="flex min-h-11 cursor-pointer select-none items-center justify-between gap-2 px-3 py-2 text-eyebrow uppercase text-muted-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50">
               <span>How this was worked out</span>
-              <ChevronDown className="size-3.5 transition-transform duration-200 group-open:rotate-180" />
+              <ChevronDown className="size-3.5 shrink-0 transition-transform duration-200 group-open:rotate-180" aria-hidden="true" />
             </summary>
-            <div className="border-t border-border/50 p-2.5 pt-2 text-xs text-muted-foreground">
+            <div className="border-t border-border/50 px-3 py-2.5 text-xs text-muted-foreground">
               <p className="break-words font-medium text-foreground">
                 {holding.latestPriceNative === undefined ? 'Closing price unavailable' : `${number(holding.units, 8)} × ${number(holding.latestPriceNative, 8)} ${holding.currency}`}
                 {holding.currency !== portfolio.appCurrency ? ` × ${holding.fxRate === undefined ? 'missing FX' : number(holding.fxRate, 8)} = ${holding.valueApp === undefined ? 'incomplete' : money(holding.valueApp, portfolio.appCurrency)}` : ''}
               </p>
-              <div className="mt-2 space-y-1 text-xs">
-                <div className="flex justify-between gap-2"><span className="opacity-70">Price from</span><span className="text-right">{holding.priceSource ?? 'Price source unavailable'} · {holding.priceDate ?? 'No date'}</span></div>
-                {holding.fxSource && <div className="flex justify-between gap-2"><span className="opacity-70">Rate from</span><span className="text-right">{holding.fxSource} · {holding.fxDate ?? 'No date'}</span></div>}
-              </div>
+              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                <dt className="opacity-70">Price from</dt>
+                <dd className="min-w-0 break-words text-right">{holding.priceSource ?? 'Price source unavailable'} · {holding.priceDate ?? 'No date'}</dd>
+                {holding.fxSource && <>
+                  <dt className="opacity-70">Rate from</dt>
+                  <dd className="min-w-0 break-words text-right">{holding.fxSource} · {holding.fxDate ?? 'No date'}</dd>
+                </>}
+              </dl>
             </div>
           </details>
         </article>

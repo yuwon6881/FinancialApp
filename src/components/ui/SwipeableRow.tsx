@@ -256,7 +256,12 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         id={actionsId}
         role="group"
         aria-label="Row actions"
-        className="absolute inset-y-0 right-0 z-0 flex items-stretch overflow-hidden rounded-r-2xl [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]"
+        // A tray of tiles, not one slab of colour. The drawer used to butt three full-bleed
+        // rectangles against each other and against the card's own rounded edge, so a revealed row
+        // showed square corners inside a rounded list and no seam between the actions. The padding
+        // lets the card colour frame the tiles, the gap separates them, and `[&>*]` rounds whatever
+        // a call site passes so no caller has to know it is sitting in a drawer.
+        className="absolute inset-y-0 right-0 z-0 flex items-stretch gap-1.5 overflow-hidden rounded-r-2xl p-1.5 [&>*]:rounded-xl [&>*]:shadow-xs [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]"
         style={{
           width: actionsWidth,
           touchAction: 'pan-y',

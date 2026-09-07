@@ -65,7 +65,7 @@ export function ReceiptSplitItemRow({
         <Button variant="tertiary"
           type="button"
           onClick={() => onRemove(index)}
-          className="flex h-full w-full items-center justify-center gap-1 bg-destructive hover:bg-destructive/90 px-3 text-xs font-bold text-destructive-foreground cursor-pointer rounded-r-2xl"
+          className="flex h-full w-full items-center justify-center gap-1 bg-destructive hover:bg-destructive/90 px-3 text-xs font-bold text-destructive-foreground cursor-pointer"
           aria-label={`Delete ${itemLabel}`}
         >
           <Trash2 className="size-4" /> Delete

@@ -108,13 +108,14 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
     view.categoryUsage ?? view.visibleCategories.map(category => ({ category, count: null }))
   const isCategoryListLoading = categoryRows.length === 0 && view.isLoadingUsage
 
-  // One card per row. Both panels are dense rows of chips, selects and figures; side by side they
-  // each had about a third of the window to lay that out in, and every row inside them wrapped.
-  // Stacked, each gets the full measure and the rows read as single lines.
+  // Two columns from the expanded tier, matching the Plan tab: the window is wide enough there for
+  // both dense panels to keep their rows on one line, and stacking them put the limits card a full
+  // category list below the fold. Compact and medium still get one card per row, where side by side
+  // would leave each panel about a third of the window and wrap every row inside it.
   return (
-    <div id="settings-panel-categories-preferences" role="tabpanel" aria-labelledby="settings-tab-categories-preferences" className="grid grid-cols-1 gap-6 items-start animate-in fade-in duration-200">
+    <div id="settings-panel-categories-preferences" role="tabpanel" aria-labelledby="settings-tab-categories-preferences" className="grid min-w-0 grid-cols-1 gap-6 items-start animate-in fade-in duration-200 lg:grid-cols-2">
       {/* Transaction Categories */}
-      <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs order-2 lg:order-1">
+      <div className="min-w-0 p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs order-2 lg:order-1">
         <div
           role="button"
           tabIndex={0}
@@ -358,7 +359,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
         </CollapsibleBody>
       </div>
 
-      <div className="order-1 lg:order-2">
+      <div className="min-w-0 order-1 lg:order-2">
         <CategoryLimitsCard
           categories={view.editableCategories}
           currency={view.activeSettings.currency || 'USD'}

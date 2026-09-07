@@ -12,6 +12,12 @@ import { InfoHint } from '../../ui/InfoHint'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { EmptyState } from '../../ui/EmptyState'
 
+/**
+ * The geometry the `Badge` primitive uses, on a squared-off chip. Every chip on a bill row shares
+ * it so the row has one chip height rather than one per label.
+ */
+const CHIP_CLASS = 'inline-flex min-h-5 shrink-0 items-center rounded border px-1.5 text-xs leading-none'
+
 export interface AccountBillRosterProps {
   roster?: AccountBillRosterType
   currency: string
@@ -45,35 +51,41 @@ function BillItemRow({
         isPaused ? 'opacity-70' : ''
       }`}
     >
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="truncate text-xs font-semibold text-foreground">
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+          {/* `leading-5` matches the chips' `min-h-5`, so the name and every chip beside it share
+              one line box. They used to be sized by `py-0.2`, which is a fifth of a spacing step:
+              the chips came out shorter than the name's own line and sat visibly high against it,
+              and each chip's height depended on its text. `min-w-0` is what lets the truncation
+              actually happen -- without it a long bill name pushed its category chip off the row
+              instead of shortening itself. */}
+          <span className="min-w-0 max-w-full truncate text-xs font-semibold leading-5 text-foreground">
             {payment.name}
           </span>
           {/* The bill's own spending category, in the colour it already carries in the Ledger and
               the charts. This list was previously entirely grey, so a dozen bills read as one
               undifferentiated block and nothing said what kind of spending each one was. */}
-          <span className={`rounded border px-1.5 py-0.2 text-xs font-semibold ${getCategoryBadgeClass(payment.category)}`}>
+          <span className={`${CHIP_CLASS} font-semibold ${getCategoryBadgeClass(payment.category)}`}>
             {payment.category}
           </span>
           {payment.frequency === 'Annually' && (
-            <span className="rounded border border-border/60 bg-muted/40 px-1.5 py-0.2 text-xs font-medium text-muted-foreground">
+            <span className={`${CHIP_CLASS} border-border/60 bg-muted/40 font-medium text-muted-foreground`}>
               Annual
             </span>
           )}
           {payment.linkedLoanName && (
-            <span className="rounded border border-border/60 bg-primary/10 px-1.5 py-0.2 text-xs font-medium text-accent-ink">
+            <span className={`${CHIP_CLASS} max-w-full truncate border-border/60 bg-primary/10 font-medium text-accent-ink`}>
               {payment.linkedLoanName}
             </span>
           )}
           {isPaused && (
-            <span className="rounded border border-border/60 bg-muted/60 px-1.5 py-0.2 text-xs font-semibold text-muted-foreground">
+            <span className={`${CHIP_CLASS} border-border/60 bg-muted/60 font-semibold text-muted-foreground`}>
               {isEnded ? 'Ended' : 'Paused'}
             </span>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs leading-5 text-muted-foreground">
           {/* Both modes are the same fact about the bill -- how it gets paid -- so both wear the
               same badge in the same tone, and the words carry the distinction. Colouring only
               auto-deduct made the manual rows read as unstyled leftovers rather than a stated

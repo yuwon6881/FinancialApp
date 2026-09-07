@@ -163,13 +163,6 @@ export function DocumentCard({
                 </p>
                 <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isFailed={isFailed} isPending={document.isPendingSync} entityLabel="document" />
               </div>
-              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 empty:hidden">
-                <LinkedTransactionButton
-                  document={document}
-                  openingTransactionId={openingTransactionId}
-                  onOpen={onOpenLinkedTransaction}
-                />
-              </div>
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <PreviewDocumentButton document={document} onPreview={onPreview} disabled={isBusy} />
@@ -183,28 +176,43 @@ export function DocumentCard({
           <div className="mt-3 flex flex-col items-stretch gap-2 min-[360px]:flex-row min-[360px]:items-end min-[360px]:justify-between sm:gap-3">
             <div className="min-w-0 max-w-full">
               <AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />
-              <p className="mt-0.5 truncate text-caption text-muted-foreground">{amountCaption}</p>
+              {/* Wraps rather than truncates: with a ledger link now sharing this row, a card
+                  narrow enough to squeeze the caption was clipping it to "Confirmed amo…", and
+                  the caption is the line that says whether the figure is confirmed or a guess. */}
+              <p className="mt-0.5 text-caption text-muted-foreground">{amountCaption}</p>
             </div>
-            {/* No name and no picker means the year's categories are still on their way: show
-                nothing rather than an empty chip claiming the document has no category. */}
-            {!showReliefPicker && reliefName && (
-              <Button
-                variant="tertiary"
-                type="button"
-                disabled={hideSensitive || isBusy}
-                onClick={() => setEditingRelief(true)}
-                aria-label={`Change tax relief category for ${document.originalFileName}`}
-                className={`inline-flex min-h-11 max-w-full shrink-0 self-end items-center gap-1.5 rounded-lg border px-2 py-1 text-caption font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-8 sm:self-auto ${
-                  isReliefDraftChanged
-                    ? 'border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/10 ring-2 ring-blue-500/50'
-                    : 'border-border/60 bg-muted/40 hover:bg-muted/40'
-                }`}
-              >
-                <span className="max-w-32 truncate">{reliefName}</span>
-                {isReliefDraftChanged && <span className="inline-block size-1.5 rounded-full bg-blue-500" title="Unsaved change" />}
-                <Pencil className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
-              </Button>
-            )}
+            {/* Both chips travel together on the trailing edge of this row. The ledger link used to
+                hang under the file name, where its 44px touch target stretched the header block and
+                pushed the file-type tile and the preview button off the name's own line. Here it
+                shares a baseline with the relief chip, which is the same shape and the same height,
+                so a linked document reads as one tidy row instead of two ragged ones. */}
+            <div className="flex min-w-0 shrink-0 items-center justify-end gap-2 self-end empty:hidden sm:self-auto">
+              <LinkedTransactionButton
+                document={document}
+                openingTransactionId={openingTransactionId}
+                onOpen={onOpenLinkedTransaction}
+              />
+              {/* No name and no picker means the year's categories are still on their way: show
+                  nothing rather than an empty chip claiming the document has no category. */}
+              {!showReliefPicker && reliefName && (
+                <Button
+                  variant="tertiary"
+                  type="button"
+                  disabled={hideSensitive || isBusy}
+                  onClick={() => setEditingRelief(true)}
+                  aria-label={`Change tax relief category for ${document.originalFileName}`}
+                  className={`inline-flex min-h-11 max-w-full shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 text-caption font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-8 ${
+                    isReliefDraftChanged
+                      ? 'border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/10 ring-2 ring-blue-500/50'
+                      : 'border-border/60 bg-muted/40 hover:bg-muted/40'
+                  }`}
+                >
+                  <span className="max-w-32 truncate">{reliefName}</span>
+                  {isReliefDraftChanged && <span className="inline-block size-1.5 rounded-full bg-blue-500" title="Unsaved change" />}
+                  <Pencil className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+                </Button>
+              )}
+            </div>
           </div>
 
           {showReliefPicker && (

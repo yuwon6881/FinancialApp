@@ -151,7 +151,7 @@ export function BucketAccountGroup({
 
       {/* Footer action row */}
       {hasAnyAccounts && (
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/30 pt-3">
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-border/30 pt-3">
           <Button
             type="button"
             variant="secondary"

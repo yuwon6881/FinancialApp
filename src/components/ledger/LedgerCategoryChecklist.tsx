@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Checkbox } from '../ui/Checkbox'
 import type { TransactionCategory } from '../../types'
 import { getCategoryDotClass, getCategoryFilterClass } from '../../lib/categoryColors'
@@ -26,10 +26,32 @@ export const LedgerCategoryChecklist: React.FC<LedgerCategoryChecklistProps> = (
   // its own length never sizes the panel -- otherwise a long category list would push the whole
   // grid past the viewport and hand the scrolling back to the panel.
   // The bottom sheet keeps the fixed cap: it already scrolls as one column.
+  const listRef = useRef<HTMLDivElement>(null)
+  const [listOverflows, setListOverflows] = useState(false)
+
+  // `overscroll-contain` is right only while this list has somewhere to scroll. An `overflow-y-auto`
+  // box is a scroll container even when its content fits, and containment on one of those swallows
+  // the wheel instead of passing it up -- so with a short category list the pointer sat over a dead
+  // zone and the panel behind it would not move at all. Measured rather than guessed: the list is
+  // as long as the user's own categories.
+  useEffect(() => {
+    const node = listRef.current
+    if (!node) return
+    const measure = () => setListOverflows(node.scrollHeight - node.clientHeight > 1)
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(node)
+    for (const child of Array.from(node.children)) observer.observe(child)
+    return () => observer.disconnect()
+  }, [availableCategories])
+
   const track = isMobile ? '' : 'relative min-h-56 flex-1'
-  const list = isMobile
-    ? 'flex max-h-56 flex-col gap-1.5 overflow-y-auto overscroll-contain pr-1'
-    : 'absolute inset-0 flex flex-col gap-1.5 overflow-y-auto overscroll-contain pr-1'
+  const list = cn(
+    'flex flex-col gap-1.5 overflow-y-auto pr-1',
+    isMobile ? 'max-h-56' : 'absolute inset-0',
+    listOverflows ? 'overscroll-contain' : 'overscroll-auto',
+  )
 
   return (
     <div className={cn('flex flex-col gap-4', !isMobile && 'h-full min-h-0')}>
@@ -65,7 +87,7 @@ export const LedgerCategoryChecklist: React.FC<LedgerCategoryChecklistProps> = (
           Categories
         </span>
         <div className={track}>
-          <div className={list}>
+          <div ref={listRef} className={list}>
             {availableCategories.map(c => {
               const isChecked = checkboxFilters.includes(c.name)
               return (

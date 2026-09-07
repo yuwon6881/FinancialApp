@@ -218,7 +218,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
             this cycle's pacing is a footnote, and drawing it as a second bar here -- with a third
             on every commitment card below -- was what made the page read as a stack of bars. */}
         {cycleTarget > 0 && (
-          <p className="text-xs font-semibold text-muted-foreground">
+          <p className="max-w-2xl text-center text-xs font-semibold text-muted-foreground">
             This cycle:{' '}
             <span className={`font-extrabold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
               {formatSensitive(fundedThisCycleTotal)}

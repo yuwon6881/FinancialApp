@@ -1,5 +1,5 @@
 import React from 'react'
-import { Plus, X } from 'lucide-react'
+import { ChartPie, Plus, X } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -139,15 +139,21 @@ const InteractiveStatTile: React.FC<{
         // yearly total and the count beside it read as one run-on number.
         className="group/stat flex h-full w-full flex-col items-start justify-between text-left cursor-pointer select-none rounded-lg p-0 transition-colors hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-ring"
       >
-        {/* The label must not wrap: a two-line "Yearly Total" dropped its figure below the plain
-            tiles beside it. The Breakdown pill moves to its own line instead when space is tight. */}
-        <div className="flex flex-wrap items-center gap-1">
+        {/* One line, always. The word "Breakdown" used to sit here as a second pill; on a phone it
+            wrapped below the label, and because every tile pins its figure to the bottom of the
+            row, that extra line stretched the whole grid -- the plain "Monthly Total" beside this
+            one grew a gap the height of a word between its label and its number. A chart glyph
+            says the same thing inside the label's own line, and the word survives for screen
+            readers on the button's accessible name. */}
+        <div className="flex min-w-0 items-center gap-1">
           <span className="block whitespace-nowrap text-eyebrow uppercase leading-tight tracking-wide text-muted-foreground transition-colors group-hover/stat:text-foreground sm:text-xs sm:tracking-wider">
             {label}
           </span>
-          <span className="shrink-0 rounded bg-muted/60 px-1 py-0.5 text-xs font-semibold text-muted-foreground opacity-70 group-hover/stat:opacity-100 transition-opacity">
-            Breakdown
-          </span>
+          <ChartPie
+            className="size-3.5 shrink-0 text-muted-foreground opacity-70 transition-opacity group-hover/stat:opacity-100"
+            aria-hidden="true"
+          />
+          <span className="sr-only">breakdown</span>
         </div>
         <span
           title={title}
