@@ -170,6 +170,15 @@ test('the ranked Essentials challenge stays inside its card at every width', asy
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
   await page.getByRole('button', { name: /Essentials challenge/i }).click()
+  await expect(page.getByText('Essentials challenge', { exact: true })).toBeFocused()
+  const help = page.getByRole('button', { name: 'What is How the Essentials score is worked out?' })
+  await expect(help).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.getByRole('tooltip')).toHaveCount(0)
+  await page.keyboard.press('Tab')
+  await expect(help).toBeFocused()
+  await expect(help).toHaveAttribute('aria-expanded', 'true')
+  await page.keyboard.press('Tab')
+  await expect(help).toHaveAttribute('aria-expanded', 'false')
   // Located by the card's own landmark rather than by a rank string: which rank this fixture earns
   // depends on the tier thresholds, so naming one couples a containment test to their tuning.
   const card = page.locator('section[aria-labelledby="essentials-challenge-heading"]')
@@ -193,6 +202,16 @@ test('the ranked Essentials challenge stays inside its card at every width', asy
 
   expect(overflow.escaping, 'challenge card content escapes its own box').toEqual([])
   expect(overflow.pageWidth, 'the ranked challenge card overflows the page').toBeLessThanOrEqual(overflow.viewport + 1)
+  await help.click()
+  await expect(help).toHaveAttribute('aria-expanded', 'true')
+  await help.click()
+  await expect(help).toHaveAttribute('aria-expanded', 'false')
+  await page.getByRole('button', { name: 'Close Essentials challenge details' }).click()
+  await expect(card).not.toBeVisible()
+  await page.getByRole('button', { name: /Essentials challenge score:/i }).click()
+  await expect(page.getByText('Essentials challenge', { exact: true })).toBeFocused()
+  await expect(help).toHaveAttribute('aria-expanded', 'false')
+  await page.screenshot({ path: test.info().outputPath('essentials-modal.png') })
 })
 
 test('medium ledger rows keep their actions inside the card', async ({ page }) => {

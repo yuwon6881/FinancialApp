@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import {
   AlertTriangle,
   ArrowRight,
@@ -210,6 +210,7 @@ export function EssentialsChallengeCard({
   onReviewEssentials,
 }: EssentialsChallengeCardProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const titleRef = useRef<HTMLSpanElement>(null)
   const presentation = TIER_PRESENTATION[challenge.tier]
   const { Icon } = presentation
   const ended = cycle.phase === 'ended'
@@ -300,10 +301,11 @@ export function EssentialsChallengeCard({
       <BottomSheet
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
-        maxWidthClassName="max-w-lg"
+        maxWidthClassName="max-w-xl"
+        initialFocusRef={titleRef}
         title={
           <div className="flex items-center gap-1.5">
-            <span className="text-base font-bold text-foreground">Essentials challenge</span>
+            <span ref={titleRef} tabIndex={-1} className="text-base font-bold text-foreground">Essentials challenge</span>
             <InfoHint inline label="How the Essentials score is worked out" text={SCORE_EXPLANATION} />
           </div>
         }
@@ -322,9 +324,9 @@ export function EssentialsChallengeCard({
           </div>
         }
       >
-        <section aria-labelledby="essentials-challenge-heading" className="space-y-4">
-          <div className={cn(panelClass, PANEL_TONES[presentation.panelTone], 'p-4')}>
-            <div className="flex items-center gap-4">
+        <section aria-labelledby="essentials-challenge-heading" className="space-y-6">
+          <div className={cn(panelClass, PANEL_TONES[presentation.panelTone], 'p-5 sm:p-6')}>
+            <div className="flex items-start gap-4">
               {challenge.score !== null && (
                 <div className="relative shrink-0" style={{ width: RING_SIZE, height: RING_SIZE }}>
                   <svg viewBox="0 0 64 64" className="size-full -rotate-90" aria-hidden focusable="false">
@@ -356,17 +358,17 @@ export function EssentialsChallengeCard({
                   <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-lg border', presentation.chip, presentation.accent)}>
                     <Icon className="size-3.5" aria-hidden />
                   </span>
-                  <h3 id="essentials-challenge-heading" className={cn('text-section truncate', presentation.accent)}>
+                  <h3 id="essentials-challenge-heading" className={cn('text-section', presentation.accent)}>
                     {rank}
                   </h3>
                 </div>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{headline}</p>
-                {result && <p className="mt-0.5 text-xs font-semibold leading-relaxed text-foreground">{result}</p>}
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{headline}</p>
+                {result && <p className="mt-2 text-sm font-semibold leading-relaxed text-foreground">{result}</p>}
               </div>
             </div>
 
             {!unranked && (
-              <div className="mt-3.5 border-t border-border/40 pt-3">
+              <div className="mt-5 border-t border-border/40 pt-4">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-xs font-semibold text-muted-foreground">Essentials money committed</span>
                   <span className="text-xs font-bold tabular-nums text-foreground">{usedPercent}</span>
@@ -385,7 +387,7 @@ export function EssentialsChallengeCard({
                     style={{ left: `${paceMarkerPercent}%` }}
                   />
                 </div>
-                <p className="mt-1 text-caption text-muted-foreground">
+                <p className="mt-2 text-caption text-muted-foreground">
                   The marker sits at {pacePercent} — {ended ? 'where a full cycle ends' : "where today's plan expects the bar"}.
                 </p>
               </div>
@@ -393,7 +395,7 @@ export function EssentialsChallengeCard({
           </div>
 
           {!unranked && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground">Badges</span>
                 <span className="text-xs font-bold tabular-nums text-muted-foreground">
@@ -407,7 +409,7 @@ export function EssentialsChallengeCard({
                     <li
                       key={badge.id}
                       className={cn(
-                        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold',
+                        'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold',
                         badge.earned
                           ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                           : 'border-dashed border-border/70 bg-muted/25 text-muted-foreground',
