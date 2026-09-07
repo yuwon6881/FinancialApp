@@ -12,7 +12,7 @@ export type BadgeTone = 'neutral' | 'accent' | 'info' | 'success' | 'warning' | 
 const toneClasses: Record<BadgeTone, string> = {
   neutral: 'border-border/60 bg-muted/55 text-muted-foreground',
   accent: 'border-primary/25 bg-primary/12 text-accent-ink',
-  info: 'border-blue-500/25 bg-blue-500/10 text-blue-600 dark:text-blue-300',
+  info: 'border-blue-500/25 bg-blue-500/10 text-blue-700 dark:text-blue-300',
   success: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
   warning: 'border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300',
   urgent: 'border-orange-500/25 bg-orange-500/10 text-orange-600 dark:text-orange-300',
