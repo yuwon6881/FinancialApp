@@ -116,6 +116,50 @@ test('essentials challenge ranks a cycle that has run past its money', async ({ 
   await expect(card).toHaveScreenshot('essentials-challenge-over.png')
 })
 
+// The route-level commitments-rewards baselines are all captured with no savings goals, so the
+// pool card's active state -- the claim tiles, the outstanding wording, the cycle pacing line --
+// appeared in none of them. Scoped to the card, so one line moving is a real share of the image
+// rather than the fraction of a page the suite's diff tolerance is built to absorb.
+//
+// Nothing is earmarked, because every bucket in the shared fixture holds a zero balance and
+// `mockApi` exposes no accounts override: any positive earmark would render the over-committed
+// error instead, which is a state this fixture cannot reach honestly. Covering the funded and
+// over-committed variants needs a dashboard fixture that gives Rewards a real balance.
+const activeCommitment: SavingsGoal = {
+  id: 7,
+  name: 'Car Maintenance',
+  targetAmount: 350,
+  earmarkedAmount: 0,
+  fundingBucket: 'Rewards',
+  targetDate: '2026-09-15',
+  priority: 'Medium',
+  status: 'active',
+  isRecurring: true,
+  recurrenceMonths: 3,
+  cycleFundedAmount: 0,
+  createdAt: '2026-01-01T00:00:00.000Z',
+}
+
+test('rewards pool reports this cycle pacing for an active commitment', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page, { savingsGoals: [activeCommitment] })
+  await page.goto('/commitments-rewards', { waitUntil: 'domcontentloaded' })
+
+  const card = page.locator('#commitments-rewards-panel-commitments > div').first()
+  await expect(card).toBeVisible()
+
+  // Below the expanded tier the pacing block sits inside a collapsed native <details>. A <summary>
+  // carries no button role, so it cannot be reached through getByRole('button').
+  const disclosure = card.locator('summary').filter({ hasText: 'Details' }).first()
+  if (await disclosure.isVisible()) {
+    await disclosure.click()
+  }
+  await expect(card.getByText(/This cycle:/)).toBeVisible()
+  await waitForStableLayout(page)
+
+  await expect(card).toHaveScreenshot('commitments-pool-active.png')
+})
+
 test('accounts settings panel uses the complete card shell', async ({ page }) => {
   await establishSession(page)
   await mockApi(page)
