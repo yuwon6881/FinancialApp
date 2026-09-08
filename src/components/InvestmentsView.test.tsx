@@ -312,18 +312,18 @@ describe('InvestmentsView provider call boundaries', () => {
 
     // units + price -> gross derives, and re-derives live when units changes.
     fireEvent.change(units, { target: { value: '10' } })
-    fireEvent.change(price, { target: { value: '10' } })
-    await waitFor(() => expect(gross.value).toBe('100'))
+    fireEvent.change(price, { target: { value: '10.00' } })
+    await waitFor(() => expect(gross.value).toBe('100.00'))
     fireEvent.change(units, { target: { value: '20' } })
-    await waitFor(() => expect(gross.value).toBe('200'))
+    await waitFor(() => expect(gross.value).toBe('200.00'))
 
     // Editing gross now makes gross + units the two most-recent (authoritative)
     // fields, so the untouched one -- unit price -- derives (250 / 20 = 12.5),
     // and the user-entered units and gross are left intact.
-    fireEvent.change(gross, { target: { value: '250' } })
-    await waitFor(() => expect(price.value).toBe('12.5'))
+    fireEvent.change(gross, { target: { value: '250.00' } })
+    await waitFor(() => expect(price.value).toBe('12.50'))
     expect(units.value).toBe('20')
-    expect(gross.value).toBe('250')
+    expect(gross.value).toBe('250.00')
   })
 
   it('auto-opens a completed investment scan and applies only supported fields', async () => {
@@ -354,8 +354,8 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(screen.getByRole('combobox', { name: 'Activity type' }).textContent).toContain('Sell')
     await waitFor(() => {
       expect((screen.getByLabelText('Units') as HTMLInputElement).value).toBe('2')
-      expect((screen.getByLabelText(/Unit price/) as HTMLInputElement).value).toBe('25')
-      expect((screen.getByLabelText(/Gross amount/) as HTMLInputElement).value).toBe('50')
+      expect((screen.getByLabelText(/Unit price/) as HTMLInputElement).value).toBe('25.00')
+      expect((screen.getByLabelText(/Gross amount/) as HTMLInputElement).value).toBe('50.00')
     })
     expect(onResetAutoOpen).toHaveBeenCalled()
   })
@@ -387,8 +387,8 @@ describe('InvestmentsView provider call boundaries', () => {
 
     expect(await screen.findByText(/Cash movement scanned/)).toBeTruthy()
     expect(screen.getByRole('combobox', { name: 'Cash movement type' }).textContent).toContain('Convert currency')
-    expect((screen.getByLabelText(/^From amount/) as HTMLInputElement).value).toBe('100')
-    expect((screen.getByLabelText(/^To amount/) as HTMLInputElement).value).toBe('430')
+    expect((screen.getByLabelText(/^From amount/) as HTMLInputElement).value).toBe('100.00')
+    expect((screen.getByLabelText(/^To amount/) as HTMLInputElement).value).toBe('430.00')
     expect(context.queueMutation).not.toHaveBeenCalled()
   })
 
@@ -404,8 +404,8 @@ describe('InvestmentsView provider call boundaries', () => {
     choose('Activity type', 'Buy')
 
     fireEvent.change(screen.getByLabelText('Units'), { target: { value: '1' } })
-    fireEvent.change(screen.getByLabelText(/Unit price/), { target: { value: '100' } })
-    await waitFor(() => expect((screen.getByLabelText(/Gross amount/) as HTMLInputElement).value).toBe('100'))
+    fireEvent.change(screen.getByLabelText(/Unit price/), { target: { value: '100.00' } })
+    await waitFor(() => expect((screen.getByLabelText(/Gross amount/) as HTMLInputElement).value).toBe('100.00'))
     fireEvent.click(screen.getByRole('button', { name: 'Save activity' }))
 
     await waitFor(() => expect(context.queueMutation).toHaveBeenCalledOnce())

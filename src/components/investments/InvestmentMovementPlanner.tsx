@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ArrowDownToLine, ArrowUpFromLine, ChevronDown, WalletCards } from 'lucide-react'
 import type { InvestmentAllocationOverview, InvestmentPortfolio } from '../../types'
-import { formatCurrencyVal } from '../../lib/utils'
+import { formatCurrencyVal, maskCurrencyInput } from '../../lib/utils'
 import { planDeposit } from '../../lib/investmentDeposit'
 import { planWithdrawal } from '../../lib/investmentWithdrawal'
 import { buildEtfPlan } from '../../lib/investmentEtfPlan'
@@ -107,7 +107,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
 
         <label className="block text-xs font-semibold text-muted-foreground">
           {mode === 'deposit' ? 'How much new money do you want to deposit?' : 'How much do you need to withdraw?'}
-          <div className="mt-1.5 flex items-center gap-2"><span className="shrink-0 text-xs font-bold">{allocation.appCurrency}</span><SmartAmountInput value={amountText} onChange={event => setAmountText(event.target.value)} placeholder="0.00" aria-label={`${mode === 'deposit' ? 'Amount to deposit' : 'Amount to withdraw'} in ${allocation.appCurrency}`} /></div>
+          <div className="mt-1.5 flex items-center gap-2"><span className="shrink-0 text-xs font-bold">{allocation.appCurrency}</span><SmartAmountInput value={amountText} onChange={event => setAmountText(maskCurrencyInput(event.target.value, amountText))} placeholder="0.00" aria-label={`${mode === 'deposit' ? 'Amount to deposit' : 'Amount to withdraw'} in ${allocation.appCurrency}`} /></div>
         </label>
 
         {!canPlan && <p className="rounded-lg border border-orange-500/25 bg-orange-500/8 p-3 text-xs text-orange-700 dark:text-orange-300">{!valuesKnown || !cashKnown ? 'Update the missing market or cash exchange rate before using this planner.' : mode === 'deposit' ? 'Classify at least one investment into a plan basket first.' : 'There is nothing to withdraw yet.'}</p>}

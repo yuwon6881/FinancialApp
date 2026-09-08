@@ -87,12 +87,15 @@ const InteractiveStatTile: React.FC<{
   const [open, setOpen] = React.useState(false)
   const [pinned, setPinned] = React.useState(false)
   const anchorRef = React.useRef<HTMLButtonElement | null>(null)
+  const popoverRef = React.useRef<HTMLDivElement | null>(null)
   const id = React.useId()
 
   React.useEffect(() => {
-    if (!pinned) return
+    if (!pinned || isMobile) return
     const dismiss = (event: Event) => {
-      if (anchorRef.current?.contains(event.target as Node)) return
+      const target = event.target as Node
+      if (anchorRef.current?.contains(target)) return
+      if (popoverRef.current?.contains(target)) return
       setPinned(false)
       setOpen(false)
     }
@@ -108,7 +111,7 @@ const InteractiveStatTile: React.FC<{
       document.removeEventListener('pointerdown', dismiss)
       document.removeEventListener('keydown', onKey)
     }
-  }, [pinned])
+  }, [pinned, isMobile])
 
   const sheetTitle = mode === 'recurring-annual'
     ? 'Yearly Bills Distribution'
@@ -166,6 +169,7 @@ const InteractiveStatTile: React.FC<{
       {/* Desktop Popover */}
       {!isMobile && (
         <AnchoredPopover
+          ref={popoverRef}
           open={open || pinned}
           anchorRef={anchorRef}
           align="left"

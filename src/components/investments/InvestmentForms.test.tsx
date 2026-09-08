@@ -180,9 +180,9 @@ describe('investment forms', () => {
     )
 
     fireEvent.change(screen.getByLabelText('Units'), { target: { value: '3' } })
-    fireEvent.change(screen.getByLabelText('Unit price (EUR)'), { target: { value: '10' } })
+    fireEvent.change(screen.getByLabelText('Unit price (EUR)'), { target: { value: '10.00' } })
     chooseOption('Activity type', 'Dividend')
-    fireEvent.change(inputFor('Gross dividend (EUR)'), { target: { value: '12' } })
+    fireEvent.change(inputFor('Gross dividend (EUR)'), { target: { value: '12.00' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save activity' }))
 
     expect(onSave).toHaveBeenCalledOnce()
@@ -248,8 +248,8 @@ describe('investment forms', () => {
       />,
     )
     fireEvent.change(screen.getByLabelText('Units'), { target: { value: '1' } })
-    fireEvent.change(screen.getByLabelText('Unit price (EUR)'), { target: { value: '1101' } })
-    fireEvent.change(screen.getByLabelText('Gross amount (EUR)'), { target: { value: '1101' } })
+    fireEvent.change(screen.getByLabelText('Unit price (EUR)'), { target: { value: '1101.00' } })
+    fireEvent.change(screen.getByLabelText('Gross amount (EUR)'), { target: { value: '1101.00' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save activity' }))
 
     expect(document.body.textContent).not.toMatch(/Only .* available in Broker/)
@@ -344,5 +344,40 @@ describe('investment forms', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
     expect(screen.getByText('Choose a different currency to receive.')).toBeTruthy()
     expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('formats currency inputs using ATM-style decimal entry in ActivityForm and CashForm', () => {
+    render(
+      <ActivityForm
+        portfolio={portfolio('USD')}
+        initial={null}
+        pendingActivities={[]}
+        busy={false}
+        onCancel={noop}
+        onSave={vi.fn().mockResolvedValue(true)}
+        onNeedAccount={noop}
+        onNeedInstrument={noop}
+      />,
+    )
+    const unitPriceInput = screen.getByLabelText('Unit price (EUR)') as HTMLInputElement
+    fireEvent.change(unitPriceInput, { target: { value: '5' } })
+    expect(unitPriceInput.value).toBe('0.05')
+    fireEvent.change(unitPriceInput, { target: { value: '0.050' } })
+    expect(unitPriceInput.value).toBe('0.50')
+
+    const cashForm = render(
+      <CashForm
+        portfolio={portfolio('USD')}
+        busy={false}
+        onCancel={noop}
+        onSave={vi.fn().mockResolvedValue(true)}
+        onNeedAccount={noop}
+      />,
+    )
+    const amountInput = cashForm.container.querySelector('input[type="text"]') as HTMLInputElement
+    fireEvent.change(amountInput, { target: { value: '2' } })
+    expect(amountInput.value).toBe('0.02')
+    fireEvent.change(amountInput, { target: { value: '0.025' } })
+    expect(amountInput.value).toBe('0.25')
   })
 })

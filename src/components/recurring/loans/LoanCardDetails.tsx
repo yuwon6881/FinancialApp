@@ -19,7 +19,7 @@ interface LoanCardDetailsProps {
 /** A single detail cell with a muted label above the value. */
 function DetailCell({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg bg-muted/20 px-3 py-2.5">
+    <div className="rounded-lg bg-muted/20 px-3 py-2.5 min-w-0 overflow-hidden">
       {/* Every label row is the same 28px, hint or no hint. A hint is a button, and the unlayered
           `button` floor in index.css gives it a 28px minimum whatever size it authors, so the three
           cells carrying one used to stand taller and push their value a line below the cells beside
@@ -28,7 +28,7 @@ function DetailCell({ label, hint, children }: { label: string; hint?: string; c
         <p className="text-caption font-medium text-muted-foreground">{label}</p>
         {hint && <InfoHint inline label={label} text={hint} />}
       </div>
-      <p className="mt-1 text-xs font-semibold text-foreground">{children}</p>
+      <p className="mt-1 text-xs font-semibold text-foreground break-words min-w-0">{children}</p>
     </div>
   )
 }
@@ -53,7 +53,7 @@ export function LoanCardDetails({
 }: LoanCardDetailsProps) {
   const methodCopy = loanInterestMethodCopy(loan.interestMethod)
   return (
-    <div className="grid gap-2 border-t border-border/50 p-3 sm:grid-cols-2 lg:grid-cols-3 lg:border-t-0">
+    <div className="grid gap-2 border-t border-border/50 p-3 sm:grid-cols-2 lg:grid-cols-3 lg:border-t-0 min-w-0 max-w-full">
       <DetailCell label="Expected payoff">
         {interestOnlyBalanceRemains ? 'No automatic payoff' : formatOccurrenceDate(loan.snapshot.payoffDate)}
       </DetailCell>

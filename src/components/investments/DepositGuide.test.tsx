@@ -36,7 +36,7 @@ const renderGuide = (overrides: Partial<InvestmentAllocationOverview> = {}) =>
 
 const open = () => fireEvent.click(screen.getByRole('button', { name: /Plan a deposit/ }))
 const enterAmount = (value: string) => fireEvent.change(
-  screen.getByLabelText('Amount to deposit in MYR'), { target: { value } })
+  screen.getByLabelText('Amount to deposit in MYR'), { target: { value: value.includes('.') ? value : `${value}.00` } })
 
 describe('DepositGuide', () => {
   beforeAll(() => {
@@ -53,6 +53,16 @@ describe('DepositGuide', () => {
     expect(screen.queryByLabelText('Amount to deposit in MYR')).toBeNull()
     open()
     expect(screen.getByLabelText('Amount to deposit in MYR')).toBeTruthy()
+  })
+
+  it('formats amount input using ATM-style currency entry', () => {
+    renderGuide()
+    open()
+    const input = screen.getByLabelText('Amount to deposit in MYR') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '1' } })
+    expect(input.value).toBe('0.01')
+    fireEvent.change(input, { target: { value: '0.012' } })
+    expect(input.value).toBe('0.12')
   })
 
   it('splits a deposit into a balanced portfolio by target weight', () => {

@@ -10,6 +10,7 @@ import {
   validateCashFlowBalances,
 } from '../../lib/investmentValidation'
 import { getErrorMessage } from '../../lib/errors'
+import { maskCurrencyInput } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { CurrencySelect } from '../ui/CurrencySelect'
 import { CustomSelect } from '../ui/CustomSelect'
@@ -83,12 +84,12 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
   const [accountId, setAccountId] = useState(initial?.accountId ?? (initialScan?.accountId && accounts.some(value => value.id === initialScan.accountId) ? initialScan.accountId : accounts[0]?.id ?? ''))
   const [type, setType] = useState<'Deposit' | 'Withdrawal' | 'Conversion'>(initial?.type ?? (initialScan?.type as 'Deposit' | 'Withdrawal' | 'Conversion') ?? 'Deposit')
   const [currency, setCurrency] = useState(initial?.currency ?? initialScan?.currency ?? accounts[0]?.baseCurrency ?? portfolio?.appCurrency ?? '')
-  const [amount, setAmount] = useState(initial?.amount ? String(Math.abs(initial.amount)) : initialScan?.cashAmount != null ? String(initialScan.cashAmount) : '')
+  const [amount, setAmount] = useState(initial?.amount ? Math.abs(initial.amount).toFixed(2) : initialScan?.cashAmount != null ? Number(initialScan.cashAmount).toFixed(2) : '')
   // The destination leg belongs to a conversion alone; for anything else it mirrors the source.
   const initialScanConversion = initialScan?.type === 'Conversion' ? initialScan : null
   const [toCurrency, setToCurrency] = useState(initial?.toCurrency
     ?? (initialScanConversion ? initialScanConversion.toCurrency ?? '' : currency))
-  const [toAmount, setToAmount] = useState(initial?.toAmount ? String(initial.toAmount) : initialScanConversion?.toAmount != null ? String(initialScanConversion.toAmount) : '')
+  const [toAmount, setToAmount] = useState(initial?.toAmount ? Number(initial.toAmount).toFixed(2) : initialScanConversion?.toAmount != null ? Number(initialScanConversion.toAmount).toFixed(2) : '')
   const [date, setDate] = useState(initial?.date ?? initialScan?.tradeDate ?? today())
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isScanning, setIsScanning] = useState(false)
@@ -152,12 +153,12 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
     setType(scannedType)
     if (result.accountId && accounts.some(value => value.id === result.accountId)) setAccountId(result.accountId)
     if (result.currency) setCurrency(result.currency)
-    if (result.cashAmount != null) setAmount(String(result.cashAmount))
+    if (result.cashAmount != null) setAmount(Number(result.cashAmount).toFixed(2))
     // A deposit or withdrawal has no destination leg. Filling one from what the model happened
     // to read would hand the user a pre-filled rate the moment they switch to Conversion.
     if (scannedType === 'Conversion') {
       setToCurrency(result.toCurrency ?? '')
-      if (result.toAmount != null) setToAmount(String(result.toAmount))
+      if (result.toAmount != null) setToAmount(Number(result.toAmount).toFixed(2))
     } else {
       setToCurrency(result.currency ?? currency)
       setToAmount('')
@@ -272,14 +273,14 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
       <Field label="Cash movement type" plain><CustomSelect value={type} onChange={v => changeType(v as 'Deposit' | 'Withdrawal' | 'Conversion')} options={[{ value: 'Deposit', label: 'Deposit (cash in)' }, { value: 'Withdrawal', label: 'Withdrawal (cash out)' }, { value: 'Conversion', label: 'Convert currency' }]} ariaLabel="Cash movement type" className="w-full" /></Field>
       {type === 'Conversion' ? (
         <>
-          <Field label="From amount" required error={errors.amount}><SmartAmountInput min="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
+          <Field label="From amount" required error={errors.amount}><SmartAmountInput min="0.0000000001" value={amount} onChange={event => { setAmount(maskCurrencyInput(event.target.value, amount)); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
           <Field label="From currency" required error={errors.currency}><CurrencySelect value={currency} onChange={value => { setCurrency(value); setErrors(previous => ({ ...previous, currency: '' })) }} className="w-full" ariaLabel="From currency" /></Field>
-          <Field label="To amount" required error={errors.toAmount}><SmartAmountInput min="0.0000000001" value={toAmount} onChange={event => { setToAmount(event.target.value); setErrors(prev => ({ ...prev, toAmount: '' })) }} /></Field>
+          <Field label="To amount" required error={errors.toAmount}><SmartAmountInput min="0.0000000001" value={toAmount} onChange={event => { setToAmount(maskCurrencyInput(event.target.value, toAmount)); setErrors(prev => ({ ...prev, toAmount: '' })) }} /></Field>
           <Field label="To currency" required error={errors.toCurrency} plain><CurrencySelect value={toCurrency} onChange={value => { setToCurrency(value); setErrors(prev => ({ ...prev, toCurrency: '' })) }} className="w-full" ariaLabel="To currency" /></Field>
         </>
       ) : (
         <>
-          <Field label={`Amount (${currency})`} required error={errors.amount}><SmartAmountInput min="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
+          <Field label={`Amount (${currency})`} required error={errors.amount}><SmartAmountInput min="0.0000000001" value={amount} onChange={event => { setAmount(maskCurrencyInput(event.target.value, amount)); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
           <Field label="Currency" required error={errors.currency}><CurrencySelect value={currency} onChange={value => { setCurrency(value); setErrors(previous => ({ ...previous, currency: '' })) }} className="w-full" ariaLabel="Cash currency" /></Field>
         </>
       )}

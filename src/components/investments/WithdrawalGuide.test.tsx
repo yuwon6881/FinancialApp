@@ -58,7 +58,7 @@ const renderGuide = (overrides: Partial<InvestmentAllocationOverview> = {}) => r
 
 const open = () => fireEvent.click(screen.getByRole('button', { name: /Plan a withdrawal/ }))
 const enterAmount = (value: string) => fireEvent.change(
-  screen.getByLabelText('Amount to withdraw in MYR'), { target: { value } })
+  screen.getByLabelText('Amount to withdraw in MYR'), { target: { value: value.includes('.') ? value : `${value}.00` } })
 
 describe('WithdrawalGuide', () => {
   beforeAll(() => {
@@ -83,6 +83,16 @@ describe('WithdrawalGuide', () => {
     const card = screen.getByRole('group', { name: 'Taking money out' })
     fireEvent.click(card)
     expect(screen.getByLabelText('Amount to withdraw in MYR')).toBeTruthy()
+  })
+
+  it('formats amount input using ATM-style currency entry', () => {
+    renderGuide()
+    open()
+    const input = screen.getByLabelText('Amount to withdraw in MYR') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '1' } })
+    expect(input.value).toBe('0.01')
+    fireEvent.change(input, { target: { value: '0.012' } })
+    expect(input.value).toBe('0.12')
   })
 
   it('splits a withdrawal across the baskets by target weight', () => {

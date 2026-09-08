@@ -5,6 +5,7 @@ import type { InvestmentAllocationOverview } from '../../types'
 import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
+import { maskCurrencyInput } from '../../lib/utils'
 import { planWithdrawal, type WithdrawalSleeveInput } from '../../lib/investmentWithdrawal'
 import type { SleeveConstituent } from '../../lib/investmentSleeveBreakdown'
 import { Badge } from '../ui/Badge'
@@ -108,7 +109,7 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
               <SmartAmountInput
                 id="withdrawal-amount"
                 value={amountText}
-                onChange={event => setAmountText(event.target.value)}
+                onChange={event => setAmountText(maskCurrencyInput(event.target.value, amountText))}
                 placeholder="0.00"
                 aria-label={`Amount to withdraw in ${allocation.appCurrency}`}
               />

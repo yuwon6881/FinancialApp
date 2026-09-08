@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { RecurringPaymentsHeader } from './RecurringPaymentsHeader'
 
@@ -59,5 +59,13 @@ describe('RecurringPaymentsHeader', () => {
     expect(screen.getByText('$13.81')).not.toBeNull()
     expect(screen.getByRole('button', { name: /new subscription/i })).not.toBeNull()
     expect(screen.queryByRole('button', { name: /new loan/i })).toBeNull()
+  })
+
+  it('opens breakdown dialog when clicking stat tile', () => {
+    render(<RecurringPaymentsHeader {...baseProps} activeView="recurring" />)
+
+    const tile = screen.getByRole('button', { name: /yearly total.*breakdown/i })
+    fireEvent.click(tile)
+    expect(screen.getByRole('dialog')).not.toBeNull()
   })
 })

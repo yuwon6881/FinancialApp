@@ -136,7 +136,7 @@ export function LoanCard({
     .map(payment => ({ ...payment, kind: 'Planned' as const }))
 
   return (
-    <article id={`loan-card-${loan.id}`} className="rounded-2xl border border-border/60 bg-card/85 p-4 shadow-sm sm:p-5 transition-all duration-300">
+    <article id={`loan-card-${loan.id}`} className="w-full min-w-0 rounded-2xl border border-border/60 bg-card/85 p-4 shadow-sm sm:p-5 transition-all duration-300">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -200,7 +200,7 @@ export function LoanCard({
         </div>
       )}
 
-      <details className="group/loan-details mt-3 rounded-xl border border-border/50 bg-muted/15 lg:mt-4 lg:bg-muted/20" open={isLoanDetailsOpen} onToggle={event => setIsLoanDetailsOpen(event.currentTarget.open)}>
+      <details className="group/loan-details mt-3 w-full min-w-0 rounded-xl border border-border/50 bg-muted/15 lg:mt-4 lg:bg-muted/20" open={isLoanDetailsOpen} onToggle={event => setIsLoanDetailsOpen(event.currentTarget.open)}>
         <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-2.5 text-xs font-bold text-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50 min-[1280px]:hidden">
           <span>Loan details</span>
           <ChevronDown className="size-3.5 text-muted-foreground transition-transform group-open/loan-details:rotate-180" aria-hidden />
@@ -220,7 +220,7 @@ export function LoanCard({
       {/* The whole panel is the toggle, the same way the Loan details disclosure above it is: the
           padding belongs to the control, not to a wrapper around it, so the hover surface covers
           the box a reader is already pointing at instead of a text-sized strip inside it. */}
-      <div className="mt-3 overflow-hidden rounded-xl border border-border/50 bg-background/40">
+      <div className="mt-3 w-full min-w-0 overflow-hidden rounded-xl border border-border/50 bg-background/40">
         <Button
           variant="tertiary"
           type="button"
@@ -327,7 +327,7 @@ export function LoanCard({
         )}
       </div>
 
-      <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between border-t border-border/30 pt-4">
+      <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between border-t border-border/30 pt-4 w-full min-w-0">
         <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
           {loan.settlementActionId && onUndoSettlement && (
             <Button

@@ -5,6 +5,7 @@ import type { InvestmentAllocationOverview } from '../../types'
 import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
+import { maskCurrencyInput } from '../../lib/utils'
 import { planDeposit, type DepositSleeveInput } from '../../lib/investmentDeposit'
 
 interface DepositGuideProps {
@@ -97,7 +98,7 @@ export function DepositGuide({ allocation, money, colors }: DepositGuideProps) {
               <SmartAmountInput
                 id="deposit-amount"
                 value={amountText}
-                onChange={event => setAmountText(event.target.value)}
+                onChange={event => setAmountText(maskCurrencyInput(event.target.value, amountText))}
                 placeholder="0.00"
                 aria-label={`Amount to deposit in ${allocation.appCurrency}`}
               />

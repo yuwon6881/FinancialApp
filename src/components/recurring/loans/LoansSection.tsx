@@ -173,15 +173,15 @@ export function LoansSection({
       ) : view.filteredAndSortedLoans.length === 0 ? (
         <EmptyState density="compact" className="rounded-2xl p-6" title="No loans match the selected filters." />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 w-full min-w-0 max-w-full">
         <m.div
           initial={reduceMotion ? false : 'hidden'}
           animate="show"
           variants={listContainerVariants}
-          className="grid gap-4 2xl:grid-cols-2"
+          className="grid grid-cols-1 gap-4 2xl:grid-cols-2 w-full min-w-0 max-w-full"
         >
           {visibleLoans.map(loan => (
-            <m.div key={loan.id} variants={listItemVariants}>
+            <m.div key={loan.id} variants={listItemVariants} className="w-full min-w-0">
               <LoanCard
                 loan={loan}
                 currency={currency}
