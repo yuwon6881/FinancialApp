@@ -519,6 +519,35 @@ describe('InvestmentsView money-sent-to-broker card', () => {
     expect(screen.queryByText('Change today')).toBeNull()
   })
 
+  it('says how much of the latest move was prices and how much was the exchange rate', async () => {
+    // A rising position reporting a falling day: the shares gained RM 8 and the rate cost RM 20.
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(withSummary({
+      totalValue: 1200,
+      unrealisedProfitLoss: 300,
+      dailyChange: -12,
+      dailyPriceChange: 8,
+      dailyCurrencyChange: -20,
+    }))
+    renderView()
+
+    expect(await screen.findByText('From share prices')).toBeTruthy()
+    expect(screen.getByText('From currency')).toBeTruthy()
+  })
+
+  it('does not split the latest move when no exchange rate moved', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(withSummary({
+      totalValue: 1200,
+      dailyChange: 8,
+      dailyPriceChange: 8,
+      dailyCurrencyChange: 0,
+    }))
+    renderView()
+
+    expect(await screen.findByText('Latest value move')).toBeTruthy()
+    expect(screen.queryByText('From share prices')).toBeNull()
+    expect(screen.queryByText('From currency')).toBeNull()
+  })
+
   it('switches panel from cash to activity when a trade draft arrives', async () => {
     vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
     const { rerender } = renderView({ activeScanJobIds: ['trade-scan-1'] })

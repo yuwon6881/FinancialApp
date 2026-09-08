@@ -90,6 +90,10 @@ interface InvestmentHolding {
   valueNative?: number
   valueApp?: number
   dailyChangeApp?: number
+  /** How much of `dailyChangeApp` was this fund own price moving. Absent on an older API. */
+  dailyPriceChangeApp?: number
+  /** How much of `dailyChangeApp` was the exchange rate moving. Absent on an older API. */
+  dailyCurrencyChangeApp?: number
   unrealisedProfitLossApp?: number
   unrealisedPercent?: number
   realisedProfitLossApp?: number
@@ -147,6 +151,10 @@ export interface InvestmentPortfolio {
     realisedProfitLoss?: number
     netDividends?: number
     dailyChange?: number
+    /** How much of `dailyChange` was prices moving. Absent on an older API. */
+    dailyPriceChange?: number
+    /** How much of `dailyChange` was the exchange rate moving. Absent on an older API. */
+    dailyCurrencyChange?: number
     annualReturn?: number
     cashValue?: number
     totalValue?: number

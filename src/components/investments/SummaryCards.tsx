@@ -23,6 +23,10 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
   const unrealised = portfolio.summary.unrealisedProfitLoss
   const realised = portfolio.summary.realisedProfitLoss
   const daily = portfolio.summary.dailyChange
+  const priceMove = portfolio.summary.dailyPriceChange
+  const currencyMove = portfolio.summary.dailyCurrencyChange
+  // Rounding noise on a same-currency portfolio should not earn two rows saying nothing.
+  const hasCurrencyMove = Math.abs(currencyMove ?? 0) >= 0.005
   const percent = portfolio.summary.unrealisedPercent
   const annualReturn = portfolio.summary.annualReturn
 
@@ -124,7 +128,18 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
       hint: 'Dividends received, plus the move between the two latest saved market values. It may be from an earlier market day.',
       bg: cardTone(daily),
       hero: { label: 'Latest value move', value: signed(daily), color: tone(daily) },
+      // A move stated in one currency cannot say whether the shares fell or the ringgit rose, and
+      // those two regularly point opposite ways: a portfolio can be up on the year and report a
+      // down day purely on the rate. The two parts add back to the move exactly, so the card can
+      // show which one drove it. Only when the server sends them, and only when a rate is actually
+      // involved — a single-currency portfolio has nothing to split.
       rows: [
+        ...(priceMove !== undefined && currencyMove !== undefined && hasCurrencyMove
+          ? [
+              { label: 'From share prices', value: signed(priceMove), hint: 'The part of the move that was your funds’ own prices changing.', color: tone(priceMove) },
+              { label: 'From currency', value: signed(currencyMove), hint: `The part of the move that was the rate between your funds’ currencies and ${currency} changing.`, color: tone(currencyMove) },
+            ]
+          : []),
         { label: 'Dividends received', value: format(portfolio.summary.netDividends), hint: 'Payouts your investments have paid you, after any tax withheld.' },
       ],
     },
