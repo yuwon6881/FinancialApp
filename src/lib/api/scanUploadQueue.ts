@@ -11,7 +11,7 @@ import {
 
 export type { ScanUploadKind } from '../scanUploadStore'
 
-/** Mirrors `SupabaseReceiptImageStore.MaxImageBytes`; the endpoints also cap the request at 11 MiB. */
+/** Mirrors `GcsReceiptImageStore.MaxImageBytes`; the endpoints also cap the request at 11 MiB. */
 const MAX_SCAN_IMAGE_BYTES = 10 * 1024 * 1024
 
 const SCAN_ENDPOINTS: Record<ScanUploadKind, string> = {
