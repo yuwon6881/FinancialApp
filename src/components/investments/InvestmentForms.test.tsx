@@ -380,4 +380,47 @@ describe('investment forms', () => {
     fireEvent.change(amountInput, { target: { value: '0.025' } })
     expect(amountInput.value).toBe('0.25')
   })
+
+  it('makes the worked out trade field uneditable until one field is cleared', () => {
+    render(
+      <ActivityForm
+        portfolio={portfolio(undefined)}
+        initial={null}
+        pendingActivities={[]}
+        busy={false}
+        onCancel={noop}
+        onSave={vi.fn().mockResolvedValue(true)}
+        onNeedAccount={noop}
+        onNeedInstrument={noop}
+      />,
+    )
+    const units = screen.getByLabelText('Units') as HTMLInputElement
+    const price = screen.getByLabelText('Unit price (EUR)') as HTMLInputElement
+    const gross = screen.getByLabelText('Gross amount (EUR)') as HTMLInputElement
+
+    expect(units.readOnly).toBe(false)
+    expect(price.readOnly).toBe(false)
+    expect(gross.readOnly).toBe(false)
+
+    // Filling units and price works out gross and marks gross uneditable
+    fireEvent.change(units, { target: { value: '10' } })
+    fireEvent.change(price, { target: { value: '5.00' } })
+    expect(gross.value).toBe('50.00')
+    expect(gross.readOnly).toBe(true)
+    expect(units.readOnly).toBe(false)
+    expect(price.readOnly).toBe(false)
+
+    // Clearing units clears gross and restores editability to all fields
+    fireEvent.change(units, { target: { value: '' } })
+    expect(gross.value).toBe('')
+    expect(gross.readOnly).toBe(false)
+    expect(price.value).toBe('5.00')
+
+    // Filling gross now works out units and marks units uneditable
+    fireEvent.change(gross, { target: { value: '100.00' } })
+    expect(units.value).toBe('20')
+    expect(units.readOnly).toBe(true)
+    expect(price.readOnly).toBe(false)
+    expect(gross.readOnly).toBe(false)
+  })
 })

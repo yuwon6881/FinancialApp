@@ -314,14 +314,23 @@ describe('InvestmentsView provider call boundaries', () => {
     fireEvent.change(units, { target: { value: '10' } })
     fireEvent.change(price, { target: { value: '10.00' } })
     await waitFor(() => expect(gross.value).toBe('100.00'))
+    expect(gross.readOnly).toBe(true)
     fireEvent.change(units, { target: { value: '20' } })
     await waitFor(() => expect(gross.value).toBe('200.00'))
+    expect(gross.readOnly).toBe(true)
 
-    // Editing gross now makes gross + units the two most-recent (authoritative)
-    // fields, so the untouched one -- unit price -- derives (250 / 20 = 12.5),
-    // and the user-entered units and gross are left intact.
+    // The worked-out field is uneditable until a user clears one field, leaving only one field with value
+    fireEvent.change(price, { target: { value: '' } })
+    await waitFor(() => {
+      expect(gross.value).toBe('')
+      expect(gross.readOnly).toBe(false)
+    })
+    expect(units.value).toBe('20')
+
+    // Entering gross now works out unit price and makes unit price uneditable
     fireEvent.change(gross, { target: { value: '250.00' } })
     await waitFor(() => expect(price.value).toBe('12.50'))
+    expect(price.readOnly).toBe(true)
     expect(units.value).toBe('20')
     expect(gross.value).toBe('250.00')
   })

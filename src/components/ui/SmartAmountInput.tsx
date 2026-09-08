@@ -73,7 +73,8 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
     publishValue(next)
   }
 
-  const showCalculator = focused && allowCalculator
+  const isReadOnly = Boolean(inputProps.readOnly || inputProps.disabled)
+  const showCalculator = focused && allowCalculator && !isReadOnly
 
   return (
     <div className="relative w-full">
@@ -85,17 +86,19 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
         inputMode="decimal"
         className={`${className ?? ''} text-left transition-all duration-200 ${showCalculator ? 'pr-36' : ''}`}
         onChange={event => {
+          if (isReadOnly) return
           if (/^-?[0-9.()+\-*/×÷\s]*$/.test(event.target.value)) onChange?.(event)
         }}
-        onFocus={event => { setFocused(true); onFocus?.(event) }}
+        onFocus={event => { if (!isReadOnly) setFocused(true); onFocus?.(event) }}
         onBlur={event => {
           // Resolve any pending expression (e.g. "12.00×5.00") when leaving the
           // field, matching the =/Enter behaviour.
-          evaluate()
+          if (!isReadOnly) evaluate()
           setFocused(false)
           onBlur?.(event)
         }}
         onKeyDown={event => {
+          if (isReadOnly) return
           if (event.key === 'Enter' || event.key === '=') {
             event.preventDefault()
             evaluate()

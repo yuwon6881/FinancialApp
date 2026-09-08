@@ -40,6 +40,12 @@ const today = () => {
 }
 
 const numberOrUndefined = (value: string) => value.trim() === '' ? undefined : Number(value)
+const positiveNumberOrUndefined = (value: string) => {
+  const n = numberOrUndefined(value)
+  return n !== undefined && n > 0 && !isNaN(n) ? n : undefined
+}
+const fmtUnits = (value: number) => value.toFixed(6).replace(/\.?0+$/, '')
+const fmtMoney = (value: number) => value.toFixed(2)
 
 // Which inputs an activity type actually puts in front of the user. A value left behind in a
 // field the current type hides is still submitted, so nothing — a scan least of all — may write
@@ -98,23 +104,35 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
   const instruments = portfolio?.instruments.filter(value => !value.isArchived) ?? []
   const initialScan = scanDraft && activityTypes.some(value => value.value === scanDraft.result.type) ? scanDraft.result : null
   const [type, setType] = useState<InvestmentTransactionType>(initial?.type ?? (initialScan?.type as InvestmentTransactionType) ?? 'Buy')
+  const trade = ['Buy', 'Sell'].includes(type)
   const [accountId, setAccountId] = useState(initial?.accountId ?? (initialScan?.accountId && accounts.some(value => value.id === initialScan.accountId) ? initialScan.accountId : accounts[0]?.id ?? ''))
   const [instrumentId, setInstrumentId] = useState(initial?.instrumentId ?? (initialScan?.instrumentId && instruments.some(value => value.id === initialScan.instrumentId) ? initialScan.instrumentId : instruments[0]?.id ?? ''))
   const [tradeDate, setTradeDate] = useState(initial?.tradeDate ?? initialScan?.tradeDate ?? today())
   const initialScanType = (initialScan?.type ?? 'Buy') as InvestmentTransactionType
   const initialScanUnits = initialScan && showsUnits(initialScanType) ? initialScan.units : null
   const initialScanUnitPrice = initialScan && showsUnitPrice(initialScanType) ? initialScan.unitPrice : null
+  const initialScanGross = initialScan?.cashAmount != null ? initialScan.cashAmount : null
   const initialScanCosts = initialScan && showsFeesAndTaxes(initialScanType) ? initialScan : null
   const [units, setUnits] = useState(initial?.units ? String(initial.units) : initialScanUnits != null ? String(initialScanUnits) : '')
   const [unitPrice, setUnitPrice] = useState(initial?.unitPrice ? Number(initial.unitPrice).toFixed(2) : initialScanUnitPrice != null ? Number(initialScanUnitPrice).toFixed(2) : '')
   const initialGross = initial?.cashAmount
     ? Number(initial.cashAmount).toFixed(2)
-    : initialScan?.cashAmount != null
-      ? Number(initialScan.cashAmount).toFixed(2)
+    : initialScanGross != null
+      ? Number(initialScanGross).toFixed(2)
       : initialScanUnits != null && initialScanUnitPrice != null
         ? (initialScanUnits * initialScanUnitPrice).toFixed(2)
         : ''
   const [cashAmount, setCashAmount] = useState(initialGross)
+  const initialWorkedOut: 'units' | 'price' | 'gross' | null = trade && !initial ? (
+    initialScanUnits != null && initialScanUnitPrice != null && initialScanGross == null
+      ? 'gross'
+      : initialScanUnits != null && initialScanGross != null && initialScanUnitPrice == null
+        ? 'price'
+        : initialScanUnitPrice != null && initialScanGross != null && initialScanUnits == null
+          ? 'units'
+          : null
+  ) : null
+  const [workedOutField, setWorkedOutField] = useState<'units' | 'price' | 'gross' | null>(initialWorkedOut)
   const [fees, setFees] = useState(initial?.fees != null ? Number(initial.fees).toFixed(2) : initialScanCosts?.fees != null ? Number(initialScanCosts.fees).toFixed(2) : '0.00')
   const [taxes, setTaxes] = useState(initial?.taxes != null ? Number(initial.taxes).toFixed(2) : initialScanCosts?.taxes != null ? Number(initialScanCosts.taxes).toFixed(2) : '0.00')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -129,22 +147,14 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
   const trackedScanJobsRef = useRef<Set<string>>(new Set())
   const selectedInstrument = instruments.find(value => value.id === instrumentId)
 
-  const supplied = initialScan ? [
-    initialScanUnits != null ? 'units' as const : null,
-    initialScanUnitPrice != null ? 'price' as const : null,
-    initialScan.cashAmount != null ? 'gross' as const : null,
-  ].filter((value): value is 'units' | 'price' | 'gross' => value !== null) : []
-  const editOrder = useRef<Array<'units' | 'price' | 'gross'>>(supplied.length === 2 ? supplied : [])
-  const noteEdit = (field: 'units' | 'price' | 'gross') => {
-    editOrder.current = [field, ...editOrder.current.filter(value => value !== field)]
-  }
   // Read by the scan effect to resolve field exposure when the scan itself named no type.
   // A ref rather than a dependency so a plain type change cannot re-run that effect.
   const typeRef = useRef(type)
   useEffect(() => { typeRef.current = type }, [type])
   const changeType = (next: InvestmentTransactionType) => {
     setType(next)
-    if (!showsUnits(next)) { setUnits(''); editOrder.current = [] }
+    setWorkedOutField(null)
+    if (!showsUnits(next)) setUnits('')
     if (!showsUnitPrice(next)) setUnitPrice('')
     if (!showsFeesAndTaxes(next)) { setFees('0.00'); setTaxes('0.00') }
   }
@@ -204,12 +214,22 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
       if (result.fees != null) setFees(Number(result.fees).toFixed(2))
       if (result.taxes != null) setTaxes(Number(result.taxes).toFixed(2))
     }
-    const supplied = [
-      scannedUnits != null ? 'units' as const : null,
-      scannedUnitPrice != null ? 'price' as const : null,
-      result.cashAmount != null ? 'gross' as const : null,
-    ].filter((value): value is 'units' | 'price' | 'gross' => value !== null)
-    editOrder.current = supplied.length === 2 ? supplied : []
+    if (['Buy', 'Sell'].includes(appliedType)) {
+      if (scannedUnits != null && scannedUnitPrice != null && result.cashAmount == null) {
+        setCashAmount(fmtMoney(scannedUnits * scannedUnitPrice))
+        setWorkedOutField('gross')
+      } else if (scannedUnits != null && result.cashAmount != null && scannedUnitPrice == null) {
+        setUnitPrice(fmtMoney(result.cashAmount / scannedUnits))
+        setWorkedOutField('price')
+      } else if (scannedUnitPrice != null && result.cashAmount != null && scannedUnits == null) {
+        setUnits(fmtUnits(result.cashAmount / scannedUnitPrice))
+        setWorkedOutField('units')
+      } else {
+        setWorkedOutField(null)
+      }
+    } else {
+      setWorkedOutField(null)
+    }
   }, [scanDraft, accounts, instruments])
   useEffect(() => {
     if (failedScanJob?.jobId !== activeScanJobId) return
@@ -229,23 +249,74 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
     setIsScanning(false)
     setActiveScanJobId(null)
   }, [activeScanJobId, activeScanJobIds, scanDraft])
-  useEffect(() => {
-    if (!['Buy', 'Sell'].includes(type)) return
-    const recent = editOrder.current.slice(0, 2)
-    if (recent.length < 2) return
-    const fmtUnits = (value: number) => value.toFixed(6).replace(/\.?0+$/, '')
-    const fmtMoney = (value: number) => value.toFixed(2)
-    const derive = (['units', 'price', 'gross'] as const).find(value => !recent.includes(value))!
-    const u = numberOrUndefined(units)
-    const p = numberOrUndefined(unitPrice)
-    const c = numberOrUndefined(cashAmount)
-    if (derive === 'gross' && u && p) setCashAmount(fmtMoney(u * p))
-    else if (derive === 'units' && c && p) setUnits(fmtUnits(c / p))
-    else if (derive === 'price' && c && u) setUnitPrice(fmtMoney(c / u))
-  }, [units, unitPrice, cashAmount, type])
+  const handleUnitsChange = (nextVal: string) => {
+    if (trade && workedOutField === 'units') return
+    setUnits(nextVal)
+    setErrors(prev => ({ ...prev, units: '', form: '' }))
+    if (!trade) return
+    const u = positiveNumberOrUndefined(nextVal)
+    const p = positiveNumberOrUndefined(unitPrice)
+    const c = positiveNumberOrUndefined(cashAmount)
+
+    if (workedOutField === 'gross') {
+      if (!u) { setCashAmount(''); setWorkedOutField(null) }
+      else if (p) setCashAmount(fmtMoney(u * p))
+    } else if (workedOutField === 'price') {
+      if (!u) { setUnitPrice(''); setWorkedOutField(null) }
+      else if (c) setUnitPrice(fmtMoney(c / u))
+    } else {
+      if (u && p && !c) { setCashAmount(fmtMoney(u * p)); setWorkedOutField('gross') }
+      else if (u && c && !p) { setUnitPrice(fmtMoney(c / u)); setWorkedOutField('price') }
+      else if (u && p && c) { setCashAmount(fmtMoney(u * p)); setWorkedOutField('gross') }
+    }
+  }
+
+  const handleUnitPriceChange = (nextVal: string) => {
+    if (trade && workedOutField === 'price') return
+    setUnitPrice(nextVal)
+    setErrors(prev => ({ ...prev, unitPrice: '', form: '' }))
+    if (!trade) return
+    const p = positiveNumberOrUndefined(nextVal)
+    const u = positiveNumberOrUndefined(units)
+    const c = positiveNumberOrUndefined(cashAmount)
+
+    if (workedOutField === 'gross') {
+      if (!p) { setCashAmount(''); setWorkedOutField(null) }
+      else if (u) setCashAmount(fmtMoney(u * p))
+    } else if (workedOutField === 'units') {
+      if (!p) { setUnits(''); setWorkedOutField(null) }
+      else if (c) setUnits(fmtUnits(c / p))
+    } else {
+      if (p && u && !c) { setCashAmount(fmtMoney(u * p)); setWorkedOutField('gross') }
+      else if (p && c && !u) { setUnits(fmtUnits(c / p)); setWorkedOutField('units') }
+      else if (p && u && c) { setCashAmount(fmtMoney(u * p)); setWorkedOutField('gross') }
+    }
+  }
+
+  const handleCashAmountChange = (nextVal: string) => {
+    if (trade && workedOutField === 'gross') return
+    setCashAmount(nextVal)
+    setErrors(prev => ({ ...prev, cashAmount: '', form: '' }))
+    if (!trade) return
+    const c = positiveNumberOrUndefined(nextVal)
+    const u = positiveNumberOrUndefined(units)
+    const p = positiveNumberOrUndefined(unitPrice)
+
+    if (workedOutField === 'price') {
+      if (!c) { setUnitPrice(''); setWorkedOutField(null) }
+      else if (u) setUnitPrice(fmtMoney(c / u))
+    } else if (workedOutField === 'units') {
+      if (!c) { setUnits(''); setWorkedOutField(null) }
+      else if (p) setUnits(fmtUnits(c / p))
+    } else {
+      if (c && u && !p) { setUnitPrice(fmtMoney(c / u)); setWorkedOutField('price') }
+      else if (c && p && !u) { setUnits(fmtUnits(c / p)); setWorkedOutField('units') }
+      else if (c && u && p) { setUnitPrice(fmtMoney(c / u)); setWorkedOutField('price') }
+    }
+  }
+
   if (!accounts.length || !instruments.length) return <div><p className="text-sm text-muted-foreground">Add both an account and an investment before recording activity.</p><div className="mt-4 flex justify-end gap-2">{!accounts.length && <Button onClick={onNeedAccount}>Add account</Button>}{!instruments.length && <Button variant="tertiary" onClick={onNeedInstrument}>Add investment</Button>}</div></div>
   const needsUnits = !['Dividend', 'FeeTax'].includes(type)
-  const trade = ['Buy', 'Sell'].includes(type)
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     let numFields = 0
@@ -321,9 +392,54 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
       <Field label="Trade date" plain><DatePicker value={tradeDate} onChange={setTradeDate} max={today()} className="w-full" /></Field>
       <Field label="Account" plain><CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
       <Field label="Investment" plain><CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: `${i.symbol} · ${i.name}` }))} ariaLabel="Investment" className="w-full" /></Field>
-      {needsUnits && <Field label="Units" error={errors.units}><Input type="number" inputMode="decimal" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value); setErrors(prev => ({ ...prev, units: '', form: '' })) }} /></Field>}
-      {trade && <Field label={`Unit price (${selectedInstrument?.currency})`} error={errors.unitPrice}><SmartAmountInput min="0" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(maskCurrencyInput(event.target.value, unitPrice)); setErrors(prev => ({ ...prev, unitPrice: '', form: '' })) }} /></Field>}
-      <Field className={type === 'FeeTax' ? 'sm:col-span-2' : ''} required={type === 'Dividend'} label={`${type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`} error={errors.cashAmount}><SmartAmountInput min={type === 'Dividend' ? '0.0000000001' : '0'} value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(maskCurrencyInput(event.target.value, cashAmount)); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} /></Field>
+      {needsUnits && (
+        <Field
+          label="Units"
+          error={errors.units}
+          hint={trade && workedOutField === 'units' ? 'Calculated automatically' : undefined}
+        >
+          <Input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.0000000001"
+            value={units}
+            readOnly={trade && workedOutField === 'units'}
+            tabIndex={trade && workedOutField === 'units' ? -1 : undefined}
+            onChange={event => handleUnitsChange(event.target.value)}
+          />
+        </Field>
+      )}
+      {trade && (
+        <Field
+          label={`Unit price (${selectedInstrument?.currency})`}
+          error={errors.unitPrice}
+          hint={workedOutField === 'price' ? 'Calculated automatically' : undefined}
+        >
+          <SmartAmountInput
+            min="0"
+            value={unitPrice}
+            readOnly={workedOutField === 'price'}
+            tabIndex={workedOutField === 'price' ? -1 : undefined}
+            onChange={event => handleUnitPriceChange(maskCurrencyInput(event.target.value, unitPrice))}
+          />
+        </Field>
+      )}
+      <Field
+        className={type === 'FeeTax' ? 'sm:col-span-2' : ''}
+        required={type === 'Dividend'}
+        label={`${type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`}
+        error={errors.cashAmount}
+        hint={trade && workedOutField === 'gross' ? 'Calculated automatically' : undefined}
+      >
+        <SmartAmountInput
+          min={type === 'Dividend' ? '0.0000000001' : '0'}
+          value={cashAmount}
+          readOnly={trade && workedOutField === 'gross'}
+          tabIndex={trade && workedOutField === 'gross' ? -1 : undefined}
+          onChange={event => handleCashAmountChange(maskCurrencyInput(event.target.value, cashAmount))}
+        />
+      </Field>
       {type !== 'FeeTax' && <>
         <Field label={`Fees${feesLabelSuffix}`}><SmartAmountInput min="0" value={fees} onChange={event => setFees(maskCurrencyInput(event.target.value, fees))} /></Field>
         <Field className={type === 'Dividend' ? 'sm:col-span-2' : ''} label={`Taxes${feesLabelSuffix}`}><SmartAmountInput min="0" value={taxes} onChange={event => setTaxes(maskCurrencyInput(event.target.value, taxes))} /></Field>
