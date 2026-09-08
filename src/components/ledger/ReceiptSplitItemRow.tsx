@@ -147,7 +147,14 @@ export function ReceiptSplitItemRow({
             </div>
 
             <div className="min-w-0 rounded-xl border border-border/60 bg-muted/25 p-2.5">
-              <span className="flex items-center gap-1 text-eyebrow uppercase text-muted-foreground">
+              {/* Height pinned to the eyebrow line box, and the hint uses its inline variant. The
+                  hint is a button, so the sub-1024px interaction floor gives it a 44px min-height
+                  no authored size can undo; in an auto-height label row that made this tile's
+                  eyebrow 44px against the 16px of Price and With extras, and every figure below it
+                  sat that much lower than its neighbour's. The inline variant carries its target on
+                  a pseudo-element instead, and the fixed height keeps the button's box out of the
+                  row's measurement at every tier. */}
+              <span className="flex h-4 items-center gap-1 text-eyebrow uppercase text-muted-foreground">
                 {/* The rate lives under the figure, not inside the label. Appended to "Extras" it
                     made a string no phone-width tile could hold, and `truncate` ate it. */}
                 <span className="min-w-0 truncate">Extras</span>
@@ -155,6 +162,7 @@ export function ReceiptSplitItemRow({
                   label="What the extras on this line are"
                   text="Tax, service charges, and discounts are split across applicable items. This line's share."
                   align="left"
+                  inline
                 />
               </span>
               {/* A line nobody is taking pays none of the receipt's extras. The figures here are

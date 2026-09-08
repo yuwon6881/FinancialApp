@@ -216,9 +216,14 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
 
         {/* A figure and a share, not another track. The pool's split bar above is the headline;
             this cycle's pacing is a footnote, and drawing it as a second bar here -- with a third
-            on every commitment card below -- was what made the page read as a stack of bars. */}
+            on every commitment card below -- was what made the page read as a stack of bars.
+
+            Centred only where the sentence fills its line. From the medium tier up the card is
+            wide enough that centring leaves it floating between two left-aligned neighbours --
+            the claim tiles above and the notes below -- so it reads as a stray caption rather
+            than part of the column. */}
         {cycleTarget > 0 && (
-          <p className="max-w-2xl text-center text-xs font-semibold text-muted-foreground">
+          <p className="max-w-2xl text-center text-xs font-semibold text-muted-foreground sm:text-left">
             This cycle:{' '}
             <span className={`font-extrabold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
               {formatSensitive(fundedThisCycleTotal)}
