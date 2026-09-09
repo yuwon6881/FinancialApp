@@ -258,12 +258,12 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         id={actionsId}
         role="group"
         aria-label="Row actions"
-        // A tray of tiles, not one slab of colour. The drawer used to butt three full-bleed
-        // rectangles against each other and against the card's own rounded edge, so a revealed row
-        // showed square corners inside a rounded list and no seam between the actions. The padding
-        // lets the card colour frame the tiles, the gap separates them, and `[&>*]` rounds whatever
-        // a call site passes so no caller has to know it is sitting in a drawer.
-        className="absolute inset-y-0 right-0 z-0 flex items-stretch gap-1.5 overflow-hidden rounded-r-2xl p-1.5 [&>*]:rounded-xl [&>*]:shadow-xs [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]"
+        // Treat the revealed actions as one contiguous trailing action group. This follows the
+        // native swipe-row pattern: the row moves as one surface, while adjacent actions share a
+        // full-height tray with separators instead of floating as disconnected pills. Destructive
+        // actions remain visually distinct through their own color, and every child keeps the
+        // mobile touch target floor supplied by the shared Button or link primitive.
+        className="absolute inset-y-0 right-0 z-0 flex items-stretch divide-x divide-black/10 overflow-hidden rounded-r-2xl bg-muted/20 shadow-inner dark:divide-white/15 [&>*]:!h-full [&>*]:!rounded-none [&>*]:!shadow-none [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]"
         style={{
           width: actionsWidth,
           touchAction: 'pan-y',

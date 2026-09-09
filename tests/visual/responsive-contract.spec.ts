@@ -254,6 +254,38 @@ test('medium ledger rows keep their actions inside the card', async ({ page }) =
   expect(geometry.every(item => item.deleteInset != null && item.deleteInset >= 11), 'ledger delete action has no trailing padding').toBe(true)
 })
 
+test('compact ledger swipe actions form one contiguous trailing group', async ({ page }) => {
+  const width = test.info().project.use.viewport?.width ?? 0
+  test.skip(width >= 640, 'The trailing swipe-action group only renders on compact screens.')
+
+  await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
+  const row = page.locator('[id^="tx-row-mobile-"]').first()
+  await expect(row).toBeVisible()
+  await waitForStableLayout(page)
+
+  const group = row.locator('[role="group"][aria-label="Row actions"]')
+  await expect(group).toHaveCount(1)
+  const geometry = await group.evaluate(element => {
+    const groupBounds = element.getBoundingClientRect()
+    const actions = Array.from(element.children).map(action => {
+      const bounds = action.getBoundingClientRect()
+      return { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom, label: action.textContent?.trim() }
+    })
+    return {
+      className: element.className,
+      group: { left: groupBounds.left, right: groupBounds.right, top: groupBounds.top, bottom: groupBounds.bottom },
+      actions,
+    }
+  })
+
+  expect(geometry.className).toContain('divide-x')
+  expect(geometry.className).not.toContain('gap-1.5')
+  expect(geometry.className).not.toContain('p-1.5')
+  expect(geometry.actions.map(action => action.label)).toEqual(['Edit', 'Move', 'Delete'])
+  expect(geometry.actions.every(action => Math.abs(action.top - geometry.group.top) <= 1 && Math.abs(action.bottom - geometry.group.bottom) <= 1)).toBe(true)
+  expect(geometry.actions.slice(1).every((action, index) => Math.abs(action.left - geometry.actions[index].right) <= 1)).toBe(true)
+})
+
 test('compact compound controls keep their buttons inside their own boundaries', async ({ page }) => {
   test.skip((test.info().project.use.viewport?.width ?? 0) >= 640, 'Compound-control containment is compact-only.')
 

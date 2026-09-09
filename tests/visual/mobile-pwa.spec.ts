@@ -396,6 +396,17 @@ for (const route of responsiveRoutes) {
       expect(bounds.left).toBeGreaterThanOrEqual(0)
       expect(bounds.right).toBeLessThanOrEqual(width.viewport)
     }
+    if (route.path === '/reports' || route.path === '/recurring' || route.path === '/ledger') {
+      const cycleSelect = page.getByRole('combobox', {
+        name: route.path === '/reports' ? 'Report cycle' : route.path === '/ledger' ? 'Ledger cycle' : 'Recurring cycle',
+      })
+      const cycleLabel = cycleSelect.locator('span').first()
+      const cycleLabelWidth = await cycleLabel.evaluate(element => ({
+        client: element.clientWidth,
+        scroll: element.scrollWidth,
+      }))
+      expect(cycleLabelWidth.scroll, `${route.path} cycle range must remain visible`).toBeLessThanOrEqual(cycleLabelWidth.client + 1)
+    }
     if (route.path === '/reports' || route.path === '/ledger') {
       const yearSelect = page.getByRole('combobox', {
         name: route.path === '/reports' ? 'Report cycle year' : 'Ledger cycle year',
@@ -408,6 +419,15 @@ for (const route of responsiveRoutes) {
         scroll: element.scrollWidth,
       }))
       expect(labelWidth.scroll, `${route.path} year label must not truncate`).toBeLessThanOrEqual(labelWidth.client + 1)
+    }
+    if (route.path === '/drafts') {
+      const title = page.locator('[data-page-title-text="draft-transactions"]')
+      await expect(title).toBeVisible()
+      const titleWidth = await title.evaluate(element => ({
+        client: element.clientWidth,
+        scroll: element.scrollWidth,
+      }))
+      expect(titleWidth.scroll, 'draft page title must remain visible').toBeLessThanOrEqual(titleWidth.client + 1)
     }
     await expect(page).toHaveScreenshot(`responsive-${route.slug}.png`)
   })

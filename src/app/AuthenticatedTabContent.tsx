@@ -153,7 +153,7 @@ export function AuthenticatedTabContent({
   return (
     <div key={prefs.activeTab} className="w-full view-enter">
       {showCycleSwitcher && (
-        <Suspense fallback={<div className="mb-4 h-[60px] rounded-2xl border border-border/60 bg-card/92 sm:h-[68px]" aria-hidden />}>
+        <Suspense fallback={<div className="mb-4 h-[88px] rounded-2xl border border-border/60 bg-card/92 sm:h-[68px]" aria-hidden />}>
         <div className="mb-4">
           <CycleSwitcher
             selectedMonth={nav.selectedMonth}

@@ -52,34 +52,36 @@ export function CycleSwitcher({
 
   return (
     <div className={cn(panelClass, 'relative z-40 flex flex-col gap-2 p-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:p-3')}>
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
         <span className="flex shrink-0 items-center gap-1.5 pl-0.5 text-xs font-bold text-muted-foreground">
           <CalendarClock className="size-4 text-accent-ink" aria-hidden />
-          <span className="hidden sm:inline">Cycle</span>
+          <span>Cycle</span>
         </span>
 
-        {periodMode === 'month-year' && (
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
+          {periodMode === 'month-year' && (
+            <CustomSelect
+              ariaLabel={`${surfaceLabel} cycle`}
+              value={selectedMonth}
+              onChange={month => onSelectPeriod(String(month), selectedYear)}
+              options={MONTH_NAMES.map(month => ({
+                value: month,
+                label: getCycleLabelForDropdown(month, selectedYear, cycleDay),
+              }))}
+              disabled={isDisabled}
+              className="w-0 min-w-0 flex-1 sm:w-56 sm:flex-initial"
+            />
+          )}
           <CustomSelect
-            ariaLabel={`${surfaceLabel} cycle`}
-            value={selectedMonth}
-            onChange={month => onSelectPeriod(String(month), selectedYear)}
-            options={MONTH_NAMES.map(month => ({
-              value: month,
-              label: getCycleLabelForDropdown(month, selectedYear, cycleDay),
-            }))}
+            ariaLabel={`${surfaceLabel} cycle year`}
+            value={selectedYear}
+            onChange={year => onSelectPeriod(selectedMonth, Number(year))}
+            options={years.map(year => ({ value: year, label: String(year) }))}
             disabled={isDisabled}
-            className="w-0 min-w-0 flex-1 sm:w-56 sm:flex-initial"
+            className={periodMode === 'month-year' ? 'w-28 shrink-0' : 'w-0 min-w-0 flex-1 sm:w-40 sm:flex-initial'}
+            align="right"
           />
-        )}
-        <CustomSelect
-          ariaLabel={`${surfaceLabel} cycle year`}
-          value={selectedYear}
-          onChange={year => onSelectPeriod(selectedMonth, Number(year))}
-          options={years.map(year => ({ value: year, label: String(year) }))}
-          disabled={isDisabled}
-          className={periodMode === 'month-year' ? 'w-28 shrink-0' : 'w-0 min-w-0 flex-1 sm:w-40 sm:flex-initial'}
-          align="right"
-        />
+        </div>
       </div>
 
       {unavailableReason ? (

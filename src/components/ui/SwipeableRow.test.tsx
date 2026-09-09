@@ -99,4 +99,29 @@ describe('SwipeableRow closed-state opacity', () => {
     expect(screen.queryByRole('button', { name: 'Show row actions' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Hide row actions' })).toBeNull()
   })
+
+  it('renders multiple mobile actions as one contiguous touch group', () => {
+    render(
+      <SwipeableRow
+        actionsWidth={192}
+        actions={(
+          <>
+            <button type="button">Edit</button>
+            <button type="button">Move</button>
+            <button type="button">Delete</button>
+          </>
+        )}
+      >
+        <p>Row body</p>
+      </SwipeableRow>,
+    )
+
+    const drawer = screen.getByRole('group')
+    expect(drawer.className).toContain('divide-x')
+    expect(drawer.className).toContain('[&>*]:!rounded-none')
+    expect(drawer.className).toContain('[&>*]:!shadow-none')
+    expect(drawer.className).not.toContain('gap-1.5')
+    expect(drawer.className).not.toContain('p-1.5')
+    expect(drawer.querySelectorAll('button')).toHaveLength(3)
+  })
 })

@@ -3,6 +3,7 @@ import { m, useReducedMotion } from 'framer-motion'
 import { ChevronRight, ShieldAlert } from 'lucide-react'
 import type { StabilityRecovery, StabilityReloadFilter } from '../../types'
 import { Button } from '../ui/Button'
+import { BottomSheet } from '../ui/BottomSheet'
 import { InfoHint } from '../ui/InfoHint'
 import { cn } from '../../lib/utils'
 import { PANEL_TONES, panelClass } from '../ui/panelStyles'
@@ -55,6 +56,7 @@ export function StabilityRecoveryExceptionCard({
   onNavigateToLedger,
 }: StabilityRecoveryExceptionCardProps) {
   const reduceMotion = useReducedMotion()
+  const [isBreakdownOpen, setIsBreakdownOpen] = React.useState(false)
 
   if (!recovery || !recovery.isActive) return null
   if (recovery.outstandingShortfall <= 0) return null
@@ -163,17 +165,39 @@ export function StabilityRecoveryExceptionCard({
             />
           </div>
         </div>
+        <div className="flex justify-end">
+          <Button
+            variant="secondary"
+            size="sm"
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={isBreakdownOpen}
+            onClick={() => setIsBreakdownOpen(true)}
+            className="w-full justify-center border-amber-500/30 bg-card/60 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 sm:w-auto"
+          >
+            See recovery details
+            <ChevronRight className="ml-1 size-3.5" aria-hidden="true" />
+          </Button>
+        </div>
       </div>
 
-      {/* The breakdown names the ledger obligation and its repayments. Keep it behind a
-          disclosure because a healthy reader never needs it, and this panel already competes
-          with two other exception cards for the top of the page. */}
-      <details className="group mt-3">
-        <summary className="flex cursor-pointer list-none items-center gap-1 text-xs font-bold text-amber-700 transition hover:underline dark:text-amber-300">
-          <ChevronRight className="size-3 transition-transform group-open:rotate-90" aria-hidden="true" />
-          Where this figure comes from
-        </summary>
-        <div className="mt-2 space-y-2.5 rounded-xl border border-border/60 bg-card/60 p-3.5">
+      {/* The breakdown names the ledger obligation and its repayments. Keep it out of the dashboard
+          flow because a healthy reader never needs it, and this panel already competes with other
+          exception cards for the top of the page. The same disclosure works on a phone and desktop,
+          but a sheet gives the detail room to breathe without making the card taller by default. */}
+      <BottomSheet
+        isOpen={isBreakdownOpen}
+        onClose={() => setIsBreakdownOpen(false)}
+        title="Emergency fund recovery details"
+        description="See how the shortfall and this cycle's plan are calculated."
+        maxWidthClassName="max-w-xl"
+        footer={(
+          <Button variant="secondary" size="sm" onClick={() => setIsBreakdownOpen(false)} className="w-full">
+            Close
+          </Button>
+        )}
+      >
+        <div className="space-y-2.5 rounded-xl border border-border/60 bg-card/60 p-3.5">
           <dl className="space-y-1.5 text-xs sm:text-xs">
             {/* The first three rows are one subtraction and are kept adjacent so they read as one:
                 what is still being put back, less what has gone back, is what is still short.
@@ -284,14 +308,17 @@ export function StabilityRecoveryExceptionCard({
                 size="sm"
                 type="button"
                 className="w-full justify-center"
-                onClick={() => onNavigateToLedger?.({
-                  category: 'Stability',
-                  startDate: recovery.recoveryFromDate,
-                  endDate: new Date().toLocaleDateString('en-CA'),
-                  reloadFilter: 'needs-put-back',
-                  showAllCycles: true,
-                  range: 'all',
-                })}
+                onClick={() => {
+                  setIsBreakdownOpen(false)
+                  onNavigateToLedger?.({
+                    category: 'Stability',
+                    startDate: recovery.recoveryFromDate,
+                    endDate: new Date().toLocaleDateString('en-CA'),
+                    reloadFilter: 'needs-put-back',
+                    showAllCycles: true,
+                    range: 'all',
+                  })
+                }}
               >
                 View pending reload movements
               </Button>
@@ -309,7 +336,7 @@ export function StabilityRecoveryExceptionCard({
             </p>
           )}
         </div>
-      </details>
+      </BottomSheet>
     </m.section>
   )
 }

@@ -25,6 +25,10 @@ const recovery = (overrides: Partial<StabilityRecovery> = {}): StabilityRecovery
 
 const format = (value: number) => `$${value.toFixed(2)}`
 
+function openRecoveryDetails() {
+  fireEvent.click(screen.getByRole('button', { name: 'See recovery details' }))
+}
+
 describe('StabilityRecoveryExceptionCard', () => {
   it('stays hidden when there is no recovery block at all', () => {
     const { container } = render(
@@ -104,6 +108,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
+    openRecoveryDetails()
     expect(screen.getByText(/Each cycle.s Stability spending keeps its own three-cycle plan/)).toBeTruthy()
     // Both responsive copies of the label, compact and expanded.
     expect(screen.getAllByText('Combined plan for this cycle')).toHaveLength(2)
@@ -134,6 +139,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
+    openRecoveryDetails()
     expect(screen.getByText(/At least one three-cycle plan is overdue/)).toBeTruthy()
     expect(screen.getByText('Overdue')).toBeTruthy()
     expect(screen.getByText('3 cycles left')).toBeTruthy()
@@ -157,6 +163,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
+    openRecoveryDetails()
     expect(screen.getByText(
       /Put back \$506\.64 this cycle — part of the \$1013\.27 still short, not money on top of it/
     )).toBeTruthy()
@@ -205,17 +212,19 @@ describe('StabilityRecoveryExceptionCard', () => {
   })
 
   // Putting money back happens by ticking the top-up offer on a salary, so an action here would
-  // have pointed at a form that could not do it. Showing the working is not such an action.
-  it('offers nothing that claims to change the shortfall', () => {
+  // have pointed at a form that could not do it. The card only offers a read-only explanation.
+  it('offers a read-only recovery details action rather than a mutation', () => {
     render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
 
     const labelled = screen.queryAllByRole('button').filter(button => button.textContent?.trim())
-    expect(labelled.map(button => button.textContent?.trim())).toEqual([])
+    expect(labelled.map(button => button.textContent?.trim())).toEqual(['See recovery details'])
   })
 
   it('shows the subtraction the figure comes from', () => {
     render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
 
+    expect(screen.queryByText('Taken out and not yet fully back')).toBeNull()
+    openRecoveryDetails()
     expect(screen.getByText('Taken out and not yet fully back')).toBeTruthy()
     expect(screen.getByText('Put back so far')).toBeTruthy()
     expect(screen.getByText('In it now')).toBeTruthy()
@@ -233,6 +242,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
+    openRecoveryDetails()
     expect(screen.getByText('$300.00')).toBeTruthy()
     expect(screen.getByText('$100.00')).toBeTruthy()
     expect(screen.getByText('$200.00')).toBeTruthy()
@@ -250,6 +260,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
+    openRecoveryDetails()
     fireEvent.click(screen.getByRole('button', { name: /pending reload movements/i }))
     expect(onNavigateToLedger).toHaveBeenCalledWith(expect.objectContaining({
       category: 'Stability',
@@ -271,6 +282,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
+    openRecoveryDetails()
     expect(screen.queryByRole('button', { name: /pending reload movements/i })).toBeNull()
     expect(screen.getByText(/no window of movements to list/)).toBeTruthy()
   })
@@ -322,6 +334,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
+    openRecoveryDetails()
     expect(screen.queryByText('Final cycle')).toBeNull()
     expect(screen.queryByText(/This is the final planned cycle/)).toBeNull()
     expect(screen.getByText(/Each cycle.s Stability spending keeps its own three-cycle plan/)).toBeTruthy()
@@ -376,6 +389,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
+    openRecoveryDetails()
     expect(screen.getAllByText('Combined plan for this cycle')).toHaveLength(2)
     expect(screen.queryByText(/^This cycle.s share of that$/)).toBeNull()
   })

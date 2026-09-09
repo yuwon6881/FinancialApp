@@ -55,8 +55,8 @@ test('canonical Ayu interface specimen', async ({ page }) => {
 })
 
 // The three reported figures are one subtraction and are only legible if they read as adjacent
-// rows. jsdom can assert the labels exist but not that the panel lays them out that way, nor that
-// the disclosure opens to a contained block at phone width.
+// rows. The dashboard keeps that secondary detail out of the default card; the button opens a
+// contained sheet with the same breakdown at phone width.
 test('emergency fund recovery card reads as one subtraction', async ({ page }) => {
   await establishSession(page)
   await mockApi(page, { stabilityRecovery: stabilityRecoveryFixture })
@@ -64,11 +64,14 @@ test('emergency fund recovery card reads as one subtraction', async ({ page }) =
 
   const card = page.getByText('Putting it back progress').locator('xpath=ancestor::section[1]')
   await expect(card).toBeVisible()
-  await card.getByText('Where this figure comes from').click()
-  await expect(card.getByText('Taken out and not yet fully back')).toBeVisible()
+  await expect(card.getByText('Taken out and not yet fully back')).toHaveCount(0)
+  await card.getByRole('button', { name: 'See recovery details' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Emergency fund recovery details' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByText('Taken out and not yet fully back')).toBeVisible()
   await waitForStableLayout(page)
 
-  await expect(card).toHaveScreenshot('stability-recovery-card.png')
+  await expect(dialog).toHaveScreenshot('stability-recovery-card.png')
 })
 
 // A funded Essentials envelope, mid-cycle. The shared fixture allocates nothing to Essentials, so

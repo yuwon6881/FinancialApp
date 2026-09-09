@@ -139,11 +139,18 @@ export function DraftStagingView({
       <PageHeader
         titleId="draft-transactions-title"
         leading={<IconButton onClick={onCancel} label="Back to Ledger" tooltip="Back to Ledger"><ArrowLeft className="size-4" aria-hidden="true" /></IconButton>}
-        title={<span className="flex items-center gap-2 min-w-0"><span className="truncate">Draft Transactions</span>
-            <Badge tone="neutral">{draftTransactions.length}</Badge>
-            <InfoHint text={recordingOrderExplanation} label="draft recording order" align="left" className="shrink-0" />
-          </span>}
-        description={<><span>Check the details, then add everything to your Ledger.</span><span className="sr-only">{recordingOrderExplanation}</span></>}
+        title={<span data-page-title-text="draft-transactions" className="inline-block whitespace-nowrap">Draft Transactions</span>}
+        description={
+          <div className="space-y-1">
+            <p>Check the details, then add everything to your Ledger.</p>
+            <p className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+              <Badge tone="neutral">{draftTransactions.length}</Badge>
+              <span>draft{draftTransactions.length === 1 ? '' : 's'} in queue</span>
+              <InfoHint text={recordingOrderExplanation} label="draft recording order" align="left" inline />
+              <span className="sr-only">{recordingOrderExplanation}</span>
+            </p>
+          </div>
+        }
       />
 
       {draftTransactions.length === 0 ? (
