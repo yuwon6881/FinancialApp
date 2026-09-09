@@ -1,6 +1,7 @@
 export * from './support'
 export * from './deviceId'
 export * from './channelIntent'
+export * from './failure'
 export * from './firebaseConfig'
 export * from './firebaseMessaging'
 export * from './messages'

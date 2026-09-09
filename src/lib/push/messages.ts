@@ -22,6 +22,35 @@ export const PUSH_DENIED_GUIDANCE =
 export const PUSH_UNSUPPORTED_GUIDANCE =
   'Push notifications are not supported in this browser or app. Try a supported desktop or Android browser.'
 
+// Shown when this deployment carries no Firebase/VAPID configuration at all. The browser is fine
+// and there is nothing for the user to change, so this one does not send them looking.
+export const PUSH_NOT_CONFIGURED_GUIDANCE =
+  'Push notifications are not set up for this app yet, so there is nothing to turn on here.'
+
+// The browser can do push and notifications are allowed, but it refused to register this device
+// with its own push service. Brave -- and other Chromium browsers carrying the same privacy
+// setting -- keep that off, which is why an install that used to work can stop after a browser
+// update with permission still granted. Naming the setting is the whole value of this message.
+export const PUSH_SERVICE_BLOCKED_GUIDANCE =
+  'This browser would not register this device for notifications. Brave and similar browsers keep '
+  + '"Use Google services for push messaging" switched off in their privacy settings; switch it on, '
+  + 'restart the browser, then try again.'
+
+// Firebase keeps this device's notification registration in local site storage. Blocked cookies
+// and site data, or a private window, look exactly like an unsupported browser from the inside.
+export const PUSH_STORAGE_BLOCKED_GUIDANCE =
+  'Notifications need this app to be allowed to store data on this device. Allow cookies and site '
+  + 'data for this app, leave private browsing, then try again.'
+
+export const PUSH_OFFLINE_GUIDANCE =
+  'This device could not reach the notification service. Check your connection, then try again.'
+
+// Last resort. It deliberately does not blame the browser -- the reasons above are the only ones
+// entitled to -- and carries the underlying code so a report about it can be acted on.
+export const pushUnknownFailureGuidance = (detail?: string): string =>
+  'Notifications could not be set up on this device just now. Please try again.'
+  + (detail ? ` (reason: ${detail})` : '')
+
 // Shown after this device is dropped because the browser no longer allows notifications. The
 // server said the device was registered, so silently leaving the switch on would have promised
 // alerts that can never arrive.

@@ -2,7 +2,13 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePushNotifications } from './usePushNotifications'
 import * as api from '../lib/api'
-import { PUSH_DENIED_GUIDANCE, PUSH_PERMISSION_REVOKED_GUIDANCE, PUSH_UNSUPPORTED_GUIDANCE } from '../lib/push/messages'
+import { PushTokenError } from '../lib/push/failure'
+import {
+  PUSH_DENIED_GUIDANCE,
+  PUSH_PERMISSION_REVOKED_GUIDANCE,
+  PUSH_SERVICE_BLOCKED_GUIDANCE,
+  PUSH_UNSUPPORTED_GUIDANCE,
+} from '../lib/push/messages'
 import type { PushStatus } from '../types'
 
 vi.mock('../lib/push/firebaseMessaging', () => ({
@@ -14,6 +20,7 @@ vi.mock('../lib/push/firebaseMessaging', () => ({
 let supportedMock = true
 vi.mock('../lib/push/support', () => ({
   isPushSupported: () => supportedMock,
+  pushSupportFailure: () => (supportedMock ? null : 'unsupported'),
 }))
 
 vi.mock('../lib/push/deviceId', () => ({
@@ -52,6 +59,10 @@ describe('usePushNotifications', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // clearAllMocks only forgets the calls, so a rejection queued by one test would otherwise be
+    // the token behaviour every later test inherits.
+    ;(getFcmToken as ReturnType<typeof vi.fn>).mockResolvedValue('fcm-token-123')
+    ;(renewFcmToken as ReturnType<typeof vi.fn>).mockResolvedValue('fcm-token-123')
     localStorage.clear()
     supportedMock = true
     vi.spyOn(api, 'fetchPushStatus').mockResolvedValue(status())
@@ -157,6 +168,42 @@ describe('usePushNotifications', () => {
     expect(success).toBe(false)
     expect(result.current.guidance).toBe(PUSH_UNSUPPORTED_GUIDANCE)
     expect(api.upsertPushSubscription).not.toHaveBeenCalled()
+  })
+
+  // The reported defect: Brave with notifications allowed refuses to register the device with its
+  // push service, and every such failure was reported as "this browser does not support push" --
+  // which sent people looking for another browser instead of the one setting that fixes it.
+  it('names the push service refusal instead of calling the browser unsupported', async () => {
+    ;(getFcmToken as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new PushTokenError('pushServiceBlocked', 'Registration failed - push service error'),
+    )
+    const { result } = renderHook(() => usePushNotifications(true, undefined, ACCOUNT))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    let success: boolean | undefined
+    await act(async () => {
+      success = await result.current.setChannelEnabled('billReminders', true)
+    })
+
+    expect(success).toBe(false)
+    expect(result.current.supported).toBe(true)
+    expect(result.current.guidance).toBe(PUSH_SERVICE_BLOCKED_GUIDANCE)
+    expect(result.current.billRemindersEnabled).toBe(false)
+    expect(api.upsertPushSubscription).not.toHaveBeenCalled()
+  })
+
+  // An enrolled device whose token refresh is blocked shows both switches on while nothing can
+  // arrive. Reporting the block is what keeps that state honest.
+  it('reports a standing block found while refreshing an already enrolled device', async () => {
+    vi.spyOn(api, 'fetchPushStatus').mockResolvedValue(bothOn)
+    ;(getFcmToken as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new PushTokenError('pushServiceBlocked', 'Registration failed - push service error'),
+    )
+
+    const { result } = renderHook(() => usePushNotifications(true, undefined, ACCOUNT))
+
+    await waitFor(() => expect(result.current.guidance).toBe(PUSH_SERVICE_BLOCKED_GUIDANCE))
+    expect(result.current.supported).toBe(true)
   })
 
   it('never reports another device opt-in as this device state', async () => {

@@ -19,11 +19,11 @@ export interface PushChannelResult {
 }
 
 export function getPushDevice(): { supported: boolean; deviceId: string | null; guidance: string | null } {
-  const supported = push.isPushSupported()
+  const failure = push.pushSupportFailure()
   return {
-    supported,
-    deviceId: supported ? push.getOrCreateDeviceId() : null,
-    guidance: supported ? null : push.PUSH_UNSUPPORTED_GUIDANCE,
+    supported: failure === null,
+    deviceId: failure === null ? push.getOrCreateDeviceId() : null,
+    guidance: failure === null ? null : push.pushFailureGuidance(failure),
   }
 }
 
@@ -91,8 +91,25 @@ export async function reconcilePush(
     }
   } catch (error) {
     console.warn('Could not refresh this device push token.', error)
+    // A silent failure here leaves an enrolled device whose switch says "on" while its
+    // registration is dead. Standing blocks are reported so the state on screen is honest;
+    // a dropped connection or a one-off is not, because it is neither actionable nor durable.
+    if (next.deviceRegistered && !callbacks.isCancelled() && isStandingPushBlock(error)) {
+      callbacks.setGuidance(push.pushErrorGuidance(error))
+    }
   }
   return deviceId
+}
+
+const STANDING_PUSH_BLOCKS: ReadonlySet<push.PushFailureReason> = new Set([
+  'pushServiceBlocked',
+  'storageBlocked',
+  'permissionBlocked',
+  'unsupported',
+])
+
+function isStandingPushBlock(error: unknown): boolean {
+  return STANDING_PUSH_BLOCKS.has(push.classifyPushTokenError(error))
 }
 
 export function startForegroundPush(
@@ -136,8 +153,14 @@ export async function setPushChannel(
     const token = currentStatus.tokenRenewalRequired
       ? await push.renewFcmToken(registration)
       : await push.getFcmToken(registration)
+    // Null here means only one thing: this deployment ships no push configuration.
     if (!token) {
-      return { success: false, status: currentStatus, guidance: push.PUSH_UNSUPPORTED_GUIDANCE, enrolmentChanged: false }
+      return {
+        success: false,
+        status: currentStatus,
+        guidance: push.PUSH_NOT_CONFIGURED_GUIDANCE,
+        enrolmentChanged: false,
+      }
     }
 
     setOptimisticStatus({
@@ -154,13 +177,15 @@ export async function setPushChannel(
     rememberIntent(channel === 'billReminders'
       ? currentStatus.billRemindersEnabled
       : currentStatus.categoryAlertsEnabled)
-    return {
-      success: false,
-      status: currentStatus,
-      guidance: getErrorMessage(error, enabled
-        ? push.PUSH_UNSUPPORTED_GUIDANCE
-        : 'These notifications could not be turned off. Please try again.'),
-      enrolmentChanged: false,
-    }
+    // Anything the classifier can name has a remedy attached, and that beats the raw DOMException
+    // text ("Registration failed - push service error") getErrorMessage would otherwise put in
+    // front of the user. Everything it cannot name is a server refusal, which speaks for itself.
+    const reason = push.classifyPushTokenError(error)
+    const guidance = reason === 'unknown'
+      ? getErrorMessage(error, enabled
+        ? push.pushErrorGuidance(error)
+        : 'These notifications could not be turned off. Please try again.')
+      : push.pushErrorGuidance(error)
+    return { success: false, status: currentStatus, guidance, enrolmentChanged: false }
   }
 }
