@@ -44,7 +44,6 @@
     "radix-ui": "^1.6.7",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "shadcn": "^4.8.1",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.0"
   },
@@ -76,6 +75,7 @@
     "msw": "^2.15.0",
     "rolldown": "^1.0.2",
     "rollup-plugin-visualizer": "^7.0.1",
+    "shadcn": "^4.8.1",
     "sharp": "^0.35.3",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
