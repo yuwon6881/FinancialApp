@@ -68,20 +68,19 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
-    expect(screen.getByText('Your emergency fund is below where it was')).toBeTruthy()
-    expect(screen.getByText(/Nothing more is needed this cycle/)).toBeTruthy()
-    expect(screen.getByText(/\$351\.77 is still short in total/)).toBeTruthy()
-    expect(screen.getByText(/spreads it over 3 cycles, counting this one/)).toBeTruthy()
+    expect(screen.getByText('Emergency fund recovery')).toBeTruthy()
+    expect(screen.getByText(/\$351\.77 still short/)).toBeTruthy()
+    expect(screen.getByText(/nothing due this cycle/)).toBeTruthy()
     expect(screen.queryByText(/Put back \$0\.00/)).toBeNull()
   })
 
   it('says what was used and what putting it back looks like', () => {
     render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
 
-    expect(screen.getByText('Your emergency fund is below where it was')).toBeTruthy()
+    expect(screen.getByText('Emergency fund recovery')).toBeTruthy()
     expect(screen.getByText(/Put back \$1000\.00 this cycle/)).toBeTruthy()
-    expect(screen.getByText('Putting it back progress')).toBeTruthy()
-    expect(screen.getByText(/0%/)).toBeTruthy()
+    expect(screen.getByText('Recovery progress')).toBeTruthy()
+    expect(screen.getByText('0% repaid')).toBeTruthy()
   })
 
   it('explains overlapping recovery cohorts without shortening the newer plan', () => {
@@ -109,7 +108,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     openRecoveryDetails()
-    expect(screen.getByText(/Each cycle.s Stability spending keeps its own three-cycle plan/)).toBeTruthy()
+    expect(screen.getByText(/Each plan starts the cycle after the money left/)).toBeTruthy()
     expect(screen.getByText('Combined plan for this cycle')).toBeTruthy()
     expect(screen.getByText('Jun 2026 cycle')).toBeTruthy()
     expect(screen.getByText('Jul 2026 cycle')).toBeTruthy()
@@ -139,7 +138,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     openRecoveryDetails()
-    expect(screen.getByText(/At least one plan is overdue/)).toBeTruthy()
+    expect(screen.getByText('Plan overdue')).toBeTruthy()
     expect(screen.getByText('Overdue')).toBeTruthy()
     expect(screen.getByText('3 cycles left')).toBeTruthy()
   })
@@ -162,11 +161,9 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
+    expect(screen.getByText(/Put back \$506\.64 this cycle/)).toBeTruthy()
+    expect(screen.queryByText(/not money on top of it/)).toBeNull()
     openRecoveryDetails()
-    expect(screen.getByText(
-      /Put back \$506\.64 this cycle — part of the \$1013\.27 still short, not money on top of it/
-    )).toBeTruthy()
-    expect(screen.getByText(/spreads it over 2 cycles, counting this one/)).toBeTruthy()
     expect(screen.getByText(/^This cycle.s share of that$/)).toBeTruthy()
   })
 
@@ -187,9 +184,8 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     expect(screen.getByText('Starts next cycle')).toBeTruthy()
-    expect(screen.getByText(/Nothing to put back this cycle/)).toBeTruthy()
-    expect(screen.getByText(/\$500\.00 is short in total/)).toBeTruthy()
-    expect(screen.getByText(/Putting it back starts next cycle, spread over 3 cycles/)).toBeTruthy()
+    expect(screen.getByText(/\$500\.00 still short/)).toBeTruthy()
+    expect(screen.getByText(/recovery starts next cycle/)).toBeTruthy()
     // A deferred cycle is not a funded one, so it must not be congratulated for being ahead.
     expect(screen.queryByText('Ahead of plan')).toBeNull()
     expect(screen.queryByText(/Put back \$0\.00/)).toBeNull()
@@ -266,8 +262,8 @@ describe('StabilityRecoveryExceptionCard', () => {
 
     // The final cycle asks for the whole remaining shortfall, so naming both would print the same
     // figure twice.
-    expect(screen.getByText(/Put back \$400\.00 this cycle to clear what is still short/)).toBeTruthy()
-    expect(screen.getByText(/final planned cycle/)).toBeTruthy()
+    expect(screen.getByText(/Put back \$400\.00 this cycle to clear the shortfall/)).toBeTruthy()
+    expect(screen.getByText('Final cycle')).toBeTruthy()
   })
 
   // Past the window cyclesRemaining sits at 1 forever, so without the overdue flag the card
@@ -287,8 +283,8 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     expect(screen.queryByText(/last cycle of the plan/)).toBeNull()
-    expect(screen.getByText(/Put back \$746\.80 this cycle to clear what is still short/)).toBeTruthy()
-    expect(screen.getByText(/planned cycles have run out/)).toBeTruthy()
+    expect(screen.getByText(/Put back \$746\.80 this cycle to clear the shortfall/)).toBeTruthy()
+    expect(screen.getByText('Plan overdue')).toBeTruthy()
   })
 
   // Putting money back happens by ticking the top-up offer on a salary, so an action here would
@@ -297,7 +293,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
 
     const labelled = screen.queryAllByRole('button').filter(button => button.textContent?.trim())
-    expect(labelled.map(button => button.textContent?.trim())).toEqual(['See recovery details'])
+    expect(labelled.map(button => button.textContent?.trim())).toEqual(['Details'])
   })
 
   it('shows the subtraction the figure comes from', () => {
@@ -327,7 +323,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.getByText('$100.00')).toBeTruthy()
     expect(screen.getByText('$200.00')).toBeTruthy()
     // 100 of 300 back, measured against what is still being put back rather than a running history.
-    expect(screen.getByText('33%')).toBeTruthy()
+    expect(screen.getByRole('progressbar', { name: 'Recovery progress' }).getAttribute('aria-valuenow')).toBe('33')
   })
 
   it('opens the ledger on the window the shortfall accumulated over', () => {
@@ -417,7 +413,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     openRecoveryDetails()
     expect(screen.queryByText('Final cycle')).toBeNull()
     expect(screen.queryByText(/This is the final planned cycle/)).toBeNull()
-    expect(screen.getByText(/Each cycle.s Stability spending keeps its own three-cycle plan/)).toBeTruthy()
+    expect(screen.getByText(/Each plan starts the cycle after the money left/)).toBeTruthy()
     expect(screen.getByText('1 cycle left')).toBeTruthy()
     expect(screen.getByText('3 cycles left')).toBeTruthy()
   })
@@ -442,7 +438,6 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     expect(screen.getByText('Final cycle')).toBeTruthy()
-    expect(screen.getByText(/This is the final planned cycle/)).toBeTruthy()
   })
 
   // Calling a sum of cohort shares "this cycle's share of that" describes arithmetic the card does

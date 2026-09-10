@@ -196,7 +196,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     <div className="space-y-5">
       <PageHeader
         title="Document Vault"
-        description="Keep receipts, invoices, and tax records in one place. Nothing is deleted automatically."
         icon={<span className="grid size-10 place-items-center rounded-xl bg-accent text-accent-ink"><ShieldCheck className="size-5" /></span>}
         actions={<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
           <Button
@@ -285,7 +284,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         <SectionHeader
           title="Your documents"
           titleId="vault-documents-heading"
-          description="Filter, review, and manage the files in your Vault."
           meta={<Badge>{totalCount} file{totalCount === 1 ? '' : 's'}</Badge>}
           className="mb-3 sm:px-3"
         />

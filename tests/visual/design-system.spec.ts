@@ -62,7 +62,7 @@ test('emergency fund recovery card reads as one subtraction', async ({ page }) =
   await mockApi(page, { stabilityRecovery: stabilityRecoveryFixture })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
-  const card = page.getByText('Putting it back progress').locator('xpath=ancestor::section[1]')
+  const card = page.getByText('Recovery progress').locator('xpath=ancestor::section[1]')
   await expect(card).toBeVisible()
   await expect(card.getByText('Taken out and not yet fully back')).toHaveCount(0)
   await card.getByRole('button', { name: 'See recovery details' }).click()
@@ -100,11 +100,11 @@ test('emergency fund recovery card reports a plan that starts next cycle', async
   })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
-  await page.getByText('Putting it back progress').waitFor()
-  const card = page.getByText('Putting it back progress').locator('xpath=ancestor::section[1]')
+  await page.getByText('Recovery progress').waitFor()
+  const card = page.getByText('Recovery progress').locator('xpath=ancestor::section[1]')
   // Exact: the sentence under the badge says "starts next cycle" too.
   await expect(card.getByText('Starts next cycle', { exact: true })).toBeVisible()
-  await expect(card.getByText(/Nothing to put back this cycle/)).toBeVisible()
+  await expect(card.getByText(/recovery starts next cycle/)).toBeVisible()
   await waitForStableLayout(page)
 
   await expect(card).toHaveScreenshot('stability-recovery-deferred.png')

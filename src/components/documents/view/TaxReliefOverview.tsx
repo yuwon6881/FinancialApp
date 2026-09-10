@@ -291,7 +291,7 @@ export function TaxReliefOverview({
           <EmptyState
             density="compact"
             className="flex min-h-[8.25rem] items-center justify-center bg-transparent p-4"
-            title="No categories are configured for this year yet. Use Manage limits to add the limits you want to track."
+            title="No categories yet."
           />
         ) : (
           <HorizontalRail label="Tax relief categories" className="items-stretch" showControls>
@@ -411,7 +411,7 @@ export function TaxReliefOverview({
       )}
 
       <p className="mt-3 text-caption leading-relaxed text-muted-foreground">
-        Confirmed document amounts are tracking aids, not an eligibility determination. Sub-limits and personal conditions may apply.
+        Tracking aid only; tax rules may also apply.
       </p>
     </section>
   )

@@ -75,9 +75,7 @@ export function StabilityRecoveryExceptionCard({
     // cycle's ask is a slice of the shortfall, never money owed on top of it. Once the ask covers
     // the whole remaining shortfall, naming both would print the same figure twice.
     askIsWholeShortfall,
-    cyclesRemaining,
     hasOverlappingPlans,
-    isFinalCycle,
     percentRepaid,
   } = describeStabilityRecovery(recovery)
   // The jump needs a window to filter on, and only the server can say when the fund was last full.
@@ -100,7 +98,7 @@ export function StabilityRecoveryExceptionCard({
               id="stability-recovery-exception"
               className="text-subsection leading-snug text-amber-700 dark:text-amber-300"
             >
-              Your emergency fund is below where it was
+              Emergency fund recovery
               <InfoHint
                 label="How putting money back is worked out"
                 text="Only money you mark as needing to go back creates this reminder. Your normal salary share does not count as putting it back; reaching your target clears it."
@@ -131,44 +129,29 @@ export function StabilityRecoveryExceptionCard({
 
         <p className="text-xs leading-relaxed text-muted-foreground">
           {status === 'deferred' ? (
-            <>
-              Nothing to put back this cycle — you have just used the fund.{' '}
-              {formatSensitive(shortfall)} is short in total.{' '}
-            </>
+            <>{formatSensitive(shortfall)} still short · recovery starts next cycle.</>
           ) : status === 'aheadOfPace' ? (
-            <>
-              Nothing more is needed this cycle — you are ahead of the plan.{' '}
-              {formatSensitive(shortfall)} is still short in total.{' '}
-            </>
+            <>{formatSensitive(shortfall)} still short · nothing due this cycle.</>
           ) : askIsWholeShortfall ? (
-            <>Put back {formatSensitive(askThisCycle)} this cycle to clear what is still short.{' '}</>
+            <>Put back {formatSensitive(askThisCycle)} this cycle to clear the shortfall.</>
           ) : (
-            <>
-              Put back {formatSensitive(askThisCycle)} this cycle — part of the{' '}
-              {formatSensitive(shortfall)} still short, not money on top of it.{' '}
-            </>
+            <>Put back {formatSensitive(askThisCycle)} this cycle · {formatSensitive(shortfall)} still short.</>
           )}
-          {status === 'deferred'
-            ? <>Putting it back starts next cycle, spread over {cyclesRemaining} cycles.</>
-            : hasOverlappingPlans
-              ? recovery.isOverdue
-                ? <>At least one plan is overdue; newer spending keeps its own window.</>
-                : <>Each cycle&rsquo;s Stability spending keeps its own three-cycle plan.</>
-              : recovery.isOverdue
-                ? <>The planned cycles have run out.</>
-                : isFinalCycle
-                  ? <>This is the final planned cycle.</>
-                  : <>The plan spreads it over {cyclesRemaining} cycles, counting this one.</>}
         </p>
 
         <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-3.5">
           <div className="flex items-center justify-between gap-2 text-xs">
-            <span className="font-semibold text-muted-foreground">Putting it back progress</span>
-            <span className="font-semibold text-foreground tabular-nums text-right">
-              <span className="font-extrabold text-amber-600 dark:text-amber-400">{percentRepaid}%</span> of {formatSensitive(recovery.markedTotal)} put back
-            </span>
+            <span className="font-semibold text-muted-foreground">Recovery progress</span>
+            <span className="font-extrabold text-amber-600 dark:text-amber-400 tabular-nums">{percentRepaid}% repaid</span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-muted/70 border border-border/40">
+          <div
+            className="h-2 w-full overflow-hidden rounded-full border border-border/40 bg-muted/70"
+            role="progressbar"
+            aria-label="Recovery progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percentRepaid}
+          >
             <div
               className="h-full rounded-full bg-amber-500 transition-all duration-300"
               style={{ width: `${Math.min(100, Math.max(0, percentRepaid))}%` }}
@@ -182,10 +165,11 @@ export function StabilityRecoveryExceptionCard({
             type="button"
             aria-haspopup="dialog"
             aria-expanded={isBreakdownOpen}
+            aria-label="See recovery details"
             onClick={() => setIsBreakdownOpen(true)}
             className="w-full justify-center border-amber-500/30 bg-card/60 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 sm:w-auto"
           >
-            See recovery details
+            Details
             <ChevronRight className="ml-1 size-3.5" aria-hidden="true" />
           </Button>
         </div>

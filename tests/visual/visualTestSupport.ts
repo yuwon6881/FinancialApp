@@ -290,8 +290,9 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
         selectedTaxYear: 2026,
         summary: {
           taxYear: 2026,
-          confirmedTotal: 0,
-          possibleTotal: 0,
+          confirmedAmount: 0,
+          pendingReviewAmount: 0,
+          documentCount: documents.length,
           categories: [],
         },
         reliefCategories: options.reliefCategories ?? [],
@@ -312,8 +313,9 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
     if (pathname.includes('/documents/summary/')) {
       return fulfill(route, {
         taxYear: 2026,
-        confirmedTotal: 0,
-        possibleTotal: 0,
+        confirmedAmount: 0,
+        pendingReviewAmount: 0,
+        documentCount: 0,
         categories: [],
       })
     }
