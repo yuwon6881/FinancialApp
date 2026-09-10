@@ -23,7 +23,7 @@ const options = (isOpen: boolean) => ({
 })
 
 const completedJob = {
-  scanId: 'investment-1',
+  scanId: 'ocr-investment-1',
   status: 'completed' as const,
   result: {
     type: 'Buy' as const,
@@ -51,17 +51,17 @@ describe('useInvestmentScanPolling', () => {
   })
 
   it('keeps a completed result until the modal consumes and clears it once', async () => {
-    localStorage.setItem('investment_scan_job_ids', JSON.stringify(['investment-1']))
+    localStorage.setItem('investment_scan_job_ids', JSON.stringify(['ocr-investment-1']))
     apiMocks.fetchInvestmentScanJob.mockResolvedValue(completedJob)
     const scanOptions = options(true)
     scanOptions.activeTabRef.current = 'investments'
     const { result, unmount } = renderHook(() => useInvestmentScanPolling(scanOptions))
 
-    await waitFor(() => expect(result.current.activeInvestmentScanDraft?.jobId).toBe('investment-1'))
+    await waitFor(() => expect(result.current.activeInvestmentScanDraft?.jobId).toBe('ocr-investment-1'))
     await act(async () => {
       await Promise.all([
-        result.current.clearInvestmentScanJob('investment-1'),
-        result.current.clearInvestmentScanJob('investment-1'),
+        result.current.clearInvestmentScanJob('ocr-investment-1'),
+        result.current.clearInvestmentScanJob('ocr-investment-1'),
       ])
     })
 
@@ -72,12 +72,12 @@ describe('useInvestmentScanPolling', () => {
   })
 
   it('stays on the current page until Review is selected', async () => {
-    localStorage.setItem('investment_scan_job_ids', JSON.stringify(['investment-1']))
+    localStorage.setItem('investment_scan_job_ids', JSON.stringify(['ocr-investment-1']))
     apiMocks.fetchInvestmentScanJob.mockResolvedValue(completedJob)
     const scanOptions = options(false)
     const { result, unmount } = renderHook(() => useInvestmentScanPolling(scanOptions))
 
-    await waitFor(() => expect(result.current.activeInvestmentScanDraft?.jobId).toBe('investment-1'))
+    await waitFor(() => expect(result.current.activeInvestmentScanDraft?.jobId).toBe('ocr-investment-1'))
     expect(scanOptions.showToast).toHaveBeenCalledWith(
       'Investment record was scanned successfully.',
       'Investment Scan Completed',
@@ -94,8 +94,8 @@ describe('useInvestmentScanPolling', () => {
   })
 
   it('clears draft, notified IDs, and tracked job IDs when job returns not found', async () => {
-    localStorage.setItem('investment_scan_job_ids', JSON.stringify(['investment-missing']))
-    localStorage.setItem('investment_scan_notified_ids', JSON.stringify(['investment-missing']))
+    localStorage.setItem('investment_scan_job_ids', JSON.stringify(['ocr-investment-missing']))
+    localStorage.setItem('investment_scan_notified_ids', JSON.stringify(['ocr-investment-missing']))
     apiMocks.fetchInvestmentScanJob.mockRejectedValue(new Error('Job not found (404)'))
     const scanOptions = options(false)
     const { result, unmount } = renderHook(() => useInvestmentScanPolling(scanOptions))

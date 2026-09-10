@@ -21,9 +21,9 @@ describe('useReceiptSplitPolling', () => {
   })
 
   it('restores a persisted scan, opens its review sheet, and clears it after consumption', async () => {
-    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['split-complete']))
+    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['ocr-split-complete']))
     apiMocks.fetchReceiptSplitScanJob.mockResolvedValue({
-      scanId: 'split-complete',
+      scanId: 'ocr-split-complete',
       status: 'completed',
       result: {
         description: 'Dinner',
@@ -53,7 +53,7 @@ describe('useReceiptSplitPolling', () => {
     const { result, unmount } = renderHook(() => useReceiptSplitPolling(options))
 
     await waitFor(() => {
-      expect(result.current.activeReceiptSplitDraft?.jobId).toBe('split-complete')
+      expect(result.current.activeReceiptSplitDraft?.jobId).toBe('ocr-split-complete')
     })
     expect(options.showToast).toHaveBeenCalledWith(
       'Receipt items were prepared for review.',
@@ -68,18 +68,18 @@ describe('useReceiptSplitPolling', () => {
     expect(options.setAutoOpenReceiptSplit).toHaveBeenCalledWith(true)
 
     await act(async () => {
-      await result.current.clearReceiptSplitJob('split-complete')
+      await result.current.clearReceiptSplitJob('ocr-split-complete')
     })
 
     expect(result.current.receiptSplitJobIds).toEqual([])
     expect(result.current.activeReceiptSplitDraft).toBeNull()
-    expect(apiMocks.deleteReceiptScanJob).toHaveBeenCalledWith('split-complete')
+    expect(apiMocks.deleteReceiptScanJob).toHaveBeenCalledWith('ocr-split-complete')
     expect(JSON.parse(localStorage.getItem('receipt_split_scan_job_ids') || '[]')).toEqual([])
     unmount()
   })
 
   it('announces each completed scan once when two are waiting', async () => {
-    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['split-a', 'split-b']))
+    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['ocr-split-a', 'ocr-split-b']))
     apiMocks.fetchReceiptSplitScanJob.mockImplementation(async (scanId: string) => ({
       scanId,
       status: 'completed',
@@ -118,7 +118,7 @@ describe('useReceiptSplitPolling', () => {
     // Each announcement changes the notified record and the active draft, which restarts the
     // poll effect with an immediate pass. Both jobs are still tracked and still complete, so a
     // missing one-shot record shows up here as a third toast.
-    expect(result.current.receiptSplitJobIds).toEqual(['split-a', 'split-b'])
+    expect(result.current.receiptSplitJobIds).toEqual(['ocr-split-a', 'ocr-split-b'])
     expect(options.showToast).toHaveBeenCalledTimes(2)
     unmount()
   })
@@ -157,7 +157,7 @@ describe('useReceiptSplitPolling', () => {
   // an open editor from a different receipt every three seconds and discarded the quantities,
   // unlocked prices and edited description already chosen there.
   it('holds a second finished scan instead of swapping the draft under the editor', async () => {
-    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['split-a', 'split-b']))
+    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['ocr-split-a', 'ocr-split-b']))
     apiMocks.fetchReceiptSplitScanJob.mockImplementation(async (scanId: string) => completed(scanId))
     const options = pollingOptions()
     const { result, unmount } = renderHook(() => useReceiptSplitPolling(options))
@@ -165,32 +165,32 @@ describe('useReceiptSplitPolling', () => {
     await waitFor(() => {
       expect(options.showToast).toHaveBeenCalledTimes(2)
     })
-    expect(result.current.activeReceiptSplitDraft?.jobId).toBe('split-a')
+    expect(result.current.activeReceiptSplitDraft?.jobId).toBe('ocr-split-a')
 
     // Both results are already in hand, so no later pass can promote the other one.
     const passes = apiMocks.fetchReceiptSplitScanJob.mock.calls.length
     await waitFor(() => {
-      expect(result.current.activeReceiptSplitDraft?.jobId).toBe('split-a')
+      expect(result.current.activeReceiptSplitDraft?.jobId).toBe('ocr-split-a')
     })
     expect(apiMocks.fetchReceiptSplitScanJob.mock.calls.length).toBe(passes)
     unmount()
   })
 
   it('reveals the next finished scan once the active one is cleared', async () => {
-    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['split-a', 'split-b']))
+    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['ocr-split-a', 'ocr-split-b']))
     apiMocks.fetchReceiptSplitScanJob.mockImplementation(async (scanId: string) => completed(scanId))
     const options = pollingOptions()
     const { result, unmount } = renderHook(() => useReceiptSplitPolling(options))
 
     await waitFor(() => {
-      expect(result.current.activeReceiptSplitDraft?.jobId).toBe('split-a')
+      expect(result.current.activeReceiptSplitDraft?.jobId).toBe('ocr-split-a')
     })
     await act(async () => {
-      await result.current.clearReceiptSplitJob('split-a')
+      await result.current.clearReceiptSplitJob('ocr-split-a')
     })
 
-    expect(result.current.activeReceiptSplitDraft?.jobId).toBe('split-b')
-    expect(result.current.receiptSplitJobIds).toEqual(['split-b'])
+    expect(result.current.activeReceiptSplitDraft?.jobId).toBe('ocr-split-b')
+    expect(result.current.receiptSplitJobIds).toEqual(['ocr-split-b'])
     unmount()
   })
 
@@ -201,9 +201,9 @@ describe('useReceiptSplitPolling', () => {
     const options = pollingOptions()
     const { result, unmount } = renderHook(() => useReceiptSplitPolling(options))
 
-    act(() => result.current.handleReceiptSplitStarted('split-form'))
+    act(() => result.current.handleReceiptSplitStarted('ocr-split-form'))
     await waitFor(() => {
-      expect(result.current.activeReceiptSplitDraft?.jobId).toBe('split-form')
+      expect(result.current.activeReceiptSplitDraft?.jobId).toBe('ocr-split-form')
     })
 
     expect(options.showToast).not.toHaveBeenCalled()
@@ -216,8 +216,8 @@ describe('useReceiptSplitPolling', () => {
     const { result, unmount } = renderHook(() => useReceiptSplitPolling(options))
 
     act(() => {
-      result.current.handleReceiptSplitStarted('split-orphan')
-      result.current.releaseReceiptSplitReview('split-orphan')
+      result.current.handleReceiptSplitStarted('ocr-split-orphan')
+      result.current.releaseReceiptSplitReview('ocr-split-orphan')
     })
 
     await waitFor(() => {
@@ -229,7 +229,7 @@ describe('useReceiptSplitPolling', () => {
   // A second finished receipt's toast must open its own receipt, not whichever draft happens to
   // be active.
   it('reviews the scan its own toast names', async () => {
-    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['split-a', 'split-b']))
+    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['ocr-split-a', 'ocr-split-b']))
     apiMocks.fetchReceiptSplitScanJob.mockImplementation(async (scanId: string) => completed(scanId))
     const options = pollingOptions()
     const { result, unmount } = renderHook(() => useReceiptSplitPolling(options))
@@ -239,7 +239,7 @@ describe('useReceiptSplitPolling', () => {
     })
     act(() => options.showToast.mock.calls[1]?.[3]?.onAction())
 
-    expect(result.current.activeReceiptSplitDraft?.jobId).toBe('split-b')
+    expect(result.current.activeReceiptSplitDraft?.jobId).toBe('ocr-split-b')
     expect(options.setActiveTab).toHaveBeenCalledWith('ledger')
     expect(options.setAutoOpenReceiptSplit).toHaveBeenCalledWith(true)
     unmount()
@@ -252,12 +252,12 @@ describe('useReceiptSplitPolling', () => {
     const options = pollingOptions()
     const { result, unmount } = renderHook(() => useReceiptSplitPolling(options))
 
-    act(() => result.current.handleReceiptSplitStarted('split-drained', false))
+    act(() => result.current.handleReceiptSplitStarted('ocr-split-drained', false))
 
     await waitFor(() => {
       expect(options.showToast).toHaveBeenCalledTimes(1)
     })
-    expect(result.current.activeReceiptSplitDraft?.jobId).toBe('split-drained')
+    expect(result.current.activeReceiptSplitDraft?.jobId).toBe('ocr-split-drained')
     unmount()
   })
 })

@@ -15,6 +15,7 @@ import { createOutboxRefreshHandler } from './financialData/useOutboxRefresh'
 import { useDirectSyncState } from './financialData/useDirectSyncState'
 import { useDraftTransactionsState } from './financialData/useDraftTransactionsState'
 import { useAccountPlacementReview } from './financialData/useAccountPlacementReview'
+import { getActiveTransactionSyncIds } from './financialData/transactionSyncStatus'
 import {
   createLocalId,
   PERSISTED_SETTING_KEYS,
@@ -232,6 +233,10 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     ...directSyncIds,
   ])), [activeQueueOperationIds, directSyncIds, outboxActiveSyncId])
   const activeSyncId = activeSyncIds[0] || null
+  const activeTransactionSyncIds = useMemo(
+    () => getActiveTransactionSyncIds(activeOps, outboxActiveSyncId),
+    [activeOps, outboxActiveSyncId],
+  )
 
   // Fetch initial ledger and dashboard statistics
   const loadAll = useLoadAll({
@@ -431,6 +436,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     isBackgroundSyncing,
     activeSyncId,
     activeSyncIds,
+    activeTransactionSyncIds,
     deletingTxId,
     setDeletingTxId,
     syncCountdownMs,

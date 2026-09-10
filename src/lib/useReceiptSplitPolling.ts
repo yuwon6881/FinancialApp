@@ -4,17 +4,9 @@ import type { ReceiptSplitScanResult } from './api'
 import type { AppTab } from '../types'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
+import { readStoredScanJobIds } from './scanJobIds'
 
 const JOB_IDS_KEY = 'receipt_split_scan_job_ids'
-
-function readStoredIds(key: string): string[] {
-  try {
-    const value = JSON.parse(localStorage.getItem(key) || '[]')
-    return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []
-  } catch {
-    return []
-  }
-}
 
 function storeIds(key: string, ids: string[]) {
   try {
@@ -50,7 +42,7 @@ export function useReceiptSplitPolling(options: Options) {
     setAutoOpenReceiptSplit,
     showToast,
   } = options
-  const [jobIds, setJobIds] = useState<string[]>(() => readStoredIds(JOB_IDS_KEY))
+  const [jobIds, setJobIds] = useState<string[]>(() => readStoredScanJobIds(JOB_IDS_KEY))
   const jobIdsRef = useRef(jobIds)
   /**
    * One-shot record of the completion toasts already raised, and of every result already read

@@ -5,19 +5,9 @@ import type { AppTab } from '../types'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
 import { scanReviewAction } from './scanReviewAction'
+import { readStoredScanJobIds } from './scanJobIds'
 
 const RECEIPT_SCAN_JOB_IDS_KEY = 'receipt_scan_job_ids'
-
-function readStoredIds(key: string): string[] {
-  try {
-    const value = JSON.parse(localStorage.getItem(key) || '[]')
-    return Array.isArray(value)
-      ? value.filter((id): id is string => typeof id === 'string')
-      : []
-  } catch {
-    return []
-  }
-}
 
 function storeIds(key: string, ids: string[]): void {
   try {
@@ -65,7 +55,7 @@ export interface UseReceiptScanPollingResult {
 export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): UseReceiptScanPollingResult {
   const { token, activeTabRef, isLedgerAddOpenRef, setActiveTab, setAutoOpenLedgerAdd, showToast } = options
 
-  const [receiptScanJobIds, setReceiptScanJobIds] = useState<string[]>(() => readStoredIds(RECEIPT_SCAN_JOB_IDS_KEY))
+  const [receiptScanJobIds, setReceiptScanJobIds] = useState<string[]>(() => readStoredScanJobIds(RECEIPT_SCAN_JOB_IDS_KEY))
   const receiptScanJobIdsRef = useRef(receiptScanJobIds)
   /**
    * One-shot record of the completion toasts already raised. Two finished scans take turns being

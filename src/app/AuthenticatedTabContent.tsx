@@ -299,6 +299,8 @@ export function AuthenticatedTabContent({
           onAddTransaction={(tx, documents) => financial.handleAddTransaction(tx, prefs.setActiveTab, documents)}
           onDeleteTransaction={financial.handleDeleteTransaction}
           onUpdateTransaction={financial.handleUpdateTransaction}
+          activeSyncId={financial.activeTransactionSyncIds[0] ?? null}
+          activeSyncIds={financial.activeTransactionSyncIds}
           onOutsideCycleSave={handleOutsideCycleSave}
           categories={financial.allCategories}
           selectedMonth={nav.selectedMonth}

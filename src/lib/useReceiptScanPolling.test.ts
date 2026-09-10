@@ -32,9 +32,9 @@ describe('useReceiptScanPolling', () => {
   })
 
   it('retains a completed job until consumption, then clears it once and does not restore it', async () => {
-    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(['scan-complete']))
+    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(['ocr-complete']))
     apiMocks.fetchReceiptScanJob.mockResolvedValue({
-      scanId: 'scan-complete',
+      scanId: 'ocr-complete',
       status: 'completed',
       result: {
         description: 'Lunch',
@@ -53,14 +53,14 @@ describe('useReceiptScanPolling', () => {
     const first = renderHook(() => useReceiptScanPolling(options))
 
     await waitFor(() => {
-      expect(first.result.current.activeReceiptScanDraft?.jobId).toBe('scan-complete')
+      expect(first.result.current.activeReceiptScanDraft?.jobId).toBe('ocr-complete')
     })
-    expect(first.result.current.receiptScanJobIds).toEqual(['scan-complete'])
+    expect(first.result.current.receiptScanJobIds).toEqual(['ocr-complete'])
 
     await act(async () => {
       await Promise.all([
-        first.result.current.clearReceiptScanJob('scan-complete'),
-        first.result.current.clearReceiptScanJob('scan-complete'),
+        first.result.current.clearReceiptScanJob('ocr-complete'),
+        first.result.current.clearReceiptScanJob('ocr-complete'),
       ])
     })
 
@@ -82,9 +82,9 @@ describe('useReceiptScanPolling', () => {
   // launch. The completed job is the only route to the review form on a fresh start, so a
   // notification record that outlives the session strands the result until retention deletes it.
   it('announces an unconsumed completed scan again after the app is relaunched', async () => {
-    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(['scan-complete']))
+    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(['ocr-complete']))
     apiMocks.fetchReceiptScanJob.mockResolvedValue({
-      scanId: 'scan-complete',
+      scanId: 'ocr-complete',
       status: 'completed',
       result: {
         description: 'Lunch',
@@ -111,9 +111,9 @@ describe('useReceiptScanPolling', () => {
   })
 
   it('keeps an in-modal failure available after removing and deleting the failed job', async () => {
-    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(['scan-failed']))
+    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(['ocr-failed']))
     apiMocks.fetchReceiptScanJob.mockResolvedValue({
-      scanId: 'scan-failed',
+      scanId: 'ocr-failed',
       status: 'failed',
       result: null,
       errorMessage: 'The image was too blurry.',
@@ -126,7 +126,7 @@ describe('useReceiptScanPolling', () => {
 
     await waitFor(() => {
       expect(result.current.failedScanJob).toEqual({
-        jobId: 'scan-failed',
+        jobId: 'ocr-failed',
         errorMessage: 'The image was too blurry.',
       })
     })
@@ -138,9 +138,9 @@ describe('useReceiptScanPolling', () => {
   })
 
   it('keeps the current page until a completed scan is explicitly reviewed', async () => {
-    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(['scan-review']))
+    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(['ocr-review']))
     apiMocks.fetchReceiptScanJob.mockResolvedValue({
-      scanId: 'scan-review',
+      scanId: 'ocr-review',
       status: 'completed',
       result: { description: 'Lunch', amount: 12.5, date: '2026-07-16', category: 'Food', ledgerCategory: 'Essentials', txType: 'outflow' },
       createdAt: '2026-07-16T00:00:00Z',
@@ -150,7 +150,7 @@ describe('useReceiptScanPolling', () => {
     options.activeTabRef.current = 'settings'
     const { result, unmount } = renderHook(() => useReceiptScanPolling(options))
 
-    await waitFor(() => expect(result.current.activeReceiptScanDraft?.jobId).toBe('scan-review'))
+    await waitFor(() => expect(result.current.activeReceiptScanDraft?.jobId).toBe('ocr-review'))
     expect(options.showToast).toHaveBeenCalledWith(
       'Receipt was scanned successfully.',
       'Receipt Scan Completed',
@@ -182,19 +182,19 @@ describe('useReceiptScanPolling', () => {
     apiMocks.fetchReceiptScanJob.mockReturnValue(new Promise(resolve => {
       resolveJob = resolve
     }))
-    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(['scan-cleared']))
+    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(['ocr-cleared']))
 
     const options = createOptions(true)
     const { result, unmount } = renderHook(() => useReceiptScanPolling(options))
 
     await waitFor(() => {
-      expect(apiMocks.fetchReceiptScanJob).toHaveBeenCalledWith('scan-cleared')
+      expect(apiMocks.fetchReceiptScanJob).toHaveBeenCalledWith('ocr-cleared')
     })
 
     await act(async () => {
-      await result.current.clearReceiptScanJob('scan-cleared')
+      await result.current.clearReceiptScanJob('ocr-cleared')
       resolveJob({
-        scanId: 'scan-cleared',
+        scanId: 'ocr-cleared',
         status: 'completed',
         result: {
           description: 'Late receipt',
