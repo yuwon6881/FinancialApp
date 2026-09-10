@@ -79,6 +79,7 @@ type Fixture<T> = {
 // fixture edit that either side has not caught up with fail loudly instead of silently skipping.
 const FIXTURE_VERSIONS: Record<string, number> = {
   'free-rewards': 2,
+  'stability-recovery-pacing': 2,
   'stability-reload': 2,
 }
 

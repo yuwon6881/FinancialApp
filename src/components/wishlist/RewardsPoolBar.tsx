@@ -194,8 +194,12 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         bodyClassName="space-y-3"
       >
         {/* The one place the Committed figure is spelled out. Keeping it here and nowhere else is
-            what stops the pool, the legend and the commitment card from all repeating it. */}
-        <div className="grid max-w-2xl grid-cols-2 gap-3 text-xs font-semibold">
+            what stops the pool, the legend and the commitment card from all repeating it.
+
+            One tile per line on compact. Two 132px columns inside a phone-width card could not fit
+            "Free to spend" beside its amount, so the labels truncated to "Free to..." and
+            "Commitm..." — the figures were legible and the thing they measured was not. */}
+        <div className="grid max-w-2xl grid-cols-1 gap-2 text-xs font-semibold sm:grid-cols-2 sm:gap-3">
           {(activeView === 'commitments'
             ? [
                 { key: 'committed', label: 'Committed', amount: totalEarmarked, color: committedColor },
@@ -208,7 +212,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
           ).map(item => (
             <span key={item.key} className="flex min-w-0 items-center gap-1.5 rounded-lg border border-border/60 bg-muted/35 px-2.5 py-2">
               <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} aria-hidden />
-              <span className="min-w-0 truncate text-muted-foreground">{item.label}</span>
+              <span className="min-w-0 text-muted-foreground">{item.label}</span>
               <span className="ml-auto shrink-0 font-extrabold text-foreground">{formatSensitive(item.amount)}</span>
             </span>
           ))}

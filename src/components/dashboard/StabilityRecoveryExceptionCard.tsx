@@ -6,6 +6,7 @@ import { Button } from '../ui/Button'
 import { BottomSheet } from '../ui/BottomSheet'
 import { InfoHint } from '../ui/InfoHint'
 import { cn } from '../../lib/utils'
+import { describeStabilityRecovery } from '../../lib/stabilityRecoveryNarrative'
 import { PANEL_TONES, panelClass } from '../ui/panelStyles'
 
 export interface StabilityRecoveryLedgerJump {
@@ -42,8 +43,12 @@ function formatRecoveryCycle(cycleKey: string) {
  * cycle, and it hits zero the moment this cycle's share is back -- so 871.77 marked with 520 already
  * put back left 351.77 genuinely owed while the pace asked for ceil(871.77/3) = 290.59, which 520
  * already covers. Gating on it hid the card in exactly the state the user was trying to read: still
- * short of target, still owing, and no longer told about it. Being ahead of pace changes the
- * sentence, not whether there is one.
+ * short of target, still owing, and no longer told about it. It is zero in the spending cycle too,
+ * where the plan has not opened yet. Being ahead of the plan, or ahead of its start, changes the
+ * sentence rather than whether there is one.
+ *
+ * Which sentence that is comes from `describeStabilityRecovery`, so the precedence between those
+ * states is decided in one tested place rather than in nested ternaries here.
  *
  * The card still carries no action that *changes* anything — the transaction form and ledger edit
  * own the answer. What it does carry is the marked/repaid arithmetic and a way to see it: an
@@ -61,26 +66,20 @@ export function StabilityRecoveryExceptionCard({
   if (!recovery || !recovery.isActive) return null
   if (recovery.outstandingShortfall <= 0) return null
 
-  const aheadOfPace = recovery.outstandingThisCycle <= 0
   const recoveryCohorts = recovery.recoveryCohorts ?? []
-  const hasOverlappingPlans = recoveryCohorts.length > 1
-
-  const percentRepaid = recovery.markedTotal > 0
-    ? Math.round(Math.min(1, Math.max(0, recovery.repaidTotal / recovery.markedTotal)) * 100)
-    : 0
-  // Overdue is checked first: past the window cyclesRemaining sits at 1 forever, so treating that
-  // as "the final cycle" announced the last cycle of the plan every cycle from then on.
-  //
-  // Overlapping plans are excluded too. The aggregate counts down the *most urgent* cohort, so an
-  // older plan on its last cycle set this while a newer cohort still had all three -- and the card
-  // called the whole recovery final while the list below it said "3 cycles left".
-  const isFinalCycle = !recovery.isOverdue && !hasOverlappingPlans && recovery.cyclesRemaining <= 1
-  // Two money figures side by side read as additive unless the containment is said out loud: this
-  // cycle's ask is a slice of the shortfall, never money owed on top of it. Once the pace asks for
-  // the whole remaining shortfall -- the final cycle, and every cycle past the window -- naming both
-  // would print the same figure twice, so that case states it once.
-  const asksForWholeShortfall =
-    recovery.outstandingThisCycle >= recovery.outstandingShortfall - 0.005
+  const {
+    status,
+    shortfall,
+    askThisCycle,
+    // Two money figures side by side read as additive unless the containment is said out loud: this
+    // cycle's ask is a slice of the shortfall, never money owed on top of it. Once the ask covers
+    // the whole remaining shortfall, naming both would print the same figure twice.
+    askIsWholeShortfall,
+    cyclesRemaining,
+    hasOverlappingPlans,
+    isFinalCycle,
+    percentRepaid,
+  } = describeStabilityRecovery(recovery)
   // The jump needs a window to filter on, and only the server can say when the fund was last full.
   const canShowMovements = Boolean(onNavigateToLedger && recovery.recoveryFromDate)
 
@@ -111,15 +110,19 @@ export function StabilityRecoveryExceptionCard({
             </h3>
           </div>
 
-          {aheadOfPace ? (
+          {status === 'deferred' ? (
+            <span className="shrink-0 rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-bold text-muted-foreground">
+              Starts next cycle
+            </span>
+          ) : status === 'aheadOfPace' ? (
             <span className="shrink-0 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
               Ahead of plan
             </span>
-          ) : recovery.isOverdue ? (
+          ) : status === 'overdue' ? (
             <span className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-bold text-destructive">
               Plan overdue
             </span>
-          ) : isFinalCycle ? (
+          ) : status === 'finalCycle' ? (
             <span className="shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400">
               Final cycle
             </span>
@@ -127,28 +130,35 @@ export function StabilityRecoveryExceptionCard({
         </div>
 
         <p className="text-xs leading-relaxed text-muted-foreground">
-          {aheadOfPace ? (
+          {status === 'deferred' ? (
+            <>
+              Nothing to put back this cycle — you have just used the fund.{' '}
+              {formatSensitive(shortfall)} is short in total.{' '}
+            </>
+          ) : status === 'aheadOfPace' ? (
             <>
               Nothing more is needed this cycle — you are ahead of the plan.{' '}
-              {formatSensitive(recovery.outstandingShortfall)} is still short in total.{' '}
+              {formatSensitive(shortfall)} is still short in total.{' '}
             </>
-          ) : asksForWholeShortfall ? (
-            <>Put back {formatSensitive(recovery.outstandingThisCycle)} this cycle to clear what is still short.{' '}</>
+          ) : askIsWholeShortfall ? (
+            <>Put back {formatSensitive(askThisCycle)} this cycle to clear what is still short.{' '}</>
           ) : (
             <>
-              Put back {formatSensitive(recovery.outstandingThisCycle)} this cycle — part of the{' '}
-              {formatSensitive(recovery.outstandingShortfall)} still short, not money on top of it.{' '}
+              Put back {formatSensitive(askThisCycle)} this cycle — part of the{' '}
+              {formatSensitive(shortfall)} still short, not money on top of it.{' '}
             </>
           )}
-          {hasOverlappingPlans
-            ? recovery.isOverdue
-              ? <>At least one three-cycle plan is overdue; newer spending keeps its own window.</>
-              : <>Each cycle&rsquo;s Stability spending keeps its own three-cycle plan.</>
-            : recovery.isOverdue
-              ? <>The planned cycles have run out.</>
-              : isFinalCycle
-                ? <>This is the final planned cycle.</>
-                : <>The plan spreads it over {recovery.cyclesRemaining} cycles, counting this one.</>}
+          {status === 'deferred'
+            ? <>Putting it back starts next cycle, spread over {cyclesRemaining} cycles.</>
+            : hasOverlappingPlans
+              ? recovery.isOverdue
+                ? <>At least one plan is overdue; newer spending keeps its own window.</>
+                : <>Each cycle&rsquo;s Stability spending keeps its own three-cycle plan.</>
+              : recovery.isOverdue
+                ? <>The planned cycles have run out.</>
+                : isFinalCycle
+                  ? <>This is the final planned cycle.</>
+                  : <>The plan spreads it over {cyclesRemaining} cycles, counting this one.</>}
         </p>
 
         <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-3.5">
@@ -213,35 +223,44 @@ export function StabilityRecoveryExceptionCard({
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 border-t border-border/40 pt-1.5">
               <dt className="font-semibold text-foreground">Still short</dt>
               <dd className="text-right font-extrabold tabular-nums text-amber-600 dark:text-amber-400">
-                {formatSensitive(recovery.outstandingShortfall)}
+                {formatSensitive(shortfall)}
               </dd>
             </div>
             {/* One label carrying two unrelated facts left its value attached to only the second of
                 them. Split so each figure has its own line, and name the cycle share outright: it is
                 what the headline asks for, and reading it directly under "still short" is what shows
-                it to be a slice of that figure rather than an addition to it. */}
+                it to be a slice of that figure rather than an addition to it.
+
+                One label at every width, wrapping rather than switching: the two responsive copies
+                differed only by a "spread over N cycles" tail the sentence above already carries,
+                and the compact copy is the one the phone has to be able to read in full. With
+                overlapping plans the figure is a sum of cohort shares that can exceed the shortfall
+                above it once a cohort is repaid in full, so it says "combined" instead. */}
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 border-t border-border/40 pt-1.5">
               <dt className="min-w-0 leading-snug text-muted-foreground">
-                {/* Compact drops only the "spread over N cycles" tail, never the containment
-                    wording itself. With overlapping plans the figure is the sum of several
-                    cohorts' shares and can exceed the shortfall above it once a cohort has been
-                    repaid in full this cycle, so calling it "this cycle's share of that" on a
-                    phone described arithmetic that does not add up. */}
-                <span className="sm:hidden">
-                  {hasOverlappingPlans ? 'Combined plan for this cycle' : <>This cycle&rsquo;s share of that</>}
-                </span>
-                <span className="hidden sm:inline">
-                  {hasOverlappingPlans
-                    ? 'Combined plan for this cycle'
-                    : <>This cycle&rsquo;s share of that, spread over {recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'}</>}
-                </span>
+                {hasOverlappingPlans
+                  ? 'Combined plan for this cycle'
+                  : status === 'deferred'
+                    ? 'Planned for this cycle'
+                    : <>This cycle&rsquo;s share of that</>}
               </dt>
-              <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.requiredThisCycle)}</dd>
+              <dd className="text-right font-semibold tabular-nums text-foreground">
+                {status === 'deferred'
+                  ? <span className="font-semibold text-muted-foreground">Starts next cycle</span>
+                  : formatSensitive(recovery.requiredThisCycle)}
+              </dd>
             </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
-              <dt className="min-w-0 leading-snug text-muted-foreground">Of that share, already back</dt>
-              <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.toppedUpThisCycle)}</dd>
-            </div>
+            {/* Hidden only while nothing has been asked for and nothing has gone back: a row reading
+                "of that share, already back: 0.00" under a share that does not exist yet is noise on
+                the smallest screen. Money put back early still shows. */}
+            {(status !== 'deferred' || recovery.toppedUpThisCycle > 0) && (
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
+                <dt className="min-w-0 leading-snug text-muted-foreground">
+                  {status === 'deferred' ? 'Already put back early' : 'Of that share, already back'}
+                </dt>
+                <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.toppedUpThisCycle)}</dd>
+              </div>
+            )}
             {/* Context rather than part of the subtraction, so it sits below the plan rows instead
                 of between "still short" and the share taken out of it. */}
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 border-t border-border/40 pt-1.5">
@@ -275,7 +294,9 @@ export function StabilityRecoveryExceptionCard({
                       >
                         {cohort.isOverdue
                           ? 'Overdue'
-                          : `${cohort.cyclesRemaining} ${cohort.cyclesRemaining === 1 ? 'cycle' : 'cycles'} left`}
+                          : cohort.isDeferred
+                            ? 'Starts next cycle'
+                            : `${cohort.cyclesRemaining} ${cohort.cyclesRemaining === 1 ? 'cycle' : 'cycles'} left`}
                       </span>
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-2 border-t border-border/40 pt-2">
@@ -288,7 +309,7 @@ export function StabilityRecoveryExceptionCard({
                       <div className="text-right">
                         <p className="text-muted-foreground">Planned this cycle</p>
                         <p className="font-semibold tabular-nums text-foreground">
-                          {formatSensitive(cohort.requiredThisCycle)}
+                          {cohort.isDeferred ? '—' : formatSensitive(cohort.requiredThisCycle)}
                         </p>
                       </div>
                     </div>
@@ -296,7 +317,8 @@ export function StabilityRecoveryExceptionCard({
                 ))}
               </ul>
               <p className="text-xs leading-snug text-muted-foreground">
-                Reimbursements reduce the combined plan above; Ledger completion still follows the oldest withdrawal first.
+                Each plan starts the cycle after the money left. Putting money back reduces the combined
+                plan above; Ledger completion still follows the oldest withdrawal first.
               </p>
             </div>
           ) : null}

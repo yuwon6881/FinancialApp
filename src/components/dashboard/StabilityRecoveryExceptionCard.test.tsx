@@ -110,8 +110,7 @@ describe('StabilityRecoveryExceptionCard', () => {
 
     openRecoveryDetails()
     expect(screen.getByText(/Each cycle.s Stability spending keeps its own three-cycle plan/)).toBeTruthy()
-    // Both responsive copies of the label, compact and expanded.
-    expect(screen.getAllByText('Combined plan for this cycle')).toHaveLength(2)
+    expect(screen.getByText('Combined plan for this cycle')).toBeTruthy()
     expect(screen.getByText('Jun 2026 cycle')).toBeTruthy()
     expect(screen.getByText('Jul 2026 cycle')).toBeTruthy()
     expect(screen.getByText('3 cycles left')).toBeTruthy()
@@ -140,7 +139,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     openRecoveryDetails()
-    expect(screen.getByText(/At least one three-cycle plan is overdue/)).toBeTruthy()
+    expect(screen.getByText(/At least one plan is overdue/)).toBeTruthy()
     expect(screen.getByText('Overdue')).toBeTruthy()
     expect(screen.getByText('3 cycles left')).toBeTruthy()
   })
@@ -168,7 +167,88 @@ describe('StabilityRecoveryExceptionCard', () => {
       /Put back \$506\.64 this cycle — part of the \$1013\.27 still short, not money on top of it/
     )).toBeTruthy()
     expect(screen.getByText(/spreads it over 2 cycles, counting this one/)).toBeTruthy()
-    expect(screen.getByText(/This cycle.s share of that, spread over 2 cycles/)).toBeTruthy()
+    expect(screen.getByText(/^This cycle.s share of that$/)).toBeTruthy()
+  })
+
+  // The reported complaint: the fund had just been tapped and the card asked for a third of it back
+  // in the same cycle, out of income that had already been split and spent.
+  it('asks for nothing in the cycle the money left the fund', () => {
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({
+          isDeferred: true,
+          outstandingShortfall: 500,
+          requiredThisCycle: 0,
+          outstandingThisCycle: 0,
+          lastDrawdownCycleKey: '2026-07',
+        })}
+        formatSensitive={format}
+      />
+    )
+
+    expect(screen.getByText('Starts next cycle')).toBeTruthy()
+    expect(screen.getByText(/Nothing to put back this cycle/)).toBeTruthy()
+    expect(screen.getByText(/\$500\.00 is short in total/)).toBeTruthy()
+    expect(screen.getByText(/Putting it back starts next cycle, spread over 3 cycles/)).toBeTruthy()
+    // A deferred cycle is not a funded one, so it must not be congratulated for being ahead.
+    expect(screen.queryByText('Ahead of plan')).toBeNull()
+    expect(screen.queryByText(/Put back \$0\.00/)).toBeNull()
+
+    openRecoveryDetails()
+    expect(screen.getByText('Planned for this cycle')).toBeTruthy()
+    expect(screen.getAllByText('Starts next cycle').length).toBeGreaterThan(1)
+    // Nothing was asked for, so there is no share for money to be "already back" against.
+    expect(screen.queryByText('Of that share, already back')).toBeNull()
+  })
+
+  it('still credits money put back early during the deferred cycle', () => {
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({
+          isDeferred: true,
+          outstandingShortfall: 400,
+          requiredThisCycle: 0,
+          outstandingThisCycle: 0,
+          toppedUpThisCycle: 100,
+        })}
+        formatSensitive={format}
+      />
+    )
+
+    openRecoveryDetails()
+    expect(screen.getByText('Already put back early')).toBeTruthy()
+    expect(screen.getByText('$100.00')).toBeTruthy()
+  })
+
+  it('names a deferred cohort in the per-cycle breakdown', () => {
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({
+          outstandingShortfall: 900,
+          requiredThisCycle: 200,
+          outstandingThisCycle: 200,
+          recoveryCohorts: [
+            {
+              originCycleKey: '2026-06', fromDate: '2026-06-04', transactionCount: 1,
+              remainingShortfall: 600, cyclesRemaining: 3, requiredThisCycle: 200, isOverdue: false,
+            },
+            {
+              originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 1,
+              remainingShortfall: 300, cyclesRemaining: 3, requiredThisCycle: 0, isOverdue: false,
+              isDeferred: true,
+            },
+          ],
+        })}
+        formatSensitive={format}
+      />
+    )
+
+    openRecoveryDetails()
+    // The live cohort still asks; the new one says when it will start rather than showing a zero.
+    expect(screen.getByText('Starts next cycle')).toBeTruthy()
+    expect(screen.getByText('3 cycles left')).toBeTruthy()
+    expect(screen.getByText('—')).toBeTruthy()
+    expect(screen.getByText(/Each plan starts the cycle after the money left/)).toBeTruthy()
   })
 
   it('says so plainly on the last cycle of the plan', () => {
@@ -365,9 +445,10 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.getByText(/This is the final planned cycle/)).toBeTruthy()
   })
 
-  // Compact renders its own copy of the label. Calling a sum of cohort shares "this cycle's share
-  // of that" describes arithmetic the card does not show, so both tiers say "combined" together.
-  it('names the combined plan on compact as well as expanded', () => {
+  // Calling a sum of cohort shares "this cycle's share of that" describes arithmetic the card does
+  // not show, so the label says "combined" instead — at every width, in one copy that wraps rather
+  // than two that differed only in a tail the sentence above already carries.
+  it('names the combined plan once, at every width', () => {
     render(
       <StabilityRecoveryExceptionCard
         recovery={recovery({
@@ -390,7 +471,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     openRecoveryDetails()
-    expect(screen.getAllByText('Combined plan for this cycle')).toHaveLength(2)
+    expect(screen.getAllByText('Combined plan for this cycle')).toHaveLength(1)
     expect(screen.queryByText(/^This cycle.s share of that$/)).toBeNull()
   })
 })

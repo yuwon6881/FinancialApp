@@ -6,8 +6,14 @@
 // module owns only the part that has to answer while the user types an amount, and the server
 // re-derives the split authoritatively on save.
 
-import type { StabilityRecovery, StabilityRecoveryCohort, Transaction } from '@/types'
-import { getCycleYearAndMonthForDate } from './cycle'
+import type { StabilityRecovery, Transaction } from '@/types'
+import {
+  type RecoveryCohortInput,
+  computeRecoveryCohortPlan,
+  cycleKeyForDate,
+  cyclesFromAnchor,
+  isDeferredFromAnchor,
+} from './stabilityRecoveryPacing'
 import {
   type StabilityReloadMovement,
   type StabilityReloadObligation,
@@ -18,6 +24,7 @@ import {
   replayStabilityReload,
 } from './stabilityRecoveryReplay'
 
+export * from './stabilityRecoveryPacing'
 export * from './stabilityRecoveryReplay'
 export * from './stabilityRecoveryOffers'
 
@@ -66,106 +73,6 @@ function openingStateFor(
       baseMovements.reduce((sum, movement) => sum + (movement.marked ? Math.max(0, -movement.change) : 0), 0),
   )
   return { outstanding, oldestOutstandingDate: recovery.openingOldestDate ?? recovery.recoveryFromDate }
-}
-
-/** The cycle a `yyyy-MM-dd` date belongs to, as the `yyyy-MM` key the pace is measured in. */
-function cycleKeyForDate(date: string, cycleDay: number) {
-  const [year, month, day] = date.split('-').map(Number)
-  if (![year, month, day].every(Number.isFinite)) return undefined
-  const { year: cycleYear, monthIndex } = getCycleYearAndMonthForDate(
-    new Date(year, month - 1, day),
-    cycleDay,
-  )
-  return `${cycleYear}-${String(monthIndex).padStart(2, '0')}`
-}
-
-function cyclesFromAnchor(anchor: string | undefined, currentCycleKey: string | undefined, horizon: number) {
-  if (!anchor || !currentCycleKey) return horizon
-  const from = anchor.split('-').map(Number)
-  const to = currentCycleKey.split('-').map(Number)
-  if (from.length !== 2 || to.length !== 2 || from.some(value => !Number.isFinite(value)) || to.some(value => !Number.isFinite(value))) {
-    return horizon
-  }
-  const elapsed = (to[0] - from[0]) * 12 + to[1] - from[1]
-  return horizon - Math.max(0, elapsed)
-}
-
-export interface RecoveryCohortInput {
-  originCycleKey: string
-  fromDate: string
-  transactionCount: number
-  remainingShortfall: number
-  repaidThisCycle: number
-}
-
-export interface RecoveryCohortPlan {
-  cohorts: StabilityRecoveryCohort[]
-  cyclesRemaining: number
-  requiredThisCycle: number
-  outstandingThisCycle: number
-  isOverdue: boolean
-}
-
-/** Mirrors the API's independent origin-cycle schedule and aggregate combined ask. */
-export function computeRecoveryCohortPlan(input: {
-  cohorts: RecoveryCohortInput[]
-  currentCycleKey: string
-  horizon?: number
-  outstandingShortfall: number
-  toppedUpThisCycle: number
-}): RecoveryCohortPlan {
-  const horizon = Math.max(1, input.horizon ?? 3)
-  const grouped = new Map<string, RecoveryCohortInput>()
-  for (const cohort of input.cohorts) {
-    if (cohort.remainingShortfall <= 0 && cohort.repaidThisCycle <= 0) continue
-    const existing = grouped.get(cohort.originCycleKey)
-    grouped.set(cohort.originCycleKey, {
-      originCycleKey: cohort.originCycleKey,
-      fromDate: existing && existing.fromDate < cohort.fromDate ? existing.fromDate : cohort.fromDate,
-      transactionCount: (existing?.transactionCount ?? 0) + Math.max(1, cohort.transactionCount),
-      remainingShortfall: (existing?.remainingShortfall ?? 0) + Math.max(0, cohort.remainingShortfall),
-      repaidThisCycle: (existing?.repaidThisCycle ?? 0) + Math.max(0, cohort.repaidThisCycle),
-    })
-  }
-  const cohorts = [...grouped.values()]
-    .map(cohort => {
-      const rawCyclesRemaining = cyclesFromAnchor(
-        cohort.originCycleKey,
-        input.currentCycleKey,
-        horizon,
-      )
-      const cyclesRemaining = Math.max(1, rawCyclesRemaining)
-      const anchor = Math.max(0, cohort.remainingShortfall) + Math.max(0, cohort.repaidThisCycle)
-      const requiredThisCycle = cyclesRemaining <= 1
-        ? anchor
-        : Math.ceil((anchor / cyclesRemaining) * 100) / 100
-      return {
-        originCycleKey: cohort.originCycleKey,
-        fromDate: cohort.fromDate,
-        transactionCount: Math.max(1, cohort.transactionCount),
-        remainingShortfall: Math.max(0, cohort.remainingShortfall),
-        cyclesRemaining,
-        requiredThisCycle,
-        isOverdue: rawCyclesRemaining <= 0 && cohort.remainingShortfall > 0,
-      }
-    })
-    .sort((left, right) =>
-      left.originCycleKey.localeCompare(right.originCycleKey) || left.fromDate.localeCompare(right.fromDate))
-  const open = cohorts.filter(cohort => cohort.remainingShortfall > 0)
-  const requiredThisCycle = cohorts.reduce((sum, cohort) => sum + cohort.requiredThisCycle, 0)
-  const outstandingShortfall = Math.max(0, input.outstandingShortfall)
-  return {
-    cohorts,
-    cyclesRemaining: open.length
-      ? Math.min(...open.map(cohort => cohort.cyclesRemaining))
-      : horizon,
-    requiredThisCycle,
-    outstandingThisCycle: Math.max(
-      0,
-      Math.min(requiredThisCycle - Math.max(0, input.toppedUpThisCycle), outstandingShortfall),
-    ),
-    isOverdue: open.some(cohort => cohort.isOverdue),
-  }
 }
 
 /** Applies a projected FIFO replay to each visible drawdown row. */
@@ -322,9 +229,13 @@ export function projectStabilityRecovery(input: {
     })
     : undefined
   const paceAnchor = outstandingShortfall + toppedUpThisCycle
-  const fallbackRequiredThisCycle = cyclesRemaining <= 1
-    ? paceAnchor
-    : Math.ceil((paceAnchor / cyclesRemaining) * 100) / 100
+  const fallbackIsDeferred = outstandingShortfall > 0
+    && isDeferredFromAnchor(lastDrawdownCycleKey, input.currentCycleKey)
+  const fallbackRequiredThisCycle = fallbackIsDeferred
+    ? 0
+    : cyclesRemaining <= 1
+      ? paceAnchor
+      : Math.ceil((paceAnchor / cyclesRemaining) * 100) / 100
   const requiredThisCycle = cohortPlan?.requiredThisCycle ?? fallbackRequiredThisCycle
 
   const effectiveTarget = input.planPoints?.length
@@ -342,6 +253,7 @@ export function projectStabilityRecovery(input: {
     recoveryCohorts: cohortPlan?.cohorts ?? input.recovery.recoveryCohorts,
     cyclesRemaining: cohortPlan?.cyclesRemaining ?? Math.max(1, cyclesRemaining),
     isOverdue: cohortPlan?.isOverdue ?? (cyclesRemaining <= 0 && outstandingShortfall > 0),
+    isDeferred: cohortPlan?.isDeferred ?? fallbackIsDeferred,
     toppedUpThisCycle,
     requiredThisCycle,
     outstandingThisCycle: cohortPlan?.outstandingThisCycle ?? Math.max(

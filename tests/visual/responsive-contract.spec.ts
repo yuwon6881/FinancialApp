@@ -459,6 +459,76 @@ test('AI page actions stay beside their page titles', async ({ page }) => {
   }
 })
 
+/**
+ * The reported defect: inside a phone-width card the pool's claim tiles and the cards' figure grids
+ * were still two columns, so "Free to spend" and "Committed" clipped to "Free to..." and
+ * "Commitm..." — the figures were legible and the thing they measured was not. Wrapping is fine
+ * here; clipping is not, so this measures overflow rather than pixels.
+ */
+test('commitments and rewards detail labels are never clipped', async ({ page }) => {
+  test.skip(test.info().project.name.endsWith('-dark'), 'Geometry is theme-independent; light projects cover every layout tier.')
+
+  await mockApi(page, {
+    // A five-figure balance and a five-figure earmark: the labels only ran out of room next to
+    // amounts of a realistic length, which is why the shared zero-balance fixture never showed it.
+    dashboard: {
+      categories: [
+        { id: 'rewards', name: 'Rewards', allocation: 0.2, target: 20_000, incomeAllocated: 14_820.5, budget: 0, netChange: 14_820.5, spent: 0, remaining: 14_820.5 },
+        { id: 'salary', name: 'Salary', allocation: 0, target: 0, incomeAllocated: 0, budget: 0, netChange: 5_500, spent: 0, remaining: 5_500 },
+      ],
+    },
+    savingsGoals: [{
+      id: 41,
+      name: 'Car Maintenance',
+      targetAmount: 12_350,
+      earmarkedAmount: 11_240.75,
+      fundingBucket: 'Rewards',
+      targetDate: '2026-10-15',
+      priority: 'Medium',
+      status: 'active',
+      isRecurring: true,
+      recurrenceMonths: 3,
+      cycleFundedAmount: 0,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }],
+    wishlist: [{
+      id: 42,
+      name: 'Headphones',
+      price: 480,
+      priority: 'High',
+      isPurchased: false,
+      isActive: true,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }],
+  })
+
+  for (const tab of ['commitments', 'rewards'] as const) {
+    await page.goto('/commitments-rewards', { waitUntil: 'domcontentloaded' })
+    await page.locator(`#commitments-rewards-panel-commitments > div`).first().waitFor()
+    if (tab === 'rewards') await page.getByRole('tab', { name: /^Rewards/ }).click()
+    await waitForStableLayout(page)
+
+    for (const summary of await page.locator('main summary', { hasText: 'Details' }).all()) {
+      if (await summary.isVisible()) await summary.click()
+    }
+    await waitForStableLayout(page)
+
+    const measured = await page.evaluate(() => {
+      const bodies = Array.from(document.querySelectorAll<HTMLElement>('main details[open] > div'))
+      return {
+        rows: bodies.reduce((total, body) => total + body.querySelectorAll('*').length, 0),
+        clipped: bodies.flatMap(body => Array.from(body.querySelectorAll<HTMLElement>('*'))
+          .filter(element => element.scrollWidth > element.clientWidth + 1 && element.clientWidth > 0)
+          .map(element => `${element.className} :: ${element.textContent?.slice(0, 40)}`)),
+      }
+    })
+
+    // Without this the assertion below passes on a page that rendered no detail rows at all.
+    expect(measured.rows, `no ${tab} detail rows were measured`).toBeGreaterThan(4)
+    expect(measured.clipped, `${tab} detail text is clipped rather than wrapped`).toEqual([])
+  }
+})
+
 test('bill review never auto-opens and exposes no automatic-open preference', async ({ page }) => {
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
   await waitForStableLayout(page)

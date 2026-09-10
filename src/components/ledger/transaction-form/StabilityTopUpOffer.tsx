@@ -81,9 +81,13 @@ export function StabilityTopUpOffer({
         </p>
       )}
 
+      {/* Two different reasons to suggest nothing, and calling the first one "covered" told the user
+          they had already put money back when they had not. */}
       {!accepted && offer.proposedTopUp <= 0 && (
         <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-          This cycleâ€™s planned amount is covered. You can still choose to put back more.
+          {offer.isDeferred
+            ? <>Putting this back starts next cycle, so nothing is asked for now. You can still put some back early.</>
+            : <>This cycle&rsquo;s planned amount is covered. You can still choose to put back more.</>}
         </p>
       )}
 

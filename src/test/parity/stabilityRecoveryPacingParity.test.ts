@@ -17,12 +17,14 @@ interface StabilityRecoveryPacingCase {
     requiredThisCycle: number
     outstandingThisCycle: number
     isOverdue: boolean
+    isDeferred: boolean
     cohorts: Array<{
       originCycleKey: string
       transactionCount: number
       cyclesRemaining: number
       requiredThisCycle: number
       isOverdue: boolean
+      isDeferred: boolean
     }>
   }
 }
@@ -38,6 +40,7 @@ describe('Stability recovery pacing parity', () => {
       expect(actual.requiredThisCycle).toBeCloseTo(expected.requiredThisCycle, 2)
       expect(actual.outstandingThisCycle).toBeCloseTo(expected.outstandingThisCycle, 2)
       expect(actual.isOverdue).toBe(expected.isOverdue)
+      expect(actual.isDeferred).toBe(expected.isDeferred)
       expect(actual.cohorts).toHaveLength(expected.cohorts.length)
       for (let index = 0; index < expected.cohorts.length; index += 1) {
         expect(actual.cohorts[index]).toMatchObject(expected.cohorts[index])

@@ -111,6 +111,7 @@ export function useStabilityTopUpOffer(options: UseStabilityTopUpOfferOptions) {
       maxTopUp: saved,
       safeCap: saved,
       isReduced: false,
+      isDeferred: false,
       draws: drawsFor(saved, bucketsForOffer),
     }
   }, [isRecoveryCycleDate, state, stabilityTopUpContext, topUpBuckets, transactions])

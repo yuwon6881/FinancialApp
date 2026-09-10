@@ -152,21 +152,25 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
         onOpenChange={detail.setOpen}
         expandedFrom="lg"
       >
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-          <div>
+        {/* Label and figure on one line per row, stacked on compact. Two columns inside a
+            phone-width card left each pair about 130px, which wrapped "Still to save" and "Every 3
+            months" into stacks of single words; the card is wide enough for label and figure side
+            by side once the row owns the whole line. */}
+        <dl className="grid grid-cols-1 gap-x-3 gap-y-1.5 text-xs sm:grid-cols-2">
+          <div className="flex items-baseline justify-between gap-2 sm:block">
             <dt className="font-semibold text-muted-foreground">Per cycle</dt>
             <dd className="font-bold text-foreground">{formatSensitive(pace.requiredPerCycle)}</dd>
           </div>
-          <div>
+          <div className="flex items-baseline justify-between gap-2 sm:block">
             <dt className="font-semibold text-muted-foreground">Time left</dt>
             <dd className="font-bold text-foreground">{describeHorizon(pace)}</dd>
           </div>
-          <div>
+          <div className="flex items-baseline justify-between gap-2 sm:block">
             <dt className="font-semibold text-muted-foreground">Still to save</dt>
             <dd className="font-bold text-foreground">{formatSensitive(pace.remaining)}</dd>
           </div>
           {goal.isRecurring && (
-            <div>
+            <div className="flex items-baseline justify-between gap-2 sm:block">
               <dt className="font-semibold text-muted-foreground">Repeats</dt>
               <dd className="font-bold text-foreground">Every {goal.recurrenceMonths} months</dd>
             </div>
@@ -174,9 +178,9 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
           {/* Figures, not a second bar. The headline bar above already draws this commitment's
               progress; a thin track under it for the cycle's own share made every card carry two
               bars, and a page of commitments read as a stack of tracks with no hierarchy. */}
-          <div>
+          <div className="flex items-baseline justify-between gap-2 sm:block">
             <dt className="font-semibold text-muted-foreground">This cycle</dt>
-            <dd className={`font-bold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
+            <dd className={`text-right font-bold sm:text-left ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
               {formatSensitive(pace.fundedThisCycle)}
               <span className="font-semibold text-muted-foreground"> of {formatSensitive(pace.requiredPerCycle)} · {cyclePct.toFixed(0)}%</span>
             </dd>

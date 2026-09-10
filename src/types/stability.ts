@@ -26,7 +26,10 @@ export interface StabilityReloadObligation {
   date?: string
 }
 
-/** One financial cycle's independent three-cycle Stability recovery schedule. */
+/**
+ * One financial cycle's independent three-cycle Stability recovery schedule. The three cycles are
+ * the ones *after* the money left; the spending cycle itself is `isDeferred`.
+ */
 export interface StabilityRecoveryCohort {
   originCycleKey: string
   /** Earliest marked withdrawal in this cohort, as `yyyy-MM-dd`. */
@@ -37,6 +40,8 @@ export interface StabilityRecoveryCohort {
   /** This cohort's share before the cycle's combined reimbursements are credited. */
   requiredThisCycle: number
   isOverdue: boolean
+  /** The spending cycle itself: the plan is known but has not opened, so nothing is due yet. */
+  isDeferred?: boolean
 }
 
 /**
@@ -72,6 +77,12 @@ export interface StabilityRecovery {
   outstandingThisCycle: number
   /** The three-cycle window has passed and money is still owed. Distinct from the final cycle. */
   isOverdue: boolean
+  /**
+   * Every plan that still owes money opens in a later cycle, so nothing is due now. Not the same as
+   * being ahead of the plan: nothing was funded, nothing was due — which the amounts on their own
+   * cannot tell apart.
+   */
+  isDeferred?: boolean
   lastDrawdownCycleKey?: string
   /** What has gone back against the drawdowns counted in `markedTotal`. */
   repaidTotal: number

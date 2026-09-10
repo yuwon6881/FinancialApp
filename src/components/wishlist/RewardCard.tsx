@@ -119,21 +119,24 @@ export const RewardCard: React.FC<RewardCardProps> = ({
         onOpenChange={detail.setOpen}
         expandedFrom="lg"
       >
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-          <div>
+        {/* One row per line on compact, label and figure on the same line — the same contract the
+            commitment card's detail grid uses, and for the same reason: two columns inside a
+            phone-width card wrapped "Free after commitments" into a stack of single words. */}
+        <dl className="grid grid-cols-1 gap-x-3 gap-y-1.5 text-xs sm:grid-cols-2">
+          <div className="flex items-baseline justify-between gap-2 sm:block">
             <dt className="font-semibold text-muted-foreground">Priority</dt>
             <dd className="font-bold text-foreground">{item.priority}</dd>
           </div>
-          <div>
+          <div className="flex items-baseline justify-between gap-2 sm:block">
             <dt className="font-semibold text-muted-foreground">Free rewards</dt>
             <dd className="font-bold text-foreground">{formatSensitive(claimableBalance)}</dd>
           </div>
-          <div>
+          <div className="flex items-baseline justify-between gap-2 sm:block">
             <dt className="font-semibold text-muted-foreground">Free after commitments</dt>
             <dd className="font-bold text-foreground">{formatSensitive(freeAfterGoalPace)}</dd>
           </div>
           {timeline && (
-            <div>
+            <div className="flex items-baseline justify-between gap-2 sm:block">
               <dt className="font-semibold text-muted-foreground">Affordable in</dt>
               <dd className="font-bold text-foreground">{timeline}</dd>
             </div>

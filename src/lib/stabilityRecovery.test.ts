@@ -88,10 +88,73 @@ describe('independent Stability recovery cohorts', () => {
       toppedUpThisCycle: 0,
     })
 
-    expect(plan.cohorts.map(cohort => cohort.cyclesRemaining)).toEqual([2, 3])
-    expect(plan.cohorts.map(cohort => cohort.requiredThisCycle)).toEqual([300, 100])
-    expect(plan.requiredThisCycle).toBe(400)
-    expect(plan.outstandingThisCycle).toBe(400)
+    // June is on its first instalment; July's own plan opens next cycle and asks for nothing yet.
+    expect(plan.cohorts.map(cohort => cohort.cyclesRemaining)).toEqual([3, 3])
+    expect(plan.cohorts.map(cohort => cohort.isDeferred)).toEqual([false, true])
+    expect(plan.cohorts.map(cohort => cohort.requiredThisCycle)).toEqual([200, 0])
+    expect(plan.requiredThisCycle).toBe(200)
+    expect(plan.outstandingThisCycle).toBe(200)
+    // One live cohort keeps the combined plan live.
+    expect(plan.isDeferred).toBe(false)
+  })
+
+  // The reported complaint: the fund was tapped this cycle and the plan asked for a third of it
+  // back out of income that had already been split and largely spent.
+  it('asks for nothing in the cycle the money left the fund', () => {
+    const plan = computeRecoveryCohortPlan({
+      cohorts: [
+        {
+          originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 2,
+          remainingShortfall: 300, repaidThisCycle: 0,
+        },
+      ],
+      currentCycleKey: '2026-07',
+      outstandingShortfall: 300,
+      toppedUpThisCycle: 0,
+    })
+
+    expect(plan.isDeferred).toBe(true)
+    expect(plan.requiredThisCycle).toBe(0)
+    expect(plan.outstandingThisCycle).toBe(0)
+    // The plan is known, it has just not opened: all three instalments are still ahead.
+    expect(plan.cyclesRemaining).toBe(3)
+    expect(plan.isOverdue).toBe(false)
+  })
+
+  it('starts the first instalment in the cycle after the money left', () => {
+    const plan = computeRecoveryCohortPlan({
+      cohorts: [
+        {
+          originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 1,
+          remainingShortfall: 300, repaidThisCycle: 0,
+        },
+      ],
+      currentCycleKey: '2026-08',
+      outstandingShortfall: 300,
+      toppedUpThisCycle: 0,
+    })
+
+    expect(plan.isDeferred).toBe(false)
+    expect(plan.requiredThisCycle).toBe(100)
+    expect(plan.cyclesRemaining).toBe(3)
+  })
+
+  it('credits money put back early without opening the plan', () => {
+    const plan = computeRecoveryCohortPlan({
+      cohorts: [
+        {
+          originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 1,
+          remainingShortfall: 200, repaidThisCycle: 100,
+        },
+      ],
+      currentCycleKey: '2026-07',
+      outstandingShortfall: 200,
+      toppedUpThisCycle: 100,
+    })
+
+    expect(plan.isDeferred).toBe(true)
+    expect(plan.requiredThisCycle).toBe(0)
+    expect(plan.outstandingThisCycle).toBe(0)
   })
 
   it('credits reimbursements against the combined cohort requirement', () => {
@@ -111,8 +174,9 @@ describe('independent Stability recovery cohorts', () => {
       toppedUpThisCycle: 100,
     })
 
-    expect(plan.requiredThisCycle).toBe(400)
-    expect(plan.outstandingThisCycle).toBe(300)
+    // A third of the 600 June still owed before this cycle's 100 went back, less that 100.
+    expect(plan.requiredThisCycle).toBe(200)
+    expect(plan.outstandingThisCycle).toBe(100)
   })
 })
 
@@ -300,7 +364,7 @@ describe('proposeTopUp', () => {
 })
 
 describe('stability reload projection', () => {
-  it('rolls the three-cycle pace at the next cycle boundary', () => {
+  it('opens the three-cycle pace at the next cycle boundary', () => {
     const projected = projectStabilityRecovery({
       recovery: recovery({
         lastDrawdownCycleKey: '2026-07',
@@ -317,9 +381,35 @@ describe('stability reload projection', () => {
       currentCycleKey: '2026-08',
     })
 
-    expect(projected.cyclesRemaining).toBe(2)
-    expect(projected.requiredThisCycle).toBe(150)
-    expect(projected.outstandingThisCycle).toBe(150)
+    // The cycle after the drawdown is the plan's first instalment, so all three are still ahead
+    // and this one asks for a third. No cycleDay was given, so this is the aggregate fallback path.
+    expect(projected.cyclesRemaining).toBe(3)
+    expect(projected.requiredThisCycle).toBe(100)
+    expect(projected.outstandingThisCycle).toBe(100)
+    expect(projected.isDeferred).toBe(false)
+  })
+
+  it('asks for nothing on the fallback path while the drawdown cycle is still on screen', () => {
+    const projected = projectStabilityRecovery({
+      recovery: recovery({
+        lastDrawdownCycleKey: '2026-07',
+        markedTotal: 300,
+        outstandingShortfall: 300,
+        currentBalance: 7000,
+        openingOutstanding: 300,
+        toppedUpThisCycle: 0,
+      }),
+      baseTransactions: [],
+      projectedTransactions: [],
+      stabilityAlloc: 0.15,
+      projectedBalance: 7000,
+      currentCycleKey: '2026-07',
+    })
+
+    expect(projected.isDeferred).toBe(true)
+    expect(projected.requiredThisCycle).toBe(0)
+    expect(projected.outstandingThisCycle).toBe(0)
+    expect(projected.outstandingShortfall).toBe(300)
   })
 
   it('uses the authoritative opening queue when deleting an inflow that preceded the drawdown', () => {

@@ -217,7 +217,8 @@ export const stabilityRecoveryFixture = {
 
 interface MockApiOptions {
   registered?: boolean
-  stabilityRecovery?: typeof stabilityRecoveryFixture
+  /** The shared fixture, or it plus the fields a particular recovery state needs. */
+  stabilityRecovery?: typeof stabilityRecoveryFixture & Record<string, unknown>
   failStatus?: boolean
   failDocuments?: boolean
   wishlist?: WishlistItem[]

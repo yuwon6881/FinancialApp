@@ -34,6 +34,11 @@ export interface RecoveryOffer {
   safeCap: number
   /** True when committed money held the default below what the pace asked for. */
   isReduced: boolean
+  /**
+   * The plan has not opened yet — the money left the fund this cycle — so nothing is asked for and
+   * `proposedTopUp` is zero by design. Anything put back now is still accepted and still counts.
+   */
+  isDeferred: boolean
   /** Which bucket's committed money bound the default, if any. */
   limitedBy?: string
   draws: RecoveryDraw[]
@@ -138,8 +143,9 @@ export function proposeTopUp(
     : Math.min(safeCap, Math.max(0, floorToCent(requestedTopUp)))
 
   const isReduced = !wholeShortfallFits && proposedTopUp < requestedTopUp
+  const isDeferred = Boolean(recovery.isDeferred)
   if (maxTopUp <= 0) {
-    return { requestedTopUp, proposedTopUp: 0, maxTopUp: 0, safeCap, isReduced, limitedBy, draws: [] }
+    return { requestedTopUp, proposedTopUp: 0, maxTopUp: 0, safeCap, isReduced, isDeferred, limitedBy, draws: [] }
   }
 
   return {
@@ -148,6 +154,7 @@ export function proposeTopUp(
     maxTopUp,
     safeCap,
     isReduced,
+    isDeferred,
     limitedBy,
     draws: drawsFor(proposedTopUp, buckets),
   }

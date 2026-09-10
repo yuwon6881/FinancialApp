@@ -74,6 +74,42 @@ test('emergency fund recovery card reads as one subtraction', async ({ page }) =
   await expect(dialog).toHaveScreenshot('stability-recovery-card.png')
 })
 
+// The cycle the money left in: the plan is known, it just has not opened. The card has to report
+// the shortfall without asking for a share of it, and without the emerald "ahead of plan" badge
+// that every other zero-ask cycle earns.
+test('emergency fund recovery card reports a plan that starts next cycle', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page, {
+    stabilityRecovery: {
+      ...stabilityRecoveryFixture,
+      isDeferred: true,
+      toppedUpThisCycle: 0,
+      requiredThisCycle: 0,
+      outstandingThisCycle: 0,
+      recoveryCohorts: [{
+        originCycleKey: '2026-08',
+        fromDate: '2026-08-09',
+        transactionCount: 2,
+        remainingShortfall: 351.77,
+        cyclesRemaining: 3,
+        requiredThisCycle: 0,
+        isOverdue: false,
+        isDeferred: true,
+      }],
+    },
+  })
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+
+  await page.getByText('Putting it back progress').waitFor()
+  const card = page.getByText('Putting it back progress').locator('xpath=ancestor::section[1]')
+  // Exact: the sentence under the badge says "starts next cycle" too.
+  await expect(card.getByText('Starts next cycle', { exact: true })).toBeVisible()
+  await expect(card.getByText(/Nothing to put back this cycle/)).toBeVisible()
+  await waitForStableLayout(page)
+
+  await expect(card).toHaveScreenshot('stability-recovery-deferred.png')
+})
+
 // A funded Essentials envelope, mid-cycle. The shared fixture allocates nothing to Essentials, so
 // its dashboard shows the card's unranked state; these two specs are the only place the ranked
 // layout — score ring, pace marker on the bar, badge grid — is drawn at every viewport.
