@@ -8,9 +8,9 @@ export interface NavItemConfig {
   label: string
   mobileLabel: string
   Icon: React.ComponentType<{ className?: string }>
-  activeClass: string
+  activeClass?: string
   iconClass: string
-  dotClass: string
+  dotClass?: string
 }
 
 export interface MobileBottomNavProps {
@@ -26,34 +26,31 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 }) => {
   return (
     <div
-      className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[var(--app-shadow-nav-up)] transform-gpu"
-      style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px', willChange: 'transform' }}
+      className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/30 bg-background/80 backdrop-blur-2xl select-none shadow-[var(--app-shadow-nav-up)] transform-gpu"
+      style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))', paddingTop: '8px', willChange: 'transform' }}
     >
       <nav
         aria-label="Primary"
-        className="mx-auto grid w-full max-w-md justify-items-center px-2"
+        className="mx-auto grid w-full max-w-md justify-items-center px-1.5"
         style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
       >
-        {navItems.map(({ tab, mobileLabel, Icon, activeClass, iconClass, dotClass }) => {
+        {navItems.map(({ tab, mobileLabel, Icon, iconClass }) => {
           const isActive = activeTab === tab
           return (
             <Button variant="tertiary"
               key={tab}
               onClick={() => { triggerHaptic(8); onTabChange(tab) }}
               aria-current={isActive ? 'page' : undefined}
-              // `px-1`: the control scale's 16px side padding is meant for a label beside an icon,
-              // and five of those in a phone's width left each nav label about two characters.
-              className={`relative flex min-w-0 flex-col items-center gap-1 px-1 text-label cursor-pointer transition-all duration-200 w-full text-center ${
-                isActive ? 'scale-[1.03] font-bold text-foreground' : 'text-muted-foreground hover:text-foreground'
+              className={`group relative flex min-w-0 flex-col items-center gap-1 px-1 text-caption cursor-pointer transition-all duration-200 w-full text-center active:scale-95 ${
+                isActive ? 'font-semibold text-foreground' : 'text-muted-foreground/75 hover:text-foreground'
               }`}
             >
-              <span className={`relative flex size-9 items-center justify-center rounded-xl border transition-all duration-200 ${
-                isActive ? `${activeClass} shadow-sm` : 'border-transparent bg-transparent'
+              <span className={`relative flex size-8 items-center justify-center rounded-xl transition-all duration-200 ${
+                isActive ? 'bg-foreground/6 text-foreground scale-105' : 'text-muted-foreground/75'
               }`}>
-                <Icon className={`size-4.5 mx-auto ${isActive ? iconClass : 'text-muted-foreground'}`} />
-                {isActive && <span className={`absolute -top-0.5 -right-0.5 size-1.5 rounded-full ${dotClass} ring-1 ring-background`} />}
+                <Icon className={`size-4.5 mx-auto transition-colors duration-200 ${isActive ? iconClass : 'text-muted-foreground/75'}`} />
               </span>
-              <span className="truncate max-w-full px-0.5">{mobileLabel}</span>
+              <span className={`truncate max-w-full px-0.5 text-caption tracking-tight transition-colors duration-200 ${isActive ? 'font-semibold text-foreground' : 'text-muted-foreground/75'}`}>{mobileLabel}</span>
             </Button>
           )
         })}

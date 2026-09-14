@@ -208,7 +208,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         id={ledgerTransactionRowId(transaction.id, 'mobile')}
         hint={props.hint}
         disabled={props.isDeleting}
-        className="relative overflow-hidden rounded-2xl border border-border shadow-xs"
+        className="relative overflow-hidden rounded-2xl border border-border/40 shadow-xs"
         contentClassName="pr-3"
         actionsWidth={props.onMove ? 192 : 128}
         actions={<><Button variant="tertiary" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</Button>{props.onMove && <Button variant="tertiary" onClick={() => props.onMove?.(transaction)} disabled={!canMove || props.isDeleting || props.isSyncing || props.hideSensitive} title={moveReason ?? undefined} aria-label={moveReason ? `Cannot move ${transaction.description}: ${moveReason}` : `Move ${transaction.description} to another cycle`} className={`flex-1 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${canMove ? 'bg-blue-600 hover:bg-blue-700 text-on-vivid' : 'bg-muted/50 hover:bg-muted/50 text-muted-foreground'}`}><CalendarClock className="size-4" />Move</Button>}<Button variant="tertiary" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</Button></>}
@@ -282,7 +282,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
             </div>
             <span className={`max-w-[45%] shrink-0 break-words text-right text-sm font-bold tabular-nums ${(props.maskFinancialFigures ?? props.hideSensitive) ? 'text-muted-foreground' : transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>{(props.maskFinancialFigures ?? props.hideSensitive) ? <SensitiveMask /> : <>{transfer ? '' : outflow ? '-' : '+'}{formatted}</>}</span>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/30"><span className="text-xs text-muted-foreground flex items-center gap-1.5">Ledger:<LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact /></span></div>
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/30"><span className="text-xs text-muted-foreground flex items-center gap-1.5"><span className="hidden sm:inline">Ledger:</span><LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact /></span></div>
         </div>
       </SwipeableRow>
     </div>

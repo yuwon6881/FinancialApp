@@ -48,7 +48,7 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
           <SensitiveAmount value={stats.monthlyInflow} isMasked={hideSensitive} formatFn={formatCurrency} />
         </div>
         <p className="text-xs mt-2 text-muted-foreground font-medium">
-          Total Actual Income: <span className="font-bold text-teal-500 tabular-nums">{formatSensitive(stats.monthlyIncome)}</span>
+          <span className="hidden sm:inline">Total Actual </span>Income: <span className="font-bold text-teal-500 tabular-nums">{formatSensitive(stats.monthlyIncome)}</span>
         </p>
       </div>
 
@@ -70,7 +70,7 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
           <SensitiveAmount value={stats.monthlyExpenses} isMasked={hideSensitive} formatFn={formatCurrency} />
         </div>
         <p className="text-xs text-muted-foreground mt-2 font-medium">
-          Active bills (monthly equivalent): <span className="font-bold text-orange-500 tabular-nums">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
+          <span className="hidden sm:inline">Active </span>Bills<span className="hidden sm:inline"> (monthly equivalent)</span>: <span className="font-bold text-orange-500 tabular-nums">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
         </p>
       </div>
     </div>

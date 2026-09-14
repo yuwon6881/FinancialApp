@@ -67,14 +67,14 @@ export function MobileLedgerList({
         />
       ))}
       {hasRows && (
-        <div className="flex flex-col gap-2.5 rounded-xl border border-border/60 bg-card p-4 text-xs shadow-xs select-none lg:col-span-2">
-          <div className="text-xs font-extrabold text-foreground uppercase tracking-wider border-b border-border/30 pb-2.5 mb-1">Page Total Summary</div>
+        <div className="flex flex-col gap-2.5 rounded-xl border border-border/40 bg-card/90 backdrop-blur-sm p-4 text-xs shadow-xs select-none lg:col-span-2">
+          <div className="text-eyebrow uppercase text-muted-foreground border-b border-border/30 pb-2 mb-0.5">Page Total Summary</div>
           <div className="flex justify-between items-center">
-            <span className="text-muted-foreground font-semibold">Total Outflow (Debit)</span>
+            <span className="text-muted-foreground font-semibold">Total Outflow<span className="hidden sm:inline"> (Debit)</span></span>
             <span className="text-orange-500 font-bold text-sm">{formatSensitive(pageTotals.outflow)}</span>
           </div>
           <div className="flex justify-between items-center border-t border-border/30 pt-2.5">
-            <span className="text-muted-foreground font-semibold">Total Inflow (Credit)</span>
+            <span className="text-muted-foreground font-semibold">Total Inflow<span className="hidden sm:inline"> (Credit)</span></span>
             <span className="text-emerald-500 font-bold text-sm">{formatSensitive(pageTotals.inflow)}</span>
           </div>
           {pageTotals.transfer > 0 && (
@@ -85,7 +85,7 @@ export function MobileLedgerList({
                 </span>
                 <span className="text-blue-500 font-bold text-sm">{formatSensitive(pageTotals.transfer)}</span>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="hidden sm:block mt-1 text-xs text-muted-foreground">
                 Internal movement between buckets — excluded from debit and credit.
               </p>
             </div>
@@ -98,7 +98,7 @@ export function MobileLedgerList({
                   {pageTotals.bucketNet >= 0 ? '+' : '-'}{formatSensitive(Math.abs(pageTotals.bucketNet))}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="hidden sm:block mt-1 text-xs text-muted-foreground">
                 What went in minus what came out, counting each row's share of this bucket.
               </p>
             </div>

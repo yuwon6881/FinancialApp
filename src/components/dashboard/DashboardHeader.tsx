@@ -45,7 +45,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             </div>
             <div className="min-w-0">
               <p className="text-eyebrow uppercase text-blue-500">Available now</p>
-              <p className="truncate text-xs text-muted-foreground">Excludes long-term Growth savings</p>
+              <p className="hidden sm:block truncate text-xs text-muted-foreground">Excludes long-term Growth savings</p>
             </div>
           </div>
           <IconButton variant="secondary"
@@ -62,7 +62,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           <div className="min-w-0 truncate text-2xl sm:text-3xl font-black tracking-tight text-foreground tabular-nums">
             <SensitiveAmount value={walletBalance} isMasked={areBalanceAmountsMasked} formatFn={formatCurrency} />
           </div>
-          <p className="shrink-0 pb-0.5 text-right text-xs font-medium text-muted-foreground">
+          <p className="hidden sm:block shrink-0 pb-0.5 text-right text-xs font-medium text-muted-foreground">
             {hideSensitive ? 'Sensitive mode active' : hideBalanceAmounts ? 'Hidden on this device' : 'Visible on this device'}
           </p>
         </div>

@@ -543,9 +543,21 @@
     background-clip: padding-box;
 }
 
-button, [role="button"] {
+button, [role="button"], a, input, select, textarea {
     user-select: none;
     -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 639px) {
+    .app-panel {
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
 }
 
 /* Bottom padding for any scroll container that sits under the floating action

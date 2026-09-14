@@ -158,7 +158,7 @@ const TopNav: React.FC<TopNavProps> = ({
   return (
     <>
       <header
-        className="glass-nav sticky top-0 z-50 w-full border-b border-border/40 backdrop-blur-xl"
+        className="glass-nav sticky top-0 z-50 w-full border-b border-border/30 backdrop-blur-2xl"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div

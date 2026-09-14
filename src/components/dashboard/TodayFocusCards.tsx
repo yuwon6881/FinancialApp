@@ -57,9 +57,9 @@ export const TodayFocusCards: React.FC<TodayFocusCardsProps> = ({
       : `Day ${cycle.dayNumber} of ${cycle.totalDays}`
 
   const progressCaption = cycle.phase === 'active'
-    ? `${cycle.daysLeft} day${cycle.daysLeft === 1 ? '' : 's'} left · next cycle starts ${nextStartLabel}`
+    ? <>{cycle.daysLeft} day{cycle.daysLeft === 1 ? '' : 's'} left<span className="hidden sm:inline"> · next cycle starts {nextStartLabel}</span></>
     : cycle.phase === 'upcoming'
-      ? `${cycle.totalDays}-day cycle · next cycle starts ${nextStartLabel}`
+      ? <>{cycle.totalDays}-day cycle<span className="hidden sm:inline"> · next cycle starts {nextStartLabel}</span></>
       : `Ended ${endLabel}`
 
   return (

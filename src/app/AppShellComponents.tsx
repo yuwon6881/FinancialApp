@@ -77,7 +77,7 @@ export const MobileFabTrigger = ({
     aria-label={isOpen ? 'Close Menu' : 'Open Menu'}
     title={isOpen ? 'Close Menu' : 'Open Menu'}
     onClick={onToggle}
-    className="fixed right-6 z-40 flex size-14 items-center justify-center rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/25 cursor-pointer sm:hidden"
+    className="fixed right-6 z-40 flex size-14 items-center justify-center rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/25 cursor-pointer active:scale-95 transition-transform duration-150 sm:hidden"
     style={{ bottom: 'calc(var(--app-fab-offset) + env(safe-area-inset-bottom, 0px))' }}
     aria-expanded={isOpen}
     aria-controls={isOpen ? "mobile-fab-actions" : undefined}
@@ -87,7 +87,7 @@ export const MobileFabTrigger = ({
 ) : null
 
 export const AppFooter = () => (
-  <footer className="border-t border-border/40 bg-background/45 py-6 pb-nav-safe backdrop-blur select-none sm:pb-6">
+  <footer className="hidden sm:block border-t border-border/40 bg-background/45 py-6 pb-nav-safe backdrop-blur select-none sm:pb-6">
     <PageContainer className="text-center text-xs text-muted-foreground sm:ml-20 sm:max-w-[calc(100%-5rem)] lg:ml-56 lg:max-w-[calc(100%-14rem)] 2xl:mx-auto 2xl:max-w-[1440px]">
       &copy; {new Date().getFullYear()} FinancialApp. All rights reserved.
     </PageContainer>
