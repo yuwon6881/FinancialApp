@@ -87,7 +87,7 @@ export const MobileFabTrigger = ({
 ) : null
 
 export const AppFooter = () => (
-  <footer className="hidden sm:block border-t border-border/40 bg-background/45 py-6 pb-nav-safe backdrop-blur select-none sm:pb-6">
+  <footer className="border-t border-border/40 bg-background/45 py-6 pb-nav-safe backdrop-blur select-none sm:pb-6">
     <PageContainer className="text-center text-xs text-muted-foreground sm:ml-20 sm:max-w-[calc(100%-5rem)] lg:ml-56 lg:max-w-[calc(100%-14rem)] 2xl:mx-auto 2xl:max-w-[1440px]">
       &copy; {new Date().getFullYear()} FinancialApp. All rights reserved.
     </PageContainer>
