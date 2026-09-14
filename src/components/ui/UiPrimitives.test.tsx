@@ -13,14 +13,14 @@ describe('canonical UI primitives', () => {
       render(<Button variant={variant}>Continue</Button>)
       const button = screen.getByRole('button', { name: 'Continue' })
       expect(button.className).toContain('rounded-control')
-      expect(button.className).toContain('min-h-12')
+      expect(button.className).toContain('min-h-13')
     },
   )
 
   it.each([
     ['sm', 'min-h-11'],
-    ['md', 'min-h-12'],
-    ['lg', 'min-h-13'],
+    ['md', 'min-h-13'],
+    ['lg', 'min-h-14'],
     ['icon', 'size-11'],
   ] as const)('renders the %s control size from the shared scale', (size, expectedClass) => {
     render(<Button size={size} aria-label={`Example ${size}`}>Example</Button>)

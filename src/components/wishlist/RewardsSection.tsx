@@ -83,8 +83,8 @@ export function RewardsSection(props: RewardsSectionProps) {
             />
           ))}
         </HorizontalRail>
-      ) : props.items.length > 0 ? (
-        <div className="grid min-w-0 gap-3 sm:grid-cols-2 min-[1280px]:grid-cols-3">
+      ) : props.items.length === 1 ? (
+        <div>
           {visibleItems.map(item => (
             <RewardCard
               key={item.id}
@@ -105,6 +105,31 @@ export function RewardsSection(props: RewardsSectionProps) {
               onEdit={props.onEdit}
               onDelete={props.onDelete}
               fullWidth
+            />
+          ))}
+        </div>
+      ) : props.items.length > 0 ? (
+        <div className="grid min-w-0 gap-3 grid-cols-1 lg:grid-cols-2 min-[1280px]:grid-cols-3">
+          {visibleItems.map(item => (
+            <RewardCard
+              key={item.id}
+              elementId={`reward-card-${item.id}`}
+              item={item}
+              isFocused={props.activeItem?.id === item.id}
+              timeline={props.activeItem?.id === item.id && props.claimableBalance < item.price
+                ? props.rewardTimeline(item.price)
+                : null}
+              claimableBalance={props.claimableBalance}
+              freeAfterGoalPace={props.freeAfterGoalPace}
+              formatSensitive={props.formatSensitive}
+              hideSensitive={props.hideSensitive}
+              isSyncing={props.isSyncing(item.id)}
+              isDeleting={props.isDeleting(item.id)}
+              onClaim={props.onClaim}
+              onFocus={props.onFocus}
+              onEdit={props.onEdit}
+              onDelete={props.onDelete}
+              fullWidth={false}
             />
           ))}
         </div>

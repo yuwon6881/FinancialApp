@@ -122,7 +122,10 @@ export function DataTablePagination({
   const nextDisabled = currentPage >= safeTotalPages || serverIsFetching
 
   return (
-    <div className="flex flex-col items-center justify-between gap-4 text-xs select-none sm:flex-row" aria-busy={serverIsFetching || undefined}>
+    <div
+      className="flex flex-col gap-3 text-xs select-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+      aria-busy={serverIsFetching || undefined}
+    >
       <div className="flex items-center gap-2 font-medium text-muted-foreground">
         {serverIsFetching && <Loader2 className="size-3.5 animate-spin text-accent-ink" aria-hidden="true" />}
         <span aria-live="polite" aria-atomic="true">
@@ -138,7 +141,7 @@ export function DataTablePagination({
         </span>
       </div>
 
-      <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
+      <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end">
         {showPageSize && (
           <div className="flex items-center gap-2">
             <span className="font-medium text-muted-foreground">Rows per page:</span>

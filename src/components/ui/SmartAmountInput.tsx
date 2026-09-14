@@ -84,7 +84,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
         value={value}
         type="text"
         inputMode="decimal"
-        className={`${className ?? ''} text-left transition-all duration-200 ${showCalculator ? 'pr-36' : ''}`}
+        className={`${className ?? ''} text-left transition-all duration-200 ${showCalculator ? 'pr-40' : ''}`}
         onChange={event => {
           if (isReadOnly) return
           if (/^-?[0-9.()+\-*/×÷\s]*$/.test(event.target.value)) onChange?.(event)
@@ -108,31 +108,36 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
       />
 
       {showCalculator && (
-        // Five 44px global targets consume nearly the whole compact input. Keep these
-        // keyboard-accessible compound keys dense so the amount itself remains readable.
+        // Five keyboard-accessible compound keys kept dense and flush so the amount itself remains readable.
         <div
           data-smart-amount-calculator
-          className="absolute right-1.5 top-1/2 flex -translate-y-1/2 overflow-hidden rounded-lg border border-border/80 bg-card/95 shadow-sm [&_button]:!min-h-8 [&_button]:!min-w-0"
+          className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-stretch overflow-hidden rounded-control border border-border/60 bg-card/90 shadow-xs backdrop-blur-md [&_button]:!h-8 [&_button]:!min-h-0 [&_button]:!min-w-0"
         >
           {[
-            ['+', '+'],
-            ['−', '-'],
-            ['×', '×'],
-            ['÷', '÷'],
-          ].map(([label, operator]) => (
-            <Button variant="tertiary"
+            ['+', '+', 'Add'],
+            ['−', '-', 'Subtract'],
+            ['×', '×', 'Multiply'],
+            ['÷', '÷', 'Divide'],
+          ].map(([label, operator, ariaLabel]) => (
+            <Button
+              variant="tertiary"
+              size="sm"
               key={operator}
               type="button"
+              aria-label={ariaLabel}
               onMouseDown={event => { event.preventDefault(); appendOperator(operator) }}
-              className="border-r border-border/50 px-2 py-1.5 text-xs font-semibold hover:bg-muted/80"
+              className="h-8 rounded-none border-r border-border/50 px-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground active:scale-95"
             >
               {label}
             </Button>
           ))}
-          <Button variant="tertiary"
+          <Button
+            variant="tertiary"
+            size="sm"
             type="button"
+            aria-label="Calculate result"
             onMouseDown={event => { event.preventDefault(); evaluate() }}
-            className="bg-primary/10 px-2.5 py-1.5 text-xs font-bold text-accent-ink hover:bg-primary/20"
+            className="h-8 rounded-none bg-primary/15 px-3 text-xs font-bold text-accent-ink transition-colors hover:bg-primary/25 active:scale-95"
           >
             =
           </Button>
