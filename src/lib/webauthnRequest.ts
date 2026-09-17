@@ -24,6 +24,9 @@ function abortRequest(request: ActiveRequest): void {
   if (request.cancelled) return
   request.cancelled = true
   request.controller.abort()
+  // Some browsers never settle credentials.get() after abort. The old request's result is
+  // ignored by Promise.race, so it must not keep the app's slot occupied indefinitely.
+  releaseRequest(request)
   request.rejectAbort(createAbortError())
 }
 

@@ -1,10 +1,8 @@
 import { withExclusiveWebAuthnRequest } from './webauthnRequest'
 
 const LOCAL_CHALLENGE_BYTES = 32
-// Keep the browser ceremony's own deadline aligned with LockScreen's automatic deadline. If an
-// Android implementation ignores AbortSignal, it still releases its authenticator slot at the
-// same point at which the UI enables retry.
-const DEVICE_GATE_TIMEOUT_MS = 15_000
+// The browser may adjust this hint; LockScreen owns the deadline shown to the user.
+const DEVICE_GATE_TIMEOUT_MS = 30_000
 const USER_PRESENT_FLAG = 0x01
 const USER_VERIFIED_FLAG = 0x04
 

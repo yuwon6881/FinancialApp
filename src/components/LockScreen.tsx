@@ -19,11 +19,10 @@ import { focusFirstInvalidField } from './ui/formValidation'
 import { useDialog } from '../lib/useDialog'
 import { rememberDeviceUnlockCredential } from '../lib/deviceUnlockRegistration'
 import { retryWhileServerWakes } from '../lib/serverWakeRetry'
-import { isAndroidInstalledMobilePwa } from '../lib/mobilePwaDeviceGateEligibility'
 
 type LockScreenMode = 'session-timeout' | 'pwa-launch'
 
-export const AUTOMATIC_DEVICE_UNLOCK_TIMEOUT_MS = 15_000
+export const DEVICE_UNLOCK_TIMEOUT_MS = 30_000
 
 interface LockScreenProps {
   mode?: LockScreenMode
@@ -145,17 +144,19 @@ export function LockScreen({
     }
   }, [mode])
 
-  const handleFingerprintUnlock = useCallback(async (automatic = false) => {
+  const handleFingerprintUnlock = useCallback(async () => {
     if (fingerprintVerifying || passwordVerifying) return
     cancelDeviceAttempt()
     const abortController = new AbortController()
     deviceAttemptAbortRef.current = abortController
     let timedOut = false
-    if (mode === 'pwa-launch' && automatic) {
-      deviceAttemptTimeoutRef.current = setTimeout(() => {
+    let attemptTimeout: ReturnType<typeof setTimeout> | null = null
+    if (mode === 'pwa-launch') {
+      attemptTimeout = setTimeout(() => {
         timedOut = true
         abortController.abort()
-      }, AUTOMATIC_DEVICE_UNLOCK_TIMEOUT_MS)
+      }, DEVICE_UNLOCK_TIMEOUT_MS)
+      deviceAttemptTimeoutRef.current = attemptTimeout
     }
     setHasAttemptedDeviceUnlock(true)
     setFingerprintVerifying(true)
@@ -164,7 +165,17 @@ export function LockScreen({
     try {
       if (mode === 'pwa-launch') {
         if (!onTryDeviceUnlock) throw new Error('Device unlock is unavailable.')
-        await onTryDeviceUnlock(abortController.signal)
+        let rejectOnAbort!: () => void
+        const aborted = new Promise<never>((_, reject) => {
+          rejectOnAbort = () => reject(new DOMException('Device verification was cancelled.', 'AbortError'))
+          abortController.signal.addEventListener('abort', rejectOnAbort, { once: true })
+        })
+        try {
+          // The UI must settle even if the browser ignores AbortSignal and leaves get() pending.
+          await Promise.race([onTryDeviceUnlock(abortController.signal), aborted])
+        } finally {
+          abortController.signal.removeEventListener('abort', rejectOnAbort)
+        }
         if (abortController.signal.aborted) return
         onUnlocked()
         return
@@ -188,25 +199,20 @@ export function LockScreen({
           : getErrorMessage(err, 'Device verification was cancelled or failed. Try again or use your password.'))
       }
     } finally {
-      if (deviceAttemptTimeoutRef.current !== null) {
-        clearTimeout(deviceAttemptTimeoutRef.current)
+      if (attemptTimeout !== null) clearTimeout(attemptTimeout)
+      if (deviceAttemptAbortRef.current === abortController) {
         deviceAttemptTimeoutRef.current = null
+        deviceAttemptAbortRef.current = null
+        setFingerprintVerifying(false)
       }
-      if (deviceAttemptAbortRef.current === abortController) deviceAttemptAbortRef.current = null
       clearCachedFingerprintAssertOptions()
-      setFingerprintVerifying(false)
     }
   }, [cancelDeviceAttempt, fingerprintVerifying, mode, onTryDeviceUnlock, onUnlocked, passwordVerifying, username])
 
   useEffect(() => {
     if (!isOpen || mode !== 'pwa-launch' || automaticLaunchAttemptRef.current) return
-    // A cold Android WebAPK launch has no user activation. Some Android/Chrome builds leave a
-    // page-load modal WebAuthn request pending without ever opening the sensor, which then blocks
-    // the next request. Start the first Android ceremony from the visible button instead; other
-    // platforms retain the automatic launch behavior.
-    if (isAndroidInstalledMobilePwa()) return
     automaticLaunchAttemptRef.current = true
-    void handleFingerprintUnlock(true)
+    void handleFingerprintUnlock()
   }, [handleFingerprintUnlock, isOpen, mode])
 
   const handleSignOut = useCallback(() => {
@@ -241,9 +247,7 @@ export function LockScreen({
           <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
             {mode === 'pwa-launch'
               ? isOnline
-                ? isAndroidInstalledMobilePwa()
-                  ? 'Tap Unlock with device to open Android’s biometric prompt. Password unlock needs an internet connection.'
-                  : 'Verify with your device to open FinancialApp. Password unlock needs an internet connection.'
+                ? 'Verify with your device to open FinancialApp. Password unlock needs an internet connection.'
                 : 'Verify with your device to open FinancialApp. You are offline, so password unlock is unavailable.'
               : fingerprintAvailable
               ? 'You were inactive for 5 minutes. Use your device unlock or enter your password to continue.'

@@ -39,7 +39,7 @@ describe('exclusive WebAuthn request coordinator', () => {
     await expect(withExclusiveWebAuthnRequest(async () => 'second')).resolves.toBe('second')
   })
 
-  it('ignores a late browser completion after cancellation', async () => {
+  it('releases a cancelled request even if the browser promise never settles', async () => {
     let resolveRequest!: (value: string) => void
     const controller = new AbortController()
     const pending = withExclusiveWebAuthnRequest(() => new Promise<string>(resolve => {
@@ -49,16 +49,20 @@ describe('exclusive WebAuthn request coordinator', () => {
     expect(hasActiveWebAuthnRequest()).toBe(true)
     controller.abort()
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
-    // Abort asks the browser to stop, but older Android implementations may keep the
-    // underlying operation alive. Do not let another request overlap that platform operation.
+    expect(hasActiveWebAuthnRequest()).toBe(false)
+    let resolveNext!: (value: string) => void
+    const next = withExclusiveWebAuthnRequest(() => new Promise<string>(resolve => {
+      resolveNext = resolve
+    }))
     expect(hasActiveWebAuthnRequest()).toBe(true)
-    await expect(withExclusiveWebAuthnRequest(async () => 'second')).rejects.toBeInstanceOf(WebAuthnRequestBusyError)
 
-    // The browser may deliver a late result after its abort acknowledgement. It must not become an
-    // active assertion for a future screen.
+    // A late result from the cancelled request cannot release or replace a newer request.
     resolveRequest('late result')
     await Promise.resolve()
     await Promise.resolve()
+    expect(hasActiveWebAuthnRequest()).toBe(true)
+    resolveNext('second')
+    await expect(next).resolves.toBe('second')
     expect(hasActiveWebAuthnRequest()).toBe(false)
     await expect(withExclusiveWebAuthnRequest(async () => 'second')).resolves.toBe('second')
   })

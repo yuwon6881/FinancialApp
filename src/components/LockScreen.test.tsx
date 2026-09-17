@@ -1,12 +1,10 @@
 import { StrictMode } from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { AUTOMATIC_DEVICE_UNLOCK_TIMEOUT_MS, LockScreen } from './LockScreen'
+import { DEVICE_UNLOCK_TIMEOUT_MS, LockScreen } from './LockScreen'
 import * as api from '../lib/api'
 import { isPlatformAuthenticatorAvailable } from '../lib/webauthn'
 import { prefetchFingerprintAssertOptions } from '../lib/fingerprintOptionsCache'
-
-const androidPwa = vi.hoisted(() => ({ value: false }))
 
 vi.mock('../lib/api', () => ({
   fetchAuthStatus: vi.fn(),
@@ -25,10 +23,6 @@ vi.mock('../lib/fingerprintOptionsCache', () => ({
   prefetchFingerprintAssertOptions: vi.fn(async () => undefined),
 }))
 
-vi.mock('../lib/mobilePwaDeviceGateEligibility', () => ({
-  isAndroidInstalledMobilePwa: () => androidPwa.value,
-}))
-
 /** The prefetch resolves the challenge it fetched; nothing here reads it, but the shape is the
     contract, and `undefined` would type-check only against a mock that lies about the signature. */
 const assertOptions = { challengeId: 'challenge-1', options: { challenge: 'Y2hhbGxlbmdl' } }
@@ -36,7 +30,6 @@ const assertOptions = { challengeId: 'challenge-1', options: { challenge: 'Y2hhb
 describe('LockScreen device unlock availability', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    androidPwa.value = false
     vi.mocked(isPlatformAuthenticatorAvailable).mockResolvedValue(true)
   })
 
@@ -126,30 +119,6 @@ describe('LockScreen device unlock availability', () => {
 
     expect(tryDeviceUnlock).toHaveBeenCalledTimes(1)
     expect(api.fetchAuthStatus).not.toHaveBeenCalled()
-  })
-
-  it('waits for a tap before opening the Android PWA authenticator', async () => {
-    androidPwa.value = true
-    const onUnlocked = vi.fn()
-    const tryDeviceUnlock = vi.fn().mockResolvedValue(undefined)
-
-    render(
-      <LockScreen
-        mode="pwa-launch"
-        isOpen
-        username="alice"
-        onTryDeviceUnlock={tryDeviceUnlock}
-        onUnlocked={onUnlocked}
-        onSignOut={vi.fn()}
-      />,
-    )
-
-    expect(await screen.findByRole('button', { name: 'Unlock with device' })).toBeTruthy()
-    expect(tryDeviceUnlock).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Unlock with device' }))
-    await waitFor(() => expect(onUnlocked).toHaveBeenCalledOnce())
-    expect(tryDeviceUnlock).toHaveBeenCalledOnce()
   })
 
   it('keeps the automatic prompt alive through Strict Mode effect rehearsal', async () => {
@@ -274,10 +243,36 @@ describe('LockScreen device unlock availability', () => {
 
       expect(tryDeviceUnlock).toHaveBeenCalledOnce()
       await act(async () => {
-        vi.advanceTimersByTime(AUTOMATIC_DEVICE_UNLOCK_TIMEOUT_MS)
+        vi.advanceTimersByTime(DEVICE_UNLOCK_TIMEOUT_MS)
         await Promise.resolve()
       })
 
+      expect(screen.getByText('Device verification timed out. Try again or use your password.')).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('bounds a manual retry when the device request never settles', async () => {
+    vi.useFakeTimers()
+    try {
+      const tryDeviceUnlock = vi.fn(() => new Promise<void>(() => undefined))
+      render(<LockScreen mode="pwa-launch" isOpen username="alice"
+        onTryDeviceUnlock={tryDeviceUnlock} onUnlocked={vi.fn()} onSignOut={vi.fn()} />)
+
+      expect(tryDeviceUnlock).toHaveBeenCalledOnce()
+      await act(async () => {
+        vi.advanceTimersByTime(DEVICE_UNLOCK_TIMEOUT_MS)
+        await Promise.resolve()
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+      expect(tryDeviceUnlock).toHaveBeenCalledTimes(2)
+
+      await act(async () => {
+        vi.advanceTimersByTime(DEVICE_UNLOCK_TIMEOUT_MS)
+        await Promise.resolve()
+      })
       expect(screen.getByText('Device verification timed out. Try again or use your password.')).toBeTruthy()
       expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
     } finally {
