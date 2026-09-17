@@ -1,5 +1,6 @@
 // Browser-side glue between the WebAuthn API and the Fido2NetLib JSON shape
 // the backend sends/expects (base64url-encoded byte fields, camelCase keys).
+import { withExclusiveWebAuthnRequest } from './webauthnRequest'
 
 function base64UrlToBuffer(base64Url: string): ArrayBuffer {
   const padded = base64Url.replace(/-/g, '+').replace(/_/g, '/')
@@ -114,7 +115,10 @@ export async function createFingerprintCredential(options: CreateOptionsJson, si
     })),
   }
 
-  const credential = (await navigator.credentials.create({ publicKey, signal })) as PublicKeyCredential | null
+  const credential = await withExclusiveWebAuthnRequest(
+    requestSignal => navigator.credentials.create({ publicKey, signal: requestSignal }) as Promise<PublicKeyCredential | null>,
+    signal,
+  )
   if (!credential) throw new Error('No credential returned by the authenticator.')
 
   const response = credential.response as AuthenticatorAttestationResponse
@@ -131,7 +135,7 @@ export async function createFingerprintCredential(options: CreateOptionsJson, si
   }
 }
 
-export async function getFingerprintAssertion(options: AssertionOptionsJson) {
+export async function getFingerprintAssertion(options: AssertionOptionsJson, signal?: AbortSignal) {
   const publicKey: PublicKeyCredentialRequestOptions = {
     challenge: base64UrlToBuffer(options.challenge),
     timeout: options.timeout,
@@ -144,7 +148,10 @@ export async function getFingerprintAssertion(options: AssertionOptionsJson) {
     })),
   }
 
-  const credential = (await navigator.credentials.get({ publicKey })) as PublicKeyCredential | null
+  const credential = await withExclusiveWebAuthnRequest(
+    requestSignal => navigator.credentials.get({ publicKey, signal: requestSignal }) as Promise<PublicKeyCredential | null>,
+    signal,
+  )
   if (!credential) throw new Error('No credential returned by the authenticator.')
 
   const response = credential.response as AuthenticatorAssertionResponse

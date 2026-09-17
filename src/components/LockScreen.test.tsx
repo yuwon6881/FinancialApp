@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { LockScreen } from './LockScreen'
+import { AUTOMATIC_DEVICE_UNLOCK_TIMEOUT_MS, LockScreen } from './LockScreen'
 import * as api from '../lib/api'
 import { isPlatformAuthenticatorAvailable } from '../lib/webauthn'
 import { prefetchFingerprintAssertOptions } from '../lib/fingerprintOptionsCache'
@@ -121,6 +121,33 @@ describe('LockScreen device unlock availability', () => {
     expect(api.fetchAuthStatus).not.toHaveBeenCalled()
   })
 
+  it('keeps the automatic prompt alive through Strict Mode effect rehearsal', async () => {
+    let requestSignal: AbortSignal | undefined
+    const tryDeviceUnlock = vi.fn((signal?: AbortSignal) => {
+      requestSignal = signal
+      return new Promise<void>((_, reject) => {
+        signal?.addEventListener('abort', () => reject(Object.assign(new Error('cancelled'), { name: 'AbortError' })), { once: true })
+      })
+    })
+    const { unmount } = render(
+      <StrictMode>
+        <LockScreen
+          mode="pwa-launch"
+          isOpen
+          username="alice"
+          onTryDeviceUnlock={tryDeviceUnlock}
+          onUnlocked={vi.fn()}
+          onSignOut={vi.fn()}
+        />
+      </StrictMode>,
+    )
+
+    await waitFor(() => expect(tryDeviceUnlock).toHaveBeenCalledOnce())
+    await Promise.resolve()
+    expect(requestSignal?.aborted).toBe(false)
+    unmount()
+  })
+
   it('opens after local verification without contacting the server', async () => {
     const onUnlocked = vi.fn()
     const tryDeviceUnlock = vi.fn().mockResolvedValue(undefined)
@@ -139,5 +166,91 @@ describe('LockScreen device unlock availability', () => {
     await waitFor(() => expect(onUnlocked).toHaveBeenCalledOnce())
     expect(api.fetchAuthStatus).not.toHaveBeenCalled()
     expect(api.verifyFingerprintAssert).not.toHaveBeenCalled()
+  })
+
+  it('cancels a pending launch request before signing out', async () => {
+    let requestSignal: AbortSignal | undefined
+    const tryDeviceUnlock = vi.fn((signal?: AbortSignal) => {
+      requestSignal = signal
+      return new Promise<void>((_, reject) => {
+        signal?.addEventListener('abort', () => reject(Object.assign(new Error('cancelled'), { name: 'AbortError' })), { once: true })
+      })
+    })
+    const onSignOut = vi.fn()
+
+    render(
+      <LockScreen
+        mode="pwa-launch"
+        isOpen
+        username="alice"
+        onTryDeviceUnlock={tryDeviceUnlock}
+        onUnlocked={vi.fn()}
+        onSignOut={onSignOut}
+      />,
+    )
+
+    await waitFor(() => expect(requestSignal).toBeDefined())
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out instead' }))
+
+    expect(requestSignal?.aborted).toBe(true)
+    expect(onSignOut).toHaveBeenCalledOnce()
+  })
+
+  it('ignores a late launch result after the request was cancelled', async () => {
+    let resolveDevice!: () => void
+    const onUnlocked = vi.fn()
+    const tryDeviceUnlock = vi.fn(() => new Promise<void>(resolve => {
+      resolveDevice = resolve
+    }))
+    const onSignOut = vi.fn()
+
+    render(
+      <LockScreen
+        mode="pwa-launch"
+        isOpen
+        username="alice"
+        onTryDeviceUnlock={tryDeviceUnlock}
+        onUnlocked={onUnlocked}
+        onSignOut={onSignOut}
+      />,
+    )
+
+    await waitFor(() => expect(tryDeviceUnlock).toHaveBeenCalledOnce())
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out instead' }))
+    resolveDevice()
+    await Promise.resolve()
+
+    expect(onUnlocked).not.toHaveBeenCalled()
+    expect(onSignOut).toHaveBeenCalledOnce()
+  })
+
+  it('times out a stuck automatic request and enables a retry', async () => {
+    vi.useFakeTimers()
+    try {
+      const tryDeviceUnlock = vi.fn((signal?: AbortSignal) => new Promise<void>((_, reject) => {
+        signal?.addEventListener('abort', () => reject(Object.assign(new Error('timed out'), { name: 'AbortError' })), { once: true })
+      }))
+      render(
+        <LockScreen
+          mode="pwa-launch"
+          isOpen
+          username="alice"
+          onTryDeviceUnlock={tryDeviceUnlock}
+          onUnlocked={vi.fn()}
+          onSignOut={vi.fn()}
+        />,
+      )
+
+      expect(tryDeviceUnlock).toHaveBeenCalledOnce()
+      await act(async () => {
+        vi.advanceTimersByTime(AUTOMATIC_DEVICE_UNLOCK_TIMEOUT_MS)
+        await Promise.resolve()
+      })
+
+      expect(screen.getByText('Device verification timed out. Try again or use your password.')).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

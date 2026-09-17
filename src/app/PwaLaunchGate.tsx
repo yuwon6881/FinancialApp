@@ -9,7 +9,7 @@ interface PwaLaunchGateProps {
   toasts: ToastMessage[]
   onDismissToast: (id: string) => void
   username: string
-  onTryDeviceUnlock: () => Promise<void>
+  onTryDeviceUnlock: (signal?: AbortSignal) => Promise<void>
   onUnlocked: () => void
   onSignOut: () => void | Promise<void>
 }

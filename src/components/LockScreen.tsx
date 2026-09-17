@@ -10,7 +10,7 @@ import {
   getCachedFingerprintAssertOptions,
   prefetchFingerprintAssertOptions,
 } from '../lib/fingerprintOptionsCache'
-import { getErrorMessage, getErrorName, getStatus } from '../lib/errors'
+import { getErrorMessage, getStatus } from '../lib/errors'
 import { AlertBanner } from './ui/AlertBanner'
 import { Button } from './ui/Button'
 import { Z_LAYERS } from '../lib/zLayers'
@@ -22,11 +22,13 @@ import { retryWhileServerWakes } from '../lib/serverWakeRetry'
 
 type LockScreenMode = 'session-timeout' | 'pwa-launch'
 
+export const AUTOMATIC_DEVICE_UNLOCK_TIMEOUT_MS = 15_000
+
 interface LockScreenProps {
   mode?: LockScreenMode
   isOpen: boolean
   username: string
-  onTryDeviceUnlock?: () => Promise<void>
+  onTryDeviceUnlock?: (signal?: AbortSignal) => Promise<void>
   onUnlocked: () => void
   onSignOut: () => void
 }
@@ -48,6 +50,9 @@ export function LockScreen({
   const [hasAttemptedDeviceUnlock, setHasAttemptedDeviceUnlock] = useState(false)
   const [isOnline, setIsOnline] = useState(() => navigator.onLine)
   const automaticLaunchAttemptRef = useRef(false)
+  const deviceAttemptAbortRef = useRef<AbortController | null>(null)
+  const deviceAttemptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lifecycleTokenRef = useRef<object | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const descriptionId = useId()
@@ -58,6 +63,32 @@ export function LockScreen({
     ref: panelRef,
     canClose: () => false,
   })
+
+  const cancelDeviceAttempt = useCallback(() => {
+    if (deviceAttemptTimeoutRef.current !== null) {
+      clearTimeout(deviceAttemptTimeoutRef.current)
+      deviceAttemptTimeoutRef.current = null
+    }
+    deviceAttemptAbortRef.current?.abort()
+    deviceAttemptAbortRef.current = null
+  }, [])
+
+  useEffect(() => {
+    // React Strict Mode rehearses an effect cleanup/setup pair without actually unmounting the
+    // screen. Defer cancellation one microtask so that rehearsal does not kill the one automatic
+    // Android prompt; a real unmount has no replacement setup and still cancels the request.
+    const lifecycleToken = {}
+    lifecycleTokenRef.current = lifecycleToken
+    return () => {
+      queueMicrotask(() => {
+        if (lifecycleTokenRef.current === lifecycleToken) cancelDeviceAttempt()
+      })
+    }
+  }, [cancelDeviceAttempt])
+
+  useEffect(() => {
+    if (!isOpen) cancelDeviceAttempt()
+  }, [cancelDeviceAttempt, isOpen])
 
   useEffect(() => {
     if (!isOpen) {
@@ -113,8 +144,18 @@ export function LockScreen({
     }
   }, [mode])
 
-  const handleFingerprintUnlock = useCallback(async () => {
+  const handleFingerprintUnlock = useCallback(async (automatic = false) => {
     if (fingerprintVerifying || passwordVerifying) return
+    cancelDeviceAttempt()
+    const abortController = new AbortController()
+    deviceAttemptAbortRef.current = abortController
+    let timedOut = false
+    if (mode === 'pwa-launch' && automatic) {
+      deviceAttemptTimeoutRef.current = setTimeout(() => {
+        timedOut = true
+        abortController.abort()
+      }, AUTOMATIC_DEVICE_UNLOCK_TIMEOUT_MS)
+    }
     setHasAttemptedDeviceUnlock(true)
     setFingerprintVerifying(true)
     setLockError(null)
@@ -122,32 +163,50 @@ export function LockScreen({
     try {
       if (mode === 'pwa-launch') {
         if (!onTryDeviceUnlock) throw new Error('Device unlock is unavailable.')
-        await onTryDeviceUnlock()
+        await onTryDeviceUnlock(abortController.signal)
+        if (abortController.signal.aborted) return
         onUnlocked()
         return
       }
       const { challengeId, options } = await getCachedFingerprintAssertOptions()
-      const credential = await getFingerprintAssertion(options)
+      const credential = await getFingerprintAssertion(options, abortController.signal)
+      if (abortController.signal.aborted) return
       await api.verifyFingerprintAssert(challengeId, credential)
+      if (abortController.signal.aborted) return
       rememberDeviceUnlockCredential(username, credential.id)
       setLockPassword('')
       onUnlocked()
     } catch (err: unknown) {
-      if (getErrorName(err) !== 'NotAllowedError') {
+      // A lifecycle cancellation (unmount or sign-out) should not put an error on a screen that is
+      // already going away. Automatic timeout and browser rejection remain visible so the user gets
+      // a retry path instead of an endless "Verifying device..." state.
+      if (!(abortController.signal.aborted && !timedOut)) {
         console.error(err)
-        setLockError(getErrorMessage(err, 'Device unlock failed. Please use your password.'))
+        setLockError(timedOut
+          ? 'Device verification timed out. Try again or use your password.'
+          : getErrorMessage(err, 'Device verification was cancelled or failed. Try again or use your password.'))
       }
     } finally {
+      if (deviceAttemptTimeoutRef.current !== null) {
+        clearTimeout(deviceAttemptTimeoutRef.current)
+        deviceAttemptTimeoutRef.current = null
+      }
+      if (deviceAttemptAbortRef.current === abortController) deviceAttemptAbortRef.current = null
       clearCachedFingerprintAssertOptions()
       setFingerprintVerifying(false)
     }
-  }, [fingerprintVerifying, mode, onTryDeviceUnlock, onUnlocked, passwordVerifying, username])
+  }, [cancelDeviceAttempt, fingerprintVerifying, mode, onTryDeviceUnlock, onUnlocked, passwordVerifying, username])
 
   useEffect(() => {
     if (!isOpen || mode !== 'pwa-launch' || automaticLaunchAttemptRef.current) return
     automaticLaunchAttemptRef.current = true
-    void handleFingerprintUnlock()
+    void handleFingerprintUnlock(true)
   }, [handleFingerprintUnlock, isOpen, mode])
+
+  const handleSignOut = useCallback(() => {
+    cancelDeviceAttempt()
+    void onSignOut()
+  }, [cancelDeviceAttempt, onSignOut])
 
   if (!isOpen) return null
 
@@ -191,7 +250,7 @@ export function LockScreen({
             type="button"
             variant="secondary"
             size="lg"
-            onClick={handleFingerprintUnlock}
+            onClick={() => void handleFingerprintUnlock()}
             disabled={fingerprintVerifying || passwordVerifying}
             className="w-full rounded-xl py-3 shadow-lg shadow-emerald-500/10"
           >
@@ -267,7 +326,7 @@ export function LockScreen({
         </form>
         <Button
           variant="tertiary"
-          onClick={onSignOut}
+          onClick={handleSignOut}
           className="text-xs text-muted-foreground hover:text-foreground transition cursor-pointer underline"
         >
           Sign out instead

@@ -42,7 +42,7 @@ describe('WebAuthn browser adapter', () => {
         challenge: expect.any(ArrayBuffer),
         user: expect.objectContaining({ id: expect.any(ArrayBuffer) }),
       }),
-      signal,
+      signal: expect.any(AbortSignal),
     }))
     expect(result).toMatchObject({
       id: 'credential-id',

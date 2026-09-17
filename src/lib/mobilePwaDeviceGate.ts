@@ -1,3 +1,5 @@
+import { withExclusiveWebAuthnRequest } from './webauthnRequest'
+
 const LOCAL_CHALLENGE_BYTES = 32
 const USER_PRESENT_FLAG = 0x01
 const USER_VERIFIED_FLAG = 0x04
@@ -78,7 +80,7 @@ export async function validateLocalDeviceAssertion(
   }
 }
 
-export async function verifyMobilePwaDeviceGate(credentialId: string): Promise<void> {
+export async function verifyMobilePwaDeviceGate(credentialId: string, signal?: AbortSignal): Promise<void> {
   if (!navigator.credentials?.get || !crypto.getRandomValues || !crypto.subtle) {
     throw new Error('Device unlock is unavailable in this browser.')
   }
@@ -87,16 +89,20 @@ export async function verifyMobilePwaDeviceGate(credentialId: string): Promise<v
   const credentialIdBytes = hexToBytes(credentialId)
   const credentialIdBuffer = new ArrayBuffer(credentialIdBytes.length)
   new Uint8Array(credentialIdBuffer).set(credentialIdBytes)
-  const credential = await navigator.credentials.get({
-    mediation: 'required',
-    publicKey: {
-      challenge,
-      rpId: window.location.hostname,
-      allowCredentials: [{ type: 'public-key', id: credentialIdBuffer }],
-      userVerification: 'required',
-      timeout: 60_000,
-    },
-  }) as PublicKeyCredential | null
+  const credential = await withExclusiveWebAuthnRequest(
+    requestSignal => navigator.credentials.get({
+      mediation: 'required',
+      signal: requestSignal,
+      publicKey: {
+        challenge,
+        rpId: window.location.hostname,
+        allowCredentials: [{ type: 'public-key', id: credentialIdBuffer }],
+        userVerification: 'required',
+        timeout: 60_000,
+      },
+    }) as Promise<PublicKeyCredential | null>,
+    signal,
+  )
 
   if (!credential) throw new Error('No device credential was returned.')
   const response = credential.response as AuthenticatorAssertionResponse

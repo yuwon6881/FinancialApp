@@ -2,10 +2,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LoginView } from './LoginView'
 import * as api from '../lib/api'
-import { isPlatformAuthenticatorAvailable } from '../lib/webauthn'
+import { getFingerprintAssertion, isPlatformAuthenticatorAvailable } from '../lib/webauthn'
 
 vi.mock('../lib/api', () => ({
   fetchAuthStatus: vi.fn(),
+  getFingerprintLoginOptions: vi.fn(),
   register: vi.fn(),
   login: vi.fn(),
   verifyTwoFactorLogin: vi.fn(),
@@ -79,5 +80,36 @@ describe('LoginView validation', () => {
     fireEvent.change(username, { target: { value: 'alex' } })
     expect(screen.queryByText('Username is required.')).toBeNull()
     expect(screen.getByText('Password is required.')).not.toBeNull()
+  })
+
+  it('cancels an in-flight device login when the login screen unmounts', async () => {
+    vi.mocked(isPlatformAuthenticatorAvailable).mockResolvedValue(true)
+    vi.mocked(api.fetchAuthStatus).mockResolvedValue({
+      isRegistered: true,
+      registrationOpen: false,
+      hasFingerprint: true,
+      hasFingerprintOnDevice: true,
+    })
+    vi.mocked(api.getFingerprintLoginOptions).mockResolvedValue({
+      challengeId: 'challenge-1',
+      options: { challenge: 'AQID' },
+    })
+    let requestSignal: AbortSignal | undefined
+    vi.mocked(getFingerprintAssertion).mockImplementation((_options, signal) => {
+      requestSignal = signal
+      return new Promise((_resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(Object.assign(new Error('cancelled'), { name: 'AbortError' })), { once: true })
+      })
+    })
+
+    const { unmount } = render(<LoginView onLoginSuccess={vi.fn()} />)
+    fireEvent.change(await screen.findByRole('textbox', { name: /Username/ }), { target: { value: 'alice' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Unlock with device' }))
+
+    await waitFor(() => expect(requestSignal).toBeDefined())
+    unmount()
+
+    expect(requestSignal?.aborted).toBe(true)
   })
 })

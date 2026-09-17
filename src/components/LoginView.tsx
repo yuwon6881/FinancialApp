@@ -1,5 +1,5 @@
 import { Input } from './ui/Input'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Lock, User, Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
@@ -51,6 +51,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [needsSecuritySetup, setNeedsSecuritySetup] = useState(false)
   const [loginResData, setLoginResData] = useState<{token: string, username: string} | null>(null)
   const [forgotPassword, setForgotPassword] = useState(false)
+  const fingerprintAbortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => () => {
+    fingerprintAbortRef.current?.abort()
+    fingerprintAbortRef.current = null
+  }, [])
 
   async function checkStatus() {
     try {
@@ -206,12 +212,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   }
 
   const handleFingerprintLogin = async () => {
+    fingerprintAbortRef.current?.abort()
+    const abortController = new AbortController()
+    fingerprintAbortRef.current = abortController
     setError(null)
     setFingerprintLoading(true)
     try {
       const { challengeId, options } = await getCachedFingerprintLoginOptions(username.trim())
-      const credential = await getFingerprintAssertion(options)
+      const credential = await getFingerprintAssertion(options, abortController.signal)
+      if (abortController.signal.aborted) return
       const res = await api.verifyFingerprintLogin(challengeId, credential)
+      if (abortController.signal.aborted) return
       rememberDeviceUnlockCredential(res.username || username.trim(), credential.id)
       if (res.hasSetupSecurityQuestions === false) {
         setLoginResData({ token: res.token, username: res.username })
@@ -228,6 +239,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       }
     } finally {
       clearCachedFingerprintLoginOptions()
+      if (fingerprintAbortRef.current === abortController) fingerprintAbortRef.current = null
       setFingerprintLoading(false)
     }
   }

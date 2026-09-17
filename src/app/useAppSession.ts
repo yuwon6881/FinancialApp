@@ -15,6 +15,7 @@ import {
 } from '../lib/deviceUnlockRegistration'
 import { useAutoLock } from '../lib/useAutoLock'
 import { retryWhileServerWakes } from '../lib/serverWakeRetry'
+import { cancelActiveWebAuthnRequest } from '../lib/webauthnRequest'
 
 export interface UseAppSessionOptions {
   onLogoutBackupAndCleanup: (username: string) => void | Promise<void>
@@ -33,7 +34,7 @@ export interface AppSession {
   username: string
   setUsername: (username: string) => void
   isPwaLaunchGateLocked: boolean
-  unlockPwaLaunchGateWithDevice: () => Promise<void>
+  unlockPwaLaunchGateWithDevice: (signal?: AbortSignal) => Promise<void>
   handlePwaLaunchGateUnlocked: () => void
   isLocked: boolean
   setIsLocked: (value: boolean) => void
@@ -45,7 +46,7 @@ export interface AppSession {
   handleUnlocked: () => void
   handleLogout: () => Promise<void>
   handleLoginSuccess: (newToken: string, newUsername: string) => void
-  revealSensitiveWithFingerprint: () => Promise<boolean>
+  revealSensitiveWithFingerprint: (signal?: AbortSignal) => Promise<boolean>
   lastUnlockedTimeRef: React.MutableRefObject<number>
   usernameRef: React.MutableRefObject<string>
 }
@@ -60,6 +61,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
 
   const lastUnlockedTimeRef = useRef<number>(0)
   const usernameRef = useRef(username)
+  const sensitiveAssertionAbortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     usernameRef.current = username
@@ -131,11 +133,11 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
     setIsPwaLaunchGateLocked(false)
   }, [])
 
-  const unlockPwaLaunchGateWithDevice = useCallback(async () => {
+  const unlockPwaLaunchGateWithDevice = useCallback(async (signal?: AbortSignal) => {
     const credentialId = getRegisteredDeviceCredentialId(usernameRef.current)
     if (!credentialId) throw new Error('Device unlock is not configured for this app.')
     const { verifyMobilePwaDeviceGate } = await import('../lib/mobilePwaDeviceGate')
-    await verifyMobilePwaDeviceGate(credentialId)
+    await verifyMobilePwaDeviceGate(credentialId, signal)
   }, [])
 
   // Propagate a lock across open tabs.
@@ -223,6 +225,9 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   }, [token, isLocked, hideSensitive, hasFingerprintSetup])
 
   async function handleLogout() {
+    sensitiveAssertionAbortRef.current?.abort()
+    sensitiveAssertionAbortRef.current = null
+    cancelActiveWebAuthnRequest()
     const currentOwner = usernameRef.current
     onPreferenceOwnerChange(null)
     // Signing out deliberately leaves this device's push enrolment alone. Unregistering here made
@@ -294,13 +299,20 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
     onLoginSuccessRestore(newUsername)
   }
 
-  const revealSensitiveWithFingerprint = async (): Promise<boolean> => {
+  const revealSensitiveWithFingerprint = async (signal?: AbortSignal): Promise<boolean> => {
     if (!hasFingerprintSetup) return false
+    const assertionAbortController = new AbortController()
+    sensitiveAssertionAbortRef.current = assertionAbortController
+    const onAbort = () => assertionAbortController.abort()
+    signal?.addEventListener('abort', onAbort, { once: true })
+    if (signal?.aborted) assertionAbortController.abort()
     let verified = false
     try {
       const { challengeId, options: fingerprintOptions } = await getCachedFingerprintAssertOptions()
-      const credential = await getFingerprintAssertion(fingerprintOptions)
+      const credential = await getFingerprintAssertion(fingerprintOptions, assertionAbortController.signal)
+      if (assertionAbortController.signal.aborted) return false
       await api.verifyFingerprintAssert(challengeId, credential)
+      if (assertionAbortController.signal.aborted) return false
       rememberDeviceUnlockCredential(username, credential.id)
       setHideSensitive(false)
       verified = true
@@ -309,6 +321,10 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
       console.warn('Fingerprint prompt failed/cancelled:', err)
       return false
     } finally {
+      signal?.removeEventListener('abort', onAbort)
+      if (sensitiveAssertionAbortRef.current === assertionAbortController) {
+        sensitiveAssertionAbortRef.current = null
+      }
       clearCachedFingerprintAssertOptions()
       if (!verified && token && !isLocked && hideSensitive) {
         void prefetchFingerprintAssertOptions().catch(() => undefined)

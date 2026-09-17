@@ -142,4 +142,20 @@ describe('mobile PWA device gate', () => {
       timeout: 60_000,
     })
   })
+
+  it('cancels a pending platform request when its owner goes away', async () => {
+    const controller = new AbortController()
+    const get = vi.fn((options: CredentialRequestOptions) => new Promise<null>((_, reject) => {
+      options.signal?.addEventListener('abort', () => reject(Object.assign(new Error('cancelled'), { name: 'AbortError' })), { once: true })
+    }))
+    Object.defineProperty(navigator, 'credentials', { configurable: true, value: { get } })
+
+    const pending = verifyMobilePwaDeviceGate(credentialHex, controller.signal)
+    await Promise.resolve()
+    controller.abort()
+
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+    expect(get).toHaveBeenCalledOnce()
+    expect(get.mock.calls[0][0].signal).toBeInstanceOf(AbortSignal)
+  })
 })

@@ -1,5 +1,5 @@
 import { CheckCircle2, KeyRound, Loader2, ShieldCheck, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as api from '../../lib/api'
 import type { FingerprintCredentialSummary } from '../../lib/api'
 import { getErrorMessage, getErrorName } from '../../lib/errors'
@@ -28,6 +28,7 @@ export function FingerprintSection() {
   const [busy, setBusy] = useState(false)
   const [removingCredentialId, setRemovingCredentialId] = useState<string | null>(null)
   const [capability, setCapability] = useState<'checking' | 'supported' | 'unsupported'>('checking')
+  const enrollmentAbortRef = useRef<AbortController | null>(null)
   const username = localStorage.getItem('auth_username') || ''
   const load = async () => {
     setCredentialsLoaded(false)
@@ -50,6 +51,11 @@ export function FingerprintSection() {
       .catch(() => setCapability('unsupported'))
   }, [])
 
+  useEffect(() => () => {
+    enrollmentAbortRef.current?.abort()
+    enrollmentAbortRef.current = null
+  }, [])
+
   const enrolledHere = useMemo(() => {
     const stored = getDeviceUnlockRegistrationMarker(username)
     if (!stored || credentials.length === 0) return false
@@ -70,10 +76,13 @@ export function FingerprintSection() {
 
   const enroll = async () => {
     if (hideSensitive || capability !== 'supported') return
+    enrollmentAbortRef.current?.abort()
+    const abortController = new AbortController()
+    enrollmentAbortRef.current = abortController
     setBusy(true)
     try {
       const { challengeId, options } = await api.getFingerprintRegisterOptions()
-      const credential = await createFingerprintCredential(options)
+      const credential = await createFingerprintCredential(options, abortController.signal)
       await api.verifyFingerprintRegistration(challengeId, credential, getFriendlyDeviceLabel())
       rememberDeviceUnlockCredential(username, credential.id)
       await load()
@@ -92,6 +101,7 @@ export function FingerprintSection() {
         showToast(getErrorMessage(error, 'Failed to set up device unlock on this device.'), 'Device unlock error', 'error')
       }
     } finally {
+      if (enrollmentAbortRef.current === abortController) enrollmentAbortRef.current = null
       setBusy(false)
     }
   }

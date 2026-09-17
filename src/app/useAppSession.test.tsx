@@ -123,6 +123,19 @@ describe('useAppSession', () => {
     expect(options.loadAll).toHaveBeenCalledWith(undefined, undefined, true)
   })
 
+  it('passes the launch gate lifecycle signal through to WebAuthn', async () => {
+    const options = createOptions()
+    const { result } = renderHook(() => useAppSession(options))
+    await waitFor(() => expect(result.current.isSessionResolved).toBe(true))
+    const controller = new AbortController()
+
+    await act(async () => {
+      await result.current.unlockPwaLaunchGateWithDevice(controller.signal)
+    })
+
+    expect(mocks.verifyMobilePwaDeviceGate).toHaveBeenCalledWith('010203', controller.signal)
+  })
+
   it('aborts in-flight loading and invalidates cached financial data when the session locks', async () => {
     const options = createOptions()
     const controller = new AbortController()
