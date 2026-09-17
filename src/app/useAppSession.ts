@@ -16,6 +16,7 @@ import {
 import { useAutoLock } from '../lib/useAutoLock'
 import { retryWhileServerWakes } from '../lib/serverWakeRetry'
 import { cancelActiveWebAuthnRequest } from '../lib/webauthnRequest'
+import { verifyMobilePwaDeviceGate } from '../lib/mobilePwaDeviceGate'
 
 export interface UseAppSessionOptions {
   onLogoutBackupAndCleanup: (username: string) => void | Promise<void>
@@ -136,7 +137,6 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   const unlockPwaLaunchGateWithDevice = useCallback(async (signal?: AbortSignal) => {
     const credentialId = getRegisteredDeviceCredentialId(usernameRef.current)
     if (!credentialId) throw new Error('Device unlock is not configured for this app.')
-    const { verifyMobilePwaDeviceGate } = await import('../lib/mobilePwaDeviceGate')
     await verifyMobilePwaDeviceGate(credentialId, signal)
   }, [])
 

@@ -7,7 +7,7 @@ vi.mock('@capacitor/core', () => ({
 }))
 
 import { rememberDeviceUnlockCredential, rememberExistingDeviceUnlock } from './deviceUnlockRegistration'
-import { getMobilePwaLaunchGateCredential, isInstalledMobilePwa } from './mobilePwaDeviceGateEligibility'
+import { getMobilePwaLaunchGateCredential, isAndroidInstalledMobilePwa, isInstalledMobilePwa } from './mobilePwaDeviceGateEligibility'
 
 function setBrowser(userAgent: string, standalone: boolean, maxTouchPoints = 0) {
   Object.defineProperty(navigator, 'userAgent', { configurable: true, value: userAgent })
@@ -46,6 +46,15 @@ describe('mobile PWA launch-gate eligibility', () => {
     setBrowser('Mozilla/5.0 (Linux; Android 15)', true)
     nativePlatform.value = true
     expect(isInstalledMobilePwa()).toBe(false)
+  })
+
+  it('identifies an installed Android PWA for the user-activated launch path', () => {
+    setBrowser('Mozilla/5.0 (Linux; Android 15)', true)
+    expect(isAndroidInstalledMobilePwa()).toBe(true)
+
+    setBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)', false)
+    Object.defineProperty(navigator, 'standalone', { configurable: true, value: true })
+    expect(isAndroidInstalledMobilePwa()).toBe(false)
   })
 
   it('does not qualify an anonymous or background-return state for a launch gate', () => {

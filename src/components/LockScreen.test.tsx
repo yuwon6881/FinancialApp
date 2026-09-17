@@ -6,6 +6,8 @@ import * as api from '../lib/api'
 import { isPlatformAuthenticatorAvailable } from '../lib/webauthn'
 import { prefetchFingerprintAssertOptions } from '../lib/fingerprintOptionsCache'
 
+const androidPwa = vi.hoisted(() => ({ value: false }))
+
 vi.mock('../lib/api', () => ({
   fetchAuthStatus: vi.fn(),
   verifyFingerprintAssert: vi.fn(),
@@ -23,6 +25,10 @@ vi.mock('../lib/fingerprintOptionsCache', () => ({
   prefetchFingerprintAssertOptions: vi.fn(async () => undefined),
 }))
 
+vi.mock('../lib/mobilePwaDeviceGateEligibility', () => ({
+  isAndroidInstalledMobilePwa: () => androidPwa.value,
+}))
+
 /** The prefetch resolves the challenge it fetched; nothing here reads it, but the shape is the
     contract, and `undefined` would type-check only against a mock that lies about the signature. */
 const assertOptions = { challengeId: 'challenge-1', options: { challenge: 'Y2hhbGxlbmdl' } }
@@ -30,6 +36,7 @@ const assertOptions = { challengeId: 'challenge-1', options: { challenge: 'Y2hhb
 describe('LockScreen device unlock availability', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    androidPwa.value = false
     vi.mocked(isPlatformAuthenticatorAvailable).mockResolvedValue(true)
   })
 
@@ -119,6 +126,30 @@ describe('LockScreen device unlock availability', () => {
 
     expect(tryDeviceUnlock).toHaveBeenCalledTimes(1)
     expect(api.fetchAuthStatus).not.toHaveBeenCalled()
+  })
+
+  it('waits for a tap before opening the Android PWA authenticator', async () => {
+    androidPwa.value = true
+    const onUnlocked = vi.fn()
+    const tryDeviceUnlock = vi.fn().mockResolvedValue(undefined)
+
+    render(
+      <LockScreen
+        mode="pwa-launch"
+        isOpen
+        username="alice"
+        onTryDeviceUnlock={tryDeviceUnlock}
+        onUnlocked={onUnlocked}
+        onSignOut={vi.fn()}
+      />,
+    )
+
+    expect(await screen.findByRole('button', { name: 'Unlock with device' })).toBeTruthy()
+    expect(tryDeviceUnlock).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock with device' }))
+    await waitFor(() => expect(onUnlocked).toHaveBeenCalledOnce())
+    expect(tryDeviceUnlock).toHaveBeenCalledOnce()
   })
 
   it('keeps the automatic prompt alive through Strict Mode effect rehearsal', async () => {

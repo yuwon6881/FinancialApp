@@ -19,6 +19,7 @@ import { focusFirstInvalidField } from './ui/formValidation'
 import { useDialog } from '../lib/useDialog'
 import { rememberDeviceUnlockCredential } from '../lib/deviceUnlockRegistration'
 import { retryWhileServerWakes } from '../lib/serverWakeRetry'
+import { isAndroidInstalledMobilePwa } from '../lib/mobilePwaDeviceGateEligibility'
 
 type LockScreenMode = 'session-timeout' | 'pwa-launch'
 
@@ -199,6 +200,11 @@ export function LockScreen({
 
   useEffect(() => {
     if (!isOpen || mode !== 'pwa-launch' || automaticLaunchAttemptRef.current) return
+    // A cold Android WebAPK launch has no user activation. Some Android/Chrome builds leave a
+    // page-load modal WebAuthn request pending without ever opening the sensor, which then blocks
+    // the next request. Start the first Android ceremony from the visible button instead; other
+    // platforms retain the automatic launch behavior.
+    if (isAndroidInstalledMobilePwa()) return
     automaticLaunchAttemptRef.current = true
     void handleFingerprintUnlock(true)
   }, [handleFingerprintUnlock, isOpen, mode])
@@ -235,7 +241,9 @@ export function LockScreen({
           <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
             {mode === 'pwa-launch'
               ? isOnline
-                ? 'Verify with your device to open FinancialApp. Password unlock needs an internet connection.'
+                ? isAndroidInstalledMobilePwa()
+                  ? 'Tap Unlock with device to open Android’s biometric prompt. Password unlock needs an internet connection.'
+                  : 'Verify with your device to open FinancialApp. Password unlock needs an internet connection.'
                 : 'Verify with your device to open FinancialApp. You are offline, so password unlock is unavailable.'
               : fingerprintAvailable
               ? 'You were inactive for 5 minutes. Use your device unlock or enter your password to continue.'

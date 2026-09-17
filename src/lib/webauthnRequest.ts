@@ -54,7 +54,15 @@ export async function withExclusiveWebAuthnRequest<T>(
   const onAbort = () => abortRequest(request)
   signal?.addEventListener('abort', onAbort, { once: true })
 
-  const operationPromise = Promise.resolve().then(() => operation(controller.signal))
+  // Invoke the browser API in the caller's stack. A user-initiated WebAuthn request must not
+  // cross a lazy-import or scheduling boundary before navigator.credentials.get/create() runs,
+  // otherwise Android can discard the tap's transient activation and never show its prompt.
+  let operationPromise: Promise<T>
+  try {
+    operationPromise = Promise.resolve(operation(controller.signal))
+  } catch (error) {
+    operationPromise = Promise.reject(error)
+  }
   // A browser implementation should honour the signal, but keep a late rejection from becoming
   // unhandled when an older implementation resolves after the caller has already moved on.
   void operationPromise.then(

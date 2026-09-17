@@ -22,6 +22,16 @@ export function isInstalledMobilePwa(): boolean {
   return reportsMobile || isAndroid || isIos
 }
 
+/**
+ * Android's installed WebAPK can leave a modal WebAuthn request pending when it is started from
+ * a page-load effect. Keep the launch gate available, but let the first request start from the
+ * visible button so Chrome has a real user activation to hand to the platform authenticator.
+ */
+export function isAndroidInstalledMobilePwa(): boolean {
+  if (!isInstalledMobilePwa() || typeof navigator === 'undefined') return false
+  return /Android/i.test(navigator.userAgent)
+}
+
 export function getMobilePwaLaunchGateCredential(hasWebSession: boolean, username: string): string | null {
   if (!hasWebSession || !username.trim() || !isInstalledMobilePwa()) return null
   return getRegisteredDeviceCredentialId(username)

@@ -139,7 +139,7 @@ describe('mobile PWA device gate', () => {
     expect(get.mock.calls[0][0].publicKey).toMatchObject({
       rpId: window.location.hostname,
       userVerification: 'required',
-      timeout: 60_000,
+      timeout: 15_000,
     })
   })
 

@@ -7,6 +7,17 @@ import {
 } from './webauthnRequest'
 
 describe('exclusive WebAuthn request coordinator', () => {
+  it('starts the browser operation before the caller yields to the event loop', async () => {
+    const calls: string[] = []
+    const pending = withExclusiveWebAuthnRequest(async () => {
+      calls.push('operation')
+      return 'done'
+    })
+
+    expect(calls).toEqual(['operation'])
+    await expect(pending).resolves.toBe('done')
+  })
+
   it('cancels a request that never settles and releases the next attempt', async () => {
     let requestSignal: AbortSignal | undefined
     const pending = withExclusiveWebAuthnRequest(signal => {

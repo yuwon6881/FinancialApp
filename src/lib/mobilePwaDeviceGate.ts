@@ -1,6 +1,10 @@
 import { withExclusiveWebAuthnRequest } from './webauthnRequest'
 
 const LOCAL_CHALLENGE_BYTES = 32
+// Keep the browser ceremony's own deadline aligned with LockScreen's automatic deadline. If an
+// Android implementation ignores AbortSignal, it still releases its authenticator slot at the
+// same point at which the UI enables retry.
+const DEVICE_GATE_TIMEOUT_MS = 15_000
 const USER_PRESENT_FLAG = 0x01
 const USER_VERIFIED_FLAG = 0x04
 
@@ -98,7 +102,7 @@ export async function verifyMobilePwaDeviceGate(credentialId: string, signal?: A
         rpId: window.location.hostname,
         allowCredentials: [{ type: 'public-key', id: credentialIdBuffer }],
         userVerification: 'required',
-        timeout: 60_000,
+        timeout: DEVICE_GATE_TIMEOUT_MS,
       },
     }) as Promise<PublicKeyCredential | null>,
     signal,
