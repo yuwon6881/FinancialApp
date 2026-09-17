@@ -38,10 +38,16 @@ describe('exclusive WebAuthn request coordinator', () => {
     expect(hasActiveWebAuthnRequest()).toBe(true)
     controller.abort()
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+    // Abort asks the browser to stop, but older Android implementations may keep the
+    // underlying operation alive. Do not let another request overlap that platform operation.
+    expect(hasActiveWebAuthnRequest()).toBe(true)
+    await expect(withExclusiveWebAuthnRequest(async () => 'second')).rejects.toBeInstanceOf(WebAuthnRequestBusyError)
 
     // The browser may deliver a late result after its abort acknowledgement. It must not become an
     // active assertion for a future screen.
     resolveRequest('late result')
+    await Promise.resolve()
+    await Promise.resolve()
     expect(hasActiveWebAuthnRequest()).toBe(false)
     await expect(withExclusiveWebAuthnRequest(async () => 'second')).resolves.toBe('second')
   })

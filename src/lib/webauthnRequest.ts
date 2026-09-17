@@ -15,13 +15,20 @@ function createAbortError(): Error {
 interface ActiveRequest {
   controller: AbortController
   rejectAbort: (error: Error) => void
+  cancelled: boolean
 }
 
 let activeRequest: ActiveRequest | null = null
 
 function abortRequest(request: ActiveRequest): void {
-  if (!request.controller.signal.aborted) request.controller.abort()
+  if (request.cancelled) return
+  request.cancelled = true
+  request.controller.abort()
   request.rejectAbort(createAbortError())
+}
+
+function releaseRequest(request: ActiveRequest): void {
+  if (activeRequest === request) activeRequest = null
 }
 
 /**
@@ -41,7 +48,7 @@ export async function withExclusiveWebAuthnRequest<T>(
   const abortPromise = new Promise<never>((_, reject) => {
     rejectAbort = reject
   })
-  const request: ActiveRequest = { controller, rejectAbort }
+  const request: ActiveRequest = { controller, rejectAbort, cancelled: false }
   activeRequest = request
 
   const onAbort = () => abortRequest(request)
@@ -50,13 +57,15 @@ export async function withExclusiveWebAuthnRequest<T>(
   const operationPromise = Promise.resolve().then(() => operation(controller.signal))
   // A browser implementation should honour the signal, but keep a late rejection from becoming
   // unhandled when an older implementation resolves after the caller has already moved on.
-  void operationPromise.catch(() => undefined)
+  void operationPromise.then(
+    () => releaseRequest(request),
+    () => releaseRequest(request),
+  )
 
   try {
     return await Promise.race([operationPromise, abortPromise])
   } finally {
     signal?.removeEventListener('abort', onAbort)
-    if (activeRequest === request) activeRequest = null
   }
 }
 
