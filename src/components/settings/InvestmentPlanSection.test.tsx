@@ -116,4 +116,48 @@ describe('InvestmentPlanSection sliders', () => {
     expect(screen.getByText(/connect once to load your investment plan/i)).toBeTruthy()
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
+
+  it('locks both drift sliders by default and unlocks individually', async () => {
+    render(
+      <AppProvider value={context}>
+        <InvestmentPlanSection />
+      </AppProvider>,
+    )
+
+    await waitFor(() => expect(api.fetchInvestmentAllocation).toHaveBeenCalled())
+
+    const watchSlider = screen.getByRole('slider', { name: 'Watch when off by, in percentage points' }) as HTMLInputElement
+    const alertSlider = screen.getByRole('slider', { name: 'Alert when off by, in percentage points' }) as HTMLInputElement
+
+    expect(watchSlider.disabled).toBe(true)
+    expect(alertSlider.disabled).toBe(true)
+    fireEvent.change(alertSlider, { target: { value: '7' } })
+    expect(alertSlider.value).toBe('5')
+
+    const unlockWatchBtn = screen.getByRole('button', { name: 'Unlock watch drift threshold' })
+    const unlockAlertBtn = screen.getByRole('button', { name: 'Unlock alert drift threshold' })
+
+    expect(unlockWatchBtn).toBeTruthy()
+    expect(unlockAlertBtn).toBeTruthy()
+
+    fireEvent.click(unlockWatchBtn)
+    expect(watchSlider.disabled).toBe(false)
+    expect(alertSlider.disabled).toBe(true)
+    expect(screen.getByRole('button', { name: 'Lock watch drift threshold' })).toBeTruthy()
+
+    fireEvent.change(watchSlider, { target: { value: '4' } })
+    expect(watchSlider.value).toBe('4')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lock watch drift threshold' }))
+    expect(watchSlider.disabled).toBe(true)
+
+    fireEvent.click(unlockAlertBtn)
+    expect(alertSlider.disabled).toBe(false)
+    expect(watchSlider.disabled).toBe(true)
+    fireEvent.change(alertSlider, { target: { value: '7' } })
+    expect(alertSlider.value).toBe('7')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lock alert drift threshold' }))
+    expect(alertSlider.disabled).toBe(true)
+  })
 })

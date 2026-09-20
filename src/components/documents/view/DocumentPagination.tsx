@@ -20,6 +20,7 @@ export function DocumentPagination(props: DocumentPaginationProps) {
         totalItems={props.totalCount}
         totalPages={props.totalPages}
         pageSizeOptions={[10, 25, 50]}
+        centerOnMobile
         onPageChange={props.onPageChange}
         onPageSizeChange={value => props.onPageSizeChange(value as 10 | 25 | 50)}
       />

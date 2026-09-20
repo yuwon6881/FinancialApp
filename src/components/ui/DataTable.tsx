@@ -93,6 +93,8 @@ export interface DataTablePaginationProps {
   serverIsFetching?: boolean
   pageSizeOptions?: readonly number[]
   showPageSize?: boolean
+  /** Center the compact pagination layout for pages whose footer is presented as a separate card. */
+  centerOnMobile?: boolean
   onPageChange: (page: number) => void
   onPageSizeChange: (size: number) => void
 }
@@ -112,6 +114,7 @@ export function DataTablePagination({
   serverIsFetching = false,
   pageSizeOptions = [10, 25, 50, 100],
   showPageSize = true,
+  centerOnMobile = false,
   onPageChange,
   onPageSizeChange,
 }: DataTablePaginationProps) {
@@ -123,10 +126,16 @@ export function DataTablePagination({
 
   return (
     <div
-      className="flex flex-col gap-3 text-xs select-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+      className={cn(
+        'flex flex-col gap-3 text-xs select-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-between',
+        centerOnMobile && 'items-center',
+      )}
       aria-busy={serverIsFetching || undefined}
     >
-      <div className="flex items-center gap-2 font-medium text-muted-foreground">
+      <div className={cn(
+        'flex items-center gap-2 font-medium text-muted-foreground',
+        centerOnMobile && 'justify-center text-center',
+      )}>
         {serverIsFetching && <Loader2 className="size-3.5 animate-spin text-accent-ink" aria-hidden="true" />}
         <span aria-live="polite" aria-atomic="true">
           {serverIsFetching ? (
@@ -141,9 +150,12 @@ export function DataTablePagination({
         </span>
       </div>
 
-      <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end">
+      <div className={cn(
+        'flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end',
+        centerOnMobile ? 'justify-center' : 'justify-between',
+      )}>
         {showPageSize && (
-          <div className="flex items-center gap-2">
+          <div className={cn('flex items-center gap-2', centerOnMobile && 'justify-center')}>
             <span className="font-medium text-muted-foreground">Rows per page:</span>
             {/* Locked mid-fetch: a second size change would only abort the request whose rows the
                 footer is already describing. */}
@@ -159,7 +171,7 @@ export function DataTablePagination({
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className={cn('flex items-center gap-2', centerOnMobile && 'justify-center')}>
           <Button
             variant="secondary"
             size="sm"

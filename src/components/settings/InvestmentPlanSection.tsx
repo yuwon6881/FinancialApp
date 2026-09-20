@@ -32,6 +32,7 @@ const DRIFT_BANDS: ReadonlyArray<{
   surface: string
   badge: string
   accent: string
+  lockColor: string
 }> = [
   {
     key: 'watchDrift',
@@ -40,6 +41,7 @@ const DRIFT_BANDS: ReadonlyArray<{
     surface: 'border-amber-500/25 bg-amber-500/5',
     badge: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
     accent: 'accent-amber-500',
+    lockColor: 'text-amber-500',
   },
   {
     key: 'alertDrift',
@@ -48,6 +50,7 @@ const DRIFT_BANDS: ReadonlyArray<{
     surface: 'border-orange-500/25 bg-orange-500/5',
     badge: 'bg-orange-500/15 text-orange-700 dark:text-orange-300',
     accent: 'accent-orange-500',
+    lockColor: 'text-orange-500',
   },
 ]
 
@@ -127,6 +130,10 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
   const [plan, setPlan] = useState<InvestmentPlan>(() => initialOverview()?.plan ?? defaults)
   const [lockedSleeve, setLockedSleeve] = useState<TargetKey | null>(null)
   const [globalTargetLock, setGlobalTargetLock] = useState(true)
+  const [lockedDrift, setLockedDrift] = useState<Record<DriftKey, boolean>>({
+    watchDrift: true,
+    alertDrift: true,
+  })
   const [loading, setLoading] = useState(() => !cachedOverview())
   const [error, setError] = useState('')
 
@@ -235,13 +242,32 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
   // The plan is only valid while Alert sits above Watch, so dragging one past the other pushes the
   // other along instead of parking the form on a validation error the slider caused.
   const changeDrift = (key: DriftKey, value: number) => {
-    if (hideSensitive) return
+    if (hideSensitive || lockedDrift[key]) return
+    const isOtherLocked = key === 'watchDrift' ? lockedDrift.alertDrift : lockedDrift.watchDrift
+    if (isOtherLocked) {
+      if (key === 'watchDrift') {
+        const next = Math.max(1, Math.min(plan.alertDrift - 1, Math.round(value)))
+        setPlan(previous => ({ ...previous, watchDrift: next }))
+      } else {
+        const next = Math.max(plan.watchDrift + 1, Math.min(driftMax, Math.round(value)))
+        setPlan(previous => ({ ...previous, alertDrift: next }))
+      }
+      return
+    }
     const next = key === 'watchDrift'
       ? Math.max(1, Math.min(driftMax - 1, Math.round(value)))
       : Math.max(2, Math.min(driftMax, Math.round(value)))
     setPlan(previous => key === 'watchDrift'
       ? { ...previous, watchDrift: next, alertDrift: Math.max(previous.alertDrift, Math.min(driftMax, next + 1)) }
       : { ...previous, alertDrift: next, watchDrift: Math.min(previous.watchDrift, Math.max(1, next - 1)) })
+  }
+
+  const toggleDriftLock = (key: DriftKey) => {
+    if (hideSensitive) return
+    setLockedDrift(previous => ({
+      ...previous,
+      [key]: !previous[key],
+    }))
   }
 
   const toggleSleeveLock = (key: TargetKey) => {
@@ -413,27 +439,52 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
                 the early warning, orange for the one that means rebalance -- and the handler holds
                 Alert above Watch, so the pair cannot be dragged into an invalid plan. */}
             <div className="mt-3 space-y-2.5 w-full min-w-0">
-              {DRIFT_BANDS.map(band => (
-                <div key={band.key} className={`rounded-xl border p-3 w-full min-w-0 ${band.surface}`}>
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
-                    <span className="text-xs font-bold text-foreground">{band.label}</span>
-                    <span className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-black tabular-nums ${band.badge}`}>
-                      {plan[band.key]} pp
-                    </span>
+              {DRIFT_BANDS.map(band => {
+                const isLocked = lockedDrift[band.key]
+                const minVal = band.key === 'watchDrift'
+                  ? 1
+                  : (lockedDrift.watchDrift ? plan.watchDrift + 1 : 2)
+                const maxVal = band.key === 'watchDrift'
+                  ? (lockedDrift.alertDrift ? Math.min(driftMax - 1, plan.alertDrift - 1) : driftMax - 1)
+                  : driftMax
+
+                return (
+                  <div key={band.key} className={`rounded-xl border p-3 w-full min-w-0 ${band.surface}`}>
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-xs font-bold text-foreground">{band.label}</span>
+                        <IconButton
+                          type="button"
+                          label={`${isLocked ? 'Unlock' : 'Lock'} ${band.key === 'watchDrift' ? 'watch' : 'alert'} drift threshold`}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            toggleDriftLock(band.key)
+                          }}
+                          className="shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition"
+                          disabled={hideSensitive}
+                          tooltip={isLocked ? `Unlock ${band.key === 'watchDrift' ? 'watch' : 'alert'} drift threshold` : `Lock ${band.key === 'watchDrift' ? 'watch' : 'alert'} drift threshold`}
+                        >
+                          {isLocked ? <Lock className={`size-3.5 ${band.lockColor}`} /> : <Unlock className="size-3.5" />}
+                        </IconButton>
+                      </span>
+                      <span className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-black tabular-nums ${band.badge}`}>
+                        {plan[band.key]} pp
+                      </span>
+                    </div>
+                    <RangeInput
+                      aria-label={`${band.label}, in percentage points`}
+                      min={minVal}
+                      max={maxVal}
+                      step="1"
+                      disabled={hideSensitive || isLocked}
+                      value={plan[band.key]}
+                      onChange={event => changeDrift(band.key, Number(event.target.value))}
+                      className={`mt-2.5 h-2 rounded-full bg-border ${band.accent} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    />
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground break-words">{band.hint}</p>
                   </div>
-                  <RangeInput
-                    aria-label={`${band.label}, in percentage points`}
-                    min={band.key === 'watchDrift' ? 1 : 2}
-                    max={band.key === 'watchDrift' ? driftMax - 1 : driftMax}
-                    step="1"
-                    disabled={hideSensitive}
-                    value={plan[band.key]}
-                    onChange={event => changeDrift(band.key, Number(event.target.value))}
-                    className={`mt-2.5 h-2 rounded-full bg-border ${band.accent}`}
-                  />
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground break-words">{band.hint}</p>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
           {(validation || error) && <p role="alert" className="flex gap-2 text-xs text-destructive"><AlertCircle className="size-4 shrink-0" />{validation || error}</p>}

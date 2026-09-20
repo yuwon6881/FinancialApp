@@ -396,6 +396,29 @@ for (const route of responsiveRoutes) {
       expect(bounds.left).toBeGreaterThanOrEqual(0)
       expect(bounds.right).toBeLessThanOrEqual(width.viewport)
     }
+    if (route.path === '/vault' && width.viewport < 640) {
+      const resultsCount = page.locator('main [aria-live="polite"][aria-atomic="true"]')
+      await expect(resultsCount).toContainText('Showing')
+      const footer = resultsCount.locator('xpath=../..')
+      const alignment = await footer.evaluate(element => {
+        const rect = element.getBoundingClientRect()
+        const centerOf = (target: Element | null) => {
+          if (!target) throw new Error('Expected Vault pagination group was not rendered.')
+          const bounds = target.getBoundingClientRect()
+          return (bounds.left + bounds.right) / 2
+        }
+        const controlRow = element.children.item(1)
+        return {
+          footerCenter: (rect.left + rect.right) / 2,
+          countCenter: centerOf(element.children.item(0)),
+          pageSizeCenter: centerOf(controlRow?.children.item(0) ?? null),
+          pagerCenter: centerOf(controlRow?.children.item(1) ?? null),
+        }
+      })
+      expect(Math.abs(alignment.countCenter - alignment.footerCenter)).toBeLessThanOrEqual(1)
+      expect(Math.abs(alignment.pageSizeCenter - alignment.footerCenter)).toBeLessThanOrEqual(1)
+      expect(Math.abs(alignment.pagerCenter - alignment.footerCenter)).toBeLessThanOrEqual(1)
+    }
     if (route.path === '/reports' || route.path === '/recurring' || route.path === '/ledger') {
       const cycleSelect = page.getByRole('combobox', {
         name: route.path === '/reports' ? 'Report cycle' : route.path === '/ledger' ? 'Ledger cycle' : 'Recurring cycle',
