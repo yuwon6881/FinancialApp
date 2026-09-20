@@ -206,7 +206,7 @@ export function AuthenticatedTabContent({
           transactions={financial.allTransactions}
           wishlist={financial.allWishlist}
           savingsGoals={financial.allSavingsGoals}
-          hideBalanceAmounts={prefs.maskPassiveFinancialFigures}
+          hideBalanceAmounts={false}
           onNavigate={prefs.setActiveTab}
           onNavigateToRecurring={nav.handleNavigateToRecurring}
           onNavigateToAccounts={nav.handleNavigateToAccounts}

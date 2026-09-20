@@ -166,7 +166,7 @@ export function useAppPreferences(): AppPreferences {
     markSensitivePreferenceUnavailable,
     hideFinancialFigures,
     setHideFinancialFigures,
-    maskPassiveFinancialFigures: hideSensitive || hideFinancialFigures,
+    maskPassiveFinancialFigures: hideSensitive,
     darkMode,
     setDarkMode,
     ledgerCyclesRange,

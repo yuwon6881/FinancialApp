@@ -307,6 +307,17 @@ describe('DashboardView focused Today experience', () => {
     expect(props.onToggleBalanceAmounts).toHaveBeenCalledOnce()
   })
 
+  it('hides the total wallet amount only when balance hiding is toggled on', () => {
+    render(<DashboardView {...makeProps({ hideBalanceAmounts: true, hideSensitive: false })} />)
+    // The total wallet balance ($4,456.00) should be hidden
+    expect(screen.queryByText('$4,456.00')).toBeNull()
+    // Other metrics on screen should remain visible
+    expect(screen.getByText('$1,185.00')).toBeDefined()
+    expect(screen.getByText('$15.00')).toBeDefined()
+    // Only 1 masked amount (the total wallet balance)
+    expect(screen.getAllByText(SENSITIVE_AMOUNT_MASK).length).toBe(1)
+  })
+
   it('renders a skeleton while switching cycles', () => {
     render(<DashboardView {...makeProps({ isSwitchingCycle: true })} />)
     expect(screen.queryByText('Today')).toBeNull()
