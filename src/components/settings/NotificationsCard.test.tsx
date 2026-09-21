@@ -15,9 +15,13 @@ const renderCard = (overrides: Partial<NotificationsCardProps> = {}) => {
     pushGuidance: null,
     billRemindersEnabled: false,
     categoryAlertsEnabled: false,
+    showNotificationDetails: false,
+    pushDeviceRegistered: false,
+    previewDetailsBusy: false,
     otherDevicesBillReminders: false,
     otherDevicesCategoryAlerts: false,
     onToggleChannel: vi.fn(),
+    onTogglePreviewDetails: vi.fn(),
     enrolmentRevision: 0,
     hasSpendingGuides: true,
     ...overrides,
@@ -46,7 +50,7 @@ describe('NotificationsCard', () => {
     renderCard()
     // "All devices" was the old account-wide spending-alert scope, and it was the claim a desktop
     // could not honour.
-    expect(screen.getAllByText('This device').length).toBe(2)
+    expect(screen.getAllByText('This device').length).toBe(3)
     expect(screen.queryByText('All devices')).toBeNull()
   })
 
@@ -83,5 +87,20 @@ describe('NotificationsCard', () => {
     renderCard({ pushSupported: false })
     expect(billsToggle().disabled).toBe(true)
     expect(alertsToggle().disabled).toBe(true)
+  })
+
+  it('keeps financial notification details hidden by default and offers an explicit per-device opt-in', () => {
+    const props = renderCard({ pushDeviceRegistered: true })
+    const previewSwitch = screen.getByRole('switch', { name: /show financial details on this device/i })
+
+    expect(previewSwitch.getAttribute('aria-checked')).toBe('false')
+    expect(screen.getByText(/generic text so financial details stay hidden/i)).toBeTruthy()
+    fireEvent.click(previewSwitch)
+    expect(props.onTogglePreviewDetails).toHaveBeenCalledWith(true)
+  })
+
+  it('requires this device to be subscribed before changing its preview privacy', () => {
+    renderCard()
+    expect(screen.getByRole('switch', { name: /show financial details on this device/i })).toHaveProperty('disabled', true)
   })
 })

@@ -5,6 +5,7 @@ import type { ToastTone } from '../components/ui/ToastViewport'
 
 export interface PendingScanUploadHandlers {
   enabled: boolean
+  ownerId: string
   onScanStarted: (kind: ScanUploadKind, scanId: string) => void
   showToast: (message: string, title?: string, tone?: ToastTone) => void
 }
@@ -27,12 +28,19 @@ const DISCARDED_MESSAGES: Record<ScanUploadKind, string> = {
  * A drained upload is handed to the same job tracking a fresh one uses, so it announces its result
  * through the ordinary completion toast rather than a second, parallel notification path.
  */
-export function usePendingScanUploads({ enabled, onScanStarted, showToast }: PendingScanUploadHandlers) {
+export function usePendingScanUploads({ enabled, ownerId, onScanStarted, showToast }: PendingScanUploadHandlers) {
   const drainingRef = useRef(false)
+  const ownerRef = useRef(ownerId)
+  const enabledRef = useRef(enabled)
+  const drainRef = useRef<() => Promise<void>>(() => Promise.resolve())
   const handlersRef = useRef({ onScanStarted, showToast })
   useEffect(() => {
     handlersRef.current = { onScanStarted, showToast }
   }, [onScanStarted, showToast])
+  useEffect(() => {
+    ownerRef.current = ownerId
+    enabledRef.current = enabled
+  }, [enabled, ownerId])
 
   const drain = useCallback(async () => {
     // One drain at a time: the wake-up signals below routinely arrive together (a relaunch fires
@@ -42,7 +50,7 @@ export function usePendingScanUploads({ enabled, onScanStarted, showToast }: Pen
     drainingRef.current = true
     try {
       const { drainPendingScanUploads } = await import('../lib/api/scanUploadQueue')
-      const result = await drainPendingScanUploads()
+      const result = await drainPendingScanUploads(ownerId)
       for (const started of result.started) {
         handlersRef.current.onScanStarted(started.kind, started.scanId)
       }
@@ -55,8 +63,14 @@ export function usePendingScanUploads({ enabled, onScanStarted, showToast }: Pen
       console.warn('Pending scan uploads could not be drained', error)
     } finally {
       drainingRef.current = false
+      // If the account changed during a request, the old drain stops before the next file and
+      // immediately hands ownership to the new account's filtered queue.
+      if (enabledRef.current && ownerRef.current !== ownerId) void drainRef.current()
     }
-  }, [])
+  }, [ownerId])
+  useEffect(() => {
+    drainRef.current = drain
+  }, [drain])
 
   useEffect(() => {
     if (!enabled) return

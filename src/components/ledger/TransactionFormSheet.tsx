@@ -164,6 +164,14 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
     if (props.hideSensitive) setReceiptSplitOpen(false)
   }, [props.hideSensitive, setReceiptSplitOpen])
 
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search)
+    if (query.get('receiptScan') !== '1' || !form.state.showAddForm) return
+    query.delete('receiptScan')
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${query.size ? `?${query}` : ''}${window.location.hash}`)
+    if (form.state.mode === 'create') form.scanner.setShowScanPicker(true)
+  }, [form.scanner.setShowScanPicker, form.state.mode, form.state.showAddForm])
+
   const title = form.state.mode === 'edit'
     ? 'Edit Transaction'
     : form.state.mode === 'draft' ? 'Edit Draft' : 'Add Transaction'

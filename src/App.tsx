@@ -312,18 +312,14 @@ function App() {
         <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-primary/25 selection:text-foreground">
         {enableRuntimeBackgroundBridges && <Suspense fallback={null}>
           <RuntimeBackgroundBridges
-            account={session.username}
-            token={session.token!}
+            session={session}
+            bridge={[nav, openSensitivePrompt, prefs.setActiveTab, setAutoOpenInvestmentAdd]}
             urgentPush={prefs.activeTab === 'settings'}
             isOffline={financial.isOffline}
             activeTabRef={activeTabRef}
             isLedgerAddOpenRef={isLedgerAddOpenRef}
             isReceiptSplitOpenRef={isReceiptSplitOpenRef}
             isInvestmentAddOpenRef={isInvestmentAddOpenRef}
-            setActiveTab={prefs.setActiveTab}
-            setAutoOpenLedgerAdd={nav.setAutoOpenLedgerAdd}
-            setAutoOpenReceiptSplit={nav.setAutoOpenReceiptSplit}
-            setAutoOpenInvestmentAdd={setAutoOpenInvestmentAdd}
             showToast={dialogs.showToast}
             onPushChange={setPush}
             onScansChange={setScans}

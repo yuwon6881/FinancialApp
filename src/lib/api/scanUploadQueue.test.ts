@@ -8,7 +8,9 @@ vi.mock('../imageCompression', () => ({ compressImageFile: compressionMocks.comp
 const storeMocks = vi.hoisted(() => ({
   savePendingScanUpload: vi.fn(),
   deletePendingScanUpload: vi.fn(),
-  listPendingScanUploads: vi.fn(),
+  listPendingScanUploads: vi.fn<(ownerId: string) => Promise<PendingScanUpload[]>>(),
+  getCurrentScanUploadOwner: vi.fn(() => localStorage.getItem('auth_username')?.trim().toLowerCase() ?? null),
+  normalizeScanUploadOwner: vi.fn((value: string | null | undefined) => value?.trim().toLowerCase() || null),
 }))
 vi.mock('../scanUploadStore', () => storeMocks)
 
@@ -28,6 +30,7 @@ const refused = (status: number, message: string) => ({
 
 const stored = (overrides: Partial<PendingScanUpload>): PendingScanUpload => ({
   uploadId: 'upload-1',
+  ownerId: 'alice',
   kind: 'receipt',
   blob: new Blob(['image']),
   fileName: 'receipt.jpg',
@@ -38,6 +41,7 @@ const stored = (overrides: Partial<PendingScanUpload>): PendingScanUpload => ({
 
 describe('scan upload queue', () => {
   beforeEach(() => {
+    localStorage.setItem('auth_username', 'alice')
     compressionMocks.compressImageFile.mockImplementation(async (file: File) => file)
     storeMocks.savePendingScanUpload.mockResolvedValue(true)
     storeMocks.deletePendingScanUpload.mockResolvedValue(undefined)
@@ -59,7 +63,7 @@ describe('scan upload queue', () => {
     await expect(startScanUpload('receipt', file)).resolves.toEqual({ scanId: 'ocr-1', status: 'queued' })
 
     expect(storeMocks.savePendingScanUpload).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 'receipt', blob: file, fileName: 'receipt.jpg' }),
+      expect.objectContaining({ ownerId: 'alice', kind: 'receipt', blob: file, fileName: 'receipt.jpg' }),
     )
     // The write happens first: an upload interrupted before the response is the case this exists for.
     expect(storeMocks.savePendingScanUpload.mock.invocationCallOrder[0])
@@ -86,6 +90,22 @@ describe('scan upload queue', () => {
     await expect(startScanUpload('receipt', file)).rejects.toThrow('Failed to fetch')
   })
 
+  it('keeps the captured account as owner and sends nothing if the account changes during compression', async () => {
+    const file = new File(['image'], 'receipt.jpg', { type: 'image/jpeg' })
+    compressionMocks.compressImageFile.mockImplementationOnce(async (picked: File) => {
+      localStorage.setItem('auth_username', 'bob')
+      return picked
+    })
+    const fetchMock = vi.fn().mockResolvedValue(accepted('must-not-start'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(startScanUpload('receipt', file, 'alice')).rejects.toThrow(/sign in as the account that selected this image/i)
+
+    expect(storeMocks.savePendingScanUpload).toHaveBeenCalledWith(expect.objectContaining({ ownerId: 'alice' }))
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(storeMocks.deletePendingScanUpload).not.toHaveBeenCalled()
+  })
+
   // A refusal about the image itself is the user's to act on now; re-sending it on every wake-up
   // would just burn their data.
   it('drops an image the server will never accept', async () => {
@@ -107,7 +127,7 @@ describe('scan upload queue', () => {
       .mockResolvedValueOnce(accepted('ocr-new'))
     vi.stubGlobal('fetch', fetchMock)
 
-    await expect(drainPendingScanUploads()).resolves.toEqual({
+    await expect(drainPendingScanUploads('alice')).resolves.toEqual({
       started: [
         { kind: 'receipt', scanId: 'ocr-old' },
         { kind: 'investment', scanId: 'ocr-new' },
@@ -119,6 +139,22 @@ describe('scan upload queue', () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain('/ocr/scan-receipt/jobs')
     expect(String(fetchMock.mock.calls[1][0])).toContain('/ocr/scan-investment/jobs')
     expect(storeMocks.deletePendingScanUpload).toHaveBeenCalledTimes(2)
+    expect(storeMocks.listPendingScanUploads).toHaveBeenCalledWith('alice')
+  })
+
+  it('does not send Alice’s retained image while Bob is the active account', async () => {
+    const records = [stored({ uploadId: 'alice-image', ownerId: 'alice' })]
+    storeMocks.listPendingScanUploads.mockImplementation(async (ownerId: string) =>
+      records.filter(record => record.ownerId.toLowerCase() === ownerId.toLowerCase()))
+    localStorage.setItem('auth_username', 'bob')
+    const fetchMock = vi.fn().mockResolvedValue(accepted('must-not-start'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(drainPendingScanUploads('bob')).resolves.toEqual({ started: [], discarded: [], remaining: 0 })
+
+    expect(storeMocks.listPendingScanUploads).toHaveBeenCalledWith('bob')
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(storeMocks.deletePendingScanUpload).not.toHaveBeenCalled()
   })
 
   it('stops at the first upload that still cannot land', async () => {
@@ -132,7 +168,7 @@ describe('scan upload queue', () => {
       .mockRejectedValue(new TypeError('Failed to fetch'))
     vi.stubGlobal('fetch', fetchMock)
 
-    const result = await drainPendingScanUploads()
+    const result = await drainPendingScanUploads('alice')
 
     expect(result.started).toEqual([{ kind: 'receipt', scanId: 'ocr-1' }])
     expect(result.remaining).toBe(2)
@@ -146,7 +182,7 @@ describe('scan upload queue', () => {
     storeMocks.listPendingScanUploads.mockResolvedValue([stored({ uploadId: 'upload-1' })])
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(refused(415, 'Unsupported receipt image.')))
 
-    const result = await drainPendingScanUploads()
+    const result = await drainPendingScanUploads('alice')
 
     expect(result).toEqual({ started: [], discarded: ['receipt'], remaining: 0 })
     expect(storeMocks.deletePendingScanUpload).toHaveBeenCalledWith('upload-1')
@@ -157,7 +193,7 @@ describe('scan upload queue', () => {
     storeMocks.listPendingScanUploads.mockResolvedValue([stored({ uploadId: 'upload-1' })])
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(refused(423, 'Locked')))
 
-    const result = await drainPendingScanUploads()
+    const result = await drainPendingScanUploads('alice')
 
     expect(result).toEqual({ started: [], discarded: [], remaining: 1 })
     expect(storeMocks.deletePendingScanUpload).not.toHaveBeenCalled()

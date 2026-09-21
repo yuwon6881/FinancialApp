@@ -83,6 +83,16 @@ describe('app URL state', () => {
     expect(window.location.search).toBe('?month=Jul&year=2026')
   })
 
+  it('preserves an Android launcher action until its authenticated handler consumes it', () => {
+    window.history.replaceState({}, '', '/?pwaAction=scan-receipt&month=Jul&year=2026')
+    navigateToAppTab('ledger')
+    expect(window.location.pathname).toBe('/ledger')
+    expect(new URLSearchParams(window.location.search).get('pwaAction')).toBe('scan-receipt')
+
+    navigateToAppTab('ledger', { search: { type: 'outflow' } })
+    expect(new URLSearchParams(window.location.search).get('pwaAction')).toBe('scan-receipt')
+  })
+
   it('uses the canonical commitments and rewards route', () => {
     navigateToAppTab('wishlist')
     expect(window.location.pathname).toBe('/commitments-rewards')

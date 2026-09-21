@@ -145,6 +145,7 @@ export interface PushStatus {
   tokenRenewalRequired: boolean
   billRemindersEnabled: boolean
   categoryAlertsEnabled: boolean
+  showNotificationDetails: boolean
   otherDevicesBillReminders: boolean
   otherDevicesCategoryAlerts: boolean
 }

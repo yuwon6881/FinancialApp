@@ -12,7 +12,7 @@ import type {
 } from '../types'
 import type { CategoryCleanupSuggestion } from '../lib/api'
 import type { ToastTone } from './ui/ToastViewport'
-import type { PushBusyAction } from '../app/usePushNotifications'
+import type { PushBusyAction, UsePushNotificationsResult } from '../app/usePushNotifications'
 import { useAppContext } from '../contexts/AppContext'
 import { useSettingsView } from './settings/view/useSettingsView'
 import type { RequestDeleteCategoryOptions } from '../app/financialData/categoryActions'
@@ -81,6 +81,9 @@ interface SettingsViewProps {
   onToast?: (message: string, title?: string, tone?: ToastTone) => void
   onNavigateToLedger?: (options: any) => void
   onClearLocalFinancialData?: () => void
+  unsyncedChangeCount?: number
+  draftCount?: number
+  scanUploadOwnerId?: string
   pushSupported?: boolean
   pushLoading?: boolean
   /** Which push switch is mid-flight, so only that row shows a busy state. */
@@ -89,6 +92,7 @@ interface SettingsViewProps {
   /** This device's own opt-in, per kind. Never an account-wide flag — see NotificationsCard. */
   billRemindersEnabled?: boolean
   categoryAlertsEnabled?: boolean
+  pushPreviewPrivacy?: UsePushNotificationsResult
   otherDevicesBillReminders?: boolean
   otherDevicesCategoryAlerts?: boolean
   onToggleChannel?: (channel: PushChannel, checked: boolean) => void
@@ -231,15 +235,22 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           onToggleDarkMode={props.onToggleDarkMode}
           onToggleHideSensitive={props.onToggleHideSensitive}
           onClearLocalFinancialData={props.onClearLocalFinancialData}
+          unsyncedChangeCount={props.unsyncedChangeCount}
+          draftCount={props.draftCount}
+          scanUploadOwnerId={props.scanUploadOwnerId}
           pushSupported={props.pushSupported}
           pushLoading={props.pushLoading}
           pushBusyAction={props.pushBusyAction}
           pushGuidance={props.pushGuidance}
           billRemindersEnabled={props.billRemindersEnabled}
           categoryAlertsEnabled={props.categoryAlertsEnabled}
+          showNotificationDetails={props.pushPreviewPrivacy?.showNotificationDetails}
+          pushDeviceRegistered={props.pushPreviewPrivacy?.deviceRegistered}
+          previewDetailsBusy={props.pushPreviewPrivacy?.previewDetailsBusy}
           otherDevicesBillReminders={props.otherDevicesBillReminders}
           otherDevicesCategoryAlerts={props.otherDevicesCategoryAlerts}
           onToggleChannel={props.onToggleChannel}
+          onTogglePreviewDetails={props.pushPreviewPrivacy?.setPreviewDetailsEnabled}
           pushEnrolmentRevision={props.pushEnrolmentRevision}
           hasSpendingGuides={hasSpendingGuides}
           onNavigateToCategoryLimits={() => handleTabChange('categories-preferences')}

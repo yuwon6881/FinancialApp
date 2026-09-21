@@ -50,6 +50,9 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
       onToggleDarkMode={handleToggleDarkMode}
       onToggleHideSensitive={handleToggleHideSensitive}
       sensitivePreferenceStatus={prefs.sensitivePreferenceStatus}
+      unsyncedChangeCount={unsyncedChangeCount}
+      draftCount={draftCount}
+      scanUploadOwnerId={session.username}
       onUpdateSettings={financial.handleUpdateSettings}
       onAddCategory={financial.handleAddCategory}
       onUpdateCategoryCycleLimit={financial.handleUpdateCategoryCycleLimit}
@@ -71,6 +74,7 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
       pushGuidance={push.guidance}
       billRemindersEnabled={push.billRemindersEnabled}
       categoryAlertsEnabled={push.categoryAlertsEnabled}
+      pushPreviewPrivacy={push}
       otherDevicesBillReminders={push.otherDevicesBillReminders}
       otherDevicesCategoryAlerts={push.otherDevicesCategoryAlerts}
       pushEnrolmentRevision={push.enrolmentRevision}
@@ -122,37 +126,39 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
       onClearLocalFinancialData={() => {
         const month = nav.selectedMonth
         const year = nav.selectedYear
-        const atStake = [
-          unsyncedChangeCount > 0
-            ? `${unsyncedChangeCount} ${unsyncedChangeCount === 1 ? 'change has' : 'changes have'} not synced yet`
-            : null,
-          draftCount > 0
-            ? `${draftCount} ${draftCount === 1 ? 'draft is' : 'drafts are'} saved only on this device`
-            : null,
-        ].filter(Boolean)
-        const message = hasPendingLocalChanges
-          ? `${atStake.join(' and ')}. Clearing removes them permanently.`
-          : 'This removes saved copies of your data from this device. Your account is unaffected.'
-        dialogs.setConfirmModalData({
-          title: 'Clear local data?',
-          message,
-          confirmText: 'Clear local data',
-          onConfirm: () => {
-            void (async () => {
-              try {
-                await financial.handleLogoutCleanup(session.username, false)
-              } finally {
-                clearLocalFinancialData()
-              }
-              await financial.loadAll(month, year, true)
-              const copy = buildMutationSuccessToast({
-                entity: 'Local Data',
-                action: 'Cleared',
-                message: 'Cached financial data, offline drafts and unsynced changes were removed from this device.',
-              })
-              dialogs.showToast(copy.message, copy.title, copy.tone)
-            })()
-          },
+        void Promise.all([
+          import('./localDataWipe'),
+          import('../lib/scanUploadStore')
+            .then(({ countStoredScanUploads }) => countStoredScanUploads())
+            .catch(() => null),
+        ]).then(([{ describeLocalDataWipe }, scanUploadCount]) => {
+          const message = describeLocalDataWipe({
+            unsyncedChangeCount,
+            draftCount,
+            scanUploadCount,
+            hasPendingLocalChanges,
+          })
+          dialogs.setConfirmModalData({
+            title: 'Clear local data?',
+            message,
+            confirmText: 'Clear local data',
+            onConfirm: () => {
+              void (async () => {
+                try {
+                  await financial.handleLogoutCleanup(session.username, false)
+                } finally {
+                  clearLocalFinancialData()
+                }
+                await financial.loadAll(month, year, true)
+                const copy = buildMutationSuccessToast({
+                  entity: 'Local Data',
+                  action: 'Cleared',
+                  message: 'Cached financial data, offline drafts, scan images and unsynced changes were removed from this device.',
+                })
+                dialogs.showToast(copy.message, copy.title, copy.tone)
+              })()
+            },
+          })
         })
       }}
     />

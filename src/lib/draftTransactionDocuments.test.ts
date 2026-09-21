@@ -9,7 +9,7 @@ type StoredRecord = { key: string; [key: string]: unknown }
 
 function createIndexedDbDouble(): IDBFactory {
   const records = new Map<string, StoredRecord>()
-  let initialized = false
+  const stores = new Set<string>()
 
   const request = <T>(result: T): IDBRequest<T> => {
     const pending = {} as IDBRequest<T>
@@ -20,10 +20,13 @@ function createIndexedDbDouble(): IDBFactory {
 
   const open = {} as IDBOpenDBRequest
   const database = {
-    objectStoreNames: { contains: () => initialized },
-    createObjectStore: () => {
-      initialized = true
-      return { createIndex: () => undefined } as unknown as IDBObjectStore
+    objectStoreNames: { contains: (name: string) => stores.has(name) },
+    createObjectStore: (name: string) => {
+      stores.add(name)
+      return {
+        indexNames: { contains: () => false },
+        createIndex: () => undefined,
+      } as unknown as IDBObjectStore
     },
     transaction: () => {
       const transaction = {
@@ -67,7 +70,7 @@ function createIndexedDbDouble(): IDBFactory {
     open: () => {
       queueMicrotask(() => {
         Object.defineProperty(open, 'result', { value: database, configurable: true })
-        if (!initialized) open.onupgradeneeded?.(new Event('upgradeneeded') as IDBVersionChangeEvent)
+        if (stores.size === 0) open.onupgradeneeded?.(new Event('upgradeneeded') as IDBVersionChangeEvent)
         open.onsuccess?.(new Event('success') as Event)
       })
       return open

@@ -1,21 +1,41 @@
 import { describe, expect, it } from 'vitest'
-import { PENDING_SCAN_UPLOAD_TTL_MS, isExpiredScanUpload } from './scanUploadStore'
+import {
+  filterScanUploadsForOwner,
+  normalizeScanUploadOwner,
+  sortPendingScanUploadsForOwner,
+} from './scanUploadStore'
 
-describe('pending scan upload expiry', () => {
-  // Matched to the server's own terminal job retention: a scan started later than this would be
-  // pruned before its result could ever be read back.
-  it('matches the server job retention window', () => {
-    expect(PENDING_SCAN_UPLOAD_TTL_MS).toBe(24 * 60 * 60 * 1000)
+const upload = (ownerId: string | undefined, createdAt: number, uploadId: string) => ({
+  uploadId,
+  ownerId: ownerId as string,
+  kind: 'receipt' as const,
+  blob: new Blob([uploadId]),
+  fileName: `${uploadId}.jpg`,
+  fileType: 'image/jpeg',
+  createdAt,
+})
+
+describe('pending scan upload ownership and retention', () => {
+  it('normalizes account names consistently and rejects an unknown owner', () => {
+    expect(normalizeScanUploadOwner('  Alice@Example.com ')).toBe('alice@example.com')
+    expect(normalizeScanUploadOwner('   ')).toBeNull()
   })
 
-  it('keeps an image right up to the window and drops it after', () => {
-    const now = 1_000_000_000_000
-    expect(isExpiredScanUpload({ createdAt: now - PENDING_SCAN_UPLOAD_TTL_MS }, now)).toBe(false)
-    expect(isExpiredScanUpload({ createdAt: now - PENDING_SCAN_UPLOAD_TTL_MS - 1 }, now)).toBe(true)
+  it('does not expose or replay another account’s upload or an old unowned upload', () => {
+    const records = [
+      upload('alice@example.com', 1, 'alice-old'),
+      upload('bob@example.com', 2, 'bob'),
+      upload(undefined, 3, 'legacy-unowned'),
+    ]
+    expect(filterScanUploadsForOwner(records, 'ALICE@example.com').map(record => record.uploadId)).toEqual(['alice-old'])
+    expect(filterScanUploadsForOwner(records, 'bob@example.com').map(record => record.uploadId)).toEqual(['bob'])
   })
 
-  // A clock that jumped backwards must not make every queued upload look expired.
-  it('treats an image from the future as still owed', () => {
-    expect(isExpiredScanUpload({ createdAt: 2_000 }, 1_000)).toBe(false)
+  it('retains and orders an old unresolved upload until resolution or an explicit wipe', () => {
+    const records = [
+      upload('alice@example.com', Date.now() - 10 * 365 * 24 * 60 * 60 * 1000, 'old'),
+      upload('alice@example.com', Date.now(), 'new'),
+    ]
+    expect(sortPendingScanUploadsForOwner(records, 'alice@example.com').map(record => record.uploadId)).toEqual(['old', 'new'])
   })
 })

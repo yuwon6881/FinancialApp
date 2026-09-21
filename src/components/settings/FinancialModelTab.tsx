@@ -16,6 +16,7 @@ import { CurrencySelect } from '../ui/CurrencySelect'
 import { ToggleButton } from '../ui/ToggleButton'
 import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { NotificationsCard } from './NotificationsCard'
+import { PwaReadinessCard } from './PwaReadinessCard'
 import type { PushBusyAction } from '../../app/usePushNotifications'
 import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
 import { FormField } from '../ui/FormField'
@@ -54,10 +55,17 @@ export interface FinancialModelTabProps {
   pushGuidance?: string | null
   billRemindersEnabled?: boolean
   categoryAlertsEnabled?: boolean
+  showNotificationDetails?: boolean
+  pushDeviceRegistered?: boolean
+  previewDetailsBusy?: boolean
   otherDevicesBillReminders?: boolean
   otherDevicesCategoryAlerts?: boolean
   onToggleChannel?: (channel: PushChannel, checked: boolean) => void
+  onTogglePreviewDetails?: (checked: boolean) => void
   pushEnrolmentRevision?: number
+  unsyncedChangeCount?: number
+  draftCount?: number
+  scanUploadOwnerId?: string
   hasSpendingGuides: boolean
   onNavigateToCategoryLimits: () => void
 }
@@ -82,10 +90,17 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
   pushGuidance,
   billRemindersEnabled,
   categoryAlertsEnabled,
+  showNotificationDetails,
+  pushDeviceRegistered,
+  previewDetailsBusy,
   otherDevicesBillReminders,
   otherDevicesCategoryAlerts,
   onToggleChannel,
+  onTogglePreviewDetails,
   pushEnrolmentRevision,
+  unsyncedChangeCount,
+  draftCount,
+  scanUploadOwnerId,
   hasSpendingGuides,
   onNavigateToCategoryLimits,
 }) => {
@@ -297,6 +312,12 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
           </div>
         </div>
 
+        <PwaReadinessCard
+          unsyncedChangeCount={unsyncedChangeCount ?? 0}
+          draftCount={draftCount ?? 0}
+          ownerId={scanUploadOwnerId ?? ''}
+        />
+
         <div>
           <NotificationsCard
             pushSupported={pushSupported !== false}
@@ -305,9 +326,13 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
             pushGuidance={pushGuidance}
             billRemindersEnabled={billRemindersEnabled || false}
             categoryAlertsEnabled={categoryAlertsEnabled || false}
+            showNotificationDetails={showNotificationDetails || false}
+            pushDeviceRegistered={pushDeviceRegistered || false}
+            previewDetailsBusy={previewDetailsBusy || false}
             otherDevicesBillReminders={otherDevicesBillReminders || false}
             otherDevicesCategoryAlerts={otherDevicesCategoryAlerts || false}
             onToggleChannel={(channel, checked) => onToggleChannel?.(channel, checked)}
+            onTogglePreviewDetails={checked => onTogglePreviewDetails?.(checked)}
             enrolmentRevision={pushEnrolmentRevision ?? 0}
             hasSpendingGuides={hasSpendingGuides}
             onNavigateToCategoryLimits={onNavigateToCategoryLimits}

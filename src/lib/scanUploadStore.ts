@@ -1,9 +1,12 @@
 import { SCAN_UPLOADS_STORE, hasLocalFileStorage, requestResult, withStore } from './localFileStore'
 
 export type ScanUploadKind = 'receipt' | 'receipt-split' | 'investment'
+export const PENDING_SCAN_UPLOADS_CHANGED_EVENT = 'financialapp:pending-scan-uploads-changed'
 
 export interface PendingScanUpload {
   uploadId: string
+  /** Normalized account name that selected this image. Never replay without an exact owner match. */
+  ownerId: string
   kind: ScanUploadKind
   blob: Blob
   fileName: string
@@ -11,19 +14,42 @@ export interface PendingScanUpload {
   createdAt: number
 }
 
-/**
- * How long a picked-but-unsent image is worth keeping. Matched to the server's own terminal job
- * retention: a scan started later than this would be pruned before its result could be read, so
- * holding the bytes past it only costs the user storage.
- */
-export const PENDING_SCAN_UPLOAD_TTL_MS = 24 * 60 * 60 * 1000
+export function normalizeScanUploadOwner(value: string | null | undefined): string | null {
+  const normalized = value?.trim().toLowerCase()
+  return normalized || null
+}
 
-/**
- * Whether a queued image has outlived its usefulness. Exported so the rule can be tested without
- * standing up a database: the ordering and pruning below are the whole of the queue's policy.
- */
-export function isExpiredScanUpload(record: Pick<PendingScanUpload, 'createdAt'>, now: number): boolean {
-  return now - record.createdAt > PENDING_SCAN_UPLOAD_TTL_MS
+/** The authenticated account name is set with the FinancialApp session, including cookie sessions. */
+export function getCurrentScanUploadOwner(): string | null {
+  try {
+    return typeof globalThis.localStorage === 'undefined'
+      ? null
+      : normalizeScanUploadOwner(globalThis.localStorage.getItem('auth_username'))
+  } catch {
+    return null
+  }
+}
+
+export function filterScanUploadsForOwner(
+  records: readonly PendingScanUpload[],
+  ownerId: string,
+): PendingScanUpload[] {
+  const owner = normalizeScanUploadOwner(ownerId)
+  if (!owner) return []
+  return records.filter(record => normalizeScanUploadOwner(record.ownerId) === owner)
+}
+
+export function sortPendingScanUploadsForOwner(
+  records: readonly PendingScanUpload[],
+  ownerId: string,
+): PendingScanUpload[] {
+  return filterScanUploadsForOwner(records, ownerId).sort((left, right) => left.createdAt - right.createdAt)
+}
+
+function announcePendingScanUploadsChanged(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(PENDING_SCAN_UPLOADS_CHANGED_EVENT))
+  }
 }
 
 /**
@@ -44,12 +70,14 @@ async function bestEffort<T>(action: () => Promise<T>, fallback: T, what: string
 }
 
 export async function savePendingScanUpload(record: PendingScanUpload): Promise<boolean> {
-  return bestEffort(async () => {
+  const saved = await bestEffort(async () => {
     await withStore(SCAN_UPLOADS_STORE, 'readwrite', async store => {
       await requestResult(store.put(record))
     })
     return true
   }, false, 'save a pending scan upload')
+  if (saved) announcePendingScanUploadsChanged()
+  return saved
 }
 
 export async function deletePendingScanUpload(uploadId: string): Promise<void> {
@@ -58,25 +86,42 @@ export async function deletePendingScanUpload(uploadId: string): Promise<void> {
       await requestResult(store.delete(uploadId))
     })
   }, undefined, 'delete a pending scan upload')
+  announcePendingScanUploadsChanged()
 }
 
 /**
- * Every upload still owed, oldest first, with anything past its useful life dropped on the way
- * out. Order matters: a queue drained newest-first would keep re-sending the same fresh image
- * while an older one aged out unsent.
+ * Count retained images without reading their potentially multi-megabyte blobs into memory.
+ * `null` means this browser could not report the queue, so the UI must not show an all-clear.
  */
-export async function listPendingScanUploads(now = Date.now()): Promise<PendingScanUpload[]> {
+/** Pass no owner only for the explicit whole-device local-data wipe confirmation. */
+export async function countStoredScanUploads(ownerId?: string): Promise<number | null> {
+  if (!hasLocalFileStorage()) return null
+  try {
+    return await withStore(SCAN_UPLOADS_STORE, 'readonly', store => {
+      if (ownerId === undefined) return requestResult(store.count()) as Promise<number>
+      const owner = normalizeScanUploadOwner(ownerId)
+      return owner
+        ? requestResult(store.index('ownerId').count(owner)) as Promise<number>
+        : Promise.resolve(0)
+    })
+  } catch (error) {
+    console.warn('Could not count saved scan uploads', error)
+    return null
+  }
+}
+
+/**
+ * Every upload still owed, oldest first. Unresolved uploads never expire automatically; the
+ * browser retains them until the server accepts the upload or the user deliberately clears local
+ * data.
+ */
+export async function listPendingScanUploads(ownerId: string): Promise<PendingScanUpload[]> {
+  const owner = normalizeScanUploadOwner(ownerId)
+  if (!owner) return []
   return bestEffort(async () => {
     const stored = await withStore(SCAN_UPLOADS_STORE, 'readonly', store =>
-      requestResult(store.getAll()) as Promise<PendingScanUpload[]>)
-    const live: PendingScanUpload[] = []
-    const expired: string[] = []
-    for (const record of stored) {
-      if (isExpiredScanUpload(record, now)) expired.push(record.uploadId)
-      else live.push(record)
-    }
-    for (const uploadId of expired) await deletePendingScanUpload(uploadId)
-    return live.sort((left, right) => left.createdAt - right.createdAt)
+      requestResult(store.index('ownerId').getAll(owner)) as Promise<PendingScanUpload[]>)
+    return sortPendingScanUploadsForOwner(stored, owner)
   }, [], 'read pending scan uploads')
 }
 
@@ -86,4 +131,5 @@ export async function clearPendingScanUploads(): Promise<void> {
       await requestResult(store.clear())
     })
   }, undefined, 'clear pending scan uploads')
+  announcePendingScanUploadsChanged()
 }

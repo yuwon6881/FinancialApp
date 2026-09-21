@@ -1,5 +1,5 @@
 import React from 'react'
-import { AlertCircle, BellRing, ChevronRight, Gauge } from 'lucide-react'
+import { AlertCircle, BellRing, ChevronRight, Eye, Gauge } from 'lucide-react'
 import {
   BILL_REMINDER_PUSH_DESCRIPTION,
   BILL_REMINDER_PUSH_TITLE,
@@ -68,10 +68,15 @@ export interface NotificationsCardProps {
   /** This device's own state, per kind. Never an account-wide flag. */
   billRemindersEnabled: boolean
   categoryAlertsEnabled: boolean
+  /** Sensitive notification text is hidden on this device until explicitly enabled. */
+  showNotificationDetails: boolean
+  pushDeviceRegistered: boolean
+  previewDetailsBusy: boolean
   /** Whether some other device has that kind on. Rendered as a sentence, never as a switch. */
   otherDevicesBillReminders: boolean
   otherDevicesCategoryAlerts: boolean
   onToggleChannel: (channel: PushChannel, checked: boolean) => void
+  onTogglePreviewDetails: (checked: boolean) => void
   /**
    * Rises once per **server-confirmed** enrolment change, and is the only thing the roster re-reads
    * on. Deriving it from the switch booleans read the roster while the write was still in flight.
@@ -151,6 +156,28 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
         <OtherDevicesNote
           show={!props.categoryAlertsEnabled && props.otherDevicesCategoryAlerts}
           kind="Spending alerts"
+        />
+
+        <NotificationRow
+          icon={<Eye className="size-4" />}
+          title="Show lock-screen details"
+          scope={SCOPE_THIS_DEVICE}
+          description={props.showNotificationDetails
+            ? 'Names and spending details may appear in notifications on this device.'
+            : 'Notifications use generic text so financial details stay hidden on the lock screen.'}
+          hint={!props.pushDeviceRegistered ? (
+            <span className="max-w-24 text-right text-eyebrow text-muted-foreground">Turn on a notification first</span>
+          ) : undefined}
+          control={
+            <ToggleButton
+              active={props.showNotificationDetails}
+              onClick={() => props.onTogglePreviewDetails(!props.showNotificationDetails)}
+              label="Show financial details on this device's lock screen"
+              disabled={!props.pushDeviceRegistered || props.previewDetailsBusy || props.pushLoading || deviceUnavailable}
+              mutationStatus={{ isSyncing: props.previewDetailsBusy }}
+              mutationEntityLabel="notification privacy"
+            />
+          }
         />
 
         {/* Offered only when there is nothing to watch, which is the one state where it is the fix

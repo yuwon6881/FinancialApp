@@ -157,7 +157,10 @@ if (!fs.existsSync(distAssetsPath)) {
 // reads `text-eyebrow` as a `text-*` colour, so `cn('text-eyebrow', 'text-muted-foreground')`
 // resolved them as one conflict and deleted the role -- 206 class lists were exposed to losing their
 // size and weight. The same nine chunks remain eager and the limit restores the ~1.5 kB margin.
-const CRITICAL_PATH_LIMIT_KB = 222.0
+// 223.5: raised from 222.0 (measured 222.03). PWA experience integration, launcher shortcuts handling,
+// push preview settings, and durable scan queue enhancements. Restores the established ~1.5 kB margin
+// for cross-platform gzip variance.
+const CRITICAL_PATH_LIMIT_KB = 223.5
 const PRECACHE_RAW_LIMIT_KB = 3 * 1024
 
 function criticalPathChunks(files) {

@@ -10,9 +10,9 @@
  */
 
 const DATABASE_NAME = 'financial-app-draft-files'
-// v2 added the scan-upload queue. Upgrades only ever create missing stores, so an existing
-// database keeps every draft file already in it.
-const DATABASE_VERSION = 2
+// v2 added the scan-upload queue; v3 indexes its account owner. Upgrades only ever create
+// missing stores/indexes, so existing draft files and old unowned scan uploads are retained.
+const DATABASE_VERSION = 3
 
 export const DRAFT_DOCUMENTS_STORE = 'transaction-documents'
 export const SCAN_UPLOADS_STORE = 'scan-uploads'
@@ -35,9 +35,13 @@ function openDatabase(): Promise<IDBDatabase> {
         const store = database.createObjectStore(DRAFT_DOCUMENTS_STORE, { keyPath: 'key' })
         store.createIndex('owner', 'owner', { unique: false })
       }
+      let scanStore: IDBObjectStore
       if (!database.objectStoreNames.contains(SCAN_UPLOADS_STORE)) {
-        database.createObjectStore(SCAN_UPLOADS_STORE, { keyPath: 'uploadId' })
+        scanStore = database.createObjectStore(SCAN_UPLOADS_STORE, { keyPath: 'uploadId' })
+      } else {
+        scanStore = request.transaction!.objectStore(SCAN_UPLOADS_STORE)
       }
+      if (!scanStore.indexNames.contains('ownerId')) scanStore.createIndex('ownerId', 'ownerId', { unique: false })
     }
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error ?? new Error('Could not open local draft file storage.'))

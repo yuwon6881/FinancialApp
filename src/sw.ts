@@ -40,7 +40,19 @@ self.addEventListener('activate', event => {
         await assetCache.delete(request)
       }
     }
+    // The client asks for activation only after the user applies a ready update from a safe
+    // point. Notify that tab to reload; other open tabs keep their current document and worker.
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    for (const client of clients) {
+      client.postMessage({ type: 'PWA_SW_ACTIVATED' })
+    }
   })())
+})
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    event.waitUntil(self.skipWaiting())
+  }
 })
 
 // API content can also be opened as a navigation by a PDF/image iframe. Keep it

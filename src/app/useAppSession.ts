@@ -17,6 +17,7 @@ import { useAutoLock } from '../lib/useAutoLock'
 import { retryWhileServerWakes } from '../lib/serverWakeRetry'
 import { cancelActiveWebAuthnRequest } from '../lib/webauthnRequest'
 import { verifyMobilePwaDeviceGate } from '../lib/mobilePwaDeviceGate'
+import { updateAppSearch } from '../lib/appLocation'
 
 export interface UseAppSessionOptions {
   onLogoutBackupAndCleanup: (username: string) => void | Promise<void>
@@ -269,6 +270,8 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
         console.warn(`Could not remove ${key} during logout.`, error)
       }
     }
+    // A launcher shortcut belongs to the session that opened it; sign-out cancels that intent.
+    updateAppSearch({ pwaAction: null })
     setToken(null)
     setUsername('')
     setHasFingerprintSetup(false)

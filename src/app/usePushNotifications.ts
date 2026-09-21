@@ -8,13 +8,17 @@ export interface UsePushNotificationsResult {
   loading: boolean
   busy: boolean
   busyAction: PushBusyAction
+  deviceRegistered?: boolean
   billRemindersEnabled: boolean
   categoryAlertsEnabled: boolean
   otherDevicesBillReminders: boolean
   otherDevicesCategoryAlerts: boolean
+  showNotificationDetails?: boolean
+  previewDetailsBusy?: boolean
   enrolmentRevision: number
   guidance: string | null
   setChannelEnabled: (channel: PushChannel, enabled: boolean) => Promise<boolean>
+  setPreviewDetailsEnabled?: (enabled: boolean) => Promise<boolean>
   refresh: () => Promise<PushStatus | null>
 }
 
@@ -24,6 +28,7 @@ const EMPTY_STATUS: PushStatus = {
   tokenRenewalRequired: false,
   billRemindersEnabled: false,
   categoryAlertsEnabled: false,
+  showNotificationDetails: false,
   otherDevicesBillReminders: false,
   otherDevicesCategoryAlerts: false,
 }
@@ -45,6 +50,7 @@ export function usePushNotifications(
   const [status, setStatus] = useState<PushStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [busyAction, setBusyAction] = useState<PushBusyAction>(null)
+  const [previewDetailsBusy, setPreviewDetailsBusy] = useState(false)
   const [guidance, setGuidance] = useState<string | null>(null)
   const [enrolmentRevision, setEnrolmentRevision] = useState(0)
   const markEnrolmentChanged = useCallback(() => setEnrolmentRevision(current => current + 1), [])
@@ -153,18 +159,65 @@ export function usePushNotifications(
     }
   }, [account, deviceId, markEnrolmentChanged, status])
 
+  const setPreviewDetailsEnabled = useCallback(async (enabled: boolean) => {
+    if (!status?.deviceRegistered) return false
+    const controller = await loadController()
+    const device = deviceId ? { supported: true, deviceId, guidance: null } : controller.getPushDevice()
+    if (!device.supported || !device.deviceId) {
+      setGuidance(device.guidance)
+      return false
+    }
+    setPreviewDetailsBusy(true)
+    setGuidance(null)
+    try {
+      await controller.setPushPreviewDetails(device.deviceId, enabled)
+      // The successful PUT is the acknowledgement for this device preference. Do not make a
+      // follow-up status read part of the success path: if that GET fails after the write
+      // committed, leaving the old local value could falsely tell the user previews are private.
+      setStatus(current => current ? { ...current, showNotificationDetails: enabled } : current)
+      return true
+    } catch (error) {
+      console.error('Could not update this device notification privacy setting.', error)
+      try {
+        // A failed response can be ambiguous: the server may have committed the change before
+        // the connection dropped. Read the device's authoritative value before reporting failure.
+        const current = await controller.fetchPushStatus(device.deviceId)
+        setStatus(current)
+        if (current.showNotificationDetails === enabled) {
+          setGuidance(null)
+          return true
+        }
+      } catch (readError) {
+        console.warn('Could not confirm the device notification privacy setting.', readError)
+        if (enabled) {
+          // If the opt-in may have committed but even the read failed, do not tell the user that
+          // lock-screen details are still hidden. An enabled switch is the privacy-cautious state.
+          setStatus(current => current ? { ...current, showNotificationDetails: true } : current)
+        }
+      }
+      setGuidance('This device\'s lock-screen preview setting could not be confirmed. Reconnect and check it before relying on private previews.')
+      return false
+    } finally {
+      setPreviewDetailsBusy(false)
+    }
+  }, [deviceId, status?.deviceRegistered])
+
   return {
     supported,
     loading,
     busy: busyAction !== null,
     busyAction,
+    deviceRegistered: !!status?.deviceRegistered,
     billRemindersEnabled: !!status?.billRemindersEnabled,
     categoryAlertsEnabled: !!status?.categoryAlertsEnabled,
     otherDevicesBillReminders: !!status?.otherDevicesBillReminders,
     otherDevicesCategoryAlerts: !!status?.otherDevicesCategoryAlerts,
+    showNotificationDetails: !!status?.showNotificationDetails,
+    previewDetailsBusy,
     enrolmentRevision,
     guidance,
     setChannelEnabled,
+    setPreviewDetailsEnabled,
     refresh,
   }
 }

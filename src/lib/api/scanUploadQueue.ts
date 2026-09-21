@@ -3,7 +3,9 @@ import { getStatus } from '../errors'
 import { isNetworkFailure, isServiceWakeFailure } from '../outboxDrainHelpers'
 import {
   deletePendingScanUpload,
+  getCurrentScanUploadOwner,
   listPendingScanUploads,
+  normalizeScanUploadOwner,
   savePendingScanUpload,
   type PendingScanUpload,
   type ScanUploadKind,
@@ -75,7 +77,7 @@ async function postScanImage(
  * to act on now, so the bytes are dropped rather than re-sent on every wake.
  *
  * A locked or expired session counts as retryable: the same image is still wanted the moment the
- * user unlocks, and the queue's own expiry stops a signed-out upload lingering.
+ * user unlocks. Unresolved images remain until accepted or explicitly cleared by the user.
  */
 function isWorthRetrying(error: unknown, online: boolean): boolean {
   const status = getStatus(error)
@@ -104,10 +106,14 @@ function newUploadId(): string {
 export async function startScanUpload(
   kind: ScanUploadKind,
   imageFile: File,
+  ownerId: string | null = getCurrentScanUploadOwner(),
 ): Promise<{ scanId: string; status: string }> {
+  const owner = normalizeScanUploadOwner(ownerId)
+  if (!owner) throw new Error('Sign in again before scanning so the saved image stays with your account.')
   const image = await prepareScanImage(imageFile)
   const record: PendingScanUpload = {
     uploadId: newUploadId(),
+    ownerId: owner,
     kind,
     blob: image,
     fileName: image.name || imageFile.name || 'receipt',
@@ -115,6 +121,12 @@ export async function startScanUpload(
     createdAt: Date.now(),
   }
   const persisted = await savePendingScanUpload(record)
+
+  // A sign-out or account switch can happen while image compression is running. Keep the bytes
+  // under the account that picked them, but never send them with the replacement account's token.
+  if (getCurrentScanUploadOwner() !== owner) {
+    throw new Error('Your account changed before the scan started. Sign in as the account that selected this image to continue.')
+  }
 
   try {
     const started = await postScanImage(kind, image)
@@ -151,12 +163,15 @@ export interface ScanUploadDrainResult {
  * next attempt will fail the same way, and draining the rest would burn the user's data allowance
  * re-sending photos that cannot land yet.
  */
-export async function drainPendingScanUploads(): Promise<ScanUploadDrainResult> {
-  const pending = await listPendingScanUploads()
+export async function drainPendingScanUploads(ownerId: string): Promise<ScanUploadDrainResult> {
+  const owner = normalizeScanUploadOwner(ownerId)
+  if (!owner) return { started: [], discarded: [], remaining: 0 }
+  const pending = await listPendingScanUploads(owner)
   const started: DrainedScanUpload[] = []
   const discarded: ScanUploadKind[] = []
 
   for (const record of pending) {
+    if (getCurrentScanUploadOwner() !== owner) break
     const image = new File([record.blob], record.fileName, { type: record.fileType || record.blob.type })
     try {
       const result = await postScanImage(record.kind, image)

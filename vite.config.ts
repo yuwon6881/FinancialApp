@@ -64,6 +64,9 @@ function cspMetaPlugin(apiUrl: string | undefined): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
+  define: {
+    __APP_BUILD_ID__: JSON.stringify(env.VITE_APP_BUILD_ID || new Date().toISOString()),
+  },
   plugins: [
     // The React Compiler auto-memoizes components and hooks at build time. Only
     // LedgerRows was hand-memoized, so on a phone a single context tick re-rendered
@@ -83,7 +86,10 @@ export default defineConfig(({ mode }) => {
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
-      registerType: 'autoUpdate',
+      // The app owns registration so a waiting worker can be shown to the user and activated
+      // only from a safe point. Automatic reloads can discard transient editor state.
+      injectRegister: false,
+      registerType: 'prompt',
       includeAssets: ['favicon.svg'],
       manifest: {
         // Chromium renders `name` under its generated Android splash icon.
@@ -107,6 +113,29 @@ export default defineConfig(({ mode }) => {
         // (or Chrome's periodic WebAPK update) before installed devices pick it up.
         theme_color: '#0b0e14',
         orientation: 'portrait-primary',
+        shortcuts: [
+          {
+            name: 'Add transaction',
+            short_name: 'Add transaction',
+            description: 'Open a new transaction form.',
+            url: '/?pwaAction=add-transaction',
+            icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+          {
+            name: 'Scan receipt',
+            short_name: 'Scan receipt',
+            description: 'Open receipt capture from the transaction form.',
+            url: '/?pwaAction=scan-receipt',
+            icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+          {
+            name: 'Upcoming bills',
+            short_name: 'Upcoming bills',
+            description: 'View scheduled and upcoming bills.',
+            url: '/?pwaAction=upcoming-bills',
+            icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+        ],
         icons: [
           {
             src: '/icon-192.png',

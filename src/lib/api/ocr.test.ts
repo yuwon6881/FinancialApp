@@ -19,6 +19,7 @@ const jsonResponse = (payload: unknown) => ({
 
 describe('OCR API client', () => {
   beforeEach(() => {
+    localStorage.setItem('auth_username', 'alice')
     // The real helper leaves a small file alone; these tests only care that every scan
     // upload goes through it.
     compressionMocks.compressImageFile.mockImplementation(async (file: File) => file)

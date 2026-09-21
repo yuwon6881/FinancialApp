@@ -42,15 +42,15 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               onClick={() => { triggerHaptic(8); onTabChange(tab) }}
               aria-current={isActive ? 'page' : undefined}
               className={`group relative flex min-w-0 flex-col items-center gap-1 px-1 text-caption cursor-pointer transition-all duration-200 w-full text-center active:scale-95 ${
-                isActive ? 'font-semibold text-foreground' : 'text-muted-foreground/75 hover:text-foreground'
+                isActive ? 'font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <span className={`relative flex size-8 items-center justify-center rounded-xl transition-all duration-200 ${
-                isActive ? 'bg-foreground/6 text-foreground scale-105' : 'text-muted-foreground/75'
+                isActive ? 'bg-foreground/6 text-foreground scale-105' : 'text-muted-foreground'
               }`}>
-                <Icon className={`size-4.5 mx-auto transition-colors duration-200 ${isActive ? iconClass : 'text-muted-foreground/75'}`} />
+                <Icon className={`size-4.5 mx-auto transition-colors duration-200 ${isActive ? iconClass : 'text-muted-foreground'}`} />
               </span>
-              <span className={`truncate max-w-full px-0.5 text-caption tracking-tight transition-colors duration-200 ${isActive ? 'font-semibold text-foreground' : 'text-muted-foreground/75'}`}>{mobileLabel}</span>
+              <span className={`truncate max-w-full px-0.5 text-caption tracking-tight transition-colors duration-200 ${isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>{mobileLabel}</span>
             </Button>
           )
         })}

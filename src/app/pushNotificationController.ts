@@ -189,3 +189,10 @@ export async function setPushChannel(
     return { success: false, status: currentStatus, guidance, enrolmentChanged: false }
   }
 }
+
+export async function setPushPreviewDetails(
+  deviceId: string,
+  showDetails: boolean,
+): Promise<void> {
+  await api.updatePushPreviewDetails(deviceId, showDetails)
+}

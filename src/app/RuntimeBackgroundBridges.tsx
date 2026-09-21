@@ -8,6 +8,24 @@ import { useInvestmentScanPolling } from '../lib/useInvestmentScanPolling'
 import { useInvestmentRefreshCoordinator } from './useInvestmentRefreshCoordinator'
 import { usePendingScanUploads } from './usePendingScanUploads'
 import type { ScanUploadKind } from '../lib/scanUploadStore'
+import { updateAppSearch } from '../lib/appLocation'
+import { useAppPrefs } from '../contexts/AppContext'
+import { PwaExperienceRuntime } from './PwaExperience'
+import { usePwaShortcutAction, type PwaShortcutAction } from './pwaShortcutActions'
+import type { useAppSession } from './useAppSession'
+
+type ShortcutNavigation = {
+  handleQuickAction: (action: 'transaction' | 'subscription' | 'wishlist') => void
+  setAutoOpenLedgerAdd: (open: boolean) => void
+  setAutoOpenLedgerTxType: (type: 'inflow' | 'outflow' | 'transfer' | null) => void
+  setAutoOpenReceiptSplit: (open: boolean) => void
+}
+type RuntimeBridgeContext = readonly [
+  navigation: ShortcutNavigation,
+  requestSensitiveReveal: () => void,
+  setActiveTab: (tab: AppTab) => void,
+  setAutoOpenInvestmentAdd: (open: boolean) => void,
+]
 
 export interface ScanPollingResults {
   receiptScan: ReturnType<typeof useReceiptScanPolling>
@@ -16,18 +34,14 @@ export interface ScanPollingResults {
 }
 
 interface RuntimeBackgroundBridgesProps {
-  account: string | null
-  token: string
+  session: Pick<ReturnType<typeof useAppSession>, 'username' | 'token'>
+  bridge: RuntimeBridgeContext
   urgentPush: boolean
   isOffline: boolean
   activeTabRef: MutableRefObject<AppTab>
   isLedgerAddOpenRef: MutableRefObject<boolean>
   isReceiptSplitOpenRef: MutableRefObject<boolean>
   isInvestmentAddOpenRef: MutableRefObject<boolean>
-  setActiveTab: (tab: AppTab) => void
-  setAutoOpenLedgerAdd: (open: boolean) => void
-  setAutoOpenReceiptSplit: (open: boolean) => void
-  setAutoOpenInvestmentAdd: (open: boolean) => void
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
   onPushChange: (push: UsePushNotificationsResult) => void
   onScansChange: (scans: ScanPollingResults) => void
@@ -35,29 +49,34 @@ interface RuntimeBackgroundBridgesProps {
 }
 
 export function RuntimeBackgroundBridges(props: RuntimeBackgroundBridgesProps) {
-  const push = usePushNotifications(true, props.showToast, props.account, props.urgentPush)
+  const { hideSensitive, sensitivePreferenceStatus: contextSensitiveStatus } = useAppPrefs()
+  const sensitivePreferenceStatus = contextSensitiveStatus ?? 'pending'
+  const account = props.session.username
+  const token = props.session.token!
+  const [shortcutNavigation, onRequestSensitiveReveal, setActiveTab, setAutoOpenInvestmentAdd] = props.bridge
+  const push = usePushNotifications(true, props.showToast, account, props.urgentPush)
   const investmentAllocation = useInvestmentRefreshCoordinator(true, props.isOffline)
   const receiptScan = useReceiptScanPolling({
-    token: props.token,
+    token,
     activeTabRef: props.activeTabRef,
     isLedgerAddOpenRef: props.isLedgerAddOpenRef,
-    setActiveTab: props.setActiveTab,
-    setAutoOpenLedgerAdd: props.setAutoOpenLedgerAdd,
+    setActiveTab,
+    setAutoOpenLedgerAdd: shortcutNavigation.setAutoOpenLedgerAdd,
     showToast: props.showToast,
   })
   const receiptSplit = useReceiptSplitPolling({
-    token: props.token,
+    token,
     isReceiptSplitOpenRef: props.isReceiptSplitOpenRef,
-    setActiveTab: props.setActiveTab,
-    setAutoOpenReceiptSplit: props.setAutoOpenReceiptSplit,
+    setActiveTab,
+    setAutoOpenReceiptSplit: shortcutNavigation.setAutoOpenReceiptSplit,
     showToast: props.showToast,
   })
   const investmentScan = useInvestmentScanPolling({
-    token: props.token,
+    token,
     activeTabRef: props.activeTabRef,
     isInvestmentAddOpenRef: props.isInvestmentAddOpenRef,
-    setActiveTab: props.setActiveTab,
-    setAutoOpenInvestmentAdd: props.setAutoOpenInvestmentAdd,
+    setActiveTab,
+    setAutoOpenInvestmentAdd,
     showToast: props.showToast,
   })
 
@@ -74,7 +93,8 @@ export function RuntimeBackgroundBridges(props: RuntimeBackgroundBridgesProps) {
     investmentScan.handleInvestmentScanStarted,
   ])
   usePendingScanUploads({
-    enabled: Boolean(props.token),
+    enabled: Boolean(token) && Boolean(account),
+    ownerId: account,
     onScanStarted: startedByKind,
     showToast,
   })
@@ -99,5 +119,27 @@ export function RuntimeBackgroundBridges(props: RuntimeBackgroundBridgesProps) {
     props.onInvestmentAllocationChange,
     investmentAllocation,
   ])
-  return null
+  const runShortcutAction = useCallback((action: PwaShortcutAction) => {
+    if (action === 'upcoming-bills') {
+      setActiveTab('recurring')
+      return
+    }
+    if (action === 'scan-receipt') updateAppSearch({ receiptScan: '1' })
+    shortcutNavigation.handleQuickAction('transaction')
+  }, [shortcutNavigation.handleQuickAction, setActiveTab])
+  const clearShortcutAction = useCallback(() => {
+    shortcutNavigation.setAutoOpenLedgerAdd(false)
+    shortcutNavigation.setAutoOpenLedgerTxType(null)
+    updateAppSearch({ receiptScan: null })
+  }, [shortcutNavigation.setAutoOpenLedgerAdd, shortcutNavigation.setAutoOpenLedgerTxType])
+  usePwaShortcutAction({
+    actionReady: true,
+    username: account ?? '',
+    hideSensitive,
+    sensitivePreferenceStatus,
+    onRequestSensitiveReveal,
+    onRunAction: runShortcutAction,
+    onClearAction: clearShortcutAction,
+  })
+  return <PwaExperienceRuntime />
 }

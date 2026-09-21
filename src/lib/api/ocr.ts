@@ -119,8 +119,19 @@ type WireReceiptScanJob = Omit<ReceiptScanJob, 'result'> & {
  * barrel sits on; starting a scan is already an async, user-initiated action.
  */
 async function startScan(kind: ScanUploadKind, imageFile: File): Promise<{ scanId: string; status: string }> {
+  // Capture the owner before the lazy queue module or image compression yields control. If the
+  // account changes while either is in progress, the upload remains held for its original owner.
+  const ownerId: string | null = (() => {
+    try {
+      return typeof globalThis.localStorage === 'undefined'
+        ? null
+        : globalThis.localStorage.getItem('auth_username')?.trim().toLowerCase() || null
+    } catch {
+      return null
+    }
+  })()
   const { startScanUpload } = await import('./scanUploadQueue')
-  return startScanUpload(kind, imageFile)
+  return startScanUpload(kind, imageFile, ownerId)
 }
 
 export function startReceiptScan(imageFile: File): Promise<{ scanId: string; status: string }> {
