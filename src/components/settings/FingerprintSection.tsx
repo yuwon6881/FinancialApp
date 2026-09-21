@@ -4,12 +4,18 @@ import * as api from '../../lib/api'
 import type { FingerprintCredentialSummary } from '../../lib/api'
 import { getErrorMessage, getErrorName } from '../../lib/errors'
 import { buildMutationSuccessToast } from '../../lib/mutationToast'
-import { createFingerprintCredential, getFriendlyDeviceLabel, isPlatformAuthenticatorAvailable } from '../../lib/webauthn'
+import {
+  createFingerprintCredential,
+  getFingerprintAssertion,
+  getFriendlyDeviceLabel,
+  isPlatformAuthenticatorAvailable,
+} from '../../lib/webauthn'
 import {
   forgetDeviceUnlockCredential,
   getDeviceUnlockRegistrationMarker,
   rememberDeviceUnlockCredential,
   rememberExistingDeviceUnlock,
+  rememberVerifiedDeviceUnlockCredential,
 } from '../../lib/deviceUnlockRegistration'
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
@@ -26,6 +32,7 @@ export function FingerprintSection() {
   const [credentialsLoaded, setCredentialsLoaded] = useState(false)
   const [credentialsError, setCredentialsError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [restoring, setRestoring] = useState(false)
   const [removingCredentialId, setRemovingCredentialId] = useState<string | null>(null)
   const [capability, setCapability] = useState<'checking' | 'supported' | 'unsupported'>('checking')
   const enrollmentAbortRef = useRef<AbortController | null>(null)
@@ -64,6 +71,10 @@ export function FingerprintSection() {
   }, [credentials, username])
 
   const enabledOnAccount = credentials.length > 0
+  // The account owns a credential but this browser cannot name one. Usually site data was
+  // cleared: the credential and its server row both survive that, only the local marker does
+  // not. Offer to prove the holder rather than to enrol again, which would mint nothing.
+  const canRestore = enabledOnAccount && !enrolledHere && capability === 'supported'
   const status = !credentialsLoaded
     ? { label: 'Checking', className: 'text-muted-foreground' }
     : credentialsError
@@ -75,7 +86,8 @@ export function FingerprintSection() {
         : { label: 'Not enabled', className: 'text-muted-foreground' }
 
   const enroll = async () => {
-    if (hideSensitive || capability !== 'supported') return
+    // Both ceremonies share one abort handle, so they must not overlap.
+    if (hideSensitive || restoring || capability !== 'supported') return
     enrollmentAbortRef.current?.abort()
     const abortController = new AbortController()
     enrollmentAbortRef.current = abortController
@@ -105,6 +117,47 @@ export function FingerprintSection() {
       setBusy(false)
     }
   }
+  // Clearing site data destroys this browser's record of which credential it holds, while the
+  // credential (platform authenticator) and its server row both survive. Enrolling again would
+  // mint nothing -- the account already owns it -- so prove the holder instead and re-derive the
+  // marker from what the server verified.
+  const restore = async () => {
+    if (hideSensitive || busy || restoring || capability !== 'supported') return
+    enrollmentAbortRef.current?.abort()
+    const abortController = new AbortController()
+    enrollmentAbortRef.current = abortController
+    setRestoring(true)
+    try {
+      const { challengeId, options } = await api.getFingerprintRestoreOptions()
+      const credential = await getFingerprintAssertion(options, abortController.signal)
+      const { credentialId } = await api.verifyFingerprintRestore(
+        challengeId,
+        credential,
+        credential.authenticatorAttachment,
+      )
+      rememberVerifiedDeviceUnlockCredential(username, credentialId)
+      await load()
+      const copy = buildMutationSuccessToast({
+        entity: 'Device Unlock',
+        action: 'Updated',
+        message: 'Device unlock works on this device again.',
+      })
+      showToast(copy.message, copy.title, copy.tone)
+    } catch (error) {
+      // A cancelled native prompt is the user declining, not a failure worth a toast.
+      if (getErrorName(error) !== 'NotAllowedError' && getErrorName(error) !== 'AbortError') {
+        showToast(
+          getErrorMessage(error, 'Could not confirm device unlock on this device.'),
+          'Device unlock error',
+          'error',
+        )
+      }
+    } finally {
+      if (enrollmentAbortRef.current === abortController) enrollmentAbortRef.current = null
+      setRestoring(false)
+    }
+  }
+
   const remove = async (id: string) => {
     if (hideSensitive || busy || removingCredentialId !== null) return
     setRemovingCredentialId(id)
@@ -161,7 +214,9 @@ export function FingerprintSection() {
               <p className="text-xs text-muted-foreground mt-0.5">
                 {enrolledHere
                   ? 'This device can unlock your account using biometrics or screen lock.'
-                  : 'Register this device to allow fast biometric or PIN unlock on the login screen.'}
+                  : canRestore
+                    ? 'This account already has device unlock set up. If this browser had it before and lost it when site data was cleared, confirm with your fingerprint, face recognition, PIN, or screen lock to use it here again.'
+                    : 'Register this device to allow fast biometric or PIN unlock on the login screen.'}
               </p>
               {capability === 'checking' && (
                 <p className="mt-1 text-xs text-muted-foreground">Checking whether this device can add a credential…</p>
@@ -170,22 +225,42 @@ export function FingerprintSection() {
                 <p className="mt-1 text-xs text-muted-foreground">This device cannot add a local biometric or screen-lock credential. You can still manage credentials already registered to the account.</p>
               )}
             </div>
-            <Button
-              type="button"
-              variant={enrolledHere ? 'secondary' : 'primary'}
-              size="sm"
-              disabled={busy || hideSensitive || capability !== 'supported'}
-              onClick={enroll}
-              className="shrink-0"
-            >
-              <MutationButtonContent
-                state={busy ? 'saving' : null}
-                entityLabel="device credential"
-                idleLabel={enrolledHere ? 'Add another credential' : enabledOnAccount ? 'Set up this device' : 'Enable on this device'}
-                busyLabel="Setting up…"
-                idleIcon={<ShieldCheck className="size-3.5" />}
-              />
-            </Button>
+            <div className="flex shrink-0 items-center justify-end gap-2">
+              {canRestore && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={busy || restoring || hideSensitive}
+                  onClick={restore}
+                  className="shrink-0"
+                >
+                  <MutationButtonContent
+                    state={restoring ? 'saving' : null}
+                    entityLabel="device credential"
+                    idleLabel="Restore on this device"
+                    busyLabel="Confirming…"
+                    idleIcon={<ShieldCheck className="size-3.5" />}
+                  />
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant={enrolledHere || canRestore ? 'secondary' : 'primary'}
+                size="sm"
+                disabled={busy || restoring || hideSensitive || capability !== 'supported'}
+                onClick={enroll}
+                className="shrink-0"
+              >
+                <MutationButtonContent
+                  state={busy ? 'saving' : null}
+                  entityLabel="device credential"
+                  idleLabel={enrolledHere || canRestore ? 'Add another credential' : enabledOnAccount ? 'Set up this device' : 'Enable on this device'}
+                  busyLabel="Setting up…"
+                  idleIcon={<ShieldCheck className="size-3.5" />}
+                />
+              </Button>
+            </div>
           </div>
 
           {credentialsError && (

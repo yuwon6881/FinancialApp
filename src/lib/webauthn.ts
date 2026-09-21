@@ -159,6 +159,12 @@ export async function getFingerprintAssertion(options: AssertionOptionsJson, sig
     id: credential.id,
     rawId: bufferToBase64Url(credential.rawId),
     type: credential.type,
+    // "platform" when the credential lives in this device's own authenticator, "cross-platform"
+    // when it was reached over hybrid transport (the phone-and-QR flow). Callers that record
+    // something about *this* device need to tell those apart. Older browsers omit it entirely.
+    authenticatorAttachment:
+      (credential as PublicKeyCredential & { authenticatorAttachment?: string | null })
+        .authenticatorAttachment ?? null,
     response: {
       authenticatorData: bufferToBase64Url(response.authenticatorData),
       signature: bufferToBase64Url(response.signature),

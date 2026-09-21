@@ -328,6 +328,33 @@ export async function verifyFingerprintAssert(challengeId: string, credential: u
   return data
 }
 
+export async function getFingerprintRestoreOptions(): Promise<{ challengeId: string; options: AssertionOptionsJson }> {
+  return request('/auth/webauthn/restore/options', {
+    method: 'POST',
+    errorMessage: 'Device unlock cannot be restored on this device right now',
+  })
+}
+
+/**
+ * Re-learns which of the account's credentials lives on this browser.
+ *
+ * Deliberately not routed through `verifyFingerprintAssert`: that one unlocks the session, and
+ * naming the credential a device holds is not a request to lift a lock the user set. The server
+ * returns the credential id it verified rather than echoing ours, so the marker written from this
+ * is one the account provably owns.
+ */
+export async function verifyFingerprintRestore(
+  challengeId: string,
+  credential: unknown,
+  authenticatorAttachment: string | null,
+): Promise<{ verified: boolean; credentialId: string }> {
+  return request('/auth/webauthn/restore/verify', {
+    method: 'POST',
+    ...jsonBody({ challengeId, credential, authenticatorAttachment }),
+    errorMessage: 'Device verification failed',
+  })
+}
+
 export async function getAvailableSecurityQuestions(): Promise<string[]> {
   return request('/auth/security-questions/available', { authenticated: false, errorMessage: 'Failed to load security questions' })
 }

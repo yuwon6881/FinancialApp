@@ -68,6 +68,26 @@ export function rememberDeviceUnlockCredential(username: string, credentialId: s
   announceRegistrationChange()
 }
 
+/**
+ * Records the credential a server-verified assertion just named.
+ *
+ * Separate from {@link rememberDeviceUnlockCredential} because the input is the backend's
+ * uppercase hex form rather than the WebAuthn API's base64url, and the two cannot be told apart
+ * reliably -- a base64url id can be all lowercase hex characters. Guessing would occasionally
+ * store a marker that matches nothing and read back as "not enrolled here".
+ *
+ * Unlike the `already_enrolled` sentinel this names a specific credential, so it restores the
+ * installed-PWA launch gate as well as the enrollment state.
+ */
+export function rememberVerifiedDeviceUnlockCredential(username: string, credentialIdHex: string): void {
+  if (!username.trim()) return
+  const normalized = credentialIdHex.trim().toUpperCase()
+  if (!/^(?:[0-9A-F]{2})+$/.test(normalized)) return
+  localStorage.setItem(storageKey(username), normalized)
+  localStorage.setItem(LEGACY_DEVICE_CREDENTIAL_ID_KEY, normalized)
+  announceRegistrationChange()
+}
+
 export function rememberExistingDeviceUnlock(username: string): void {
   if (!username.trim()) return
   localStorage.setItem(storageKey(username), 'already_enrolled')

@@ -237,6 +237,62 @@ test('accounts settings panel uses the complete card shell', async ({ page }) =>
   await expect(page).toHaveScreenshot('settings-accounts.png', { fullPage: true, maxDiffPixelRatio: 0.08 })
 })
 
+// The state a browser lands in after its site data is cleared: the account still owns a
+// credential, this browser can no longer name one. Both actions have to fit on the row without
+// pushing the panel wide or stranding themselves in the middle of it.
+test('device unlock offers restore and enrol together on a browser that lost its marker', async ({ page }) => {
+  await establishSession(page)
+  // Headless Chromium reports no platform authenticator, which would hide both actions.
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'PublicKeyCredential', {
+      configurable: true,
+      value: class {
+        static isUserVerifyingPlatformAuthenticatorAvailable() { return Promise.resolve(true) }
+      },
+    })
+  })
+  await mockApi(page)
+  // Registered after mockApi so it wins: Playwright matches the most recent handler first.
+  await page.route('**/api/auth/webauthn/credentials', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        { id: 'AABBCC', deviceLabel: 'Chrome on Windows', createdAt: '2026-06-01T00:00:00Z' },
+      ]),
+    }))
+  await page.goto('/settings?section=security', { waitUntil: 'domcontentloaded' })
+
+  await page.getByRole('button', { name: /Device Unlock/i }).click()
+  const restore = page.getByRole('button', { name: 'Restore on this device' })
+  const addAnother = page.getByRole('button', { name: 'Add another credential' })
+  await expect(restore).toBeVisible()
+  await expect(addAnother).toBeVisible()
+  await waitForStableLayout(page)
+
+  const row = await restore.evaluate((element, other: HTMLElement) => {
+    const bounds = element.getBoundingClientRect()
+    const otherBounds = other.getBoundingClientRect()
+    const container = element.closest('.flex.shrink-0')!.parentElement!
+    return {
+      height: bounds.height,
+      otherHeight: otherBounds.height,
+      // Both sit on one line, and the row ends flush with its container's trailing edge rather
+      // than leaving dead space to the right of it.
+      sameLine: Math.abs(bounds.top - otherBounds.top) < 1,
+      trailingGap: container.getBoundingClientRect().right - otherBounds.right,
+      pageWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+    }
+  }, (await addAnother.elementHandle())!)
+
+  expect(row.sameLine).toBe(true)
+  // The new action matches the size of the one beside it rather than introducing its own.
+  expect(row.height).toBe(row.otherHeight)
+  expect(row.trailingGap).toBeLessThanOrEqual(2)
+  expect(row.pageWidth).toBeLessThanOrEqual(row.viewportWidth + 1)
+})
+
 test('desktop top-bar icon actions stay compact', async ({ page }) => {
   test.skip(!test.info().project.name.startsWith('desktop'), 'Desktop navigation uses compact pointer targets.')
 
