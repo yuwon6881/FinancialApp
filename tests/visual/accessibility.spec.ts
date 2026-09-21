@@ -40,6 +40,30 @@ test('all primary routes have no serious or critical axe violations', async ({ p
   expect(findings, 'blocking accessibility violations').toEqual([])
 })
 
+// The allocation chip's out-of-balance state is the one the route sweep above could not be
+// trusted to catch: the inputs start empty, so the chip renders "0%" for a moment on every load
+// and then settles to "100%". Which of the two the sweep scanned came down to timing, so a
+// genuine 4.33:1 on the red branch surfaced on a different viewport project each run and looked
+// like flake. Seed allocations that really do not total 100 and scan the chip itself.
+test('the out-of-balance allocation chip clears AA in both themes', async ({ page }) => {
+  await mockApi(page, {
+    setting: { essentialsAlloc: 0.3, growthAlloc: 0.25, stabilityAlloc: 0.15, rewardsAlloc: 0.1 },
+  })
+  await page.goto('/settings?section=model', { waitUntil: 'domcontentloaded' })
+  await expect(page.locator('main')).toBeVisible()
+  await waitForStableLayout(page)
+
+  // Guards the fixture as much as the colour: an allocation set that quietly totalled 100 would
+  // render the blue branch and let the red one go unscanned again.
+  await expect(page.getByText('80%', { exact: true })).toBeVisible()
+
+  const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze()
+  const blocking = results.violations
+    .filter(violation => violation.impact === 'serious' || violation.impact === 'critical')
+    .flatMap(violation => violation.nodes.map(node => `${violation.id}: ${node.html}`))
+  expect(blocking, 'contrast violations on the financial model tab').toEqual([])
+})
+
 test('representative dense pages remain contained at 200 percent text size', async ({ page }) => {
   const overflows: string[] = []
   for (const route of ['/dashboard', '/ledger', '/settings']) {

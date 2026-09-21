@@ -173,7 +173,11 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
           <div className="flex items-center justify-between border-b border-border/40 pb-2">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-foreground">Income Allocations</span>
-              <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${view.allocSum === 100 ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400' : 'bg-destructive/15 text-destructive animate-pulse'}`}>
+              {/* The out-of-balance branch used `text-destructive`, which is the 500 step of the
+                  same red ramp and lands at 4.33:1 on its own tint -- under AA for this 12px
+                  text. Both branches now take the deeper step on the tint, the way the balanced
+                  one already did. */}
+              <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${view.allocSum === 100 ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400' : 'bg-red-500/15 text-red-700 dark:text-red-400 animate-pulse'}`}>
                 {view.allocSum}%
               </span>
             </div>
