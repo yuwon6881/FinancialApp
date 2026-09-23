@@ -262,6 +262,7 @@ describe('TopNav mobile primary navigation', () => {
     )
 
     fireEvent.pointerDown(screen.getByRole('button', { name: 'Account menu' }), { button: 0 })
+    expect(screen.getByRole('button', { name: 'Account menu' }).textContent).toBe('TU')
     expect(screen.getByText('Test User')).toBeTruthy()
     expect(screen.queryByText('Premium Account')).toBeNull()
     expect(screen.queryByRole('menuitem', { name: /commands/i })).toBeNull()

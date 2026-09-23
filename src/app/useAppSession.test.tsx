@@ -138,6 +138,19 @@ describe('useAppSession', () => {
     expect(mocks.setNativeFinancialContentHidden).toHaveBeenLastCalledWith(true)
   })
 
+  it('restores the signed-in username from its last known value when the current key is missing', async () => {
+    localStorage.removeItem('auth_username')
+    localStorage.setItem('last_auth_username', 'alice')
+    const options = createOptions()
+    const { result } = renderHook(() => useAppSession(options))
+
+    await waitFor(() => expect(result.current.isSessionResolved).toBe(true))
+
+    expect(result.current.username).toBe('alice')
+    expect(localStorage.getItem('auth_username')).toBe('alice')
+    expect(options.onPreferenceOwnerChange).toHaveBeenCalledWith('alice')
+  })
+
   it('keeps the startup PWA gate separate from the normal session lock', async () => {
     const options = createOptions()
     const { result } = renderHook(() => useAppSession(options))

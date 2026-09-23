@@ -24,9 +24,30 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - name: Install pinned Android SDK components
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
       - uses: gradle/actions/setup-gradle@v4
+      - name: Prepare stable device-test signing key
+        if: github.event_name != 'pull_request'
+        env:
+          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+          ANDROID_DEBUG_KEY_ALIAS: ${{ secrets.ANDROID_DEBUG_KEY_ALIAS }}
+          ANDROID_DEBUG_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_DEBUG_KEYSTORE_PASSWORD }}
+          ANDROID_DEBUG_KEY_PASSWORD: ${{ secrets.ANDROID_DEBUG_KEY_PASSWORD }}
+        run: |
+          test -n "$ANDROID_DEBUG_KEYSTORE_BASE64"
+          test -n "$ANDROID_DEBUG_KEY_ALIAS"
+          test -n "$ANDROID_DEBUG_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_DEBUG_KEY_PASSWORD"
+          keystore="$RUNNER_TEMP/financialapp-device-test.p12"
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          chmod 600 "$keystore"
+          echo "ANDROID_DEBUG_KEYSTORE_PATH=$keystore" >> "$GITHUB_ENV"
+          echo "ANDROID_DEBUG_KEY_ALIAS=$ANDROID_DEBUG_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_DEBUG_KEYSTORE_PASSWORD=$ANDROID_DEBUG_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_DEBUG_KEY_PASSWORD=$ANDROID_DEBUG_KEY_PASSWORD" >> "$GITHUB_ENV"
       - name: Install dependencies and generate native assets
         run: |
           npm ci
@@ -41,17 +62,43 @@ jobs:
       - name: Build bundled native web app
         env:
           ANDROID_APP_SIGNING_CERT_SHA256: ${{ secrets.ANDROID_APP_SIGNING_CERT_SHA256 }}
+          ANDROID_DEBUG_SIGNING_CERT_SHA256: ${{ vars.ANDROID_DEBUG_SIGNING_CERT_SHA256 }}
         run: npm run build:native
       - name: Sync Capacitor Android project
         run: npx cap sync android
       - name: Build and verify Android debug APK
         working-directory: android
         run: ./gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug
+      - name: Verify stable device-test APK certificate
+        if: github.event_name != 'pull_request'
+        env:
+          ANDROID_DEBUG_SIGNING_CERT_SHA256: ${{ vars.ANDROID_DEBUG_SIGNING_CERT_SHA256 }}
+        run: |
+          test -n "$ANDROID_DEBUG_SIGNING_CERT_SHA256"
+          apk="android/app/build/outputs/apk/debug/app-debug.apk"
+          actual="$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk" | awk -F ': ' '/Signer #1 certificate SHA-256 digest:/ {gsub(":", "", $2); print toupper($2); exit}')"
+          expected="$(printf '%s' "$ANDROID_DEBUG_SIGNING_CERT_SHA256" | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          test "$actual" = "$expected"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: financialapp-android-debug
+          name: financialapp-android-debug-${{ github.event_name == 'pull_request' && 'pull-request' || 'device-test' }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+  verify-production-assetlinks:
+    if: github.event_name != 'pull_request'
+    needs: debug-apk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Verify production Digital Asset Links response
+        env:
+          ANDROID_APP_SIGNING_CERT_SHA256: ${{ secrets.ANDROID_APP_SIGNING_CERT_SHA256 }}
+          ANDROID_DEBUG_SIGNING_CERT_SHA256: ${{ vars.ANDROID_DEBUG_SIGNING_CERT_SHA256 }}
+        run: node scripts/verify-assetlinks.mjs
 
   signed-release-aab:
     if: github.event_name == 'workflow_dispatch'

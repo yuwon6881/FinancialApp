@@ -4,6 +4,11 @@ def signingStoreFile = System.getenv('ANDROID_KEYSTORE_PATH')
 def signingKeyAlias = System.getenv('ANDROID_KEY_ALIAS')
 def signingStorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
 def signingKeyPassword = System.getenv('ANDROID_KEY_PASSWORD')
+def debugSigningStoreFile = System.getenv('ANDROID_DEBUG_KEYSTORE_PATH')
+def debugSigningKeyAlias = System.getenv('ANDROID_DEBUG_KEY_ALIAS')
+def debugSigningStorePassword = System.getenv('ANDROID_DEBUG_KEYSTORE_PASSWORD')
+def debugSigningKeyPassword = System.getenv('ANDROID_DEBUG_KEY_PASSWORD')
+def hasStableDebugSigningKey = debugSigningStoreFile && debugSigningKeyAlias && debugSigningStorePassword && debugSigningKeyPassword
 
 android {
     namespace = "com.financialapp.app"
@@ -22,6 +27,15 @@ android {
         }
     }
     signingConfigs {
+        deviceTestDebug {
+            if (hasStableDebugSigningKey) {
+                storeFile file(debugSigningStoreFile)
+                storeType 'PKCS12'
+                storePassword debugSigningStorePassword
+                keyAlias debugSigningKeyAlias
+                keyPassword debugSigningKeyPassword
+            }
+        }
         release {
             if (signingStoreFile && signingKeyAlias && signingStorePassword && signingKeyPassword) {
                 storeFile file(signingStoreFile)
@@ -32,6 +46,11 @@ android {
         }
     }
     buildTypes {
+        debug {
+            if (hasStableDebugSigningKey) {
+                signingConfig signingConfigs.deviceTestDebug
+            }
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
