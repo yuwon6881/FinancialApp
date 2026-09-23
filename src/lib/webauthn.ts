@@ -117,14 +117,83 @@ export interface AssertionOptionsJson {
   userVerification?: 'discouraged' | 'preferred' | 'required'
 }
 
+interface NativePasskeyCredential<Response extends object> {
+  id: string
+  rawId: string
+  type: 'public-key'
+  authenticatorAttachment?: string | null
+  response: Response
+  clientExtensionResults: Record<string, unknown>
+}
+
+interface NativeAttestationResponse {
+  attestationObject: string
+  clientDataJSON: string
+  transports?: unknown
+}
+
+interface NativeAssertionResponse {
+  authenticatorData: string
+  signature: string
+  clientDataJSON: string
+  userHandle?: unknown
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function requireNativePasskeyCredential<Response extends object>(
+  value: unknown,
+  requiredResponseFields: readonly string[],
+): NativePasskeyCredential<Response> {
+  if (!isRecord(value) || !isRecord(value.response)) {
+    throw new Error('The device returned an incomplete passkey response. Try again or use another sign-in method.')
+  }
+
+  const response = value.response
+  const id = value.id
+  const rawId = value.rawId
+  if (
+    typeof id !== 'string' || id.length === 0 ||
+    typeof rawId !== 'string' || rawId.length === 0 ||
+    value.type !== 'public-key'
+  ) {
+    throw new Error('The device returned an incomplete passkey response. Try again or use another sign-in method.')
+  }
+
+  const hasResponseFields = requiredResponseFields.every(field =>
+    typeof response[field] === 'string' && response[field].length > 0,
+  )
+
+  if (!hasResponseFields) {
+    throw new Error('The device returned an incomplete passkey response. Try again or use another sign-in method.')
+  }
+
+  return {
+    id,
+    rawId,
+    type: 'public-key',
+    authenticatorAttachment: typeof value.authenticatorAttachment === 'string'
+      ? value.authenticatorAttachment
+      : null,
+    response: response as Response,
+    clientExtensionResults: isRecord(value.clientExtensionResults) ? value.clientExtensionResults : {},
+  }
+}
+
 export async function createFingerprintCredential(options: CreateOptionsJson, signal?: AbortSignal) {
   if (Capacitor.isNativePlatform()) {
     return withExclusiveWebAuthnRequest(async () => {
       const { CapacitorPasskey } = await loadNativePasskeyPlugin()
-      const credential = await CapacitorPasskey.createCredential({
+      const result: unknown = await CapacitorPasskey.createCredential({
         origin: NATIVE_PASSKEY_ORIGIN,
         publicKey: options,
       })
+      const credential = requireNativePasskeyCredential<NativeAttestationResponse>(result, [
+        'attestationObject',
+        'clientDataJSON',
+      ])
       return {
         id: credential.id,
         rawId: credential.rawId,
@@ -133,7 +202,9 @@ export async function createFingerprintCredential(options: CreateOptionsJson, si
         response: {
           attestationObject: credential.response.attestationObject,
           clientDataJSON: credential.response.clientDataJSON,
-          transports: credential.response.transports ?? [],
+          transports: Array.isArray(credential.response.transports)
+            ? credential.response.transports.filter((transport): transport is string => typeof transport === 'string')
+            : [],
         },
         clientExtensionResults: credential.clientExtensionResults,
       }
@@ -183,10 +254,15 @@ export async function getFingerprintAssertion(options: AssertionOptionsJson, sig
   if (Capacitor.isNativePlatform()) {
     return withExclusiveWebAuthnRequest(async () => {
       const { CapacitorPasskey } = await loadNativePasskeyPlugin()
-      const credential = await CapacitorPasskey.getCredential({
+      const result: unknown = await CapacitorPasskey.getCredential({
         origin: NATIVE_PASSKEY_ORIGIN,
         publicKey: options,
       })
+      const credential = requireNativePasskeyCredential<NativeAssertionResponse>(result, [
+        'authenticatorData',
+        'signature',
+        'clientDataJSON',
+      ])
       return {
         id: credential.id,
         rawId: credential.rawId,
@@ -196,7 +272,7 @@ export async function getFingerprintAssertion(options: AssertionOptionsJson, sig
           authenticatorData: credential.response.authenticatorData,
           signature: credential.response.signature,
           clientDataJSON: credential.response.clientDataJSON,
-          userHandle: credential.response.userHandle ?? null,
+          userHandle: typeof credential.response.userHandle === 'string' ? credential.response.userHandle : null,
         },
         clientExtensionResults: credential.clientExtensionResults,
       }

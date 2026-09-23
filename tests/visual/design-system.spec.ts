@@ -266,6 +266,19 @@ test('device unlock offers setup without a restore action after the browser lose
   const setup = page.getByRole('button', { name: 'Set up this device', exact: true })
   await expect(setup).toBeVisible()
   await expect(page.getByRole('button', { name: /restore on this device/i })).toHaveCount(0)
+  const setupAlignment = await setup.evaluate(button => {
+    const row = button.parentElement!
+    const buttonBounds = button.getBoundingClientRect()
+    const rowBounds = row.getBoundingClientRect()
+    return {
+      justifyContent: getComputedStyle(row).justifyContent,
+      buttonCenter: buttonBounds.left + buttonBounds.width / 2,
+      rowCenter: rowBounds.left + rowBounds.width / 2,
+    }
+  })
+  const compact = (page.viewportSize()?.width ?? 0) < 640
+  expect(setupAlignment.justifyContent).toBe(compact ? 'center' : 'flex-end')
+  if (compact) expect(Math.abs(setupAlignment.buttonCenter - setupAlignment.rowCenter)).toBeLessThanOrEqual(1)
   await waitForStableLayout(page)
 
   const layout = await setup.evaluate(() => ({

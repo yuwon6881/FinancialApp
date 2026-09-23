@@ -216,7 +216,7 @@ export function FingerprintSection() {
                 <p className="mt-1 text-xs text-muted-foreground">This device cannot add a local biometric or screen-lock credential. You can still manage credentials already registered to the account.</p>
               )}
             </div>
-            <div className="flex shrink-0 items-center justify-end gap-2">
+            <div className="flex w-full shrink-0 items-center justify-center gap-2 sm:w-auto sm:justify-end">
               <Button
                 type="button"
                 variant={enrolledHere ? 'secondary' : 'primary'}

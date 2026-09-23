@@ -183,4 +183,28 @@ describe('WebAuthn browser adapter', () => {
       response: { authenticatorData: 'BAU', signature: 'Bgc', clientDataJSON: 'CAk', userHandle: 'Cg' },
     })
   })
+
+  it('reports an incomplete native assertion instead of dereferencing a missing credential id', async () => {
+    native.enabled = true
+    native.getCredential.mockResolvedValue(undefined)
+
+    await expect(getFingerprintAssertion({ challenge: 'BAUG' })).rejects.toThrow(
+      'The device returned an incomplete passkey response. Try again or use another sign-in method.',
+    )
+  })
+
+  it('rejects native credential responses missing required registration fields', async () => {
+    native.enabled = true
+    native.createCredential.mockResolvedValue({ id: 'AQID' })
+    const options: CreateOptionsJson = {
+      rp: { id: 'financialapp-ecru.vercel.app', name: 'FinancialApp' },
+      user: { name: 'alice', id: 'AQID', displayName: 'Alice' },
+      challenge: 'BAUG',
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+    }
+
+    await expect(createFingerprintCredential(options)).rejects.toThrow(
+      'The device returned an incomplete passkey response. Try again or use another sign-in method.',
+    )
+  })
 })
