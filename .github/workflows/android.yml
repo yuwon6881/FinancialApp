@@ -61,9 +61,16 @@ jobs:
           fi
       - name: Build bundled native web app
         env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
           ANDROID_APP_SIGNING_CERT_SHA256: ${{ secrets.ANDROID_APP_SIGNING_CERT_SHA256 }}
           ANDROID_DEBUG_SIGNING_CERT_SHA256: ${{ vars.ANDROID_DEBUG_SIGNING_CERT_SHA256 }}
-        run: npm run build:native
+        run: |
+          test -n "$VITE_API_URL"
+          case "$VITE_API_URL" in
+            https://*/api) ;;
+            *) echo "VITE_API_URL must be an HTTPS API base ending in /api." >&2; exit 1 ;;
+          esac
+          npm run build:native
       - name: Sync Capacitor Android project
         run: npx cap sync android
       - name: Build and verify Android debug APK
