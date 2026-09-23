@@ -1,4 +1,22 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const native = vi.hoisted(() => ({
+  enabled: false,
+  createCredential: vi.fn(),
+  getCredential: vi.fn(),
+  isSupported: vi.fn(),
+}))
+
+vi.mock('@capacitor/core', () => ({
+  Capacitor: { isNativePlatform: () => native.enabled },
+}))
+vi.mock('@capgo/capacitor-passkey', () => ({
+  CapacitorPasskey: {
+    createCredential: native.createCredential,
+    getCredential: native.getCredential,
+    isSupported: native.isSupported,
+  },
+}))
 import {
   base64UrlToHex,
   createFingerprintCredential,
@@ -8,6 +26,15 @@ import {
 } from './webauthn'
 
 const bytes = (values: number[]) => Uint8Array.from(values).buffer
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  native.enabled = false
+})
+
+afterEach(() => {
+  native.enabled = false
+})
 
 describe('WebAuthn browser adapter', () => {
   it('uses the backend-compatible uppercase hex credential id', () => {
@@ -92,6 +119,68 @@ describe('WebAuthn browser adapter', () => {
         clientDataJSON: 'CAk',
         userHandle: 'Cg',
       },
+    })
+  })
+
+  it('maps Android Credential Manager passkey creation into the server credential shape', async () => {
+    native.enabled = true
+    const options: CreateOptionsJson = {
+      rp: { id: 'financialapp-ecru.vercel.app', name: 'FinancialApp' },
+      user: { name: 'alice', id: 'AQID', displayName: 'Alice' },
+      challenge: 'BAUG',
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+    }
+    native.createCredential.mockResolvedValue({
+      id: 'AQID',
+      rawId: 'AQID',
+      type: 'public-key',
+      authenticatorAttachment: 'platform',
+      response: { attestationObject: 'BAU', clientDataJSON: 'Bgc', transports: ['internal'] },
+      clientExtensionResults: {},
+    })
+
+    const result = await createFingerprintCredential(options)
+
+    expect(native.createCredential).toHaveBeenCalledWith({
+      origin: 'https://financialapp-ecru.vercel.app',
+      publicKey: options,
+    })
+    expect(result).toMatchObject({
+      id: 'AQID',
+      rawId: 'AQID',
+      authenticatorAttachment: 'platform',
+      response: { attestationObject: 'BAU', clientDataJSON: 'Bgc', transports: ['internal'] },
+    })
+  })
+
+  it('maps Android Credential Manager assertions into the verified API shape', async () => {
+    native.enabled = true
+    const options: AssertionOptionsJson = {
+      challenge: 'BAUG',
+      rpId: 'financialapp-ecru.vercel.app',
+      allowCredentials: [{ type: 'public-key', id: 'AQID' }],
+      userVerification: 'required',
+    }
+    native.getCredential.mockResolvedValue({
+      id: 'AQID',
+      rawId: 'AQID',
+      type: 'public-key',
+      authenticatorAttachment: 'platform',
+      response: { authenticatorData: 'BAU', signature: 'Bgc', clientDataJSON: 'CAk', userHandle: 'Cg' },
+      clientExtensionResults: {},
+    })
+
+    const result = await getFingerprintAssertion(options)
+
+    expect(native.getCredential).toHaveBeenCalledWith({
+      origin: 'https://financialapp-ecru.vercel.app',
+      publicKey: options,
+    })
+    expect(result).toMatchObject({
+      id: 'AQID',
+      rawId: 'AQID',
+      authenticatorAttachment: 'platform',
+      response: { authenticatorData: 'BAU', signature: 'Bgc', clientDataJSON: 'CAk', userHandle: 'Cg' },
     })
   })
 })

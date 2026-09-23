@@ -1,5 +1,8 @@
 import type { PushChannel, PushDevice, PushStatus } from '../../types'
 import { request, requestVoid } from './client'
+import type { getPushPlatform } from '../push/support'
+
+type PushPlatform = ReturnType<typeof getPushPlatform>
 
 export function fetchPushStatus(deviceId: string, signal?: AbortSignal): Promise<PushStatus> {
   return request<PushStatus>(`/push/status?deviceId=${encodeURIComponent(deviceId)}`, {
@@ -33,11 +36,12 @@ export function upsertPushSubscription(
   deviceId: string,
   fcmToken: string,
   channels: Partial<Record<PushChannel, boolean>> = {},
+  platform: PushPlatform = 'web',
 ): Promise<void> {
   return requestVoid('/push/subscriptions', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ deviceId, fcmToken, ...channels }),
+    body: JSON.stringify({ deviceId, fcmToken, platform, ...channels }),
     errorMessage: 'Failed to register this device for push notifications',
   })
 }

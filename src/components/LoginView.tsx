@@ -2,6 +2,7 @@ import { Input } from './ui/Input'
 import React, { useState, useEffect, useRef } from 'react'
 import { Lock, User, Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import * as api from '../lib/api'
+import { getErrorMessage, getErrorName } from '../lib/errors'
 import { AppLogo } from './ui/AppLogo'
 import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from '../lib/webauthn'
 import {
@@ -9,8 +10,11 @@ import {
   getCachedFingerprintLoginOptions,
   prefetchFingerprintLoginOptions,
 } from '../lib/fingerprintOptionsCache'
-import { getErrorMessage, getErrorName } from '../lib/errors'
-import { rememberDeviceUnlockCredential } from '../lib/deviceUnlockRegistration'
+import {
+  getDeviceUnlockRegistrationMarker,
+  getLastEnrolledUsername,
+  rememberDeviceUnlockCredential,
+} from '../lib/deviceUnlockRegistration'
 import { SecurityQuestionSetup } from './SecurityQuestionSetup'
 import { ForgotPassword } from './ForgotPassword'
 import { AlertBanner } from './ui/AlertBanner'
@@ -36,7 +40,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   // When accounts already exist but more slots remain, the user can opt into a signup form.
   const [wantsRegister, setWantsRegister] = useState(false)
   const [platformAuthAvailable, setPlatformAuthAvailable] = useState(false)
-  const [username, setUsername] = useState('')
+  const initialUsername = () => (
+    localStorage.getItem('last_auth_username')
+    || getLastEnrolledUsername()
+    || localStorage.getItem('auth_username')
+    || ''
+  )
+  const [username, setUsername] = useState(initialUsername)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -47,7 +57,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [pendingToken, setPendingToken] = useState<string | null>(null)
   const [twoFactorCode, setTwoFactorCode] = useState('')
   const [twoFactorLoading, setTwoFactorLoading] = useState(false)
-  const [loginStep, setLoginStep] = useState<1 | 2>(1)
+  const [loginStep, setLoginStep] = useState<1 | 2>(() => {
+    const u = initialUsername().trim()
+    return u && getDeviceUnlockRegistrationMarker(u) ? 2 : 1
+  })
   const [needsSecuritySetup, setNeedsSecuritySetup] = useState(false)
   const [loginResData, setLoginResData] = useState<{token: string, username: string} | null>(null)
   const [forgotPassword, setForgotPassword] = useState(false)

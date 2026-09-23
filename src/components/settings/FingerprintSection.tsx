@@ -1,5 +1,6 @@
 import { CheckCircle2, KeyRound, Loader2, ShieldCheck, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import * as api from '../../lib/api'
 import type { FingerprintCredentialSummary } from '../../lib/api'
 import { getErrorMessage, getErrorName } from '../../lib/errors'
@@ -14,8 +15,6 @@ import {
   forgetDeviceUnlockCredential,
   getDeviceUnlockRegistrationMarker,
   rememberDeviceUnlockCredential,
-  rememberExistingDeviceUnlock,
-  rememberVerifiedDeviceUnlockCredential,
 } from '../../lib/deviceUnlockRegistration'
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
@@ -32,7 +31,6 @@ export function FingerprintSection() {
   const [credentialsLoaded, setCredentialsLoaded] = useState(false)
   const [credentialsError, setCredentialsError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [restoring, setRestoring] = useState(false)
   const [removingCredentialId, setRemovingCredentialId] = useState<string | null>(null)
   const [capability, setCapability] = useState<'checking' | 'supported' | 'unsupported'>('checking')
   const enrollmentAbortRef = useRef<AbortController | null>(null)
@@ -66,15 +64,14 @@ export function FingerprintSection() {
   const enrolledHere = useMemo(() => {
     const stored = getDeviceUnlockRegistrationMarker(username)
     if (!stored || credentials.length === 0) return false
-    if (stored === 'already_enrolled') return true
     return credentials.some(credential => credential.id.toUpperCase() === stored)
   }, [credentials, username])
 
   const enabledOnAccount = credentials.length > 0
   // The account owns a credential but this browser cannot name one. Usually site data was
   // cleared: the credential and its server row both survive that, only the local marker does
-  // not. Offer to prove the holder rather than to enrol again, which would mint nothing.
-  const canRestore = enabledOnAccount && !enrolledHere && capability === 'supported'
+  // not. If creation reports a duplicate, the setup action proves the holder with an assertion.
+  const needsLocalSetup = enabledOnAccount && !enrolledHere && capability === 'supported'
   const status = !credentialsLoaded
     ? { label: 'Checking', className: 'text-muted-foreground' }
     : credentialsError
@@ -86,8 +83,7 @@ export function FingerprintSection() {
         : { label: 'Not enabled', className: 'text-muted-foreground' }
 
   const enroll = async () => {
-    // Both ceremonies share one abort handle, so they must not overlap.
-    if (hideSensitive || restoring || capability !== 'supported') return
+    if (hideSensitive || capability !== 'supported') return
     enrollmentAbortRef.current?.abort()
     const abortController = new AbortController()
     enrollmentAbortRef.current = abortController
@@ -106,9 +102,35 @@ export function FingerprintSection() {
       showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       if (getErrorName(error) === 'InvalidStateError') {
-        rememberExistingDeviceUnlock(username)
-        await load()
-        showToast('This device already has device unlock enabled.', 'Already enabled', 'info')
+        if (abortController.signal.aborted) return
+        try {
+          const { challengeId, options } = await api.getFingerprintAssertOptions()
+          const existing = await getFingerprintAssertion(options, abortController.signal)
+          if (existing.authenticatorAttachment !== 'platform') {
+            throw new Error('This passkey belongs to another device. Use this phone’s own screen lock or add a credential here.')
+          }
+          await api.verifyFingerprintAssert(challengeId, existing)
+          rememberDeviceUnlockCredential(username, existing.id)
+          await load()
+          const copy = buildMutationSuccessToast({
+            entity: 'Device Unlock',
+            action: 'Enabled',
+            message: 'Device unlock was enabled on this device.',
+          })
+          showToast(copy.message, copy.title, copy.tone)
+        } catch (assertError) {
+          if (getErrorName(assertError) === 'NotAllowedError' || getErrorName(assertError) === 'AbortError') {
+            showToast('Confirm with this phone’s fingerprint, face recognition, PIN, or screen lock to finish setup.', 'Device unlock needs confirmation', 'info')
+          } else {
+            showToast(getErrorMessage(assertError, 'Could not verify the existing device credential.'), 'Device unlock error', 'error')
+          }
+        }
+      } else if (getErrorName(error) === 'NotAllowedError' && Capacitor.isNativePlatform()) {
+        showToast(
+          'Android could not create a passkey. Check that this phone has a screen lock and this app is verified for sign-in, then try again.',
+          'Device unlock was not enabled',
+          'error',
+        )
       } else if (getErrorName(error) !== 'NotAllowedError') {
         showToast(getErrorMessage(error, 'Failed to set up device unlock on this device.'), 'Device unlock error', 'error')
       }
@@ -117,47 +139,6 @@ export function FingerprintSection() {
       setBusy(false)
     }
   }
-  // Clearing site data destroys this browser's record of which credential it holds, while the
-  // credential (platform authenticator) and its server row both survive. Enrolling again would
-  // mint nothing -- the account already owns it -- so prove the holder instead and re-derive the
-  // marker from what the server verified.
-  const restore = async () => {
-    if (hideSensitive || busy || restoring || capability !== 'supported') return
-    enrollmentAbortRef.current?.abort()
-    const abortController = new AbortController()
-    enrollmentAbortRef.current = abortController
-    setRestoring(true)
-    try {
-      const { challengeId, options } = await api.getFingerprintRestoreOptions()
-      const credential = await getFingerprintAssertion(options, abortController.signal)
-      const { credentialId } = await api.verifyFingerprintRestore(
-        challengeId,
-        credential,
-        credential.authenticatorAttachment,
-      )
-      rememberVerifiedDeviceUnlockCredential(username, credentialId)
-      await load()
-      const copy = buildMutationSuccessToast({
-        entity: 'Device Unlock',
-        action: 'Updated',
-        message: 'Device unlock works on this device again.',
-      })
-      showToast(copy.message, copy.title, copy.tone)
-    } catch (error) {
-      // A cancelled native prompt is the user declining, not a failure worth a toast.
-      if (getErrorName(error) !== 'NotAllowedError' && getErrorName(error) !== 'AbortError') {
-        showToast(
-          getErrorMessage(error, 'Could not confirm device unlock on this device.'),
-          'Device unlock error',
-          'error',
-        )
-      }
-    } finally {
-      if (enrollmentAbortRef.current === abortController) enrollmentAbortRef.current = null
-      setRestoring(false)
-    }
-  }
-
   const remove = async (id: string) => {
     if (hideSensitive || busy || removingCredentialId !== null) return
     setRemovingCredentialId(id)
@@ -214,8 +195,8 @@ export function FingerprintSection() {
               <p className="text-xs text-muted-foreground mt-0.5">
                 {enrolledHere
                   ? 'This device can unlock your account using biometrics or screen lock.'
-                  : canRestore
-                    ? 'This account already has device unlock set up. If this browser had it before and lost it when site data was cleared, confirm with your fingerprint, face recognition, PIN, or screen lock to use it here again.'
+                  : needsLocalSetup
+                    ? 'This account already has a device credential. If it is saved on this phone, confirm with your fingerprint, face recognition, PIN, or screen lock to use it here.'
                     : 'Register this device to allow fast biometric or PIN unlock on the login screen.'}
               </p>
               {capability === 'checking' && (
@@ -226,36 +207,18 @@ export function FingerprintSection() {
               )}
             </div>
             <div className="flex shrink-0 items-center justify-end gap-2">
-              {canRestore && (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  disabled={busy || restoring || hideSensitive}
-                  onClick={restore}
-                  className="shrink-0"
-                >
-                  <MutationButtonContent
-                    state={restoring ? 'saving' : null}
-                    entityLabel="device credential"
-                    idleLabel="Restore on this device"
-                    busyLabel="Confirming…"
-                    idleIcon={<ShieldCheck className="size-3.5" />}
-                  />
-                </Button>
-              )}
               <Button
                 type="button"
-                variant={enrolledHere || canRestore ? 'secondary' : 'primary'}
+                variant={enrolledHere ? 'secondary' : 'primary'}
                 size="sm"
-                disabled={busy || restoring || hideSensitive || capability !== 'supported'}
+                disabled={busy || hideSensitive || capability !== 'supported'}
                 onClick={enroll}
                 className="shrink-0"
               >
                 <MutationButtonContent
                   state={busy ? 'saving' : null}
                   entityLabel="device credential"
-                  idleLabel={enrolledHere || canRestore ? 'Add another credential' : enabledOnAccount ? 'Set up this device' : 'Enable on this device'}
+                  idleLabel={enrolledHere ? 'Add another credential' : enabledOnAccount ? 'Set up this device' : 'Enable on this device'}
                   busyLabel="Setting up…"
                   idleIcon={<ShieldCheck className="size-3.5" />}
                 />

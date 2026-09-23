@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { Download, HardDrive, RefreshCw, ShieldCheck, Smartphone, Wifi, WifiOff } from 'lucide-react'
 import { usePwaExperience } from '../../app/usePwaExperience'
 import { getInstallInstructions } from '../../app/pwaSafety'
@@ -15,6 +16,7 @@ interface PwaReadinessCardProps {
 
 export const PwaReadinessCard: React.FC<PwaReadinessCardProps> = ({ unsyncedChangeCount, draftCount, ownerId }) => {
   const pwa = usePwaExperience()
+  const nativeApp = pwa.nativeApp || Capacitor.isNativePlatform()
   const [message, setMessage] = useState<string | null>(null)
   const [scanImageCount, setScanImageCount] = useState<number | null | undefined>(undefined)
   const scanCountRequestRef = useRef(0)
@@ -103,7 +105,7 @@ export const PwaReadinessCard: React.FC<PwaReadinessCardProps> = ({ unsyncedChan
         <div className="flex items-center gap-2 text-sm">
           <Smartphone className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <dt className="font-medium text-foreground">App</dt>
-          <dd className="ml-auto text-right text-xs text-muted-foreground">{pwa.installed ? 'Installed on this device' : 'Running in browser'}</dd>
+          <dd className="ml-auto text-right text-xs text-muted-foreground">{nativeApp ? 'Native app' : pwa.installed ? 'Installed on this device' : 'Running in browser'}</dd>
         </div>
         <div className="flex items-center gap-2 text-sm">
           {pwa.online
@@ -116,7 +118,7 @@ export const PwaReadinessCard: React.FC<PwaReadinessCardProps> = ({ unsyncedChan
           <HardDrive className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <dt className="font-medium text-foreground">Offline app</dt>
           <dd className="ml-auto text-right text-xs text-muted-foreground">
-            {pwa.offlineShellReady ? 'App shell ready' : pwa.offlineSetupError ? 'Offline setup needs attention' : 'Preparing offline launch'}
+            {nativeApp ? 'Bundled app ready' : pwa.offlineShellReady ? 'App shell ready' : pwa.offlineSetupError ? 'Offline setup needs attention' : 'Preparing offline launch'}
           </dd>
         </div>
         <div className="flex items-start gap-2 text-sm">
@@ -135,7 +137,7 @@ export const PwaReadinessCard: React.FC<PwaReadinessCardProps> = ({ unsyncedChan
           <span className="size-4 shrink-0" aria-hidden="true" />
           <dt className="font-medium text-foreground">Storage protection</dt>
           <dd className="ml-auto text-right text-xs text-muted-foreground">
-            {pwa.storageProtection === 'checking' ? 'Checking browser support'
+            {nativeApp ? 'App storage on this device' : pwa.storageProtection === 'checking' ? 'Checking browser support'
               : pwa.storageProtection === 'persistent' ? 'Browser retention requested'
                 : pwa.storageProtection === 'available' ? 'Can ask browser to retain data'
                   : pwa.storageProtection === 'denied' ? 'Browser may clear local data'
@@ -144,13 +146,13 @@ export const PwaReadinessCard: React.FC<PwaReadinessCardProps> = ({ unsyncedChan
         </div>
       </dl>
 
-      {pwa.installAvailable && !pwa.installed && (
+      {!nativeApp && pwa.installAvailable && !pwa.installed && (
         <Button variant="secondary" type="button" onClick={() => void handleInstall()} className="min-h-11 w-full gap-2">
           <Download className="size-4" aria-hidden="true" /> Install FinancialApp
         </Button>
       )}
 
-      {pwa.offlineSetupError && (
+      {!nativeApp && pwa.offlineSetupError && (
         <div role="alert" className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3">
           <p className="text-xs leading-snug text-foreground">{pwa.offlineSetupError}</p>
           <Button
@@ -166,7 +168,7 @@ export const PwaReadinessCard: React.FC<PwaReadinessCardProps> = ({ unsyncedChan
         </div>
       )}
 
-      {hasRecoverableWork && pwa.storageProtection === 'available' && (
+      {!nativeApp && hasRecoverableWork && pwa.storageProtection === 'available' && (
         <Button
           variant="tertiary"
           type="button"
@@ -179,7 +181,7 @@ export const PwaReadinessCard: React.FC<PwaReadinessCardProps> = ({ unsyncedChan
         </Button>
       )}
 
-      {pwa.updateAvailable && (
+      {!nativeApp && pwa.updateAvailable && (
         <div className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3">
           <p className="text-xs leading-snug text-foreground">An app update is ready. Applying it restarts this page; saved drafts and queued changes remain on this device.</p>
           <Button variant="secondary" type="button" onClick={() => void handleUpdate()} disabled={pwa.updateBusy} className="min-h-11 w-full gap-2">
@@ -189,12 +191,12 @@ export const PwaReadinessCard: React.FC<PwaReadinessCardProps> = ({ unsyncedChan
         </div>
       )}
 
-      <details className="group border-t border-border/30 pt-2.5">
+      {!nativeApp && <details className="group border-t border-border/30 pt-2.5">
         <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground">
           <Download className="size-4" aria-hidden="true" /> Installation help
         </summary>
         <p className="pb-1 text-xs leading-relaxed text-muted-foreground">{installHelp}</p>
-      </details>
+      </details>}
 
       <p className="text-right text-eyebrow text-muted-foreground">Build {pwa.buildId}</p>
       {(message || pwa.updateMessage) && (

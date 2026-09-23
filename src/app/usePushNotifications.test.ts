@@ -21,6 +21,7 @@ let supportedMock = true
 vi.mock('../lib/push/support', () => ({
   isPushSupported: () => supportedMock,
   pushSupportFailure: () => (supportedMock ? null : 'unsupported'),
+  getPushPlatform: () => 'web',
 }))
 
 vi.mock('../lib/push/deviceId', () => ({
@@ -117,7 +118,7 @@ describe('usePushNotifications', () => {
     expect(renewFcmToken).not.toHaveBeenCalled()
     // Only the kind being turned on is sent: the other is deliberately omitted so the server
     // leaves whatever this device already chose alone.
-    expect(api.upsertPushSubscription).toHaveBeenCalledWith('device-abc', 'fcm-token-123', { billReminders: true })
+    expect(api.upsertPushSubscription).toHaveBeenCalledWith('device-abc', 'fcm-token-123', { billReminders: true }, 'web')
     expect(result.current.billRemindersEnabled).toBe(true)
     expect(result.current.categoryAlertsEnabled).toBe(false)
   })
@@ -136,7 +137,7 @@ describe('usePushNotifications', () => {
       await result.current.setChannelEnabled('categoryAlerts', true)
     })
 
-    expect(api.upsertPushSubscription).toHaveBeenCalledWith('device-abc', 'fcm-token-123', { categoryAlerts: true })
+    expect(api.upsertPushSubscription).toHaveBeenCalledWith('device-abc', 'fcm-token-123', { categoryAlerts: true }, 'web')
     expect(result.current.categoryAlertsEnabled).toBe(true)
     expect(result.current.billRemindersEnabled).toBe(false)
   })
@@ -269,7 +270,7 @@ describe('usePushNotifications', () => {
     const { result } = renderHook(() => usePushNotifications(true, vi.fn(), ACCOUNT))
 
     await waitFor(() => expect(api.upsertPushSubscription).toHaveBeenCalledWith(
-      'device-abc', 'fcm-token-123', { billReminders: true, categoryAlerts: true }))
+      'device-abc', 'fcm-token-123', { billReminders: true, categoryAlerts: true }, 'web'))
     expect(renewFcmToken).toHaveBeenCalled()
     expect(getFcmToken).not.toHaveBeenCalled()
     await waitFor(() => expect(result.current.billRemindersEnabled).toBe(true))
@@ -308,7 +309,7 @@ describe('usePushNotifications', () => {
 
     // No channels argument: re-registering a rotated token must not restate the user's choices.
     await waitFor(() => expect(api.upsertPushSubscription).toHaveBeenCalledWith(
-      'device-abc', 'fcm-token-123', undefined))
+      'device-abc', 'fcm-token-123', undefined, 'web'))
     expect(getFcmToken).toHaveBeenCalled()
     expect(renewFcmToken).not.toHaveBeenCalled()
   })

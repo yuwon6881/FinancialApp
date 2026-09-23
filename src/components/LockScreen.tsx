@@ -19,8 +19,9 @@ import { focusFirstInvalidField } from './ui/formValidation'
 import { useDialog } from '../lib/useDialog'
 import { rememberDeviceUnlockCredential } from '../lib/deviceUnlockRegistration'
 import { retryWhileServerWakes } from '../lib/serverWakeRetry'
+import { authenticateNativeDevice, checkNativeDeviceAuthentication } from '../lib/native/deviceAuthentication'
 
-type LockScreenMode = 'session-timeout' | 'pwa-launch'
+type LockScreenMode = 'session-timeout' | 'pwa-launch' | 'native-app'
 
 export const DEVICE_UNLOCK_TIMEOUT_MS = 30_000
 
@@ -29,7 +30,7 @@ interface LockScreenProps {
   isOpen: boolean
   username: string
   onTryDeviceUnlock?: (signal?: AbortSignal) => Promise<void>
-  onUnlocked: () => void
+  onUnlocked: () => void | Promise<void>
   onSignOut: () => void
 }
 
@@ -100,6 +101,16 @@ export function LockScreen({
     if (mode === 'pwa-launch') {
       setFingerprintAvailable(true)
       return
+    }
+
+    if (mode === 'native-app') {
+      let cancelled = false
+      void checkNativeDeviceAuthentication()
+        .then(result => {
+          if (!cancelled) setFingerprintAvailable(result.isAvailable || result.deviceIsSecure)
+        })
+        .catch(() => { if (!cancelled) setFingerprintAvailable(false) })
+      return () => { cancelled = true }
     }
 
     setFingerprintAvailable(false)
@@ -180,6 +191,12 @@ export function LockScreen({
         onUnlocked()
         return
       }
+      if (mode === 'native-app') {
+        await authenticateNativeDevice('Verify your identity to open FinancialApp.')
+        if (abortController.signal.aborted) return
+        await onUnlocked()
+        return
+      }
       const { challengeId, options } = await getCachedFingerprintAssertOptions()
       const credential = await getFingerprintAssertion(options, abortController.signal)
       if (abortController.signal.aborted) return
@@ -196,7 +213,9 @@ export function LockScreen({
         console.error(err)
         setLockError(timedOut
           ? 'Device verification timed out. Try again or use your password.'
-          : getErrorMessage(err, 'Device verification was cancelled or failed. Try again or use your password.'))
+          : mode === 'native-app'
+            ? 'Device verification did not finish. Retry with biometrics or your device PIN.'
+            : getErrorMessage(err, 'Device verification was cancelled or failed. Try again or use your password.'))
       }
     } finally {
       if (attemptTimeout !== null) clearTimeout(attemptTimeout)
@@ -210,7 +229,7 @@ export function LockScreen({
   }, [cancelDeviceAttempt, fingerprintVerifying, mode, onTryDeviceUnlock, onUnlocked, passwordVerifying, username])
 
   useEffect(() => {
-    if (!isOpen || mode !== 'pwa-launch' || automaticLaunchAttemptRef.current) return
+    if (!isOpen || (mode !== 'pwa-launch' && mode !== 'native-app') || automaticLaunchAttemptRef.current) return
     automaticLaunchAttemptRef.current = true
     void handleFingerprintUnlock()
   }, [handleFingerprintUnlock, isOpen, mode])
@@ -242,10 +261,12 @@ export function LockScreen({
         <AppLogo className="size-16 rounded-2xl shadow-xl shadow-primary/20" />
         <div className="text-center">
           <h2 id={titleId} className="text-xl font-bold text-foreground">
-            {mode === 'pwa-launch' ? 'Unlock FinancialApp' : 'Session locked'}
+            {mode !== 'session-timeout' ? 'Unlock FinancialApp' : 'Session locked'}
           </h2>
           <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
-            {mode === 'pwa-launch'
+            {mode === 'native-app'
+              ? 'Verify with biometrics or your device PIN before opening your saved session.'
+              : mode === 'pwa-launch'
               ? isOnline
                 ? 'Verify with your device to open FinancialApp. Password unlock needs an internet connection.'
                 : 'Verify with your device to open FinancialApp. You are offline, so password unlock is unavailable.'
@@ -256,6 +277,11 @@ export function LockScreen({
         </div>
 
         {lockError && <AlertBanner variant="error" className="w-full">{lockError}</AlertBanner>}
+        {mode === 'native-app' && !fingerprintAvailable && (
+          <AlertBanner variant="warning" className="w-full">
+            Device authentication is unavailable. Set up biometrics or a screen lock in device settings, or sign out.
+          </AlertBanner>
+        )}
 
         {fingerprintAvailable && (
           <Button
@@ -269,13 +295,13 @@ export function LockScreen({
             <ShieldCheck className="size-5 text-emerald-400 animate-pulse" />
             {fingerprintVerifying
               ? 'Verifying device...'
-              : mode === 'pwa-launch' && hasAttemptedDeviceUnlock
+              : mode !== 'session-timeout' && hasAttemptedDeviceUnlock
                 ? 'Try again'
                 : 'Unlock with device'}
           </Button>
         )}
 
-        <form
+        {mode !== 'native-app' && <form
           noValidate
           onSubmit={async (e) => {
             e.preventDefault()
@@ -335,7 +361,7 @@ export function LockScreen({
           >
             {passwordVerifying ? 'Unlocking…' : 'Unlock with Password'}
           </Button>
-        </form>
+        </form>}
         <Button
           variant="tertiary"
           onClick={handleSignOut}

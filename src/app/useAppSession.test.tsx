@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { Capacitor } from '@capacitor/core'
 import { DEVICE_UNLOCK_REGISTRATION_EVENT } from '../lib/deviceUnlockRegistration'
 import { useAppSession, type UseAppSessionOptions } from './useAppSession'
 
@@ -18,8 +19,10 @@ const mocks = vi.hoisted(() => ({
   getRegisteredDeviceCredentialId: vi.fn(),
   rememberDeviceUnlockCredential: vi.fn(),
   forgetDeviceUnlockCredential: vi.fn(),
+  syncDeviceUnlockFromSecureStorage: vi.fn(),
   verifyMobilePwaDeviceGate: vi.fn(),
   getMobilePwaLaunchGateCredential: vi.fn(),
+  setNativeFinancialContentHidden: vi.fn(),
   tokenStore: {
     getToken: vi.fn(),
     setToken: vi.fn(),
@@ -58,6 +61,7 @@ vi.mock('../lib/deviceUnlockRegistration', () => ({
   getRegisteredDeviceCredentialId: mocks.getRegisteredDeviceCredentialId,
   rememberDeviceUnlockCredential: mocks.rememberDeviceUnlockCredential,
   forgetDeviceUnlockCredential: mocks.forgetDeviceUnlockCredential,
+  syncDeviceUnlockFromSecureStorage: mocks.syncDeviceUnlockFromSecureStorage,
 }))
 
 vi.mock('../lib/useAutoLock', () => ({
@@ -70,6 +74,10 @@ vi.mock('../lib/mobilePwaDeviceGateEligibility', () => ({
 
 vi.mock('../lib/mobilePwaDeviceGate', () => ({
   verifyMobilePwaDeviceGate: mocks.verifyMobilePwaDeviceGate,
+}))
+
+vi.mock('../lib/native/privacyScreen', () => ({
+  setNativeFinancialContentHidden: mocks.setNativeFinancialContentHidden,
 }))
 
 function createOptions(): UseAppSessionOptions {
@@ -87,6 +95,7 @@ function createOptions(): UseAppSessionOptions {
 describe('useAppSession', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.setNativeFinancialContentHidden.mockResolvedValue(undefined)
     localStorage.clear()
     sessionStorage.clear()
     localStorage.setItem('auth_username', 'alice')
@@ -100,10 +109,33 @@ describe('useAppSession', () => {
     })
     mocks.getMobilePwaLaunchGateCredential.mockReturnValue('010203')
     mocks.getRegisteredDeviceCredentialId.mockReturnValue('010203')
+    mocks.syncDeviceUnlockFromSecureStorage.mockResolvedValue(undefined)
     mocks.prefetchFingerprintAssertOptions.mockResolvedValue(undefined)
     mocks.tokenStore.setToken.mockResolvedValue(undefined)
     mocks.tokenStore.clearToken.mockResolvedValue(undefined)
     mocks.logout.mockResolvedValue(undefined)
+  })
+
+  afterEach(() => vi.restoreAllMocks())
+
+  it('covers a restored native session on startup and every return from background', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true)
+    mocks.resolveSessionToken.mockResolvedValue('native-bearer-token')
+    const { result } = renderHook(() => useAppSession(createOptions()))
+
+    await waitFor(() => expect(result.current.isSessionResolved).toBe(true))
+
+    expect(result.current.isNativeAppGateLocked).toBe(true)
+    expect(result.current.isPwaLaunchGateLocked).toBe(false)
+    expect(mocks.setNativeFinancialContentHidden).toHaveBeenCalledWith(true)
+
+    await act(async () => result.current.unlockNativeAppGate())
+    expect(result.current.isNativeAppGateLocked).toBe(false)
+    expect(mocks.setNativeFinancialContentHidden).toHaveBeenLastCalledWith(false)
+
+    await act(async () => result.current.lockNativeAppGate())
+    expect(result.current.isNativeAppGateLocked).toBe(true)
+    expect(mocks.setNativeFinancialContentHidden).toHaveBeenLastCalledWith(true)
   })
 
   it('keeps the startup PWA gate separate from the normal session lock', async () => {

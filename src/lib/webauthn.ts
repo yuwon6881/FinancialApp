@@ -1,6 +1,20 @@
 // Browser-side glue between the WebAuthn API and the Fido2NetLib JSON shape
 // the backend sends/expects (base64url-encoded byte fields, camelCase keys).
 import { withExclusiveWebAuthnRequest } from './webauthnRequest'
+import { Capacitor } from '@capacitor/core'
+
+const NATIVE_PASSKEY_ORIGIN = 'https://financialapp-ecru.vercel.app'
+let nativePasskeyPluginPromise: Promise<typeof import('@capgo/capacitor-passkey')> | null = null
+if (Capacitor.isNativePlatform()) {
+  // Resolve the lazy native bridge before a user taps a passkey action; the actual OS prompt
+  // should begin directly from that gesture, without waiting for a chunk download.
+  nativePasskeyPluginPromise = import('@capgo/capacitor-passkey')
+}
+
+function loadNativePasskeyPlugin() {
+  nativePasskeyPluginPromise ??= import('@capgo/capacitor-passkey')
+  return nativePasskeyPluginPromise
+}
 
 function base64UrlToBuffer(base64Url: string): ArrayBuffer {
   const padded = base64Url.replace(/-/g, '+').replace(/_/g, '/')
@@ -57,6 +71,14 @@ export function getFriendlyDeviceLabel(): string {
 }
 
 export async function isPlatformAuthenticatorAvailable(): Promise<boolean> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { CapacitorPasskey } = await loadNativePasskeyPlugin()
+      return (await CapacitorPasskey.isSupported()).available
+    } catch {
+      return false
+    }
+  }
   if (!isFingerprintSupported()) return false
   try {
     return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
@@ -66,7 +88,7 @@ export async function isPlatformAuthenticatorAvailable(): Promise<boolean> {
 }
 
 interface Fido2Descriptor {
-  type: string
+  type: 'public-key'
   id: string
   transports?: string[]
 }
@@ -75,14 +97,14 @@ export interface CreateOptionsJson {
   rp: { id: string; name: string }
   user: { name: string; id: string; displayName: string }
   challenge: string
-  pubKeyCredParams: { type: string; alg: number }[]
+  pubKeyCredParams: { type: 'public-key'; alg: number }[]
   timeout?: number
-  attestation?: string
+  attestation?: 'none' | 'indirect' | 'direct' | 'enterprise'
   authenticatorSelection?: {
-    authenticatorAttachment?: string
-    residentKey?: string
+    authenticatorAttachment?: 'platform' | 'cross-platform'
+    residentKey?: 'discouraged' | 'preferred' | 'required'
     requireResidentKey?: boolean
-    userVerification?: string
+    userVerification?: 'discouraged' | 'preferred' | 'required'
   }
   excludeCredentials?: Fido2Descriptor[]
 }
@@ -92,10 +114,32 @@ export interface AssertionOptionsJson {
   timeout?: number
   rpId?: string
   allowCredentials?: Fido2Descriptor[]
-  userVerification?: string
+  userVerification?: 'discouraged' | 'preferred' | 'required'
 }
 
 export async function createFingerprintCredential(options: CreateOptionsJson, signal?: AbortSignal) {
+  if (Capacitor.isNativePlatform()) {
+    return withExclusiveWebAuthnRequest(async () => {
+      const { CapacitorPasskey } = await loadNativePasskeyPlugin()
+      const credential = await CapacitorPasskey.createCredential({
+        origin: NATIVE_PASSKEY_ORIGIN,
+        publicKey: options,
+      })
+      return {
+        id: credential.id,
+        rawId: credential.rawId,
+        type: credential.type,
+        authenticatorAttachment: credential.authenticatorAttachment ?? null,
+        response: {
+          attestationObject: credential.response.attestationObject,
+          clientDataJSON: credential.response.clientDataJSON,
+          transports: credential.response.transports ?? [],
+        },
+        clientExtensionResults: credential.clientExtensionResults,
+      }
+    }, signal)
+  }
+
   const publicKey: PublicKeyCredentialCreationOptions = {
     rp: options.rp,
     user: {
@@ -136,6 +180,29 @@ export async function createFingerprintCredential(options: CreateOptionsJson, si
 }
 
 export async function getFingerprintAssertion(options: AssertionOptionsJson, signal?: AbortSignal) {
+  if (Capacitor.isNativePlatform()) {
+    return withExclusiveWebAuthnRequest(async () => {
+      const { CapacitorPasskey } = await loadNativePasskeyPlugin()
+      const credential = await CapacitorPasskey.getCredential({
+        origin: NATIVE_PASSKEY_ORIGIN,
+        publicKey: options,
+      })
+      return {
+        id: credential.id,
+        rawId: credential.rawId,
+        type: credential.type,
+        authenticatorAttachment: credential.authenticatorAttachment ?? null,
+        response: {
+          authenticatorData: credential.response.authenticatorData,
+          signature: credential.response.signature,
+          clientDataJSON: credential.response.clientDataJSON,
+          userHandle: credential.response.userHandle ?? null,
+        },
+        clientExtensionResults: credential.clientExtensionResults,
+      }
+    }, signal)
+  }
+
   const publicKey: PublicKeyCredentialRequestOptions = {
     challenge: base64UrlToBuffer(options.challenge),
     timeout: options.timeout,

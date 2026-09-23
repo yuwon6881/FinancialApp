@@ -6,7 +6,7 @@ vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: () => nativePlatform.value },
 }))
 
-import { rememberDeviceUnlockCredential, rememberExistingDeviceUnlock } from './deviceUnlockRegistration'
+import { rememberDeviceUnlockCredential } from './deviceUnlockRegistration'
 import { getMobilePwaLaunchGateCredential, isInstalledMobilePwa } from './mobilePwaDeviceGateEligibility'
 
 function setBrowser(userAgent: string, standalone: boolean, maxTouchPoints = 0) {
@@ -30,7 +30,7 @@ describe('mobile PWA launch-gate eligibility', () => {
     expect(getMobilePwaLaunchGateCredential(true, 'alice')).toBe('010203')
     expect(getMobilePwaLaunchGateCredential(true, 'bob')).toBeNull()
 
-    rememberExistingDeviceUnlock('carol')
+    localStorage.setItem('fingerprint_credential_id_on_this_device:CAROL', 'already_enrolled')
     expect(getMobilePwaLaunchGateCredential(true, 'carol')).toBeNull()
     localStorage.setItem('fingerprint_credential_id_on_this_device', 'already_enrolled')
     expect(getMobilePwaLaunchGateCredential(true, 'dave')).toBeNull()

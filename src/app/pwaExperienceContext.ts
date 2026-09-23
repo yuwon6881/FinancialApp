@@ -3,6 +3,7 @@ export type UpdateResult = 'applied' | 'blocked' | 'failed' | 'unavailable'
 export type InstallPromptResult = 'accepted' | 'dismissed' | 'unavailable' | 'failed'
 
 export interface PwaExperienceValue {
+  nativeApp: boolean
   online: boolean
   installed: boolean
   installAvailable: boolean
@@ -23,6 +24,7 @@ export interface PwaExperienceValue {
 }
 
 const DEFAULT_VALUE: PwaExperienceValue = {
+  nativeApp: false,
   online: true,
   installed: false,
   installAvailable: false,

@@ -160,7 +160,9 @@ if (!fs.existsSync(distAssetsPath)) {
 // 223.5: raised from 222.0 (measured 222.03). PWA experience integration, launcher shortcuts handling,
 // push preview settings, and durable scan queue enhancements. Restores the established ~1.5 kB margin
 // for cross-platform gzip variance.
-const CRITICAL_PATH_LIMIT_KB = 223.5
+// 225.5: raised from 223.5 (measured 223.93). Native app lifecycle and Capacitor biometrics/push integrations
+// for native platform support. Restores the established ~1.5 kB margin for cross-platform gzip variance.
+const CRITICAL_PATH_LIMIT_KB = 225.5
 const PRECACHE_RAW_LIMIT_KB = 3 * 1024
 
 function criticalPathChunks(files) {

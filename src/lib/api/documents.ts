@@ -344,7 +344,7 @@ export async function downloadDocumentArchive(taxYear?: number): Promise<void> {
   const query = taxYear === undefined ? '' : `?taxYear=${taxYear}`
   const response = await apiFetch(`/documents/export${query}`)
   if (!response.ok) await throwApiError(response, 'Failed to export documents')
-  downloadCsvBlob(await response.blob(), taxYear === undefined ? 'tax-vault-all-tax-years.zip' : `tax-vault-${taxYear}.zip`)
+  await downloadCsvBlob(await response.blob(), taxYear === undefined ? 'tax-vault-all-tax-years.zip' : `tax-vault-${taxYear}.zip`)
 }
 
 export async function downloadSelectedDocumentArchive(ids: number[]): Promise<void> {
@@ -354,7 +354,7 @@ export async function downloadSelectedDocumentArchive(ids: number[]): Promise<vo
     body: JSON.stringify({ ids }),
   })
   if (!response.ok) await throwApiError(response, 'Failed to export selected documents')
-  downloadCsvBlob(await response.blob(), 'tax-vault-selected.zip')
+  await downloadCsvBlob(await response.blob(), 'tax-vault-selected.zip')
 }
 
 export async function deleteDocument(id: number): Promise<void> {
@@ -367,7 +367,7 @@ export async function deleteDocument(id: number): Promise<void> {
 
 export async function downloadDocument(id: number, fileName: string): Promise<void> {
   const { blob, fileName: responseFileName } = await getDocumentContent(id, fileName)
-  downloadCsvBlob(blob, responseFileName)
+  await downloadCsvBlob(blob, responseFileName)
 }
 
 export interface DocumentContent {

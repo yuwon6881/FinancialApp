@@ -61,4 +61,10 @@ describe('isRecurringNotificationData', () => {
     expect(isRecurringNotificationData({ recurringPaymentId: 'sub-1' })).toBe(false)
     expect(isRecurringNotificationData({ occurrenceDate: '2024-06-15' })).toBe(false)
   })
+
+  it('rejects malformed ids, dates, and unexpected kinds before routing', () => {
+    expect(isRecurringNotificationData({ recurringPaymentId: ' ', occurrenceDate: '2024-06-15' })).toBe(false)
+    expect(isRecurringNotificationData({ recurringPaymentId: 'sub-1', occurrenceDate: '2024-02-30' })).toBe(false)
+    expect(isRecurringNotificationData({ kind: 'unknown', recurringPaymentId: 'sub-1', occurrenceDate: '2024-06-15' })).toBe(false)
+  })
 })

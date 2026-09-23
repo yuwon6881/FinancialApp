@@ -31,6 +31,27 @@ export function fetchPushStatus(deviceId: string): Promise<PushStatus> {
   return api.fetchPushStatus(deviceId)
 }
 
+async function notificationPermission(platform: ReturnType<typeof push.getPushPlatform>) {
+  return platform === 'web'
+    ? Notification.permission
+    : push.checkNativePushPermission()
+}
+
+async function requestNotificationPermission(platform: ReturnType<typeof push.getPushPlatform>) {
+  return platform === 'web'
+    ? Notification.requestPermission()
+    : push.requestNativePushPermission()
+}
+
+async function getRegistrationToken(
+  platform: ReturnType<typeof push.getPushPlatform>,
+  renew: boolean,
+): Promise<string | null> {
+  if (platform !== 'web') return push.getNativeFcmToken(renew)
+  const registration = await navigator.serviceWorker.ready
+  return renew ? push.renewFcmToken(registration) : push.getFcmToken(registration)
+}
+
 export async function reconcilePush(
   account: string | null | undefined,
   callbacks: PushReconcileCallbacks,
@@ -43,6 +64,7 @@ export async function reconcilePush(
   }
 
   const deviceId = device.deviceId
+  const platform = push.getPushPlatform()
   const next = await fetchPushStatus(deviceId)
   if (callbacks.isCancelled()) return deviceId
   callbacks.setStatus(next)
@@ -56,7 +78,7 @@ export async function reconcilePush(
     return deviceId
   }
 
-  if (Notification.permission !== 'granted') {
+  if (await notificationPermission(platform) !== 'granted') {
     if (!next.deviceRegistered) {
       push.writePushChannelIntent(account, { billReminders: false, categoryAlerts: false })
       if (!callbacks.isCancelled()) callbacks.setGuidance(push.PUSH_PERMISSION_REVOKED_GUIDANCE)
@@ -76,15 +98,12 @@ export async function reconcilePush(
   }
 
   try {
-    const registration = await navigator.serviceWorker.ready
-    const token = next.tokenRenewalRequired
-      ? await push.renewFcmToken(registration)
-      : await push.getFcmToken(registration)
+    const token = await getRegistrationToken(platform, next.tokenRenewalRequired)
     if (!token) return deviceId
     const channels = next.deviceRegistered
       ? undefined
       : { billReminders: intent.billReminders, categoryAlerts: intent.categoryAlerts }
-    await api.upsertPushSubscription(deviceId, token, channels)
+    await api.upsertPushSubscription(deviceId, token, channels, platform)
     if (!next.deviceRegistered && !callbacks.isCancelled()) {
       callbacks.setStatus(await fetchPushStatus(deviceId))
       callbacks.enrolmentChanged()
@@ -115,6 +134,7 @@ function isStandingPushBlock(error: unknown): boolean {
 export function startForegroundPush(
   onNotification: (message: string, title?: string) => void,
 ): Promise<() => void> {
+  if (push.getPushPlatform() !== 'web') return push.listenForNativeForegroundPush(onNotification)
   return push.onForegroundMessage(payload => {
     const title = payload.data?.title || payload.notification?.title || 'FinancialApp notification'
     const message = payload.data?.body || payload.notification?.body || 'Open the app to review this update.'
@@ -146,13 +166,12 @@ export async function setPushChannel(
       return { success: true, status: await fetchPushStatus(deviceId), guidance: null, enrolmentChanged: true }
     }
 
-    if (await Notification.requestPermission() !== 'granted') {
+    const platform = push.getPushPlatform()
+    if (platform === 'android') await push.assertNativePushConfigured()
+    if (await requestNotificationPermission(platform) !== 'granted') {
       return { success: false, status: currentStatus, guidance: push.PUSH_DENIED_GUIDANCE, enrolmentChanged: false }
     }
-    const registration = await navigator.serviceWorker.ready
-    const token = currentStatus.tokenRenewalRequired
-      ? await push.renewFcmToken(registration)
-      : await push.getFcmToken(registration)
+    const token = await getRegistrationToken(platform, currentStatus.tokenRenewalRequired)
     // Null here means only one thing: this deployment ships no push configuration.
     if (!token) {
       return {
@@ -170,7 +189,7 @@ export async function setPushChannel(
       billRemindersEnabled: channel === 'billReminders' ? true : currentStatus.billRemindersEnabled,
       categoryAlertsEnabled: channel === 'categoryAlerts' ? true : currentStatus.categoryAlertsEnabled,
     })
-    await api.upsertPushSubscription(deviceId, token, { [channel]: true })
+    await api.upsertPushSubscription(deviceId, token, { [channel]: true }, platform)
     rememberIntent(true)
     return { success: true, status: await fetchPushStatus(deviceId), guidance: null, enrolmentChanged: true }
   } catch (error) {

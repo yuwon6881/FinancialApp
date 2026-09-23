@@ -169,15 +169,20 @@ export function useLedgerExport(options: UseLedgerExportOptions) {
     return `${toFilename(label)}.csv`
   }
 
-  const handleExportPage = () => {
+  const handleExportPage = async () => {
     if (hideSensitive) return
     if (showAllCycles && (!serverResult || serverIsReplacingRows)) {
       onShowAlert?.('Load the saved transactions before exporting this page.', 'Export Not Ready')
       return
     }
     const rows = showAllCycles && serverResult ? displayTransactions : paginatedTransactions
-    downloadCsvRows(rows, getPageExportFilename(rows), accounts)
-    setShowExportModal(false)
+    try {
+      await downloadCsvRows(rows, getPageExportFilename(rows), accounts)
+      setShowExportModal(false)
+    } catch (error) {
+      console.error(error)
+      onShowAlert?.('The export could not be saved or shared.', 'Export Error')
+    }
   }
 
   const handleExportAll = async () => {
@@ -206,7 +211,7 @@ export function useLedgerExport(options: UseLedgerExportOptions) {
           wishlistFilter: appliedWishlistFilter,
           sort: sortOrder,
         })
-        downloadCsvBlob(result.blob, getExportAllFilename())
+        await downloadCsvBlob(result.blob, getExportAllFilename())
         setShowExportModal(false)
       } catch (err) {
         console.error(err)
@@ -216,8 +221,13 @@ export function useLedgerExport(options: UseLedgerExportOptions) {
       }
       return
     }
-    downloadCsvRows(filteredTransactions, getExportAllFilename(), accounts)
-    setShowExportModal(false)
+    try {
+      await downloadCsvRows(filteredTransactions, getExportAllFilename(), accounts)
+      setShowExportModal(false)
+    } catch (error) {
+      console.error(error)
+      onShowAlert?.('The export could not be saved or shared.', 'Export Error')
+    }
   }
 
   return {

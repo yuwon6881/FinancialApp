@@ -33,7 +33,15 @@ export function buildNotificationTag(data: PushNotificationData): string {
 export function isRecurringNotificationData(value: unknown): value is RecurringNotificationData {
   if (!value || typeof value !== 'object') return false
   const data = value as Record<string, unknown>
-  return typeof data.recurringPaymentId === 'string' && typeof data.occurrenceDate === 'string'
+  if (data.kind !== undefined && data.kind !== 'recurring-payment') return false
+  if (typeof data.recurringPaymentId !== 'string'
+    || data.recurringPaymentId.trim().length === 0
+    || data.recurringPaymentId.length > 200
+    || typeof data.occurrenceDate !== 'string'
+    || !/^\d{4}-\d{2}-\d{2}$/.test(data.occurrenceDate)) return false
+
+  const date = new Date(`${data.occurrenceDate}T00:00:00.000Z`)
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === data.occurrenceDate
 }
 
 export function isCategoryLimitNotificationData(value: unknown): value is CategoryLimitNotificationData {

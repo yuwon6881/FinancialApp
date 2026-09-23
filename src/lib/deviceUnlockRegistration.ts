@@ -2,6 +2,51 @@ import { base64UrlToHex } from './webauthn'
 
 const LEGACY_DEVICE_CREDENTIAL_ID_KEY = 'fingerprint_credential_id_on_this_device'
 const DEVICE_CREDENTIAL_ID_KEY_PREFIX = 'fingerprint_credential_id_on_this_device:'
+const LAST_ENROLLED_USERNAME_KEY = 'fingerprint_last_enrolled_username'
+
+export function getLastEnrolledUsername(): string | null {
+  if (typeof localStorage === 'undefined') return null
+  return localStorage.getItem(LAST_ENROLLED_USERNAME_KEY) || null
+}
+
+export function rememberEnrolledUsername(username: string): void {
+  if (typeof localStorage === 'undefined' || !username.trim()) return
+  localStorage.setItem(LAST_ENROLLED_USERNAME_KEY, username.trim())
+}
+
+function persistToNativeSecureStorage(username: string, normalizedCred: string): void {
+  if (typeof window === 'undefined') return
+  void import('@capacitor/core').then(({ Capacitor }) => {
+    if (!Capacitor.isNativePlatform()) return
+    return import('@aparajita/capacitor-secure-storage').then(({ SecureStorage }) => {
+      return Promise.all([
+        SecureStorage.set(storageKey(username), normalizedCred),
+        SecureStorage.set('last_enrolled_username', username.trim()),
+      ])
+    })
+  }).catch(() => undefined)
+}
+
+export async function syncDeviceUnlockFromSecureStorage(): Promise<void> {
+  if (typeof window === 'undefined') return
+  try {
+    const { Capacitor } = await import('@capacitor/core')
+    if (!Capacitor.isNativePlatform()) return
+    const { SecureStorage } = await import('@aparajita/capacitor-secure-storage')
+    const lastUser = (await SecureStorage.get('last_enrolled_username')) as string | null
+    if (lastUser && !localStorage.getItem(LAST_ENROLLED_USERNAME_KEY)) {
+      rememberEnrolledUsername(lastUser)
+      const cred = (await SecureStorage.get(storageKey(lastUser))) as string | null
+      if (cred && !localStorage.getItem(storageKey(lastUser))) {
+        localStorage.setItem(storageKey(lastUser), cred)
+        localStorage.setItem(LEGACY_DEVICE_CREDENTIAL_ID_KEY, cred)
+        announceRegistrationChange()
+      }
+    }
+  } catch (err) {
+    console.warn('Could not sync device unlock from SecureStorage', err)
+  }
+}
 
 function storageKey(username: string): string {
   return `${DEVICE_CREDENTIAL_ID_KEY_PREFIX}${username.trim().toUpperCase()}`
@@ -34,17 +79,12 @@ function normalizeCredentialId(value: string | null): string | null {
 export function getDeviceUnlockRegistrationMarker(username: string): string | null {
   if (!username.trim()) return null
   const accountValue = localStorage.getItem(storageKey(username))
-  if (accountValue === 'already_enrolled') return accountValue
   const normalized = normalizeCredentialId(accountValue)
   if (normalized) return normalized
 
-  // Fall back to the legacy non-account-scoped key. The old code stored both
-  // hex credential ids and the 'already_enrolled' sentinel here; the latter
-  // must be checked explicitly because normalizeCredentialId treats it as an
-  // unrecognised value and returns null.
-  const legacyValue = localStorage.getItem(LEGACY_DEVICE_CREDENTIAL_ID_KEY)
-  if (legacyValue === 'already_enrolled') return legacyValue
-  return normalizeCredentialId(legacyValue)
+  // Old installations may retain a marker without an exact credential id.
+  // That marker cannot prove this device holds an account credential.
+  return normalizeCredentialId(localStorage.getItem(LEGACY_DEVICE_CREDENTIAL_ID_KEY))
 }
 
 /** Returns the credential this browser recorded for this account at enrollment time. */
@@ -65,32 +105,8 @@ export function rememberDeviceUnlockCredential(username: string, credentialId: s
   localStorage.setItem(storageKey(username), normalized)
   // Keep the old key during the compatibility window for existing installations.
   localStorage.setItem(LEGACY_DEVICE_CREDENTIAL_ID_KEY, normalized)
-  announceRegistrationChange()
-}
-
-/**
- * Records the credential a server-verified assertion just named.
- *
- * Separate from {@link rememberDeviceUnlockCredential} because the input is the backend's
- * uppercase hex form rather than the WebAuthn API's base64url, and the two cannot be told apart
- * reliably -- a base64url id can be all lowercase hex characters. Guessing would occasionally
- * store a marker that matches nothing and read back as "not enrolled here".
- *
- * Unlike the `already_enrolled` sentinel this names a specific credential, so it restores the
- * installed-PWA launch gate as well as the enrollment state.
- */
-export function rememberVerifiedDeviceUnlockCredential(username: string, credentialIdHex: string): void {
-  if (!username.trim()) return
-  const normalized = credentialIdHex.trim().toUpperCase()
-  if (!/^(?:[0-9A-F]{2})+$/.test(normalized)) return
-  localStorage.setItem(storageKey(username), normalized)
-  localStorage.setItem(LEGACY_DEVICE_CREDENTIAL_ID_KEY, normalized)
-  announceRegistrationChange()
-}
-
-export function rememberExistingDeviceUnlock(username: string): void {
-  if (!username.trim()) return
-  localStorage.setItem(storageKey(username), 'already_enrolled')
+  rememberEnrolledUsername(username)
+  persistToNativeSecureStorage(username, normalized)
   announceRegistrationChange()
 }
 
@@ -101,11 +117,7 @@ export function forgetDeviceUnlockCredential(username: string, credentialId: str
   const accountKey = storageKey(username)
   const accountValue = localStorage.getItem(accountKey)
   let changed = false
-  // Only clear the per-account key when it stores the exact credential being
-  // removed. The 'already_enrolled' marker is imprecise — it does not name a
-  // specific credential — so deleting any individual credential must not erase
-  // the device's enrollment state. The backend credential list and the
-  // enrolledHere guard in Settings are the authoritative checks.
+  // Only clear a marker when it names the credential being removed.
   if (normalizeCredentialId(accountValue) === normalized) {
     localStorage.removeItem(accountKey)
     changed = true

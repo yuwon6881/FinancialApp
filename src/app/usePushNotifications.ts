@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import type { PushChannel, PushStatus } from '../types'
 
 export type PushBusyAction = PushChannel | null
@@ -89,6 +90,7 @@ export function usePushNotifications(
     }
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | undefined
+    let removeNativeResume: (() => void) | undefined
     setLoading(true)
     const run = () => void loadController()
       .then(controller => controller.reconcilePush(account, {
@@ -108,14 +110,24 @@ export function usePushNotifications(
       .finally(() => { if (!cancelled) setLoading(false) })
     if (urgent) run()
     else timer = setTimeout(run, 0)
+    if (Capacitor.isNativePlatform()) {
+      void import('@capacitor/app').then(({ App }) => App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive && !cancelled) run()
+      })).then(handle => {
+        if (cancelled) void handle.remove()
+        else removeNativeResume = () => { void handle.remove() }
+      }).catch(error => console.warn('Could not refresh native push registration on resume.', error))
+    }
     return () => {
       cancelled = true
       if (timer) clearTimeout(timer)
+      removeNativeResume?.()
     }
   }, [active, account, markEnrolmentChanged, urgent])
 
   useEffect(() => {
-    if (!active || !onForegroundNotification || !status?.deviceRegistered || Notification.permission !== 'granted') return
+    if (!active || !onForegroundNotification || !status?.deviceRegistered
+      || (!Capacitor.isNativePlatform() && Notification.permission !== 'granted')) return
     let disposed = false
     let unsubscribe: (() => void) | undefined
     void loadController().then(controller => controller.startForegroundPush(onForegroundNotification))

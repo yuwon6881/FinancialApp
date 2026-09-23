@@ -1,6 +1,8 @@
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import React from 'react'
+import { Capacitor } from '@capacitor/core'
+import { captureReceiptPhoto, isReceiptCameraCancelled } from '../../../lib/native/receiptCamera'
 import { Calculator, Camera, Image, X, Loader2 } from 'lucide-react'
 import { PerimeterBeam } from '../../ui/PerimeterBeam'
 
@@ -57,6 +59,21 @@ export function ReceiptScanPicker({
   // Either picker takes over the whole row, so the buttons it replaces never
   // shift position while a source is being chosen.
   const pickingSource = (showScanPicker || showSplitPicker) && !busy
+
+  const scanFromNativeCamera = async (onFile: (file: File) => void, close: () => void) => {
+    setScanError(null)
+    try {
+      const file = await captureReceiptPhoto()
+      if (file) {
+        close()
+        onFile(file)
+      }
+    } catch (error) {
+      if (!isReceiptCameraCancelled(error)) {
+        setScanError('The camera could not capture this receipt. Check camera access and try again.')
+      }
+    }
+  }
 
   return (
     <div className="sm:col-span-2">
@@ -158,7 +175,9 @@ export function ReceiptScanPicker({
         <div className="flex gap-2">
           <Button variant="tertiary"
             type="button"
-            onClick={() => scanFileInputRef.current?.click()}
+            onClick={() => Capacitor.isNativePlatform()
+              ? void scanFromNativeCamera(handleScanReceipt, () => setShowScanPicker(false))
+              : scanFileInputRef.current?.click()}
             className={SOURCE_BUTTON}
           >
             <Camera className="size-3.5" /> Take Photo
@@ -185,7 +204,9 @@ export function ReceiptScanPicker({
         <div className="flex gap-2">
           <Button variant="tertiary"
             type="button"
-            onClick={() => splitCameraInputRef?.current?.click()}
+            onClick={() => Capacitor.isNativePlatform()
+              ? void scanFromNativeCamera(file => handleSplitScan?.(file), () => setShowSplitPicker?.(false))
+              : splitCameraInputRef?.current?.click()}
             className={SOURCE_BUTTON}
           >
             <Camera className="size-3.5" /> Take Photo

@@ -44,3 +44,7 @@ scratch/
 *.sw?
 
 .vercel
+
+# Native local configuration (provision Firebase through CI secrets for build artifacts).
+.env.native
+/android/app/google-services.json

@@ -5,27 +5,31 @@ import { FingerprintSection } from './FingerprintSection'
 const {
   createFingerprintCredential,
   getFingerprintAssertion,
+  getFingerprintAssertOptions,
   getFingerprintRegisterOptions,
-  getFingerprintRestoreOptions,
   isPlatformAuthenticatorAvailable,
-  verifyFingerprintRestore,
+  verifyFingerprintAssert,
+  verifyFingerprintRegistration,
+  showToast,
 } = vi.hoisted(() => ({
   createFingerprintCredential: vi.fn(),
   getFingerprintAssertion: vi.fn(),
+  getFingerprintAssertOptions: vi.fn(),
   getFingerprintRegisterOptions: vi.fn(),
-  getFingerprintRestoreOptions: vi.fn(),
   isPlatformAuthenticatorAvailable: vi.fn(),
-  verifyFingerprintRestore: vi.fn(),
+  verifyFingerprintAssert: vi.fn(),
+  verifyFingerprintRegistration: vi.fn(),
+  showToast: vi.fn(),
 }))
 const listFingerprintCredentials = vi.fn()
 const deleteFingerprintCredential = vi.fn()
 
 vi.mock('../../lib/api', () => ({
   listFingerprintCredentials: () => listFingerprintCredentials(),
+  getFingerprintAssertOptions,
   getFingerprintRegisterOptions,
-  getFingerprintRestoreOptions,
-  verifyFingerprintRestore,
-  verifyFingerprintRegistration: vi.fn(),
+  verifyFingerprintAssert,
+  verifyFingerprintRegistration,
   deleteFingerprintCredential: (id: string) => deleteFingerprintCredential(id),
 }))
 
@@ -39,13 +43,16 @@ vi.mock('../../lib/webauthn', () => ({
 
 vi.mock('../../contexts/AppContext', () => ({
   useAppPrefs: () => ({ hideSensitive: false }),
-  useAppUi: () => ({ showToast: vi.fn() }),
+  useAppUi: () => ({ showToast }),
 }))
 
 describe('FingerprintSection', () => {
   beforeEach(() => {
     localStorage.clear()
     getFingerprintRegisterOptions.mockReset()
+    getFingerprintRegisterOptions.mockResolvedValue({ challengeId: 'register-1', options: {} })
+    verifyFingerprintRegistration.mockReset()
+    verifyFingerprintRegistration.mockResolvedValue({ verified: true })
     createFingerprintCredential.mockReset()
     deleteFingerprintCredential.mockReset()
     listFingerprintCredentials.mockResolvedValue([
@@ -53,10 +60,12 @@ describe('FingerprintSection', () => {
     ])
     isPlatformAuthenticatorAvailable.mockReset()
     isPlatformAuthenticatorAvailable.mockResolvedValue(true)
-    getFingerprintRestoreOptions.mockReset()
-    getFingerprintRestoreOptions.mockResolvedValue({ challengeId: 'challenge-1', options: {} })
+    getFingerprintAssertOptions.mockReset()
+    getFingerprintAssertOptions.mockResolvedValue({ challengeId: 'assert-1', options: {} })
     getFingerprintAssertion.mockReset()
-    verifyFingerprintRestore.mockReset()
+    verifyFingerprintAssert.mockReset()
+    verifyFingerprintAssert.mockResolvedValue({ verified: true })
+    showToast.mockReset()
   })
 
   it('shows account-level availability instead of disabled on an unregistered device', async () => {
@@ -68,32 +77,32 @@ describe('FingerprintSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Device Unlock/i }))
 
-    expect(await screen.findByRole('button', { name: 'Add another credential' })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: 'Set up this device' })).toBeTruthy()
   })
 
-  // Clearing site data leaves the credential and its server row intact and destroys only this
-  // browser's marker, so the way back is to prove the holder -- not to enrol a second time.
-  it('restores the enrollment marker from the credential the server verified', async () => {
+  it('verifies an existing passkey after duplicate creation and records its exact credential id', async () => {
     localStorage.setItem('auth_username', 'alice')
-    getFingerprintAssertion.mockResolvedValue({ rawId: 'AQID', authenticatorAttachment: 'platform' })
-    verifyFingerprintRestore.mockResolvedValue({ verified: true, credentialId: 'ABCDEF' })
+    createFingerprintCredential.mockRejectedValue(Object.assign(new Error('Credential already exists'), { name: 'InvalidStateError' }))
+    getFingerprintAssertion.mockResolvedValue({ id: 'AQID', authenticatorAttachment: 'platform' })
+    listFingerprintCredentials.mockImplementation(async () => [
+      { id: 'AQID', deviceLabel: 'This phone', createdAt: '2026-08-01T00:00:00Z' },
+    ])
 
     render(<FingerprintSection />)
     await screen.findByText('Available')
     fireEvent.click(screen.getByRole('button', { name: /Device Unlock/i }))
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Restore on this device' }))
+    const setupButton = await screen.findByRole('button', { name: 'Set up this device' })
+    await waitFor(() => expect(setupButton.hasAttribute('disabled')).toBe(false))
+    fireEvent.click(setupButton)
 
-    await waitFor(() => expect(verifyFingerprintRestore).toHaveBeenCalled())
-    // The marker is the server's answer, not the id the browser handed us.
-    expect(verifyFingerprintRestore.mock.calls[0][2]).toBe('platform')
-    await waitFor(() =>
-      expect(localStorage.getItem('fingerprint_credential_id_on_this_device:ALICE')).toBe('ABCDEF'))
-    // Nothing was registered: the account already owns this credential.
-    expect(createFingerprintCredential).not.toHaveBeenCalled()
+    await waitFor(() => expect(verifyFingerprintAssert).toHaveBeenCalledWith('assert-1', expect.objectContaining({ id: 'AQID' })))
+    await waitFor(() => expect(localStorage.getItem('fingerprint_credential_id_on_this_device:ALICE')).toBe('AQID'))
+    expect(verifyFingerprintRegistration).not.toHaveBeenCalled()
+    expect(await screen.findByText('Enabled here')).toBeTruthy()
   })
 
-  it('does not offer to restore once this browser knows its credential', async () => {
+  it('does not offer a separate restore action once this browser knows its credential', async () => {
     listFingerprintCredentials.mockResolvedValue([
       { id: 'ABCDEF', deviceLabel: 'This browser', createdAt: '2026-08-01T00:00:00Z' },
     ])
@@ -105,7 +114,7 @@ describe('FingerprintSection', () => {
     fireEvent.click(screen.getByRole('button', { name: /Device Unlock/i }))
 
     await screen.findByRole('button', { name: 'Add another credential' })
-    expect(screen.queryByRole('button', { name: 'Restore on this device' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /restore on this device/i })).toBeNull()
   })
 
   it('does not open a native passkey prompt while the security tab loads', async () => {
@@ -129,8 +138,7 @@ describe('FingerprintSection', () => {
     expect(await screen.findByText('Other phone')).toBeTruthy()
     expect(screen.getByText(/cannot add a local biometric/i)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Set up this device' }).hasAttribute('disabled')).toBe(true)
-    // Restoring also needs a platform authenticator, so it is not offered here either.
-    expect(screen.queryByRole('button', { name: 'Restore on this device' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /restore on this device/i })).toBeNull()
   })
 
   it('keeps account credentials visible while the capability probe is pending', async () => {

@@ -12,7 +12,7 @@ import {
   type LocalDeviceAssertion,
 } from './mobilePwaDeviceGate'
 import { getMobilePwaLaunchGateCredential, isInstalledMobilePwa } from './mobilePwaDeviceGateEligibility'
-import { rememberDeviceUnlockCredential, rememberExistingDeviceUnlock } from './deviceUnlockRegistration'
+import { rememberDeviceUnlockCredential } from './deviceUnlockRegistration'
 
 const credentialHex = '01020304'
 const challenge = Uint8Array.from([5, 6, 7, 8])
@@ -98,7 +98,7 @@ describe('mobile PWA device gate', () => {
     expect(getMobilePwaLaunchGateCredential(true, '')).toBeNull()
     expect(getMobilePwaLaunchGateCredential(true, 'bob')).toBeNull()
 
-    rememberExistingDeviceUnlock('carol')
+    localStorage.setItem('fingerprint_credential_id_on_this_device:CAROL', 'already_enrolled')
     expect(getMobilePwaLaunchGateCredential(true, 'carol')).toBeNull()
   })
 

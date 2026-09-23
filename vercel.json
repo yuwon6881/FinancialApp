@@ -1,6 +1,19 @@
 {
   "headers": [
     {
+      "source": "/.well-known/apple-app-site-association",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
       "source": "/assets/:path*",
       "headers": [
         {
@@ -45,7 +58,7 @@
       "destination": "https://financialapp-api-i47taxhzba-as.a.run.app/api/:path*"
     },
     {
-      "source": "/((?!assets/|api/).*)",
+      "source": "/((?!assets/|api/|\\.well-known/).*)",
       "destination": "/index.html"
     }
   ]

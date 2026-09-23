@@ -4,6 +4,7 @@ import * as api from './lib/api'
 import { ToastViewport } from './components/ui/ToastViewport'
 import { AlertBanner } from './components/ui/AlertBanner'
 import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
+import { getStatus } from './lib/errors'
 const AiAssistantPanel = lazy(() => import('./components/AiAssistantPanel').then(m => ({ default: m.AiAssistantPanel })))
 import { AppProvider } from './contexts/AppProvider'
 import { Button } from './components/ui/Button'
@@ -36,6 +37,8 @@ import {
 import { AppGateways } from './app/AppGateways'
 import { useTabNavigationCleanup } from './app/useTabNavigationCleanup'
 import { useAppThemeAndShortcuts } from './app/useAppThemeAndShortcuts'
+import { useNativePushActions } from './app/useNativePushActions'
+import { useNativeNavigation } from './lib/useNativeNavigation'
 
 const RuntimeBackgroundBridges = lazy(() => import('./app/RuntimeBackgroundBridges').then(module => ({ default: module.RuntimeBackgroundBridges })))
 const enableRuntimeBackgroundBridges = import.meta.env.MODE !== 'test'
@@ -45,9 +48,8 @@ import { useAppModalState } from './app/useAppModalState'
 const AppOverlays = lazy(() => import('./app/AppOverlays').then(module => ({ default: module.AppOverlays })))
 
 function App() {
+  useNativeNavigation()
   const loadAllAbortRef = useRef<AbortController | null>(null)
-
-  useNativeAppLifecycle(hideNativeSplashAfterPaint)
 
   // 1. Preferences
   const prefs = useAppPreferences()
@@ -101,6 +103,27 @@ function App() {
     showAlert: dialogs.showAlert,
     persistPeriod: (month, year) => persistSelectedPeriodRef.current(month, year),
   })
+
+  useNativePushActions(
+    session.isSessionResolved
+      && Boolean(session.token)
+      && !session.isLocked
+      && !session.isNativeAppGateLocked
+      && !session.isPwaLaunchGateLocked,
+    {
+      verifySession: async () => {
+        try {
+          await api.fetchAuthStatus(session.username)
+          return true
+        } catch (error) {
+          if (getStatus(error) === 401) await session.handleLogout()
+          return false
+        }
+      },
+      openRecurringPayment: nav.handleNavigateToRecurring,
+      openCategoryAlerts: () => nav.handleNavigateToReportSection('category-limits'),
+    },
+  )
 
   // 5. Financial Data
   const financial = useFinancialData({
@@ -172,6 +195,12 @@ function App() {
     showSearch: dialogs.showSearch,
     setShowSearch: dialogs.setShowSearch,
   })
+
+  const handleNativeAppStateChange = useCallback(async (isActive: boolean) => {
+    await session.lockNativeAppGate()
+    if (isActive) await hideNativeSplashAfterPaint()
+  }, [session.lockNativeAppGate])
+  useNativeAppLifecycle(handleNativeAppStateChange)
 
   const [isAiOpen, setIsAiOpen] = useState(false)
   const aiEntryPoint = useAiEntryPoint()

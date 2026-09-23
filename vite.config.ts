@@ -63,6 +63,7 @@ function cspMetaPlugin(apiUrl: string | undefined): Plugin {
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const isNativeBuild = mode === 'native'
   return {
   define: {
     __APP_BUILD_ID__: JSON.stringify(env.VITE_APP_BUILD_ID || new Date().toISOString()),
@@ -82,7 +83,7 @@ export default defineConfig(({ mode }) => {
     babel({ presets: [reactCompilerPreset({ target: '19' })] }),
     tailwindcss(),
     cspMetaPlugin(env.VITE_API_URL),
-    VitePWA({
+    ...(!isNativeBuild ? [VitePWA({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
@@ -174,13 +175,18 @@ export default defineConfig(({ mode }) => {
         // stays a lazy import in PdfDocumentPreview and is fetched on demand when online.
         globIgnores: ['**/UiSpecimen-*.js', '**/pdf-*.js'],
       }
-    }),
+    })] : []),
     // Opt-in bundle breakdown: ANALYZE=1 npm run build -> stats.html (not emitted otherwise).
     ...(process.env.ANALYZE ? [visualizer({ filename: 'stats.html', gzipSize: true, brotliSize: true })] : [])
   ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      ...(isNativeBuild ? {
+        // PWA registration is disabled in native mode, but its guarded dynamic import still has
+        // to resolve during bundling. The stub is never called by PwaExperienceRuntime.
+        "virtual:pwa-register": path.resolve(__dirname, "./src/lib/pwaRegisterNative.ts"),
+      } : {}),
       // Framer Motion's feature bundle, addressed directly so LazyMotion can actually
       // code-split it (see src/lib/motionFeatures.ts for the full reasoning). The package's
       // "exports" map only publishes the barrel, so a bare deep import fails to resolve;

@@ -75,6 +75,25 @@ export const AppGateways: React.FC<AppGatewaysProps> = ({
     )
   }
 
+  if (session.isNativeAppGateLocked) {
+    return (
+      <LaunchReady>
+        <AppProvider value={appContextValue}>
+          <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-primary/25 selection:text-foreground">
+            <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
+            <LockScreen
+              mode="native-app"
+              isOpen
+              username={session.username}
+              onUnlocked={session.unlockNativeAppGate}
+              onSignOut={session.handleLogout}
+            />
+          </div>
+        </AppProvider>
+      </LaunchReady>
+    )
+  }
+
   if (financial.loading && !financial.optimisticDashboardData) {
     return (
       <LaunchReady>

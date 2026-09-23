@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { getWorkerActivationAction, hasUncommittedFormEdits, isStandaloneDisplayMode } from './pwaSafety'
 import { publishPwaExperience, type InstallPromptResult, type PwaExperienceValue, type StorageProtection, type UpdateResult } from './pwaExperienceContext'
 import { getPwaInstallPrompt, subscribePwaInstallPrompt, takePwaInstallPrompt } from './pwaInstallPrompt'
 
 export function PwaExperienceRuntime() {
+  const isNative = Capacitor.isNativePlatform()
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine)
   const [installed, setInstalled] = useState(false)
   const [installAvailable, setInstallAvailable] = useState(() => getPwaInstallPrompt() !== null)
@@ -25,12 +27,23 @@ export function PwaExperienceRuntime() {
   const mountedRef = useRef(false)
 
   useEffect(() => {
+    const syncOnline = () => setOnline(navigator.onLine)
+    window.addEventListener('online', syncOnline)
+    window.addEventListener('offline', syncOnline)
+    if (isNative) {
+      setInstalled(true)
+      setOfflineShellReady(true)
+      setStorageProtection('unsupported')
+      return () => {
+        window.removeEventListener('online', syncOnline)
+        window.removeEventListener('offline', syncOnline)
+      }
+    }
     const syncInstalled = () => {
       if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
         setInstalled(isStandaloneDisplayMode(window, navigator as Navigator & { standalone?: boolean }))
       }
     }
-    const syncOnline = () => setOnline(navigator.onLine)
     const onInstalled = () => {
       setInstalled(true)
       setInstallAvailable(false)
@@ -53,7 +66,7 @@ export function PwaExperienceRuntime() {
       window.removeEventListener('appinstalled', onInstalled)
       mediaQuery?.removeEventListener?.('change', syncInstalled)
     }
-  }, [])
+  }, [isNative])
 
   useEffect(() => subscribePwaInstallPrompt(setInstallAvailable), [])
 
@@ -63,6 +76,7 @@ export function PwaExperienceRuntime() {
   }, [])
 
   useEffect(() => {
+    if (isNative) return
     let cancelled = false
     const storage = navigator.storage
     if (!storage?.persisted) {
@@ -73,9 +87,10 @@ export function PwaExperienceRuntime() {
       .then(persisted => { if (!cancelled) setStorageProtection(persisted ? 'persistent' : 'available') })
       .catch(() => { if (!cancelled) setStorageProtection('unsupported') })
     return () => { cancelled = true }
-  }, [])
+  }, [isNative])
 
   useEffect(() => {
+    if (isNative) return
     if (!('serviceWorker' in navigator)) return
     // A client that already had a controller is running an installed build. If another tab
     // activates a waiting worker, this tab must be offered a safe restart even if its own
@@ -105,7 +120,7 @@ export function PwaExperienceRuntime() {
     }
     navigator.serviceWorker.addEventListener('message', onWorkerMessage)
     return () => navigator.serviceWorker.removeEventListener('message', onWorkerMessage)
-  }, [])
+  }, [isNative])
 
   const registerOfflineSupport = useCallback(async (): Promise<void> => {
     if (!('serviceWorker' in navigator) || registrationAttemptRef.current) return
@@ -163,12 +178,12 @@ export function PwaExperienceRuntime() {
   }, [])
 
   useEffect(() => {
-    if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return
+    if (isNative || !import.meta.env.PROD || !('serviceWorker' in navigator)) return
     void registerOfflineSupport()
     return () => {
       updateServiceWorkerRef.current = null
     }
-  }, [registerOfflineSupport])
+  }, [isNative, registerOfflineSupport])
 
   const retryOfflineSetup = useCallback(async (): Promise<void> => {
     if (offlineSetupRetryBusy) return
@@ -251,6 +266,7 @@ export function PwaExperienceRuntime() {
   }, [])
 
   const value = useMemo<PwaExperienceValue>(() => ({
+    nativeApp: isNative,
     online,
     installed,
     installAvailable,
@@ -269,6 +285,7 @@ export function PwaExperienceRuntime() {
     applyUpdate,
     requestStorageProtection,
   }), [
+    isNative,
     online,
     installed,
     installAvailable,

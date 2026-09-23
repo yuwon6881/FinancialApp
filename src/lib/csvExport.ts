@@ -1,5 +1,6 @@
 import type { LedgerAccount, Transaction } from '../types'
 import { displayLedgerCategory } from './utils'
+import { Capacitor } from '@capacitor/core'
 
 /** Excel reads a BOM-less UTF-8 CSV as the system codepage; the server export writes one too. */
 const UTF8_BOM = '\ufeff'
@@ -63,7 +64,12 @@ export function buildCsvContent(rows: Transaction[], accounts: ReadonlyArray<Pic
   return [headers.join(','), ...dataRows.map(e => e.join(','))].join('\n')
 }
 
-export function downloadCsvBlob(blob: Blob, filename: string): void {
+export async function downloadCsvBlob(blob: Blob, filename: string): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    const { shareBlobAsNativeFile } = await import('./native/shareFile')
+    await shareBlobAsNativeFile(blob, filename)
+    return
+  }
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.setAttribute('href', url)
@@ -74,10 +80,10 @@ export function downloadCsvBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url)
 }
 
-export function downloadCsvRows(rows: Transaction[], filename: string, accounts: ReadonlyArray<Pick<LedgerAccount, 'id' | 'name'>> = []): void {
+export async function downloadCsvRows(rows: Transaction[], filename: string, accounts: ReadonlyArray<Pick<LedgerAccount, 'id' | 'name'>> = []): Promise<void> {
   const csvContent = buildCsvContent(rows, accounts)
   // Byte-order mark, as the server export writes: without it Excel reads the UTF-8 bytes as the
   // system codepage, so a page exported from here mangled non-ASCII text that the full export kept.
   const csvBlob = new Blob([UTF8_BOM, csvContent], { type: 'text/csv;charset=utf-8;' })
-  downloadCsvBlob(csvBlob, filename)
+  await downloadCsvBlob(csvBlob, filename)
 }

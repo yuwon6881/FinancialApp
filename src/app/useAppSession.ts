@@ -18,6 +18,8 @@ import { retryWhileServerWakes } from '../lib/serverWakeRetry'
 import { cancelActiveWebAuthnRequest } from '../lib/webauthnRequest'
 import { verifyMobilePwaDeviceGate } from '../lib/mobilePwaDeviceGate'
 import { updateAppSearch } from '../lib/appLocation'
+import { Capacitor } from '@capacitor/core'
+import { setNativeFinancialContentHidden } from '../lib/native/privacyScreen'
 
 export interface UseAppSessionOptions {
   onLogoutBackupAndCleanup: (username: string) => void | Promise<void>
@@ -36,6 +38,9 @@ export interface AppSession {
   username: string
   setUsername: (username: string) => void
   isPwaLaunchGateLocked: boolean
+  isNativeAppGateLocked: boolean
+  lockNativeAppGate: () => Promise<void>
+  unlockNativeAppGate: () => Promise<void>
   unlockPwaLaunchGateWithDevice: (signal?: AbortSignal) => Promise<void>
   handlePwaLaunchGateUnlocked: () => void
   isLocked: boolean
@@ -60,6 +65,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   const [isSessionResolved, setIsSessionResolved] = useState(false)
   const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
   const [isPwaLaunchGateLocked, setIsPwaLaunchGateLocked] = useState(false)
+  const [isNativeAppGateLocked, setIsNativeAppGateLocked] = useState(false)
 
   const lastUnlockedTimeRef = useRef<number>(0)
   const usernameRef = useRef(username)
@@ -84,6 +90,17 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
         if (cancelled) return
         const restoredUsername = localStorage.getItem('auth_username') || ''
         onPreferenceOwnerChange(sessionToken ? (restoredUsername || null) : null)
+        if (Capacitor.isNativePlatform()) {
+          const { syncDeviceUnlockFromSecureStorage } = await import('../lib/deviceUnlockRegistration')
+          await syncDeviceUnlockFromSecureStorage()
+          if (cancelled) return
+          setIsNativeAppGateLocked(!!sessionToken)
+          try {
+            await setNativeFinancialContentHidden(!!sessionToken)
+          } catch (error) {
+            console.error('Could not update Android task snapshot privacy.', error)
+          }
+        }
         setToken(sessionToken)
         let launchCredentialId: string | null = null
         if (sessionToken === WEB_COOKIE_SESSION && restoredUsername) {
@@ -133,6 +150,27 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
 
   const handlePwaLaunchGateUnlocked = useCallback(() => {
     setIsPwaLaunchGateLocked(false)
+  }, [])
+
+  const lockNativeAppGate = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) return
+    if (!token) {
+      await setNativeFinancialContentHidden(false).catch(error => {
+        console.warn('Could not clear native task snapshot privacy without a saved session.', error)
+      })
+      return
+    }
+    setIsNativeAppGateLocked(true)
+    try {
+      await setNativeFinancialContentHidden(true)
+    } catch (error) {
+      console.error('Could not hide Android task snapshot content.', error)
+    }
+  }, [token])
+
+  const unlockNativeAppGate = useCallback(async () => {
+    await setNativeFinancialContentHidden(false)
+    setIsNativeAppGateLocked(false)
   }, [])
 
   const unlockPwaLaunchGateWithDevice = useCallback(async (signal?: AbortSignal) => {
@@ -258,6 +296,11 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
       console.error('Could not clear the platform token store during logout.', error)
     }
 
+    const lastUser = currentOwner || localStorage.getItem('auth_username')
+    if (lastUser) {
+      localStorage.setItem('last_auth_username', lastUser)
+    }
+
     for (const [storage, key] of [
       [localStorage, 'auth_username'],
       [localStorage, 'session_locked_global'],
@@ -277,6 +320,10 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
     setHasFingerprintSetup(false)
     clearCachedFingerprintAssertOptions()
     setIsPwaLaunchGateLocked(false)
+    setIsNativeAppGateLocked(false)
+    await setNativeFinancialContentHidden(false).catch(error => {
+      console.warn('Could not clear Android task snapshot privacy after sign-out.', error)
+    })
     setIsLocked(false)
   }
 
@@ -285,6 +332,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   const handleLoginSuccess = async (newToken: string, newUsername: string) => {
     await tokenStore.setToken(newToken)
     localStorage.setItem('auth_username', newUsername)
+    localStorage.setItem('last_auth_username', newUsername)
     sessionStorage.setItem('session_locked', 'false')
     localStorage.setItem('session_locked_global', 'false')
     const now = Date.now()
@@ -292,6 +340,10 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
     lastUnlockedTimeRef.current = now
     setIsLocked(false)
     setIsPwaLaunchGateLocked(false)
+    setIsNativeAppGateLocked(false)
+    await setNativeFinancialContentHidden(false).catch(error => {
+      console.warn('Could not clear Android task snapshot privacy after sign-in.', error)
+    })
     api.invalidateCache()
     onPreferenceOwnerChange(newUsername)
     // On the web the real bearer token is never held in memory — the cookie is the credential and
@@ -342,6 +394,9 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
     username,
     setUsername,
     isPwaLaunchGateLocked,
+    isNativeAppGateLocked,
+    lockNativeAppGate,
+    unlockNativeAppGate,
     unlockPwaLaunchGateWithDevice,
     handlePwaLaunchGateUnlocked,
     isLocked,
