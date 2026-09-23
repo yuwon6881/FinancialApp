@@ -64,12 +64,3 @@ export function deletePushSubscription(deviceId: string): Promise<void> {
     errorMessage: 'Failed to unregister this device from push notifications',
   })
 }
-
-export function updatePushPreviewDetails(deviceId: string, showDetails: boolean): Promise<void> {
-  return requestVoid(`/push/subscriptions/${encodeURIComponent(deviceId)}/preview-details`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ showDetails }),
-    errorMessage: 'Failed to save this device\'s notification privacy setting',
-  })
-}

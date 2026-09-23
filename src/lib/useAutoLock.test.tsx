@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from './api'
+import { prefetchFingerprintAssertOptions } from './fingerprintOptionsCache'
 import { useAutoLock } from './useAutoLock'
 
 vi.mock('./api', () => ({
@@ -65,5 +66,23 @@ describe('useAutoLock', () => {
     })
 
     expect(markSessionLocked).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not request a fingerprint challenge when the account has no device unlock credential', async () => {
+    localStorage.setItem('last_active_time', String(Date.now()))
+
+    renderHook(() => useAutoLock({
+      token: 'session',
+      isLocked: false,
+      hasFingerprintSetup: false,
+      markSessionLocked: vi.fn(),
+      onAuthError: vi.fn(),
+    }))
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 15_000)
+    })
+
+    expect(prefetchFingerprintAssertOptions).not.toHaveBeenCalled()
   })
 })

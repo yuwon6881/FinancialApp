@@ -135,7 +135,7 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
             <span className="flex min-w-0 flex-col gap-0.5">
               <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
                 <MonitorSmartphone className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                {device.isCurrent ? 'This device' : 'Another device'}
+                {device.isCurrent ? 'Current installation' : 'Another installation'}
               </span>
               {/* Naming what each device receives is what makes "on for another device" checkable
                   rather than something the app just asserts. */}

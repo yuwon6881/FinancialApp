@@ -256,6 +256,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
     </m.div>
     {payments.length > pagination.pageSize && (
       <DataTablePagination
+        centerOnMobile
         currentPage={pagination.page}
         pageSize={pagination.pageSize}
         totalItems={payments.length}

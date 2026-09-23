@@ -50,6 +50,7 @@ describe('native FCM adapter', () => {
     expect(mocks.createChannel).toHaveBeenCalledWith(expect.objectContaining({
       id: NATIVE_PUSH_CHANNEL_ID,
       importance: 4,
+      visibility: 1,
     }))
     expect(mocks.register).toHaveBeenCalledOnce()
     expect(mocks.getToken).toHaveBeenCalledOnce()

@@ -278,6 +278,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
     {total > 0 && (
       <DataTableFooter>
         <DataTablePagination
+          centerOnMobile
           currentPage={page}
           pageSize={pageSize}
           totalItems={total}
@@ -498,6 +499,7 @@ export const PagedActivityTable = ({
       </div>
       <DataTableFooter>
         <DataTablePagination
+          centerOnMobile
           currentPage={page}
           pageSize={pageSize}
           totalItems={total}

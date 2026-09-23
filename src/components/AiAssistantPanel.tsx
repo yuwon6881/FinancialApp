@@ -354,7 +354,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               ref={composerHighlightRef}
               data-testid="ai-composer-highlight"
               aria-hidden="true"
-              className="pointer-events-none absolute inset-px overflow-hidden whitespace-pre-wrap break-words px-3 py-2.5 text-sm leading-6 text-foreground"
+              className="ai-composer-text pointer-events-none absolute inset-px overflow-hidden whitespace-pre-wrap break-words px-3 py-2.5 text-sm leading-6 text-foreground"
             >
               <AccountMentionText content={input} accounts={accounts} style="composer" />
               {input.endsWith('\n') && '\u200b'}
@@ -385,7 +385,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               onKeyUp={mentions.syncCaret}
               placeholder={isOffline ? 'Ask AI is offline' : isHydrating ? 'Loading conversation…' : 'Ask about your finances…'}
               rows={1}
-              className="relative z-10 min-h-11 max-h-40 w-full resize-none rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-sm leading-6 text-transparent caret-foreground outline-hidden selection:bg-primary/25 focus:border-transparent focus:ring-0 focus:outline-hidden placeholder:text-muted-foreground"
+              className="ai-composer-text relative z-10 min-h-11 max-h-40 w-full resize-none rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-sm leading-6 text-transparent caret-foreground outline-hidden selection:bg-primary/25 focus:border-transparent focus:ring-0 focus:outline-hidden placeholder:text-muted-foreground"
             />
           </div>
           {/* While a turn is in flight the primary control becomes Stop, so a slow

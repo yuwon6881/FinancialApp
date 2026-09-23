@@ -234,6 +234,8 @@ interface MockApiOptions {
   investmentPortfolio?: Record<string, unknown>
   /** Lets a spec give categories explicit flow types; the default fixture leaves them all `both`. */
   categories?: Array<{ id: string; name: string; type?: string }>
+  /** Adds ledger rows to exercise populated pagination states in browser tests. */
+  transactions?: Array<typeof transaction>
   /** Adds report-specific density without replacing unrelated bootstrap fixture fields. */
   dashboard?: Partial<typeof dashboard>
   pendingNotifications?: PendingNotification[]
@@ -251,6 +253,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
   const themedBootstrap = {
     ...bootstrap,
     accounts: options.accounts ?? bootstrap.accounts,
+    transactions: options.transactions ?? bootstrap.transactions,
     wishlist: options.wishlist ?? bootstrap.wishlist,
     savingsGoals: options.savingsGoals ?? bootstrap.savingsGoals,
     categories: options.categories ?? bootstrap.categories,
@@ -330,9 +333,15 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
       return fulfill(route, { items, total: items.length, page: 1, pageSize: Number(url.searchParams.get('pageSize') || 10) })
     }
     if (pathname.endsWith('/transactions')) {
-      return fulfill(route, url.searchParams.has('page')
-        ? { items: [transaction], total: 1, page: 1, pageSize: Number(url.searchParams.get('pageSize') || 25) }
-        : [transaction])
+      const items = options.transactions ?? [transaction]
+      if (!url.searchParams.has('page')) return fulfill(route, items)
+      const pageSize = Number(url.searchParams.get('pageSize') || 25)
+      return fulfill(route, {
+        items: items.slice(0, pageSize),
+        total: items.length,
+        page: 1,
+        pageSize,
+      })
     }
     if (pathname.endsWith('/investments/portfolio')) {
       return fulfill(route, {

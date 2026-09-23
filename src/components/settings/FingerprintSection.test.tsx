@@ -102,6 +102,27 @@ describe('FingerprintSection', () => {
     expect(await screen.findByText('Enabled here')).toBeTruthy()
   })
 
+  it('does not request an assertion challenge when Android has a duplicate passkey absent from the account', async () => {
+    localStorage.setItem('auth_username', 'alice')
+    listFingerprintCredentials.mockResolvedValue([])
+    createFingerprintCredential.mockRejectedValue(Object.assign(new Error('Credential already exists'), { name: 'InvalidStateError' }))
+
+    render(<FingerprintSection />)
+    await screen.findByText('Not enabled')
+    fireEvent.click(screen.getByRole('button', { name: /Device Unlock/i }))
+    const setupButton = await screen.findByRole('button', { name: 'Enable on this device' })
+    await waitFor(() => expect(setupButton.hasAttribute('disabled')).toBe(false))
+    fireEvent.click(setupButton)
+
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(
+      expect.stringMatching(/passkey already exists on this phone/i),
+      'Device unlock needs reset',
+      'error',
+    ))
+    expect(getFingerprintAssertOptions).not.toHaveBeenCalled()
+    expect(verifyFingerprintAssert).not.toHaveBeenCalled()
+  })
+
   it('does not offer a separate restore action once this browser knows its credential', async () => {
     listFingerprintCredentials.mockResolvedValue([
       { id: 'ABCDEF', deviceLabel: 'This browser', createdAt: '2026-08-01T00:00:00Z' },

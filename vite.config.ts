@@ -65,9 +65,6 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const isNativeBuild = mode === 'native'
   return {
-  define: {
-    __APP_BUILD_ID__: JSON.stringify(env.VITE_APP_BUILD_ID || new Date().toISOString()),
-  },
   plugins: [
     // The React Compiler auto-memoizes components and hooks at build time. Only
     // LedgerRows was hand-memoized, so on a phone a single context tick re-rendered
@@ -87,8 +84,8 @@ export default defineConfig(({ mode }) => {
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
-      // The app owns registration so a waiting worker can be shown to the user and activated
-      // only from a safe point. Automatic reloads can discard transient editor state.
+      // Let an open app finish its current work before a new worker takes over. No in-app update
+      // prompt is shown; the new worker activates when the running app is naturally closed.
       injectRegister: false,
       registerType: 'prompt',
       includeAssets: ['favicon.svg'],
@@ -183,8 +180,8 @@ export default defineConfig(({ mode }) => {
     alias: {
       "@": path.resolve(__dirname, "./src"),
       ...(isNativeBuild ? {
-        // PWA registration is disabled in native mode, but its guarded dynamic import still has
-        // to resolve during bundling. The stub is never called by PwaExperienceRuntime.
+        // PWA registration is disabled in native mode, but its dynamic import still has to resolve
+        // during bundling. The stub is never called by OfflineSupportRuntime.
         "virtual:pwa-register": path.resolve(__dirname, "./src/lib/pwaRegisterNative.ts"),
       } : {}),
       // Framer Motion's feature bundle, addressed directly so LazyMotion can actually

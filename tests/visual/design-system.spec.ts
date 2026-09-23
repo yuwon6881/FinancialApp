@@ -237,10 +237,9 @@ test('accounts settings panel uses the complete card shell', async ({ page }) =>
   await expect(page).toHaveScreenshot('settings-accounts.png', { fullPage: true, maxDiffPixelRatio: 0.08 })
 })
 
-// The state a browser lands in after its site data is cleared: the account still owns a
-// credential, this browser can no longer name one. Both actions have to fit on the row without
-// pushing the panel wide or stranding themselves in the middle of it.
-test('device unlock offers restore and enrol together on a browser that lost its marker', async ({ page }) => {
+// The account still owns a credential, but this browser has lost its local marker. Device Unlock
+// offers the normal setup action without exposing the removed restore flow.
+test('device unlock offers setup without a restore action after the browser loses its marker', async ({ page }) => {
   await establishSession(page)
   // Headless Chromium reports no platform authenticator, which would hide both actions.
   await page.addInitScript(() => {
@@ -264,33 +263,17 @@ test('device unlock offers restore and enrol together on a browser that lost its
   await page.goto('/settings?section=security', { waitUntil: 'domcontentloaded' })
 
   await page.getByRole('button', { name: /Device Unlock/i }).click()
-  const restore = page.getByRole('button', { name: 'Restore on this device' })
-  const addAnother = page.getByRole('button', { name: 'Add another credential' })
-  await expect(restore).toBeVisible()
-  await expect(addAnother).toBeVisible()
+  const setup = page.getByRole('button', { name: 'Set up this device', exact: true })
+  await expect(setup).toBeVisible()
+  await expect(page.getByRole('button', { name: /restore on this device/i })).toHaveCount(0)
   await waitForStableLayout(page)
 
-  const row = await restore.evaluate((element, other: HTMLElement) => {
-    const bounds = element.getBoundingClientRect()
-    const otherBounds = other.getBoundingClientRect()
-    const container = element.closest('.flex.shrink-0')!.parentElement!
-    return {
-      height: bounds.height,
-      otherHeight: otherBounds.height,
-      // Both sit on one line, and the row ends flush with its container's trailing edge rather
-      // than leaving dead space to the right of it.
-      sameLine: Math.abs(bounds.top - otherBounds.top) < 1,
-      trailingGap: container.getBoundingClientRect().right - otherBounds.right,
-      pageWidth: document.documentElement.scrollWidth,
-      viewportWidth: document.documentElement.clientWidth,
-    }
-  }, (await addAnother.elementHandle())!)
+  const layout = await setup.evaluate(() => ({
+    pageWidth: document.documentElement.scrollWidth,
+    viewportWidth: document.documentElement.clientWidth,
+  }))
 
-  expect(row.sameLine).toBe(true)
-  // The new action matches the size of the one beside it rather than introducing its own.
-  expect(row.height).toBe(row.otherHeight)
-  expect(row.trailingGap).toBeLessThanOrEqual(2)
-  expect(row.pageWidth).toBeLessThanOrEqual(row.viewportWidth + 1)
+  expect(layout.pageWidth).toBeLessThanOrEqual(layout.viewportWidth + 1)
 })
 
 test('desktop top-bar icon actions stay compact', async ({ page }) => {

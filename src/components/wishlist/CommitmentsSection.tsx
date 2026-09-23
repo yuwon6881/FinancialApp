@@ -162,6 +162,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
       )}
       {collection.length > pagination.pageSize && (
         <DataTablePagination
+          centerOnMobile
           currentPage={pagination.page}
           pageSize={pagination.pageSize}
           totalItems={collection.length}

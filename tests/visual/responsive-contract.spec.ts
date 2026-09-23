@@ -459,6 +459,75 @@ test('AI page actions stay beside their page titles', async ({ page }) => {
   }
 })
 
+test('compact Ask AI text overlay keeps the textarea typography used by its caret', async ({ page }) => {
+  test.skip((test.info().project.use.viewport?.width ?? 0) >= 640, 'The reported caret drift is on compact screens.')
+  test.skip(test.info().project.name.endsWith('-dark'), 'Typography geometry is theme-independent.')
+
+  await page.goto('/reports', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'Explain this cycle with Ask AI' }).click()
+
+  const textarea = page.locator('textarea[aria-label="Ask AI"]')
+  const overlay = page.getByTestId('ai-composer-highlight')
+  await expect(textarea).toBeVisible()
+  await textarea.fill('Check whether these words stay aligned while typing.')
+  await expect(overlay).toContainText('Check whether these words stay aligned while typing.')
+
+  const typography = await page.evaluate(() => {
+    const input = document.querySelector('textarea[aria-label="Ask AI"]')
+    const highlight = document.querySelector('[data-testid="ai-composer-highlight"]')
+    if (!input || !highlight) throw new Error('Ask AI composer layers were not rendered.')
+    const properties = ['fontFamily', 'fontSize', 'fontWeight', 'letterSpacing', 'lineHeight', 'wordSpacing'] as const
+    const measure = (element: Element) => {
+      const style = getComputedStyle(element)
+      return Object.fromEntries(properties.map(property => [property, style[property]]))
+    }
+    return { input: measure(input), highlight: measure(highlight) }
+  })
+  expect(typography.highlight).toEqual(typography.input)
+})
+
+test('compact Ledger centers its count, page-size control, and pager together', async ({ page }) => {
+  test.skip((test.info().project.use.viewport?.width ?? 0) >= 640, 'Only the compact footer has stacked pagination groups.')
+  test.skip(test.info().project.name.endsWith('-dark'), 'Footer alignment is theme-independent.')
+
+  const transactions = Array.from({ length: 54 }, (_, index) => ({
+    id: `tx-pagination-${index + 1}`,
+    accountId: 'account-visual-essentials',
+    date: '2026-08-01',
+    description: `Neighbourhood Grocer ${index + 1}`,
+    category: 'Food',
+    ledgerCategory: 'Essentials',
+    amount: -86.4,
+  }))
+  await mockApi(page, { documents: vaultDocuments, transactions })
+  await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
+  const resultsCount = page.locator('main [aria-live="polite"][aria-atomic="true"]')
+    .filter({ hasText: 'Showing' })
+    .first()
+  await expect(resultsCount).toContainText('of 54 entries')
+  await waitForStableLayout(page)
+
+  const alignment = await resultsCount.locator('xpath=../..').evaluate(element => {
+    const rect = element.getBoundingClientRect()
+    const centerOf = (target: Element | null) => {
+      if (!target) throw new Error('Expected Ledger pagination group was not rendered.')
+      const bounds = target.getBoundingClientRect()
+      return (bounds.left + bounds.right) / 2
+    }
+    const controlRow = element.children.item(1)
+    return {
+      footerCenter: (rect.left + rect.right) / 2,
+      countCenter: centerOf(element.children.item(0)),
+      pageSizeCenter: centerOf(controlRow?.children.item(0) ?? null),
+      pagerCenter: centerOf(controlRow?.children.item(1) ?? null),
+    }
+  })
+
+  expect(Math.abs(alignment.countCenter - alignment.footerCenter)).toBeLessThanOrEqual(1)
+  expect(Math.abs(alignment.pageSizeCenter - alignment.footerCenter)).toBeLessThanOrEqual(1)
+  expect(Math.abs(alignment.pagerCenter - alignment.footerCenter)).toBeLessThanOrEqual(1)
+})
+
 /**
  * The reported defect: inside a phone-width card the pool's claim tiles and the cards' figure grids
  * were still two columns, so "Free to spend" and "Committed" clipped to "Free to..." and

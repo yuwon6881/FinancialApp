@@ -15,13 +15,9 @@ const renderCard = (overrides: Partial<NotificationsCardProps> = {}) => {
     pushGuidance: null,
     billRemindersEnabled: false,
     categoryAlertsEnabled: false,
-    showNotificationDetails: false,
-    pushDeviceRegistered: false,
-    previewDetailsBusy: false,
     otherDevicesBillReminders: false,
     otherDevicesCategoryAlerts: false,
     onToggleChannel: vi.fn(),
-    onTogglePreviewDetails: vi.fn(),
     enrolmentRevision: 0,
     hasSpendingGuides: true,
     ...overrides,
@@ -46,12 +42,12 @@ describe('NotificationsCard', () => {
     expect(props.onToggleChannel).toHaveBeenCalledWith('billReminders', true)
   })
 
-  it('scopes every switch to this device, because that is all any of them changes', () => {
+  it('keeps notification rows free of device labels and lock-screen preview controls', () => {
     renderCard()
-    // "All devices" was the old account-wide spending-alert scope, and it was the claim a desktop
-    // could not honour.
-    expect(screen.getAllByText('This device').length).toBe(3)
-    expect(screen.queryByText('All devices')).toBeNull()
+    expect(screen.getAllByRole('switch')).toHaveLength(2)
+    expect(screen.queryByText(/this device/i)).toBeNull()
+    expect(screen.queryByText(/show lock-screen details/i)).toBeNull()
+    expect(screen.getByText(/choose which alerts this installation receives/i)).toBeTruthy()
   })
 
   it('reports another device opt-in as a sentence, never as this switch being on', () => {
@@ -89,18 +85,4 @@ describe('NotificationsCard', () => {
     expect(alertsToggle().disabled).toBe(true)
   })
 
-  it('keeps financial notification details hidden by default and offers an explicit per-device opt-in', () => {
-    const props = renderCard({ pushDeviceRegistered: true })
-    const previewSwitch = screen.getByRole('switch', { name: /show financial details on this device/i })
-
-    expect(previewSwitch.getAttribute('aria-checked')).toBe('false')
-    expect(screen.getByText(/generic text so financial details stay hidden/i)).toBeTruthy()
-    fireEvent.click(previewSwitch)
-    expect(props.onTogglePreviewDetails).toHaveBeenCalledWith(true)
-  })
-
-  it('requires this device to be subscribed before changing its preview privacy', () => {
-    renderCard()
-    expect(screen.getByRole('switch', { name: /show financial details on this device/i })).toHaveProperty('disabled', true)
-  })
 })

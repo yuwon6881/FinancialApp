@@ -104,10 +104,20 @@ export function FingerprintSection() {
       if (getErrorName(error) === 'InvalidStateError') {
         if (abortController.signal.aborted) return
         try {
+          const registeredCredentials = await api.listFingerprintCredentials()
+          setCredentials(registeredCredentials)
+          if (registeredCredentials.length === 0) {
+            showToast(
+              'A FinancialApp passkey already exists on this phone, but this account has no registered device credential. Remove the old passkey from the phone password manager, then try again.',
+              'Device unlock needs reset',
+              'error',
+            )
+            return
+          }
           const { challengeId, options } = await api.getFingerprintAssertOptions()
           const existing = await getFingerprintAssertion(options, abortController.signal)
           if (existing.authenticatorAttachment !== 'platform') {
-            throw new Error('This passkey belongs to another device. Use this phone’s own screen lock or add a credential here.')
+            throw new Error('This passkey belongs to another device. Use this phone’s own screen lock or add a credential here.', { cause: error })
           }
           await api.verifyFingerprintAssert(challengeId, existing)
           rememberDeviceUnlockCredential(username, existing.id)

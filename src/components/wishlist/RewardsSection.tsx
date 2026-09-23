@@ -142,6 +142,7 @@ export function RewardsSection(props: RewardsSectionProps) {
       )}
       {props.items.length > pagination.pageSize && (
         <DataTablePagination
+          centerOnMobile
           currentPage={pagination.page}
           pageSize={pagination.pageSize}
           totalItems={props.items.length}

@@ -39,7 +39,6 @@ const status = (overrides: Partial<PushStatus> = {}): PushStatus => ({
   tokenRenewalRequired: false,
   billRemindersEnabled: false,
   categoryAlertsEnabled: false,
-  showNotificationDetails: false,
   otherDevicesBillReminders: false,
   otherDevicesCategoryAlerts: false,
   ...overrides,
@@ -71,7 +70,6 @@ describe('usePushNotifications', () => {
     vi.spyOn(api, 'upsertPushSubscription').mockResolvedValue(undefined)
     vi.spyOn(api, 'deletePushSubscription').mockResolvedValue(undefined)
     vi.spyOn(api, 'disablePushChannel').mockResolvedValue(undefined)
-    vi.spyOn(api, 'updatePushPreviewDetails').mockResolvedValue(undefined)
 
     Object.defineProperty(global, 'Notification', {
       configurable: true,
@@ -413,73 +411,4 @@ describe('usePushNotifications', () => {
     expect(result.current.busyAction).toBeNull()
   })
 
-  it('uses a successful privacy PUT as authoritative even if a later status read would fail', async () => {
-    const fetchStatus = vi.spyOn(api, 'fetchPushStatus')
-      .mockResolvedValueOnce(status({
-        enabled: true,
-        deviceRegistered: true,
-        billRemindersEnabled: true,
-        showNotificationDetails: false,
-      }))
-      .mockRejectedValueOnce(new Error('offline after the preference was saved'))
-    const { result } = renderHook(() => usePushNotifications(true, undefined, ACCOUNT))
-    await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.showNotificationDetails).toBe(false)
-
-    let success = false
-    await act(async () => {
-      success = await result.current.setPreviewDetailsEnabled!(true)
-    })
-
-    expect(success).toBe(true)
-    expect(api.updatePushPreviewDetails).toHaveBeenCalledWith('device-abc', true)
-    expect(fetchStatus).toHaveBeenCalledTimes(1)
-    expect(result.current.showNotificationDetails).toBe(true)
-    expect(result.current.previewDetailsBusy).toBe(false)
-  })
-
-  it('reconciles an ambiguous privacy PUT failure with the server status', async () => {
-    vi.spyOn(api, 'fetchPushStatus')
-      .mockResolvedValueOnce(status({
-        enabled: true,
-        deviceRegistered: true,
-        billRemindersEnabled: true,
-        showNotificationDetails: false,
-      }))
-      .mockResolvedValueOnce(status({
-      enabled: true,
-      deviceRegistered: true,
-      billRemindersEnabled: true,
-      showNotificationDetails: true,
-    }))
-    vi.spyOn(api, 'updatePushPreviewDetails').mockRejectedValue(new Error('connection reset after commit'))
-    const { result } = renderHook(() => usePushNotifications(true, undefined, ACCOUNT))
-    await waitFor(() => expect(result.current.loading).toBe(false))
-
-    let success = false
-    await act(async () => {
-      success = await result.current.setPreviewDetailsEnabled!(true)
-    })
-
-    expect(success).toBe(true)
-    expect(result.current.showNotificationDetails).toBe(true)
-    expect(result.current.guidance).toBeNull()
-    expect(result.current.previewDetailsBusy).toBe(false)
-  })
-
-  it('keeps private previews enabled when the server cannot save an opt-in', async () => {
-    vi.spyOn(api, 'fetchPushStatus').mockResolvedValue(status({ enabled: true, deviceRegistered: true }))
-    vi.spyOn(api, 'updatePushPreviewDetails').mockRejectedValue(new Error('offline'))
-    const { result } = renderHook(() => usePushNotifications(true, undefined, ACCOUNT))
-    await waitFor(() => expect(result.current.loading).toBe(false))
-
-    let success = true
-    await act(async () => {
-      success = await result.current.setPreviewDetailsEnabled!(true)
-    })
-
-    expect(success).toBe(false)
-    expect(result.current.showNotificationDetails).toBe(false)
-    expect(result.current.guidance).toMatch(/could not be confirmed/i)
-  })
 })

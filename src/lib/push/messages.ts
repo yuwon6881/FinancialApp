@@ -63,10 +63,6 @@ export const PUSH_PERMISSION_REVOKED_GUIDANCE =
 export const PUSH_DEVICES_UNAVAILABLE =
   'The list of devices could not be loaded. This does not change what your devices receive.'
 
-// Scope chip. Both switches are per device, and saying so on every row is what stops "on" being
-// read as "on everywhere".
-export const SCOPE_THIS_DEVICE = 'This device'
-
 export const RECURRING_PAUSED_LABEL = 'Paused—no device is set up to receive bill reminders'
 
 // A bill reminder is delivered to every device opted into bill reminders, so "on" and "on here"

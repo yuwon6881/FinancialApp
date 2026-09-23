@@ -13,7 +13,7 @@ export function LedgerPagination(props: LedgerPaginationProps) {
 
   return (
     <DataTableFooter standalone>
-      <DataTablePagination {...props} />
+      <DataTablePagination {...props} centerOnMobile />
     </DataTableFooter>
   )
 }

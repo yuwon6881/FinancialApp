@@ -396,14 +396,14 @@ for (const route of responsiveRoutes) {
       expect(bounds.left).toBeGreaterThanOrEqual(0)
       expect(bounds.right).toBeLessThanOrEqual(width.viewport)
     }
-    if (route.path === '/vault' && width.viewport < 640) {
-      const resultsCount = page.locator('main [aria-live="polite"][aria-atomic="true"]')
+    if ((route.path === '/vault' || route.path.startsWith('/ledger')) && width.viewport < 640) {
+      const resultsCount = page.locator('main [aria-live="polite"][aria-atomic="true"]').filter({ hasText: 'Showing' }).first()
       await expect(resultsCount).toContainText('Showing')
       const footer = resultsCount.locator('xpath=../..')
       const alignment = await footer.evaluate(element => {
         const rect = element.getBoundingClientRect()
         const centerOf = (target: Element | null) => {
-          if (!target) throw new Error('Expected Vault pagination group was not rendered.')
+          if (!target) throw new Error('Expected pagination group was not rendered.')
           const bounds = target.getBoundingClientRect()
           return (bounds.left + bounds.right) / 2
         }

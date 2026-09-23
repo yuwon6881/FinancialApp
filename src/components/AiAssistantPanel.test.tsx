@@ -88,6 +88,15 @@ describe('AiAssistantPanel', () => {
     expect(screen.getAllByRole('button').filter(button => !button.getAttribute('title'))).toHaveLength(3)
   })
 
+  it('shares one typography class between the Ask AI text overlay and its textarea', () => {
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+    const overlay = screen.getByTestId('ai-composer-highlight')
+    const textarea = screen.getByLabelText('Ask AI')
+
+    expect(overlay.className).toContain('ai-composer-text')
+    expect(textarea.className).toContain('ai-composer-text')
+  })
+
   it('keeps each prompt suggestion in a centered column stack with text-dependent pill widths', () => {
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
     const suggestions = screen.getByRole('group', { name: 'Suggested questions' })

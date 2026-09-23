@@ -1,7 +1,9 @@
 import { Capacitor, registerPlugin, type PermissionState, type PluginListenerHandle } from '@capacitor/core'
 import { PushTokenError } from './failure'
 
-export const NATIVE_PUSH_CHANNEL_ID = 'financialapp-alerts'
+// Android cannot update an existing channel's lock-screen visibility after creation. Version the
+// ID so an upgrade receives the public-preview defaults requested by the product.
+export const NATIVE_PUSH_CHANNEL_ID = 'financialapp-alerts-v2'
 
 let nativeRegistrationRequested = false
 
@@ -40,6 +42,7 @@ export async function getNativeFcmToken(renew = false): Promise<string> {
       name: 'FinancialApp alerts',
       description: 'Reminders and account alerts from FinancialApp',
       importance: 4,
+      visibility: 1,
       sound: 'default',
       vibration: true,
     })

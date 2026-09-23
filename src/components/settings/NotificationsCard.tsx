@@ -1,12 +1,11 @@
 import React from 'react'
-import { AlertCircle, BellRing, ChevronRight, Eye, Gauge } from 'lucide-react'
+import { AlertCircle, BellRing, ChevronRight, Gauge } from 'lucide-react'
 import {
   BILL_REMINDER_PUSH_DESCRIPTION,
   BILL_REMINDER_PUSH_TITLE,
   CATEGORY_LIMIT_PUSH_DESCRIPTION,
   CATEGORY_LIMIT_PUSH_TITLE,
   otherDevicesHaveItOn,
-  SCOPE_THIS_DEVICE,
 } from '../../lib/push/messages'
 import type { PushChannel } from '../../types'
 import { Button } from '../ui/Button'
@@ -16,16 +15,8 @@ import { PushDevicesList } from './PushDevicesList'
 import { cn } from '../../lib/utils'
 import { panelClass } from '../ui/panelStyles'
 
-// Which devices a switch changes is the thing people get wrong here, so each row says it rather
-// than leaving it to be read out of the wording.
-const ScopeChip: React.FC<{ scope: string }> = ({ scope }) => (
-  <span className="shrink-0 rounded-md border border-border/50 bg-muted/40 px-1.5 py-0.5 text-eyebrow uppercase text-muted-foreground">
-    {scope}
-  </span>
-)
-
 /**
- * One switch and everything that describes it, in a fixed shape: icon, name, scope, busy badge,
+ * One switch and everything that describes it, in a fixed shape: icon, name, busy badge,
  * a single line of explanation, control on the right.
  *
  * The rows here used to be written out longhand, and each drifted into carrying a different amount
@@ -36,19 +27,15 @@ const ScopeChip: React.FC<{ scope: string }> = ({ scope }) => (
 const NotificationRow: React.FC<{
   icon: React.ReactNode
   title: string
-  scope: string
   description: string
   hint?: React.ReactNode
   control: React.ReactNode
-}> = ({ icon, title, scope, description, hint, control }) => (
+}> = ({ icon, title, description, hint, control }) => (
   <div className="flex items-start justify-between gap-3">
     <div className="flex min-w-0 flex-1 gap-2">
       <span className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true">{icon}</span>
       <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="flex flex-wrap items-center gap-1.5 text-body font-medium text-foreground sm:text-sm">
-          <span className="truncate">{title}</span>
-          <ScopeChip scope={scope} />
-        </span>
+        <span className="truncate text-body font-medium text-foreground sm:text-sm">{title}</span>
         <span className="text-xs leading-snug text-muted-foreground">{description}</span>
       </span>
     </div>
@@ -65,18 +52,13 @@ export interface NotificationsCardProps {
   /** Which of the two switches is mid-flight, or null. They must not share one busy flag. */
   pushBusyChannel: PushChannel | null
   pushGuidance?: string | null
-  /** This device's own state, per kind. Never an account-wide flag. */
+  /** This installation's own state, per kind. Never an account-wide flag. */
   billRemindersEnabled: boolean
   categoryAlertsEnabled: boolean
-  /** Sensitive notification text is hidden on this device until explicitly enabled. */
-  showNotificationDetails: boolean
-  pushDeviceRegistered: boolean
-  previewDetailsBusy: boolean
   /** Whether some other device has that kind on. Rendered as a sentence, never as a switch. */
   otherDevicesBillReminders: boolean
   otherDevicesCategoryAlerts: boolean
   onToggleChannel: (channel: PushChannel, checked: boolean) => void
-  onTogglePreviewDetails: (checked: boolean) => void
   /**
    * Rises once per **server-confirmed** enrolment change, and is the only thing the roster re-reads
    * on. Deriving it from the switch booleans read the roster while the write was still in flight.
@@ -99,24 +81,21 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
       <div className="border-b border-border/40 pb-2.5 sm:pb-3">
         <h3 id="settings-notifications-heading" className="text-subsection text-foreground">Notifications</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Each of these is set up on the device you are using now.
+          Choose which alerts this installation receives. Full details appear on the lock screen; other installations keep their choices.
         </p>
       </div>
 
       <div className="space-y-2.5 sm:space-y-3">
-        {/* The two kinds are independent settings on equal footing. They used to sit behind one
-            "notifications on this device" master switch, which meant the thing people came here to
-            turn on was two taps away and disabled until the first one landed. Turning either on is
-            what asks the browser for permission. */}
+        {/* The two kinds are independent settings on equal footing. Turning either on is what asks
+            the browser or native app for notification permission. */}
         <NotificationRow
           icon={<BellRing className="size-4" />}
           title={BILL_REMINDER_PUSH_TITLE}
-          scope={SCOPE_THIS_DEVICE}
           description={BILL_REMINDER_PUSH_DESCRIPTION}
           hint={
             <InfoHint
               label="How notifications are turned on"
-              text="Each device is set up separately, even on the same account. A phone only shows notifications once you turn them on while using that phone, and your browser has to allow them."
+              text="Each installation is set up separately, even on the same account. Notifications appear only after they are enabled here and allowed by the browser or app."
             />
           }
           control={
@@ -139,7 +118,6 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
         <NotificationRow
           icon={<Gauge className="size-4" />}
           title={CATEGORY_LIMIT_PUSH_TITLE}
-          scope={SCOPE_THIS_DEVICE}
           description={CATEGORY_LIMIT_PUSH_DESCRIPTION}
           control={
             <ToggleButton
@@ -156,28 +134,6 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
         <OtherDevicesNote
           show={!props.categoryAlertsEnabled && props.otherDevicesCategoryAlerts}
           kind="Spending alerts"
-        />
-
-        <NotificationRow
-          icon={<Eye className="size-4" />}
-          title="Show lock-screen details"
-          scope={SCOPE_THIS_DEVICE}
-          description={props.showNotificationDetails
-            ? 'Names and spending details may appear in notifications on this device.'
-            : 'Notifications use generic text so financial details stay hidden on the lock screen.'}
-          hint={!props.pushDeviceRegistered ? (
-            <span className="max-w-24 text-right text-eyebrow text-muted-foreground">Turn on a notification first</span>
-          ) : undefined}
-          control={
-            <ToggleButton
-              active={props.showNotificationDetails}
-              onClick={() => props.onTogglePreviewDetails(!props.showNotificationDetails)}
-              label="Show financial details on this device's lock screen"
-              disabled={!props.pushDeviceRegistered || props.previewDetailsBusy || props.pushLoading || deviceUnavailable}
-              mutationStatus={{ isSyncing: props.previewDetailsBusy }}
-              mutationEntityLabel="notification privacy"
-            />
-          }
         />
 
         {/* Offered only when there is nothing to watch, which is the one state where it is the fix

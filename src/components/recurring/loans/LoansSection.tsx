@@ -202,6 +202,7 @@ export function LoansSection({
         </m.div>
         {view.filteredAndSortedLoans.length > pagination.pageSize && (
           <DataTablePagination
+            centerOnMobile
             currentPage={pagination.page}
             pageSize={pagination.pageSize}
             totalItems={view.filteredAndSortedLoans.length}

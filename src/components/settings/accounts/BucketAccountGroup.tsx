@@ -136,6 +136,7 @@ export function BucketAccountGroup({
             ))}
             {accounts.length > pagination.pageSize && (
               <DataTablePagination
+                centerOnMobile
                 currentPage={pagination.page}
                 pageSize={pagination.pageSize}
                 totalItems={accounts.length}

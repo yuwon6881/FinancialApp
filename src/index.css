@@ -868,6 +868,14 @@ html, body {
     textarea {
         font-size: 16px !important;
     }
+
+    /* Ask AI draws highlighted text below a transparent textarea. Keep the overlay at the same
+       16px mobile size enforced for textareas so Android's caret never drifts from typed text. */
+    .ai-composer-text {
+        font-size: 16px;
+        font-family: inherit;
+        letter-spacing: inherit;
+    }
 }
 
 /* The header's top rule doubles as the app's activity indicator: a sheen travels along it while

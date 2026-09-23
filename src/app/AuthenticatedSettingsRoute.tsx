@@ -50,9 +50,6 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
       onToggleDarkMode={handleToggleDarkMode}
       onToggleHideSensitive={handleToggleHideSensitive}
       sensitivePreferenceStatus={prefs.sensitivePreferenceStatus}
-      unsyncedChangeCount={unsyncedChangeCount}
-      draftCount={draftCount}
-      scanUploadOwnerId={session.username}
       onUpdateSettings={financial.handleUpdateSettings}
       onAddCategory={financial.handleAddCategory}
       onUpdateCategoryCycleLimit={financial.handleUpdateCategoryCycleLimit}
@@ -74,7 +71,6 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
       pushGuidance={push.guidance}
       billRemindersEnabled={push.billRemindersEnabled}
       categoryAlertsEnabled={push.categoryAlertsEnabled}
-      pushPreviewPrivacy={push}
       otherDevicesBillReminders={push.otherDevicesBillReminders}
       otherDevicesCategoryAlerts={push.otherDevicesCategoryAlerts}
       pushEnrolmentRevision={push.enrolmentRevision}
@@ -98,9 +94,9 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
             action: checked ? 'Turned on' : 'Turned off',
             message: checked
               ? isBills
-                ? 'This device will now be reminded before each bill is due.'
-                : 'This device will now be told when a category gets close to its planned amount.'
-              : 'This device will no longer show these. Your other devices are unchanged.',
+                ? 'This installation will now show a reminder before each bill is due.'
+                : 'This installation will now show when a category gets close to its planned amount.'
+              : 'This installation will no longer show these. Your other installations are unchanged.',
           })
           dialogs.showToast(copy.message, copy.title, copy.tone, {
             label: 'Undo',
@@ -109,7 +105,7 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
                 const undone = await push.setChannelEnabled(channel, !checked)
                 if (!undone) {
                   dialogs.showToast(
-                    'The notification setting could not be restored. Check this device\'s permission and connection, then try again.',
+                    'The notification setting could not be restored. Check notification permission and connection, then try again.',
                     'Undo failed',
                     'error',
                   )

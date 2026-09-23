@@ -93,7 +93,7 @@ export interface DataTablePaginationProps {
   serverIsFetching?: boolean
   pageSizeOptions?: readonly number[]
   showPageSize?: boolean
-  /** Center the compact pagination layout for pages whose footer is presented as a separate card. */
+  /** Center the compact pagination content within its available width. */
   centerOnMobile?: boolean
   onPageChange: (page: number) => void
   onPageSizeChange: (size: number) => void

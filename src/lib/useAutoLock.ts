@@ -89,7 +89,9 @@ export function useAutoLock(options: UseAutoLockOptions): void {
       if (idleFor > LOCK_TIMEOUT_MS && !lockRequestInFlightRef.current) {
         lockRequestInFlightRef.current = true
         markSessionLocked()
-        void prefetchFingerprintAssertOptions().catch(() => undefined)
+        if (hasFingerprintSetup) {
+          void prefetchFingerprintAssertOptions().catch(() => undefined)
+        }
         void api.lockSession()
           .catch(err => {
             if (err?.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {

@@ -10,7 +10,7 @@ import { usePendingScanUploads } from './usePendingScanUploads'
 import type { ScanUploadKind } from '../lib/scanUploadStore'
 import { updateAppSearch } from '../lib/appLocation'
 import { useAppPrefs } from '../contexts/AppContext'
-import { PwaExperienceRuntime } from './PwaExperience'
+import { OfflineSupportRuntime } from './OfflineSupportRuntime'
 import { usePwaShortcutAction, type PwaShortcutAction } from './pwaShortcutActions'
 import type { useAppSession } from './useAppSession'
 
@@ -141,5 +141,5 @@ export function RuntimeBackgroundBridges(props: RuntimeBackgroundBridgesProps) {
     onRunAction: runShortcutAction,
     onClearAction: clearShortcutAction,
   })
-  return <PwaExperienceRuntime />
+  return <OfflineSupportRuntime />
 }
