@@ -1,11 +1,5 @@
-import { Capacitor, registerPlugin } from '@capacitor/core'
-
-interface NativeBiometricsPlugin {
-  checkBiometry(): Promise<{ isAvailable: boolean; deviceIsSecure: boolean }>
-  authenticate(options: { reason: string }): Promise<void>
-}
-
-const NativeBiometrics = registerPlugin<NativeBiometricsPlugin>('NativeBiometrics')
+import { Capacitor } from '@capacitor/core'
+import { NativeBiometrics } from './nativeBiometricsPlugin'
 
 export async function checkNativeDeviceAuthentication(): Promise<{ isAvailable: boolean; deviceIsSecure: boolean }> {
   if (Capacitor.getPlatform() === 'ios') return NativeBiometrics.checkBiometry()
