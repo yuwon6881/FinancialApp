@@ -5,6 +5,7 @@ import { DEVICE_UNLOCK_TIMEOUT_MS, LockScreen } from './LockScreen'
 import * as api from '../lib/api'
 import { isPlatformAuthenticatorAvailable } from '../lib/webauthn'
 import { prefetchFingerprintAssertOptions } from '../lib/fingerprintOptionsCache'
+import { authenticateNativeDevice, checkNativeDeviceAuthentication } from '../lib/native/deviceAuthentication'
 
 vi.mock('../lib/api', () => ({
   fetchAuthStatus: vi.fn(),
@@ -21,6 +22,11 @@ vi.mock('../lib/fingerprintOptionsCache', () => ({
   clearCachedFingerprintAssertOptions: vi.fn(),
   getCachedFingerprintAssertOptions: vi.fn(),
   prefetchFingerprintAssertOptions: vi.fn(async () => undefined),
+}))
+
+vi.mock('../lib/native/deviceAuthentication', () => ({
+  authenticateNativeDevice: vi.fn(),
+  checkNativeDeviceAuthentication: vi.fn(),
 }))
 
 /** The prefetch resolves the challenge it fetched; nothing here reads it, but the shape is the
@@ -278,5 +284,53 @@ describe('LockScreen device unlock availability', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('LockScreen native app unlock', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(checkNativeDeviceAuthentication).mockResolvedValue({ isAvailable: true, deviceIsSecure: true })
+    vi.mocked(authenticateNativeDevice).mockResolvedValue(undefined)
+  })
+
+  it('dismisses a cancelled automatic prompt quietly and allows a successful retry', async () => {
+    const onUnlocked = vi.fn()
+    vi.mocked(authenticateNativeDevice)
+      .mockRejectedValueOnce(Object.assign(new Error('User cancelled'), { code: 'userCancel' }))
+      .mockResolvedValueOnce(undefined)
+
+    render(<LockScreen mode="native-app" isOpen username="alice" onUnlocked={onUnlocked} onSignOut={vi.fn()} />)
+
+    const retry = await screen.findByRole('button', { name: 'Try again' })
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByText('Device verification did not finish. Retry with biometrics or your device PIN.')).toBeNull()
+    expect(onUnlocked).not.toHaveBeenCalled()
+
+    fireEvent.click(retry)
+    await waitFor(() => expect(onUnlocked).toHaveBeenCalledOnce())
+    expect(authenticateNativeDevice).toHaveBeenCalledTimes(2)
+  })
+
+  it('opens after a successful automatic native authentication', async () => {
+    const onUnlocked = vi.fn()
+
+    render(<LockScreen mode="native-app" isOpen username="alice" onUnlocked={onUnlocked} onSignOut={vi.fn()} />)
+
+    await waitFor(() => expect(onUnlocked).toHaveBeenCalledOnce())
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('keeps genuine native authentication failures visible', async () => {
+    vi.mocked(authenticateNativeDevice).mockRejectedValue(
+      Object.assign(new Error('Authentication failed'), { code: 'authenticationFailed' }),
+    )
+
+    render(<LockScreen mode="native-app" isOpen username="alice" onUnlocked={vi.fn()} onSignOut={vi.fn()} />)
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Device verification did not finish. Retry with biometrics or your device PIN.',
+    )
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
   })
 })

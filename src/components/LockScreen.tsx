@@ -10,7 +10,7 @@ import {
   getCachedFingerprintAssertOptions,
   prefetchFingerprintAssertOptions,
 } from '../lib/fingerprintOptionsCache'
-import { getErrorMessage, getStatus } from '../lib/errors'
+import { getErrorCode, getErrorMessage, getStatus } from '../lib/errors'
 import { AlertBanner } from './ui/AlertBanner'
 import { Button } from './ui/Button'
 import { Z_LAYERS } from '../lib/zLayers'
@@ -206,10 +206,10 @@ export function LockScreen({
       setLockPassword('')
       onUnlocked()
     } catch (err: unknown) {
-      // A lifecycle cancellation (unmount or sign-out) should not put an error on a screen that is
-      // already going away. Automatic timeout and browser rejection remain visible so the user gets
-      // a retry path instead of an endless "Verifying device..." state.
-      if (!(abortController.signal.aborted && !timedOut)) {
+      // A lifecycle cancellation or an explicit native prompt dismissal is a quiet return to the
+      // locked screen. Other failures remain visible so the user gets a retry path.
+      const nativePromptDismissed = mode === 'native-app' && getErrorCode(err) === 'userCancel'
+      if (!(abortController.signal.aborted && !timedOut) && !nativePromptDismissed) {
         console.error(err)
         setLockError(timedOut
           ? 'Device verification timed out. Try again or use your password.'

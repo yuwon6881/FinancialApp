@@ -14,6 +14,7 @@
     "native:sync:android": "npm run build:native && cap sync android",
     "native:sync:ios": "npm run build:native && cap sync ios && node scripts/normalize-ios-package-paths.mjs",
     "native:assets": "node scripts/generate-native-assets.mjs",
+    "check:assetlinks:production": "node scripts/verify-assetlinks.mjs",
     "lint": "eslint .",
     "check:design-system": "node scripts/check-design-system.mjs",
     "deadcode": "knip --include files,dependencies,devDependencies",
@@ -24,7 +25,7 @@
     "test:one": "vitest run --pool=threads --maxWorkers=1 --no-file-parallelism --reporter=dot",
     "test:coverage": "vitest run --coverage",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "node --test scripts/write-assetlinks.node.mjs && vitest run",
     "test:visual": "node ./node_modules/@playwright/test/cli.js test",
     "test:visual:update": "node ./node_modules/@playwright/test/cli.js test --update-snapshots",
     "pretest": "node scripts/bundle-test-dom.mjs"

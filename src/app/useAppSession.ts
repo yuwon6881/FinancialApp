@@ -21,6 +21,12 @@ import { updateAppSearch } from '../lib/appLocation'
 import { Capacitor } from '@capacitor/core'
 import { setNativeFinancialContentHidden } from '../lib/native/privacyScreen'
 
+function getRestoredUsername(): string {
+  return localStorage.getItem('auth_username')?.trim()
+    || localStorage.getItem('last_auth_username')?.trim()
+    || ''
+}
+
 export interface UseAppSessionOptions {
   onLogoutBackupAndCleanup: (username: string) => void | Promise<void>
   onLoginSuccessRestore: (username: string) => void
@@ -63,7 +69,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
 
   const [token, setToken] = useState<string | null>(null)
   const [isSessionResolved, setIsSessionResolved] = useState(false)
-  const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
+  const [username, setUsername] = useState<string>(getRestoredUsername)
   const [isPwaLaunchGateLocked, setIsPwaLaunchGateLocked] = useState(false)
   const [isNativeAppGateLocked, setIsNativeAppGateLocked] = useState(false)
 
@@ -88,7 +94,10 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
       try {
         const sessionToken = await resolveSessionToken()
         if (cancelled) return
-        const restoredUsername = localStorage.getItem('auth_username') || ''
+        const restoredUsername = getRestoredUsername()
+        if (sessionToken && restoredUsername && !localStorage.getItem('auth_username')?.trim()) {
+          localStorage.setItem('auth_username', restoredUsername)
+        }
         onPreferenceOwnerChange(sessionToken ? (restoredUsername || null) : null)
         if (Capacitor.isNativePlatform()) {
           const { syncDeviceUnlockFromSecureStorage } = await import('../lib/deviceUnlockRegistration')
