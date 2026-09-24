@@ -48,6 +48,7 @@ export function LockScreen({
   const [passwordVerifying, setPasswordVerifying] = useState(false)
   const [fingerprintVerifying, setFingerprintVerifying] = useState(false)
   const [fingerprintAvailable, setFingerprintAvailable] = useState(false)
+  const [nativeAuthenticationChecked, setNativeAuthenticationChecked] = useState(false)
   const [hasAttemptedDeviceUnlock, setHasAttemptedDeviceUnlock] = useState(false)
   const [isOnline, setIsOnline] = useState(() => navigator.onLine)
   const automaticLaunchAttemptRef = useRef(false)
@@ -94,26 +95,37 @@ export function LockScreen({
   useEffect(() => {
     if (!isOpen) {
       setFingerprintAvailable(false)
+      setNativeAuthenticationChecked(false)
       clearCachedFingerprintAssertOptions()
       return
     }
 
     if (mode === 'pwa-launch') {
       setFingerprintAvailable(true)
+      setNativeAuthenticationChecked(false)
       return
     }
 
     if (mode === 'native-app') {
       let cancelled = false
+      setFingerprintAvailable(false)
+      setNativeAuthenticationChecked(false)
       void checkNativeDeviceAuthentication()
         .then(result => {
-          if (!cancelled) setFingerprintAvailable(result.isAvailable || result.deviceIsSecure)
+          if (cancelled) return
+          setFingerprintAvailable(result.isAvailable || result.deviceIsSecure)
+          setNativeAuthenticationChecked(true)
         })
-        .catch(() => { if (!cancelled) setFingerprintAvailable(false) })
+        .catch(() => {
+          if (cancelled) return
+          setFingerprintAvailable(false)
+          setNativeAuthenticationChecked(true)
+        })
       return () => { cancelled = true }
     }
 
     setFingerprintAvailable(false)
+    setNativeAuthenticationChecked(false)
     let cancelled = false
     // The lock screen is exactly where a scaled-to-zero backend is most likely to be cold, and
     // asking once meant a lost race hid device unlock for as long as the screen stayed up -- with
@@ -157,6 +169,7 @@ export function LockScreen({
 
   const handleFingerprintUnlock = useCallback(async () => {
     if (fingerprintVerifying || passwordVerifying) return
+    if (mode === 'native-app' && (!nativeAuthenticationChecked || !fingerprintAvailable)) return
     cancelDeviceAttempt()
     const abortController = new AbortController()
     deviceAttemptAbortRef.current = abortController
@@ -226,13 +239,14 @@ export function LockScreen({
       }
       clearCachedFingerprintAssertOptions()
     }
-  }, [cancelDeviceAttempt, fingerprintVerifying, mode, onTryDeviceUnlock, onUnlocked, passwordVerifying, username])
+  }, [cancelDeviceAttempt, fingerprintAvailable, fingerprintVerifying, mode, nativeAuthenticationChecked, onTryDeviceUnlock, onUnlocked, passwordVerifying, username])
 
   useEffect(() => {
     if (!isOpen || (mode !== 'pwa-launch' && mode !== 'native-app') || automaticLaunchAttemptRef.current) return
+    if (mode === 'native-app' && (!nativeAuthenticationChecked || !fingerprintAvailable)) return
     automaticLaunchAttemptRef.current = true
     void handleFingerprintUnlock()
-  }, [handleFingerprintUnlock, isOpen, mode])
+  }, [fingerprintAvailable, handleFingerprintUnlock, isOpen, mode, nativeAuthenticationChecked])
 
   const handleSignOut = useCallback(() => {
     cancelDeviceAttempt()
@@ -277,7 +291,10 @@ export function LockScreen({
         </div>
 
         {lockError && <AlertBanner variant="error" className="w-full">{lockError}</AlertBanner>}
-        {mode === 'native-app' && !fingerprintAvailable && (
+        {mode === 'native-app' && !nativeAuthenticationChecked && (
+          <p role="status" className="text-sm text-muted-foreground">Checking device authentication…</p>
+        )}
+        {mode === 'native-app' && nativeAuthenticationChecked && !fingerprintAvailable && (
           <AlertBanner variant="warning" className="w-full">
             Device authentication is unavailable. Set up biometrics or a screen lock in device settings, or sign out.
           </AlertBanner>

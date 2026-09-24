@@ -333,4 +333,21 @@ describe('LockScreen native app unlock', () => {
     )
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
   })
+
+  it('waits for native device availability and shows only the unavailable guidance when unsupported', async () => {
+    vi.mocked(checkNativeDeviceAuthentication).mockResolvedValue({ isAvailable: false, deviceIsSecure: false })
+    vi.mocked(authenticateNativeDevice).mockRejectedValue(
+      Object.assign(new Error('No device credential'), { code: 'noDeviceCredential' }),
+    )
+
+    render(<LockScreen mode="native-app" isOpen username="alice" onUnlocked={vi.fn()} onSignOut={vi.fn()} />)
+
+    expect(await screen.findByText(
+      'Device authentication is unavailable. Set up biometrics or a screen lock in device settings, or sign out.',
+    )).toBeTruthy()
+    expect(authenticateNativeDevice).not.toHaveBeenCalled()
+    expect(screen.queryByText(
+      'Device verification did not finish. Retry with biometrics or your device PIN.',
+    )).toBeNull()
+  })
 })
