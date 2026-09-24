@@ -37,6 +37,8 @@ GitHub Actions device-test APKs use a separate, stable signing key so reinstalli
 Set the GitHub Actions repository variable `VITE_API_URL` to the public API base URL ending in `/api` (currently `https://financialapp-api-i47taxhzba-as.a.run.app/api`). Android builds do not inherit Vercel environment variables; the workflow requires this value so the native bundle calls Cloud Run instead of its local WebView origin.
 Passkey enrollment in the device-test APK requires its dedicated signing certificate in both the hosted Digital Asset Links file and API origin configuration. The production RP ID remains `financialapp-ecru.vercel.app`; trust only the Play App Signing certificate and this dedicated device-test certificate. The native app's local biometric or device-PIN launch gate can be tested with a saved session independently of passkey enrollment.
 
+Passkey registration requires a discoverable (resident) credential so Android Credential Manager can find it on this device. If an account has an older credential created before this requirement was enabled, remove that credential from FinancialApp's Device Unlock settings and set up the device again after the API update is deployed. The native login prompt prefers credentials available from the device's credential provider and skips external NFC, USB, and nearby-device choices.
+
 The Android workflow builds and uploads a debug APK on pushes and pull requests. Run it manually with Actions → Android → Run workflow to build a signed release AAB. Configure these GitHub Actions secrets first:
 
 - `ANDROID_APP_SIGNING_CERT_SHA256`: Play App Signing certificate fingerprint, hexadecimal with or without colons.

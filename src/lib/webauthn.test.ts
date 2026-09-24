@@ -174,6 +174,7 @@ describe('WebAuthn browser adapter', () => {
 
     expect(native.getCredential).toHaveBeenCalledWith({
       mediation: 'optional',
+      preferImmediatelyAvailableCredentials: true,
       origin: 'https://financialapp-ecru.vercel.app',
       publicKey: options,
     })

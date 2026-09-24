@@ -259,6 +259,9 @@ export async function getFingerprintAssertion(options: AssertionOptionsJson, sig
         // from a registration request. Omitting it makes the plugin read `publicKey.rp.id`
         // from assertion options, which have `rpId` instead.
         mediation: 'optional',
+        // This is an explicit device-unlock action. Use a passkey already available
+        // through this device's credential provider, and skip NFC/USB/hybrid choices.
+        preferImmediatelyAvailableCredentials: true,
         origin: NATIVE_PASSKEY_ORIGIN,
         publicKey: options,
       })
