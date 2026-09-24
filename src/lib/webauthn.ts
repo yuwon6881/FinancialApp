@@ -255,6 +255,10 @@ export async function getFingerprintAssertion(options: AssertionOptionsJson, sig
     return withExclusiveWebAuthnRequest(async () => {
       const { CapacitorPasskey } = await loadNativePasskeyPlugin()
       const result: unknown = await CapacitorPasskey.getCredential({
+        // capacitor-passkey uses this field to distinguish an authentication request
+        // from a registration request. Omitting it makes the plugin read `publicKey.rp.id`
+        // from assertion options, which have `rpId` instead.
+        mediation: 'optional',
         origin: NATIVE_PASSKEY_ORIGIN,
         publicKey: options,
       })

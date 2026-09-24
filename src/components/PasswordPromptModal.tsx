@@ -7,6 +7,12 @@ import { Button } from './ui/Button'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
 import { ModalActions } from './ui/ModalActions'
+import { getErrorCode, getErrorMessage, getErrorName } from '../lib/errors'
+
+function isDevicePromptCancellation(error: unknown): boolean {
+  const reason = getErrorCode(error) ?? getErrorName(error)
+  return reason === 'NotAllowedError' || reason === 'AbortError' || reason === 'userCancel'
+}
 
 interface PasswordPromptModalProps {
   isOpen: boolean
@@ -39,6 +45,11 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
         onClose()
       } else {
         setPromptError('Device verification failed or was cancelled.')
+      }
+    } catch (error) {
+      if (!isDevicePromptCancellation(error)) {
+        console.error(error)
+        setPromptError(getErrorMessage(error, 'Device verification failed. Try again or use your password.'))
       }
     } finally {
       setFingerprintBusy(false)

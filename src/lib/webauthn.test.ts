@@ -173,6 +173,7 @@ describe('WebAuthn browser adapter', () => {
     const result = await getFingerprintAssertion(options)
 
     expect(native.getCredential).toHaveBeenCalledWith({
+      mediation: 'optional',
       origin: 'https://financialapp-ecru.vercel.app',
       publicKey: options,
     })

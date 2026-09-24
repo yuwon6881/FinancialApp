@@ -272,6 +272,26 @@ describe('useAppSession', () => {
     expect(options.setHideSensitive).toHaveBeenCalledWith(false)
   })
 
+  it('keeps sensitive values masked and propagates a dismissed device prompt to the UI', async () => {
+    mocks.isPlatformAuthenticatorAvailable.mockResolvedValue(false)
+    mocks.getCachedFingerprintAssertOptions.mockResolvedValue({
+      challengeId: 'challenge-1',
+      options: { challenge: 'AQID' },
+    })
+    const cancellation = Object.assign(new Error('Prompt dismissed.'), { name: 'NotAllowedError' })
+    mocks.getFingerprintAssertion.mockRejectedValue(cancellation)
+    const options = createOptions()
+    const { result } = renderHook(() => useAppSession(options))
+    await waitFor(() => expect(result.current.isSessionResolved).toBe(true))
+    act(() => result.current.setHasFingerprintSetup(true))
+
+    await expect(result.current.revealSensitiveWithFingerprint()).rejects.toMatchObject({ name: 'NotAllowedError' })
+
+    expect(options.setHideSensitive).not.toHaveBeenCalledWith(false)
+    expect(mocks.verifyFingerprintAssert).not.toHaveBeenCalled()
+    expect(mocks.rememberDeviceUnlockCredential).not.toHaveBeenCalled()
+  })
+
   it('restores the account marker and clears the lock on login success', async () => {
     const options = createOptions()
     const { result } = renderHook(() => useAppSession(options))

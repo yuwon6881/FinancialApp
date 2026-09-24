@@ -383,7 +383,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
       return true
     } catch (err) {
       console.warn('Fingerprint prompt failed/cancelled:', err)
-      return false
+      throw err
     } finally {
       signal?.removeEventListener('abort', onAbort)
       if (sensitiveAssertionAbortRef.current === assertionAbortController) {
