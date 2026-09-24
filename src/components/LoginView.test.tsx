@@ -64,6 +64,49 @@ describe('LoginView validation', () => {
     expect(await screen.findByRole('button', { name: 'Unlock with device' })).toBeTruthy()
   })
 
+  it('explains that this device is not recognized when the passkey is missing', async () => {
+    vi.mocked(isPlatformAuthenticatorAvailable).mockResolvedValue(true)
+    vi.mocked(api.fetchAuthStatus).mockResolvedValue({
+      isRegistered: true,
+      registrationOpen: false,
+      hasFingerprint: true,
+      hasFingerprintOnDevice: true,
+    })
+    vi.mocked(api.getFingerprintLoginOptions).mockResolvedValue({
+      challengeId: 'challenge-1',
+      options: { challenge: 'AQID' },
+    })
+    vi.mocked(getFingerprintAssertion).mockRejectedValue(
+      Object.assign(new Error('No matching passkey was found.'), { name: 'NotFoundError' }),
+    )
+
+    render(<LoginView onLoginSuccess={vi.fn()} />)
+    fireEvent.change(await screen.findByRole('textbox', { name: /Username/ }), { target: { value: 'alice' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Unlock with device' }))
+
+    expect(await screen.findByText('This device is not recognized')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Unlock with device' })).toBeNull()
+    expect(screen.queryByText('No matching passkey was found.')).toBeNull()
+  })
+
+  it('shows this device is not recognized when the account passkey belongs to another device', async () => {
+    vi.mocked(isPlatformAuthenticatorAvailable).mockResolvedValue(true)
+    vi.mocked(api.fetchAuthStatus).mockResolvedValue({
+      isRegistered: true,
+      registrationOpen: false,
+      hasFingerprint: true,
+      hasFingerprintOnDevice: false,
+    })
+    render(<LoginView onLoginSuccess={vi.fn()} />)
+
+    fireEvent.change(await screen.findByRole('textbox', { name: /Username/ }), { target: { value: 'alice' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+
+    expect(await screen.findByText('This device is not recognized')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Unlock with device' })).toBeNull()
+  })
+
   it('uses field errors, focuses the first invalid field, and makes no API mutation', async () => {
     render(<LoginView onLoginSuccess={vi.fn()} />)
 

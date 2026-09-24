@@ -3,6 +3,26 @@ import { describe, expect, it, vi } from 'vitest'
 import { PasswordPromptModal } from './PasswordPromptModal'
 
 describe('PasswordPromptModal device verification', () => {
+  it('places the password verification first and presents device unlock as a separated alternative', () => {
+    render(
+      <PasswordPromptModal
+        isOpen
+        onClose={vi.fn()}
+        onVerified={vi.fn()}
+        onTryFingerprint={vi.fn().mockResolvedValue(true)}
+      />,
+    )
+
+    const password = screen.getByPlaceholderText('Enter password')
+    const verify = screen.getByRole('button', { name: 'Verify' })
+    const unlock = screen.getByRole('button', { name: 'Unlock with device' })
+    const separator = screen.getByRole('separator', { name: 'Alternative verification' })
+
+    expect(password.compareDocumentPosition(unlock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(verify.compareDocumentPosition(unlock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(separator.compareDocumentPosition(unlock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('silently keeps sensitive values masked when the user dismisses the device prompt', async () => {
     const cancellation = Object.assign(new Error('Prompt dismissed.'), { name: 'NotAllowedError' })
     const onTryFingerprint = vi.fn().mockRejectedValue(cancellation)

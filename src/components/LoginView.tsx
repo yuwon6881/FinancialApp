@@ -11,6 +11,7 @@ import {
   prefetchFingerprintLoginOptions,
 } from '../lib/fingerprintOptionsCache'
 import {
+  forgetDeviceUnlockCredential,
   getDeviceUnlockRegistrationMarker,
   getLastEnrolledUsername,
   rememberDeviceUnlockCredential,
@@ -36,6 +37,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     return cached === 'true' ? true : cached === 'false' ? false : null
   })
   const [hasFingerprint, setHasFingerprint] = useState(false)
+  const [deviceNotRecognized, setDeviceNotRecognized] = useState(false)
   const [registrationOpen, setRegistrationOpen] = useState(false)
   // When accounts already exist but more slots remain, the user can opt into a signup form.
   const [wantsRegister, setWantsRegister] = useState(false)
@@ -99,10 +101,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
     let cancelled = false
     setHasFingerprint(false)
+    setDeviceNotRecognized(false)
     void api.fetchAuthStatus(username.trim()).then(status => {
       if (cancelled) return
       const available = status.hasFingerprintOnDevice
       setHasFingerprint(available)
+      setDeviceNotRecognized(status.hasFingerprint && !available)
+      if (!available) {
+        const staleCredentialId = getDeviceUnlockRegistrationMarker(username.trim())
+        if (staleCredentialId) forgetDeviceUnlockCredential(username.trim(), staleCredentialId)
+      }
       if (available) {
         void prefetchFingerprintLoginOptions(username.trim()).catch(() => undefined)
       }
@@ -247,6 +255,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       console.error(err)
       if (getErrorName(err) === 'NotAllowedError') {
         // User cancelled prompt
+      } else if (
+        getErrorName(err) === 'NotFoundError'
+        || getErrorMessage(err, '').toLowerCase().includes('no matching passkey')
+      ) {
+        const attemptedCredentialId = getDeviceUnlockRegistrationMarker(username.trim())
+        if (attemptedCredentialId) forgetDeviceUnlockCredential(username.trim(), attemptedCredentialId)
+        clearCachedFingerprintLoginOptions()
+        setHasFingerprint(false)
+        setDeviceNotRecognized(true)
       } else {
         setError(getErrorMessage(err, 'Device unlock failed. Please use your password instead.'))
       }
@@ -484,6 +501,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             )}
             Unlock with device
           </Button>
+        )}
+
+        {!registering && isRegistered && deviceNotRecognized && loginStep === 2 && (
+          <AlertBanner variant="info" title="This device is not recognized">
+            Sign in with your password, then set up device unlock for this device in Security settings.
+          </AlertBanner>
         )}
 
         <div className="text-center text-xs text-muted-foreground select-none">

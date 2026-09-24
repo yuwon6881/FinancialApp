@@ -4,6 +4,8 @@ import * as api from './lib/api'
 import { ToastViewport } from './components/ui/ToastViewport'
 import { AlertBanner } from './components/ui/AlertBanner'
 import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
+import { hasActiveWebAuthnRequest } from './lib/webauthnRequest'
+import { shouldLockNativeAppForStateChange } from './lib/nativeAppLifecyclePolicy'
 import { getStatus } from './lib/errors'
 const AiAssistantPanel = lazy(() => import('./components/AiAssistantPanel').then(m => ({ default: m.AiAssistantPanel })))
 import { AppProvider } from './contexts/AppProvider'
@@ -197,8 +199,12 @@ function App() {
   })
 
   const handleNativeAppStateChange = useCallback(async (isActive: boolean) => {
+    if (isActive) {
+      await hideNativeSplashAfterPaint()
+      return
+    }
+    if (!shouldLockNativeAppForStateChange(isActive, hasActiveWebAuthnRequest())) return
     await session.lockNativeAppGate()
-    if (isActive) await hideNativeSplashAfterPaint()
   }, [session.lockNativeAppGate])
   useNativeAppLifecycle(handleNativeAppStateChange)
 

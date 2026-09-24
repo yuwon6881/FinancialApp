@@ -36,6 +36,47 @@ test('authentication workflow error', async ({ page }) => {
   await expect(page).toHaveScreenshot('auth-workflow-error.png', { fullPage: true })
 })
 
+test('sensitive-mode verification gives the password and device choices a clear order', async ({ page }) => {
+  test.skip(test.info().project.name !== 'mobile-light', 'A single compact baseline covers the verification sheet.')
+  await establishSession(page)
+  await page.addInitScript(() => {
+    localStorage.setItem('fingerprint_credential_id_on_this_device:VISUAL-USER', '01020304')
+    if (window.PublicKeyCredential) {
+      Object.defineProperty(window.PublicKeyCredential, 'isUserVerifyingPlatformAuthenticatorAvailable', {
+        configurable: true,
+        value: async () => true,
+      })
+    }
+  })
+  await mockApi(page, { setting: { hideSensitive: true } })
+  await page.route('**/api/auth/status*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      isRegistered: true,
+      hasFingerprint: true,
+      hasFingerprintOnDevice: true,
+      registrationOpen: false,
+    }),
+  }))
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'Account menu' }).click()
+  await page.getByRole('menuitem', { name: 'Show Sensitive' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Verify identity' })
+  await expect(dialog).toBeVisible()
+  const password = dialog.getByPlaceholder('Enter password')
+  const deviceUnlock = dialog.getByRole('button', { name: 'Unlock with device' })
+  await expect(password).toBeVisible()
+  await expect(deviceUnlock).toBeVisible()
+  const passwordBox = await password.boundingBox()
+  const deviceUnlockBox = await deviceUnlock.boundingBox()
+  expect(passwordBox).not.toBeNull()
+  expect(deviceUnlockBox).not.toBeNull()
+  expect(deviceUnlockBox!.y).toBeGreaterThan(passwordBox!.y)
+  await expect(dialog).toHaveScreenshot('sensitive-mode-verification-modal.png')
+})
+
 test('representative dashboard', async ({ page }) => {
   await establishSession(page)
   await mockApi(page)

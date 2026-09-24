@@ -24,19 +24,21 @@ interface PasswordPromptModalProps {
 
 export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerprint }: PasswordPromptModalProps) {
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [promptError, setPromptError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [deviceError, setDeviceError] = useState<string | null>(null)
   const [promptVerifying, setPromptVerifying] = useState(false)
   const [fingerprintBusy, setFingerprintBusy] = useState(false)
 
   const handleClose = () => {
     onClose()
     setConfirmPassword('')
-    setPromptError(null)
+    setPasswordError(null)
+    setDeviceError(null)
   }
 
   const handleTryFingerprint = async () => {
     if (!onTryFingerprint) return
-    setPromptError(null)
+    setDeviceError(null)
     setFingerprintBusy(true)
     try {
       const success = await onTryFingerprint()
@@ -44,12 +46,12 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
         setConfirmPassword('')
         onClose()
       } else {
-        setPromptError('Device verification failed or was cancelled.')
+        setDeviceError('Device verification failed. Try again or use your password.')
       }
     } catch (error) {
       if (!isDevicePromptCancellation(error)) {
         console.error(error)
-        setPromptError(getErrorMessage(error, 'Device verification failed. Try again or use your password.'))
+        setDeviceError(getErrorMessage(error, 'Device verification failed. Try again or use your password.'))
       }
     } finally {
       setFingerprintBusy(false)
@@ -64,58 +66,44 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
       title="Verify identity"
       description="Confirm that you are the account owner before revealing sensitive financial figures."
     >
-      {onTryFingerprint && (
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={handleTryFingerprint}
-          disabled={fingerprintBusy}
-          className="w-full rounded-xl py-2.5"
-        >
-          {fingerprintBusy ? (
-            <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
-          ) : (
-            <ShieldCheck className="size-3.5" />
-          )}
-          {fingerprintBusy ? 'Verifying…' : 'Unlock with device'}
-        </Button>
-      )}
-
       <form
         noValidate
         onSubmit={async (e) => {
           e.preventDefault()
           if (!confirmPassword.trim()) {
-            setPromptError('Password is required.')
+            setPasswordError('Password is required.')
             focusFirstInvalidField(e.currentTarget)
             return
           }
           setPromptVerifying(true)
-          setPromptError(null)
+          setPasswordError(null)
           try {
             const res = await api.verifyPassword(confirmPassword)
             if (res.verified) {
               setConfirmPassword('')
               onVerified()
             } else {
-              setPromptError(res.message || 'Incorrect password.')
+              setPasswordError(res.message || 'Incorrect password.')
             }
           } catch (err) {
             console.error(err)
-            setPromptError('Failed to contact verification server.')
+            setPasswordError('Failed to contact verification server.')
           } finally {
             setPromptVerifying(false)
           }
         }}
         className="space-y-4 font-semibold text-xs text-foreground"
       >
-        <FormField label="Password" required error={promptError}>
+        <FormField label="Password" required error={passwordError}>
           <Input
             type="password"
             required
             placeholder="Enter password"
             value={confirmPassword}
-            onChange={e => setConfirmPassword(e.target.value)}
+            onChange={e => {
+              setConfirmPassword(e.target.value)
+              if (passwordError) setPasswordError(null)
+            }}
             autoComplete="current-password"
             className="font-medium"
           />
@@ -131,13 +119,43 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
           </Button>
           <Button
             type="submit"
-            disabled={promptVerifying}
+            disabled={promptVerifying || fingerprintBusy}
             className="rounded-xl px-4 shadow-md shadow-primary/10"
           >
             {promptVerifying ? 'Verifying…' : 'Verify'}
           </Button>
         </ModalActions>
       </form>
+
+      {onTryFingerprint && (
+        <div className="space-y-3 border-t border-border/40 pt-4">
+          <div
+            role="separator"
+            aria-label="Alternative verification"
+            className="flex items-center gap-3 text-eyebrow uppercase text-muted-foreground"
+          >
+            <span className="h-px flex-1 bg-border/60" />
+            <span>Or use your device</span>
+            <span className="h-px flex-1 bg-border/60" />
+          </div>
+          {deviceError && <p role="alert" className="text-xs leading-relaxed text-destructive">{deviceError}</p>}
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            onClick={handleTryFingerprint}
+            disabled={fingerprintBusy || promptVerifying}
+            className="w-full rounded-xl"
+          >
+            {fingerprintBusy ? (
+              <div className="size-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+            ) : (
+              <ShieldCheck className="size-4" />
+            )}
+            {fingerprintBusy ? 'Verifying…' : 'Unlock with device'}
+          </Button>
+        </div>
+      )}
     </BottomSheet>
   )
 }
