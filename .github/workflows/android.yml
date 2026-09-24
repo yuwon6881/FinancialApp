@@ -52,13 +52,16 @@ jobs:
         run: |
           npm ci
           npm run native:assets
-      - name: Configure Firebase for debug build when credentials are available
+      - name: Configure and validate Firebase for device-test build
+        if: github.event_name != 'pull_request'
         env:
           FIREBASE_ANDROID_CONFIG_BASE64: ${{ secrets.FIREBASE_ANDROID_CONFIG_BASE64 }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
         run: |
-          if [ -n "$FIREBASE_ANDROID_CONFIG_BASE64" ]; then
-            printf '%s' "$FIREBASE_ANDROID_CONFIG_BASE64" | base64 --decode > android/app/google-services.json
-          fi
+          test -n "$FIREBASE_ANDROID_CONFIG_BASE64"
+          test -n "$FIREBASE_PROJECT_ID"
+          printf '%s' "$FIREBASE_ANDROID_CONFIG_BASE64" | base64 --decode > android/app/google-services.json
+          node scripts/check-android-firebase.mjs
       - name: Build bundled native web app
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
@@ -133,6 +136,7 @@ jobs:
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           FIREBASE_ANDROID_CONFIG_BASE64: ${{ secrets.FIREBASE_ANDROID_CONFIG_BASE64 }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
         run: |
           test -n "$ANDROID_APP_SIGNING_CERT_SHA256"
           test -n "$ANDROID_KEY_ALIAS"
@@ -140,10 +144,12 @@ jobs:
           test -n "$ANDROID_KEY_PASSWORD"
           test -n "$ANDROID_KEYSTORE_BASE64"
           test -n "$FIREBASE_ANDROID_CONFIG_BASE64"
+          test -n "$FIREBASE_PROJECT_ID"
           npm ci
           npm run native:assets
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/financialapp-release.jks"
           printf '%s' "$FIREBASE_ANDROID_CONFIG_BASE64" | base64 --decode > android/app/google-services.json
+          node scripts/check-android-firebase.mjs
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/financialapp-release.jks" >> "$GITHUB_ENV"
       - name: Build bundled native web app
         run: npm run build:native
