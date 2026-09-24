@@ -77,7 +77,7 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
           size="sm"
           type="button"
           onClick={onOpenVault}
-          className="mt-3 border-amber-500/30 bg-card/60 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 text-caption self-center sm:self-start"
+          className="mt-3 w-full justify-center border-amber-500/30 bg-card/60 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 text-caption sm:w-auto"
         >
           Review in the Vault
           <ChevronRight className="size-3.5 ml-1" />

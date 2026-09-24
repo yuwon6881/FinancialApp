@@ -267,7 +267,7 @@ export function TaxReliefOverview({
             type="button"
             disabled={hideSensitive}
             onClick={() => setEditorOpen(true)}
-            className="self-center sm:self-start"
+            className="w-full self-center justify-center sm:w-auto sm:self-start"
           >
             <Pencil className="size-3.5" />
             Manage limits
