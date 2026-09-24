@@ -262,12 +262,12 @@ export function TaxReliefOverview({
         </div>
         {selectedYear !== undefined && (
           <Button
-            variant="secondary"
+            variant="primary"
             size="sm"
             type="button"
             disabled={hideSensitive}
             onClick={() => setEditorOpen(true)}
-            className="self-start bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            className="self-center sm:self-start"
           >
             <Pencil className="size-3.5" />
             Manage limits

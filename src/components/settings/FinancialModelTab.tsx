@@ -283,7 +283,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
                 <HardDrive className="size-4 text-muted-foreground shrink-0" />
                 <div className="flex flex-col gap-0.5">
                   <span className="font-medium text-foreground">Local Data</span>
-                  <span className="text-xs text-muted-foreground">Remove cached data, offline drafts and any changes still waiting to sync.</span>
+                  <span className="text-xs text-muted-foreground">Remove cached data and offline drafts.</span>
                 </div>
               </div>
               <Button variant="tertiary"

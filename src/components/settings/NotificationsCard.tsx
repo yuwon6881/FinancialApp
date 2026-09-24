@@ -81,7 +81,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
       <div className="border-b border-border/40 pb-2.5 sm:pb-3">
         <h3 id="settings-notifications-heading" className="text-subsection text-foreground">Notifications</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Choose which alerts this installation receives. Full details appear on the lock screen; other installations keep their choices.
+          Choose which alerts this installation receives.
         </p>
       </div>
 

@@ -37,7 +37,7 @@ const DRIFT_BANDS: ReadonlyArray<{
   {
     key: 'watchDrift',
     label: 'Watch when off by',
-    hint: 'Shows an early warning; guidance may use new money to correct it.',
+    hint: 'Early warning threshold before rebalancing.',
     surface: 'border-amber-500/25 bg-amber-500/5',
     badge: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
     accent: 'accent-amber-500',
@@ -46,7 +46,7 @@ const DRIFT_BANDS: ReadonlyArray<{
   {
     key: 'alertDrift',
     label: 'Alert when off by',
-    hint: 'Marks a larger mismatch that may eventually require rebalancing.',
+    hint: 'Marks a larger mismatch that triggers alerts.',
     surface: 'border-orange-500/25 bg-orange-500/5',
     badge: 'bg-orange-500/15 text-orange-700 dark:text-orange-300',
     accent: 'accent-orange-500',
@@ -431,7 +431,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
           <div className="rounded-xl border border-border/50 bg-muted/20 p-3 w-full min-w-0">
             <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground min-w-0">
               <Info className="mt-0.5 size-3.5 shrink-0 text-blue-500" />
-              <span className="min-w-0 break-words">Drift is the gap between a basket’s actual share and its target. 62% vs 66% is 4 points off.</span>
+              <span className="min-w-0 break-words">Difference between a basket’s target and current share.</span>
             </p>
             {/* Two sliders on one shared scale, stacked. A drift band is a threshold on the same
                 axis the sleeve targets above already use, and typing it into a number box gave no
@@ -507,7 +507,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
           <h3 className="flex flex-wrap items-center gap-2 text-subsection text-foreground">
             Investment classification <RowSyncStatus isSyncing={orderSyncing} isPending={orderPending} entityLabel="classification order" />
           </h3>
-          <p className="mt-1 text-xs text-muted-foreground break-words">Every open holding needs a basket. Drag a grip, or focus it and press Up or Down, to change the order.</p>
+          <p className="mt-1 text-xs text-muted-foreground break-words">Assign each holding to a basket and set rebalancing priority.</p>
         </div>
         <Reorder.Group
           axis="y"

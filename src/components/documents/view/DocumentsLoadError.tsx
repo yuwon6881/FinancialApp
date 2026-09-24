@@ -19,7 +19,7 @@ export function DocumentsLoadError({ message, isLoading, onRetry }: DocumentsLoa
           type="button"
           disabled={isLoading}
           onClick={onRetry}
-          className="min-h-11 shrink-0 bg-card hover:bg-card sm:min-h-8"
+          className="min-h-11 shrink-0 self-center sm:self-auto bg-card hover:bg-card sm:min-h-8"
         >
           {isLoading ? <><Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> Retrying…</> : 'Try again'}
         </Button>

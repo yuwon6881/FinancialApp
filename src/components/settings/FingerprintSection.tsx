@@ -182,10 +182,10 @@ export function FingerprintSection() {
           <h3 className="text-subsection text-foreground">Device Unlock</h3>
           <p className="text-xs text-muted-foreground">
             {enrolledHere
-              ? "Use this device's screen lock, PIN, fingerprint, or face recognition."
+              ? "Screen lock, fingerprint, or face recognition unlock."
               : enabledOnAccount
                 ? 'Enabled for this account; set up this device to use it here.'
-                : "Use this device's screen lock, PIN, fingerprint, or face recognition."}
+                : "Screen lock, fingerprint, or face recognition unlock."}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -196,17 +196,19 @@ export function FingerprintSection() {
 
       <CollapsibleBody open={open}>
         <div className="px-5 pb-5 pt-0 space-y-4 border-t border-border/40">
-          <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <KeyRound className="size-3.5 text-muted-foreground" />
-                <span>Device Authentication</span>
+          <div className="rounded-2xl border border-border/60 bg-muted/20 p-4 sm:p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-accent-ink">
+                  <KeyRound className="size-3.5" />
+                </span>
+                <span className="text-xs font-semibold text-foreground">Device Authentication</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
                 {enrolledHere
-                  ? 'This device can unlock your account using biometrics or screen lock.'
+                  ? 'This device is registered and can unlock your account using biometrics or screen lock.'
                   : needsLocalSetup
-                    ? 'This account already has a device credential. If it is saved on this phone, confirm with your fingerprint, face recognition, PIN, or screen lock to use it here.'
+                    ? 'This account already has a device credential. Confirm with your fingerprint, face recognition, PIN, or screen lock to use it here.'
                     : 'Register this device to allow fast biometric or PIN unlock on the login screen.'}
               </p>
               {capability === 'checking' && (
@@ -219,11 +221,11 @@ export function FingerprintSection() {
             <div className="flex w-full shrink-0 items-center justify-center gap-2 sm:w-auto sm:justify-end">
               <Button
                 type="button"
-                variant={enrolledHere ? 'secondary' : 'primary'}
+                variant="primary"
                 size="sm"
                 disabled={busy || hideSensitive || capability !== 'supported'}
                 onClick={enroll}
-                className="shrink-0"
+                className="w-full justify-center sm:w-auto shrink-0 shadow-sm"
               >
                 <MutationButtonContent
                   state={busy ? 'saving' : null}

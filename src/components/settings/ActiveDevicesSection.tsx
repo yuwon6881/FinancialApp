@@ -85,7 +85,7 @@ export function ActiveDevicesSection() {
           grid. */}
       <Button variant="tertiary" type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex w-full min-w-0 items-center gap-2.5 p-5 justify-start text-left cursor-pointer">
         <MonitorSmartphone className="size-5 shrink-0 text-blue-500" />
-        <div className="min-w-0 flex-1"><h3 className="truncate text-subsection text-foreground">Active Devices</h3><p className="truncate text-xs text-muted-foreground">Manage devices currently logged into your account.</p></div>
+        <div className="min-w-0 flex-1"><h3 className="truncate text-subsection text-foreground">Active Devices</h3><p className="truncate text-xs text-muted-foreground">Manage active login sessions.</p></div>
         <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-muted-foreground">
           {loading ? <><Loader2 className="size-3 animate-spin" /> Checking…</> : sessions.length}
         </span>
