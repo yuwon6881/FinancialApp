@@ -5,6 +5,8 @@ import type { TransactionPrefillDraft } from '../TransactionFormSheet'
 import type { TransactionDocumentsFieldRef } from './TransactionDocumentsField'
 import { canOpenBlankMutationForm } from '../../../lib/quickAddAvailability'
 import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
+import { usePurchaseCaptureActions } from '../../../contexts/PurchaseCaptureContext'
+import { capturedPurchaseEdits } from './useCapturedPurchaseForm'
 
 export interface UseTransactionFormLifecycleOptions {
   state: TransactionFormState
@@ -37,6 +39,7 @@ export interface UseTransactionFormLifecycleOptions {
 }
 
 export function useTransactionFormLifecycle(options: UseTransactionFormLifecycleOptions) {
+  const capture = usePurchaseCaptureActions()
   const {
     state,
     dispatch,
@@ -224,6 +227,16 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
     descriptionRef.current = ''
     autocompletedDescriptionRef.current = null
     if (autoOpenPrefill) {
+      if (autoOpenPrefill.captureId) {
+        dispatch({ type: 'SET_FIELD', field: 'captureId', value: autoOpenPrefill.captureId })
+        dispatch({ type: 'SET_FIELD', field: 'captureSource', value: autoOpenPrefill.captureSource })
+        dispatch({ type: 'SET_FIELD', field: 'captureNotice', value: autoOpenPrefill.captureNotice })
+        dispatch({ type: 'SET_FIELD', field: 'captureExcerpt', value: autoOpenPrefill.captureExcerpt })
+        dispatch({ type: 'SET_FIELD', field: 'category', value: autoOpenPrefill.category ?? '' })
+        dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: autoOpenPrefill.ledgerCategory ?? '' })
+        dispatch({ type: 'SET_FIELD', field: 'amount', value: autoOpenPrefill.amount ?? '' })
+        dispatch({ type: 'SET_FIELD', field: 'date', value: autoOpenPrefill.date ?? '' })
+      }
       if (autoOpenPrefill.category) {
         dispatch({ type: 'SET_FIELD', field: 'category', value: autoOpenPrefill.category })
       }
@@ -312,7 +325,11 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
     })
   }
 
-  const handleCloseForm = useCallback(() => {
+  const handleCloseForm = useCallback(async () => {
+    if (state.captureId && capture) {
+      try { await capture.edit(state.captureId, capturedPurchaseEdits(state)) }
+      catch { onShowAlert?.('Purchase edits could not be saved on this device. Try closing again.', 'Review kept open'); return }
+    }
     documentsFieldRef.current?.reset()
     documentLookupRef.current += 1
     setExistingDocuments([])
@@ -324,7 +341,7 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
     if (state.editingId && onStartEditPending) {
       onStartEditPending(null)
     }
-  }, [clearFormDraft, dispatch, documentsFieldRef, onStartEditPending, scanner, setExistingDocuments, setInitialDocumentChanges, state.editingId, suggestions])
+  }, [capture, onShowAlert, clearFormDraft, dispatch, documentsFieldRef, onStartEditPending, scanner, setExistingDocuments, setInitialDocumentChanges, state, suggestions])
 
   return {
     handleStartEdit,

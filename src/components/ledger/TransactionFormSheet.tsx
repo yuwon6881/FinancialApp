@@ -184,6 +184,12 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
       title={title}
     >
       <form noValidate onSubmit={form.handleSubmit} className="space-y-5">
+        {form.state.captureId && !props.hideSensitive && <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3 text-sm">
+          <p className="font-medium">Detected purchase · {form.state.captureSource}</p>
+          <p className="text-muted-foreground">Review the available details and complete the empty fields. AI suggestions are choices; nothing is saved automatically.</p>
+          {form.state.captureNotice && <p className="text-muted-foreground">{form.state.captureNotice}</p>}
+          {form.state.captureExcerpt && <details><summary className="min-h-11 cursor-pointer py-3">View source alert</summary><p className="whitespace-pre-wrap break-words text-muted-foreground">{form.state.captureExcerpt}</p></details>}
+        </div>}
         {securityPending && (
           <p className="rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground" role="status">
             Finishing security check… You can fill this form in, but saving is temporarily disabled.
@@ -195,7 +201,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           </p>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <ReceiptScanPicker
+          {!form.state.captureId && <ReceiptScanPicker
             isScanning={form.scanner.isScanning}
             showScanPicker={form.scanner.showScanPicker}
             setShowScanPicker={form.scanner.setShowScanPicker}
@@ -209,7 +215,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             setShowSplitPicker={splitScan.setShowPicker}
             splitCameraInputRef={splitScan.cameraInputRef}
             splitGalleryInputRef={splitScan.galleryInputRef}
-          />
+          />}
 
           <ReceiptScanStatus
             showScanBanner={form.scanner.showScanBanner}
@@ -221,7 +227,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           <TransactionTypeFields
             txType={form.state.ledgerCategory === 'AccountMove' ? 'transfer' : form.state.transactionType}
             onChangeTxType={(type: TransactionType) => form.changeTransactionType(type)}
-            disabled={form.state.mode === 'edit'}
+            disabled={form.state.mode === 'edit' || Boolean(form.state.captureId)}
           />
 
           <TransactionFormFields
@@ -258,7 +264,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             cycleDay={props.cycleDay}
           />
 
-          {form.state.transactionType === 'outflow' && (
+          {form.state.transactionType === 'outflow' && !form.state.captureId && (
             <div className="sm:col-span-2">
               <TransactionDocumentsField
                 key={form.documentFieldRevision}

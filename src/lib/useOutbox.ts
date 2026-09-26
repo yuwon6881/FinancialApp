@@ -51,6 +51,7 @@ export interface UseOutboxResult {
     isUndo?: boolean,
   ) => QueuedOp[]
   mutateQueue: (updater: (previous: QueuedOp[]) => QueuedOp[]) => void
+  mutateQueueDurably: (updater: (previous: QueuedOp[]) => QueuedOp[]) => void
   snapshotForUndo: (entity: EntityKind, targetId: string, value: UndoSnapshot | undefined) => void
   processQueue: () => Promise<void>
   setBackgroundSyncing: (value: boolean) => void
@@ -153,6 +154,13 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
 
   const mutateQueue = useCallback((updater: (previous: QueuedOp[]) => QueuedOp[]) => {
     const next = updater(pendingOpsRef.current)
+    pendingOpsRef.current = next
+    setPendingOps(next)
+  }, [])
+
+  const mutateQueueDurably = useCallback((updater: (previous: QueuedOp[]) => QueuedOp[]) => {
+    const next = updater(pendingOpsRef.current)
+    if (!setCachedJSON(CACHE_KEYS.pendingOperations, next)) throw new Error('Could not store this transaction on the device. Free some space and try again.')
     pendingOpsRef.current = next
     setPendingOps(next)
   }, [])
@@ -345,6 +353,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   const activeOps = useMemo(() => [...pendingOps, ...recentlyCompletedOps], [pendingOps, recentlyCompletedOps])
 
   return {
+    mutateQueueDurably,
     pendingOps,
     failedOps,
     activeOps,

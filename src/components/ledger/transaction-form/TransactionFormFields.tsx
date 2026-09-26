@@ -247,16 +247,18 @@ export function TransactionFormFields({
             <CustomSelect
               ariaLabel="Category"
               value={state.category}
+              placeholder="Select a category"
               onChange={val => onSetField('category', val)}
               options={categorySelectOptions}
               className="w-full"
             />
           </FormField>
 
-          <FormField label="Ledger category">
+          <FormField label="Ledger category" error={errors.ledgerCategory}>
             <CustomSelect
               ariaLabel="Ledger category"
               value={state.ledgerCategory}
+              placeholder="Select a ledger category"
               onChange={val => onSetField('ledgerCategory', val as SelectableLedgerCategory)}
               options={[
                 ...(state.transactionType === 'inflow' ? [{ value: 'Income', label: 'Income (Allocate Split)' }] : []),

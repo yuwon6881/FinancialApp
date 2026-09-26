@@ -14,6 +14,12 @@ import {
 
 /** Where a caller already knows a new posting belongs, before the form opens. */
 export interface LedgerAddPrefill {
+  amount?: string
+  date?: string
+  captureId?: string
+  captureSource?: string
+  captureNotice?: string
+  captureExcerpt?: string
   category?: string
   ledgerCategory?: 'Essentials' | 'Growth' | 'Stability' | 'Rewards'
   accountId?: string

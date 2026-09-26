@@ -9,6 +9,7 @@ import { isTransactionOutsideCycle } from '../../../lib/transactionCyclePlacemen
 import type { TransactionDocumentsFieldRef } from './TransactionDocumentsField'
 import type { RecoveryOffer } from '../../../lib/stabilityRecovery'
 import type { UseTransactionFormOptions } from './useTransactionFormOptions'
+import { usePurchaseCaptureActions } from '../../../contexts/PurchaseCaptureContext'
 
 export interface UseTransactionFormSubmitOptions extends Pick<
   UseTransactionFormOptions,
@@ -46,6 +47,7 @@ export interface UseTransactionFormSubmitOptions extends Pick<
 }
 
 export function useTransactionFormSubmit(options: UseTransactionFormSubmitOptions) {
+  const capture = usePurchaseCaptureActions()
   const {
     state,
     dispatch,
@@ -116,6 +118,10 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
       stabilityReloadIntent: state.stabilityReloadIntent,
     })
 
+    if (state.captureId) {
+      if (!state.category) validationErrors.category = 'Choose a category.'
+      if (!state.ledgerCategory) validationErrors.ledgerCategory = 'Choose where this money came from.'
+    }
     if (Object.keys(validationErrors).length > 0) {
       dispatch({ type: 'SET_ERRORS', errors: validationErrors })
       focusFirstInvalidField(e.currentTarget)
@@ -179,6 +185,9 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
         await onUpdateTransaction?.(state.editingId, mapped, documentChanges)
       } else if (state.mode === 'draft' && state.editingId) {
         await onUpdateDraftTransaction?.(state.editingId, mapped, documentChanges)
+      } else if (state.captureId) {
+        if (!capture) throw new Error('Transaction detection is unavailable. Close and reopen the review.')
+        await capture.save(state.captureId, mapped)
       } else {
         await onAddTransaction(mapped, documentChanges)
       }

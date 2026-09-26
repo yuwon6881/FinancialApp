@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         registerPlugin(PrivacyScreenPlugin.class);
         registerPlugin(NativePushConfigurationPlugin.class);
+        registerPlugin(PurchaseCapturePlugin.class);
 
         super.onCreate(savedInstanceState);
     }

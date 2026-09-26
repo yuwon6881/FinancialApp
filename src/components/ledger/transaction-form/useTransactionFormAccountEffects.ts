@@ -17,7 +17,7 @@ export function useTransactionFormAccountEffects(
       const live = accounts.filter(account => account.bucket === bucket && !account.isArchived)
       const nextId = selected?.bucket === bucket && !selected.isArchived
         ? selected.id
-        : live.length === 1 ? live[0].id : ''
+        : !state.captureId && live.length === 1 ? live[0].id : ''
       if (state.accountId !== nextId) {
         dispatch({ type: 'SET_FIELD', field: 'accountId', value: nextId })
       }
@@ -48,7 +48,7 @@ export function useTransactionFormAccountEffects(
     if (!bucket && state.transactionType !== 'transfer' && state.ledgerCategory !== 'Income' && state.accountId !== null) {
       dispatch({ type: 'SET_FIELD', field: 'accountId', value: null })
     }
-  }, [accounts, state.accountId, state.counterAccountId, state.ledgerCategory, state.transactionType, state.transferSource, state.transferTarget, dispatch])
+  }, [accounts, state.captureId, state.accountId, state.counterAccountId, state.ledgerCategory, state.transactionType, state.transferSource, state.transferTarget, dispatch])
 
   useEffect(() => {
     if (accounts.length === 0) return

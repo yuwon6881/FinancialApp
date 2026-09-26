@@ -273,6 +273,8 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   }, [token, isLocked, hideSensitive, hasFingerprintSetup])
 
   async function handleLogout() {
+    const { suspendPurchaseCapture } = await import('../lib/native/purchaseCapture')
+    await suspendPurchaseCapture()
     sensitiveAssertionAbortRef.current?.abort()
     sensitiveAssertionAbortRef.current = null
     cancelActiveWebAuthnRequest()

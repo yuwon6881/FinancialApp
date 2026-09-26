@@ -20,6 +20,7 @@ import { useTransactionFormAccountEffects } from './useTransactionFormAccountEff
 import { useTransactionOutflowWarning } from './useTransactionOutflowWarning'
 import { useTransactionFormLifecycle } from './useTransactionFormLifecycle'
 import { useTransactionFormSubmit } from './useTransactionFormSubmit'
+import { useCapturedPurchaseForm } from './useCapturedPurchaseForm'
 
 export type { UseTransactionFormOptions } from './useTransactionFormOptions'
 
@@ -131,7 +132,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
 
   const { clearDraft: clearFormDraft } = useFormDraft(
     'ledger-tx-form',
-    state.showAddForm,
+    state.showAddForm && !state.captureId,
     {
       editorMode: state.mode,
       editingTxId: state.editingId,
@@ -234,6 +235,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     ledgerCategory: state.ledgerCategory,
   })
 
+  useCapturedPurchaseForm(state, suggestions, Boolean(hideSensitive))
+
   const filteredSuggestions = useMemo(() => {
     if (!state.description.trim() || state.description.trim().length < 1) return []
     const query = state.description.toLowerCase().trim()
@@ -314,10 +317,10 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   useTransactionFormAccountEffects(state, accounts, dispatch)
 
   useEffect(() => {
-    if (categories.length > 0 && !state.category) {
+    if (!state.captureId && categories.length > 0 && !state.category) {
       dispatch({ type: 'SET_FIELD', field: 'category', value: defaultCategory })
     }
-  }, [categories, state.category, defaultCategory])
+  }, [categories, state.captureId, state.category, defaultCategory])
 
   const lifecycle = useTransactionFormLifecycle({
     state,

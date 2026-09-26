@@ -40,6 +40,8 @@ import { AppGateways } from './app/AppGateways'
 import { useTabNavigationCleanup } from './app/useTabNavigationCleanup'
 import { useAppThemeAndShortcuts } from './app/useAppThemeAndShortcuts'
 import { useNativePushActions } from './app/useNativePushActions'
+import { PurchaseCaptureBoundary, PurchaseCapturePanelSlot } from './app/PurchaseCaptureBoundary'
+import type { PurchaseCaptureOptions } from './app/usePurchaseCapture'
 import { useNativeNavigation } from './lib/useNativeNavigation'
 
 const RuntimeBackgroundBridges = lazy(() => import('./app/RuntimeBackgroundBridges').then(module => ({ default: module.RuntimeBackgroundBridges })))
@@ -327,6 +329,22 @@ function App() {
     financial.handleUpdateDarkModePreference(newDark)
   }
 
+  const captureOptions: PurchaseCaptureOptions = {
+    owner: session.isSessionResolved && session.token ? session.username : null,
+    eligible: session.isSessionResolved && Boolean(session.token) && !session.isLocked && !session.isNativeAppGateLocked && !session.isPwaLaunchGateLocked && prefs.sensitivePreferenceStatus === 'resolved',
+    hidden: prefs.hideSensitive,
+    formOpen: modals.isLedgerAddOpen,
+    currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
+    reveal: openSensitivePrompt,
+    open: prefill => { nav.setAutoOpenLedgerPrefill(prefill); nav.handleQuickAction('transaction', { txType: 'outflow' }) },
+    enqueue: (id, transaction) => {
+      if (!guardSensitive()) throw new Error('Reveal financial data before saving.')
+      if (financial.allTransactions.some(row => row.id === id) || financial.activeOps.some(op => op.entity === 'transaction' && op.targetId === id)) return
+      if (financial.failedOps.some(op => op.entity === 'transaction' && op.targetId === id)) throw new Error('Retry the existing failed transaction instead of saving it again.')
+      financial.mutateQueueDurably(previous => financial.enqueue(previous, 'transaction', 'add', id, { ...transaction, id, postedAt: transaction.postedAt ?? new Date().toISOString() }))
+    },
+  }
+
   const appContextValue = useAppRootContext({
     prefs,
     financial,
@@ -344,6 +362,7 @@ function App() {
       appContextValue={appContextValue}
     >
       <AppProvider value={appContextValue}>
+        <PurchaseCaptureBoundary options={captureOptions} tab={prefs.activeTab}>
         <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-primary/25 selection:text-foreground">
         {enableRuntimeBackgroundBridges && <Suspense fallback={null}>
           <RuntimeBackgroundBridges
@@ -431,6 +450,8 @@ function App() {
           </AlertBanner>
         )}
 
+        <PurchaseCapturePanelSlot />
+
         <AuthenticatedView
           prefs={prefs}
           financial={financial}
@@ -506,6 +527,7 @@ function App() {
           />
         </Suspense>
       </div>
+    </PurchaseCaptureBoundary>
     </AppProvider>
     </AppGateways>
   )

@@ -11,8 +11,8 @@ vi.mock('../../../lib/api/documents', () => ({
 
 vi.mock('../../../lib/api', () => ({
   startReceiptScan: vi.fn(),
-  suggestTransactionCategories: vi.fn(),
-  suggestTransactionNotes: vi.fn(),
+  suggestTransactionCategories: vi.fn().mockResolvedValue([]),
+  suggestTransactionNotes: vi.fn().mockResolvedValue([]),
 }))
 
 const CATEGORIES = [{ id: 'food', name: 'Food' }]
@@ -48,6 +48,22 @@ const transaction = (id: string, amount = -10): Transaction => ({
 const share = { description: 'Shared receipt', amount: 42.5, date: '2026-08-21', txType: 'outflow' } as const
 
 describe('applying a computed share to the transaction sheet', () => {
+  it('opens a captured purchase without inventing missing date, amount, category, bucket or account', async () => {
+    const { result } = renderHook(() => useTransactionForm(createOptions({
+      autoOpenPrefill: { captureId: 'capture', description: 'Coffee' },
+      accounts: [{ id: 'one', name: 'Cash', bucket: 'Essentials', isArchived: false } as any],
+    })))
+    await act(async () => result.current.openFresh())
+    expect(result.current.state.captureId).toBe('capture')
+    expect(result.current.state.description).toBe('Coffee')
+    expect(result.current.state.amount).toBe('')
+    expect(result.current.state.date).toBe('')
+    expect(result.current.state.category).toBe('')
+    expect(result.current.state.ledgerCategory).toBe('')
+    expect(result.current.state.accountId).toBeFalsy()
+    act(() => result.current.dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: 'Essentials' }))
+    expect(result.current.state.accountId).toBeFalsy()
+  })
   it('edits an open edit in place instead of reopening a blank create', async () => {
     const { result } = renderHook(() => useTransactionForm(createOptions()))
 

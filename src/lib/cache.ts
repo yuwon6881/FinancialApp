@@ -264,6 +264,7 @@ export function clearDisposableFinancialCaches(): void {
 }
 
 export function clearLocalFinancialData(): void {
+  void import('./native/purchaseCapture').then(({ wipePurchaseCaptures }) => wipePurchaseCaptures())
   void import('./draftTransactionDocuments').then(({ clearDraftTransactionDocuments }) =>
     clearDraftTransactionDocuments())
   // Images picked for a scan that never finished uploading are unsynced local work, so they are
