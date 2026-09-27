@@ -340,7 +340,7 @@ function App() {
     formOpen: modals.isLedgerAddOpen,
     currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
     reveal: openSensitivePrompt,
-    open: prefill => { nav.setAutoOpenLedgerPrefill(prefill); nav.handleQuickAction('transaction', { txType: 'outflow' }) },
+    open: prefill => { nav.setAutoOpenLedgerPrefill(prefill); nav.handleQuickAction('transaction', { txType: prefill.transactionType ?? 'outflow' }) },
     enqueue: (id, transaction) => {
       if (!guardSensitive()) throw new Error('Reveal financial data before saving.')
       if (financial.allTransactions.some(row => row.id === id) || financial.activeOps.some(op => op.entity === 'transaction' && op.targetId === id)) return

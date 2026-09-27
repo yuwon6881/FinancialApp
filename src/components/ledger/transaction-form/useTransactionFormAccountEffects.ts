@@ -28,7 +28,7 @@ export function useTransactionFormAccountEffects(
       if (isSameBucket) {
         const otherAccounts = accounts.filter(account => account.bucket === state.transferTarget && !account.isArchived && account.id !== state.accountId)
         if (!selectedTarget || selectedTarget.bucket !== state.transferTarget || selectedTarget.id === state.accountId) {
-          const nextTargetId = otherAccounts.length === 1 ? otherAccounts[0].id : null
+          const nextTargetId = state.captureId ? null : otherAccounts.length === 1 ? otherAccounts[0].id : null
           if (state.counterAccountId !== nextTargetId) {
             dispatch({ type: 'SET_FIELD', field: 'counterAccountId', value: nextTargetId })
           }
@@ -37,7 +37,7 @@ export function useTransactionFormAccountEffects(
         const liveTarget = accounts.filter(account => account.bucket === state.transferTarget && !account.isArchived)
         const nextTargetId = selectedTarget?.bucket === state.transferTarget && !selectedTarget.isArchived
           ? selectedTarget.id
-          : liveTarget.length === 1 ? liveTarget[0].id : ''
+          : !state.captureId && liveTarget.length === 1 ? liveTarget[0].id : ''
         if (state.counterAccountId !== nextTargetId) {
           dispatch({ type: 'SET_FIELD', field: 'counterAccountId', value: nextTargetId })
         }

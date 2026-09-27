@@ -29,13 +29,19 @@ export function validateTransactionForm(state: {
     errors.date = 'Posting date is required.'
   }
   if (state.transactionType === 'transfer') {
-    if (state.transferSource === state.transferTarget) {
+    if (!state.transferSource) errors.transferSource = 'Choose the source category.'
+    if (!state.transferTarget) errors.transferTarget = 'Choose the target category.'
+    if (state.transferSource && state.transferTarget && state.transferSource === state.transferTarget) {
       if (!state.accountId) errors.accountId = 'Choose the account sending the money.'
       if (!state.counterAccountId) errors.counterAccountId = 'Choose the account receiving the money.'
       if (state.accountId && state.counterAccountId && state.accountId === state.counterAccountId) {
         errors.counterAccountId = 'Choose two different accounts.'
       }
-    } else {
+    } else if (state.transferSource && state.transferTarget) {
+      if (!state.accountId) errors.accountId = 'Choose the account sending the money.'
+      if (!state.counterAccountId) errors.counterAccountId = 'Choose the account receiving the money.'
+    }
+    if (!state.transferSource || !state.transferTarget) {
       if (!state.accountId) errors.accountId = 'Choose the account sending the money.'
       if (!state.counterAccountId) errors.counterAccountId = 'Choose the account receiving the money.'
     }

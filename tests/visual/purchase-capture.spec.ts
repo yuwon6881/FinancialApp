@@ -2,9 +2,9 @@ import { expect, test, type Page } from '@playwright/test'
 import { establishSession, mockApi } from './visualTestSupport'
 
 /** Native bridge simulation exercises the actual shipped React UI; it is not handset proof. */
-async function nativeCapture(page: Page, tapped: boolean, access = true) {
-  await page.addInitScript(({ tapped, access }) => {
-    const candidate: Record<string, unknown> = { id: 'capture-one', transactionId: '11111111-1111-4111-8111-111111111111', sourcePackage: 'bank.example', sourceLabel: 'Example bank', capturedAt: Date.now(), excerpt: 'Payment successful at COFFEE HOUSE', description: 'COFFEE HOUSE', possibleDuplicate: false }
+async function nativeCapture(page: Page, tapped: boolean, access = true, transactionType: 'outflow' | 'transfer' = 'outflow') {
+  await page.addInitScript(({ tapped, access, transactionType }) => {
+    const candidate: Record<string, unknown> = { id: 'capture-one', transactionId: '11111111-1111-4111-8111-111111111111', sourcePackage: 'bank.example', sourceLabel: 'Example bank', capturedAt: Date.now(), excerpt: 'Payment successful at COFFEE HOUSE', description: 'COFFEE HOUSE', transactionType, possibleDuplicate: false }
     let tapId: string | undefined = tapped ? 'capture-one' : undefined
     let completed = false
     let enabled = true
@@ -50,12 +50,12 @@ async function nativeCapture(page: Page, tapped: boolean, access = true) {
         return {}
       },
     }
-  }, { tapped, access })
+  }, { tapped, access, transactionType })
 }
 
-async function openNative(page: Page, tapped = false, tab = 'ledger', access = true) {
+async function openNative(page: Page, tapped = false, tab = 'ledger', access = true, transactionType: 'outflow' | 'transfer' = 'outflow') {
   await establishSession(page)
-  await nativeCapture(page, tapped, access)
+  await nativeCapture(page, tapped, access, transactionType)
   await mockApi(page)
   await page.goto(`/${tab}`, { waitUntil: 'domcontentloaded' })
   await expect(page.getByRole('heading', { name: 'Unlock FinancialApp' })).toBeVisible()
@@ -87,7 +87,7 @@ test('permission setup is required and does not launch biometrics over Android s
   await expect(card.getByText('Not listening — Android notification access is required')).toBeVisible()
   await expect(card.getByRole('switch')).toBeChecked()
   await card.screenshot({ path: test.info().outputPath('purchase-detection-settings.png') })
-  await card.getByRole('button', { name: 'Manage purchase detection' }).click()
+  await card.getByRole('button', { name: 'Manage transaction detection' }).click()
   await page.getByRole('button', { name: 'Grant notification access', exact: true }).click()
   await page.getByRole('button', { name: 'Agree and open settings', exact: true }).click()
   await expect.poll(() => page.evaluate(() => (window as unknown as { authRequests: number }).authRequests)).toBe(1)
@@ -97,10 +97,18 @@ test('permission setup is required and does not launch biometrics over Android s
   await expect.poll(() => page.evaluate(() => (window as unknown as { authRequests: number }).authRequests)).toBe(2)
 })
 
+test('transfer notification opens as an outflow purchase draft', async ({ page }) => {
+  await openNative(page, true, 'ledger', true, 'transfer')
+  const form = page.getByRole('dialog').filter({ has: page.getByText('Detected purchase · Example bank') })
+  await expect(form).toBeVisible()
+  await expect(form.getByRole('radio', { name: /Outflow/ })).toBeChecked()
+  await expect(form.getByRole('combobox', { name: 'Ledger category', exact: true })).toHaveText('Select a ledger category')
+})
+
 test('Android settings select notification source apps with usable controls', async ({ page }) => {
   await openNative(page, false, 'settings')
-  await expect(page.getByRole('switch', { name: 'Detect purchases on this device' })).toBeChecked()
-  await page.getByRole('button', { name: 'Manage purchase detection' }).click()
+  await expect(page.getByRole('switch', { name: 'Detect transactions on this device' })).toBeChecked()
+  await page.getByRole('button', { name: 'Manage transaction detection' }).click()
   await page.getByRole('button', { name: 'Choose apps', exact: true }).click()
   const selection = page.getByRole('dialog', { name: 'Choose notification sources' })
   await expect(selection).toBeVisible()

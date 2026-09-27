@@ -13,7 +13,7 @@ export async function saveCapturedPurchase(
 ): Promise<void> {
   const approved = await deps.prepare(transaction)
   if (approved.completed) return
-  if (!approved.prepared) throw new Error('Purchase approval could not be stored. Try again.')
+  if (!approved.prepared) throw new Error('Transaction approval could not be stored. Try again.')
   deps.enqueue(candidate.transactionId, approved.prepared)
   await deps.complete()
 }

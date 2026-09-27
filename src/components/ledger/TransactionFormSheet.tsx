@@ -185,7 +185,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
     >
       <form noValidate onSubmit={form.handleSubmit} className="space-y-5">
         {form.state.captureId && !props.hideSensitive && <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3 text-sm">
-          <p className="font-medium">Detected purchase · {form.state.captureSource}</p>
+          <p className="font-medium">Detected {form.state.transactionType === 'transfer' ? 'transfer' : 'purchase'} · {form.state.captureSource}</p>
           <p className="text-muted-foreground">Review the available details and complete the empty fields. AI suggestions are choices; nothing is saved automatically.</p>
           {form.state.captureNotice && <p className="text-muted-foreground">{form.state.captureNotice}</p>}
           {form.state.captureExcerpt && <details><summary className="min-h-11 cursor-pointer py-3">View source alert</summary><p className="whitespace-pre-wrap break-words text-muted-foreground">{form.state.captureExcerpt}</p></details>}
@@ -227,7 +227,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           <TransactionTypeFields
             txType={form.state.ledgerCategory === 'AccountMove' ? 'transfer' : form.state.transactionType}
             onChangeTxType={(type: TransactionType) => form.changeTransactionType(type)}
-            disabled={form.state.mode === 'edit' || Boolean(form.state.captureId)}
+            disabled={form.state.mode === 'edit'}
           />
 
           <TransactionFormFields

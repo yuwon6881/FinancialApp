@@ -111,27 +111,31 @@ export const AccountTransferFields: React.FC<AccountTransferFieldsProps> = ({
         </Button>
       </div>
 
-      <FormField label="Source category (from)">
-        <CustomSelect
-          ariaLabel="Transfer source category"
-          value={state.transferSource}
-          onChange={val => onSetField('transferSource', val as TransferBucket)}
-          options={[
-            { value: 'Essentials', label: 'Essentials' },
-            { value: 'Growth', label: 'Growth' },
-            { value: 'Stability', label: 'Stability' },
-            { value: 'Rewards', label: 'Rewards' }
-          ]}
-          className="w-full"
-        />
-      </FormField>
+        <FormField label="Source category (from)" required error={errors.transferSource}>
+          <CustomSelect
+            ariaLabel="Transfer source category"
+            value={state.transferSource}
+            placeholder="Choose a source category"
+            onChange={val => onSetField('transferSource', val as TransferBucket | '')}
+            options={[
+              { value: '', label: 'Choose a source category' },
+              { value: 'Essentials', label: 'Essentials' },
+              { value: 'Growth', label: 'Growth' },
+              { value: 'Stability', label: 'Stability' },
+              { value: 'Rewards', label: 'Rewards' }
+            ]}
+            className="w-full"
+          />
+        </FormField>
 
       <FormField label="Target category (to)" required error={errors.transferTarget}>
         <CustomSelect
           ariaLabel="Transfer target category"
           value={state.transferTarget}
-          onChange={val => onSetField('transferTarget', val as TransferBucket)}
+          placeholder="Choose a target category"
+          onChange={val => onSetField('transferTarget', val as TransferBucket | '')}
           options={[
+            { value: '', label: 'Choose a target category' },
             { value: 'Essentials', label: 'Essentials' },
             { value: 'Growth', label: 'Growth' },
             { value: 'Stability', label: 'Stability' },

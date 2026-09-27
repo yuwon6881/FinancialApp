@@ -12,6 +12,7 @@ export interface PurchaseCapture {
   currency?: string
   description?: string
   date?: string
+  transactionType?: 'outflow' | 'transfer'
   possibleDuplicate: boolean
   edits?: Record<string, unknown>
   prepared?: Omit<Transaction, 'id'>

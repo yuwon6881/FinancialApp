@@ -5,7 +5,9 @@ import type { useTransactionSuggestions } from './useTransactionSuggestions'
 
 export function capturedPurchaseEdits(state: TransactionFormState): Record<string, unknown> {
   return { description: state.description, amount: state.amount, date: state.date,
-    category: state.category, ledgerCategory: state.ledgerCategory, accountId: state.accountId }
+    category: state.category, ledgerCategory: state.ledgerCategory, transactionType: state.transactionType,
+    transferSource: state.transferSource, transferTarget: state.transferTarget, accountId: state.accountId,
+    counterAccountId: state.counterAccountId }
 }
 
 /** Suggestions run once for a captured description and never apply themselves. */

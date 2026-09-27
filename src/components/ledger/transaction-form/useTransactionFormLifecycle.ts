@@ -236,6 +236,12 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
         dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: autoOpenPrefill.ledgerCategory ?? '' })
         dispatch({ type: 'SET_FIELD', field: 'amount', value: autoOpenPrefill.amount ?? '' })
         dispatch({ type: 'SET_FIELD', field: 'date', value: autoOpenPrefill.date ?? '' })
+        if (autoOpenPrefill.transferSource !== undefined) {
+          dispatch({ type: 'SET_FIELD', field: 'transferSource', value: autoOpenPrefill.transferSource })
+        }
+        if (autoOpenPrefill.transferTarget !== undefined) {
+          dispatch({ type: 'SET_FIELD', field: 'transferTarget', value: autoOpenPrefill.transferTarget })
+        }
       }
       if (autoOpenPrefill.category) {
         dispatch({ type: 'SET_FIELD', field: 'category', value: autoOpenPrefill.category })
@@ -245,6 +251,9 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
       }
       if (autoOpenPrefill.accountId) {
         dispatch({ type: 'SET_FIELD', field: 'accountId', value: autoOpenPrefill.accountId })
+      }
+      if (autoOpenPrefill.counterAccountId !== undefined) {
+        dispatch({ type: 'SET_FIELD', field: 'counterAccountId', value: autoOpenPrefill.counterAccountId })
       }
       if (autoOpenPrefill.description) {
         dispatch({ type: 'SET_FIELD', field: 'description', value: autoOpenPrefill.description })

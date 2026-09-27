@@ -144,12 +144,11 @@ export function TransactionFormFields({
     : (['Essentials', 'Growth', 'Stability', 'Rewards'].includes(state.ledgerCategory) ? state.ledgerCategory : null)
 
   const accountOptions = React.useMemo(() => {
-    if (!accountBucket) return []
     const bucketAccounts = accounts.filter(account =>
       account.bucket === accountBucket && (!account.isArchived || account.id === state.accountId),
     )
     return [
-      { value: '', label: `Choose ${accountBucket} account`, disabled: false },
+      { value: '', label: accountBucket ? 'Choose ' + accountBucket + ' account' : 'Choose source category first', disabled: false },
       ...bucketAccounts.map(account => ({
         value: account.id,
         label: `${account.name}${account.isArchived ? ' (Closed)' : ''}`,
@@ -163,7 +162,7 @@ export function TransactionFormFields({
       account.bucket === state.transferTarget && (!account.isArchived || account.id === state.counterAccountId),
     )
     return [
-      { value: '', label: `Choose ${state.transferTarget} account`, disabled: false },
+      { value: '', label: state.transferTarget ? 'Choose ' + state.transferTarget + ' account' : 'Choose target category first', disabled: false },
       ...bucketAccounts.map(account => ({
         value: account.id,
         label: `${account.name}${account.isArchived ? ' (Closed)' : ''}`,

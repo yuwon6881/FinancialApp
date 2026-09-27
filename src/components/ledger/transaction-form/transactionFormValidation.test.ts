@@ -17,6 +17,21 @@ describe('validateTransactionForm', () => {
     expect(validateTransactionForm(validForm)).toEqual({})
   })
 
+  it('requires explicit source and target categories for a detected transfer draft', () => {
+    expect(validateTransactionForm({
+      ...validForm,
+      transferSource: '',
+      transferTarget: '',
+      accountId: '',
+      counterAccountId: '',
+    })).toMatchObject({
+      transferSource: 'Choose the source category.',
+      transferTarget: 'Choose the target category.',
+      accountId: 'Choose the account sending the money.',
+      counterAccountId: 'Choose the account receiving the money.',
+    })
+  })
+
   it('requires distinct accounts for a same-bucket transfer', () => {
     expect(validateTransactionForm({ ...validForm, transferTarget: 'Rewards', counterAccountId: 'acc-rewards-1' })).toMatchObject({
       counterAccountId: 'Choose two different accounts.',

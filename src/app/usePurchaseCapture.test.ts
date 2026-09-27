@@ -51,4 +51,32 @@ describe('purchase capture routing', () => {
     expect(capturePrefill({ ...candidate, currency: undefined }, 'MYR').amount).toBeUndefined()
     expect(capturePrefill({ ...candidate, edits: { amount: '9.50' } }, 'USD').amount).toBe('9.50')
   })
+  it('opens a transfer alert as an outflow purchase draft', () => {
+    const prefill = capturePrefill({ ...candidate, transactionType: 'transfer' }, 'MYR')
+    expect(prefill.transactionType).toBe('outflow')
+    expect(prefill.transferSource).toBeUndefined()
+    expect(prefill.transferTarget).toBeUndefined()
+    expect(prefill.accountId).toBeUndefined()
+    expect(prefill.counterAccountId).toBeUndefined()
+  })
+  it('preserves a reviewer-chosen transfer type and route', () => {
+    const prefill = capturePrefill({
+      ...candidate,
+      transactionType: 'transfer',
+      edits: {
+        transactionType: 'transfer',
+        transferSource: 'Rewards',
+        transferTarget: 'Growth',
+        accountId: 'source',
+        counterAccountId: 'destination',
+      },
+    }, 'MYR')
+    expect(prefill).toMatchObject({
+      transactionType: 'transfer',
+      transferSource: 'Rewards',
+      transferTarget: 'Growth',
+      accountId: 'source',
+      counterAccountId: 'destination',
+    })
+  })
 })

@@ -55,8 +55,8 @@ public class PurchaseNotificationListener extends NotificationListenerService {
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
         NotificationManager manager = context.getSystemService(NotificationManager.class);
         if (Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel channel = new NotificationChannel(CHANNEL, "Detected purchases", NotificationManager.IMPORTANCE_HIGH);
-            channel.setDescription("Purchases waiting for your review in FinancialApp");
+            NotificationChannel channel = new NotificationChannel(CHANNEL, "Detected transactions", NotificationManager.IMPORTANCE_HIGH);
+            channel.setDescription("Transactions waiting for your review in FinancialApp");
             channel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
             manager.createNotificationChannel(channel);
         }

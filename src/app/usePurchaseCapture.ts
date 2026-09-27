@@ -21,6 +21,7 @@ export function capturePrefill(candidate: PurchaseCapture, currency: string): Le
     description: candidate.description,
     amount: matchingCurrency ? candidate.amount : undefined,
     date: candidate.date,
+    transactionType: candidate.transactionType === 'transfer' ? 'outflow' : candidate.transactionType ?? 'outflow',
     ...candidate.edits,
     captureId: candidate.id,
     captureSource: candidate.sourceLabel,
@@ -48,13 +49,13 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
   const save = useCallback(async (id: string, transaction: Omit<Transaction, 'id'>) => {
     const latest = current.current
     if (!latest.owner || !latest.eligible || latest.hidden) throw new Error('Unlock and reveal financial data before saving.')
-    if (inFlight.current.has(id)) throw new Error('This purchase is already being saved.')
+    if (inFlight.current.has(id)) throw new Error('This transaction is already being saved.')
     const owner = latest.owner
     inFlight.current.add(id)
     try {
       const snapshot = await PurchaseCapturePlugin.state({ owner })
       const candidate = snapshot.candidates.find(item => item.id === id)
-      if (!candidate) throw new Error('This purchase has already been saved or discarded.')
+      if (!candidate) throw new Error('This transaction has already been saved or discarded.')
       await saveCapturedPurchase(candidate, transaction, {
         prepare: data => PurchaseCapturePlugin.update({ owner, id, action: 'prepare', data: { ...data, postedAt: data.postedAt ?? new Date().toISOString() } }),
         enqueue: (transactionId, data) => {
@@ -97,7 +98,7 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
         await PurchaseCapturePlugin.consumeTap({ owner })
       }
     } catch {
-      if (current.current.owner === owner) setError('Transaction detection could not refresh. Try again; stored purchases have been kept.')
+      if (current.current.owner === owner) setError('Transaction detection could not refresh. Try again; stored transactions have been kept.')
     } finally {
       refreshing.current = false
       if (refreshRequested.current) {

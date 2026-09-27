@@ -16,6 +16,10 @@ import {
 export interface LedgerAddPrefill {
   amount?: string
   date?: string
+  transactionType?: 'inflow' | 'outflow' | 'transfer'
+  transferSource?: 'Essentials' | 'Growth' | 'Stability' | 'Rewards' | ''
+  transferTarget?: 'Essentials' | 'Growth' | 'Stability' | 'Rewards' | ''
+  counterAccountId?: string | null
   captureId?: string
   captureSource?: string
   captureNotice?: string

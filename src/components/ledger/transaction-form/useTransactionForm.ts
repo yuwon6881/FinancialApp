@@ -305,14 +305,14 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
 
   // Transfer text generator side effects
   useEffect(() => {
-    if (state.transactionType === 'transfer' && !state.editingId) {
+    if (state.transactionType === 'transfer' && !state.editingId && !state.captureId) {
       if (state.transferSource === state.transferTarget) {
         dispatch({ type: 'SET_FIELD', field: 'description', value: `Transfer within ${state.transferSource}` })
       } else {
         dispatch({ type: 'SET_FIELD', field: 'description', value: `Transfer from ${state.transferSource} to ${state.transferTarget}` })
       }
     }
-  }, [state.transactionType, state.transferSource, state.transferTarget, state.editingId])
+  }, [state.transactionType, state.transferSource, state.transferTarget, state.editingId, state.captureId])
 
   useTransactionFormAccountEffects(state, accounts, dispatch)
 

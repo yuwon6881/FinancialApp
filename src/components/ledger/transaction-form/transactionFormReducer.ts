@@ -20,8 +20,8 @@ export interface TransactionFormState {
   transactionType: TransactionType
   category: string
   ledgerCategory: SelectableLedgerCategory
-  transferSource: TransferBucket
-  transferTarget: TransferBucket
+  transferSource: TransferBucket | ''
+  transferTarget: TransferBucket | ''
   /** The selected account for the bucket leg; empty/null means the user must choose one. */
   accountId: string | null
   /** Destination account for an in-bucket AccountMove row. */
@@ -51,8 +51,8 @@ export interface TransactionFormState {
 
 export type TransactionFormAction =
   | { type: 'OPEN_CREATE'; payload?: { defaultCategory: string; todayDate: string } }
-  | { type: 'OPEN_EDIT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; accountId?: string | null; counterAccountId?: string | null; splitAccountIds?: Record<string, string> | null; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
-  | { type: 'OPEN_DRAFT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; accountId?: string | null; counterAccountId?: string | null; splitAccountIds?: Record<string, string> | null; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
+  | { type: 'OPEN_EDIT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket | ''; transferTarget?: TransferBucket | ''; accountId?: string | null; counterAccountId?: string | null; splitAccountIds?: Record<string, string> | null; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
+  | { type: 'OPEN_DRAFT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket | ''; transferTarget?: TransferBucket | ''; accountId?: string | null; counterAccountId?: string | null; splitAccountIds?: Record<string, string> | null; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
   | { type: 'SET_FIELD'; field: keyof TransactionFormState; value: any }
   | { type: 'SET_SPLIT_ACCOUNT'; bucket: TransferBucket; accountId: string }
   | { type: 'SWAP_TRANSFER' }

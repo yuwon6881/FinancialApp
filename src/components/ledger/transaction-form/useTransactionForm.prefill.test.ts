@@ -64,6 +64,32 @@ describe('applying a computed share to the transaction sheet', () => {
     act(() => result.current.dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: 'Essentials' }))
     expect(result.current.state.accountId).toBeFalsy()
   })
+
+  it('opens a captured transfer with empty categories and requires the reviewer to choose both accounts', async () => {
+    const { result } = renderHook(() => useTransactionForm(createOptions({
+      autoOpenTxType: 'transfer',
+      autoOpenPrefill: {
+        captureId: 'transfer-capture',
+        transactionType: 'transfer',
+        transferSource: '',
+        transferTarget: '',
+        description: 'Transfer to savings',
+      },
+      accounts: [
+        { id: 'essentials', name: 'Main', bucket: 'Essentials', isArchived: false } as any,
+        { id: 'rewards', name: 'Savings', bucket: 'Rewards', isArchived: false } as any,
+      ],
+    })))
+
+    await act(async () => result.current.openFresh())
+
+    expect(result.current.state.captureId).toBe('transfer-capture')
+    expect(result.current.state.transactionType).toBe('transfer')
+    expect(result.current.state.transferSource).toBe('')
+    expect(result.current.state.transferTarget).toBe('')
+    expect(result.current.state.accountId).toBeFalsy()
+    expect(result.current.state.counterAccountId).toBeFalsy()
+  })
   it('edits an open edit in place instead of reopening a blank create', async () => {
     const { result } = renderHook(() => useTransactionForm(createOptions()))
 

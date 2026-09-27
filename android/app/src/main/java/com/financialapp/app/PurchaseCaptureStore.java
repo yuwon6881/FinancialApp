@@ -106,7 +106,8 @@ final class PurchaseCaptureStore {
             if (pending >= 200 || retained.length() >= 2000) return null;
             JSONObject candidate = new JSONObject().put("id", UUID.randomUUID().toString()).put("transactionId", UUID.randomUUID().toString())
                 .put("owner", owner).put("sourcePackage", source).put("sourceLabel", label).put("eventKey", eventKey)
-                .put("capturedAt", postedAt).put("excerpt", excerpt).put("status", "pending").put("possibleDuplicate", possibleDuplicate);
+                .put("capturedAt", postedAt).put("excerpt", excerpt).put("status", "pending").put("possibleDuplicate", possibleDuplicate)
+                .put("transactionType", parsed.transactionType);
             if (parsed.amount != null) candidate.put("amount", parsed.amount);
             if (parsed.currency != null) candidate.put("currency", parsed.currency);
             if (parsed.description != null) candidate.put("description", parsed.description);
@@ -126,7 +127,7 @@ final class PurchaseCaptureStore {
                 else if (action.equals("prepare")) {
                     if (!value.has("prepared")) value.put("prepared", data);
                 } else if (action.equals("complete") || action.equals("discard")) {
-                    if (action.equals("discard") && value.has("prepared")) throw new IllegalStateException("This purchase has already been approved");
+                    if (action.equals("discard") && value.has("prepared")) throw new IllegalStateException("This transaction has already been approved");
                     JSONObject tombstone = new JSONObject().put("id", id).put("eventKey", value.getString("eventKey"))
                         .put("status", "completed").put("completedAt", System.currentTimeMillis());
                     candidates.put(i, tombstone);
