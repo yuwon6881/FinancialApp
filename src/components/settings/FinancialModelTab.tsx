@@ -16,6 +16,7 @@ import { CurrencySelect } from '../ui/CurrencySelect'
 import { ToggleButton } from '../ui/ToggleButton'
 import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { NotificationsCard } from './NotificationsCard'
+import { PurchaseCapturePanelSlot } from '../../app/PurchaseCaptureBoundary'
 import type { PushBusyAction } from '../../app/usePushNotifications'
 import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
 import { FormField } from '../ui/FormField'
@@ -298,6 +299,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
         </div>
 
         <div>
+          <PurchaseCapturePanelSlot />
           <NotificationsCard
             pushSupported={pushSupported !== false}
             pushLoading={pushLoading || false}

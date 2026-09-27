@@ -1,6 +1,10 @@
 # Android transaction detection
 
-This feature is optional and local to a FinancialApp account on an Android installation. Enable it in Settings → Transaction detection, choose banking/wallet apps, and explicitly grant Android notification access. Review alerts also require FinancialApp notification permission. Android may require **Allow restricted settings** in the app's Android App info menu for sideloaded APKs before notification access can be granted.
+This feature is optional and local to a FinancialApp account on an Android installation. Enable Purchase detection in Settings → Plan & Preferences, then open Manage purchase detection. Source apps and Android notification access are required; the status stays Not listening until both are ready. Review alerts also require FinancialApp notification permission. Android may require **Allow restricted settings** in the app's Android App info menu for sideloaded APKs before notification access can be granted.
+
+Play Protect installation blocking is separate from notification access setup. In some markets, Google blocks internet-sideloaded apps declaring notification-listener access. A different signing key or a release build does not guarantee removal of that block. Use an appropriate Google Play testing/distribution channel, or seek a classification appeal when warranted by the exact warning. Keep Play Protect enabled; this feature does not bypass it. See [Google's developer guidance](https://developers.google.com/android/play-protect/warning-dev-guidance).
+
+App backgrounding protects the native task snapshot and schedules the app-access gate for return to FinancialApp. It does not mount the biometric prompt while Android Settings or another app is in front. Returning from settings still requires the existing app unlock.
 
 Android grants access to the listener as a whole; the source selection is enforced by FinancialApp before notification content is inspected. The first parser recognizes conservative English purchase/payment confirmations and explicit RM/MYR/USD/EUR/GBP/SGD amounts. It does not guarantee support for every selected app or language. Ambiguous amounts, currencies, merchant names, and dates stay absent. Requests, declines, OTPs, incoming payments, refunds, and transfers are excluded.
 

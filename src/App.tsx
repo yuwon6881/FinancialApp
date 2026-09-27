@@ -5,7 +5,8 @@ import { ToastViewport } from './components/ui/ToastViewport'
 import { AlertBanner } from './components/ui/AlertBanner'
 import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
 import { hasActiveWebAuthnRequest } from './lib/webauthnRequest'
-import { shouldLockNativeAppForStateChange } from './lib/nativeAppLifecyclePolicy'
+import { NativeAppResumeLock } from './lib/nativeAppLifecyclePolicy'
+import { setNativeFinancialContentHidden } from './lib/native/privacyScreen'
 import { getStatus } from './lib/errors'
 const AiAssistantPanel = lazy(() => import('./components/AiAssistantPanel').then(m => ({ default: m.AiAssistantPanel })))
 import { AppProvider } from './contexts/AppProvider'
@@ -200,14 +201,17 @@ function App() {
     setShowSearch: dialogs.setShowSearch,
   })
 
+  const nativeResumeLock = useRef(new NativeAppResumeLock())
   const handleNativeAppStateChange = useCallback(async (isActive: boolean) => {
-    if (isActive) {
-      await hideNativeSplashAfterPaint()
+    const lock = nativeResumeLock.current.onStateChange(isActive, hasActiveWebAuthnRequest())
+    if (!isActive) {
+      await setNativeFinancialContentHidden(true)
       return
     }
-    if (!shouldLockNativeAppForStateChange(isActive, hasActiveWebAuthnRequest())) return
-    await session.lockNativeAppGate()
-  }, [session.lockNativeAppGate])
+    if (lock) await session.lockNativeAppGate()
+    else await setNativeFinancialContentHidden(Boolean(session.token) && (session.isNativeAppGateLocked || session.isLocked || prefs.hideSensitive))
+    await hideNativeSplashAfterPaint()
+  }, [session.lockNativeAppGate, session.token, session.isNativeAppGateLocked, session.isLocked, prefs.hideSensitive])
   useNativeAppLifecycle(handleNativeAppStateChange)
 
   const [isAiOpen, setIsAiOpen] = useState(false)
@@ -450,7 +454,7 @@ function App() {
           </AlertBanner>
         )}
 
-        <PurchaseCapturePanelSlot />
+        {prefs.activeTab === 'ledger' && <PurchaseCapturePanelSlot />}
 
         <AuthenticatedView
           prefs={prefs}
