@@ -8,7 +8,7 @@ export type SelectableLedgerCategory = 'Income' | TransferBucket | 'AccountMove'
 export interface TransactionFormState {
   captureId?: string | null
   captureSource?: string
-  captureNotice?: string
+  captureNotices?: string[]
   captureExcerpt?: string
   showAddForm: boolean
   mode: 'create' | 'edit' | 'draft'
@@ -106,7 +106,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         editingId: null,
         captureId: null,
         captureSource: undefined,
-        captureNotice: undefined,
+        captureNotices: undefined,
         captureExcerpt: undefined,
         originalDate: null,
         description: '',
@@ -140,7 +140,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         editingId: action.payload.id,
         captureId: null,
         captureSource: undefined,
-        captureNotice: undefined,
+        captureNotices: undefined,
         captureExcerpt: undefined,
         originalDate: action.payload.date,
         description: action.payload.description,

@@ -230,7 +230,7 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
       if (autoOpenPrefill.captureId) {
         dispatch({ type: 'SET_FIELD', field: 'captureId', value: autoOpenPrefill.captureId })
         dispatch({ type: 'SET_FIELD', field: 'captureSource', value: autoOpenPrefill.captureSource })
-        dispatch({ type: 'SET_FIELD', field: 'captureNotice', value: autoOpenPrefill.captureNotice })
+        dispatch({ type: 'SET_FIELD', field: 'captureNotices', value: autoOpenPrefill.captureNotices })
         dispatch({ type: 'SET_FIELD', field: 'captureExcerpt', value: autoOpenPrefill.captureExcerpt })
         dispatch({ type: 'SET_FIELD', field: 'category', value: autoOpenPrefill.category ?? '' })
         dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: autoOpenPrefill.ledgerCategory ?? '' })

@@ -53,7 +53,7 @@ public class PurchaseNotificationParserTest {
         result = PurchaseNotificationParser.parse("Purchase successful", "Paid $12.00 at SHOP");
         assertNull(result.currency);
         assertNull(result.amount);
-        result = PurchaseNotificationParser.parse("Payment successful", "Paid RM 20.00; balance RM 500.00");
+        result = PurchaseNotificationParser.parse("Payment successful", "Paid RM 20.00 to SHOP A and RM 30.00 to SHOP B");
         assertNull(result.amount);
     }
     @Test public void doesNotInventDatesOrReadMalformedAmounts() {
@@ -61,5 +61,32 @@ public class PurchaseNotificationParserTest {
         assertNull(PurchaseNotificationParser.parse("Payment successful", "Paid RM 12,34 at SHOP").amount);
         assertNull(PurchaseNotificationParser.parse("Payment successful", "Paid RM 12.50 on 2026-02-30").date);
         assertNull(PurchaseNotificationParser.parse("Payment successful", "Paid RM 12.50 at 10:30 AM").description);
+    }
+    @Test public void acceptsQrPaymentsAndCommonConfirmationWording() {
+        PurchaseNotificationParser.Result result = PurchaseNotificationParser.parse("DuitNow QR", "You have successfully paid RM5.00 to KEDAI MAJU via DuitNow QR code");
+        assertNotNull(result);
+        assertEquals("5.00", result.amount);
+        assertEquals("KEDAI MAJU", result.description);
+
+        result = PurchaseNotificationParser.parse("Bank", "Payment of RM 1,250.00 to ACME SDN BHD is successful.");
+        assertNotNull(result);
+        assertEquals("1250.00", result.amount);
+        assertEquals("ACME SDN BHD", result.description);
+
+        result = PurchaseNotificationParser.parse("Card alert", "Your card was charged RM 18.90 at GRAB FOOD, ref 1234");
+        assertNotNull(result);
+        assertEquals("GRAB FOOD", result.description);
+    }
+    @Test public void ignoresBalanceFiguresWhenReadingTheAmount() {
+        PurchaseNotificationParser.Result result = PurchaseNotificationParser.parse("Payment successful", "Paid RM 20.00 at SHOP. Available balance: RM 500.00");
+        assertNotNull(result);
+        assertEquals("20.00", result.amount);
+        assertEquals("SHOP", result.description);
+        assertEquals("20.00", PurchaseNotificationParser.parse("Payment successful", "Paid RM 20.00; balance RM 500.00").amount);
+    }
+    @Test public void stillExcludesVerificationCodes() {
+        for (String text : new String[] {"Your TAC for payment RM 20 is 123456", "Security code for purchase RM 20", "Your code is 1234 for payment RM 20", "Payment successful, one-time PIN 1234"}) {
+            assertNull(text, PurchaseNotificationParser.parse("Bank", text));
+        }
     }
 }

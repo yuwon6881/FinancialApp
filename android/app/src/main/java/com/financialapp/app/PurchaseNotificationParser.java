@@ -9,8 +9,15 @@ import java.util.regex.Pattern;
 
 /** Conservative purchase and completed outgoing-transfer recognition. */
 final class PurchaseNotificationParser {
-    private static final Pattern EXCLUDED = Pattern.compile("\\b(otp|verification|verify|code|declined|failed|failure|unsuccessful|pending|requested|request|approve|authori[sz]ation|refund|reversed|reversal|received|credited|incoming|inbound|reminder|due|scheduled|initiated|processing|cancelled|canceled)\\b", Pattern.CASE_INSENSITIVE);
-    private static final Pattern PURCHASE = Pattern.compile("\\b(payment|purchase|transaction)\\s+(?:was\\s+|is\\s+)?(?:successful|completed|approved)|\\b(?:paid|spent|purchased)\\b|\\b(?:successful|completed)\\s+(?:payment|purchase)", Pattern.CASE_INSENSITIVE);
+    // "code" alone is not excluded: DuitNow/QR payment confirmations routinely say "QR code".
+    private static final Pattern EXCLUDED = Pattern.compile(
+        "\\b(otp|tac|one[- ]time|verification|verify|(?:security|secure|auth(?:entication)?|confirmation|activation|login)\\s+code|code\\s+(?:is|:)|declined|failed|failure|unsuccessful|pending|requested|request|approve|authori[sz]ation|refund|refunded|reversed|reversal|received|credited|incoming|inbound|reminder|due|scheduled|initiated|processing|cancelled|canceled)\\b",
+        Pattern.CASE_INSENSITIVE);
+    private static final Pattern PURCHASE = Pattern.compile(
+        "\\b(payment|purchase|transaction)\\s+(?:was\\s+|is\\s+|has\\s+been\\s+)?(?:successful|completed|approved)"
+            + "|\\b(?:payment|purchase|transaction)\\b[^\\n]{0,80}?\\b(?:is|was|has\\s+been)\\s+(?:successful|completed|approved)\\b"
+            + "|\\b(?:paid|spent|purchased|charged|debited)\\b|\\b(?:successful|completed)\\s+(?:payment|purchase)",
+        Pattern.CASE_INSENSITIVE);
     private static final Pattern TRANSFER = Pattern.compile(
         "\\btransfer\\b.*\\b(?:successful|successfully|completed|processed|sent|made|transferred)\\b"
             + "|\\b(?:successful|successfully|completed|processed)\\b.*\\btransfer\\b"
@@ -21,7 +28,11 @@ final class PurchaseNotificationParser {
             + "|\\bsent\\s+(?:RM|MYR|USD|EUR|GBP|SGD)\\b",
         Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     private static final Pattern MONEY = Pattern.compile("\\b(RM|MYR|USD|EUR|GBP|SGD)\\s*((?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\\.[0-9]{1,2})?)(?![0-9.,])", Pattern.CASE_INSENSITIVE);
-    private static final Pattern MERCHANT = Pattern.compile("\\b(?:at|to)\\s+([^\\n;]+?)(?=\\s+(?:on|using|with|via)\\b|[.!]?$)", Pattern.CASE_INSENSITIVE);
+    /** A figure labelled as a balance or limit is context, not the amount that moved. */
+    private static final Pattern BALANCE_CONTEXT = Pattern.compile("\\b(?:bal(?:ance)?|available|avail|limit|remaining)\\b[^0-9]{0,24}$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern MERCHANT = Pattern.compile(
+        "\\b(?:at|to)\\s+([^\\n;]+?)(?=\\s+(?:on|using|with|via|for|from|is|was|has|successful|successfully|ref|reference)\\b|[.!,](?:\\s|$)|[.!]?$)",
+        Pattern.CASE_INSENSITIVE);
     private static final Pattern DATE = Pattern.compile("\\b(20[0-9]{2}-[0-9]{2}-[0-9]{2})\\b");
     private static final Pattern MERCHANT_LETTER = Pattern.compile("\\p{L}");
     private static final Pattern TIME = Pattern.compile("^\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)?(?:\\s|$)", Pattern.CASE_INSENSITIVE);
@@ -40,18 +51,7 @@ final class PurchaseNotificationParser {
         if (EXCLUDED.matcher(text).find() || (!transfer && !PURCHASE.matcher(text).find())) return null;
         Result result = new Result();
         result.transactionType = "outflow";
-        Matcher money = MONEY.matcher(text);
-        if (money.find()) {
-            String currency = money.group(1).toUpperCase(Locale.ROOT);
-            String amount = money.group(2).replace(",", "");
-            if (!money.find()) {
-                BigDecimal value = new BigDecimal(amount);
-                if (value.signum() > 0) {
-                    result.amount = value.toPlainString();
-                    result.currency = currency.equals("RM") ? "MYR" : currency;
-                }
-            }
-        }
+        readAmount(text, result);
         Matcher merchant = MERCHANT.matcher(body);
         if (merchant.find()) {
             String description = merchant.group(1).trim();
@@ -69,5 +69,23 @@ final class PurchaseNotificationParser {
             }
         }
         return result;
+    }
+
+    /** Exactly one non-balance figure is an amount; two or more stay absent rather than guessed. */
+    private static void readAmount(String text, Result result) {
+        Matcher money = MONEY.matcher(text);
+        String currency = null, amount = null;
+        int found = 0;
+        while (money.find()) {
+            if (BALANCE_CONTEXT.matcher(text.substring(Math.max(0, money.start() - 40), money.start())).find()) continue;
+            currency = money.group(1).toUpperCase(Locale.ROOT);
+            amount = money.group(2).replace(",", "");
+            found++;
+        }
+        if (found != 1) return;
+        BigDecimal value = new BigDecimal(amount);
+        if (value.signum() <= 0) return;
+        result.amount = value.toPlainString();
+        result.currency = currency.equals("RM") ? "MYR" : currency;
     }
 }

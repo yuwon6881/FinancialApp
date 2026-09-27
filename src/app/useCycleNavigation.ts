@@ -22,7 +22,7 @@ export interface LedgerAddPrefill {
   counterAccountId?: string | null
   captureId?: string
   captureSource?: string
-  captureNotice?: string
+  captureNotices?: string[]
   captureExcerpt?: string
   category?: string
   ledgerCategory?: 'Essentials' | 'Growth' | 'Stability' | 'Rewards'

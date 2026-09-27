@@ -17,6 +17,8 @@ export interface PurchaseCapture {
   edits?: Record<string, unknown>
   prepared?: Omit<Transaction, 'id'>
   completed?: boolean
+  /** The capture no longer exists (wiped or already pruned); nothing is left to edit or discard. */
+  missing?: boolean
 }
 
 export interface CaptureState {

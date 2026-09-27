@@ -130,6 +130,9 @@ public class PurchaseCapturePlugin extends Plugin {
             getActivity().getIntent().removeExtra(PurchaseNotificationListener.EXTRA); return new JSObject(); });
     }
     @PluginMethod public void wipe(PluginCall call) {
-        store().wipe(); pendingTap = null; getContext().getSystemService(NotificationManager.class).cancelAll(); changed(); call.resolve();
+        // Withdraw only review alerts; unrelated FinancialApp notifications are not part of this store.
+        NotificationManager manager = getContext().getSystemService(NotificationManager.class);
+        for (String id : store().wipe()) manager.cancel(id, 1);
+        pendingTap = null; changed(); call.resolve();
     }
 }

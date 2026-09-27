@@ -25,6 +25,7 @@ import type { ReceiptScanResult } from '../../lib/api'
 import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
 import { Button } from '../ui/Button'
 import { ModalActions } from '../ui/ModalActions'
+import { CapturedAlertNotice } from './transaction-form/CapturedAlertNotice'
 import type { StabilityTopUpContext } from './transaction-form/useTransactionFormOptions'
 
 const ReceiptSplitSheet = lazy(() =>
@@ -174,7 +175,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
 
   const title = form.state.mode === 'edit'
     ? 'Edit Transaction'
-    : form.state.mode === 'draft' ? 'Edit Draft' : 'Add Transaction'
+    : form.state.mode === 'draft' ? 'Edit Draft' : form.state.captureId ? 'Review Detected Transaction' : 'Add Transaction'
 
   return (
     <>
@@ -184,12 +185,9 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
       title={title}
     >
       <form noValidate onSubmit={form.handleSubmit} className="space-y-5">
-        {form.state.captureId && !props.hideSensitive && <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3 text-sm">
-          <p className="font-medium">Detected {form.state.transactionType === 'transfer' ? 'transfer' : 'purchase'} · {form.state.captureSource}</p>
-          <p className="text-muted-foreground">Review the available details and complete the empty fields. AI suggestions are choices; nothing is saved automatically.</p>
-          {form.state.captureNotice && <p className="text-muted-foreground">{form.state.captureNotice}</p>}
-          {form.state.captureExcerpt && <details><summary className="min-h-11 cursor-pointer py-3">View source alert</summary><p className="whitespace-pre-wrap break-words text-muted-foreground">{form.state.captureExcerpt}</p></details>}
-        </div>}
+        {form.state.captureId && !props.hideSensitive && (
+          <CapturedAlertNotice source={form.state.captureSource} notices={form.state.captureNotices} excerpt={form.state.captureExcerpt} />
+        )}
         {securityPending && (
           <p className="rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground" role="status">
             Finishing security check… You can fill this form in, but saving is temporarily disabled.
