@@ -192,7 +192,7 @@ export function useBucketAccountSetupView({
   const canReview = canReviewBucketAccountSetup(preview, drafts.length)
 
   const prepareReview = () => {
-    if (!bucket || !preview) return
+    if (!bucket) return
     const nextErrors: Record<string, string> = {}
     const hasExternalChanges = hasBucketAccountSetupChanged(sessionSnapshotRef.current, bucketTotal, bucketAccounts)
     const names = new Set(bucketAccounts.map(account => account.name.trim().toLowerCase()))
@@ -221,7 +221,7 @@ export function useBucketAccountSetupView({
       nextErrors.form = 'The bucket or account balances changed while this form was open. Close and reopen the setup before reviewing.'
     }
     setErrors(nextErrors)
-    if (Object.keys(nextErrors).length > 0) return
+    if (Object.keys(nextErrors).length > 0 || !preview) return
     setPending({
       preview,
       drafts: drafts.map(draft => ({ ...draft, name: draft.name.trim() })),
