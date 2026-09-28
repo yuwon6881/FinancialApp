@@ -47,15 +47,31 @@ export interface UseCycleSummaryOptions {
   // Live optimistic dashboard for the *selected* cycle -- reflects unsynced edits instantly.
   optimisticDashboardData: DashboardData | null
   selectedTransactions: Transaction[]
+  onAdvanceCycle?: (month: string, year: number) => void | Promise<void>
   onMarkSummarySeen: (cycleKey: string) => void
 }
 
 export function useCycleSummary(options: UseCycleSummaryOptions) {
-  const { token, dashboardData, optimisticDashboardData, selectedTransactions, onMarkSummarySeen } = options
+  const { token, dashboardData, optimisticDashboardData, selectedTransactions, onMarkSummarySeen, onAdvanceCycle } = options
 
   const cycleDay = dashboardData?.setting.cycleDay || 28
 
-  const currentCycle = useMemo(() => getCurrentCycleYearAndMonth(cycleDay), [cycleDay])
+  const [clockTick, setClockTick] = useState(0)
+  useEffect(() => {
+    const refresh = () => setClockTick(tick => tick + 1)
+    const timer = window.setInterval(refresh, 30_000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [])
+  const currentCycle = useMemo(() => getCurrentCycleYearAndMonth(cycleDay), [cycleDay, clockTick])
+  const advancedKeyRef = useRef<string | null>(null)
+  const onAdvanceCycleRef = useRef(onAdvanceCycle)
+  useEffect(() => { onAdvanceCycleRef.current = onAdvanceCycle }, [onAdvanceCycle])
   const currentKey = cycleKeyOf(currentCycle.year, currentCycle.monthIndex)
   const justClosed = useMemo(
     () => prevCycle(currentCycle.year, currentCycle.monthIndex),
@@ -86,6 +102,15 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
       return
     }
     if (summaryMarker !== currentKey && dismissedKeyRef.current !== currentKey) {
+      // Navigate before opening: context navigation dismisses existing sheets.
+      // The summary target remains the closed cycle, independent of this selection.
+      if (advancedKeyRef.current !== currentKey) {
+        advancedKeyRef.current = currentKey
+        const month = MONTH_NAMES[currentCycle.monthIndex - 1]
+        if (dashboardData.setting.selectedMonth !== month || dashboardData.setting.selectedYear !== currentCycle.year) {
+          void onAdvanceCycleRef.current?.(month, currentCycle.year)
+        }
+      }
       setAutoOpen(true)
     }
   }, [token, hasDashboard, currentKey, summaryMarker])

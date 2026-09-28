@@ -107,7 +107,7 @@ export function TransactionDetectionPanel({ detection, tab, hidden, formOpen }: 
               onClick={() => { setShowPending(true); void detection.refresh() }}
             >
               Review
-              {!hidden && candidates.length > 0 && <Badge tone="neutral" className="ml-1.5 bg-background/70">{candidates.length}</Badge>}
+              {!hidden && candidates.length > 0 && <Badge tone="neutral" className="ml-1.5 border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground">{candidates.length}</Badge>}
             </Button>
           </div>
           {errorRow}

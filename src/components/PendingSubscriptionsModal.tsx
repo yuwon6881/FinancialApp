@@ -10,8 +10,15 @@ import { SmartAmountInput } from './ui/SmartAmountInput'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { Button } from './ui/Button'
 import { MutationButtonContent } from './ui/MutationButtonContent'
-import { AlertCircle, BellRing, CheckCircle2, CircleDollarSign } from 'lucide-react'
+import { Meter } from './ui/Meter'
+import { AlertCircle, BellRing, CalendarClock, CheckCircle2, CircleDollarSign } from 'lucide-react'
 import { financialDate } from '../lib/financialDate'
+
+// Quick fills for the common "half now, half later" cases. All stay strictly below the total,
+// so a quick fill can never be mistaken for a full settlement.
+const QUICK_FRACTIONS = [0.25, 0.5, 0.75] as const
+
+const quickFractionAmount = (due: number, fraction: number) => (Math.round(due * fraction * 100) / 100).toFixed(2)
 
 interface PendingSubscriptionsModalProps {
   isOpen: boolean
@@ -44,6 +51,7 @@ export function PendingSubscriptionsModal({
   const [partialModes, setPartialModes] = useState<Record<string, boolean>>({})
   const [pendingActions, setPendingActions] = useState<Record<string, 'confirm' | 'discard' | 'remove'>>({})
 
+  const headingRef = useRef<HTMLDivElement>(null)
   const prevAmountsRef = useRef<Record<string, number>>({})
 
   const paymentAmountStateFor = (noti: PendingNotification): PaymentAmountState => {
@@ -171,11 +179,12 @@ export function PendingSubscriptionsModal({
       isOpen={isOpen}
       onClose={onClose}
       maxWidthClassName="max-w-2xl"
+      initialFocusRef={headingRef}
       layerClassName="z-[300]"
       backdropClassName="max-sm:p-2"
       panelClassName="max-sm:gap-3 max-sm:p-4"
       title={
-        <div className="flex items-center gap-2">
+        <div ref={headingRef} tabIndex={-1} className="flex items-center gap-2 outline-none">
           <BellRing className="size-4 text-amber-500" />
           <span className="text-base font-bold text-foreground">Bills to review</span>
         </div>
@@ -200,37 +209,51 @@ export function PendingSubscriptionsModal({
         </div>
       ) : (
       <>
-        <div className="text-xs leading-relaxed text-muted-foreground">
+        <div className="text-sm leading-relaxed text-muted-foreground">
           Confirm paid bills to add them to the ledger, skip only this cycle, or remove the subscription entirely.
         </div>
 
-        <div key={isOpen ? 'open' : 'closed'} className="mt-1 max-h-[56vh] space-y-3 overflow-y-auto py-1 pr-1 sm:mt-2 sm:max-h-80">
+        <div key={isOpen ? 'open' : 'closed'} className="space-y-4">
         {pendingNotifications.map((noti) => {
           const pendingAction = pendingActions[noti.id]
           const isPending = pendingAction !== undefined
           const amountState = paymentAmountStateFor(noti)
+          const isPartial = Boolean(partialModes[noti.id])
+          const paidPercent = amountState.kind === 'partial' ? (amountState.amount / amountState.due) * 100 : 0
           return (
-          <div key={noti.id} className="flex flex-col gap-4 rounded-2xl border border-border/50 bg-muted/25 p-4 shadow-xs sm:gap-3">
-            <div className="space-y-2">
-              <div className="flex items-start justify-between gap-4">
-                <span className="min-w-0 truncate text-sm font-bold text-foreground">{noti.name}</span>
-                <span className="shrink-0 text-sm font-extrabold text-orange-500 transition-all duration-300">
+          <article
+            key={noti.id}
+            aria-label={noti.name}
+            className={`overflow-hidden rounded-2xl border bg-card shadow-xs transition-colors ${
+              isPartial ? 'border-accent-ink/35' : 'border-border/60'
+            }`}
+          >
+            <header className="flex items-start justify-between gap-3 border-b border-border/40 bg-muted/25 px-4 py-3 sm:px-5">
+              <div className="min-w-0 space-y-1.5">
+                <h3 className="break-words text-sm font-bold text-foreground sm:text-base">{noti.name}</h3>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className={`inline-block rounded border px-1.5 py-0.5 text-xs font-bold ${getCategoryBadgeClass(noti.category)}`}>
+                    {noti.category}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                    <CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />
+                    Due {noti.billingDate}
+                  </span>
+                  <span className="text-xs text-muted-foreground">Cycle {noti.cycleLabel}</span>
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                <span className="block text-eyebrow uppercase text-muted-foreground">Bill total</span>
+                <span className="block text-sm font-extrabold tabular-nums text-orange-500 sm:text-base">
                   {hideSensitive ? <SensitiveMask /> : <>-{formatCurrencyVal(Math.abs(noti.amount), currency)}</>}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                  <span className={`inline-block text-xs px-1.5 py-0.5 font-bold rounded border ${getCategoryBadgeClass(noti.category)}`}>
-                    {noti.category}
-                  </span>
-                  <span className="text-xs font-medium text-muted-foreground">Due {noti.billingDate}</span>
-                  <span className="text-xs text-muted-foreground">Cycle {noti.cycleLabel}</span>
-              </div>
-            </div>
+            </header>
 
-            <div className="space-y-3 border-t border-border/30 pt-3">
-              <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${isPending ? 'pointer-events-none opacity-70' : ''}`}>
+            <div className="space-y-4 p-4 sm:p-5">
+              <div className={`grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] sm:gap-4 ${isPending ? 'pointer-events-none opacity-70' : ''}`}>
                 <div className="space-y-1.5">
-                  <span className="block text-xs font-bold text-muted-foreground">Paid Date</span>
+                  <span className="block text-xs font-bold text-muted-foreground">Payment date</span>
                   <DatePicker
                     value={paidDates[noti.id] ?? noti.billingDate}
                     onChange={value => setPaidDates(prev => ({ ...prev, [noti.id]: value }))}
@@ -239,11 +262,13 @@ export function PendingSubscriptionsModal({
                     className="w-full"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className={`space-y-3 rounded-xl border p-3 transition-colors ${
+                  isPartial ? 'border-accent-ink/25 bg-accent-ink/5' : 'border-border/60 bg-background/60'
+                }`}>
                   <div className="flex items-center justify-between gap-2">
                     <label
                       htmlFor={`partial-toggle-${noti.id}`}
-                      className="flex cursor-pointer items-center gap-2 select-none"
+                      className="flex min-h-11 cursor-pointer items-center gap-2 select-none"
                     >
                       <Checkbox
                         id={`partial-toggle-${noti.id}`}
@@ -265,8 +290,8 @@ export function PendingSubscriptionsModal({
                     />
                   </div>
 
-                  {partialModes[noti.id] && (
-                    <div className="space-y-1.5">
+                  {isPartial && (
+                    <div className="space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <label
                           htmlFor={`pending-amount-${noti.id}`}
@@ -275,7 +300,7 @@ export function PendingSubscriptionsModal({
                           Amount paid
                         </label>
                         <span className="text-xs font-medium text-muted-foreground">
-                          Max {hideSensitive ? '•••' : `< ${formatCurrencyVal(amountState.due, currency)}`}
+                          Less than {hideSensitive ? '•••' : formatCurrencyVal(amountState.due, currency)}
                         </span>
                       </div>
                       <SmartAmountInput
@@ -290,6 +315,42 @@ export function PendingSubscriptionsModal({
                         aria-describedby={`pending-amount-hint-${noti.id}`}
                         className="w-full font-medium"
                       />
+                      <div className="grid grid-cols-3 gap-2" role="group" aria-label="Quick part payment">
+                        {QUICK_FRACTIONS.map(fraction => {
+                          const value = quickFractionAmount(amountState.due, fraction)
+                          const label = `${fraction * 100}%`
+                          const selected = paidAmounts[noti.id] !== undefined
+                            && paidAmounts[noti.id] !== ''
+                            && Number(paidAmounts[noti.id]) === Number(value)
+                          return (
+                            <Button
+                              key={fraction}
+                              variant={selected ? 'primary' : 'secondary'}
+                              size="sm"
+                              aria-pressed={selected}
+                              disabled={hideSensitive}
+                              onClick={() => setPaidAmounts(prev => ({ ...prev, [noti.id]: value }))}
+                              className="w-full tabular-nums"
+                            >
+                              {label}
+                            </Button>
+                          )
+                        })}
+                      </div>
+                      {amountState.kind === 'partial' && (
+                        <div className="space-y-1 pt-1">
+                          <div className="flex items-center justify-between gap-2 text-xs font-semibold text-muted-foreground">
+                            <span>Paid now</span>
+                            <span className="tabular-nums text-foreground">{Math.round(paidPercent)}%</span>
+                          </div>
+                          <Meter
+                            percent={paidPercent}
+                            label={`${noti.name} paid now`}
+                            tone="bg-accent-ink"
+                            valueHidden={hideSensitive}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -333,13 +394,14 @@ export function PendingSubscriptionsModal({
                 </div>
               </div>
 
-              <div className="grid w-full grid-cols-2 gap-2 pt-1 sm:flex sm:w-auto sm:items-center sm:justify-end">
+              <div className="grid w-full grid-cols-2 gap-2 border-t border-border/40 pt-4 sm:flex sm:w-auto sm:items-center sm:justify-end">
                 <Button
                   variant="secondary"
                   onClick={() => runSubscriptionAction(noti, 'discard', () => onDiscardSubscription(noti))}
                   disabled={hideSensitive || isPending}
                   title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                  className="min-h-10 min-w-0 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
+                  size="sm"
+                  className="min-w-0 whitespace-nowrap px-4 font-semibold disabled:cursor-wait disabled:opacity-70"
                 >
                   <MutationButtonContent
                     state={pendingAction === 'discard' ? 'syncing' : null}
@@ -353,7 +415,8 @@ export function PendingSubscriptionsModal({
                   onClick={() => onRemoveSubscription(noti.recurringPaymentId)}
                   disabled={hideSensitive || isPending}
                   title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                  className="min-h-10 min-w-0 whitespace-nowrap rounded-xl px-3 py-2 text-xs disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
+                  size="sm"
+                  className="min-w-0 whitespace-nowrap px-4 disabled:cursor-wait disabled:opacity-70"
                 >
                   Remove
                 </Button>
@@ -370,7 +433,8 @@ export function PendingSubscriptionsModal({
                   )}
                   disabled={hideSensitive || isPending || amountState.kind === 'invalid'}
                   title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                  className="col-span-2 min-h-10 min-w-0 justify-center whitespace-nowrap rounded-xl px-4 py-2 text-xs font-bold shadow-sm disabled:cursor-wait disabled:opacity-70 sm:col-span-1 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:px-3 sm:py-1.5"
+                  size="sm"
+                  className="col-span-2 min-w-0 justify-center whitespace-nowrap px-5 shadow-sm disabled:cursor-wait disabled:opacity-70 sm:col-span-1 sm:min-w-36"
                 >
                   <MutationButtonContent
                     state={pendingAction === 'confirm' ? 'syncing' : null}
@@ -381,7 +445,7 @@ export function PendingSubscriptionsModal({
                 </Button>
               </div>
             </div>
-          </div>
+          </article>
           )
         })}
         </div>

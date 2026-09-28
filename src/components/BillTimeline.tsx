@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import type { ActiveRecurringPayment, RecurringPayment, Transaction } from '../types'
+import { billTimelineStatus } from '../lib/billTimelineStatus'
 import { Calendar, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
 import { ordinalSuffix } from '../lib/cycleLabels'
@@ -161,20 +162,19 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         </div>
       </div>
 
+      {timelineNodes.length > 0 && (
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-medium text-muted-foreground sm:justify-end" aria-label="Timeline colour key">
+          <li className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-accent-ink ring-2 ring-accent-ink/20" aria-hidden="true" />Fully paid</li>
+          <li className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-accent-ink/60 ring-2 ring-accent-ink/15" aria-hidden="true" />Part paid or several bills</li>
+          <li className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-accent-ink/25 ring-2 ring-accent-ink/20" aria-hidden="true" />Pending</li>
+        </ul>
+      )}
       {/* Mobile: compact tappable vertical list */}
       {timelineNodes.length > 0 && (
         <div className="sm:hidden space-y-2">
           {timelineNodes.map((node) => {
-            const allPaid = node.bills.every(b => b.status === 'Paid' || b.status === 'SettledByLoanPayoff')
-            const anyPartiallyPaid = node.bills.some(b => b.status === 'PartiallyPaid')
-            const anyPending = node.bills.some(b => b.status === 'Pending')
             const allDiscarded = node.bills.every(b => b.status === 'Discarded')
-
-            let dotColor = 'bg-amber-500'
-            if (allPaid) dotColor = 'bg-emerald-500'
-            else if (anyPartiallyPaid) dotColor = 'bg-blue-500'
-            else if (allDiscarded) dotColor = 'bg-slate-400'
-            else if (!anyPending) dotColor = 'bg-emerald-500'
+            const { dot: dotColor, label: statusLabel, badge: statusStyle } = billTimelineStatus(node.bills)
 
             const d = parseBillTimelineDate(node.dueDate)
             const dateLabel = `${BILL_TIMELINE_MONTHS[d.getMonth()]} ${d.getDate()}${ordinalSuffix(d.getDate())}`
@@ -187,21 +187,6 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             const total = amounts.some(amount => amount == null)
               ? null
               : amounts.reduce<number>((sum, amount) => sum + (amount ?? 0), 0)
-            const statusLabel = anyPartiallyPaid
-              ? 'Part paid'
-              : anyPending
-                ? 'Pending'
-                : allDiscarded
-                  ? 'Discarded'
-                  : 'Paid'
-            const statusStyle = statusLabel === 'Paid'
-              ? 'text-emerald-500 bg-emerald-500/10'
-              : statusLabel === 'Part paid'
-                ? 'text-blue-500 bg-blue-500/10'
-                : statusLabel === 'Discarded'
-                  ? 'text-slate-400 bg-slate-500/10'
-                  : 'text-amber-500 bg-amber-500/10'
-
             return (
               <Button variant="tertiary"
                 key={node.dueDate}
@@ -243,17 +228,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                 return <div className="absolute left-0 top-0 h-full rounded-full bg-blue-500/30" style={{ width: `${todayPct}%` }} />
               })()}
               {timelineNodes.map(node => {
-                const allPaid = node.bills.every(b => b.status === 'Paid' || b.status === 'SettledByLoanPayoff')
-                const anyPartiallyPaid = node.bills.some(b => b.status === 'PartiallyPaid')
-                const anyPending = node.bills.some(b => b.status === 'Pending')
-                const allDiscarded = node.bills.every(b => b.status === 'Discarded')
-                const dotColor = allPaid || !anyPending && !anyPartiallyPaid && !allDiscarded
-                  ? 'bg-emerald-500 ring-emerald-500/20'
-                  : anyPartiallyPaid
-                    ? 'bg-blue-500 ring-blue-500/20'
-                    : allDiscarded
-                      ? 'bg-slate-400 ring-slate-400/20'
-                      : 'bg-amber-500 ring-amber-500/20'
+                const { dot: dotColor, label: statusLabel } = billTimelineStatus(node.bills)
                 const labelText = node.bills.length === 1 ? node.bills[0].name : `${node.bills.length} bills`
                 const isHighlighted = highlightedNodeDate === node.dueDate
                 return (
@@ -268,7 +243,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                     onBlur={() => highlightNode(null)}
                     aria-label={`View subscriptions due on ${node.dueDate}`}
                     aria-describedby={`${timelineId}-description-${node.dueDate}`}
-                    title={`${node.dueDate}: ${labelText}`}
+                    title={`${node.dueDate}: ${labelText} · ${statusLabel}`}
                     style={{ left: `${node.percent}%` }}
                     className={`absolute top-1/2 z-10 flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full p-0 transition-opacity hover:bg-transparent ${
                       highlightedNodeDate && !isHighlighted ? 'opacity-45' : ''
@@ -303,10 +278,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               const total = amounts.some(amount => amount == null)
                 ? null
                 : amounts.reduce<number>((sum, amount) => sum + (amount ?? 0), 0)
-              const allPaid = node.bills.every(bill => bill.status === 'Paid' || bill.status === 'SettledByLoanPayoff')
-              const anyPartiallyPaid = node.bills.some(bill => bill.status === 'PartiallyPaid')
-              const allDiscarded = node.bills.every(bill => bill.status === 'Discarded')
-              const dotColor = allPaid ? 'bg-emerald-500' : anyPartiallyPaid ? 'bg-blue-500' : allDiscarded ? 'bg-slate-400' : 'bg-amber-500'
+              const { dot: dotColor, label: statusLabel } = billTimelineStatus(node.bills)
               const isHighlighted = highlightedNodeDate === node.dueDate
               return (
                 <Button
@@ -333,7 +305,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   <span className={`size-2.5 shrink-0 rounded-full ${dotColor}`} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-xs font-bold text-foreground">{nameLabel}</span>
-                    <span className="block text-xs text-muted-foreground">{BILL_TIMELINE_MONTHS[date.getMonth()]} {date.getDate()}</span>
+                    <span className="block text-xs text-muted-foreground">{BILL_TIMELINE_MONTHS[date.getMonth()]} {date.getDate()} · {statusLabel}</span>
                   </span>
                   <span className="shrink-0 text-xs font-extrabold text-foreground">{formatTimelineAmount(total)}</span>
                 </Button>

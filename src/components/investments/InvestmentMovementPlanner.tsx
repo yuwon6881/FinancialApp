@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { ArrowDownToLine, ArrowUpFromLine, ChevronDown, WalletCards } from 'lucide-react'
 import type { InvestmentAllocationOverview, InvestmentPortfolio } from '../../types'
 import { formatCurrencyVal, maskCurrencyInput } from '../../lib/utils'
-import { planDeposit } from '../../lib/investmentDeposit'
+import { planDeposit, splitDepositFunding } from '../../lib/investmentDeposit'
 import { planWithdrawal } from '../../lib/investmentWithdrawal'
 import { buildEtfPlan } from '../../lib/investmentEtfPlan'
 import { Button } from '../ui/Button'
@@ -34,12 +34,12 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
   const canWithdraw = valuesKnown && cashKnown && (invested > 0 || (allocation.availableCash ?? 0) > 0)
   const canPlan = mode === 'deposit' ? canDeposit : canWithdraw
   const spareCash = Math.max(0, allocation.availableCash ?? 0)
+  const depositFunding = splitDepositFunding(requested, spareCash)
 
   const plan = useMemo(() => {
     if (!canPlan || requested <= 0) return null
     if (mode === 'deposit') {
-      const totalReady = requested + spareCash
-      const deposit = planDeposit(totalReady, allocation.sleeves.map(sleeve => ({
+      const deposit = planDeposit(requested, allocation.sleeves.map(sleeve => ({
         sleeve: sleeve.sleeve,
         label: sleeve.label,
         targetPercentage: sleeve.targetPercentage,
@@ -47,8 +47,8 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
       })))
       return deposit && {
         sleeves: deposit.sleeves,
-        fromCash: spareCash,
-        fromHoldings: totalReady,
+        fromCash: depositFunding.fromCash,
+        fromHoldings: 0,
         shortfall: 0,
         projectedTotal: deposit.projectedTotal,
         worstProjectedDrift: deposit.worstProjectedDrift,
@@ -68,7 +68,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
       projectedTotal: withdrawal.projectedTotal,
       worstProjectedDrift: withdrawal.worstProjectedDrift,
     }
-  }, [allocation.sleeves, canPlan, mode, requested, spareCash])
+  }, [allocation.sleeves, canPlan, depositFunding.fromCash, mode, requested, spareCash])
 
   const etfPlans = useMemo(() => plan ? buildEtfPlan(
     plan.sleeves.map(sleeve => ({ sleeve: sleeve.sleeve, amount: sleeve.amount })),
@@ -106,16 +106,18 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
         </div>
 
         <label className="block text-xs font-semibold text-muted-foreground">
-          {mode === 'deposit' ? 'How much new money do you want to deposit?' : 'How much do you need to withdraw?'}
-          <div className="mt-1.5 flex items-center gap-2"><span className="shrink-0 text-xs font-bold">{allocation.appCurrency}</span><SmartAmountInput value={amountText} onChange={event => setAmountText(maskCurrencyInput(event.target.value, amountText))} placeholder="0.00" aria-label={`${mode === 'deposit' ? 'Amount to deposit' : 'Amount to withdraw'} in ${allocation.appCurrency}`} /></div>
+          {mode === 'deposit' ? 'How much do you want to invest?' : 'How much do you need to withdraw?'}
+          <div className="mt-1.5 flex items-center gap-2"><span className="shrink-0 text-xs font-bold">{allocation.appCurrency}</span><SmartAmountInput value={amountText} onChange={event => setAmountText(maskCurrencyInput(event.target.value, amountText))} placeholder="0.00" aria-label={`${mode === 'deposit' ? 'Amount to invest' : 'Amount to withdraw'} in ${allocation.appCurrency}`} /></div>
         </label>
 
         {!canPlan && <p className="rounded-lg border border-orange-500/25 bg-orange-500/8 p-3 text-xs text-orange-700 dark:text-orange-300">{!valuesKnown || !cashKnown ? 'Update the missing market or cash exchange rate before using this planner.' : mode === 'deposit' ? 'Classify at least one investment into a plan basket first.' : 'There is nothing to withdraw yet.'}</p>}
 
         {plan && <>
           <div className="flex flex-wrap gap-2 text-xs">
-            {mode === 'deposit' && <Badge tone="info">{money(requested)} new deposit</Badge>}
-            {plan.fromCash > 0 && <Badge tone="success">{money(plan.fromCash)} spare broker cash</Badge>}
+            {mode === 'deposit' && <Badge tone="info">{money(requested)} to invest</Badge>}
+            {plan.fromCash > 0 && <Badge tone="success">{money(plan.fromCash)} {mode === 'deposit' ? 'from spare broker cash' : 'spare broker cash'}</Badge>}
+            {mode === 'deposit' && depositFunding.cashRemaining > 0 && <Badge tone="neutral">{money(depositFunding.cashRemaining)} broker cash remaining</Badge>}
+            {mode === 'deposit' && depositFunding.newFundsRequired > 0 && <Badge tone="warning">{money(depositFunding.newFundsRequired)} new funds required</Badge>}
             {mode === 'withdrawal' && plan.fromHoldings > 0 && <Badge tone="neutral">{money(plan.fromHoldings)} raised by selling</Badge>}
           </div>
           {plan.shortfall > 0 && <p className="rounded-lg border border-orange-500/30 bg-orange-500/8 p-2.5 text-xs text-orange-700 dark:text-orange-300">You are {money(plan.shortfall)} short after using all spare cash and holdings.</p>}
@@ -131,7 +133,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
               </li>
             })}
           </ul>
-          <details className="rounded-lg border border-border/50 bg-background/40 p-3"><summary className="cursor-pointer text-xs font-semibold text-foreground">How this is calculated</summary><p className="mt-2 text-xs leading-relaxed text-muted-foreground">Basket amounts rebalance toward your saved target. Multiple ETFs keep their current value proportions. Native equivalents use the latest available rate where one unit of ETF currency equals the shown rate in {allocation.appCurrency}; your broker’s execution rate remains authoritative.</p></details>
+          <details className="rounded-lg border border-border/50 bg-background/40 p-3"><summary className="cursor-pointer text-xs font-semibold text-foreground">How this is calculated</summary><p className="mt-2 text-xs leading-relaxed text-muted-foreground">{mode === 'deposit' ? 'The amount entered is the total to invest. Spare broker cash funds it first; any unused cash stays outside this plan, and any gap needs new funds. ' : ''}Basket amounts rebalance toward your saved target. Multiple ETFs keep their current value proportions. Native equivalents use the latest available rate where one unit of ETF currency equals the shown rate in {allocation.appCurrency}; your broker’s execution rate remains authoritative.</p></details>
         </>}
       </div>}
     </section>

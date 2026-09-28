@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { planDeposit, type DepositSleeveInput } from './investmentDeposit'
+import { planDeposit, splitDepositFunding, type DepositSleeveInput } from './investmentDeposit'
+
+describe('splitDepositFunding', () => {
+  it('uses only the requested part of spare broker cash', () => {
+    expect(splitDepositFunding(1000, 1500)).toEqual({ fromCash: 1000, newFundsRequired: 0, cashRemaining: 500 })
+  })
+
+  it('requires new funds only for the amount beyond spare cash', () => {
+    expect(splitDepositFunding(1000, 5.92)).toEqual({ fromCash: 5.92, newFundsRequired: 994.08, cashRemaining: 0 })
+    expect(splitDepositFunding(1000, 0)).toEqual({ fromCash: 0, newFundsRequired: 1000, cashRemaining: 0 })
+  })
+
+  it('handles an exact match and rounds every part to cents', () => {
+    expect(splitDepositFunding(5.92, 5.92)).toEqual({ fromCash: 5.92, newFundsRequired: 0, cashRemaining: 0 })
+    expect(splitDepositFunding(10.005, 0.005)).toEqual({ fromCash: 0.01, newFundsRequired: 10, cashRemaining: 0 })
+  })
+})
 
 // A balanced 60/30/10 portfolio worth 10,000.
 const balanced: DepositSleeveInput[] = [

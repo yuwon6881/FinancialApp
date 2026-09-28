@@ -292,6 +292,7 @@ function App() {
     optimisticDashboardData: financial.optimisticDashboardData,
     selectedTransactions: financial.allTransactions,
     onMarkSummarySeen: financial.handleMarkSummarySeen,
+    onAdvanceCycle: nav.handleSelectPeriod,
   })
   useEffect(() => {
     if (!cycleSummary.isOpen || !session.token) return

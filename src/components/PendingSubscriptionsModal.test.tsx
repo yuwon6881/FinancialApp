@@ -168,6 +168,20 @@ describe('PendingSubscriptionsModal', () => {
     expect(onConfirmSubscription).toHaveBeenCalledWith(notification, '2026-07-28', 869.99)
   })
 
+  it('fills a part payment from a quick fraction without reaching the full total', () => {
+    const { onConfirmSubscription } = renderModal()
+    fireEvent.click(screen.getByLabelText('Pay partial amount'))
+
+    fireEvent.click(screen.getByRole('button', { name: '50%' }))
+    expect((screen.getByLabelText('Amount paid') as HTMLInputElement).value).toBe('435.00')
+    expect(screen.getByRole('button', { name: '50%' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('status').textContent).toContain('435.00 remains due')
+    expect(screen.getByRole('progressbar', { name: /paid now/ }).getAttribute('aria-valuenow')).toBe('50')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Paid' }))
+    expect(onConfirmSubscription).toHaveBeenCalledWith(notification, '2026-07-28', 435)
+  })
+
   it('reverts to full payment when partial checkbox is unchecked', () => {
     const { onConfirmSubscription } = renderModal()
     const toggle = screen.getByLabelText('Pay partial amount')

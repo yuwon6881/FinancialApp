@@ -37,6 +37,18 @@ export interface DepositPlan {
 
 const round = (value: number) => Math.round(value * 100) / 100
 
+/** Split an intended purchase amount against cash already held at the broker. */
+export function splitDepositFunding(requestedAmount: number, availableCash: number) {
+  const requested = round(Math.max(0, requestedAmount))
+  const cash = round(Math.max(0, availableCash))
+  const fromCash = Math.min(requested, cash)
+  return {
+    fromCash,
+    newFundsRequired: round(requested - fromCash),
+    cashRemaining: round(cash - fromCash),
+  }
+}
+
 /**
  * Works out where a deposit should go.
  *

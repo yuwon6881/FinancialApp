@@ -34,6 +34,27 @@ const dashboard = (): DashboardData => ({
 } as DashboardData)
 
 describe('useCycleSummary', () => {
+  it('advances once at rollover while retaining the closed cycle summary', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 7, 31, 23, 59, 50))
+    const initial = dashboard()
+    initial.setting.lastSummaryCycleSeen = '2026-08'
+    const onAdvanceCycle = vi.fn()
+    const { result, unmount } = renderHook(() => useCycleSummary({
+      token: 'token', dashboardData: initial, optimisticDashboardData: initial,
+      selectedTransactions: [], onMarkSummarySeen: vi.fn(), onAdvanceCycle,
+    }))
+    expect(result.current.isOpen).toBe(false)
+    act(() => vi.advanceTimersByTime(60_000))
+    expect(onAdvanceCycle).toHaveBeenCalledWith('Sep', 2026)
+    expect(result.current.isOpen).toBe(true)
+    expect(result.current.target).toEqual({ monthIndex: 8, year: 2026 })
+    act(() => vi.advanceTimersByTime(60_000))
+    expect(onAdvanceCycle).toHaveBeenCalledTimes(1)
+    unmount()
+    vi.useRealTimers()
+  })
+
   it('does not restart requests or hide selected-cycle data when optimistic state changes identity', async () => {
     fetchDashboard.mockClear()
     fetchTransactions.mockClear()

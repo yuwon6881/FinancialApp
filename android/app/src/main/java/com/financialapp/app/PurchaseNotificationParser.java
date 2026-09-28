@@ -31,7 +31,11 @@ final class PurchaseNotificationParser {
     /** A figure labelled as a balance or limit is context, not the amount that moved. */
     private static final Pattern BALANCE_CONTEXT = Pattern.compile("\\b(?:bal(?:ance)?|available|avail|limit|remaining)\\b[^0-9]{0,24}$", Pattern.CASE_INSENSITIVE);
     private static final Pattern MERCHANT = Pattern.compile(
-        "\\b(?:at|to)\\s+([^\\n;]+?)(?=\\s+(?:on|using|with|via|for|from|is|was|has|successful|successfully|ref|reference)\\b|[.!,](?:\\s|$)|[.!]?$)",
+        "\\b(?:at|to)\\s+([^\\n;]+?)(?=\\s+(?:at|to|on|using|with|via|for|from|is|was|has|successful|successfully|ref|reference)\\b|[.!,](?:\\s|$)|[.!]?$)",
+        Pattern.CASE_INSENSITIVE);
+    /** Phrases that look like merchant captures but are payment instruments or generic nouns. */
+    private static final Pattern NOT_MERCHANT = Pattern.compile(
+        "^(?:your\\s+)?(?:(?:debit|credit|prepaid|visa|master(?:card)?|amex)\\s+)?(?:card|account|bank(?:\\s+account)?|wallet|e-wallet)\\b",
         Pattern.CASE_INSENSITIVE);
     private static final Pattern DATE = Pattern.compile("\\b(20[0-9]{2}-[0-9]{2}-[0-9]{2})\\b");
     private static final Pattern MERCHANT_LETTER = Pattern.compile("\\p{L}");
@@ -53,10 +57,14 @@ final class PurchaseNotificationParser {
         result.transactionType = "outflow";
         readAmount(text, result);
         Matcher merchant = MERCHANT.matcher(body);
-        if (merchant.find()) {
+        while (merchant.find()) {
             String description = merchant.group(1).trim();
+            if (NOT_MERCHANT.matcher(description).find()) continue;
             if (description.length() >= 2 && description.length() <= 120 && MERCHANT_LETTER.matcher(description).find()
-                && !TIME.matcher(description).find() && !MONEY.matcher(description).find()) result.description = description;
+                && !TIME.matcher(description).find() && !MONEY.matcher(description).find()) {
+                result.description = description;
+                break;
+            }
         }
         Matcher date = DATE.matcher(text);
         if (date.find()) {

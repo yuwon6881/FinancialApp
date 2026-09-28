@@ -89,4 +89,35 @@ public class PurchaseNotificationParserTest {
             assertNull(text, PurchaseNotificationParser.parse("Bank", text));
         }
     }
+    @Test public void skipInstrumentPhrasesAndFindsActualMerchant() {
+        // "to your debit card ... at SPayLater" — must skip "your debit card" and extract "SPayLater"
+        PurchaseNotificationParser.Result result = PurchaseNotificationParser.parse(
+            "Maybank", "RM50.00 was charged to your debit card on 2026-09-27 at SPayLater. Please call 1300221234");
+        assertNotNull(result);
+        assertEquals("SPayLater", result.description);
+
+        // "to your credit card ... at LAZADA"
+        result = PurchaseNotificationParser.parse(
+            "Card alert", "RM 120.00 charged to your credit card at LAZADA, ref 9876");
+        assertNotNull(result);
+        assertEquals("LAZADA", result.description);
+
+        // "to your account ... at GRAB"
+        result = PurchaseNotificationParser.parse(
+            "Transaction successful", "RM 15.00 debited to your account at GRAB on 2026-09-27");
+        assertNotNull(result);
+        assertEquals("GRAB", result.description);
+
+        // "to your card ... at TNG EWALLET" — bare "card" without debit/credit prefix
+        result = PurchaseNotificationParser.parse(
+            "Payment successful", "RM 30.00 was charged to your card at TNG EWALLET. Ref 5555");
+        assertNotNull(result);
+        assertEquals("TNG EWALLET", result.description);
+
+        // Only instrument phrase, no subsequent merchant — description stays absent
+        result = PurchaseNotificationParser.parse(
+            "Payment successful", "RM 10.00 was charged to your debit card on 2026-09-27");
+        assertNotNull(result);
+        assertNull(result.description);
+    }
 }

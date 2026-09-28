@@ -45,6 +45,18 @@ describe('radius contract', () => {
     expect(css).toMatch(/--radius-panel:/)
   })
 
+  // Tailwind v4 emits its utilities inside `@layer utilities`, and unlayered CSS beats every
+  // layer. A bare `button { min-height }` floor therefore overrode each Button's own `min-h-*`
+  // on desktop and left `size="lg"` actions like "New Subscription" 28px tall.
+  it('keeps the global button size floor below the utility layer', () => {
+    const css = fs.readFileSync(path.join(process.cwd(), 'src/index.css'), 'utf8')
+    const unlayered = css.replace(/@layer\s+base\s*\{(?:[^{}]|\{[^{}]*\})*\}/g, '')
+    expect(unlayered).not.toMatch(/(?:^|[}/])\s*button\s*\{[^}]*min-height/m)
+    // Same trap for the primitive's own class: an unlayered floor would flatten md/lg sizes.
+    expect(unlayered).not.toMatch(/\.shared-button[^{]*\{[^}]*min-height/)
+    expect(css).toMatch(/@layer\s+base\s*\{\s*button\s*\{[^}]*min-height:\s*1\.75rem/)
+  })
+
   it.each(VARIANTS.flatMap(variant => BUTTON_SIZES.map(size => [variant, size] as const)))(
     'Button %s/%s uses the control radius',
     (variant, size) => {

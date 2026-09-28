@@ -118,6 +118,28 @@ describe('InvestmentPlanPanel contribution split', () => {
     },
   }
 
+  it('plans only the entered total and leaves unused broker cash out', () => {
+    render(<InvestmentPlanPanel allocation={{ ...withPlan, availableCash: 1500 }} holdings={[]} instruments={plannedInstruments} fxRates={usdFx} masked={false} onNavigate={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /Plan money in or out/ }))
+    fireEvent.change(screen.getByLabelText('Amount to invest in MYR'), { target: { value: '100000' } })
+
+    expect(screen.getByText(/RM\s+1,000\.00 from spare broker cash/)).toBeTruthy()
+    expect(screen.getByText(/RM\s+500\.00 broker cash remaining/)).toBeTruthy()
+    expect(screen.queryByText(/new funds required/)).toBeNull()
+    expect(screen.getAllByText(/RM\s+660\.00/).length).toBeGreaterThan(1)
+  })
+
+  it('shows the precise new funds needed beyond broker cash', () => {
+    render(<InvestmentPlanPanel allocation={{ ...withPlan, availableCash: 5.92 }} holdings={[]} instruments={plannedInstruments} fxRates={usdFx} masked={false} onNavigate={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /Plan money in or out/ }))
+    fireEvent.change(screen.getByLabelText('Amount to invest in MYR'), { target: { value: '100000' } })
+
+    expect(screen.getByText(/RM\s+5\.92 from spare broker cash/)).toBeTruthy()
+    expect(screen.getByText(/RM\s+994\.08 new funds required/)).toBeTruthy()
+    expect(screen.queryByText(/broker cash remaining/)).toBeNull()
+    expect(screen.getAllByText(/RM\s+660\.00/).length).toBeGreaterThan(1)
+  })
+
   it('shows the deposit toggle even when the plan is on track', () => {
     render(<InvestmentPlanPanel allocation={withPlan} holdings={[]} instruments={[]} masked={false} onNavigate={vi.fn()} />)
 
@@ -131,11 +153,13 @@ describe('InvestmentPlanPanel contribution split', () => {
   })
 
   it('masks deposit plan sleeve amounts when sensitive values are hidden', () => {
-    render(<InvestmentPlanPanel allocation={withPlan} holdings={[]} instruments={plannedInstruments} fxRates={usdFx} masked onNavigate={vi.fn()} />)
+    render(<InvestmentPlanPanel allocation={{ ...withPlan, availableCash: 5.92 }} holdings={[]} instruments={plannedInstruments} fxRates={usdFx} masked onNavigate={vi.fn()} />)
 
     fireEvent.click(screen.getByRole('button', { name: /Plan money in or out/ }))
-    fireEvent.change(screen.getByLabelText('Amount to deposit in MYR'), { target: { value: '1000' } })
+    fireEvent.change(screen.getByLabelText('Amount to invest in MYR'), { target: { value: '1000' } })
     expect(screen.getAllByText('••••').length).toBeGreaterThan(0)
+    expect(screen.getByText('•••• from spare broker cash')).toBeTruthy()
+    expect(screen.getByText('•••• new funds required')).toBeTruthy()
   })
 
   it('keeps the planner available and explains incomplete classification', () => {

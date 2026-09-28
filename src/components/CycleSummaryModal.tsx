@@ -58,7 +58,7 @@ export function CycleSummaryModal({
   onViewLedger,
 }: CycleSummaryModalProps) {
   const { formatSensitive, hideSensitive } = useAppPrefs()
-  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const headingRef = useRef<HTMLDivElement>(null)
   const summary = useMemo(
     () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay, transactions, loans) : null,
     [data, previousData, wishlist, year, monthIndex, cycleDay, transactions, loans],
@@ -71,10 +71,10 @@ export function CycleSummaryModal({
       isOpen={isOpen}
       onClose={onClose}
       maxWidthClassName="max-w-3xl"
-      initialFocusRef={closeButtonRef}
+      initialFocusRef={headingRef}
       ariaLabel="Cycle summary"
       title={
-        <div className="flex items-center gap-2.5">
+        <div ref={headingRef} tabIndex={-1} className="flex items-center gap-2.5 outline-none">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
             <ChartNoAxesCombined className="size-4" />
           </span>
@@ -93,7 +93,7 @@ export function CycleSummaryModal({
               View ledger
             </Button>
           )}
-          <Button ref={closeButtonRef} variant="tertiary" onClick={onClose} className="flex-1 rounded-lg bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:bg-foreground/90 sm:flex-none">
+          <Button variant="tertiary" onClick={onClose} className="flex-1 rounded-lg bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:bg-foreground/90 sm:flex-none">
             {variant === 'auto' ? 'Got it' : 'Close'}
           </Button>
         </div>
@@ -125,7 +125,7 @@ export function CycleSummaryModal({
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-7 text-sm leading-relaxed">
           <div className="grid gap-3 sm:grid-cols-[1.25fr_1fr]">
             <div className={`rounded-2xl border p-4 sm:p-5 ${summary.positive ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-orange-500/20 bg-orange-500/5'}`}>
               <div className="flex items-center gap-1.5 text-eyebrow uppercase text-muted-foreground">
@@ -408,14 +408,14 @@ export function CycleSummaryModal({
 
           {/* Lower sections: Where it went, Stability fund, Bills, claimed rewards */}
           {summary.topCategories.length > 0 ? (
-            <div className="grid gap-6 sm:grid-cols-2">
+            <div className="grid gap-6 lg:grid-cols-2">
               <div>
                 <Section title="Where it went">
                   <div className="space-y-2.5 rounded-xl border border-border/50 bg-muted/20 p-3.5">
                     {summary.topCategories.map(category => (
                       <div key={category.category} className="flex items-center gap-2">
                         {/* Badge Container: fixed width so all bars start at the same X position without stretching the badge */}
-                        <div className="w-24 shrink-0 flex items-center">
+                        <div className="w-20 shrink-0 flex items-center sm:w-24">
                           <span
                             className={`max-w-full truncate rounded border px-1.5 py-0.5 text-xs font-bold leading-tight ${getCategoryBadgeClass(category.category)}`}
                             title={category.category}
@@ -431,7 +431,7 @@ export function CycleSummaryModal({
                           />
                         </div>
                         {/* Amount: fixed right-aligned column */}
-                        <span className="w-20 shrink-0 text-right text-xs font-bold text-foreground">
+                        <span className="shrink-0 text-right text-xs font-bold tabular-nums text-foreground">
                           {formatSensitive(category.amount)}
                         </span>
                       </div>

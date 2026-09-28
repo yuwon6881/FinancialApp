@@ -1209,10 +1209,15 @@ html {
 }
 
 /* Shared pointer-target floor for icon and compact actions. Larger controls
-   keep their authored dimensions; only undersized buttons are expanded. */
-button {
-    min-width: 1.75rem;
-    min-height: 1.75rem;
+   keep their authored dimensions; only undersized buttons are expanded.
+   Kept in the base layer: unlayered CSS outranks every Tailwind layer, so as a
+   bare rule this floor silently beat each button's own `min-h-*` utility on
+   the expanded tier and collapsed a `size="lg"` action to 28px tall. */
+@layer base {
+    button {
+        min-width: 1.75rem;
+        min-height: 1.75rem;
+    }
 }
 
 /* Table rows cannot paint one continuous animated outline reliably, so their cells use the
