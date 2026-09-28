@@ -11,6 +11,7 @@ import type {
   InvestmentCashFlow,
   InvestmentRange,
 } from '../types'
+import type { AppNavigationOptions } from '../lib/appLocation'
 import { useAppContext } from '../contexts/AppContext'
 import { Button } from './ui/Button'
 import { PageHeader } from './ui/PageHeader'
@@ -38,7 +39,7 @@ import { cn } from '../lib/utils'
 import { PANEL_TONES, panelClass } from './ui/panelStyles'
 
 interface InvestmentsViewProps {
-  onNavigate: (tab: AppTab) => void
+  onNavigate: (tab: AppTab, options?: AppNavigationOptions) => void
   autoOpenAddForm?: boolean
   onResetAutoOpen?: () => void
   onAddFormOpenChange?: (open: boolean) => void

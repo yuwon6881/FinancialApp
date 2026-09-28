@@ -10,6 +10,7 @@ import { breakdownBySleeve } from '../../lib/investmentSleeveBreakdown'
 import { SleeveCard } from './SleeveCard'
 import { InvestmentMovementPlanner } from './InvestmentMovementPlanner'
 import { panelClass } from '../ui/panelStyles'
+import type { AppNavigationOptions } from '../../lib/appLocation'
 
 const tone: Record<InvestmentAllocationStatus, string> = {
   NotStarted: 'border-border/60 bg-muted/20 text-muted-foreground',
@@ -36,7 +37,7 @@ export function InvestmentPlanPanel({
   /** Retained for callers during the portfolio contract transition; native ETF rates are used. */
   reference?: { currency: string; rate: number }
   masked: boolean
-  onNavigate: (tab: AppTab) => void
+  onNavigate: (tab: AppTab, options?: AppNavigationOptions) => void
 }) {
   const reduceMotion = useReducedMotion()
   const currency = allocation.appCurrency
@@ -45,10 +46,7 @@ export function InvestmentPlanPanel({
     ? 'Incomplete'
     : masked ? '••••' : formatCurrencyVal(value, currency)
   const configure = () => {
-    const next = new URL(window.location.href)
-    next.searchParams.set('section', 'investment-plan')
-    window.history.replaceState(window.history.state, '', next)
-    onNavigate('settings')
+    onNavigate('settings', { search: { section: 'investment-plan' } })
   }
   const StatusIcon = allocation.status === 'OnTrack'
     ? CheckCircle2

@@ -3,7 +3,7 @@ import type { PendingNotification } from '../types'
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { BottomSheet } from './ui/BottomSheet'
-import { Checkbox } from './ui/Checkbox'
+import { ToggleButton } from './ui/ToggleButton'
 import { DatePicker } from './ui/DatePicker'
 import { InfoHint } from './ui/InfoHint'
 import { SmartAmountInput } from './ui/SmartAmountInput'
@@ -266,15 +266,12 @@ export function PendingSubscriptionsModal({
                   isPartial ? 'border-accent-ink/25 bg-accent-ink/5' : 'border-border/60 bg-background/60'
                 }`}>
                   <div className="flex items-center justify-between gap-2">
-                    <label
-                      htmlFor={`partial-toggle-${noti.id}`}
-                      className="flex min-h-11 cursor-pointer items-center gap-2 select-none"
-                    >
-                      <Checkbox
-                        id={`partial-toggle-${noti.id}`}
-                        checked={Boolean(partialModes[noti.id])}
-                        onChange={event => {
-                          const checked = event.target.checked
+                    <div className="flex min-h-11 items-center gap-2">
+                      <ToggleButton
+                        active={Boolean(partialModes[noti.id])}
+                        label={`Pay partial amount for ${noti.name}`}
+                        onClick={() => {
+                          const checked = !partialModes[noti.id]
                           setPartialModes(prev => ({ ...prev, [noti.id]: checked }))
                           if (!checked) {
                             setPaidAmounts(prev => ({ ...prev, [noti.id]: '' }))
@@ -283,10 +280,10 @@ export function PendingSubscriptionsModal({
                         disabled={hideSensitive || isPending}
                       />
                       <span className="text-xs font-bold text-foreground">Pay partial amount</span>
-                    </label>
+                    </div>
                     <InfoHint
                       label="Part payment info"
-                      text="By default bills are paid in full. Check this to record a smaller part payment now; the remainder stays due."
+                      text="By default bills are paid in full. Turn this on to record a smaller part payment now; the remainder stays due."
                     />
                   </div>
 

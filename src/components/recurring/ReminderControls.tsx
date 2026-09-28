@@ -112,7 +112,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
 
               <div role="radiogroup" aria-label={`Reminder frequency for ${payment.name}`} className="flex gap-1.5">
                 {(['Once', 'Daily'] as RecurringReminderMode[]).map(mode => (
-                  <Button variant="tertiary"
+                  <Button variant="tertiary" size="sm"
                     key={mode}
                     type="button"
                     role="radio"

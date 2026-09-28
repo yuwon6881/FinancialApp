@@ -109,7 +109,7 @@ describe('PendingSubscriptionsModal', () => {
 
   it('resets input and action state when a partial payment is confirmed', () => {
     const { onConfirmSubscription } = renderModal()
-    const toggle = screen.getByLabelText('Pay partial amount')
+    const toggle = screen.getByRole('switch', { name: 'Pay partial amount for Household' })
     fireEvent.click(toggle)
 
     const input = screen.getByLabelText('Amount paid')
@@ -123,12 +123,12 @@ describe('PendingSubscriptionsModal', () => {
     expect(onConfirmSubscription).toHaveBeenCalledWith(notification, '2026-07-28', 500)
     expect(screen.getByRole('button', { name: 'Confirm Paid' }).hasAttribute('disabled')).toBe(false)
     expect(screen.queryByLabelText('Amount paid')).toBeNull()
-    expect((toggle as HTMLInputElement).checked).toBe(false)
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
   })
 
   it('blocks an invalid nonblank amount without blocking discard or remove', () => {
     renderModal()
-    fireEvent.click(screen.getByLabelText('Pay partial amount'))
+    fireEvent.click(screen.getByRole('switch', { name: 'Pay partial amount for Household' }))
 
     const input = screen.getByLabelText('Amount paid')
     fireEvent.change(input, { target: { value: '0' } })
@@ -142,7 +142,7 @@ describe('PendingSubscriptionsModal', () => {
 
   it('blocks a partial amount that is greater than or equal to the full bill amount', () => {
     const { onConfirmSubscription } = renderModal()
-    fireEvent.click(screen.getByLabelText('Pay partial amount'))
+    fireEvent.click(screen.getByRole('switch', { name: 'Pay partial amount for Household' }))
 
     const input = screen.getByLabelText('Amount paid')
 
@@ -170,7 +170,7 @@ describe('PendingSubscriptionsModal', () => {
 
   it('fills a part payment from a quick fraction without reaching the full total', () => {
     const { onConfirmSubscription } = renderModal()
-    fireEvent.click(screen.getByLabelText('Pay partial amount'))
+    fireEvent.click(screen.getByRole('switch', { name: 'Pay partial amount for Household' }))
 
     fireEvent.click(screen.getByRole('button', { name: '50%' }))
     expect((screen.getByLabelText('Amount paid') as HTMLInputElement).value).toBe('435.00')
@@ -182,9 +182,9 @@ describe('PendingSubscriptionsModal', () => {
     expect(onConfirmSubscription).toHaveBeenCalledWith(notification, '2026-07-28', 435)
   })
 
-  it('reverts to full payment when partial checkbox is unchecked', () => {
+  it('reverts to full payment when the partial payment switch is turned off', () => {
     const { onConfirmSubscription } = renderModal()
-    const toggle = screen.getByLabelText('Pay partial amount')
+    const toggle = screen.getByRole('switch', { name: 'Pay partial amount for Household' })
     fireEvent.click(toggle)
 
     const input = screen.getByLabelText('Amount paid')
@@ -206,6 +206,6 @@ describe('PendingSubscriptionsModal', () => {
     expect(summary.textContent).toContain('Full payment selected')
     expect(summary.textContent).toContain('Amounts are hidden')
     expect(summary.textContent).not.toContain('870.00')
-    expect((screen.getByLabelText('Pay partial amount') as HTMLInputElement).disabled).toBe(true)
+    expect((screen.getByRole('switch', { name: 'Pay partial amount for Household' }) as HTMLButtonElement).disabled).toBe(true)
   })
 })

@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
-import type { InvestmentActivity, PendingNotification, SavingsGoal, TaxReliefCategoryDefinition, VaultDocument, WishlistItem } from '../../src/types'
+import type { InvestmentActivity, Loan, PendingNotification, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, VaultDocument, WishlistItem } from '../../src/types'
 
 const transaction = {
   id: 'tx-visual-1',
@@ -239,6 +239,8 @@ interface MockApiOptions {
   /** Adds report-specific density without replacing unrelated bootstrap fixture fields. */
   dashboard?: Partial<typeof dashboard>
   pendingNotifications?: PendingNotification[]
+  recurringPayments?: RecurringPayment[]
+  loans?: Loan[]
   /** Overrides account settings for tests that need one stable privacy presentation. */
   setting?: Partial<typeof setting>
   /**
@@ -252,6 +254,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
   const darkMode = test.info().project.name.endsWith('-dark')
   const themedBootstrap = {
     ...bootstrap,
+    recurringPayments: options.recurringPayments ?? bootstrap.recurringPayments,
     accounts: options.accounts ?? bootstrap.accounts,
     transactions: options.transactions ?? bootstrap.transactions,
     wishlist: options.wishlist ?? bootstrap.wishlist,
@@ -278,6 +281,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
       })
     }
     if (pathname.endsWith('/bootstrap')) return fulfill(route, themedBootstrap)
+    if (pathname.endsWith('/loans')) return fulfill(route, options.loans ?? [])
     if (options.failDocuments && pathname.includes('/documents')) {
       return fulfill(route, { message: 'Vault temporarily unavailable.' }, 503)
     }

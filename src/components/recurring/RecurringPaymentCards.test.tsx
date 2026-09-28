@@ -179,7 +179,9 @@ describe('RecurringPaymentCards loan links', () => {
     }], { onDeletePayment, onNavigateToLoan })
 
     expect(screen.getByText('Linked to Home loan')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'View linked loan: Home loan' }))
+    const linkedLoan = screen.getByRole('link', { name: 'View linked loan: Home loan' })
+    expect(linkedLoan.getAttribute('href')).toBe('/recurring?loan=loan-home')
+    fireEvent.click(linkedLoan)
     expect(onNavigateToLoan).toHaveBeenCalledWith('loan-home')
 
     const deleteButton = screen.getByRole('button', { name: 'Delete Netflix' }) as HTMLButtonElement

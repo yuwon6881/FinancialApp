@@ -654,7 +654,7 @@ test('bill review centers text-only actions and explains the full-payment defaul
 
   await expect(dialog.getByRole('status')).toContainText('Full payment selected')
   await expect(dialog.getByRole('status')).toContainText('172.80')
-  await dialog.getByRole('checkbox', { name: 'Pay partial amount' }).check()
+  await dialog.getByRole('switch', { name: 'Pay partial amount for Gym' }).click()
   const amount = dialog.getByLabel('Amount paid')
   await amount.fill('100')
   await expect(dialog.getByRole('status')).toContainText('Part payment')
@@ -663,6 +663,69 @@ test('bill review centers text-only actions and explains the full-payment defaul
   await expect(dialog.getByRole('button', { name: 'Confirm Paid' })).toBeDisabled()
   await expect(dialog.getByRole('button', { name: 'Discard' })).toBeEnabled()
   await expect(dialog.getByRole('button', { name: 'Remove' })).toBeEnabled()
+})
+
+test('investment plan Configure opens its settings tab', async ({ page }) => {
+  test.skip(
+    !['mobile-dark', 'desktop-dark'].includes(test.info().project.name),
+    'The plan link is checked at phone and desktop widths.',
+  )
+
+  await mockApi(page, {
+    investmentPortfolio: {
+      accounts: [{ id: 'broker', name: 'Broker', baseCurrency: 'MYR', isArchived: false }],
+    },
+  })
+  await page.goto('/investments', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'Configure' }).click()
+
+  await expect(page).toHaveURL(/\/settings\?.*section=investment-plan/)
+  await expect(page.getByRole('tab', { name: 'Investment Plan' })).toHaveAttribute('aria-selected', 'true')
+})
+
+test('recurring card actions and linked loan badge keep compact heights', async ({ page }) => {
+  test.skip(
+    !['mobile-dark', 'desktop-dark'].includes(test.info().project.name),
+    'The compact card is checked at phone and desktop widths.',
+  )
+
+  await mockApi(page, {
+    recurringPayments: [{
+      id: 'linked-bill', name: 'PTPTN', amount: 94.29, frequency: 'Monthly',
+      category: 'Loan', ledgerCategory: 'Essentials', accountId: 'account-visual-essentials',
+      nextDueDate: '2026-08-28', dueDate: 28, startDate: '2026-07-28', active: true,
+      paymentMode: 'Manual', linkedLoanId: 'ptptn-loan', linkedLoanName: 'PTPTN',
+      reminderEnabled: true, reminderMode: 'Once', reminderLeadDays: 3,
+    }],
+    loans: [{
+      id: 'ptptn-loan', name: 'PTPTN', recurringPaymentId: 'linked-bill',
+      openingPrincipal: 1_000, trackingStartDate: '2026-07-28', annualRatePercent: 0,
+      termPeriods: 12, interestMethod: 'ReducingBalance',
+      snapshot: {
+        outstandingBalance: 1_000, scheduledPayment: 94.29, totalScheduledInterest: 0,
+        totalInterestPaid: 0, payments: [], futureSchedule: [],
+      },
+    }],
+  })
+  await page.goto('/recurring', { waitUntil: 'domcontentloaded' })
+  const card = page.locator('#recur-card-linked-bill')
+  await expect(card).toBeVisible()
+
+  const badgeHeight = await card.getByText('Loan', { exact: true }).first().evaluate(element => element.getBoundingClientRect().height)
+  const linkHeight = await card.getByRole('link', { name: 'View linked loan: PTPTN' }).evaluate(element => element.getBoundingClientRect().height)
+  expect(Math.abs(linkHeight - badgeHeight)).toBeLessThanOrEqual(1)
+  for (const name of ['Edit PTPTN', 'Delete PTPTN']) {
+    const height = await card.getByRole('button', { name }).evaluate(element => element.getBoundingClientRect().height)
+    expect(height).toBe(44)
+  }
+  const onceHeight = await card.getByRole('radio', { name: 'Once' }).evaluate(element => element.getBoundingClientRect().height)
+  expect(onceHeight).toBe(44)
+  const newSubscriptionHeight = await page.getByRole('button', { name: 'New Subscription' }).evaluate(element => element.getBoundingClientRect().height)
+  expect(newSubscriptionHeight).toBe(test.info().project.name === 'mobile-dark' ? 44 : 52)
+  if (test.info().project.name === 'desktop-dark') {
+    const askAiHeight = await page.getByRole('button', { name: 'ASK AI' }).evaluate(element => element.getBoundingClientRect().height)
+    expect(askAiHeight).toBe(44)
+  }
 })
 
 test('vault keeps the linked-ledger action adjacent to its document name', async ({ page }) => {

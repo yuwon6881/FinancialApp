@@ -99,18 +99,21 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                       {rp.category}
                     </span>
                     {rp.linkedLoanId && (
-                      <Button
-                        variant="tertiary"
-                        type="button"
-                        onClick={() => onNavigateToLoan?.(rp.linkedLoanId!)}
-                        className="inline-flex items-center justify-center h-5 box-border gap-1 rounded border border-accent-ink/25 bg-accent/30 hover:bg-accent/50 text-accent-ink px-1.5 py-0 text-xs font-semibold leading-none transition cursor-pointer shrink-0"
+                      <a
+                        href={`/recurring?loan=${encodeURIComponent(rp.linkedLoanId)}`}
+                        onClick={event => {
+                          if (!onNavigateToLoan || event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+                          event.preventDefault()
+                          onNavigateToLoan(rp.linkedLoanId!)
+                        }}
+                        className="relative inline-flex h-5 box-border shrink-0 items-center justify-center gap-1 rounded border border-accent-ink/25 bg-accent/30 px-1.5 py-0 text-xs font-semibold leading-none text-accent-ink transition hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring after:absolute after:-inset-y-3 after:inset-x-0"
                         title={`View linked loan: ${rp.linkedLoanName || 'Loan'}`}
                         aria-label={`View linked loan: ${rp.linkedLoanName || 'Loan'}`}
                       >
                         <Link2 className="size-2.5 shrink-0" aria-hidden="true" />
                         <span className="truncate max-w-[140px]">Linked to {rp.linkedLoanName || 'Loan'}</span>
                         <ChevronRight className="size-2.5 shrink-0 opacity-70" aria-hidden="true" />
-                      </Button>
+                      </a>
                     )}
                   </div>
                 </div>
@@ -197,6 +200,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                 {isEligibleForPayEarly(rp) ? (
                   <Button
                     variant="tertiary"
+                    size="sm"
                     onClick={() => onRequestPayEarly?.(rp.id)}
                     disabled={isBusy || hideSensitive}
                     aria-label={`Pay Early for ${rp.name}`}
@@ -208,6 +212,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                 <div className="flex items-center gap-2">
                   <Button
                     variant="tertiary"
+                    size="sm"
                     onClick={() => onEditPayment(rp)}
                     disabled={isBusy || hideSensitive}
                     aria-label={`Edit ${rp.name}`}
@@ -217,6 +222,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                   </Button>
                   <Button
                     variant="destructive"
+                    size="sm"
                     onClick={() => { if (!hideSensitive) onDeletePayment(rp.id) }}
                     disabled={isBusy || hideSensitive || Boolean(rp.linkedLoanId)}
                     aria-label={`Delete ${rp.name}`}

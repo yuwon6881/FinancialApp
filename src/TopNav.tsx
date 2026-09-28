@@ -237,7 +237,7 @@ const TopNav: React.FC<TopNavProps> = ({
             </>
           )}
           
-          <Button variant="tertiary"
+          <Button variant="tertiary" size="sm"
             type="button"
             onClick={onAskAI}
             className="hidden sm:flex size-9 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/8 text-blue-600 hover:border-blue-500/35 hover:bg-blue-500/14 dark:text-blue-400 select-none transition-all duration-150 cursor-pointer active:scale-95 xl:h-9 xl:w-auto xl:gap-1.5 xl:px-3"

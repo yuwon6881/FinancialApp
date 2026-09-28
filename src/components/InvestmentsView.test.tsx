@@ -113,6 +113,15 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(api.refreshInvestmentMarketData).not.toHaveBeenCalled()
   })
 
+  it('opens the Investment Plan settings tab from Configure', async () => {
+    const onNavigate = vi.fn()
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
+    renderView({ onNavigate })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Configure' }))
+    expect(onNavigate).toHaveBeenCalledWith('settings', { search: { section: 'investment-plan' } })
+  })
+
   it('shows the themed refresh status while a cached portfolio is replaced by the API response', async () => {
     let resolveFetch!: (portfolio: InvestmentPortfolio) => void
     vi.mocked(api.readCachedInvestmentPortfolio).mockReturnValue(tradablePortfolio)

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { CaptureApplication } from '../../../lib/native/purchaseCapture'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { Button } from '../../ui/Button'
-import { Checkbox } from '../../ui/Checkbox'
+import { ToggleButton } from '../../ui/ToggleButton'
 import { FormField } from '../../ui/FormField'
 import { Input } from '../../ui/Input'
 import { ModalActions } from '../../ui/ModalActions'
@@ -37,7 +37,7 @@ export function SourceAppsSheet({ isOpen, onClose, applications, loading, busy, 
       isOpen={isOpen}
       onClose={onClose}
       title="Choose notification sources"
-      description="Only alerts from the apps you tick are read. Choose your banking and e-wallet apps."
+      description="Only alerts from the apps you turn on are read. Choose your banking and e-wallet apps."
       footer={
         <ModalActions>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
@@ -69,13 +69,18 @@ export function SourceAppsSheet({ isOpen, onClose, applications, loading, busy, 
           <ul className="divide-y divide-border/50 overflow-hidden rounded-control border border-border/60">
             {visible.map(app => (
               <li key={app.packageName}>
-                <label className="flex min-h-13 cursor-pointer items-center justify-between gap-3 px-3 py-2 hover:bg-muted/40 sm:min-h-11">
+                <div className="flex min-h-13 items-center justify-between gap-3 px-3 py-2 sm:min-h-11">
                   <span className="min-w-0">
                     <span className="block break-words text-sm text-foreground">{app.label}</span>
                     <span className="block truncate text-xs text-muted-foreground" aria-hidden="true">{app.packageName}</span>
                   </span>
-                  <Checkbox aria-label={app.label} checked={selected.includes(app.packageName)} onChange={event => toggle(app.packageName, event.target.checked)} />
-                </label>
+                  <ToggleButton
+                    label={app.label}
+                    active={selected.includes(app.packageName)}
+                    disabled={busy}
+                    onClick={() => toggle(app.packageName, !selected.includes(app.packageName))}
+                  />
+                </div>
               </li>
             ))}
           </ul>
