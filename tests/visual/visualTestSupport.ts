@@ -364,10 +364,14 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
 /** Waits for asynchronous content to stop changing the document height. */
 export async function waitForStableLayout(page: Page) {
   await expect.poll(async () => {
-    const first = await page.evaluate(() => document.documentElement.scrollHeight)
-    await page.waitForTimeout(150)
-    const second = await page.evaluate(() => document.documentElement.scrollHeight)
-    return first === second ? second : -1
+    try {
+      const first = await page.evaluate(() => document.documentElement.scrollHeight)
+      await page.waitForTimeout(150)
+      const second = await page.evaluate(() => document.documentElement.scrollHeight)
+      return first === second ? second : -1
+    } catch {
+      return -1
+    }
   }, { timeout: 10_000 }).toBeGreaterThan(0)
 }
 
