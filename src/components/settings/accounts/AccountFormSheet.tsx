@@ -91,7 +91,7 @@ export function AccountFormSheet({
   }, [account, defaultBucket, defaultKind, isOpen])
 
   const parsedBalance = balanceAmount.trim() ? Number(balanceAmount) : Number.NaN
-  const isBalanceValid = Number.isFinite(parsedBalance)
+  const isBalanceValid = Number.isFinite(parsedBalance) && parsedBalance >= 0
   const balanceDiff = isBalanceValid && account ? parsedBalance - account.remaining : 0
   const isBalanceDirty = isEditing && !account?.isArchived && isBalanceValid && Math.abs(balanceDiff) >= 0.005
 
@@ -125,13 +125,13 @@ export function AccountFormSheet({
     }
 
     const parsedOpening = openingAmount.trim() ? Number(openingAmount) : 0
-    if (!isEditing && !Number.isFinite(parsedOpening)) {
-      setOpeningError('Enter a valid starting amount.')
+    if (!isEditing && (!Number.isFinite(parsedOpening) || parsedOpening < 0)) {
+      setOpeningError(parsedOpening < 0 ? 'Starting amount cannot be negative.' : 'Enter a valid starting amount.')
       return
     }
 
-    if (isEditing && !account?.isArchived && !isBalanceValid) {
-      setBalanceError('Enter a valid balance.')
+    if (isEditing && !account?.isArchived && (!isBalanceValid || parsedBalance < 0)) {
+      setBalanceError(parsedBalance < 0 ? 'Account balance cannot be negative.' : 'Enter a valid balance.')
       return
     }
 

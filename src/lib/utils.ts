@@ -112,7 +112,10 @@ export const maskCurrencyInput = (rawVal: string, currentValue: string): string 
     const parsed = parseInt(digits, 10)
     if (parsed === 0) {
       const prevToken = currentTokens[index] || ''
-      return prevToken === '0.00' || prevToken === '' ? '' : '0.00'
+      if ((prevToken === '0.00' || prevToken === '0') && token.length < prevToken.length) {
+        return ''
+      }
+      return '0.00'
     }
 
     return (parsed / 100).toFixed(2)

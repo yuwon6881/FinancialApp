@@ -21,6 +21,7 @@ export interface StabilityRecoveryLedgerJump {
 interface StabilityRecoveryExceptionCardProps {
   recovery: StabilityRecovery | undefined
   formatSensitive: (value: number) => React.ReactNode
+  isMasked?: boolean
   /** Opens the ledger on the movements that produced the shortfall. Absent in tests and previews. */
   onNavigateToLedger?: (options: StabilityRecoveryLedgerJump) => void
 }
@@ -58,6 +59,7 @@ function formatRecoveryCycle(cycleKey: string) {
 export function StabilityRecoveryExceptionCard({
   recovery,
   formatSensitive,
+  isMasked = false,
   onNavigateToLedger,
 }: StabilityRecoveryExceptionCardProps) {
   const reduceMotion = useReducedMotion()
@@ -76,7 +78,8 @@ export function StabilityRecoveryExceptionCard({
     // the whole remaining shortfall, naming both would print the same figure twice.
     askIsWholeShortfall,
     hasOverlappingPlans,
-    percentRepaid,
+    cyclePlanFunded,
+    cyclePlanPercent,
   } = describeStabilityRecovery(recovery)
   // The jump needs a window to filter on, and only the server can say when the fund was last full.
   const canShowMovements = Boolean(onNavigateToLedger && recovery.recoveryFromDate)
@@ -140,23 +143,31 @@ export function StabilityRecoveryExceptionCard({
         </p>
 
         <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-3.5">
-          <div className="flex items-center justify-between gap-2 text-xs">
-            <span className="font-semibold text-muted-foreground">Recovery progress</span>
-            <span className="font-extrabold text-amber-600 dark:text-amber-400 tabular-nums">{percentRepaid}% repaid</span>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs">
+            <span className="font-semibold text-muted-foreground">This cycle's plan</span>
+            <span className="font-extrabold text-amber-600 dark:text-amber-400 tabular-nums">
+              {status === 'deferred' ? 'No amount due yet' : cyclePlanPercent === null
+                ? 'No amount planned this cycle'
+                : cyclePlanPercent >= 100 ? <>This cycle’s plan met · {formatSensitive(cyclePlanFunded)} of {formatSensitive(recovery.requiredThisCycle)}</>
+                  : <>{formatSensitive(cyclePlanFunded)} of {formatSensitive(recovery.requiredThisCycle)} put back</>}
+            </span>
           </div>
-          <div
-            className="h-2 w-full overflow-hidden rounded-full border border-border/40 bg-muted/70"
-            role="progressbar"
-            aria-label="Recovery progress"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={percentRepaid}
-          >
+          {cyclePlanPercent !== null && (
             <div
-              className="h-full rounded-full bg-amber-500 transition-all duration-300"
-              style={{ width: `${Math.min(100, Math.max(0, percentRepaid))}%` }}
-            />
-          </div>
+              className="h-2 w-full overflow-hidden rounded-full border border-border/40 bg-muted/70"
+              role="progressbar"
+              aria-label="This cycle's recovery plan"
+              aria-valuemin={isMasked ? undefined : 0}
+              aria-valuemax={isMasked ? undefined : 100}
+              aria-valuenow={isMasked ? undefined : cyclePlanPercent}
+              aria-valuetext={isMasked ? 'Hidden' : undefined}
+            >
+              <div
+                className="h-full rounded-full bg-amber-500 transition-all duration-300"
+                style={{ width: `${isMasked ? 0 : cyclePlanPercent}%` }}
+              />
+            </div>
+          )}
         </div>
         <div className="flex justify-end">
           <Button

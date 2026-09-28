@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SavingsGoal } from '../types'
-import { calculateFreeRewardsBalance, pendingRewardsAmount } from './freeRewards'
+import { calculateFreeRewardsBalance, getRewardsAvailability, pendingRewardsAmount } from './freeRewards'
 
 function goal(overrides: Partial<SavingsGoal> = {}): SavingsGoal {
   return {
@@ -22,6 +22,7 @@ function goal(overrides: Partial<SavingsGoal> = {}): SavingsGoal {
 describe('free Rewards calculation', () => {
   it('subtracts active Rewards earmarks and pending Rewards bills', () => {
     expect(calculateFreeRewardsBalance(1000, [goal()], 150)).toBe(550)
+    expect(getRewardsAvailability(1000, [goal()], 150)).toEqual({ committed: 450, freeToSpend: 550 })
   })
 
   it('ignores completed, Essentials, and pending-delete commitments', () => {
@@ -30,6 +31,10 @@ describe('free Rewards calculation', () => {
       goal({ id: 2, fundingBucket: 'Essentials', earmarkedAmount: 300 }),
       goal({ id: 3, isPendingDelete: true, earmarkedAmount: 400 }),
     ], 0)).toBe(1000)
+  })
+
+  it('keeps free money at zero when commitments exceed the Rewards balance', () => {
+    expect(getRewardsAvailability(200, [goal()], 50)).toEqual({ committed: 350, freeToSpend: 0 })
   })
 
   it('matches pending bills by exact bucket ledger category only', () => {

@@ -39,8 +39,10 @@ export interface StabilityRecoveryNarrative {
   isOverdue: boolean
   /** The only open plan is on its last cycle. Never true for overlapping or overdue plans. */
   isFinalCycle: boolean
-  /** How much of what is still being put back has gone back, 0-100. */
-  percentRepaid: number
+  /** Amount credited toward the current cycle's fixed ask, capped at that ask. */
+  cyclePlanFunded: number
+  /** Null when the plan has not opened and there is no cycle target. */
+  cyclePlanPercent: number | null
 }
 
 export function describeStabilityRecovery(recovery: StabilityRecovery): StabilityRecoveryNarrative {
@@ -77,8 +79,9 @@ export function describeStabilityRecovery(recovery: StabilityRecovery): Stabilit
     hasOverlappingPlans,
     isOverdue: recovery.isOverdue,
     isFinalCycle,
-    percentRepaid: recovery.markedTotal > 0
-      ? Math.round(Math.min(1, Math.max(0, recovery.repaidTotal / recovery.markedTotal)) * 100)
-      : 0,
+    cyclePlanFunded: Math.min(Math.max(0, recovery.toppedUpThisCycle), Math.max(0, recovery.requiredThisCycle)),
+    cyclePlanPercent: recovery.isDeferred || recovery.requiredThisCycle <= 0
+      ? null
+      : Math.round(Math.min(1, Math.max(0, recovery.toppedUpThisCycle / recovery.requiredThisCycle)) * 100),
   }
 }

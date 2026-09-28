@@ -4,6 +4,24 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class PurchaseNotificationParserTest {
+    @Test public void recognizesCimbFpxAcceptedPayment() {
+        PurchaseNotificationParser.Result result = PurchaseNotificationParser.parse(
+            "CIMB OCTO", "FPX Payment RM515.00 To MOOMOO Securities malaysi accepted on 28 sep 2026");
+        assertNotNull(result);
+        assertEquals("515.00", result.amount);
+        assertEquals("MYR", result.currency);
+        assertEquals("MOOMOO Securities malaysi", result.description);
+        assertEquals("2026-09-28", result.date);
+        assertEquals("outflow", result.transactionType);
+        result = PurchaseNotificationParser.parse("FPX Payment RM515.00 To MOOMOO Securities malaysi", "accepted on 28 sep 2026");
+        assertNotNull(result);
+        assertEquals("MOOMOO Securities malaysi", result.description);
+    }
+    @Test public void doesNotMistakePendingFpxAuthorizationForPayment() {
+        assertNull(PurchaseNotificationParser.parse("CIMB", "FPX Payment RM515.00 to MOOMOO pending approval"));
+        assertNull(PurchaseNotificationParser.parse("CIMB", "Approve FPX Payment RM515.00 to MOOMOO"));
+        assertNull(PurchaseNotificationParser.parse("CIMB", "FPX Payment RM515.00 to MOOMOO declined"));
+    }
     @Test public void extractsSuccessfulPurchase() {
         PurchaseNotificationParser.Result result = PurchaseNotificationParser.parse("Payment successful", "You paid RM 24.50 at COFFEE HOUSE on 2026-09-27");
         assertNotNull(result);

@@ -78,8 +78,9 @@ interface UseBucketAccountSetupViewOptions {
 }
 
 const parseAmount = (value: string) => {
-  if (!value.trim()) return Number.NaN
-  const parsed = Number(value)
+  const trimmed = value.trim()
+  if (!trimmed) return 0
+  const parsed = Number(trimmed)
   return Number.isFinite(parsed) ? parsed : Number.NaN
 }
 
@@ -163,8 +164,8 @@ export function useBucketAccountSetupView({
   })), [bucketAccounts, targetInputs])
   const parsedDraftTargets = useMemo(() => drafts.map(draft => ({ ...draft, targetValue: parseAmount(draft.target) })), [drafts])
   const hasInvalidTarget = useMemo(
-    () => parsedExistingTargets.some(account => !account.isArchived && Number.isNaN(account.target))
-      || parsedDraftTargets.some(draft => Number.isNaN(draft.targetValue)),
+    () => parsedExistingTargets.some(account => !account.isArchived && (Number.isNaN(account.target) || account.target < 0))
+      || parsedDraftTargets.some(draft => Number.isNaN(draft.targetValue) || draft.targetValue < 0),
     [parsedDraftTargets, parsedExistingTargets],
   )
   const preview = useMemo<BucketAccountReconciliation | null>(() => {
@@ -200,10 +201,15 @@ export function useBucketAccountSetupView({
       if (!name) nextErrors[draft.id] = 'Enter an account name.'
       else if (names.has(name.toLowerCase())) nextErrors[draft.id] = 'This account name is already in use.'
       else names.add(name.toLowerCase())
-      if (Number.isNaN(parseAmount(draft.target))) nextErrors[`${draft.id}-target`] = 'Enter a valid balance.'
+      const draftTarget = parseAmount(draft.target)
+      if (Number.isNaN(draftTarget)) nextErrors[`${draft.id}-target`] = 'Enter a valid balance.'
+      else if (draftTarget < 0) nextErrors[`${draft.id}-target`] = 'Account balance cannot be negative.'
     }
     for (const account of parsedExistingTargets) {
-      if (!account.isArchived && Number.isNaN(account.target)) nextErrors[account.id] = 'Enter a valid balance.'
+      if (!account.isArchived) {
+        if (Number.isNaN(account.target)) nextErrors[account.id] = 'Enter a valid balance.'
+        else if (account.target < 0) nextErrors[account.id] = 'Account balance cannot be negative.'
+      }
     }
     if (!bucketAccounts.some(account => !account.isArchived) && drafts.length === 0) {
       nextErrors.form = 'Add at least one open account to this bucket.'

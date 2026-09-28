@@ -94,4 +94,64 @@ describe('BucketAccountSetupSheet', () => {
         }),
       ))
   })
+
+  it('allows setting account balance to 0 and proceeding with review', async () => {
+    const onReconcileAccounts = vi.fn().mockResolvedValue(undefined)
+    render(
+      <BucketAccountSetupSheet
+        isOpen={true}
+        bucket="Essentials"
+        accounts={mockAccounts}
+        bucketTotal={100}
+        currency="MYR"
+        hideSensitive={false}
+        onClose={vi.fn()}
+        onReconcileAccounts={onReconcileAccounts}
+      />,
+    )
+
+    // Update existing account balance to 0
+    const mainInput = screen.getByLabelText(/Current balance for Main Checking/i)
+    fireEvent.change(mainInput, { target: { value: '0' } })
+
+    const reviewBtn = screen.getByRole('button', { name: 'Review changes' }) as HTMLButtonElement
+    expect(reviewBtn.disabled).toBe(false)
+    fireEvent.click(reviewBtn)
+
+    expect(screen.getByText(/Confirm (account setup|bucket adjustment)/i)).toBeDefined()
+
+    const confirmBtn = screen.getByRole('button', { name: 'Apply account setup' })
+    fireEvent.click(confirmBtn)
+
+    await waitFor(() => expect(onReconcileAccounts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bucket: 'Essentials',
+        expectedBucketTotal: 100,
+        targets: expect.arrayContaining([
+          expect.objectContaining({ id: 'acct-essentials-1', target: 0 }),
+        ]),
+      }),
+    ))
+  })
+
+  it('disallows review when account balance is negative', () => {
+    render(
+      <BucketAccountSetupSheet
+        isOpen={true}
+        bucket="Essentials"
+        accounts={mockAccounts}
+        bucketTotal={100}
+        currency="MYR"
+        hideSensitive={false}
+        onClose={vi.fn()}
+        onReconcileAccounts={vi.fn()}
+      />,
+    )
+
+    const mainInput = screen.getByLabelText(/Current balance for Main Checking/i)
+    fireEvent.change(mainInput, { target: { value: '-50' } })
+
+    const reviewBtn = screen.getByRole('button', { name: 'Review changes' }) as HTMLButtonElement
+    expect(reviewBtn.disabled).toBe(true)
+  })
 })

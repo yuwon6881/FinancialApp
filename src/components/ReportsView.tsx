@@ -175,6 +175,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         isCurrentCycle={isCurrentCycle}
         cycleLabel={view.cycleLabel}
         pendingDeductionsByCategory={view.pendingDeductionsByCategory}
+        savingsGoals={savingsGoals}
         amountsMasked={view.areBalanceAmountsMasked}
         hideSensitive={hideSensitive}
         formatCurrency={view.formatCurrency}

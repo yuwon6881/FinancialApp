@@ -168,6 +168,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <StabilityRecoveryExceptionCard
         recovery={dashboardData?.stabilityRecovery}
         formatSensitive={view.formatSensitive}
+        isMasked={hideSensitive}
         onNavigateToLedger={onNavigateToLedger}
       />
 

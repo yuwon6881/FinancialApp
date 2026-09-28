@@ -13,18 +13,30 @@ export const isActiveGoal = (goal: SavingsGoal): boolean =>
  * Wishlist and AI actions: the same Rewards balance cannot be spent twice by a goal, a pending
  * bill and a wishlist item.
  */
-export function calculateFreeRewardsBalance(
+export function getRewardsAvailability(
   rewardsBalance: number,
   goals: readonly SavingsGoal[],
   pendingRewards: number,
-): number {
+): { committed: number; freeToSpend: number } {
   const earmarked = goals.reduce(
     (sum, goal) => isActiveGoal(goal) && (goal.fundingBucket ?? 'Rewards') === 'Rewards'
       ? sum + goal.earmarkedAmount
       : sum,
     0,
   )
-  return Math.round(Math.max(0, rewardsBalance - pendingRewards - earmarked) * 100) / 100
+  const committed = Math.round((earmarked + Math.max(0, pendingRewards)) * 100) / 100
+  return {
+    committed,
+    freeToSpend: Math.round(Math.max(0, rewardsBalance - committed) * 100) / 100,
+  }
+}
+
+export function calculateFreeRewardsBalance(
+  rewardsBalance: number,
+  goals: readonly SavingsGoal[],
+  pendingRewards: number,
+): number {
+  return getRewardsAvailability(rewardsBalance, goals, pendingRewards).freeToSpend
 }
 
 export function pendingRecurringAmount(

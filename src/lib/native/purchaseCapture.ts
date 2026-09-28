@@ -26,6 +26,8 @@ export interface CaptureState {
   packages: string[]
   candidates: PurchaseCapture[]
   access: boolean
+  /** Older Android shells did not report listener lifecycle. */
+  listenerConnected?: boolean
   notifications: boolean
   tapId?: string
 }

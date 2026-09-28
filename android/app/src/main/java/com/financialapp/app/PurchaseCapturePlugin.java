@@ -52,6 +52,10 @@ public class PurchaseCapturePlugin extends Plugin {
     private boolean access() {
         return NotificationManagerCompat.getEnabledListenerPackages(getContext()).contains(getContext().getPackageName());
     }
+    private void reconnectIfNeeded() {
+        if (access() && !PurchaseNotificationListener.isConnected())
+            NotificationListenerService.requestRebind(new ComponentName(getContext(), PurchaseNotificationListener.class));
+    }
     private boolean reviewNotifications() {
         NotificationManager manager = getContext().getSystemService(NotificationManager.class);
         if (!manager.areNotificationsEnabled()) return false;
@@ -61,17 +65,18 @@ public class PurchaseCapturePlugin extends Plugin {
         }
         return true;
     }
-    @PluginMethod public void activate(PluginCall call) { run(call, () -> { store().activate(call.getString("owner")); return new JSObject(); }); }
+    @PluginMethod public void activate(PluginCall call) { run(call, () -> { store().activate(call.getString("owner")); reconnectIfNeeded(); return new JSObject(); }); }
     @PluginMethod public void state(PluginCall call) {
         run(call, () -> {
             JSONObject data = store().state(call.getString("owner"));
+            reconnectIfNeeded();
             JSONArray pending = new JSONArray(); JSONArray candidates = data.getJSONArray("candidates");
             for (int i = 0; i < candidates.length(); i++) {
                 JSONObject candidate = candidates.getJSONObject(i);
                 if (!candidate.optString("status").equals("completed")) pending.put(candidate);
             }
             return new JSObject().put("enabled", data.optBoolean("enabled")).put("packages", data.getJSONArray("packages"))
-                .put("candidates", pending).put("access", access()).put("tapId", pendingTap)
+                .put("candidates", pending).put("access", access()).put("listenerConnected", PurchaseNotificationListener.isConnected()).put("tapId", pendingTap)
                 .put("notifications", reviewNotifications());
         });
     }

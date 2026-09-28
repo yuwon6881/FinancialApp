@@ -14,8 +14,9 @@ final class PurchaseNotificationParser {
         "\\b(otp|tac|one[- ]time|verification|verify|(?:security|secure|auth(?:entication)?|confirmation|activation|login)\\s+code|code\\s+(?:is|:)|declined|failed|failure|unsuccessful|pending|requested|request|approve|authori[sz]ation|refund|refunded|reversed|reversal|received|credited|incoming|inbound|reminder|due|scheduled|initiated|processing|cancelled|canceled)\\b",
         Pattern.CASE_INSENSITIVE);
     private static final Pattern PURCHASE = Pattern.compile(
-        "\\b(payment|purchase|transaction)\\s+(?:was\\s+|is\\s+|has\\s+been\\s+)?(?:successful|completed|approved)"
+        "\\b(payment|purchase|transaction)\\s+(?:was\\s+|is\\s+|has\\s+been\\s+)?(?:successful|completed|approved|accepted)"
             + "|\\b(?:payment|purchase|transaction)\\b[^\\n]{0,80}?\\b(?:is|was|has\\s+been)\\s+(?:successful|completed|approved)\\b"
+            + "|\\b(?:payment|purchase|transaction)\\b[^\\n]{0,120}?\\baccepted\\b"
             + "|\\b(?:paid|spent|purchased|charged|debited)\\b|\\b(?:successful|completed)\\s+(?:payment|purchase)",
         Pattern.CASE_INSENSITIVE);
     private static final Pattern TRANSFER = Pattern.compile(
@@ -31,13 +32,13 @@ final class PurchaseNotificationParser {
     /** A figure labelled as a balance or limit is context, not the amount that moved. */
     private static final Pattern BALANCE_CONTEXT = Pattern.compile("\\b(?:bal(?:ance)?|available|avail|limit|remaining)\\b[^0-9]{0,24}$", Pattern.CASE_INSENSITIVE);
     private static final Pattern MERCHANT = Pattern.compile(
-        "\\b(?:at|to)\\s+([^\\n;]+?)(?=\\s+(?:at|to|on|using|with|via|for|from|is|was|has|successful|successfully|ref|reference)\\b|[.!,](?:\\s|$)|[.!]?$)",
+        "\\b(?:at|to)\\s+([^\\n;]+?)(?=\\s+(?:at|to|on|using|with|via|for|from|is|was|has|successful|successfully|accepted|ref|reference)\\b|[.!,](?:\\s|$)|[.!]?$)",
         Pattern.CASE_INSENSITIVE);
     /** Phrases that look like merchant captures but are payment instruments or generic nouns. */
     private static final Pattern NOT_MERCHANT = Pattern.compile(
         "^(?:your\\s+)?(?:(?:debit|credit|prepaid|visa|master(?:card)?|amex)\\s+)?(?:card|account|bank(?:\\s+account)?|wallet|e-wallet)\\b",
         Pattern.CASE_INSENSITIVE);
-    private static final Pattern DATE = Pattern.compile("\\b(20[0-9]{2}-[0-9]{2}-[0-9]{2})\\b");
+    private static final Pattern DATE = Pattern.compile("\\b(20[0-9]{2}-[0-9]{2}-[0-9]{2}|[0-9]{1,2}\\s+[a-z]{3}\\s+20[0-9]{2})\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern MERCHANT_LETTER = Pattern.compile("\\p{L}");
     private static final Pattern TIME = Pattern.compile("^\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)?(?:\\s|$)", Pattern.CASE_INSENSITIVE);
 
@@ -50,13 +51,13 @@ final class PurchaseNotificationParser {
     }
 
     static Result parse(String title, String body) {
-        String text = (title + "\n" + body).trim();
+        String text = (title + " " + body).trim();
         boolean transfer = TRANSFER.matcher(text).find();
         if (EXCLUDED.matcher(text).find() || (!transfer && !PURCHASE.matcher(text).find())) return null;
         Result result = new Result();
         result.transactionType = "outflow";
         readAmount(text, result);
-        Matcher merchant = MERCHANT.matcher(body);
+        Matcher merchant = MERCHANT.matcher(text);
         while (merchant.find()) {
             String description = merchant.group(1).trim();
             if (NOT_MERCHANT.matcher(description).find()) continue;
@@ -70,9 +71,9 @@ final class PurchaseNotificationParser {
         if (date.find()) {
             String value = date.group(1);
             if (!date.find()) {
-                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT);
+                SimpleDateFormat format = new SimpleDateFormat(value.indexOf('-') >= 0 ? "yyyy-MM-dd" : "d MMM yyyy", Locale.ENGLISH);
                 format.setLenient(false);
-                try { if (value.equals(format.format(format.parse(value)))) result.date = value; }
+                try { result.date = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(format.parse(value)); }
                 catch (ParseException ignored) { /* Ambiguous dates remain absent. */ }
             }
         }

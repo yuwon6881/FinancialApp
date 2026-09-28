@@ -7,6 +7,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ComponentName;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.service.notification.NotificationListenerService;
@@ -22,20 +23,34 @@ public class PurchaseNotificationListener extends NotificationListenerService {
     static final String CHANNEL = "financialapp-purchase-review-v1";
     static final String EXTRA = "financialapp.purchaseCaptureId";
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    private static volatile boolean connected;
+    static boolean isConnected() { return connected; }
+    @Override public void onListenerConnected() {
+        connected = true;
+        PurchaseCapturePlugin.changed();
+        StatusBarNotification[] active = getActiveNotifications();
+        if (active != null) for (StatusBarNotification notification : active) onNotificationPosted(notification);
+    }
+    @Override public void onListenerDisconnected() {
+        connected = false;
+        PurchaseCapturePlugin.changed();
+        requestRebind(new ComponentName(this, PurchaseNotificationListener.class));
+    }
     @Override public void onNotificationPosted(StatusBarNotification sbn) {
         if (sbn.getPackageName().equals(getPackageName()) || (sbn.getNotification().flags & Notification.FLAG_GROUP_SUMMARY) != 0) return;
         // Keystore and disk access must not block the service's main thread.
         worker.execute(() -> captureNotification(sbn));
     }
-    @Override public void onDestroy() { worker.shutdown(); super.onDestroy(); }
+    @Override public void onDestroy() { connected = false; PurchaseCapturePlugin.changed(); worker.shutdown(); super.onDestroy(); }
     private void captureNotification(StatusBarNotification sbn) {
         try {
             PurchaseCaptureStore store = new PurchaseCaptureStore(this);
             if (!store.selected(sbn.getPackageName())) return;
             Notification notification = sbn.getNotification();
             String title = String.valueOf(notification.extras.getCharSequence(Notification.EXTRA_TITLE, ""));
-            String body = String.valueOf(notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT,
-                notification.extras.getCharSequence(Notification.EXTRA_TEXT, "")));
+            CharSequence bigText = notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
+            String body = String.valueOf(bigText == null || bigText.length() == 0
+                ? notification.extras.getCharSequence(Notification.EXTRA_TEXT, "") : bigText);
             if (title.length() > 500 || body.length() > 3000) return;
             PurchaseNotificationParser.Result parsed = PurchaseNotificationParser.parse(title, body);
             if (parsed == null) return;
@@ -48,7 +63,11 @@ public class PurchaseNotificationListener extends NotificationListenerService {
             catch (PackageManager.NameNotFoundException ignored) { /* Package name is still a truthful source. */ }
             String excerpt = (title + "\n" + body).trim();
             JSONObject candidate = store.capture(sbn.getPackageName(), label, key.toString(), sbn.getPostTime(), excerpt.substring(0, Math.min(500, excerpt.length())), parsed);
-            if (candidate != null) { showReviewNotification(this, candidate.getString("id")); PurchaseCapturePlugin.changed(); }
+            if (candidate != null) {
+                if (PurchaseNotificationTiming.shouldAlert(sbn.getPostTime(), System.currentTimeMillis()))
+                    showReviewNotification(this, candidate.getString("id"));
+                PurchaseCapturePlugin.changed();
+            }
         } catch (Exception ignored) { /* Fail closed: never log bank notification text or replace unreadable storage. */ }
     }
     static void showReviewNotification(Context context, String id) {

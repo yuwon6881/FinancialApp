@@ -31,7 +31,52 @@ const mockCategories: CategorySummary[] = [
   },
 ]
 
+const rewardsCategory: CategorySummary = {
+  name: 'Rewards', allocation: 0.1, target: 100, incomeAllocated: 100,
+  budget: 100, spent: 0, netChange: 100, remaining: 200, accounts: [],
+}
+
 describe('CarryoverLedgerTable', () => {
+  it('shows current Rewards commitments and free money using the shared pool rules', () => {
+    render(<CarryoverLedgerTable
+      categories={[rewardsCategory]}
+      isCurrentCycle
+      cycleLabel="Sep 1st ~ Sep 30th"
+      pendingDeductionsByCategory={{ Rewards: 30 }}
+      savingsGoals={[{
+        id: 1, name: 'Trip', targetAmount: 300, earmarkedAmount: 50,
+        fundingBucket: 'Rewards', targetDate: '2026-12-01', priority: 'Medium',
+        status: 'active', isRecurring: false, recurrenceMonths: 12,
+        cycleFundedAmount: 0, createdAt: '2026-09-01T00:00:00Z',
+      }]}
+      amountsMasked={false}
+      hideSensitive={false}
+      formatCurrency={value => `RM ${value.toFixed(2)}`}
+    />)
+
+    expect(screen.getByText('Committed')).toBeTruthy()
+    expect(screen.getByText('RM 80.00')).toBeTruthy()
+    expect(screen.getByText('Free to spend')).toBeTruthy()
+    expect(screen.getByText('RM 120.00')).toBeTruthy()
+    expect(screen.queryByText('Projected')).toBeNull()
+  })
+
+  it('does not apply today’s Rewards commitments to a historical cycle', () => {
+    render(<CarryoverLedgerTable
+      categories={[rewardsCategory]}
+      isCurrentCycle={false}
+      cycleLabel="Jun 1st ~ Jun 30th"
+      pendingDeductionsByCategory={{ Rewards: 30 }}
+      amountsMasked={false}
+      hideSensitive={false}
+      formatCurrency={value => `RM ${value.toFixed(2)}`}
+    />)
+    expect(screen.queryByText('Committed')).toBeNull()
+    expect(screen.queryByText('Free to spend')).toBeNull()
+    expect(screen.getByText('Pending')).toBeTruthy()
+    expect(screen.getByText('Projected')).toBeTruthy()
+  })
+
   it('renders categories and opens the account breakdown modal on click', () => {
     const onNavigateToAccounts = vi.fn()
     render(

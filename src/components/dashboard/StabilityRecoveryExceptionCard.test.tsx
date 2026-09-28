@@ -79,8 +79,20 @@ describe('StabilityRecoveryExceptionCard', () => {
 
     expect(screen.getByText('Emergency fund recovery')).toBeTruthy()
     expect(screen.getByText(/Put back \$1000\.00 this cycle/)).toBeTruthy()
-    expect(screen.getByText('Recovery progress')).toBeTruthy()
-    expect(screen.getByText('0% repaid')).toBeTruthy()
+    expect(screen.getByText("This cycle's plan")).toBeTruthy()
+    expect(screen.getByText('$0.00 of $1000.00 put back')).toBeTruthy()
+  })
+
+  it('does not expose progress while amounts are masked', () => {
+    render(<StabilityRecoveryExceptionCard
+      recovery={recovery({ toppedUpThisCycle: 250, requiredThisCycle: 1000, outstandingThisCycle: 750 })}
+      formatSensitive={() => '•••'}
+      isMasked
+    />)
+    const progress = screen.getByRole('progressbar', { name: "This cycle's recovery plan" })
+    expect(progress.getAttribute('aria-valuenow')).toBeNull()
+    expect(progress.getAttribute('aria-valuetext')).toBe('Hidden')
+    expect(screen.queryByText(/250|1000/)).toBeNull()
   })
 
   it('explains overlapping recovery cohorts without shortening the newer plan', () => {
@@ -313,17 +325,18 @@ describe('StabilityRecoveryExceptionCard', () => {
   it('reports figures that account for exactly what is still owed', () => {
     render(
       <StabilityRecoveryExceptionCard
-        recovery={recovery({ markedTotal: 300, repaidTotal: 100, outstandingShortfall: 200 })}
+        recovery={recovery({ markedTotal: 300, repaidTotal: 100, outstandingShortfall: 200,
+          requiredThisCycle: 300, toppedUpThisCycle: 100, outstandingThisCycle: 200 })}
         formatSensitive={format}
       />
     )
 
     openRecoveryDetails()
-    expect(screen.getByText('$300.00')).toBeTruthy()
-    expect(screen.getByText('$100.00')).toBeTruthy()
+    expect(screen.getAllByText('$300.00').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('$100.00').length).toBeGreaterThan(0)
     expect(screen.getByText('$200.00')).toBeTruthy()
-    // 100 of 300 back, measured against what is still being put back rather than a running history.
-    expect(screen.getByRole('progressbar', { name: 'Recovery progress' }).getAttribute('aria-valuenow')).toBe('33')
+    // 100 of this cycle's 300 plan is funded.
+    expect(screen.getByRole('progressbar', { name: "This cycle's recovery plan" }).getAttribute('aria-valuenow')).toBe('33')
   })
 
   it('opens the ledger on the window the shortfall accumulated over', () => {

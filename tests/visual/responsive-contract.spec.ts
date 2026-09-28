@@ -370,10 +370,62 @@ test('laptop-width Ledger and carryover views avoid horizontal data scrolling', 
   await waitForStableLayout(page)
   const carryover = page.getByRole('heading', { name: 'Carryover Rolling Ledgers' }).locator('..')
   await expect(carryover.locator('table')).toHaveCount(0)
-  const clippedLabels = await carryover.getByText(/^(Pending|Projected):/).evaluateAll(elements =>
-    elements.filter(element => element.scrollWidth > element.clientWidth + 1).map(element => element.textContent),
+  const clippedAmounts = await carryover.locator('span').evaluateAll(elements =>
+    elements.filter(element => element.scrollWidth > element.clientWidth + 1 && getComputedStyle(element).textOverflow === 'ellipsis')
+      .map(element => element.textContent),
   )
-  expect(clippedLabels).toEqual([])
+  expect(clippedAmounts).toEqual([])
+})
+
+test('Rewards carryover card keeps committed and free amounts readable across widths', async ({ page }) => {
+  const width = test.info().project.use.viewport?.width ?? 0
+
+  await mockApi(page, {
+    dashboard: {
+      categories: [
+        { id: 'rewards', name: 'Rewards', allocation: 0.1, target: 100,
+          incomeAllocated: 1655.16, budget: 37.06, netChange: 716.95,
+          spent: 0, remaining: 754.01 },
+      ],
+      activeRecurringPayments: [{
+        id: 'rewards-pending', recurringPaymentId: 'rewards-bill', name: 'Annual membership',
+        amount: 172.8, category: 'Membership', ledgerCategory: 'Rewards',
+        dueDate: '2026-07-31', dueDay: 31, isPaid: false, isDiscarded: false, status: 'Pending',
+      }],
+    },
+    savingsGoals: [{
+      id: 8, name: 'New bike', targetAmount: 500, earmarkedAmount: 200,
+      fundingBucket: 'Rewards', targetDate: '2026-12-01', priority: 'Medium',
+      status: 'active', isRecurring: false, recurrenceMonths: 12,
+      cycleFundedAmount: 0, createdAt: '2026-01-01T00:00:00.000Z',
+    }],
+  })
+  await page.goto('/reports', { waitUntil: 'domcontentloaded' })
+  await waitForStableLayout(page)
+  const card = page.getByTestId(width >= 1280 ? 'carryover-row-rewards' : 'carryover-card-rewards')
+  await expect(card.getByText('Committed')).toBeVisible()
+  await expect(card.getByText('Free to spend')).toBeVisible()
+  await expect(card.getByText('Pending')).toHaveCount(0)
+  await expect(card.getByText('Projected')).toHaveCount(0)
+
+  const geometry = await card.evaluate(element => ({
+    ownWidth: element.clientWidth,
+    contentWidth: element.scrollWidth,
+    clippedValues: Array.from(element.querySelectorAll('span'))
+      .filter(span => getComputedStyle(span).textOverflow === 'ellipsis' && span.scrollWidth > span.clientWidth + 1)
+      .map(span => span.textContent),
+  }))
+  expect(geometry.contentWidth).toBeLessThanOrEqual(geometry.ownWidth + 1)
+  expect(geometry.clippedValues).toEqual([])
+  if (width === 320) {
+    const net = await card.getByText('Net Change').boundingBox()
+    const remaining = await card.getByText('Remaining Balance').boundingBox()
+    expect(Math.abs((net?.y ?? 0) - (remaining?.y ?? 0))).toBeLessThan(3)
+  }
+  if (test.info().project.name === 'compact-320-light' ||
+      (width === 390 && (test.info().project.name === 'mobile-light' || test.info().project.name === 'mobile-dark'))) {
+    await expect(card).toHaveScreenshot('rewards-carryover-card.png')
+  }
 })
 
 test('dense report charts and limit cards keep every value inside its own control', async ({ page }) => {

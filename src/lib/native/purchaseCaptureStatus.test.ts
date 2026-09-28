@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { formatAlertTime, purchaseCaptureStatus } from './purchaseCaptureStatus'
 
-const ready = { enabled: true, access: true, packages: ['bank'], notifications: true, candidates: [] }
+const ready = { enabled: true, access: true, listenerConnected: true, packages: ['bank'], notifications: true, candidates: [] }
 
 describe('purchase capture status', () => {
   it('only reports listening when detection is on, access is granted and apps are chosen', () => {
@@ -9,6 +9,8 @@ describe('purchase capture status', () => {
     expect(purchaseCaptureStatus({ ...ready, enabled: false })).toMatchObject({ label: 'Off', tone: 'neutral', listening: false })
     expect(purchaseCaptureStatus({ ...ready, access: false })).toMatchObject({ label: 'Setup needed', tone: 'warning', listening: false })
     expect(purchaseCaptureStatus({ ...ready, packages: [] })).toMatchObject({ label: 'Setup needed', listening: false })
+    expect(purchaseCaptureStatus({ ...ready, listenerConnected: false })).toMatchObject({ label: 'Connecting', tone: 'warning', listening: false })
+    expect(purchaseCaptureStatus({ ...ready, listenerConnected: undefined })).toMatchObject({ label: 'Listening', listening: true })
     expect(purchaseCaptureStatus(ready)).toMatchObject({ label: 'Listening', tone: 'success', listening: true, detail: expect.stringContaining('1 app') })
     expect(purchaseCaptureStatus({ ...ready, notifications: false }).detail).toMatch(/Review alerts are off/)
   })

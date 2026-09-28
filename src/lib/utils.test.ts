@@ -50,6 +50,12 @@ describe('utils', () => {
       expect(maskCurrencyInput('', '')).toBe('')
     })
 
+    it('formats 0.00 when typing 0 on empty input', () => {
+      expect(maskCurrencyInput('0', '')).toBe('0.00')
+      expect(maskCurrencyInput('0.000', '0.00')).toBe('0.00')
+      expect(maskCurrencyInput('0.0', '0.00')).toBe('')
+    })
+
     it('applies ATM formatting to money amounts (divides integer cents by 100)', () => {
       expect(maskCurrencyInput('5', '')).toBe('0.05')
       expect(maskCurrencyInput('50', '')).toBe('0.50')

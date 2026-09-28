@@ -137,4 +137,79 @@ describe('useBucketAccountSetupView review flow', () => {
     expect(result.current.pending).toBeNull()
     expect(result.current.errors.form).toContain('changed while this form was open')
   })
+
+  it('allows review when an account balance is updated to 0', async () => {
+    const { result } = renderHook(() => useBucketAccountSetupView({
+      isOpen: true,
+      bucket: 'Stability',
+      accounts: [ledgerAccount(100)],
+      bucketTotal: 100,
+    }))
+
+    await waitFor(() => expect(result.current.targetInputs.main).toBe('100.00'))
+    act(() => result.current.updateTarget('main', '0.00'))
+    expect(result.current.canReview).toBe(true)
+    act(() => result.current.prepareReview())
+
+    expect(result.current.errors.main).toBeUndefined()
+    expect(result.current.pending).not.toBeNull()
+    expect(result.current.pending?.preview.targetAccountTotal).toBe(0)
+    expect(result.current.pending?.preview.bucketDifference).toBe(-100)
+  })
+
+  it('allows review when typing 0 on empty input', async () => {
+    const { result } = renderHook(() => useBucketAccountSetupView({
+      isOpen: true,
+      bucket: 'Stability',
+      accounts: [ledgerAccount(100)],
+      bucketTotal: 100,
+    }))
+
+    await waitFor(() => expect(result.current.targetInputs.main).toBe('100.00'))
+    // Simulate clearing then typing 0
+    act(() => result.current.updateTarget('main', ''))
+    act(() => result.current.updateTarget('main', '0'))
+    expect(result.current.targetInputs.main).toBe('0.00')
+    expect(result.current.canReview).toBe(true)
+    act(() => result.current.prepareReview())
+
+    expect(result.current.errors.main).toBeUndefined()
+    expect(result.current.pending).not.toBeNull()
+  })
+
+  it('disallows review when an account balance is negative', async () => {
+    const { result } = renderHook(() => useBucketAccountSetupView({
+      isOpen: true,
+      bucket: 'Stability',
+      accounts: [ledgerAccount(100)],
+      bucketTotal: 100,
+    }))
+
+    await waitFor(() => expect(result.current.targetInputs.main).toBe('100.00'))
+    act(() => result.current.updateTarget('main', '-50.00'))
+    expect(result.current.canReview).toBe(false)
+    act(() => result.current.prepareReview())
+
+    expect(result.current.errors.main).toBe('Account balance cannot be negative.')
+    expect(result.current.pending).toBeNull()
+  })
+
+  it('allows adding a new account draft with 0 balance', async () => {
+    const { result } = renderHook(() => useBucketAccountSetupView({
+      isOpen: true,
+      bucket: 'Stability',
+      accounts: [ledgerAccount(100)],
+      bucketTotal: 100,
+    }))
+
+    await waitFor(() => expect(result.current.targetInputs.main).toBe('100.00'))
+    act(() => result.current.addDraft())
+    const draftId = result.current.drafts[0].id
+    act(() => result.current.updateDraft(draftId, { name: 'Cash jar' }))
+    act(() => result.current.updateDraftTarget(draftId, '0.00'))
+    expect(result.current.canReview).toBe(true)
+    act(() => result.current.prepareReview())
+
+    expect(result.current.pending).not.toBeNull()
+  })
 })

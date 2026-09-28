@@ -56,7 +56,8 @@ describe('describeStabilityRecovery', () => {
     }))
 
     expect(narrative.status).toBe('aheadOfPace')
-    expect(narrative.percentRepaid).toBe(60)
+    expect(narrative.cyclePlanPercent).toBe(100)
+    expect(narrative.cyclePlanFunded).toBe(290.59)
   })
 
   // Past the window cyclesRemaining sits at 1 forever, so reading that as the final cycle announced
@@ -108,7 +109,17 @@ describe('describeStabilityRecovery', () => {
     expect(narrative.status).toBe('onPlan')
   })
 
-  it('reports no progress rather than dividing by zero on an empty obligation', () => {
-    expect(describeStabilityRecovery(recovery({ markedTotal: 0, repaidTotal: 0 })).percentRepaid).toBe(0)
+  it('uses the fixed current-cycle ask while repayments increase', () => {
+    const narrative = describeStabilityRecovery(recovery({
+      requiredThisCycle: 1000, toppedUpThisCycle: 250, outstandingThisCycle: 750,
+    }))
+    expect(narrative.cyclePlanFunded).toBe(250)
+    expect(narrative.cyclePlanPercent).toBe(25)
+  })
+
+  it('has no progress bar target in the deferred spending cycle', () => {
+    expect(describeStabilityRecovery(recovery({
+      isDeferred: true, requiredThisCycle: 0, toppedUpThisCycle: 50, outstandingThisCycle: 0,
+    })).cyclePlanPercent).toBeNull()
   })
 })

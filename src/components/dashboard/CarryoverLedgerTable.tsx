@@ -1,6 +1,6 @@
 import { Clock, Settings, Wallet } from 'lucide-react'
 import { useState } from 'react'
-import type { CategorySummary } from '../../types'
+import type { CategorySummary, SavingsGoal } from '../../types'
 import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { getCategoryBadgeClass, getCategoryDotClass } from '../../lib/categoryColors'
 import { cn, SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
@@ -9,12 +9,14 @@ import { Button } from '../ui/Button'
 import { BottomSheet } from '../ui/BottomSheet'
 import { AlertBanner } from '../ui/AlertBanner'
 import { panelClass } from '../ui/panelStyles'
+import { getRewardsAvailability } from '../../lib/freeRewards'
 
 interface CarryoverLedgerTableProps {
   categories: CategorySummary[]
   isCurrentCycle: boolean
   cycleLabel: string
   pendingDeductionsByCategory: Record<string, number>
+  savingsGoals?: SavingsGoal[]
   amountsMasked: boolean
   hideSensitive: boolean
   formatCurrency: (value: number) => string
@@ -26,6 +28,7 @@ export function CarryoverLedgerTable({
   isCurrentCycle,
   cycleLabel,
   pendingDeductionsByCategory,
+  savingsGoals = [],
   amountsMasked,
   hideSensitive: _hideSensitive,
   formatCurrency,
@@ -50,10 +53,13 @@ export function CarryoverLedgerTable({
           </div>
           {categories.map(category => {
             const pending = pendingDeductionsByCategory[category.name] ?? 0
+            const rewards = isCurrentCycle && category.name === 'Rewards'
+              ? getRewardsAvailability(category.remaining, savingsGoals, pending)
+              : null
             const hasAccounts = Boolean(category.accounts?.length)
             const badgeClass = getCategoryBadgeClass(category.name)
             return (
-              <div key={category.name} className="grid grid-cols-[2.2fr_1fr_1.4fr_1.4fr_1.7fr_2.1fr] items-center gap-4 py-3 px-4 rounded-xl border border-transparent hover:bg-muted/10 transition">
+              <div key={category.name} data-testid={`carryover-row-${category.name.toLowerCase()}`} className="grid grid-cols-[2.2fr_1fr_1.4fr_1.4fr_1.7fr_2.1fr] items-center gap-4 py-3 px-4 rounded-xl border border-transparent hover:bg-muted/10 transition">
                 <div className="flex items-center gap-2 font-bold text-foreground min-w-0">
                   <span className={`size-2.5 rounded-full shrink-0 ${getCategoryDotClass(category.name)}`} />
                   <span className="truncate">{category.name}</span>
@@ -76,17 +82,15 @@ export function CarryoverLedgerTable({
                 <div className="text-right text-muted-foreground font-medium">{amount(category.budget)}</div>
                 <div className={`text-right font-medium ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : ''}`}>
                   <div><SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} /></div>
-                  {pending > 0 && <div className="mt-0.5 flex items-center justify-end gap-1 whitespace-nowrap text-xs font-normal text-yellow-500"><Clock className="size-3" />Pending: -{amount(pending)}</div>}
+                  {rewards ? <div className="mt-0.5 text-xs font-normal text-muted-foreground">Committed: {amount(rewards.committed)}</div>
+                    : pending > 0 && <div className="mt-0.5 flex items-center justify-end gap-1 text-xs font-normal text-yellow-500"><Clock className="size-3 shrink-0" />Pending: -{amount(pending)}</div>}
                 </div>
                 <div className="text-right">
                   <div className={`font-bold ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
                     <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                   </div>
-                  {pending > 0 && (
-                    <div className={`mt-0.5 whitespace-nowrap text-xs font-semibold ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
-                      Projected: {amount(category.remaining - pending)}
-                    </div>
-                  )}
+                  {rewards ? <div className="mt-0.5 text-xs font-semibold text-foreground">Free to spend: {amount(rewards.freeToSpend)}</div>
+                    : pending > 0 && <div className={`mt-0.5 text-xs font-semibold ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</div>}
                 </div>
               </div>
             )
@@ -99,16 +103,19 @@ export function CarryoverLedgerTable({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {categories.map(category => {
           const pending = pendingDeductionsByCategory[category.name] ?? 0
+          const rewards = isCurrentCycle && category.name === 'Rewards'
+            ? getRewardsAvailability(category.remaining, savingsGoals, pending)
+            : null
           const hasAccounts = Boolean(category.accounts?.length)
           const badgeClass = getCategoryBadgeClass(category.name)
           return (
-            <div key={category.name} className="p-4 rounded-xl border border-border bg-background/50 space-y-3 shadow-xs transition">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 font-bold text-sm">
+            <div key={category.name} data-testid={`carryover-card-${category.name.toLowerCase()}`} className="min-w-0 p-4 rounded-xl border border-border bg-background/50 space-y-3 shadow-xs transition">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2 font-bold text-sm">
                   <span className={`size-2.5 rounded-full ${getCategoryDotClass(category.name)}`} />
                   <span>{category.name}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   {hasAccounts && (
                     <Button
                       variant="tertiary"
@@ -125,37 +132,31 @@ export function CarryoverLedgerTable({
                   <span className="text-xs font-semibold bg-muted px-2 py-0.5 rounded-md text-muted-foreground">Target: {(category.allocation * 100).toFixed(0)}%</span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,5.5rem),1fr))] gap-4 text-xs border-t border-border/30 pt-2.5">
                 <Metric label="Income Added" value={amount(category.incomeAllocated ?? category.target)} />
                 <Metric label="Carried Over" value={amount(category.budget)} />
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs border-t border-border/30 pt-2.5">
-                <div className="col-start-1">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,5.5rem),1fr))] gap-x-4 gap-y-3 text-xs border-t border-border/30 pt-2.5">
+                <div className="min-w-0">
                   <span className="text-muted-foreground text-xs block mb-0.5">Net Change</span>
-                  <div className="flex items-center h-6">
-                    <span className={`font-bold truncate ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
+                  <div className="min-w-0">
+                    <span className={`font-bold tabular-nums [overflow-wrap:anywhere] ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
                       <SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} />
                     </span>
                   </div>
+                  {rewards ? <SubMetric label="Committed" value={amount(rewards.committed)} />
+                    : pending > 0 && <SubMetric label="Pending" value={`-${amount(pending)}`} className="text-yellow-500" />}
                 </div>
-                <div className="col-start-2">
+                <div className="min-w-0">
                   <span className="text-muted-foreground text-xs block mb-0.5">Remaining Balance</span>
-                  <div className="flex items-center h-6">
-                    <span className={`font-bold truncate ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
+                  <div className="min-w-0">
+                    <span className={`font-bold tabular-nums [overflow-wrap:anywhere] ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
                       <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                     </span>
                   </div>
+                  {rewards ? <SubMetric label="Free to spend" value={amount(rewards.freeToSpend)} />
+                    : pending > 0 && <SubMetric label="Projected" value={amount(category.remaining - pending)} className={(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'} />}
                 </div>
-                {pending > 0 && (
-                  <>
-                    <div className="col-start-1">
-                      <span className="text-xs font-semibold text-yellow-500 block truncate">Pending: -{amount(pending)}</span>
-                    </div>
-                    <div className="col-start-2">
-                      <span className={`text-xs font-semibold block truncate ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</span>
-                    </div>
-                  </>
-                )}
               </div>
             </div>
           )
@@ -286,5 +287,9 @@ export function CarryoverLedgerTable({
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
-  return <div><span className="text-muted-foreground text-xs block mb-0.5">{label}</span><span className="font-semibold text-foreground">{value}</span></div>
+  return <div className="min-w-0"><span className="text-muted-foreground text-xs block mb-0.5">{label}</span><span className="font-semibold text-foreground tabular-nums [overflow-wrap:anywhere]">{value}</span></div>
+}
+
+function SubMetric({ label, value, className = 'text-foreground' }: { label: string; value: string; className?: string }) {
+  return <div className="mt-1 min-w-0"><span className="block text-muted-foreground">{label}</span><span className={`block font-semibold tabular-nums [overflow-wrap:anywhere] ${className}`}>{value}</span></div>
 }
