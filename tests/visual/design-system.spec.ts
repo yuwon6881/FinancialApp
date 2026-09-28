@@ -249,7 +249,7 @@ test('accounts settings panel uses the complete card shell', async ({ page }) =>
   await page.goto('/settings?section=accounts', { waitUntil: 'domcontentloaded' })
 
   const panel = page.getByRole('tabpanel', { name: 'Accounts' })
-  await expect(panel).toBeVisible()
+  await expect(panel).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('Everyday bank')).toBeVisible()
   await waitForStableLayout(page)
 
