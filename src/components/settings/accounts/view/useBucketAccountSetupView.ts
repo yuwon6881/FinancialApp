@@ -84,6 +84,12 @@ const parseAmount = (value: string) => {
   return Number.isFinite(parsed) ? parsed : Number.NaN
 }
 
+const NEGATIVE_BALANCE_ERROR = 'Account balance cannot be negative.'
+
+// Review stays disabled while a balance is negative, so the reason must appear
+// as the user types. A half-entered calculator expression is not flagged here.
+const liveTargetError = (value: string) => parseAmount(value) < 0 ? NEGATIVE_BALANCE_ERROR : ''
+
 const createDraft = (prefill?: BucketSetupPrefill): BucketSetupDraftAccount => ({
   id: createFinalId('ledgerAccount'),
   name: prefill?.name ?? '',
@@ -135,8 +141,9 @@ export function useBucketAccountSetupView({
   }, [bucket, bucketAccounts, bucketTotal, initialDraft, initializationKey])
 
   const updateTarget = (id: string, rawValue: string) => {
-    setTargetInputs(previous => ({ ...previous, [id]: maskCurrencyInput(rawValue, previous[id] ?? '') }))
-    setErrors(previous => ({ ...previous, [id]: '' }))
+    const nextValue = maskCurrencyInput(rawValue, targetInputs[id] ?? '')
+    setTargetInputs(previous => ({ ...previous, [id]: nextValue }))
+    setErrors(previous => ({ ...previous, [id]: liveTargetError(nextValue) }))
   }
 
   const updateDraft = (id: string, change: Partial<Omit<BucketSetupDraftAccount, 'id'>>) => {
@@ -145,10 +152,9 @@ export function useBucketAccountSetupView({
   }
 
   const updateDraftTarget = (id: string, rawValue: string) => {
-    setDrafts(previous => previous.map(draft => draft.id === id
-      ? { ...draft, target: maskCurrencyInput(rawValue, draft.target) }
-      : draft))
-    setErrors(previous => ({ ...previous, [id]: '' }))
+    const nextValue = maskCurrencyInput(rawValue, drafts.find(draft => draft.id === id)?.target ?? '')
+    setDrafts(previous => previous.map(draft => draft.id === id ? { ...draft, target: nextValue } : draft))
+    setErrors(previous => ({ ...previous, [`${id}-target`]: liveTargetError(nextValue) }))
   }
 
   const addDraft = () => setDrafts(previous => [...previous, createDraft()])
@@ -203,12 +209,12 @@ export function useBucketAccountSetupView({
       else names.add(name.toLowerCase())
       const draftTarget = parseAmount(draft.target)
       if (Number.isNaN(draftTarget)) nextErrors[`${draft.id}-target`] = 'Enter a valid balance.'
-      else if (draftTarget < 0) nextErrors[`${draft.id}-target`] = 'Account balance cannot be negative.'
+      else if (draftTarget < 0) nextErrors[`${draft.id}-target`] = NEGATIVE_BALANCE_ERROR
     }
     for (const account of parsedExistingTargets) {
       if (!account.isArchived) {
         if (Number.isNaN(account.target)) nextErrors[account.id] = 'Enter a valid balance.'
-        else if (account.target < 0) nextErrors[account.id] = 'Account balance cannot be negative.'
+        else if (account.target < 0) nextErrors[account.id] = NEGATIVE_BALANCE_ERROR
       }
     }
     if (!bucketAccounts.some(account => !account.isArchived) && drafts.length === 0) {

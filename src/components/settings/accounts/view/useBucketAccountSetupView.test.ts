@@ -187,11 +187,46 @@ describe('useBucketAccountSetupView review flow', () => {
 
     await waitFor(() => expect(result.current.targetInputs.main).toBe('100.00'))
     act(() => result.current.updateTarget('main', '-50.00'))
+    // Review is disabled, so the reason must be visible before any review attempt.
+    expect(result.current.errors.main).toBe('Account balance cannot be negative.')
     expect(result.current.canReview).toBe(false)
     act(() => result.current.prepareReview())
 
     expect(result.current.errors.main).toBe('Account balance cannot be negative.')
     expect(result.current.pending).toBeNull()
+
+    act(() => result.current.updateTarget('main', '50.00'))
+    expect(result.current.errors.main).toBe('')
+  })
+
+  it('does not flag a half-typed calculator expression as negative', async () => {
+    const { result } = renderHook(() => useBucketAccountSetupView({
+      isOpen: true,
+      bucket: 'Stability',
+      accounts: [ledgerAccount(100)],
+      bucketTotal: 100,
+    }))
+
+    await waitFor(() => expect(result.current.targetInputs.main).toBe('100.00'))
+    act(() => result.current.updateTarget('main', '100.00-'))
+    expect(result.current.errors.main).toBe('')
+  })
+
+  it('shows the negative-balance message on a new account draft as the user types', async () => {
+    const { result } = renderHook(() => useBucketAccountSetupView({
+      isOpen: true,
+      bucket: 'Stability',
+      accounts: [ledgerAccount(100)],
+      bucketTotal: 100,
+    }))
+
+    await waitFor(() => expect(result.current.targetInputs.main).toBe('100.00'))
+    act(() => result.current.addDraft())
+    const draftId = result.current.drafts[0].id
+    act(() => result.current.updateDraftTarget(draftId, '-5.00'))
+
+    expect(result.current.errors[`${draftId}-target`]).toBe('Account balance cannot be negative.')
+    expect(result.current.canReview).toBe(false)
   })
 
   it('allows adding a new account draft with 0 balance', async () => {
