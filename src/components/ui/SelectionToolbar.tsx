@@ -54,7 +54,7 @@ export function SelectionToolbar({
   const hasSelection = selectedCount > 0
 
   return (
-    <div data-testid={testId} className={`mb-3 grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border px-3 py-2 transition-colors ${hasSelection ? 'border-primary/30 bg-primary/5' : 'border-border/60 bg-muted/20'}`}>
+    <div data-testid={testId} className={`mb-3 grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border px-3 py-2 transition-colors lg:min-h-16 ${hasSelection ? 'border-primary/30 bg-primary/5' : 'border-border/60 bg-muted/20'}`}>
       <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
         {isSelecting && (
           <>
