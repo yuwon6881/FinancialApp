@@ -2,9 +2,8 @@ import { ApiError, jsonBody, request, requestVoid } from './client'
 import type { AiAccountMention } from '../aiAccountMentions'
 import type { AppTab } from '../../types'
 
-// The backend can chain several provider calls (classification, answer, then up to a
-// few ledger-draft enrichment calls) with a 30s budget each, so a stuck turn could
-// otherwise spin indefinitely. Cap the whole round trip client side.
+// A turn can run several model rounds with lookups in between. The JSON endpoint caps the
+// whole round trip; the streamed endpoint uses this as an idle limit reset by every event.
 export const AI_CHAT_TIMEOUT_MS = 60_000
 
 export interface AiChatMessage {
@@ -35,48 +34,16 @@ export interface AiActionBatch {
   status: 'PendingReview'
 }
 
-interface AiAmountThreshold {
-  comparator: string
-  low: number
-  high?: number | null
-}
-
+// What one Ask AI turn hands the next. The server owns it and re-validates every field; ids are
+// only hints it re-reads for this user before anything can target them.
 export interface AiConversationState {
-  lastIntent?: string | null
-  lastSearchText?: string | null
-  lastCycleHint?: string | null
-  lastWishlistReference?: string | null
-  lastResolvedCycle?: string | null
   lastMatchedTransactionIds?: string[] | null
-  lastWishlistItemId?: number | null
-  lastCategory?: string | null
-  lastResolvedCycleKeys?: string[] | null
-  lastAmountThreshold?: AiAmountThreshold | null
-  lastExcludeTransfers?: boolean
-  lastExcludedCategories?: string[] | null
-  lastIncludedCategories?: string[] | null
-  lastLedgerCategory?: string | null
-  lastTransactionType?: string | null
-  lastExactDate?: string | null
-  lastComparison?: boolean
-  lastRecurringReference?: string | null
-  lastIntents?: string[] | null
-  lastTopic?: 'transactional' | 'wishlist' | 'recurring' | 'rewards' | 'investment' | 'report' | 'loan' | null
-  lastQueryFacets?: string[] | null
-  lastRecurringStatus?: string | null
-  lastWishlistStatus?: string | null
-  lastTargetAmount?: number | null
-  lastRewardsTopic?: string | null
   lastSavingsGoalId?: number | null
-  lastInvestmentTopic?: string | null
   lastInvestmentRange?: string | null
-  lastInvestmentInstrumentId?: string | null
   lastReportCycleKey?: string | null
   lastLoanId?: string | null
-  lastLedgerAccountId?: string | null
   // The request a clarification left unfinished. Echoed back verbatim so the answer to that
-  // question ("yes, cimb to ryt") completes it instead of starting from nothing; the server
-  // re-parses it and never treats it as a resolved reference.
+  // question ("yes, cimb to ryt") completes it instead of starting from nothing.
   pendingLedgerRequest?: string | null
 }
 
@@ -124,84 +91,26 @@ export interface AiConversationRequest {
 function normalizeAiConversationState(value: unknown): AiConversationState | null {
   if (!value || typeof value !== 'object') return null
   const candidate = value as Record<string, unknown>
-  const text = (key: string, max = 80) => typeof candidate[key] === 'string'
+  const text = (key: string, max: number) => typeof candidate[key] === 'string'
     ? (candidate[key] as string).trim().slice(0, max) || null
     : null
-  const ids = Array.isArray(candidate.lastMatchedTransactionIds)
-    ? candidate.lastMatchedTransactionIds
+  const state: AiConversationState = {}
+  if (Array.isArray(candidate.lastMatchedTransactionIds)) {
+    state.lastMatchedTransactionIds = candidate.lastMatchedTransactionIds
       .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
       .slice(0, 50)
-    : null
-  const itemId = typeof candidate.lastWishlistItemId === 'number'
-    && Number.isInteger(candidate.lastWishlistItemId)
-    && candidate.lastWishlistItemId > 0
-    ? candidate.lastWishlistItemId
-    : null
-  const stringArray = (key: string) => Array.isArray(candidate[key])
-    ? (candidate[key] as unknown[])
-      .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-      .slice(0, 24)
-    : null
-  const threshold = (() => {
-    const value = candidate.lastAmountThreshold
-    if (!value || typeof value !== 'object') return null
-    const amount = value as Record<string, unknown>
-    if (typeof amount.comparator !== 'string' || typeof amount.low !== 'number') return null
-    return {
-      comparator: amount.comparator,
-      low: amount.low,
-      high: typeof amount.high === 'number' ? amount.high : null,
-    } as AiAmountThreshold
-  })()
-
-  const state: AiConversationState = {}
-  for (const key of [
-    'lastIntent', 'lastSearchText', 'lastCycleHint', 'lastWishlistReference',
-    'lastResolvedCycle', 'lastCategory', 'lastLedgerCategory', 'lastTransactionType',
-    'lastExactDate', 'lastRecurringReference', 'lastRecurringStatus', 'lastWishlistStatus',
-    'lastRewardsTopic', 'lastInvestmentTopic', 'lastInvestmentRange', 'lastInvestmentInstrumentId',
-    'lastReportCycleKey', 'lastLoanId', 'lastLedgerAccountId',
-  ] as const) {
-    if (Object.prototype.hasOwnProperty.call(candidate, key)) state[key] = text(key)
   }
-  // Not clamped to the 80-character reference limit: this one is a whole request, not a reference,
-  // and truncating it would hand back a half-instruction the next turn would try to carry out.
-  if (Object.prototype.hasOwnProperty.call(candidate, 'pendingLedgerRequest')) state.pendingLedgerRequest = text('pendingLedgerRequest', 2000)
-  if (Object.prototype.hasOwnProperty.call(candidate, 'lastMatchedTransactionIds')) state.lastMatchedTransactionIds = ids
-  if (Object.prototype.hasOwnProperty.call(candidate, 'lastWishlistItemId')) state.lastWishlistItemId = itemId
-  if (Object.prototype.hasOwnProperty.call(candidate, 'lastSavingsGoalId')) {
-    state.lastSavingsGoalId = typeof candidate.lastSavingsGoalId === 'number'
-      && Number.isInteger(candidate.lastSavingsGoalId)
-      && candidate.lastSavingsGoalId > 0
-      ? candidate.lastSavingsGoalId
-      : null
+  if (typeof candidate.lastSavingsGoalId === 'number'
+    && Number.isInteger(candidate.lastSavingsGoalId)
+    && candidate.lastSavingsGoalId > 0) state.lastSavingsGoalId = candidate.lastSavingsGoalId
+  for (const key of ['lastInvestmentRange', 'lastReportCycleKey', 'lastLoanId'] as const) {
+    const value = text(key, 100)
+    if (value) state[key] = value
   }
-  if (Object.prototype.hasOwnProperty.call(candidate, 'lastResolvedCycleKeys')) state.lastResolvedCycleKeys = stringArray('lastResolvedCycleKeys')
-  if (Object.prototype.hasOwnProperty.call(candidate, 'lastExcludedCategories')) state.lastExcludedCategories = stringArray('lastExcludedCategories')
-  if (Object.prototype.hasOwnProperty.call(candidate, 'lastIncludedCategories')) state.lastIncludedCategories = stringArray('lastIncludedCategories')
-  if (Object.prototype.hasOwnProperty.call(candidate, 'lastIntents')) state.lastIntents = stringArray('lastIntents')
-  if (Object.prototype.hasOwnProperty.call(candidate, 'lastQueryFacets')) state.lastQueryFacets = stringArray('lastQueryFacets')
-  if (Object.prototype.hasOwnProperty.call(candidate, 'lastTopic')) {
-    state.lastTopic = candidate.lastTopic === 'transactional'
-      || candidate.lastTopic === 'wishlist'
-      || candidate.lastTopic === 'recurring'
-      || candidate.lastTopic === 'rewards'
-      || candidate.lastTopic === 'investment'
-      || candidate.lastTopic === 'report'
-      || candidate.lastTopic === 'loan'
-      ? candidate.lastTopic
-      : null
-  }
-  if (Object.prototype.hasOwnProperty.call(candidate, 'lastAmountThreshold')) state.lastAmountThreshold = threshold
-  if (Object.prototype.hasOwnProperty.call(candidate, 'lastExcludeTransfers')) state.lastExcludeTransfers = candidate.lastExcludeTransfers === true
-  if (Object.prototype.hasOwnProperty.call(candidate, 'lastComparison')) state.lastComparison = candidate.lastComparison === true
-  if (Object.prototype.hasOwnProperty.call(candidate, 'lastTargetAmount')) {
-    state.lastTargetAmount = typeof candidate.lastTargetAmount === 'number'
-      && Number.isFinite(candidate.lastTargetAmount)
-      && candidate.lastTargetAmount > 0
-      ? candidate.lastTargetAmount
-      : null
-  }
+  // Not clamped to the reference length: it is a whole request, and truncating it would hand
+  // back half an instruction for the next turn to carry out.
+  const pending = text('pendingLedgerRequest', 2000)
+  if (pending) state.pendingLedgerRequest = pending
   return state
 }
 
@@ -251,20 +160,10 @@ export async function chatWithAi(
   try {
     data = await request<Partial<AiChatResponse>>('/ai/chat', {
       method: 'POST',
-      ...jsonBody({
-        message,
-        history: history.slice(-6),
-        state: state ?? null,
-        conversationId: conversation?.conversationId ?? null,
-        conversationVersion: conversation?.conversationVersion ?? null,
-        clientTurnId: conversation?.clientTurnId,
-        context: context ?? null,
-        forceSensitiveMode,
-        clientContractVersion: 2,
-        // The server re-resolves every id against the account list it owns, so this is a
-        // convenience for the person typing, not an authority the request carries.
-        accountMentions,
-      }),
+      ...jsonBody(buildAiChatBody(
+        { message, history, state, conversation, context, forceSensitiveMode, accountMentions },
+        2,
+      )),
       signal: controller.signal,
       errorMessage: 'AI is unavailable. Please try again.',
       errorMessageField: 'reply',
@@ -278,6 +177,38 @@ export async function chatWithAi(
     clearTimeout(timer)
     signal?.removeEventListener('abort', forwardAbort)
   }
+  return normalizeAiChatResponse(data)
+}
+
+export interface AiChatTurn {
+  message: string
+  history: AiChatMessage[]
+  state?: AiConversationState | null
+  conversation?: AiConversationRequest
+  context?: AiInvocationContext
+  forceSensitiveMode?: boolean
+  accountMentions?: AiAccountMention[]
+}
+
+// One request body for both the JSON and the streamed chat endpoints, so the two cannot drift.
+export function buildAiChatBody(turn: AiChatTurn, clientContractVersion: number) {
+  return {
+    message: turn.message,
+    history: turn.history.slice(-6),
+    state: turn.state ?? null,
+    conversationId: turn.conversation?.conversationId ?? null,
+    conversationVersion: turn.conversation?.conversationVersion ?? null,
+    clientTurnId: turn.conversation?.clientTurnId,
+    context: turn.context ?? null,
+    forceSensitiveMode: turn.forceSensitiveMode ?? false,
+    clientContractVersion,
+    // The server re-resolves every id against the account list it owns, so this is a
+    // convenience for the person typing, not an authority the request carries.
+    accountMentions: turn.accountMentions ?? [],
+  }
+}
+
+export function normalizeAiChatResponse(data: Partial<AiChatResponse>): AiChatResponse {
   return {
     reply: data.reply || '',
     actions: Array.isArray(data.actions)

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../lib/api/client'
 import {
-  chatWithAi,
   deleteAiConversation,
   fetchAiConversation,
   resolveAiActionBatch,
@@ -11,7 +10,9 @@ import {
   type AiInvocationContext,
   type AiUiAction,
 } from '../lib/api/ai'
+import { streamChatWithAi } from '../lib/api/aiStream'
 import { resolveAccountMentions } from '../lib/aiAccountMentions'
+import { useAiTurnStream } from './ai/useAiTurnStream'
 import type { LedgerAccount } from '../types'
 import type { AiInvocationRequest } from '../app/useAiEntryPoint'
 export type { AiInvocationRequest }
@@ -78,6 +79,7 @@ export function useAiConversation({
   const [historyRedacted, setHistoryRedacted] = useState(false)
   const [pendingActionBatches, setPendingActionBatches] = useState<AiActionBatch[]>([])
   const [hasConversation, setHasConversation] = useState(false)
+  const { pendingReply, clear: clearTurnStream, handlersFor: turnStreamHandlers } = useAiTurnStream()
   const conversationIdRef = useRef<string | null>(null)
   const conversationVersionRef = useRef(0)
   const conversationStateRef = useRef<AiConversationState | null>(null)
@@ -126,6 +128,8 @@ export function useAiConversation({
     activeRequestRef.current?.abort()
     activeRequestRef.current = null
     setIsSending(false)
+    // Streamed text belongs to the abandoned turn; it must not linger under the next one.
+    clearTurnStream()
     const pending = pendingTurnRef.current
     pendingTurnRef.current = null
     if (!wasSending || !options.recoverable || !pending) return
@@ -135,7 +139,7 @@ export function useAiConversation({
       ...current,
       { role: 'assistant', content: 'Cancelled before the AI answered. Tap Retry to ask again.' },
     ])
-  }, [])
+  }, [clearTurnStream])
 
   useEffect(() => {
     if (isOpen && !isOffline) {
@@ -226,23 +230,27 @@ export function useAiConversation({
     activeRequestRef.current?.abort()
     activeRequestRef.current = controller
     pendingTurnRef.current = failedTurn
+    clearTurnStream()
 
     try {
-      const result = await chatWithAi(
-        trimmed,
-        baseMessages,
-        conversationStateRef.current,
-        controller.signal,
+      const result = await streamChatWithAi(
         {
-          conversationId: conversationIdRef.current,
-          conversationVersion: conversationIdRef.current ? conversationVersionRef.current : null,
-          clientTurnId: failedTurn.clientTurnId,
+          message: trimmed,
+          history: baseMessages,
+          state: conversationStateRef.current,
+          conversation: {
+            conversationId: conversationIdRef.current,
+            conversationVersion: conversationIdRef.current ? conversationVersionRef.current : null,
+            clientTurnId: failedTurn.clientTurnId,
+          },
+          context: failedTurn.context,
+          forceSensitiveMode: sensitiveMode,
+          // Resolved from the message itself rather than kept as separate state, so a mention the
+          // user edited back out of the text is not still sent as a named account.
+          accountMentions: resolveAccountMentions(trimmed, accounts),
         },
-        failedTurn.context,
-        sensitiveMode,
-        // Resolved from the message itself rather than kept as separate state, so a mention the
-        // user edited back out of the text is not still sent as a named account.
-        resolveAccountMentions(trimmed, accounts),
+        turnStreamHandlers(() => generation === requestGenerationRef.current && !controller.signal.aborted),
+        controller.signal,
       )
       if (generation !== requestGenerationRef.current) return
       pendingTurnRef.current = null
@@ -311,9 +319,12 @@ export function useAiConversation({
         activeRequestRef.current = null
         pendingTurnRef.current = null
         setIsSending(false)
+        clearTurnStream()
       }
     }
   }, [
+    clearTurnStream,
+    turnStreamHandlers,
     accounts,
     applySnapshot,
     defaultContext,
@@ -393,5 +404,6 @@ export function useAiConversation({
     sendMessage,
     newChat,
     cancelInFlight,
+    pendingReply,
   }
 }

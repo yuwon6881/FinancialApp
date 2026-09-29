@@ -11,6 +11,7 @@ import { useAiConversation, type AiInvocationRequest } from './useAiConversation
 import { AccountMentionMenu } from './ai/AccountMentionMenu'
 import { useAccountMentionComposer } from './ai/useAccountMentionComposer'
 import { AccountMentionText, AiMessageContent } from './ai/AiMessageContent'
+import { AiPendingReply } from './ai/AiPendingReply'
 import { motionSafeScrollBehavior } from '../lib/motionPreference'
 
 interface AiAssistantPanelProps {
@@ -104,6 +105,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
     pendingActionBatches,
     resumeActionBatch,
     dismissActionBatch,
+    pendingReply,
   } = useAiConversation({
     isOpen,
     onClose,
@@ -125,7 +127,8 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: motionSafeScrollBehavior() })
     }
-  }, [messages, isOpen])
+    // A streaming reply grows in place, so keep its newest line in view as well.
+  }, [messages, isOpen, pendingReply])
 
   const adjustTextareaHeight = () => {
     const el = textareaRef.current
@@ -274,7 +277,9 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
           >
           {/* The spinner and the perimeter beam are both decorative, so announce
               progress separately for screen readers. */}
-          <span role="status" className="sr-only">{isHydrating ? 'Loading conversation…' : isSending ? 'Thinking…' : ''}</span>
+          <span role="status" className="sr-only">
+            {isHydrating ? 'Loading conversation…' : isSending ? `${pendingReply.status ?? 'Thinking'}…` : ''}
+          </span>
           {resetError && (
             <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
               {resetError}
@@ -336,6 +341,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               </div>
             ))
           )}
+          {isSending && messages.length > 0 && <AiPendingReply reply={pendingReply} accounts={accounts} />}
           {messages.length > 0 && <div ref={messagesEndRef} />}
           </div>
         </div>

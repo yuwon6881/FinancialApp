@@ -104,7 +104,7 @@ describe('fetchDashboard request caching', () => {
 
 describe('chatWithAi state contract', () => {
   it('sends conversation state in the request body and returns it from the response', async () => {
-    const state = { lastIntent: 'ledger.spending_total', lastSearchText: 'coffee' }
+    const state = { lastMatchedTransactionIds: ['coffee-1'], pendingLedgerRequest: 'Coffee 12' }
     const fetchMock = vi.fn(() =>
       Promise.resolve(new Response(
         JSON.stringify({ reply: 'ok', actions: [], closeChat: false, state }),
@@ -141,13 +141,11 @@ describe('chatWithAi state contract', () => {
   it('normalizes malformed response state before returning it to the panel', async () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response(
       JSON.stringify({ reply: 'ok', actions: [], closeChat: false, state: {
-        lastSearchText: '  coffee  ',
+        lastLoanId: '  loan-home  ',
         lastMatchedTransactionIds: ['a', 42, '', ...Array.from({ length: 60 }, (_, i) => `id-${i}`)],
-        lastWishlistItemId: -4,
-        lastTopic: 'recurring',
-        lastQueryFacets: ['recurring_cost', 42, '', 'recurring_status'],
-        lastRecurringStatus: 'paid',
-        lastTargetAmount: 5000,
+        lastSavingsGoalId: -4,
+        lastReportCycleKey: 7,
+        lastIntent: 'ledger.spending_total',
       } }),
       { status: 200 },
     )))
@@ -157,13 +155,12 @@ describe('chatWithAi state contract', () => {
     const api = await import('./api/ai')
     const result = await api.chatWithAi('follow up', [])
 
-    expect(result.state?.lastSearchText).toBe('coffee')
+    expect(result.state?.lastLoanId).toBe('loan-home')
     expect(result.state?.lastMatchedTransactionIds).toHaveLength(50)
-    expect(result.state?.lastWishlistItemId).toBeNull()
-    expect(result.state?.lastTopic).toBe('recurring')
-    expect(result.state?.lastQueryFacets).toEqual(['recurring_cost', 'recurring_status'])
-    expect(result.state?.lastRecurringStatus).toBe('paid')
-    expect(result.state?.lastTargetAmount).toBe(5000)
+    expect(result.state?.lastSavingsGoalId).toBeUndefined()
+    expect(result.state?.lastReportCycleKey).toBeUndefined()
+    // Fields the server no longer sends are dropped rather than carried forward.
+    expect(result.state).not.toHaveProperty('lastIntent')
   })
 })
 

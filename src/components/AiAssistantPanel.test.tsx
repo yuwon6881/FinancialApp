@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { AiChatResponse, AiConversationState, AiUiAction } from '../lib/api/ai'
 import type { AiInvocationRequest } from './useAiConversation'
 import type { LedgerAccount } from '../types'
@@ -13,6 +13,23 @@ vi.mock('../lib/api/ai', () => ({
   deleteAiConversation: vi.fn(),
   resolveAiActionBatch: vi.fn(),
 }))
+
+// The panel streams its turns. The stream module forwards to the mocked chatWithAi with the
+// same positional arguments, so every assertion on chatWithAi's calls still describes the turn
+// that was sent; streamHandlers exposes the live callbacks to the streaming tests.
+const streamHandlers: { current: import('../lib/api/aiStream').AiStreamHandlers | null } = { current: null }
+vi.mock('../lib/api/aiStream', async () => {
+  const ai = await import('../lib/api/ai')
+  return {
+    streamChatWithAi: vi.fn((turn: import('../lib/api/ai').AiChatTurn, handlers: import('../lib/api/aiStream').AiStreamHandlers, signal?: AbortSignal) => {
+      streamHandlers.current = handlers
+      return ai.chatWithAi(
+        turn.message, turn.history, turn.state, signal, turn.conversation, turn.context,
+        turn.forceSensitiveMode ?? false, turn.accountMentions ?? [],
+      )
+    }),
+  }
+})
 
 vi.mock('../lib/api/client', () => ({
   ApiError: class ApiError extends Error {
@@ -80,6 +97,7 @@ afterEach(() => {
   fetchAiConversation.mockReset()
   deleteAiConversation.mockReset()
   resolveAiActionBatch.mockReset()
+  streamHandlers.current = null
 })
 
 describe('AiAssistantPanel', () => {
@@ -115,7 +133,7 @@ describe('AiAssistantPanel', () => {
         { role: 'user', content: 'Saved question' },
         { role: 'assistant', content: 'Saved answer' },
       ],
-      state: { lastIntent: 'ledger.spending_total' },
+      state: { lastLoanId: 'loan-home' },
     })
 
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
@@ -271,7 +289,7 @@ describe('AiAssistantPanel', () => {
   })
 
   it('echoes the returned conversation state on the next request', async () => {
-    const state: AiConversationState = { lastIntent: 'ledger.spending_total', lastSearchText: 'coffee' }
+    const state: AiConversationState = { lastLoanId: 'loan-home', lastMatchedTransactionIds: ['coffee-1'] }
     chatWithAi
       .mockResolvedValueOnce(reply({ reply: 'first', state }))
       .mockResolvedValueOnce(reply({ reply: 'second' }))
@@ -287,7 +305,7 @@ describe('AiAssistantPanel', () => {
   })
 
   it('preserves conversation state across close and reopen', async () => {
-    const state: AiConversationState = { lastIntent: 'ledger.spending_total' }
+    const state: AiConversationState = { lastLoanId: 'loan-home' }
     fetchAiConversation
       .mockResolvedValueOnce({ conversationId: null, conversationVersion: 0, messages: [], state: null })
       .mockResolvedValueOnce({
@@ -313,7 +331,7 @@ describe('AiAssistantPanel', () => {
   })
 
   it('clears conversation state when New chat is pressed', async () => {
-    const state: AiConversationState = { lastIntent: 'ledger.spending_total' }
+    const state: AiConversationState = { lastLoanId: 'loan-home' }
     chatWithAi.mockResolvedValue(reply({ state }))
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
 
@@ -412,7 +430,7 @@ describe('AiAssistantPanel', () => {
   })
 
   it('preserves the last valid state when a subsequent request fails', async () => {
-    const state: AiConversationState = { lastIntent: 'ledger.spending_total', lastSearchText: 'coffee' }
+    const state: AiConversationState = { lastLoanId: 'loan-home', lastMatchedTransactionIds: ['coffee-1'] }
     chatWithAi
       .mockResolvedValueOnce(reply({ state }))
       .mockRejectedValueOnce(new Error('provider unavailable'))
@@ -599,7 +617,7 @@ describe('AiAssistantPanel', () => {
           { role: 'user', content: 'Question from another device' },
           { role: 'assistant', content: 'Answer from another device' },
         ],
-        state: { lastIntent: 'ledger.spending_total' },
+        state: { lastLoanId: 'loan-home' },
       })
     chatWithAi.mockRejectedValueOnce(new ApiError('changed', 409))
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
@@ -706,6 +724,48 @@ describe('AiAssistantPanel', () => {
 
     expect(screen.queryByRole('button', { name: /Ask again/ })).toBeNull()
     expect(chatWithAi).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows what the assistant is looking up, then its streamed text, then only the final answer', async () => {
+    let resolve!: (value: AiChatResponse) => void
+    chatWithAi.mockReturnValue(new Promise<AiChatResponse>(done => { resolve = done }))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    await typeAndSend('when is my latest haircut?')
+    await waitFor(() => expect(streamHandlers.current).not.toBeNull())
+    const pending = await screen.findByTestId('ai-pending-reply')
+    expect(pending.textContent).toBe('Thinking…')
+
+    act(() => streamHandlers.current!.onStatus!('Searching your transactions for “haircut”'))
+    expect(screen.getByTestId('ai-pending-reply').textContent).toBe('Searching your transactions for “haircut”…')
+    expect(screen.getByRole('status').textContent).toContain('Searching your transactions')
+
+    act(() => {
+      streamHandlers.current!.onDelta!('Your latest ')
+      streamHandlers.current!.onDelta!('haircut was')
+    })
+    expect(screen.getByTestId('ai-pending-reply').textContent).toBe('Your latest haircut was')
+
+    // Text the model wrote before deciding to look something up is dropped, not kept.
+    act(() => streamHandlers.current!.onReset!())
+    expect(screen.getByTestId('ai-pending-reply').textContent).toBe('Searching your transactions for “haircut”…')
+
+    await act(async () => resolve(reply({ reply: 'Your latest haircut was on 14 Feb 2026.' })))
+    await waitFor(() => expect(screen.queryByTestId('ai-pending-reply')).toBeNull())
+    expect(screen.getByText('Your latest haircut was on 14 Feb 2026.')).toBeTruthy()
+  })
+
+  it('drops streamed text when the turn is stopped', async () => {
+    chatWithAi.mockReturnValue(new Promise<AiChatResponse>(() => undefined))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    await typeAndSend('am I okay this month?')
+    await waitFor(() => expect(streamHandlers.current).not.toBeNull())
+    act(() => streamHandlers.current!.onDelta!('You spent'))
+    fireEvent.click(await screen.findByLabelText('Stop generating'))
+
+    await waitFor(() => expect(screen.queryByTestId('ai-pending-reply')).toBeNull())
+    expect(screen.queryByText('You spent')).toBeNull()
   })
 
   it('applies a review action before closing the panel', async () => {

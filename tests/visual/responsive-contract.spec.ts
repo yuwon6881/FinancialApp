@@ -538,6 +538,41 @@ test('compact Ask AI text overlay keeps the textarea typography used by its care
   expect(typography.highlight).toEqual(typography.input)
 })
 
+test('Ask AI shows a pending reply inside the chat log and replaces it with the final answer', async ({ page }) => {
+  let release: () => void = () => {}
+  const released = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/api/ai/chat/stream', async route => {
+    await released
+    const events = [
+      ['status', { label: 'Searching your transactions for “haircut”' }],
+      ['delta', { text: 'Your latest haircut was ' }],
+      ['done', { reply: 'Your latest haircut was on **14 Feb 2026**.', actions: [], closeChat: false, conversationId: null, conversationVersion: 1 }],
+    ] as const
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      body: events.map(([event, data]) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`).join(''),
+    })
+  })
+
+  await page.goto('/reports', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'Explain this cycle with Ask AI' }).click()
+
+  const pending = page.getByTestId('ai-pending-reply')
+  await expect(pending).toBeVisible()
+  await expect(pending).toHaveText('Thinking…')
+  const fits = await pending.evaluate(element => {
+    const bubble = element.firstElementChild!.getBoundingClientRect()
+    const log = element.closest('[role="log"]')!.getBoundingClientRect()
+    return bubble.left >= log.left && bubble.right <= log.right && bubble.right <= window.innerWidth
+  })
+  expect(fits, 'the pending bubble stays inside the chat log').toBe(true)
+
+  release()
+  await expect(pending).toBeHidden()
+  await expect(page.getByText('Your latest haircut was on')).toBeVisible()
+})
+
 test('compact Ledger centers its count, page-size control, and pager together', async ({ page }) => {
   test.skip((test.info().project.use.viewport?.width ?? 0) >= 640, 'Only the compact footer has stacked pagination groups.')
   test.skip(test.info().project.name.endsWith('-dark'), 'Footer alignment is theme-independent.')
