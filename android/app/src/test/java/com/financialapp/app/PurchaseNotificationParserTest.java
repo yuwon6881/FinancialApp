@@ -17,6 +17,65 @@ public class PurchaseNotificationParserTest {
         assertNotNull(result);
         assertEquals("MOOMOO Securities malaysi", result.description);
     }
+    private static void assertCaptured(String body, String amount, String description) {
+        PurchaseNotificationParser.Result result = PurchaseNotificationParser.parse("CIMB OCTO", body);
+        assertNotNull(body, result);
+        assertEquals(body, "outflow", result.transactionType);
+        assertEquals(body, "MYR", result.currency);
+        assertEquals(body, amount, result.amount);
+        assertEquals(body, description, result.description);
+    }
+    @Test public void recognizesCimbRailsWithoutPaymentWordOrAuxiliaryVerb() {
+        assertCaptured("FPX Payment RM515.00 To MOOMOO successful on 28 sep 2026", "515.00", "MOOMOO");
+        assertCaptured("Payment RM50.00 to RESTORAN ALI successful", "50.00", "RESTORAN ALI");
+        assertCaptured("DuitNow QR RM15.00 to KEDAI KOPI successful", "15.00", "KEDAI KOPI");
+        assertCaptured("DuitNow QR: RM15.00 to KEDAI KOPI successful", "15.00", "KEDAI KOPI");
+        assertCaptured("DuitNow QR Payment RM15.00 to KEDAI KOPI successful", "15.00", "KEDAI KOPI");
+        assertCaptured("DuitNow RM50.00 to AHMAD successful", "50.00", "AHMAD");
+        assertCaptured("JomPAY RM120.00 to TNB successful", "120.00", "TNB");
+        assertCaptured("JomPAY: RM120.00 to TNB successful", "120.00", "TNB");
+        assertCaptured("JomPAY Payment RM120.00 to TNB successful", "120.00", "TNB");
+    }
+    @Test public void recognizesAcceptedOrApprovedTransfersAndCompactAmounts() {
+        assertCaptured("DuitNow Transfer RM50.00 to AHMAD BIN ALI accepted", "50.00", "AHMAD BIN ALI");
+        assertCaptured("DuitNow Transfer RM50.00 to AHMAD BIN ALI approved", "50.00", "AHMAD BIN ALI");
+        assertCaptured("Transfer RM50.00 to JOHN DOE accepted", "50.00", "JOHN DOE");
+        // No space between the code and the digits: "RM50" has no word boundary after "RM".
+        assertCaptured("You have transferred RM50.00 to JOHN DOE", "50.00", "JOHN DOE");
+        assertCaptured("You sent RM50.00 to JOHN DOE", "50.00", "JOHN DOE");
+    }
+    @Test public void recognizesCardUsedAlerts() {
+        assertCaptured("Your card ending 1234 was used for RM 45.00 at STARBUCKS", "45.00", "STARBUCKS");
+        assertNull(PurchaseNotificationParser.parse("Bank", "Your card ending 1234 was used for a transaction that was declined"));
+    }
+    @Test public void endsPayeeAtAFollowingAmountButKeepsOfInsideNames() {
+        assertCaptured("Transfer to AHMAD BIN ALI RM50.00 successful", "50.00", "AHMAD BIN ALI");
+        assertCaptured("Payment to RESTORAN ALI of RM50.00 is successful", "50.00", "RESTORAN ALI");
+        assertCaptured("Payment RM50.00 to HOUSE OF NOODLES successful", "50.00", "HOUSE OF NOODLES");
+    }
+    @Test public void rejectsMoneyArrivingFromACounterparty() {
+        assertNull(PurchaseNotificationParser.parse("CIMB", "DuitNow Transfer RM50.00 from AHMAD successful"));
+        assertNull(PurchaseNotificationParser.parse("CIMB", "Transfer RM50.00 from AHMAD BIN ALI successful"));
+        // Paying out of one's own account or wallet is still an outflow.
+        assertCaptured("Payment RM20.00 from your account to TNB successful", "20.00", "TNB");
+        assertCaptured("DuitNow QR RM8.00 from Savings Account to KEDAI successful", "8.00", "KEDAI");
+        assertNotNull(PurchaseNotificationParser.parse("Wallet", "Payment of RM5.00 from eWallet balance successful"));
+    }
+    @Test public void readsDayFirstAndFullMonthDates() {
+        assertEquals("2026-09-28", PurchaseNotificationParser.parse("Payment successful", "Paid RM12.00 at SHOP on 28/09/2026").date);
+        assertEquals("2026-09-08", PurchaseNotificationParser.parse("Payment successful", "Paid RM12.00 at SHOP on 8-9-2026").date);
+        assertEquals("2026-09-28", PurchaseNotificationParser.parse("Payment successful", "Paid RM12.00 at SHOP on 28 September 2026").date);
+        assertEquals("2026-09-28", PurchaseNotificationParser.parse("Payment successful", "Paid RM12.00 at SHOP on 28-Sept-2026").date);
+        assertNull(PurchaseNotificationParser.parse("Payment successful", "Paid RM12.00 at SHOP on 31/09/2026").date);
+        assertNull(PurchaseNotificationParser.parse("Payment successful", "Paid RM12.00 at SHOP on 28/13/2026").date);
+        assertNull(PurchaseNotificationParser.parse("Payment successful", "Paid RM12.00 at SHOP on 28/09/2026, settled 29/09/2026").date);
+    }
+    @Test public void broadenedRailsStillExcludeUnfinishedOrIncomingAlerts() {
+        for (String text : new String[] {"DuitNow QR RM15.00 to KEDAI pending", "JomPAY RM120.00 to TNB failed", "DuitNow Transfer RM50.00 received from AHMAD",
+            "FPX Payment RM20.00 to SHOP unsuccessful", "Your DuitNow TAC is 123456", "JomPAY bill RM120.00 due on 30/09/2026", "DuitNow request RM50.00 approved"}) {
+            assertNull(text, PurchaseNotificationParser.parse("CIMB", text));
+        }
+    }
     @Test public void doesNotMistakePendingFpxAuthorizationForPayment() {
         assertNull(PurchaseNotificationParser.parse("CIMB", "FPX Payment RM515.00 to MOOMOO pending approval"));
         assertNull(PurchaseNotificationParser.parse("CIMB", "Approve FPX Payment RM515.00 to MOOMOO"));

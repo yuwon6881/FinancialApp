@@ -186,6 +186,7 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
     }),
     accessSettings: () => perform(() => PurchaseCapturePlugin.openAccessSettings()),
     notificationSettings: () => perform(() => PurchaseCapturePlugin.openNotificationSettings()),
+    batterySettings: () => perform(() => PurchaseCapturePlugin.openBatterySettings()),
     review: (candidate: PurchaseCapture) => {
       if (!current.current.eligible || current.current.formOpen) return
       if (current.current.hidden) {

@@ -16,7 +16,7 @@ async function nativeCapture(page: Page, tapped: boolean, access = true, transac
     simulation.authRequests = 0
     simulation.emitNativeState = value => { active = value; listeners.forEach(callback => callback({ isActive: value })) }
     const methods: Record<string, string[]> = {
-      PurchaseCapture: ['activate', 'state', 'configure', 'applications', 'consumeTap', 'update', 'openAccessSettings', 'requestNotifications', 'openNotificationSettings', 'wipe'],
+      PurchaseCapture: ['activate', 'state', 'configure', 'applications', 'consumeTap', 'update', 'openAccessSettings', 'requestNotifications', 'openNotificationSettings', 'openBatterySettings', 'wipe'],
       SecureStorage: ['internalGetItem', 'internalSetItem', 'internalRemoveItem', 'getPrefixedKeys', 'setSynchronizeKeychain'],
       PrivacyScreen: ['setHidden'], App: ['getState'], SplashScreen: ['hide'], StatusBar: ['setStyle', 'setBackgroundColor'], Keyboard: ['setResizeMode'], BiometricAuthNative: ['checkBiometry', 'internalAuthenticate'],
     }
@@ -36,8 +36,8 @@ async function nativeCapture(page: Page, tapped: boolean, access = true, transac
         if (plugin === 'BiometricAuthNative' && method === 'checkBiometry') return { isAvailable: true, deviceIsSecure: true, biometryType: 1, biometryTypes: [1] }
         if (plugin === 'BiometricAuthNative') { simulation.authRequests++; return new Promise(resolve => { (window as unknown as { unlockDevice: () => void }).unlockDevice = () => resolve({}) }) }
         if (plugin !== 'PurchaseCapture') return {}
-        if (method === 'state') return { enabled, packages, candidates: completed ? [] : [candidate], access, notifications: true, tapId }
-        if (method === 'openAccessSettings' || method === 'openNotificationSettings') simulation.emitNativeState(false)
+        if (method === 'state') return { enabled, packages, candidates: completed ? [] : [candidate], access, notifications: true, batteryUnrestricted: false, tapId }
+        if (method === 'openAccessSettings' || method === 'openNotificationSettings' || method === 'openBatterySettings') simulation.emitNativeState(false)
         if (method === 'configure') { enabled = Boolean(options.enabled); packages = options.packages as string[] }
         if (method === 'consumeTap') tapId = undefined
         if (method === 'applications') return { applications: [{ packageName: 'bank.example', label: 'Example bank' }, { packageName: 'wallet.example', label: 'Example wallet' }] }
@@ -109,6 +109,8 @@ test('Android settings select notification source apps with usable controls', as
   await openNative(page, false, 'settings')
   await expect(page.getByRole('switch', { name: 'Detect transactions on this device' })).toBeChecked()
   await page.getByRole('button', { name: 'Manage detection' }).click()
+  await expect(page.getByRole('button', { name: 'Battery settings', exact: true })).toBeVisible()
+  await page.screenshot({ path: test.info().outputPath('detection-setup.png'), fullPage: true })
   await page.getByRole('button', { name: 'Change apps', exact: true }).click()
   const selection = page.getByRole('dialog', { name: 'Choose notification sources' })
   await expect(selection).toBeVisible()

@@ -29,6 +29,8 @@ export interface CaptureState {
   /** Older Android shells did not report listener lifecycle. */
   listenerConnected?: boolean
   notifications: boolean
+  /** Battery use is Unrestricted, so OEM power saving leaves the listener running. Older Android shells did not report it. */
+  batteryUnrestricted?: boolean
   tapId?: string
 }
 
@@ -42,6 +44,7 @@ export const PurchaseCapturePlugin = registerPlugin<{
   openAccessSettings(): Promise<void>
   requestNotifications(): Promise<void>
   openNotificationSettings(): Promise<void>
+  openBatterySettings(): Promise<void>
   update(options: { owner: string; id: string; action: 'edit' | 'prepare' | 'complete' | 'discard'; data?: Record<string, unknown> }): Promise<PurchaseCapture>
   consumeTap(options: { owner: string }): Promise<void>
   wipe(): Promise<void>

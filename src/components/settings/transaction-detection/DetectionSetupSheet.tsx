@@ -43,9 +43,10 @@ interface SetupProps {
   onChooseApps: () => void
   onAccess: () => void
   onNotificationSettings: () => void
+  onBatterySettings: () => void
 }
 
-export function DetectionSetupSheet({ isOpen, onClose, state, status, busy, onChooseApps, onAccess, onNotificationSettings }: SetupProps) {
+export function DetectionSetupSheet({ isOpen, onClose, state, status, busy, onChooseApps, onAccess, onNotificationSettings, onBatterySettings }: SetupProps) {
   const apps = state?.packages.length ?? 0
   return (
     <BottomSheet
@@ -81,6 +82,17 @@ export function DetectionSetupSheet({ isOpen, onClose, state, status, busy, onCh
             state={state?.notifications ? 'done' : 'optional'}
             action={<Button variant="secondary" size="sm" disabled={busy || !state} onClick={onNotificationSettings}>Notification settings</Button>}
           />
+          {state?.batteryUnrestricted !== undefined && (
+            <SetupStep
+              step={4}
+              title="Keep detection running"
+              description={state.batteryUnrestricted
+                ? 'Battery use is Unrestricted, so Android keeps reading alerts while the phone sleeps.'
+                : 'Some phones stop detection to save battery. In App info, set Battery to Unrestricted so payments aren’t missed while the phone is locked.'}
+              state={state.batteryUnrestricted ? 'done' : 'optional'}
+              action={<Button variant="secondary" size="sm" disabled={busy} onClick={onBatterySettings}>Battery settings</Button>}
+            />
+          )}
         </ol>
         <p className="text-xs text-muted-foreground">Recognition depends on how each app words its alerts. Up to 200 transactions can wait for review. Turning detection off keeps the ones already waiting.</p>
       </div>

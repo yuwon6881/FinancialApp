@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Build;
+import android.os.PowerManager;
 import android.net.Uri;
 import android.provider.Settings;
 import android.service.notification.NotificationListenerService;
@@ -22,6 +23,7 @@ import java.lang.ref.WeakReference;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Arrays;
+import java.util.Collections;
 import androidx.core.app.NotificationManagerCompat;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -29,9 +31,14 @@ import org.json.JSONObject;
 @CapacitorPlugin(name = "PurchaseCapture", permissions = @Permission(alias = "notifications", strings = {Manifest.permission.POST_NOTIFICATIONS}))
 public class PurchaseCapturePlugin extends Plugin {
     private static WeakReference<PurchaseCapturePlugin> instance = new WeakReference<>(null);
+    private static volatile boolean foreground;
     private String pendingTap;
     @Override public void load() { instance = new WeakReference<>(this); readTap(getActivity().getIntent()); }
     @Override protected void handleOnNewIntent(Intent intent) { readTap(intent); }
+    @Override protected void handleOnResume() { foreground = true; }
+    @Override protected void handleOnPause() { foreground = false; }
+    /** FinancialApp is on screen, so its own Detected transactions card is the live surface. */
+    static boolean isForeground() { return foreground; }
     private void readTap(Intent intent) {
         if (intent != null && intent.hasExtra(PurchaseNotificationListener.EXTRA)) {
             getActivity().setIntent(intent);
@@ -77,8 +84,18 @@ public class PurchaseCapturePlugin extends Plugin {
             }
             return new JSObject().put("enabled", data.optBoolean("enabled")).put("packages", data.getJSONArray("packages"))
                 .put("candidates", pending).put("access", access()).put("listenerConnected", PurchaseNotificationListener.isConnected()).put("tapId", pendingTap)
-                .put("notifications", reviewNotifications());
+                .put("notifications", reviewNotifications()).put("batteryUnrestricted", batteryUnrestricted());
         });
+    }
+    /** OEM battery savers stop the listener while the phone sleeps unless the app's battery use is Unrestricted. */
+    private boolean batteryUnrestricted() {
+        PowerManager power = getContext().getSystemService(PowerManager.class);
+        return power != null && power.isIgnoringBatteryOptimizations(getContext().getPackageName());
+    }
+    // App info is where Android and OEM skins keep the Battery → Unrestricted choice; the exemption dialog needs a restricted permission.
+    @PluginMethod public void openBatterySettings(PluginCall call) {
+        getActivity().startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getContext().getPackageName())));
+        call.resolve();
     }
     @PluginMethod public void applications(PluginCall call) {
         run(call, () -> {
@@ -125,7 +142,7 @@ public class PurchaseCapturePlugin extends Plugin {
             if (!Arrays.asList("edit", "prepare", "complete", "discard").contains(action)) throw new IllegalArgumentException();
             String id = call.getString("id");
             JSONObject candidate = store().update(call.getString("owner"), id, action, call.getObject("data", new JSObject()));
-            if (action.equals("complete") || action.equals("discard")) getContext().getSystemService(NotificationManager.class).cancel(id, 1);
+            if (action.equals("complete") || action.equals("discard")) PurchaseNotificationListener.withdrawReviews(getContext(), Collections.singleton(id));
             if (action.equals("complete") || action.equals("discard")) changed();
             return new JSObject(candidate.toString());
         });
@@ -136,8 +153,7 @@ public class PurchaseCapturePlugin extends Plugin {
     }
     @PluginMethod public void wipe(PluginCall call) {
         // Withdraw only review alerts; unrelated FinancialApp notifications are not part of this store.
-        NotificationManager manager = getContext().getSystemService(NotificationManager.class);
-        for (String id : store().wipe()) manager.cancel(id, 1);
+        PurchaseNotificationListener.withdrawReviews(getContext(), new HashSet<>(store().wipe()));
         pendingTap = null; changed(); call.resolve();
     }
 }
