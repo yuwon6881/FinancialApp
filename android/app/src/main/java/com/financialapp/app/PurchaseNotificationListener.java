@@ -32,7 +32,9 @@ public class PurchaseNotificationListener extends NotificationListenerService {
         connected = true;
         PurchaseCapturePlugin.changed();
         // Alerts that arrived while Android had the listener unbound are recovered here, as a replay rather than live news.
-        StatusBarNotification[] active = getActiveNotifications();
+        StatusBarNotification[] active;
+        try { active = getActiveNotifications(); }
+        catch (RuntimeException unavailable) { return; /* Some OEM builds throw while the binding settles; live alerts still arrive. */ }
         if (active != null) for (StatusBarNotification notification : active) enqueue(notification, true);
     }
     @Override public void onListenerDisconnected() {
@@ -44,7 +46,8 @@ public class PurchaseNotificationListener extends NotificationListenerService {
     private void enqueue(StatusBarNotification sbn, boolean replay) {
         if (sbn.getPackageName().equals(getPackageName()) || (sbn.getNotification().flags & Notification.FLAG_GROUP_SUMMARY) != 0) return;
         // Keystore and disk access must not block the service's main thread.
-        worker.execute(() -> captureNotification(sbn, replay));
+        try { worker.execute(() -> captureNotification(sbn, replay)); }
+        catch (java.util.concurrent.RejectedExecutionException destroyed) { /* The service is shutting down; the next binding replays the tray. */ }
     }
     @Override public void onDestroy() { connected = false; PurchaseCapturePlugin.changed(); worker.shutdown(); super.onDestroy(); }
     private void captureNotification(StatusBarNotification sbn, boolean replay) {
@@ -52,10 +55,8 @@ public class PurchaseNotificationListener extends NotificationListenerService {
             PurchaseCaptureStore store = new PurchaseCaptureStore(this);
             if (!store.selected(sbn.getPackageName())) return;
             Notification notification = sbn.getNotification();
-            String title = String.valueOf(notification.extras.getCharSequence(Notification.EXTRA_TITLE, ""));
-            CharSequence bigText = notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
-            String body = String.valueOf(bigText == null || bigText.length() == 0
-                ? notification.extras.getCharSequence(Notification.EXTRA_TEXT, "") : bigText);
+            PurchaseNotificationContent content = PurchaseNotificationContent.read(notification);
+            String title = content.title, body = content.body;
             if (title.length() > 500 || body.length() > 3000) return;
             PurchaseNotificationParser.Result parsed = PurchaseNotificationParser.parse(title, body);
             if (parsed == null) return;
@@ -69,7 +70,8 @@ public class PurchaseNotificationListener extends NotificationListenerService {
             String excerpt = (title + "\n" + body).trim();
             JSONObject candidate = store.capture(sbn.getPackageName(), label, key.toString(), sbn.getPostTime(), excerpt.substring(0, Math.min(500, excerpt.length())), parsed);
             if (candidate != null) {
-                PurchaseAlertPolicy.Alert alert = PurchaseAlertPolicy.decide(replay, PurchaseCapturePlugin.isForeground(), sbn.getPostTime(), System.currentTimeMillis());
+                PurchaseAlertPolicy.Alert alert = PurchaseAlertPolicy.decide(replay, PurchaseCapturePlugin.isForeground(),
+                    candidate.optBoolean("possibleDuplicate"), sbn.getPostTime(), System.currentTimeMillis());
                 if (alert != PurchaseAlertPolicy.Alert.NONE) showReviewNotification(this, candidate.getString("id"), alert == PurchaseAlertPolicy.Alert.RING);
                 PurchaseCapturePlugin.changed();
             }
