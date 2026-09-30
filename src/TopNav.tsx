@@ -130,13 +130,13 @@ const TopNav: React.FC<TopNavProps> = ({
   const isBusy = !isOffline && (isSyncing || Boolean(syncLabel))
 
   const draftStatus = draftCount > 0 ? (
-    <Button variant="tertiary"
+    <Button variant="tertiary" size="sm"
       type="button"
       onClick={() => onTabChange('drafts')}
-      className="ml-2.5 flex items-center gap-1 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-xs font-bold text-amber-600 dark:text-amber-400 cursor-pointer select-none shrink-0 hover:bg-amber-500/25 transition duration-150 animate-in fade-in zoom-in-95"
+      className="ml-2 sm:ml-0 flex h-9 shrink-0 items-center justify-center gap-1.5 px-3 rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold select-none transition-all duration-150 cursor-pointer active:scale-95 hover:bg-amber-500/20 animate-in fade-in zoom-in-95"
       title="Draft transactions waiting to be synced to the server"
     >
-      <FileText className="size-3" />
+      <FileText className="size-3.5" />
       <span>{draftCount} Draft{draftCount > 1 ? 's' : ''}</span>
     </Button>
   ) : null
