@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { ChevronDown, Info } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import type { InvestmentPortfolio } from '../../types'
-import { Button } from '../ui/Button'
-import { RowSyncStatus } from '../ui/RowSyncBadge'
+import { PortfolioManagementRow } from './PortfolioManagementRow'
 import { FormField } from '../ui/FormField'
 import { Input } from '../ui/Input'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -81,48 +80,17 @@ export const AccountsAndInstruments: React.FC<AccountsAndInstrumentsProps> = ({
             <h3 className="text-eyebrow uppercase text-muted-foreground">Accounts</h3>
             <div className="mt-2 space-y-2">
               {portfolio.accounts.filter(value => matches(`${value.name} ${value.baseCurrency}`)).map(value => (
-                <div key={value.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/25 p-3">
-                  <span className="min-w-0">
-                    <strong className="flex min-w-0 items-center gap-2 text-xs text-foreground">
-                      <span className="truncate">{value.name}</span>
-                      <RowSyncStatus
-                        isDeleting={Boolean(value.isPendingDelete)}
-                        isSyncing={activeSyncIds.includes(value.id)}
-                        isPending={value.isPendingSync && !activeSyncIds.includes(value.id)}
-                        entityLabel="account"
-                      />
-                      {!value.canDelete && !value.canArchive && !value.isArchived && (
-                        <span title="Close all positions and set cash to zero before archiving." className="flex shrink-0 cursor-help items-center gap-1.5 rounded-md px-1.5 py-0.5 text-amber-500 hover:bg-amber-500/10">
-                          <Info className="size-3.5" />
-                          <span className="text-xs font-medium">Cannot archive</span>
-                        </span>
-                      )}
-                    </strong>
-                    <span className="text-xs text-muted-foreground">{value.baseCurrency}{value.isArchived ? ' · Archived' : ''}</span>
-                  </span>
-                  <div className="flex shrink-0 gap-1">
-                    {value.isArchived ? (
-                      <Button
-                        variant="tertiary"
-                        size="sm"
-                        disabled={mutationsDisabled || Boolean(value.isPendingSync || value.isPendingDelete)}
-                        onClick={() => onUnarchiveAccount(value.id, value.name, value.baseCurrency)}
-                      >
-                        Unarchive
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={mutationsDisabled || Boolean(value.isPendingSync || value.isPendingDelete) || (!value.canDelete && !value.canArchive)}
-                        title={value.archiveUnavailableReason}
-                        onClick={() => value.canDelete ? onDeleteAccount(value.id) : onArchiveAccount(value.id)}
-                      >
-                        {value.canDelete ? 'Delete' : 'Archive'}
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                <PortfolioManagementRow
+                  key={value.id}
+                  {...value}
+                  details={value.baseCurrency}
+                  entityLabel="account"
+                  isSyncing={activeSyncIds.includes(value.id)}
+                  mutationsDisabled={mutationsDisabled}
+                  onArchive={() => onArchiveAccount(value.id)}
+                  onDelete={() => onDeleteAccount(value.id)}
+                  onUnarchive={() => onUnarchiveAccount(value.id, value.name, value.baseCurrency)}
+                />
               ))}
             </div>
             <p className="mt-3 text-xs text-muted-foreground">Archive preserves closed-account history.</p>
@@ -131,39 +99,18 @@ export const AccountsAndInstruments: React.FC<AccountsAndInstrumentsProps> = ({
             <h3 className="text-eyebrow uppercase text-muted-foreground">Investments</h3>
             <div className="mt-2 space-y-2">
               {portfolio.instruments.filter(value => matches(`${value.symbol} ${value.name} ${value.currency}`)).map(value => (
-                <div key={value.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/25 p-3" aria-busy={value.isPendingSync || value.isPendingDelete || activeSyncIds.includes(value.id)}>
-                  <span className="min-w-0">
-                    <strong className="flex min-w-0 items-center gap-2 text-xs text-foreground">
-                      <span className="truncate">{value.symbol} · {value.name}</span>
-                      <RowSyncStatus
-                        isDeleting={Boolean(value.isPendingDelete)}
-                        isSyncing={activeSyncIds.includes(value.id)}
-                        isPending={value.isPendingSync && !activeSyncIds.includes(value.id)}
-                        entityLabel="investment"
-                      />
-                      {!value.canDelete && !value.canArchive && !value.isArchived && (
-                        <span title={value.archiveUnavailableReason} className="flex shrink-0 cursor-help items-center gap-1.5 rounded-md px-1.5 py-0.5 text-amber-500 hover:bg-amber-500/10">
-                          <Info className="size-3.5" />
-                          <span className="text-xs font-medium">Cannot archive</span>
-                        </span>
-                      )}
-                    </strong>
-                    <span className="text-xs text-muted-foreground">{value.type} · {value.currency} · {value.isCustom ? 'Manual' : value.mic ?? value.exchange ?? 'Provider'}</span>
-                  </span>
-                  <Button
-                    variant={value.isArchived ? 'tertiary' : 'destructive'}
-                    size="sm"
-                    disabled={mutationsDisabled || Boolean(value.isPendingSync || value.isPendingDelete) || (!value.isArchived && !value.canDelete && !value.canArchive)}
-                    title={value.archiveUnavailableReason}
-                    onClick={() => value.isArchived
-                      ? onUnarchiveInstrument(value.id)
-                      : value.canDelete
-                        ? onDeleteInstrument(value.id)
-                        : onArchiveInstrument(value.id)}
-                  >
-                    {value.isArchived ? 'Unarchive' : value.canDelete ? 'Delete' : 'Archive'}
-                  </Button>
-                </div>
+                <PortfolioManagementRow
+                  key={value.id}
+                  {...value}
+                  name={`${value.symbol} · ${value.name}`}
+                  details={`${value.type === 'MutualFund' ? 'Mutual fund' : value.type} · ${value.currency} · ${value.isCustom ? 'Manual' : value.mic ?? value.exchange ?? 'Provider'}`}
+                  entityLabel="investment"
+                  isSyncing={activeSyncIds.includes(value.id)}
+                  mutationsDisabled={mutationsDisabled}
+                  onArchive={() => onArchiveInstrument(value.id)}
+                  onDelete={() => onDeleteInstrument(value.id)}
+                  onUnarchive={() => onUnarchiveInstrument(value.id)}
+                />
               ))}
             </div>
             <p className="mt-3 text-xs text-muted-foreground">Delete only unused investments. Close active ones to keep their history.</p>

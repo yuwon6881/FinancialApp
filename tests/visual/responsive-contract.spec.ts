@@ -1035,3 +1035,41 @@ test('the page heading keeps its type role at every tier', async ({ page }) => {
   // A loop that can skip its way to green is worse than no test.
   expect(checked, 'routes with a page heading').toBe(routes.length)
 })
+
+test('portfolio archive restrictions stay readable and actions remain contained', async ({ page }) => {
+  await mockApi(page, { investmentPortfolio: {
+    accounts: [
+      { id: 'blocked', name: 'MooMoo international investment account with a long name', baseCurrency: 'USD', isArchived: false, canDelete: false, canArchive: false, archiveUnavailableReason: 'Close all positions and bring every cash balance to zero before archiving.' },
+      { id: 'closed', name: 'Closed broker', baseCurrency: 'USD', isArchived: true, canDelete: false, canArchive: true },
+      { id: 'ready', name: 'Settled broker', baseCurrency: 'USD', isArchived: false, canDelete: false, canArchive: true },
+    ],
+    instruments: [
+      { id: 'fund', symbol: 'FUND', name: 'A very long investment name that must remain readable', type: 'MutualFund', currency: 'USD', isCustom: true, isArchived: false, canDelete: false, canArchive: false, archiveUnavailableReason: 'Close all units before archiving this investment.' },
+    ],
+  } })
+  await page.goto('/investments', { waitUntil: 'domcontentloaded' })
+  await waitForStableLayout(page)
+  await page.getByRole('button', { name: /Manage portfolio/ }).click()
+  const dialog = page.getByRole('dialog', { name: 'Manage portfolio' })
+  const blocked = dialog.getByRole('button', { name: /^Archive MooMoo/ })
+  await expect(blocked).toBeDisabled()
+  await expect(blocked).toHaveAccessibleDescription(/Before archiving: Close all positions/)
+  await expect(dialog.getByText(/Close all positions and bring every cash balance/)).toBeVisible()
+  const reopen = dialog.getByRole('button', { name: 'Unarchive Closed broker' })
+  await expect(reopen).toBeEnabled()
+  await reopen.scrollIntoViewIfNeeded()
+  const box = await reopen.boundingBox()
+  expect(box!.height).toBeGreaterThanOrEqual(44)
+  expect(await reopen.evaluate(element => {
+    const rect = element.getBoundingClientRect()
+    return element.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2))
+  })).toBe(true)
+  await blocked.scrollIntoViewIfNeeded()
+  await expect(dialog).toHaveScreenshot('portfolio-archive-accounts.png')
+  await dialog.getByRole('tab', { name: 'Investments (1)' }).click()
+  await expect(dialog.getByText('Mutual fund · USD · Manual')).toBeVisible()
+  await expect(dialog.getByRole('button', { name: /^Archive FUND/ })).toHaveAccessibleDescription(/Close all units/)
+  expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await expect(dialog).toHaveScreenshot('portfolio-archive-investments.png')
+})
