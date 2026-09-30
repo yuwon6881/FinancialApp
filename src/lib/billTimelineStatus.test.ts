@@ -12,9 +12,26 @@ describe('billTimelineStatus', () => {
     expect(billTimelineStatus([bill('Pending')]).dot).toContain('bg-accent-ink/25')
   })
 
-  it('gives a stacked date the part-paid shade even when every bill is paid', () => {
-    const stacked = billTimelineStatus([bill('Paid'), bill('Paid')])
-    expect(stacked.label).toBe('Multiple bills')
-    expect(stacked.dot).toBe(billTimelineStatus([bill('PartiallyPaid')]).dot)
+  it('shows a stacked date as fully paid only when every bill on it is paid', () => {
+    const stacked = billTimelineStatus([bill('Paid'), bill('Paid'), bill('SettledByLoanPayoff'), bill('Paid')])
+    expect(stacked.label).toBe('Paid')
+    expect(stacked.dot).toBe(billTimelineStatus([bill('Paid')]).dot)
+  })
+
+  it('shows a stacked date as part paid when only some of its bills are paid', () => {
+    const partPaid = billTimelineStatus([bill('PartiallyPaid')])
+    expect(billTimelineStatus([bill('Paid'), bill('Paid'), bill('Paid'), bill('Pending')])).toEqual(partPaid)
+    expect(billTimelineStatus([bill('Paid'), bill('PartiallyPaid')])).toEqual(partPaid)
+    expect(billTimelineStatus([bill('Pending'), bill('PartiallyPaid')])).toEqual(partPaid)
+  })
+
+  it('keeps a stacked date pending when nothing on it has been paid', () => {
+    expect(billTimelineStatus([bill('Pending'), bill('Pending')])).toEqual(billTimelineStatus([bill('Pending')]))
+  })
+
+  it('ignores discarded bills when judging a stacked date', () => {
+    expect(billTimelineStatus([bill('Paid'), bill('Discarded')])).toEqual(billTimelineStatus([bill('Paid')]))
+    expect(billTimelineStatus([bill('Pending'), bill('Discarded')])).toEqual(billTimelineStatus([bill('Pending')]))
+    expect(billTimelineStatus([bill('Discarded'), bill('Discarded')])).toEqual(billTimelineStatus([bill('Discarded')]))
   })
 })

@@ -163,10 +163,10 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
       </div>
 
       {timelineNodes.length > 0 && (
-        <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-medium text-muted-foreground sm:justify-end" aria-label="Timeline colour key">
-          <li className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-accent-ink ring-2 ring-accent-ink/20" aria-hidden="true" />Fully paid</li>
-          <li className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-accent-ink/60 ring-2 ring-accent-ink/15" aria-hidden="true" />Part paid or several bills</li>
-          <li className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-accent-ink/25 ring-2 ring-accent-ink/20" aria-hidden="true" />Pending</li>
+        <ul className="flex flex-nowrap items-center justify-between gap-x-3 text-xs font-medium whitespace-nowrap text-muted-foreground sm:justify-end sm:gap-x-4" aria-label="Timeline colour key">
+          <li className="flex items-center gap-1.5"><span className="size-2.5 shrink-0 rounded-full bg-accent-ink ring-2 ring-accent-ink/20" aria-hidden="true" />Fully paid</li>
+          <li className="flex items-center gap-1.5"><span className="size-2.5 shrink-0 rounded-full bg-accent-ink/60 ring-2 ring-accent-ink/15" aria-hidden="true" />Part paid</li>
+          <li className="flex items-center gap-1.5"><span className="size-2.5 shrink-0 rounded-full bg-accent-ink/25 ring-2 ring-accent-ink/20" aria-hidden="true" />Pending</li>
         </ul>
       )}
       {/* Mobile: compact tappable vertical list */}
