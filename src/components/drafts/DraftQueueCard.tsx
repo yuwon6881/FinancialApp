@@ -72,14 +72,14 @@ export function DraftQueueCard({ draft, grip, issues, documentCount, currency, h
             <LedgerAllocationBadge ledgerCategory={draft.ledgerCategory} transactionId={draft.id} compact />
             {!isTransfer && <span className={`min-w-0 max-w-full truncate rounded-md border px-1.5 py-0.5 text-caption font-semibold ${getCategoryBadgeClass(draft.category)}`} title={draft.category}>{draft.category}</span>}
           </div>
-          {needsReview && (
-            <div className="mt-3 flex flex-col gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 p-2.5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="min-w-0 text-caption leading-relaxed text-amber-700 dark:text-amber-300">{issues.join(' ')}</p>
-              <Button variant="secondary" size="sm" onClick={onEdit} disabled={hideSensitive} className="min-h-11 shrink-0 border-amber-500/30 bg-card text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 sm:min-h-9">Review</Button>
-            </div>
-          )}
         </div>
       </div>
+      {needsReview && (
+        <div className="mt-3 flex flex-col gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 p-2.5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="min-w-0 text-caption leading-relaxed text-amber-700 dark:text-amber-300">{issues.join(' ')}</p>
+          <Button variant="secondary" size="sm" onClick={onEdit} disabled={hideSensitive} className="min-h-11 shrink-0 border-amber-500/30 bg-card text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 sm:min-h-9">Review</Button>
+        </div>
+      )}
     </SwipeableRow>
   )
 }
