@@ -184,7 +184,6 @@ export function LoansSection({
             <m.div key={loan.id} variants={listItemVariants} className="w-full min-w-0">
               <LoanCard
                 loan={loan}
-                currency={currency}
                 hideSensitive={hideSensitive}
                 formatSensitive={formatSensitive}
                 isSyncing={view.activeSyncIdSet.has(loan.id)}

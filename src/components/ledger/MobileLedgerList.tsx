@@ -85,9 +85,6 @@ export function MobileLedgerList({
                 </span>
                 <span className="text-blue-500 font-bold text-sm">{formatSensitive(pageTotals.transfer)}</span>
               </div>
-              <p className="hidden sm:block mt-1 text-xs text-muted-foreground">
-                Internal movement between buckets — excluded from debit and credit.
-              </p>
             </div>
           )}
           {pageTotals.bucket && hasDistinctBucketMovement(pageTotals.bucketNet, net) ? (
@@ -98,9 +95,6 @@ export function MobileLedgerList({
                   {pageTotals.bucketNet >= 0 ? '+' : '-'}{formatSensitive(Math.abs(pageTotals.bucketNet))}
                 </span>
               </div>
-              <p className="hidden sm:block mt-1 text-xs text-muted-foreground">
-                What went in minus what came out, counting each row's share of this bucket.
-              </p>
             </div>
           ) : (
             <div className="flex justify-between items-center border-t border-border/50 pt-2.5 font-bold">

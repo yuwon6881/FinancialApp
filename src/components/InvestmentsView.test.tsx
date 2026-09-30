@@ -202,7 +202,7 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(screen.getByText('$300.00')).toBeTruthy()
   })
 
-  it('explains investment archive eligibility', async () => {
+  it('lists investments in the portfolio manager', async () => {
     vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
     renderView()
 
@@ -210,7 +210,7 @@ describe('InvestmentsView provider call boundaries', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Manage portfolio/ }))
     fireEvent.click(screen.getByRole('tab', { name: 'Investments (1)' }))
-    expect(screen.getByText(/Delete only unused investments/)).toBeTruthy()
+    expect(screen.getByRole('tabpanel').textContent).toContain('VOO')
   })
 
   it('debounces explicit searches and starts at three characters', async () => {

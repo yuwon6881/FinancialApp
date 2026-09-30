@@ -383,7 +383,6 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
               <h3 className="flex flex-wrap items-center gap-2 text-subsection text-foreground">
                 Portfolio targets
               </h3>
-              <p className="mt-1 text-xs text-muted-foreground break-words">Changing one sleeve automatically redistributes the other two.</p>
             </div>
           </div>
           <Button variant="tertiary"
@@ -507,7 +506,6 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
           <h3 className="flex flex-wrap items-center gap-2 text-subsection text-foreground">
             Investment classification <RowSyncStatus isSyncing={orderSyncing} isPending={orderPending} entityLabel="classification order" />
           </h3>
-          <p className="mt-1 text-xs text-muted-foreground break-words">Assign each holding to a basket and set rebalancing priority.</p>
         </div>
         <Reorder.Group
           axis="y"

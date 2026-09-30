@@ -98,7 +98,6 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
             <h3 className="flex items-center gap-2 text-subsection text-foreground">
               Financial Model
             </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Controls budget targets and cycle calculations.</p>
           </div>
         </div>
 
@@ -239,7 +238,6 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
           <div className="flex items-center justify-between border-b border-border/40 pb-3">
             <div>
               <h3 className="text-subsection text-foreground">App Preferences</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Customize display and local storage.</p>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-y-3">

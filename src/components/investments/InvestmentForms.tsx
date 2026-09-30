@@ -76,7 +76,6 @@ export const AccountForm = ({ appCurrency, existingAccounts = [], busy, onCancel
       <Field label="Account name" required error={errors.name}><Input maxLength={120} value={name} onChange={event => { setName(event.target.value); setErrors({}) }} placeholder="e.g. Moomoo" /></Field>
       <Field label="Base currency" required error={errors.currency}><CurrencySelect value={currency} onChange={value => { setCurrency(value); setErrors(previous => ({ ...previous, currency: '' })) }} className="w-full" ariaLabel="Base currency" required /></Field>
     </div>
-    <p className="text-xs text-muted-foreground">A display name only — no broker login is stored.</p>
     <FormActions busy={busy} onCancel={onCancel} submitLabel="Add account" />
   </form>
 }

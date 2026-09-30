@@ -29,7 +29,6 @@ describe('CategoryLimitsCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save Guides' }))
 
     expect(onUpdate).toHaveBeenCalledWith('cat-transport', 400)
-    expect(screen.getByText(/Spending is never blocked/)).toBeTruthy()
   })
 
   it('saves null when an existing guide is switched off', () => {

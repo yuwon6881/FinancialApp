@@ -22,7 +22,6 @@ export function LedgerPendingReviews({ receiptReady, receiptSplitReady, onReview
           </span>
           <div className="min-w-0">
             <h3 id="ledger-scan-ready-title" className="text-subsection text-foreground">Scan ready for review</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">Your current page stays open until you choose what to review.</p>
           </div>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">

@@ -247,9 +247,6 @@ export function AccountsSection({
             </div>
             <div className="min-w-0">
               <h3 className="text-section text-foreground">Accounts</h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Connect where your money lives to the four budget buckets.
-              </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground">

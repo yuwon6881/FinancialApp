@@ -43,7 +43,6 @@ export function ForecastTargetSection({
       <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-border/50 bg-muted/15 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-bold text-foreground">Want to aim for a number?</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Add a target to see the chance of reaching it and the required monthly amount.</p>
         </div>
         <Button variant="primary" size="sm" disabled={masked} onClick={onAdd} className="w-full shrink-0 justify-center sm:w-auto sm:self-auto">Add a target</Button>
       </div>

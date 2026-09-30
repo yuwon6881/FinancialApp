@@ -225,7 +225,6 @@ export function CycleSummaryModal({
                     <p className="text-xs font-bold text-foreground">
                       {summary.categoryLimitsMet} of {summary.categoryLimits.length} within guide
                     </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">Final category spending for this salary cycle.</p>
                   </div>
                   <span className={`rounded-full px-2 py-1 text-eyebrow uppercase ${summary.categoryLimitsMet === summary.categoryLimits.length ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>
                     {summary.categoryLimitsMet === summary.categoryLimits.length ? 'All met' : `${summary.categoryLimits.length - summary.categoryLimitsMet} over`}
@@ -361,12 +360,10 @@ export function CycleSummaryModal({
                 <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
                   <p className="text-eyebrow uppercase text-muted-foreground">No-spend days</p>
                   <p className="mt-1 text-xs font-bold text-emerald-500">{summary.noSpendDays} days</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Days with zero expenses</p>
                 </div>
                 <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
                   <p className="text-eyebrow uppercase text-muted-foreground">Transaction count</p>
                   <p className="mt-1 text-xs font-bold text-foreground">{summary.transactionCount} expense entries</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Total purchases this cycle</p>
                 </div>
                 {summary.committedSpend + summary.discretionarySpend > 0 && (
                   <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">

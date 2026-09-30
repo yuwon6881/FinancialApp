@@ -70,7 +70,6 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
       >
         <div>
           <h2 id="forecast-title" className="text-section text-foreground">Investment forecast</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Explore long-term outcomes without changing your records.</p>
         </div>
         <ChevronDown className="size-4 -rotate-90 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-foreground" />
       </Button>

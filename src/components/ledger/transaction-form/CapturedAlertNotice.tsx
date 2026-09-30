@@ -17,7 +17,6 @@ export function CapturedAlertNotice({ source, notices = [], excerpt }: Props) {
         <BellRing className="size-4 shrink-0 text-accent-ink" aria-hidden="true" />
         <p className="font-medium text-foreground">Detected from {source || 'a payment alert'}</p>
       </div>
-      <p className="text-xs leading-snug text-muted-foreground">Check the details and fill in anything missing. Suggestions are only choices — nothing is saved until you tap Save.</p>
       {notices.length > 0 && (
         <ul className="space-y-1">
           {notices.map(notice => (

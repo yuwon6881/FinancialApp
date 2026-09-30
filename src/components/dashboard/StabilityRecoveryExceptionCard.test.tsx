@@ -79,8 +79,8 @@ describe('StabilityRecoveryExceptionCard', () => {
 
     expect(screen.getByText('Emergency fund recovery')).toBeTruthy()
     expect(screen.getByText(/Put back \$1000\.00 this cycle/)).toBeTruthy()
-    expect(screen.getByText("This cycle's plan")).toBeTruthy()
-    expect(screen.getByText('$0.00 of $1000.00 put back')).toBeTruthy()
+    expect(screen.getByText('This cycle')).toBeTruthy()
+    expect(screen.getByText('$0.00 of $1000.00')).toBeTruthy()
   })
 
   it('does not expose progress while amounts are masked', () => {

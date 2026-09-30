@@ -37,7 +37,6 @@ const baseLoan: Loan = {
 
 const props = (loan: Loan) => ({
   loan,
-  currency: 'MYR',
   hideSensitive: false,
   formatSensitive: (value: number) => `RM ${value.toFixed(2)}`,
   isSyncing: false,

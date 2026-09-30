@@ -45,11 +45,6 @@ export function PerformanceBars({ portfolio, masked, onSelectHolding }: {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h2 id="performance-title" className="text-section text-foreground">How each fund is doing</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {mode === 'money'
-              ? 'Gain or loss on paper, in money. Pick a fund to see its history.'
-              : 'Gain or loss on paper, as a percentage of what you paid.'}
-          </p>
         </div>
         <div className="w-full shrink-0 sm:w-auto">
           <CustomSelect

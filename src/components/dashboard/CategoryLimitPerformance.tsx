@@ -86,11 +86,9 @@ export function CategoryLimitPerformance({
               text="Bars show spending against your limit; marker projects the cycle-end total."
             />
           </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {exceptionCount > 0
-              ? `${exceptionCount} of ${items.length} tracked categor${items.length === 1 ? 'y needs' : 'ies need'} attention.`
-              : `All ${items.length} tracked categor${items.length === 1 ? 'y is' : 'ies are'} currently on plan.`}
-          </p>
+          {exceptionCount > 0 && (
+            <p className="mt-1 text-xs text-muted-foreground">{exceptionCount} of {items.length} need attention</p>
+          )}
         </div>
         {exceptionCount === 0 ? (
           <CheckCircle2 className="size-5 shrink-0 text-emerald-500" />

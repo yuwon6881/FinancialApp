@@ -53,7 +53,6 @@ export function ForecastControls({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-bold text-foreground">Show in today’s money</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">What this could buy at today’s prices.</p>
           </div>
           <PillSwitch checked={todayMoney} onChange={onTodayMoneyChange} ariaLabel="Show in today’s money" disabled={masked} />
         </div>

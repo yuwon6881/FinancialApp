@@ -141,9 +141,6 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
           />
         </FormField>
 
-        <p className="text-xs text-muted-foreground font-medium">
-          This reserves {fundingBucket} money without adding a ledger transaction.
-        </p>
         {isTopUp && (
           <p className="text-xs text-muted-foreground font-medium">
             If this cycle stays short, the missing amount is recalculated across the cycles left before the deadline. Once the deadline arrives, the full amount still missing is due.

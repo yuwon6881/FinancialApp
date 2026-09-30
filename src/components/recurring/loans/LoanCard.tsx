@@ -13,7 +13,6 @@ import { Badge } from '../../ui/Badge'
 
 interface LoanCardProps {
   loan: Loan
-  currency: string
   hideSensitive: boolean
   formatSensitive: (value: number) => ReactNode
   isSyncing: boolean
@@ -27,7 +26,6 @@ interface LoanCardProps {
 
 export function LoanCard({
   loan,
-  currency,
   hideSensitive,
   formatSensitive,
   isSyncing,
@@ -320,7 +318,6 @@ export function LoanCard({
             </tbody>
           </table>
             </div>
-            <p className="mt-2.5 text-xs text-muted-foreground">Amounts in {currency}. Schedule follows original bill cadence.</p>
               </>
             )}
           </div>

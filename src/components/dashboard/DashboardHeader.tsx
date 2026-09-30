@@ -45,7 +45,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             </div>
             <div className="min-w-0">
               <p className="text-eyebrow uppercase text-blue-500">Available now</p>
-              <p className="hidden sm:block truncate text-xs text-muted-foreground">Excludes long-term Growth savings</p>
             </div>
           </div>
           <IconButton variant="secondary"

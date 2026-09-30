@@ -237,7 +237,6 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
           <div className="space-y-3" role="status">
             <div className={`rounded-xl border p-3 ${failedCount ? 'border-amber-500/30 bg-amber-500/8' : 'border-emerald-500/30 bg-emerald-500/8'}`}>
               <p className="text-sm font-bold text-foreground">{results.filter(result => result.uploaded).length} saved · {failedCount} failed</p>
-              <p className="mt-1 text-caption text-muted-foreground">Successful files remain in your Vault. AI amounts require your review.</p>
             </div>
             {results.map(result => <div key={result.fileName} className="flex items-start gap-2 rounded-xl border border-border/60 p-3">
               {result.uploaded ? <CheckCircle2 className="mt-0.5 size-4 text-emerald-500" /> : <XCircle className="mt-0.5 size-4 text-destructive" />}

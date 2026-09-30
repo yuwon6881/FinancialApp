@@ -71,7 +71,6 @@ function NewAccountRow({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold text-foreground">New account row</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Add a real account where this bucket’s money lives.</p>
         </div>
         <IconButton type="button" onClick={onRemove} label={`Remove ${draft.name || 'new account row'}`}>
           <Trash2 className="size-4 text-destructive" aria-hidden="true" />

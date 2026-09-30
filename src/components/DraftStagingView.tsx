@@ -142,7 +142,6 @@ export function DraftStagingView({
         title={<span data-page-title-text="draft-transactions" className="inline-block whitespace-nowrap">Draft Transactions</span>}
         description={
           <div className="space-y-1">
-            <p>Check the details, then add everything to your Ledger.</p>
             <p className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-muted-foreground">
               <Badge tone="neutral">{draftTransactions.length}</Badge>
               <span>draft{draftTransactions.length === 1 ? '' : 's'} in queue</span>

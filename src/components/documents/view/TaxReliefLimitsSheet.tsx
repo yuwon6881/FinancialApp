@@ -91,7 +91,6 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h4 className="text-subsection">Categories and limits for YA {selectedYear}</h4>
-            <p className="mt-0.5 text-caption text-muted-foreground">Only this year changes. Amounts marked for review are never counted as confirmed.</p>
           </div>
           {!isAdding && (
             <Button variant="secondary" size="sm" type="button" onClick={() => setIsAdding(true)} className="shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground">

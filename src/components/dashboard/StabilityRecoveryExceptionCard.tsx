@@ -144,12 +144,11 @@ export function StabilityRecoveryExceptionCard({
 
         <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-3.5">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs">
-            <span className="font-semibold text-muted-foreground">This cycle's plan</span>
+            <span className="font-semibold text-muted-foreground">This cycle</span>
             <span className="font-extrabold text-amber-600 dark:text-amber-400 tabular-nums">
-              {status === 'deferred' ? 'No amount due yet' : cyclePlanPercent === null
-                ? 'No amount planned this cycle'
-                : cyclePlanPercent >= 100 ? <>This cycle’s plan met · {formatSensitive(cyclePlanFunded)} of {formatSensitive(recovery.requiredThisCycle)}</>
-                  : <>{formatSensitive(cyclePlanFunded)} of {formatSensitive(recovery.requiredThisCycle)} put back</>}
+              {status === 'deferred' || cyclePlanPercent === null
+                ? '—'
+                : <>{formatSensitive(cyclePlanFunded)} of {formatSensitive(recovery.requiredThisCycle)}</>}
             </span>
           </div>
           {cyclePlanPercent !== null && (
@@ -194,7 +193,6 @@ export function StabilityRecoveryExceptionCard({
         isOpen={isBreakdownOpen}
         onClose={() => setIsBreakdownOpen(false)}
         title="Emergency fund recovery details"
-        description="See how the shortfall and this cycle's plan are calculated."
         maxWidthClassName="max-w-xl"
         footer={(
           <Button variant="secondary" size="sm" onClick={() => setIsBreakdownOpen(false)} className="w-full">

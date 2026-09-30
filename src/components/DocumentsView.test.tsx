@@ -127,7 +127,7 @@ describe('DocumentsView', () => {
     expect(screen.getByText(/in about 5 months/)).toBeTruthy()
     expect(screen.getByText(/Nothing is ever deleted for you/)).toBeTruthy()
 
-    await waitFor(() => expect(screen.queryByText(/Save them together/i)).toBeNull())
+    await waitFor(() => expect(screen.queryByText(/categor(y|ies) changes? staged/i)).toBeNull())
   })
 
   it('forgets staged category edits when the filters change', async () => {
@@ -142,14 +142,14 @@ describe('DocumentsView', () => {
     const selectButtons = await screen.findAllByLabelText('Tax relief category for tax.pdf')
     fireEvent.click(selectButtons[0])
     fireEvent.click((await screen.findAllByRole('option', { name: 'Medical' }))[0])
-    await waitFor(() => expect(screen.getByText(/Save them together/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/categor(y|ies) changes? staged/i)).toBeTruthy())
 
     // Changing the sort re-queries the server, so the staged rows are no longer the rows on screen.
     // Left behind, the bar counted documents the user could not see and Save wrote them anyway.
     fireEvent.click(screen.getByLabelText('Sort vault documents'))
     fireEvent.click(screen.getByRole('option', { name: /Sort: Name A/ }))
 
-    await waitFor(() => expect(screen.queryByText(/Save them together/i)).toBeNull())
+    await waitFor(() => expect(screen.queryByText(/categor(y|ies) changes? staged/i)).toBeNull())
   })
 
   it('refreshes the tax insights after a single delete, so the tracker cannot go stale', async () => {

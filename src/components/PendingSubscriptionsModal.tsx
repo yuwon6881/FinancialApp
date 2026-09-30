@@ -5,7 +5,6 @@ import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { BottomSheet } from './ui/BottomSheet'
 import { ToggleButton } from './ui/ToggleButton'
 import { DatePicker } from './ui/DatePicker'
-import { InfoHint } from './ui/InfoHint'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { Button } from './ui/Button'
@@ -205,14 +204,9 @@ export function PendingSubscriptionsModal({
         <div className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-8 text-center">
           <CheckCircle2 className="size-9 text-emerald-500" />
           <h3 className="mt-3 text-subsection text-foreground">All caught up</h3>
-          <p className="mt-1 max-w-sm text-xs text-muted-foreground">No subscription payments are waiting for confirmation.</p>
         </div>
       ) : (
       <>
-        <div className="text-sm leading-relaxed text-muted-foreground">
-          Confirm paid bills to add them to the ledger, skip only this cycle, or remove the subscription entirely.
-        </div>
-
         <div key={isOpen ? 'open' : 'closed'} className="space-y-4">
         {pendingNotifications.map((noti) => {
           const pendingAction = pendingActions[noti.id]
@@ -228,25 +222,23 @@ export function PendingSubscriptionsModal({
               isPartial ? 'border-accent-ink/35' : 'border-border/60'
             }`}
           >
-            <header className="flex items-start justify-between gap-3 border-b border-border/40 bg-muted/25 px-4 py-3 sm:px-5">
-              <div className="min-w-0 space-y-1.5">
-                <h3 className="break-words text-sm font-bold text-foreground sm:text-base">{noti.name}</h3>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className={`inline-block rounded border px-1.5 py-0.5 text-xs font-bold ${getCategoryBadgeClass(noti.category)}`}>
-                    {noti.category}
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                    <CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />
-                    Due {noti.billingDate}
-                  </span>
-                  <span className="text-xs text-muted-foreground">Cycle {noti.cycleLabel}</span>
-                </div>
-              </div>
-              <div className="shrink-0 text-right">
-                <span className="block text-eyebrow uppercase text-muted-foreground">Bill total</span>
-                <span className="block text-sm font-extrabold tabular-nums text-orange-500 sm:text-base">
+            <header className="space-y-2 border-b border-border/40 bg-muted/25 px-4 py-3 sm:px-5">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="min-w-0 break-words text-sm font-bold text-foreground sm:text-base">{noti.name}</h3>
+                <span className="shrink-0 text-sm font-extrabold tabular-nums text-orange-500 sm:text-base">
                   {hideSensitive ? <SensitiveMask /> : <>-{formatCurrencyVal(Math.abs(noti.amount), currency)}</>}
                 </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
+                <span className={`inline-block rounded border px-1.5 py-0.5 font-bold ${getCategoryBadgeClass(noti.category)}`}>
+                  {noti.category}
+                </span>
+                <span className="inline-flex items-center gap-1 font-medium">
+                  <CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />
+                  Due {noti.billingDate}
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>{noti.cycleLabel}</span>
               </div>
             </header>
 
@@ -281,10 +273,6 @@ export function PendingSubscriptionsModal({
                       />
                       <span className="text-xs font-bold text-foreground">Pay partial amount</span>
                     </div>
-                    <InfoHint
-                      label="Part payment info"
-                      text="By default bills are paid in full. Turn this on to record a smaller part payment now; the remainder stays due."
-                    />
                   </div>
 
                   {isPartial && (
@@ -351,43 +339,33 @@ export function PendingSubscriptionsModal({
                     </div>
                   )}
 
-                  <div
-                    id={`pending-amount-hint-${noti.id}`}
-                    role="status"
-                    aria-live="polite"
-                    className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 text-xs leading-relaxed ${
-                      amountState.kind === 'invalid'
-                        ? 'border-destructive/20 bg-destructive/10 text-destructive'
-                        : 'border-border/60 bg-muted/20 text-muted-foreground'
-                    }`}
-                  >
-                    {amountState.kind === 'full' ? (
-                      <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-                    ) : amountState.kind === 'partial' ? (
-                      <CircleDollarSign className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-                    ) : (
-                      <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                    )}
-                    <span>
-                      {amountState.kind === 'full' ? (
-                        <>
-                          <strong className="font-bold text-foreground">Full payment selected{hideSensitive ? '' : ` · ${formatCurrencyVal(amountState.due, currency)}`}.</strong>{' '}
-                          {hideSensitive
-                            ? 'Amounts are hidden while sensitive mode is on.'
-                            : 'Settles this bill in full and advances to the next cycle.'}
-                        </>
-                      ) : amountState.kind === 'partial' ? (
-                        <>
-                          <strong className="font-bold text-foreground">Part payment{hideSensitive ? '' : ` · ${formatCurrencyVal(amountState.amount, currency)}`}.</strong>{' '}
-                          {hideSensitive
-                            ? 'Amounts are hidden while sensitive mode is on.'
-                            : `${formatCurrencyVal(amountState.remaining, currency)} remains due.`}
-                        </>
+                  {amountState.kind !== 'full' && (
+                    <div
+                      id={`pending-amount-hint-${noti.id}`}
+                      role="status"
+                      aria-live="polite"
+                      className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 text-xs leading-relaxed ${
+                        amountState.kind === 'invalid'
+                          ? 'border-destructive/20 bg-destructive/10 text-destructive'
+                          : 'border-border/60 bg-muted/20 text-muted-foreground'
+                      }`}
+                    >
+                      {amountState.kind === 'partial' ? (
+                        <CircleDollarSign className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
                       ) : (
-                        <strong className="font-bold">{amountState.error}</strong>
+                        <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                       )}
-                    </span>
-                  </div>
+                      <span>
+                        {amountState.kind === 'partial' ? (
+                          hideSensitive
+                            ? 'Part payment'
+                            : <><strong className="font-bold text-foreground">{formatCurrencyVal(amountState.amount, currency)}</strong> now · {formatCurrencyVal(amountState.remaining, currency)} remains due</>
+                        ) : (
+                          <strong className="font-bold">{amountState.error}</strong>
+                        )}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

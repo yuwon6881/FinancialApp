@@ -83,9 +83,7 @@ export function InvestmentPlanPanel({
                 text="See your target mix, current holdings, and what to buy next."
               />
             </h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Across every brokerage account · {allocationStatusLabel(allocation.status)}
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{allocationStatusLabel(allocation.status)}</p>
           </div>
         </div>
         <Button variant="tertiary" size="sm" onClick={configure} className="group/configure">

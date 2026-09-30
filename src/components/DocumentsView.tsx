@@ -308,7 +308,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           <div className="mb-3 flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-bold">{stagedCategories.staged.size} tax relief categor{stagedCategories.staged.size === 1 ? 'y change' : 'y changes'} staged</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">Save them together to update the Vault in one request.</p>
             </div>
             <div className="flex shrink-0 justify-end gap-2">
               <Button

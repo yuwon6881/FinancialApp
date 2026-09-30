@@ -93,7 +93,6 @@ export const AccountsAndInstruments: React.FC<AccountsAndInstrumentsProps> = ({
                 />
               ))}
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">Archive preserves closed-account history.</p>
           </div>}
           {tab === 'investments' && <div id="portfolio-panel-investments" role="tabpanel" aria-labelledby="portfolio-tab-investments">
             <h3 className="text-eyebrow uppercase text-muted-foreground">Investments</h3>
@@ -113,7 +112,6 @@ export const AccountsAndInstruments: React.FC<AccountsAndInstrumentsProps> = ({
                 />
               ))}
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">Delete only unused investments. Close active ones to keep their history.</p>
           </div>}
         </div>
       </BottomSheet>

@@ -47,7 +47,6 @@ describe('NotificationsCard', () => {
     expect(screen.getAllByRole('switch')).toHaveLength(2)
     expect(screen.queryByText(/this device/i)).toBeNull()
     expect(screen.queryByText(/show lock-screen details/i)).toBeNull()
-    expect(screen.getByText(/choose which alerts this installation receives/i)).toBeTruthy()
   })
 
   it('reports another device opt-in as a sentence, never as this switch being on', () => {

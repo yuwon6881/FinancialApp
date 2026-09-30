@@ -136,7 +136,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             This repeats
           </label>
         </div>
-        {props.isRecurring ? (
+        {props.isRecurring && (
           <FormField
             label="Repeat every (months)"
             error={props.errors.recurrence}
@@ -155,10 +155,6 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
               className="font-medium [appearance:textfield]"
             />
           </FormField>
-        ) : (
-          <p className="text-xs text-muted-foreground font-medium">
-            For things like a quarterly car service or annual insurance.
-          </p>
         )}
       </div>
 

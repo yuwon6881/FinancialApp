@@ -128,7 +128,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
     .filter(group => group.holdings.length > 0 || group.cash.length > 0)
   return (
   <section aria-labelledby="holdings-title" className={cn(panelClass, 'overflow-hidden')}>
-    <div className="p-4 sm:p-5"><h2 id="holdings-title" className="text-section text-foreground">What you hold</h2><p className="mt-1 text-xs text-muted-foreground">Every fund you own, grouped by the account holding it.{filter ? ` Showing only ${filterLabel}.` : ''}</p></div>
+    <div className="p-4 sm:p-5"><h2 id="holdings-title" className="text-section text-foreground">What you hold</h2>{filter && <p className="mt-1 text-xs text-muted-foreground">Showing only {filterLabel}.</p>}</div>
     <div className="grid gap-3 px-4 pb-4 sm:px-5 sm:pb-5 sm:grid-cols-2 lg:grid-cols-3">
       {accountGroups.map(({ account, holdings: accountHoldings, cash, total }) => (
         <article key={account.id} className="interactive-card rounded-xl border border-border/50 bg-muted/15 p-4">

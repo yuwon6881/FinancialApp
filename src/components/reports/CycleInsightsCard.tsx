@@ -25,7 +25,6 @@ export function CycleInsightsCard({
         <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500"><CalendarDays className="size-5" aria-hidden /></div>
         <div>
           <h2 id="cycle-insights-title" className="text-subsection text-foreground">This cycle at a glance</h2>
-          <p className="mt-0.5 text-caption text-muted-foreground">Useful patterns from the cycle you selected.</p>
         </div>
       </div>
       <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">

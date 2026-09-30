@@ -286,7 +286,6 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
       )}
       <Field label="Date" plain className="sm:col-span-2"><DatePicker value={date} onChange={setDate} max={today()} className="w-full" /></Field>
     </div>
-    <p className="text-xs text-muted-foreground">Use for deposits, withdrawals, and currency conversions. Trades, dividends, and fees adjust cash automatically.</p>
     <FormActions busy={busy} onCancel={() => { clearScan(); onCancel() }} submitLabel={initial ? 'Save changes' : type === 'Conversion' ? 'Record conversion' : type === 'Withdrawal' ? 'Record withdrawal' : 'Record deposit'} disabled={!accountId} />
   </form>
 }

@@ -51,7 +51,6 @@ export function CategoryCleanupReviewPanel({
           <h4 id="category-review-heading" className="flex items-center gap-1.5 text-xs font-bold text-foreground">
             <Sparkles className="size-3.5 text-accent-ink" aria-hidden="true" /> AI Category Review
           </h4>
-          <p className="mt-0.5 text-xs text-muted-foreground">Review category purpose, flow, and recent usage before applying anything.</p>
         </div>
         <Button size="icon" variant="tertiary" type="button" onClick={onClose} className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-background hover:text-foreground sm:size-8 lg:size-8" aria-label="Close AI category review">
           <ChevronUp className="size-3.5" />

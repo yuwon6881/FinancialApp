@@ -60,9 +60,8 @@ describe('PendingSubscriptionsModal', () => {
 
   it('shows confirmation progress and prevents duplicate actions', () => {
     const { onConfirmSubscription } = renderModal()
-    const fullPaymentSummary = screen.getByRole('status')
-    expect(fullPaymentSummary.textContent).toContain('Full payment selected')
-    expect(fullPaymentSummary.textContent).toContain('870.00')
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByText('-RM 870.00')).toBeTruthy()
     expect(screen.queryByLabelText('Amount paid')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Paid' }))
 
@@ -115,7 +114,6 @@ describe('PendingSubscriptionsModal', () => {
     const input = screen.getByLabelText('Amount paid')
     fireEvent.change(input, { target: { value: '500' } })
     const partPaymentSummary = screen.getByRole('status')
-    expect(partPaymentSummary.textContent).toContain('Part payment')
     expect(partPaymentSummary.textContent).toContain('500.00')
     expect(partPaymentSummary.textContent).toContain('370.00 remains due')
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Paid' }))
@@ -189,11 +187,11 @@ describe('PendingSubscriptionsModal', () => {
 
     const input = screen.getByLabelText('Amount paid')
     fireEvent.change(input, { target: { value: '300' } })
-    expect(screen.getByRole('status').textContent).toContain('Part payment')
+    expect(screen.getByRole('status').textContent).toContain('300.00')
 
     fireEvent.click(toggle)
     expect(screen.queryByLabelText('Amount paid')).toBeNull()
-    expect(screen.getByRole('status').textContent).toContain('Full payment selected')
+    expect(screen.queryByRole('status')).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Paid' }))
     expect(onConfirmSubscription).toHaveBeenCalledWith(notification, '2026-07-28', undefined)
@@ -202,10 +200,8 @@ describe('PendingSubscriptionsModal', () => {
   it('keeps the full-payment summary private while sensitive mode is active', () => {
     renderModal({ hideSensitive: true })
 
-    const summary = screen.getByRole('status')
-    expect(summary.textContent).toContain('Full payment selected')
-    expect(summary.textContent).toContain('Amounts are hidden')
-    expect(summary.textContent).not.toContain('870.00')
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(document.body.textContent).not.toContain('870.00')
     expect((screen.getByRole('switch', { name: 'Pay partial amount for Household' }) as HTMLButtonElement).disabled).toBe(true)
   })
 })

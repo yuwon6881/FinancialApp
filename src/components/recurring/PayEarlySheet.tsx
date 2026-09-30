@@ -193,9 +193,6 @@ export function PayEarlySheet({
                     <span className="font-bold text-foreground">{formatCurrencyVal(alreadyPaidAmount, currency)}</span>
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Recording this full payment will add a transaction to your ledger and advance the subscription to the next cycle.
-                </p>
               </div>
             ) : (
               <div className="space-y-3">

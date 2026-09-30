@@ -137,9 +137,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <h3 id="attention-heading" className="text-subsection text-amber-700 dark:text-amber-300">
                   {pendingNotificationCount} bill{pendingNotificationCount === 1 ? '' : 's'} need review
                 </h3>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  Confirm paid bills, skip this cycle, or remove subscriptions from one review queue.
-                </p>
               </div>
             </div>
             <Button
@@ -194,10 +191,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div data-testid="today-plan-grid">
         <section aria-labelledby="plan-snapshot-heading" className={cn(panelClass, 'flex flex-col p-5')}>
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 id="plan-snapshot-heading" className="text-section text-foreground">Plan snapshot</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Current-cycle spending room, committed bills, and emergency savings.</p>
-            </div>
+            <h3 id="plan-snapshot-heading" className="text-section text-foreground">Plan snapshot</h3>
             <EssentialsChallengeCard
               challenge={challenge}
               cycle={cycleProgress}

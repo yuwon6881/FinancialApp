@@ -148,9 +148,6 @@ export function CategoryLimitsCard({
           <h3 className="flex items-center gap-1.5 text-subsection text-foreground">
             <Gauge className="size-4 text-blue-500" /> Cycle Spending Guides
           </h3>
-          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-            Optional category expectations. Spending is never blocked when a guide is reached.
-          </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Badge tone="info">
