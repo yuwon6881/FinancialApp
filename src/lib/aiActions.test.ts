@@ -302,6 +302,34 @@ describe('dispatchAiActions — ledger filters', () => {
       minAmount: null, maxAmount: null, recurringOnly: false, wishlistOnly: false,
     }))
   })
+
+  it('lands on the exact bill or commitment the AI named', async () => {
+    const bill = makeDeps()
+    await dispatchAiActions([{ type: 'openRecurring', payload: { id: 'rp-netflix' } }], bill)
+    expect(bill.navigate).toHaveBeenCalledWith({ tab: 'recurring', recurringId: 'rp-netflix' })
+
+    const goal = makeDeps()
+    await dispatchAiActions([{ type: 'openWishlist', payload: { savingsGoalId: 7 } }], goal)
+    expect(goal.navigate).toHaveBeenCalledWith({ tab: 'wishlist', savingsGoalId: '7' })
+  })
+
+  it('searches every cycle with the ledger\'s own all range', async () => {
+    const d = makeDeps()
+    await dispatchAiActions([{ type: 'openLedger', payload: { search: 'haircut', allCycles: true } }], d)
+    expect(d.handleNavigateToLedger).toHaveBeenCalledWith(expect.objectContaining({
+      search: 'haircut', showAllCycles: true, range: 'all',
+    }))
+  })
+
+  it('opens one transaction in the cycle the server resolved and highlights it', async () => {
+    const d = makeDeps()
+    await dispatchAiActions([{ type: 'openLedger', payload: { id: 'cut-latest', month: 'Aug', year: 2026 } }], d)
+    expect(d.handleSelectPeriod).toHaveBeenCalledWith('Aug', 2026)
+    expect(d.handleNavigateToLedger).toHaveBeenCalledWith(expect.objectContaining({
+      highlightedTxId: 'cut-latest', showAllCycles: false, range: 'monthly',
+    }))
+    expect(d.navigate).toHaveBeenCalledWith({ tab: 'ledger', ledgerTxId: 'cut-latest' })
+  })
 })
 
 describe('dispatchAiActions — recurring reminders', () => {

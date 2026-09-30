@@ -231,6 +231,8 @@ function App() {
       nav.handleNavigateToRecurring(aiNavigation.recurringId)
     } else if (aiNavigation.tab === 'wishlist' && aiNavigation.wishlistItemId) {
       nav.handleNavigateToReward(aiNavigation.wishlistItemId)
+    } else if (aiNavigation.tab === 'wishlist' && aiNavigation.savingsGoalId) {
+      nav.handleNavigateToCommitment(aiNavigation.savingsGoalId)
     } else if (aiNavigation.tab === 'ledger' && aiNavigation.ledgerTxId) {
       nav.setHighlightedTxId(aiNavigation.ledgerTxId)
       prefs.setActiveTab('ledger')

@@ -79,6 +79,8 @@ export interface AiNavigationTarget {
   cycleKey?: string | null
   /** Reward to scroll to and highlight so account selection can continue in its Claim sheet. */
   wishlistItemId?: string | null
+  /** Commitment (savings goal) to scroll to and highlight on the Wishlist tab. */
+  savingsGoalId?: string | null
 }
 
 /**
@@ -161,7 +163,7 @@ export interface AiActionsDeps {
     recurringOnly?: boolean
     wishlistOnly?: boolean
     txType?: 'inflow' | 'outflow' | 'transfer' | null
-    range?: 'monthly' | '3month' | '6month' | 'yearly'
+    range?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
     highlightedTxId?: string | null
     showAllCycles?: boolean
   }) => void
@@ -299,9 +301,11 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
     } else if (action.type === 'openInvestments') {
       setDestination({ tab: 'investments' })
     } else if (action.type === 'openRecurring') {
-      setDestination({ tab: 'recurring' })
+      const recurringId = getPayloadString(payload, 'id')
+      setDestination(recurringId ? { tab: 'recurring', recurringId } : { tab: 'recurring' })
     } else if (action.type === 'openWishlist') {
-      setDestination({ tab: 'wishlist' })
+      const savingsGoalId = getPayloadNumber(payload, 'savingsGoalId')
+      setDestination(savingsGoalId != null ? { tab: 'wishlist', savingsGoalId: String(savingsGoalId) } : { tab: 'wishlist' })
     } else if (action.type === 'openLedger' || action.type === 'openLedgerExport') {
       const month = getPayloadString(payload, 'month')
       const year = getPayloadNumber(payload, 'year')
@@ -311,7 +315,13 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
       const txTypeValue = getPayloadString(payload, 'txType')
       const txType = txTypeValue === 'inflow' || txTypeValue === 'outflow' || txTypeValue === 'transfer' ? txTypeValue : null
       const rangeValue = getPayloadString(payload, 'range')
-      const range = rangeValue === '3month' || rangeValue === '6month' || rangeValue === 'yearly' ? rangeValue : 'monthly'
+      // "Every cycle" is the Ledger's own 'all' range, the one its global search opens with; a
+      // monthly range under showAllCycles is a different, narrower view.
+      const range = rangeValue === '3month' || rangeValue === '6month' || rangeValue === 'yearly'
+        ? rangeValue
+        : payload.allCycles === true ? 'all' : 'monthly'
+      // The server has already switched month/year to this transaction's own cycle.
+      const highlightedTxId = getPayloadString(payload, 'id')
       const minAmount = getPayloadNumber(payload, 'minAmount')
       const maxAmount = getPayloadNumber(payload, 'maxAmount')
       deps.handleNavigateToLedger({
@@ -326,10 +336,11 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
         maxAmount: maxAmount != null && maxAmount >= 0 ? String(maxAmount) : null,
         recurringOnly: payload.recurringOnly === true,
         wishlistOnly: payload.wishlistOnly === true,
-        showAllCycles: payload.allCycles === true || range !== 'monthly',
+        showAllCycles: range !== 'monthly',
         range,
+        highlightedTxId,
       })
-      setDestination({ tab: 'ledger' })
+      setDestination(highlightedTxId ? { tab: 'ledger', ledgerTxId: highlightedTxId } : { tab: 'ledger' })
       if (action.type === 'openLedgerExport') {
         deps.setAiLedgerExportRequest({ nonce: deps.nextNonce() })
       }
