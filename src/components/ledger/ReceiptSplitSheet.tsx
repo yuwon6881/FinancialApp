@@ -181,7 +181,12 @@ export function ReceiptSplitSheet({
       itemIndex === index ? Math.max(0, Math.min(maximum, quantity + delta)) : quantity))
   }
 
-  const togglePriceLock = (index: number) => {
+  const selectEvery = (all: boolean) => {
+    if (!receipt) return
+    setSelectedQuantities(receipt.items.map(item => all ? receiptQuantity(item) : 0))
+  }
+
+  const togglePriceLock =(index: number) => {
     setUnlockedPriceIndexes(current => {
       const next = new Set(current)
       if (next.has(index)) next.delete(index)
@@ -217,14 +222,21 @@ export function ReceiptSplitSheet({
         <div className="space-y-5">
           <section className="rounded-2xl border border-primary/25 bg-primary/10 p-4">
             <p className="text-eyebrow uppercase text-accent-ink">Your share</p>
-            <div className="mt-1 flex items-end justify-between gap-4">
-              <strong className="text-2xl font-black tracking-tight text-foreground">
-                {formatCurrencyVal(calculation.total, currency)}
+            <div className="mt-1 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+              <strong data-testid="receipt-share-total" className="text-2xl font-black tracking-tight text-foreground">
+                {calculation.invalidSelectedItemIndexes.length > 0
+                  ? 'Price needed'
+                  : formatCurrencyVal(calculation.total, currency)}
               </strong>
               <span className="pb-0.5 text-right text-xs text-muted-foreground">
                 {calculation.selectedItemCount} selected item{calculation.selectedItemCount === 1 ? '' : 's'}
               </span>
             </div>
+            {receipt.total != null && (
+              <p data-testid="receipt-share-context" className="mt-1 text-xs text-muted-foreground">
+                Whole receipt: {formatCurrencyVal(receipt.total, currency)}
+              </p>
+            )}
           </section>
 
           <details className="group rounded-2xl border border-border/60 bg-muted/15">
@@ -292,11 +304,23 @@ export function ReceiptSplitSheet({
           )}
 
           <section className="space-y-3">
-            <div>
-              <h3 className="text-subsection">Items</h3>
-              <p className="text-xs text-muted-foreground">
-                Use −/+ for your quantity. Delete a line only if it was not on the receipt.
-              </p>
+            <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
+              <div className="min-w-0">
+                <h3 className="text-subsection">Items</h3>
+                <p className="text-xs text-muted-foreground">
+                  Use −/+ for your quantity. Delete a line only if it was not on the receipt.
+                </p>
+              </div>
+              {receipt.items.length > 0 && (
+                <div className="ml-auto flex shrink-0 items-center gap-1">
+                  <Button variant="tertiary" size="sm" type="button" onClick={() => selectEvery(true)}>
+                    Select all
+                  </Button>
+                  <Button variant="tertiary" size="sm" type="button" onClick={() => selectEvery(false)}>
+                    Clear all
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* A receipt with nothing left on it is a dead end otherwise: the total reads zero,

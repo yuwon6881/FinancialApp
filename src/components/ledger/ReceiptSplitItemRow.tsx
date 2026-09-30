@@ -54,6 +54,8 @@ export function ReceiptSplitItemRow({
   const isExcluded = selected <= 0
   const lowConfidence = item.confidence < 0.65
   const itemLabel = item.name.trim() || `Item ${index + 1}`
+  // A line with no readable price costs nothing in the sum, but that is unknown, not free.
+  const needsPrice = !isExcluded && (itemCalculation?.invalidSelectedItemIndexes.length ?? 0) > 0
   const chargeAmount = itemCalculation ? itemCalculation.total - itemCalculation.itemSubtotal : 0
   const chargePercent = itemCalculation && itemCalculation.itemSubtotal > 0
     ? (chargeAmount / itemCalculation.itemSubtotal) * 100
@@ -101,7 +103,7 @@ export function ReceiptSplitItemRow({
               {isExcluded ? 'Not yours' : 'Your share for this item'}
             </span>
             <strong className="mt-0.5 block truncate text-sm font-extrabold text-foreground">
-              {isExcluded ? 'Nothing to pay' : formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
+              {isExcluded ? 'Nothing to pay' : needsPrice ? 'Price needed' : formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
             </strong>
           </div>
           <span className="shrink-0 text-xs text-muted-foreground">{selected} of {maximum}</span>
@@ -169,11 +171,11 @@ export function ReceiptSplitItemRow({
                   costed at one unit so the panel can still show what the line is worth, which read
                   as a bill for something the summary above had already called "Nothing to pay". */}
               <span className={`mt-2 block truncate text-xs font-bold ${isExcluded ? 'text-muted-foreground' : chargeAmount < 0 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
-                {isExcluded
+                {isExcluded || needsPrice
                   ? '—'
                   : <>{chargeAmount < 0 ? '−' : '+'}{formatCurrencyVal(Math.abs(chargeAmount), currency)}</>}
               </span>
-              {!isExcluded && Math.abs(chargePercent) >= 0.05 && (
+              {!isExcluded && !needsPrice && Math.abs(chargePercent) >= 0.05 && (
                 <span className="mt-0.5 block truncate text-eyebrow text-muted-foreground">
                   {Math.abs(chargePercent).toFixed(1)}% of this line
                 </span>
@@ -183,7 +185,7 @@ export function ReceiptSplitItemRow({
             <div className="min-w-0 rounded-xl border border-primary/25 bg-primary/10 p-2.5">
               <span className="block text-eyebrow uppercase text-accent-ink">With extras</span>
               <span className="mt-2 block truncate text-xs font-extrabold text-accent-ink">
-                {isExcluded ? '—' : formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
+                {isExcluded || needsPrice ? '—' : formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
               </span>
             </div>
           </div>

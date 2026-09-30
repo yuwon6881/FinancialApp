@@ -267,4 +267,36 @@ describe('ReceiptSplitSheet', () => {
 
     expect(screen.queryByText(/printed in/)).toBeNull()
   })
+
+  it('does not present an unreadable price as a zero share', () => {
+    renderSheet({
+      ...result(),
+      items: [
+        { name: 'Mine', quantity: 1, unitPrice: 16, lineTotal: 16, confidence: 1 },
+        { name: 'Unreadable', quantity: 1, unitPrice: null, lineTotal: null, confidence: 0.2 },
+      ],
+      charges: [],
+    })
+
+    expect(screen.getAllByText('Price needed')).toHaveLength(2)
+    expect(screen.getByTestId('receipt-share-total').textContent).toBe('Price needed')
+  })
+
+  it('takes or leaves every line at once', () => {
+    renderSheet()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear all' }))
+    expect(screen.getByLabelText('Quantity for item 1').textContent).toBe('0')
+    expect(screen.getByLabelText('Quantity for item 2').textContent).toBe('0')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }))
+    expect(screen.getByLabelText('Quantity for item 1').textContent).toBe('1')
+    expect(screen.getByLabelText('Quantity for item 2').textContent).toBe('1')
+  })
+
+  it('shows the printed receipt total beside your share for context', () => {
+    renderSheet()
+
+    expect(screen.getByTestId('receipt-share-context').textContent).toMatch(/23\.20/)
+  })
 })
