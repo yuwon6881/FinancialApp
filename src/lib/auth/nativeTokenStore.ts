@@ -37,9 +37,12 @@ export const nativeTokenStore: TokenStore = {
 
   async setToken(token: string): Promise<void> {
     await SecureStorage.set(TOKEN_KEY, token)
+    // A retained migration fallback must never replace the new login on the next read.
+    localStorage.removeItem(TOKEN_KEY)
   },
 
   async clearToken(): Promise<void> {
+    localStorage.removeItem(TOKEN_KEY)
     try {
       await SecureStorage.remove(TOKEN_KEY)
     } catch {

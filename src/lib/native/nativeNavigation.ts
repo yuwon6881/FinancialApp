@@ -1,7 +1,7 @@
 /** Native-only Android Back and external URL handling. */
 export async function installNativeNavigation(): Promise<() => void> {
   const { App } = await import('@capacitor/app')
-  const backButton = await App.addListener('backButton', () => {
+  const backButton = await App.addListener('backButton', ({ canGoBack }) => {
     const modal = document.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]')
     if (modal) {
       const escape = new KeyboardEvent('keydown', {
@@ -13,8 +13,7 @@ export async function installNativeNavigation(): Promise<() => void> {
       if (escape.defaultPrevented) return
     }
 
-    const historyIndex = window.history.state?.idx
-    if (typeof historyIndex === 'number' && historyIndex > 0) {
+    if (canGoBack) {
       window.history.back()
     } else {
       void App.exitApp()

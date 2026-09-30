@@ -122,6 +122,40 @@ describe('nativeTokenStore', () => {
     await nativeTokenStore.clearToken()
     expect(await nativeTokenStore.getToken()).toBeNull()
   })
+
+  it('removes a retained legacy token on logout after migration fails', async () => {
+    localStorage.setItem(TOKEN_KEY, 'legacy')
+    const { SecureStorage } = mockSecureStorage()
+    SecureStorage.set.mockRejectedValueOnce(new Error('secure storage unavailable'))
+    const { nativeTokenStore } = await import('./nativeTokenStore')
+
+    expect(await nativeTokenStore.getToken()).toBe('legacy')
+    await nativeTokenStore.clearToken()
+
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+    expect(await nativeTokenStore.getToken()).toBeNull()
+  })
+
+  it('replaces a retained legacy token when a new login succeeds', async () => {
+    localStorage.setItem(TOKEN_KEY, 'old-account')
+    mockSecureStorage()
+    const { nativeTokenStore } = await import('./nativeTokenStore')
+
+    await nativeTokenStore.setToken('new-account')
+
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+    expect(await nativeTokenStore.getToken()).toBe('new-account')
+  })
+
+  it('preserves the legacy token when saving a new login fails', async () => {
+    localStorage.setItem(TOKEN_KEY, 'legacy')
+    const { SecureStorage } = mockSecureStorage()
+    SecureStorage.set.mockRejectedValueOnce(new Error('secure storage unavailable'))
+    const { nativeTokenStore } = await import('./nativeTokenStore')
+
+    await expect(nativeTokenStore.setToken('new-account')).rejects.toThrow('secure storage unavailable')
+    expect(localStorage.getItem(TOKEN_KEY)).toBe('legacy')
+  })
 })
 
 describe('auth session token lifecycle', () => {
