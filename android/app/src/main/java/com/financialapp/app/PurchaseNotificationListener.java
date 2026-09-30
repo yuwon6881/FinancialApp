@@ -58,9 +58,11 @@ public class PurchaseNotificationListener extends NotificationListenerService {
             PurchaseNotificationContent content = PurchaseNotificationContent.read(notification);
             String title = content.title, body = content.body;
             if (title.length() > 500 || body.length() > 3000) return;
-            PurchaseNotificationParser.Result parsed = PurchaseNotificationParser.parse(title, body);
-            if (parsed == null) return;
             long eventTime = notification.when > 0 ? notification.when : sbn.getPostTime();
+            // Many card alerts state the day and month only ("30/09"), assuming the current year;
+            // the notification's own time is the only honest reference for resolving it.
+            PurchaseNotificationParser.Result parsed = PurchaseNotificationParser.parse(title, body, eventTime);
+            if (parsed == null) return;
             String identity = sbn.getPackageName() + ":" + sbn.getKey() + ":" + eventTime;
             byte[] hash = MessageDigest.getInstance("SHA-256").digest(identity.getBytes(StandardCharsets.UTF_8));
             StringBuilder key = new StringBuilder(); for (byte b : hash) key.append(String.format(java.util.Locale.ROOT, "%02x", b));

@@ -197,4 +197,36 @@ public class PurchaseNotificationParserTest {
         assertNotNull(result);
         assertNull(result.description);
     }
+    // Card alerts commonly write the merchant as "@NAME" rather than "at NAME" or "to NAME".
+    @Test public void recognizesAtSignMerchants() {
+        assertCaptured("RM 59.36 was charged on your card num 1181 @Courtsite on 30/09", "59.36", "Courtsite");
+        assertCaptured("Your card ending 1234 was used for RM 45.00 @STARBUCKS", "45.00", "STARBUCKS");
+    }
+    // A bare day/month with no year is common in card alerts; the notification's own post time
+    // resolves which year it means, staying in the past when the day/month alone reads as future.
+    @Test public void resolvesYearlessDatesFromTheNotificationTime() {
+        long postedAt = utc(2026, 9, 30);
+        PurchaseNotificationParser.Result result = PurchaseNotificationParser.parse(
+            "CIMB", "RM 59.36 was charged on your card num 1181 @Courtsite on 30/09", postedAt);
+        assertNotNull(result);
+        assertEquals("2026-09-30", result.date);
+
+        // Posted just after New Year, referencing a date from the tail end of the prior year.
+        result = PurchaseNotificationParser.parse(
+            "Bank", "Paid RM 12.00 at SHOP on 31/12", utc(2027, 1, 2));
+        assertNotNull(result);
+        assertEquals("2026-12-31", result.date);
+
+        // "24/7" (customer support hours) must never be misread as 24 July.
+        result = PurchaseNotificationParser.parse(
+            "Bank", "Paid RM 12.00 at SHOP. Need help? Call us 24/7.", utc(2026, 9, 30));
+        assertNotNull(result);
+        assertNull(result.date);
+    }
+    private static long utc(int year, int month, int day) {
+        java.util.Calendar calendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+        calendar.clear();
+        calendar.set(year, month - 1, day, 12, 0, 0);
+        return calendar.getTimeInMillis();
+    }
 }

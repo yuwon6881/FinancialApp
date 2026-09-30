@@ -19,6 +19,12 @@ final class PurchaseMerchantReader {
         "\\b(?:merchant(?:\\s+name)?|payee(?:\\s+name)?|recipient(?:\\s+name)?|beneficiary(?:\\s+name)?|biller(?:\\s+name)?|paid\\s+to|to"
             + "|penerima|nama\\s+penerima|peniaga)\\s*:\\s*([^\\n;|]+?)" + END, Pattern.CASE_INSENSITIVE);
     private static final Pattern INLINE = Pattern.compile("\\b(?:at|to|kepada|di)\\s+([^\\n;|]+?)" + END, Pattern.CASE_INSENSITIVE);
+    /**
+     * Card alerts commonly name the merchant with "@" instead of a word ("RM59.36 ... @COURTSITE").
+     * The lookbehind keeps this from reading an embedded email address's domain ("user@bank.com")
+     * as a merchant: an email's "@" is always preceded by a word character, a standalone one never is.
+     */
+    private static final Pattern AT_SIGN = Pattern.compile("(?<!\\w)@\\s*([^\\n;|]+?)" + END, Pattern.CASE_INSENSITIVE);
     /** "RM59.00 deducted for MAXIS": a weaker cue, used only when nothing names a payee. */
     private static final Pattern PURPOSE = Pattern.compile("\\b(?:for|untuk)\\s+([^\\n;|]+?)" + END, Pattern.CASE_INSENSITIVE);
     /** "your debit card", "Savings account 1234", "own account": the payment instrument, not who was paid. */
@@ -39,7 +45,9 @@ final class PurchaseMerchantReader {
         String labelled = first(LABELLED.matcher(text));
         if (labelled != null) return labelled;
         String inline = first(INLINE.matcher(text));
-        return inline != null ? inline : first(PURPOSE.matcher(text));
+        if (inline != null) return inline;
+        String atSign = first(AT_SIGN.matcher(text));
+        return atSign != null ? atSign : first(PURPOSE.matcher(text));
     }
 
     private static String first(Matcher match) {

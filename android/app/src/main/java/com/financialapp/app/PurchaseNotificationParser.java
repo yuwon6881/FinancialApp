@@ -72,8 +72,14 @@ final class PurchaseNotificationParser {
     private static final Pattern TOP_UP_OUT = Pattern.compile(
         "\\b(?:top[- ]?up|reload)\\b[^\\n]{0,60}?\\b(?:to|kepada)\\s+(?!(?:your|my|anda)\\b)\\S", Pattern.CASE_INSENSITIVE);
     private static final Pattern ANY_FIGURE = Pattern.compile(FIGURE, Pattern.CASE_INSENSITIVE);
-    /** Someone the money went to; "to your account" is where money arrives and "at 10:30" is a time, not a payee. */
-    private static final Pattern PAYEE = Pattern.compile("\\b(?:to|at|kepada|di)\\s+(?!(?:your|my|anda)\\b|[0-9]{1,2}(?:[:.][0-9]{2}|\\s*[ap]m\\b))\\S", Pattern.CASE_INSENSITIVE);
+    /**
+     * Someone the money went to; "to your account" is where money arrives and "at 10:30" is a time, not a payee.
+     * Card alerts commonly name the merchant with "@" instead of a word ("RM10.00 @SHOP").
+     */
+    private static final Pattern PAYEE = Pattern.compile(
+        "\\b(?:to|at|kepada|di)\\s+(?!(?:your|my|anda)\\b|[0-9]{1,2}(?:[:.][0-9]{2}|\\s*[ap]m\\b))\\S"
+            // Not preceded by a word character, so an embedded email address's "@" never counts.
+            + "|(?<!\\w)@\\s*(?!(?:your|my|anda)\\b|[0-9]{1,2}(?:[:.][0-9]{2}|\\s*[ap]m\\b))\\S", Pattern.CASE_INSENSITIVE);
     /** Money "from" a person or business with no payee is incoming; paying from one's own account, card or wallet is not. */
     private static final Pattern FROM_COUNTERPARTY = Pattern.compile(
         "\\b(?:from|daripada|dari)\\s+(?!(?:your|my|anda)\\b|(?:[\\w-]+\\s+){0,2}(?:account|acct|a/c|card|wallet|e-?wallet|balance|savings?|current|akaun|kad)\\b)",
@@ -93,6 +99,11 @@ final class PurchaseNotificationParser {
     }
 
     static Result parse(String title, String body) {
+        return parse(title, body, System.currentTimeMillis());
+    }
+
+    /** referenceTimeMillis resolves a date the alert states without a year (see PurchaseDateReader). */
+    static Result parse(String title, String body, long referenceTimeMillis) {
         String text = normalize(title + "\n" + body);
         if (EXCLUDED.matcher(text).find()) return null;
         boolean figure = ANY_FIGURE.matcher(text).find();
@@ -107,7 +118,7 @@ final class PurchaseNotificationParser {
         PurchaseAmountReader.read(text, result);
         if (result.amount == null && SETTINGS_CHANGE.matcher(text).find()) return null;
         result.description = PurchaseMerchantReader.read(text);
-        result.date = PurchaseDateReader.read(text);
+        result.date = PurchaseDateReader.read(text, referenceTimeMillis);
         return result;
     }
 
