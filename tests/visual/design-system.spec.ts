@@ -103,7 +103,7 @@ test('emergency fund recovery card reads as one subtraction', async ({ page }) =
   await mockApi(page, { stabilityRecovery: stabilityRecoveryFixture })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
-  const card = page.getByText("This cycle's plan").locator('xpath=ancestor::section[1]')
+  const card = page.getByRole('region', { name: /Emergency fund recovery/ })
   await expect(card).toBeVisible()
   if (test.info().project.name === 'mobile-light' || test.info().project.name === 'mobile-dark') {
     await expect(card).toHaveScreenshot('stability-recovery-plan-card.png')
@@ -144,8 +144,7 @@ test('emergency fund recovery card reports a plan that starts next cycle', async
   })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
-  await page.getByText("This cycle's plan").waitFor()
-  const card = page.getByText("This cycle's plan").locator('xpath=ancestor::section[1]')
+  const card = page.getByRole('region', { name: /Emergency fund recovery/ })
   // Exact: the sentence under the badge says "starts next cycle" too.
   await expect(card.getByText('Starts next cycle', { exact: true })).toBeVisible()
   await expect(card.getByText(/recovery starts next cycle/)).toBeVisible()

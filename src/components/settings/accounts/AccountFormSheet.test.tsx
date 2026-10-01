@@ -191,7 +191,7 @@ describe('AccountFormSheet', () => {
 
     expect(screen.getByText(/Was .*150\.00 · Essentials total becomes .*250\.00/i)).toBeDefined()
     expect(screen.getByText('Move this account to another bucket on its own, then correct the balance.')).toBeDefined()
-    expect(screen.getByText('Closed accounts cannot change balance. Save the balance correction first.')).toBeDefined()
+    expect(screen.getByText('Save the balance correction first.')).toBeDefined()
 
     const saveBtn = screen.getByRole('button', { name: 'Save changes' })
     fireEvent.click(saveBtn)
@@ -218,7 +218,7 @@ describe('AccountFormSheet', () => {
     expect(screen.getByText('Reopen this account to correct its balance.')).toBeDefined()
   })
 
-  it('renders Growth separation note only when bucket is Growth', () => {
+  it('omits the redundant separation note in both Essentials and Growth', () => {
     const { rerender } = render(
       <AccountFormSheet
         isOpen={true}
@@ -243,6 +243,6 @@ describe('AccountFormSheet', () => {
       />,
     )
 
-    expect(screen.getByText(/Growth is kept separate/i)).toBeDefined()
+    expect(screen.queryByText(/Growth is kept separate/i)).toBeNull()
   })
 })

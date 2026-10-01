@@ -502,7 +502,6 @@ describe('AiAssistantPanel', () => {
   it('discloses provider data sharing and sensitive-mode protection', () => {
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} sensitiveMode />)
     expect(screen.getByText(/details go to the configured AI provider/i)).toBeTruthy()
-    expect(screen.getByText(/disables changes/i)).toBeTruthy()
   })
 
   it('closes when the server requests it without returning actions', async () => {

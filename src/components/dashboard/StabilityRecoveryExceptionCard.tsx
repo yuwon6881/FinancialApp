@@ -309,10 +309,6 @@ export function StabilityRecoveryExceptionCard({
                   </li>
                 ))}
               </ul>
-              <p className="text-xs leading-snug text-muted-foreground">
-                Each plan starts the cycle after the money left. Putting money back reduces the combined
-                plan above; Ledger completion still follows the oldest withdrawal first.
-              </p>
             </div>
           ) : null}
 
@@ -337,17 +333,10 @@ export function StabilityRecoveryExceptionCard({
               >
                 View pending reload movements
               </Button>
-              {/* Said plainly rather than left to be discovered: the ledger totals it lands on
-                  are per page, and the window can run to more rows than one page holds. */}
-              <p className="text-xs leading-snug text-muted-foreground">
-                Opens your ledger on pending and partly put-back emergency fund reload movements since your fund was last full.
-                A long window may span more than one page.
-              </p>
             </>
           ) : (
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Your fund has not yet closed a cycle at its highest point, so there is no window of
-              movements to list.
+              No reload movements to list yet.
             </p>
           )}
         </div>

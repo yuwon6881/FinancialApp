@@ -31,6 +31,5 @@ describe('LedgerToolbar', () => {
 
     expect(screen.queryByLabelText('Ledger cycle')).toBeNull()
     expect(screen.queryByLabelText('Ledger cycle year')).toBeNull()
-    expect(screen.getByText(/server/)).toBeTruthy()
   })
 })

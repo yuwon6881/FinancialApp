@@ -388,9 +388,6 @@ export function EssentialsChallengeCard({
                     style={{ left: `${paceMarkerPercent}%` }}
                   />
                 </div>
-                <p className="mt-2 text-caption text-muted-foreground">
-                  The marker sits at {pacePercent} — {ended ? 'where a full cycle ends' : "where today's plan expects the bar"}.
-                </p>
               </div>
             )}
           </div>

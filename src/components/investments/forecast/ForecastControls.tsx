@@ -35,13 +35,12 @@ export function ForecastControls({
     <div className="space-y-5 rounded-2xl border border-border/50 bg-muted/15 p-4">
       <FormField
         label={<span className="flex justify-between gap-3"><span>Years ahead</span><strong className="text-foreground">{years} years</strong></span>}
-        hint="More years mean a wider outcome range."
       >
         <RangeInput aria-label="Forecast years" min={FORECAST_MIN_YEARS} max={FORECAST_MAX_YEARS} step={1} value={years} disabled={masked} onChange={event => onYearsChange(Number(event.target.value))} />
       </FormField>
       <FormField
         label={<span className="flex justify-between gap-3"><span>Monthly contribution</span><strong className="text-foreground">{money(monthlyContribution)}</strong></span>}
-        hint={`${money(monthlyContribution * 12)} a year; for planning only.`}
+        hint={`${money(monthlyContribution * 12)} a year`}
       >
         <RangeInput aria-label="Hypothetical monthly contribution" min={0} max={contributionMax} step={contributionStep} value={Math.min(monthlyContribution, contributionMax)} disabled={masked} onChange={event => onMonthlyContributionChange(Number(event.target.value))} />
       </FormField>
@@ -61,7 +60,6 @@ export function ForecastControls({
         {todayMoney && (
           <FormField
             label={<span className="flex justify-between gap-3"><span>Prices rise by</span><strong className="text-foreground">{inflationPercent.toFixed(1)}% a year</strong></span>}
-            hint="Affects today’s-money figures only."
           >
             <RangeInput aria-label="Forecast inflation estimate" min={0} max={10} step={0.1} value={inflationPercent} disabled={masked} onChange={event => onInflationPercentChange(Number(event.target.value))} />
           </FormField>

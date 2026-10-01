@@ -167,6 +167,7 @@ export function CarryoverLedgerTable({
         <BottomSheet
           isOpen={Boolean(selectedCategory)}
           onClose={() => setSelectedCategory(null)}
+          description={cycleLabel}
           title={
             <div className="flex items-center gap-2 min-w-0">
               <span className={`size-3 shrink-0 rounded-full ${getCategoryDotClass(selectedCategory.name)} shadow-xs`} />
@@ -178,7 +179,6 @@ export function CarryoverLedgerTable({
               {(selectedCategory.allocation * 100).toFixed(0)}% Allocation
             </span>
           }
-          description={`Accounts contributing to the ${selectedCategory.name} ledger balance for ${cycleLabel}.`}
           footer={
             <div className="flex flex-wrap items-center justify-between gap-2 w-full">
               {onNavigateToAccounts && (
@@ -231,9 +231,7 @@ export function CarryoverLedgerTable({
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                          {account.isArchived ? 'Archived account' : 'Active ledger account'}
-                        </p>
+                        {account.isArchived && <p className="text-xs text-muted-foreground mt-0.5 truncate">Archived</p>}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">

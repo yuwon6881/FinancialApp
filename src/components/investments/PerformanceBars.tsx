@@ -87,7 +87,7 @@ export function PerformanceBars({ portfolio, masked, onSelectHolding }: {
         })}
         {holdings.length === 0 && (
           <p className="text-xs text-muted-foreground">
-            Latest prices and what you paid are both needed before this can be worked out.
+            Needs latest prices and your cost.
           </p>
         )}
       </div>

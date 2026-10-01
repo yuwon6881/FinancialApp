@@ -78,7 +78,6 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         title="Investment forecast"
-        description="Explore long-term outcomes without changing your records."
         maxWidthClassName="max-w-4xl"
         initialFocusRef={initialFocusRef}
       >

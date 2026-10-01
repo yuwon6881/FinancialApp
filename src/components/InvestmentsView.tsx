@@ -224,7 +224,6 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
                 <span>Updating prices…</span>
               </span>
             )}</span>}
-        description="Track holdings across your brokers."
         titleActions={onExplainWithAi && (
           <Button
             variant="secondary"
@@ -245,7 +244,6 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 id="investment-scan-ready-title" className="text-subsection text-foreground">Investment scan ready for review</h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">Nothing opens until you choose to review the scanned record.</p>
             </div>
             <Button
               type="button"
@@ -391,7 +389,6 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           {portfolio.warnings.length > 0 && (
             <details className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
               <summary id="calculation-warnings" className="cursor-pointer text-sm font-bold text-foreground">Why some figures are missing</summary>
-              <p className="mt-1 text-xs text-muted-foreground">Most clear up after selecting "Update prices".</p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
                 {portfolio.warnings.map(warning => <li key={warning}>{warning}</li>)}
               </ul>

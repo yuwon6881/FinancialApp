@@ -19,8 +19,7 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
   if (prices.length < 2) {
     return (
       <p className="rounded-xl border border-border/50 bg-muted/20 p-4 text-xs text-muted-foreground">
-        There is not enough price history stored for this fund yet. Prices arrive when you refresh
-        them on the investments page; funds you track by hand never have a price line.
+        Not enough price history yet.
       </p>
     )
   }

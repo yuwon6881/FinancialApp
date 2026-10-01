@@ -132,7 +132,6 @@ export function TaxReliefOverview({
     activeDeletingId,
   )
   const deleteBlockedById = new Map(categories.map(category => [category.id, blockedDeleteReason(summaryByCategory.get(category.id))]))
-  const inheritedDefaults = categories.length > 0 && categories.every(category => category.isInherited)
   const money = (value: number) => hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(value, currency)
 
   const beginEdit = (category: TaxReliefCategoryDefinition) => {
@@ -274,12 +273,6 @@ export function TaxReliefOverview({
           </Button>
         )}
       </div>
-
-      {inheritedDefaults && (
-        <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2 text-caption text-muted-foreground">
-          These are editable defaults inherited from the prior configured tax year. Your first change for YA {selectedYear} creates an independent copy.
-        </p>
-      )}
 
       <div className="mt-4 min-h-[8.25rem]" aria-busy={isLoading}>
         {isLoading ? (

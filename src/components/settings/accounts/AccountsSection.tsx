@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Building2, CircleHelp } from 'lucide-react'
+import { Building2 } from 'lucide-react'
 import type { LedgerAccount, RecurringPayment } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
@@ -306,13 +306,6 @@ export function AccountsSection({
           ))}
         </div>
 
-        {/* Footer info callout */}
-        <div className="flex items-start gap-2.5 rounded-xl border border-border/50 bg-muted/10 p-3 text-xs leading-relaxed text-muted-foreground">
-          <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-          <p>
-            <span className="font-semibold text-foreground">Balances are ledger-tracked.</span> Starting amounts are reviewed against bucket totals, and Stability credits automatically satisfy emergency reloads.
-          </p>
-        </div>
       </section>
 
       {/* Account form sheet */}
@@ -379,9 +372,6 @@ export function AccountsSection({
                 />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              This records the correction on this account; a real transfer remains a separate Ledger transfer.
-            </p>
           </div>
         )}
         onCancel={() => setPendingBalanceCorrection(null)}

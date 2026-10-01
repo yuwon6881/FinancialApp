@@ -22,7 +22,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   cycleDay,
   walletBalance,
   areBalanceAmountsMasked,
-  hideSensitive,
   hideBalanceAmounts,
   formatCurrency,
   onToggleBalanceAmounts,
@@ -61,9 +60,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           <div className="min-w-0 truncate text-2xl sm:text-3xl font-black tracking-tight text-foreground tabular-nums">
             <SensitiveAmount value={walletBalance} isMasked={areBalanceAmountsMasked} formatFn={formatCurrency} />
           </div>
-          <p className="hidden sm:block shrink-0 pb-0.5 text-right text-xs font-medium text-muted-foreground">
-            {hideSensitive ? 'Sensitive mode active' : hideBalanceAmounts ? 'Hidden on this device' : 'Visible on this device'}
-          </p>
         </div>
       </div>
     }

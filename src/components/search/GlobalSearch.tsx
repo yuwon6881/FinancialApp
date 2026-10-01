@@ -182,7 +182,7 @@ export function GlobalSearch({
                     // it is a fact about the list, and arrowing onto it would give Enter nothing
                     // to open.
                     <p className="px-3 pt-1 text-caption text-muted-foreground">
-                      +{group.totalMatched - group.results.length} more — keep typing to narrow this down
+                      +{group.totalMatched - group.results.length} more
                     </p>
                   )}
                 </div>

@@ -120,12 +120,10 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     openRecoveryDetails()
-    expect(screen.getByText(/Each plan starts the cycle after the money left/)).toBeTruthy()
     expect(screen.getByText('Combined plan for this cycle')).toBeTruthy()
     expect(screen.getByText('Jun 2026 cycle')).toBeTruthy()
     expect(screen.getByText('Jul 2026 cycle')).toBeTruthy()
     expect(screen.getByText('3 cycles left')).toBeTruthy()
-    expect(screen.getByText(/Ledger completion still follows the oldest withdrawal first/)).toBeTruthy()
   })
 
   it('distinguishes an overdue cohort from a newer plan that still has time', () => {
@@ -256,7 +254,6 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.getByText('Starts next cycle')).toBeTruthy()
     expect(screen.getByText('3 cycles left')).toBeTruthy()
     expect(screen.getByText('—')).toBeTruthy()
-    expect(screen.getByText(/Each plan starts the cycle after the money left/)).toBeTruthy()
   })
 
   it('says so plainly on the last cycle of the plan', () => {
@@ -373,7 +370,7 @@ describe('StabilityRecoveryExceptionCard', () => {
 
     openRecoveryDetails()
     expect(screen.queryByRole('button', { name: /pending reload movements/i })).toBeNull()
-    expect(screen.getByText(/no window of movements to list/)).toBeTruthy()
+    expect(screen.getByText(/No reload movements to list/)).toBeTruthy()
   })
 
   it('does not go silent when ordinary salary reaches an old high point below target', () => {
@@ -426,7 +423,6 @@ describe('StabilityRecoveryExceptionCard', () => {
     openRecoveryDetails()
     expect(screen.queryByText('Final cycle')).toBeNull()
     expect(screen.queryByText(/This is the final planned cycle/)).toBeNull()
-    expect(screen.getByText(/Each plan starts the cycle after the money left/)).toBeTruthy()
     expect(screen.getByText('1 cycle left')).toBeTruthy()
     expect(screen.getByText('3 cycles left')).toBeTruthy()
   })

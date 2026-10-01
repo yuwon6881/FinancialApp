@@ -4,7 +4,6 @@ import {
   Banknote,
   CircleHelp,
   CreditCard,
-  Info,
   Landmark,
   Wallet,
 } from 'lucide-react'
@@ -161,7 +160,6 @@ export function AccountFormSheet({
     <BottomSheet
       isOpen={isOpen}
       title={isEditing ? 'Edit account' : 'Add account'}
-      description="Connect where money lives to a budget bucket."
       onClose={onClose}
       maxWidthClassName="max-w-xl"
       footer={(
@@ -188,11 +186,6 @@ export function AccountFormSheet({
                 </span>
               )}
             </div>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {isEditing
-                ? 'Changes affect this account only. Past transactions stay as they are.'
-                : 'Name this account and choose its budget bucket.'}
-            </p>
           </div>
         </div>
 
@@ -234,17 +227,12 @@ export function AccountFormSheet({
             </FormField>
           </div>
 
-          <p className="-mt-1 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
-            <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-            <span>Account names are unique across every bucket. To track one real account in two buckets, give each a name of its own.</span>
-          </p>
 
           {/* Balance Field */}
           {!isEditing ? (
             <FormField
               label={`Balance today (${currency})`}
               error={openingError ?? undefined}
-              hint="Optional. If this account holds funds today, balances are confirmed against the bucket total."
             >
               <SmartAmountInput
                 value={openingAmount}
@@ -323,8 +311,8 @@ export function AccountFormSheet({
                     </div>
                     <p className="text-xs leading-relaxed text-muted-foreground">
                       {isBalanceDirty
-                        ? 'Closed accounts cannot change balance. Save the balance correction first.'
-                        : 'Closed accounts stay in history but are hidden from new entries.'}
+                        ? 'Save the balance correction first.'
+                        : 'Hidden from new entries.'}
                     </p>
                   </div>
                 </div>
@@ -340,15 +328,6 @@ export function AccountFormSheet({
           </div>
         )}
 
-        {/* Growth Note Callout - only rendered for Growth bucket */}
-        {bucket === 'Growth' && (
-          <div className="flex items-start gap-2.5 rounded-xl border border-border/40 bg-muted/10 px-3 py-2.5 text-xs text-muted-foreground">
-            <Info className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-            <p className="leading-relaxed">
-              <span className="font-semibold text-foreground">Growth is kept separate.</span> Investment deposits and withdrawals remain the source of truth.
-            </p>
-          </div>
-        )}
       </form>
     </BottomSheet>
   )

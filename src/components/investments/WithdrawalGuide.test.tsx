@@ -120,8 +120,8 @@ describe('WithdrawalGuide', () => {
     open()
     enterAmount('1000')
 
-    expect(screen.getByText(/About RM 60.00 gain moves from on paper to already banked/)).toBeTruthy()
-    expect(screen.getByText(/About RM 15.00 loss moves from on paper to already banked/)).toBeTruthy()
+    expect(screen.getByText(/Gain booked ≈ RM 60.00/)).toBeTruthy()
+    expect(screen.getByText(/Loss booked ≈ RM 15.00/)).toBeTruthy()
   })
 
   it('warns when the request is larger than everything held', () => {
@@ -129,7 +129,7 @@ describe('WithdrawalGuide', () => {
     open()
     enterAmount('20000')
 
-    expect(screen.getByText(/You are RM 9,500.00 short/)).toBeTruthy()
+    expect(screen.getByText(/RM 9,500.00 short/)).toBeTruthy()
   })
 
   it('offers nothing to plan when the portfolio is empty', () => {
@@ -143,7 +143,7 @@ describe('WithdrawalGuide', () => {
     renderGuide({ availableCash: undefined })
 
     expect(screen.getByRole('button', { name: /Plan a withdrawal/ })).toHaveProperty('disabled', true)
-    expect(screen.getByText(/missing cash exchange rate/i)).toBeTruthy()
+    expect(screen.getByText(/cash exchange rate missing/i)).toBeTruthy()
   })
 
   it('keeps a basket sale visible but omits its gain copy when its price is unknown', () => {

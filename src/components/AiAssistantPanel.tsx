@@ -306,8 +306,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
                 ))}
               </div>
               <p className="mt-4 max-w-md text-xs leading-relaxed text-muted-foreground">
-                Details go to the configured AI provider.
-                {sensitiveMode ? ' Sensitive mode hides amounts and disables changes.' : ' Changes still need your confirmation.'}
+                Details go to the configured AI provider.{sensitiveMode ? ' Amounts are hidden.' : ''}
               </p>
             </div>
           ) : (

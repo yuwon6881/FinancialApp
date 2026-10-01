@@ -88,7 +88,7 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
 
       {!canPlan && (
         <p className="mt-2 text-xs text-muted-foreground">
-          {cashKnown ? 'There is nothing to withdraw yet.' : 'Update the missing cash exchange rate before planning a withdrawal.'}
+          {cashKnown ? 'There is nothing to withdraw yet.' : 'Cash exchange rate missing.'}
         </p>
       )}
 
@@ -133,8 +133,7 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
 
               {plan.shortfall > 0 && (
                 <p className="rounded-lg border border-orange-500/30 bg-orange-500/8 p-2.5 text-xs text-orange-700 dark:text-orange-300">
-                  You are {money(plan.shortfall)} short. Selling everything you hold plus all spare
-                  cash raises {money(plan.requested - plan.shortfall)}.
+                  {money(plan.shortfall)} short — everything you hold raises {money(plan.requested - plan.shortfall)}.
                 </p>
               )}
 
@@ -151,52 +150,20 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
                           {sleeve.amount > 0 ? money(sleeve.amount) : 'Leave alone'}
                         </strong>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {sleeve.amount > 0
-                            ? `${sleeve.percentageOfBasket.toFixed(1)}% of this basket · leaves you at ${sleeve.projectedPercentage.toFixed(1)}%`
-                            : `Stays as it is · leaves you at ${sleeve.projectedPercentage.toFixed(1)}%`}
+                          Leaves {sleeve.projectedPercentage.toFixed(1)}%
                           {Math.abs(sleeve.projectedDriftPercentagePoints) >= 0.05
                             ? ` (${sleeve.projectedDriftPercentagePoints > 0 ? '+' : ''}${sleeve.projectedDriftPercentagePoints.toFixed(1)} off target)`
                             : ' (on target)'}
                         </p>
                         {sleeve.amount > 0 && sleeve.estimatedRealisedProfitLoss !== undefined && (
                           <p className={`mt-1 text-xs font-semibold ${sleeve.estimatedRealisedProfitLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                            About {money(Math.abs(sleeve.estimatedRealisedProfitLoss))}{' '}
-                            {sleeve.estimatedRealisedProfitLoss >= 0 ? 'gain' : 'loss'} moves from on paper to already banked
+                            {sleeve.estimatedRealisedProfitLoss >= 0 ? 'Gain' : 'Loss'} booked ≈ {money(Math.abs(sleeve.estimatedRealisedProfitLoss))}
                           </p>
                         )}
                       </li>
                     ))}
                   </ul>
 
-                  <details className="rounded-lg border border-border/50 bg-background/40 p-3">
-                    <summary className="cursor-pointer text-xs font-semibold text-foreground">
-                      Why these baskets?
-                    </summary>
-                    <div className="mt-2 space-y-2 text-xs leading-relaxed text-muted-foreground">
-                      <p>
-                        The money comes out of whichever baskets are holding more than their share of
-                        what will be left, so the withdrawal tidies your mix on the way out instead of
-                        pulling it further away. After this you would be {money(plan.projectedTotal)} invested,
-                        {plan.worstProjectedDrift < 0.05
-                          ? ' exactly on your target mix.'
-                          : ` at most ${plan.worstProjectedDrift.toFixed(1)} percentage points from your target mix.`}
-                      </p>
-                      <p>
-                        Gains and losses are shown but do not decide the order. Picking what to sell by
-                        gain or loss is a tax decision that depends on your country and on which exact
-                        purchases your broker sells — this app tracks neither, and choosing that way
-                        usually leaves your mix further off target.
-                        {plan.estimatedRealisedProfitLoss !== undefined && (
-                          <> Across all baskets this sale turns about {money(Math.abs(plan.estimatedRealisedProfitLoss))}{' '}
-                          {plan.estimatedRealisedProfitLoss >= 0 ? 'of gains' : 'of losses'} from on paper into already banked.</>
-                        )}
-                      </p>
-                      <p>
-                        These are estimates based on the latest prices you have. Your broker's own
-                        figures at the moment you sell are the real ones.
-                      </p>
-                    </div>
-                  </details>
                 </>
               )}
             </div>

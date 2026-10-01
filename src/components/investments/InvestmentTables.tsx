@@ -144,7 +144,6 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
           {accountHoldings.length > 0 && <p className="mt-3 truncate text-xs text-muted-foreground">{accountHoldings.map(value => value.symbol).join(' · ')}</p>}
         </article>
       ))}
-      {accountGroups.length === 0 && <p className="text-xs text-muted-foreground">Record a buy or cash movement to populate an account.</p>}
     </div>
     <div className="space-y-3 px-4 pb-4 sm:px-5 sm:pb-5 lg:hidden">
       {paginatedHoldings.map(holding => (

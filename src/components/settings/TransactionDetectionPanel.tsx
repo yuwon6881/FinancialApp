@@ -124,6 +124,7 @@ export function TransactionDetectionPanel({ detection, tab, hidden, formOpen }: 
         onAccess={requestAccess}
         onNotificationSettings={() => { void detection.notificationSettings() }}
         onBatterySettings={() => { void detection.batterySettings() }}
+        onReconnect={() => { void detection.reconnect() }}
       />
       <DetectionConsentSheet
         isOpen={consentOpen && !hidden}

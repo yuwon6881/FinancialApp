@@ -162,7 +162,7 @@ export function LoansSection({
           className="bg-card/40 sm:p-8"
           icon={<Landmark className="size-5" aria-hidden="true" />}
           title="No loans tracked yet"
-          description="Link a recurring bill to see your real repayment progress, interest paid, and estimated payoff timeline."
+          description="Link a recurring bill to track repayment."
           actions={(
             <Button variant="primary" size="sm" onClick={openAdd}>
               <Plus className="size-3.5" aria-hidden="true" />

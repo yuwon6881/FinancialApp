@@ -134,7 +134,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     <div className="min-w-0 space-y-6 overflow-x-hidden">
       <PageHeader
         title="Reports"
-        description={<>Trends, plan performance, and activity for {view.cycleLabel}.</>}
+        description={view.cycleLabel}
         icon={<span className="flex size-10 items-center justify-center rounded-xl border border-blue-500/15 bg-blue-500/10 text-blue-500"><BarChart3 className="size-5" /></span>}
         titleActions={onExplainWithAi && (
           <Button

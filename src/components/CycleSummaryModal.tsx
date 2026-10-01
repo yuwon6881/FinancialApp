@@ -354,7 +354,6 @@ export function CycleSummaryModal({
                   <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
                     <p className="text-eyebrow uppercase text-muted-foreground">Average daily spend</p>
                     <p className="mt-1 text-xs font-bold text-foreground">{formatSensitive(summary.avgDailySpend)} / day</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">Across a {summary.cycleLengthDays}-day cycle</p>
                   </div>
                 )}
                 <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">

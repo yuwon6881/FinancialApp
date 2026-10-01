@@ -244,7 +244,6 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
       <PageHeader
         titleId={isLoansView ? 'loans-heading' : 'recurring-payments-heading'}
         title={isLoansView ? 'Loans' : 'Recurring Bills & Subscriptions'}
-        description={isLoansView ? 'Track what is still owed from linked bill history.' : 'Manage your recurring bills.'}
         actions={isLoansView ? (
           <Button variant="primary" size="lg" onClick={onAddLoan} disabled={hideSensitive || !onAddLoan} title={hideSensitive ? 'Unhide balances to add a loan' : undefined}>
             <Plus className="size-4" />New Loan

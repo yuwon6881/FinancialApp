@@ -5,7 +5,7 @@ import { capturePrefill } from '../lib/native/capturePrefill'
 import type { PurchaseCapture } from '../lib/native/purchaseCapture'
 
 const mocks = vi.hoisted(() => ({
-  activate: vi.fn(), state: vi.fn(), consumeTap: vi.fn(), update: vi.fn(),
+  activate: vi.fn(), state: vi.fn(), consumeTap: vi.fn(), update: vi.fn(), reconnect: vi.fn(),
   addListener: vi.fn(async () => ({ remove: vi.fn() })),
 }))
 vi.mock('../lib/native/purchaseCapture', () => ({ supportsPurchaseCapture: () => true, PurchaseCapturePlugin: mocks }))
@@ -16,6 +16,27 @@ const snapshot = { candidates: [candidate], packages: ['bank'], enabled: true, a
 
 describe('purchase capture routing', () => {
   beforeEach(() => { vi.clearAllMocks(); mocks.state.mockResolvedValue(snapshot); mocks.activate.mockResolvedValue(undefined) })
+  it('retries the current owner connection and refreshes health', async () => {
+    mocks.state.mockResolvedValue({ ...snapshot, tapId: undefined, listenerConnected: false, listenerRecovery: 'stalled' })
+    const { result } = renderHook(() => usePurchaseCapture({ owner: 'one', eligible: true, hidden: false, formOpen: false, currency: 'MYR', categories: [], reveal: vi.fn(), open: vi.fn(), enqueue: vi.fn() }))
+    await waitFor(() => expect(result.current.state?.listenerRecovery).toBe('stalled'))
+    await act(async () => { await result.current.reconnect() })
+    expect(mocks.reconnect).toHaveBeenCalledWith({ owner: 'one' })
+    expect(result.current.busy).toBe(false)
+  })
+  it('refreshes older shells without calling an unavailable reconnect method', async () => {
+    const { result } = renderHook(() => usePurchaseCapture({ owner: 'one', eligible: true, hidden: false, formOpen: false, currency: 'MYR', categories: [], reveal: vi.fn(), open: vi.fn(), enqueue: vi.fn() }))
+    await waitFor(() => expect(result.current.state).not.toBeNull())
+    await act(async () => { await result.current.reconnect() })
+    expect(mocks.reconnect).not.toHaveBeenCalled()
+  })
+  it('blocks a reconnect while locked', async () => {
+    const { result } = renderHook(() => usePurchaseCapture({ owner: 'one', eligible: false, hidden: false, formOpen: false, currency: 'MYR', categories: [], reveal: vi.fn(), open: vi.fn(), enqueue: vi.fn() }))
+    await waitFor(() => expect(result.current.state).not.toBeNull())
+    await act(async () => { await result.current.reconnect() })
+    expect(mocks.reconnect).not.toHaveBeenCalled()
+    expect(result.current.error).toContain('could not reconnect')
+  })
   it('keeps notification taps pending until unlocked', async () => {
     const open = vi.fn()
     const options = { owner: 'one', eligible: false, hidden: false, formOpen: false, currency: 'MYR', categories: [], reveal: vi.fn(), open, enqueue: vi.fn() }

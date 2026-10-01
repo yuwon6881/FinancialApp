@@ -115,7 +115,6 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
     <BottomSheet
       isOpen={document !== null && !hideSensitive}
       title={document?.originalFileName ?? 'Document preview'}
-      description="Preview the stored original without downloading a separate copy."
       onClose={onClose}
       maxWidthClassName="max-w-5xl"
       panelClassName="h-[90vh]"

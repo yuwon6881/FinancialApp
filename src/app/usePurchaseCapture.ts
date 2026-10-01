@@ -185,6 +185,12 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
       if (!latest.access) await PurchaseCapturePlugin.openAccessSettings()
     }),
     accessSettings: () => perform(() => PurchaseCapturePlugin.openAccessSettings()),
+    reconnect: () => perform(async () => {
+      const latest = current.current
+      if (!latest.owner || !latest.eligible || latest.hidden) throw new Error('Unlock first')
+      // Older installed shells do not implement reconnect; their existing state read already requests a rebind.
+      if (state?.listenerRecovery !== undefined) await PurchaseCapturePlugin.reconnect({ owner: latest.owner })
+    }, 'Detection could not reconnect. Review notification access in Android settings.'),
     notificationSettings: () => perform(() => PurchaseCapturePlugin.openNotificationSettings()),
     batterySettings: () => perform(() => PurchaseCapturePlugin.openBatterySettings()),
     review: (candidate: PurchaseCapture) => {

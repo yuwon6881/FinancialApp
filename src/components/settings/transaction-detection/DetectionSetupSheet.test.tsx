@@ -6,7 +6,7 @@ import { DetectionSetupSheet } from './DetectionSetupSheet'
 
 const base: CaptureState = { enabled: true, packages: ['bank'], candidates: [], access: true, listenerConnected: true, notifications: true }
 
-function renderSheet(state: CaptureState, onBatterySettings = vi.fn()) {
+function renderSheet(state: CaptureState, onBatterySettings = vi.fn(), onReconnect = vi.fn(), onAccess = vi.fn()) {
   render(
     <DetectionSetupSheet
       isOpen
@@ -15,15 +15,34 @@ function renderSheet(state: CaptureState, onBatterySettings = vi.fn()) {
       status={purchaseCaptureStatus(state)}
       busy={false}
       onChooseApps={vi.fn()}
-      onAccess={vi.fn()}
+      onAccess={onAccess}
       onNotificationSettings={vi.fn()}
       onBatterySettings={onBatterySettings}
+      onReconnect={onReconnect}
     />,
   )
   return onBatterySettings
 }
 
 describe('DetectionSetupSheet battery step', () => {
+  it('keeps completed setup separate from a stalled listener and offers recovery', () => {
+    const reconnect = vi.fn(), access = vi.fn()
+    renderSheet({ ...base, batteryUnrestricted: true, listenerConnected: false, listenerRecovery: 'stalled' }, vi.fn(), reconnect, access)
+    expect(screen.getByRole('region', { name: 'Live detection connection' }).textContent).toContain('Not listening')
+    expect(screen.getAllByText(/— Done/)).toHaveLength(4)
+    fireEvent.click(screen.getByRole('button', { name: 'Retry connection' }))
+    expect(reconnect).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: 'Reset notification access' }))
+    expect(access).toHaveBeenCalledOnce()
+  })
+
+  it('does not offer reconnection when listening or notification access is missing', () => {
+    const { unmount } = render(<DetectionSetupSheet isOpen onClose={vi.fn()} state={base} status={purchaseCaptureStatus(base)} busy={false} onChooseApps={vi.fn()} onAccess={vi.fn()} onNotificationSettings={vi.fn()} onBatterySettings={vi.fn()} onReconnect={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: 'Retry connection' })).toBeNull()
+    unmount()
+    renderSheet({ ...base, access: false, listenerConnected: false })
+    expect(screen.queryByRole('button', { name: 'Retry connection' })).toBeNull()
+  })
   it('stays hidden for Android shells that do not report battery state', () => {
     renderSheet(base)
     expect(screen.queryByText(/Keep detection running/)).toBeNull()

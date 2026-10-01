@@ -116,7 +116,7 @@ export function AccountPlacementReviewSheet({
       onClose={onClose}
       maxWidthClassName="max-w-2xl"
       title="Review offline account placement"
-      description="Choose the live account for each affected bucket. The original operation, date, identity and attachments stay unchanged."
+      description="Choose the live account for each affected bucket."
       footer={(
         <ModalActions>
           <Button type="button" variant="secondary" onClick={onClose} className="rounded-xl">

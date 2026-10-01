@@ -37,7 +37,6 @@ export function SourceAppsSheet({ isOpen, onClose, applications, loading, busy, 
       isOpen={isOpen}
       onClose={onClose}
       title="Choose notification sources"
-      description="Only alerts from the apps you turn on are read. Choose your banking and e-wallet apps."
       footer={
         <ModalActions>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
@@ -85,7 +84,6 @@ export function SourceAppsSheet({ isOpen, onClose, applications, loading, busy, 
             ))}
           </ul>
         )}
-        <p className="text-xs text-muted-foreground">Selecting an app doesn’t guarantee its alerts can be read — recognition depends on how the app words them.</p>
       </div>
     </BottomSheet>
   )

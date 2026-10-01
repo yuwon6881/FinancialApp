@@ -156,7 +156,6 @@ export function DraftStagingView({
         <EmptyState
           icon={<FileText className="size-5" aria-hidden="true" />}
           title="Your draft queue is clear"
-          description="Start a transaction to review it here before adding it to the Ledger."
           actions={<>
             <Button variant="secondary" onClick={onCancel}>Back to Ledger</Button>
             {onAddAnother && <Button onClick={onAddAnother} disabled={hideSensitive}>Post Transaction</Button>}

@@ -28,6 +28,9 @@ export interface CaptureState {
   access: boolean
   /** Older Android shells did not report listener lifecycle. */
   listenerConnected?: boolean
+  /** New Android shells stop automatic recovery after a bounded attempt window. */
+  listenerRecovery?: 'connecting' | 'stalled'
+  listenerDiagnostics?: { reconnectAttempts: number; lastEvent: string; lastFailure: string }
   notifications: boolean
   /** Battery use is Unrestricted, so OEM power saving leaves the listener running. Older Android shells did not report it. */
   batteryUnrestricted?: boolean
@@ -39,6 +42,7 @@ export interface CaptureApplication { packageName: string; label: string }
 export const PurchaseCapturePlugin = registerPlugin<{
   activate(options: { owner: string | null }): Promise<void>
   state(options: { owner: string }): Promise<CaptureState>
+  reconnect(options: { owner: string }): Promise<void>
   applications(): Promise<{ applications: CaptureApplication[] }>
   configure(options: { owner: string; enabled: boolean; packages: string[] }): Promise<void>
   openAccessSettings(): Promise<void>

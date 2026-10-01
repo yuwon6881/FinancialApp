@@ -9,7 +9,6 @@ export function ForecastSummary({
   startValue,
   futureContributions,
   growth,
-  todayMoney,
   money,
 }: {
   years: number
@@ -58,11 +57,6 @@ export function ForecastSummary({
             ? 'Calculating…'
             : `Could reasonably range from ${money(lower)} to ${money(upper)}, based on 10,000 simulated paths.`}
         </p>
-        {todayMoney && (
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Shown in today’s money — what this could buy at today’s prices.
-          </p>
-        )}
       </article>
       {tiles.map(tile => (
         <article key={tile.label} className="rounded-xl border border-border/50 bg-muted/15 p-3">

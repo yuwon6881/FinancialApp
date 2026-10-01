@@ -59,7 +59,7 @@ export function CommitmentsRewardsSheets(props: Props) {
               <div><h4 className="text-sm font-bold text-foreground">{props.purchasingItem.name}</h4><span className="text-xs font-medium text-muted-foreground">Reward</span></div>
               <span className="text-lg font-extrabold text-accent-ink">{props.formatSensitive(props.purchasingItem.price)}</span>
             </div>
-            <FormField label="Purchased date" hint="Use this date for the ledger entry.">
+            <FormField label="Purchased date">
               <DatePicker value={props.purchaseDateInput} onChange={props.setPurchaseDateInput} max={props.todayKey} className="w-full" />
             </FormField>
             <FormField label="Paid from account" required error={props.purchaseError}>
@@ -98,9 +98,6 @@ export function CommitmentsRewardsSheets(props: Props) {
       {props.completingGoal && (
         <BottomSheet isOpen title="Complete Commitment" onClose={() => props.setCompletingGoal(null)} maxWidthClassName="max-w-md">
           <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">
-              Record <span className="font-semibold text-foreground">{props.completingGoal.name}</span> in its bucket ledger account.
-            </p>
             <FormField label="Account" required>
               <CustomSelect
                 ariaLabel="Commitment completion account"

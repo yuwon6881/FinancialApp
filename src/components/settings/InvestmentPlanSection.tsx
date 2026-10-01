@@ -1,7 +1,7 @@
 import { RangeInput } from '../ui/RangeInput'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Reorder } from 'framer-motion'
-import { AlertCircle, Info, Loader2, Save, SlidersHorizontal, Lock, Unlock, WifiOff } from 'lucide-react'
+import { AlertCircle, Loader2, Save, SlidersHorizontal, Lock, Unlock, WifiOff } from 'lucide-react'
 import type {
   InvestmentAllocationOverview,
   InvestmentAllocationSleeve,
@@ -428,10 +428,6 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
           ))}
           <div className="rounded-xl bg-muted/30 px-3 py-2 text-xs font-bold text-foreground w-full">Total: {total}%</div>
           <div className="rounded-xl border border-border/50 bg-muted/20 p-3 w-full min-w-0">
-            <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground min-w-0">
-              <Info className="mt-0.5 size-3.5 shrink-0 text-blue-500" />
-              <span className="min-w-0 break-words">Difference between a basket’s target and current share.</span>
-            </p>
             {/* Two sliders on one shared scale, stacked. A drift band is a threshold on the same
                 axis the sleeve targets above already use, and typing it into a number box gave no
                 sense of how far apart the two bands were. Each keeps its own colour -- amber for

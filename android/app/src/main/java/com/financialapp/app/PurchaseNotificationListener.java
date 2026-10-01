@@ -7,7 +7,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ComponentName;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.service.notification.NotificationListenerService;
@@ -30,17 +29,18 @@ public class PurchaseNotificationListener extends NotificationListenerService {
     static boolean isConnected() { return connected; }
     @Override public void onListenerConnected() {
         connected = true;
+        PurchaseListenerRuntime.connected();
         PurchaseCapturePlugin.changed();
         // Alerts that arrived while Android had the listener unbound are recovered here, as a replay rather than live news.
         StatusBarNotification[] active;
         try { active = getActiveNotifications(); }
-        catch (RuntimeException unavailable) { return; /* Some OEM builds throw while the binding settles; live alerts still arrive. */ }
+        catch (RuntimeException unavailable) { PurchaseListenerRuntime.failure("replay"); return; /* Live alerts still arrive. */ }
         if (active != null) for (StatusBarNotification notification : active) enqueue(notification, true);
     }
     @Override public void onListenerDisconnected() {
         connected = false;
         PurchaseCapturePlugin.changed();
-        requestRebind(new ComponentName(this, PurchaseNotificationListener.class));
+        PurchaseListenerRuntime.disconnected(this, "disconnected");
     }
     @Override public void onNotificationPosted(StatusBarNotification sbn) { enqueue(sbn, false); }
     private void enqueue(StatusBarNotification sbn, boolean replay) {
@@ -49,11 +49,13 @@ public class PurchaseNotificationListener extends NotificationListenerService {
         try { worker.execute(() -> captureNotification(sbn, replay)); }
         catch (java.util.concurrent.RejectedExecutionException destroyed) { /* The service is shutting down; the next binding replays the tray. */ }
     }
-    @Override public void onDestroy() { connected = false; PurchaseCapturePlugin.changed(); worker.shutdown(); super.onDestroy(); }
+    @Override public void onDestroy() { connected = false; PurchaseListenerRuntime.disconnected(this, "destroyed"); PurchaseCapturePlugin.changed(); worker.shutdown(); super.onDestroy(); }
     private void captureNotification(StatusBarNotification sbn, boolean replay) {
+        String stage = "storage";
         try {
             PurchaseCaptureStore store = new PurchaseCaptureStore(this);
             if (!store.selected(sbn.getPackageName())) return;
+            stage = "content";
             Notification notification = sbn.getNotification();
             PurchaseNotificationContent content = PurchaseNotificationContent.read(notification);
             String title = content.title, body = content.body;
@@ -61,8 +63,10 @@ public class PurchaseNotificationListener extends NotificationListenerService {
             long eventTime = notification.when > 0 ? notification.when : sbn.getPostTime();
             // Many card alerts state the day and month only ("30/09"), assuming the current year;
             // the notification's own time is the only honest reference for resolving it.
+            stage = "parse";
             PurchaseNotificationParser.Result parsed = PurchaseNotificationParser.parse(title, body, eventTime);
             if (parsed == null) return;
+            stage = "persist";
             String identity = sbn.getPackageName() + ":" + sbn.getKey() + ":" + eventTime;
             byte[] hash = MessageDigest.getInstance("SHA-256").digest(identity.getBytes(StandardCharsets.UTF_8));
             StringBuilder key = new StringBuilder(); for (byte b : hash) key.append(String.format(java.util.Locale.ROOT, "%02x", b));
@@ -72,12 +76,13 @@ public class PurchaseNotificationListener extends NotificationListenerService {
             String excerpt = (title + "\n" + body).trim();
             JSONObject candidate = store.capture(sbn.getPackageName(), label, key.toString(), sbn.getPostTime(), excerpt.substring(0, Math.min(500, excerpt.length())), parsed);
             if (candidate != null) {
+                stage = "review_alert";
                 PurchaseAlertPolicy.Alert alert = PurchaseAlertPolicy.decide(replay, PurchaseCapturePlugin.isForeground(),
                     candidate.optBoolean("possibleDuplicate"), sbn.getPostTime(), System.currentTimeMillis());
                 if (alert != PurchaseAlertPolicy.Alert.NONE) showReviewNotification(this, candidate.getString("id"), alert == PurchaseAlertPolicy.Alert.RING);
                 PurchaseCapturePlugin.changed();
             }
-        } catch (Exception ignored) { /* Fail closed: never log bank notification text or replace unreadable storage. */ }
+        } catch (Exception ignored) { PurchaseListenerRuntime.failure(stage); /* Never log bank text or replace unreadable storage. */ }
     }
     static void showReviewNotification(Context context, String id, boolean ring) {
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;

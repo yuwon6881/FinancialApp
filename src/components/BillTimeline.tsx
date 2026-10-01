@@ -261,10 +261,6 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             </div>
           </div>
 
-          <p className="text-xs font-medium text-muted-foreground">
-            Hover or focus a dot to find its matching bill below. Select either one for details.
-            {denseTimeline ? ` The ${timelineNodes.length} dates stay readable in a horizontally scrollable timeline and a compact list.` : ''}
-          </p>
 
           <div className={`grid gap-2 md:grid-cols-2 xl:grid-cols-3 ${denseTimeline ? 'max-h-72 overflow-y-auto pr-1' : ''}`}>
             {timelineNodes.map(node => {

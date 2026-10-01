@@ -245,7 +245,6 @@ describe('BillTimeline', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Expand Subscriptions Billing Timeline' }))
 
-    expect(screen.getByText(/The 20 dates stay readable/)).toBeTruthy()
     expect(container.querySelector('.overflow-x-auto')).toBeTruthy()
     expect(container.querySelector('.max-h-72.overflow-y-auto')).toBeTruthy()
   })

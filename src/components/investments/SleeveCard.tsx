@@ -70,7 +70,7 @@ export function SleeveCard({
         </>
       ) : (
         <p className="mt-3 text-xs text-muted-foreground">
-          These are not part of your plan yet. Put each one in a basket and it will start counting towards your aim.
+          Not in a basket yet.
         </p>
       )}
 

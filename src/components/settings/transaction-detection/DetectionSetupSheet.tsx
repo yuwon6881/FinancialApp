@@ -44,41 +44,52 @@ interface SetupProps {
   onAccess: () => void
   onNotificationSettings: () => void
   onBatterySettings: () => void
+  onReconnect?: () => void
 }
 
-export function DetectionSetupSheet({ isOpen, onClose, state, status, busy, onChooseApps, onAccess, onNotificationSettings, onBatterySettings }: SetupProps) {
+export function DetectionSetupSheet({ isOpen, onClose, state, status, busy, onChooseApps, onAccess, onNotificationSettings, onBatterySettings, onReconnect }: SetupProps) {
   const apps = state?.packages.length ?? 0
   return (
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
       title="Transaction detection setup"
-      description="Turn payment alerts from your bank and wallet apps into Ledger entries you review first."
     >
       <div className="space-y-4">
-        <div className="flex items-start justify-between gap-3 rounded-control bg-muted/30 p-3">
-          <p className="min-w-0 text-sm text-foreground">{status.detail}</p>
-          <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
-        </div>
+        <section className="space-y-3 rounded-control bg-muted/30 p-3" aria-label="Live detection connection">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 space-y-1">
+              <p className="text-body font-medium text-foreground">Live detection</p>
+              <p className="text-sm text-muted-foreground">{status.detail}</p>
+            </div>
+            <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
+          </div>
+          {state?.enabled && state.access && apps > 0 && state.listenerConnected === false && onReconnect && (
+            <div className="flex flex-wrap justify-end gap-2">
+              {state.listenerRecovery === 'stalled' && <Button variant="secondary" size="sm" disabled={busy} onClick={onAccess}>Reset notification access</Button>}
+              <Button variant="primary" size="sm" disabled={busy} onClick={onReconnect}>Retry connection</Button>
+            </div>
+          )}
+        </section>
         <ol className="space-y-2.5" aria-label="Setup steps">
           <SetupStep
             step={1}
             title="Choose source apps"
-            description={apps ? `${apps} ${apps === 1 ? 'app' : 'apps'} selected. Only these apps are read.` : 'Pick the banking or wallet apps whose payment alerts should be read.'}
+            description={apps ? `${apps} ${apps === 1 ? 'app' : 'apps'} selected` : 'Pick your bank and wallet apps'}
             state={apps ? 'done' : 'required'}
             action={<Button variant="secondary" size="sm" disabled={busy || !state} onClick={onChooseApps}>{apps ? 'Change apps' : 'Choose apps'}</Button>}
           />
           <SetupStep
             step={2}
             title="Allow notification access"
-            description={state?.access ? 'Granted. Android lets FinancialApp see alerts from the apps above.' : 'Android asks you to allow this once in its settings. Detection can’t start without it.'}
+            description={state?.access ? 'Granted' : 'Required — allow once in Android settings'}
             state={state?.access ? 'done' : 'required'}
             action={<Button variant="secondary" size="sm" disabled={busy || !state} onClick={onAccess}>{state?.access ? 'Review access' : 'Grant notification access'}</Button>}
           />
           <SetupStep
             step={3}
             title="Get review alerts"
-            description={state?.notifications ? 'On. A private alert opens each detected payment for review.' : 'Off. Detected payments still wait in Ledger, but you won’t be alerted.'}
+            description={state?.notifications ? 'On' : 'Off — you won’t be alerted'}
             state={state?.notifications ? 'done' : 'optional'}
             action={<Button variant="secondary" size="sm" disabled={busy || !state} onClick={onNotificationSettings}>Notification settings</Button>}
           />
@@ -87,14 +98,13 @@ export function DetectionSetupSheet({ isOpen, onClose, state, status, busy, onCh
               step={4}
               title="Keep detection running"
               description={state.batteryUnrestricted
-                ? 'Battery use is Unrestricted, so Android keeps reading alerts while the phone sleeps.'
-                : 'Some phones stop detection to save battery. In App info, set Battery to Unrestricted so payments aren’t missed while the phone is locked.'}
+                ? 'Unrestricted'
+                : 'Set Battery to Unrestricted so payments aren’t missed'}
               state={state.batteryUnrestricted ? 'done' : 'optional'}
               action={<Button variant="secondary" size="sm" disabled={busy} onClick={onBatterySettings}>Battery settings</Button>}
             />
           )}
         </ol>
-        <p className="text-xs text-muted-foreground">Recognition depends on how each app words its alerts. Up to 200 transactions can wait for review. Turning detection off keeps the ones already waiting.</p>
       </div>
     </BottomSheet>
   )

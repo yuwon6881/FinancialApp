@@ -75,7 +75,7 @@ export function DetectedTransactionsSheet({ isOpen, onClose, candidates, ...row 
       description={count ? `${count} waiting for review · newest first` : undefined}
     >
       {count === 0
-        ? <EmptyState icon={<Inbox className="size-5" />} title="You’re all caught up" description="New payment alerts from your selected apps will appear here." />
+        ? <EmptyState icon={<Inbox className="size-5" />} title="You’re all caught up" />
         : <ul className="space-y-2.5" aria-label="Detected transactions waiting for review">
             {candidates.map(candidate => <CaptureRow key={candidate.id} candidate={candidate} {...row} />)}
           </ul>}

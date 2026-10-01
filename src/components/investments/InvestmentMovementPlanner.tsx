@@ -120,20 +120,19 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
             {mode === 'deposit' && depositFunding.newFundsRequired > 0 && <Badge tone="warning">{money(depositFunding.newFundsRequired)} new funds required</Badge>}
             {mode === 'withdrawal' && plan.fromHoldings > 0 && <Badge tone="neutral">{money(plan.fromHoldings)} raised by selling</Badge>}
           </div>
-          {plan.shortfall > 0 && <p className="rounded-lg border border-orange-500/30 bg-orange-500/8 p-2.5 text-xs text-orange-700 dark:text-orange-300">You are {money(plan.shortfall)} short after using all spare cash and holdings.</p>}
+          {plan.shortfall > 0 && <p className="rounded-lg border border-orange-500/30 bg-orange-500/8 p-2.5 text-xs text-orange-700 dark:text-orange-300">{money(plan.shortfall)} short.</p>}
           <ul className="grid gap-2 lg:grid-cols-3">
             {plan.sleeves.map((sleeve, index) => {
               const etfPlan = etfPlans.find(item => item.sleeve === sleeve.sleeve)
               return <li key={sleeve.sleeve} className="rounded-xl border border-border/50 bg-background/55 p-3">
                 <div className="flex items-center gap-2"><span className={`size-2 rounded-full ${colors[index]}`} /><strong className="text-xs text-foreground">{sleeve.label}</strong></div>
                 <strong className="mt-2 block text-lg text-foreground">{sleeve.amount > 0 ? money(sleeve.amount) : mode === 'deposit' ? 'Skip' : 'Leave alone'}</strong>
-                <p className="text-xs text-muted-foreground">Leaves this basket at {sleeve.projectedPercentage.toFixed(1)}%.</p>
+                <p className="text-xs text-muted-foreground">Leaves {sleeve.projectedPercentage.toFixed(1)}%</p>
                 {etfPlan?.requiresChoice && <CustomSelect ariaLabel={`ETF for ${sleeve.label}`} value={selections[sleeve.sleeve] ?? ''} onChange={value => setSelections(previous => ({ ...previous, [sleeve.sleeve]: String(value) }))} options={[{ value: '', label: 'Choose an ETF' }, ...etfPlan.choices.map(choice => ({ value: choice.id, label: `${choice.symbol} · ${choice.currency}` }))]} className="mt-2 w-full" />}
                 {etfPlan && etfPlan.lines.length > 0 && <ul className="mt-2 space-y-1.5 border-t border-border/40 pt-2">{etfPlan.lines.map(line => <li key={line.instrumentId} className="text-xs"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate font-bold text-foreground">{line.symbol}</span><span className="shrink-0 font-bold text-foreground">{masked ? '••••' : money(line.amountApp)}</span></div>{line.currency !== allocation.appCurrency.toUpperCase() && <div className="mt-0.5 flex items-start justify-between gap-2 text-muted-foreground"><span className="truncate">{line.currency}{line.fx?.asOf ? ` · FX ${line.fx.asOf}` : ''}</span><span className="shrink-0">{masked ? '••••' : line.amountNative === undefined ? 'Exchange rate unavailable' : `≈ ${formatCurrencyVal(line.amountNative, line.currency)}`}</span></div>}</li>)}</ul>}
               </li>
             })}
           </ul>
-          <details className="rounded-lg border border-border/50 bg-background/40 p-3"><summary className="cursor-pointer text-xs font-semibold text-foreground">How this is calculated</summary><p className="mt-2 text-xs leading-relaxed text-muted-foreground">{mode === 'deposit' ? 'The amount entered is the total to invest. Spare broker cash funds it first; any unused cash stays outside this plan, and any gap needs new funds. ' : ''}Basket amounts rebalance toward your saved target. Multiple ETFs keep their current value proportions. Native equivalents use the latest available rate where one unit of ETF currency equals the shown rate in {allocation.appCurrency}; your broker’s execution rate remains authoritative.</p></details>
         </>}
       </div>}
     </section>

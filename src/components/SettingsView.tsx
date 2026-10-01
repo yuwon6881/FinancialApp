@@ -210,7 +210,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     <div className="w-full min-w-0 space-y-6">
       <PageHeader
         title="Settings"
-        description="Manage your budget, app, and categories."
         icon={<span className="grid size-10 place-items-center rounded-xl bg-blue-500/10 text-blue-500"><Settings className="size-5" /></span>}
       />
 

@@ -180,13 +180,6 @@ export function FingerprintSection() {
         <ShieldCheck className="size-5 text-emerald-500 shrink-0" />
         <div className="flex-1 min-w-0">
           <h3 className="text-subsection text-foreground">Device Unlock</h3>
-          <p className="text-xs text-muted-foreground">
-            {enrolledHere
-              ? "Screen lock, fingerprint, or face recognition unlock."
-              : enabledOnAccount
-                ? 'Enabled for this account; set up this device to use it here.'
-                : "Screen lock, fingerprint, or face recognition unlock."}
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-xs font-medium ${status.className}`}>{status.label}</span>
@@ -204,13 +197,11 @@ export function FingerprintSection() {
                 </span>
                 <span className="text-xs font-semibold text-foreground">Device Authentication</span>
               </div>
-              <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-                {enrolledHere
-                  ? 'This device is registered and can unlock your account using biometrics or screen lock.'
-                  : needsLocalSetup
-                    ? 'This account already has a device credential. Confirm with your fingerprint, face recognition, PIN, or screen lock to use it here.'
-                    : 'Register this device to allow fast biometric or PIN unlock on the login screen.'}
-              </p>
+              {needsLocalSetup && !enrolledHere && (
+                <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                  Confirm with your fingerprint, face, PIN, or screen lock to use this account’s device credential here.
+                </p>
+              )}
               {capability === 'checking' && (
                 <p className="mt-1 text-xs text-muted-foreground">Checking whether this device can add a credential…</p>
               )}

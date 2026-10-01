@@ -20,7 +20,8 @@ test('every route obeys the window-tier containment and navigation contract', as
 
   for (const route of routes) {
     await page.goto(route, { waitUntil: 'domcontentloaded' })
-    await expect(page.locator('main')).toBeVisible()
+    // Each navigation starts a fresh document; allow the same cold-start window as the route snapshots.
+    await expect(page.locator('main'), `${route} did not finish loading the app shell`).toBeVisible({ timeout: 15_000 })
     await waitForStableLayout(page)
 
     const contract = await page.evaluate(() => {
@@ -695,7 +696,7 @@ test('bill review never auto-opens and exposes no automatic-open preference', as
   await expect(page.getByText(/Bill alerts when you open the app|Notify Bills/i)).toHaveCount(0)
 })
 
-test('bill review centers text-only actions and explains the full-payment default', async ({ page }) => {
+test('bill review centers text-only actions and defaults to full payment', async ({ page }) => {
   test.skip(
     !['mobile-light', 'desktop-light'].includes(test.info().project.name),
     'One compact and one desktop project cover this shared modal contract.',
@@ -739,12 +740,11 @@ test('bill review centers text-only actions and explains the full-payment defaul
     'Discard should use its natural idle width rather than reserving the longer busy label',
   ).toBeLessThanOrEqual(12)
 
-  await expect(dialog.getByRole('status')).toContainText('Full payment selected')
-  await expect(dialog.getByRole('status')).toContainText('172.80')
+  await expect(dialog.getByRole('status')).toHaveCount(0)
+  await expect(dialog.getByText(/-.*172.80/)).toBeVisible()
   await dialog.getByRole('switch', { name: 'Pay partial amount for Gym' }).click()
   const amount = dialog.getByLabel('Amount paid')
   await amount.fill('100')
-  await expect(dialog.getByRole('status')).toContainText('Part payment')
   await expect(dialog.getByRole('status')).toContainText('72.80 remains due')
   await amount.fill('0')
   await expect(dialog.getByRole('button', { name: 'Confirm Paid' })).toBeDisabled()

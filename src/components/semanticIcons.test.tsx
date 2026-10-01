@@ -11,7 +11,7 @@ describe('financial semantic icons', () => {
       </>,
     )
 
-    expect(container.querySelector('[data-testid="commitment-icon"]')?.classList.contains('lucide-banknote')).toBe(true)
+    expect(container.querySelector('[data-testid="commitment-icon"]')?.classList.contains('lucide-target')).toBe(true)
     expect(container.querySelector('[data-testid="reward-icon"]')?.classList.contains('lucide-piggy-bank')).toBe(true)
   })
 })

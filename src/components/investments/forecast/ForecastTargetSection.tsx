@@ -14,7 +14,6 @@ export function ForecastTargetSection({
   onChange,
   targetMax,
   targetStep,
-  years,
   targetChance,
   requiredContribution,
   maxMonthlyContribution,
@@ -56,7 +55,6 @@ export function ForecastTargetSection({
     <div className="mt-5 space-y-4 rounded-2xl border border-border/50 bg-muted/15 p-4">
       <FormField
         label={<span className="flex justify-between gap-3"><span>Target amount</span><strong className="text-foreground">{money(target)}</strong></span>}
-        hint={`Monthly amount for the middle outcome after ${years} years.`}
       >
         <RangeInput aria-label="Forecast target amount" min={0} max={targetMax} step={targetStep} value={Math.min(target, targetMax)} disabled={masked} onChange={event => onChange(Number(event.target.value))} />
       </FormField>

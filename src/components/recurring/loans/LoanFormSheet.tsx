@@ -155,7 +155,6 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
     <BottomSheet
       isOpen={isOpen}
       title={editingLoan ? 'Edit loan' : 'Add a loan'}
-      description="Link a recurring bill and set terms to project repayment progress and interest."
       onClose={onClose}
       maxWidthClassName="max-w-xl"
       footer={(

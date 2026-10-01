@@ -124,12 +124,6 @@ export function StabilityTopUpOffer({
             </p>
           )}
 
-          {!invalid && !overSafe && offer.isReduced && (
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              The suggestion leaves room for this cycle’s bills and commitments.
-            </p>
-          )}
-
           <details className="rounded-lg border border-border/40 bg-card/50 p-2.5">
             <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
               Where it comes from

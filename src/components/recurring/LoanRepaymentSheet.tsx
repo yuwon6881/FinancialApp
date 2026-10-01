@@ -232,7 +232,6 @@ export function LoanRepaymentSheet({
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-foreground">Number of instalments to pay</p>
-                      <p className="text-xs text-muted-foreground">Type a number from 1 to {maxAvailableCycles}, or use the step buttons.</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       <Button

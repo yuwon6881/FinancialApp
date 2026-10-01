@@ -139,11 +139,8 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
                 </div>
               )}
             </div>
-            {foreign && (
+            {foreign && gainSplit !== undefined && (
               <div className="mt-3 rounded-lg bg-background/50 p-2.5 text-xs leading-relaxed text-muted-foreground">
-                <p>
-                  Prices use {holding.currency}; gains use {appCurrency}, so they may differ.
-                </p>
                 {gainSplit !== undefined && (
                   <p className="mt-1.5">
                     Of your {figure(holding.unrealisedProfitLossApp, appCurrency, masked)} gain on paper,{' '}
@@ -167,10 +164,8 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
               How this was worked out
             </summary>
             <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-              <p>Prices in {holding.currency}, converted to {appCurrency} where the two differ.</p>
               <p>Price from {holding.priceSource ?? 'no source on record'} · {holding.priceDate ?? 'no date'}</p>
               {holding.fxSource && <p>Exchange rate from {holding.fxSource} · {holding.fxDate ?? 'no date'}</p>}
-              <p>To see this fund’s buys, sells and dividends, filter the activity list on the investments page by {holding.symbol}.</p>
             </div>
           </details>
         </div>

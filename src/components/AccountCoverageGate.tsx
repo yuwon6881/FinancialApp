@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle2, CircleAlert, LockKeyhole, Plus, RotateCcw, Wallet } from 'lucide-react'
+import { CheckCircle2, LockKeyhole, Plus, RotateCcw, Wallet } from 'lucide-react'
 import type { LedgerAccount } from '../types'
 import { AuthCard, AuthHeader, AuthLoadingState, AuthShell } from './ui/AuthLayout'
 import { AlertBanner } from './ui/AlertBanner'
@@ -54,7 +54,6 @@ export function AccountCoverageGate({
         <AuthHeader
           icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10"><LockKeyhole className="size-6 text-accent-ink" /></span>}
           title="Set up your four accounts"
-          description="Before you record money, tell us which account holds each budget bucket. This keeps every ledger entry traceable."
         />
 
         {error && (
@@ -68,7 +67,6 @@ export function AccountCoverageGate({
 
         <div className="rounded-2xl border border-accent-ink/20 bg-accent/15 p-4 text-xs leading-relaxed text-muted-foreground">
           <p className="font-semibold text-foreground">You need one open account in every bucket.</p>
-          <p className="mt-1">You can add more accounts later. Existing balances stay where they are; this setup only makes the account placement explicit.</p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -120,11 +118,6 @@ export function AccountCoverageGate({
               </section>
             )
           })}
-        </div>
-
-        <div className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
-          <CircleAlert className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-          <p>Once all four accounts are confirmed, the rest of the app will open. Closed accounts remain available for history.</p>
         </div>
 
         <AccountFormSheet

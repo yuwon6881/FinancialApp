@@ -15,7 +15,10 @@ export function purchaseCaptureStatus(state: CaptureState | null): CaptureStatus
   if (!state.enabled) return { label: 'Off', detail: 'Payment alerts on this phone are not read.', tone: 'neutral', listening: false }
   if (!state.access) return { label: 'Setup needed', detail: 'Not listening yet — allow notification access in Android settings.', tone: 'warning', listening: false }
   if (!state.packages.length) return { label: 'Setup needed', detail: 'Not listening yet — choose the banking or wallet apps to read.', tone: 'warning', listening: false }
-  if (state.listenerConnected === false) return { label: 'Connecting', detail: 'Android has not connected transaction detection yet. Open notification access settings if this persists.', tone: 'warning', listening: false }
+  if (state.listenerConnected === false) {
+    if (state.listenerRecovery === 'stalled') return { label: 'Not listening', detail: 'Android did not reconnect detection. Retry the connection, or switch FinancialApp notification access off and back on in Android settings.', tone: 'warning', listening: false }
+    return { label: 'Connecting', detail: 'Notification access is granted, but Android has not connected detection yet. Alerts cannot be read until it connects.', tone: 'warning', listening: false }
+  }
   const apps = `${state.packages.length} ${state.packages.length === 1 ? 'app' : 'apps'}`
   if (!state.notifications) return { label: 'Listening', detail: `Reading alerts from ${apps}. Review alerts are off, so check Ledger for new items.`, tone: 'success', listening: true }
   return { label: 'Listening', detail: `Reading alerts from ${apps}. You’ll get a private alert to review each one.`, tone: 'success', listening: true }

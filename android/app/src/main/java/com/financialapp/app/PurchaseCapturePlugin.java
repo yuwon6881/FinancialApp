@@ -9,8 +9,6 @@ import android.os.Build;
 import android.os.PowerManager;
 import android.net.Uri;
 import android.provider.Settings;
-import android.service.notification.NotificationListenerService;
-import android.content.ComponentName;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -24,7 +22,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Arrays;
 import java.util.Collections;
-import androidx.core.app.NotificationManagerCompat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -35,7 +32,7 @@ public class PurchaseCapturePlugin extends Plugin {
     private String pendingTap;
     @Override public void load() { instance = new WeakReference<>(this); readTap(getActivity().getIntent()); }
     @Override protected void handleOnNewIntent(Intent intent) { readTap(intent); }
-    @Override protected void handleOnResume() { foreground = true; }
+    @Override protected void handleOnResume() { foreground = true; PurchaseListenerRuntime.ensure(getContext(), true); }
     @Override protected void handleOnPause() { foreground = false; }
     /** FinancialApp is on screen, so its own Detected transactions card is the live surface. */
     static boolean isForeground() { return foreground; }
@@ -57,11 +54,10 @@ public class PurchaseCapturePlugin extends Plugin {
         catch (Exception error) { call.reject("Transaction detection could not complete this operation. Try again after signing in."); }
     }
     private boolean access() {
-        return NotificationManagerCompat.getEnabledListenerPackages(getContext()).contains(getContext().getPackageName());
+        return PurchaseListenerRuntime.access(getContext());
     }
     private void reconnectIfNeeded() {
-        if (access() && !PurchaseNotificationListener.isConnected())
-            NotificationListenerService.requestRebind(new ComponentName(getContext(), PurchaseNotificationListener.class));
+        PurchaseListenerRuntime.ensure(getContext(), false);
     }
     private boolean reviewNotifications() {
         NotificationManager manager = getContext().getSystemService(NotificationManager.class);
@@ -72,7 +68,7 @@ public class PurchaseCapturePlugin extends Plugin {
         }
         return true;
     }
-    @PluginMethod public void activate(PluginCall call) { run(call, () -> { store().activate(call.getString("owner")); reconnectIfNeeded(); return new JSObject(); }); }
+    @PluginMethod public void activate(PluginCall call) { run(call, () -> { store().activate(call.getString("owner")); PurchaseListenerRuntime.ensure(getContext(), true); return new JSObject(); }); }
     @PluginMethod public void state(PluginCall call) {
         run(call, () -> {
             JSONObject data = store().state(call.getString("owner"));
@@ -82,9 +78,19 @@ public class PurchaseCapturePlugin extends Plugin {
                 JSONObject candidate = candidates.getJSONObject(i);
                 if (!candidate.optString("status").equals("completed")) pending.put(candidate);
             }
-            return new JSObject().put("enabled", data.optBoolean("enabled")).put("packages", data.getJSONArray("packages"))
+            JSObject result = new JSObject().put("enabled", data.optBoolean("enabled")).put("packages", data.getJSONArray("packages"))
                 .put("candidates", pending).put("access", access()).put("listenerConnected", PurchaseNotificationListener.isConnected()).put("tapId", pendingTap)
-                .put("notifications", reviewNotifications()).put("batteryUnrestricted", batteryUnrestricted());
+                .put("notifications", reviewNotifications()).put("batteryUnrestricted", batteryUnrestricted())
+                .put("listenerDiagnostics", PurchaseListenerRuntime.diagnostics());
+            if (!PurchaseNotificationListener.isConnected()) result.put("listenerRecovery", PurchaseListenerRuntime.phase());
+            return result;
+        });
+    }
+    @PluginMethod public void reconnect(PluginCall call) {
+        run(call, () -> {
+            store().state(call.getString("owner"));
+            PurchaseListenerRuntime.ensure(getContext(), true);
+            return new JSObject();
         });
     }
     /** OEM battery savers stop the listener while the phone sleeps unless the app's battery use is Unrestricted. */
@@ -118,7 +124,7 @@ public class PurchaseCapturePlugin extends Plugin {
                 if (!name.equals(getContext().getPackageName()) && getContext().getPackageManager().getLaunchIntentForPackage(name) != null) valid.put(name);
             }
             store().configure(call.getString("owner"), Boolean.TRUE.equals(call.getBoolean("enabled")), valid);
-            if (access()) NotificationListenerService.requestRebind(new ComponentName(getContext(), PurchaseNotificationListener.class));
+            PurchaseListenerRuntime.ensure(getContext(), true);
             return new JSObject();
         });
     }

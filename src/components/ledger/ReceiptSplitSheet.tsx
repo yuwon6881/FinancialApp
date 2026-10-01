@@ -307,9 +307,6 @@ export function ReceiptSplitSheet({
             <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
               <div className="min-w-0">
                 <h3 className="text-subsection">Items</h3>
-                <p className="text-xs text-muted-foreground">
-                  Use −/+ for your quantity. Delete a line only if it was not on the receipt.
-                </p>
               </div>
               {receipt.items.length > 0 && (
                 <div className="ml-auto flex shrink-0 items-center gap-1">

@@ -129,6 +129,6 @@ describe('DepositGuide', () => {
       sleeves: allocation.sleeves.map(s => ({ ...s, value: undefined })),
     })
     expect(screen.getByRole('button', { name: /Plan a deposit/ })).toHaveProperty('disabled', true)
-    expect(screen.getByText('There is nothing to plan against yet — add holdings first.')).toBeTruthy()
+    expect(screen.getByText('Add holdings first.')).toBeTruthy()
   })
 })

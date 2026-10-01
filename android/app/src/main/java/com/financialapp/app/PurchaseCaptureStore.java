@@ -182,6 +182,10 @@ final class PurchaseCaptureStore {
             throw new IllegalArgumentException("Capture no longer exists");
         }
     }
+    boolean hasSelectedSources() throws Exception {
+        if (selectedCache == null) synchronized (PurchaseCaptureStore.class) { read(); }
+        return !selectedCache.isEmpty();
+    }
     boolean selected(String source) throws Exception {
         Set<String> cached = selectedCache;
         if (cached != null) return cached.contains(source);

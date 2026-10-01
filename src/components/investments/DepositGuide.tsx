@@ -77,7 +77,7 @@ export function DepositGuide({ allocation, money, colors }: DepositGuideProps) {
 
       {!canPlan && (
         <p className="mt-2 text-xs text-muted-foreground">
-          There is nothing to plan against yet — add holdings first.
+          Add holdings first.
         </p>
       )}
 
@@ -118,9 +118,7 @@ export function DepositGuide({ allocation, money, colors }: DepositGuideProps) {
                       {sleeve.amount > 0 ? money(sleeve.amount) : 'Skip'}
                     </strong>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {sleeve.amount > 0
-                        ? `${sleeve.percentageOfDeposit.toFixed(1)}% of this deposit · leaves you at ${sleeve.projectedPercentage.toFixed(1)}%`
-                        : `Already on target · stays at ${sleeve.projectedPercentage.toFixed(1)}%`}
+                      Leaves {sleeve.projectedPercentage.toFixed(1)}%
                       {Math.abs(sleeve.projectedDriftPercentagePoints) >= 0.05
                         ? ` (${sleeve.projectedDriftPercentagePoints > 0 ? '+' : ''}${sleeve.projectedDriftPercentagePoints.toFixed(1)} off target)`
                         : ' (on target)'}
@@ -129,26 +127,6 @@ export function DepositGuide({ allocation, money, colors }: DepositGuideProps) {
                 ))}
               </ul>
 
-              <details className="rounded-lg border border-border/50 bg-background/40 p-3">
-                <summary className="cursor-pointer text-xs font-semibold text-foreground">
-                  Why these amounts?
-                </summary>
-                <div className="mt-2 space-y-2 text-xs leading-relaxed text-muted-foreground">
-                  <p>
-                    Each basket gets as much of the deposit as it needs to reach its target share of
-                    the new total. Whichever basket is furthest below its slice receives the most,
-                    so the deposit tidies your mix on the way in instead of pulling it further away.
-                    After this you would be {money(plan.projectedTotal)} invested,
-                    {plan.worstProjectedDrift < 0.05
-                      ? ' exactly on your target mix.'
-                      : ` at most ${plan.worstProjectedDrift.toFixed(1)} percentage points from your target mix.`}
-                  </p>
-                  <p>
-                    These are estimates based on the latest prices you have. Your broker's actual
-                    figures at the time you invest are the real ones.
-                  </p>
-                </div>
-              </details>
             </div>
           )}
         </m.div>
