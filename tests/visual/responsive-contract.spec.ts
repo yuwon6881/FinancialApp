@@ -1,5 +1,41 @@
 import { expect, test } from '@playwright/test'
 import { establishSession, mockApi, seedDraftTransaction, vaultDocuments, waitForStableLayout } from './visualTestSupport'
+import { coveredRecovery } from './recoveryFixtures'
+
+test('covered recovery separates this cycle from the remaining balance', async ({ page }) => {
+  await mockApi(page, { stabilityRecovery: coveredRecovery })
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'See recovery details' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Emergency fund recovery details' })
+  await expect(dialog.getByText('This cycle covered')).toBeVisible()
+  await expect(dialog.getByText(/416\.23 of.*416\.23/)).toBeVisible()
+  const july = dialog.getByRole('listitem').filter({ hasText: 'Jul 2026 cycle' })
+  await expect(july.getByText('Fully put back')).toBeVisible()
+  await expect(july.getByText(/Plan ends|cycles left/)).toHaveCount(0)
+  await expect(dialog.getByText('Plan ends Nov 2026 cycle')).toBeVisible()
+  await expect(dialog.locator('time')).toHaveCount(0)
+  await dialog.getByText('How the total is calculated').click()
+  await expect(dialog.getByText('Withdrawals still being repaid')).toBeVisible()
+  await waitForStableLayout(page)
+  const bounds = await dialog.evaluate(element => {
+    const rect = element.getBoundingClientRect()
+    return { left: rect.left, right: rect.right, width: window.innerWidth,
+      overflow: element.scrollWidth > element.clientWidth + 1 }
+  })
+  expect(bounds.left).toBeGreaterThanOrEqual(0)
+  expect(bounds.right).toBeLessThanOrEqual(bounds.width)
+  expect(bounds.overflow).toBe(false)
+  const close = dialog.getByRole('button', { name: 'Close', exact: true })
+  await close.scrollIntoViewIfNeeded()
+  await expect(close).toBeVisible()
+  const hit = await close.evaluate(element => {
+    const rect = element.getBoundingClientRect()
+    return element.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2))
+  })
+  expect(hit).toBe(true)
+  await close.click()
+  await expect(dialog).toHaveCount(0)
+})
 
 const routes = [
   '/dashboard', '/reports', '/recurring', '/ledger', '/commitments-rewards',

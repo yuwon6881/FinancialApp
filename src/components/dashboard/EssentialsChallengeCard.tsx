@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react'
 import {
   AlertTriangle,
   ArrowRight,
+  BadgeCheck,
   CalendarClock,
   Check,
   Circle,
@@ -9,7 +10,6 @@ import {
   Gauge,
   Rocket,
   ShieldCheck,
-  Target,
   TrendingUp,
   Wallet,
   X,
@@ -79,7 +79,7 @@ const TIER_PRESENTATION: Record<EssentialsChallengeTier, TierPresentation> = {
   'on-track': {
     rank: 'On plan',
     finishedRank: 'Finished on plan',
-    Icon: Target,
+    Icon: BadgeCheck,
     accent: 'text-blue-600 dark:text-blue-300',
     chip: 'border-blue-500/25 bg-blue-500/12',
     stroke: 'stroke-blue-500',

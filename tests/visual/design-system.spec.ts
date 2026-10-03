@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test'
+import { coveredRecovery } from './recoveryFixtures'
+
 import type { InvestmentActivity, SavingsGoal, WishlistItem } from '../../src/types'
 import {
   establishSession,
@@ -10,6 +12,17 @@ import {
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.clock.setFixedTime(new Date('2026-07-30T10:00:00+08:00'))
+})
+
+test('covered recovery shows completed spending cycles without a countdown', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page, { stabilityRecovery: coveredRecovery })
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'See recovery details' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Emergency fund recovery details' })
+  await expect(dialog.getByText('This cycle covered')).toBeVisible()
+  await waitForStableLayout(page)
+  await expect(dialog).toHaveScreenshot('stability-recovery-covered.png')
 })
 
 async function openGlobalSearch(page: import('@playwright/test').Page) {
@@ -108,11 +121,11 @@ test('emergency fund recovery card reads as one subtraction', async ({ page }) =
   if (test.info().project.name === 'mobile-light' || test.info().project.name === 'mobile-dark') {
     await expect(card).toHaveScreenshot('stability-recovery-plan-card.png')
   }
-  await expect(card.getByText('Taken out and not yet fully back')).toHaveCount(0)
+  await expect(card.getByText('Withdrawals still being repaid')).toHaveCount(0)
   await card.getByRole('button', { name: 'See recovery details' }).click()
   const dialog = page.getByRole('dialog', { name: 'Emergency fund recovery details' })
   await expect(dialog).toBeVisible()
-  await expect(dialog.getByText('Taken out and not yet fully back')).toBeVisible()
+  await expect(dialog.getByText('Total still to put back')).toBeVisible()
   await waitForStableLayout(page)
 
   await expect(dialog).toHaveScreenshot('stability-recovery-card.png')
@@ -183,6 +196,23 @@ test('essentials challenge ranks a cycle that is holding its plan', async ({ pag
   await waitForStableLayout(page)
 
   await expect(card).toHaveScreenshot('essentials-challenge-ahead.png')
+})
+
+test('essentials on-plan score and details use a check badge', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page, { setting: essentialsCycle, dashboard: fundedEssentials(1_320, 50) })
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+  const trigger = page.getByRole('button', { name: /Essentials challenge score/i })
+  await expect(trigger.locator('.lucide-badge-check')).toBeVisible()
+  await expect(trigger.locator('.lucide-target')).toHaveCount(0)
+  await expect(trigger).toHaveScreenshot('essentials-score-on-plan.png')
+  await trigger.click()
+  const dialog = page.getByRole('dialog', { name: 'Essentials challenge' })
+  await expect(dialog.getByRole('heading', { name: 'On plan' })).toBeVisible()
+  await expect(dialog.locator('.lucide-badge-check')).toBeVisible()
+  await expect(dialog.locator('.lucide-target')).toHaveCount(0)
+  await waitForStableLayout(page)
+  await expect(dialog).toHaveScreenshot('essentials-challenge-on-plan.png')
 })
 
 test('essentials challenge ranks a cycle that has run past its money', async ({ page }) => {

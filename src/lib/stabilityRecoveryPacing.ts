@@ -26,6 +26,7 @@ export function cycleKeyForDate(date: string, cycleDay: number) {
  * cycle asks for money the buckets no longer hold.
  */
 export const STABILITY_RECOVERY_GRACE_CYCLES = 1
+export const STABILITY_RECOVERY_PLAN_CYCLES = 3
 
 /** Cycles between two `yyyy-MM` cycle keys, or undefined when either cannot be read. */
 function elapsedCycles(anchor: string | undefined, currentCycleKey: string | undefined) {
@@ -80,7 +81,7 @@ export function computeRecoveryCohortPlan(input: {
   outstandingShortfall: number
   toppedUpThisCycle: number
 }): RecoveryCohortPlan {
-  const horizon = Math.max(1, input.horizon ?? 3)
+  const horizon = Math.max(1, input.horizon ?? STABILITY_RECOVERY_PLAN_CYCLES)
   const grouped = new Map<string, RecoveryCohortInput>()
   for (const cohort of input.cohorts) {
     if (cohort.remainingShortfall <= 0 && cohort.repaidThisCycle <= 0) continue

@@ -48,6 +48,18 @@ const renderCard = (
 }
 
 describe('EssentialsChallengeCard embedded trigger', () => {
+  it('uses the check badge for both the on-plan score and its details', () => {
+    renderCard({ projectedEndingBalance: 50 }, activeCycle, undefined, false)
+    const trigger = screen.getByRole('button', { name: /Essentials challenge score/i })
+    expect(trigger.querySelector('.lucide-badge-check')).toBeTruthy()
+    expect(trigger.querySelector('.lucide-target')).toBeNull()
+    fireEvent.click(trigger)
+    const dialog = screen.getByRole('dialog', { name: 'Essentials challenge' })
+    expect(within(dialog).getByRole('heading', { name: 'On plan' })).toBeTruthy()
+    expect(dialog.querySelector('.lucide-badge-check')).toBeTruthy()
+    expect(dialog.querySelector('.lucide-target')).toBeNull()
+  })
+
   it('only shows the score button initially and opens details on click', () => {
     renderCard({ projectedRemaining: 1600, projectedEndingBalance: 1200 }, activeCycle, undefined, false)
 

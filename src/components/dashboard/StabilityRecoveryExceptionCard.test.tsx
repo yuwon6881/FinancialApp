@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { StabilityRecovery } from '../../types'
 import { StabilityRecoveryExceptionCard } from './StabilityRecoveryExceptionCard'
@@ -30,6 +30,31 @@ function openRecoveryDetails() {
 }
 
 describe('StabilityRecoveryExceptionCard', () => {
+  it('separates a covered current plan from remaining debt and a fully repaid spending cycle', () => {
+    render(<StabilityRecoveryExceptionCard recovery={recovery({
+      markedTotal: 696.05, repaidTotal: 10.16, outstandingShortfall: 685.89,
+      requiredThisCycle: 416.23, toppedUpThisCycle: 416.23, outstandingThisCycle: 0,
+      recoveryCohorts: [
+        { originCycleKey: '2026-07', fromDate: '2026-08-15', transactionCount: 5,
+          remainingShortfall: 0, cyclesRemaining: 2, requiredThisCycle: 146.54, isOverdue: false },
+        { originCycleKey: '2026-08', fromDate: '2026-09-10', transactionCount: 4,
+          remainingShortfall: 685.89, cyclesRemaining: 3, requiredThisCycle: 269.69, isOverdue: false },
+      ],
+    })} formatSensitive={format} />)
+    openRecoveryDetails()
+    const dialog = screen.getByRole('dialog', { name: 'Emergency fund recovery details' })
+    expect(within(dialog).getByText('This cycle covered')).toBeTruthy()
+    expect(within(dialog).getByText('$416.23 of $416.23')).toBeTruthy()
+    const july = within(dialog).getByText('Jul 2026 cycle').closest('li')!
+    expect(within(july).getByText('Fully put back')).toBeTruthy()
+    expect(within(july).queryByText(/cycles left|Plan ends|Planned this cycle/)).toBeNull()
+    const august = within(dialog).getByText('Aug 2026 cycle').closest('li')!
+    expect(within(august).getByText('Plan ends Nov 2026 cycle')).toBeTruthy()
+    expect(within(august).getByText('$685.89')).toBeTruthy()
+    expect(dialog.querySelector('time')).toBeNull()
+    expect(within(dialog).queryByText(/cycles left|withdrawals since/)).toBeNull()
+  })
+
   it('stays hidden when there is no recovery block at all', () => {
     const { container } = render(
       <StabilityRecoveryExceptionCard recovery={undefined} formatSensitive={format} />
@@ -120,10 +145,11 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     openRecoveryDetails()
-    expect(screen.getByText('Combined plan for this cycle')).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'Current cycle recovery' })).toBeTruthy()
     expect(screen.getByText('Jun 2026 cycle')).toBeTruthy()
     expect(screen.getByText('Jul 2026 cycle')).toBeTruthy()
-    expect(screen.getByText('3 cycles left')).toBeTruthy()
+    expect(screen.getByText('Plan ends Sep 2026 cycle')).toBeTruthy()
+    expect(screen.getByText('Plan ends Oct 2026 cycle')).toBeTruthy()
   })
 
   it('distinguishes an overdue cohort from a newer plan that still has time', () => {
@@ -150,7 +176,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     openRecoveryDetails()
     expect(screen.getByText('Plan overdue')).toBeTruthy()
     expect(screen.getByText('Overdue')).toBeTruthy()
-    expect(screen.getByText('3 cycles left')).toBeTruthy()
+    expect(screen.getByText('Plan ends Oct 2026 cycle')).toBeTruthy()
   })
 
   // The reported confusion: two figures side by side read as "pay 506.64 now AND 1013.27 later".
@@ -174,7 +200,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.getByText(/Put back \$506\.64 this cycle/)).toBeTruthy()
     expect(screen.queryByText(/not money on top of it/)).toBeNull()
     openRecoveryDetails()
-    expect(screen.getByText(/^This cycle.s share of that$/)).toBeTruthy()
+    expect(screen.getByText('Still due this cycle')).toBeTruthy()
   })
 
   // The reported complaint: the fund had just been tapped and the card asked for a third of it back
@@ -201,10 +227,10 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.queryByText(/Put back \$0\.00/)).toBeNull()
 
     openRecoveryDetails()
-    expect(screen.getByText('Planned for this cycle')).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'Current cycle recovery' })).toBeTruthy()
     expect(screen.getAllByText('Starts next cycle').length).toBeGreaterThan(1)
     // Nothing was asked for, so there is no share for money to be "already back" against.
-    expect(screen.queryByText('Of that share, already back')).toBeNull()
+    expect(screen.queryByText('Still due this cycle')).toBeNull()
   })
 
   it('still credits money put back early during the deferred cycle', () => {
@@ -222,8 +248,8 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     openRecoveryDetails()
-    expect(screen.getByText('Already put back early')).toBeTruthy()
-    expect(screen.getByText('$100.00')).toBeTruthy()
+    expect(screen.getByText(/Already put back early/)).toBeTruthy()
+    expect(screen.getAllByText(/\$100\.00/).length).toBeGreaterThan(0)
   })
 
   it('names a deferred cohort in the per-cycle breakdown', () => {
@@ -252,8 +278,8 @@ describe('StabilityRecoveryExceptionCard', () => {
     openRecoveryDetails()
     // The live cohort still asks; the new one says when it will start rather than showing a zero.
     expect(screen.getByText('Starts next cycle')).toBeTruthy()
-    expect(screen.getByText('3 cycles left')).toBeTruthy()
-    expect(screen.getByText('—')).toBeTruthy()
+    expect(screen.getByText('Plan ends Sep 2026 cycle')).toBeTruthy()
+    expect(screen.queryByText('—')).toBeNull()
   })
 
   it('says so plainly on the last cycle of the plan', () => {
@@ -308,13 +334,12 @@ describe('StabilityRecoveryExceptionCard', () => {
   it('shows the subtraction the figure comes from', () => {
     render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
 
-    expect(screen.queryByText('Taken out and not yet fully back')).toBeNull()
+    expect(screen.queryByText('Withdrawals still being repaid')).toBeNull()
     openRecoveryDetails()
-    expect(screen.getByText('Taken out and not yet fully back')).toBeTruthy()
-    expect(screen.getByText('Put back so far')).toBeTruthy()
-    expect(screen.getByText('In it now')).toBeTruthy()
-    expect(screen.getByText('Still short')).toBeTruthy()
-    expect(screen.getByText('Of that share, already back')).toBeTruthy()
+    expect(screen.getByText('Withdrawals still being repaid')).toBeTruthy()
+    expect(screen.getByText('Put back against those withdrawals')).toBeTruthy()
+    expect(screen.getByText('Total still to put back')).toBeTruthy()
+    expect(screen.getByText('Still due this cycle')).toBeTruthy()
   })
 
   // The reported defect showed up here: 800 asked back against 200 owed, because drawdowns already
@@ -331,7 +356,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     openRecoveryDetails()
     expect(screen.getAllByText('$300.00').length).toBeGreaterThan(0)
     expect(screen.getAllByText('$100.00').length).toBeGreaterThan(0)
-    expect(screen.getByText('$200.00')).toBeTruthy()
+    expect(screen.getAllByText('$200.00').length).toBeGreaterThan(0)
     // 100 of this cycle's 300 plan is funded.
     expect(screen.getByRole('progressbar', { name: "This cycle's recovery plan" }).getAttribute('aria-valuenow')).toBe('33')
   })
@@ -423,8 +448,8 @@ describe('StabilityRecoveryExceptionCard', () => {
     openRecoveryDetails()
     expect(screen.queryByText('Final cycle')).toBeNull()
     expect(screen.queryByText(/This is the final planned cycle/)).toBeNull()
-    expect(screen.getByText('1 cycle left')).toBeTruthy()
-    expect(screen.getByText('3 cycles left')).toBeTruthy()
+    expect(screen.getByText('Plan ends Sep 2026 cycle')).toBeTruthy()
+    expect(screen.getByText('Plan ends Nov 2026 cycle')).toBeTruthy()
   })
 
   // A single plan is still the last one when its window runs down to this cycle.
@@ -449,10 +474,8 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.getByText('Final cycle')).toBeTruthy()
   })
 
-  // Calling a sum of cohort shares "this cycle's share of that" describes arithmetic the card does
-  // not show, so the label says "combined" instead — at every width, in one copy that wraps rather
-  // than two that differed only in a tail the sentence above already carries.
-  it('names the combined plan once, at every width', () => {
+  // One combined progress summary avoids suggesting that this cycle's share is an extra debt.
+  it('shows the current cycle plan once, at every width', () => {
     render(
       <StabilityRecoveryExceptionCard
         recovery={recovery({
@@ -475,7 +498,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     openRecoveryDetails()
-    expect(screen.getAllByText('Combined plan for this cycle')).toHaveLength(1)
+    expect(screen.getAllByRole('region', { name: 'Current cycle recovery' })).toHaveLength(1)
     expect(screen.queryByText(/^This cycle.s share of that$/)).toBeNull()
   })
 })
