@@ -3,6 +3,8 @@ package com.financialapp.app;
 import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.*;
 
 public class PurchaseListenerRecoveryTest {
@@ -53,7 +55,7 @@ public class PurchaseListenerRecoveryTest {
         clock.advance(60000); recovery.refresh(true, false, false);
         assertEquals(2, attempts[0]); assertEquals("connecting", recovery.phase());
     }
-    @Test public void explicitRetryOrResumeRestartsStalledRecovery() {
+    @Test public void explicitRetryRestartsStalledRecovery() {
         Clock clock = new Clock(); int[] attempts = {0};
         PurchaseListenerRecovery recovery = new PurchaseListenerRecovery(clock, current -> attempts[0]++, () -> {});
         recovery.refresh(true, false, false); clock.advance(30000);
@@ -77,6 +79,8 @@ public class PurchaseListenerRecoveryTest {
         recovery.refresh(true, false, true);
         assertTrue(requests.get(1).getAsBoolean());
         recovery.refresh(true, false, true);
+        assertTrue(requests.get(1).getAsBoolean());
+        clock.advance(30000);
         assertFalse(requests.get(1).getAsBoolean());
     }
     @Test public void timeoutAndConnectionPublishHealthWithoutStatusPolling() {
@@ -87,5 +91,73 @@ public class PurchaseListenerRecoveryTest {
         assertEquals(java.util.Arrays.asList("connecting", "stalled", "idle"), phases);
         holder[0].refresh(true, false, false);
         assertEquals("connecting", holder[0].phase());
+    }
+    @Test public void failedEpisodesWaitOneFiveThenFifteenMinutes() {
+        Clock clock = new Clock(); List<Long> attempts = new ArrayList<>();
+        PurchaseListenerRecovery recovery = new PurchaseListenerRecovery(clock, current -> attempts.add(clock.now), () -> {});
+        recovery.refresh(true, false, false);
+        clock.advance(89999); assertEquals(5, attempts.size());
+        clock.advance(90000); assertEquals(Long.valueOf(90000), attempts.get(5));
+        clock.advance(419999); assertEquals(10, attempts.size());
+        clock.advance(420000); assertEquals(Long.valueOf(420000), attempts.get(10));
+        clock.advance(1350000); assertEquals(Long.valueOf(1350000), attempts.get(15));
+        clock.advance(2280000); assertEquals(Long.valueOf(2280000), attempts.get(20));
+    }
+    @Test public void repeatedTriggersNeverExtendAnActiveDeadline() {
+        Clock clock = new Clock(); int[] attempts = {0};
+        PurchaseListenerRecovery recovery = new PurchaseListenerRecovery(clock, current -> attempts[0]++, () -> {});
+        recovery.refresh(true, false, false);
+        clock.advance(19000);
+        recovery.refresh(true, false, false); recovery.refresh(true, false, true);
+        clock.advance(30000);
+        assertEquals("stalled", recovery.phase()); assertEquals(5, attempts[0]);
+        recovery.refresh(true, false, false);
+        clock.advance(90000); assertEquals(6, attempts[0]);
+    }
+    @Test public void reconnectAndDisableCancelCooldownAndResetBackoff() {
+        for (boolean connected : new boolean[] {false, true}) {
+            Clock clock = new Clock(); int[] attempts = {0};
+            PurchaseListenerRecovery recovery = new PurchaseListenerRecovery(clock, current -> attempts[0]++, () -> {});
+            recovery.refresh(true, false, false); clock.advance(30000);
+            recovery.refresh(connected, connected, false); clock.advance(90000);
+            assertEquals(5, attempts[0]);
+            recovery.refresh(true, false, false); clock.advance(180000);
+            assertEquals(11, attempts[0]);
+        }
+    }
+    @Test public void storageUnavailableDefersWithoutDiscardingRecovery() {
+        Clock clock = new Clock(); int[] attempts = {0};
+        PurchaseListenerRecovery recovery = new PurchaseListenerRecovery(clock, current -> attempts[0]++, () -> {});
+        recovery.unavailable();
+        assertEquals("stalled", recovery.phase());
+        clock.advance(59999); assertEquals(0, attempts[0]);
+        clock.advance(60000); assertEquals(1, attempts[0]);
+        recovery.unavailable(); recovery.unavailable();
+        clock.advance(359999); assertEquals(1, attempts[0]);
+        clock.advance(360000); assertEquals(2, attempts[0]);
+    }
+    @Test public void freshProcessStartsRecoveryRatherThanTrustingOldHealth() {
+        Clock clock = new Clock(); int[] attempts = {0};
+        PurchaseListenerRecovery previous = new PurchaseListenerRecovery(clock, current -> attempts[0]++, () -> {});
+        previous.refresh(true, true, false);
+        PurchaseListenerRecovery fresh = new PurchaseListenerRecovery(clock, current -> attempts[0]++, () -> {});
+        fresh.refresh(true, false, false);
+        assertEquals("connecting", fresh.phase()); assertEquals(1, attempts[0]);
+    }
+    @Test public void simultaneousTriggersShareOneEpisode() throws Exception {
+        Clock clock = new Clock(); AtomicInteger attempts = new AtomicInteger();
+        PurchaseListenerRecovery recovery = new PurchaseListenerRecovery(clock, current -> attempts.incrementAndGet(), () -> {});
+        CountDownLatch start = new CountDownLatch(1); List<Thread> triggers = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            Thread trigger = new Thread(() -> {
+                try { start.await(); recovery.refresh(true, false, true); }
+                catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+            });
+            triggers.add(trigger); trigger.start();
+        }
+        start.countDown();
+        for (Thread trigger : triggers) { trigger.join(5000); assertFalse(trigger.isAlive()); }
+        assertEquals(1, attempts.get());
+        clock.advance(30000); assertEquals(5, attempts.get()); assertEquals("stalled", recovery.phase());
     }
 }

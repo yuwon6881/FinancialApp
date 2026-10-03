@@ -28,11 +28,21 @@ export interface CaptureState {
   access: boolean
   /** Older Android shells did not report listener lifecycle. */
   listenerConnected?: boolean
-  /** New Android shells stop automatic recovery after a bounded attempt window. */
+  /** Connecting during an attempt window; stalled while waiting for a later retry. */
   listenerRecovery?: 'connecting' | 'stalled'
-  listenerDiagnostics?: { reconnectAttempts: number; lastEvent: string; lastFailure: string }
+  listenerDiagnostics?: {
+    reconnectAttempts: number
+    lastEvent: string
+    lastFailure: string
+    lastConnectedAt?: number
+    lastDisconnectedAt?: number
+    lastAttemptAt?: number
+    lastWorkerAt?: number
+    recoveryTrigger?: string
+    recoveryScheduled?: boolean
+  }
   notifications: boolean
-  /** Battery use is Unrestricted, so OEM power saving leaves the listener running. Older Android shells did not report it. */
+  /** An optimization exemption reduces background restrictions, without guaranteeing connectivity. */
   batteryUnrestricted?: boolean
   tapId?: string
 }

@@ -9,6 +9,14 @@ describe('purchase capture status', () => {
       .toMatchObject({ label: 'Not listening', listening: false, tone: 'warning', detail: expect.stringContaining('off and back on') })
     expect(purchaseCaptureStatus({ ...ready, listenerRecovery: 'stalled' })).toMatchObject({ label: 'Listening', listening: true })
   })
+  it('explains scheduled automatic recovery without claiming to listen', () => {
+    const state = { ...ready, listenerConnected: false, listenerRecovery: 'stalled' as const,
+      listenerDiagnostics: { reconnectAttempts: 5, lastEvent: 'disconnected', lastFailure: '', recoveryScheduled: true } }
+    expect(purchaseCaptureStatus(state)).toMatchObject({ label: 'Not listening', listening: false,
+      detail: expect.stringContaining('retry automatically') })
+    expect(purchaseCaptureStatus({ ...state, listenerRecovery: 'connecting' }).label).toBe('Connecting')
+    expect(purchaseCaptureStatus({ ...state, listenerConnected: true }).label).toBe('Listening')
+  })
   it('only reports listening when detection is on, access is granted and apps are chosen', () => {
     expect(purchaseCaptureStatus(null)).toMatchObject({ label: 'Checking', listening: false })
     expect(purchaseCaptureStatus({ ...ready, enabled: false })).toMatchObject({ label: 'Off', tone: 'neutral', listening: false })

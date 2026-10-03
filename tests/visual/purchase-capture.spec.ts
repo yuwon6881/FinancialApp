@@ -17,8 +17,9 @@ async function nativeCapture(page: Page, tapped: boolean, access = true, transac
     let listenerId = 0
     const simulation = window as unknown as { emitNativeState: (active: boolean) => void; authRequests: number }
     simulation.authRequests = 0
-    const recoverySimulation = window as unknown as { connectCapture: () => void; reconnectOwner?: string }
+    const recoverySimulation = window as unknown as { connectCapture: () => void; waitCapture: () => void; reconnectOwner?: string }
     recoverySimulation.connectCapture = () => { listenerConnected = true; captureListeners.forEach(callback => callback({ isActive: true })) }
+    recoverySimulation.waitCapture = () => { listenerConnected = false; listenerRecovery = 'stalled'; captureListeners.forEach(callback => callback({ isActive: true })) }
     simulation.emitNativeState = value => { active = value; listeners.forEach(callback => callback({ isActive: value })) }
     const methods: Record<string, string[]> = {
       PurchaseCapture: ['activate', 'state', 'reconnect', 'configure', 'applications', 'consumeTap', 'update', 'openAccessSettings', 'requestNotifications', 'openNotificationSettings', 'openBatterySettings', 'wipe'],
@@ -42,7 +43,7 @@ async function nativeCapture(page: Page, tapped: boolean, access = true, transac
         if (plugin === 'BiometricAuthNative' && method === 'checkBiometry') return { isAvailable: true, deviceIsSecure: true, biometryType: 1, biometryTypes: [1] }
         if (plugin === 'BiometricAuthNative') { simulation.authRequests++; return new Promise(resolve => { (window as unknown as { unlockDevice: () => void }).unlockDevice = () => resolve({}) }) }
         if (plugin !== 'PurchaseCapture') return {}
-        if (method === 'state') return { enabled, packages, candidates: completed ? [] : [candidate], access, notifications: true, batteryUnrestricted: recovery, tapId, ...(recovery ? { listenerConnected, listenerRecovery } : {}) }
+        if (method === 'state') return { enabled, packages, candidates: completed ? [] : [candidate], access, notifications: true, batteryUnrestricted: recovery, tapId, ...(recovery ? { listenerConnected, listenerRecovery, listenerDiagnostics: { reconnectAttempts: 5, lastEvent: 'disconnected', lastFailure: '', recoveryScheduled: true } } : {}) }
         if (method === 'reconnect') { recoverySimulation.reconnectOwner = String(options.owner); listenerRecovery = 'connecting'; captureListeners.forEach(callback => callback({ isActive: true })) }
         if (method === 'openAccessSettings' || method === 'openNotificationSettings' || method === 'openBatterySettings') simulation.emitNativeState(false)
         if (method === 'configure') { enabled = Boolean(options.enabled); packages = options.packages as string[] }
@@ -78,6 +79,8 @@ test('completed setup distinguishes a stalled listener and retries live detectio
   await card.getByRole('button', { name: 'Finish setup' }).click()
   const sheet = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'Transaction detection setup' }) })
   const health = sheet.getByRole('region', { name: 'Live detection connection' })
+  await expect(health.getByText(/retry automatically/)).toBeVisible()
+  await expect(sheet.getByText(/Android may still disconnect detection/)).toBeVisible()
   await expect(sheet.locator('li').filter({ hasText: '— Done' })).toHaveCount(4)
   await expect(health.getByRole('button', { name: 'Reset notification access' })).toBeVisible()
   expect(await sheet.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(false)
@@ -101,7 +104,30 @@ test('completed setup distinguishes a stalled listener and retries live detectio
   await page.evaluate(() => (window as unknown as { connectCapture: () => void }).connectCapture())
   await expect(health.getByText('Listening', { exact: true })).toBeVisible()
   await expect(health.getByRole('button', { name: 'Retry connection' })).toHaveCount(0)
+  await page.evaluate(() => (window as unknown as { waitCapture: () => void }).waitCapture())
+  await expect(health.getByText('Not listening', { exact: true })).toBeVisible()
+  await expect(health.getByText(/retry automatically/)).toBeVisible()
+  await page.evaluate(() => (window as unknown as { connectCapture: () => void }).connectCapture())
+  await expect(health.getByText('Listening', { exact: true })).toBeVisible()
   expect(await sheet.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(false)
+  const viewport = page.viewportSize()
+  if (viewport && viewport.width < 640) {
+    await page.setViewportSize({ width: viewport.width, height: 500 })
+    await page.evaluate(() => (window as unknown as { waitCapture: () => void }).waitCapture())
+    await expect(health.getByText(/retry automatically/)).toBeVisible()
+    for (const name of ['Reset notification access', 'Retry connection']) {
+      const button = health.getByRole('button', { name })
+      await button.click({ trial: true })
+      const hit = await button.evaluate(element => {
+        const box = element.getBoundingClientRect()
+        return { height: box.height, receivesPointer: element.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)) }
+      })
+      expect(hit.height).toBeGreaterThanOrEqual(44)
+      expect(hit.receivesPointer).toBe(true)
+    }
+    expect(await sheet.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(false)
+    await sheet.screenshot({ path: test.info().outputPath('detection-recovery-short-window.png') })
+  }
 })
 
 test('native purchase tap opens the real Ledger form with unknown fields empty', async ({ page }) => {

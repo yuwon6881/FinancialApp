@@ -16,7 +16,13 @@ export function purchaseCaptureStatus(state: CaptureState | null): CaptureStatus
   if (!state.access) return { label: 'Setup needed', detail: 'Not listening yet — allow notification access in Android settings.', tone: 'warning', listening: false }
   if (!state.packages.length) return { label: 'Setup needed', detail: 'Not listening yet — choose the banking or wallet apps to read.', tone: 'warning', listening: false }
   if (state.listenerConnected === false) {
-    if (state.listenerRecovery === 'stalled') return { label: 'Not listening', detail: 'Android did not reconnect detection. Retry the connection, or switch FinancialApp notification access off and back on in Android settings.', tone: 'warning', listening: false }
+    if (state.listenerRecovery === 'stalled') return {
+      label: 'Not listening',
+      detail: state.listenerDiagnostics?.recoveryScheduled
+        ? 'Detection is disconnected. It will retry automatically; Android may delay retries while the phone sleeps. You can also retry now or reset notification access.'
+        : 'Android did not reconnect detection. Retry the connection, or switch FinancialApp notification access off and back on in Android settings.',
+      tone: 'warning', listening: false,
+    }
     return { label: 'Connecting', detail: 'Notification access is granted, but Android has not connected detection yet. Alerts cannot be read until it connects.', tone: 'warning', listening: false }
   }
   const apps = `${state.packages.length} ${state.packages.length === 1 ? 'app' : 'apps'}`

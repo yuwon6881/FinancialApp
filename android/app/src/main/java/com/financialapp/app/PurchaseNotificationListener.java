@@ -29,7 +29,7 @@ public class PurchaseNotificationListener extends NotificationListenerService {
     static boolean isConnected() { return connected; }
     @Override public void onListenerConnected() {
         connected = true;
-        PurchaseListenerRuntime.connected();
+        PurchaseListenerRuntime.connected(this);
         PurchaseCapturePlugin.changed();
         // Alerts that arrived while Android had the listener unbound are recovered here, as a replay rather than live news.
         StatusBarNotification[] active;

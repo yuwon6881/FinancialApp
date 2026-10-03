@@ -32,7 +32,7 @@ public class PurchaseCapturePlugin extends Plugin {
     private String pendingTap;
     @Override public void load() { instance = new WeakReference<>(this); readTap(getActivity().getIntent()); }
     @Override protected void handleOnNewIntent(Intent intent) { readTap(intent); }
-    @Override protected void handleOnResume() { foreground = true; PurchaseListenerRuntime.ensure(getContext(), true); }
+    @Override protected void handleOnResume() { foreground = true; PurchaseListenerRuntime.ensure(getContext(), "resume", false); }
     @Override protected void handleOnPause() { foreground = false; }
     /** FinancialApp is on screen, so its own Detected transactions card is the live surface. */
     static boolean isForeground() { return foreground; }
@@ -57,7 +57,7 @@ public class PurchaseCapturePlugin extends Plugin {
         return PurchaseListenerRuntime.access(getContext());
     }
     private void reconnectIfNeeded() {
-        PurchaseListenerRuntime.ensure(getContext(), false);
+        PurchaseListenerRuntime.ensure(getContext(), "status", false);
     }
     private boolean reviewNotifications() {
         NotificationManager manager = getContext().getSystemService(NotificationManager.class);
@@ -68,7 +68,7 @@ public class PurchaseCapturePlugin extends Plugin {
         }
         return true;
     }
-    @PluginMethod public void activate(PluginCall call) { run(call, () -> { store().activate(call.getString("owner")); PurchaseListenerRuntime.ensure(getContext(), true); return new JSObject(); }); }
+    @PluginMethod public void activate(PluginCall call) { run(call, () -> { store().activate(call.getString("owner")); PurchaseListenerRuntime.ensure(getContext(), "account", false); return new JSObject(); }); }
     @PluginMethod public void state(PluginCall call) {
         run(call, () -> {
             JSONObject data = store().state(call.getString("owner"));
@@ -89,11 +89,11 @@ public class PurchaseCapturePlugin extends Plugin {
     @PluginMethod public void reconnect(PluginCall call) {
         run(call, () -> {
             store().state(call.getString("owner"));
-            PurchaseListenerRuntime.ensure(getContext(), true);
+            PurchaseListenerRuntime.ensure(getContext(), "manual", true);
             return new JSObject();
         });
     }
-    /** OEM battery savers stop the listener while the phone sleeps unless the app's battery use is Unrestricted. */
+    /** An optimization exemption reduces restrictions; it cannot guarantee listener connectivity. */
     private boolean batteryUnrestricted() {
         PowerManager power = getContext().getSystemService(PowerManager.class);
         return power != null && power.isIgnoringBatteryOptimizations(getContext().getPackageName());
@@ -124,7 +124,7 @@ public class PurchaseCapturePlugin extends Plugin {
                 if (!name.equals(getContext().getPackageName()) && getContext().getPackageManager().getLaunchIntentForPackage(name) != null) valid.put(name);
             }
             store().configure(call.getString("owner"), Boolean.TRUE.equals(call.getBoolean("enabled")), valid);
-            PurchaseListenerRuntime.ensure(getContext(), true);
+            PurchaseListenerRuntime.ensure(getContext(), "configuration", false);
             return new JSObject();
         });
     }
@@ -160,6 +160,7 @@ public class PurchaseCapturePlugin extends Plugin {
     @PluginMethod public void wipe(PluginCall call) {
         // Withdraw only review alerts; unrelated FinancialApp notifications are not part of this store.
         PurchaseNotificationListener.withdrawReviews(getContext(), new HashSet<>(store().wipe()));
+        PurchaseListenerRuntime.wiped(getContext());
         pendingTap = null; changed(); call.resolve();
     }
 }

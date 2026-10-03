@@ -59,6 +59,9 @@ android {
             }
         }
     }
+    testOptions {
+        unitTests.includeAndroidResources = true
+    }
 }
 
 repositories {
@@ -74,7 +77,10 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     implementation "com.google.firebase:firebase-messaging:$firebaseMessagingVersion"
+    implementation "androidx.work:work-runtime:2.12.0"
     testImplementation "junit:junit:$junitVersion"
+    testImplementation "androidx.work:work-testing:2.12.0"
+    testImplementation "org.robolectric:robolectric:4.16.1"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')

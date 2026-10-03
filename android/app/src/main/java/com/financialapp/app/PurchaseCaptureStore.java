@@ -183,8 +183,9 @@ final class PurchaseCaptureStore {
         }
     }
     boolean hasSelectedSources() throws Exception {
-        if (selectedCache == null) synchronized (PurchaseCaptureStore.class) { read(); }
-        return !selectedCache.isEmpty();
+        // Recovery is infrequent and must verify persisted consent, including a storage failure.
+        // Ordinary notification source filtering still uses the inexpensive selected() cache.
+        synchronized (PurchaseCaptureStore.class) { read(); return !selectedCache.isEmpty(); }
     }
     boolean selected(String source) throws Exception {
         Set<String> cached = selectedCache;

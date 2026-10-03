@@ -3,7 +3,7 @@ package com.financialapp.app;
 import java.util.ArrayList;
 import java.util.List;
 
-/** A bounded recovery episode. Status reads never extend its deadline or restart a stalled episode. */
+/** Bounded attempts followed by spaced recovery; reads and lifecycle noise never extend a deadline. */
 final class PurchaseListenerRecovery {
     interface Scheduler { Runnable later(Runnable run, long delay); }
     interface Request { void run(java.util.function.BooleanSupplier current); }
@@ -14,20 +14,31 @@ final class PurchaseListenerRecovery {
     private String phase = "idle";
     private int generation;
     private int attempts;
+    private int failedEpisodes;
+    private String trigger = "checking";
 
     PurchaseListenerRecovery(Scheduler scheduler, Request request, Runnable changed) {
         this.scheduler = scheduler; this.request = request; this.changed = changed;
     }
     synchronized String phase() { return phase; }
     synchronized int attempts() { return attempts; }
+    synchronized String trigger() { return trigger; }
+    synchronized boolean retryScheduled() { return phase.equals("stalled"); }
     synchronized void refresh(boolean eligible, boolean connected, boolean restart) {
+        refresh(eligible, connected, restart, restart ? "manual" : "status");
+    }
+    synchronized void refresh(boolean eligible, boolean connected, boolean restart, String reason) {
         if (!eligible || connected) {
-            cancel(); setPhase("idle"); return;
+            cancel(); failedEpisodes = 0; setPhase("idle"); return;
         }
+        if (phase.equals("connecting")) return;
         if (!restart && !phase.equals("idle")) return;
+        start(reason);
+    }
+    private void start(String reason) {
         cancel();
         int episode = generation;
-        phase = "connecting";
+        phase = "connecting"; trigger = reason;
         // Schedule before requesting: Android may connect synchronously in a test or platform adapter.
         for (long delay : new long[] {2000, 5000, 10000, 20000})
             cancellations.add(scheduler.later(() -> attempt(episode), delay));
@@ -41,7 +52,22 @@ final class PurchaseListenerRecovery {
     private synchronized boolean current(int episode) { return episode == generation && phase.equals("connecting"); }
     private synchronized void timeout(int episode) {
         if (episode != generation) return;
-        cancel(); setPhase("stalled");
+        waitForRetry();
+    }
+    synchronized void unavailable() {
+        if (!phase.equals("stalled")) waitForRetry();
+    }
+    private void waitForRetry() {
+        cancel();
+        long delay = failedEpisodes == 0 ? 60000 : failedEpisodes == 1 ? 300000 : 900000;
+        failedEpisodes = Math.min(2, failedEpisodes + 1);
+        int waiting = generation;
+        // Register before publishing so observers always see a real pending retry.
+        cancellations.add(scheduler.later(() -> retry(waiting), delay));
+        setPhase("stalled");
+    }
+    private synchronized void retry(int waiting) {
+        if (waiting == generation && phase.equals("stalled")) start("cooldown");
     }
     private void cancel() {
         generation++;

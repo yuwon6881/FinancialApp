@@ -98,8 +98,8 @@ export function DetectionSetupSheet({ isOpen, onClose, state, status, busy, onCh
               step={4}
               title="Keep detection running"
               description={state.batteryUnrestricted
-                ? 'Unrestricted'
-                : 'Set Battery to Unrestricted so payments aren’t missed'}
+                ? 'Unrestricted — Android may still disconnect detection or delay retries'
+                : 'Set Battery to Unrestricted to reduce background restrictions'}
               state={state.batteryUnrestricted ? 'done' : 'optional'}
               action={<Button variant="secondary" size="sm" disabled={busy} onClick={onBatterySettings}>Battery settings</Button>}
             />

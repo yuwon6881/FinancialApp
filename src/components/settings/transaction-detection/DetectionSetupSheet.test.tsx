@@ -58,5 +58,13 @@ describe('DetectionSetupSheet battery step', () => {
   it('marks the step done once battery use is Unrestricted', () => {
     renderSheet({ ...base, batteryUnrestricted: true })
     expect(screen.getByText(/Keep detection running/).textContent).toContain('Done')
+    expect(screen.getByText(/Android may still disconnect detection/)).toBeTruthy()
+  })
+  it('keeps manual recovery available while automatic retries are scheduled', () => {
+    renderSheet({ ...base, listenerConnected: false, listenerRecovery: 'stalled',
+      listenerDiagnostics: { reconnectAttempts: 5, lastEvent: 'disconnected', lastFailure: '', recoveryScheduled: true } })
+    expect(screen.getByRole('region', { name: 'Live detection connection' }).textContent).toContain('retry automatically')
+    expect(screen.getByRole('button', { name: 'Retry connection' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Reset notification access' })).toBeTruthy()
   })
 })
