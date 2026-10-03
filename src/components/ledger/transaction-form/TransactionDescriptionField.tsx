@@ -52,9 +52,13 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const descriptionAnchorRef = useRef<HTMLDivElement>(null)
+  const blurTimeoutRef = useRef<number | undefined>(undefined)
+
+  useEffect(() => () => window.clearTimeout(blurTimeoutRef.current), [])
 
   const handleDescriptionBlur = () => {
-    window.setTimeout(() => {
+    window.clearTimeout(blurTimeoutRef.current)
+    blurTimeoutRef.current = window.setTimeout(() => {
       setShowSuggestions(false)
       void onSuggestCategory()
     }, 200)

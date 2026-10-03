@@ -78,6 +78,7 @@ const typeAndSend = async (text: string) => {
 beforeAll(() => {
   // jsdom does not implement scrollIntoView; the panel calls it on every message change.
   Element.prototype.scrollIntoView = vi.fn()
+  Element.prototype.scrollTo = vi.fn()
 })
 
 beforeEach(() => {
@@ -101,6 +102,94 @@ afterEach(() => {
 })
 
 describe('AiAssistantPanel', () => {
+  it('keeps typing, selection and focus while saved history loads', async () => {
+    let resolve!: (value: unknown) => void
+    fetchAiConversation.mockReturnValueOnce(new Promise(done => { resolve = done }))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} sensitiveMode={false} />)
+    const textarea = screen.getByLabelText('Ask AI') as HTMLTextAreaElement
+    expect(textarea.disabled).toBe(false)
+    textarea.focus()
+    fireEvent.change(textarea, { target: { value: 'Badminton 20' } })
+    textarea.setSelectionRange(5, 5)
+    await act(async () => resolve({ conversationId: 'saved', conversationVersion: 4, messages: [{ role: 'assistant', content: 'Earlier reply' }], state: null }))
+    expect(screen.getByText('Earlier reply')).toBeTruthy()
+    expect(screen.getByLabelText('Ask AI')).toBe(textarea)
+    expect(document.activeElement).toBe(textarea)
+    expect(textarea.value).toBe('Badminton 20')
+    expect(textarea.selectionStart).toBe(5)
+    expect(chatWithAi).not.toHaveBeenCalled()
+  })
+
+  it('waits for history before sending once and keeps the next draft', async () => {
+    let resolve!: (value: unknown) => void
+    fetchAiConversation.mockReturnValueOnce(new Promise(done => { resolve = done }))
+    chatWithAi.mockResolvedValue(reply())
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} sensitiveMode={false} />)
+    await typeAndSend('Badminton 20')
+    expect(chatWithAi).not.toHaveBeenCalled()
+    expect(screen.getByText(/message will send when/i)).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Ask AI'), { target: { value: 'Coffee 5' } })
+    await act(async () => resolve({ conversationId: 'saved', conversationVersion: 4, messages: [{ role: 'assistant', content: 'Earlier reply' }], state: null }))
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
+    expect(chatWithAi.mock.calls[0][0]).toBe('Badminton 20')
+    expect(chatWithAi.mock.calls[0][4]).toMatchObject({ conversationId: 'saved', conversationVersion: 4 })
+    expect(chatWithAi.mock.calls[0][1]).toEqual([{ role: 'assistant', content: 'Earlier reply' }])
+    expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).value).toBe('Coffee 5')
+  })
+
+  it('stops a waiting message without sending it when history arrives', async () => {
+    let resolve!: (value: unknown) => void
+    fetchAiConversation.mockReturnValueOnce(new Promise(done => { resolve = done }))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} sensitiveMode={false} />)
+    await typeAndSend('Badminton 20')
+    fireEvent.click(screen.getByLabelText('Stop generating'))
+    await act(async () => resolve({ conversationId: null, conversationVersion: 0, messages: [], state: null }))
+    expect(chatWithAi).not.toHaveBeenCalled()
+    expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).value).toBe('Badminton 20')
+  })
+
+  it('keeps a waiting message as a draft if history cannot load', async () => {
+    let reject!: (reason: unknown) => void
+    fetchAiConversation.mockReturnValueOnce(new Promise((_, fail) => { reject = fail }))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} sensitiveMode={false} />)
+    await typeAndSend('Badminton 20')
+    await act(async () => reject(new TypeError('Connection unavailable')))
+    expect(chatWithAi).not.toHaveBeenCalled()
+    expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).value).toBe('Badminton 20')
+    expect(screen.getByText('The saved conversation could not be loaded. Close and reopen Ask AI to retry.')).toBeTruthy()
+    expect(screen.getByLabelText('Retry the last question')).toBeTruthy()
+  })
+
+  it('preserves typing and focus when startup privacy settings reload history', async () => {
+    let resolve!: (value: unknown) => void
+    fetchAiConversation.mockReturnValueOnce(new Promise(done => { resolve = done }))
+    const props = { isOpen: true, onClose: vi.fn(), onActions: vi.fn() }
+    const { rerender } = render(<AiAssistantPanel {...props} sensitiveMode />)
+    const textarea = screen.getByLabelText('Ask AI') as HTMLTextAreaElement
+    textarea.focus()
+    fireEvent.change(textarea, { target: { value: 'Badminton 20' } })
+    rerender(<AiAssistantPanel {...props} sensitiveMode={false} />)
+    await waitFor(() => expect(fetchAiConversation).toHaveBeenCalledTimes(2))
+    await act(async () => resolve({ conversationId: 'stale', conversationVersion: 1, messages: [{ role: 'assistant', content: 'Stale history' }], state: null }))
+    expect(screen.queryByText('Stale history')).toBeNull()
+    expect(textarea.value).toBe('Badminton 20')
+    expect(document.activeElement).toBe(textarea)
+    expect(chatWithAi).not.toHaveBeenCalled()
+  })
+
+  it('does not send a waiting message after the panel closes', async () => {
+    let resolve!: (value: unknown) => void
+    fetchAiConversation.mockReturnValueOnce(new Promise(done => { resolve = done }))
+    const props = { onClose: vi.fn(), onActions: vi.fn(), sensitiveMode: false }
+    const { rerender } = render(<AiAssistantPanel {...props} isOpen />)
+    await typeAndSend('Badminton 20')
+    rerender(<AiAssistantPanel {...props} isOpen={false} />)
+    await act(async () => resolve({ conversationId: null, conversationVersion: 0, messages: [], state: null }))
+    expect(chatWithAi).not.toHaveBeenCalled()
+    rerender(<AiAssistantPanel {...props} isOpen />)
+    expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).value).toBe('Badminton 20')
+  })
+
   it('shows exactly three prompt suggestions from the curated pool', () => {
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
     expect(screen.getAllByRole('button').filter(button => !button.getAttribute('title'))).toHaveLength(3)
@@ -514,11 +603,13 @@ describe('AiAssistantPanel', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
   })
 
-  it('disables prompts and sending while offline', () => {
+  it('allows drafting but disables sending while offline', () => {
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} isOffline />)
     expect(screen.getByText(/requires an internet connection/i)).toBeTruthy()
-    expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).disabled).toBe(true)
+    expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).disabled).toBe(false)
     expect((screen.getByTitle('Send') as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.change(screen.getByLabelText('Ask AI'), { target: { value: 'Badminton 20' } })
+    expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).value).toBe('Badminton 20')
   })
 
   it('clicking a suggestion chip fills the textarea', () => {

@@ -177,6 +177,7 @@ export function TransactionFormFields({
   return (
     <>
       <TransactionDescriptionField
+        key={state.transactionType}
         state={state}
         firstInputRef={firstInputRef}
         descriptionRef={descriptionRef}

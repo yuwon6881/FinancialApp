@@ -192,6 +192,7 @@ vi.hoisted(() => {
     dispatchEvent: vi.fn(),
   }))
   Element.prototype.scrollIntoView = vi.fn()
+  Element.prototype.scrollTo = vi.fn()
 })
 
 describe('App behaviors', () => {

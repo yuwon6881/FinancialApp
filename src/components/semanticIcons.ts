@@ -1,1 +1,1 @@
-export { Target as CommitmentIcon, PiggyBank as RewardIcon } from 'lucide-react'
+export { ClipboardCheck as CommitmentIcon, PiggyBank as RewardIcon } from 'lucide-react'

@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
-import type { InvestmentActivity, Loan, PendingNotification, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, VaultDocument, WishlistItem } from '../../src/types'
+import type { AutocompleteSuggestion, InvestmentActivity, Loan, PendingNotification, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, VaultDocument, WishlistItem } from '../../src/types'
 
 const transaction = {
   id: 'tx-visual-1',
@@ -216,6 +216,7 @@ export const stabilityRecoveryFixture = {
 }
 
 interface MockApiOptions {
+  autocomplete?: AutocompleteSuggestion[]
   registered?: boolean
   /** The shared fixture, or it plus the fields a particular recovery state needs. */
   stabilityRecovery?: typeof stabilityRecoveryFixture & Record<string, unknown>
@@ -254,6 +255,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
   const darkMode = test.info().project.name.endsWith('-dark')
   const themedBootstrap = {
     ...bootstrap,
+    autocomplete: options.autocomplete ?? bootstrap.autocomplete,
     recurringPayments: options.recurringPayments ?? bootstrap.recurringPayments,
     accounts: options.accounts ?? bootstrap.accounts,
     transactions: options.transactions ?? bootstrap.transactions,

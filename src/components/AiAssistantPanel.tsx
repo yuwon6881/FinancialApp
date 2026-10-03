@@ -82,7 +82,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
   const defaultContext = useMemo(() => ({
     surface: surface ?? 'dashboard',
   }), [surface])
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messageLogRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const composerHighlightRef = useRef<HTMLDivElement>(null)
   const {
@@ -91,6 +91,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
     setInput,
     isSending,
     isHydrating,
+    waitingForHistory,
     isResetting,
     lastFailedTurn,
     recoverableTurn,
@@ -125,7 +126,8 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: motionSafeScrollBehavior() })
+      const log = messageLogRef.current
+      log?.scrollTo({ top: log.scrollHeight, behavior: motionSafeScrollBehavior() })
     }
     // A streaming reply grows in place, so keep its newest line in view as well.
   }, [messages, isOpen, pendingReply])
@@ -179,7 +181,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             <Button variant="tertiary"
               type="button"
               onClick={() => void handleNewChat()}
-              disabled={isResetting}
+              disabled={isResetting || isHydrating}
               className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer sm:min-h-9"
               title="Start a new chat (clears history)"
               aria-label="Start a new chat"
@@ -270,6 +272,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
         <div className={`relative min-h-0 flex-1 rounded-xl ${isSending ? 'perimeter-beam-host' : ''}`}>
           {isSending && <PerimeterBeam size={132} duration={7} />}
           <div
+            ref={messageLogRef}
             role="log"
             aria-live="polite"
             aria-busy={isSending}
@@ -285,12 +288,17 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               {resetError}
             </div>
           )}
+          {waitingForHistory && (
+            <p role="status" className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              Your message will send when the saved conversation is ready. You can keep typing or stop it below.
+            </p>
+          )}
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center text-xs text-muted-foreground">
               <div className="mb-3 grid size-11 place-items-center rounded-xl border border-border/60 bg-muted/40 shadow-xs">
                 <Sparkles className="size-5 text-muted-foreground" />
               </div>
-              <p className="font-medium text-foreground">Ready.</p>
+              <p className="font-medium text-foreground">{isHydrating ? 'Loading saved conversation…' : 'Ready.'}</p>
               {isOffline && <p className="mt-2 text-xs font-medium text-orange-500">Ask AI requires an internet connection.</p>}
               <div role="group" aria-label="Suggested questions" className="mt-4 flex w-full max-w-md flex-col items-center gap-2">
                 {suggestedPrompts.map(prompt => (
@@ -340,8 +348,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               </div>
             ))
           )}
-          {isSending && messages.length > 0 && <AiPendingReply reply={pendingReply} accounts={accounts} />}
-          {messages.length > 0 && <div ref={messagesEndRef} />}
+          {isSending && !waitingForHistory && messages.length > 0 && <AiPendingReply reply={pendingReply} accounts={accounts} />}
           </div>
         </div>
 
@@ -372,7 +379,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               aria-controls={mentions.isOpen ? 'ai-account-mentions' : undefined}
               aria-activedescendant={mentions.activeAccountId ? `ai-account-mention-${mentions.activeAccountId}` : undefined}
               aria-autocomplete="list"
-              disabled={isOffline || isHydrating || isResetting}
+              disabled={isResetting}
               value={input}
               onChange={e => mentions.handleChange(e.target.value, e.target.selectionStart ?? e.target.value.length)}
               onSelect={mentions.syncCaret}
@@ -388,7 +395,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
                 }
               }}
               onKeyUp={mentions.syncCaret}
-              placeholder={isOffline ? 'Ask AI is offline' : isHydrating ? 'Loading conversation…' : 'Ask about your finances…'}
+              placeholder={isOffline ? 'Write a message to send when online…' : 'Ask about your finances…'}
               rows={1}
               className="ai-composer-text relative z-10 min-h-11 max-h-40 w-full resize-none rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-sm leading-6 text-transparent caret-foreground outline-hidden selection:bg-primary/25 focus:border-transparent focus:ring-0 focus:outline-hidden placeholder:text-muted-foreground"
             />
@@ -399,7 +406,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             variant="primary"
             type={isSending ? 'button' : 'submit'}
             onClick={isSending ? () => cancelInFlight({ recoverable: true }) : undefined}
-            disabled={isSending ? false : (!input.trim() || isOffline || isHydrating || isResetting)}
+            disabled={isSending ? false : (!input.trim() || isOffline || isResetting)}
             className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl shadow-xs"
             tooltip={isSending ? 'Stop' : 'Send'}
             label={isSending ? 'Stop generating' : 'Send message'}

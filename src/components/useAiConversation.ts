@@ -68,6 +68,8 @@ export function useAiConversation({
   const [isSending, setIsSending] = useState(false)
   const [isHydrating, setIsHydrating] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+  const [waitingTurn, setWaitingTurn] = useState<FailedTurn | null>(null)
+  const waitingTurnRef = useRef<FailedTurn | null>(null)
   const [lastFailedTurn, setLastFailedTurn] = useState<FailedTurn | null>(null)
   // A stopped turn is not necessarily an abandoned one: the server may have finished and
   // committed it after we stopped listening, and replaying its clientTurnId is the only way to
@@ -123,6 +125,10 @@ export function useAiConversation({
   }, [applySnapshot, isOffline, sensitiveMode])
 
   const cancelInFlight = useCallback((options: { recoverable?: boolean } = {}) => {
+    const waiting = waitingTurnRef.current
+    waitingTurnRef.current = null
+    setWaitingTurn(null)
+    if (waiting) setInput(current => current || waiting.text)
     const wasSending = activeRequestRef.current !== null
     requestGenerationRef.current += 1
     activeRequestRef.current?.abort()
@@ -207,7 +213,17 @@ export function useAiConversation({
 
   const sendMessage = useCallback(async (retry?: FailedTurn) => {
     const trimmed = (retry?.text ?? input).trim()
-    if (!trimmed || isSending || isOffline || isHydrating || isResetting) return
+    if (!trimmed || isSending || isOffline || isResetting || waitingTurnRef.current) return
+    if (isHydrating || !hydratedRef.current) {
+      const waiting = retry ?? { text: trimmed, clientTurnId: newClientTurnId(), context: defaultContext }
+      waitingTurnRef.current = waiting
+      setWaitingTurn(waiting)
+      if (!retry) setInput('')
+      if (!hydrationRequestRef.current) {
+        void hydrate().catch(() => setResetError('The saved conversation could not be loaded. Close and reopen Ask AI to retry.'))
+      }
+      return
+    }
 
     // Retrying the exchange still on screen replaces it. Recovering an older stopped turn, or
     // running a contextual invocation against a hydrated history, must append instead -- both
@@ -222,7 +238,7 @@ export function useAiConversation({
     setResetError(null)
     setLastFailedTurn(null)
     setMessages(nextMessages)
-    setInput('')
+    if (!retry) setInput('')
     setIsSending(true)
     const generation = requestGenerationRef.current + 1
     requestGenerationRef.current = generation
@@ -329,6 +345,7 @@ export function useAiConversation({
     applySnapshot,
     defaultContext,
     input,
+    hydrate,
     isHydrating,
     isOffline,
     isResetting,
@@ -340,7 +357,24 @@ export function useAiConversation({
   ])
 
   useEffect(() => {
-    if (!invocation || !isOpen || isOffline || isHydrating || isResetting || !hydratedRef.current) return
+    if (!waitingTurn || isHydrating || isOffline || !isOpen) return
+    if (waitingTurnRef.current !== waitingTurn) return
+    waitingTurnRef.current = null
+    setWaitingTurn(null)
+    if (!hydratedRef.current) {
+      setInput(current => current || waitingTurn.text)
+      setLastFailedTurn(waitingTurn)
+      setMessages(current => [...current,
+        { role: 'user', content: waitingTurn.text },
+        { role: 'assistant', content: 'Your message was not sent because the saved conversation could not be loaded. Tap Retry to try again.' },
+      ])
+      return
+    }
+    void sendMessage(waitingTurn)
+  }, [waitingTurn, isHydrating, isOffline, isOpen, sendMessage])
+
+  useEffect(() => {
+    if (!invocation || !isOpen || isOffline || isHydrating || isResetting || isSending || waitingTurn || !hydratedRef.current) return
     if (consumedInvocationRef.current === invocation.nonce) return
     consumedInvocationRef.current = invocation.nonce
     onInvocationConsumed()
@@ -349,7 +383,7 @@ export function useAiConversation({
       clientTurnId: invocation.clientTurnId ?? newClientTurnId(),
       context: invocation.context,
     })
-  }, [invocation, isHydrating, isOffline, isOpen, isResetting, onInvocationConsumed, sendMessage])
+  }, [invocation, isHydrating, isOffline, isOpen, isResetting, isSending, waitingTurn, onInvocationConsumed, sendMessage])
 
   const recoverStoppedTurn = useCallback(() => {
     if (recoverableTurn) void sendMessage(recoverableTurn)
@@ -388,7 +422,8 @@ export function useAiConversation({
     messages,
     input,
     setInput,
-    isSending,
+    isSending: isSending || waitingTurn !== null,
+    waitingForHistory: waitingTurn !== null,
     isHydrating,
     isResetting,
     lastFailedTurn,

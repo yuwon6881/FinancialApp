@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Inbox } from 'lucide-react'
 import type { PurchaseCapture } from '../../../lib/native/purchaseCapture'
 import { formatAlertTime } from '../../../lib/native/purchaseCaptureStatus'
@@ -24,7 +23,6 @@ const detectedAmount = (candidate: PurchaseCapture) => {
 }
 
 function CaptureRow({ candidate, busy, formOpen, onReview, onDiscard }: Omit<Props, 'isOpen' | 'onClose' | 'candidates'> & { candidate: PurchaseCapture }) {
-  const [confirming, setConfirming] = useState(false)
   const amount = detectedAmount(candidate)
   const finishing = Boolean(candidate.prepared)
   const title = candidate.description || 'Merchant not detected'
@@ -47,20 +45,10 @@ function CaptureRow({ candidate, busy, formOpen, onReview, onDiscard }: Omit<Pro
       )}
       {candidate.possibleDuplicate && <p className="text-xs text-muted-foreground">A similar alert arrived around the same time. Check your Ledger before saving both.</p>}
       {finishing && <p className="text-xs text-muted-foreground">You approved this one. It is added to the Ledger automatically the next time the app is unlocked.</p>}
-      {confirming ? (
-        <div className="space-y-2 rounded-control bg-muted/40 p-3" role="group" aria-label={`Discard ${title}`}>
-          <p className="text-sm text-foreground">Discard this detected transaction? It won’t be added to the Ledger.</p>
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setConfirming(false)}>Keep</Button>
-            <Button variant="destructive" size="sm" loading={busy} onClick={async () => { if (await onDiscard(candidate.id)) setConfirming(false) }}>Discard</Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="tertiary" size="sm" disabled={busy || finishing} onClick={() => setConfirming(true)}>Discard</Button>
-          <Button variant="primary" size="sm" disabled={formOpen || finishing} onClick={() => onReview(candidate)} aria-label={`Review ${title}`}>Review</Button>
-        </div>
-      )}
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button variant="tertiary" size="sm" disabled={busy || finishing} onClick={() => void onDiscard(candidate.id)}>Discard</Button>
+        <Button variant="primary" size="sm" disabled={formOpen || finishing} onClick={() => onReview(candidate)} aria-label={`Review ${title}`}>Review</Button>
+      </div>
     </li>
   )
 }

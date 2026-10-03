@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { CommitmentIcon, RewardIcon } from './semanticIcons'
 
 describe('financial semantic icons', () => {
-  it('uses a banknote for commitments and a piggy bank for rewards', () => {
+  it('uses a clipboard check for commitments and a piggy bank for rewards', () => {
     const { container } = render(
       <>
         <CommitmentIcon data-testid="commitment-icon" />
@@ -11,7 +11,7 @@ describe('financial semantic icons', () => {
       </>,
     )
 
-    expect(container.querySelector('[data-testid="commitment-icon"]')?.classList.contains('lucide-target')).toBe(true)
+    expect(container.querySelector('[data-testid="commitment-icon"]')?.classList.contains('lucide-clipboard-check')).toBe(true)
     expect(container.querySelector('[data-testid="reward-icon"]')?.classList.contains('lucide-piggy-bank')).toBe(true)
   })
 })

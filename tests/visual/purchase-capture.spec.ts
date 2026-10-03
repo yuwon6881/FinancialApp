@@ -72,6 +72,25 @@ async function openNative(page: Page, tapped = false, tab = 'ledger', access = t
   await page.evaluate(() => (window as unknown as { unlockDevice: () => void }).unlockDevice())
 }
 
+test('detected transaction discards with one click', async ({ page }) => {
+  await openNative(page)
+  await page.getByRole('button', { name: 'Review 1 detected transaction', exact: true }).click()
+  const sheet = page.getByRole('dialog', { name: 'Detected transactions' })
+  await expect(sheet.getByText('COFFEE HOUSE', { exact: true })).toBeVisible()
+  const discard = sheet.getByRole('button', { name: 'Discard', exact: true })
+  await discard.click({ trial: true })
+  const hit = await discard.evaluate(element => {
+    const box = element.getBoundingClientRect()
+    return { height: box.height, receivesPointer: element.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)) }
+  })
+  expect(hit.receivesPointer).toBe(true)
+  expect(hit.height).toBeGreaterThanOrEqual((page.viewportSize()?.width ?? 0) < 1024 ? 44 : 36)
+  await sheet.screenshot({ path: test.info().outputPath('detected-transaction-discard.png') })
+  await discard.click()
+  await expect(sheet.getByText('You’re all caught up')).toBeVisible()
+  await expect(sheet.getByText('Discard this detected transaction?')).toHaveCount(0)
+})
+
 test('completed setup distinguishes a stalled listener and retries live detection', async ({ page }) => {
   await openNative(page, false, 'settings', true, 'outflow', true)
   const card = page.getByRole('region', { name: 'Transaction detection', exact: true })

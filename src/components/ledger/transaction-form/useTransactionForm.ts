@@ -366,6 +366,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   )
 
   const changeTransactionType = (type: 'inflow' | 'outflow' | 'transfer') => {
+    suggestions.clearSuggestions()
     if (state.mode === 'create') {
       dispatch({ type: 'RESET', todayDate, defaultCategory })
       dispatch({ type: 'SET_FIELD', field: 'showAddForm', value: true })

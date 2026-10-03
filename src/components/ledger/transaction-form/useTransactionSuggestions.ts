@@ -45,6 +45,8 @@ export function useTransactionSuggestions(options: UseTransactionSuggestionsOpti
   const noteSuggestionRequestSeqRef = useRef(0)
 
   const clearSuggestions = useCallback(() => {
+    categorySuggestionRequestSeqRef.current += 1
+    noteSuggestionRequestSeqRef.current += 1
     setCategorySuggestions([])
     setCategorySuggestionUnavailable(false)
     setNoteSuggestions([])
@@ -56,6 +58,10 @@ export function useTransactionSuggestions(options: UseTransactionSuggestionsOpti
     categorySuggestionAbortRef.current?.abort()
     noteSuggestionAbortRef.current?.abort()
   }, [])
+
+  useEffect(() => {
+    clearSuggestions()
+  }, [txType, showAddForm, clearSuggestions])
 
   const requestCategorySuggestions = useCallback(async (
     trimmedDescription: string,
