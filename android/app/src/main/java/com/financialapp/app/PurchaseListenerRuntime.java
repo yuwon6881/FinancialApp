@@ -6,7 +6,6 @@ import android.content.Context;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.service.notification.NotificationListenerService;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.work.Operation;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -97,7 +96,7 @@ final class PurchaseListenerRuntime {
         if (!reconcile(RECOVERY.trigger(), false) || PurchaseNotificationListener.isConnected() || !current.getAsBoolean()) return;
         health.attempted(RECOVERY.trigger(), System.currentTimeMillis());
         try {
-            NotificationListenerService.requestRebind(component(application));
+            PurchaseListenerBinding.refresh(component(application), Build.VERSION.SDK_INT, PurchaseListenerBinding.SYSTEM);
         } catch (RuntimeException unavailable) { health.failure("rebind"); }
         publish();
     }
