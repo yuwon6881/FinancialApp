@@ -11,6 +11,18 @@ import {
 import { obfuscateAmount } from './api/amounts'
 import type { DashboardData } from '../types'
 
+// The full wipe starts these lazy imports without awaiting them. Loading the real modules (and
+// @capacitor/core behind purchaseCapture) can outlive a test file on a cold CI runner and fail
+// the run with EnvironmentTeardownError, so stand them in with modules that resolve at once.
+const wipes = vi.hoisted(() => ({
+  purchaseCaptures: vi.fn(async () => undefined),
+  draftDocuments: vi.fn(async () => undefined),
+  scanUploads: vi.fn(async () => undefined),
+}))
+vi.mock('./native/purchaseCapture', () => ({ wipePurchaseCaptures: wipes.purchaseCaptures }))
+vi.mock('./draftTransactionDocuments', () => ({ clearDraftTransactionDocuments: wipes.draftDocuments }))
+vi.mock('./scanUploadStore', () => ({ clearPendingScanUploads: wipes.scanUploads }))
+
 describe('setCachedJSON', () => {
   beforeEach(() => localStorage.clear())
 
@@ -155,7 +167,7 @@ describe('local financial data clearing', () => {
     removeItem.mockRestore()
   })
 
-  it('keeps the deliberate full wipe broad enough to remove queued user data', () => {
+  it('keeps the deliberate full wipe broad enough to remove queued user data', async () => {
     localStorage.setItem(CACHE_KEYS.pendingOperations, 'queued')
     localStorage.setItem(CACHE_KEYS.pendingTransactions, 'pending')
     localStorage.setItem('failed_operations', 'failed')
@@ -167,6 +179,11 @@ describe('local financial data clearing', () => {
     expect(localStorage.getItem(CACHE_KEYS.pendingTransactions)).toBeNull()
     expect(localStorage.getItem('failed_operations')).toBeNull()
     expect(localStorage.getItem('draft_transactions')).toBeNull()
+    await vi.waitFor(() => {
+      expect(wipes.purchaseCaptures).toHaveBeenCalled()
+      expect(wipes.draftDocuments).toHaveBeenCalled()
+      expect(wipes.scanUploads).toHaveBeenCalled()
+    })
   })
 })
 
