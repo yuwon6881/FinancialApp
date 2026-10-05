@@ -43,7 +43,6 @@ import { useAppThemeAndShortcuts } from './app/useAppThemeAndShortcuts'
 import { useNativePushActions } from './app/useNativePushActions'
 import { PurchaseCaptureBoundary, PurchaseCapturePanelSlot } from './app/PurchaseCaptureBoundary'
 import type { PurchaseCaptureOptions } from './app/usePurchaseCapture'
-import { buildMutationSuccessToast } from './lib/mutationToast'
 import { useNativeNavigation } from './lib/useNativeNavigation'
 
 const RuntimeBackgroundBridges = lazy(() => import('./app/RuntimeBackgroundBridges').then(module => ({ default: module.RuntimeBackgroundBridges })))
@@ -354,10 +353,6 @@ function App() {
       financial.mutateQueueDurably(previous => financial.enqueue(previous, 'transaction', 'add', id, { ...transaction, id, postedAt: transaction.postedAt ?? new Date().toISOString() }))
     },
     categories: financial.allCategories,
-    onSaved: transaction => {
-      const copy = buildMutationSuccessToast({ entity: 'Transaction', action: 'Added', recordName: transaction.description, messageVerb: 'added to the Ledger' })
-      dialogs.showToast(copy.message, copy.title, copy.tone)
-    },
   }
 
   const appContextValue = useAppRootContext({

@@ -22,6 +22,8 @@ interface AnchoredPopoverProps extends Omit<React.HTMLAttributes<HTMLDivElement>
   matchAnchorWidth?: boolean
   minWidth?: number
   viewportPadding?: number
+  /** Called for a pointer press outside both the anchor and the panel. */
+  onDismiss?: () => void
 }
 
 /**
@@ -41,6 +43,7 @@ export const AnchoredPopover = forwardRef<HTMLDivElement, AnchoredPopoverProps>(
   matchAnchorWidth = false,
   minWidth = 0,
   viewportPadding = 8,
+  onDismiss,
   className = '',
   style,
   ...props
@@ -134,6 +137,18 @@ export const AnchoredPopover = forwardRef<HTMLDivElement, AnchoredPopoverProps>(
       observer?.disconnect()
     }
   }, [anchorRef, isPositioned, open, updatePosition])
+
+  useEffect(() => {
+    if (!open || !onDismiss) return
+    // Capture phase so a sheet or modal that stops propagation cannot keep the layer pinned open.
+    const dismiss = (event: PointerEvent) => {
+      const target = event.target as Node
+      if (anchorRef.current?.contains(target) || panelRef.current?.contains(target)) return
+      onDismiss()
+    }
+    document.addEventListener('pointerdown', dismiss, true)
+    return () => document.removeEventListener('pointerdown', dismiss, true)
+  }, [anchorRef, onDismiss, open])
 
   if (!open) return null
 

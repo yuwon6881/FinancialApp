@@ -17,8 +17,6 @@ export interface PurchaseCaptureOptions {
   reveal: () => void
   open: (prefill: LedgerAddPrefill) => void
   enqueue: (id: string, transaction: Omit<Transaction, 'id'>) => void
-  /** Called once for a reviewer's own save; interrupted approvals finishing later stay quiet. */
-  onSaved?: (transaction: Omit<Transaction, 'id'>) => void
 }
 
 export function usePurchaseCapture(options: PurchaseCaptureOptions) {
@@ -61,7 +59,6 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
         },
         complete: () => PurchaseCapturePlugin.update({ owner, id, action: 'complete' }),
       })
-      if (!recovering) current.current.onSaved?.(transaction)
       await refreshRef.current()
     } finally { inFlight.current.delete(id) }
   }, [])

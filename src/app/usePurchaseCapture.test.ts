@@ -139,16 +139,17 @@ describe('purchase capture routing', () => {
     await expect(result.current.actions.save('capture', transaction as never)).rejects.toThrow()
     expect(mocks.update).not.toHaveBeenCalledWith(expect.objectContaining({ action: 'prepare' }))
   })
-  it('announces a reviewer save once and completes the capture', async () => {
+  // The outbox announces the queued add when it syncs; the capture flow must not toast it a second time.
+  it('queues a reviewer save once and completes the capture', async () => {
     mocks.state.mockResolvedValue({ ...snapshot, tapId: undefined })
     const transaction = { amount: -12.5, description: 'Cafe', date: '2026-09-27', category: 'Food', ledgerCategory: 'Essentials', accountId: 'cash' }
     mocks.update.mockImplementation(async ({ action }: { action: string }) => action === 'prepare' ? { ...candidate, prepared: transaction } : candidate)
-    const enqueue = vi.fn(), onSaved = vi.fn()
+    const enqueue = vi.fn()
     const categories = [{ id: 'food', name: 'Food', type: 'outflow' }] as never
-    const { result } = renderHook(() => usePurchaseCapture({ owner: 'one', eligible: true, hidden: false, formOpen: false, currency: 'MYR', categories, reveal: vi.fn(), open: vi.fn(), enqueue, onSaved }))
+    const { result } = renderHook(() => usePurchaseCapture({ owner: 'one', eligible: true, hidden: false, formOpen: false, currency: 'MYR', categories, reveal: vi.fn(), open: vi.fn(), enqueue }))
     await act(async () => { await result.current.actions.save('capture', transaction as never) })
+    expect(enqueue).toHaveBeenCalledTimes(1)
     expect(enqueue).toHaveBeenCalledWith('transaction', transaction)
     expect(mocks.update).toHaveBeenCalledWith({ owner: 'one', id: 'capture', action: 'complete' })
-    expect(onSaved).toHaveBeenCalledTimes(1)
   })
 })

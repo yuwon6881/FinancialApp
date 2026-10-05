@@ -158,6 +158,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
       <AnchoredPopover
         open={suggestions.showNoteSuggestions}
         anchorRef={descriptionAnchorRef}
+        onDismiss={() => suggestions.setShowNoteSuggestions(false)}
         matchAnchorWidth
         side="bottom"
         className="z-[190] overflow-y-auto overscroll-contain bg-card border border-blue-500/25 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
@@ -200,6 +201,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
         ref={suggestionsRef}
         open={showSuggestions && !suggestions.showNoteSuggestions && filteredSuggestions.length > 0}
         anchorRef={descriptionAnchorRef}
+        onDismiss={() => setShowSuggestions(false)}
         matchAnchorWidth
         side="bottom"
         className="z-[210] overflow-y-auto overscroll-contain bg-card border border-border/80 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
