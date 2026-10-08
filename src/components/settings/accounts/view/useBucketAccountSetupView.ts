@@ -160,7 +160,12 @@ export function useBucketAccountSetupView({
 
   const updateDraft = (id: string, change: Partial<Omit<BucketSetupDraftAccount, 'id'>>) => {
     setDrafts(previous => previous.map(draft => draft.id === id ? { ...draft, ...change } : draft))
-    setErrors(previous => ({ ...previous, [id]: '' }))
+    const draft = drafts.find(candidate => candidate.id === id)
+    // Whether a negative balance is allowed depends on the type, so a type change re-judges it.
+    const targetError = change.kind && draft
+      ? { [`${id}-target`]: liveTargetError(draft.target, change.kind) }
+      : {}
+    setErrors(previous => ({ ...previous, [id]: '', ...targetError }))
   }
 
   const updateDraftTarget = (id: string, rawValue: string) => {

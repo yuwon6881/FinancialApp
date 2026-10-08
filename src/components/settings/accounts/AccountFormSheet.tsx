@@ -13,7 +13,7 @@ import type { LedgerAccountInput } from '../../../app/financialData/accountActio
 import { getCategoryBadgeClass } from '../../../lib/categoryColors'
 import { cardOwed, isCreditCardKind } from '../../../lib/creditCards'
 import { formatCurrencyVal, maskCurrencyInput } from '../../../lib/utils'
-import { ACCOUNT_KIND_ICONS, accountBucketOptionsFor, accountKindOptionsFor } from './accountOptions'
+import { ACCOUNT_KIND_ICONS, ACCOUNT_KIND_LABELS, accountBucketOptionsFor, accountKindOptionsFor } from './accountOptions'
 
 export interface AccountFormSaveInput extends LedgerAccountInput {
   targetBalance?: number
@@ -199,19 +199,20 @@ export function AccountFormSheet({
     >
       <form id="ledger-account-form" noValidate onSubmit={submit} className="space-y-4">
         {/* Header summary banner */}
-        <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/15 p-3.5">
+        <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/15 p-3.5">
           <div className={`grid size-10 shrink-0 place-items-center rounded-xl border ${bucketBadgeClass}`} aria-hidden="true">
             <AccountIcon className="size-5" />
           </div>
           <div className="min-w-0 flex-1 space-y-0.5">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-bold text-foreground">{isEditing ? 'Update this account' : 'Account connection'}</p>
+              <p className="text-xs font-bold text-foreground">{isEditing ? 'Update this account' : 'New account'}</p>
               {isEditing && isArchived && (
                 <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-eyebrow uppercase text-muted-foreground">
                   Closed
                 </span>
               )}
             </div>
+            <p className="text-xs text-muted-foreground">{ACCOUNT_KIND_LABELS[kind]} in {bucket}</p>
             {isCard && (
               <p className="text-xs leading-relaxed text-muted-foreground">
                 Purchases count as spending when you make them. Paying the card later is a move between your accounts, not new spending.

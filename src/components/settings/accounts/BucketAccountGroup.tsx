@@ -27,7 +27,7 @@ export interface BucketAccountGroupProps {
   onDelete: (id: string) => void
   onMoveMoney: (bucket: LedgerAccount['bucket']) => void
   onNavigateToRecurring?: (recurringId: string) => void
-  onPayCard?: (card: LedgerAccount) => void
+  onClearCard?: (card: LedgerAccount) => void
   searchQuery?: string
 }
 
@@ -47,7 +47,7 @@ export function BucketAccountGroup({
   onDelete,
   onMoveMoney,
   onNavigateToRecurring,
-  onPayCard,
+  onClearCard,
   searchQuery,
 }: BucketAccountGroupProps) {
   const pagination = useClientPagination(accounts.length, 10)
@@ -151,7 +151,7 @@ export function BucketAccountGroup({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onNavigateToRecurring={onNavigateToRecurring}
-                onPayCard={onPayCard}
+                onClearCard={onClearCard}
               />
             ))}
             {accounts.length > pagination.pageSize && (

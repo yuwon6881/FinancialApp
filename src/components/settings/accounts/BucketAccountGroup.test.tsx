@@ -93,3 +93,68 @@ describe('BucketAccountGroup', () => {
     expect(screen.queryByRole('button', { name: 'Update balances' })).toBeNull()
   })
 })
+
+describe('BucketAccountGroup credit card rows', () => {
+  const renderGroup = (card: LedgerAccount) => {
+    const bank = makeAccount({ id: 'acc-bank', name: 'Main bank', remaining: 2000 })
+    render(
+      <BucketAccountGroup
+        bucket="Essentials"
+        description="Everyday spending"
+        accounts={[bank, card]}
+        allBucketAccounts={[bank, card]}
+        currency="MYR"
+        hideSensitive={false}
+        isDeleting={() => false}
+        isSyncing={() => false}
+        onAdd={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMoveMoney={vi.fn()}
+      />,
+    )
+  }
+
+  // A card charged past its limit has no credit left; a negative "available" reads as nonsense.
+  it('says how far a card is over its limit instead of showing negative credit', () => {
+    renderGroup(makeAccount({ id: 'acc-visa', name: 'Visa', kind: 'CreditCard', remaining: -5100, creditLimit: 5000 }))
+
+    expect(screen.getByText(/Over limit by/)).toBeDefined()
+    expect(screen.queryByText(/available of/)).toBeNull()
+  })
+
+  // An overpaid card owes nothing: the balance is the bank's money held on the card.
+  it('labels an overpaid card as in credit', () => {
+    renderGroup(makeAccount({ id: 'acc-visa', name: 'Visa', kind: 'CreditCard', remaining: 50, creditLimit: 5000 }))
+
+    expect(screen.getByText(/In credit/)).toBeDefined()
+    expect(screen.queryByText(/^Owed/)).toBeNull()
+  })
+
+  it('offers Clear balance only on an open card that owes something', () => {
+    const onClearCard = vi.fn()
+    const owing = makeAccount({ id: 'acc-visa', name: 'Visa', kind: 'CreditCard', remaining: -280 })
+    const paid = makeAccount({ id: 'acc-amex', name: 'Amex', kind: 'CreditCard', remaining: 0 })
+    render(
+      <BucketAccountGroup
+        bucket="Essentials"
+        description="Everyday spending"
+        accounts={[owing, paid]}
+        allBucketAccounts={[owing, paid]}
+        currency="MYR"
+        hideSensitive={false}
+        isDeleting={() => false}
+        isSyncing={() => false}
+        onAdd={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMoveMoney={vi.fn()}
+        onClearCard={onClearCard}
+      />,
+    )
+
+    screen.getByRole('button', { name: 'Clear Visa balance' }).click()
+    expect(onClearCard).toHaveBeenCalledWith(owing)
+    expect(screen.queryByRole('button', { name: 'Clear Amex balance' })).toBeNull()
+  })
+})

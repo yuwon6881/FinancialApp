@@ -1,5 +1,4 @@
-import type { LedgerAccount, LedgerAccountKind } from '../types'
-import type { LedgerAddPrefill } from '../app/useCycleNavigation'
+import type { LedgerAccount, LedgerAccountKind, Transaction, TransactionCategory } from '../types'
 import { roundMoney } from './money'
 
 // A credit card is a ledger account whose balance may sit below zero: the negative balance is what
@@ -52,39 +51,108 @@ export function splitBucketCards(accounts: ReadonlyArray<LedgerAccount>): Bucket
   return { cash, owed, isShort: owed > 0 && cash < owed }
 }
 
-/**
- * The account a card payment should leave from by default: the open non-card account in the same
- * bucket holding the most. Null when the bucket has none, so the form asks instead of guessing.
- */
-export function defaultCardPaymentSource(
-  card: Pick<LedgerAccount, 'id' | 'bucket'>,
-  accounts: ReadonlyArray<LedgerAccount>,
-): LedgerAccount | null {
-  const candidates = accounts.filter(account =>
-    account.bucket === card.bucket
-    && account.id !== card.id
-    && !account.isArchived
-    && !isCreditCard(account))
-  if (candidates.length === 0) return null
-  return candidates.reduce((best, account) => account.remaining > best.remaining ? account : best)
-}
 
 /**
- * A card payment is an in-bucket move from a cash account to the card: it settles debt the bucket
- * already counted, so it has no bucket effect and never reports as spending.
+ * Accounts a card can be paid from here: open cash accounts in the spending buckets, the card's own
+ * bucket first and the fullest first within it. Stability and Growth are left to the ledger form,
+ * which asks the reload and contribution questions a payment out of them needs.
  */
-export function buildCardPaymentPrefill(
-  card: LedgerAccount,
+export function cardPaymentSources(
+  card: Pick<LedgerAccount, 'id' | 'bucket'>,
   accounts: ReadonlyArray<LedgerAccount>,
-): LedgerAddPrefill {
+): LedgerAccount[] {
+  return accounts
+    .filter(account =>
+      account.id !== card.id
+      && !account.isArchived
+      && !isCreditCard(account)
+      && CREDIT_CARD_BUCKETS.includes(account.bucket))
+    .sort((left, right) =>
+      Number(right.bucket === card.bucket) - Number(left.bucket === card.bucket)
+      || right.remaining - left.remaining)
+}
+
+const RESERVED_CATEGORY_NAMES = new Set(['transfer', 'adjustment'])
+const REBATE_CATEGORY_PATTERN = /cash\s*-?\s*back|rebate|refund|reward/i
+
+/**
+ * The category a card rebate is filed under by default: an inflow category that reads like cashback,
+ * else Other. Empty otherwise, so the sheet asks rather than filing a rebate under an unrelated name.
+ */
+export function defaultRebateCategory(categories: ReadonlyArray<TransactionCategory>): string {
+  const usable = categories.filter(category =>
+    !category.isPendingDelete
+    && category.type !== 'outflow'
+    && !RESERVED_CATEGORY_NAMES.has(category.name.trim().toLowerCase()))
+  return (usable.find(category => REBATE_CATEGORY_PATTERN.test(category.name))
+    ?? usable.find(category => category.name.trim().toLowerCase() === 'other'))?.name ?? ''
+}
+
+/** What the part of the bill not paid in cash was: taken off by the bank, or still owed. */
+export type CardRemainder = 'rebate' | 'owed'
+
+export interface CardSettlementInput {
+  card: LedgerAccount
+  source: LedgerAccount | undefined
+  amountPaid: number
+  /** Required only when the payment is below what is owed. */
+  remainder: CardRemainder | null
+  rebateCategory: string
+  /** yyyy-MM-dd */
+  date: string
+}
+
+export type CardSettlementPlan =
+  | { ok: true; transactions: Array<Omit<Transaction, 'id'>>; rebate: number; stillOwed: number }
+  | { ok: false; field: 'source' | 'amount' | 'remainder' | 'category'; message: string }
+
+/**
+ * Turns "I paid X towards this card" into ledger rows. The payment is a structural move into the
+ * card -- an AccountMove inside the bucket, or a Transfer from the other spending bucket -- so it is
+ * never spending. A rebate is a separate inflow on the card in the user's chosen category: the bank
+ * gave that money back, so it is visible in reports rather than hidden in a balance correction.
+ */
+export function planCardSettlement(input: CardSettlementInput): CardSettlementPlan {
+  const { card, source, rebateCategory, date } = input
   const owed = cardOwed(card)
-  return {
-    transactionType: 'transfer',
-    transferSource: card.bucket,
-    transferTarget: card.bucket,
-    accountId: defaultCardPaymentSource(card, accounts)?.id,
-    counterAccountId: card.id,
-    amount: owed > 0 ? owed.toFixed(2) : undefined,
-    description: `Pay ${card.name}`,
+  if (owed <= 0) return { ok: false, field: 'amount', message: 'Nothing is owed on this card.' }
+  if (!source) return { ok: false, field: 'source', message: 'Choose the account the payment came from.' }
+  if (!Number.isFinite(input.amountPaid) || input.amountPaid <= 0) {
+    return { ok: false, field: 'amount', message: 'Enter the amount you paid.' }
   }
+  const amountPaid = roundMoney(input.amountPaid)
+  if (amountPaid > owed) return { ok: false, field: 'amount', message: 'That is more than this card owes.' }
+  if (amountPaid > roundMoney(source.remaining)) {
+    return { ok: false, field: 'amount', message: `${source.name} does not hold that much.` }
+  }
+
+  const rest = roundMoney(owed - amountPaid)
+  if (rest > 0 && input.remainder === null) {
+    return { ok: false, field: 'remainder', message: 'Choose what happened to the rest.' }
+  }
+  const rebate = rest > 0 && input.remainder === 'rebate' ? rest : 0
+  if (rebate > 0 && !rebateCategory.trim()) {
+    return { ok: false, field: 'category', message: 'Choose a category for the rebate.' }
+  }
+
+  const transactions: Array<Omit<Transaction, 'id'>> = [{
+    date,
+    description: `Pay ${card.name}`,
+    category: 'Transfer',
+    ledgerCategory: source.bucket === card.bucket ? 'AccountMove' : `Transfer:${source.bucket}->${card.bucket}`,
+    amount: amountPaid,
+    accountId: source.id,
+    counterAccountId: card.id,
+  }]
+  if (rebate > 0) {
+    transactions.push({
+      date,
+      description: `Rebate on ${card.name}`,
+      category: rebateCategory.trim(),
+      ledgerCategory: card.bucket,
+      amount: rebate,
+      accountId: card.id,
+    })
+  }
+  return { ok: true, transactions, rebate, stillOwed: roundMoney(rest - rebate) }
 }

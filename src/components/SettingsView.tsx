@@ -7,6 +7,7 @@ import type {
   LedgerAccount,
   PushChannel,
   RecurringPayment,
+  Transaction,
   TransactionCategory,
   InvestmentAllocationOverview,
 } from '../types'
@@ -74,7 +75,7 @@ interface SettingsViewProps {
   onUpdateAccount?: (id: string, input: LedgerAccountInput) => Promise<void> | void
   onRequestDeleteAccount?: (id: string) => void
   onReconcileAccounts?: (input: LedgerAccountReconcileInput) => Promise<void> | void
-  onPayCard?: (card: LedgerAccount) => void
+  onSettleCard?: (transactions: Array<Omit<Transaction, 'id'>>) => void
   isCurrentCycle?: boolean
   activeSyncId?: string | null
   activeSyncIds?: string[]
@@ -283,7 +284,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             onUpdateAccount={(id, input) => props.onUpdateAccount?.(id, input)}
             onRequestDeleteAccount={id => props.onRequestDeleteAccount?.(id)}
             onReconcileAccounts={input => props.onReconcileAccounts?.(input)}
-            onPayCard={props.onPayCard}
+            categories={props.categoriesList || []}
+            onSettleCard={props.onSettleCard}
             isCurrentCycle={props.isCurrentCycle !== false}
           />
         </React.Suspense>

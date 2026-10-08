@@ -21,7 +21,7 @@ export interface AccountRowProps {
   onEdit: (account: LedgerAccount) => void
   onDelete: (id: string) => void
   onNavigateToRecurring?: (recurringId: string) => void
-  onPayCard?: (card: LedgerAccount) => void
+  onClearCard?: (card: LedgerAccount) => void
 }
 
 export function AccountRow({
@@ -35,7 +35,7 @@ export function AccountRow({
   onEdit,
   onDelete,
   onNavigateToRecurring,
-  onPayCard,
+  onClearCard,
 }: AccountRowProps) {
   const AccountIcon = ACCOUNT_KIND_ICONS[account.kind] ?? CircleHelp
   const bucketClass = getCategoryBadgeClass(account.bucket)
@@ -73,17 +73,24 @@ export function AccountRow({
                   <span className="font-semibold text-muted-foreground">Closed</span>
                 </>
               )}
-              {isCard && availableCredit !== null && !account.isArchived && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span>
+            </div>
+            {/* Its own line: beside the kind label it wrapped mid-phrase and left the separator dangling. */}
+            {isCard && availableCredit !== null && !account.isArchived && (
+              <p className="text-xs text-muted-foreground">
+                {availableCredit < 0 ? (
+                  <>
+                    {'Over limit by '}
+                    <SensitiveAmount value={-availableCredit} isMasked={hideSensitive} formatFn={formatMoney} />
+                  </>
+                ) : (
+                  <>
                     <SensitiveAmount value={availableCredit} isMasked={hideSensitive} formatFn={formatMoney} />
                     {' available of '}
                     <SensitiveAmount value={account.creditLimit ?? 0} isMasked={hideSensitive} formatFn={formatMoney} />
-                  </span>
-                </>
-              )}
-            </div>
+                  </>
+                )}
+              </p>
+            )}
           </div>
         </div>
 
@@ -93,13 +100,13 @@ export function AccountRow({
             under the name. From `sm:` the group hugs the trailing edge again -- there it usually
             shares a line with the name, and `ml-auto` is what keeps it off the left when a narrow
             bucket card forces it onto its own. */}
-        <div className="flex w-full items-center justify-between gap-x-3 gap-y-2 sm:ml-auto sm:w-auto sm:shrink-0 sm:justify-end">
+        <div className="flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:ml-auto sm:w-auto sm:shrink-0 sm:justify-end">
           <div className="flex shrink-0 items-center gap-2">
             {/* A card's balance reads as what is owed; its signed figure is still what the bucket counts. */}
-            {isCard && owed > 0 ? (
+            {isCard && (owed > 0 || account.remaining >= 0.005) ? (
               <span className={`text-xs font-bold sm:text-sm ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}>
-                {'Owed '}
-                <SensitiveAmount value={owed} isMasked={hideSensitive} formatFn={formatMoney} />
+                {owed > 0 ? 'Owed ' : 'In credit '}
+                <SensitiveAmount value={owed > 0 ? owed : account.remaining} isMasked={hideSensitive} formatFn={formatMoney} />
               </span>
             ) : (
               <SensitiveAmount
@@ -117,17 +124,19 @@ export function AccountRow({
             />
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5">
-            {isCard && owed > 0 && !account.isArchived && onPayCard && (
+          {/* A card's extra action can push the buttons onto their own line; ml-auto keeps them on
+              the trailing edge there instead of stranding them on the left. */}
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            {isCard && owed > 0 && !account.isArchived && onClearCard && (
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={() => onPayCard(account)}
+                onClick={() => onClearCard(account)}
                 disabled={disabled || isDeleting || hideSensitive}
-                aria-label={`Pay ${account.name}`}
+                aria-label={`Clear ${account.name} balance`}
               >
-                Pay card
+                Clear balance
               </Button>
             )}
             <Button

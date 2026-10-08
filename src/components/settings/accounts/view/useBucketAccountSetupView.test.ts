@@ -273,4 +273,26 @@ describe('useBucketAccountSetupView review flow', () => {
     act(() => result.current.prepareReview())
     expect(result.current.pending).not.toBeNull()
   })
+
+  // The negative-balance error belongs to the row's type, so changing the type re-judges the amount.
+  it('re-checks a draft balance when its type changes', async () => {
+    const bank: LedgerAccount = { ...ledgerAccount(500), bucket: 'Essentials' }
+    const { result } = renderHook(() => useBucketAccountSetupView({
+      isOpen: true,
+      bucket: 'Essentials',
+      accounts: [bank],
+      bucketTotal: 500,
+    }))
+
+    act(() => result.current.addDraft())
+    const id = result.current.drafts[0].id
+    act(() => result.current.updateDraftTarget(id, '-40.00'))
+    expect(result.current.errors[`${id}-target`]).toBe('Account balance cannot be negative.')
+
+    act(() => result.current.updateDraft(id, { kind: 'CreditCard' }))
+    expect(result.current.errors[`${id}-target`]).toBe('')
+
+    act(() => result.current.updateDraft(id, { kind: 'Cash' }))
+    expect(result.current.errors[`${id}-target`]).toBe('Account balance cannot be negative.')
+  })
 })

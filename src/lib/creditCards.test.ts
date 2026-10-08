@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import type { LedgerAccount } from '../types'
+import type { LedgerAccount, TransactionCategory } from '../types'
 import {
-  buildCardPaymentPrefill,
   cardAvailableCredit,
   cardOwed,
-  defaultCardPaymentSource,
+  cardPaymentSources,
+  defaultRebateCategory,
   isKindAllowedInBucket,
+  planCardSettlement,
   splitBucketCards,
 } from './creditCards'
 
@@ -59,34 +60,117 @@ describe('credit cards', () => {
     ])).toBeNull()
   })
 
-  it('pays a card by default from the richest open non-card account in its bucket', () => {
+  // Stability carries reload obligations and Growth carries contributions; a payment out of either
+  // needs the full ledger form, so the card sheet offers only the spending buckets.
+  it("offers open cash accounts from the spending buckets, the card's own bucket first", () => {
     const visa = account({ id: 'visa', kind: 'CreditCard', remaining: -300 })
     const accounts = [
       visa,
+      account({ id: 'rewards', bucket: 'Rewards', remaining: 9000 }),
       account({ id: 'cash', kind: 'Cash', remaining: 40 }),
       account({ id: 'bank', remaining: 900 }),
       account({ id: 'closed', remaining: 5000, isArchived: true }),
-      account({ id: 'rewards', bucket: 'Rewards', remaining: 9000 }),
+      account({ id: 'reserve', bucket: 'Stability', remaining: 7000 }),
+      account({ id: 'growth', bucket: 'Growth', remaining: 7000 }),
       account({ id: 'other-card', kind: 'CreditCard', remaining: 0 }),
     ]
 
-    expect(defaultCardPaymentSource(visa, accounts)?.id).toBe('bank')
-    expect(defaultCardPaymentSource(visa, [visa])).toBeNull()
+    expect(cardPaymentSources(visa, accounts).map(source => source.id)).toEqual(['bank', 'cash', 'rewards'])
   })
 
-  it('prefills a card payment as an in-bucket move of the owed amount into the card', () => {
-    const visa = account({ id: 'visa', name: 'Visa', kind: 'CreditCard', remaining: -312.5 })
-    const bank = account({ id: 'bank', remaining: 900 })
+  it('prefers a cashback-style inflow category for a rebate, then Other', () => {
+    const category = (name: string, type?: TransactionCategory['type'], extra: Partial<TransactionCategory> = {}): TransactionCategory =>
+      ({ id: name, name, type, ...extra })
 
-    expect(buildCardPaymentPrefill(visa, [visa, bank])).toEqual({
-      transactionType: 'transfer',
-      transferSource: 'Essentials',
-      transferTarget: 'Essentials',
-      accountId: 'bank',
-      counterAccountId: 'visa',
-      amount: '312.50',
-      description: 'Pay Visa',
+    expect(defaultRebateCategory([category('Food'), category('Other'), category('Card cashback', 'inflow')])).toBe('Card cashback')
+    expect(defaultRebateCategory([category('Rebates', 'outflow'), category('Other')])).toBe('Other')
+    expect(defaultRebateCategory([category('Refund', 'both', { isPendingDelete: true }), category('Salary', 'inflow')])).toBe('')
+    expect(defaultRebateCategory([category('Transfer'), category('Food', 'outflow')])).toBe('')
+  })
+})
+
+describe('planCardSettlement', () => {
+  const visa = account({ id: 'visa', name: 'Visa', kind: 'CreditCard', remaining: -280 })
+  const bank = account({ id: 'bank', name: 'Main bank', remaining: 2000 })
+  const rewardsBank = account({ id: 'rewards-bank', name: 'Fun money', bucket: 'Rewards', remaining: 500 })
+  const base = {
+    card: visa,
+    source: bank,
+    amountPaid: 280,
+    remainder: null,
+    rebateCategory: 'Cashback',
+    date: '2026-10-08',
+  }
+
+  it('pays the full amount owed as an in-bucket move that is not spending', () => {
+    expect(planCardSettlement(base)).toEqual({
+      ok: true,
+      rebate: 0,
+      stillOwed: 0,
+      transactions: [{
+        date: '2026-10-08',
+        description: 'Pay Visa',
+        category: 'Transfer',
+        ledgerCategory: 'AccountMove',
+        amount: 280,
+        accountId: 'bank',
+        counterAccountId: 'visa',
+      }],
     })
   })
 
+  it('clears the card when the bank took the rest off as a rebate', () => {
+    const plan = planCardSettlement({ ...base, amountPaid: 250, remainder: 'rebate' })
+
+    expect(plan).toMatchObject({ ok: true, rebate: 30, stillOwed: 0 })
+    expect(plan.ok && plan.transactions).toEqual([
+      expect.objectContaining({ ledgerCategory: 'AccountMove', amount: 250 }),
+      {
+        date: '2026-10-08',
+        description: 'Rebate on Visa',
+        category: 'Cashback',
+        ledgerCategory: 'Essentials',
+        amount: 30,
+        accountId: 'visa',
+      },
+    ])
+  })
+
+  it('leaves the rest owed on a partial payment and records no rebate', () => {
+    const plan = planCardSettlement({ ...base, amountPaid: 100, remainder: 'owed' })
+
+    expect(plan).toMatchObject({ ok: true, rebate: 0, stillOwed: 180 })
+    expect(plan.ok && plan.transactions).toHaveLength(1)
+  })
+
+  it('pays from the other spending bucket as a cross-bucket transfer into the card', () => {
+    const plan = planCardSettlement({ ...base, source: rewardsBank, amountPaid: 200, remainder: 'owed' })
+
+    expect(plan.ok && plan.transactions[0]).toMatchObject({
+      ledgerCategory: 'Transfer:Rewards->Essentials',
+      category: 'Transfer',
+      amount: 200,
+      accountId: 'rewards-bank',
+      counterAccountId: 'visa',
+    })
+  })
+
+  it('asks what happened to the rest instead of guessing', () => {
+    expect(planCardSettlement({ ...base, amountPaid: 250 })).toMatchObject({ ok: false, field: 'remainder' })
+  })
+
+  it('refuses an amount above what is owed, above what the account holds, or not above zero', () => {
+    expect(planCardSettlement({ ...base, amountPaid: 280.01 })).toMatchObject({ ok: false, field: 'amount' })
+    expect(planCardSettlement({ ...base, amountPaid: 0, remainder: 'rebate' })).toMatchObject({ ok: false, field: 'amount' })
+    expect(planCardSettlement({ ...base, amountPaid: Number.NaN })).toMatchObject({ ok: false, field: 'amount' })
+    expect(planCardSettlement({ ...base, source: { ...rewardsBank, remaining: 200 }, amountPaid: 280 }))
+      .toMatchObject({ ok: false, field: 'amount' })
+  })
+
+  it('needs a source account, a category for a rebate, and a card that owes something', () => {
+    expect(planCardSettlement({ ...base, source: undefined })).toMatchObject({ ok: false, field: 'source' })
+    expect(planCardSettlement({ ...base, amountPaid: 250, remainder: 'rebate', rebateCategory: '' }))
+      .toMatchObject({ ok: false, field: 'category' })
+    expect(planCardSettlement({ ...base, card: { ...visa, remaining: 10 } })).toMatchObject({ ok: false, field: 'amount' })
+  })
 })

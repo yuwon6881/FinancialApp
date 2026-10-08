@@ -1,4 +1,4 @@
-import type { LedgerAccount } from '../../types'
+import type { LedgerAccount, Transaction } from '../../types'
 import { createFinalId, type OutboxPayload } from '../../lib/outbox'
 import { triggerHaptic } from '../../lib/haptics'
 import type { UseOutboxResult } from '../../lib/useOutbox'
@@ -143,8 +143,24 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
     }))
   }
 
+  // Paying a card is one user action that may write two rows (the payment, then a rebate); they are
+  // queued in one mutation with ordered posting times so they replay and display in that order.
+  const handleSettleCard = (transactions: ReadonlyArray<Omit<Transaction, 'id'>>) => {
+    if (!guardSensitive() || transactions.length === 0) return
+    const postedAt = Date.now()
+    mutateQueue(queue => transactions.reduce((next, transaction, index) => {
+      const id = createFinalId('transaction')
+      return enqueue(next, 'transaction', 'add', id, {
+        ...transaction,
+        id,
+        postedAt: new Date(postedAt + index).toISOString(),
+      })
+    }, queue))
+  }
+
   return {
     handleAddAccount,
+    handleSettleCard,
     handleUpdateAccount,
     handleDeleteAccount,
     requestDeleteAccount,

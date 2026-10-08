@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Building2 } from 'lucide-react'
-import type { LedgerAccount, RecurringPayment } from '../../../types'
+import type { LedgerAccount, RecurringPayment, Transaction, TransactionCategory } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
 import { cn, formatCurrencyVal } from '../../../lib/utils'
@@ -13,6 +13,7 @@ import { isCreditCardKind } from '../../../lib/creditCards'
 import { AccountFormSheet, type AccountFormSaveInput } from './AccountFormSheet'
 import { BucketAccountGroup } from './BucketAccountGroup'
 import { BucketAccountSetupSheet } from './BucketAccountSetupSheet'
+import { ClearCardBalanceSheet } from './ClearCardBalanceSheet'
 import { useHighlightedElement } from '../../ui/useHighlightedElement'
 import {
   hasBucketAccountSetupChanged,
@@ -39,8 +40,10 @@ interface AccountsSectionProps {
   onRequestDeleteAccount: (id: string) => void
   onReconcileAccounts: (input: LedgerAccountReconcileInput) => Promise<void> | void
   onNavigateToRecurring?: (recurringId: string) => void
-  /** Opens a payment from one of the bucket's accounts to a credit card. */
-  onPayCard?: (card: LedgerAccount) => void
+  /** The user's categories; a card rebate is filed under one of them. */
+  categories?: TransactionCategory[]
+  /** Queues a card payment and, when the bank took some off, its rebate. */
+  onSettleCard?: (transactions: Array<Omit<Transaction, 'id'>>) => void
   isCurrentCycle: boolean
 }
 
@@ -82,7 +85,8 @@ export function AccountsSection({
   onRequestDeleteAccount,
   onReconcileAccounts,
   onNavigateToRecurring,
-  onPayCard,
+  categories = [],
+  onSettleCard,
   isCurrentCycle,
 }: AccountsSectionProps) {
   const [searchQuery, setSearchQuery] = useState('')
@@ -125,6 +129,9 @@ export function AccountsSection({
   const [setupPrefill, setSetupPrefill] = useState<BucketSetupPrefill | null>(null)
   const [pendingBalanceCorrection, setPendingBalanceCorrection] = useState<PendingBalanceCorrection | null>(null)
   const [isApplyingCorrection, setIsApplyingCorrection] = useState(false)
+  const [clearingCardId, setClearingCardId] = useState<string | null>(null)
+  // Read from the live list so the sheet shows the balance as it is now, not when it was opened.
+  const clearingCard = clearingCardId ? accounts.find(account => account.id === clearingCardId) ?? null : null
 
   const editSessionSnapshotRef = useRef<BucketSetupSessionSnapshot | null>(null)
 
@@ -157,6 +164,11 @@ export function AccountsSection({
     if (disabled || hideSensitive) return
     setSetupBucket(bucket)
     setSetupPrefill(prefill)
+  }
+
+  const openClearCard = (card: LedgerAccount) => {
+    if (disabled || hideSensitive) return
+    setClearingCardId(card.id)
   }
 
   const closeForm = () => {
@@ -307,7 +319,7 @@ export function AccountsSection({
               onDelete={onRequestDeleteAccount}
               onMoveMoney={openSetup}
               onNavigateToRecurring={onNavigateToRecurring}
-              onPayCard={onPayCard}
+              onClearCard={onSettleCard ? openClearCard : undefined}
               searchQuery={searchQuery}
             />
           ))}
@@ -346,6 +358,18 @@ export function AccountsSection({
         }}
         onReconcileAccounts={onReconcileAccounts}
       />
+
+      {/* Clear credit card balance sheet */}
+      {onSettleCard && (
+        <ClearCardBalanceSheet
+          card={clearingCard}
+          accounts={accounts}
+          categories={categories}
+          currency={currency}
+          onClose={() => setClearingCardId(null)}
+          onConfirm={onSettleCard}
+        />
+      )}
 
       {/* Single-account balance correction confirmation modal */}
       <CustomConfirmModal
