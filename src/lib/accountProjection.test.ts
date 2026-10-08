@@ -103,6 +103,36 @@ describe('projectAccountBalances', () => {
     expect(result.find(account => account.id === 'cash')?.remaining).toBe(40)
   })
 
+  // Mirrors the server: a card may be set below zero, an absent limit keeps the stored one, and
+  // leaving the card kind drops the limit.
+  it('projects a credit card reconciliation with its negative balance and limit', () => {
+    const card: LedgerAccount = {
+      id: 'visa', name: 'Visa', bucket: 'Essentials', kind: 'CreditCard', creditLimit: 3000,
+      isArchived: false, remaining: -100, createdAt: '2026-01-01', updatedAt: '2026-01-01',
+    }
+    const reconcile = (targets: OutboxPayload[], id: string) => op({
+      id,
+      entity: 'ledgerAccountReconcile',
+      targetId: id,
+      payload: { reconciliation: { operationId: id, bucket: 'Essentials', expectedBucketTotal: 0, targets } },
+    })
+
+    const kept = projectAccountBalances([card], [reconcile([
+      { id: 'visa', name: 'Visa', kind: 'CreditCard', isArchived: false, expectedCurrent: -100, target: -250 },
+    ], 'op-keep')])
+    expect(kept[0]).toMatchObject({ remaining: -250, creditLimit: 3000 })
+
+    const raised = projectAccountBalances([card], [reconcile([
+      { id: 'visa', name: 'Visa', kind: 'CreditCard', isArchived: false, expectedCurrent: -100, target: -100, creditLimit: 5000 },
+    ], 'op-raise')])
+    expect(raised[0]).toMatchObject({ remaining: -100, creditLimit: 5000, isPendingSync: true })
+
+    const debit = projectAccountBalances([card], [reconcile([
+      { id: 'visa', name: 'Visa', kind: 'Card', isArchived: false, expectedCurrent: -100, target: 0 },
+    ], 'op-debit')])
+    expect(debit[0]).toMatchObject({ kind: 'Card', creditLimit: null })
+  })
+
   it('projects an atomic reconciliation onto existing and new account rows', () => {
     const result = projectAccountBalances(accounts, [op({
       entity: 'ledgerAccountReconcile',

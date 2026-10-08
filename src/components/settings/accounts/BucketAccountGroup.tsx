@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react'
 import type { LedgerAccount } from '../../../types'
 import type { AccountBillRoster as AccountBillRosterType } from '../../../lib/accountBillRoster'
 import { formatCurrencyVal } from '../../../lib/utils'
+import { splitBucketCards } from '../../../lib/creditCards'
 import { getCategoryBadgeClass } from '../../../lib/categoryColors'
 import { Button } from '../../ui/Button'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
@@ -26,6 +27,7 @@ export interface BucketAccountGroupProps {
   onDelete: (id: string) => void
   onMoveMoney: (bucket: LedgerAccount['bucket']) => void
   onNavigateToRecurring?: (recurringId: string) => void
+  onPayCard?: (card: LedgerAccount) => void
   searchQuery?: string
 }
 
@@ -45,6 +47,7 @@ export function BucketAccountGroup({
   onDelete,
   onMoveMoney,
   onNavigateToRecurring,
+  onPayCard,
   searchQuery,
 }: BucketAccountGroupProps) {
   const pagination = useClientPagination(accounts.length, 10)
@@ -53,6 +56,7 @@ export function BucketAccountGroup({
   const openCount = allBucketAccounts.filter(account => !account.isArchived).length
   const totalBalance = allBucketAccounts.reduce((sum, account) => sum + account.remaining, 0)
   const hasAnyAccounts = allBucketAccounts.length > 0
+  const cardSplit = splitBucketCards(allBucketAccounts)
 
   return (
     <div
@@ -91,6 +95,21 @@ export function BucketAccountGroup({
               formatFn={value => formatCurrencyVal(value, currency)}
               className="mt-0.5 block text-lg font-extrabold text-foreground sm:text-xl"
             />
+            {/* The total already counts card debt; this line shows the two halves so the total
+                is never mistaken for cash in hand. */}
+            {cardSplit && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                <SensitiveAmount value={cardSplit.cash} isMasked={hideSensitive} formatFn={value => formatCurrencyVal(value, currency)} className="font-semibold text-foreground" />
+                {' in accounts · '}
+                <SensitiveAmount value={cardSplit.owed} isMasked={hideSensitive} formatFn={value => formatCurrencyVal(value, currency)} className="font-semibold text-foreground" />
+                {' owed on cards'}
+              </p>
+            )}
+            {cardSplit?.isShort && !hideSensitive && (
+              <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                Your {bucket} accounts can't pay off its cards in full today.
+              </p>
+            )}
           </div>
         </div>
 
@@ -132,6 +151,7 @@ export function BucketAccountGroup({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onNavigateToRecurring={onNavigateToRecurring}
+                onPayCard={onPayCard}
               />
             ))}
             {accounts.length > pagination.pageSize && (

@@ -162,7 +162,12 @@ if (!fs.existsSync(distAssetsPath)) {
 // for cross-platform gzip variance.
 // 225.5: raised from 223.5 (measured 223.93). Native app lifecycle and Capacitor biometrics/push integrations
 // for native platform support. Restores the established ~1.5 kB margin for cross-platform gzip variance.
-const CRITICAL_PATH_LIMIT_KB = 225.5
+// 227.0: raised from 225.5 (measured 225.57; 225.33 before the change). Credit-card accounts add a
+// credit limit that the eager wire mapping must deobfuscate and the eager reconcile projection must
+// carry, so a queued limit change shows before sync. The card helpers and the Pay card prefill stay
+// lazy (Settings and an on-demand import). The same seven chunks remain eager, and the limit
+// restores the established ~1.5 kB margin.
+const CRITICAL_PATH_LIMIT_KB = 227.0
 const PRECACHE_RAW_LIMIT_KB = 3 * 1024
 
 function criticalPathChunks(files) {

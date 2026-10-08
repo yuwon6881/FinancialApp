@@ -86,8 +86,9 @@ export interface WireSavingsGoalFundingUndoResult {
   goals?: WireSavingsGoal[]
 }
 
-export type WireLedgerAccount = Omit<LedgerAccount, 'remaining'> & {
+export type WireLedgerAccount = Omit<LedgerAccount, 'remaining' | 'creditLimit'> & {
   remaining: WireAmount
+  creditLimit?: WireAmount | null
 }
 
 export interface WireSavingsGoalCompletionResult {

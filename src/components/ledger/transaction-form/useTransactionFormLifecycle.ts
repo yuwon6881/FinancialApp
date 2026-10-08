@@ -242,6 +242,18 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
         if (autoOpenPrefill.transferTarget !== undefined) {
           dispatch({ type: 'SET_FIELD', field: 'transferTarget', value: autoOpenPrefill.transferTarget })
         }
+      } else {
+        // A prefill that already knows the movement, such as paying a credit card, carries its
+        // amount and buckets; a capture sets these above with its own review semantics.
+        if (autoOpenPrefill.amount) {
+          dispatch({ type: 'SET_FIELD', field: 'amount', value: autoOpenPrefill.amount })
+        }
+        if (autoOpenPrefill.transferSource) {
+          dispatch({ type: 'SET_FIELD', field: 'transferSource', value: autoOpenPrefill.transferSource })
+        }
+        if (autoOpenPrefill.transferTarget) {
+          dispatch({ type: 'SET_FIELD', field: 'transferTarget', value: autoOpenPrefill.transferTarget })
+        }
       }
       if (autoOpenPrefill.category) {
         dispatch({ type: 'SET_FIELD', field: 'category', value: autoOpenPrefill.category })

@@ -47,6 +47,7 @@ export function deobfuscateLedgerAccount(account: WireLedgerAccount): LedgerAcco
   return {
     ...account,
     remaining: deobfuscateAmount(account.remaining),
+    creditLimit: account.creditLimit == null ? null : deobfuscateAmount(account.creditLimit),
   }
 }
 

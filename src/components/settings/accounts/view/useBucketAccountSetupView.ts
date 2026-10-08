@@ -8,11 +8,13 @@ import {
   type BucketAccountReconciliation,
 } from '../../../../lib/accountReconciliation'
 import { roundMoney } from '../../../../lib/money'
+import { isCreditCardKind } from '../../../../lib/creditCards'
 
 export interface BucketSetupPrefill {
   name: string
   kind: LedgerAccountKind
   target: number
+  creditLimit?: number | null
 }
 
 export interface BucketSetupDraftAccount {
@@ -20,6 +22,7 @@ export interface BucketSetupDraftAccount {
   name: string
   kind: LedgerAccountKind
   target: string
+  creditLimit?: number | null
 }
 
 export interface BucketSetupPendingReview {
@@ -86,15 +89,23 @@ const parseAmount = (value: string) => {
 
 const NEGATIVE_BALANCE_ERROR = 'Account balance cannot be negative.'
 
+// A credit card's balance is below zero while money is owed on it; every other account is held at
+// zero or above.
+const isNegativeBalanceAllowed = (kind: LedgerAccountKind) => isCreditCardKind(kind)
+const isInvalidTarget = (value: number, kind: LedgerAccountKind) =>
+  Number.isNaN(value) || (value < 0 && !isNegativeBalanceAllowed(kind))
+
 // Review stays disabled while a balance is negative, so the reason must appear
 // as the user types. A half-entered calculator expression is not flagged here.
-const liveTargetError = (value: string) => parseAmount(value) < 0 ? NEGATIVE_BALANCE_ERROR : ''
+const liveTargetError = (value: string, kind: LedgerAccountKind) =>
+  parseAmount(value) < 0 && !isNegativeBalanceAllowed(kind) ? NEGATIVE_BALANCE_ERROR : ''
 
 const createDraft = (prefill?: BucketSetupPrefill): BucketSetupDraftAccount => ({
   id: createFinalId('ledgerAccount'),
   name: prefill?.name ?? '',
   kind: prefill?.kind ?? 'Bank',
   target: prefill ? roundMoney(prefill.target).toFixed(2) : '0.00',
+  ...(prefill?.creditLimit !== undefined ? { creditLimit: prefill.creditLimit } : {}),
 })
 
 export function useBucketAccountSetupView({
@@ -143,7 +154,8 @@ export function useBucketAccountSetupView({
   const updateTarget = (id: string, rawValue: string) => {
     const nextValue = maskCurrencyInput(rawValue, targetInputs[id] ?? '')
     setTargetInputs(previous => ({ ...previous, [id]: nextValue }))
-    setErrors(previous => ({ ...previous, [id]: liveTargetError(nextValue) }))
+    const kind = bucketAccounts.find(account => account.id === id)?.kind ?? 'Bank'
+    setErrors(previous => ({ ...previous, [id]: liveTargetError(nextValue, kind) }))
   }
 
   const updateDraft = (id: string, change: Partial<Omit<BucketSetupDraftAccount, 'id'>>) => {
@@ -154,7 +166,8 @@ export function useBucketAccountSetupView({
   const updateDraftTarget = (id: string, rawValue: string) => {
     const nextValue = maskCurrencyInput(rawValue, drafts.find(draft => draft.id === id)?.target ?? '')
     setDrafts(previous => previous.map(draft => draft.id === id ? { ...draft, target: nextValue } : draft))
-    setErrors(previous => ({ ...previous, [`${id}-target`]: liveTargetError(nextValue) }))
+    const kind = drafts.find(draft => draft.id === id)?.kind ?? 'Bank'
+    setErrors(previous => ({ ...previous, [`${id}-target`]: liveTargetError(nextValue, kind) }))
   }
 
   const addDraft = () => setDrafts(previous => [...previous, createDraft()])
@@ -170,8 +183,8 @@ export function useBucketAccountSetupView({
   })), [bucketAccounts, targetInputs])
   const parsedDraftTargets = useMemo(() => drafts.map(draft => ({ ...draft, targetValue: parseAmount(draft.target) })), [drafts])
   const hasInvalidTarget = useMemo(
-    () => parsedExistingTargets.some(account => !account.isArchived && (Number.isNaN(account.target) || account.target < 0))
-      || parsedDraftTargets.some(draft => Number.isNaN(draft.targetValue) || draft.targetValue < 0),
+    () => parsedExistingTargets.some(account => !account.isArchived && isInvalidTarget(account.target, account.kind))
+      || parsedDraftTargets.some(draft => isInvalidTarget(draft.targetValue, draft.kind)),
     [parsedDraftTargets, parsedExistingTargets],
   )
   const preview = useMemo<BucketAccountReconciliation | null>(() => {
@@ -209,12 +222,12 @@ export function useBucketAccountSetupView({
       else names.add(name.toLowerCase())
       const draftTarget = parseAmount(draft.target)
       if (Number.isNaN(draftTarget)) nextErrors[`${draft.id}-target`] = 'Enter a valid balance.'
-      else if (draftTarget < 0) nextErrors[`${draft.id}-target`] = NEGATIVE_BALANCE_ERROR
+      else if (draftTarget < 0 && !isNegativeBalanceAllowed(draft.kind)) nextErrors[`${draft.id}-target`] = NEGATIVE_BALANCE_ERROR
     }
     for (const account of parsedExistingTargets) {
       if (!account.isArchived) {
         if (Number.isNaN(account.target)) nextErrors[account.id] = 'Enter a valid balance.'
-        else if (account.target < 0) nextErrors[account.id] = NEGATIVE_BALANCE_ERROR
+        else if (account.target < 0 && !isNegativeBalanceAllowed(account.kind)) nextErrors[account.id] = NEGATIVE_BALANCE_ERROR
       }
     }
     if (!bucketAccounts.some(account => !account.isArchived) && drafts.length === 0) {

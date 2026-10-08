@@ -9,6 +9,7 @@ import { CustomConfirmModal } from '../../ui/CustomConfirmModal'
 import { Input } from '../../ui/Input'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { buildSingleAccountCorrection } from '../../../lib/accountBalanceCorrection'
+import { isCreditCardKind } from '../../../lib/creditCards'
 import { AccountFormSheet, type AccountFormSaveInput } from './AccountFormSheet'
 import { BucketAccountGroup } from './BucketAccountGroup'
 import { BucketAccountSetupSheet } from './BucketAccountSetupSheet'
@@ -38,6 +39,8 @@ interface AccountsSectionProps {
   onRequestDeleteAccount: (id: string) => void
   onReconcileAccounts: (input: LedgerAccountReconcileInput) => Promise<void> | void
   onNavigateToRecurring?: (recurringId: string) => void
+  /** Opens a payment from one of the bucket's accounts to a credit card. */
+  onPayCard?: (card: LedgerAccount) => void
   isCurrentCycle: boolean
 }
 
@@ -79,6 +82,7 @@ export function AccountsSection({
   onRequestDeleteAccount,
   onReconcileAccounts,
   onNavigateToRecurring,
+  onPayCard,
   isCurrentCycle,
 }: AccountsSectionProps) {
   const [searchQuery, setSearchQuery] = useState('')
@@ -184,6 +188,7 @@ export function AccountsSection({
           nextBalance: input.targetBalance,
           nextName: input.name,
           nextKind: input.kind,
+          nextCreditLimit: input.creditLimit,
           isArchived: input.isArchived,
         })
 
@@ -208,6 +213,7 @@ export function AccountsSection({
         name: input.name,
         kind: input.kind,
         target: openingAmount,
+        ...(input.creditLimit !== undefined ? { creditLimit: input.creditLimit } : {}),
       })
       closeForm()
       return
@@ -301,6 +307,7 @@ export function AccountsSection({
               onDelete={onRequestDeleteAccount}
               onMoveMoney={openSetup}
               onNavigateToRecurring={onNavigateToRecurring}
+              onPayCard={onPayCard}
               searchQuery={searchQuery}
             />
           ))}
@@ -350,7 +357,9 @@ export function AccountsSection({
         message={pendingBalanceCorrection && (
           <div className="space-y-3">
             <p>
-              The balance for <span className="font-semibold text-foreground">{pendingBalanceCorrection.account.name}</span> will be corrected from <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.account.remaining, currency)}</span> to <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.targetBalance, currency)}</span>.
+              {isCreditCardKind(pendingBalanceCorrection.correction.targets.find(target => target.id === pendingBalanceCorrection.account.id)?.kind)
+                ? <>The amount owed on <span className="font-semibold text-foreground">{pendingBalanceCorrection.account.name}</span> will be corrected from <span className="font-semibold text-foreground">{formatCurrencyVal(Math.max(0, -pendingBalanceCorrection.account.remaining), currency)}</span> to <span className="font-semibold text-foreground">{formatCurrencyVal(Math.max(0, -pendingBalanceCorrection.targetBalance), currency)}</span>.</>
+                : <>The balance for <span className="font-semibold text-foreground">{pendingBalanceCorrection.account.name}</span> will be corrected from <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.account.remaining, currency)}</span> to <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.targetBalance, currency)}</span>.</>}
             </p>
             <div className="space-y-1.5 rounded-xl border border-border/60 bg-muted/30 p-3 text-xs">
               <div className="flex items-center justify-between gap-3">

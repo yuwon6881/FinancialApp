@@ -245,4 +245,101 @@ describe('AccountFormSheet', () => {
 
     expect(screen.queryByText(/Growth is kept separate/i)).toBeNull()
   })
+
+  describe('credit cards', () => {
+    const mockCard: LedgerAccount = {
+      ...mockAccount,
+      id: 'acct-visa',
+      name: 'Visa',
+      kind: 'CreditCard',
+      remaining: -300,
+      creditLimit: 5000,
+    }
+
+    // The field reads as what is owed, so a positive entry is stored as a negative balance.
+    it('opens a card with what is owed and its limit', async () => {
+      const onSave = vi.fn()
+      render(
+        <AccountFormSheet
+          isOpen={true}
+          account={null}
+          defaultKind="CreditCard"
+          currency="MYR"
+          onClose={vi.fn()}
+          onSave={onSave}
+        />,
+      )
+
+      fireEvent.change(screen.getByPlaceholderText('Name this account'), { target: { value: 'Visa' } })
+      fireEvent.change(screen.getByLabelText(/Owed today \(MYR\)/i), { target: { value: '30000' } })
+      fireEvent.change(screen.getByLabelText(/Credit limit \(MYR\)/i), { target: { value: '500000' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Add account' }))
+
+      await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        kind: 'CreditCard',
+        openingAmount: -300,
+        creditLimit: 5000,
+      })))
+    })
+
+    it('shows the owed amount when editing and saves a new one as a negative balance', async () => {
+      const onSave = vi.fn()
+      render(
+        <AccountFormSheet
+          isOpen={true}
+          account={mockCard}
+          bucketAccounts={[mockAccount, mockCard]}
+          currency="MYR"
+          onClose={vi.fn()}
+          onSave={onSave}
+        />,
+      )
+
+      const owedInput = screen.getByLabelText(/Owed today \(MYR\)/i) as HTMLInputElement
+      expect(owedInput.value).toBe('300.00')
+      fireEvent.change(owedInput, { target: { value: '25000' } })
+      expect(screen.getByText(/Was owing .*300\.00/)).toBeDefined()
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+      await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        targetBalance: -250,
+        creditLimit: 5000,
+      })))
+    })
+
+    it('will not close a card that still owes money', () => {
+      render(
+        <AccountFormSheet
+          isOpen={true}
+          account={mockCard}
+          currency="MYR"
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+        />,
+      )
+
+      const archive = screen.getByLabelText(/Mark account as closed/i) as HTMLInputElement
+      expect(archive.disabled).toBe(true)
+      expect(screen.getByText('Pay off this card before closing it.')).toBeDefined()
+    })
+
+    it('rejects a limit of zero', () => {
+      const onSave = vi.fn()
+      render(
+        <AccountFormSheet
+          isOpen={true}
+          account={mockCard}
+          currency="MYR"
+          onClose={vi.fn()}
+          onSave={onSave}
+        />,
+      )
+
+      fireEvent.change(screen.getByLabelText(/Credit limit \(MYR\)/i), { target: { value: '0' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+      expect(screen.getByText('Enter a credit limit above zero, or leave it blank.')).toBeDefined()
+      expect(onSave).not.toHaveBeenCalled()
+    })
+  })
 })

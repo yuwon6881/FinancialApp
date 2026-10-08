@@ -10,6 +10,8 @@ export interface SingleAccountCorrectionInput {
   nextBalance: number
   nextName?: string
   nextKind?: LedgerAccountKind
+  /** Omitted keeps the stored limit; null clears it. */
+  nextCreditLimit?: number | null
   isArchived?: boolean
   operationId?: string
 }
@@ -62,6 +64,7 @@ export function buildSingleAccountCorrection(input: SingleAccountCorrectionInput
       expectedIsArchived: account.isArchived,
       expectedCurrent: currentRemaining,
       target: targetRemaining,
+      ...(input.nextCreditLimit !== undefined ? { creditLimit: input.nextCreditLimit } : {}),
     }
   })
 

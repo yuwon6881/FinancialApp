@@ -13,7 +13,8 @@ import { Input } from '../../ui/Input'
 import { ModalActions } from '../../ui/ModalActions'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
-import { ACCOUNT_KIND_OPTIONS } from './accountOptions'
+import { accountKindOptionsFor } from './accountOptions'
+import { isCreditCardKind } from '../../../lib/creditCards'
 import {
   useBucketAccountSetupView,
   type BucketSetupDraftAccount,
@@ -51,6 +52,7 @@ function SignedAmount({ value, currency, hideSensitive }: { value: number; curre
 
 function NewAccountRow({
   draft,
+  bucket,
   currency,
   error,
   targetError,
@@ -59,6 +61,7 @@ function NewAccountRow({
   onRemove,
 }: {
   draft: BucketSetupDraftAccount
+  bucket: LedgerAccount['bucket']
   currency: string
   error?: string
   targetError?: string
@@ -81,9 +84,9 @@ function NewAccountRow({
       </FormField>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Account type" required>
-          <CustomSelect value={draft.kind} onChange={(value: LedgerAccountKind) => onChange({ kind: value })} options={ACCOUNT_KIND_OPTIONS} ariaLabel={`${draft.name || 'New'} account type`} className="w-full" />
+          <CustomSelect value={draft.kind} onChange={(value: LedgerAccountKind) => onChange({ kind: value })} options={accountKindOptionsFor(bucket)} ariaLabel={`${draft.name || 'New'} account type`} className="w-full" />
         </FormField>
-        <FormField label={`Current balance (${currency})`} required error={targetError}>
+        <FormField label={`Current balance (${currency})`} required error={targetError} hint={isCreditCardKind(draft.kind) ? 'Enter what you owe on this card as a negative amount.' : undefined}>
           <SmartAmountInput value={draft.target} onChange={event => onTargetChange(event.target.value)} placeholder="0.00" />
         </FormField>
       </div>
@@ -129,6 +132,7 @@ export function BucketAccountSetupSheet({
             } : {}),
             expectedCurrent: line.current,
             target: line.target,
+            ...(draft && draft.creditLimit !== undefined ? { creditLimit: draft.creditLimit } : {}),
           }
         })
         const operationId = operationIdRef.current ?? `reconcile-${bucket.toLowerCase()}-${Date.now()}`
@@ -168,7 +172,7 @@ export function BucketAccountSetupSheet({
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3"><div><h4 className="text-sm font-bold text-foreground">Accounts in {bucket}</h4></div><Button variant="secondary" size="sm" type="button" onClick={view.addDraft} disabled={isBusy}><Plus className="size-3.5" aria-hidden="true" />Add account</Button></div>
             {view.bucketAccounts.map(account => <div key={account.id} className="grid grid-cols-1 items-center gap-2.5 rounded-2xl border border-border/60 bg-card/70 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,12rem)] sm:gap-3"><div className="min-w-0"><p className={`truncate text-xs font-semibold ${account.isArchived ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{account.name}</p><p className="mt-0.5 text-xs text-muted-foreground">{account.isArchived ? 'Closed account · kept for history' : 'Open account'}</p></div>{account.isArchived ? <div className="text-right text-xs">{formatAmount(account.remaining)}</div> : <FormField label={`Current balance for ${account.name}`} error={view.errors[account.id]}><SmartAmountInput value={view.targetInputs[account.id] ?? ''} onChange={event => view.updateTarget(account.id, event.target.value)} placeholder="0.00" /></FormField>}</div>)}
-            {view.drafts.map(draft => <NewAccountRow key={draft.id} draft={draft} currency={currency} error={view.errors[draft.id]} targetError={view.errors[`${draft.id}-target`]} onChange={change => view.updateDraft(draft.id, change)} onTargetChange={value => view.updateDraftTarget(draft.id, value)} onRemove={() => view.removeDraft(draft.id)} />)}
+            {bucket && view.drafts.map(draft => <NewAccountRow key={draft.id} draft={draft} bucket={bucket} currency={currency} error={view.errors[draft.id]} targetError={view.errors[`${draft.id}-target`]} onChange={change => view.updateDraft(draft.id, change)} onTargetChange={value => view.updateDraftTarget(draft.id, value)} onRemove={() => view.removeDraft(draft.id)} />)}
             {view.bucketAccounts.length === 0 && view.drafts.length === 0 && <EmptyState density="compact" className="rounded-2xl bg-card/40" title="Add at least one account row to start this bucket." />}
           </div>
           {view.preview && view.preview.accountAdjustments.length > 0 && <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/15 p-3.5"><div className="flex items-center gap-2 text-xs font-bold text-foreground"><CheckCircle2 className="size-4 text-accent-ink" aria-hidden="true" />Planned balance changes</div>{view.preview.accountAdjustments.map(account => <div key={account.id} className="flex items-center justify-between gap-3 text-xs"><span className="min-w-0 truncate">{account.name}</span><SignedAmount value={account.diff} currency={currency} hideSensitive={hideSensitive} /></div>)}</div>}

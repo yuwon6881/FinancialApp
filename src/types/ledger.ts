@@ -40,7 +40,7 @@ export interface Transaction {
   isAccountBalanceAdjustment?: boolean
 }
 
-export type LedgerAccountKind = 'Bank' | 'EWallet' | 'Cash' | 'Card' | 'Other'
+export type LedgerAccountKind = 'Bank' | 'EWallet' | 'Cash' | 'Card' | 'CreditCard' | 'Other'
 
 export interface LedgerAccount {
   id: string
@@ -48,7 +48,10 @@ export interface LedgerAccount {
   bucket: 'Essentials' | 'Growth' | 'Stability' | 'Rewards'
   kind: LedgerAccountKind
   isArchived: boolean
+  /** Below zero only on a credit card, where it is the amount owed. */
   remaining: number
+  /** A credit card's borrowing limit, never money held. Null or absent when not recorded. */
+  creditLimit?: number | null
   createdAt: string
   updatedAt: string
   isPendingSync?: boolean

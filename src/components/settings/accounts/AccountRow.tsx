@@ -1,13 +1,14 @@
-import { Banknote, CircleHelp, CreditCard, Landmark, Wallet, type LucideIcon } from 'lucide-react'
-import type { LedgerAccount, LedgerAccountKind } from '../../../types'
+import { CircleHelp } from 'lucide-react'
+import type { LedgerAccount } from '../../../types'
 import type { AccountBillRoster as AccountBillRosterType } from '../../../lib/accountBillRoster'
+import { cardAvailableCredit, cardOwed, isCreditCard } from '../../../lib/creditCards'
 import { formatCurrencyVal } from '../../../lib/utils'
 import { getCategoryBadgeClass } from '../../../lib/categoryColors'
 import { Button } from '../../ui/Button'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { AccountBillRoster } from './AccountBillRoster'
-import { ACCOUNT_KIND_LABELS } from './accountOptions'
+import { ACCOUNT_KIND_ICONS, ACCOUNT_KIND_LABELS } from './accountOptions'
 
 export interface AccountRowProps {
   account: LedgerAccount
@@ -20,14 +21,7 @@ export interface AccountRowProps {
   onEdit: (account: LedgerAccount) => void
   onDelete: (id: string) => void
   onNavigateToRecurring?: (recurringId: string) => void
-}
-
-const KIND_ICONS: Record<LedgerAccountKind, LucideIcon> = {
-  Bank: Landmark,
-  EWallet: Wallet,
-  Cash: Banknote,
-  Card: CreditCard,
-  Other: CircleHelp,
+  onPayCard?: (card: LedgerAccount) => void
 }
 
 export function AccountRow({
@@ -41,9 +35,14 @@ export function AccountRow({
   onEdit,
   onDelete,
   onNavigateToRecurring,
+  onPayCard,
 }: AccountRowProps) {
-  const AccountIcon = KIND_ICONS[account.kind] ?? CircleHelp
+  const AccountIcon = ACCOUNT_KIND_ICONS[account.kind] ?? CircleHelp
   const bucketClass = getCategoryBadgeClass(account.bucket)
+  const isCard = isCreditCard(account)
+  const owed = cardOwed(account)
+  const availableCredit = cardAvailableCredit(account)
+  const formatMoney = (value: number) => formatCurrencyVal(value, currency)
 
   return (
     <div
@@ -74,6 +73,16 @@ export function AccountRow({
                   <span className="font-semibold text-muted-foreground">Closed</span>
                 </>
               )}
+              {isCard && availableCredit !== null && !account.isArchived && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    <SensitiveAmount value={availableCredit} isMasked={hideSensitive} formatFn={formatMoney} />
+                    {' available of '}
+                    <SensitiveAmount value={account.creditLimit ?? 0} isMasked={hideSensitive} formatFn={formatMoney} />
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -86,12 +95,20 @@ export function AccountRow({
             bucket card forces it onto its own. */}
         <div className="flex w-full items-center justify-between gap-x-3 gap-y-2 sm:ml-auto sm:w-auto sm:shrink-0 sm:justify-end">
           <div className="flex shrink-0 items-center gap-2">
-            <SensitiveAmount
-              value={account.remaining}
-              isMasked={hideSensitive}
-              formatFn={value => formatCurrencyVal(value, currency)}
-              className={`text-xs font-bold sm:text-sm ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}
-            />
+            {/* A card's balance reads as what is owed; its signed figure is still what the bucket counts. */}
+            {isCard && owed > 0 ? (
+              <span className={`text-xs font-bold sm:text-sm ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}>
+                {'Owed '}
+                <SensitiveAmount value={owed} isMasked={hideSensitive} formatFn={formatMoney} />
+              </span>
+            ) : (
+              <SensitiveAmount
+                value={account.remaining}
+                isMasked={hideSensitive}
+                formatFn={formatMoney}
+                className={`text-xs font-bold sm:text-sm ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}
+              />
+            )}
             <RowSyncStatus
               isDeleting={isDeleting}
               isSyncing={isSyncing}
@@ -101,6 +118,18 @@ export function AccountRow({
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
+            {isCard && owed > 0 && !account.isArchived && onPayCard && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => onPayCard(account)}
+                disabled={disabled || isDeleting || hideSensitive}
+                aria-label={`Pay ${account.name}`}
+              >
+                Pay card
+              </Button>
+            )}
             <Button
               type="button"
               variant="tertiary"

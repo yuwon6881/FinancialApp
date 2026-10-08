@@ -131,6 +131,8 @@ export function projectAccountBalances(
   }))
 }
 
+const ACCOUNT_KINDS: ReadonlyArray<LedgerAccount['kind']> = ['Bank', 'EWallet', 'Cash', 'Card', 'CreditCard', 'Other']
+
 function applyReconciliation(
   operation: QueuedOp,
   accounts: LedgerAccount[],
@@ -154,9 +156,7 @@ function applyReconciliation(
       ? roundMoney(target.target)
       : null
     if (!id || targetBalance === null || !name) continue
-    const normalizedKind = target.kind === 'EWallet' || target.kind === 'Cash' || target.kind === 'Card' || target.kind === 'Other' || target.kind === 'Bank'
-      ? target.kind
-      : undefined
+    const normalizedKind = ACCOUNT_KINDS.find(kind => kind === target.kind)
     let account = accounts.find(candidate => candidate.id === id)
     if (!account) {
       account = {
@@ -179,11 +179,18 @@ function applyReconciliation(
       const isNameChanged = account.name !== name
       const isKindChanged = normalizedKind !== undefined && account.kind !== normalizedKind
       const isArchivedChanged = account.isArchived !== (target.isArchived === true)
-      const hasChanged = isBalanceChanged || isNameChanged || isKindChanged || isArchivedChanged
+      const nextKind = normalizedKind ?? account.kind
+      // Mirrors the server: an absent limit keeps the stored one, and only a card keeps any limit.
+      const nextCreditLimit = nextKind !== 'CreditCard'
+        ? null
+        : 'creditLimit' in target ? target.creditLimit as number | null : (account.creditLimit ?? null)
+      const isLimitChanged = (account.creditLimit ?? null) !== nextCreditLimit
+      const hasChanged = isBalanceChanged || isNameChanged || isKindChanged || isArchivedChanged || isLimitChanged
 
       account.name = name
-      if (normalizedKind) account.kind = normalizedKind
+      account.kind = nextKind
       account.isArchived = target.isArchived === true
+      if (isLimitChanged) account.creditLimit = nextCreditLimit
       if (hasChanged) {
         account.isPendingSync = !operation.isCompleted
         account.pendingSyncOperationId = operation.isCompleted ? undefined : operation.id

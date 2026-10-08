@@ -1,13 +1,5 @@
 import { useEffect, useState } from 'react'
-import {
-  Archive,
-  Banknote,
-  CircleHelp,
-  CreditCard,
-  Landmark,
-  Wallet,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Archive, CircleHelp } from 'lucide-react'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { Button } from '../../ui/Button'
 import { Checkbox } from '../../ui/Checkbox'
@@ -19,8 +11,9 @@ import { SmartAmountInput } from '../../ui/SmartAmountInput'
 import type { LedgerAccount, LedgerAccountKind } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import { getCategoryBadgeClass } from '../../../lib/categoryColors'
+import { cardOwed, isCreditCardKind } from '../../../lib/creditCards'
 import { formatCurrencyVal, maskCurrencyInput } from '../../../lib/utils'
-import { ACCOUNT_BUCKET_OPTIONS, ACCOUNT_KIND_OPTIONS } from './accountOptions'
+import { ACCOUNT_KIND_ICONS, accountBucketOptionsFor, accountKindOptionsFor } from './accountOptions'
 
 export interface AccountFormSaveInput extends LedgerAccountInput {
   targetBalance?: number
@@ -43,13 +36,12 @@ interface AccountFormSheetProps {
   onSave: (input: AccountFormSaveInput) => Promise<void> | void
 }
 
-const KIND_ICONS: Record<LedgerAccountKind, LucideIcon> = {
-  Bank: Landmark,
-  EWallet: Wallet,
-  Cash: Banknote,
-  Card: CreditCard,
-  Other: CircleHelp,
-}
+const parseField = (value: string) => value.trim() ? Number(value) : Number.NaN
+
+// A card's balance field reads as what is owed, so the stored balance is its negation. Switching a
+// row in or out of the card kind re-expresses the same balance rather than flipping its sign.
+const toSigned = (field: number, isCard: boolean) => isCard ? 0 - field : field
+const toField = (signed: number, isCard: boolean) => toSigned(signed, isCard).toFixed(2)
 
 export function AccountFormSheet({
   isOpen,
@@ -68,31 +60,53 @@ export function AccountFormSheet({
   const [kind, setKind] = useState<LedgerAccountKind>(defaultKind)
   const [openingAmount, setOpeningAmount] = useState('')
   const [balanceAmount, setBalanceAmount] = useState('')
+  const [creditLimitAmount, setCreditLimitAmount] = useState('')
   const [isArchived, setIsArchived] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [openingError, setOpeningError] = useState<string | null>(null)
   const [balanceError, setBalanceError] = useState<string | null>(null)
+  const [creditLimitError, setCreditLimitError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   const isEditing = Boolean(account)
+  const isCard = isCreditCardKind(kind)
 
   useEffect(() => {
     if (!isOpen) return
+    const initialKind = account?.kind ?? defaultKind
     setName(account?.name ?? '')
     setBucket(account?.bucket ?? defaultBucket)
-    setKind(account?.kind ?? defaultKind)
+    setKind(initialKind)
     setOpeningAmount('')
-    setBalanceAmount(account ? account.remaining.toFixed(2) : '')
+    setBalanceAmount(account ? toField(account.remaining, isCreditCardKind(initialKind)) : '')
+    setCreditLimitAmount(typeof account?.creditLimit === 'number' ? account.creditLimit.toFixed(2) : '')
     setIsArchived(account?.isArchived ?? false)
     setError(null)
     setOpeningError(null)
     setBalanceError(null)
+    setCreditLimitError(null)
   }, [account, defaultBucket, defaultKind, isOpen])
 
-  const parsedBalance = balanceAmount.trim() ? Number(balanceAmount) : Number.NaN
-  const isBalanceValid = Number.isFinite(parsedBalance) && parsedBalance >= 0
+  const changeKind = (nextKind: LedgerAccountKind) => {
+    const wasCard = isCreditCardKind(kind)
+    const willBeCard = isCreditCardKind(nextKind)
+    if (wasCard !== willBeCard) {
+      const balance = parseField(balanceAmount)
+      if (Number.isFinite(balance)) setBalanceAmount(toField(toSigned(balance, wasCard), willBeCard))
+      const opening = parseField(openingAmount)
+      if (Number.isFinite(opening)) setOpeningAmount(toField(toSigned(opening, wasCard), willBeCard))
+    }
+    setKind(nextKind)
+  }
+
+  const parsedBalanceField = parseField(balanceAmount)
+  // A card may sit in credit, so only a non-card balance is held at zero or above.
+  const isBalanceValid = Number.isFinite(parsedBalanceField) && (isCard || parsedBalanceField >= 0)
+  const parsedBalance = isBalanceValid ? toSigned(parsedBalanceField, isCard) : Number.NaN
   const balanceDiff = isBalanceValid && account ? parsedBalance - account.remaining : 0
   const isBalanceDirty = isEditing && !account?.isArchived && isBalanceValid && Math.abs(balanceDiff) >= 0.005
+  const owesOnCard = Boolean(account && !account.isArchived && cardOwed(account) > 0)
+  const isArchiveBlocked = isBalanceDirty || (isCard && owesOnCard)
 
   const effectiveBucketTotal = bucketTotal ?? (
     bucketAccounts
@@ -123,29 +137,40 @@ export function AccountFormSheet({
       return
     }
 
-    const parsedOpening = openingAmount.trim() ? Number(openingAmount) : 0
-    if (!isEditing && (!Number.isFinite(parsedOpening) || parsedOpening < 0)) {
-      setOpeningError(parsedOpening < 0 ? 'Starting amount cannot be negative.' : 'Enter a valid starting amount.')
+    const parsedOpeningField = openingAmount.trim() ? Number(openingAmount) : 0
+    if (!isEditing && (!Number.isFinite(parsedOpeningField) || parsedOpeningField < 0)) {
+      setOpeningError(parsedOpeningField < 0
+        ? (isCard ? 'Amount owed cannot be negative.' : 'Starting amount cannot be negative.')
+        : 'Enter a valid starting amount.')
       return
     }
 
-    if (isEditing && !account?.isArchived && (!isBalanceValid || parsedBalance < 0)) {
-      setBalanceError(parsedBalance < 0 ? 'Account balance cannot be negative.' : 'Enter a valid balance.')
+    if (isEditing && !account?.isArchived && !isBalanceValid) {
+      setBalanceError(Number.isFinite(parsedBalanceField) ? 'Account balance cannot be negative.' : 'Enter a valid balance.')
+      return
+    }
+
+    const parsedLimit = creditLimitAmount.trim() ? Number(creditLimitAmount) : null
+    if (isCard && parsedLimit !== null && (!Number.isFinite(parsedLimit) || parsedLimit <= 0)) {
+      setCreditLimitError('Enter a credit limit above zero, or leave it blank.')
       return
     }
 
     setError(null)
     setOpeningError(null)
     setBalanceError(null)
+    setCreditLimitError(null)
     setIsSaving(true)
     try {
       await onSave({
         name: trimmedName,
         bucket,
         kind,
-        openingAmount: isEditing ? undefined : parsedOpening,
+        openingAmount: isEditing ? undefined : toSigned(parsedOpeningField, isCard),
         targetBalance: isEditing && isBalanceDirty ? parsedBalance : undefined,
         isArchived,
+        // The server drops the limit itself when an account stops being a card.
+        ...(isCard ? { creditLimit: parsedLimit } : {}),
       })
       onClose()
     } finally {
@@ -153,8 +178,9 @@ export function AccountFormSheet({
     }
   }
 
-  const AccountIcon = KIND_ICONS[kind] ?? CircleHelp
+  const AccountIcon = ACCOUNT_KIND_ICONS[kind] ?? CircleHelp
   const bucketBadgeClass = getCategoryBadgeClass(bucket)
+  const balanceLabel = isCard ? `Owed today (${currency})` : `Balance today (${currency})`
 
   return (
     <BottomSheet
@@ -186,6 +212,11 @@ export function AccountFormSheet({
                 </span>
               )}
             </div>
+            {isCard && (
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Purchases count as spending when you make them. Paying the card later is a move between your accounts, not new spending.
+              </p>
+            )}
           </div>
         </div>
 
@@ -205,12 +236,14 @@ export function AccountFormSheet({
             <FormField
               label="Bucket"
               required
-              hint={isBalanceDirty ? 'Move this account to another bucket on its own, then correct the balance.' : undefined}
+              hint={isBalanceDirty
+                ? 'Move this account to another bucket on its own, then correct the balance.'
+                : isCard ? 'Credit cards sit in Essentials or Rewards.' : undefined}
             >
               <CustomSelect
                 value={bucket}
                 onChange={setBucket}
-                options={ACCOUNT_BUCKET_OPTIONS}
+                options={accountBucketOptionsFor(kind)}
                 ariaLabel="Account bucket"
                 disabled={isBalanceDirty}
                 className="w-full"
@@ -219,8 +252,8 @@ export function AccountFormSheet({
             <FormField label="Account type" required>
               <CustomSelect
                 value={kind}
-                onChange={setKind}
-                options={ACCOUNT_KIND_OPTIONS}
+                onChange={changeKind}
+                options={accountKindOptionsFor(bucket)}
                 ariaLabel="Account type"
                 className="w-full"
               />
@@ -231,8 +264,9 @@ export function AccountFormSheet({
           {/* Balance Field */}
           {!isEditing ? (
             <FormField
-              label={`Balance today (${currency})`}
+              label={balanceLabel}
               error={openingError ?? undefined}
+              hint={isCard ? 'What you currently owe on this card. Leave it at 0 if it is paid off.' : undefined}
             >
               <SmartAmountInput
                 value={openingAmount}
@@ -243,7 +277,7 @@ export function AccountFormSheet({
           ) : (
             <div className="space-y-1.5">
               <FormField
-                label={`Balance today (${currency})`}
+                label={balanceLabel}
                 error={balanceError ?? undefined}
                 hint={account?.isArchived ? 'Reopen this account to correct its balance.' : undefined}
               >
@@ -257,15 +291,31 @@ export function AccountFormSheet({
               {account && !account.isArchived && (
                 <div className="px-0.5 text-xs">
                   {!isBalanceDirty ? (
-                    <span className="text-muted-foreground">Balance unchanged</span>
+                    <span className="text-muted-foreground">{isCard ? 'Amount owed unchanged' : 'Balance unchanged'}</span>
                   ) : (
                     <span className="font-medium text-accent-ink">
-                      Was {formatCurrencyVal(account.remaining, currency)} · {bucket} total becomes {formatCurrencyVal(nextBucketTotal, currency)}
+                      {isCard
+                        ? `Was owing ${formatCurrencyVal(Math.max(0, -account.remaining), currency)}`
+                        : `Was ${formatCurrencyVal(account.remaining, currency)}`} · {bucket} total becomes {formatCurrencyVal(nextBucketTotal, currency)}
                     </span>
                   )}
                 </div>
               )}
             </div>
+          )}
+
+          {isCard && (
+            <FormField
+              label={`Credit limit (${currency})`}
+              error={creditLimitError ?? undefined}
+              hint="Optional. Shows how much room is left on the card. It is never counted as money you have."
+            >
+              <SmartAmountInput
+                value={creditLimitAmount}
+                onChange={event => setCreditLimitAmount(maskCurrencyInput(event.target.value, creditLimitAmount))}
+                placeholder="No limit recorded"
+              />
+            </FormField>
           )}
         </div>
 
@@ -282,7 +332,7 @@ export function AccountFormSheet({
             >
               <label
                 className={`flex items-start justify-between gap-3 p-3.5 ${
-                  isBalanceDirty
+                  isArchiveBlocked
                     ? 'cursor-not-allowed opacity-60'
                     : 'cursor-pointer'
                 }`}
@@ -312,14 +362,16 @@ export function AccountFormSheet({
                     <p className="text-xs leading-relaxed text-muted-foreground">
                       {isBalanceDirty
                         ? 'Save the balance correction first.'
-                        : 'Hidden from new entries.'}
+                        : isCard && owesOnCard
+                          ? 'Pay off this card before closing it.'
+                          : 'Hidden from new entries.'}
                     </p>
                   </div>
                 </div>
                 <Checkbox
                   checked={isArchived}
                   onChange={event => setIsArchived(event.target.checked)}
-                  disabled={isBalanceDirty}
+                  disabled={isArchiveBlocked}
                   aria-label="Mark account as closed"
                   className="mt-1"
                 />

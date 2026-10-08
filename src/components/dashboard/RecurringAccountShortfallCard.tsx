@@ -64,7 +64,9 @@ export function RecurringAccountShortfallCard({
               </span>
             </div>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              {primary.accountName} has {formatSensitive(primary.accountBalance)}, but {primary.name} needs {formatSensitive(primary.amount)}. Transfer at least {formatSensitive(primary.shortfall)} to avoid a missed auto-deduction.
+              {primary.isCreditCard
+                ? <>{primary.accountName} has {formatSensitive(primary.accountBalance)} of credit left, but {primary.name} needs {formatSensitive(primary.amount)}. Pay at least {formatSensitive(primary.shortfall)} off the card to avoid a declined charge.</>
+                : <>{primary.accountName} has {formatSensitive(primary.accountBalance)}, but {primary.name} needs {formatSensitive(primary.amount)}. Transfer at least {formatSensitive(primary.shortfall)} to avoid a missed auto-deduction.</>}
               {othersCount > 0 && ` ${othersCount} other auto-deduction${othersCount > 1 ? 's are' : ' is'} also short on funds.`}
             </p>
           </div>

@@ -247,4 +247,30 @@ describe('useBucketAccountSetupView review flow', () => {
 
     expect(result.current.pending).not.toBeNull()
   })
+
+  // A credit card's balance is below zero while money is owed on it, so only its row may go negative.
+  it('accepts a negative balance on a credit card row and on a prefilled card draft', async () => {
+    const card: LedgerAccount = { ...ledgerAccount(-100), id: 'visa', name: 'Visa', bucket: 'Essentials', kind: 'CreditCard' }
+    const bank: LedgerAccount = { ...ledgerAccount(500), bucket: 'Essentials' }
+    const { result } = renderHook(() => useBucketAccountSetupView({
+      isOpen: true,
+      bucket: 'Essentials',
+      accounts: [bank, card],
+      bucketTotal: 400,
+      initialDraft: { name: 'Amex', kind: 'CreditCard', target: -50, creditLimit: 2000 },
+    }))
+
+    await waitFor(() => expect(result.current.targetInputs.visa).toBe('-100.00'))
+    act(() => result.current.updateTarget('visa', '-250.00'))
+    expect(result.current.errors.visa).toBe('')
+    act(() => result.current.updateTarget('main', '-1.00'))
+    expect(result.current.errors.main).toBe('Account balance cannot be negative.')
+    act(() => result.current.updateTarget('main', '500.00'))
+
+    const draft = result.current.drafts[0]
+    expect(draft.target).toBe('-50.00')
+    expect(draft.creditLimit).toBe(2000)
+    act(() => result.current.prepareReview())
+    expect(result.current.pending).not.toBeNull()
+  })
 })

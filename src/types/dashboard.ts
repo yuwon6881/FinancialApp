@@ -101,8 +101,10 @@ export interface RecurringAccountShortfall {
   offsetDays: number
   accountId: string
   accountName: string
+  /** For a credit card this is the credit still available, not money held. */
   accountBalance: number
   shortfall: number
+  isCreditCard?: boolean
 }
 
 

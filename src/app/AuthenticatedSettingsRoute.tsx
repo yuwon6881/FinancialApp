@@ -64,6 +64,13 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
       onUpdateAccount={financial.handleUpdateAccount}
       onRequestDeleteAccount={financial.requestDeleteAccount}
       onReconcileAccounts={financial.handleReconcileAccounts}
+      onPayCard={card => {
+        // Loaded on demand: this route module sits on the eager launch graph, the card helpers do not.
+        void import('../lib/creditCards').then(({ buildCardPaymentPrefill }) => {
+          nav.setAutoOpenLedgerPrefill(buildCardPaymentPrefill(card, financial.allAccounts))
+          nav.handleQuickAction('transaction', { txType: 'transfer' })
+        })
+      }}
       isCurrentCycle={isCurrentCycle}
       pushSupported={push.supported}
       pushLoading={push.loading}

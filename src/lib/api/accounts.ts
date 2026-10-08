@@ -10,6 +10,8 @@ export interface LedgerAccountMutation {
   kind: LedgerAccountKind
   isArchived?: boolean
   openingAmount?: number
+  /** Omitted keeps the stored limit; null clears it. */
+  creditLimit?: number | null
 }
 
 export interface LedgerAccountReconcileTarget {
@@ -23,7 +25,15 @@ export interface LedgerAccountReconcileTarget {
   expectedName?: string
   expectedKind?: LedgerAccountKind
   expectedIsArchived?: boolean
+  /** Omitted keeps the stored limit; null clears it. */
+  creditLimit?: number | null
 }
+
+// Absent and null mean different things to the server, so an unset limit stays off the wire.
+const creditLimitField = (creditLimit: number | null | undefined) =>
+  creditLimit === undefined
+    ? {}
+    : { creditLimit: creditLimit === null ? null : obfuscateAmount(creditLimit) }
 
 export interface LedgerAccountReconcileInput {
   operationId: string
@@ -61,6 +71,7 @@ function toBody(account: LedgerAccountMutation) {
     kind: account.kind,
     isArchived: account.isArchived ?? false,
     openingAmount: obfuscateAmount(account.openingAmount ?? 0),
+    ...creditLimitField(account.creditLimit),
   }
 }
 
@@ -122,6 +133,7 @@ export async function reconcileLedgerAccounts(input: LedgerAccountReconcileInput
         expectedName: target.expectedName,
         expectedKind: target.expectedKind,
         expectedIsArchived: target.expectedIsArchived,
+        ...creditLimitField(target.creditLimit),
       })),
     }),
     errorMessage: 'Could not reconcile ledger accounts',

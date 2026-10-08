@@ -23,6 +23,8 @@ export interface LedgerAccountInput {
   kind: LedgerAccount['kind']
   openingAmount?: number
   isArchived?: boolean
+  /** Omitted keeps the stored limit; null clears it. */
+  creditLimit?: number | null
 }
 
 export function createLedgerAccountActions(deps: LedgerAccountActionDependencies) {
@@ -47,6 +49,7 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
       isArchived: false,
       openingAmount,
       remaining: openingAmount,
+      ...(value.creditLimit !== undefined ? { creditLimit: value.creditLimit } : {}),
     }
     mutateQueue(previous => enqueue(previous, 'ledgerAccount', 'add', id, payload))
   }
@@ -110,6 +113,7 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
             name: account.name,
             bucket: account.bucket,
             kind: account.kind,
+            creditLimit: account.creditLimit ?? null,
             expectedCurrent: target.target,
             target: account.remaining,
             isArchived: account.isArchived,
