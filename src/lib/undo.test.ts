@@ -7,6 +7,16 @@ const op = (entity: QueuedOp['entity'], type: QueuedOp['type'], targetId = '1', 
 })
 
 describe('undo helpers', () => {
+  it('undoes both rows of a grouped card settlement together', () => {
+    const enqueue = vi.fn()
+    const transactions = [
+      { id: 'payment', amount: 250 }, { id: 'rebate', amount: 30 },
+    ]
+    const action = buildUndoAction(new Map(), op('transaction', 'bulkAdd', 'payment', { transactions }), undefined, enqueue)
+    expect(action).toBeDefined()
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith('transaction', 'bulkDelete', 'payment', { transactionIds: ['payment', 'rebate'], transactions })
+  })
   it('captures the first clean snapshot only', () => {
     const snapshots = new Map<string, UndoSnapshot>()
     snapshotForUndo(snapshots, 'transaction', '1', {

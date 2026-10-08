@@ -143,19 +143,19 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
     }))
   }
 
-  // Paying a card is one user action that may write two rows (the payment, then a rebate); they are
-  // queued in one mutation with ordered posting times so they replay and display in that order.
+  // A rebate depends on its payment. Keep the pair in one bulk request: the server stops at the
+  // first invalid row, and retries replay the same IDs rather than sending an orphan rebate.
   const handleSettleCard = (transactions: ReadonlyArray<Omit<Transaction, 'id'>>) => {
     if (!guardSensitive() || transactions.length === 0) return
     const postedAt = Date.now()
-    mutateQueue(queue => transactions.reduce((next, transaction, index) => {
-      const id = createFinalId('transaction')
-      return enqueue(next, 'transaction', 'add', id, {
-        ...transaction,
-        id,
-        postedAt: new Date(postedAt + index).toISOString(),
-      })
-    }, queue))
+    const rows = transactions.map((transaction, index) => ({
+      ...transaction,
+      id: createFinalId('transaction'),
+      postedAt: new Date(postedAt + index).toISOString(),
+    }))
+    mutateQueue(queue => rows.length === 1
+      ? enqueue(queue, 'transaction', 'add', rows[0].id, rows[0])
+      : enqueue(queue, 'transaction', 'bulkAdd', rows[0].id, { transactions: rows, description: transactions[0].description }))
   }
 
   return {

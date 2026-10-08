@@ -57,12 +57,12 @@ export function AccountRow({
           the balance printed against it. The name keeps a floor width, so the balance and actions
           drop to their own line instead of squeezing it out. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <div className="flex min-w-[9rem] flex-1 items-center gap-3">
+        <div className="flex min-w-[9rem] flex-1 items-center gap-3 overflow-hidden">
           <div className={`grid size-9 shrink-0 place-items-center rounded-xl border ${bucketClass}`} aria-hidden="true">
             <AccountIcon className="size-4" />
           </div>
-          <div className="min-w-0 space-y-0.5">
-            <p className={`truncate text-xs font-semibold sm:text-sm ${account.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p title={account.name} className={`truncate text-xs font-semibold sm:text-sm ${account.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
               {account.name}
             </p>
             <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
@@ -74,23 +74,6 @@ export function AccountRow({
                 </>
               )}
             </div>
-            {/* Its own line: beside the kind label it wrapped mid-phrase and left the separator dangling. */}
-            {isCard && availableCredit !== null && !account.isArchived && (
-              <p className="text-xs text-muted-foreground">
-                {availableCredit < 0 ? (
-                  <>
-                    {'Over limit by '}
-                    <SensitiveAmount value={-availableCredit} isMasked={hideSensitive} formatFn={formatMoney} />
-                  </>
-                ) : (
-                  <>
-                    <SensitiveAmount value={availableCredit} isMasked={hideSensitive} formatFn={formatMoney} />
-                    {' available of '}
-                    <SensitiveAmount value={account.creditLimit ?? 0} isMasked={hideSensitive} formatFn={formatMoney} />
-                  </>
-                )}
-              </p>
-            )}
           </div>
         </div>
 
@@ -162,6 +145,23 @@ export function AccountRow({
           </div>
         </div>
       </div>
+
+      {isCard && availableCredit !== null && !account.isArchived && (
+        <dl className="grid grid-cols-2 gap-3 rounded-lg bg-muted/20 px-3 py-2 text-xs">
+          <div className="min-w-0 space-y-1">
+            <dt className="text-muted-foreground">{availableCredit < 0 ? 'Over limit by' : 'Available credit'}</dt>
+            <dd className="break-words font-semibold tabular-nums text-foreground">
+              <SensitiveAmount value={Math.abs(availableCredit)} isMasked={hideSensitive} formatFn={formatMoney} />
+            </dd>
+          </div>
+          <div className="min-w-0 space-y-1 text-right">
+            <dt className="text-muted-foreground">Credit limit</dt>
+            <dd className="break-words font-semibold tabular-nums text-foreground">
+              <SensitiveAmount value={account.creditLimit!} isMasked={hideSensitive} formatFn={formatMoney} />
+            </dd>
+          </div>
+        </dl>
+      )}
 
       <AccountBillRoster
         roster={roster}

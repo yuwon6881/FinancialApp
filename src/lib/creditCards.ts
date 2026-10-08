@@ -115,12 +115,15 @@ export type CardSettlementPlan =
 export function planCardSettlement(input: CardSettlementInput): CardSettlementPlan {
   const { card, source, rebateCategory, date } = input
   const owed = cardOwed(card)
-  if (owed <= 0) return { ok: false, field: 'amount', message: 'Nothing is owed on this card.' }
-  if (!source) return { ok: false, field: 'source', message: 'Choose the account the payment came from.' }
+  if (card.isArchived || owed <= 0) return { ok: false, field: 'amount', message: 'Nothing is owed on an open card.' }
+  if (!source || !cardPaymentSources(card, [source]).length) {
+    return { ok: false, field: 'source', message: 'Choose an open Essentials or Rewards account the payment came from.' }
+  }
   if (!Number.isFinite(input.amountPaid) || input.amountPaid <= 0) {
     return { ok: false, field: 'amount', message: 'Enter the amount you paid.' }
   }
   const amountPaid = roundMoney(input.amountPaid)
+  if (amountPaid <= 0) return { ok: false, field: 'amount', message: 'Enter at least 0.01 as the amount paid.' }
   if (amountPaid > owed) return { ok: false, field: 'amount', message: 'That is more than this card owes.' }
   if (amountPaid > roundMoney(source.remaining)) {
     return { ok: false, field: 'amount', message: `${source.name} does not hold that much.` }

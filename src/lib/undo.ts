@@ -94,6 +94,13 @@ export function buildUndoAction(
   })
 
   switch (`${op.entity}:${op.type}`) {
+    case 'transaction:bulkAdd': {
+      const rows = Array.isArray(op.payload?.transactions) ? op.payload.transactions : []
+      const transactions = rows.filter((row): row is Transaction => Boolean(row && typeof row === 'object' && 'id' in row))
+      return transactions.length > 0
+        ? action('transaction', 'bulkDelete', String(op.targetId), { transactionIds: transactions.map(row => String(row.id)), transactions })
+        : undefined
+    }
     case 'transaction:bulkDelete': {
       const deleted = result && typeof result === 'object' && 'deleted' in result && Array.isArray(result.deleted)
         ? result.deleted

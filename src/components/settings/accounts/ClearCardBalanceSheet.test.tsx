@@ -41,6 +41,27 @@ const renderSheet = (overrides: Partial<React.ComponentProps<typeof ClearCardBal
 }
 
 describe('ClearCardBalanceSheet', () => {
+  it('asks again before treating newly arrived card debt as a bank rebate', () => {
+    const props = { card: visa, accounts: [bank, visa], categories, currency: 'MYR', onClose: vi.fn(), onConfirm: vi.fn() }
+    const { rerender } = render(<ClearCardBalanceSheet {...props} />)
+    fireEvent.change(screen.getByLabelText(/Amount paid \(MYR\)/i), { target: { value: '25000' } })
+    fireEvent.click(screen.getByRole('radio', { name: /The bank took it off/ }))
+    const updatedCard = { ...visa, remaining: -330 }
+    rerender(<ClearCardBalanceSheet {...props} card={updatedCard} accounts={[bank, updatedCard]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Clear balance' }))
+    expect(props.onConfirm).not.toHaveBeenCalled()
+    expect(screen.getByText('Choose what happened to the rest.')).toBeTruthy()
+  })
+  it('does not queue a rebate into a category that was deleted while the sheet was open', () => {
+    const props = { card: visa, accounts: [bank, visa], categories, currency: 'MYR', onClose: vi.fn(), onConfirm: vi.fn() }
+    const { rerender } = render(<ClearCardBalanceSheet {...props} />)
+    fireEvent.change(screen.getByLabelText(/Amount paid \(MYR\)/i), { target: { value: '25000' } })
+    fireEvent.click(screen.getByRole('radio', { name: /The bank took it off/ }))
+    rerender(<ClearCardBalanceSheet {...props} categories={categories.filter(category => category.name !== 'Cashback')} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Clear balance' }))
+    expect(props.onConfirm).not.toHaveBeenCalled()
+    expect(screen.getByText('Choose a category for the rebate.')).toBeTruthy()
+  })
   it('prefills the full amount owed and pays it from the fullest account in one move', () => {
     const { onConfirm, onClose } = renderSheet()
 

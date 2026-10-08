@@ -92,6 +92,7 @@ export function projectAccountBalances(
   const projectedAccounts = accounts.map(account => ({ ...account }))
   const accountsById = new Map(projectedAccounts.map(account => [account.id, account]))
   const balances = new Map(projectedAccounts.map(account => [account.id, account.remaining]))
+  const confirmedTransactionIds = new Set(baseTransactions.map(transaction => String(transaction.id)))
   const operations = activeOps
     .filter(operation => operation.entity === 'transaction' || operation.entity === 'ledgerAccountReconcile')
     .sort((left, right) => left.createdAt - right.createdAt)
@@ -105,6 +106,17 @@ export function projectAccountBalances(
     if (operation.type === 'add') {
       const transaction = currentTransaction(operation)
       if (transaction) addDelta(balances, transaction, projectedAccounts, accountsById, incomeAllocations, 1)
+      continue
+    }
+    if (operation.type === 'bulkAdd') {
+      const rows = Array.isArray(operation.payload?.transactions) ? operation.payload.transactions : []
+      for (const row of rows) {
+        const transaction = asTransaction(row)
+        // A failed bulk request can already have committed its first rows. Their effects are in
+        // the canonical snapshot; replaying their stable IDs on retry must not add them again.
+        if (transaction && !confirmedTransactionIds.has(transaction.id))
+          addDelta(balances, transaction, projectedAccounts, accountsById, incomeAllocations, 1)
+      }
       continue
     }
     if (operation.type === 'update') {

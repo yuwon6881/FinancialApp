@@ -137,6 +137,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
   const clearBackoffAttempts = () => deps.setBackoffAttempt?.(0)
 
   let processedAny = false
+  let needsCanonicalRefresh = false
   const successfulOps: SuccessfulSyncOp[] = []
 
   try {
@@ -342,6 +343,12 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           deps.setBackoff(online ? scheduleBackoff(err) : 0)
           break
         } else if (isPermanentError) {
+          // Bulk creation stops at the first invalid row; earlier rows may already be committed.
+          // Refresh canonical balances even when the whole operation moves to failed work.
+          if (nextOp.entity === 'transaction' && nextOp.type === 'bulkAdd') {
+            processedAny = true
+            needsCanonicalRefresh = true
+          }
           deps.emitFailureToast(nextOp, err)
           deps.mutateQueue(prev => prev.filter(item => item.id !== nextOp.id))
           deps.addFailedOp({
@@ -355,6 +362,10 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         } else {
           const updatedRetryCount = (nextOp.retryCount || 0) + 1
           if (updatedRetryCount >= MAX_RETRIES) {
+            if (nextOp.entity === 'transaction' && nextOp.type === 'bulkAdd') {
+              processedAny = true
+              needsCanonicalRefresh = true
+            }
             deps.emitFailureToast(nextOp, err)
             deps.mutateQueue(prev => prev.filter(item => item.id !== nextOp.id))
             deps.addFailedOp({
@@ -380,13 +391,14 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
     const retainedOps = deps.getRecentlyCompleted?.() ?? []
     const completedOps = mergeCompletedOps(retainedOps, successfulOps)
     if ((processedAny || completedOps.length > 0) && deps.now() >= deps.getBackoffUntil()) {
-      const shouldRefresh = deps.shouldRefresh?.(completedOps) ?? true
+      const shouldRefresh = needsCanonicalRefresh || (deps.shouldRefresh?.(completedOps) ?? true)
       if (!shouldRefresh) {
         deps.removeRecentlyCompleted(new Set(completedOps.map(({ op }) => op.id)))
       } else {
         let refreshSucceeded = false
         try {
-          await deps.refresh(completedOps, hintCollection.finish())
+          const hints = hintCollection.finish()
+          await deps.refresh(completedOps, needsCanonicalRefresh ? { ...hints, requiresFull: true } : hints)
           refreshSucceeded = true
         } catch (refreshErr) {
           const isSuperseded = getErrorName(refreshErr) === 'AbortError'

@@ -56,6 +56,11 @@ export function AccountsSkeleton({ isCurrentCycle = true }: { isCurrentCycle?: b
                     </div>
                     <Skeleton className="h-4 w-16" />
                   </div>
+                  {rowIdx === 2 && index === 1 && (
+                    <div className="flex justify-between gap-3 rounded-lg bg-muted/20 px-3 py-2">
+                      {[1, 2].map(column => <div key={column} className="space-y-1.5"><Skeleton className="h-3 w-20" /><Skeleton className="h-3.5 w-24" /></div>)}
+                    </div>
+                  )}
                   <div className="border-t border-border/30 pt-2">
                     <Skeleton className="h-3 w-40" />
                   </div>

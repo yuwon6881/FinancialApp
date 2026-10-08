@@ -301,6 +301,25 @@ describe('drainQueue — success path', () => {
 })
 
 describe('drainQueue — break conditions', () => {
+  it('keeps a failed grouped card settlement together and never dispatches its rebate alone', async () => {
+    const error = Object.assign(new Error('Payment account is closed'), { status: 400 })
+    const dispatch = vi.fn(async (): Promise<DispatchResult> => { throw error })
+    const settlement = op({ type: 'bulkAdd', payload: { transactions: [{ id: 'payment' }, { id: 'rebate' }] } })
+    const h = makeHarness({ resolveDispatch: () => dispatch, shouldRefresh: () => false }, [settlement])
+    const refresh = vi.fn(h.deps.refresh)
+    h.deps.refresh = refresh
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      await drainQueue(h.deps)
+      expect(dispatch).toHaveBeenCalledTimes(1)
+      expect(h.failedOps).toMatchObject([{ type: 'bulkAdd', payload: settlement.payload }])
+      expect(h.queue).toHaveLength(0)
+      expect(h.calls.refresh).toBe(1)
+      expect(refresh).toHaveBeenCalledWith([], expect.objectContaining({ requiresFull: true }))
+    } finally {
+      spy.mockRestore()
+    }
+  })
   it('stops before dispatching the op currently being edited', async () => {
     const dispatch = vi.fn(async (): Promise<DispatchResult> => undefined)
     const h = makeHarness({ resolveDispatch: () => dispatch, getEditingPendingId: () => 't1' }, [op({ targetId: 't1' })])

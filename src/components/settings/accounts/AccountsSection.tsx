@@ -130,20 +130,29 @@ export function AccountsSection({
   const [pendingBalanceCorrection, setPendingBalanceCorrection] = useState<PendingBalanceCorrection | null>(null)
   const [isApplyingCorrection, setIsApplyingCorrection] = useState(false)
   const [clearingCardId, setClearingCardId] = useState<string | null>(null)
+  useEffect(() => {
+    if (hideSensitive || disabled) setClearingCardId(null)
+    if (hideSensitive) {
+      setIsFormOpen(false)
+      setEditingAccount(null)
+      setSetupBucket(null)
+      setPendingBalanceCorrection(null)
+    }
+  }, [hideSensitive, disabled])
   // Read from the live list so the sheet shows the balance as it is now, not when it was opened.
   const clearingCard = clearingCardId ? accounts.find(account => account.id === clearingCardId) ?? null : null
 
   const editSessionSnapshotRef = useRef<BucketSetupSessionSnapshot | null>(null)
 
   const openAdd = (bucket: LedgerAccount['bucket'] = 'Essentials') => {
-    if (disabled) return
+    if (disabled || hideSensitive) return
     setEditingAccount(null)
     setFormDefaultBucket(bucket)
     setIsFormOpen(true)
   }
 
   const openEdit = (account: LedgerAccount) => {
-    if (disabled) return
+    if (disabled || hideSensitive) return
     const group = bucketGroups.find(g => g.bucket === account.bucket)
     editSessionSnapshotRef.current = {
       bucketTotal: roundMoney(group?.balance ?? 0),
@@ -310,7 +319,7 @@ export function AccountsSection({
               allBucketAccounts={group.allBucketAccounts}
               currency={currency}
               hideSensitive={hideSensitive}
-              disabled={disabled}
+              disabled={disabled || hideSensitive}
               isDeleting={isDeleting}
               isSyncing={isSyncing}
               billRosters={billRosters}
@@ -329,7 +338,7 @@ export function AccountsSection({
 
       {/* Account form sheet */}
       <AccountFormSheet
-        isOpen={isFormOpen && !pendingBalanceCorrection}
+        isOpen={isFormOpen && !pendingBalanceCorrection && !hideSensitive}
         account={editingAccount}
         existingAccounts={accounts}
         bucketAccounts={activeGroup?.allBucketAccounts}
@@ -342,7 +351,7 @@ export function AccountsSection({
 
       {/* Setup / Update balances sheet */}
       <BucketAccountSetupSheet
-        isOpen={setupBucket !== null}
+        isOpen={setupBucket !== null && !hideSensitive}
         bucket={setupBucket}
         // Reconciliation must include every account in the bucket; the search result is only for
         // display and must never turn a filtered edit into a partial bucket snapshot.
@@ -362,7 +371,7 @@ export function AccountsSection({
       {/* Clear credit card balance sheet */}
       {onSettleCard && (
         <ClearCardBalanceSheet
-          card={clearingCard}
+          card={hideSensitive || disabled || clearingCard?.isArchived ? null : clearingCard}
           accounts={accounts}
           categories={categories}
           currency={currency}
@@ -373,7 +382,7 @@ export function AccountsSection({
 
       {/* Single-account balance correction confirmation modal */}
       <CustomConfirmModal
-        isOpen={Boolean(pendingBalanceCorrection)}
+        isOpen={Boolean(pendingBalanceCorrection) && !hideSensitive}
         title="Confirm balance correction"
         confirmText="Apply balance correction"
         cancelText="Go back"

@@ -23,6 +23,29 @@ const op = (overrides: Partial<QueuedOp>): QueuedOp => ({
 })
 
 describe('projectAccountBalances', () => {
+  it('does not count a confirmed payment again when retrying a partially completed settlement', () => {
+    const payment = baseTransaction({ id: 'payment', category: 'Transfer', ledgerCategory: 'AccountMove', amount: 70, counterAccountId: 'visa' })
+    const rebate = baseTransaction({ id: 'rebate', category: 'Cashback', amount: 10, accountId: 'visa' })
+    const result = projectAccountBalances([
+      { ...accounts[0], remaining: 30 },
+      { ...accounts[0], id: 'visa', kind: 'CreditCard', remaining: -10 },
+    ], [op({ type: 'bulkAdd', payload: { transactions: [payment, rebate] } })], [payment])
+    expect(result.find(account => account.id === 'essentials')?.remaining).toBe(30)
+    expect(result.find(account => account.id === 'visa')?.remaining).toBe(0)
+  })
+
+  it('projects the payment and rebate in a grouped card settlement before and after sync', () => {
+    const card = { ...accounts[0], id: 'visa', kind: 'CreditCard' as const, remaining: -80 }
+    const settlement = op({ type: 'bulkAdd', payload: { transactions: [
+      baseTransaction({ id: 'payment', category: 'Transfer', ledgerCategory: 'AccountMove', amount: 70, counterAccountId: 'visa' }),
+      baseTransaction({ id: 'rebate', category: 'Cashback', amount: 10, accountId: 'visa' }),
+    ] } })
+    for (const isCompleted of [false, true]) {
+      const result = projectAccountBalances([...accounts, card], [{ ...settlement, isCompleted }])
+      expect(result.find(account => account.id === 'essentials')?.remaining).toBe(30)
+      expect(result.find(account => account.id === 'visa')?.remaining).toBe(0)
+    }
+  })
   it('projects an added transaction onto the server account snapshot', () => {
     const result = projectAccountBalances(accounts, [op({ payload: baseTransaction({ id: 'tx-new', amount: -15 }) as unknown as Record<string, unknown>, targetId: 'tx-new' })])
 

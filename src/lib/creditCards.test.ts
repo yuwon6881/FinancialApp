@@ -173,4 +173,14 @@ describe('planCardSettlement', () => {
       .toMatchObject({ ok: false, field: 'category' })
     expect(planCardSettlement({ ...base, card: { ...visa, remaining: 10 } })).toMatchObject({ ok: false, field: 'amount' })
   })
+
+  it('rejects a payment that rounds to zero and accounts that became ineligible', () => {
+    expect(planCardSettlement({ ...base, amountPaid: 0.001, remainder: 'owed' }))
+      .toMatchObject({ ok: false, field: 'amount' })
+    expect(planCardSettlement({ ...base, card: { ...visa, isArchived: true } }))
+      .toMatchObject({ ok: false, field: 'amount' })
+    for (const source of [visa, { ...rewardsBank, isArchived: true }, { ...rewardsBank, bucket: 'Growth' as const }]) {
+      expect(planCardSettlement({ ...base, source })).toMatchObject({ ok: false, field: 'source' })
+    }
+  })
 })

@@ -67,6 +67,11 @@ export function ClearCardBalanceSheet({
     // Reset only when a different card opens; live balance updates must not wipe what was typed.
   }, [card?.id])
 
+  // A live purchase must not inherit an earlier decision to write the remainder off as a rebate.
+  useEffect(() => {
+    setRemainder(null)
+  }, [owed])
+
   if (!card) return null
 
   const source = sources.find(candidate => candidate.id === sourceId)
@@ -77,7 +82,7 @@ export function ClearCardBalanceSheet({
     source,
     amountPaid: parsedAmount,
     remainder,
-    rebateCategory,
+    rebateCategory: rebateCategories.some(category => category.name === rebateCategory) ? rebateCategory : '',
     date: getTodayDateString(),
   })
   const errorFor = (field: 'source' | 'amount' | 'remainder' | 'category') =>

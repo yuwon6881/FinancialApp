@@ -12,6 +12,7 @@ import type { LedgerAccount, LedgerAccountKind } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import { getCategoryBadgeClass } from '../../../lib/categoryColors'
 import { cardOwed, isCreditCardKind } from '../../../lib/creditCards'
+import { roundMoney } from '../../../lib/money'
 import { formatCurrencyVal, maskCurrencyInput } from '../../../lib/utils'
 import { ACCOUNT_KIND_ICONS, ACCOUNT_KIND_LABELS, accountBucketOptionsFor, accountKindOptionsFor } from './accountOptions'
 
@@ -151,7 +152,7 @@ export function AccountFormSheet({
     }
 
     const parsedLimit = creditLimitAmount.trim() ? Number(creditLimitAmount) : null
-    if (isCard && parsedLimit !== null && (!Number.isFinite(parsedLimit) || parsedLimit <= 0)) {
+    if (isCard && parsedLimit !== null && (!Number.isFinite(parsedLimit) || roundMoney(parsedLimit) <= 0 || parsedLimit > 9999999999.99)) {
       setCreditLimitError('Enter a credit limit above zero, or leave it blank.')
       return
     }

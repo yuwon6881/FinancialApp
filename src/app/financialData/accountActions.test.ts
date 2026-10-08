@@ -35,19 +35,23 @@ const setup = (revealed = true) => {
 }
 
 describe('handleSettleCard', () => {
-  // The payment and its rebate are queued together and in order, each as an ordinary transaction
-  // add, so they sync, project, and undo like any other ledger row.
-  it('queues the card payment and its rebate as ordered transaction adds', () => {
+  it('keeps a rebate dependent on its payment through sync failure and retry', () => {
     const { actions, queue } = setup()
 
     actions.handleSettleCard([payment, rebate])
 
     const ops = queue()
-    expect(ops.map(op => [op.entity, op.type])).toEqual([['transaction', 'add'], ['transaction', 'add']])
-    expect(ops.map(op => op.payload?.description)).toEqual(['Pay Visa', 'Rebate on Visa'])
-    expect(ops[0].targetId).not.toBe(ops[1].targetId)
-    expect(ops.every(op => op.payload?.id === op.targetId)).toBe(true)
-    expect(Date.parse(String(ops[1].payload?.postedAt))).toBeGreaterThan(Date.parse(String(ops[0].payload?.postedAt)))
+    expect(ops.map(op => [op.entity, op.type])).toEqual([['transaction', 'bulkAdd']])
+    const rows = ops[0].payload?.transactions as Transaction[]
+    expect(rows.map(row => row.description)).toEqual(['Pay Visa', 'Rebate on Visa'])
+    expect(rows[0].id).not.toBe(rows[1].id)
+    expect(Date.parse(rows[1].postedAt!)).toBeGreaterThan(Date.parse(rows[0].postedAt!))
+  })
+
+  it('keeps a payment without a rebate as an ordinary add', () => {
+    const { actions, queue } = setup()
+    actions.handleSettleCard([payment])
+    expect(queue()).toMatchObject([{ entity: 'transaction', type: 'add', payload: payment }])
   })
 
   it('queues nothing while financial values are hidden', () => {
