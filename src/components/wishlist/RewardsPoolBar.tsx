@@ -99,7 +99,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
           <span className="block text-label text-muted-foreground">
             {bucketLabel} pool
           </span>
-          <div className="mt-1 flex items-baseline gap-2">
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="text-display text-foreground tabular-nums">{formatSensitive(bucketBalance)}</span>
             {expectedInflow > 0 && (
               <span className="text-label text-muted-foreground tabular-nums">

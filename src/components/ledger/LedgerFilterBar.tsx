@@ -205,7 +205,7 @@ export function LedgerFilterBar({
   )
 
   const searchField = (
-    <div className="group flex h-11 min-w-0 flex-1 items-center gap-1 rounded-full border border-border/70 bg-card pl-4 pr-1 transition focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/20">
+    <div className="group flex h-11 min-w-44 flex-1 items-center gap-1 rounded-full border border-border/70 bg-card pl-4 pr-1 transition focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/20">
       <Search className="size-4 shrink-0 text-muted-foreground transition-colors group-focus-within:text-foreground" aria-hidden="true" />
       <Input
         type="text"
@@ -270,99 +270,103 @@ export function LedgerFilterBar({
   return (
     <Toolbar
       aria-label="Ledger filters"
-      className="sticky top-[calc(3.5rem+env(safe-area-inset-top,0px))] z-30 -mx-4 flex-nowrap gap-2 bg-background/90 px-4 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/75 sm:top-0 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+      className="sticky top-[calc(3.5rem+env(safe-area-inset-top,0px))] z-30 -mx-4 flex-wrap gap-2 bg-background/90 px-4 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/75 sm:top-0 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
     >
       {searchField}
 
-      <CustomSelect
-        ariaLabel="Sort ledger transactions"
-        value={sortOrder}
-        onChange={onSortOrderChange}
-        options={SORT_OPTIONS}
-        align="right"
-        variant="ghost"
-        className="w-auto shrink-0"
-      />
-
-      <div
-        className="ledger-filter-dropdown relative flex shrink-0 justify-end"
-        onKeyDown={event => {
-          if (!isMobile && isFilterDropdownOpen && event.key === 'Escape') {
-            event.preventDefault()
-            event.stopPropagation()
-            onFilterDropdownOpenChange(false)
-            filterButtonRef.current?.focus()
-          }
-        }}
-      >
-        <Button
-          variant="secondary"
-          ref={filterButtonRef}
-          onClick={() => onFilterDropdownOpenChange(!isFilterDropdownOpen)}
-          aria-haspopup="dialog"
-          aria-expanded={isFilterDropdownOpen}
-          aria-label={filterButtonLabel}
-          className={cn('relative min-h-11 shrink-0 gap-2 px-3 lg:min-h-11 lg:px-4', activeFilterCount > 0 && 'border-primary/40 bg-primary/8 text-accent-ink hover:bg-primary/12')}
-        >
-          <Filter className="size-4" aria-hidden="true" />
-          <span className="hidden lg:inline">Filters</span>
-          {activeFilterCount > 0 && (
-            <span className="grid min-w-5 place-items-center rounded-full bg-primary px-1.5 text-caption font-semibold text-primary-foreground tabular-nums">
-              {activeFilterCount}
-            </span>
-          )}
-          <ChevronDown className={cn('hidden size-3.5 text-muted-foreground transition-transform lg:block', isFilterDropdownOpen && 'rotate-180')} aria-hidden="true" />
-        </Button>
-
-        <AnchoredPopover
-          ref={filterPanelRef}
-          open={isFilterDropdownOpen && !isMobile}
-          anchorRef={filterButtonRef}
+      {/* Sort and filter wrap as one group, so a narrow phone gives search its own row rather
+          than stranding the filter button on a line of its own. */}
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        <CustomSelect
+          ariaLabel="Sort ledger transactions"
+          value={sortOrder}
+          onChange={onSortOrderChange}
+          options={SORT_OPTIONS}
           align="right"
-          side="bottom"
-          role="dialog"
-          aria-label="Filter ledger entries"
-          className="ledger-filter-dropdown z-[200] flex w-[min(42rem,calc(100vw-16rem))] flex-col overflow-hidden rounded-overlay border border-border/70 bg-popover p-4 shadow-(--app-shadow-overlay) animate-in fade-in slide-in-from-top-2 duration-150"
+          variant="ghost"
+          className="w-auto shrink-0"
+        />
+
+        <div
+          className="ledger-filter-dropdown relative flex shrink-0 justify-end"
+          onKeyDown={event => {
+            if (!isMobile && isFilterDropdownOpen && event.key === 'Escape') {
+              event.preventDefault()
+              event.stopPropagation()
+              onFilterDropdownOpenChange(false)
+              filterButtonRef.current?.focus()
+            }
+          }}
         >
-          <div className="mb-3 flex shrink-0 items-center justify-between">
-            <span className="text-subsection text-foreground">Filters</span>
-            {clearAllButton}
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
-            <div className="grid grid-cols-2 gap-5">
-              <LedgerCategoryChecklist
-                checkboxFilters={checkboxFilters}
-                availableCategories={availableCategories}
-                onToggleFilter={onToggleFilter}
-                isMobile={false}
-              />
-              <LedgerAdvancedFilterControls {...advancedFilterProps} />
-            </div>
-          </div>
-
-          {showAllCycles && <div className="mt-3 border-t border-border/60 pt-3">{applyButton()}</div>}
-        </AnchoredPopover>
-
-        {isMobile && (
-          <BottomSheet
-            isOpen={isFilterDropdownOpen}
-            title="Filters"
-            onClose={() => onFilterDropdownOpenChange(false)}
-            headerActions={clearAllButton || undefined}
-            footer={showAllCycles ? applyButton(() => onFilterDropdownOpenChange(false)) : undefined}
+          <Button
+            variant="secondary"
+            ref={filterButtonRef}
+            onClick={() => onFilterDropdownOpenChange(!isFilterDropdownOpen)}
+            aria-haspopup="dialog"
+            aria-expanded={isFilterDropdownOpen}
+            aria-label={filterButtonLabel}
+            className={cn('relative min-h-11 shrink-0 gap-2 px-3 lg:min-h-11 lg:px-4', activeFilterCount > 0 && 'border-primary/40 bg-primary/8 text-accent-ink hover:bg-primary/12')}
           >
-            <div className="ledger-filter-dropdown space-y-5 pr-1">
-              <LedgerCategoryChecklist
-                checkboxFilters={checkboxFilters}
-                availableCategories={availableCategories}
-                onToggleFilter={onToggleFilter}
-                isMobile={true}
-              />
-              <LedgerAdvancedFilterControls {...advancedFilterProps} />
+            <Filter className="size-4" aria-hidden="true" />
+            <span className="hidden lg:inline">Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="grid min-w-5 place-items-center rounded-full bg-primary px-1.5 text-caption font-semibold text-primary-foreground tabular-nums">
+                {activeFilterCount}
+              </span>
+            )}
+            <ChevronDown className={cn('hidden size-3.5 text-muted-foreground transition-transform lg:block', isFilterDropdownOpen && 'rotate-180')} aria-hidden="true" />
+          </Button>
+
+          <AnchoredPopover
+            ref={filterPanelRef}
+            open={isFilterDropdownOpen && !isMobile}
+            anchorRef={filterButtonRef}
+            align="right"
+            side="bottom"
+            role="dialog"
+            aria-label="Filter ledger entries"
+            className="ledger-filter-dropdown z-[200] flex w-[min(42rem,calc(100vw-16rem))] flex-col overflow-hidden rounded-overlay border border-border/70 bg-popover p-4 shadow-(--app-shadow-overlay) animate-in fade-in slide-in-from-top-2 duration-150"
+          >
+            <div className="mb-3 flex shrink-0 items-center justify-between">
+              <span className="text-subsection text-foreground">Filters</span>
+              {clearAllButton}
             </div>
-          </BottomSheet>
-        )}
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+              <div className="grid grid-cols-2 gap-5">
+                <LedgerCategoryChecklist
+                  checkboxFilters={checkboxFilters}
+                  availableCategories={availableCategories}
+                  onToggleFilter={onToggleFilter}
+                  isMobile={false}
+                />
+                <LedgerAdvancedFilterControls {...advancedFilterProps} />
+              </div>
+            </div>
+
+            {showAllCycles && <div className="mt-3 border-t border-border/60 pt-3">{applyButton()}</div>}
+          </AnchoredPopover>
+
+          {isMobile && (
+            <BottomSheet
+              isOpen={isFilterDropdownOpen}
+              title="Filters"
+              onClose={() => onFilterDropdownOpenChange(false)}
+              headerActions={clearAllButton || undefined}
+              footer={showAllCycles ? applyButton(() => onFilterDropdownOpenChange(false)) : undefined}
+            >
+              <div className="ledger-filter-dropdown space-y-5 pr-1">
+                <LedgerCategoryChecklist
+                  checkboxFilters={checkboxFilters}
+                  availableCategories={availableCategories}
+                  onToggleFilter={onToggleFilter}
+                  isMobile={true}
+                />
+                <LedgerAdvancedFilterControls {...advancedFilterProps} />
+              </div>
+            </BottomSheet>
+          )}
+        </div>
       </div>
     </Toolbar>
   )

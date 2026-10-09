@@ -197,7 +197,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
       <PageHeader
         title="Vault"
         description="Receipts, invoices and statements, kept for tax season."
-        actions={<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+        actions={<div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <Button
             variant="secondary"
             type="button"
@@ -209,7 +209,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 showToast(getErrorMessage(error, 'The ZIP archive could not be prepared.'), 'Download Failed', 'error'))
                 .finally(() => setIsDownloadingArchive(false))
             }}
-            className="w-full justify-center sm:w-auto"
+            className="min-w-36 flex-1 justify-center whitespace-nowrap sm:flex-none"
           >
             <Download className="size-4" /> {isDownloadingArchive ? 'Preparing ZIP…' : taxYear ? `Download ${taxYear}` : 'Download all'}
           </Button>
@@ -221,7 +221,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               if (!guardSensitive()) return
               setIsUploadSheetOpen(true)
             }}
-            className="w-full shrink-0 justify-center sm:w-auto"
+            className="min-w-36 flex-1 justify-center whitespace-nowrap sm:flex-none"
           >
             <UploadCloud className="size-4" />
             Upload

@@ -46,7 +46,7 @@ const StatTile: React.FC<{
     </span>
     <span
       title={title}
-      className={`mt-1 block truncate text-section text-foreground tabular-nums sm:text-title ${tone === 'count' ? 'font-medium' : ''}`}
+      className={`mt-1 block truncate text-callout text-foreground tabular-nums @xs:text-section @lg:text-title ${tone === 'count' ? 'font-medium' : ''}`}
     >
       {value}
     </span>
@@ -160,7 +160,7 @@ const InteractiveStatTile: React.FC<{
         </div>
         <span
           title={title}
-          className={`mt-1 block max-w-full truncate text-section text-foreground tabular-nums sm:text-title ${tone === 'count' ? 'font-medium' : ''}`}
+          className={`mt-1 block max-w-full truncate text-callout text-foreground tabular-nums @xs:text-section @lg:text-title ${tone === 'count' ? 'font-medium' : ''}`}
         >
           {value}
         </span>
@@ -258,7 +258,7 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
           {/* Two figures per row until the rail-narrowed page can hold four. At the medium tier a
               four-column row gave each currency figure about a hundred pixels, so neighbouring
               totals ran into the divider between them. */}
-          <div className="mt-5 grid min-w-0 grid-cols-2 gap-x-4 gap-y-4 rounded-panel bg-surface-2/70 px-4 py-4 sm:px-5 lg:grid-cols-4 lg:gap-y-0">
+          <div className="@container mt-5 grid min-w-0 grid-cols-2 gap-x-4 gap-y-4 rounded-panel bg-surface-2/70 px-4 py-4 sm:px-5 lg:grid-cols-4 lg:gap-y-0">
             {isLoansView ? (
               <>
                 <InteractiveStatTile

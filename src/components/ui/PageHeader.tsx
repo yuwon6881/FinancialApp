@@ -33,8 +33,8 @@ export function PageHeader({
         <div className="flex min-w-0 items-start gap-3">
           {leading && <div className="shrink-0">{leading}</div>}
           <div className="min-w-0">
-            <div className="flex min-w-0 flex-nowrap items-center gap-2.5">
-              <h1 id={titleId} className="min-w-0 flex-1 text-title text-foreground sm:text-display">{title}</h1>
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-2">
+              <h1 id={titleId} className="min-w-0 flex-[1_1_auto] text-title text-foreground sm:text-display">{title}</h1>
               {titleActions && <div data-page-title-actions className="flex shrink-0 flex-wrap items-center gap-2">{titleActions}</div>}
             </div>
             {description && <div className="mt-1.5 max-w-2xl text-body text-muted-foreground line-clamp-2 sm:line-clamp-none">{description}</div>}
