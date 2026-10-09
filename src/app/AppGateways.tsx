@@ -2,7 +2,7 @@ import React, { lazy, Suspense } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Skeleton } from '../components/ui/Skeleton'
 import { AppLogo } from '../components/ui/AppLogo'
-import { ToastViewport } from '../components/ui/ToastViewport'
+import { ToastHost } from '../components/ui/ToastHost'
 import { AppProvider } from '../contexts/AppProvider'
 import type { AppContextValue } from '../contexts/AppContext'
 import { LaunchReady } from './LaunchReady'
@@ -80,7 +80,7 @@ export const AppGateways: React.FC<AppGatewaysProps> = ({
       <LaunchReady>
         <AppProvider value={appContextValue}>
           <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-primary/25 selection:text-foreground">
-            <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
+            <ToastHost toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
             <LockScreen
               mode="native-app"
               isOpen
@@ -112,7 +112,7 @@ export const AppGateways: React.FC<AppGatewaysProps> = ({
                   <Skeleton className="mt-2 h-2 w-20" />
                 </div>
               </div>
-              <div role="status" aria-live="polite" aria-atomic="true" className="flex items-center gap-2 text-xs font-semibold text-blue-500">
+              <div role="status" aria-live="polite" aria-atomic="true" className="flex items-center gap-2 text-xs font-semibold text-accent-ink">
                 <Loader2 className="animate-spin size-5" aria-hidden="true" />
                 <span className="hidden sm:inline">Loading your financial data securely…</span>
               </div>
@@ -131,7 +131,7 @@ export const AppGateways: React.FC<AppGatewaysProps> = ({
       <LaunchReady>
         <AppProvider value={appContextValue}>
           <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-primary/25 selection:text-foreground">
-            <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
+            <ToastHost toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
             <LockScreen
               isOpen
               username={session.username}
@@ -153,7 +153,7 @@ export const AppGateways: React.FC<AppGatewaysProps> = ({
           * their verdict always arrives after the sheet has closed; without this the first-run
           * user whose account the server refused watched the row vanish and was told nothing.
           */}
-        <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
+        <ToastHost toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
         <Suspense fallback={<ViewFallback />}>
           <AccountCoverageGate
             accounts={financial.allAccounts}

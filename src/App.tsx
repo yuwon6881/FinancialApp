@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import TopNav from "./TopNav.tsx"
 import * as api from './lib/api'
-import { ToastViewport } from './components/ui/ToastViewport'
+import { ToastHost } from './components/ui/ToastHost'
 import { AlertBanner } from './components/ui/AlertBanner'
 import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
 import { hasActiveWebAuthnRequest } from './lib/webauthnRequest'
@@ -385,7 +385,7 @@ function App() {
             onInvestmentAllocationChange={setInvestmentAllocation}
           />
         </Suspense>}
-        <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
+        <ToastHost toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
 
         <TopNav
           activeTab={prefs.activeTab}
@@ -451,7 +451,7 @@ function App() {
               type="button"
               onClick={() => financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)}
               disabled={financial.isBackgroundSyncing}
-              className="ml-1 font-bold underline underline-offset-2 hover:text-destructive/80 disabled:opacity-60 disabled:cursor-default cursor-pointer"
+              className="ml-1 font-semibold underline underline-offset-2 hover:text-destructive/80 disabled:opacity-60 disabled:cursor-default cursor-pointer"
             >
               {financial.isBackgroundSyncing ? 'Retrying…' : 'Retry'}
             </Button>

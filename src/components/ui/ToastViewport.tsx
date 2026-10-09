@@ -24,7 +24,7 @@ export interface ToastMessage {
   action?: ToastAction
 }
 
-interface ToastViewportProps {
+export interface ToastViewportProps {
   toasts: ToastMessage[]
   onDismiss: (id: string) => void
 }
