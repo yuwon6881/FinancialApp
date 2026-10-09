@@ -31,6 +31,8 @@ import { ChangePasswordSection } from './ChangePasswordSection'
 import { ActiveDevicesSection } from './settings/ActiveDevicesSection'
 import { FingerprintSection } from './settings/FingerprintSection'
 import { InvestmentPlanSection } from './settings/InvestmentPlanSection'
+import { useIsDenseContent } from '../lib/breakpoints'
+import { cn } from '../lib/utils'
 
 const AccountsSection = React.lazy(() => import('./settings/accounts/AccountsSection').then(m => ({ default: m.AccountsSection })))
 
@@ -143,6 +145,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     [props.categoriesList])
 
   const scope = props.scope ?? 'settings'
+  // Settings proper is a two-pane page once there is room for both: its sections down the side,
+  // the open one beside them. Budget and Accounts keep their tabs across the top.
+  const isDense = useIsDenseContent()
+  const twoPane = scope === 'settings' && isDense
   const allowedTabs = React.useMemo(() => SETTINGS_TABS_BY_SCOPE[scope].map(([id]) => id), [scope])
   const fitScope = React.useCallback(
     (tab: SettingsTabId): SettingsTabId => (allowedTabs.includes(tab) ? tab : allowedTabs[0]),
@@ -228,8 +234,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             : undefined}
       />
 
-      <SettingsTabs scope={scope} activeTab={activeTab} onChange={handleTabChange} />
+      <div className={cn(twoPane ? 'grid grid-cols-[15rem_minmax(0,1fr)] items-start gap-8' : 'space-y-6')}>
+      <SettingsTabs scope={scope} activeTab={activeTab} onChange={handleTabChange} vertical={twoPane} />
 
+      <div className="min-w-0 space-y-6">
       {activeTab === 'financial-model' && (
         <FinancialModelTab
           view={view}
@@ -316,6 +324,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           <FingerprintSection />
         </div>
       )}
+      </div>
+      </div>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -23,6 +23,7 @@ import { InsightCard, StatTile } from './cycle-summary/CycleSummaryCards'
 import { changeTone } from '../lib/cycleSummaryTone'
 import { Badge } from './ui/Badge'
 import { Meter } from './ui/Meter'
+import { RecapStory, type RecapStep } from './cycle-summary/RecapStory'
 
 interface CycleSummaryModalProps {
   isOpen: boolean
@@ -63,6 +64,10 @@ export function CycleSummaryModal({
     () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay, transactions, loans) : null,
     [data, previousData, wishlist, year, monthIndex, cycleDay, transactions, loans],
   )
+
+  const [step, setStep] = useState(0)
+  // Every opening, and every other cycle, starts the story from the top.
+  useEffect(() => { if (isOpen) setStep(0) }, [isOpen, monthIndex, year])
 
   const savingsRateChange = savingsRatePointChange(summary?.savingsRate ?? null, summary?.previousSavingsRate ?? null)
 
@@ -125,7 +130,11 @@ export function CycleSummaryModal({
           </p>
         </div>
       ) : (
-        <div className="space-y-7 text-sm leading-relaxed">
+        (() => {
+          // The recap as a short story, one chapter at a time: the bottom line first, then the
+          // buckets, the guides, how it compares, the moments, and where the money went.
+          const steps: RecapStep[] = [
+            { id: 'net', title: 'The bottom line', node: (
           <div className="grid gap-3 sm:grid-cols-[1.25fr_1fr]">
             <div className={`rounded-2xl border p-4 sm:p-5 ${summary.positive ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-orange-500/20 bg-orange-500/5'}`}>
               <div className="flex items-center gap-1.5 text-label font-medium text-muted-foreground">
@@ -148,10 +157,9 @@ export function CycleSummaryModal({
               )}
             </div>
           </div>
-
-
-
-          <Section title="Envelopes">
+            ) },
+            { id: 'buckets', title: 'Your buckets', node: (
+          <Section bare title="Envelopes">
             <div className="grid gap-3 sm:grid-cols-2">
               {summary.envelopes.map(envelope => (
                 <div key={envelope.name} className="rounded-control bg-surface-2/70 p-3.5">
@@ -216,9 +224,9 @@ export function CycleSummaryModal({
               ))}
             </div>
           </Section>
-
-          {summary.categoryLimits.length > 0 && (
-            <Section title="Cycle spending guides" icon={<Gauge className="size-3 text-muted-foreground" />}>
+            ) },
+            ...(summary.categoryLimits.length > 0 ? [{ id: 'guides', title: 'Spending guides', node: (
+<Section bare title="Cycle spending guides" icon={<Gauge className="size-3 text-muted-foreground" />}>
               <div className="rounded-control bg-surface-2/70 p-3.5">
                 <div className="mb-3 flex items-center justify-between gap-3 border-b border-border/40 pb-3">
                   <div>
@@ -263,10 +271,9 @@ export function CycleSummaryModal({
                 </div>
               </div>
             </Section>
-          )}
-
-          {summary.previousHasActivity && (
-            <Section title="Since last cycle">
+            ) }] : []),
+            ...(summary.previousHasActivity ? [{ id: 'compare', title: 'Since last cycle', node: (
+<Section bare title="Since last cycle">
               <div className="grid gap-3 sm:grid-cols-2">
                 {summary.spendingDelta !== null && (
                   <InsightCard
@@ -328,11 +335,9 @@ export function CycleSummaryModal({
                 )}
               </div>
             </Section>
-          )}
-
-          {/* Spending insights — backend-generated */}
-          {(summary.largestTxn || summary.biggestDay || summary.avgDailySpend !== null || summary.velocityFirstHalf !== null || summary.noSpendDays > 0 || summary.transactionCount > 0) && (
-            <Section title="Spending insights" icon={<Zap className="size-3 text-amber-400" />}>
+            ) }] : []),
+            ...(((summary.largestTxn || summary.biggestDay || summary.avgDailySpend !== null || summary.velocityFirstHalf !== null || summary.noSpendDays > 0 || summary.transactionCount > 0)) ? [{ id: 'moments', title: 'Spending moments', node: (
+<Section bare title="Spending insights" icon={<Zap className="size-3 text-amber-400" />}>
               <div className="grid gap-3 sm:grid-cols-2">
                 {summary.largestTxn && (
                   <div className="rounded-control bg-surface-2/70 p-3.5">
@@ -400,13 +405,13 @@ export function CycleSummaryModal({
                 )}
               </div>
             </Section>
-          )}
-
-          {/* Lower sections: Where it went, Stability fund, Bills, claimed rewards */}
-          {summary.topCategories.length > 0 ? (
+            ) }] : []),
+            { id: 'where', title: 'Where it went', node: (
+              <>
+{summary.topCategories.length > 0 ? (
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
-                <Section title="Where it went">
+                <Section bare title="Where it went">
                   <div className="space-y-2.5 rounded-control bg-surface-2/70 p-3.5">
                     {summary.topCategories.map(category => (
                       <div key={category.category} className="flex items-center gap-2">
@@ -461,7 +466,11 @@ export function CycleSummaryModal({
               <CycleActivitySections summary={summary} formatSensitive={formatSensitive} />
             </div>
           )}
-        </div>
+              </>
+            ) },
+          ]
+          return <RecapStory steps={steps} step={Math.min(step, steps.length - 1)} onStepChange={setStep} />
+        })()
       )}
     </BottomSheet>
   )

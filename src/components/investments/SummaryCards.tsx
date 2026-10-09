@@ -142,33 +142,53 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
     },
   ]
 
+  const [worth, ...groups] = cards
+  const onPaper = cards[2].hero
+
+  // One panel: what it is worth as the headline, with the gain on paper and the latest move beside
+  // it, then every supporting figure in a strip of labelled groups underneath. Four equal panels
+  // gave the headline no more weight than dividends received.
   return (
-    <section aria-label="Investment summary" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
-      {cards.map(({ label, hint, hero, rows, bg }, index) => (
-        <article
-          key={label}
-          className={cn('list-card-enter', panelClass, 'flex flex-col p-5', bg)}
-          style={index === 0 ? undefined : { animationDelay: `${index * 35}ms` }}
-        >
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-label font-medium text-muted-foreground">{label}</p>
-            <InfoHint label={label} text={hint} />
+    <section aria-label="Investment summary" className={cn('list-card-enter', panelClass, 'p-5 sm:p-6')}>
+      <div className="flex items-center gap-1.5">
+        <p className="text-label font-medium text-muted-foreground">{worth.label}</p>
+        <InfoHint label={worth.label} text={worth.hint} />
+      </div>
+      <strong className={cn('mt-1 block break-words text-display font-semibold tabular-nums', worth.hero.color ?? 'text-foreground')}>{worth.hero.value}</strong>
+      <p className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-label text-muted-foreground">
+        <span>{worth.hero.label}</span>
+        {/* Unknown figures stay in the groups below; the headline line only carries real ones. */}
+        {unrealised !== undefined && <span><span className={cn('font-semibold tabular-nums', onPaper.color)}>{onPaper.value}</span> on paper</span>}
+        {daily !== undefined && <span><span className={cn('font-semibold tabular-nums', tone(daily))}>{signed(daily)}</span> latest move</span>}
+      </p>
+
+      <div className="mt-5 grid gap-x-8 gap-y-5 border-t border-border/60 pt-5 sm:grid-cols-2 2xl:grid-cols-4">
+        {[{ ...worth, label: 'Made up of', hero: null }, ...groups].map(({ label, hint, hero, rows }) => (
+          <div key={label} className="min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-label font-medium text-foreground">{label}</p>
+              <InfoHint label={label} text={hint} />
+            </div>
+            <div className="mt-1.5 divide-y divide-border/50">
+              {hero && (
+                <div className="flex items-center justify-between gap-2 py-2">
+                  <span className="min-w-0 truncate text-label text-muted-foreground">{hero.label}</span>
+                  <strong className={cn('shrink-0 text-right text-body font-semibold tabular-nums', hero.color ?? 'text-foreground')}>{hero.value}</strong>
+                </div>
+              )}
+              {rows.map(row => (
+                <div key={row.label} className="flex items-center justify-between gap-2 py-2">
+                  <span className="flex min-w-0 items-center gap-0.5 text-label text-muted-foreground">
+                    <span className="truncate">{row.label}</span>
+                    <InfoHint label={row.label} text={row.hint} />
+                  </span>
+                  <strong className={cn('shrink-0 break-words text-right text-label font-semibold tabular-nums', row.color ?? 'text-foreground')}>{row.value}</strong>
+                </div>
+              ))}
+            </div>
           </div>
-          <p className="mt-3 text-caption text-muted-foreground">{hero.label}</p>
-          <strong className={`mt-0.5 block break-words text-title font-semibold tabular-nums ${hero.color ?? 'text-foreground'}`}>{hero.value}</strong>
-          <div className="mt-4 divide-y divide-border/60 border-t border-border/60">
-            {rows.map(row => (
-              <div key={row.label} className="flex items-center justify-between gap-2 py-2">
-                <span className="flex min-w-0 items-center gap-0.5 text-label text-muted-foreground">
-                  <span className="truncate">{row.label}</span>
-                  <InfoHint label={row.label} text={row.hint} />
-                </span>
-                <strong className={`shrink-0 break-words text-right text-label font-semibold tabular-nums ${row.color ?? 'text-foreground'}`}>{row.value}</strong>
-              </div>
-            ))}
-          </div>
-        </article>
-      ))}
+        ))}
+      </div>
     </section>
   )
 }

@@ -177,7 +177,9 @@ export function StabilityFundSection({
   )
 }
 
-export function Section({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
+/** `bare` drops the heading where the recap chapter around it already says the same thing. */
+export function Section({ title, icon, bare = false, children }: { title: string; icon?: ReactNode; bare?: boolean; children: ReactNode }) {
+  if (bare) return <section aria-label={title}>{children}</section>
   return <section><h3 className="mb-3 flex items-center gap-1.5 text-label font-medium text-muted-foreground">{icon}{title}</h3>{children}</section>
 }
 
