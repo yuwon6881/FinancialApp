@@ -79,7 +79,7 @@ export function CycleSummaryModal({
             <ChartNoAxesCombined className="size-4" />
           </span>
           <div className="min-w-0">
-            <div className="truncate text-sm font-bold text-foreground sm:text-base">
+            <div className="truncate text-sm font-semibold text-foreground sm:text-base">
               {variant === 'auto' ? 'Your cycle wrapped up' : 'Cycle summary'}
             </div>
             {summary && <div className="truncate text-xs font-medium text-muted-foreground">{summary.cycleLabel}</div>}
@@ -206,7 +206,7 @@ export function CycleSummaryModal({
                               {account.name}
                               {account.isArchived ? ' · Archived' : ''}
                             </span>
-                            <span className="shrink-0 font-bold text-foreground">{formatSensitive(account.remaining)}</span>
+                            <span className="shrink-0 font-semibold text-foreground">{formatSensitive(account.remaining)}</span>
                           </div>
                         ))}
                       </div>
@@ -370,11 +370,11 @@ export function CycleSummaryModal({
                     <div className="mt-2 space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">Committed</span>
-                        <span className="font-bold text-foreground">{formatSensitive(summary.committedSpend)}</span>
+                        <span className="font-semibold text-foreground">{formatSensitive(summary.committedSpend)}</span>
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">Discretionary</span>
-                        <span className="font-bold text-foreground">{formatSensitive(summary.discretionarySpend)}</span>
+                        <span className="font-semibold text-foreground">{formatSensitive(summary.discretionarySpend)}</span>
                       </div>
                     </div>
                     <div className="mt-2 flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -389,11 +389,11 @@ export function CycleSummaryModal({
                     <div className="mt-2 space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">First half</span>
-                        <span className={`font-bold ${summary.velocityFirstHalf > summary.velocitySecondHalf ? 'text-orange-400' : 'text-foreground'}`}>{formatSensitive(summary.velocityFirstHalf)}</span>
+                        <span className={`font-semibold ${summary.velocityFirstHalf > summary.velocitySecondHalf ? 'text-orange-400' : 'text-foreground'}`}>{formatSensitive(summary.velocityFirstHalf)}</span>
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">Second half</span>
-                        <span className={`font-bold ${summary.velocitySecondHalf > summary.velocityFirstHalf ? 'text-orange-400' : 'text-foreground'}`}>{formatSensitive(summary.velocitySecondHalf)}</span>
+                        <span className={`font-semibold ${summary.velocitySecondHalf > summary.velocityFirstHalf ? 'text-orange-400' : 'text-foreground'}`}>{formatSensitive(summary.velocitySecondHalf)}</span>
                       </div>
                     </div>
                   </div>
@@ -437,7 +437,7 @@ export function CycleSummaryModal({
                         <span className="min-w-0 truncate">
                           {summary.otherCategoriesCount} smaller {summary.otherCategoriesCount === 1 ? 'category' : 'categories'}
                         </span>
-                        <span className="w-20 shrink-0 text-right font-bold">{formatSensitive(summary.otherCategoriesTotal)}</span>
+                        <span className="w-20 shrink-0 text-right font-semibold">{formatSensitive(summary.otherCategoriesTotal)}</span>
                       </div>
                     )}
                   </div>

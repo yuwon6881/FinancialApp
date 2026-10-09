@@ -83,7 +83,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
       isOpen={holding !== null}
       onClose={onClose}
       maxWidthClassName="max-w-2xl"
-      title={holding === null ? '' : <span className="flex flex-col"><span className="text-base font-bold">{holding.symbol}</span><span className="text-xs font-normal text-muted-foreground">{holding.name}</span></span>}
+      title={holding === null ? '' : <span className="flex flex-col"><span className="text-base font-semibold">{holding.symbol}</span><span className="text-xs font-normal text-muted-foreground">{holding.name}</span></span>}
       ariaLabel={holding === null ? 'Fund details' : `Details for ${holding.symbol}`}
       description={holding === null ? undefined : `Held in ${holding.accountName}${history?.firstBoughtOn ? ` · first bought ${history.firstBoughtOn}` : ''}`}
     >
@@ -93,7 +93,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
             {rows.map(row => (
               <div key={row.label} className="rounded-control bg-surface-2/70 p-2.5 sm:p-3">
                 <dt className="text-xs leading-tight text-muted-foreground">{row.label}</dt>
-                <dd className={`mt-1 break-words text-sm font-bold ${row.tone === undefined ? 'text-foreground' : row.tone >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                <dd className={`mt-1 break-words text-sm font-semibold ${row.tone === undefined ? 'text-foreground' : row.tone >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
                   {row.value}
                 </dd>
                 <p className="mt-1 text-xs leading-snug text-muted-foreground">{row.hint}</p>

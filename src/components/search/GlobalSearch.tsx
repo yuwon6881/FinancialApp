@@ -198,7 +198,7 @@ export function GlobalSearch({
                 <p className="mx-3 mt-2 flex items-center justify-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-caption text-amber-500">
                   <span>Your loans could not be loaded, so none were searched.</span>
                   {onRetryLoans && (
-                    <Button variant="tertiary" onClick={onRetryLoans} className="font-bold underline underline-offset-2 cursor-pointer">
+                    <Button variant="tertiary" onClick={onRetryLoans} className="font-semibold underline underline-offset-2 cursor-pointer">
                       Try again
                     </Button>
                   )}
@@ -224,7 +224,7 @@ export function GlobalSearch({
                     <Layers className="size-4" aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-body font-bold text-foreground">
+                    <span className="block truncate text-body font-semibold text-foreground">
                       Search every cycle for “{trimmedQuery}”
                     </span>
                     <span className="block truncate text-caption text-muted-foreground">

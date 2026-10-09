@@ -49,7 +49,7 @@ describe('CycleCalendar component', () => {
 
     const today = screen.getByTitle('Jul 25: No cash activity.')
     expect(today.className).toContain('ring-inset')
-    expect(today.className).toContain('ring-blue-500')
+    expect(today.className).toContain('ring-primary')
     expect(container.querySelector('[aria-label="Cycle days"]')?.parentElement?.className).toContain('px-0.5')
   })
 

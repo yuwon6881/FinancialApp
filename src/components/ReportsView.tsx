@@ -1,6 +1,6 @@
 import { Button } from './ui/Button'
 import React from 'react'
-import { BarChart3, ChartNoAxesCombined, ChevronRight, Sparkles, TrendingUp } from 'lucide-react'
+import { ChartNoAxesCombined, ChevronRight, Sparkles, TrendingUp } from 'lucide-react'
 import type { AppTab, DashboardData, SavingsGoal, Transaction, WishlistItem } from '../types'
 import { useAppPrefs } from '../contexts/AppContext'
 import { getCycleProgress } from '../lib/cycle'
@@ -135,7 +135,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       <PageHeader
         title="Insights"
         description={view.cycleLabel}
-        icon={<span className="flex size-10 items-center justify-center rounded-xl border border-blue-500/15 bg-blue-500/10 text-blue-500"><BarChart3 className="size-5" /></span>}
         titleActions={onExplainWithAi && (
           <Button
             variant="secondary"

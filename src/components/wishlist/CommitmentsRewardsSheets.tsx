@@ -56,7 +56,7 @@ export function CommitmentsRewardsSheets(props: Props) {
         <BottomSheet isOpen title="Claim Reward" onClose={() => props.setPurchasingItem(null)} maxWidthClassName="max-w-md">
           <div className="space-y-4 py-2">
             <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/10 p-4">
-              <div><h4 className="text-sm font-bold text-foreground">{props.purchasingItem.name}</h4><span className="text-xs font-medium text-muted-foreground">Reward</span></div>
+              <div><h4 className="text-sm font-semibold text-foreground">{props.purchasingItem.name}</h4><span className="text-xs font-medium text-muted-foreground">Reward</span></div>
               <span className="text-lg font-semibold text-accent-ink">{props.formatSensitive(props.purchasingItem.price)}</span>
             </div>
             <FormField label="Purchased date">
@@ -79,7 +79,7 @@ export function CommitmentsRewardsSheets(props: Props) {
             </FormField>
             {props.purchasingItem.price <= props.claimableBalance && props.purchasingItem.price > props.freeAfterGoalPace && (
               <p className="text-xs font-medium text-muted-foreground">
-                Buying this leaves your commitments <span className="font-bold text-amber-500">{props.formatSensitive(Math.max(0, props.purchasingItem.price - props.freeAfterGoalPace))}</span> short this cycle.
+                Buying this leaves your commitments <span className="font-semibold text-amber-500">{props.formatSensitive(Math.max(0, props.purchasingItem.price - props.freeAfterGoalPace))}</span> short this cycle.
               </p>
             )}
             {props.isOffline && (
@@ -89,7 +89,7 @@ export function CommitmentsRewardsSheets(props: Props) {
             )}
             <ModalActions className="pt-4">
               <Button variant="secondary" className="rounded-xl" onClick={() => props.setPurchasingItem(null)}>Cancel</Button>
-              <Button variant="primary" className="rounded-xl font-bold shadow-md" onClick={props.onConfirmPurchase} disabled={props.hideSensitive || props.isOffline}>Claim &amp; Log to Ledger</Button>
+              <Button variant="primary" className="rounded-xl font-semibold shadow-md" onClick={props.onConfirmPurchase} disabled={props.hideSensitive || props.isOffline}>Claim &amp; Log to Ledger</Button>
             </ModalActions>
           </div>
         </BottomSheet>
@@ -114,7 +114,7 @@ export function CommitmentsRewardsSheets(props: Props) {
             </FormField>
             <ModalActions className="pt-2">
               <Button variant="secondary" className="rounded-xl" onClick={() => props.setCompletingGoal(null)}>Cancel</Button>
-              <Button variant="primary" className="rounded-xl font-bold shadow-md" onClick={props.onConfirmCompletion} disabled={props.hideSensitive || !props.completionAccountId}>
+              <Button variant="primary" className="rounded-xl font-semibold shadow-md" onClick={props.onConfirmCompletion} disabled={props.hideSensitive || !props.completionAccountId}>
                 Complete &amp; Log to Ledger
               </Button>
             </ModalActions>

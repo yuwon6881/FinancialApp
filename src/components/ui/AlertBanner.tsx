@@ -13,7 +13,7 @@ type AlertBannerVariant = 'error' | 'warning' | 'info' | 'success'
 const STYLES: Record<AlertBannerVariant, string> = {
   error: 'border-destructive/25 bg-destructive/10 text-destructive',
   warning: 'border-orange-500/25 bg-orange-500/10 text-orange-500',
-  info: 'border-blue-500/25 bg-blue-500/10 text-blue-500',
+  info: 'border-primary/25 bg-primary/10 text-accent-ink',
   success: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-500',
 }
 
@@ -51,7 +51,7 @@ export function AlertBanner({
     >
       <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <div className="min-w-0">
-        {title && <p className="font-bold">{title}</p>}
+        {title && <p className="font-semibold">{title}</p>}
         <div className={title ? 'mt-0.5' : undefined}>{children}</div>
       </div>
     </div>

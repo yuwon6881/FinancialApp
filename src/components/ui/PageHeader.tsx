@@ -4,11 +4,6 @@ import { cn } from '../../lib/utils'
 interface PageHeaderProps {
   title: ReactNode
   description?: ReactNode
-  /**
-   * Accepted for compatibility with existing call sites but not drawn: a Lumen page title stands
-   * on its own, and an icon tile beside it was one more container competing with the content.
-   */
-  icon?: ReactNode
   leading?: ReactNode
   titleActions?: ReactNode
   actions?: ReactNode

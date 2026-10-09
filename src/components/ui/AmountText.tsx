@@ -23,8 +23,6 @@ export interface AmountTextProps {
   /** Counts to a new value instead of swapping it. Use on hero figures only. */
   animate?: boolean
   className?: string
-  /** Accessible text when the visible figure is part of a larger sentence. */
-  'aria-label'?: string
 }
 
 /**
@@ -41,7 +39,6 @@ export function AmountText({
   tone = 'neutral',
   animate = false,
   className,
-  'aria-label': ariaLabel,
 }: AmountTextProps) {
   if (isMasked) return <SensitiveMask className={className} />
   const positive = tone === 'positive' && value > 0
@@ -52,8 +49,8 @@ export function AmountText({
     className,
   )
   return animate
-    ? <AnimatedAmount value={value} currency={currency} signDisplay={signDisplay} className={classes} ariaLabel={ariaLabel} />
-    : <StaticAmount value={value} currency={currency} signDisplay={signDisplay} className={classes} ariaLabel={ariaLabel} />
+    ? <AnimatedAmount value={value} currency={currency} signDisplay={signDisplay} className={classes} />
+    : <StaticAmount value={value} currency={currency} signDisplay={signDisplay} className={classes} />
 }
 
 interface InnerProps {
@@ -61,14 +58,13 @@ interface InnerProps {
   currency: string
   signDisplay: 'auto' | 'always' | 'never'
   className: string
-  ariaLabel?: string
 }
 
-function StaticAmount({ value, currency, signDisplay, className, ariaLabel }: InnerProps) {
+function StaticAmount({ value, currency, signDisplay, className }: InnerProps) {
   const parts = formatAmountParts(value, currency, signDisplay)
   const sign = parts.sign === '-' ? '−' : parts.sign
   return (
-    <span className={className} aria-label={ariaLabel}>
+    <span className={className}>
       {sign && <span className="amount-sign">{sign}</span>}
       {!parts.currencyAfter && parts.currency && <span className="amount-currency">{parts.currency}</span>}
       <span>{parts.integer}</span>
@@ -81,9 +77,10 @@ function StaticAmount({ value, currency, signDisplay, className, ariaLabel }: In
 /**
  * The ticking variant. Like `AnimatedNumber`, it writes straight to the text nodes on each spring
  * frame so a counting balance never re-renders through React; the structure (marker, units,
- * fraction) is rendered once and only the digits move.
+ * fraction) is rendered once and only the digits move. The digits stay readable text: the spring
+ * starts at the mounted value, so assistive tech reads the real figure and only a change counts.
  */
-function AnimatedAmount({ value, currency, signDisplay, className, ariaLabel }: InnerProps) {
+function AnimatedAmount({ value, currency, signDisplay, className }: InnerProps) {
   const reduceMotion = useReducedMotion()
   const spring = useSpring(value, { stiffness: 90, damping: 20, mass: 1 })
   const signRef = useRef<HTMLSpanElement>(null)
@@ -121,15 +118,12 @@ function AnimatedAmount({ value, currency, signDisplay, className, ariaLabel }: 
     return spring.on('change', write)
   }, [spring, reduceMotion, write])
 
-  const final = formatAmountParts(value, currency, signDisplay)
   return (
-    <span className={className} aria-label={ariaLabel ?? `${final.sign}${final.currency} ${final.integer}${final.fraction}`}>
-      <span aria-hidden="true" className="contents">
-        <span ref={signRef} className="amount-sign" />
-        <span ref={currencyRef} className="amount-currency" />
-        <span ref={integerRef} />
-        <span ref={fractionRef} className="amount-fraction" />
-      </span>
+    <span className={className}>
+      <span ref={signRef} className="amount-sign" />
+      <span ref={currencyRef} className="amount-currency" />
+      <span ref={integerRef} />
+      <span ref={fractionRef} className="amount-fraction" />
     </span>
   )
 }

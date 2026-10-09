@@ -48,7 +48,7 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
           <SensitiveAmount value={stats.monthlyInflow} isMasked={hideSensitive} formatFn={formatCurrency} />
         </div>
         <p className="text-xs mt-2 text-muted-foreground font-medium">
-          <span className="hidden sm:inline">Total Actual </span>Income: <span className="font-bold text-teal-500 tabular-nums">{formatSensitive(stats.monthlyIncome)}</span>
+          <span className="hidden sm:inline">Total Actual </span>Income: <span className="font-semibold text-teal-500 tabular-nums">{formatSensitive(stats.monthlyIncome)}</span>
         </p>
       </div>
 

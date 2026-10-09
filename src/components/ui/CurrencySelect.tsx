@@ -217,7 +217,7 @@ export function CurrencySelect({
           {loadFailed && !catalog.length && (
             <div className="p-3 text-xs text-amber-600 dark:text-amber-300">
               <p className="flex items-start gap-2"><AlertCircle className="mt-0.5 size-3.5 shrink-0" /> Currency list unavailable. Reconnect and try again.</p>
-              <Button variant="tertiary" type="button" onClick={() => load()} className="mt-2 font-bold text-blue-600 dark:text-blue-400">Retry</Button>
+              <Button variant="tertiary" type="button" onClick={() => load()} className="mt-2 font-semibold text-accent-ink">Retry</Button>
             </div>
           )}
           {results.map((item, index) => (
@@ -231,9 +231,9 @@ export function CurrencySelect({
               onClick={() => choose(item)}
               className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 justify-start text-left text-xs ${index === activeIndex ? 'bg-muted hover:bg-muted' : 'hover:bg-muted'}`}
             >
-              <span className="w-16 shrink-0 font-bold">{item.code} <span className="font-normal text-muted-foreground">{item.symbol}</span></span>
+              <span className="w-16 shrink-0 font-semibold">{item.code} <span className="font-normal text-muted-foreground">{item.symbol}</span></span>
               <span className="min-w-0 flex-1 truncate text-muted-foreground">{item.name}</span>
-              {item.code === value && <Check className="size-3.5 shrink-0 text-blue-500" />}
+              {item.code === value && <Check className="size-3.5 shrink-0 text-accent-ink" />}
             </Button>
           ))}
           {!loading && !loadFailed && results.length === 0 && <p className="px-3 py-4 text-xs text-muted-foreground">No supported currency matches.</p>}

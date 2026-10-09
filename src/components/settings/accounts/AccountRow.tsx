@@ -113,7 +113,7 @@ export function AccountRow({
 
           {/* A card's extra action can push the buttons onto their own line; ml-auto keeps them on
               the trailing edge there instead of stranding them on the left. */}
-          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-1.5">
             {isCard && owed > 0 && !account.isArchived && onClearCard && (
               <Button
                 type="button"

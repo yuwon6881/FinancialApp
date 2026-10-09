@@ -90,7 +90,7 @@ export function DeleteTransactionModal({
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="font-semibold text-foreground shrink-0">Restore</span>
-                <span className="font-bold text-foreground whitespace-nowrap">{formatSensitive(Math.abs(transaction.amount))}</span>
+                <span className="font-semibold text-foreground whitespace-nowrap">{formatSensitive(Math.abs(transaction.amount))}</span>
               </div>
             </div>
           </div>
@@ -106,7 +106,7 @@ export function DeleteTransactionModal({
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="font-semibold text-foreground shrink-0">Restore</span>
-                <span className="font-bold text-foreground whitespace-nowrap">{formatSensitive(Math.abs(transaction.amount))}</span>
+                <span className="font-semibold text-foreground whitespace-nowrap">{formatSensitive(Math.abs(transaction.amount))}</span>
               </div>
             </div>
           </div>
@@ -120,7 +120,7 @@ export function DeleteTransactionModal({
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="font-semibold text-foreground shrink-0">Amount</span>
-                <span className="font-bold text-foreground whitespace-nowrap">{formatSensitive(transaction.amount)}</span>
+                <span className="font-semibold text-foreground whitespace-nowrap">{formatSensitive(transaction.amount)}</span>
               </div>
             </div>
           </div>
@@ -184,8 +184,8 @@ export function EditDisabledModal({ isOpen, transaction, onClose }: EditDisabled
       onClose={onClose}
       maxWidthClassName="max-w-md"
       title={
-        <div className="flex items-center gap-2 text-blue-500">
-          <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+        <div className="flex items-center gap-2 text-accent-ink">
+          <span className="p-1.5 rounded-lg bg-primary/10 text-accent-ink">
             <AlertCircle className="size-5" />
           </span>
           <span>Editing Disabled</span>

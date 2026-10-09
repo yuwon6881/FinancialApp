@@ -79,7 +79,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <div className="rounded-control bg-surface-2/70 p-2">
           <span className="block text-xs text-muted-foreground">Money in</span>
-          <span className="font-bold text-emerald-500">
+          <span className="font-semibold text-emerald-500">
             {day.inflow > 0 ? formatAmount(day.inflow) : '—'}
           </span>
         </div>
@@ -93,7 +93,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
           <span className="block text-xs text-muted-foreground">Net</span>
           <span
             className={cn(
-              'font-bold',
+              'font-semibold',
               day.net !== undefined && day.net > 0 && 'text-emerald-500',
               day.net !== undefined && day.net < 0 && 'text-foreground',
               (day.net === undefined || day.net === 0) && 'text-muted-foreground',
@@ -132,7 +132,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
                   <span className="min-w-0 flex-1 truncate font-medium text-foreground">{bill.name}</span>
                   <div className="flex shrink-0 items-center gap-1.5">
                     {/* An occurrence with no scheduled amount is genuinely unknown, not zero. */}
-                    <span className="font-bold text-muted-foreground">
+                    <span className="font-semibold text-muted-foreground">
                       {amount == null ? 'Amount not set' : formatAmount(-Math.abs(amount))}
                     </span>
                     <span
@@ -140,7 +140,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
                         'inline-flex items-center rounded px-1 py-0.5 text-caption font-semibold',
                         isSettled && 'bg-emerald-500/15 text-emerald-500',
                         isPartial && 'bg-amber-500/15 text-amber-500',
-                        !isSettled && !isPartial && 'bg-blue-500/15 text-blue-500',
+                        !isSettled && !isPartial && 'bg-primary/15 text-accent-ink',
                       )}
                     >
                       {isSettled ? 'Paid' : isPartial ? 'Part paid' : 'Due'}
@@ -176,7 +176,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
                   </div>
                   <span
                     className={cn(
-                      'shrink-0 font-bold',
+                      'shrink-0 font-semibold',
                       isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground',
                     )}
                   >

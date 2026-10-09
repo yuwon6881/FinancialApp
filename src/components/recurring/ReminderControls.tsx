@@ -80,8 +80,8 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
 
   return (
     <div className="mt-4 space-y-3 border-t border-border/60 pt-3">
-      <div className="flex items-center justify-between">
-        <span className="flex shrink-0 items-center gap-1.5 text-label text-muted-foreground">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-1.5 text-label text-muted-foreground">
           <Bell className="size-3.5" aria-hidden="true" /> Payment Reminder
         </span>
         <ToggleButton

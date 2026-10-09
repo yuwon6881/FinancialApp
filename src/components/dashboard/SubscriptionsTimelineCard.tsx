@@ -74,7 +74,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
               <span className="pointer-events-none absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-full bg-primary transition-all duration-200 group-hover:h-7" />
 
               <div className="min-w-0 flex-1">
-                <span className={`font-bold text-foreground truncate block ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
+                <span className={`font-semibold text-foreground truncate block ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
                 <div className="mt-1 flex min-w-0 items-center gap-1.5 select-none">
                   <span
                     title={rp.category}
@@ -98,7 +98,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
                 </div>
               </div>
               <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
-                <span className={`font-bold tabular-nums block ${rp.isDiscarded ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                <span className={`font-semibold tabular-nums block ${rp.isDiscarded ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
                   {rp.amount == null ? 'Unavailable' : <>-{formatSensitive(rp.amount)}</>}
                 </span>
                 <span className="text-muted-foreground text-xs font-medium">Due {rp.dueDate}</span>

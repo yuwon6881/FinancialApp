@@ -169,7 +169,7 @@ export function AccountBillRoster({
                   value={monthlyTotal}
                   isMasked={hideSensitive}
                   formatFn={val => formatCurrencyVal(val, currency)}
-                  className="font-bold text-foreground"
+                  className="font-semibold text-foreground"
                 />
                 <span>/ mo</span>
                 <InfoHint

@@ -203,7 +203,7 @@ export function CustomSelect<T extends string | number>({
         aria-invalid={accessibleProps['aria-invalid']}
         aria-required={accessibleProps['aria-required']}
         className={variant === 'ghost'
-          ? 'h-11 w-full min-w-0 cursor-pointer justify-between gap-1.5 rounded-full px-3 text-body font-medium text-foreground hover:bg-surface-2 disabled:cursor-not-allowed lg:h-9'
+          ? 'h-11 w-full min-w-0 cursor-pointer justify-between gap-1 rounded-full px-2.5 text-body font-medium text-foreground hover:bg-surface-2 disabled:cursor-not-allowed lg:h-9'
           : controlTriggerClassName({
             size: controlSize,
             invalid: isInvalid,
@@ -253,7 +253,7 @@ export function CustomSelect<T extends string | number>({
                   className={`shrink-0 rounded border px-1.5 py-0.5 text-label font-medium ${
                     option.value === value
                       ? 'border-primary/30 bg-primary/10 text-accent-ink'
-                      : 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-300'
+                      : 'border-primary/20 bg-primary/10 text-accent-ink'
                   }`}
                 >
                   {option.badge}

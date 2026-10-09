@@ -185,7 +185,7 @@ export function PendingSubscriptionsModal({
       title={
         <div ref={headingRef} tabIndex={-1} className="flex items-center gap-2 outline-none">
           <BellRing className="size-4 text-amber-500" />
-          <span className="text-base font-bold text-foreground">Bills to review</span>
+          <span className="text-base font-semibold text-foreground">Bills to review</span>
         </div>
       }
       footer={
@@ -224,13 +224,13 @@ export function PendingSubscriptionsModal({
           >
             <header className="space-y-2 border-b border-border/40 bg-muted/25 px-4 py-3 sm:px-5">
               <div className="flex items-start justify-between gap-3">
-                <h3 className="min-w-0 break-words text-sm font-bold text-foreground sm:text-base">{noti.name}</h3>
+                <h3 className="min-w-0 break-words text-sm font-semibold text-foreground sm:text-base">{noti.name}</h3>
                 <span className="shrink-0 text-sm font-semibold tabular-nums text-orange-500 sm:text-base">
                   {hideSensitive ? <SensitiveMask /> : <>-{formatCurrencyVal(Math.abs(noti.amount), currency)}</>}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
-                <span className={`inline-block rounded border px-1.5 py-0.5 font-bold ${getCategoryBadgeClass(noti.category)}`}>
+                <span className={`inline-block rounded border px-1.5 py-0.5 font-semibold ${getCategoryBadgeClass(noti.category)}`}>
                   {noti.category}
                 </span>
                 <span className="inline-flex items-center gap-1 font-medium">
@@ -359,9 +359,9 @@ export function PendingSubscriptionsModal({
                         {amountState.kind === 'partial' ? (
                           hideSensitive
                             ? 'Part payment'
-                            : <><strong className="font-bold text-foreground">{formatCurrencyVal(amountState.amount, currency)}</strong> now · {formatCurrencyVal(amountState.remaining, currency)} remains due</>
+                            : <><strong className="font-semibold text-foreground">{formatCurrencyVal(amountState.amount, currency)}</strong> now · {formatCurrencyVal(amountState.remaining, currency)} remains due</>
                         ) : (
-                          <strong className="font-bold">{amountState.error}</strong>
+                          <strong className="font-semibold">{amountState.error}</strong>
                         )}
                       </span>
                     </div>

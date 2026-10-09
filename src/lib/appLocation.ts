@@ -185,14 +185,16 @@ const emptyLedgerRouteState = (): LedgerRouteState => ({
   highlightedTxId: null,
 })
 
+const LEGACY_BUDGET_SECTIONS = new Set(['categories', 'model', 'rules', 'financial-model'])
+
 const parseTab = (pathname: string, params: URLSearchParams): AppTab => {
   const pathTab = TAB_BY_PATH[normalizePath(pathname)]
   if (pathTab === 'settings') {
-    // Accounts and Categories & Limits used to be sections of Settings. They are destinations of
-    // their own now, and the old section links land on them.
+    // Accounts, Categories & Limits and the financial model used to be sections of Settings. They
+    // are destinations of their own now, and the old section links land on them.
     const section = params.get('section')
     if (section === 'accounts' || params.has('account')) return 'accounts'
-    if (section === 'categories') return 'budget'
+    if (section && LEGACY_BUDGET_SECTIONS.has(section)) return 'budget'
   }
   if (pathTab) return pathTab
   const legacyView = params.get('view')
@@ -375,6 +377,8 @@ export const canonicalizeAppLocation = () => {
   const params = new URLSearchParams(window.location.search)
   const tab = parseTab(window.location.pathname, params)
   const path = normalizePath(window.location.pathname)
+  // The automation-only primitive specimen is not a destination; rewriting it would hide it.
+  if (path === '/ui-specimen') return
   const isCanonical = path === PATH_BY_TAB[tab] || (tab === 'recurring' && path === LOANS_PATH)
   if (isCanonical && !params.has('view')) return
   // Keep the section (Budget opens on Categories when it came from the old Categories link), except

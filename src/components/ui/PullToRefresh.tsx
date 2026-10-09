@@ -199,7 +199,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
             transition: dragging && !refreshing ? 'none' : 'transform 200ms ease, opacity 200ms ease',
           }}
         >
-          <div className="flex items-center gap-2 rounded-full bg-card border border-border shadow-(--app-shadow-overlay) text-blue-500 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-full bg-card border border-border shadow-(--app-shadow-overlay) text-accent-ink px-3 py-2">
             <Loader2
               aria-hidden="true"
               className={`size-4 ${refreshing ? 'animate-spin' : ''}`}

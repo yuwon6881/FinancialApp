@@ -132,7 +132,7 @@ export function ReceiptSplitItemRow({
                   onChange={event => onUpdatePrice(index, event.target.value)}
                   disabled={!priceUnlocked}
                   controlSize="sm"
-                  className="min-w-0 flex-1 font-bold"
+                  className="min-w-0 flex-1 font-semibold"
                 />
                 <Button
                   size="icon"

@@ -41,7 +41,7 @@ const CATEGORY_FLOW_SEGMENTS: ReadonlyArray<{
     label: 'Allow money in and out',
     title: 'Both — money in and money out',
     Icon: ArrowLeftRight,
-    activeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
+    activeClass: 'bg-primary/15 text-accent-ink',
   },
   {
     value: 'inflow',
@@ -165,8 +165,8 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
               title={hideSensitive ? 'Unhide balances to review' : 'AI category review'}
               className={`inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer sm:min-h-8 ${
                 view.isReviewingCleanup
-                  ? 'border-blue-500/35 bg-blue-500/5 hover:bg-blue-500/5 text-blue-600 dark:text-blue-400'
-                  : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed'
+                  ? 'border-primary/35 bg-primary/5 hover:bg-primary/5 text-accent-ink'
+                  : 'text-accent-ink bg-primary/5 border-primary/30 hover:bg-primary/10 disabled:opacity-45 disabled:cursor-not-allowed'
               }`}
             >
               {view.isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
@@ -246,7 +246,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                           role="group"
                           aria-label={`Flow restriction for ${item.name}`}
                           className={`inline-flex shrink-0 items-center gap-0.5 rounded-full border p-0.5 ${
-                            isDraftChanged ? 'border-blue-500/50 bg-blue-500/5' : 'border-border/60 bg-muted/40'
+                            isDraftChanged ? 'border-primary/50 bg-primary/5' : 'border-border/60 bg-muted/40'
                           }`}
                         >
                           {CATEGORY_FLOW_SEGMENTS.map(segment => {
@@ -275,7 +275,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                               role="img"
                               aria-label="Unsaved flow change"
                               title="Unsaved change"
-                              className="mx-1 inline-block size-1.5 shrink-0 rounded-full bg-blue-500"
+                              className="mx-1 inline-block size-1.5 shrink-0 rounded-full bg-primary"
                             />
                           )}
                         </div>

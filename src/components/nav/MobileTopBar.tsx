@@ -83,13 +83,15 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
 
   return (
     <header
+      aria-label="App bar"
       className={cn(
-        'sticky top-0 z-50 w-full border-b transition-[background-color,border-color,backdrop-filter] duration-200 ease-fluid sm:hidden',
+        'app-chrome sticky top-0 z-50 w-full border-b transition-[background-color,border-color,backdrop-filter] duration-200 ease-fluid sm:hidden',
         scrolled ? 'glass-nav border-border/60' : 'border-transparent bg-transparent',
       )}
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
-      <div className="flex h-14 items-center gap-1 px-3">
+      {/* Wraps rather than overflows: at 200% text the five 44px controls no longer fit one row. */}
+      <div className="flex min-h-14 flex-wrap items-center justify-end gap-1 px-3">
         <Button
           variant="tertiary"
           type="button"
@@ -158,7 +160,7 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
           </IconButton>
         )}
         {onAskAI && (
-          <IconButton label="ASK AI" tooltip="Ask AI" onClick={onAskAI} className="text-accent-ink">
+          <IconButton label="Ask AI" onClick={onAskAI} className="text-accent-ink">
             <Sparkles className="size-[1.125rem]" />
           </IconButton>
         )}

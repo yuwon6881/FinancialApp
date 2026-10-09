@@ -15,7 +15,6 @@ import { CommitmentsRewardsTabs, type CommitmentsRewardsTabId } from './wishlist
 import { useCommitmentsRewardsData } from './wishlist/useCommitmentsRewardsData'
 import { RewardsSection } from './wishlist/RewardsSection'
 import { CommitmentsRewardsSheets } from './wishlist/CommitmentsRewardsSheets'
-import { CommitmentIcon } from './semanticIcons'
 import { Sparkles } from 'lucide-react'
 import { APP_LOCATION_CHANGED_EVENT, updateAppSearch } from '../lib/appLocation'
 import { PageHeader } from './ui/PageHeader'
@@ -324,7 +323,6 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
     <div className="space-y-5">
       <PageHeader
         title={<span className="flex items-center gap-1">Goals <InfoHint label="this page" text="Set money aside for commitments, then see what is free for rewards." /></span>}
-        icon={<span className="flex size-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-accent-ink"><CommitmentIcon className="size-5" /></span>}
         titleActions={onExplainWithAi && (
             <Button variant="secondary" size="sm" type="button" onClick={onExplainWithAi} aria-label="Explain my commitments and rewards plan with Ask AI" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5">
               <Sparkles className="size-3.5" aria-hidden />

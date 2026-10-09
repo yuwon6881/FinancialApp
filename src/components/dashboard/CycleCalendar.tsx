@@ -48,7 +48,7 @@ const TONE_CLASS: Record<CycleMetricTone, string> = {
 
 // Phone cells show a presence dot where the tablet/desktop cell shows the figure.
 const TONE_DOT_CLASS: Record<CycleMetricTone, string> = {
-  inflow: 'bg-blue-500',
+  inflow: 'bg-emerald-500',
   outflow: 'bg-orange-500',
   neutral: 'bg-foreground/60',
 }
@@ -183,8 +183,9 @@ export function CycleCalendar(props: CycleCalendarProps) {
               <div
                 key={day}
                 className={cn(
-                  'pb-1.5 text-caption font-semibold',
-                  isWeekendHeader ? 'text-muted-foreground/70' : 'text-muted-foreground'
+                  'pb-1.5 text-caption text-muted-foreground',
+                  // Weekends step down in weight, not colour: a fainter grey would fall below AA.
+                  isWeekendHeader ? 'font-medium' : 'font-semibold'
                 )}
               >
                 {/* Single letter on phones: three-letter headers crowd a 40px column. */}
@@ -201,7 +202,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
             const metric = cycleDayMetric(day, mode)
 
             const color = isToday
-              ? 'border-blue-500 ring-2 ring-inset ring-blue-500 bg-card'
+              ? 'border-primary ring-2 ring-inset ring-primary bg-card'
               : day.isFuture
                 ? 'border-dashed border-border/70 hover:border-border'
                 : visibleHeatLevel > 0
@@ -238,7 +239,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
                 <span
                   className={cn(
                     'text-caption font-semibold sm:text-sm',
-                    isToday ? 'text-accent-ink' : day.isFuture ? 'text-muted-foreground/70' : 'text-foreground/90'
+                    isToday ? 'text-accent-ink' : day.isFuture ? 'text-muted-foreground' : 'text-foreground/90'
                   )}
                 >
                   {day.date.getDate()}

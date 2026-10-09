@@ -78,7 +78,7 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
         aria-expanded={open}
         className="w-full flex items-center gap-2.5 p-5 justify-start text-left cursor-pointer"
       >
-        <KeyRound className="size-5 text-blue-500 shrink-0" />
+        <KeyRound className="size-5 text-accent-ink shrink-0" />
         <div className="flex-1 min-w-0">
           <h3 className="text-subsection text-foreground">Change Password</h3>
         </div>

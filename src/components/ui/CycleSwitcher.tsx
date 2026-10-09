@@ -33,6 +33,10 @@ export interface CycleSwitcherProps {
  * The one cycle picker for every cycle-dependent page: a compact pill with step arrows either side
  * of the cycle and year, so moving one cycle back is a single tap and jumping further is a pick.
  */
+// The step arrows, hidden on a phone pill narrower than 19rem -- a 320px phone, or large text -- so
+// the cycle range itself stays readable. Both pickers still reach every cycle without them.
+const STEP_CLASS = 'shrink-0 text-muted-foreground max-sm:hidden max-sm:@[19rem]:inline-flex'
+
 export function CycleSwitcher({
   selectedMonth,
   selectedYear,
@@ -74,13 +78,14 @@ export function CycleSwitcher({
   return (
     <div className={cn('relative z-40 flex min-w-0 flex-wrap items-center gap-2', className)}>
       {/* Full width on a phone: the month picker is the flexible part, and inside a shrink-wrapped
-          pill "flex-1" resolved to nothing, leaving only the year. */}
-      <div className="flex w-full min-w-0 max-w-full items-center gap-0.5 rounded-full border border-border/70 bg-card p-1 sm:w-auto">
+          pill "flex-1" resolved to nothing, leaving only the year. On a phone the pill is also a
+          size container, so a narrow one drops the step arrows rather than truncate the range. */}
+      <div className="flex w-full min-w-0 max-w-full items-center gap-0.5 rounded-full border border-border/70 bg-card p-1 max-sm:@container sm:w-auto">
         <IconButton
           label={periodMode === 'year' ? 'Previous year' : 'Previous cycle'}
           onClick={() => step(-1)}
           disabled={isDisabled || atStart}
-          className="shrink-0 text-muted-foreground"
+          className={STEP_CLASS}
         >
           <ChevronLeft className="size-4" />
         </IconButton>
@@ -105,14 +110,16 @@ export function CycleSwitcher({
           onChange={year => onSelectPeriod(selectedMonth, Number(year))}
           options={years.map(year => ({ value: year, label: String(year) }))}
           disabled={isDisabled}
-          className={periodMode === 'month-year' ? 'w-24 shrink-0' : 'w-28 shrink-0'}
+          // Content-sized on a phone: four digits need far less than the fixed width, and the month
+          // range beside it needs every pixel to show in full.
+          className={periodMode === 'month-year' ? 'shrink-0 sm:w-24' : 'w-28 shrink-0'}
           align="right"
         />
         <IconButton
           label={periodMode === 'year' ? 'Next year' : 'Next cycle'}
           onClick={() => step(1)}
           disabled={isDisabled || atEnd}
-          className="shrink-0 text-muted-foreground"
+          className={STEP_CLASS}
         >
           <ChevronRight className="size-4" />
         </IconButton>

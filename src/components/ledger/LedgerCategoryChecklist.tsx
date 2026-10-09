@@ -71,7 +71,7 @@ export const LedgerCategoryChecklist: React.FC<LedgerCategoryChecklistProps> = (
                 <Checkbox
                   checked={isChecked}
                   onChange={() => onToggleFilter(bucket)}
-                  className="rounded border-border text-blue-500 focus:ring-ring size-3.5"
+                  className="rounded border-border text-accent-ink focus:ring-ring size-3.5"
                 />
                 <span className={`size-2 shrink-0 rounded-full ${getCategoryDotClass(bucket)}`} />
                 <span className="min-w-0 flex-1 truncate font-semibold">{bucket}</span>
@@ -98,7 +98,7 @@ export const LedgerCategoryChecklist: React.FC<LedgerCategoryChecklistProps> = (
                   <Checkbox
                     checked={isChecked}
                     onChange={() => onToggleFilter(c.name)}
-                    className="rounded border-border text-blue-500 focus:ring-ring size-3.5"
+                    className="rounded border-border text-accent-ink focus:ring-ring size-3.5"
                   />
                   <span className={`size-2 shrink-0 rounded-full ${getCategoryDotClass(c.name)}`} />
                   <span className="min-w-0 flex-1 truncate font-semibold">{c.name}</span>

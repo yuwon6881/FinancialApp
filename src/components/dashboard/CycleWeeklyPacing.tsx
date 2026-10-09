@@ -68,7 +68,7 @@ export const CycleWeeklyPacing: React.FC<CycleWeeklyPacingProps> = ({
           const content = (
             <>
               <div className="flex w-full items-baseline justify-between gap-1 text-xs">
-                <span className="font-bold text-foreground">Week {week.weekNumber}</span>
+                <span className="font-semibold text-foreground">Week {week.weekNumber}</span>
                 {/* Date ranges are desktop detail; a phone card only has room for the figure. */}
                 <span className="hidden text-xs text-muted-foreground min-[1280px]:inline">
                   {formatShortDate(week.startDate)} - {formatShortDate(week.endDate)}

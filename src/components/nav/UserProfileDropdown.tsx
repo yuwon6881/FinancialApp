@@ -77,7 +77,9 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           aria-label="Account menu"
           title="Account menu"
           className={cn(
-            'flex cursor-pointer items-center transition duration-150 active:scale-[0.97]',
+            'flex cursor-pointer items-center transition duration-150',
+            // The round avatar presses in; the full-width sidebar row does not (see Sidebar).
+            trigger === 'avatar' && 'active:scale-[0.97]',
             trigger === 'avatar'
               ? 'size-11 justify-center rounded-full hover:bg-surface-2 lg:size-9'
               : 'min-h-11 w-full justify-center gap-2.5 rounded-xl px-2 hover:bg-surface-2 lg:justify-start',

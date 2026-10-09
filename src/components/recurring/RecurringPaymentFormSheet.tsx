@@ -89,7 +89,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
       maxWidthClassName="max-w-xl"
       title={
         <span className="flex items-center gap-2">
-          {editingPayment ? <Edit className="size-4 text-blue-500" /> : <Plus className="size-4 text-blue-500" />}
+          {editingPayment ? <Edit className="size-4 text-accent-ink" /> : <Plus className="size-4 text-accent-ink" />}
           {editingPayment ? 'Edit Subscription' : 'Add New Recurring Payment'}
         </span>
       }
@@ -101,7 +101,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
           </p>
         )}
         {editingPayment && (
-          <p className="sm:col-span-2 rounded-xl border border-blue-500/15 bg-blue-500/5 px-3.5 py-2.5 text-xs leading-relaxed text-muted-foreground">
+          <p className="sm:col-span-2 rounded-xl border border-primary/15 bg-primary/5 px-3.5 py-2.5 text-xs leading-relaxed text-muted-foreground">
             Changes apply to unpaid and future bills. Paid bills keep their ledger details.
           </p>
         )}

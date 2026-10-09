@@ -149,7 +149,7 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
                       <b className="text-foreground">{holding.symbol}</b>
                       <span className="text-muted-foreground"> · {holding.accountName}</span>
                     </span>
-                    <span className="shrink-0 font-bold text-foreground">
+                    <span className="shrink-0 font-semibold text-foreground">
                       {masked ? '••••' : holding.valueApp === undefined ? 'Unavailable' : money(holding.valueApp, portfolio.appCurrency)}
                     </span>
                   </li>

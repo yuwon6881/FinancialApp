@@ -112,10 +112,10 @@ export const InstrumentForm = ({ busy, offline, existingInstruments = [], onCanc
   const selectedUnavailable = selected ? marketAvailability(selected) === 'Unavailable' : false
   return <div className="space-y-4">
     <>
-      <Field label="Symbol or company / fund name"><span className="relative block"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} placeholder="Search at least 3 characters" className="pl-9" />{searching && <Loader2 className="absolute right-3 top-3 size-4 animate-spin text-blue-500" />}</span></Field>
+      <Field label="Symbol or company / fund name"><span className="relative block"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} placeholder="Search at least 3 characters" className="pl-9" />{searching && <Loader2 className="absolute right-3 top-3 size-4 animate-spin text-accent-ink" />}</span></Field>
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
       {selected ? (
-        <div className="rounded-xl border border-blue-500 bg-blue-500/5 p-3">
+        <div className="rounded-xl border border-primary bg-primary/5 p-3">
           <div className="flex items-start justify-between gap-3"><span className="min-w-0"><strong className="block text-sm">{selected.symbol} · {selected.name}</strong><span className="mt-1 block text-xs text-muted-foreground">{[selected.exchange, selected.mic, selected.currency, selected.country].filter(Boolean).join(' · ')}</span></span><Button type="button" variant="tertiary" size="sm" onClick={() => setSelected(null)}>Change</Button></div>
         </div>
       ) : <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">

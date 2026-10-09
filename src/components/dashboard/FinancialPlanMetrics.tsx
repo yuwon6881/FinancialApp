@@ -89,7 +89,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
               <span className="size-2 rounded-full bg-violet-500 inline-block ring-1 ring-background" />
               Growth Achieved
             </span>
-            <span className="text-foreground font-bold tabular-nums">
+            <span className="text-foreground font-semibold tabular-nums">
               {(growthMetric.currentPct * 100).toFixed(1)}%
               {growthMetric.pending > 0 && (
                 <span className="ml-1 text-amber-700 dark:text-amber-300">{'→'} {(growthMetric.safePct * 100).toFixed(1)}%</span>
@@ -127,7 +127,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
               <span className="size-2 rounded-full bg-sky-500 inline-block ring-1 ring-background" />
               Essentials Remaining
             </span>
-            <span className="text-foreground font-bold tabular-nums">
+            <span className="text-foreground font-semibold tabular-nums">
               {(essentialsMetric.currentPct * 100).toFixed(1)}%
               {essentialsMetric.pending > 0 && (
                 <span className="ml-1 text-amber-700 dark:text-amber-300">{'→'} {(essentialsMetric.projectedPct * 100).toFixed(1)}%</span>
@@ -165,7 +165,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
               <span className="size-2 rounded-full bg-emerald-500 inline-block ring-1 ring-background" />
               {stabilityMetric.hasTarget ? 'Stability Cap Reached' : 'Stability Fund'}
             </span>
-            <span className="text-foreground font-bold tabular-nums">
+            <span className="text-foreground font-semibold tabular-nums">
               {stabilityMetric.hasTarget ? `${(stabilityMetric.currentPct * 100).toFixed(1)}%` : 'No limit set'}
               {stabilityMetric.pending > 0 && (
                 <span className="ml-1 text-amber-700 dark:text-amber-300">{'→'} {(stabilityMetric.projectedPct * 100).toFixed(1)}%</span>

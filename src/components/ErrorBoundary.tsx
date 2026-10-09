@@ -116,7 +116,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <AlertTriangle className="size-6" />
           </div>
           <div className="space-y-1.5 text-center">
-            <h2 className="text-lg font-bold tracking-tight text-foreground">Something went wrong</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">Something went wrong</h2>
             <p className="text-xs leading-relaxed text-muted-foreground">
               {retryFailed
                 ? 'Trying again ran into the same problem, so it will not clear on its own. Your saved and queued data is safe — reload the app, and if that does not help, clear the data kept on this device.'

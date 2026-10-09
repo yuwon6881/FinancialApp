@@ -146,7 +146,7 @@ export function CategoryLimitsCard({
       >
         <div className="min-w-0">
           <h3 className="flex items-center gap-1.5 text-subsection text-foreground">
-            <Gauge className="size-4 text-blue-500" /> Cycle Spending Guides
+            <Gauge className="size-4 text-accent-ink" /> Cycle Spending Guides
           </h3>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -174,7 +174,7 @@ export function CategoryLimitsCard({
                   key={category.id}
                   className={`rounded-xl border p-3 sm:p-3.5 transition-all duration-200 ${
                     enabled
-                      ? 'border-blue-500/25 bg-blue-500/5 dark:bg-blue-500/10'
+                      ? 'border-primary/25 bg-primary/5 dark:bg-primary/10'
                       : 'border-border/40 bg-muted/20 hover:border-border/70'
                   }`}
                 >
@@ -202,7 +202,7 @@ export function CategoryLimitsCard({
                         </span>
                       </div>
                     </div>
-                    <span className={`text-xs font-semibold shrink-0 ${enabled ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-muted-foreground'}`}>
+                    <span className={`text-xs font-semibold shrink-0 ${enabled ? 'text-accent-ink font-semibold' : 'text-muted-foreground'}`}>
                       {enabled ? 'Active Guide' : 'No Guide'}
                     </span>
                   </div>

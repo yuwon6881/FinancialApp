@@ -20,7 +20,7 @@ const tone: Record<InvestmentAllocationStatus, string> = {
   Alert: 'bg-red-500/12 text-red-700 dark:text-red-300',
 }
 
-const colors = ['bg-blue-500', 'bg-amber-500', 'bg-emerald-500']
+const colors = ['bg-primary', 'bg-amber-500', 'bg-emerald-500']
 
 export function InvestmentPlanPanel({
   allocation,

@@ -79,7 +79,7 @@ export function FingerprintSection() {
     : enrolledHere
       ? { label: 'Enabled here', className: 'text-emerald-500' }
       : enabledOnAccount
-        ? { label: 'Available', className: 'text-blue-500' }
+        ? { label: 'Available', className: 'text-accent-ink' }
         : { label: 'Not enabled', className: 'text-muted-foreground' }
 
   const enroll = async () => {

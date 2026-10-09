@@ -105,7 +105,7 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
             variant="tertiary"
             type="button"
             onClick={() => { setLoading(true); void load() }}
-            className="inline-flex items-center gap-1 font-bold text-accent-ink hover:underline"
+            className="inline-flex items-center gap-1 font-semibold text-accent-ink hover:underline"
           >
             <RefreshCw className="size-3" aria-hidden="true" /> Try again
           </Button>

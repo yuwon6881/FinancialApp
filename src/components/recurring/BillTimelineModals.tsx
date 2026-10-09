@@ -34,7 +34,7 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
           maxWidthClassName="max-w-md"
           title={
             <div className="flex items-center gap-2">
-              <List className="size-4 text-blue-500" />
+              <List className="size-4 text-accent-ink" />
               <span>Subscriptions on {selectedNode.dueDate}</span>
             </div>
           }
@@ -44,7 +44,7 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
               const statusStyle = bill.status === 'Paid' || bill.status === 'SettledByLoanPayoff'
                 ? 'text-emerald-500 bg-emerald-500/10'
                 : bill.status === 'PartiallyPaid'
-                  ? 'text-blue-500 bg-blue-500/10'
+                  ? 'text-accent-ink bg-primary/10'
                   : bill.status === 'Discarded'
                     ? 'text-slate-400 bg-slate-500/10'
                     : 'text-amber-500 bg-amber-500/10'
@@ -97,7 +97,7 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
                 selectedBill.status === 'Paid' || selectedBill.status === 'SettledByLoanPayoff'
                   ? 'bg-emerald-500/10 text-emerald-500'
                   : selectedBill.status === 'PartiallyPaid'
-                    ? 'bg-blue-500/10 text-blue-500'
+                    ? 'bg-primary/10 text-accent-ink'
                     : selectedBill.status === 'Discarded'
                       ? 'bg-slate-500/10 text-slate-400'
                       : 'bg-amber-500/10 text-amber-500'
@@ -110,26 +110,26 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
                   <AlertCircle className="size-4" />
                 )}
               </span>
-              <span className="text-sm font-bold">{selectedBill.name}</span>
+              <span className="text-sm font-semibold">{selectedBill.name}</span>
             </div>
           }
         >
           <div className="text-xs space-y-3 font-semibold text-foreground">
             <div className="grid grid-cols-2 gap-3.5 bg-muted/30 p-3.5 rounded-xl border border-border/40">
               <div className="flex flex-col justify-between">
-                <span className="text-xs text-muted-foreground block font-normal uppercase tracking-wider mb-1">Amount</span>
+                <span className="text-xs text-muted-foreground block font-normal mb-1">Amount</span>
                 <div className="flex items-center min-h-[22px]">
                   <span className="text-base font-semibold text-foreground leading-none">{selectedBill.amount == null ? 'Unavailable' : formatSensitive(Math.abs(selectedBill.amount))}</span>
                 </div>
               </div>
               <div className="flex flex-col justify-between">
-                <span className="text-xs text-muted-foreground block font-normal uppercase tracking-wider mb-1">Status</span>
+                <span className="text-xs text-muted-foreground block font-normal mb-1">Status</span>
                 <div className="flex items-center min-h-[22px]">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-caption font-semibold leading-none ${
                     selectedBill.status === 'Paid' || selectedBill.status === 'SettledByLoanPayoff'
                       ? 'bg-emerald-500/10 text-emerald-500'
                       : selectedBill.status === 'PartiallyPaid'
-                        ? 'bg-blue-500/10 text-blue-500'
+                        ? 'bg-primary/10 text-accent-ink'
                         : selectedBill.status === 'Discarded'
                           ? 'bg-slate-500/10 text-slate-400 line-through'
                           : 'bg-amber-500/10 text-amber-500'
@@ -143,13 +143,13 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
                 </div>
               </div>
               <div className="flex flex-col justify-between pt-2.5 border-t border-border/30">
-                <span className="text-xs text-muted-foreground block font-normal uppercase tracking-wider mb-1">Due Date</span>
+                <span className="text-xs text-muted-foreground block font-normal mb-1">Due Date</span>
                 <div className="flex items-center min-h-[22px]">
                   <span className="text-xs font-semibold text-foreground leading-none">{selectedBill.dueDate}</span>
                 </div>
               </div>
               <div className="flex flex-col justify-between pt-2.5 border-t border-border/30">
-                <span className="text-xs text-muted-foreground block font-normal uppercase tracking-wider mb-1">Categories</span>
+                <span className="text-xs text-muted-foreground block font-normal mb-1">Categories</span>
                 <div className="flex flex-wrap items-center gap-1 min-h-[22px]">
                   <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-xs font-semibold leading-none ${getCategoryBadgeClass(selectedBill.ledgerCategory)}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${getCategoryDotClass(selectedBill.ledgerCategory)}`} />
@@ -164,14 +164,14 @@ export const BillTimelineModals: React.FC<BillTimelineModalsProps> = ({
             </div>
 
             {selectedBill.status === 'PartiallyPaid' && (
-              <div className="grid grid-cols-2 gap-2 bg-blue-500/10 border border-blue-500/20 p-2.5 rounded-xl text-xs">
+              <div className="grid grid-cols-2 gap-2 bg-primary/10 border border-primary/20 p-2.5 rounded-xl text-xs">
                 <div>
                   <span className="text-label font-medium text-muted-foreground block">Paid so far</span>
                   <span className="font-semibold text-foreground">{formatSensitive(selectedBill.paidAmount ?? 0)}</span>
                 </div>
                 <div>
                   <span className="text-label font-medium text-muted-foreground block">Still to pay</span>
-                  <span className="font-semibold text-blue-600 dark:text-blue-400">{formatSensitive(selectedBill.remainingAmount ?? 0)}</span>
+                  <span className="font-semibold text-accent-ink">{formatSensitive(selectedBill.remainingAmount ?? 0)}</span>
                 </div>
               </div>
             )}

@@ -582,14 +582,15 @@ html, body {
    button. It paints nothing, and inset:0 never leaves the button's own footprint,
    so it cannot reach into the lane gap or a neighbouring control.
 
-   Scoped to the header rather than added as a class per control: every action up
-   there is a small rounded control with the same dead corners, and one rule costs
-   the eager bundle nothing, while six class names cost it real bytes. */
-.glass-nav button {
+   Scoped to the app chrome (sidebar, phone top bar, tab bar) rather than added as a
+   class per control: every action there is a small rounded control with the same dead
+   corners, and one rule costs the eager bundle nothing, while a class per control
+   costs it real bytes. */
+.app-chrome button {
     position: relative;
 }
 
-.glass-nav button::after {
+.app-chrome button::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -701,8 +702,13 @@ html, body {
 }
 .amount-fraction {
     font-size: max(0.72em, min(1em, 0.8125rem));
-    opacity: 0.66;
     letter-spacing: 0;
+}
+/* Fading the cents is a display-size flourish. From display up the cents are large text, where AA
+   asks 3:1 and a two-thirds fade keeps it even on muted figures; at row and caption sizes the same
+   fade drops muted amounts under 4.5:1, so there the smaller size alone does the quieting. */
+.amount-text:is([class*="text-display"], [class*="text-hero"], [class*="text-jumbo"]) .amount-fraction {
+    opacity: 0.66;
 }
 .amount-sign {
     margin-right: 0.08em;
@@ -1188,12 +1194,14 @@ html {
    utilities may make the visible control denser, but its hit box never drops
    below the shared 44px interaction floor until the expanded tier. */
 @media (width < 64rem) {
+    /* In CSS pixels, not rem: the 44px target is a pointer size, and a rem floor doubled with the
+       reader's text size until five tabs and the add button no longer fitted a phone at 200%. */
     :is(button, [role="button"], [role="combobox"], input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
-        min-height: 2.75rem !important;
+        min-height: 44px !important;
     }
 
     :is(button, [role="button"]) {
-        min-width: 2.75rem !important;
+        min-width: 44px !important;
     }
 }
 

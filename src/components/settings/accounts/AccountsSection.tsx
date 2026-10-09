@@ -57,13 +57,13 @@ interface PendingBalanceCorrection {
 function SignedAmount({ value, currency, hideSensitive }: { value: number; currency: string; hideSensitive: boolean }) {
   if (Math.abs(value) < 0.005) return <span className="text-muted-foreground">No change</span>
   return (
-    <span className={value > 0 ? 'text-accent-ink font-bold' : 'text-destructive font-bold'}>
+    <span className={value > 0 ? 'text-accent-ink font-semibold' : 'text-destructive font-semibold'}>
       {value > 0 ? '+' : '−'}
       <SensitiveAmount
         value={Math.abs(value)}
         isMasked={hideSensitive}
         formatFn={amount => formatCurrencyVal(amount, currency)}
-        className="font-bold"
+        className="font-semibold"
       />
     </span>
   )
@@ -266,13 +266,13 @@ export function AccountsSection({
 
   return (
     <>
+      {/* Wealth › Accounts has no tab row, so this is a named region rather than a tab panel. */}
       <section
         id="settings-panel-accounts"
-        role="tabpanel"
-        aria-labelledby="settings-tab-accounts"
+        aria-labelledby="accounts-region-title"
         className="space-y-6 animate-in fade-in duration-200"
       >
-        <h3 className="sr-only">Accounts</h3>
+        <h3 id="accounts-region-title" className="sr-only">Accounts</h3>
         {/* What all the accounts add up to, card balances already netted off, then how that total
             divides across the four buckets -- the one figure the bucket cards below never state. */}
         {openAccountCount > 0 && (
@@ -419,11 +419,11 @@ export function AccountsSection({
             <div className="space-y-1.5 rounded-control bg-surface-2/70 p-3 text-label">
               <div className="flex items-center justify-between gap-3">
                 <span>Current {pendingBalanceCorrection.account.bucket} total</span>
-                <span className="font-bold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.bucketTotal, currency)}</span>
+                <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.bucketTotal, currency)}</span>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span>New {pendingBalanceCorrection.account.bucket} total</span>
-                <span className="font-bold text-foreground">
+                <span className="font-semibold text-foreground">
                   {formatCurrencyVal(pendingBalanceCorrection.bucketTotal + (pendingBalanceCorrection.targetBalance - pendingBalanceCorrection.account.remaining), currency)}
                 </span>
               </div>

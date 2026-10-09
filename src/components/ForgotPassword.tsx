@@ -151,7 +151,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                 <span
                   key={s}
                   className={`h-1.5 rounded-full transition-all duration-300 ${
-                    s === step ? 'w-6 bg-blue-500' : s < step ? 'w-6 bg-blue-500/40' : 'w-1.5 bg-border'
+                    s === step ? 'w-6 bg-primary' : s < step ? 'w-6 bg-primary/40' : 'w-1.5 bg-border'
                   }`}
                 />
               ))}

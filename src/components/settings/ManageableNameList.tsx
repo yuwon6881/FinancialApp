@@ -212,7 +212,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
       >
         {isLoading ? (
           <div role="status" className="flex min-h-24 items-center justify-center gap-2 text-xs font-semibold text-muted-foreground">
-            <Loader2 className="size-4 animate-spin text-blue-500" />
+            <Loader2 className="size-4 animate-spin text-accent-ink" />
             Loading…
           </div>
         ) : filtered.length === 0 ? (

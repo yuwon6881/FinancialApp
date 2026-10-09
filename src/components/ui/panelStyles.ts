@@ -39,7 +39,7 @@ export const PANEL_TONES = {
   /** A limit is already exceeded or a payment is already short. */
   urgent: 'border-orange-500/30',
   /** Neutral explanation of state the reader did not ask about. */
-  info: 'border-blue-500/20 bg-blue-500/5',
+  info: 'border-primary/20 bg-primary/5',
 } as const
 
 export type PanelTone = keyof typeof PANEL_TONES

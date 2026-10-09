@@ -80,7 +80,7 @@ function InvestmentActivityAmount({ activity, currency, masked, mobile = false }
 
   return (
     <span className={`flex min-w-0 max-w-full flex-col items-end gap-0.5 text-right ${mobile ? 'max-w-[56%]' : ''}`}>
-      <span className="font-bold">
+      <span className="font-semibold">
         {masked ? '••••' : activity.cashAmount === undefined ? 'Unavailable' : money(activity.cashAmount, currency)}
       </span>
       {!masked && hasCharges && (
@@ -162,7 +162,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
               onClick={() => onSelectHolding(holding)}
               className="group/holding flex min-w-0 flex-1 cursor-pointer flex-col items-start justify-center gap-0.5 rounded-lg px-0 py-0 text-left hover:bg-transparent"
             >
-              <span className="max-w-full truncate text-sm font-bold text-foreground underline decoration-dotted underline-offset-4 transition-colors group-hover/holding:text-accent-ink">{holding.symbol} · {holding.name}</span>
+              <span className="max-w-full truncate text-sm font-semibold text-foreground underline decoration-dotted underline-offset-4 transition-colors group-hover/holding:text-accent-ink">{holding.symbol} · {holding.name}</span>
               <span className="max-w-full truncate text-xs font-medium text-muted-foreground">{holding.accountName} · {holding.type}</span>
             </Button>
             <strong className="shrink-0 text-sm">{masked ? '••••' : holding.valueApp === undefined ? 'Exchange rate missing' : money(holding.valueApp, portfolio.appCurrency)}</strong>
@@ -245,7 +245,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
           {paginatedHoldings.map(holding => (
             <tr key={`${holding.accountId}-${holding.instrumentId}`} className="hover:bg-muted/20">
               <td className="px-3 py-3">
-                <Button variant="tertiary" onClick={() => onSelectHolding(holding)} className="cursor-pointer font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-accent-ink">{holding.symbol}</Button>
+                <Button variant="tertiary" onClick={() => onSelectHolding(holding)} className="cursor-pointer font-semibold text-foreground underline decoration-dotted underline-offset-4 hover:text-accent-ink">{holding.symbol}</Button>
                 <span className="ml-2 text-xs text-muted-foreground">{holding.type}</span>
                 <span className="block truncate text-xs text-muted-foreground" title={holding.name}>{holding.name}</span>
                 <details className="group/valuation mt-2 rounded border border-border/50 bg-muted/10">
@@ -267,9 +267,9 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
               <td className="px-3 py-3 text-muted-foreground"><span className="block truncate" title={holding.accountName}>{holding.accountName}</span></td>
               <td className="px-3 py-3 text-right font-medium">{masked ? '••••' : number(holding.units, 8)}</td>
               <td className="px-3 py-3 text-right">{masked ? '••••' : holding.latestPriceNative === undefined ? 'Unavailable' : money(holding.latestPriceNative, holding.currency)}</td>
-              <td className="px-3 py-3 text-right font-bold">{masked ? '••••' : holding.valueApp === undefined ? 'Exchange rate missing' : money(holding.valueApp, portfolio.appCurrency)}</td>
+              <td className="px-3 py-3 text-right font-semibold">{masked ? '••••' : holding.valueApp === undefined ? 'Exchange rate missing' : money(holding.valueApp, portfolio.appCurrency)}</td>
               <td className="px-3 py-3 text-right">{masked ? '••••' : holding.dailyChangeApp === undefined ? '—' : money(holding.dailyChangeApp, portfolio.appCurrency)}</td>
-              <td className={`px-3 py-3 text-right font-bold ${(holding.unrealisedProfitLossApp ?? 0) >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.unrealisedProfitLossApp === undefined ? '—' : `${money(holding.unrealisedProfitLossApp, portfolio.appCurrency)} (${(holding.unrealisedPercent ?? 0).toFixed(1)}%)`}</td>
+              <td className={`px-3 py-3 text-right font-semibold ${(holding.unrealisedProfitLossApp ?? 0) >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.unrealisedProfitLossApp === undefined ? '—' : `${money(holding.unrealisedProfitLossApp, portfolio.appCurrency)} (${(holding.unrealisedPercent ?? 0).toFixed(1)}%)`}</td>
             </tr>
           ))}
         </DataTableBody>
@@ -489,7 +489,7 @@ export const PagedActivityTable = ({
                   }) : displayCashFlows.map(value => {
                     const isActive = isActiveRecord(value.id, 'investmentCashFlow')
                     const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-                    return <tr key={value.id} className="transition-colors hover:bg-surface-2/50"><td className="px-4 py-3 tabular-nums text-muted-foreground">{value.date}</td><td className="px-4 py-3"><span className="flex items-center gap-2"><Badge tone={CASH_FLOW_TONES[value.type] ?? 'neutral'}>{value.type}</Badge><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3 text-muted-foreground">{accounts.get(value.accountId)}</td><td className={`px-4 py-3 text-right font-bold tabular-nums ${value.type === 'Conversion' ? 'text-foreground' : value.amount < 0 ? 'text-foreground' : 'text-emerald-600 dark:text-emerald-400'}`}>{cashFlowAmount(value, masked)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><IconButton label={`Edit ${value.type} ${value.date}`} tooltip="Edit" disabled={isBusy || masked} onClick={() => onEditCashFlow(value)} className="text-muted-foreground hover:text-foreground"><Pencil className="size-4" aria-hidden="true" /></IconButton><IconButton label={`Delete ${value.type} ${value.date}`} tooltip="Delete" disabled={isBusy || masked} onClick={() => onDeleteCashFlow(value)} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" aria-hidden="true" /></IconButton></span></td></tr>
+                    return <tr key={value.id} className="transition-colors hover:bg-surface-2/50"><td className="px-4 py-3 tabular-nums text-muted-foreground">{value.date}</td><td className="px-4 py-3"><span className="flex items-center gap-2"><Badge tone={CASH_FLOW_TONES[value.type] ?? 'neutral'}>{value.type}</Badge><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3 text-muted-foreground">{accounts.get(value.accountId)}</td><td className={`px-4 py-3 text-right font-semibold tabular-nums ${value.type === 'Conversion' ? 'text-foreground' : value.amount < 0 ? 'text-foreground' : 'text-emerald-600 dark:text-emerald-400'}`}>{cashFlowAmount(value, masked)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><IconButton label={`Edit ${value.type} ${value.date}`} tooltip="Edit" disabled={isBusy || masked} onClick={() => onEditCashFlow(value)} className="text-muted-foreground hover:text-foreground"><Pencil className="size-4" aria-hidden="true" /></IconButton><IconButton label={`Delete ${value.type} ${value.date}`} tooltip="Delete" disabled={isBusy || masked} onClick={() => onDeleteCashFlow(value)} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" aria-hidden="true" /></IconButton></span></td></tr>
                   })}</DataTableBody>
                 </DataTable>
               </div>

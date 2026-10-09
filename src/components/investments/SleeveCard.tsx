@@ -83,8 +83,8 @@ export function SleeveCard({
           <ul className="space-y-2 border-t border-border/60 px-3 py-2.5">
             {constituents.map(holding => (
               <li key={`${holding.accountId}-${holding.instrumentId}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 text-xs">
-                <span className="truncate font-bold text-foreground">{holding.symbol} · {holding.name}</span>
-                <span className="text-right font-bold text-foreground">{money(holding.valueApp)}</span>
+                <span className="truncate font-semibold text-foreground">{holding.symbol} · {holding.name}</span>
+                <span className="text-right font-semibold text-foreground">{money(holding.valueApp)}</span>
                 <span className="text-muted-foreground">
                   {holding.shareOfSleeve === undefined ? 'Share unavailable' : `${holding.shareOfSleeve.toFixed(1)}% of this basket`}
                 </span>

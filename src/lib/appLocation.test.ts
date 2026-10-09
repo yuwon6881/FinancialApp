@@ -142,12 +142,20 @@ describe('app URL state', () => {
     ['/reports?focus=category-limits', 'reports', '/insights'],
     ['/settings?section=accounts', 'accounts', '/wealth/accounts'],
     ['/settings?section=categories', 'budget', '/plan/budget'],
+    ['/settings?section=model', 'budget', '/plan/budget'],
+    ['/settings?section=rules', 'budget', '/plan/budget'],
     ['/', 'dashboard', '/today'],
   ] as const)('resolves the published address %s and settles on its canonical path', (address, tab, canonical) => {
     window.history.replaceState({}, '', address)
     expect(readAppLocation().tab).toBe(tab)
     canonicalizeAppLocation()
     expect(window.location.pathname).toBe(canonical)
+  })
+
+  it('leaves the automation-only specimen page where it is', () => {
+    window.history.replaceState({}, '', '/ui-specimen')
+    canonicalizeAppLocation()
+    expect(window.location.pathname).toBe('/ui-specimen')
   })
 
   it('keeps the query a published address carried', () => {

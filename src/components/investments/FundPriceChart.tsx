@@ -119,8 +119,8 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
         {history.averageCostNative !== undefined && (
           <span className="flex items-center gap-1.5"><i className="inline-block w-4 border-t-2 border-dashed border-amber-500 align-middle" /> What you paid on average</span>
         )}
-        <span>Lowest <strong className="font-bold text-foreground tabular-nums">{masked ? '••••' : money(low)}</strong></span>
-        <span>Highest <strong className="font-bold text-foreground tabular-nums">{masked ? '••••' : money(high)}</strong></span>
+        <span>Lowest <strong className="font-semibold text-foreground tabular-nums">{masked ? '••••' : money(low)}</strong></span>
+        <span>Highest <strong className="font-semibold text-foreground tabular-nums">{masked ? '••••' : money(high)}</strong></span>
       </div>
 
       <div className="sr-only">

@@ -33,7 +33,7 @@ export const TabBar: React.FC<TabBarProps> = ({
   const active = destinationForTab(activeTab)
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 select-none sm:hidden"
+      className="app-chrome pointer-events-none fixed inset-x-0 bottom-0 z-50 select-none sm:hidden"
       style={{ paddingBottom: 'calc(0.625rem + env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="mx-auto flex max-w-md items-center gap-2 px-3">

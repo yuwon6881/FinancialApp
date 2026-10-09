@@ -135,7 +135,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
                     <Checkbox
                       checked={isChecked}
                       onChange={() => onToggleCategoryFilter(bucket)}
-                      className="rounded border-border text-blue-500 focus:ring-ring size-3"
+                      className="rounded border-border text-accent-ink focus:ring-ring size-3"
                     />
                     <span className={`size-2 rounded-full ${getCategoryDotClass(bucket)}`} />
                     <span>{bucket}</span>
@@ -174,7 +174,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
                       <Checkbox
                         checked={isChecked}
                         onChange={() => onToggleCategoryFilter(bucket)}
-                        className="rounded border-border text-blue-500 focus:ring-ring size-3.5"
+                        className="rounded border-border text-accent-ink focus:ring-ring size-3.5"
                       />
                       <span className={`size-2.5 rounded-full ${getCategoryDotClass(bucket)}`} />
                       <span className="font-semibold">{bucket}</span>

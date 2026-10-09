@@ -132,7 +132,7 @@ export function PayEarlySheet({
       onClose={onClose}
       title={
         <div className="min-w-0">
-          <div className="text-sm font-bold text-foreground">Pay {payment.name} early</div>
+          <div className="text-sm font-semibold text-foreground">Pay {payment.name} early</div>
           <p className="text-xs font-normal text-muted-foreground">Due on {payment.nextDueDate || 'upcoming date'}</p>
         </div>
       }
@@ -153,7 +153,7 @@ export function PayEarlySheet({
                 onClick={() => { setMode('full'); setError(null) }}
                 className={`rounded-lg py-2 transition-all cursor-pointer text-center ${
                   mode === 'full'
-                    ? 'bg-card hover:bg-card text-foreground shadow-xs font-bold'
+                    ? 'bg-card hover:bg-card text-foreground shadow-xs font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -165,7 +165,7 @@ export function PayEarlySheet({
                 onClick={() => { setMode('partial'); setError(null) }}
                 className={`rounded-lg py-2 transition-all cursor-pointer text-center ${
                   mode === 'partial'
-                    ? 'bg-card hover:bg-card text-foreground shadow-xs font-bold'
+                    ? 'bg-card hover:bg-card text-foreground shadow-xs font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -190,7 +190,7 @@ export function PayEarlySheet({
                 {alreadyPaidAmount > 0 && (
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Already recorded</span>
-                    <span className="font-bold text-foreground">{formatCurrencyVal(alreadyPaidAmount, currency)}</span>
+                    <span className="font-semibold text-foreground">{formatCurrencyVal(alreadyPaidAmount, currency)}</span>
                   </div>
                 )}
               </div>
@@ -203,12 +203,12 @@ export function PayEarlySheet({
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Total bill amount</span>
-                    <span className="font-bold text-foreground">{formatCurrencyVal(scheduledAmount, currency)}</span>
+                    <span className="font-semibold text-foreground">{formatCurrencyVal(scheduledAmount, currency)}</span>
                   </div>
                   {alreadyPaidAmount > 0 && (
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">Already recorded</span>
-                      <span className="font-bold text-foreground">{formatCurrencyVal(alreadyPaidAmount, currency)}</span>
+                      <span className="font-semibold text-foreground">{formatCurrencyVal(alreadyPaidAmount, currency)}</span>
                     </div>
                   )}
                 </div>
@@ -231,7 +231,7 @@ export function PayEarlySheet({
                     </div>
                     <div>
                       <span className="text-label font-medium text-muted-foreground block">Still due</span>
-                      <span className="font-semibold text-blue-600 dark:text-blue-400">{formatCurrencyVal(remainingAmount, currency)}</span>
+                      <span className="font-semibold text-accent-ink">{formatCurrencyVal(remainingAmount, currency)}</span>
                     </div>
                   </div>
                 )}

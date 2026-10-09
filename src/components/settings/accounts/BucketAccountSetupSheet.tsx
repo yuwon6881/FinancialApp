@@ -44,7 +44,7 @@ function SignedAmount({ value, currency, hideSensitive }: { value: number; curre
         value={Math.abs(value)}
         isMasked={hideSensitive}
         formatFn={amount => formatCurrencyVal(amount, currency)}
-        className="font-bold"
+        className="font-semibold"
       />
     </span>
   )
@@ -151,7 +151,7 @@ export function BucketAccountSetupSheet({
     }
   }
 
-  const formatAmount = (value: number) => <SensitiveAmount value={value} isMasked={hideSensitive} formatFn={amount => formatCurrencyVal(amount, currency)} className="font-bold text-foreground" />
+  const formatAmount = (value: number) => <SensitiveAmount value={value} isMasked={hideSensitive} formatFn={amount => formatCurrencyVal(amount, currency)} className="font-semibold text-foreground" />
 
   return (
     <>
@@ -170,7 +170,7 @@ export function BucketAccountSetupSheet({
           </div>
           {view.errors.form && <div className="flex items-start gap-2 rounded-xl border border-destructive/25 bg-destructive/10 p-3 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" /><p>{view.errors.form}</p></div>}
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3"><div><h4 className="text-sm font-bold text-foreground">Accounts in {bucket}</h4></div><Button variant="secondary" size="sm" type="button" onClick={view.addDraft} disabled={isBusy}><Plus className="size-3.5" aria-hidden="true" />Add account</Button></div>
+            <div className="flex items-center justify-between gap-3"><div><h4 className="text-sm font-semibold text-foreground">Accounts in {bucket}</h4></div><Button variant="secondary" size="sm" type="button" onClick={view.addDraft} disabled={isBusy}><Plus className="size-3.5" aria-hidden="true" />Add account</Button></div>
             {view.bucketAccounts.map(account => (
               <div key={account.id} className="grid grid-cols-1 items-center gap-2.5 rounded-2xl border border-border/60 bg-card/70 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,12rem)] sm:gap-3">
                 <div className="min-w-0">

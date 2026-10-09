@@ -362,7 +362,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 </div>
                 <div className="min-w-0 leading-tight">
                   <p className="text-caption text-muted-foreground">Signing in as</p>
-                  <p className="text-sm font-bold text-foreground truncate">{username}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">{username}</p>
                 </div>
               </div>
               <Button variant="secondary" size="sm" onClick={() => { setLoginStep(1); setPassword(''); setError(null) }} className="shrink-0 text-muted-foreground shadow-sm">
@@ -495,7 +495,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             className="w-full rounded-xl"
           >
             {fingerprintLoading ? (
-              <div className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+              <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
             ) : (
               <ShieldCheck className="size-4 text-accent-ink" aria-hidden="true" />
             )}

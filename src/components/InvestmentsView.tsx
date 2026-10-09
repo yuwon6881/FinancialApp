@@ -265,7 +265,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
       )}
 
       {!portfolio?.marketDataConfigured && (
-        <div className="rounded-xl border border-blue-500/20 bg-blue-500/7 px-4 py-3 text-xs text-muted-foreground">
+        <div className="rounded-xl border border-primary/20 bg-primary/7 px-4 py-3 text-xs text-muted-foreground">
           Live prices are unavailable. You can still record activity; values update when market data is configured.
         </div>
       )}
@@ -388,7 +388,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           />
           {portfolio.warnings.length > 0 && (
             <details className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
-              <summary id="calculation-warnings" className="cursor-pointer text-sm font-bold text-foreground">Why some figures are missing</summary>
+              <summary id="calculation-warnings" className="cursor-pointer text-sm font-semibold text-foreground">Why some figures are missing</summary>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
                 {portfolio.warnings.map(warning => <li key={warning}>{warning}</li>)}
               </ul>

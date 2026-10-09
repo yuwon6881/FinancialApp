@@ -188,7 +188,7 @@ interface StatField {
 function statusBadgeClass(status: string): string {
   const s = status.toLowerCase()
   if (s === 'paid' || s === 'paid off' || s === 'settledbyloanpayoff') return 'bg-emerald-500/15 text-emerald-500'
-  if (s === 'part paid' || s === 'partiallypaid') return 'bg-blue-500/15 text-blue-500'
+  if (s === 'part paid' || s === 'partiallypaid') return 'bg-primary/15 text-accent-ink'
   if (s === 'discarded') return 'bg-muted text-muted-foreground'
   return 'bg-amber-500/15 text-amber-500'
 }
@@ -285,7 +285,7 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
       title={
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-destructive" />
-          <span className="text-base font-bold text-foreground">Failed Sync Items</span>
+          <span className="text-base font-semibold text-foreground">Failed Sync Items</span>
         </div>
       }
       footer={
@@ -319,12 +319,12 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
               {/* Header */}
               <div className="flex items-start justify-between gap-3 px-4 pt-3">
                 <div className="min-w-0">
-                  <span className="font-bold text-foreground text-sm block truncate">{describeOp(op)}</span>
+                  <span className="font-semibold text-foreground text-sm block truncate">{describeOp(op)}</span>
                   <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                    <span className="inline-block text-xs px-1.5 py-0.5 font-bold rounded border border-border/40 bg-muted/40 text-muted-foreground">
+                    <span className="inline-block text-xs px-1.5 py-0.5 font-semibold rounded border border-border/40 bg-muted/40 text-muted-foreground">
                       {ENTITY_LABELS[op.entity] || 'Item'}
                     </span>
-                    <span className="inline-block text-xs px-1.5 py-0.5 font-bold rounded border border-border/40 bg-muted/40 text-muted-foreground">
+                    <span className="inline-block text-xs px-1.5 py-0.5 font-semibold rounded border border-border/40 bg-muted/40 text-muted-foreground">
                       {TYPE_LABELS[op.type] || 'Change'}
                     </span>
                     <span className="text-xs text-muted-foreground">
@@ -339,13 +339,13 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
                 <div className="grid grid-cols-2 gap-2.5 mx-4 p-3 bg-muted/30 border border-border/40 rounded-xl">
                   {curatedFields.map((field) => (
                     <div key={field.label} className="flex flex-col gap-0.5 min-w-0">
-                      <span className="text-xs text-muted-foreground font-normal uppercase tracking-wider">{field.label}</span>
+                      <span className="text-xs text-muted-foreground font-normal">{field.label}</span>
                       {field.tone === 'status' ? (
                         <span className={`inline-flex items-center self-start px-1.5 py-0.5 rounded text-caption font-semibold leading-none ${statusBadgeClass(field.value)}`}>
                           {field.value}
                         </span>
                       ) : (
-                        <span className="text-sm font-bold text-foreground break-words leading-tight">{field.value}</span>
+                        <span className="text-sm font-semibold text-foreground break-words leading-tight">{field.value}</span>
                       )}
                     </div>
                   ))}
@@ -357,8 +357,8 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
                 <div className="grid grid-cols-2 gap-2.5 mx-4 p-3 bg-muted/30 border border-border/40 rounded-xl">
                   {getPayloadEntries(op).map(([key, value]) => (
                     <div key={key} className="flex flex-col gap-0.5 min-w-0">
-                      <span className="text-xs text-muted-foreground font-normal uppercase tracking-wider">{formatFieldName(key)}</span>
-                      <span className="text-sm font-bold text-foreground break-words leading-tight">{formatFieldValue(key, value)}</span>
+                      <span className="text-xs text-muted-foreground font-normal">{formatFieldName(key)}</span>
+                      <span className="text-sm font-semibold text-foreground break-words leading-tight">{formatFieldValue(key, value)}</span>
                     </div>
                   ))}
                 </div>

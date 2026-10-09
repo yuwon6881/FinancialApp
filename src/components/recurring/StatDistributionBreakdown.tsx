@@ -158,7 +158,7 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
           <p className="text-xs text-muted-foreground sm:text-xs">{subtitle}</p>
         </div>
         <div className="text-right shrink-0">
-          <span className="text-xs font-semibold text-blue-500 sm:text-sm">{totalFormatted}</span>
+          <span className="text-xs font-semibold text-accent-ink sm:text-sm">{totalFormatted}</span>
           <span className="block text-label font-medium text-muted-foreground">
             {mode === 'loan-owed' ? 'total owed' : 'total / year'}
           </span>
@@ -198,7 +198,7 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
                       <span>
                         {formatSensitive(row.monthlyAmount)} / month
                         {row.dailyAmount !== undefined && (
-                          <span className="ml-1 text-muted-foreground/70">· {formatSensitive(row.dailyAmount)} / day</span>
+                          <span className="ml-1 text-muted-foreground">· {formatSensitive(row.dailyAmount)} / day</span>
                         )}
                       </span>
                     ) : null}
@@ -223,7 +223,7 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
               <Meter
                 className="mt-2 bg-muted/50"
                 percent={row.percentage}
-                tone="bg-blue-500"
+                tone="bg-primary"
                 valueHidden={hideSensitive}
                 label={`${row.name} share of the total`}
               />

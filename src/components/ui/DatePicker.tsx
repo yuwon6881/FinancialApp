@@ -369,11 +369,11 @@ export function DatePicker({
                   className={cn(
                     // Seven global 44px targets cannot fit the fixed calendar panel; the grid
                     // supplies spacing and keyboard navigation while each cell stays contained.
-                    'flex h-8 !min-h-8 !min-w-0 cursor-pointer items-center justify-center rounded-full text-label transition duration-100',
+                    'flex h-8 w-full !min-h-8 !min-w-0 cursor-pointer items-center justify-center rounded-full px-0 text-label transition duration-100',
                     isDisabled && 'cursor-not-allowed text-muted-foreground/35',
                     !isDisabled && isSelected && 'bg-primary hover:bg-primary font-semibold text-primary-foreground',
                     !isDisabled && !isSelected && isToday
-                      && 'font-bold text-blue-600 hover:bg-muted/80 dark:text-blue-400',
+                      && 'font-semibold text-accent-ink hover:bg-muted/80',
                     !isDisabled && !isSelected && !isToday
                       && 'font-medium text-foreground hover:bg-muted/80',
                     isActive && 'outline-2 outline-offset-1 outline-ring',
@@ -399,7 +399,7 @@ export function DatePicker({
             type="button"
             disabled={Boolean((min && todayISO < min) || (max && todayISO > max))}
             onClick={() => select(todayISO)}
-            className="cursor-pointer rounded-lg px-2.5 py-1 text-caption font-semibold text-blue-600 transition hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-blue-400"
+            className="cursor-pointer rounded-lg px-2.5 py-1 text-caption font-semibold text-accent-ink transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Today
           </Button>

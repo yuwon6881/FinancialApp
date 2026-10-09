@@ -112,7 +112,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       aria-current={options.active ? 'page' : undefined}
       onClick={onClick}
       className={cn(
-        'group relative isolate min-h-11 w-full gap-3 rounded-xl px-0 text-body hover:bg-transparent lg:min-h-10',
+        // No press scale on a full-width row: 3% of 200px pulls its corners out from under the
+        // pointer between press and release, and the click is lost.
+        'group relative isolate min-h-11 w-full gap-3 rounded-xl px-0 text-body hover:bg-transparent active:scale-100 lg:min-h-10',
         collapsed ? 'justify-center' : 'justify-center lg:justify-start lg:px-3',
         options.active ? 'font-semibold text-foreground' : 'font-medium text-muted-foreground hover:text-foreground',
       )}
@@ -153,7 +155,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       aria-label="Sidebar"
-      className="fixed inset-y-0 left-0 z-40 hidden w-(--app-sidebar-w) flex-col border-r border-sidebar-border bg-sidebar pt-[env(safe-area-inset-top,0px)] transition-[width] duration-200 ease-fluid sm:flex"
+      className="app-chrome fixed inset-y-0 left-0 z-40 hidden w-(--app-sidebar-w) flex-col border-r border-sidebar-border bg-sidebar pt-[env(safe-area-inset-top,0px)] transition-[width] duration-200 ease-fluid sm:flex"
     >
       <div className={cn('flex h-16 shrink-0 items-center gap-2 px-3', collapsed ? 'justify-center' : 'justify-center lg:justify-between lg:pl-4')}>
         <Button
@@ -196,7 +198,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={onOpenSearch}
           aria-label="Search your records"
           title="Search (Ctrl+K)"
-          className={cn('min-h-11 w-full gap-2.5 rounded-xl px-0 text-muted-foreground lg:min-h-10', collapsed ? 'justify-center' : 'justify-center lg:justify-start lg:px-3')}
+          className={cn('min-h-11 w-full gap-2.5 rounded-xl px-0 text-muted-foreground active:scale-100 lg:min-h-10', collapsed ? 'justify-center' : 'justify-center lg:justify-start lg:px-3')}
         >
           <Search className="size-4 shrink-0" aria-hidden />
           <span className={cn('flex-1 text-left text-body font-normal', label)}>Search</span>
@@ -208,7 +210,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           disabled={newTransactionDisabled}
           aria-label="New transaction"
           title={newTransactionDisabled ? 'Reveal sensitive data to make financial changes' : 'New transaction'}
-          className={cn('min-h-11 w-full gap-2 px-0 lg:min-h-10', collapsed ? 'justify-center' : 'justify-center lg:px-4')}
+          className={cn('min-h-11 w-full gap-2 px-0 active:scale-100 lg:min-h-10', collapsed ? 'justify-center' : 'justify-center lg:px-4')}
         >
           <Plus className="size-4 shrink-0" strokeWidth={2.25} />
           <span className={label}>New transaction</span>

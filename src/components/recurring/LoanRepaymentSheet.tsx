@@ -181,7 +181,7 @@ export function LoanRepaymentSheet({
       onClose={onClose}
       title={
         <div className="min-w-0">
-          <div className="text-sm font-bold text-foreground">Pay {loan.name}</div>
+          <div className="text-sm font-semibold text-foreground">Pay {loan.name}</div>
           <p className="text-xs font-normal text-muted-foreground">Linked bill: {loan.recurringPaymentName || 'Recurring bill'}</p>
         </div>
       }
@@ -196,7 +196,7 @@ export function LoanRepaymentSheet({
             onClick={() => { setTab('advance'); setActionError(null) }}
             className={`rounded-lg py-2 transition-all cursor-pointer text-center ${
               tab === 'advance'
-                ? 'bg-card hover:bg-card text-foreground shadow-xs font-bold'
+                ? 'bg-card hover:bg-card text-foreground shadow-xs font-semibold'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -208,7 +208,7 @@ export function LoanRepaymentSheet({
             onClick={() => { setTab('settlement'); setActionError(null) }}
             className={`rounded-lg py-2 transition-all cursor-pointer text-center ${
               tab === 'settlement'
-                ? 'bg-card hover:bg-card text-foreground shadow-xs font-bold'
+                ? 'bg-card hover:bg-card text-foreground shadow-xs font-semibold'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -284,7 +284,7 @@ export function LoanRepaymentSheet({
                 ) : preview ? (
                   <div className="space-y-3">
                     <div className="rounded-xl border border-border/60 overflow-hidden text-xs">
-                      <div className="bg-muted/40 px-3 py-2 font-bold text-muted-foreground border-b border-border/40 flex justify-between">
+                      <div className="bg-muted/40 px-3 py-2 font-semibold text-muted-foreground border-b border-border/40 flex justify-between">
                         <span>Cycle</span>
                         <span>Payment</span>
                       </div>
@@ -297,13 +297,13 @@ export function LoanRepaymentSheet({
                                 Principal: {formatCurrencyVal(occ.principal, currency)} · Interest: {formatCurrencyVal(occ.interest, currency)}
                               </p>
                             </div>
-                            <span className="font-bold text-foreground">
+                            <span className="font-semibold text-foreground">
                               {formatCurrencyVal(occ.payment, currency)}
                             </span>
                           </div>
                         ))}
                       </div>
-                      <div className="bg-muted/20 px-3 py-2.5 border-t border-border/40 flex items-center justify-between font-bold">
+                      <div className="bg-muted/20 px-3 py-2.5 border-t border-border/40 flex items-center justify-between font-semibold">
                         <span className="text-foreground">Total to pay</span>
                         <span className="text-sm text-accent-ink">
                           {formatCurrencyVal(preview.totalAmount, currency)}

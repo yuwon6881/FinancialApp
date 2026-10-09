@@ -272,7 +272,7 @@ export function ReceiptSplitSheet({
           {(receipt.truncated || receipt.warnings.length > 0 || receipt.confidence < 0.7
             || calculation.hasMismatch || calculation.chargeBaseIncomplete || printedCurrency) && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-              <div className="flex items-center gap-2 font-bold">
+              <div className="flex items-center gap-2 font-semibold">
                 <AlertTriangle className="size-4" /> Review the extracted receipt
               </div>
               {receipt.truncated && <p className="mt-1">Some visible receipt lines may be missing.</p>}

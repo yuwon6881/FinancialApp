@@ -157,9 +157,9 @@ export function InteractiveDoughnutChart({
           >
             <span className="mr-2 flex min-w-0 flex-1 items-center gap-2">
               <span aria-hidden="true" className="size-2 shrink-0 rounded-full ring-1 ring-background" style={{ backgroundColor: slice.color }} />
-              <span className="truncate font-bold text-foreground">{slice.label}</span>
+              <span className="truncate font-semibold text-foreground">{slice.label}</span>
             </span>
-            <span className="shrink-0 font-bold tabular-nums text-foreground/90">
+            <span className="shrink-0 font-semibold tabular-nums text-foreground/90">
               {masked ? '••••' : <>{formatValue(slice.value)} ({(slice.percentage * 100).toFixed(1)}%)</>}
             </span>
           </m.button>

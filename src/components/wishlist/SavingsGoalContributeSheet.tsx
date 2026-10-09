@@ -111,7 +111,7 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
       <form noValidate onSubmit={event => { void handleConfirm(event) }} className="space-y-4 py-2">
         <div className="p-4 rounded-xl bg-violet-500/10 border border-pink-500/20 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h4 className="font-bold text-sm text-foreground truncate">{goal.name}</h4>
+            <h4 className="font-semibold text-sm text-foreground truncate">{goal.name}</h4>
             <span className="text-xs text-muted-foreground font-medium">
               {formatSensitive(goal.earmarkedAmount)} of {formatSensitive(goal.targetAmount)} set aside
             </span>

@@ -118,7 +118,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
               )}
             </div>
 
-            <dl className="mt-4 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 border-t border-border/60 pt-4 text-label">
+            <dl className="mt-4 grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-4 gap-y-2 border-t border-border/60 pt-4 text-label">
               <dt className="text-muted-foreground">Recurs</dt>
               <dd className="min-w-0 text-right text-foreground">{getRecurrenceDescription(normalizeRecurringFrequency(rp.frequency), rp.startDate, rp.dueDate)}</dd>
               {/* Stated on every card because it is the reason Pay Early is or isn't offered
@@ -146,7 +146,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                   event.preventDefault()
                   onNavigateToLoan(rp.linkedLoanId!)
                 }}
-                className="mt-3 inline-flex min-h-9 max-w-full items-center gap-1.5 self-start rounded-full bg-primary/8 px-3 text-label font-medium text-accent-ink transition hover:bg-primary/12 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="mt-3 inline-flex min-h-11 max-w-full items-center gap-1.5 self-start rounded-full bg-primary/8 px-3 text-label lg:min-h-9 font-medium text-accent-ink transition hover:bg-primary/12 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 title={`View linked loan: ${rp.linkedLoanName || 'Loan'}`}
                 aria-label={`View linked loan: ${rp.linkedLoanName || 'Loan'}`}
               >

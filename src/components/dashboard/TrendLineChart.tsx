@@ -209,7 +209,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
       </div>
       <div className="border-t border-border/50 pt-3 mt-3 flex justify-between text-xs text-muted-foreground">
         <span>{range === '3month' ? 'Last 3 cycles' : range === '6month' ? 'Last 6 cycles' : `${dashboardData?.setting.selectedYear || new Date().getFullYear()} full year`}</span>
-        <span className="font-medium">Growth Savings: <strong className="font-bold text-foreground tabular-nums">{formatSensitive(growthBalance)}</strong></span>
+        <span className="font-medium">Growth Savings: <strong className="font-semibold text-foreground tabular-nums">{formatSensitive(growthBalance)}</strong></span>
       </div>
     </div>
   )

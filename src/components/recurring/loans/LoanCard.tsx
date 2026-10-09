@@ -275,7 +275,7 @@ export function LoanCard({
                     {row.kind === 'Paid' ? 'Recorded' : 'Planned'}
                   </span>
                 </div>
-                <span className="font-bold text-foreground tabular-nums shrink-0">{formatSensitive(row.payment)}</span>
+                <span className="font-semibold text-foreground tabular-nums shrink-0">{formatSensitive(row.payment)}</span>
               </div>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-border/25 pt-1.5 text-xs text-muted-foreground min-w-0">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">

@@ -126,10 +126,10 @@ export function CycleActivitySections({
               {summary.purchasedThisCycle.map(item => (
                 <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-background/50 px-3 py-2 text-xs">
                   <div className="min-w-0 flex items-center gap-2">
-                    <span className="font-bold text-foreground truncate">{item.name}</span>
+                    <span className="font-semibold text-foreground truncate">{item.name}</span>
                     {item.priority && <span className={`shrink-0 rounded px-1.5 py-0.5 text-label font-medium ${priorityClass(item.priority)}`}>{item.priority}</span>}
                   </div>
-                  <span className="shrink-0 font-bold text-foreground">{formatSensitive(item.price)}</span>
+                  <span className="shrink-0 font-semibold text-foreground">{formatSensitive(item.price)}</span>
                 </div>
               ))}
             </div>
@@ -159,7 +159,7 @@ export function StabilityFundSection({
       <div className="rounded-control bg-surface-2/70 p-3.5">
         <div className="flex items-center justify-between text-xs">
           <span className="font-semibold text-foreground">Funded</span>
-          <span className="font-bold text-foreground">{Math.round(summary.stabilityPct * 100)}%</span>
+          <span className="font-semibold text-foreground">{Math.round(summary.stabilityPct * 100)}%</span>
         </div>
         <Meter className="mt-2 h-2" percent={summary.stabilityPct * 100} tone="bg-cyan-500" valueHidden={hideSensitive} label="Stability fund funded against its target" />
         {/* The percentage on its own never said how much money that was, nor how much of the

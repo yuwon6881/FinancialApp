@@ -84,7 +84,7 @@ export function ActiveDevicesSection() {
           title block. This one carried a boxed icon, which made its row the odd one out in the
           grid. */}
       <Button variant="tertiary" type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex w-full min-w-0 items-center gap-2.5 p-5 justify-start text-left cursor-pointer">
-        <MonitorSmartphone className="size-5 shrink-0 text-blue-500" />
+        <MonitorSmartphone className="size-5 shrink-0 text-accent-ink" />
         <div className="min-w-0 flex-1"><h3 className="truncate text-subsection text-foreground">Active Devices</h3></div>
         <span className="inline-flex shrink-0 items-center gap-1 text-caption font-semibold text-muted-foreground">
           {loading ? <><Loader2 className="size-3 animate-spin" /> Checking…</> : sessions.length}
@@ -99,7 +99,7 @@ export function ActiveDevicesSection() {
               return (
                 <div key={session.id} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs" aria-busy={isRevoking}>
                   <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="flex min-w-0 flex-wrap items-center gap-2 font-semibold"><MonitorSmartphone className="size-3.5 shrink-0 text-blue-500" />{session.deviceName || 'Unknown Device'}{session.isCurrent && <small className="shrink-0 text-blue-500">Current</small>}</span>
+                    <span className="flex min-w-0 flex-wrap items-center gap-2 font-semibold"><MonitorSmartphone className="size-3.5 shrink-0 text-accent-ink" />{session.deviceName || 'Unknown Device'}{session.isCurrent && <small className="shrink-0 text-accent-ink">Current</small>}</span>
                     <span className="text-xs text-muted-foreground"><CalendarDays className="inline size-3" /> Logged in: {new Date(session.createdAt).toLocaleDateString()} · Last active: {relativeTime(session.lastActiveAt)}</span>
                     {session.ipAddress && <span className="text-xs text-muted-foreground">IP: {session.ipAddress}</span>}
                   </div>

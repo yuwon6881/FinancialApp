@@ -173,18 +173,20 @@ describe('class-merge contract', () => {
 describe('tone vocabulary contract', () => {
   // A reader should not have to learn "orange means already over" twice. Where a badge and a panel
   // name the same state, they must reach for the same colour family -- hand-rolled pills had used
-  // amber and orange on sibling elements with nothing recording which meant what.
+  // amber and orange on sibling elements with nothing recording which meant what. Info is the Iris
+  // accent in Lumen rather than a second blue competing with it.
   const SHARED: Array<[BadgeTone & PanelTone, string]> = [
     ['warning', 'amber'],
     ['urgent', 'orange'],
-    ['info', 'blue'],
+    ['info', 'primary'],
   ]
 
   it.each(SHARED)('the %s tone is %s in both a badge and a panel', (tone, family) => {
     render(<Badge tone={tone}>Label</Badge>)
     const badge = screen.getByText('Label').className
-    expect(badge, `Badge ${tone}`).toContain(`-${family}-`)
-    expect(PANEL_TONES[tone], `PANEL_TONES.${tone}`).toContain(`-${family}-`)
+    const usesFamily = new RegExp(`-${family}[-/]`)
+    expect(badge, `Badge ${tone}`).toMatch(usesFamily)
+    expect(PANEL_TONES[tone], `PANEL_TONES.${tone}`).toMatch(usesFamily)
   })
 
   it('keeps every badge tone on a rounded-full pill', () => {

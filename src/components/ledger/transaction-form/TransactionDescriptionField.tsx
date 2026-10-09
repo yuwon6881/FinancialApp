@@ -116,7 +116,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
             onClick={onSuggestNotes}
             disabled={suggestions.isSuggestingNote || state.description.trim().length < 2}
             title={state.description.trim().length < 2 ? 'Enter a description first' : 'Suggest better notes'}
-            className="inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-caption font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2 py-1 text-caption font-semibold text-accent-ink hover:bg-primary/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
           >
             {suggestions.isSuggestingNote ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
             AI
@@ -161,11 +161,11 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
         onDismiss={() => suggestions.setShowNoteSuggestions(false)}
         matchAnchorWidth
         side="bottom"
-        className="z-[190] overflow-y-auto overscroll-contain bg-card border border-blue-500/25 rounded-xl shadow-(--app-shadow-overlay) animate-in fade-in slide-in-from-top-2 duration-150"
+        className="z-[190] overflow-y-auto overscroll-contain bg-card border border-primary/25 rounded-xl shadow-(--app-shadow-overlay) animate-in fade-in slide-in-from-top-2 duration-150"
       >
         {suggestions.isSuggestingNote ? (
           <div className="flex items-center gap-2 px-3.5 py-3 text-xs font-semibold text-muted-foreground">
-            <Loader2 className="size-3.5 animate-spin text-blue-500" />
+            <Loader2 className="size-3.5 animate-spin text-accent-ink" />
             Suggesting cleaner notes...
           </div>
         ) : suggestions.noteSuggestions.length > 0 ? (
@@ -180,7 +180,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
                 descriptionRef.current = s.note
                 suggestions.setShowNoteSuggestions(false)
               }}
-              className="w-full items-start justify-start text-left px-3.5 py-2.5 text-sm flex flex-col gap-0.5 cursor-pointer transition duration-100 hover:bg-blue-500/10 first:rounded-t-xl last:rounded-b-xl"
+              className="w-full items-start justify-start text-left px-3.5 py-2.5 text-sm flex flex-col gap-0.5 cursor-pointer transition duration-100 hover:bg-primary/10 first:rounded-t-xl last:rounded-b-xl"
             >
               <span className="font-semibold text-foreground">{s.note}</span>
               <span className="text-xs text-muted-foreground">{s.reason}</span>
@@ -214,7 +214,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
             const before = s.description.slice(0, matchIdx)
             const match = s.description.slice(matchIdx, matchIdx + query.length)
             const after = s.description.slice(matchIdx + query.length)
-            rendered = <>{before}<span className="text-blue-500 font-bold">{match}</span>{after}</>
+            rendered = <>{before}<span className="text-accent-ink font-semibold">{match}</span>{after}</>
           }
           return (
             <Button
@@ -231,7 +231,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
               }}
               className={`w-full text-left px-3.5 py-2 text-sm flex items-center justify-between gap-2 cursor-pointer transition duration-100 first:rounded-t-xl last:rounded-b-xl ${
                 idx === selectedSuggestionIndex
-                  ? 'bg-blue-500/10 hover:bg-blue-500/10 text-foreground'
+                  ? 'bg-primary/10 hover:bg-primary/10 text-foreground'
                   : 'hover:bg-muted/50 text-foreground'
               }`}
             >

@@ -178,7 +178,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </section>
 
       {(view.wishlistGoal || hasOutstandingBills) && (
-        <div className="grid items-start gap-6 @3xl:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-6 @3xl:grid-cols-2">
           {view.wishlistGoal && (
             <RewardGoalCard
               goal={view.wishlistGoal}

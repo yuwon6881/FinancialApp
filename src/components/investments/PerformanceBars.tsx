@@ -67,7 +67,7 @@ export function PerformanceBars({ portfolio, masked, onSelectHolding }: {
               <Button
                 variant="tertiary"
                 onClick={() => onSelectHolding(holding)}
-                className="min-w-0 cursor-pointer truncate justify-start text-left font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-accent-ink"
+                className="min-w-0 cursor-pointer truncate justify-start text-left font-semibold text-foreground underline decoration-dotted underline-offset-4 hover:text-accent-ink"
               >
                 {holding.symbol}
               </Button>
@@ -81,7 +81,7 @@ export function PerformanceBars({ portfolio, masked, onSelectHolding }: {
                   style={positive ? { left: '50%' } : undefined}
                 />
               </div>
-              <span className={`min-w-13 text-right font-bold ${positive ? 'text-emerald-500' : 'text-orange-500'}`}>{label(holding)}</span>
+              <span className={`min-w-13 text-right font-semibold ${positive ? 'text-emerald-500' : 'text-orange-500'}`}>{label(holding)}</span>
             </div>
           )
         })}

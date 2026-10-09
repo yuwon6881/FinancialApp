@@ -225,7 +225,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                 const todayTime = new Date().getTime()
                 if (todayTime < startTime || todayTime > endTime) return null
                 const todayPct = ((todayTime - startTime) / durationMs) * 100
-                return <div className="absolute left-0 top-0 h-full rounded-full bg-blue-500/30" style={{ width: `${todayPct}%` }} />
+                return <div className="absolute left-0 top-0 h-full rounded-full bg-primary/30" style={{ width: `${todayPct}%` }} />
               })()}
               {timelineNodes.map(node => {
                 const { dot: dotColor, label: statusLabel } = billTimelineStatus(node.bills)

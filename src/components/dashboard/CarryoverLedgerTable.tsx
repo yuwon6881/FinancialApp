@@ -59,7 +59,7 @@ export function CarryoverLedgerTable({
             const badgeClass = getCategoryBadgeClass(category.name)
             return (
               <div key={category.name} data-testid={`carryover-row-${category.name.toLowerCase()}`} className="grid grid-cols-[2.2fr_1fr_1.4fr_1.4fr_1.7fr_2.1fr] items-center gap-4 py-3 px-4 rounded-xl border border-transparent hover:bg-muted/10 transition">
-                <div className="flex items-center gap-2 font-bold text-foreground min-w-0">
+                <div className="flex items-center gap-2 font-semibold text-foreground min-w-0">
                   <span className={`size-2.5 rounded-full shrink-0 ${getCategoryDotClass(category.name)}`} />
                   <span className="truncate">{category.name}</span>
                   {hasAccounts && (
@@ -85,7 +85,7 @@ export function CarryoverLedgerTable({
                     : pending > 0 && <div className="mt-0.5 flex items-center justify-end gap-1 text-xs font-normal text-yellow-500"><Clock className="size-3 shrink-0" />Pending: -{amount(pending)}</div>}
                 </div>
                 <div className="text-right">
-                  <div className={`font-bold ${category.remaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
+                  <div className={`font-semibold ${category.remaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
                     <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                   </div>
                   {rewards ? <div className="mt-0.5 text-xs font-semibold text-foreground">Free to spend: {amount(rewards.freeToSpend)}</div>
@@ -110,7 +110,7 @@ export function CarryoverLedgerTable({
           return (
             <div key={category.name} data-testid={`carryover-card-${category.name.toLowerCase()}`} className="min-w-0 p-4 rounded-xl border border-border bg-background/50 space-y-3 shadow-xs transition">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2 font-bold text-sm">
+                <div className="flex min-w-0 items-center gap-2 font-semibold text-sm">
                   <span className={`size-2.5 rounded-full ${getCategoryDotClass(category.name)}`} />
                   <span>{category.name}</span>
                 </div>
@@ -139,7 +139,7 @@ export function CarryoverLedgerTable({
                 <div className="min-w-0">
                   <span className="text-muted-foreground text-xs block mb-0.5">Net Change</span>
                   <div className="min-w-0">
-                    <span className={`font-bold tabular-nums [overflow-wrap:anywhere] ${category.netChange > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
+                    <span className={`font-semibold tabular-nums [overflow-wrap:anywhere] ${category.netChange > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
                       <SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} />
                     </span>
                   </div>
@@ -149,7 +149,7 @@ export function CarryoverLedgerTable({
                 <div className="min-w-0">
                   <span className="text-muted-foreground text-xs block mb-0.5">Remaining Balance</span>
                   <div className="min-w-0">
-                    <span className={`font-bold tabular-nums [overflow-wrap:anywhere] ${category.remaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
+                    <span className={`font-semibold tabular-nums [overflow-wrap:anywhere] ${category.remaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
                       <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                     </span>
                   </div>
@@ -171,7 +171,7 @@ export function CarryoverLedgerTable({
           title={
             <div className="flex items-center gap-2 min-w-0">
               <span className={`size-3 shrink-0 rounded-full ${getCategoryDotClass(selectedCategory.name)} shadow-xs`} />
-              <span className="text-base font-bold text-foreground truncate">{selectedCategory.name} Account Balances</span>
+              <span className="text-base font-semibold text-foreground truncate">{selectedCategory.name} Account Balances</span>
             </div>
           }
           headerActions={
@@ -222,7 +222,7 @@ export function CarryoverLedgerTable({
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className={`block truncate font-bold ${account.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
+                          <span className={`block truncate font-semibold ${account.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
                             {account.name}
                           </span>
                           {account.isArchived && (
@@ -239,7 +239,7 @@ export function CarryoverLedgerTable({
                         value={account.remaining}
                         isMasked={amountsMasked}
                         formatFn={formatCurrency}
-                        className={`font-bold tabular-nums text-sm ${account.remaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}
+                        className={`font-semibold tabular-nums text-sm ${account.remaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}
                       />
                       {onNavigateToAccounts && (
                         <Button
