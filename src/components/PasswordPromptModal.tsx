@@ -120,7 +120,7 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
           <Button
             type="submit"
             disabled={promptVerifying || fingerprintBusy}
-            className="rounded-xl px-4 shadow-md shadow-primary/10"
+            className="rounded-xl px-4"
           >
             {promptVerifying ? 'Verifying…' : 'Verify'}
           </Button>
@@ -132,7 +132,7 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
           <div
             role="separator"
             aria-label="Alternative verification"
-            className="flex items-center gap-3 text-eyebrow uppercase text-muted-foreground"
+            className="flex items-center gap-3 text-label font-medium text-muted-foreground"
           >
             <span className="h-px flex-1 bg-border/60" />
             <span>Or use your device</span>

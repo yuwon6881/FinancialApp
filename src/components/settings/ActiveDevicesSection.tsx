@@ -86,7 +86,7 @@ export function ActiveDevicesSection() {
       <Button variant="tertiary" type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex w-full min-w-0 items-center gap-2.5 p-5 justify-start text-left cursor-pointer">
         <MonitorSmartphone className="size-5 shrink-0 text-blue-500" />
         <div className="min-w-0 flex-1"><h3 className="truncate text-subsection text-foreground">Active Devices</h3></div>
-        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-muted-foreground">
+        <span className="inline-flex shrink-0 items-center gap-1 text-caption font-semibold text-muted-foreground">
           {loading ? <><Loader2 className="size-3 animate-spin" /> Checking…</> : sessions.length}
         </span>
         {open ? <ChevronUp className="size-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="size-4 shrink-0 text-muted-foreground" />}
@@ -108,7 +108,7 @@ export function ActiveDevicesSection() {
               )
             })}
           </div>
-          {sessions.length > 1 && <Button variant="tertiary" type="button" onClick={() => void revokeOthers()} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingOthers} className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 disabled:opacity-40"><MutationButtonContent state={revokingOthers ? 'deleting' : null} entityLabel="other device sessions" idleLabel="Log out all other devices" busyLabel="Revoking…" idleIcon={<LogOut className="size-3.5" />} /></Button>}
+          {sessions.length > 1 && <Button variant="tertiary" type="button" onClick={() => void revokeOthers()} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingOthers} className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-caption font-semibold text-red-500 border border-red-500/30 disabled:opacity-40"><MutationButtonContent state={revokingOthers ? 'deleting' : null} entityLabel="other device sessions" idleLabel="Log out all other devices" busyLabel="Revoking…" idleIcon={<LogOut className="size-3.5" />} /></Button>}
         </div>
       </CollapsibleBody>
     </Panel>

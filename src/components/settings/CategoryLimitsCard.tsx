@@ -213,7 +213,6 @@ export function CategoryLimitsCard({
                       required
                       error={errors[category.id]}
                       className="mt-3 pt-3 border-t border-border/30 animate-in fade-in duration-150"
-                      labelClassName="text-xs uppercase tracking-wider"
                       errorClassName="text-xs font-semibold"
                     >
                       {hideSensitive ? (
@@ -222,7 +221,7 @@ export function CategoryLimitsCard({
                         </div>
                       ) : (
                       <div className="relative flex items-center">
-                        <span className="absolute left-3 z-10 text-xs font-bold text-muted-foreground pointer-events-none">
+                        <span className="absolute left-3 z-10 text-caption font-semibold text-muted-foreground pointer-events-none">
                           {getCurrencySymbol(currency)}
                         </span>
                         <SmartAmountInput
@@ -257,7 +256,7 @@ export function CategoryLimitsCard({
               )
             })}
             {spendingCategories.length === 0 && (
-              <p className="rounded-xl border border-border/40 bg-muted/20 p-3 text-xs text-muted-foreground">
+              <p className="rounded-control bg-surface-2/70 p-3 text-xs text-muted-foreground">
                 Inflow categories do not use spending guides.
               </p>
             )}

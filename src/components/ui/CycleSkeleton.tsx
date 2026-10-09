@@ -45,7 +45,7 @@ const LedgerFilterSkeleton: React.FC = () => (
 const CompactMetricGridSkeleton: React.FC<{ count: number; className?: string }> = ({ count, className }) => (
   <div className={cn('grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3', className)}>
     {Array.from({ length: count }, (_, i) => (
-      <div key={i} className="space-y-2 rounded-xl border border-border/50 bg-muted/25 p-4">
+      <div key={i} className="space-y-2 rounded-control bg-surface-2/70 p-4">
         <Skeleton className="h-3 w-28" />
         <Skeleton className="h-6 w-24" />
         <Skeleton className="h-3 w-3/4" />
@@ -309,7 +309,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
             <div className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-56 max-w-full" /></div>
             <Skeleton className="h-7 w-16 rounded-lg" />
           </div>
-          <div className="space-y-2.5 rounded-xl border border-border/60 bg-muted/20 p-3 lg:flex lg:space-y-0 lg:gap-2.5">
+          <div className="space-y-2.5 rounded-control bg-surface-2/70 p-3 lg:flex lg:space-y-0 lg:gap-2.5">
             <Skeleton className="h-10 flex-1 rounded-xl" />
             <div className="grid grid-cols-2 gap-2 lg:w-80"><Skeleton className="h-10 rounded-xl" /><Skeleton className="h-10 rounded-xl" /></div>
           </div>

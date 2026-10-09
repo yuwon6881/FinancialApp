@@ -118,7 +118,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
               <CheckCircle2 className="size-6 text-emerald-500" />
             </div>
             <div className="space-y-1.5">
-              <h1 className="text-2xl font-black tracking-tight text-foreground">Password reset</h1>
+              <h1 className="text-display text-foreground">Password reset</h1>
               <p className="text-xs text-muted-foreground">
                 Your password has been updated and all other sessions were signed out. You can now log
                 in with your new password.
@@ -127,7 +127,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
             <Button
               onClick={onBackToLogin}
               size="lg"
-              className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
+              className="w-full"
             >
               Return to login
             </Button>
@@ -136,7 +136,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
           <>
             {/* Header */}
             <AuthHeader
-              icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-blue-500/10"><KeyRound className="size-6 text-blue-500" /></span>}
+              icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10"><KeyRound className="size-6 text-accent-ink" aria-hidden="true" /></span>}
               title="Account recovery"
               description={
                 step === 1 ? 'Enter your username to begin.'
@@ -167,7 +167,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                   label="Username"
                   required
                   error={fieldErrors.username}
-                  labelClassName="uppercase tracking-wider"
+                 
                 >
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
@@ -191,7 +191,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                   type="submit"
                   size="lg"
                   disabled={loading}
-                  className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
+                  className="w-full"
                 >
                   {loading ? (
                     <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
@@ -234,7 +234,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                 <Button
                   type="submit"
                   size="lg"
-                  className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
+                  className="w-full"
                 >
                   Verify answers
                 </Button>
@@ -247,7 +247,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                   label="New password"
                   required
                   error={fieldErrors.newPassword}
-                  labelClassName="uppercase tracking-wider"
+                 
                 >
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
@@ -281,7 +281,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                   label="Confirm password"
                   required
                   error={fieldErrors.confirmPassword}
-                  labelClassName="uppercase tracking-wider"
+                 
                 >
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
@@ -304,7 +304,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                   type="submit"
                   size="lg"
                   disabled={loading}
-                  className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
+                  className="w-full"
                 >
                   {loading ? (
                     <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />

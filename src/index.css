@@ -657,6 +657,22 @@ html, body {
     transform: scale(0.97);
 }
 
+/* The brand mark as a loader: its four bucket segments light up in turn, like a pay being split.
+   Reduced motion leaves the mark still and fully drawn. */
+@keyframes brand-segment {
+    0%, 100% { opacity: 0.32; }
+    35% { opacity: 1; }
+}
+.brand-mark-animated path {
+    animation: brand-segment 1.4s var(--ease-fluid) infinite;
+    animation-delay: calc(var(--segment, 0) * 160ms);
+}
+@media (prefers-reduced-motion: reduce) {
+    .brand-mark-animated path {
+        animation: none;
+    }
+}
+
 /* "Needs attention" is exception-only: when none of its notices rendered, the heading goes too. */
 .attention-section:not(:has([data-notice])) {
     display: none;

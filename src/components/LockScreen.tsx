@@ -272,9 +272,9 @@ export function LockScreen({
         tabIndex={-1}
         className="view-enter my-auto flex w-full max-w-sm flex-col items-center gap-6 outline-none"
       >
-        <AppLogo className="size-16 rounded-2xl shadow-xl shadow-primary/20" />
+        <AppLogo className="size-14 rounded-2xl" />
         <div className="text-center">
-          <h2 id={titleId} className="text-xl font-bold text-foreground">
+          <h2 id={titleId} className="text-title text-foreground">
             {mode !== 'session-timeout' ? 'Unlock FinancialApp' : 'Session locked'}
           </h2>
           <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
@@ -307,7 +307,7 @@ export function LockScreen({
             size="lg"
             onClick={() => void handleFingerprintUnlock()}
             disabled={fingerprintVerifying || passwordVerifying}
-            className="w-full rounded-xl py-3 shadow-lg shadow-emerald-500/10"
+            className="w-full"
           >
             <ShieldCheck className="size-5 text-emerald-400 animate-pulse" />
             {fingerprintVerifying
@@ -374,7 +374,7 @@ export function LockScreen({
             type="submit"
             size="lg"
             disabled={passwordVerifying || fingerprintVerifying || !lockPassword || (mode === 'pwa-launch' && !isOnline)}
-            className="w-full rounded-xl py-3 shadow-lg shadow-primary/20"
+            className="w-full"
           >
             {passwordVerifying ? 'Unlocking…' : 'Unlock with Password'}
           </Button>

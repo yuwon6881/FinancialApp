@@ -220,7 +220,7 @@ export function GlobalSearch({
                     isAllCyclesActive ? 'bg-muted/80 hover:bg-muted/80 border-border/60 shadow-xs' : 'border-border/40 hover:bg-muted/40'
                   }`}
                 >
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/40 bg-muted/40 text-muted-foreground">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-surface-2/70 text-muted-foreground">
                     <Layers className="size-4" aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1">

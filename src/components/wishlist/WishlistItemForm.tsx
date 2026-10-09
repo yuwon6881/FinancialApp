@@ -92,7 +92,7 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
           type="submit"
           disabled={mutationBlocked}
           title={props.securityPending && mutationBlocked ? 'Finishing security check…' : mutationBlocked ? 'Reveal sensitive data before saving' : undefined}
-          className="rounded-xl py-2.5 shadow-(--app-shadow-overlay) shadow-primary/25"
+          
         >
           {isAdd ? 'Add Reward' : 'Save Changes'}
         </Button>

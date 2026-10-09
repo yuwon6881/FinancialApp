@@ -189,7 +189,7 @@ export function FingerprintSection() {
 
       <CollapsibleBody open={open}>
         <div className="px-5 pb-5 pt-0 space-y-4 border-t border-border/40">
-          <div className="rounded-2xl border border-border/60 bg-muted/20 p-4 sm:p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+          <div className="rounded-control bg-surface-2/70 p-4 sm:p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-accent-ink">
@@ -240,7 +240,7 @@ export function FingerprintSection() {
 
           {credentials.length > 0 && (
             <div className="space-y-2 pt-2 border-t border-border/40">
-              <span className="text-eyebrow uppercase text-muted-foreground">
+              <span className="text-label font-medium text-muted-foreground">
                 Registered Credentials ({credentials.length})
               </span>
               <div className="space-y-1.5">

@@ -309,8 +309,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     <AuthShell>
       <AuthCard>
         <AuthHeader
-          icon={<AppLogo className="size-12 rounded-2xl shadow-xl shadow-primary/15" pulse />}
-          title={<>FinancialApp <span className="text-accent-ink">Ledger</span></>}
+          icon={<AppLogo className="size-12 rounded-2xl" />}
+          title={registering ? 'Create your account' : 'Welcome back'}
           description={registering
             ? 'Create your account to get started.'
             : loginStep === 1
@@ -330,7 +330,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               label="Username"
               required
               error={errors.username}
-              labelClassName="uppercase tracking-wider"
+             
             >
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
@@ -357,11 +357,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           {!registering && loginStep === 2 && (
             <div className="flex items-center justify-between gap-3 bg-muted/40 p-2.5 pl-3 rounded-2xl border border-border/50 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="size-9 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0 font-black text-sm uppercase select-none">
-                  {username.trim().charAt(0) || <User className="size-4" />}
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-label font-semibold text-accent-ink select-none">
+                  {username.trim().charAt(0).toUpperCase() || <User className="size-4" />}
                 </div>
                 <div className="min-w-0 leading-tight">
-                  <p className="text-eyebrow uppercase text-muted-foreground">Signing in as</p>
+                  <p className="text-caption text-muted-foreground">Signing in as</p>
                   <p className="text-sm font-bold text-foreground truncate">{username}</p>
                 </div>
               </div>
@@ -377,7 +377,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               required
               error={errors.password}
               className="animate-in fade-in slide-in-from-right-4 duration-300"
-              labelClassName="uppercase tracking-wider"
+             
             >
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
@@ -414,7 +414,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     type="button"
                     variant="tertiary"
                     onClick={() => setForgotPassword(true)}
-                    className="text-xs font-semibold text-blue-500 hover:text-blue-600 focus-visible:underline"
+                    className="text-label font-medium text-accent-ink hover:underline focus-visible:underline"
                   >
                     Forgot Password?
                   </Button>
@@ -429,7 +429,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               required
               error={errors.confirmPassword}
               className="animate-in fade-in duration-200"
-              labelClassName="uppercase tracking-wider"
+             
             >
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
@@ -459,7 +459,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             type="submit"
             size="lg"
             disabled={loading || (isRegistered === null)}
-            className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
+            className="w-full"
           >
             {loading ? (
               <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
@@ -497,7 +497,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             {fingerprintLoading ? (
               <div className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
             ) : (
-              <ShieldCheck className="size-4 text-blue-500" />
+              <ShieldCheck className="size-4 text-accent-ink" aria-hidden="true" />
             )}
             Unlock with device
           </Button>
@@ -509,9 +509,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </AlertBanner>
         )}
 
-        <div className="text-center text-xs text-muted-foreground select-none">
-          Secure Personal Financial Ledger
-        </div>
+        <p className="text-caption text-muted-foreground select-none lg:hidden">
+          FinancialApp · secure personal finance
+        </p>
       </AuthCard>
     </AuthShell>
   )

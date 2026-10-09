@@ -134,7 +134,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             {(!inline || retryFailed) && (
               <Button
                 onClick={() => window.location.reload()}
-                className="rounded-xl px-4 shadow-md shadow-primary/10"
+                className="rounded-xl px-4"
               >
                 Reload app
               </Button>
@@ -142,7 +142,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           </div>
           {error.message && (
             <details className="w-full text-left">
-              <summary className="cursor-pointer text-xs font-bold text-muted-foreground">
+              <summary className="cursor-pointer text-caption font-semibold text-muted-foreground">
                 What went wrong
               </summary>
               <p className="mt-1.5 break-words rounded-lg bg-muted/60 p-2 text-xs leading-relaxed text-muted-foreground">

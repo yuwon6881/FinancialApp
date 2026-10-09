@@ -336,7 +336,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         <div className="relative" aria-busy={isLoading}>
           {isLoading && documents.length > 0 && (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-              <div className="inline-flex items-center gap-2 rounded-control bg-surface-2/70 px-3 py-2 text-xs font-semibold text-muted-foreground shadow-(--app-shadow-overlay) backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 rounded-full bg-surface-2 px-3 py-2 text-label font-medium text-muted-foreground">
                 <Loader2 className="size-3.5 animate-spin text-accent-ink" aria-hidden="true" />
                 Updating documents…
               </div>

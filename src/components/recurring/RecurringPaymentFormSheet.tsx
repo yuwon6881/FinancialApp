@@ -248,7 +248,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
             type="submit"
             disabled={mutationBlocked}
             title={securityPending && mutationBlocked ? 'Finishing security check…' : mutationBlocked ? 'Reveal sensitive data before saving' : undefined}
-            className="rounded-xl px-5 py-2.5 shadow-(--app-shadow-overlay) shadow-primary/25 hover:shadow-primary/40"
+            
           >
             {editingPayment ? 'Save Changes' : 'Add Subscription'}
           </Button>

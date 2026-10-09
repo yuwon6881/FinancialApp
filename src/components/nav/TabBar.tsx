@@ -84,7 +84,7 @@ export const TabBar: React.FC<TabBarProps> = ({
           aria-expanded={quickAddOpen}
           aria-haspopup="dialog"
           onClick={() => { triggerHaptic(10); onQuickAdd() }}
-          className="pointer-events-auto size-15 shrink-0 bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary/90"
+          className="pointer-events-auto size-15 shrink-0 bg-primary text-primary-foreground shadow-(--app-shadow-overlay) hover:bg-primary/90"
         >
           <Plus className={cn('size-6 transition-transform duration-200 ease-fluid', quickAddOpen && 'rotate-45')} strokeWidth={2.25} />
         </Button>

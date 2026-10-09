@@ -106,7 +106,7 @@ export const AppGateways: React.FC<AppGatewaysProps> = ({
           <PageContainer className="safe-screen-inset space-y-6 [--safe-screen-block:1.5rem] !px-0 sm:[--safe-screen-inline:1.5rem] lg:[--safe-screen-inline:2rem]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <AppLogo className="size-10 rounded-xl" pulse />
+                <AppLogo className="size-12 rounded-2xl" animated />
                 <div>
                   <Skeleton className="h-4 w-32" />
                   <Skeleton className="mt-2 h-2 w-20" />

@@ -88,7 +88,7 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
     <AuthShell>
       <AuthCard>
         <AuthHeader
-          icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-blue-500/10"><ShieldCheck className="size-6 text-blue-500" /></span>}
+          icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10"><ShieldCheck className="size-6 text-accent-ink" aria-hidden="true" /></span>}
           title="Secure your account"
           description="Pick three questions only you can answer. We use them to verify your identity during account recovery."
         />
@@ -108,8 +108,8 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
             ]
             return (
               <div key={item.id} className="space-y-3">
-                <div className="flex items-center gap-2 text-eyebrow uppercase text-muted-foreground">
-                  <span className="flex size-5 items-center justify-center rounded-md bg-blue-500/10 text-xs font-black text-blue-500">
+                <div className="flex items-center gap-2 text-label font-medium text-muted-foreground">
+                  <span className="flex size-5 items-center justify-center rounded-full bg-primary/12 text-caption font-semibold text-accent-ink">
                     {idx + 1}
                   </span>
                   Question {idx + 1}
@@ -159,7 +159,7 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
             type="submit"
             size="lg"
             disabled={submitting}
-            className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
+            className="w-full"
           >
             {submitting ? (
               <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />

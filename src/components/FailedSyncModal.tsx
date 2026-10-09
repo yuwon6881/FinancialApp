@@ -341,7 +341,7 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
                     <div key={field.label} className="flex flex-col gap-0.5 min-w-0">
                       <span className="text-xs text-muted-foreground font-normal uppercase tracking-wider">{field.label}</span>
                       {field.tone === 'status' ? (
-                        <span className={`inline-flex items-center self-start px-1.5 py-0.5 rounded text-xs font-bold leading-none ${statusBadgeClass(field.value)}`}>
+                        <span className={`inline-flex items-center self-start px-1.5 py-0.5 rounded text-caption font-semibold leading-none ${statusBadgeClass(field.value)}`}>
                           {field.value}
                         </span>
                       ) : (

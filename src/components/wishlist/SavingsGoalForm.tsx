@@ -164,7 +164,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         </Button>
         <Button
           type="submit"
-          className="rounded-xl py-2.5 shadow-(--app-shadow-overlay) shadow-primary/25"
+          
         >
           {isAdd ? 'Add Commitment' : 'Save Changes'}
         </Button>

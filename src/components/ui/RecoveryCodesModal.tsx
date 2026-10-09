@@ -55,7 +55,7 @@ export const RecoveryCodesModal: React.FC<RecoveryCodesModalProps> = ({ isOpen, 
             type="button"
             disabled={!acknowledged}
             onClick={onAcknowledge}
-            className="press-scale w-full py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-primary-foreground font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
+            className="press-scale w-full py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-primary-foreground font-semibold text-caption rounded-xl shadow-md transition cursor-pointer"
           >
             Done
           </Button>

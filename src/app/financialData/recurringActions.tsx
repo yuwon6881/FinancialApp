@@ -238,7 +238,7 @@ export function createRecurringActions(deps: RecurringActionDependencies) {
       message: (
         <div className="space-y-3">
           <p className="text-sm">Pay <strong>{payment.name}</strong> before its scheduled date?</p>
-          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2 text-xs">
+          <div className="rounded-control bg-surface-2/70 p-3 space-y-2 text-xs">
             <div className="flex items-center justify-between gap-3">
               <span className="text-muted-foreground">Amount</span>
               <strong className="text-foreground">{formatSensitive(Math.abs(payment.amount))}</strong>

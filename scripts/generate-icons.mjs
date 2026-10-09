@@ -1,30 +1,26 @@
-// One-off generator: renders the black "F" brand tile into every PNG icon the
-// PWA manifest and iOS need.
+// Renders the Lumen brand tile (scripts/brand-mark.mjs) into every icon the PWA manifest, the
+// browser tab and iOS need. Run after changing the mark: `node scripts/generate-icons.mjs`.
+import { writeFile } from 'node:fs/promises'
 import sharp from 'sharp'
+import { tileSvg } from './brand-mark.mjs'
 
-const F_PATH = 'M30 32h40v8H38v12h28v8H38v16h-8V32z'
-
-// Keep standard and maskable assets visually identical. Installed browsers may
-// choose either purpose for the launcher icon and generated splash screen.
-const tile = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
-  <rect width="100" height="100" fill="#0b0e14" />
-  <path d="${F_PATH}" fill="#ffffff" />
-</svg>`
-
-const maskable = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
-  <rect width="100" height="100" fill="#0b0e14" />
-  <path d="${F_PATH}" fill="#ffffff" />
-</svg>`
+// Launchers mask the square themselves, so the raster icons are full-bleed. The mark already sits
+// inside the maskable safe zone (a centred circle of 80%), so one drawing serves both purposes.
+const square = tileSvg({ size: 1024 })
 
 const jobs = [
-  [tile, 192, 'public/icon-192.png'],
-  [tile, 512, 'public/icon-512.png'],
-  [maskable, 192, 'public/icon-192-maskable.png'],
-  [maskable, 512, 'public/icon-512-maskable.png'],
-  [maskable, 180, 'public/apple-touch-icon.png'],
+  [square, 192, 'public/icon-192.png'],
+  [square, 512, 'public/icon-512.png'],
+  [square, 192, 'public/icon-192-maskable.png'],
+  [square, 512, 'public/icon-512-maskable.png'],
+  [square, 180, 'public/apple-touch-icon.png'],
 ]
 
 for (const [svg, size, out] of jobs) {
-  await sharp(Buffer.from(svg)).resize(size, size).png().toFile(out)
+  await sharp(Buffer.from(svg)).resize(size, size).png({ compressionLevel: 9 }).toFile(out)
   console.log(`wrote ${out} (${size}x${size})`)
 }
+
+// The tab icon keeps its own rounding: a browser draws it as-is.
+await writeFile('public/favicon.svg', `${tileSvg({ size: 100, radius: 22 }).replace(' width="100" height="100"', ' width="100%" height="100%"')}\n`)
+console.log('wrote public/favicon.svg')

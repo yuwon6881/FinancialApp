@@ -188,7 +188,7 @@ export function CurrencySelect({
         side="auto"
         role="presentation"
         aria-label={ariaLabel}
-        className="z-[230] flex min-h-28 flex-col overflow-hidden rounded-xl border border-border bg-popover p-2 text-popover-foreground shadow-xl"
+        className="z-[230] flex min-h-28 flex-col overflow-hidden rounded-xl border border-border bg-popover p-2 text-popover-foreground shadow-(--app-shadow-overlay)"
       >
         <div className="relative shrink-0">
           <Search className="pointer-events-none absolute left-3 top-2.5 size-3.5 text-muted-foreground" />

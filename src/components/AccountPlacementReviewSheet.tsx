@@ -126,7 +126,7 @@ export function AccountPlacementReviewSheet({
       )}
     >
       {operations.length === 0 ? (
-        <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 rounded-control bg-surface-2/70 p-4 text-sm text-muted-foreground">
           <RotateCcw className="size-4" aria-hidden="true" /> No offline changes need account review.
         </div>
       ) : (

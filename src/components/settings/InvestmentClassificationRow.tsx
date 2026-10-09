@@ -47,7 +47,7 @@ export function InvestmentClassificationRow({
       // from 640px of *window* up, but this card sits in a half-width column, so the name was left
       // with about thirty pixels and showed one letter. Both parts keep a floor width and the
       // select drops below the name when the row cannot hold them side by side.
-      className="flex flex-wrap items-center gap-x-3 gap-y-2.5 rounded-xl border border-border/50 bg-card/60 p-3 shadow-2xs transition-colors hover:border-border/80 w-full min-w-0 overflow-hidden"
+      className="flex flex-wrap items-center gap-x-3 gap-y-2.5 rounded-control bg-surface-2/70 p-3 shadow-2xs transition-colors hover:border-border/80 w-full min-w-0 overflow-hidden"
     >
       <div className="flex min-w-[10rem] flex-1 items-center gap-2.5">
         <Button size="icon"
@@ -68,7 +68,7 @@ export function InvestmentClassificationRow({
         </Button>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 min-w-0">
-            <strong className="block truncate text-xs font-bold text-foreground">{value.symbol}</strong>
+            <strong className="block truncate text-caption font-semibold text-foreground">{value.symbol}</strong>
             <RowSyncStatus isSyncing={isSyncing} isPending={isPending} entityLabel="classification" />
           </div>
           <span className="block truncate text-xs text-muted-foreground">{value.name}</span>

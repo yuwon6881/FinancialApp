@@ -49,7 +49,7 @@ export function AccountCoverageGate({
   }
 
   return (
-    <AuthShell>
+    <AuthShell brand={false}>
       <AuthCard className="max-w-2xl">
         <AuthHeader
           icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10"><LockKeyhole className="size-6 text-accent-ink" /></span>}
@@ -76,7 +76,7 @@ export function AccountCoverageGate({
             const complete = accounts.some(account => account.bucket === bucket.name && !account.isArchived && !account.isPendingSync)
             const pending = live.some(account => account.isPendingSync)
             return (
-              <section key={bucket.name} className={complete ? 'rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4' : 'rounded-2xl border border-border/60 bg-muted/10 p-4'} aria-labelledby={'account-gate-' + bucket.name}>
+              <section key={bucket.name} className={complete ? 'rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4' : 'rounded-control bg-surface-2/70 p-4'} aria-labelledby={'account-gate-' + bucket.name}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h2 id={'account-gate-' + bucket.name} className="flex items-center gap-2 text-subsection text-foreground">

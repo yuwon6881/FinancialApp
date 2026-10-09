@@ -225,7 +225,7 @@ export function PendingSubscriptionsModal({
             <header className="space-y-2 border-b border-border/40 bg-muted/25 px-4 py-3 sm:px-5">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="min-w-0 break-words text-sm font-bold text-foreground sm:text-base">{noti.name}</h3>
-                <span className="shrink-0 text-sm font-extrabold tabular-nums text-orange-500 sm:text-base">
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-orange-500 sm:text-base">
                   {hideSensitive ? <SensitiveMask /> : <>-{formatCurrencyVal(Math.abs(noti.amount), currency)}</>}
                 </span>
               </div>
@@ -245,7 +245,7 @@ export function PendingSubscriptionsModal({
             <div className="space-y-4 p-4 sm:p-5">
               <div className={`grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] sm:gap-4 ${isPending ? 'pointer-events-none opacity-70' : ''}`}>
                 <div className="space-y-1.5">
-                  <span className="block text-xs font-bold text-muted-foreground">Payment date</span>
+                  <span className="block text-caption font-semibold text-muted-foreground">Payment date</span>
                   <DatePicker
                     value={paidDates[noti.id] ?? noti.billingDate}
                     onChange={value => setPaidDates(prev => ({ ...prev, [noti.id]: value }))}
@@ -271,7 +271,7 @@ export function PendingSubscriptionsModal({
                         }}
                         disabled={hideSensitive || isPending}
                       />
-                      <span className="text-xs font-bold text-foreground">Pay partial amount</span>
+                      <span className="text-caption font-semibold text-foreground">Pay partial amount</span>
                     </div>
                   </div>
 

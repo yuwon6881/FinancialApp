@@ -160,16 +160,16 @@ export function ManageableNameList<T extends ManageableNameItem>({
 
       {!onAddClick && <div id={addPanelId}>
         <CollapsibleBody open={isAddOpen}>
-          <div className="space-y-3 rounded-xl border border-border/60 bg-muted/15 p-3">
+          <div className="space-y-3 rounded-control bg-surface-2/70 p-3">
             {addFormTitle && (
               <div className="space-y-0.5">
-                <p className="text-xs font-bold text-foreground">{addFormTitle}</p>
+                <p className="text-caption font-semibold text-foreground">{addFormTitle}</p>
                 {addFormDescription && <p className="text-xs leading-relaxed text-muted-foreground">{addFormDescription}</p>}
               </div>
             )}
             {addFormFields}
             <div className="space-y-1.5">
-              {addFormTitle && <label htmlFor={addInputId} className="block text-xs font-bold text-muted-foreground">{itemLabel} name</label>}
+              {addFormTitle && <label htmlFor={addInputId} className="block text-caption font-semibold text-muted-foreground">{itemLabel} name</label>}
               <div className="flex gap-2">
                 <Input
                   id={addInputId}

@@ -82,7 +82,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Growth', showAllCycles: true }))}
           role="button"
           tabIndex={0}
-          className="interactive-card space-y-2.5 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-violet-500/40 shadow-xs hover:shadow-(--app-shadow-overlay) hover:shadow-violet-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
+          className="interactive-card cursor-pointer space-y-2.5 rounded-control border border-transparent bg-surface-2/60 p-4 hover:bg-surface-2"
         >
           <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold">
             <span className="text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
@@ -120,7 +120,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Essentials', showAllCycles: false }))}
           role="button"
           tabIndex={0}
-          className="interactive-card space-y-2.5 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-sky-500/40 shadow-xs hover:shadow-(--app-shadow-overlay) hover:shadow-sky-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
+          className="interactive-card cursor-pointer space-y-2.5 rounded-control border border-transparent bg-surface-2/60 p-4 hover:bg-surface-2"
         >
           <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold">
             <span className="text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
@@ -158,7 +158,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Stability', showAllCycles: true }))}
           role="button"
           tabIndex={0}
-          className="interactive-card space-y-2.5 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-emerald-500/40 shadow-xs hover:shadow-(--app-shadow-overlay) hover:shadow-emerald-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
+          className="interactive-card cursor-pointer space-y-2.5 rounded-control border border-transparent bg-surface-2/60 p-4 hover:bg-surface-2"
         >
           <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold">
             <span className="text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">

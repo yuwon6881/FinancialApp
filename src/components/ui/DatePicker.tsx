@@ -283,7 +283,7 @@ export function DatePicker({
           >
             <ChevronLeft className="size-4" />
           </Button>
-          <span aria-live="polite" className="text-xs font-bold text-foreground select-none">
+          <span aria-live="polite" className="text-caption font-semibold text-foreground select-none">
             {MONTHS[viewDate.month]} {viewDate.year}
           </span>
           <Button variant="tertiary"
@@ -303,7 +303,7 @@ export function DatePicker({
                 key={label}
                 role="columnheader"
                 aria-label={label}
-                className="flex h-7 items-center justify-center text-eyebrow uppercase text-muted-foreground select-none"
+                className="flex h-7 items-center justify-center text-label font-medium text-muted-foreground select-none"
               >
                 {label}
               </span>
@@ -391,7 +391,7 @@ export function DatePicker({
             type="button"
             disabled={Boolean((min && yesterdayISO < min) || (max && yesterdayISO > max))}
             onClick={() => select(yesterdayISO)}
-            className="cursor-pointer rounded-lg px-2.5 py-1 text-xs font-bold text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+            className="cursor-pointer rounded-lg px-2.5 py-1 text-caption font-semibold text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
           >
             Yesterday
           </Button>
@@ -399,7 +399,7 @@ export function DatePicker({
             type="button"
             disabled={Boolean((min && todayISO < min) || (max && todayISO > max))}
             onClick={() => select(todayISO)}
-            className="cursor-pointer rounded-lg px-2.5 py-1 text-xs font-bold text-blue-600 transition hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-blue-400"
+            className="cursor-pointer rounded-lg px-2.5 py-1 text-caption font-semibold text-blue-600 transition hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-blue-400"
           >
             Today
           </Button>

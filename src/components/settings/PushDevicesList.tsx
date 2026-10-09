@@ -130,7 +130,7 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
           <li
             key={device.id}
             aria-busy={isRevoking}
-            className="flex items-center justify-between gap-2 rounded-xl border border-border/40 bg-muted/20 px-3 py-2"
+            className="flex items-center justify-between gap-2 rounded-control bg-surface-2/70 px-3 py-2"
           >
             <span className="flex min-w-0 flex-col gap-0.5">
               <span className="flex items-center gap-2 text-xs font-semibold text-foreground">

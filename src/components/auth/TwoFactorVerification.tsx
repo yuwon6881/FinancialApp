@@ -31,7 +31,7 @@ export const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
     <AuthShell>
       <AuthCard>
         <AuthHeader
-          icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-blue-500/10"><ShieldCheck className="size-6 text-blue-500" /></span>}
+          icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10"><ShieldCheck className="size-6 text-accent-ink" aria-hidden="true" /></span>}
           title="Two-factor verification"
           description="Enter the code from your authenticator app, or use one of your recovery codes."
         />
@@ -45,7 +45,7 @@ export const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
             label="Verification code"
             required
             error={errors.twoFactorCode}
-            labelClassName="uppercase tracking-wider"
+           
           >
             <Input
               type="text"
@@ -67,7 +67,7 @@ export const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
             type="submit"
             size="lg"
             disabled={twoFactorLoading}
-            className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
+            className="w-full"
           >
             {twoFactorLoading ? (
               <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />

@@ -162,7 +162,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
         <div className="flex-1 min-w-0">
           <h3 className="text-subsection text-foreground">Two-Factor Authentication</h3>
         </div>
-        <span className={`shrink-0 text-eyebrow uppercase ${loaded && enabled ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+        <span className={`shrink-0 text-label font-medium ${loaded && enabled ? 'text-emerald-500' : 'text-muted-foreground'}`}>
           {loaded ? (enabled ? 'Enabled' : 'Disabled') : 'Checking…'}
         </span>
         {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
@@ -247,7 +247,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
           disabled={setupBusy || hideSensitive}
           title={hideSensitive ? 'Unhide balances to edit' : undefined}
           aria-busy={setupBusy}
-          className="press-scale w-full rounded-xl py-2.5 shadow-md shadow-emerald-600/20"
+          className="press-scale w-full rounded-xl py-2.5"
         >
           {setupBusy ? (
             <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />

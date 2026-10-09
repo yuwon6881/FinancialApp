@@ -48,7 +48,7 @@ export function CategoryCleanupReviewPanel({
       {reviewing && <PerimeterBeam size={120} />}
       <header className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h4 id="category-review-heading" className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+          <h4 id="category-review-heading" className="flex items-center gap-1.5 text-caption font-semibold text-foreground">
             <Sparkles className="size-3.5 text-accent-ink" aria-hidden="true" /> AI Category Review
           </h4>
         </div>
@@ -80,7 +80,7 @@ export function CategoryCleanupReviewPanel({
                 <span className="text-xs font-semibold text-muted-foreground">{confidence}% confidence</span>
               </div>
               <div>
-                <h5 className="text-xs font-bold text-foreground">{suggestion.title}</h5>
+                <h5 className="text-caption font-semibold text-foreground">{suggestion.title}</h5>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{suggestion.summary}</p>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -90,7 +90,7 @@ export function CategoryCleanupReviewPanel({
               {suggestion.type === 'consolidate' && <label className="block space-y-1 text-xs font-semibold text-muted-foreground">Move its entries to:<CustomSelect ariaLabel="Category consolidation target" value={target} onChange={value => setConsolidateTargets(previous => ({ ...previous, [suggestion.id]: String(value) }))} options={[{ value: '', label: 'Choose a category' }, ...consolidateOptions.map(category => ({ value: category.name, label: category.name }))]} className="w-full" /></label>}
             </div>
             <footer className="flex items-center justify-between gap-2 border-t border-border/50 bg-muted/15 px-3 py-2.5">
-              <Button variant="tertiary" type="button" disabled={suggestion.affectedTransactionCount === 0 || !onNavigateToLedger} onClick={() => onNavigateToLedger?.({ category: suggestion.categories[0], txType: incompatibleType, showAllCycles: true })} className="min-h-11 min-w-0 rounded-lg px-2 justify-start text-left text-eyebrow uppercase text-orange-600 disabled:text-muted-foreground sm:min-h-8">
+              <Button variant="tertiary" type="button" disabled={suggestion.affectedTransactionCount === 0 || !onNavigateToLedger} onClick={() => onNavigateToLedger?.({ category: suggestion.categories[0], txType: incompatibleType, showAllCycles: true })} className="min-h-11 min-w-0 rounded-lg px-2 justify-start text-left text-label font-medium text-orange-600 disabled:text-muted-foreground sm:min-h-8">
                 {suggestion.affectedTransactionCount > 0 ? `${suggestion.affectedTransactionCount} ledger ${suggestion.affectedTransactionCount === 1 ? 'entry' : 'entries'} need validation` : 'No ledger entries affected'}
               </Button>
               <Button variant="secondary" size="sm" type="button" onClick={() => onApply(suggestion)} disabled={!canApply || applyingId !== null || disabled} title={disabled ? 'Choose a category first' : 'Accept suggestion'} className="w-20 shrink-0">

@@ -305,7 +305,7 @@ export function TaxReliefOverview({
                       ? 'border-emerald-500/45 bg-emerald-500/10 hover:border-emerald-500/70 hover:bg-emerald-500/14'
                       : 'border-border/60 bg-card hover:border-primary/45 hover:bg-muted/60'
                   } ${
-                    selected ? 'ring-2 ring-inset ring-primary/80 shadow-md shadow-primary/10' : 'hover:shadow-md hover:shadow-primary/5'
+                    selected ? 'ring-2 ring-inset ring-primary/80' : 'hover:shadow-md hover:shadow-primary/5'
                   }`}
                 >
                   <div className="flex min-w-0 items-start justify-between gap-2">

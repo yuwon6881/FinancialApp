@@ -175,7 +175,7 @@ export const CycleCalendarSkeleton: React.FC = () => (
         <div className="flex items-center gap-2"><Skeleton className="h-5 w-28" /><Skeleton className="size-7 rounded-full" /></div>
         <Skeleton className="h-3 w-40" />
       </div>
-      <div className="flex gap-1 self-stretch rounded-xl border border-border/60 bg-muted/25 p-1 sm:self-start">
+      <div className="flex gap-1 self-stretch rounded-control bg-surface-2/70 p-1 sm:self-start">
         <Skeleton className="h-7 flex-1 rounded-md sm:h-6 sm:w-16 sm:flex-none" />
         <Skeleton className="h-7 flex-1 rounded-md sm:h-6 sm:w-16 sm:flex-none" />
         <Skeleton className="h-7 flex-1 rounded-md sm:h-6 sm:w-16 sm:flex-none" />
@@ -197,7 +197,7 @@ export const CycleCalendarSkeleton: React.FC = () => (
       </div>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3 min-[1280px]:grid-cols-5">
         {Array.from({ length: 5 }).map((_, index) => (
-          <div key={`week-${index}`} className="space-y-2 rounded-xl border border-border/50 bg-muted/15 p-2 sm:p-2.5">
+          <div key={`week-${index}`} className="space-y-2 rounded-control bg-surface-2/70 p-2 sm:p-2.5">
             <div className="flex justify-between"><Skeleton className="h-3 w-12" /><Skeleton className="hidden h-2.5 w-16 min-[1280px]:block" /></div>
             <div className="flex justify-between"><Skeleton className="h-3 w-14" /><Skeleton className="h-2.5 w-8" /></div>
           </div>
