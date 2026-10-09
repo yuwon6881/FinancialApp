@@ -34,7 +34,7 @@ export function useTabNavigationCleanup(
       if (prevTab === 'reports') {
         if (nav.highlightedReportSection || nav.highlightedReportCategory) nav.clearHighlightedReportSection()
       }
-      if (prevTab === 'settings') {
+      if (prevTab === 'settings' || prevTab === 'accounts') {
         if (nav.highlightedAccountId) nav.clearHighlightedAccount()
       }
       activeTabRef.current = activeTab

@@ -14,6 +14,9 @@ import type { useReceiptScanPolling } from '../lib/useReceiptScanPolling'
 import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
 import type { AiInvocationContext } from '../lib/api/ai'
 import { AuthenticatedSettingsRoute } from './AuthenticatedSettingsRoute'
+import { HubNav } from '../components/nav/HubNav'
+import { activeSectionId, destinationForTab, rememberSection } from '../components/nav/navModel'
+import { useAppLocationKey } from '../lib/useAppLocationKey'
 // Lazy like the views it sits above: the picker's select control is not part of the eager
 // critical path, and the pages that need it are lazily loaded anyway.
 const CycleSwitcher = lazy(() => import('../components/ui/CycleSwitcher').then(module => ({ default: module.CycleSwitcher })))
@@ -148,14 +151,31 @@ export function AuthenticatedTabContent({
     && nav.ledgerShowAllCycles
     && prefs.ledgerCyclesRange === 'all'
   const showCycleSwitcher = (CYCLE_DEPENDENT_TABS as readonly string[]).includes(prefs.activeTab)
-
-
-  return (
-    <div key={prefs.activeTab} className="w-full view-enter">
+  useAppLocationKey()
+  const destination = destinationForTab(prefs.activeTab)
+  const sectionId = destination
+    ? activeSectionId(destination, prefs.activeTab, window.location.pathname, window.location.search)
+    : null
+  const showHubNav = Boolean(destination?.sections)
+  // A section row and a cycle picker share one line on wide screens: where you are, and when.
+  const pageBar = (showHubNav || showCycleSwitcher) && (
+    <div className="mb-6 flex flex-col gap-3 sm:mb-8 lg:flex-row lg:items-center lg:justify-between">
+      {showHubNav && destination && (
+        <HubNav
+          destination={destination}
+          activeSectionId={sectionId}
+          hidden={draftCount > 0 ? undefined : ['review']}
+          counts={{ review: draftCount }}
+          onSelect={section => {
+            if (section.id !== 'review') rememberSection(destination.id, section.id)
+            prefs.setActiveTab(section.tab, section.search ? { search: section.search } : undefined)
+          }}
+        />
+      )}
       {showCycleSwitcher && (
-        <Suspense fallback={<div className="mb-4 h-[88px] rounded-2xl border border-border/60 bg-card/92 sm:h-[68px]" aria-hidden />}>
-        <div className="mb-4">
+        <Suspense fallback={<div className="h-12 w-72 max-w-full rounded-full border border-border/60 bg-card" aria-hidden />}>
           <CycleSwitcher
+            className={showHubNav ? 'lg:justify-end' : undefined}
             selectedMonth={nav.selectedMonth}
             selectedYear={nav.selectedYear}
             availableYears={financial.optimisticDashboardData?.availableYears || [nav.selectedYear]}
@@ -170,9 +190,14 @@ export function AuthenticatedTabContent({
             disabled={nav.isSwitchingCycle}
             unavailableReason={ledgerSpansAllCycles ? 'Showing every saved cycle — switch back to Current cycle to pick one.' : undefined}
           />
-        </div>
         </Suspense>
       )}
+    </div>
+  )
+
+  return (
+    <div key={prefs.activeTab === 'recurring' ? `recurring-${sectionId}` : prefs.activeTab} className="w-full view-enter">
+      {pageBar}
       {prefs.activeTab === 'dashboard' && (
         <DashboardView
           dashboardData={todayDashboardData}
@@ -225,8 +250,10 @@ export function AuthenticatedTabContent({
         />
       )}
 
-      {prefs.activeTab === 'settings' && (
+      {(prefs.activeTab === 'settings' || prefs.activeTab === 'budget' || prefs.activeTab === 'accounts') && (
         <AuthenticatedSettingsRoute
+          key={prefs.activeTab}
+          scope={prefs.activeTab === 'budget' ? 'budget' : prefs.activeTab === 'accounts' ? 'accounts' : 'settings'}
           investmentAllocation={investmentAllocation}
           prefs={prefs}
           financial={financial}

@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AppTab } from '../types'
 
-// Drafts already expose a dedicated Add draft action and a sticky batch action.
-// Hiding the global quick-add here keeps those two page actions unobstructed.
-export const shouldShowMobileFab = (activeTab: AppTab) => activeTab !== 'drafts'
-
+// Open state for the quick-add sheet behind the tab bar's add button. It closes itself whenever the
+// destination changes, since every action in it navigates somewhere.
 export function useFabMenu(activeTab: AppTab) {
   const [isOpen, setIsOpen] = useState(false)
 

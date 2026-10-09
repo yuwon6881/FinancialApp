@@ -61,6 +61,12 @@ export interface FinancialModelTabProps {
   pushEnrolmentRevision?: number
   hasSpendingGuides: boolean
   onNavigateToCategoryLimits: () => void
+  /**
+   * `plan` is the money model -- allocations, the Stability target, cycle day and currency -- and
+   * lives under Plan › Budget. `preferences` is app behaviour -- theme, privacy, local data and
+   * notifications -- and lives in Settings.
+   */
+  part?: 'plan' | 'preferences'
 }
 
 export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
@@ -89,10 +95,14 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
   pushEnrolmentRevision,
   hasSpendingGuides,
   onNavigateToCategoryLimits,
+  part = 'plan',
 }) => {
+  const showPlan = part === 'plan'
+  const showPreferences = part === 'preferences'
   return (
-    <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="grid w-full grid-cols-1 space-y-6 animate-in fade-in duration-200 min-[1280px]:grid-cols-3 min-[1280px]:items-start min-[1280px]:gap-6 min-[1280px]:space-y-0">
-      <form noValidate onSubmit={view.handleSaveSettings} className="space-y-5 rounded-2xl border border-border/60 bg-card p-4 shadow-xs sm:p-6 min-[1280px]:col-span-2">
+    <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="grid w-full grid-cols-1 gap-6 animate-in fade-in duration-200 min-[1280px]:grid-cols-2 min-[1280px]:items-start">
+      {showPlan && (
+      <form noValidate onSubmit={view.handleSaveSettings} className="space-y-5 rounded-panel border border-border/70 bg-card p-4 sm:p-6 min-[1280px]:col-span-2">
         <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
           <div>
             <h3 className="flex items-center gap-2 text-subsection text-foreground">
@@ -232,8 +242,11 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
           </Button>
         </div>
       </form>
+      )}
 
-      <div className="space-y-6 min-[1280px]:col-span-1">
+      {showPreferences && (
+      <>
+      <div className="space-y-6">
         <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-border/40 pb-3">
             <div>
@@ -296,6 +309,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
           </div>
         </div>
 
+      </div>
         <div>
           <PurchaseCapturePanelSlot />
           <NotificationsCard
@@ -313,7 +327,8 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
             onNavigateToCategoryLimits={onNavigateToCategoryLimits}
           />
         </div>
-      </div>
+      </>
+      )}
     </div>
   )
 }

@@ -40,10 +40,14 @@ export function useCurrentCycleDashboard({
   // The selected cycle already *is* the current one, so Today reads the shared optimistic value
   // (see todayDashboardData below) and owes no request at all. Mirroring it here only seeds the
   // placeholder the fetching branch shows if the user later moves to another cycle.
+  //
+  // Only the ref is written here. Mirroring into state re-rendered the app, which re-derived
+  // optimisticDashboardData as a new object, which re-ran this effect: an update loop that React
+  // stopped with "Maximum update depth exceeded" on every launch in development. The fetching
+  // branch below publishes the seeded value to state the moment it is actually needed.
   useEffect(() => {
     if (!optimisticDashboardData || !selectedCycleIsCurrent) return
     currentCycleDashboardRef.current = optimisticDashboardData
-    setCurrentCycleDashboardData(optimisticDashboardData)
     setIsCurrentCycleLoading(false)
   }, [optimisticDashboardData, selectedCycleIsCurrent])
 
@@ -58,9 +62,9 @@ export function useCurrentCycleDashboard({
     if (!matchesCurrentCycle(currentCycleDashboardRef.current)) {
       const cached = getCachedCycleSnapshot(currentCycleMonth, currentCycleYear)?.dashboardData || null
       currentCycleDashboardRef.current = matchesCurrentCycle(cached) ? cached : null
-      if (currentCycleDashboardRef.current) {
-        setCurrentCycleDashboardData(currentCycleDashboardRef.current)
-      }
+    }
+    if (currentCycleDashboardRef.current) {
+      setCurrentCycleDashboardData(currentCycleDashboardRef.current)
     }
 
     // A queued write has not reached the server yet, and the drain refreshes once it lands, so

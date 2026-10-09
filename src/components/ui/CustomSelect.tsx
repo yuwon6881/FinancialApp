@@ -26,6 +26,11 @@ export interface CustomSelectProps<T extends string | number = string | number> 
   invalid?: boolean
   required?: boolean
   controlSize?: ControlSize
+  /**
+   * `field` is the bordered form control. `ghost` is a borderless pill trigger for selects that
+   * sit inside a toolbar or a compound control which already supplies the surface.
+   */
+  variant?: 'field' | 'ghost'
   'aria-describedby'?: string
   onBlur?: FocusEventHandler<HTMLButtonElement>
 }
@@ -44,6 +49,7 @@ export function CustomSelect<T extends string | number>({
   invalid = false,
   required = false,
   controlSize = 'md',
+  variant = 'field',
   'aria-describedby': ariaDescribedBy,
   onBlur,
 }: CustomSelectProps<T>) {
@@ -196,11 +202,13 @@ export function CustomSelect<T extends string | number>({
         aria-describedby={accessibleProps['aria-describedby']}
         aria-invalid={accessibleProps['aria-invalid']}
         aria-required={accessibleProps['aria-required']}
-        className={controlTriggerClassName({
-          size: controlSize,
-          invalid: isInvalid,
-          className: 'cursor-pointer disabled:cursor-not-allowed',
-        })}
+        className={variant === 'ghost'
+          ? 'h-11 w-full min-w-0 cursor-pointer justify-between gap-1.5 rounded-full px-3 text-body font-medium text-foreground hover:bg-surface-2 disabled:cursor-not-allowed lg:h-9'
+          : controlTriggerClassName({
+            size: controlSize,
+            invalid: isInvalid,
+            className: 'cursor-pointer disabled:cursor-not-allowed',
+          })}
       >
         <span className={`min-w-0 flex-1 truncate ${isPlaceholderDisplayed ? 'text-subtle-foreground font-normal' : ''}`}>{displayLabel}</span>
         <ChevronDown className={`size-3.5 text-muted-foreground/80 transition duration-200 ${isOpen ? 'rotate-180' : ''}`} />

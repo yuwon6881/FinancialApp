@@ -109,7 +109,7 @@ describe('useAppPreferences', () => {
     window.history.replaceState({}, '', '/wishlist?month=Jul&year=2026')
     renderHook(() => useAppPreferences())
 
-    expect(window.location.pathname).toBe('/commitments-rewards')
+    expect(window.location.pathname).toBe('/plan/goals')
     expect(window.location.search).toBe('?month=Jul&year=2026')
   })
 

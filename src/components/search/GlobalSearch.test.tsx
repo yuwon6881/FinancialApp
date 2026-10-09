@@ -115,12 +115,14 @@ describe('GlobalSearch', () => {
     setup({ maskAmounts: true, formatAmount: () => '......' })
     type('coffee')
     const masked = screen.getAllByText('......')[0]
-    expect(masked.className).not.toContain('text-orange-500')
+    expect(masked.className).not.toContain('text-emerald-600')
+    expect(masked.className).toContain('text-foreground')
 
     cleanup()
     setup({ maskAmounts: false })
     type('coffee')
-    expect(screen.getByText('RM12.50').className).toContain('text-orange-500')
+    // An outflow reads as plain ink: in Lumen, spending is normal and red means "over".
+    expect(screen.getByText('RM12.50').className).toContain('text-foreground')
   })
 
   it('says how many matches the per-kind cap is not showing', () => {

@@ -59,10 +59,10 @@ interface SearchResultRowProps {
 }
 
 export function SearchResultRow({ result, id, isActive, amountText, maskAmounts, onActivate, onHover }: SearchResultRowProps) {
-  // Gated on the mask, not just on the value: the amount text is replaced by the mask, but
-  // painting an outflow orange still discloses the sign of every figure the mask is withholding,
-  // and it does so without a query being typed. Masked rows read neutral either way.
-  const isOutflow = !maskAmounts && typeof result.amount === 'number' && result.amount < 0
+  // Lumen colours direction only for money coming in; spending reads as plain ink. Gated on the
+  // mask, not just on the value: the amount text is replaced by the mask, but painting an inflow
+  // green would still disclose the sign the mask withholds. Masked rows read neutral either way.
+  const isInflow = !maskAmounts && typeof result.amount === 'number' && result.amount > 0
 
   return (
     <Button
@@ -76,16 +76,16 @@ export function SearchResultRow({ result, id, isActive, amountText, maskAmounts,
       // drive it, and mouseenter fires on the row that arrives beneath the pointer, yanking the
       // selection away from the key press.
       onMouseMove={onHover}
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl justify-start text-left cursor-pointer border transition-colors duration-100 ${
-        isActive ? 'bg-muted/80 hover:bg-muted/80 border-border/60 shadow-xs' : 'border-transparent hover:bg-muted/40'
+      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl justify-start text-left cursor-pointer border border-transparent transition-colors duration-100 ${
+        isActive ? 'bg-surface-2 hover:bg-surface-2 dark:bg-surface-3 dark:hover:bg-surface-3' : 'hover:bg-surface-2/60'
       }`}
     >
-      <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg border ${tileClassFor(result)}`}>
+      <span className={`flex size-9 shrink-0 items-center justify-center rounded-[0.625rem] border border-transparent ${tileClassFor(result)}`}>
         <SearchResultIcon kind={result.kind} className="size-4" />
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-body font-bold text-foreground">{result.title}</span>
+        <span className="block truncate text-body font-medium text-foreground">{result.title}</span>
         <span className="block truncate text-caption text-muted-foreground">
           {result.subtitle}
           {result.meta ? ` · ${result.meta}` : ''}
@@ -95,7 +95,7 @@ export function SearchResultRow({ result, id, isActive, amountText, maskAmounts,
       <RowSyncStatus entityLabel={SEARCH_ENTITY_LABELS[result.kind]} isPending={result.isPendingSync} />
 
       {amountText && (
-        <span className={`shrink-0 text-caption font-bold tabular-nums ${isOutflow ? 'text-orange-500' : 'text-foreground'}`}>
+        <span className={`shrink-0 text-label font-medium tabular-nums ${isInflow ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
           {amountText}
         </span>
       )}

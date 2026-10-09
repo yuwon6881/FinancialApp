@@ -1,5 +1,6 @@
 import { m, useReducedMotion } from 'framer-motion'
 import { AlertTriangle, ChevronRight, PieChart } from 'lucide-react'
+import type { AppNavigationOptions } from '../../lib/appLocation'
 import type { AppTab, InvestmentAllocationOverview } from '../../types'
 import { Button } from '../ui/Button'
 import { cn } from '../../lib/utils'
@@ -7,7 +8,7 @@ import { PANEL_TONES, panelClass } from '../ui/panelStyles'
 
 interface InvestmentPlanExceptionCardProps {
   allocation: InvestmentAllocationOverview | null
-  onNavigate: (tab: AppTab) => void
+  onNavigate: (tab: AppTab, options?: AppNavigationOptions) => void
 }
 
 export function InvestmentPlanExceptionCard({
@@ -23,10 +24,7 @@ export function InvestmentPlanExceptionCard({
     .sort((a, b) => Math.abs(b.driftPercentagePoints ?? 0) - Math.abs(a.driftPercentagePoints ?? 0))[0]
   const open = () => {
     if (incomplete) {
-      const next = new URL(window.location.href)
-      next.searchParams.set('section', 'investment-plan')
-      window.history.replaceState(window.history.state, '', next)
-      onNavigate('settings')
+      onNavigate('settings', { search: { section: 'investment-plan' } })
     } else {
       onNavigate('investments')
     }

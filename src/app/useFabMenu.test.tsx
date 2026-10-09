@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { AppTab } from '../types'
-import { shouldShowMobileFab, useFabMenu } from './useFabMenu'
+import { useFabMenu } from './useFabMenu'
 
 describe('useFabMenu', () => {
   it('toggles and closes on Escape', () => {
@@ -27,10 +27,4 @@ describe('useFabMenu', () => {
     expect(result.current.isOpen).toBe(false)
   })
 
-  it('keeps quick-add off the Draft review surface where dedicated actions already exist', () => {
-    for (const tab of ['dashboard', 'reports', 'recurring', 'ledger', 'wishlist', 'settings', 'investments', 'documents'] as const) {
-      expect(shouldShowMobileFab(tab)).toBe(true)
-    }
-    expect(shouldShowMobileFab('drafts')).toBe(false)
-  })
 })

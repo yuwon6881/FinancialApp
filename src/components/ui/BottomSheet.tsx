@@ -26,6 +26,12 @@ interface BottomSheetProps {
   layerClassName?: string
   backdropClassName?: string
   panelClassName?: string
+  /**
+   * `center` is the default dialog. `end` docks the sheet as a full-height drawer on the right
+   * from the medium tier up -- for long-lived companions like Ask AI that read beside the page
+   * rather than over it. Phones always get the bottom sheet.
+   */
+  placement?: 'center' | 'end'
 }
 
 const openModalIds: string[] = []
@@ -46,12 +52,14 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   layerClassName = Z_LAYERS.sheet,
   backdropClassName = '',
   panelClassName = '',
+  placement = 'center',
 }) => {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const descriptionId = useId()
   const isMobile = useIsCompact()
   const reduceMotion = useReducedMotion()
+  const docked = placement === 'end' && !isMobile
 
   // Pace the slide by measured height so a tall sheet and a short sheet travel
   // at roughly the same perceived *speed*. A fixed duration makes a near-
@@ -302,7 +310,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             }
             backdropMouseDownRef.current = false
           }}
-          className={`sheet-backdrop fixed inset-0 ${layerClassName} flex items-center justify-center p-4 bg-(--app-scrim) backdrop-blur-[2px] ${backdropClassName}`}
+          className={`sheet-backdrop fixed inset-0 ${layerClassName} flex ${docked ? 'items-stretch justify-end p-3' : 'items-center justify-center p-4'} bg-(--app-scrim) backdrop-blur-[2px] ${backdropClassName}`}
         >
           {/* Entrance/exit slide lives on this OUTER wrapper, deliberately kept
               separate from the drag below. framer's drag gesture takes ownership
@@ -317,15 +325,15 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             // Phones: the sheet rides up on the fluid ease, paced by its height. Wider screens:
             // a dialog that settles into place from slightly below and slightly smaller -- it never
             // travels the full viewport, which read as a slow slide on a large monitor.
-            initial={reduceMotion ? false : isMobile ? { y: "100%" } : { y: 16, scale: 0.97, opacity: 0 }}
-            animate={isMobile ? { y: 0 } : { y: 0, scale: 1, opacity: 1 }}
-            exit={reduceMotion ? undefined : isMobile ? { y: "100%" } : { y: 12, scale: 0.98, opacity: 0 }}
+            initial={reduceMotion ? false : isMobile ? { y: "100%" } : docked ? { x: 48, opacity: 0 } : { y: 16, scale: 0.97, opacity: 0 }}
+            animate={isMobile ? { y: 0 } : docked ? { x: 0, opacity: 1 } : { y: 0, scale: 1, opacity: 1 }}
+            exit={reduceMotion ? undefined : isMobile ? { y: "100%" } : docked ? { x: 40, opacity: 0 } : { y: 12, scale: 0.98, opacity: 0 }}
             transition={reduceMotion
               ? { duration: 0 }
               : isMobile
                 ? { type: "tween", ease: EASE_FLUID, duration: slideDuration }
                 : { type: "tween", ease: EASE_FLUID, duration: 0.24 }}
-            className={`sheet-enter w-full ${maxWidthClassName}`}
+            className={`sheet-enter w-full ${docked ? 'flex max-w-[28rem]' : maxWidthClassName}`}
           >
           <m.div
             key="sheet"
@@ -370,7 +378,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             // pan-y lets inner content scroll natively; the non-passive
             // touchmove listener above preventDefaults only the dismiss gesture,
             // so the drag still engages reliably over scrollable content.
-            className={`touch-pan-y sheet-panel no-scrollbar w-full bg-popover text-popover-foreground border border-border/70 rounded-sheet shadow-(--app-shadow-overlay) p-4 sm:p-6 flex flex-col gap-4 max-h-[90vh] overflow-x-hidden overflow-y-auto focus:outline-none ${panelClassName}`}
+            className={`touch-pan-y sheet-panel no-scrollbar w-full bg-popover text-popover-foreground border border-border/70 rounded-sheet shadow-(--app-shadow-overlay) p-4 sm:p-6 flex flex-col gap-4 ${docked ? 'h-full max-h-full' : 'max-h-[90vh]'} overflow-x-hidden overflow-y-auto focus:outline-none ${panelClassName}`}
           >
             <div
               className="touch-none shrink-0"

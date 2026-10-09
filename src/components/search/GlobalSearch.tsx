@@ -83,7 +83,7 @@ export function GlobalSearch({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 p-3 pt-12 backdrop-blur-md sm:pt-20 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-(--app-scrim) p-3 pt-12 backdrop-blur-[2px] sm:pt-24 animate-in fade-in duration-150"
       onMouseDown={(e: React.MouseEvent) => {
         backdropMouseDownRef.current = e.target === e.currentTarget
       }}
@@ -106,9 +106,9 @@ export function GlobalSearch({
         // Wider from the expanded tier up: a 36rem palette on a desktop screen left a result row
         // mostly empty space between its description and its amount, and the surrounding page was
         // three times the width of the panel searching it.
-        className="flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-2xl max-h-[min(80vh,calc(var(--app-vvh,100dvh)-6rem))] animate-in zoom-in-95 duration-150 lg:max-w-3xl"
+        className="flex w-full max-w-xl flex-col overflow-hidden rounded-panel border border-border/70 bg-popover shadow-(--app-shadow-overlay) max-h-[min(80vh,calc(var(--app-vvh,100dvh)-6rem))] animate-in fade-in zoom-in-[0.98] slide-in-from-top-2 duration-200 lg:max-w-2xl"
       >
-        <div className="flex items-center gap-3 border-b border-border/50 bg-muted/20 px-4 py-3">
+        <div className="flex items-center gap-3 border-b border-border/60 px-4 py-3.5">
           <Search className="size-4.5 shrink-0 text-muted-foreground" aria-hidden />
           <Input
             ref={inputRef}
@@ -124,7 +124,7 @@ export function GlobalSearch({
             aria-autocomplete="list"
             aria-controls="global-search-results"
             aria-activedescendant={selectableCount > 0 ? optionId(activeIndex) : undefined}
-            className="w-full border-0 bg-transparent text-sm font-semibold text-foreground shadow-none outline-hidden placeholder:text-muted-foreground focus-visible:ring-0"
+            className="w-full border-0 bg-transparent text-callout text-foreground shadow-none outline-hidden placeholder:text-subtle-foreground focus-visible:ring-0 focus:bg-transparent"
           />
           {hasQuery && (
             <IconButton
@@ -133,7 +133,7 @@ export function GlobalSearch({
                 inputRef.current?.focus()
               }}
               label="Clear search"
-              className="size-7 shrink-0 rounded-lg text-muted-foreground hover:text-foreground"
+              className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
             >
               <X className="size-3.5" />
             </IconButton>
@@ -157,7 +157,7 @@ export function GlobalSearch({
             <>
               {groups.map(group => (
                 <div key={group.kind} className="mb-1 last:mb-0">
-                  <p className="px-3 pb-1 pt-2 text-eyebrow uppercase text-muted-foreground">
+                  <p className="px-3 pb-1.5 pt-3 text-caption font-medium text-subtle-foreground">
                     {group.label}
                   </p>
                   <div className="space-y-1">
@@ -237,11 +237,11 @@ export function GlobalSearch({
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-border/40 bg-muted/15 px-4 py-2 text-caption text-muted-foreground select-none">
+        <div className="flex items-center justify-between border-t border-border/60 px-4 py-2.5 text-caption text-muted-foreground select-none">
           <span className="flex items-center gap-3">
-            <span><kbd className="font-bold">↑↓</kbd> Move</span>
-            <span><kbd className="font-bold">↵</kbd> Open</span>
-            <span><kbd className="font-bold">esc</kbd> Close</span>
+            <span><kbd className="rounded-md border border-border bg-surface-2 px-1.5 py-0.5 font-medium">↑↓</kbd> Move</span>
+            <span><kbd className="rounded-md border border-border bg-surface-2 px-1.5 py-0.5 font-medium">↵</kbd> Open</span>
+            <span><kbd className="rounded-md border border-border bg-surface-2 px-1.5 py-0.5 font-medium">esc</kbd> Close</span>
           </span>
           <span aria-live="polite" aria-atomic="true" className="font-semibold text-foreground/75">
             {isLoadingLoans

@@ -1,5 +1,5 @@
 import React from 'react'
-import type { LedgerRouteRange } from '../lib/appLocation'
+import type { AppNavigationOptions, LedgerRouteRange } from '../lib/appLocation'
 import type { DashboardData, SavingsGoal, WishlistItem, AppTab, InvestmentAllocationOverview, StabilityReloadFilter } from '../types'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useAppPrefs } from '../contexts/AppContext'
@@ -25,7 +25,7 @@ import { PANEL_TONES, panelClass } from './ui/panelStyles'
 
 interface DashboardViewProps {
   dashboardData: DashboardData | null
-  onNavigate: (tab: AppTab) => void
+  onNavigate: (tab: AppTab, options?: AppNavigationOptions) => void
   hideSensitive?: boolean
   hideBalanceAmounts: boolean
   onToggleBalanceAmounts: () => void

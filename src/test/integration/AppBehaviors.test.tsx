@@ -331,25 +331,30 @@ describe('App behaviors', () => {
     }
   })
 
-  it('opens Ask AI from the mobile quick-action menu', async () => {
+  it('opens Ask AI from the phone quick-add sheet', async () => {
     localStorage.setItem('auth_session', '1')
     localStorage.setItem('auth_username', 'alice')
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
 
-    render(<App />)
+    try {
+      render(<App />)
 
-    await waitFor(() => {
-      expect(screen.getByTestId('dashboard-view')).toBeDefined()
-    }, { timeout: 5000 })
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-view')).toBeDefined()
+      }, { timeout: 5000 })
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Open Menu' }))
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Ask AI' }, { timeout: 5000 }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Quick add' }))
+      fireEvent.click(await screen.findByRole('menuitem', { name: /^Ask AI/ }, { timeout: 5000 }))
 
-    // The panel is lazy behind a null fallback, so this waits on a real dynamic import
-    // rather than a render; the default 1s is not enough for its chunk here.
-    expect(await screen.findByRole('dialog', { name: 'ASK AI' }, { timeout: 5000 })).toBeDefined()
-    await waitFor(() => {
-      expect(screen.queryByRole('menuitem', { name: 'Ask AI' })).toBeNull()
-    })
+      // The panel is lazy behind a null fallback, so this waits on a real dynamic import
+      // rather than a render; the default 1s is not enough for its chunk here.
+      expect(await screen.findByRole('dialog', { name: 'ASK AI' }, { timeout: 5000 })).toBeDefined()
+      await waitFor(() => {
+        expect(screen.queryByRole('menuitem', { name: /^Ask AI/ })).toBeNull()
+      })
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+    }
   })
 
   it('uses addressable navigation for the Reports view', async () => {
@@ -358,10 +363,10 @@ describe('App behaviors', () => {
     render(<App />)
 
     await waitFor(() => expect(screen.getByTestId('dashboard-view')).toBeDefined())
-    fireEvent.click(screen.getAllByRole('button', { name: /Reports/ })[0])
+    fireEvent.click(screen.getAllByRole('button', { name: /Insights/ })[0])
 
     await waitFor(() => expect(screen.getByTestId('reports-view')).toBeDefined())
-    expect(window.location.pathname).toBe('/reports')
+    expect(window.location.pathname).toBe('/insights')
   })
 
   it('keeps cached amounts protected while the server privacy preference is loading', async () => {
@@ -457,7 +462,7 @@ describe('App behaviors', () => {
     render(<App />)
 
     await waitFor(() => expect(screen.getByTestId('today-cycle').textContent).toBe(currentCycleLabel))
-    fireEvent.click(screen.getAllByRole('button', { name: /Reports/ })[0])
+    fireEvent.click(screen.getAllByRole('button', { name: /Insights/ })[0])
     fireEvent.click(await screen.findByRole('combobox', { name: 'Report cycle' }))
     // The cycle after the current one, so the choice is always a real change.
     const targetIndex = currentCycle.monthIndex % 12

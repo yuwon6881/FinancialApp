@@ -53,22 +53,58 @@ export interface AppNavigationOptions {
 export const APP_CONTEXT_WILL_CHANGE_EVENT = 'financial-app:context-will-change'
 export const APP_LOCATION_CHANGED_EVENT = 'financial-app:location-changed'
 
+/**
+ * Canonical addresses, grouped by the five Lumen destinations: Today, Activity, Plan, Wealth and
+ * Insights. The internal tab ids predate the regrouping and are kept, so a destination is a set of
+ * tabs rather than a new kind of route.
+ */
 const PATH_BY_TAB: Record<AppTab, string> = {
-  dashboard: '/dashboard',
-  reports: '/reports',
-  recurring: '/recurring',
-  ledger: '/ledger',
-  wishlist: '/commitments-rewards',
-  drafts: '/drafts',
+  dashboard: '/today',
+  ledger: '/activity',
+  drafts: '/activity/review',
+  budget: '/plan/budget',
+  recurring: '/plan/bills',
+  wishlist: '/plan/goals',
+  accounts: '/wealth/accounts',
+  investments: '/wealth/investments',
+  documents: '/wealth/vault',
+  reports: '/insights',
   settings: '/settings',
-  investments: '/investments',
-  documents: '/vault',
 }
 
-const TAB_BY_PATH = Object.fromEntries(
-  Object.entries(PATH_BY_TAB).map(([tab, path]) => [path, tab]),
-) as Record<string, AppTab>
-TAB_BY_PATH['/wishlist'] = 'wishlist'
+/** Loans live on the Recurring tab but have an address of their own. */
+export const LOANS_PATH = '/plan/loans'
+
+/**
+ * Every address the app has published before keeps resolving: push notifications (the API still
+ * sends `/recurring?subscription=` and `/reports?focus=`), PWA shortcuts, installed home-screen
+ * links and anything a person bookmarked.
+ */
+const LEGACY_TAB_BY_PATH: Record<string, AppTab> = {
+  '/dashboard': 'dashboard',
+  '/ledger': 'ledger',
+  '/drafts': 'drafts',
+  '/recurring': 'recurring',
+  '/commitments-rewards': 'wishlist',
+  '/wishlist': 'wishlist',
+  '/investments': 'investments',
+  '/vault': 'documents',
+  '/reports': 'reports',
+  '/plan': 'budget',
+  '/wealth': 'accounts',
+}
+
+const TAB_BY_PATH = {
+  ...LEGACY_TAB_BY_PATH,
+  ...Object.fromEntries(Object.entries(PATH_BY_TAB).map(([tab, path]) => [path, tab])),
+  [LOANS_PATH]: 'recurring',
+} as Record<string, AppTab>
+
+const normalizePath = (pathname: string) => (pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname)
+
+/** True when the address names the Loans section, by path or by the older `section` query. */
+export const isLoansLocation = (pathname: string, search: string) =>
+  normalizePath(pathname) === LOANS_PATH || search.includes('loan') || search.includes('section=loans')
 
 const LEDGER_PARAM_KEYS = [
   'filters',
@@ -150,8 +186,14 @@ const emptyLedgerRouteState = (): LedgerRouteState => ({
 })
 
 const parseTab = (pathname: string, params: URLSearchParams): AppTab => {
-  const normalizedPath = pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname
-  const pathTab = TAB_BY_PATH[normalizedPath]
+  const pathTab = TAB_BY_PATH[normalizePath(pathname)]
+  if (pathTab === 'settings') {
+    // Accounts and Categories & Limits used to be sections of Settings. They are destinations of
+    // their own now, and the old section links land on them.
+    const section = params.get('section')
+    if (section === 'accounts' || params.has('account')) return 'accounts'
+    if (section === 'categories') return 'budget'
+  }
   if (pathTab) return pathTab
   const legacyView = params.get('view')
   return APP_TABS.includes(legacyView as AppTab) ? (legacyView as AppTab) : 'dashboard'
@@ -204,7 +246,7 @@ export const readAppLocation = (): AppLocationState => {
       commitmentId: params.get('commitment'),
       rewardId: params.get('reward'),
       draftId: params.get('draft'),
-      section: params.get('section'),
+      section: params.get('section') ?? (normalizePath(window.location.pathname) === LOANS_PATH ? 'loans' : null),
     },
   }
 }
@@ -260,7 +302,7 @@ export const navigateToAppTab = (tab: AppTab, options: AppNavigationOptions = {}
     params.delete('focus')
     params.delete('focusCategory')
   }
-  if (tab !== 'settings') params.delete('account')
+  if (tab !== 'settings' && tab !== 'accounts') params.delete('account')
   if (tab !== 'wishlist') {
     params.delete('commitment')
     params.delete('reward')
@@ -273,8 +315,18 @@ export const navigateToAppTab = (tab: AppTab, options: AppNavigationOptions = {}
     params.delete('section')
   }
   if (options.search) applySearchUpdates(params, options.search)
-  writeUrl(PATH_BY_TAB[tab], params, options.replace === true)
+  let path = PATH_BY_TAB[tab]
+  if (tab === 'recurring') {
+    // The Loans section and a single loan both live at /plan/loans; a bill lives at /plan/bills.
+    const toLoans = params.get('section') === 'loans' || (params.has('loan') && !params.has('subscription'))
+    if (toLoans) path = LOANS_PATH
+    if (params.get('section') === 'loans' || params.get('section') === 'recurring') params.delete('section')
+  }
+  writeUrl(path, params, options.replace === true)
 }
+
+/** The canonical path a tab is published at. */
+export const pathForTab = (tab: AppTab) => PATH_BY_TAB[tab]
 
 export const updateAppSearch = (
   updates: Record<string, string | number | boolean | null | undefined>,
@@ -313,4 +365,24 @@ export const ledgerRouteSearch = (state: Partial<LedgerRouteState>) => {
     range: state.range && state.range !== 'monthly' ? state.range : null,
     tx: state.highlightedTxId || null,
   }
+}
+
+/**
+ * Rewrites a legacy or root address to the canonical one for the tab it resolves to, keeping its
+ * query. `/recurring?subscription=…` becomes `/plan/bills?subscription=…`, `/settings?section=
+ * accounts` becomes `/wealth/accounts`, and `/` becomes `/today`.
+ */
+export const canonicalizeAppLocation = () => {
+  if (typeof window === 'undefined') return
+  const params = new URLSearchParams(window.location.search)
+  const tab = parseTab(window.location.pathname, params)
+  const path = normalizePath(window.location.pathname)
+  const isCanonical = path === PATH_BY_TAB[tab] || (tab === 'recurring' && path === LOANS_PATH)
+  if (isCanonical && !params.has('view')) return
+  // Keep the section (Budget opens on Categories when it came from the old Categories link), except
+  // the old `section=accounts`, which the Accounts destination no longer needs.
+  navigateToAppTab(tab, {
+    replace: true,
+    search: { section: tab === 'accounts' ? null : params.get('section') },
+  })
 }

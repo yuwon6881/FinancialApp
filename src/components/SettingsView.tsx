@@ -1,5 +1,4 @@
 import React from 'react'
-import { Settings } from 'lucide-react'
 import { PageHeader } from './ui/PageHeader'
 import type {
   CategoryFlowType,
@@ -20,8 +19,9 @@ import type { RequestDeleteCategoryOptions } from '../app/financialData/category
 import { isSpendingGuideCategory, isSystemCategoryName } from '../lib/categoryFlow'
 import { AccountsSkeleton } from './settings/accounts/AccountsSkeleton'
 import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
-import { APP_LOCATION_CHANGED_EVENT, updateAppSearch } from '../lib/appLocation'
-import { SettingsTabs, type SettingsTabId } from './settings/SettingsTabs'
+import { APP_LOCATION_CHANGED_EVENT, navigateToAppTab, updateAppSearch } from '../lib/appLocation'
+import { SettingsTabs } from './settings/SettingsTabs'
+import { SETTINGS_TABS_BY_SCOPE, type SettingsScope, type SettingsTabId } from './settings/settingsScopes'
 import type { LedgerAccountInput } from '../app/financialData/accountActions'
 import type { LedgerAccountReconcileInput } from '../lib/api/accounts'
 import { FinancialModelTab } from './settings/FinancialModelTab'
@@ -44,6 +44,8 @@ const SECTION_BY_SETTINGS_TAB: Record<SettingsTabId, string> = {
 }
 
 interface SettingsViewProps {
+  /** Which surface this is: Settings, Plan › Budget or Wealth › Accounts. */
+  scope?: SettingsScope
   investmentAllocation?: InvestmentAllocationOverview | null
   dashboardData: DashboardData | null
   categoriesList: TransactionCategory[]
@@ -140,19 +142,26 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       && isSpendingGuideCategory(category)),
     [props.categoriesList])
 
+  const scope = props.scope ?? 'settings'
+  const allowedTabs = React.useMemo(() => SETTINGS_TABS_BY_SCOPE[scope].map(([id]) => id), [scope])
+  const fitScope = React.useCallback(
+    (tab: SettingsTabId): SettingsTabId => (allowedTabs.includes(tab) ? tab : allowedTabs[0]),
+    [allowedTabs],
+  )
+
   const [activeTab, setActiveTab] = React.useState<SettingsTabId>(() => {
-    if (props.highlightedAccountId) return 'accounts'
+    if (props.highlightedAccountId) return fitScope('accounts')
     if (typeof window !== 'undefined') {
       const search = window.location.search
       const hash = window.location.hash
-      if (search.includes('investment-plan') || hash.includes('investment-plan') || search.includes('section=investment-plan')) return 'investment-plan'
+      if (search.includes('investment-plan') || hash.includes('investment-plan') || search.includes('section=investment-plan')) return fitScope('investment-plan')
       if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits') || search.includes('section=categories')) {
-        return 'categories-preferences'
+        return fitScope('categories-preferences')
       }
-      if (search.includes('account') || hash.includes('account') || search.includes('section=accounts')) return 'accounts'
-      if (search.includes('security') || hash.includes('security') || search.includes('section=security')) return 'security'
+      if (search.includes('account') || hash.includes('account') || search.includes('section=accounts')) return fitScope('accounts')
+      if (search.includes('security') || hash.includes('security') || search.includes('section=security')) return fitScope('security')
     }
-    return 'financial-model'
+    return fitScope('financial-model')
   })
 
   // A tab pressed on this page writes the address itself, so the limits card must not be scrolled
@@ -164,24 +173,24 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     if (nextTab !== 'accounts' && props.highlightedAccountId) props.onClearHighlightedAccount?.()
     setActiveTab(nextTab)
     cameFromTabPress.current = true
-    // Accounts and Settings are separate destinations on the navigation rail, and every section is
-    // linkable, so the address follows the tab rather than lagging a section behind it.
-    updateAppSearch({ section: SECTION_BY_SETTINGS_TAB[nextTab] })
+    // Every section is linkable, so the address follows the tab rather than lagging a section
+    // behind it.
+    updateAppSearch({ section: scope === 'budget' && nextTab === 'financial-model' ? 'rules' : SECTION_BY_SETTINGS_TAB[nextTab] })
     cameFromTabPress.current = false
-  }, [props])
+  }, [props, scope])
 
   React.useEffect(() => {
     const syncFromLocation = () => {
       if (props.highlightedAccountId) {
-        setActiveTab('accounts')
+        setActiveTab(fitScope('accounts'))
         return
       }
       const search = window.location.search
       const hash = window.location.hash
       if (search.includes('investment-plan') || hash.includes('investment-plan') || search.includes('section=investment-plan')) {
-        setActiveTab('investment-plan')
+        setActiveTab(fitScope('investment-plan'))
       } else if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits') || search.includes('section=categories')) {
-        setActiveTab('categories-preferences')
+        setActiveTab(fitScope('categories-preferences'))
         if (cameFromTabPress.current) return
         requestAnimationFrame(() => {
           const el = document.getElementById('category-limits-card')
@@ -193,11 +202,11 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           }
         })
       } else if (search.includes('account') || hash.includes('account') || search.includes('section=accounts')) {
-        setActiveTab('accounts')
+        setActiveTab(fitScope('accounts'))
       } else if (search.includes('security') || hash.includes('security') || search.includes('section=security')) {
-        setActiveTab('security')
-      } else if (search.includes('section=model') || search.includes('financial-model')) {
-        setActiveTab('financial-model')
+        setActiveTab(fitScope('security'))
+      } else if (search.includes('section=model') || search.includes('section=rules') || search.includes('financial-model')) {
+        setActiveTab(fitScope('financial-model'))
       }
     }
     window.addEventListener(APP_LOCATION_CHANGED_EVENT, syncFromLocation)
@@ -206,16 +215,20 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       window.removeEventListener(APP_LOCATION_CHANGED_EVENT, syncFromLocation)
       window.removeEventListener('popstate', syncFromLocation)
     }
-  }, [props.highlightedAccountId])
+  }, [props.highlightedAccountId, fitScope])
 
   return (
     <div className="w-full min-w-0 space-y-6">
       <PageHeader
-        title="Settings"
-        icon={<span className="grid size-10 place-items-center rounded-xl bg-blue-500/10 text-blue-500"><Settings className="size-5" /></span>}
+        title={scope === 'budget' ? 'Budget' : scope === 'accounts' ? 'Accounts' : 'Settings'}
+        description={scope === 'budget'
+          ? 'How each pay is split, and how much each category may spend in a cycle.'
+          : scope === 'accounts'
+            ? 'Where your money is held, bucket by bucket.'
+            : undefined}
       />
 
-      <SettingsTabs activeTab={activeTab} onChange={handleTabChange} />
+      <SettingsTabs scope={scope} activeTab={activeTab} onChange={handleTabChange} />
 
       {activeTab === 'financial-model' && (
         <FinancialModelTab
@@ -243,7 +256,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           onToggleChannel={props.onToggleChannel}
           pushEnrolmentRevision={props.pushEnrolmentRevision}
           hasSpendingGuides={hasSpendingGuides}
-          onNavigateToCategoryLimits={() => handleTabChange('categories-preferences')}
+          onNavigateToCategoryLimits={() => navigateToAppTab('budget', { search: { section: 'categories' } })}
+          part={scope === 'budget' ? 'plan' : 'preferences'}
         />
       )}
 

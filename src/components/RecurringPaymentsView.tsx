@@ -10,8 +10,7 @@ import { RecurringPaymentFormSheet } from './recurring/RecurringPaymentFormSheet
 import { RecurringFilterBar } from './recurring/RecurringFilterBar'
 import { RecurringPaymentCards } from './recurring/RecurringPaymentCards'
 import { useRecurringPaymentsView } from './recurring/useRecurringPaymentsView'
-import { APP_LOCATION_CHANGED_EVENT, updateAppSearch } from '../lib/appLocation'
-import { RecurringTabs, type RecurringTabId } from './recurring/RecurringTabs'
+import { APP_LOCATION_CHANGED_EVENT, isLoansLocation } from '../lib/appLocation'
 import type { LoanLoadStatus } from '../app/financialData/useLoanData'
 import { formatSensitiveAmount } from './recurring/formatters'
 import { occurrencePaidSoFar, occurrenceRemaining } from '../lib/recurringPayments'
@@ -19,12 +18,13 @@ import { occurrencePaidSoFar, occurrenceRemaining } from '../lib/recurringPaymen
 const LoansSection = React.lazy(() => import('./recurring/loans/LoansSection').then(module => ({ default: module.LoansSection })))
 import { PayEarlySheet } from './recurring/PayEarlySheet'
 
+/** Bills and Loans share this view; Plan's section row chooses between them by address. */
+type RecurringTabId = 'recurring' | 'loans'
+
 function parseInitialRecurringTab(highlightedLoanId: string | null | undefined): RecurringTabId {
   if (highlightedLoanId) return 'loans'
   if (typeof window !== 'undefined') {
-    const search = window.location.search
-    const hash = window.location.hash
-    if (search.includes('loan') || hash.includes('loan') || search.includes('section=loans')) return 'loans'
+    if (isLoansLocation(window.location.pathname, window.location.search) || window.location.hash.includes('loan')) return 'loans'
   }
   return 'recurring'
 }
@@ -176,23 +176,13 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     onClearHighlightedLoanProp?.()
   }, [onClearHighlightedLoanProp])
 
-  const handleTabChange = React.useCallback((nextTab: RecurringTabId) => {
-    if (nextTab !== 'recurring' && highlightedRecurringId) onClearHighlightedRecurring?.()
-    if (nextTab !== 'loans' && currentHighlightedLoanId) handleClearHighlightedLoan()
-    setActiveTab(nextTab)
-    // Recurring Bills and Loans are two destinations on the navigation rail, so switching between
-    // them by tab has to move the address too -- otherwise the rail keeps pointing at the section
-    // the reader just left, and a reload or a shared link reopens the wrong one.
-    updateAppSearch({ section: nextTab })
-  }, [currentHighlightedLoanId, handleClearHighlightedLoan, highlightedRecurringId, onClearHighlightedRecurring])
 
   React.useEffect(() => {
     const syncFromLocation = () => {
       const search = window.location.search
-      const hash = window.location.hash
-      if (search.includes('loan') || hash.includes('loan') || search.includes('section=loans')) {
+      if (isLoansLocation(window.location.pathname, search) || window.location.hash.includes('loan')) {
         setActiveTab('loans')
-      } else if (search.includes('section=recurring') || search.includes('subscription')) {
+      } else {
         setActiveTab('recurring')
       }
     }
@@ -297,19 +287,11 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         onAddLoan={() => setIsLoanFormOpen(true)}
       />
 
-      {/* View Switcher Tabs (Recurring Bills | Loans) */}
-      <RecurringTabs
-        activeTab={activeTab}
-        onChange={handleTabChange}
-        recurringCount={payments.length}
-        loansCount={isLoansKnown ? loans.length : undefined}
-      />
 
       {activeTab === 'recurring' && (
-        <div
+        <section
           id="recurring-panel-recurring"
-          role="tabpanel"
-          aria-labelledby="recurring-tab-recurring"
+          aria-label="Recurring bills"
           className="space-y-6"
         >
           {/* Visual Bill Timeline */}
@@ -362,16 +344,15 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               setInternalHighlightedLoanId(loanId)
             }}
           />
-        </div>
+        </section>
       )}
 
       {/* The fallback is a real skeleton, not a lone pulsing bar: it is the first thing a user
           sees when the Loans tab opens, so it should have the shape of what is about to arrive. */}
       {activeTab === 'loans' && (
-        <div
+        <section
           id="recurring-panel-loans"
-          role="tabpanel"
-          aria-labelledby="recurring-tab-loans"
+          aria-label="Loans"
           className="space-y-6"
         >
           <Suspense fallback={<LoansSectionSkeleton />}>
@@ -399,7 +380,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               onCloseAddForm={() => setIsLoanFormOpen(false)}
             />
           </Suspense>
-        </div>
+        </section>
       )}
 
       {/* Slide-over Form for Adding / Editing a Subscription */}

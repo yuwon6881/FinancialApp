@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { AppTab } from '../types'
 import type { TransactionSort } from '../lib/transactionOrdering'
-import { navigateToAppTab, readAppLocation, type AppNavigationOptions } from '../lib/appLocation'
+import { canonicalizeAppLocation, navigateToAppTab, readAppLocation, type AppNavigationOptions } from '../lib/appLocation'
 
 export type SensitivePreferenceStatus = 'pending' | 'resolved' | 'unavailable'
 
@@ -62,9 +62,9 @@ export function useAppPreferences(): AppPreferences {
   }, [activeTab])
 
   useEffect(() => {
-    if (window.location.pathname === '/' || window.location.pathname === '/wishlist' || window.location.search.includes('view=')) {
-      navigateToAppTab(activeTab, { replace: true })
-    }
+    // Old and root addresses (push notifications, bookmarks, home-screen shortcuts) settle on the
+    // canonical address of the tab they resolve to.
+    canonicalizeAppLocation()
     const handlePopState = () => setActiveTabState(readAppLocation().tab)
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)

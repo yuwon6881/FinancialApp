@@ -1,5 +1,6 @@
 import React from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { APP_LOCATION_CHANGED_EVENT } from '../lib/appLocation'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { RecurringPaymentsView } from './RecurringPaymentsView'
 import { AppPrefsContext } from '../contexts/AppContext'
@@ -130,7 +131,8 @@ describe('RecurringPaymentsView form', () => {
     expect(onLoadLoans).toHaveBeenCalledTimes(1)
   })
 
-  it('displays the loans count badge when loans are cached or loaded', () => {
+  it('opens on Loans when the address names the Loans section', () => {
+    window.history.replaceState({}, '', '/plan/loans')
     const sampleLoan = {
       id: 'loan-1',
       name: 'Car Loan',
@@ -169,9 +171,10 @@ describe('RecurringPaymentsView form', () => {
       />,
     )
 
-    // Recurring tab has 0 bills, Loans tab has 1 loan from cache
-    const loansTab = screen.getByRole('tab', { name: /loans/i })
-    expect(loansTab.textContent).toContain('1')
+    // Plan's section row owns the Bills/Loans choice now; the view follows the address.
+    expect(screen.getByRole('region', { name: 'Loans' })).toBeTruthy()
+    expect(screen.queryByRole('region', { name: 'Recurring bills' })).toBeNull()
+    window.history.replaceState({}, '', '/')
   })
 
   it('clears a category filter when search navigates to a hidden bill', () => {
@@ -280,8 +283,8 @@ describe('RecurringPaymentsView pay early', () => {
 // showing from the address. A tab switch that only moved local state left the rail pointing at the
 // section the reader had just left, and a reload reopened the wrong tab.
 describe('RecurringPaymentsView addressing', () => {
-  it('writes the section it switched to into the address', () => {
-    window.history.replaceState({}, '', '/recurring?section=recurring')
+  it('follows the address between Bills and Loans', () => {
+    window.history.replaceState({}, '', '/plan/bills')
 
     render(
       <RecurringPaymentsView
@@ -299,10 +302,19 @@ describe('RecurringPaymentsView addressing', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('tab', { name: /Loans/ }))
-    expect(new URLSearchParams(window.location.search).get('section')).toBe('loans')
+    expect(screen.getByRole('region', { name: 'Recurring bills' })).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('tab', { name: /Recurring Bills/ }))
-    expect(new URLSearchParams(window.location.search).get('section')).toBe('recurring')
+    act(() => {
+      window.history.replaceState({}, '', '/plan/loans')
+      window.dispatchEvent(new Event(APP_LOCATION_CHANGED_EVENT))
+    })
+    expect(screen.getByRole('region', { name: 'Loans' })).toBeTruthy()
+
+    act(() => {
+      window.history.replaceState({}, '', '/plan/bills')
+      window.dispatchEvent(new Event(APP_LOCATION_CHANGED_EVENT))
+    })
+    expect(screen.getByRole('region', { name: 'Recurring bills' })).toBeTruthy()
+    window.history.replaceState({}, '', '/')
   })
 })

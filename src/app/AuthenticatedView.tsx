@@ -4,7 +4,6 @@ import { ErrorBoundary } from '../components/ErrorBoundary'
 import { PullToRefresh } from '../components/ui/PullToRefresh'
 import { PageContainer } from '../components/ui/PageContainer'
 import { Skeleton } from '../components/ui/Skeleton'
-import type { PageSkeletonVariant } from '../components/ui/CycleSkeleton'
 import { LaunchReady } from './LaunchReady'
 import type { useAiActionRouter } from './useAiActionRouter'
 import type { useAppDialogs } from './useAppDialogs'
@@ -15,7 +14,6 @@ import type { useCycleSummary } from './useCycleSummary'
 import type { useFinancialData } from './useFinancialData'
 import type { useInvestmentRefreshCoordinator } from './useInvestmentRefreshCoordinator'
 import type { usePushNotifications } from './usePushNotifications'
-import { shouldShowMobileFab } from './useFabMenu'
 import type { useInvestmentScanPolling } from '../lib/useInvestmentScanPolling'
 import type { useReceiptScanPolling } from '../lib/useReceiptScanPolling'
 import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
@@ -26,11 +24,10 @@ import { getTransactionCyclePlacement } from '../lib/transactionCyclePlacement'
 import { openLedgerTransaction } from '../lib/openLedgerTransaction'
 import type { AiInvocationContext } from '../lib/api/ai'
 import { AuthenticatedTabContent } from './AuthenticatedTabContent'
+import { getPageSkeletonVariant } from './pageSkeletonUtils'
 
 const CycleSkeleton = lazy(() => import('../components/ui/CycleSkeleton').then(module => ({ default: module.CycleSkeleton })))
 const UiSpecimen = lazy(() => import('../components/ui/UiSpecimen').then(module => ({ default: module.UiSpecimen })))
-
-const getPageSkeletonVariant = (tab: AppTab): PageSkeletonVariant => tab
 
 const ContentViewFallback = ({ tab }: { tab: AppTab }) => (
   <div className="w-full pt-2 view-enter">
@@ -190,7 +187,7 @@ export function AuthenticatedView({
 
   return (
     <>
-      <a href="#main-content" className="sr-only fixed left-4 top-4 z-[100] rounded-lg bg-card px-3 py-2 text-sm font-bold text-foreground shadow-lg focus:not-sr-only">
+      <a href="#main-content" className="sr-only fixed left-4 top-4 z-[100] rounded-full bg-card px-4 py-2 text-body font-semibold text-foreground shadow-lg focus:not-sr-only">
         Skip to main content
       </a>
       <PullToRefresh
@@ -200,7 +197,7 @@ export function AuthenticatedView({
         <PageContainer
           as="main"
           id="main-content"
-          className={`${shouldShowMobileFab(prefs.activeTab) ? 'pb-fab-safe' : 'pb-nav-safe'} relative flex-1 overflow-x-clip py-6 sm:py-8 sm:ml-20 sm:max-w-[calc(100%-5rem)] lg:ml-56 lg:max-w-[calc(100%-14rem)] 2xl:max-w-[1440px]`}
+          className="pb-nav-safe relative flex-1 overflow-x-clip pt-2 sm:pt-8 lg:pt-10"
           aria-busy={prefs.sensitivePreferenceStatus === 'pending' || financial.loading}
         >
           <ErrorBoundary variant="inline" resetKey={prefs.activeTab}>

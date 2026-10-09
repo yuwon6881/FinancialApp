@@ -168,6 +168,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
       isOpen={isOpen}
       onClose={handleClose}
       maxWidthClassName="max-w-2xl"
+      placement="end"
       ariaLabel="ASK AI"
       title={
         <span className="flex items-center gap-2">

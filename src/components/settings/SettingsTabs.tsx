@@ -1,27 +1,24 @@
 import { Tabs } from '../ui/Tabs'
 
-export type SettingsTabId = 'financial-model' | 'investment-plan' | 'categories-preferences' | 'accounts' | 'security'
+import { SETTINGS_TABS_BY_SCOPE, type SettingsScope, type SettingsTabId } from './settingsScopes'
 
-const SETTINGS_TABS: ReadonlyArray<readonly [SettingsTabId, string]> = [
-  ['financial-model', 'Plan & Preferences'],
-  ['investment-plan', 'Investment Plan'],
-  ['categories-preferences', 'Categories & Limits'],
-  ['accounts', 'Accounts'],
-  ['security', 'Security & Devices'],
-]
+export type { SettingsScope, SettingsTabId }
 
 interface SettingsTabsProps {
+  scope?: SettingsScope
   activeTab: SettingsTabId
   onChange: (tab: SettingsTabId) => void
 }
 
-export function SettingsTabs({ activeTab, onChange }: SettingsTabsProps) {
+export function SettingsTabs({ scope = 'settings', activeTab, onChange }: SettingsTabsProps) {
+  const tabs = SETTINGS_TABS_BY_SCOPE[scope]
+  if (tabs.length < 2) return null
   return (
     <Tabs
       value={activeTab}
       onValueChange={onChange}
-      options={SETTINGS_TABS.map(([value, label]) => ({ value, label, panelId: `settings-panel-${value}` }))}
-      label="Settings sections"
+      options={tabs.map(([value, label]) => ({ value, label, panelId: `settings-panel-${value}` }))}
+      label={scope === 'budget' ? 'Budget sections' : 'Settings sections'}
       idPrefix="settings-tab"
       scrollable
     />

@@ -21,7 +21,7 @@ import { useAiActionRouter } from './app/useAiActionRouter'
 import { useAppDialogs } from './app/useAppDialogs'
 import { useCycleSummary } from './app/useCycleSummary'
 import { useAiEntryPoint } from './app/useAiEntryPoint'
-import { shouldShowMobileFab, useFabMenu } from './app/useFabMenu'
+import { useFabMenu } from './app/useFabMenu'
 import { useCurrentCycleDashboard } from './app/useCurrentCycleDashboard'
 import { AuthenticatedView } from './app/AuthenticatedView'
 import { hideNativeSplashAfterPaint } from './app/launchHandoff'
@@ -32,11 +32,6 @@ import { mutationBusyLabel } from './components/ui/rowSyncState'
 import type { AiInvocationContext } from './lib/api/ai'
 import { calculateFreeRewardsBalance, pendingRecurringAmount, pendingRewardsAmount } from './lib/freeRewards'
 import { canOpenBlankMutationForm } from './lib/quickAddAvailability'
-import {
-  AppFooter,
-  AppOverlaysFallback,
-  MobileFabTrigger,
-} from './app/AppShellComponents'
 import { AppGateways } from './app/AppGateways'
 import { useTabNavigationCleanup } from './app/useTabNavigationCleanup'
 import { useAppThemeAndShortcuts } from './app/useAppThemeAndShortcuts'
@@ -395,7 +390,11 @@ function App() {
         <TopNav
           activeTab={prefs.activeTab}
           onTabChange={prefs.setActiveTab}
-          onQuickAction={nav.handleQuickAction}
+          onQuickAdd={fabMenu.toggle}
+          quickAddOpen={fabMenu.isOpen}
+          quickAddTriggerRef={fabTriggerRef}
+          onNewTransaction={() => nav.handleQuickAction('transaction')}
+          newTransactionDisabled={!canOpenBlankMutationForm(prefs.hideSensitive, prefs.sensitivePreferenceStatus)}
           onAskAI={() => setIsAiOpen(true)}
           onOpenSearch={() => dialogs.setShowSearch(true)}
           hideSensitive={prefs.hideSensitive}
@@ -499,28 +498,7 @@ function App() {
           onExplainWithAi={launchAiExplanation}
         />
 
-        <AppFooter />
-
-        <MobileFabTrigger
-          isOpen={fabMenu.isOpen}
-          visible={shouldShowMobileFab(prefs.activeTab)}
-          onToggle={fabMenu.toggle}
-          triggerRef={fabTriggerRef}
-        />
-
-        <Suspense fallback={<AppOverlaysFallback
-          isOpen={fabMenu.isOpen}
-          visible={shouldShowMobileFab(prefs.activeTab)}
-          onAskAi={() => {
-            setIsAiOpen(true)
-            fabMenu.close()
-          }}
-          onPostTransaction={() => {
-            nav.handleQuickAction('transaction')
-            fabMenu.close()
-          }}
-          postTransactionDisabled={!canOpenBlankMutationForm(prefs.hideSensitive, prefs.sensitivePreferenceStatus)}
-        />}>
+        <Suspense fallback={null}>
           <AppOverlays
             dialogs={dialogs}
             financial={financial}
@@ -533,6 +511,10 @@ function App() {
             todayDashboardData={todayDashboardData}
             currentPendingNotifications={currentPendingNotifications}
             setIsAiOpen={setIsAiOpen}
+            onQuickAddInvestment={() => {
+              prefs.setActiveTab('investments')
+              setAutoOpenInvestmentAdd(true)
+            }}
             apiClient={api}
           />
         </Suspense>

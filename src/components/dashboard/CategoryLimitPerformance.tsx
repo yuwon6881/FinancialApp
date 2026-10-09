@@ -2,6 +2,7 @@ import { Button } from '../ui/Button'
 import React from 'react'
 import { AlertTriangle, ArrowRight, CheckCircle2, Gauge, SlidersHorizontal, TrendingUp } from 'lucide-react'
 import type { CategoryLimitProgress, AppTab } from '../../types'
+import type { AppNavigationOptions } from '../../lib/appLocation'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { InfoHint } from '../ui/InfoHint'
 import { getCategoryLimitCardId, type NavigateToLedgerOptions } from './types'
@@ -13,7 +14,7 @@ interface CategoryLimitPerformanceProps {
   items: CategoryLimitProgress[]
   formatSensitive: (value: number) => React.ReactNode
   onNavigateToLedger?: (options: NavigateToLedgerOptions) => void
-  onNavigate?: (tab: AppTab) => void
+  onNavigate?: (tab: AppTab, options?: AppNavigationOptions) => void
 }
 
 const statusRank = { Exceeded: 0, Watch: 1, OnTrack: 2 } as const
@@ -47,14 +48,7 @@ export function CategoryLimitPerformance({
           {onNavigate && (
             <Button variant="tertiary"
               type="button"
-              onClick={() => {
-                if (typeof window !== 'undefined') {
-                  const url = new URL(window.location.href)
-                  url.searchParams.set('section', 'category-limits')
-                  window.history.replaceState(null, '', url.toString())
-                }
-                onNavigate('settings')
-              }}
+              onClick={() => onNavigate('budget', { search: { section: 'categories' } })}
               className="mt-4 inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3.5 py-2 text-xs font-bold text-blue-500 transition hover:border-blue-500/50 hover:bg-blue-500/20 cursor-pointer sm:mt-0"
             >
               <span>Set Up Limits</span>

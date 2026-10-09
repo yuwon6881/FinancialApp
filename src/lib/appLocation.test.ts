@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   APP_CONTEXT_WILL_CHANGE_EVENT,
+  canonicalizeAppLocation,
   ledgerRouteSearch,
   navigateToAppTab,
   readAppLocation,
@@ -74,29 +75,91 @@ describe('app URL state', () => {
     navigateToAppTab('ledger', {
       search: ledgerRouteSearch({ filters: ['Rewards'], txType: 'inflow', showAllCycles: true }),
     })
-    expect(window.location.pathname).toBe('/ledger')
+    expect(window.location.pathname).toBe('/activity')
     expect(window.location.search).toContain('filters=Rewards')
     expect(window.location.search).toContain('month=Jul')
 
     navigateToAppTab('reports')
-    expect(window.location.pathname).toBe('/reports')
+    expect(window.location.pathname).toBe('/insights')
     expect(window.location.search).toBe('?month=Jul&year=2026')
   })
 
   it('preserves an Android launcher action until its authenticated handler consumes it', () => {
     window.history.replaceState({}, '', '/?pwaAction=scan-receipt&month=Jul&year=2026')
     navigateToAppTab('ledger')
-    expect(window.location.pathname).toBe('/ledger')
+    expect(window.location.pathname).toBe('/activity')
     expect(new URLSearchParams(window.location.search).get('pwaAction')).toBe('scan-receipt')
 
     navigateToAppTab('ledger', { search: { type: 'outflow' } })
     expect(new URLSearchParams(window.location.search).get('pwaAction')).toBe('scan-receipt')
   })
 
-  it('uses the canonical commitments and rewards route', () => {
-    navigateToAppTab('wishlist')
-    expect(window.location.pathname).toBe('/commitments-rewards')
-    expect(window.location.search).toBe('?month=Jul&year=2026')
+  it('uses the canonical Lumen destination paths', () => {
+    const cases: Array<[Parameters<typeof navigateToAppTab>[0], string]> = [
+      ['dashboard', '/today'],
+      ['ledger', '/activity'],
+      ['drafts', '/activity/review'],
+      ['budget', '/plan/budget'],
+      ['recurring', '/plan/bills'],
+      ['wishlist', '/plan/goals'],
+      ['accounts', '/wealth/accounts'],
+      ['investments', '/wealth/investments'],
+      ['documents', '/wealth/vault'],
+      ['reports', '/insights'],
+      ['settings', '/settings'],
+    ]
+    for (const [tab, path] of cases) {
+      navigateToAppTab(tab)
+      expect(window.location.pathname, tab).toBe(path)
+      expect(window.location.search).toBe('?month=Jul&year=2026')
+    }
+  })
+
+  it('gives Loans an address of its own and keeps a bill on Bills', () => {
+    navigateToAppTab('recurring', { search: { section: 'loans' } })
+    expect(window.location.pathname).toBe('/plan/loans')
+    expect(new URLSearchParams(window.location.search).has('section')).toBe(false)
+    expect(readAppLocation()).toEqual(expect.objectContaining({ tab: 'recurring' }))
+    expect(readAppLocation().destination.section).toBe('loans')
+
+    navigateToAppTab('recurring', { search: { loan: 'loan-1' } })
+    expect(window.location.pathname).toBe('/plan/loans')
+
+    navigateToAppTab('recurring', { search: { subscription: 'bill-1', loan: null } })
+    expect(window.location.pathname).toBe('/plan/bills')
+  })
+
+  it.each([
+    ['/dashboard', 'dashboard', '/today'],
+    ['/ledger?tx=abc', 'ledger', '/activity'],
+    ['/drafts?draft=d1', 'drafts', '/activity/review'],
+    ['/recurring?subscription=s1', 'recurring', '/plan/bills'],
+    ['/recurring?section=loans', 'recurring', '/plan/loans'],
+    ['/commitments-rewards?reward=7', 'wishlist', '/plan/goals'],
+    ['/wishlist', 'wishlist', '/plan/goals'],
+    ['/investments', 'investments', '/wealth/investments'],
+    ['/vault', 'documents', '/wealth/vault'],
+    ['/reports?focus=category-limits', 'reports', '/insights'],
+    ['/settings?section=accounts', 'accounts', '/wealth/accounts'],
+    ['/settings?section=categories', 'budget', '/plan/budget'],
+    ['/', 'dashboard', '/today'],
+  ] as const)('resolves the published address %s and settles on its canonical path', (address, tab, canonical) => {
+    window.history.replaceState({}, '', address)
+    expect(readAppLocation().tab).toBe(tab)
+    canonicalizeAppLocation()
+    expect(window.location.pathname).toBe(canonical)
+  })
+
+  it('keeps the query a published address carried', () => {
+    window.history.replaceState({}, '', '/recurring?subscription=s1&month=Jul&year=2026')
+    canonicalizeAppLocation()
+    const params = new URLSearchParams(window.location.search)
+    expect(params.get('subscription')).toBe('s1')
+    expect(params.get('month')).toBe('Jul')
+
+    window.history.replaceState({}, '', '/settings?section=categories')
+    canonicalizeAppLocation()
+    expect(new URLSearchParams(window.location.search).get('section')).toBe('categories')
   })
 
   it('parses destination ids and removes stale ids when leaving their page', () => {
@@ -142,7 +205,7 @@ describe('app URL state', () => {
     navigateToAppTab('reports')
 
     expect(contextListener).toHaveBeenCalledTimes(1)
-    expect(window.location.pathname).toBe('/reports')
+    expect(window.location.pathname).toBe('/insights')
     expect(window.history.state).toEqual({})
     window.removeEventListener(APP_CONTEXT_WILL_CHANGE_EVENT, contextListener)
   })

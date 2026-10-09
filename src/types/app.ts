@@ -1,2 +1,2 @@
-export const APP_TABS = ['dashboard', 'reports', 'recurring', 'ledger', 'wishlist', 'drafts', 'settings', 'investments', 'documents'] as const
+export const APP_TABS = ['dashboard', 'reports', 'recurring', 'ledger', 'wishlist', 'drafts', 'settings', 'investments', 'documents', 'budget', 'accounts'] as const
 export type AppTab = typeof APP_TABS[number]

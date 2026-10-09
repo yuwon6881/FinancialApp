@@ -8,10 +8,13 @@ import type { useAppSession } from './useAppSession'
 import type { useAppDialogs } from './useAppDialogs'
 import type { usePushNotifications } from './usePushNotifications'
 import type { InvestmentAllocationOverview } from '../types'
+import type { SettingsScope } from '../components/settings/settingsScopes'
 
 const SettingsView = lazy(() => import('../components/SettingsView').then(module => ({ default: module.SettingsView })))
 
 export interface AuthenticatedSettingsRouteProps {
+  /** Settings, Plan › Budget or Wealth › Accounts. */
+  scope?: SettingsScope
   prefs: ReturnType<typeof useAppPreferences>
   financial: ReturnType<typeof useFinancialData>
   nav: ReturnType<typeof useCycleNavigation>
@@ -28,6 +31,7 @@ export interface AuthenticatedSettingsRouteProps {
 }
 
 export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProps> = ({
+  scope = 'settings',
   prefs,
   financial,
   nav,
@@ -44,6 +48,7 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
 }) => {
   return (
     <SettingsView 
+      scope={scope}
       investmentAllocation={investmentAllocation}
       dashboardData={financial.optimisticDashboardData}
       categoriesList={financial.allCategories}

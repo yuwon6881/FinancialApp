@@ -307,7 +307,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const handleNavigateToAccounts = useCallback((targetIdOrBucket?: string | null) => {
     const target = targetIdOrBucket || '1'
     setHighlightedAccountId(target)
-    setActiveTab('settings', { search: { account: target } })
+    setActiveTab('accounts', { search: { account: target } })
   }, [setActiveTab])
 
   // Commitments, rewards and drafts arrive the same way a bill or a loan does. Search used to

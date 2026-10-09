@@ -1,10 +1,10 @@
-import { CalendarClock, RotateCcw } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react'
 import { Button } from './Button'
+import { IconButton } from './IconButton'
 import { CustomSelect } from './CustomSelect'
 import { getCycleLabelForDropdown } from '../../lib/cycleLabels'
 import { MONTH_NAMES } from '../../lib/cycle'
 import { cn } from '../../lib/utils'
-import { panelClass } from './panelStyles'
 
 export interface CycleSwitcherProps {
   selectedMonth: string
@@ -26,12 +26,12 @@ export interface CycleSwitcherProps {
    * moved the whole page up by the switcher's height on every toggle.
    */
   unavailableReason?: string
+  className?: string
 }
 
 /**
- * The one cycle picker for every cycle-dependent page. The Ledger and Reports each carried their
- * own copy in their own header, so the same choice sat in two different places and Recurring --
- * which is just as cycle-dependent -- had none at all.
+ * The one cycle picker for every cycle-dependent page: a compact pill with step arrows either side
+ * of the cycle and year, so moving one cycle back is a single tap and jumping further is a pick.
  */
 export function CycleSwitcher({
   selectedMonth,
@@ -45,47 +45,79 @@ export function CycleSwitcher({
   surfaceLabel,
   disabled = false,
   unavailableReason,
+  className,
 }: CycleSwitcherProps) {
   const isDisabled = disabled || Boolean(unavailableReason)
   const isCurrentCycle = selectedMonth === currentCycleMonth && selectedYear === currentCycleYear
   const years = availableYears.length > 0 ? availableYears : [selectedYear]
+  const minYear = Math.min(...years)
+  const maxYear = Math.max(...years, currentCycleYear)
+
+  const step = (direction: -1 | 1) => {
+    if (periodMode === 'year') {
+      const nextYear = selectedYear + direction
+      if (nextYear >= minYear && nextYear <= maxYear) onSelectPeriod(selectedMonth, nextYear)
+      return
+    }
+    const index = MONTH_NAMES.indexOf(selectedMonth) + direction
+    const nextYear = selectedYear + (index < 0 ? -1 : index > 11 ? 1 : 0)
+    const nextMonth = MONTH_NAMES[(index + 12) % 12]
+    if (nextYear >= minYear && nextYear <= maxYear) onSelectPeriod(nextMonth, nextYear)
+  }
+  const atStart = periodMode === 'year'
+    ? selectedYear <= minYear
+    : selectedYear <= minYear && selectedMonth === MONTH_NAMES[0]
+  const atEnd = periodMode === 'year'
+    ? selectedYear >= maxYear
+    : selectedYear >= maxYear && selectedMonth === MONTH_NAMES[11]
 
   return (
-    <div className={cn(panelClass, 'relative z-40 flex flex-col gap-2 p-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:p-3')}>
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
-        <span className="flex shrink-0 items-center gap-1.5 pl-0.5 text-xs font-bold text-muted-foreground">
-          <CalendarClock className="size-4 text-accent-ink" aria-hidden />
-          <span>Cycle</span>
-        </span>
-
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
-          {periodMode === 'month-year' && (
-            <CustomSelect
-              ariaLabel={`${surfaceLabel} cycle`}
-              value={selectedMonth}
-              onChange={month => onSelectPeriod(String(month), selectedYear)}
-              options={MONTH_NAMES.map(month => ({
-                value: month,
-                label: getCycleLabelForDropdown(month, selectedYear, cycleDay),
-              }))}
-              disabled={isDisabled}
-              className="w-0 min-w-0 flex-1 sm:w-56 sm:flex-initial"
-            />
-          )}
+    <div className={cn('relative z-40 flex min-w-0 flex-wrap items-center gap-2', className)}>
+      <div className="flex min-w-0 max-w-full items-center gap-0.5 rounded-full border border-border/70 bg-card p-1 shadow-xs dark:shadow-none">
+        <IconButton
+          label={periodMode === 'year' ? 'Previous year' : 'Previous cycle'}
+          onClick={() => step(-1)}
+          disabled={isDisabled || atStart}
+          className="shrink-0 text-muted-foreground"
+        >
+          <ChevronLeft className="size-4" />
+        </IconButton>
+        {periodMode === 'month-year' && (
           <CustomSelect
-            ariaLabel={`${surfaceLabel} cycle year`}
-            value={selectedYear}
-            onChange={year => onSelectPeriod(selectedMonth, Number(year))}
-            options={years.map(year => ({ value: year, label: String(year) }))}
+            variant="ghost"
+            ariaLabel={`${surfaceLabel} cycle`}
+            value={selectedMonth}
+            onChange={month => onSelectPeriod(String(month), selectedYear)}
+            options={MONTH_NAMES.map(month => ({
+              value: month,
+              label: getCycleLabelForDropdown(month, selectedYear, cycleDay),
+            }))}
             disabled={isDisabled}
-            className={periodMode === 'month-year' ? 'w-28 shrink-0' : 'w-0 min-w-0 flex-1 sm:w-40 sm:flex-initial'}
-            align="right"
+            className="w-0 min-w-0 flex-1 sm:w-48 sm:flex-initial"
           />
-        </div>
+        )}
+        <CustomSelect
+          variant="ghost"
+          ariaLabel={`${surfaceLabel} cycle year`}
+          value={selectedYear}
+          onChange={year => onSelectPeriod(selectedMonth, Number(year))}
+          options={years.map(year => ({ value: year, label: String(year) }))}
+          disabled={isDisabled}
+          className={periodMode === 'month-year' ? 'w-24 shrink-0' : 'w-28 shrink-0'}
+          align="right"
+        />
+        <IconButton
+          label={periodMode === 'year' ? 'Next year' : 'Next cycle'}
+          onClick={() => step(1)}
+          disabled={isDisabled || atEnd}
+          className="shrink-0 text-muted-foreground"
+        >
+          <ChevronRight className="size-4" />
+        </IconButton>
       </div>
 
       {unavailableReason ? (
-        <p className="min-w-0 text-xs font-medium text-muted-foreground sm:shrink-0 sm:text-right">{unavailableReason}</p>
+        <p className="min-w-0 text-caption text-muted-foreground">{unavailableReason}</p>
       ) : !isCurrentCycle && (
         <Button
           variant="secondary"
@@ -93,11 +125,12 @@ export function CycleSwitcher({
           type="button"
           onClick={() => onSelectPeriod(currentCycleMonth, currentCycleYear)}
           disabled={isDisabled}
+          aria-label="Back to current cycle"
           title={`Back to ${getCycleLabelForDropdown(currentCycleMonth, currentCycleYear, cycleDay)}`}
-          className="min-h-10 w-full justify-center gap-1.5 rounded-xl px-3 text-xs sm:min-h-9 sm:w-auto sm:shrink-0"
+          className="shrink-0"
         >
           <RotateCcw className="size-3.5" aria-hidden />
-          <span className="whitespace-nowrap">Back to current cycle</span>
+          <span className="whitespace-nowrap">Current cycle</span>
         </Button>
       )}
     </div>

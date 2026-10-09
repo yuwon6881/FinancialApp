@@ -1,7 +1,4 @@
 import { lazy, Suspense, useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react'
-import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
-import { CreditCard, Search, Sparkles, Wallet } from 'lucide-react'
-import { RewardIcon } from '../components/semanticIcons'
 import type { DashboardData, PendingNotification } from '../types'
 import { MONTH_NAMES } from '../lib/cycle'
 import type { useAppDialogs } from './useAppDialogs'
@@ -9,7 +6,6 @@ import type { useAppPreferences } from './useAppPreferences'
 import type { useAppSession } from './useAppSession'
 import type { useCycleNavigation } from './useCycleNavigation'
 import type { useCycleSummary } from './useCycleSummary'
-import { shouldShowMobileFab } from './useFabMenu'
 import { canOpenBlankMutationForm } from '../lib/quickAddAvailability'
 import { GlobalSearchLoading } from '../components/search/GlobalSearchLoading'
 import { loadGlobalSearch, preloadGlobalSearch } from '../components/search/globalSearchPreload'
@@ -18,6 +14,8 @@ import type { useFinancialData } from './useFinancialData'
 import { openLedgerTransaction } from '../lib/openLedgerTransaction'
 import { openSearchResult } from '../lib/search/openSearchResult'
 import { CustomConfirmModal } from '../components/ui/CustomConfirmModal'
+import { updateAppSearch } from '../lib/appLocation'
+import type { QuickAddAction } from '../components/nav/QuickAddSheet'
 
 const PendingSubscriptionsModal = lazy(() => import('../components/PendingSubscriptionsModal').then(module => ({ default: module.PendingSubscriptionsModal })))
 const FailedSyncModal = lazy(() => import('../components/FailedSyncModal').then(module => ({ default: module.FailedSyncModal })))
@@ -27,29 +25,7 @@ const LockScreen = lazy(() => import('../components/LockScreen').then(module => 
 const CycleSummaryModal = lazy(() => import('../components/CycleSummaryModal').then(module => ({ default: module.CycleSummaryModal })))
 const CustomAlertModal = lazy(() => import('../components/ui/CustomAlertModal').then(module => ({ default: module.CustomAlertModal })))
 const GlobalSearch = lazy(() => loadGlobalSearch().then(module => ({ default: module.GlobalSearch })))
-
-const fabMenuVariants = {
-  hidden: {
-    transition: { staggerChildren: 0.04 },
-  },
-  visible: {
-    transition: {
-      delayChildren: 0.06,
-      staggerChildren: 0.08,
-      staggerDirection: -1,
-    },
-  },
-}
-
-const fabActionVariants = {
-  hidden: { opacity: 0, scale: 0.7, y: 18 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: { type: 'spring' as const, stiffness: 260, damping: 18 },
-  },
-}
+const QuickAddSheet = lazy(() => import('../components/nav/QuickAddSheet').then(module => ({ default: module.QuickAddSheet })))
 
 interface AppOverlaysProps {
   dialogs: ReturnType<typeof useAppDialogs>
@@ -63,6 +39,8 @@ interface AppOverlaysProps {
   todayDashboardData: DashboardData | null
   currentPendingNotifications: PendingNotification[]
   setIsAiOpen: Dispatch<SetStateAction<boolean>>
+  /** Opens Investments with the activity form, for the quick-add sheet. */
+  onQuickAddInvestment: () => void
   apiClient: Pick<typeof import('../lib/api'), 'fetchTransactionById'>
 }
 
@@ -78,10 +56,9 @@ export function AppOverlays({
   todayDashboardData,
   currentPendingNotifications,
   setIsAiOpen,
+  onQuickAddInvestment,
   apiClient,
 }: AppOverlaysProps) {
-  const reduceMotion = useReducedMotion()
-  const fabActionsRef = useRef<HTMLDivElement>(null)
 
   const openSearchTransaction = async (transactionId: string, transactionDate?: string) => {
     const opened = await openLedgerTransaction({
@@ -102,7 +79,6 @@ export function AppOverlays({
   }
   const searchLoanLoadAttemptedRef = useRef(false)
   const [isAccountReviewOpen, setIsAccountReviewOpen] = useState(false)
-  const showMobileFab = shouldShowMobileFab(prefs.activeTab)
 
   // Warm the search module once the app is otherwise idle. AppOverlays itself only mounts after
   // launch, so this costs the cold start nothing and leaves the first Ctrl+K / trigger press with
@@ -129,31 +105,29 @@ export function AppOverlays({
     void financial.loadLoans().catch(() => undefined)
   }, [dialogs.showSearch, financial.hasLoadedLoans, financial.loadLoans, financial.loanLoadStatus])
 
-  useEffect(() => {
-    if (!fabMenu.isOpen || !showMobileFab) return
-    const frame = window.requestAnimationFrame(() => {
-      fabActionsRef.current
-        ?.querySelector<HTMLButtonElement>('[data-fab-action]:not(:disabled)')
-        ?.focus({ preventScroll: true })
-    })
-    return () => window.cancelAnimationFrame(frame)
-  }, [fabMenu.isOpen, showMobileFab])
-
-  useEffect(() => {
-    if (!fabMenu.isOpen || !showMobileFab) return
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      fabMenu.close()
-      window.requestAnimationFrame(() => fabTriggerRef.current?.focus({ preventScroll: true }))
-    }
-    document.addEventListener('keydown', closeOnEscape)
-    return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [fabMenu.close, fabMenu.isOpen, showMobileFab])
-
-  const closeFabAndRestoreFocus = () => {
+  // The sheet's dialog machinery traps focus and handles Escape; only the hand-back to the add
+  // button is ours, so a keyboard user lands where they started.
+  const closeQuickAdd = () => {
     fabMenu.close()
     window.requestAnimationFrame(() => fabTriggerRef.current?.focus({ preventScroll: true }))
+  }
+
+  const runQuickAdd = (action: QuickAddAction) => {
+    fabMenu.close()
+    switch (action) {
+      case 'expense': nav.handleQuickAction('transaction', { txType: 'outflow' }); break
+      case 'income': nav.handleQuickAction('transaction', { txType: 'inflow' }); break
+      case 'transfer': nav.handleQuickAction('transaction', { txType: 'transfer' }); break
+      case 'scan-receipt':
+        updateAppSearch({ receiptScan: '1' })
+        nav.handleQuickAction('transaction')
+        break
+      case 'bill': nav.handleQuickAction('subscription'); break
+      case 'reward': nav.handleQuickAction('wishlist'); break
+      case 'investment': onQuickAddInvestment(); break
+      case 'ask-ai': setIsAiOpen(true); break
+      case 'search': dialogs.setShowSearch(true); break
+    }
   }
 
   return (
@@ -329,90 +303,18 @@ export function AppOverlays({
         </Suspense>
       )}
 
-      {session.token && (
-        <>
-          <AnimatePresence>
-            {fabMenu.isOpen && showMobileFab && (
-              <m.div
-                initial={reduceMotion ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: reduceMotion ? 0 : 0.25 }}
-                className="sm:hidden fixed inset-0 z-30 bg-background/45 backdrop-blur-sm cursor-pointer"
-                onClick={closeFabAndRestoreFocus}
-                aria-hidden="true"
-              />
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {fabMenu.isOpen && showMobileFab && (
-              <m.div
-                ref={fabActionsRef}
-                id="mobile-fab-actions"
-                role="menu"
-                aria-label="Quick actions"
-                variants={fabMenuVariants}
-                initial={reduceMotion ? false : 'hidden'}
-                animate="visible"
-                exit="hidden"
-                className="sm:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
-                style={{ bottom: 'calc(var(--app-fab-offset) + 4.25rem + env(safe-area-inset-bottom, 0px))' }}
-              >
-                {/* Search lives here rather than in the phone header: the header's right lane is
-                    already the app's tightest space, and unlike the quick-add actions search is a
-                    read, so it is never blocked by sensitive mode.
-                    The column grows upwards from the trigger, so this list runs top to bottom:
-                    the most-used action (Post Transaction) sits last, closest to the thumb, and
-                    the occasional reads sit furthest away. */}
-                {([
-                  { key: 'search' as const, label: 'Search', Icon: Search, color: 'bg-sky-500' },
-                  { key: 'ai' as const, label: 'Ask AI', Icon: Sparkles, color: 'bg-indigo-500' },
-                  { key: 'wishlist' as const, label: 'Add Reward', Icon: RewardIcon, color: 'bg-pink-500' },
-                  { key: 'subscription' as const, label: 'New Subscription', Icon: CreditCard, color: 'bg-violet-500' },
-                  { key: 'transaction' as const, label: 'Post Transaction', Icon: Wallet, color: 'bg-emerald-500' },
-                ]).map(({ key, label, Icon, color }) => {
-                  // Ask AI and Search are reads; only the three quick-add actions open a blank
-                  // mutation form and are therefore gated by sensitive mode.
-                  const isMutation = key !== 'ai' && key !== 'search'
-                  return (
-                  <m.button
-                    key={key}
-                    type="button"
-                    role="menuitem"
-                    data-fab-action
-                    variants={fabActionVariants}
-                    whileTap={reduceMotion ? undefined : { scale: 0.92 }}
-                    disabled={isMutation && !canOpenBlankMutationForm(prefs.hideSensitive, prefs.sensitivePreferenceStatus)}
-                    title={isMutation && prefs.hideSensitive && prefs.sensitivePreferenceStatus === 'pending'
-                      ? 'Finishing security check…'
-                      : isMutation && prefs.hideSensitive
-                        ? 'Reveal sensitive data to make financial changes'
-                        : label}
-                    onClick={() => {
-                      if (key === 'ai') {
-                        setIsAiOpen(true)
-                      } else if (key === 'search') {
-                        dialogs.setShowSearch(true)
-                      } else {
-                        nav.handleQuickAction(key)
-                      }
-                      fabMenu.close()
-                    }}
-                    className="flex items-center gap-2.5 group cursor-pointer"
-                  >
-                    <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-xs font-bold text-foreground shadow-xs">{label}</span>
-                    {/* Ayu's 500 steps are bright tints on a near-black surface, so a white
-                        glyph on them is close to invisible; the dark surface colour is the
-                        readable pairing there. Light mode keeps white on its darker fills. */}
-                    <span className={`size-11 rounded-full ${color} text-on-vivid flex items-center justify-center shadow-lg`}><Icon className="size-5" /></span>
-                  </m.button>
-                  )
-                })}
-              </m.div>
-            )}
-          </AnimatePresence>
-        </>
+      {session.token && fabMenu.isOpen && (
+        <Suspense fallback={null}>
+          <QuickAddSheet
+            isOpen={fabMenu.isOpen}
+            onClose={closeQuickAdd}
+            onAction={runQuickAdd}
+            mutationsDisabled={!canOpenBlankMutationForm(prefs.hideSensitive, prefs.sensitivePreferenceStatus)}
+            mutationsDisabledReason={prefs.hideSensitive && prefs.sensitivePreferenceStatus === 'pending'
+              ? 'Finishing security check…'
+              : 'Reveal sensitive data to make financial changes'}
+          />
+        </Suspense>
       )}
     </>
   )
