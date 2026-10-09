@@ -1,9 +1,14 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { RecurringPaymentCards } from './RecurringPaymentCards'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { RecurringBills } from './RecurringBills'
 import { RECURRING_PAUSED_LABEL } from '../../lib/push/messages'
-import type { RecurringPayment } from '../../types'
+import type { ActiveRecurringPayment, RecurringPayment } from '../../types'
+
+// The bill detail sits beside the list from 1280px; below that it opens as a sheet.
+const jsdomWidth = window.innerWidth
+beforeAll(() => { window.innerWidth = 1440 })
+afterAll(() => { window.innerWidth = jsdomWidth })
 
 const basePayment: RecurringPayment = {
   id: 'rp-1',
@@ -22,10 +27,11 @@ const basePayment: RecurringPayment = {
 
 const noop = () => {}
 
-function renderCards(payments: RecurringPayment[], overrides: Partial<React.ComponentProps<typeof RecurringPaymentCards>> = {}) {
+function renderCards(payments: RecurringPayment[], overrides: Partial<React.ComponentProps<typeof RecurringBills>> = {}) {
   return render(
-    <RecurringPaymentCards
+    <RecurringBills
       payments={payments}
+      occurrences={[]}
       totalCount={payments.length}
       hideSensitive={false}
       formatSensitive={val => `$${val.toFixed(2)}`}
@@ -40,7 +46,7 @@ function renderCards(payments: RecurringPayment[], overrides: Partial<React.Comp
   )
 }
 
-describe('RecurringPaymentCards reminder controls', () => {
+describe('RecurringBills reminder controls', () => {
   beforeAll(() => {
     Element.prototype.scrollIntoView = vi.fn()
   })
@@ -115,11 +121,13 @@ describe('RecurringPaymentCards reminder controls', () => {
 
     expect(screen.getByText('Ended')).toBeTruthy()
     expect((screen.getByRole('switch', { name: 'Turn off payment reminder for Netflix' }) as HTMLButtonElement).disabled).toBe(true)
-    expect(document.getElementById('recur-card-rp-1')!.className).toContain('border-dashed')
+    // An ended bill is filed with the paused ones, saying when it stopped.
+    const paused = screen.getByRole('region', { name: /Paused/ })
+    expect(within(paused).getByText('Ended Jan 1, 2000')).toBeTruthy()
   })
 })
 
-describe('RecurringPaymentCards pay early', () => {
+describe('RecurringBills pay early', () => {
   beforeAll(() => {
     Element.prototype.scrollIntoView = vi.fn()
   })
@@ -150,7 +158,7 @@ describe('RecurringPaymentCards pay early', () => {
   })
 })
 
-describe('RecurringPaymentCards payment mode', () => {
+describe('RecurringBills payment mode', () => {
   beforeAll(() => {
     Element.prototype.scrollIntoView = vi.fn()
   })
@@ -168,7 +176,7 @@ describe('RecurringPaymentCards payment mode', () => {
   })
 })
 
-describe('RecurringPaymentCards loan links', () => {
+describe('RecurringBills loan links', () => {
   it('identifies the linked loan and keeps delete visible but disabled', () => {
     const onDeletePayment = vi.fn()
     const onNavigateToLoan = vi.fn()
@@ -192,7 +200,7 @@ describe('RecurringPaymentCards loan links', () => {
   })
 })
 
-describe('RecurringPaymentCards highlight-on-navigation', () => {
+describe('RecurringBills highlight-on-navigation', () => {
   beforeAll(() => {
     Element.prototype.scrollIntoView = vi.fn()
   })
@@ -209,5 +217,88 @@ describe('RecurringPaymentCards highlight-on-navigation', () => {
     await vi.advanceTimersByTimeAsync(2600)
     expect(onClearHighlight).toHaveBeenCalled()
     vi.useRealTimers()
+  })
+})
+
+const occurrence = (overrides: Partial<ActiveRecurringPayment>): ActiveRecurringPayment => ({
+  id: 'occ', recurringPaymentId: 'rp-1', name: 'Netflix', amount: 15, category: 'Entertainment',
+  ledgerCategory: 'Essentials', dueDate: '2026-10-20', isPaid: false, isDiscarded: false, status: 'Pending',
+  ...overrides,
+})
+
+describe('RecurringBills list', () => {
+  beforeAll(() => {
+    Element.prototype.scrollIntoView = vi.fn()
+  })
+
+  it('groups bills by what needs doing and opens the first one beside the list', () => {
+    vi.useFakeTimers({ now: new Date(2026, 9, 9, 12) })
+    const bills: RecurringPayment[] = [
+      { ...basePayment, id: 'later', name: 'Gym', nextDueDate: '2026-10-25' },
+      { ...basePayment, id: 'late', name: 'Power', nextDueDate: '2026-10-02' },
+      { ...basePayment, id: 'soon', name: 'Phone', nextDueDate: '2026-10-11' },
+      { ...basePayment, id: 'paid', name: 'Water', nextDueDate: '2026-11-05' },
+      { ...basePayment, id: 'off', name: 'Old app', active: false },
+    ]
+    renderCards(bills, {
+      occurrences: [
+        occurrence({ id: 'o1', recurringPaymentId: 'late', dueDate: '2026-10-02' }),
+        occurrence({ id: 'o2', recurringPaymentId: 'soon', dueDate: '2026-10-11' }),
+        occurrence({ id: 'o3', recurringPaymentId: 'paid', dueDate: '2026-10-05', status: 'Paid', isPaid: true, paidDate: '2026-10-04' }),
+      ],
+    })
+
+    const groups = screen.getAllByRole('region').map(region => region.getAttribute('aria-labelledby')).filter(Boolean)
+    expect(groups).toEqual(['bill-group-overdue', 'bill-group-due-soon', 'bill-group-later', 'bill-group-paid', 'bill-group-paused'])
+    expect(screen.getByText('7 days overdue')).toBeTruthy()
+    expect(screen.getByText('Due in 2 days')).toBeTruthy()
+    expect(screen.getByText('Paid Oct 4')).toBeTruthy()
+
+    // The most urgent bill is the one open in the panel.
+    expect(screen.getByRole('complementary', { name: 'Power details' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Show details for Water' }))
+    const detail = screen.getByRole('complementary', { name: 'Water details' })
+    expect(within(detail).getByText('This cycle')).toBeTruthy()
+    expect(within(detail).getByText('Paid on')).toBeTruthy()
+    vi.useRealTimers()
+  })
+
+  it('lists only the bills due on a day picked from the strip', () => {
+    const onClearDayFilter = vi.fn()
+    renderCards([
+      { ...basePayment, id: 'a', name: 'Gym' },
+      { ...basePayment, id: 'b', name: 'Phone' },
+    ], {
+      occurrences: [
+        occurrence({ id: 'o1', recurringPaymentId: 'a', dueDate: '2026-10-20' }),
+        occurrence({ id: 'o2', recurringPaymentId: 'b', dueDate: '2026-10-22' }),
+      ],
+      dayFilter: '2026-10-22',
+      onClearDayFilter,
+    })
+
+    expect(screen.queryByRole('button', { name: 'Show details for Gym' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Show details for Phone' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /Show all/ }))
+    expect(onClearDayFilter).toHaveBeenCalled()
+  })
+})
+
+describe('RecurringBills below the wide tier', () => {
+  beforeAll(() => {
+    Element.prototype.scrollIntoView = vi.fn()
+    window.innerWidth = 1024
+  })
+  afterAll(() => { window.innerWidth = 1440 })
+
+  it('opens a bill in a sheet instead of a side panel', () => {
+    renderCards([basePayment])
+    expect(screen.queryByRole('complementary')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Edit Netflix' })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show details for Netflix' }))
+    const sheet = screen.getByRole('dialog', { name: 'Netflix' })
+    expect(within(sheet).getByRole('button', { name: 'Edit Netflix' })).toBeTruthy()
+    expect(within(sheet).getByText('Manual payment')).toBeTruthy()
   })
 })

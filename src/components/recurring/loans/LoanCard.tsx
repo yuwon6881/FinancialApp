@@ -1,4 +1,4 @@
-import { ChevronDown, Edit, Loader2, Sparkles, Trash2 } from 'lucide-react'
+import { Loader2, Pencil, Sparkles, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { fetchLoanSchedule } from '../../../lib/api/loans'
 import { entryRateFromAnnual, formatRatePercent, loanPayoffProgress } from '../../../lib/loanTerms'
@@ -11,14 +11,14 @@ import { panelClass } from '../../ui/panelStyles'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { formatOccurrenceDate } from '../formatters'
 import { LoanCardDetails } from './LoanCardDetails'
-import { Badge } from '../../ui/Badge'
+import { IconButton } from '../../ui/IconButton'
+import { Tabs } from '../../ui/Tabs'
 
 interface LoanCardProps {
   loan: Loan
   hideSensitive: boolean
   formatSensitive: (value: number) => ReactNode
   isSyncing: boolean
-  isMobile?: boolean
   onEdit: () => void
   onDelete: () => void
   onExplain: () => void
@@ -31,7 +31,6 @@ export function LoanCard({
   hideSensitive,
   formatSensitive,
   isSyncing,
-  isMobile = false,
   onEdit,
   onDelete,
   onExplain,
@@ -82,8 +81,8 @@ export function LoanCard({
     replayRevision,
     loan.termPeriods,
   ])
-  const [isScheduleOpen, setIsScheduleOpen] = useState(false)
-  const [isLoanDetailsOpen, setIsLoanDetailsOpen] = useState(!isMobile)
+  const [section, setSection] = useState<LoanSection>('details')
+  const isScheduleOpen = section === 'schedule'
   const [loadedSchedule, setLoadedSchedule] = useState<{ key: string; rows: LoanScheduleEntry[] } | null>(null)
   const [scheduleLoadingKey, setScheduleLoadingKey] = useState<string | null>(null)
   const [scheduleErrorKey, setScheduleErrorKey] = useState<string | null>(null)
@@ -102,45 +101,44 @@ export function LoanCard({
     }
   }, [loan.id, loan.isPendingSync, scheduleKey, scheduleUnavailable])
 
-  const handleScheduleToggle = useCallback(() => {
-    if (isScheduleOpen) {
-      setIsScheduleOpen(false)
-      return
-    }
-
-    const needsFullSchedule = !loan.isPendingSync
+  const handleSectionChange = useCallback((next: LoanSection) => {
+    const needsFullSchedule = next === 'schedule'
+      && !loan.isPendingSync
       && !scheduleUnavailable
       && loadedSchedule?.key !== scheduleKey
       && scheduleLoadingKey !== scheduleKey
     if (needsFullSchedule) {
-      // Native <details> reveals its children before React receives `toggle`, which allowed the
-      // six-row list preview to paint for a frame before this loader. A controlled disclosure
-      // commits open + loading together, so stale preview rows can never become visible first.
+      // Commit the tab and the loading state together, so the short preview schedule carried on
+      // the snapshot can never paint for a frame before the full one starts loading.
       setScheduleLoadingKey(scheduleKey)
       setScheduleErrorKey(null)
       void loadSchedule()
     }
-    setIsScheduleOpen(true)
-  }, [isScheduleOpen, loadSchedule, loadedSchedule?.key, loan.isPendingSync, scheduleKey, scheduleLoadingKey, scheduleUnavailable])
+    setSection(next)
+  }, [loadSchedule, loadedSchedule?.key, loan.isPendingSync, scheduleKey, scheduleLoadingKey, scheduleUnavailable])
 
   useEffect(() => {
     if (!isScheduleOpen || loan.isPendingSync || scheduleUnavailable || loadedSchedule?.key === scheduleKey || scheduleLoadingKey === scheduleKey) return
     void loadSchedule()
   }, [isScheduleOpen, loadSchedule, loadedSchedule?.key, loan.isPendingSync, scheduleKey, scheduleLoadingKey, scheduleUnavailable])
 
-  useEffect(() => {
-    setIsLoanDetailsOpen(!isMobile)
-  }, [isMobile])
-
   const scheduleRows = (loadedSchedule?.key === scheduleKey ? loadedSchedule.rows : loan.snapshot.futureSchedule)
     .map(payment => ({ ...payment, kind: 'Planned' as const }))
+  const canRepay = loan.snapshot.outstandingBalance > 0 && !scheduleUnavailable && Boolean(onRepay)
+  const actionsDisabled = hideSensitive || loan.isPendingSync || loan.isRecalculating
+  const payoffLine = interestOnlyBalanceRemains
+    ? 'No automatic payoff'
+    : loan.snapshot.payoffDate
+      ? `Paid off by ${formatOccurrenceDate(loan.snapshot.payoffDate, { month: 'short', year: 'numeric' })}`
+      : null
+  const panelId = `loan-${loan.id}-panel`
 
   return (
     <article id={`loan-card-${loan.id}`} className={cn(panelClass, 'w-full min-w-0 p-4 sm:p-5')}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-section text-foreground">{loan.name}</h3>
+            <h3 className="truncate text-subsection text-foreground">{loan.name}</h3>
             <RowSyncStatus
               entityLabel="loan"
               isDeleting={loan.isPendingDelete === true}
@@ -148,11 +146,31 @@ export function LoanCard({
               isPending={loan.isPendingSync === true}
             />
           </div>
-          <p className="mt-1 text-label text-muted-foreground">
+          <p className="mt-0.5 truncate text-label text-muted-foreground">
             {loan.recurringPaymentExists
               ? `Linked bill: ${loan.recurringPaymentName || 'Recurring bill'}`
               : 'Bill removed · original history preserved'}
           </p>
+        </div>
+        <div className="-mr-2 -mt-1 flex shrink-0 items-center">
+          <IconButton
+            label={`Edit ${loan.name}`}
+            tooltip={hideSensitive ? 'Unhide balances to edit' : 'Edit loan'}
+            onClick={onEdit}
+            disabled={hideSensitive}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Pencil className="size-4" aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            label={`Delete ${loan.name}`}
+            tooltip={hideSensitive ? 'Unhide balances to delete' : 'Delete loan'}
+            onClick={onDelete}
+            disabled={hideSensitive}
+            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="size-4" aria-hidden="true" />
+          </IconButton>
         </div>
       </div>
 
@@ -165,241 +183,224 @@ export function LoanCard({
           This loan cannot show a balance or schedule because its bill history is incomplete. Edit this loan to choose a valid bill.
         </AlertBanner>
       ) : (
-        <div className="mt-4 space-y-3">
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-label text-muted-foreground">Still owed</p>
-              <p className="mt-0.5 text-title text-foreground tabular-nums">
-                {formatSensitive(loan.snapshot.outstandingBalance)}
-              </p>
-            </div>
-            {/* Anchored on the principal at the tracking start date, so the copy says "tracked" and
-                never "borrowed": a loan added part-way through its life has no record of what came
-                before it. Absent entirely when the figure is not knowable. */}
+        <div className="mt-4 flex items-center gap-4 sm:gap-5">
+          {/* Anchored on the principal at the tracking start date, so the copy says "tracked" and
+              never "borrowed": a loan added part-way through its life has no record of what came
+              before it. Absent entirely when the figure is not knowable. */}
+          {payoffProgress && (
+            <ProgressRing
+              percent={payoffProgress.percentPaid}
+              size={84}
+              thickness={8}
+              label={`${payoffProgress.percentPaid.toFixed(0)}% of the tracked principal cleared`}
+            >
+              <span className="text-callout font-semibold tabular-nums text-foreground">{payoffProgress.percentPaid.toFixed(0)}%</span>
+            </ProgressRing>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-label text-muted-foreground">Still owed</p>
+            <p className="text-title text-foreground tabular-nums">
+              {formatSensitive(loan.snapshot.outstandingBalance)}
+            </p>
+            {payoffLine && <p className="mt-0.5 text-label text-muted-foreground">{payoffLine}</p>}
             {payoffProgress && (
-              <ProgressRing
-                percent={payoffProgress.percentPaid}
-                size={60}
-                thickness={6}
-                label={`${payoffProgress.percentPaid.toFixed(0)}% of the tracked principal cleared`}
-              >
-                <span className="text-label font-semibold tabular-nums text-foreground">{payoffProgress.percentPaid.toFixed(0)}%</span>
-              </ProgressRing>
+              <p className="mt-0.5 text-caption text-muted-foreground tabular-nums">
+                {formatSensitive(payoffProgress.clearedPrincipal)} cleared of {formatSensitive(payoffProgress.trackedPrincipal)} tracked
+              </p>
             )}
           </div>
-
-          {payoffProgress && (
-            <p className="text-label text-muted-foreground">
-              {payoffProgress.percentPaid.toFixed(0)}% paid off ·{' '}
-              {formatSensitive(payoffProgress.clearedPrincipal)} cleared of{' '}
-              {formatSensitive(payoffProgress.trackedPrincipal)} tracked
-            </p>
-          )}
-
-          <p className="text-label text-muted-foreground">
-            Next instalment{' '}
-            <span className="font-semibold text-foreground tabular-nums">
-              {finalBalanceDueNow ? 'Final balance due now' : formatSensitive(loan.snapshot.scheduledPayment)}
-            </span>
-          </p>
         </div>
       )}
 
-      <details className="group/loan-details mt-3 w-full min-w-0 rounded-control bg-surface-2/70 lg:mt-4" open={isLoanDetailsOpen} onToggle={event => setIsLoanDetailsOpen(event.currentTarget.open)}>
-        <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-2.5 text-caption font-semibold text-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50 min-[1280px]:hidden">
-          <span>Loan details</span>
-          <ChevronDown className="size-3.5 text-muted-foreground transition-transform group-open/loan-details:rotate-180" aria-hidden />
-        </summary>
-        <LoanCardDetails
-          loan={loan}
-          hideSensitive={hideSensitive}
-          formatSensitive={formatSensitive}
-          scheduleUnavailable={scheduleUnavailable}
-          interestOnlyBalanceRemains={interestOnlyBalanceRemains}
-          finalBalanceDueNow={finalBalanceDueNow}
-          next={next}
-          rateText={rateText}
-        />
-      </details>
+      {!loan.isRecalculating && !scheduleUnavailable && (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-control bg-surface-2/70 px-3.5 py-3 text-label dark:bg-surface-3/70">
+          <span className="min-w-0 text-muted-foreground">Next instalment</span>
+          <span className="shrink-0 text-body font-semibold text-foreground tabular-nums">
+            {finalBalanceDueNow ? 'Final balance due now' : formatSensitive(loan.snapshot.scheduledPayment)}
+          </span>
+        </div>
+      )}
 
-      {/* The whole panel is the toggle, the same way the Loan details disclosure above it is: the
-          padding belongs to the control, not to a wrapper around it, so the hover surface covers
-          the box a reader is already pointing at instead of a text-sized strip inside it. */}
-      <div className="mt-3 w-full min-w-0 overflow-hidden rounded-control bg-surface-2/70">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {canRepay && (
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            aria-label={`Make a payment for ${loan.name}`}
+            title={hideSensitive ? 'Unhide balances to repay' : 'Pay instalments in advance or record full settlement'}
+            onClick={onRepay}
+            disabled={actionsDisabled}
+          >
+            <span>Make payment</span>
+          </Button>
+        )}
         <Button
-          variant="tertiary"
+          variant="secondary"
+          size="sm"
           type="button"
-          aria-expanded={isScheduleOpen}
-          aria-controls={isScheduleOpen ? `loan-schedule-${loan.id}` : undefined}
-          onClick={handleScheduleToggle}
-          className="flex min-h-11 w-full cursor-pointer select-none items-center justify-between gap-3 rounded-none px-3 py-2.5 text-left text-caption font-semibold text-foreground transition-colors hover:bg-muted/30 hover:text-accent-ink sm:min-h-0 sm:px-3.5"
+          aria-label={`Explain ${loan.name} with Ask AI`}
+          title={hideSensitive ? 'Unhide balances to explain this loan' : 'Explain this loan with Ask AI'}
+          onClick={onExplain}
+          disabled={actionsDisabled}
         >
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="truncate">Payment history and planned schedule</span>
-            <Badge tone="neutral">
-              {actualRows.length + scheduleRows.length}
-            </Badge>
-          </div>
-          <ChevronDown className={`size-3.5 text-muted-foreground transition-transform shrink-0 ${isScheduleOpen ? 'rotate-180' : ''}`} aria-hidden />
+          <Sparkles className="size-3.5 shrink-0" aria-hidden="true" />
+          <span>Explain this loan</span>
         </Button>
-        {isScheduleOpen && (
-          <div id={`loan-schedule-${loan.id}`} className="min-w-0 max-w-full overflow-hidden px-3 pb-3 sm:px-3.5 sm:pb-3.5">
-            {scheduleLoadingKey === scheduleKey ? (
-              <div className="mt-3 flex min-h-28 items-center justify-center gap-2 rounded-control bg-surface-2/70 text-xs font-semibold text-muted-foreground" role="status">
+        {loan.settlementActionId && onUndoSettlement && (
+          <Button
+            variant="secondary"
+            size="sm"
+            type="button"
+            aria-label={`Undo the full settlement of ${loan.name}`}
+            title={hideSensitive ? 'Unhide balances to undo this settlement' : 'Reopen this loan and restore its recurring bill'}
+            onClick={onUndoSettlement}
+            disabled={actionsDisabled}
+          >
+            <span>Undo settlement</span>
+          </Button>
+        )}
+      </div>
+
+      <div className="mt-5 border-t border-border/60 pt-4">
+        <Tabs
+          variant="segmented"
+          label={`${loan.name} sections`}
+          idPrefix={`loan-${loan.id}`}
+          value={section}
+          onValueChange={handleSectionChange}
+          className="w-full [&>*]:flex-1 [&>*]:justify-center"
+          options={[
+            { value: 'details', label: 'Details', panelId },
+            { value: 'schedule', label: 'Schedule', panelId },
+            { value: 'history', label: 'History', count: actualRows.length, panelId },
+          ]}
+        />
+        <div id={panelId} role="tabpanel" aria-labelledby={`loan-${loan.id}-${section}`} className="mt-3 min-w-0">
+          {section === 'details' && (
+            <LoanCardDetails
+              loan={loan}
+              hideSensitive={hideSensitive}
+              formatSensitive={formatSensitive}
+              scheduleUnavailable={scheduleUnavailable}
+              interestOnlyBalanceRemains={interestOnlyBalanceRemains}
+              finalBalanceDueNow={finalBalanceDueNow}
+              next={next}
+              rateText={rateText}
+            />
+          )}
+          {section === 'schedule' && (
+            scheduleLoadingKey === scheduleKey ? (
+              <div className="flex min-h-28 items-center justify-center gap-2 rounded-control bg-surface-2/70 text-label text-muted-foreground" role="status">
                 <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
                 Loading full planned schedule…
               </div>
             ) : (
               <>
-            {scheduleErrorKey === scheduleKey && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span>The full planned schedule could not be loaded.</span>
-                <Button variant="tertiary" size="sm" onClick={() => void loadSchedule()}>Retry</Button>
-              </div>
-            )}
-            {/* Mobile schedule: compact, full-width cards with responsive wrapping */}
-            <div className="mt-3 max-h-72 space-y-2 overflow-x-hidden overflow-y-auto pr-0.5 min-[1280px]:hidden min-w-0 max-w-full">
-          {[...actualRows, ...scheduleRows].map((row, index) => (
-            <div
-              key={`${row.occurrenceDate}-${row.kind}-${index}`}
-              className="rounded-control bg-surface-2/70 p-2.5 text-xs transition-colors hover:bg-muted/20 min-w-0"
-            >
-              <div className="flex items-center justify-between gap-2 min-w-0">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <span className="font-semibold text-foreground truncate">{formatOccurrenceDate(row.occurrenceDate)}</span>
-                  <span className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-caption font-semibold ${
-                    row.kind === 'Paid'
-                      ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                      : 'bg-muted text-muted-foreground'
-                  }`}>
-                    {row.kind === 'Paid' ? 'Recorded' : 'Planned'}
-                  </span>
-                </div>
-                <span className="font-semibold text-foreground tabular-nums shrink-0">{formatSensitive(row.payment)}</span>
-              </div>
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-border/25 pt-1.5 text-xs text-muted-foreground min-w-0">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
-                  <span className="whitespace-nowrap">Interest: <strong className="font-semibold text-muted-foreground">{formatSensitive(row.interest)}</strong></span>
-                  <span className="text-border/60">·</span>
-                  <span className="whitespace-nowrap">Clears: <strong className="font-semibold text-foreground">{formatSensitive(row.principal)}</strong></span>
-                </div>
-                <span className="font-medium text-foreground whitespace-nowrap">Owed: <strong className="font-semibold text-foreground">{formatSensitive(row.balanceAfter)}</strong></span>
-              </div>
-            </div>
-          ))}
-            </div>
-
-            {/* Desktop schedule: tabular view */}
-            <div className="mt-3 hidden max-h-72 overflow-x-hidden overflow-y-auto rounded-control bg-surface-2/70 min-[1280px]:block">
-          <table className="w-full text-left text-xs">
-            <caption className="sr-only">Payment history and planned schedule for {loan.name}</caption>
-            <thead className="sticky top-0 z-10 border-b border-border/40 bg-card text-xs text-muted-foreground shadow-2xs">
-              <tr>
-                <th className="px-3 py-2 font-semibold">Date</th>
-                <th className="px-3 py-2 font-semibold">Status</th>
-                <th className="px-3 py-2 text-right font-semibold">Payment</th>
-                <th className="px-3 py-2 text-right font-semibold">Interest</th>
-                <th className="px-3 py-2 text-right font-semibold">Clears debt</th>
-                <th className="px-3 py-2 text-right font-semibold">Still owed</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {[...actualRows, ...scheduleRows].map((row, index) => (
-                <tr key={`${row.occurrenceDate}-${row.kind}-${index}`} className="transition-colors hover:bg-muted/30">
-                  <td className="px-3 py-2 font-medium text-foreground">{formatOccurrenceDate(row.occurrenceDate)}</td>
-                  <td className="px-3 py-2">
-                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold ${
-                      row.kind === 'Paid'
-                        ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
-                      {row.kind === 'Paid' ? 'Recorded' : 'Planned'}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right font-semibold text-foreground">{formatSensitive(row.payment)}</td>
-                  <td className="px-3 py-2 text-right text-muted-foreground">{formatSensitive(row.interest)}</td>
-                  <td className="px-3 py-2 text-right text-foreground">{formatSensitive(row.principal)}</td>
-                  <td className="px-3 py-2 text-right font-semibold text-foreground">{formatSensitive(row.balanceAfter)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-            </div>
+                {scheduleErrorKey === scheduleKey && (
+                  <div className="mb-2 flex flex-wrap items-center gap-2 text-label text-muted-foreground">
+                    <span>The full planned schedule could not be loaded.</span>
+                    <Button variant="tertiary" size="sm" onClick={() => void loadSchedule()}>Retry</Button>
+                  </div>
+                )}
+                <LoanScheduleList
+                  rows={scheduleRows}
+                  caption={`Planned schedule for ${loan.name}`}
+                  empty={scheduleUnavailable ? 'The schedule is unavailable until the bill history is complete.' : 'Nothing left to schedule.'}
+                  formatSensitive={formatSensitive}
+                />
               </>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between border-t border-border/30 pt-4 w-full min-w-0">
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-          {loan.settlementActionId && onUndoSettlement && (
-            <Button
-              variant="secondary"
-              size="sm"
-              type="button"
-              aria-label={`Undo the full settlement of ${loan.name}`}
-              title={hideSensitive ? 'Unhide balances to undo this settlement' : 'Reopen this loan and restore its recurring bill'}
-              onClick={onUndoSettlement}
-              disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}
-              className="w-full justify-center sm:w-auto"
-            >
-              <span>Undo settlement</span>
-            </Button>
+            )
           )}
-          {loan.snapshot.outstandingBalance > 0 && !scheduleUnavailable && onRepay && (
-            <Button
-              variant="primary"
-              size="sm"
-              type="button"
-              aria-label={`Make a payment for ${loan.name}`}
-              title={hideSensitive ? 'Unhide balances to repay' : 'Pay instalments in advance or record full settlement'}
-              onClick={onRepay}
-              disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}
-              className="w-full justify-center sm:w-auto shadow-sm"
-            >
-              <span>Make payment</span>
-            </Button>
+          {section === 'history' && (
+            <LoanScheduleList
+              rows={actualRows}
+              caption={`Payment history for ${loan.name}`}
+              empty="No payments recorded yet."
+              formatSensitive={formatSensitive}
+            />
           )}
-          <Button
-            variant="secondary"
-            size="sm"
-            type="button"
-            aria-label={`Explain ${loan.name} with Ask AI`}
-            title={hideSensitive ? 'Unhide balances to explain this loan' : 'Explain this loan with Ask AI'}
-            onClick={onExplain}
-            disabled={hideSensitive || loan.isPendingSync || loan.isRecalculating}
-            className={`w-full justify-center sm:w-auto ${!(loan.snapshot.outstandingBalance > 0 && !scheduleUnavailable && onRepay) ? 'col-span-2' : ''}`}
-          >
-            <Sparkles className="size-3.5 shrink-0" aria-hidden="true" />
-            <span>Explain this loan</span>
-          </Button>
-        </div>
-        <div className="flex items-center justify-end gap-1.5 pt-1 sm:pt-0 border-t border-border/20 sm:border-t-0">
-          <Button
-            variant="tertiary"
-            size="sm"
-            aria-label={`Edit ${loan.name}`}
-            title={hideSensitive ? 'Unhide balances to edit' : 'Edit loan'}
-            onClick={onEdit}
-            disabled={hideSensitive}
-          >
-            <Edit className="size-3.5 shrink-0" aria-hidden="true" />
-            <span>Edit</span>
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            aria-label={`Delete ${loan.name}`}
-            title={hideSensitive ? 'Unhide balances to delete' : 'Delete loan'}
-            onClick={onDelete}
-            disabled={hideSensitive}
-          >
-            <Trash2 className="size-3.5 shrink-0" aria-hidden="true" />
-            <span>Delete</span>
-          </Button>
         </div>
       </div>
     </article>
+  )
+}
+
+type LoanSection = 'details' | 'schedule' | 'history'
+
+interface LoanScheduleRow extends LoanScheduleEntry {
+  kind: 'Paid' | 'Planned'
+}
+
+/**
+ * Payments as rows: date and amount on the line, the interest / principal split under it. Wide
+ * screens get the same rows as a table, where the columns line up.
+ */
+function LoanScheduleList({ rows, caption, empty, formatSensitive }: {
+  rows: LoanScheduleRow[]
+  caption: string
+  empty: string
+  formatSensitive: (value: number) => ReactNode
+}) {
+  if (rows.length === 0) {
+    return <p className="rounded-control bg-surface-2/70 px-3.5 py-4 text-center text-label text-muted-foreground">{empty}</p>
+  }
+  return (
+    <div className="max-h-80 overflow-y-auto overscroll-contain rounded-control border border-border/60">
+      <ul className="divide-y divide-border/50 min-[1280px]:hidden">
+        {rows.map((row, index) => (
+          <li key={`${row.occurrenceDate}-${row.kind}-${index}`} className="px-3.5 py-2.5 text-label">
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="truncate font-medium text-foreground">{formatOccurrenceDate(row.occurrenceDate)}</span>
+                <LoanRowStatus kind={row.kind} />
+              </span>
+              <span className="shrink-0 font-semibold text-foreground tabular-nums">{formatSensitive(row.payment)}</span>
+            </div>
+            <p className="mt-0.5 flex flex-wrap gap-x-3 text-caption text-muted-foreground tabular-nums">
+              <span>Interest {formatSensitive(row.interest)}</span>
+              <span>Clears {formatSensitive(row.principal)}</span>
+              <span>Owed after {formatSensitive(row.balanceAfter)}</span>
+            </p>
+          </li>
+        ))}
+      </ul>
+      <table className="hidden w-full text-left text-label min-[1280px]:table">
+        <caption className="sr-only">{caption}</caption>
+        <thead className="sticky top-0 z-10 bg-card text-caption text-muted-foreground shadow-[0_1px_0_var(--border)]">
+          <tr>
+            <th className="px-3.5 py-2 font-medium">Date</th>
+            <th className="px-3.5 py-2 font-medium">Status</th>
+            <th className="px-3.5 py-2 text-right font-medium">Payment</th>
+            <th className="px-3.5 py-2 text-right font-medium">Interest</th>
+            <th className="px-3.5 py-2 text-right font-medium">Clears debt</th>
+            <th className="px-3.5 py-2 text-right font-medium">Still owed</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border/50 tabular-nums">
+          {rows.map((row, index) => (
+            <tr key={`${row.occurrenceDate}-${row.kind}-${index}`}>
+              <td className="px-3.5 py-2 font-medium text-foreground">{formatOccurrenceDate(row.occurrenceDate)}</td>
+              <td className="px-3.5 py-2"><LoanRowStatus kind={row.kind} /></td>
+              <td className="px-3.5 py-2 text-right font-semibold text-foreground">{formatSensitive(row.payment)}</td>
+              <td className="px-3.5 py-2 text-right text-muted-foreground">{formatSensitive(row.interest)}</td>
+              <td className="px-3.5 py-2 text-right text-foreground">{formatSensitive(row.principal)}</td>
+              <td className="px-3.5 py-2 text-right font-semibold text-foreground">{formatSensitive(row.balanceAfter)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function LoanRowStatus({ kind }: { kind: LoanScheduleRow['kind'] }) {
+  return (
+    <span className={cn(
+      'inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-caption font-medium',
+      kind === 'Paid' ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300' : 'bg-muted text-muted-foreground',
+    )}>
+      {kind === 'Paid' ? 'Recorded' : 'Planned'}
+    </span>
   )
 }

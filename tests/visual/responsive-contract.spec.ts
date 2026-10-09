@@ -724,10 +724,10 @@ test('investment plan Configure opens its settings tab', async ({ page }) => {
   await expect(page.getByRole('tab', { name: 'Investment plan' })).toHaveAttribute('aria-selected', 'true')
 })
 
-test('recurring card actions and linked loan badge keep compact heights', async ({ page }) => {
+test('recurring bill detail actions and linked loan badge keep compact heights', async ({ page }) => {
   test.skip(
     !['mobile-dark', 'desktop-dark'].includes(test.info().project.name),
-    'The compact card is checked at phone and desktop widths.',
+    'The bill detail is checked at phone and desktop widths.',
   )
 
   await mockApi(page, {
@@ -749,12 +749,17 @@ test('recurring card actions and linked loan badge keep compact heights', async 
     }],
   })
   await page.goto('/recurring', { waitUntil: 'domcontentloaded' })
-  const card = page.locator('#recur-card-linked-bill')
-  await expect(card).toBeVisible()
+  const row = page.locator('#recur-card-linked-bill')
+  await expect(row).toBeVisible()
 
   // Phones keep the 44px touch floor on every control; the expanded tier steps down to its compact
-  // pointer sizes.
+  // pointer sizes. Wide screens show the bill's detail beside the list; phones open it as a sheet.
   const isPhone = test.info().project.name === 'mobile-dark'
+  if (isPhone) await row.getByRole('button', { name: 'Show details for PTPTN' }).click()
+  const card = isPhone
+    ? page.getByRole('dialog', { name: 'PTPTN' })
+    : page.getByRole('complementary', { name: 'PTPTN details' })
+  await expect(card).toBeVisible()
   const linkHeight = await card.getByRole('link', { name: 'View linked loan: PTPTN' }).evaluate(element => element.getBoundingClientRect().height)
   expect(linkHeight).toBe(isPhone ? 44 : 36)
   for (const name of ['Edit PTPTN', 'Delete PTPTN']) {
@@ -763,6 +768,7 @@ test('recurring card actions and linked loan badge keep compact heights', async 
   }
   const onceHeight = await card.getByRole('radio', { name: 'Once' }).evaluate(element => element.getBoundingClientRect().height)
   expect(onceHeight).toBe(isPhone ? 44 : 36)
+  if (isPhone) await page.keyboard.press('Escape')
   const newBillHeight = await page.getByRole('button', { name: 'New bill' }).evaluate(element => element.getBoundingClientRect().height)
   expect(newBillHeight).toBe(isPhone ? 44 : 40)
   if (!isPhone) {

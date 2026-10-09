@@ -1,20 +1,15 @@
-import { Checkbox } from '../ui/Checkbox'
-import { Button } from '../ui/Button'
 import React from 'react'
+import { getCategoryDotClass } from '../../lib/categoryColors'
+import { cn } from '../../lib/utils'
+import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
-import { BottomSheet } from '../ui/BottomSheet'
-import { AnchoredPopover } from '../ui/AnchoredPopover'
-import { getCategoryDotClass, getCategoryFilterClass } from '../../lib/categoryColors'
-import { ChevronDown } from 'lucide-react'
 import { Toolbar } from '../ui/Toolbar'
 
+const BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
+
 interface RecurringFilterBarProps {
-  isMobile: boolean
   selectedCategories: string[]
   sortOrder: string
-  isFilterDropdownOpen: boolean
-  filterButtonRef: React.RefObject<HTMLButtonElement | null>
-  setIsFilterDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>
   onToggleCategoryFilter: (cat: string) => void
   onClearFilters: () => void
   onSortChange: (value: string) => void
@@ -24,175 +19,68 @@ interface RecurringFilterBarProps {
   sortOptions?: Array<{ value: string; label: string }>
 }
 
-// Filter and Sort controls
+/**
+ * Filter and sort as one row: the four buckets are chips you toggle in place (any mix of them, or
+ * All), with the sort order beside them. Four choices never needed a popover to hide them in.
+ */
 export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
-  isMobile,
   selectedCategories,
   sortOrder,
-  isFilterDropdownOpen,
-  filterButtonRef,
-  setIsFilterDropdownOpen,
   onToggleCategoryFilter,
   onClearFilters,
   onSortChange,
-  allLabel = 'All Categories',
+  allLabel = 'All',
   filterAriaLabel = 'Filter recurring payment categories',
   sortAriaLabel = 'Sort recurring payments',
   sortOptions = [
-    { value: 'amount-desc', label: 'Sort by: Amount (High to Low)' },
-    { value: 'amount-asc', label: 'Sort by: Amount (Low to High)' },
-    { value: 'name-asc', label: 'Sort by: Name (A-Z)' },
-    { value: 'due-date', label: 'Sort by: Next Due Date' },
+    { value: 'amount-desc', label: 'Amount, high to low' },
+    { value: 'amount-asc', label: 'Amount, low to high' },
+    { value: 'name-asc', label: 'Name, A to Z' },
+    { value: 'due-date', label: 'Due day of the month' },
   ],
 }) => {
-  const filterContainerRef = React.useRef<HTMLDivElement>(null)
-  const filterPopoverRef = React.useRef<HTMLDivElement>(null)
-
-  React.useEffect(() => {
-    if (!isFilterDropdownOpen || isMobile) return
-
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node
-      if (
-        filterContainerRef.current?.contains(target)
-        || filterPopoverRef.current?.contains(target)
-      ) {
-        return
-      }
-
-      setIsFilterDropdownOpen(false)
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isFilterDropdownOpen, isMobile, setIsFilterDropdownOpen])
+  const chipClass = (selected: boolean) => cn(
+    'shrink-0 gap-2 border px-3.5',
+    selected
+      ? 'border-foreground/80 bg-card font-semibold text-foreground hover:bg-card'
+      : 'border-border/70 font-medium text-muted-foreground hover:text-foreground',
+  )
 
   return (
-    <Toolbar aria-label="Recurring filters" className="flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-center">
-      {/* Category Multi-select dropdown */}
-      <div
-        ref={filterContainerRef}
-        className="relative recurring-filter-dropdown w-full sm:w-auto"
-        onKeyDown={event => {
-          if (!isMobile && isFilterDropdownOpen && event.key === 'Escape') {
-            event.preventDefault()
-            event.stopPropagation()
-            setIsFilterDropdownOpen(false)
-            filterButtonRef.current?.focus()
-          }
-        }}
-      >
-        <Button variant="tertiary"
-          ref={filterButtonRef}
-          onClick={() => setIsFilterDropdownOpen(prev => !prev)}
-          aria-haspopup="dialog"
-          aria-expanded={isFilterDropdownOpen}
-          className="w-full sm:w-60 flex items-center justify-between gap-2 px-4 text-label font-medium bg-card border border-border/70 rounded-full hover:bg-surface-2 transition duration-200 cursor-pointer select-none border-border/60"
+    <Toolbar aria-label="Recurring filters" className="flex-nowrap items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
+      <div role="group" aria-label={filterAriaLabel} className="no-scrollbar -mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 py-0.5">
+        <Button
+          variant="tertiary"
+          size="sm"
+          aria-pressed={selectedCategories.length === 0}
+          onClick={onClearFilters}
+          className={chipClass(selectedCategories.length === 0)}
         >
-          <span className="flex items-center gap-2 text-muted-foreground">
-            <span className="truncate">
-              {selectedCategories.length === 0
-                ? allLabel
-                : `${selectedCategories.length} category filter${selectedCategories.length > 1 ? 's' : ''} active`}
-            </span>
-          </span>
-          <ChevronDown
-            aria-hidden="true"
-            className={`size-3.5 text-muted-foreground/80 transition duration-200 ${isFilterDropdownOpen ? 'rotate-180' : ''}`}
-          />
+          {allLabel}
         </Button>
-
-        {/* Desktop Filter Popover */}
-        <AnchoredPopover
-          ref={filterPopoverRef}
-          open={isFilterDropdownOpen && !isMobile}
-          anchorRef={filterButtonRef}
-          align="left"
-          side="bottom"
-          role="dialog"
-          aria-label={filterAriaLabel}
-          className="recurring-filter-dropdown w-60 overflow-y-auto overscroll-contain bg-popover border border-border/70 rounded-overlay shadow-(--app-shadow-overlay) p-4 z-[200] animate-in fade-in slide-in-from-top-2 duration-150"
-        >
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-subsection text-foreground">Filter Categories</span>
-              {selectedCategories.length > 0 && (
-                <Button variant="tertiary"
-                  onClick={onClearFilters}
-                  className="text-label font-medium text-accent-ink hover:underline cursor-pointer"
-                >
-                  Clear All
-                </Button>
-              )}
-            </div>
-            <div className="grid grid-cols-1 gap-1.5 pr-1">
-              {['Essentials', 'Growth', 'Stability', 'Rewards'].map(bucket => {
-                const isChecked = selectedCategories.includes(bucket)
-                return (
-                  <label
-                    key={bucket}
-                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(bucket, isChecked)}`}
-                  >
-                    <Checkbox
-                      checked={isChecked}
-                      onChange={() => onToggleCategoryFilter(bucket)}
-                      className="rounded border-border text-accent-ink focus:ring-ring size-3"
-                    />
-                    <span className={`size-2 rounded-full ${getCategoryDotClass(bucket)}`} />
-                    <span>{bucket}</span>
-                  </label>
-                )
-              })}
-            </div>
-        </AnchoredPopover>
-
-        {/* Mobile BottomSheet Filter */}
-        {isMobile && (
-          <BottomSheet
-            isOpen={isFilterDropdownOpen}
-            title="Filter Categories"
-            onClose={() => setIsFilterDropdownOpen(false)}
-          >
-            <div className="recurring-filter-dropdown space-y-4 pr-1">
-              {selectedCategories.length > 0 && (
-                <div className="flex justify-end">
-                  <Button variant="tertiary"
-                    onClick={onClearFilters}
-                    className="text-label font-medium text-accent-ink hover:underline cursor-pointer"
-                  >
-                    Clear All
-                  </Button>
-                </div>
-              )}
-              <div className="grid grid-cols-1 gap-2">
-                {['Essentials', 'Growth', 'Stability', 'Rewards'].map(bucket => {
-                  const isChecked = selectedCategories.includes(bucket)
-                  return (
-                    <label
-                      key={bucket}
-                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(bucket, isChecked)}`}
-                    >
-                      <Checkbox
-                        checked={isChecked}
-                        onChange={() => onToggleCategoryFilter(bucket)}
-                        className="rounded border-border text-accent-ink focus:ring-ring size-3.5"
-                      />
-                      <span className={`size-2.5 rounded-full ${getCategoryDotClass(bucket)}`} />
-                      <span className="font-semibold">{bucket}</span>
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-          </BottomSheet>
-        )}
+        {BUCKETS.map(bucket => {
+          const selected = selectedCategories.includes(bucket)
+          return (
+            <Button
+              key={bucket}
+              variant="tertiary"
+              size="sm"
+              aria-pressed={selected}
+              onClick={() => onToggleCategoryFilter(bucket)}
+              className={chipClass(selected)}
+            >
+              <span aria-hidden="true" className={cn('size-2 shrink-0 rounded-full', getCategoryDotClass(bucket))} />
+              {bucket}
+            </Button>
+          )
+        })}
       </div>
 
-      {/* Sort Select */}
-      <div className="w-full sm:w-60">
+      <div className="w-full shrink-0 sm:w-52">
         <CustomSelect
           ariaLabel={sortAriaLabel}
           value={sortOrder}
-          onChange={(val) => onSortChange(val)}
+          onChange={onSortChange}
           options={sortOptions}
           className="w-full"
         />

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Loan } from '../../../types'
 import { LoanCard } from './LoanCard'
@@ -54,19 +54,18 @@ describe('LoanCard headline', () => {
 
     const meter = screen.getByRole('progressbar', { name: '38% of the tracked principal cleared' })
     expect(meter.getAttribute('aria-valuenow')).toBe('38')
-    expect(screen.getByText(/38% paid off/)).toBeTruthy()
     // "tracked", never "borrowed": the opening principal is the balance at the tracking start date.
     expect(screen.getByText(/RM 1000.00 tracked/)).toBeTruthy()
   })
 
-  it('keeps one secondary fact visible and demotes the rest into Loan details', () => {
-    render(<LoanCard {...props(baseLoan)} isMobile />)
+  it('keeps one secondary fact beside the hero and the rest in the Details section', () => {
+    render(<LoanCard {...props(baseLoan)} />)
 
     expect(screen.getByText('Next instalment')).toBeTruthy()
-    // Still reachable, but inside the disclosure rather than competing for the summary.
-    const payoff = screen.getByText('Expected payoff')
-    expect(payoff.closest('details')).not.toBeNull()
-    expect(screen.getByText('Remaining interest').closest('details')).not.toBeNull()
+    // Still reachable, but in the sections below rather than competing for the summary.
+    const panel = screen.getByRole('tabpanel')
+    expect(within(panel).getByText('Expected payoff')).toBeTruthy()
+    expect(within(panel).getByText('Remaining interest')).toBeTruthy()
   })
 
   it('shows no balance, meter or percentage when the schedule is unavailable', () => {
@@ -121,17 +120,19 @@ describe('LoanCard', () => {
     })} />)
 
     expect(screen.getByText('1.42% a month (17.04% a year)')).not.toBeNull()
-    expect(screen.getByText('No automatic payoff')).not.toBeNull()
+    expect(screen.getAllByText('No automatic payoff').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Final balance due now').length).toBeGreaterThan(0)
   })
 
-  it('keeps secondary loan details collapsed on mobile while preserving the desktop summary', () => {
-    const mobile = render(<LoanCard {...props(baseLoan)} isMobile />)
-    expect(screen.getByText('Loan details').closest('details')?.open).toBe(false)
-    mobile.unmount()
+  it('switches between details, the planned schedule and the payment history', () => {
+    fetchLoanSchedule.mockResolvedValue([])
+    render(<LoanCard {...props(baseLoan)} />)
 
-    render(<LoanCard {...props(baseLoan)} isMobile={false} />)
-    expect(screen.getByText('Loan details').closest('details')?.open).toBe(true)
+    expect(screen.getByRole('tab', { name: 'Details' }).getAttribute('aria-selected')).toBe('true')
+    fireEvent.click(screen.getByRole('tab', { name: /History/ }))
+    expect(screen.getByRole('tab', { name: /History/ }).getAttribute('aria-selected')).toBe('true')
+    expect(within(screen.getByRole('tabpanel')).getByText('No payments recorded yet.')).toBeTruthy()
+    expect(screen.queryByText('Expected payoff')).toBeNull()
   })
 
   it('renders Ask AI, Edit, and Delete action buttons', () => {
@@ -141,8 +142,10 @@ describe('LoanCard', () => {
     render(<LoanCard {...props(baseLoan)} onEdit={onEdit} onDelete={onDelete} onExplain={onExplain} />)
 
     expect(screen.getByText('Explain this loan')).not.toBeNull()
-    expect(screen.getByText('Edit')).not.toBeNull()
-    expect(screen.getByText('Delete')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: `Edit ${baseLoan.name}` }))
+    fireEvent.click(screen.getByRole('button', { name: `Delete ${baseLoan.name}` }))
+    expect(onEdit).toHaveBeenCalled()
+    expect(onDelete).toHaveBeenCalled()
   })
 
   it('names the repayment action as a payment', () => {
@@ -152,7 +155,7 @@ describe('LoanCard', () => {
     expect(screen.getByText('Make payment')).toBeTruthy()
   })
 
-  it('starts the full-schedule loader in the disclosure event so preview rows never flash first', () => {
+  it('starts the full-schedule loader in the tab event so preview rows never flash first', () => {
     fetchLoanSchedule.mockReturnValue(new Promise(() => {}))
     const scheduledLoan = {
       ...baseLoan,
@@ -165,11 +168,11 @@ describe('LoanCard', () => {
       },
     }
     render(<LoanCard {...props(scheduledLoan)} />)
-    const schedule = screen.getByRole('button', { name: /Payment history and planned schedule/ })
+    const schedule = screen.getByRole('tab', { name: 'Schedule' })
     fireEvent.click(schedule)
 
     expect(fetchLoanSchedule).toHaveBeenCalledWith('loan-card')
-    expect(schedule.getAttribute('aria-expanded')).toBe('true')
+    expect(schedule.getAttribute('aria-selected')).toBe('true')
     expect(screen.getByRole('status').textContent).toContain('Loading full planned schedule')
     expect(screen.queryByText('Planned', { exact: true })).toBeNull()
   })

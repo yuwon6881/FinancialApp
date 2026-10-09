@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Loan, RecurringPayment } from '../../../../types'
 
 export type LoanSortOrder = 'amount-desc' | 'amount-asc' | 'name-asc' | 'payoff-date'
@@ -10,8 +10,6 @@ export function useLoansView(
 ) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [sortOrder, setSortOrder] = useState<LoanSortOrder>('amount-desc')
-  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
-  const filterButtonRef = useRef<HTMLButtonElement>(null)
 
   const linkedPaymentIds = useMemo(() => new Set(loans.map(loan => loan.recurringPaymentId)), [loans])
   const activeSyncIdSet = useMemo(() => new Set(activeSyncIds), [activeSyncIds])
@@ -57,10 +55,7 @@ export function useLoansView(
     activeSyncIdSet,
     selectedCategories,
     sortOrder,
-    isFilterDropdownOpen,
-    filterButtonRef,
     setSortOrder: (value: string) => setSortOrder(value as LoanSortOrder),
-    setIsFilterDropdownOpen,
     toggleCategory,
     clearCategories: () => setSelectedCategories([]),
   }

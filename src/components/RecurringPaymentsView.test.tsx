@@ -1,11 +1,15 @@
 import React from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { APP_LOCATION_CHANGED_EVENT } from '../lib/appLocation'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { RecurringPaymentsView } from './RecurringPaymentsView'
 import { AppPrefsContext } from '../contexts/AppContext'
 
-vi.mock('./BillTimeline', () => ({ BillTimeline: () => null }))
+// The bill detail sits beside the list from 1280px; below that it opens as a sheet.
+const jsdomWidth = window.innerWidth
+beforeAll(() => { window.innerWidth = 1440 })
+afterAll(() => { window.innerWidth = jsdomWidth })
+
 vi.mock('./ui/BottomSheet', () => ({
   BottomSheet: ({ title, children }: { title: React.ReactNode; children: React.ReactNode }) => (
     <div role="dialog">{title}{children}</div>
@@ -207,13 +211,14 @@ describe('RecurringPaymentsView form', () => {
     }
     const { rerender } = render(<RecurringPaymentsView {...baseProps} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /all categories/i }))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Rewards' }))
-    expect(screen.queryByText('Insurance')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Rewards' }))
+    expect(screen.queryByRole('heading', { level: 3, name: 'Insurance' })).toBeNull()
 
     rerender(<RecurringPaymentsView {...baseProps} highlightedRecurringId="bill-essential" />)
-    expect(screen.getByText('Insurance')).toBeTruthy()
-    expect(screen.getByRole('button', { name: /all categories/i })).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 3, name: 'Insurance' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe('true')
+    // A search result opens its bill beside the list.
+    expect(screen.getByRole('complementary', { name: 'Insurance details' })).toBeTruthy()
   })
 })
 

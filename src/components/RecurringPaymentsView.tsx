@@ -2,18 +2,18 @@ import React, { Suspense } from 'react'
 import type { LedgerAccount, Loan, RecurringPayment, RecurringReminderSettings, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { LoansSectionSkeleton } from './ui/skeletons/FeatureSkeletons'
-import { useIsExpanded } from '../lib/breakpoints'
 import { useAppContext } from '../contexts/AppContext'
 import { RecurringPaymentsHeader } from './recurring/RecurringPaymentsHeader'
-import { RecurringTimelineCard } from './recurring/RecurringTimelineCard'
+import { BillDayStrip } from './recurring/BillDayStrip'
 import { RecurringPaymentFormSheet } from './recurring/RecurringPaymentFormSheet'
 import { RecurringFilterBar } from './recurring/RecurringFilterBar'
-import { RecurringPaymentCards } from './recurring/RecurringPaymentCards'
+import { RecurringBills } from './recurring/RecurringBills'
 import { useRecurringPaymentsView } from './recurring/useRecurringPaymentsView'
 import { APP_LOCATION_CHANGED_EVENT, isLoansLocation } from '../lib/appLocation'
 import type { LoanLoadStatus } from '../app/financialData/useLoanData'
 import { formatSensitiveAmount } from './recurring/formatters'
 import { occurrencePaidSoFar, occurrenceRemaining } from '../lib/recurringPayments'
+import { buildBillTimelineModel } from '../lib/billTimeline'
 
 const LoansSection = React.lazy(() => import('./recurring/loans/LoansSection').then(module => ({ default: module.LoansSection })))
 import { PayEarlySheet } from './recurring/PayEarlySheet'
@@ -131,7 +131,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       ? (activeSyncIdProp ? [activeSyncIdProp] : [])
       : (app.activeSyncIds?.length ? app.activeSyncIds : (app.activeSyncId ? [app.activeSyncId] : [])))
   const deletingId = deletingIdProp ?? app.deletingId
-  const isMobile = !useIsExpanded()
   const [activeTab, setActiveTab] = React.useState<RecurringTabId>(() => parseInitialRecurringTab(highlightedLoanIdProp))
   const [internalHighlightedLoanId, setInternalHighlightedLoanId] = React.useState<string | null>(null)
   const [payEarlyPayment, setPayEarlyPayment] = React.useState<RecurringPayment | null>(null)
@@ -252,13 +251,26 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     onAiEditDraftConsumed,
   })
 
+  // The cycle's occurrences with their paid state: the day strip draws them and the list groups by
+  // them, so both read one model.
+  const cycleModel = React.useMemo(() => buildBillTimelineModel({
+    activeRecurringPayments,
+    allPayments: payments,
+    transactions,
+    selectedMonth,
+    selectedYear,
+    cycleDay,
+  }), [activeRecurringPayments, payments, transactions, selectedMonth, selectedYear, cycleDay])
+  const [dayFilter, setDayFilter] = React.useState<string | null>(null)
+  React.useEffect(() => { setDayFilter(null) }, [selectedMonth, selectedYear])
+
   React.useEffect(() => {
     if (!highlightedRecurringId) return
     // A global-search destination must win over a page-local filter that would otherwise leave
-    // the user on the right page with no matching card to reveal.
+    // the user on the right page with no matching bill to reveal.
     view.clearCategoryFilters()
-    view.setIsFilterDropdownOpen(false)
-  }, [highlightedRecurringId, view.clearCategoryFilters, view.setIsFilterDropdownOpen])
+    setDayFilter(null)
+  }, [highlightedRecurringId, view.clearCategoryFilters])
 
   if (isSwitchingCycle) {
     return <CycleSkeleton variant="recurring" />
@@ -294,35 +306,27 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           aria-label="Recurring bills"
           className="space-y-6"
         >
-          {/* Visual Bill Timeline */}
-          <RecurringTimelineCard
-            activeRecurringPayments={activeRecurringPayments}
-            allPayments={payments}
-            transactions={transactions}
-            selectedMonth={selectedMonth}
-            selectedYear={selectedYear}
-            cycleDay={cycleDay}
-            currency={currency}
-            hideSensitive={passiveMask}
+          <BillDayStrip
+            model={cycleModel}
+            formatSensitive={formatPassive}
+            selectedDay={dayFilter}
+            onSelectDay={setDayFilter}
           />
 
-          {/* Filter and Sort controls */}
           <RecurringFilterBar
-            isMobile={isMobile}
             selectedCategories={view.selectedCategories}
             sortOrder={view.sortOrder}
-            isFilterDropdownOpen={view.isFilterDropdownOpen}
-            filterButtonRef={view.filterButtonRef}
-            setIsFilterDropdownOpen={view.setIsFilterDropdownOpen}
             onToggleCategoryFilter={view.handleToggleCategoryFilter}
             onClearFilters={view.clearCategoryFilters}
             onSortChange={view.setSortOrder}
           />
 
-          {/* Subscriptions Cards Grid */}
-          <RecurringPaymentCards
+          <RecurringBills
             payments={view.filteredAndSortedPayments}
+            occurrences={cycleModel.processedPayments}
             totalCount={payments.length}
+            dayFilter={dayFilter}
+            onClearDayFilter={() => setDayFilter(null)}
             hideSensitive={hideSensitive}
             formatSensitive={formatPassive}
             isPaymentSyncing={view.isPaymentSyncing}

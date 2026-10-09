@@ -10,14 +10,11 @@ import { LoanRepaymentSheet } from '../LoanRepaymentSheet'
 import { useLoansView } from './view/useLoansView'
 import { RecurringFilterBar } from '../RecurringFilterBar'
 import { InfoHint } from '../../ui/InfoHint'
-import { useIsDenseContent } from '../../../lib/breakpoints'
 import type { LoanLoadStatus } from '../../../app/financialData/useLoanData'
 import { useHighlightedElement } from '../../ui/useHighlightedElement'
 import { listContainerVariants, listItemVariants } from '../../../lib/animations'
 import { DataTablePagination } from '../../ui/DataTable'
 import { useClientPagination } from '../../ui/useClientPagination'
-import { cn } from '../../../lib/utils'
-import { panelFromMediumClass } from '../../ui/panelStyles'
 import { EmptyState } from '../../ui/EmptyState'
 
 interface LoansSectionProps {
@@ -88,7 +85,6 @@ export function LoansSection({
   }
 
   const reduceMotion = useReducedMotion()
-  const isMobile = !useIsDenseContent()
   const view = useLoansView(loans, payments, activeSyncIds)
   const highlightedIndex = highlightedLoanId
     ? view.filteredAndSortedLoans.findIndex(loan => loan.id === highlightedLoanId)
@@ -109,11 +105,11 @@ export function LoansSection({
   }, [onLoad])
 
   return (
-    <section className={cn(panelFromMediumClass, 'space-y-4')} aria-label="Loans list">
+    <section className="space-y-4" aria-label="Loans list">
       {/* Adding a loan is the summary card's New Loan button, matching where New Subscription sits
           on the bills tab. Only the empty state repeats the action, where there is nothing else to do. */}
       <div>
-        <h3 className="flex items-center gap-1 text-subsection text-foreground sm:text-section">
+        <h3 className="flex items-center gap-1 px-1 text-label font-medium text-muted-foreground">
           Tracked loans
           <InfoHint
             label="tracked loans"
@@ -126,23 +122,18 @@ export function LoansSection({
           what makes this screen feel busy. */}
       {loans.length > 1 && (
         <RecurringFilterBar
-          isMobile={isMobile}
           selectedCategories={view.selectedCategories}
           sortOrder={view.sortOrder}
-          isFilterDropdownOpen={view.isFilterDropdownOpen}
-          filterButtonRef={view.filterButtonRef}
-          setIsFilterDropdownOpen={view.setIsFilterDropdownOpen}
           onToggleCategoryFilter={view.toggleCategory}
           onClearFilters={view.clearCategories}
           onSortChange={view.setSortOrder}
-          allLabel="All bill categories"
           filterAriaLabel="Filter loans by linked bill category"
           sortAriaLabel="Sort loans"
           sortOptions={[
-            { value: 'amount-desc', label: 'Sort by: Amount owed (High to Low)' },
-            { value: 'amount-asc', label: 'Sort by: Amount owed (Low to High)' },
-            { value: 'name-asc', label: 'Sort by: Name (A-Z)' },
-            { value: 'payoff-date', label: 'Sort by: Expected payoff' },
+            { value: 'amount-desc', label: 'Owed, high to low' },
+            { value: 'amount-asc', label: 'Owed, low to high' },
+            { value: 'name-asc', label: 'Name, A to Z' },
+            { value: 'payoff-date', label: 'Expected payoff' },
           ]}
         />
       )}
@@ -187,7 +178,6 @@ export function LoansSection({
                 hideSensitive={hideSensitive}
                 formatSensitive={formatSensitive}
                 isSyncing={view.activeSyncIdSet.has(loan.id)}
-                isMobile={isMobile}
                 onEdit={() => openEdit(loan)}
                 onDelete={() => onRequestDeleteLoan(loan.id)}
                 onExplain={() => onExplain(loan)}

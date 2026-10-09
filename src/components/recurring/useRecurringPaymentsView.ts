@@ -191,8 +191,6 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
   // Filter & Sorting state
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [sortOrder, setSortOrder] = useState<string>('amount-desc')
-  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
-  const filterButtonRef = React.useRef<HTMLButtonElement>(null)
 
   // Toggle filter on or off
   const handleToggleCategoryFilter = (cat: string) => {
@@ -206,19 +204,6 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
   }
 
   const clearCategoryFilters = React.useCallback(() => setSelectedCategories([]), [])
-
-  // Click outside to close filter dropdown
-  React.useEffect(() => {
-    if (!isFilterDropdownOpen) return
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (!target.closest('.recurring-filter-dropdown, [data-floating-overlay]')) {
-        setIsFilterDropdownOpen(false)
-      }
-    }
-    document.addEventListener('click', handleClick)
-    return () => document.removeEventListener('click', handleClick)
-  }, [isFilterDropdownOpen])
 
   // Filter and Sort payments
   const filteredAndSortedPayments = React.useMemo(() => {
@@ -480,9 +465,6 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     selectedCategories,
     sortOrder,
     setSortOrder,
-    isFilterDropdownOpen,
-    setIsFilterDropdownOpen,
-    filterButtonRef,
     handleToggleCategoryFilter,
     clearCategoryFilters,
     filteredAndSortedPayments,

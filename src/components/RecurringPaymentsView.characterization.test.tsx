@@ -1,18 +1,21 @@
 import React from 'react'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { RecurringPaymentsView } from './RecurringPaymentsView'
-import { BillTimeline } from './BillTimeline'
 import type { RecurringPayment } from '../types'
+
+// The bill detail sits beside the list from 1280px; below that it opens as a sheet.
+const jsdomWidth = window.innerWidth
+beforeAll(() => { window.innerWidth = 1440 })
+afterAll(() => { window.innerWidth = jsdomWidth })
 
 // Characterization tests pinning RecurringPaymentsView behavior ahead of the
 // Phase 7 decomposition. The existing RecurringPaymentsView.test.tsx already
 // covers the add-form frequency selection; this file pins everything else:
 // rendered card content, header stats, edit/delete/toggle flows, filtering and
-// sorting, hideSensitive masking, BillTimeline integration, AI drafts, empty
+// sorting, hideSensitive masking, the cycle day strip, AI drafts, empty
 // states, and form validation.
 
-vi.mock('./BillTimeline', () => ({ BillTimeline: vi.fn(() => null) }))
 vi.mock('./ui/BottomSheet', () => ({
   BottomSheet: ({ title, children }: { title: React.ReactNode; children: React.ReactNode }) => (
     <div role="dialog">{title}{children}</div>
@@ -110,12 +113,10 @@ const makeProps = (overrides: Partial<React.ComponentProps<typeof RecurringPayme
   ...overrides,
 })
 
-// Each subscription card is the element carrying its `recur-card-` id.
+// Opens a bill from the list; on desktop its detail panel sits beside the list.
 const getCard = (name: string): HTMLElement => {
-  const heading = screen.getByRole('heading', { level: 3, name: new RegExp(name) })
-  const card = heading.closest<HTMLElement>('[id^="recur-card-"]')
-  if (!card) throw new Error(`card for ${name} not found`)
-  return card as HTMLElement
+  fireEvent.click(screen.getByRole('button', { name: `Show details for ${name}` }))
+  return screen.getByRole('complementary', { name: `${name} details` })
 }
 
 const getToggleButton = (card: HTMLElement): HTMLElement => {
@@ -145,10 +146,6 @@ describe('RecurringPaymentsView characterization', () => {
   })
 
 
-  beforeEach(() => {
-    vi.mocked(BillTimeline).mockClear()
-  })
-
   describe('header stats', () => {
     it('normalizes annual amounts into the monthly total and skips paused subscriptions', () => {
       render(<RecurringPaymentsView {...makeProps()} />)
@@ -175,15 +172,15 @@ describe('RecurringPaymentsView characterization', () => {
       expect(within(netflix).getByText('Every month on the 15th')).toBeTruthy()
       expect(within(netflix).getByText('Rewards')).toBeTruthy()
       expect(within(netflix).getByText('Entertainment')).toBeTruthy()
+      // End date row only renders when endDate is set
+      expect(within(netflix).queryByText('Ends')).toBeNull()
 
       const insurance = getCard('Insurance')
       expect(within(insurance).getByText('$240.00')).toBeTruthy()
       expect(within(insurance).getByText('/yr')).toBeTruthy()
       expect(within(insurance).getByText('Every year on January 1st')).toBeTruthy()
-      // End date row only renders when endDate is set
       expect(within(insurance).getByText('Ends')).toBeTruthy()
       expect(within(insurance).getByText('2027-01-01')).toBeTruthy()
-      expect(within(netflix).queryByText('Ends')).toBeNull()
 
       const cloud = getCard('Cloud Storage')
       expect(within(cloud).getByText('Every month on the 22nd')).toBeTruthy()
@@ -192,8 +189,10 @@ describe('RecurringPaymentsView characterization', () => {
       expect(within(gym).getByText('Every month on the 3rd')).toBeTruthy()
     })
 
-    it('marks inactive payments with a Paused badge', () => {
+    it('marks inactive payments with a Paused badge and files them last', () => {
       render(<RecurringPaymentsView {...makeProps()} />)
+      const paused = screen.getByRole('region', { name: /^Paused/ })
+      expect(within(paused).getByRole('heading', { level: 3, name: 'Gym' })).toBeTruthy()
       const gym = getCard('Gym')
       expect(within(gym).getByText('Paused')).toBeTruthy()
       expect(within(getCard('Netflix')).queryByText('Paused')).toBeNull()
@@ -226,7 +225,7 @@ describe('RecurringPaymentsView characterization', () => {
       expect((within(netflix).getByRole('button', { name: /Edit/ }) as HTMLButtonElement).disabled).toBe(true)
       expect((within(netflix).getByRole('button', { name: /Delete/ }) as HTMLButtonElement).disabled).toBe(true)
       expect((getToggleButton(netflix) as HTMLButtonElement).disabled).toBe(true)
-      // other rows unaffected
+      // other bills unaffected
       expect((within(getCard('Insurance')).getByRole('button', { name: /Delete/ }) as HTMLButtonElement).disabled).toBe(false)
     })
   })
@@ -394,48 +393,46 @@ describe('RecurringPaymentsView characterization', () => {
   })
 
   describe('filtering and sorting', () => {
-    it('filters cards by ledger category and shows the no-match empty state', async () => {
+    it('filters bills by ledger category and shows the no-match empty state', async () => {
       render(<RecurringPaymentsView {...makeProps()} />)
 
-      fireEvent.click(screen.getByRole('button', { name: /All Categories/ }))
-      fireEvent.click(screen.getByRole('checkbox', { name: /Essentials/ }))
-
+      fireEvent.click(screen.getByRole('button', { name: 'Essentials' }))
       expect(screen.getByRole('heading', { level: 3, name: /Insurance/ })).toBeTruthy()
-      // Filtered-out cards animate out via AnimatePresence, so removal is async
       await waitFor(() => expect(screen.queryByRole('heading', { level: 3, name: /Netflix/ })).toBeNull())
-      expect(screen.getByText('1 category filter active')).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Essentials' }).getAttribute('aria-pressed')).toBe('true')
 
       // Swap the filter to a different bucket
-      fireEvent.click(screen.getByRole('checkbox', { name: /Essentials/ }))
-      fireEvent.click(screen.getByRole('checkbox', { name: /Rewards/ }))
+      fireEvent.click(screen.getByRole('button', { name: 'Essentials' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Rewards' }))
       expect(screen.getByRole('heading', { level: 3, name: /Netflix/ })).toBeTruthy()
       await waitFor(() => expect(screen.queryByRole('heading', { level: 3, name: /Insurance/ })).toBeNull())
 
-      fireEvent.click(screen.getByText('Clear All'))
-      expect(screen.getByText('All Categories')).toBeTruthy()
+      fireEvent.click(screen.getByRole('button', { name: 'All' }))
+      expect(screen.getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe('true')
       expect(screen.getByRole('heading', { level: 3, name: /Insurance/ })).toBeTruthy()
     })
 
     it('shows the filter-mismatch empty state when no payment matches', () => {
       render(<RecurringPaymentsView {...makeProps({ payments: [payments[0]] })} />)
-      fireEvent.click(screen.getByRole('button', { name: /All Categories/ }))
-      fireEvent.click(screen.getByRole('checkbox', { name: /Stability/ }))
+      fireEvent.click(screen.getByRole('button', { name: 'Stability' }))
       expect(screen.getByText('No subscriptions match your filter criteria.')).toBeTruthy()
     })
 
-    it('sorts by absolute amount descending by default and re-sorts by name', () => {
+    // The list is grouped by what needs doing first (all three live bills here are past their next
+    // due date, so overdue; Gym is paused), and the sort order applies inside each group.
+    it('sorts by absolute amount descending by default and re-sorts by name within each group', () => {
       render(<RecurringPaymentsView {...makeProps()} />)
       const names = () => screen.getAllByRole('heading', { level: 3 }).map(h => h.textContent || '')
 
-      expect(names().map(n => n.replace('Paused', ''))).toEqual(['Insurance', 'Gym', 'Netflix', 'Cloud Storage'])
+      expect(names()).toEqual(['Insurance', 'Netflix', 'Cloud Storage', 'Gym'])
 
       fireEvent.click(screen.getByRole('combobox', { name: 'Sort recurring payments' }))
-      fireEvent.click(screen.getByRole('option', { name: 'Sort by: Name (A-Z)' }))
-      expect(names().map(n => n.replace('Paused', ''))).toEqual(['Cloud Storage', 'Gym', 'Insurance', 'Netflix'])
+      fireEvent.click(screen.getByRole('option', { name: 'Name, A to Z' }))
+      expect(names()).toEqual(['Cloud Storage', 'Insurance', 'Netflix', 'Gym'])
 
       fireEvent.click(screen.getByRole('combobox', { name: 'Sort recurring payments' }))
-      fireEvent.click(screen.getByRole('option', { name: 'Sort by: Next Due Date' }))
-      expect(names().map(n => n.replace('Paused', ''))).toEqual(['Insurance', 'Gym', 'Netflix', 'Cloud Storage'])
+      fireEvent.click(screen.getByRole('option', { name: 'Due day of the month' }))
+      expect(names()).toEqual(['Insurance', 'Netflix', 'Cloud Storage', 'Gym'])
     })
   })
 
@@ -480,23 +477,28 @@ describe('RecurringPaymentsView characterization', () => {
     })
   })
 
-  describe('BillTimeline integration', () => {
-    it('passes the timeline card its cycle, data and masking props', () => {
-      render(<RecurringPaymentsView {...makeProps({ hideSensitive: true, currency: 'MYR' })} />)
-      expect(vi.mocked(BillTimeline)).toHaveBeenCalled()
-      const props = vi.mocked(BillTimeline).mock.calls[0][0]
-      expect(props).toMatchObject({
-        title: 'Subscriptions Billing Timeline',
-        cycleOffset: 0,
-        allPayments: payments,
-        transactions: [],
-        selectedMonth: 'Jul',
-        selectedYear: 2026,
-        cycleDay: 28,
-        currency: 'MYR',
-        hideSensitive: true,
-      })
-      expect(props.activeRecurringPayments).toEqual([])
+  describe('cycle day strip', () => {
+    it('marks the days bills fall on and narrows the list to the day picked', () => {
+      const occurrence = {
+        id: 'occ-1', recurringPaymentId: 'rp-4', name: 'Cloud Storage', amount: 2.99, category: 'Software',
+        ledgerCategory: 'Stability', dueDate: '2026-08-05', isPaid: false, isDiscarded: false, status: 'Pending' as const,
+      }
+      render(<RecurringPaymentsView {...makeProps({ activeRecurringPayments: [occurrence], hideSensitive: true, currency: 'MYR' })} />)
+
+      const strip = screen.getByRole('region', { name: 'Bills this cycle' })
+      expect(within(strip).getByText(/^1 bill ·/)).toBeTruthy()
+      // The cycle total is a figure, so it is masked with the rest.
+      expect(within(strip).getByRole('img', { name: 'Sensitive amount hidden' })).toBeTruthy()
+
+      const day = within(strip).getByRole('button', { name: /^Aug 5: Cloud Storage/ })
+      fireEvent.click(day)
+      expect(day.getAttribute('aria-pressed')).toBe('true')
+      expect(screen.getByText('Bills due Aug 5')).toBeTruthy()
+      expect(screen.queryByRole('heading', { level: 3, name: 'Netflix' })).toBeNull()
+      expect(screen.getByRole('heading', { level: 3, name: 'Cloud Storage' })).toBeTruthy()
+
+      fireEvent.click(screen.getByRole('button', { name: /Show all/ }))
+      expect(screen.getByRole('heading', { level: 3, name: 'Netflix' })).toBeTruthy()
     })
   })
 

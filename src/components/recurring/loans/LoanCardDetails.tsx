@@ -16,25 +16,21 @@ interface LoanCardDetailsProps {
   rateText: string
 }
 
-/** A single detail cell with a muted label above the value. */
+/** One fact as a row: the label (with its hint) on the left, the value on the right. */
 function DetailCell({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg bg-muted/20 px-3 py-2.5 min-w-0 overflow-hidden">
-      {/* Every label row is the same 28px, hint or no hint. A hint is a button, and the unlayered
-          `button` floor in index.css gives it a 28px minimum whatever size it authors, so the three
-          cells carrying one used to stand taller and push their value a line below the cells beside
-          them -- the grid stopped reading as rows. `inline` keeps the hint inside the text run. */}
-      <div className="flex h-7 items-center gap-1.5">
-        <p className="text-caption font-medium text-muted-foreground">{label}</p>
+    <div className="flex min-w-0 items-center justify-between gap-4 py-2">
+      <dt className="flex shrink-0 items-center gap-1 text-muted-foreground">
+        {label}
         {hint && <InfoHint inline label={label} text={hint} />}
-      </div>
-      <p className="mt-1 text-xs font-semibold text-foreground break-words min-w-0">{children}</p>
+      </dt>
+      <dd className="min-w-0 break-words text-right font-medium text-foreground">{children}</dd>
     </div>
   )
 }
 
 /**
- * The body of the loan card's "Loan details" disclosure.
+ * The loan card's Details section.
  *
  * Extracted so demoting the payoff and remaining-interest figures off the summary did not grow an
  * already-oversized card component. Expected payoff and Remaining interest live here rather than
@@ -53,7 +49,7 @@ export function LoanCardDetails({
 }: LoanCardDetailsProps) {
   const methodCopy = loanInterestMethodCopy(loan.interestMethod)
   return (
-    <div className="grid gap-2 border-t border-border/50 p-3 sm:grid-cols-2 lg:grid-cols-3 lg:border-t-0 min-w-0 max-w-full">
+    <dl className="grid min-w-0 max-w-full divide-y divide-border/50 text-label sm:grid-cols-2 sm:gap-x-8 sm:divide-y-0 sm:[&>*]:border-b sm:[&>*]:border-border/50 sm:[&>*:nth-last-child(-n+2)]:border-b-0">
       <DetailCell label="Expected payoff">
         {interestOnlyBalanceRemains ? 'No automatic payoff' : formatOccurrenceDate(loan.snapshot.payoffDate)}
       </DetailCell>
@@ -82,6 +78,6 @@ export function LoanCardDetails({
       <DetailCell label="Payoff estimation" hint="A payment that does not cover that period's interest reduces none of the amount owed, so the payoff date is not promised.">
         Calculated from bill history.
       </DetailCell>
-    </div>
+    </dl>
   )
 }

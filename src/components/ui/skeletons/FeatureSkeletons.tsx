@@ -81,14 +81,13 @@ export const RecurringHeaderSkeleton: React.FC = () => (
   </Card>
 )
 
-export const BillTimelineSkeleton: React.FC = () => (
-  <Card className="space-y-6">
-    <div className="flex items-center justify-between gap-3 border-b border-border/30 pb-3">
-      <div className="space-y-2"><Skeleton className="h-5 w-56" /><Skeleton className="h-3 w-72 max-w-full" /></div>
-      <Skeleton className="size-8 rounded-lg" />
+export const BillDayStripSkeleton: React.FC = () => (
+  <div className={cn(panelClass, 'space-y-3 p-4 sm:p-5')}>
+    <div className="flex items-center justify-between gap-3"><Skeleton className="h-5 w-40" /><Skeleton className="h-4 w-28" /></div>
+    <div className="flex gap-1 overflow-hidden">
+      {Array.from({ length: 14 }, (_, i) => <Skeleton key={i} className="size-10 shrink-0 rounded-full" />)}
     </div>
-    <Skeleton className="h-72 w-full rounded-2xl sm:h-[26rem]" />
-  </Card>
+  </div>
 )
 
 export const CarryoverLedgerSkeleton: React.FC = () => (
