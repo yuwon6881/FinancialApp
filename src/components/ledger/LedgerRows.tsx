@@ -280,7 +280,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         variant="flush"
         hint={props.hint}
         disabled={props.isDeleting}
-        contentClassName="pr-2"
+        contentClassName="pr-4"
         actionsWidth={props.onMove ? 216 : 144}
         actions={<>
           <Button variant="tertiary" onClick={edit} disabled={!editBlocked && busy} aria-label={editLabel} className={cn(DRAWER_ACTION, 'bg-surface-3 text-foreground hover:bg-surface-3')}>

@@ -159,9 +159,6 @@ export function DeleteTransactionModal({
             </label>
           </div>
         )}
-        <p className="rounded-control bg-amber-500/10 p-2.5 text-caption font-medium text-amber-700 dark:text-amber-300">
-          Are you sure you want to delete this transaction?
-        </p>
       </div>
     </BottomSheet>
   )

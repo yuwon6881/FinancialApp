@@ -153,10 +153,18 @@ export function AuthenticatedTabContent({
     && nav.ledgerShowAllCycles
     && prefs.ledgerCyclesRange === 'all'
   const showCycleSwitcher = (CYCLE_DEPENDENT_TABS as readonly string[]).includes(prefs.activeTab)
-  useAppLocationKey()
+  // Read the address through the hook's value rather than `window.location`: the compiler memoises
+  // this on its React inputs, so a direct read went stale when Bills switched to Loans in place.
+  const locationKey = useAppLocationKey()
+  const queryStart = locationKey.indexOf('?')
   const destination = destinationForTab(prefs.activeTab)
   const sectionId = destination
-    ? activeSectionId(destination, prefs.activeTab, window.location.pathname, window.location.search)
+    ? activeSectionId(
+        destination,
+        prefs.activeTab,
+        queryStart < 0 ? locationKey : locationKey.slice(0, queryStart),
+        queryStart < 0 ? '' : locationKey.slice(queryStart),
+      )
     : null
   // Review only appears while drafts wait, so Activity alone has a single section and no row.
   const hiddenSections = draftCount > 0 ? undefined : ['review']
