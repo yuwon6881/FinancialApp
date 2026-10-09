@@ -41,12 +41,12 @@ const StatTile: React.FC<{
   // `justify-between` pins the value to the bottom of the row so every tile's figure sits on one
   // line, even when a neighbour's label needs two.
   <div className={`flex h-full min-w-0 flex-col justify-between overflow-hidden ${className}`}>
-    <span className="block text-eyebrow uppercase leading-tight tracking-wide text-muted-foreground sm:text-xs sm:tracking-wider">
+    <span className="block text-label leading-tight text-muted-foreground">
       {label}
     </span>
     <span
       title={title}
-      className={`block truncate text-base font-extrabold sm:text-xl ${tone === 'figure' ? 'text-blue-500' : 'text-foreground'}`}
+      className={`mt-1 block truncate text-section text-foreground tabular-nums sm:text-title ${tone === 'count' ? 'font-medium' : ''}`}
     >
       {value}
     </span>
@@ -140,7 +140,7 @@ const InteractiveStatTile: React.FC<{
         // The hover surface covers the tile exactly. It used to bleed 4px sideways (`px-1 -mx-1`),
         // which put the truncation edge of a long figure right on the neighbour's divider -- the
         // yearly total and the count beside it read as one run-on number.
-        className="group/stat flex h-full w-full flex-col items-start justify-between text-left cursor-pointer select-none rounded-lg p-0 transition-colors hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-ring"
+        className="group/stat flex h-full min-h-0 w-full flex-col items-start justify-between rounded-control p-0 text-left font-normal cursor-pointer select-none hover:bg-transparent focus-visible:outline-2 focus-visible:outline-ring lg:min-h-0"
       >
         {/* One line, always. The word "Breakdown" used to sit here as a second pill; on a phone it
             wrapped below the label, and because every tile pins its figure to the bottom of the
@@ -149,7 +149,7 @@ const InteractiveStatTile: React.FC<{
             says the same thing inside the label's own line, and the word survives for screen
             readers on the button's accessible name. */}
         <div className="flex min-w-0 items-center gap-1">
-          <span className="block whitespace-nowrap text-eyebrow uppercase leading-tight tracking-wide text-muted-foreground transition-colors group-hover/stat:text-foreground sm:text-xs sm:tracking-wider">
+          <span className="block whitespace-nowrap text-label leading-tight text-muted-foreground transition-colors group-hover/stat:text-foreground">
             {label}
           </span>
           <ChartPie
@@ -160,7 +160,7 @@ const InteractiveStatTile: React.FC<{
         </div>
         <span
           title={title}
-          className={`block truncate text-base font-extrabold sm:text-xl ${tone === 'figure' ? 'text-blue-500' : 'text-foreground'}`}
+          className={`mt-1 block max-w-full truncate text-section text-foreground tabular-nums sm:text-title ${tone === 'count' ? 'font-medium' : ''}`}
         >
           {value}
         </span>
@@ -177,7 +177,7 @@ const InteractiveStatTile: React.FC<{
           role="dialog"
           aria-label={sheetTitle}
           id={id}
-          className="w-84 rounded-2xl border border-border bg-card p-4 shadow-xl z-[200] animate-in fade-in slide-in-from-top-1 duration-150"
+          className="z-[200] w-84 rounded-overlay border border-border/70 bg-popover p-4 shadow-(--app-shadow-overlay) animate-in fade-in slide-in-from-top-1 duration-150"
         >
           <StatDistributionBreakdown
             mode={mode}
@@ -243,22 +243,22 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
     <div className="w-full">
       <PageHeader
         titleId={isLoansView ? 'loans-heading' : 'recurring-payments-heading'}
-        title={isLoansView ? 'Loans' : 'Recurring Bills & Subscriptions'}
+        title={isLoansView ? 'Loans' : 'Bills & subscriptions'}
         actions={isLoansView ? (
-          <Button variant="primary" size="lg" onClick={onAddLoan} disabled={hideSensitive || !onAddLoan} title={hideSensitive ? 'Unhide balances to add a loan' : undefined}>
-            <Plus className="size-4" />New Loan
+          <Button variant="primary" onClick={onAddLoan} disabled={hideSensitive || !onAddLoan} title={hideSensitive ? 'Unhide balances to add a loan' : undefined}>
+            <Plus className="size-4" aria-hidden="true" />New loan
           </Button>
         ) : (
-          <Button variant="primary" size="lg" onClick={onToggleForm} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a subscription' : undefined}>
+          <Button variant="primary" onClick={onToggleForm} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a subscription' : undefined}>
             {showAddForm ? <X className="size-4" /> : <Plus className="size-4" />}
-            {showAddForm ? 'Cancel' : 'New Subscription'}
+            {showAddForm ? 'Cancel' : 'New bill'}
           </Button>
         )}
       >
           {/* Two figures per row until the rail-narrowed page can hold four. At the medium tier a
               four-column row gave each currency figure about a hundred pixels, so neighbouring
               totals ran into the divider between them. */}
-          <div className="mt-4 grid min-w-0 grid-cols-2 gap-x-2 gap-y-3 lg:grid-cols-4 lg:gap-y-0">
+          <div className="mt-5 grid min-w-0 grid-cols-2 gap-x-4 gap-y-4 rounded-panel bg-surface-2/70 px-4 py-4 sm:px-5 lg:grid-cols-4 lg:gap-y-0">
             {isLoansView ? (
               <>
                 <InteractiveStatTile
@@ -281,13 +281,13 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
                   formatSensitive={formatSensitive}
                   hideSensitive={hideSensitive}
                   isMobile={isMobile}
-                  className="border-l border-border/60 pl-2 pr-1 lg:px-2"
+                  className="border-l border-border/70 pl-2 pr-1 lg:px-2"
                 />
                 <StatTile
                   label="Loans tracked"
                   value={loanCount}
                   tone="count"
-                  className="col-span-2 border-t border-border/60 pt-3 lg:col-span-1 lg:border-t-0 lg:border-l lg:pl-2 lg:pt-0"
+                  className="col-span-2 border-t border-border/70 pt-3 lg:col-span-1 lg:border-t-0 lg:border-l lg:pl-2 lg:pt-0"
                 />
               </>
             ) : (
@@ -302,18 +302,18 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
                   formatSensitive={formatSensitive}
                   hideSensitive={hideSensitive}
                   isMobile={isMobile}
-                  className="border-l border-border/60 pl-2 pr-1 lg:px-2"
+                  className="border-l border-border/70 pl-2 pr-1 lg:px-2"
                 />
                 <StatTile
                   label="Daily Cost"
                   value={formatSensitive(totalCommittedDaily)}
-                  className="border-t border-border/60 pr-2 pt-3 lg:border-t-0 lg:border-l lg:px-2 lg:pt-0"
+                  className="border-t border-border/70 pr-2 pt-3 lg:border-t-0 lg:border-l lg:px-2 lg:pt-0"
                 />
                 <StatTile
                   label="Active bills"
                   value={`${activeCount} / ${totalCount}`}
                   tone="count"
-                  className="border-l border-t border-border/60 pl-2 pt-3 lg:border-t-0 lg:px-2 lg:pt-0"
+                  className="border-l border-t border-border/70 pl-2 pt-3 lg:border-t-0 lg:px-2 lg:pt-0"
                 />
               </>
             )}

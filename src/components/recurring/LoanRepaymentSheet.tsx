@@ -228,10 +228,10 @@ export function LoanRepaymentSheet({
               <AlertBanner variant="warning">{repaymentBlockedReason}</AlertBanner>
             ) : (
               <>
-                <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
+                <div className="rounded-control bg-surface-2/70 p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-foreground">Number of instalments to pay</p>
+                      <p className="text-caption font-semibold text-foreground">Number of instalments to pay</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       <Button
@@ -255,7 +255,7 @@ export function LoanRepaymentSheet({
                         onBlur={() => setCyclesInput(String(cycles))}
                         aria-label="Number of instalments to pay"
                         controlSize="sm"
-                        className="w-16 text-center font-extrabold tabular-nums"
+                        className="w-16 text-center font-semibold tabular-nums"
                         disabled={submitting}
                       />
                       <Button
@@ -350,9 +350,9 @@ export function LoanRepaymentSheet({
           <AlertBanner variant="warning">{repaymentBlockedReason}</AlertBanner>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-2">
+            <div className="rounded-control bg-surface-2/70 p-4 space-y-2">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-foreground">Lender settlement quote</span>
+                <span className="text-caption font-semibold text-foreground">Lender settlement quote</span>
                 <InfoHint label="Lender settlement quote" text="Enter the exact amount your lender quoted to close the loan account in full, including any interest rebate." />
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">

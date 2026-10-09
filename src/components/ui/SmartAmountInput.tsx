@@ -111,7 +111,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
         // Five keyboard-accessible compound keys kept dense and flush so the amount itself remains readable.
         <div
           data-smart-amount-calculator
-          className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-stretch overflow-hidden rounded-control border border-border/60 bg-card/90 shadow-xs backdrop-blur-md [&_button]:!h-8 [&_button]:!min-h-0 [&_button]:!min-w-0"
+          className="absolute right-2 top-1/2 flex -translate-y-1/2 items-stretch overflow-hidden rounded-full border border-border/70 bg-card shadow-(--app-shadow) [&_button]:!h-8 [&_button]:!min-h-0 [&_button]:!min-w-0"
         >
           {[
             ['+', '+', 'Add'],
@@ -126,7 +126,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
               type="button"
               aria-label={ariaLabel}
               onMouseDown={event => { event.preventDefault(); appendOperator(operator) }}
-              className="h-8 rounded-none border-r border-border/50 px-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground active:scale-95"
+              className="h-8 rounded-none border-r border-border/60 px-2.5 text-body font-medium text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground active:scale-95"
             >
               {label}
             </Button>
@@ -137,7 +137,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
             type="button"
             aria-label="Calculate result"
             onMouseDown={event => { event.preventDefault(); evaluate() }}
-            className="h-8 rounded-none bg-primary/15 px-3 text-xs font-bold text-accent-ink transition-colors hover:bg-primary/25 active:scale-95"
+            className="h-8 rounded-none bg-primary px-3 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-95"
           >
             =
           </Button>

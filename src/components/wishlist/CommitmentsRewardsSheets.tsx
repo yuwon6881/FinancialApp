@@ -57,7 +57,7 @@ export function CommitmentsRewardsSheets(props: Props) {
           <div className="space-y-4 py-2">
             <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/10 p-4">
               <div><h4 className="text-sm font-bold text-foreground">{props.purchasingItem.name}</h4><span className="text-xs font-medium text-muted-foreground">Reward</span></div>
-              <span className="text-lg font-extrabold text-accent-ink">{props.formatSensitive(props.purchasingItem.price)}</span>
+              <span className="text-lg font-semibold text-accent-ink">{props.formatSensitive(props.purchasingItem.price)}</span>
             </div>
             <FormField label="Purchased date">
               <DatePicker value={props.purchaseDateInput} onChange={props.setPurchaseDateInput} max={props.todayKey} className="w-full" />

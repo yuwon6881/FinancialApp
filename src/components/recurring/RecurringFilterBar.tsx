@@ -68,7 +68,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
   }, [isFilterDropdownOpen, isMobile, setIsFilterDropdownOpen])
 
   return (
-    <Toolbar aria-label="Recurring filters" className="flex-col items-center justify-between gap-4 bg-card p-4 shadow-xs sm:flex-row">
+    <Toolbar aria-label="Recurring filters" className="flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-center">
       {/* Category Multi-select dropdown */}
       <div
         ref={filterContainerRef}
@@ -87,7 +87,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
           onClick={() => setIsFilterDropdownOpen(prev => !prev)}
           aria-haspopup="dialog"
           aria-expanded={isFilterDropdownOpen}
-          className="w-full sm:w-60 flex items-center justify-between gap-2 px-4 py-2 text-xs font-semibold bg-background border border-border rounded-xl hover:bg-muted transition duration-200 cursor-pointer select-none border-border/60"
+          className="w-full sm:w-60 flex items-center justify-between gap-2 px-4 text-label font-medium bg-card border border-border/70 rounded-full hover:bg-surface-2 transition duration-200 cursor-pointer select-none border-border/60"
         >
           <span className="flex items-center gap-2 text-muted-foreground">
             <span className="truncate">
@@ -111,14 +111,14 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
           side="bottom"
           role="dialog"
           aria-label={filterAriaLabel}
-          className="recurring-filter-dropdown w-60 overflow-y-auto overscroll-contain bg-card border border-border rounded-2xl shadow-xl p-4 z-[200] animate-in fade-in slide-in-from-top-2 duration-150"
+          className="recurring-filter-dropdown w-60 overflow-y-auto overscroll-contain bg-popover border border-border/70 rounded-overlay shadow-(--app-shadow-overlay) p-4 z-[200] animate-in fade-in slide-in-from-top-2 duration-150"
         >
-            <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
-              <span className="text-xs font-bold text-foreground">Filter Categories</span>
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-subsection text-foreground">Filter Categories</span>
               {selectedCategories.length > 0 && (
                 <Button variant="tertiary"
                   onClick={onClearFilters}
-                  className="text-xs font-bold text-orange-500 hover:underline cursor-pointer"
+                  className="text-label font-medium text-accent-ink hover:underline cursor-pointer"
                 >
                   Clear All
                 </Button>
@@ -157,7 +157,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
                 <div className="flex justify-end">
                   <Button variant="tertiary"
                     onClick={onClearFilters}
-                    className="text-xs font-bold text-orange-500 hover:underline cursor-pointer"
+                    className="text-label font-medium text-accent-ink hover:underline cursor-pointer"
                   >
                     Clear All
                   </Button>

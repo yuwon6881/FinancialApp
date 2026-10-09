@@ -68,7 +68,7 @@ export function ReceiptSplitItemRow({
         <Button variant="tertiary"
           type="button"
           onClick={() => onRemove(index)}
-          className="flex h-full w-full items-center justify-center gap-1 bg-destructive hover:bg-destructive/90 px-3 text-xs font-bold text-destructive-foreground cursor-pointer"
+          className="flex h-full w-full items-center justify-center gap-1 bg-destructive hover:bg-destructive/90 px-3 text-caption font-semibold text-destructive-foreground cursor-pointer"
           aria-label={`Delete ${itemLabel}`}
         >
           <Trash2 className="size-4" /> Delete
@@ -84,7 +84,7 @@ export function ReceiptSplitItemRow({
     >
       <div className={`relative space-y-3 transition-opacity ${isExcluded ? 'opacity-60' : ''}`}>
         <div className="flex min-w-0 items-start gap-2 px-1">
-          <h4 className="min-w-0 flex-1 text-sm font-bold text-foreground">{itemLabel}</h4>
+          <h4 className="min-w-0 flex-1 text-subsection text-foreground">{itemLabel}</h4>
           <IconButton
             variant="tertiary"
             type="button"
@@ -97,20 +97,20 @@ export function ReceiptSplitItemRow({
           </IconButton>
         </div>
 
-        <div className={`flex items-center justify-between gap-3 rounded-control px-3 py-2.5 ${isExcluded ? 'bg-surface-2/70' : 'bg-primary/8'}`}>
+        <div className="flex items-center justify-between gap-3 rounded-control bg-surface-2/70 px-3.5 py-2.5">
           <div className="min-w-0">
-            <span className={`block text-label font-medium ${isExcluded ? 'text-muted-foreground' : 'text-accent-ink'}`}>
+            <span className="block text-label text-muted-foreground">
               {isExcluded ? 'Not yours' : 'Your share for this item'}
             </span>
-            <strong className="mt-0.5 block truncate text-sm font-semibold text-foreground">
+            <strong className={`mt-0.5 block truncate text-callout font-semibold tabular-nums ${isExcluded ? 'text-muted-foreground' : 'text-foreground'}`}>
               {isExcluded ? 'Nothing to pay' : needsPrice ? 'Price needed' : formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
             </strong>
           </div>
-          <span className="shrink-0 text-xs text-muted-foreground">{selected} of {maximum}</span>
+          <span className="shrink-0 text-label text-muted-foreground tabular-nums">{selected} of {maximum}</span>
         </div>
 
         <details className="group rounded-control bg-surface-2/70">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-xs font-bold text-muted-foreground">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-caption font-semibold text-muted-foreground">
             Price and charge breakdown
             <ChevronDown className="size-3.5 shrink-0 transition-transform group-open:rotate-180" />
           </summary>
@@ -170,7 +170,7 @@ export function ReceiptSplitItemRow({
               {/* A line nobody is taking pays none of the receipt's extras. The figures here are
                   costed at one unit so the panel can still show what the line is worth, which read
                   as a bill for something the summary above had already called "Nothing to pay". */}
-              <span className={`mt-2 block truncate text-xs font-bold ${isExcluded ? 'text-muted-foreground' : chargeAmount < 0 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+              <span className={`mt-2 block truncate text-caption font-semibold ${isExcluded ? 'text-muted-foreground' : chargeAmount < 0 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
                 {isExcluded || needsPrice
                   ? '—'
                   : <>{chargeAmount < 0 ? '−' : '+'}{formatCurrencyVal(Math.abs(chargeAmount), currency)}</>}

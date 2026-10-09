@@ -79,10 +79,10 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
   }
 
   return (
-    <div className="mt-4 border-t border-border/30 pt-4 space-y-3">
+    <div className="mt-4 space-y-3 border-t border-border/60 pt-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground flex items-center gap-1.5 shrink-0">
-          <Bell className="size-3 text-blue-500" /> Payment Reminder
+        <span className="flex shrink-0 items-center gap-1.5 text-label text-muted-foreground">
+          <Bell className="size-3.5" aria-hidden="true" /> Payment Reminder
         </span>
         <ToggleButton
           active={draftSettings.enabled}
@@ -104,13 +104,13 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
           >
             <div className={paused ? 'opacity-50' : undefined}>
               {paused && (
-                <p className="mb-2 text-xs font-semibold text-amber-500">{RECURRING_PAUSED_LABEL}</p>
+                <p className="mb-2 text-caption font-medium text-amber-700 dark:text-amber-300">{RECURRING_PAUSED_LABEL}</p>
               )}
               {otherDevicesOnly && (
-                <p className="mb-2 text-xs font-semibold text-amber-500">{RECURRING_OTHER_DEVICES_ONLY_LABEL}</p>
+                <p className="mb-2 text-caption font-medium text-amber-700 dark:text-amber-300">{RECURRING_OTHER_DEVICES_ONLY_LABEL}</p>
               )}
 
-              <div role="radiogroup" aria-label={`Reminder frequency for ${payment.name}`} className="flex gap-1.5">
+              <div role="radiogroup" aria-label={`Reminder frequency for ${payment.name}`} className="inline-flex gap-1 rounded-full bg-surface-2 p-1">
                 {(['Once', 'Daily'] as RecurringReminderMode[]).map(mode => (
                   <Button variant="tertiary" size="sm"
                     key={mode}
@@ -119,8 +119,8 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                     aria-checked={draftSettings.mode === mode}
                     disabled={disabled || paused || isSyncing}
                     onClick={() => handleModeChange(mode)}
-                    className={`px-2 py-1 rounded-lg text-xs font-semibold border transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                      draftSettings.mode === mode ? 'bg-blue-500/10 hover:bg-blue-500/10 border-blue-500/40 text-blue-500' : 'border-border text-muted-foreground hover:bg-muted'
+                    className={`min-h-8 px-3 text-label font-medium disabled:opacity-40 lg:min-h-8 ${
+                      draftSettings.mode === mode ? 'bg-card text-foreground shadow-(--app-shadow) ring-1 ring-border/60 hover:bg-card' : 'text-muted-foreground hover:bg-transparent hover:text-foreground'
                     }`}
                   >
                     {mode}
@@ -128,7 +128,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                 ))}
               </div>
 
-              <div role="radiogroup" aria-label={`Lead time for ${payment.name}`} className="mt-2 flex gap-1.5">
+              <div role="radiogroup" aria-label={`Lead time for ${payment.name}`} className="mt-2 flex flex-wrap gap-1.5">
                 {REMINDER_LEAD_DAY_OPTIONS.map(leadDays => (
                   <Button variant="tertiary"
                     key={leadDays}
@@ -140,8 +140,8 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                     aria-checked={draftSettings.leadDays === leadDays}
                     disabled={disabled || paused || isSyncing}
                     onClick={() => handleLeadDaysChange(leadDays)}
-                    className={`size-7 lg:size-7 rounded-lg text-xs font-semibold border transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                      draftSettings.leadDays === leadDays ? 'bg-blue-500/10 hover:bg-blue-500/10 border-blue-500/40 text-blue-500' : 'border-border text-muted-foreground hover:bg-muted'
+                    className={`h-8 w-10 rounded-full border text-caption font-medium tabular-nums disabled:opacity-40 lg:size-auto lg:h-8 lg:w-10 ${
+                      draftSettings.leadDays === leadDays ? 'border-transparent bg-primary/12 text-accent-ink hover:bg-primary/12' : 'border-border/70 text-muted-foreground hover:bg-surface-2'
                     }`}
                   >
                     {leadDays}d
@@ -149,7 +149,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                 ))}
               </div>
 
-              <p className="mt-2 text-xs text-muted-foreground">{buildReminderPreview(draftSettings.mode, draftSettings.leadDays)}</p>
+              <p className="mt-2 text-caption text-muted-foreground">{buildReminderPreview(draftSettings.mode, draftSettings.leadDays)}</p>
             </div>
           </m.div>
         )}
@@ -164,7 +164,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
             transition={{ duration: 0.15 }}
             className="overflow-hidden"
           >
-            <div className="pt-2 border-t border-border/20 flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 pt-2">
               <span role="status" aria-label="Unsaved changes" title="Unsaved changes" className="flex items-center">
                 <span className="size-2 rounded-full bg-amber-500 inline-block animate-pulse shrink-0" />
                 <span className="sr-only">Unsaved changes</span>
@@ -176,7 +176,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                   type="button"
                   disabled={disabled || isSyncing}
                   onClick={handleCancel}
-                  className="h-8 px-2.5 text-xs text-muted-foreground hover:bg-muted transition cursor-pointer disabled:opacity-40 whitespace-nowrap"
+                  className="whitespace-nowrap text-muted-foreground"
                 >
                   Cancel
                 </Button>
@@ -186,7 +186,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                   type="button"
                   disabled={disabled || isSyncing}
                   onClick={handleSave}
-                  className="h-8 px-2.5 text-xs whitespace-nowrap"
+                  className="whitespace-nowrap"
                 >
                   {isSyncing ? (
                     <Loader2 className="size-3 animate-spin mr-1" />

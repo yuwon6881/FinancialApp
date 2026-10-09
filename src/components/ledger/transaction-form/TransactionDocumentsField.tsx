@@ -252,7 +252,7 @@ export const TransactionDocumentsField = React.forwardRef<
                   void import('../../../lib/api/documents').then(({ downloadDocument }) =>
                     downloadDocument(document.id, document.originalFileName))
                 }}
-                className="block max-w-full cursor-pointer truncate text-left text-xs font-bold text-accent-ink hover:underline"
+                className="block max-w-full cursor-pointer truncate text-left text-caption font-semibold text-accent-ink hover:underline"
                 title={`Download ${document.originalFileName}`}
               >
                 {document.originalFileName}
@@ -270,7 +270,7 @@ export const TransactionDocumentsField = React.forwardRef<
               aria-label={`Detach ${document.originalFileName} from this transaction`}
             >
               <Link2Off className="size-3.5" />
-              <span className="hidden text-xs font-bold sm:inline">Detach</span>
+              <span className="hidden text-caption font-semibold sm:inline">Detach</span>
             </Button>
           </div>
         )
@@ -293,7 +293,7 @@ export const TransactionDocumentsField = React.forwardRef<
               </span>
             )}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-bold text-foreground" title={document.file.name}>{document.file.name}</p>
+              <p className="truncate text-caption font-semibold text-foreground" title={document.file.name}>{document.file.name}</p>
               <p className="text-xs text-muted-foreground tabular-nums">Uploads on save · {(document.file.size / 1024 / 1024).toFixed(2)} MB</p>
             </div>
             <Button variant="tertiary"

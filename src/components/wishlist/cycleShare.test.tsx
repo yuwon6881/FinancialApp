@@ -311,7 +311,9 @@ describe('RewardsPoolBar cycle share', () => {
 describe('SavingsGoalCard cycle share', () => {
   it('leads with what this cycle still owes and keeps the figures in the tail', () => {
     renderCard({ fundedThisCycle: 70, outstandingThisCycle: 105 })
-    expect(screen.getByText(/RM 105\.00 still to set aside this cycle/)).toBeTruthy()
+    // The figure is set apart from its sentence, so match the whole status line.
+    expect(screen.getByText((_, element) => element?.tagName === 'P'
+      && /RM 105\.00 still to set aside this cycle/.test(element.textContent ?? ''))).toBeTruthy()
 
     openDetails()
     // One bar per card: the commitment's own progress. This cycle's share is a figure beside it,

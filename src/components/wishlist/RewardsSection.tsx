@@ -8,8 +8,6 @@ import { RewardCard } from './RewardCard'
 import { useIsCompact } from '../../lib/breakpoints'
 import { DataTablePagination } from '../ui/DataTable'
 import { useClientPagination } from '../ui/useClientPagination'
-import { cn } from '../../lib/utils'
-import { panelFromMediumClass } from '../ui/panelStyles'
 import { EmptyState } from '../ui/EmptyState'
 import { Badge } from '../ui/Badge'
 
@@ -37,11 +35,11 @@ export function RewardsSection(props: RewardsSectionProps) {
   const pagination = useClientPagination(props.items.length, 9, activeIndex)
   const visibleItems = props.items.slice(pagination.start, pagination.end)
   return (
-    <section aria-labelledby="commitments-rewards-rewards-heading" className={cn(panelFromMediumClass, 'space-y-3')}>
+    <section aria-labelledby="commitments-rewards-rewards-heading" className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h3 id="commitments-rewards-rewards-heading" className="flex items-center gap-1.5 text-subsection text-foreground">
-            <RewardIcon className="size-4 text-accent-ink" aria-hidden />
+            <RewardIcon className="size-4 text-muted-foreground" aria-hidden />
             Rewards
             {props.affordableCount > 0 && (
               <Badge tone="success">
@@ -49,12 +47,12 @@ export function RewardsSection(props: RewardsSectionProps) {
               </Badge>
             )}
           </h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-label text-muted-foreground">
             From your {props.formatSensitive(props.claimableBalance)} free rewards
           </p>
         </div>
-        <Button variant="secondary" size="sm" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5" onClick={props.onAdd} disabled={props.hideSensitive} title={props.hideSensitive ? 'Unhide balances to add a reward' : undefined} aria-label="Add reward">
-          <Plus className="size-3" aria-hidden /> <span className="hidden sm:inline">Add reward</span>
+        <Button variant="secondary" size="sm" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3" onClick={props.onAdd} disabled={props.hideSensitive} title={props.hideSensitive ? 'Unhide balances to add a reward' : undefined} aria-label="Add reward">
+          <Plus className="size-4" aria-hidden /> <span className="hidden sm:inline">Add reward</span>
         </Button>
       </div>
 

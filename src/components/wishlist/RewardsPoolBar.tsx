@@ -46,7 +46,8 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   const bucket = summary.fundingBucket ?? bucketProp
   const bucketLabel = bucket === 'Essentials' ? 'Essentials' : 'Rewards'
   const committedColor = getCategoryChartColor(bucket)
-  const freeColor = bucket === 'Rewards' ? 'var(--color-amber-500)' : 'var(--color-emerald-500)'
+  // Free money is the absence of a claim, so it is drawn as quiet track rather than a second hue.
+  const freeColor = 'color-mix(in srgb, var(--foreground) 20%, transparent)'
   const {
     rewardsBalance: bucketBalance,
     totalEarmarked,
@@ -92,16 +93,16 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         : 'Set aside what your commitments still need this cycle'
 
   return (
-    <Card className="space-y-3 p-3 sm:space-y-4 sm:p-5">
+    <Card className="space-y-4 p-5">
       <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <span className="text-eyebrow uppercase text-muted-foreground block">
+          <span className="block text-label text-muted-foreground">
             {bucketLabel} pool
           </span>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-foreground">{formatSensitive(bucketBalance)}</span>
+            <span className="text-display text-foreground tabular-nums">{formatSensitive(bucketBalance)}</span>
             {expectedInflow > 0 && (
-              <span className="text-xs font-semibold text-muted-foreground">
+              <span className="text-label text-muted-foreground tabular-nums">
                 +{formatSensitive(expectedInflow)}/cycle
               </span>
             )}
@@ -132,7 +133,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
       {/* The selected view leads the bar, matching the tab order above. Both claims use a full,
           distinct Ayu color so the split never depends on a low-contrast opacity difference. */}
       <div
-        className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted"
+        className="flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-foreground/8"
         role="img"
         aria-label={hasGoals
           ? `${committedPct.toFixed(0)}% of your ${bucketLabel.toLowerCase()} money is set aside for commitments`
@@ -160,12 +161,12 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
       {/* One status line, worst news first: an over-commitment or an unreachable pace matters more
           than this cycle's bookkeeping, so it takes the line rather than sitting below it. */}
       {overCommitted > 0 ? (
-        <p className="flex items-start gap-2 text-xs font-bold text-destructive">
+        <p className="flex items-start gap-2 text-label font-medium text-destructive">
           <AlertTriangle className="size-3.5 shrink-0 mt-px" aria-hidden />
           <span>Commitments claim {formatSensitive(overCommitted)} more than your {bucketLabel.toLowerCase()} holds</span>
         </p>
       ) : paceShortfall > 0 ? (
-        <p className="flex items-start gap-2 text-xs font-bold text-amber-500">
+        <p className="flex items-start gap-2 text-label font-medium text-amber-700 dark:text-amber-300">
           <AlertTriangle className="size-3.5 shrink-0 mt-px" aria-hidden />
           <span>
             Commitments need {formatSensitive(requiredPerCycleTotal)} a cycle —{' '}
@@ -173,14 +174,14 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
           </span>
         </p>
       ) : !hasGoals ? (
-        <p className="text-xs font-semibold text-muted-foreground">No commitments yet</p>
+        <p className="text-label text-muted-foreground">No commitments yet</p>
       ) : cycleDone ? (
-        <p className="flex items-center gap-1.5 text-xs font-bold text-emerald-500">
+        <p className="flex items-center gap-1.5 text-label font-medium text-emerald-700 dark:text-emerald-300">
           <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Funded this cycle
         </p>
       ) : (
-        <p className="text-xs font-bold text-muted-foreground">
-          <span className="text-amber-500">{formatSensitive(outstandingThisCycleTotal)}</span>
+        <p className="text-label text-muted-foreground">
+          <span className="font-semibold text-foreground tabular-nums">{formatSensitive(outstandingThisCycleTotal)}</span>
           {' '}still to set aside across {summary.activeGoals.length}{' '}
           {summary.activeGoals.length === 1 ? 'commitment' : 'commitments'}
         </p>
@@ -199,7 +200,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
             One tile per line on compact. Two 132px columns inside a phone-width card could not fit
             "Free to spend" beside its amount, so the labels truncated to "Free to..." and
             "Commitm..." — the figures were legible and the thing they measured was not. */}
-        <div className="grid max-w-2xl grid-cols-1 gap-2 text-xs font-semibold sm:grid-cols-2 sm:gap-3">
+        <div className="grid max-w-2xl grid-cols-1 gap-2 text-label sm:grid-cols-2 sm:gap-3">
           {(activeView === 'commitments'
             ? [
                 { key: 'committed', label: 'Committed', amount: totalEarmarked, color: committedColor },
@@ -210,10 +211,10 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
                 { key: 'committed', label: 'Committed', amount: totalEarmarked, color: committedColor },
               ]
           ).map(item => (
-            <span key={item.key} className="flex min-w-0 items-center gap-1.5 rounded-lg border border-border/60 bg-muted/35 px-2.5 py-2">
+            <span key={item.key} className="flex min-w-0 items-center gap-2 rounded-control bg-surface-2/70 px-3 py-2.5">
               <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} aria-hidden />
               <span className="min-w-0 text-muted-foreground">{item.label}</span>
-              <span className="ml-auto shrink-0 font-extrabold text-foreground">{formatSensitive(item.amount)}</span>
+              <span className="ml-auto shrink-0 font-semibold text-foreground tabular-nums">{formatSensitive(item.amount)}</span>
             </span>
           ))}
         </div>
@@ -227,18 +228,18 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
             the claim tiles above and the notes below -- so it reads as a stray caption rather
             than part of the column. */}
         {cycleTarget > 0 && (
-          <p className="max-w-2xl text-center text-xs font-semibold text-muted-foreground sm:text-left">
+          <p className="max-w-2xl text-center text-label text-muted-foreground sm:text-left">
             This cycle:{' '}
-            <span className={`font-extrabold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
+            <span className={`font-semibold tabular-nums ${cycleDone ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
               {formatSensitive(fundedThisCycleTotal)}
             </span>
             {' '}of {formatSensitive(requiredPerCycleTotal)} set aside
-            {' '}<span className="font-bold tabular-nums text-foreground">· {cyclePct.toFixed(0)}%</span>
+            {' '}<span className="font-semibold tabular-nums text-foreground">· {cyclePct.toFixed(0)}%</span>
           </p>
         )}
 
         {overCommitted > 0 && (
-          <p className="text-xs font-semibold text-destructive">
+          <p className="text-label font-medium text-destructive">
             {bucket === 'Rewards'
               ? <>Something has been spent from Rewards since it was set aside — release money from a commitment, or let this cycle's rewards money refill the pool.</>
               : <>Something has been spent from {bucketLabel} since it was set aside — release money from a commitment, or let this cycle's {bucketLabel.toLowerCase()} money refill the pool.</>}
@@ -246,7 +247,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         )}
 
         {paceShortfall > 0 && (
-          <p className="text-xs font-semibold text-amber-500">
+          <p className="text-label font-medium text-amber-700 dark:text-amber-300">
             Extend a deadline, lower a target, or raise your {bucketLabel} share.
           </p>
         )}

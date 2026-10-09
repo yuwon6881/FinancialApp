@@ -154,12 +154,12 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
     <div className={`space-y-3 ${className}`}>
       <div className="flex items-baseline justify-between gap-2 border-b border-border/40 pb-2.5">
         <div className="min-w-0">
-          <h4 className="text-xs font-bold text-foreground sm:text-sm">{title}</h4>
+          <h4 className="text-caption font-semibold text-foreground sm:text-sm">{title}</h4>
           <p className="text-xs text-muted-foreground sm:text-xs">{subtitle}</p>
         </div>
         <div className="text-right shrink-0">
-          <span className="text-xs font-extrabold text-blue-500 sm:text-sm">{totalFormatted}</span>
-          <span className="block text-eyebrow uppercase text-muted-foreground">
+          <span className="text-xs font-semibold text-blue-500 sm:text-sm">{totalFormatted}</span>
+          <span className="block text-label font-medium text-muted-foreground">
             {mode === 'loan-owed' ? 'total owed' : 'total / year'}
           </span>
         </div>
@@ -181,7 +181,7 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="truncate text-xs font-bold text-foreground" title={row.name}>
+                    <span className="truncate text-caption font-semibold text-foreground" title={row.name}>
                       {row.name}
                     </span>
                     {row.category && (
@@ -206,7 +206,7 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
                 </div>
                 <div className="text-right shrink-0">
                   <div className="flex items-center justify-end gap-1.5">
-                    <span className="text-xs font-bold text-foreground">
+                    <span className="text-caption font-semibold text-foreground">
                       {formatSensitive(row.primaryAmount)}
                     </span>
                     <Badge tone="neutral">

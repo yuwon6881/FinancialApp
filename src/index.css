@@ -703,7 +703,7 @@ html, body {
     padding: 0 !important;
     margin: -1.1875rem 0 !important;
     background:
-        linear-gradient(to right, var(--primary) 0 var(--range-fill, 0%), color-mix(in srgb, var(--foreground) 12%, transparent) var(--range-fill, 0%) 100%)
+        linear-gradient(to right, var(--range-color, var(--primary)) 0 var(--range-fill, 0%), color-mix(in srgb, var(--foreground) 12%, transparent) var(--range-fill, 0%) 100%)
         center / 100% 0.375rem no-repeat;
     border-radius: 9999px;
 }

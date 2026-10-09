@@ -54,7 +54,7 @@ describe('RecurringPaymentsView form', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+    fireEvent.click(screen.getByRole('button', { name: 'New bill' }))
     fireEvent.change(screen.getByPlaceholderText('e.g. Netflix, Spotify'), { target: { value: 'Insurance' } })
     fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '120.00' } })
     fireEvent.change(screen.getAllByLabelText('billing date')[0], { target: { value: '2026-07-20' } })

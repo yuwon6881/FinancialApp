@@ -110,10 +110,10 @@ const makeProps = (overrides: Partial<React.ComponentProps<typeof RecurringPayme
   ...overrides,
 })
 
-// Each subscription card is the closest ancestor with the p-6 card styling.
+// Each subscription card is the element carrying its `recur-card-` id.
 const getCard = (name: string): HTMLElement => {
   const heading = screen.getByRole('heading', { level: 3, name: new RegExp(name) })
-  const card = heading.closest('div.p-6')
+  const card = heading.closest<HTMLElement>('[id^="recur-card-"]')
   if (!card) throw new Error(`card for ${name} not found`)
   return card as HTMLElement
 }
@@ -159,7 +159,7 @@ describe('RecurringPaymentsView characterization', () => {
 
     it('renders the skeleton instead of content while switching cycles', () => {
       const { container } = render(<RecurringPaymentsView {...makeProps({ isSwitchingCycle: true })} />)
-      expect(screen.queryByText('Recurring Bills & Subscriptions')).toBeNull()
+      expect(screen.queryByText('Bills & subscriptions')).toBeNull()
       expect(container.firstChild).not.toBeNull()
     })
   })
@@ -181,9 +181,9 @@ describe('RecurringPaymentsView characterization', () => {
       expect(within(insurance).getByText('/yr')).toBeTruthy()
       expect(within(insurance).getByText('Every year on January 1st')).toBeTruthy()
       // End date row only renders when endDate is set
-      expect(within(insurance).getByText('End Date')).toBeTruthy()
+      expect(within(insurance).getByText('Ends')).toBeTruthy()
       expect(within(insurance).getByText('2027-01-01')).toBeTruthy()
-      expect(within(netflix).queryByText('End Date')).toBeNull()
+      expect(within(netflix).queryByText('Ends')).toBeNull()
 
       const cloud = getCard('Cloud Storage')
       expect(within(cloud).getByText('Every month on the 22nd')).toBeTruthy()
@@ -277,7 +277,7 @@ describe('RecurringPaymentsView characterization', () => {
   describe('add form validation and cancel', () => {
     it('keeps the optional marker with the end-date label', () => {
       render(<RecurringPaymentsView {...makeProps()} />)
-      fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+      fireEvent.click(screen.getByRole('button', { name: 'New bill' }))
 
       expect(screen.getByText('End billing date (optional)')).toBeTruthy()
       expect(screen.queryByText('Optional')).toBeNull()
@@ -286,7 +286,7 @@ describe('RecurringPaymentsView characterization', () => {
     it('shows field errors and does not submit when required fields are missing', () => {
       const onAddPayment = vi.fn()
       render(<RecurringPaymentsView {...makeProps({ onAddPayment })} />)
-      fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+      fireEvent.click(screen.getByRole('button', { name: 'New bill' }))
       fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
 
       expect(screen.getByText('Subscription name is required.')).toBeTruthy()
@@ -301,7 +301,7 @@ describe('RecurringPaymentsView characterization', () => {
     it('blocks an otherwise complete submission until a payment mode is chosen', () => {
       const onAddPayment = vi.fn()
       render(<RecurringPaymentsView {...makeProps({ onAddPayment })} />)
-      fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+      fireEvent.click(screen.getByRole('button', { name: 'New bill' }))
       fireEvent.change(screen.getByPlaceholderText('e.g. Netflix, Spotify'), { target: { value: 'Water Bill' } })
       fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '42.50' } })
       fireEvent.change(screen.getAllByLabelText('billing date')[0], { target: { value: '2026-07-31' } })
@@ -321,7 +321,7 @@ describe('RecurringPaymentsView characterization', () => {
     it('carries the chosen manual mode into the new subscription', () => {
       const onAddPayment = vi.fn()
       render(<RecurringPaymentsView {...makeProps({ onAddPayment })} />)
-      fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+      fireEvent.click(screen.getByRole('button', { name: 'New bill' }))
       fireEvent.change(screen.getByPlaceholderText('e.g. Netflix, Spotify'), { target: { value: 'Rent' } })
       fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '900.00' } })
       fireEvent.change(screen.getAllByLabelText('billing date')[0], { target: { value: '2026-07-05' } })
@@ -335,7 +335,7 @@ describe('RecurringPaymentsView characterization', () => {
     it('rejects a non-positive amount', () => {
       const onAddPayment = vi.fn()
       render(<RecurringPaymentsView {...makeProps({ onAddPayment })} />)
-      fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+      fireEvent.click(screen.getByRole('button', { name: 'New bill' }))
       fireEvent.change(screen.getByPlaceholderText('e.g. Netflix, Spotify'), { target: { value: 'Test' } })
       // The currency mask keeps the leading minus ('-5' -> '-0.05'), which
       // parses negative and must be rejected. (A bare '0' is masked to an empty
@@ -357,7 +357,7 @@ describe('RecurringPaymentsView characterization', () => {
       try {
         const onAddPayment = vi.fn()
         render(<RecurringPaymentsView {...makeProps({ onAddPayment })} />)
-        fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+        fireEvent.click(screen.getByRole('button', { name: 'New bill' }))
         fireEvent.change(screen.getByPlaceholderText('e.g. Netflix, Spotify'), { target: { value: 'Water Bill' } })
         fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '42.50' } })
         fireEvent.change(screen.getAllByLabelText('billing date')[0], { target: { value: '2026-07-31' } })
@@ -381,14 +381,14 @@ describe('RecurringPaymentsView characterization', () => {
 
     it('cancel resets the form so reopening starts blank', () => {
       render(<RecurringPaymentsView {...makeProps()} />)
-      fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+      fireEvent.click(screen.getByRole('button', { name: 'New bill' }))
       fireEvent.change(screen.getByPlaceholderText('e.g. Netflix, Spotify'), { target: { value: 'Draft name' } })
       // Both the header toggle and the form footer read "Cancel" while the
       // sheet is open; either path runs handleCancelForm.
       fireEvent.click(screen.getAllByRole('button', { name: 'Cancel' })[0])
       expect(screen.queryByPlaceholderText('e.g. Netflix, Spotify')).toBeNull()
 
-      fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+      fireEvent.click(screen.getByRole('button', { name: 'New bill' }))
       expect((screen.getByPlaceholderText('e.g. Netflix, Spotify') as HTMLInputElement).value).toBe('')
     })
   })
@@ -469,13 +469,13 @@ describe('RecurringPaymentsView characterization', () => {
     it('closes and clears an open add sheet when sensitive mode activates', () => {
       const onAddPayment = vi.fn()
       const { rerender } = render(<RecurringPaymentsView {...makeProps({ onAddPayment })} />)
-      fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+      fireEvent.click(screen.getByRole('button', { name: 'New bill' }))
       fireEvent.change(screen.getByPlaceholderText('e.g. Netflix, Spotify'), { target: { value: 'Private draft' } })
 
       rerender(<RecurringPaymentsView {...makeProps({ hideSensitive: true, onAddPayment })} />)
 
       expect(screen.queryByPlaceholderText('e.g. Netflix, Spotify')).toBeNull()
-      expect((screen.getByRole('button', { name: 'New Subscription' }) as HTMLButtonElement).disabled).toBe(true)
+      expect((screen.getByRole('button', { name: 'New bill' }) as HTMLButtonElement).disabled).toBe(true)
       expect(onAddPayment).not.toHaveBeenCalled()
     })
   })

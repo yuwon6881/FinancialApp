@@ -64,7 +64,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
   return (
     <Card
       id={elementId}
-      className={`${fullWidth ? 'w-full' : 'w-[calc(100vw-3.5rem)] shrink-0 snap-start sm:w-full sm:min-w-0'} flex flex-col gap-3 p-4 transition-colors duration-300 ${
+      className={`${fullWidth ? 'w-full' : 'w-[calc(100vw-3.5rem)] shrink-0 snap-start sm:w-full sm:min-w-0'} flex flex-col gap-3.5 p-5 transition-colors duration-300 ${
         isFocused ? 'border-pink-500/50 ring-1 ring-pink-500/20' : ''
       }`}
     >
@@ -74,17 +74,17 @@ export const RewardCard: React.FC<RewardCardProps> = ({
               special" with a coloured dot, and two different glyphs for the same idea is most of
               why the two rails read as parts of different pages. */}
           {isFocused && (
-            <span className="size-1.5 shrink-0 rounded-full bg-pink-500" aria-label="Focused reward" />
+            <span className="size-2 shrink-0 rounded-full bg-pink-500" aria-label="Focused reward" />
           )}
-          <h4 className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{item.name}</h4>
+          <h4 className="min-w-0 flex-1 truncate text-subsection text-foreground">{item.name}</h4>
           <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={item.isPendingSync} entityLabel="item" />
         </div>
       </div>
 
       <div>
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-lg font-extrabold text-foreground">{formatSensitive(item.price)}</span>
-          <span className={`text-xs font-bold ${canAfford ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+          <span className="text-title text-foreground tabular-nums">{formatSensitive(item.price)}</span>
+          <span className={`text-label font-medium ${canAfford ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}`}>
             {pct.toFixed(0)}%
           </span>
         </div>
@@ -101,15 +101,15 @@ export const RewardCard: React.FC<RewardCardProps> = ({
         />
       </div>
 
-      <p className={`text-xs font-bold ${canAfford ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+      <p className={`text-label font-medium ${canAfford ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}`}>
         {canAfford
           ? 'Ready to claim'
           : <>Need {formatSensitive(item.price - claimableBalance)} more</>}
       </p>
 
       {canAfford && item.price > freeAfterGoalPace && (
-        <p className="text-xs font-medium text-muted-foreground">
-          Buying this leaves your commitments <span className="font-bold text-amber-500">{formatSensitive(goalPaceShortfall)}</span> short this cycle.
+        <p className="text-label text-muted-foreground">
+          Buying this leaves your commitments <span className="font-semibold text-amber-700 dark:text-amber-300">{formatSensitive(goalPaceShortfall)}</span> short this cycle.
         </p>
       )}
 
@@ -122,29 +122,29 @@ export const RewardCard: React.FC<RewardCardProps> = ({
         {/* One row per line on compact, label and figure on the same line — the same contract the
             commitment card's detail grid uses, and for the same reason: two columns inside a
             phone-width card wrapped "Free after commitments" into a stack of single words. */}
-        <dl className="grid grid-cols-1 gap-x-3 gap-y-1.5 text-xs sm:grid-cols-2">
+        <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-label sm:grid-cols-2">
           <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="font-semibold text-muted-foreground">Priority</dt>
-            <dd className="font-bold text-foreground">{item.priority}</dd>
+            <dt className="text-muted-foreground">Priority</dt>
+            <dd className="font-medium text-foreground tabular-nums">{item.priority}</dd>
           </div>
           <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="font-semibold text-muted-foreground">Free rewards</dt>
-            <dd className="font-bold text-foreground">{formatSensitive(claimableBalance)}</dd>
+            <dt className="text-muted-foreground">Free rewards</dt>
+            <dd className="font-medium text-foreground tabular-nums">{formatSensitive(claimableBalance)}</dd>
           </div>
           <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="font-semibold text-muted-foreground">Free after commitments</dt>
-            <dd className="font-bold text-foreground">{formatSensitive(freeAfterGoalPace)}</dd>
+            <dt className="text-muted-foreground">Free after commitments</dt>
+            <dd className="font-medium text-foreground tabular-nums">{formatSensitive(freeAfterGoalPace)}</dd>
           </div>
           {timeline && (
             <div className="flex items-baseline justify-between gap-2 sm:block">
-              <dt className="font-semibold text-muted-foreground">Affordable in</dt>
-              <dd className="font-bold text-foreground">{timeline}</dd>
+              <dt className="text-muted-foreground">Affordable in</dt>
+              <dd className="font-medium text-foreground tabular-nums">{timeline}</dd>
             </div>
           )}
         </dl>
       </DetailDisclosure>
 
-      <div className="mt-auto flex items-center gap-1.5 border-t border-border/30 pt-3">
+      <div className="mt-auto flex items-center gap-1.5 border-t border-border/60 pt-3">
         <Button
           size="sm"
           className="shrink-0"

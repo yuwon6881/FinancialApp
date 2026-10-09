@@ -25,6 +25,11 @@ import { IconButton } from '../ui/IconButton'
 import { SensitiveMask } from '../ui/SensitiveAmount'
 import { Input } from '../ui/Input'
 import { RangeInput } from '../ui/RangeInput'
+import { Badge } from '../ui/Badge'
+import { SegmentedMeter } from '../ui/SegmentedMeter'
+import { panelClass } from '../ui/panelStyles'
+import { cn } from '../../lib/utils'
+import { getCategoryChartColor } from '../../lib/categoryColors'
 import type { useSettingsView } from './view/useSettingsView'
 
 const getDayWithSuffix = (day: number) => {
@@ -102,19 +107,16 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
   return (
     <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="grid w-full grid-cols-1 gap-6 animate-in fade-in duration-200 min-[1280px]:grid-cols-2 min-[1280px]:items-start">
       {showPlan && (
-      <form noValidate onSubmit={view.handleSaveSettings} className="space-y-5 rounded-panel border border-border/70 bg-card p-4 sm:p-6 min-[1280px]:col-span-2">
-        <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
-          <div>
-            <h3 className="flex items-center gap-2 text-subsection text-foreground">
-              Financial Model
-            </h3>
-          </div>
+      <form noValidate onSubmit={view.handleSaveSettings} className={cn(panelClass, 'space-y-6 p-5 sm:p-6 min-[1280px]:col-span-2')}>
+        <div>
+          <h3 className="text-section text-foreground">Financial Model</h3>
+          <p className="mt-1 text-body text-muted-foreground">The cycle, the emergency-fund target, and how every pay is divided.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Target stability fund limit" required error={view.errors.target}>
             {hideSensitive ? (
-              <div className="flex h-10 items-center rounded-md border border-border bg-muted/20 px-3"><SensitiveMask /></div>
+              <div className="flex h-11 items-center rounded-control border border-border bg-surface-2/70 px-3.5 lg:h-10"><SensitiveMask /></div>
             ) : (
               <Input
                 type="text"
@@ -179,17 +181,13 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
           </FormField>
         </div>
 
-        <div className="space-y-4 border-t border-border/30 pt-4">
-          <div className="flex items-center justify-between border-b border-border/40 pb-2">
+        <div className="space-y-5 border-t border-border/60 pt-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-foreground">Income Allocations</span>
-              {/* The out-of-balance branch used `text-destructive`, which is the 500 step of the
-                  same red ramp and lands at 4.33:1 on its own tint -- under AA for this 12px
-                  text. Both branches now take the deeper step on the tint, the way the balanced
-                  one already did. */}
-              <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${view.allocSum === 100 ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400' : 'bg-red-500/15 text-red-700 dark:text-red-400 animate-pulse'}`}>
+              <span className="text-subsection text-foreground">Income Allocations</span>
+              <Badge tone={view.allocSum === 100 ? 'success' : 'danger'} className={view.allocSum === 100 ? undefined : 'animate-pulse'}>
                 {view.allocSum}%
-              </span>
+              </Badge>
             </div>
             <Button
               variant="secondary"
@@ -197,31 +195,62 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
               type="button"
               onClick={() => view.setGlobalAllocLock(!view.globalAllocLock)}
               disabled={hideSensitive}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer sm:min-h-8"
             >
-              {view.globalAllocLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
+              {view.globalAllocLock ? <Lock className="size-3.5" aria-hidden="true" /> : <Unlock className="size-3.5" aria-hidden="true" />}
               {view.globalAllocLock ? 'Locked' : 'Unlocked'}
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+          {/* The split at a glance: one bar, each bucket in its own colour, so moving a slider
+              visibly takes room from the others. */}
+          <SegmentedMeter
+            size="lg"
+            total={100}
+            label={`Essentials ${Number(view.essentialsAllocInput).toFixed(0)}%, Growth ${Number(view.growthAllocInput).toFixed(0)}%, Stability ${Number(view.stabilityAllocInput).toFixed(0)}%, Rewards ${Number(view.rewardsAllocInput).toFixed(0)}%`}
+            segments={([
+              ['Essentials', view.essentialsAllocInput],
+              ['Growth', view.growthAllocInput],
+              ['Stability', view.stabilityAllocInput],
+              ['Rewards', view.rewardsAllocInput],
+            ] as const).map(([label, value]) => ({ label, value: Number(value) || 0, color: getCategoryChartColor(label) }))}
+          />
+
+          <div className="grid grid-cols-1 gap-x-8 gap-y-5 md:grid-cols-2">
             {([
-              ['Essentials', view.essentialsAllocInput, 'essentials', 'accent-blue-500'],
-              ['Growth', view.growthAllocInput, 'growth', 'accent-green-500'],
-              ['Stability', view.stabilityAllocInput, 'stability', 'accent-purple-500'],
-              ['Rewards', view.rewardsAllocInput, 'rewards', 'accent-amber-500'],
-            ] as const).map(([label, value, key, accentClass]) => (
-              <div key={label} className="space-y-2 block">
-                <div className="flex justify-between items-center text-xs font-bold">
-                  <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><IconButton type="button" onClick={() => view.toggleLock(key)} disabled={hideSensitive} className="size-11 text-muted-foreground hover:text-foreground hover:bg-muted sm:size-8" label={`${view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'} the ${label} allocation`} tooltip={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</IconButton></span>
-                  <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
+              ['Essentials', view.essentialsAllocInput, 'essentials'],
+              ['Growth', view.growthAllocInput, 'growth'],
+              ['Stability', view.stabilityAllocInput, 'stability'],
+              ['Rewards', view.rewardsAllocInput, 'rewards'],
+            ] as const).map(([label, value, key]) => {
+              const locked = view.lockedAllocations.includes(key)
+              return (
+                <div key={label} className="block space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 text-label font-medium text-foreground">
+                      <span aria-hidden="true" className="size-2 rounded-full" style={{ backgroundColor: getCategoryChartColor(label) }} />
+                      {label}
+                      <IconButton type="button" onClick={() => view.toggleLock(key)} disabled={hideSensitive} className="size-9 text-muted-foreground hover:text-foreground lg:size-8" label={`${locked ? 'Unlock' : 'Lock'} the ${label} allocation`} tooltip={locked ? 'Unlock' : 'Lock'}>
+                        {locked ? <Lock className="size-3.5 text-foreground" /> : <Unlock className="size-3.5" />}
+                      </IconButton>
+                    </span>
+                    <span className="text-section text-foreground tabular-nums">{Number(value).toFixed(0)}%</span>
+                  </div>
+                  <RangeInput
+                    aria-label={`${label} allocation percentage`}
+                    min="0"
+                    max="100"
+                    step="5"
+                    disabled={hideSensitive || view.globalAllocLock || locked}
+                    value={value}
+                    onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))}
+                    style={{ '--range-color': getCategoryChartColor(label) } as React.CSSProperties}
+                  />
                 </div>
-                <RangeInput aria-label={`${label} allocation percentage`} min="0" max="100" step="5" disabled={hideSensitive || view.globalAllocLock || view.lockedAllocations.includes(key)} value={value} onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))} className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`} />
-              </div>
-            ))}
+              )
+            })}
           </div>
           {view.errors.allocationSum && (
-            <p className="text-xs text-destructive font-semibold">{view.errors.allocationSum}</p>
+            <p className="text-label font-medium text-destructive">{view.errors.allocationSum}</p>
           )}
         </div>
 
@@ -230,7 +259,6 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
             type="submit"
             disabled={hideSensitive || settingsSyncing || settingsPending}
             aria-busy={settingsSyncing}
-            className="rounded-xl px-4 py-2 shadow-lg shadow-primary/10 hover:shadow-primary/20"
           >
             <MutationButtonContent
               state={settingsSyncing ? 'syncing' : settingsPending ? 'pending' : null}

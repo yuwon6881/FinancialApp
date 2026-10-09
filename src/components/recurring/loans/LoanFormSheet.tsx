@@ -249,7 +249,7 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
         {preview !== null && (
           <div className="flex items-center justify-between rounded-xl border border-accent-ink/20 bg-accent/15 px-3.5 py-2.5 text-xs text-foreground">
             <span className="font-semibold text-muted-foreground">Estimated payment:</span>
-            <span className="font-extrabold text-accent-ink">{preview.toFixed(2)}</span>
+            <span className="font-semibold text-accent-ink">{preview.toFixed(2)}</span>
           </div>
         )}
       </form>

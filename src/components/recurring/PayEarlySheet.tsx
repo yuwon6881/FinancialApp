@@ -180,10 +180,10 @@ export function PayEarlySheet({
             )}
 
             {mode === 'full' ? (
-              <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-2">
+              <div className="rounded-control bg-surface-2/70 p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Amount still due</span>
-                  <span className="text-sm font-extrabold text-foreground">
+                  <span className="text-sm font-semibold text-foreground">
                     {formatCurrencyVal(outstandingAmount, currency)}
                   </span>
                 </div>
@@ -196,9 +196,9 @@ export function PayEarlySheet({
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="rounded-xl border border-border/60 bg-muted/20 p-3.5 space-y-2">
+                <div className="rounded-control bg-surface-2/70 p-3.5 space-y-2">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-foreground">Part payment</span>
+                    <span className="text-caption font-semibold text-foreground">Part payment</span>
                     <InfoHint label="Part payment" text="Pay a portion of this bill now. The rest stays due on the scheduled date." />
                   </div>
                   <div className="flex items-center justify-between text-xs">
@@ -224,14 +224,14 @@ export function PayEarlySheet({
                 </FormField>
 
                 {parsedPartialAmount != null && (
-                  <div className="grid grid-cols-2 gap-2 rounded-xl border border-border/60 bg-muted/15 p-3 text-xs">
+                  <div className="grid grid-cols-2 gap-2 rounded-control bg-surface-2/70 p-3 text-xs">
                     <div>
-                      <span className="text-eyebrow uppercase text-muted-foreground block">Paying now</span>
-                      <span className="font-extrabold text-foreground">{formatCurrencyVal(parsedPartialAmount, currency)}</span>
+                      <span className="text-label font-medium text-muted-foreground block">Paying now</span>
+                      <span className="font-semibold text-foreground">{formatCurrencyVal(parsedPartialAmount, currency)}</span>
                     </div>
                     <div>
-                      <span className="text-eyebrow uppercase text-muted-foreground block">Still due</span>
-                      <span className="font-extrabold text-blue-600 dark:text-blue-400">{formatCurrencyVal(remainingAmount, currency)}</span>
+                      <span className="text-label font-medium text-muted-foreground block">Still due</span>
+                      <span className="font-semibold text-blue-600 dark:text-blue-400">{formatCurrencyVal(remainingAmount, currency)}</span>
                     </div>
                   </div>
                 )}
@@ -239,9 +239,9 @@ export function PayEarlySheet({
             )}
 
             {assignedAccount ? (
-              <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/20 px-3.5 py-3">
+              <div className="flex items-center justify-between rounded-control bg-surface-2/70 px-3.5 py-3">
                 <span className="text-xs text-muted-foreground">Pay from account</span>
-                <span className="text-xs font-bold text-foreground">{assignedAccount.name}</span>
+                <span className="text-caption font-semibold text-foreground">{assignedAccount.name}</span>
               </div>
             ) : accountOptions.length > 0 ? (
               <FormField label="Pay from account" id="pay-early-account-select" required>

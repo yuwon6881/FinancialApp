@@ -116,7 +116,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
             onClick={onSuggestNotes}
             disabled={suggestions.isSuggestingNote || state.description.trim().length < 2}
             title={state.description.trim().length < 2 ? 'Enter a description first' : 'Suggest better notes'}
-            className="inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-caption font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
           >
             {suggestions.isSuggestingNote ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
             AI

@@ -12,7 +12,8 @@ import { DetailDisclosure } from '../ui/DetailDisclosure'
 import { Meter } from '../ui/Meter'
 import { OverflowMenu } from '../ui/OverflowMenu'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
-import { getCategoryBadgeClass, getCategoryChartColor } from '../../lib/categoryColors'
+import { getCategoryChartColor } from '../../lib/categoryColors'
+import { LedgerAllocationBadge } from '../ledger/LedgerAllocationBadge'
 
 interface SavingsGoalCardProps {
   goal: SavingsGoal
@@ -39,9 +40,9 @@ interface SavingsGoalCardProps {
 // Pace, not percent, is the signal. 3% of a six-year house fund is fine; 33% of a three-month car
 // service is a problem — a percentage alone cannot tell those apart.
 const STATUS: Record<GoalPaceStatus, { label: string; dot: string; text: string; bar: string }> = {
-  funded: { label: 'Ready', dot: 'bg-emerald-500', text: 'text-emerald-500', bar: 'bg-emerald-500' },
-  onPace: { label: 'On pace', dot: 'bg-emerald-500', text: 'text-emerald-500', bar: 'bg-pink-500' },
-  needsFunding: { label: 'Needs funding', dot: 'bg-amber-500', text: 'text-amber-500', bar: 'bg-pink-500' },
+  funded: { label: 'Ready', dot: 'bg-emerald-500', text: 'text-emerald-700 dark:text-emerald-300', bar: 'bg-emerald-500' },
+  onPace: { label: 'On pace', dot: 'bg-emerald-500', text: 'text-muted-foreground', bar: 'bg-pink-500' },
+  needsFunding: { label: 'Needs funding', dot: 'bg-amber-500', text: 'text-muted-foreground', bar: 'bg-pink-500' },
   overdue: { label: 'Overdue', dot: 'bg-destructive', text: 'text-destructive', bar: 'bg-destructive' },
 }
 
@@ -91,20 +92,19 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
   return (
     <Card
       id={elementId}
-      className={`flex flex-col gap-3 p-4 transition-colors duration-300 ${
+      className={`flex flex-col gap-3.5 p-5 transition-colors duration-300 ${
         fullWidth ? 'w-full lg:max-w-xl' : 'w-[calc(100vw-3.5rem)] shrink-0 snap-start sm:w-full sm:min-w-0'
-      } ${status === 'overdue' ? 'border-destructive/40' : 'border-border/60'}`}
+      } ${status === 'overdue' ? 'border-destructive/40' : 'border-border/70'}`}
     >
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className={`size-1.5 rounded-full shrink-0 ${style.dot}`} aria-hidden />
-          <h4 className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{goal.name}</h4>
+          <span className={`size-2 rounded-full shrink-0 ${style.dot}`} aria-hidden />
+          <h4 className="min-w-0 flex-1 truncate text-subsection text-foreground">{goal.name}</h4>
           <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={goal.isPendingSync} entityLabel="goal" />
         </div>
-        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-          <span className={`rounded-full border px-1.5 py-0.5 text-xs ${getCategoryBadgeClass(fundingBucket)}`}>
-            {fundingBucket}
-          </span>
+        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-label text-muted-foreground">
+          <LedgerAllocationBadge ledgerCategory={fundingBucket} transactionId={String(goal.id)} />
+          <span aria-hidden="true">·</span>
           <span>{formatDeadline(goal.targetDate)}</span>
         </p>
       </div>
@@ -113,8 +113,8 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
           never shown. */}
       <div>
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-lg font-extrabold text-foreground">{formatSensitive(goal.earmarkedAmount)}</span>
-          <span className="text-xs font-semibold text-muted-foreground">
+          <span className="text-title text-foreground tabular-nums">{formatSensitive(goal.earmarkedAmount)}</span>
+          <span className="text-label text-muted-foreground tabular-nums">
             of {formatSensitive(goal.targetAmount)}
           </span>
         </div>
@@ -125,14 +125,14 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
             tone={style.bar}
             color={status === 'onPace' || status === 'needsFunding' ? bucketColor : undefined}
           />
-          <span className="shrink-0 text-xs font-bold tabular-nums text-muted-foreground">{pct.toFixed(0)}%</span>
+          <span className="shrink-0 text-label font-medium tabular-nums text-muted-foreground">{pct.toFixed(0)}%</span>
         </div>
       </div>
 
       {/* One status line. The per-cycle figures behind it used to sit in an always-open inset that
           repeated what the Rewards pool panel and its Committed tile already said — with a single
           commitment the same number appeared three times on one screen. */}
-      <p className={`text-xs font-bold ${pace.isFunded || cycleDone ? 'text-emerald-500' : style.text}`}>
+      <p className={`text-label font-medium ${pace.isFunded || cycleDone ? 'text-emerald-700 dark:text-emerald-300' : style.text}`}>
         {pace.isFunded ? (
           <span className="flex items-center gap-1.5">
             <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Ready to use
@@ -142,7 +142,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
             <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Done for this cycle
           </span>
         ) : (
-          <>{formatSensitive(pace.outstandingThisCycle)} still to set aside this cycle</>
+          <><span className="font-semibold text-foreground tabular-nums">{formatSensitive(pace.outstandingThisCycle)}</span> still to set aside this cycle</>
         )}
       </p>
 
@@ -156,39 +156,39 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
             phone-width card left each pair about 130px, which wrapped "Still to save" and "Every 3
             months" into stacks of single words; the card is wide enough for label and figure side
             by side once the row owns the whole line. */}
-        <dl className="grid grid-cols-1 gap-x-3 gap-y-1.5 text-xs sm:grid-cols-2">
+        <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-label sm:grid-cols-2">
           <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="font-semibold text-muted-foreground">Per cycle</dt>
-            <dd className="font-bold text-foreground">{formatSensitive(pace.requiredPerCycle)}</dd>
+            <dt className="text-muted-foreground">Per cycle</dt>
+            <dd className="font-medium text-foreground tabular-nums">{formatSensitive(pace.requiredPerCycle)}</dd>
           </div>
           <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="font-semibold text-muted-foreground">Time left</dt>
-            <dd className="font-bold text-foreground">{describeHorizon(pace)}</dd>
+            <dt className="text-muted-foreground">Time left</dt>
+            <dd className="font-medium text-foreground tabular-nums">{describeHorizon(pace)}</dd>
           </div>
           <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="font-semibold text-muted-foreground">Still to save</dt>
-            <dd className="font-bold text-foreground">{formatSensitive(pace.remaining)}</dd>
+            <dt className="text-muted-foreground">Still to save</dt>
+            <dd className="font-medium text-foreground tabular-nums">{formatSensitive(pace.remaining)}</dd>
           </div>
           {goal.isRecurring && (
             <div className="flex items-baseline justify-between gap-2 sm:block">
-              <dt className="font-semibold text-muted-foreground">Repeats</dt>
-              <dd className="font-bold text-foreground">Every {goal.recurrenceMonths} months</dd>
+              <dt className="text-muted-foreground">Repeats</dt>
+              <dd className="font-medium text-foreground tabular-nums">Every {goal.recurrenceMonths} months</dd>
             </div>
           )}
           {/* Figures, not a second bar. The headline bar above already draws this commitment's
               progress; a thin track under it for the cycle's own share made every card carry two
               bars, and a page of commitments read as a stack of tracks with no hierarchy. */}
           <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="font-semibold text-muted-foreground">This cycle</dt>
-            <dd className={`text-right font-bold sm:text-left ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
+            <dt className="text-muted-foreground">This cycle</dt>
+            <dd className={`text-right font-medium tabular-nums sm:text-left ${cycleDone ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground'}`}>
               {formatSensitive(pace.fundedThisCycle)}
-              <span className="font-semibold text-muted-foreground"> of {formatSensitive(pace.requiredPerCycle)} · {cyclePct.toFixed(0)}%</span>
+              <span className="font-normal text-muted-foreground"> of {formatSensitive(pace.requiredPerCycle)} · {cyclePct.toFixed(0)}%</span>
             </dd>
           </div>
         </dl>
       </DetailDisclosure>
 
-      <div className="mt-auto flex items-center gap-1.5 border-t border-border/30 pt-3">
+      <div className="mt-auto flex items-center gap-1.5 border-t border-border/60 pt-3">
         <IconButton
           variant="secondary"
           className="shrink-0"
@@ -202,7 +202,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
         <Button
           variant="secondary"
           size="sm"
-          className="h-11 sm:h-9 shrink-0"
+          className="shrink-0"
           onClick={() => onComplete(goal.id)}
           disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
           aria-label={goal.isRecurring ? `Complete this cycle for ${goal.name}` : `Mark ${goal.name} done`}

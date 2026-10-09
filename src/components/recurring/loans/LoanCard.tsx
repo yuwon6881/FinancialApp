@@ -5,7 +5,9 @@ import { entryRateFromAnnual, formatRatePercent, loanPayoffProgress } from '../.
 import type { Loan, LoanScheduleEntry } from '../../../types'
 import { Button } from '../../ui/Button'
 import { AlertBanner } from '../../ui/AlertBanner'
-import { Meter } from '../../ui/Meter'
+import { ProgressRing } from '../../ui/ProgressRing'
+import { cn } from '../../../lib/utils'
+import { panelClass } from '../../ui/panelStyles'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { formatOccurrenceDate } from '../formatters'
 import { LoanCardDetails } from './LoanCardDetails'
@@ -134,11 +136,11 @@ export function LoanCard({
     .map(payment => ({ ...payment, kind: 'Planned' as const }))
 
   return (
-    <article id={`loan-card-${loan.id}`} className="w-full min-w-0 rounded-2xl border border-border/60 bg-card/85 p-4 shadow-sm sm:p-5 transition-all duration-300">
+    <article id={`loan-card-${loan.id}`} className={cn(panelClass, 'w-full min-w-0 p-4 sm:p-5')}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-section tracking-tight text-foreground">{loan.name}</h3>
+            <h3 className="truncate text-section text-foreground">{loan.name}</h3>
             <RowSyncStatus
               entityLabel="loan"
               isDeleting={loan.isPendingDelete === true}
@@ -146,7 +148,7 @@ export function LoanCard({
               isPending={loan.isPendingSync === true}
             />
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-label text-muted-foreground">
             {loan.recurringPaymentExists
               ? `Linked bill: ${loan.recurringPaymentName || 'Recurring bill'}`
               : 'Bill removed · original history preserved'}
@@ -163,43 +165,48 @@ export function LoanCard({
           This loan cannot show a balance or schedule because its bill history is incomplete. Edit this loan to choose a valid bill.
         </AlertBanner>
       ) : (
-        <div className="mt-4 space-y-2">
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground">Still owed</p>
-            <p className="text-2xl font-black tracking-tight text-foreground">
-              {formatSensitive(loan.snapshot.outstandingBalance)}
-            </p>
-          </div>
-
-          {/* Anchored on the principal at the tracking start date, so the copy says "tracked" and
-              never "borrowed": a loan added part-way through its life has no record of what came
-              before it. Absent entirely when the figure is not knowable. */}
-          {payoffProgress && (
-            <div className="space-y-1">
-              <Meter
-                percent={payoffProgress.percentPaid}
-                tone="bg-primary"
-                label={`${payoffProgress.percentPaid.toFixed(0)}% of the tracked principal cleared`}
-              />
-              <p className="text-xs font-semibold text-muted-foreground">
-                {payoffProgress.percentPaid.toFixed(0)}% paid off ·{' '}
-                {formatSensitive(payoffProgress.clearedPrincipal)} cleared of{' '}
-                {formatSensitive(payoffProgress.trackedPrincipal)} tracked
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-label text-muted-foreground">Still owed</p>
+              <p className="mt-0.5 text-title text-foreground tabular-nums">
+                {formatSensitive(loan.snapshot.outstandingBalance)}
               </p>
             </div>
+            {/* Anchored on the principal at the tracking start date, so the copy says "tracked" and
+                never "borrowed": a loan added part-way through its life has no record of what came
+                before it. Absent entirely when the figure is not knowable. */}
+            {payoffProgress && (
+              <ProgressRing
+                percent={payoffProgress.percentPaid}
+                size={60}
+                thickness={6}
+                label={`${payoffProgress.percentPaid.toFixed(0)}% of the tracked principal cleared`}
+              >
+                <span className="text-label font-semibold tabular-nums text-foreground">{payoffProgress.percentPaid.toFixed(0)}%</span>
+              </ProgressRing>
+            )}
+          </div>
+
+          {payoffProgress && (
+            <p className="text-label text-muted-foreground">
+              {payoffProgress.percentPaid.toFixed(0)}% paid off ·{' '}
+              {formatSensitive(payoffProgress.clearedPrincipal)} cleared of{' '}
+              {formatSensitive(payoffProgress.trackedPrincipal)} tracked
+            </p>
           )}
 
-          <p className="text-xs font-semibold text-muted-foreground">
+          <p className="text-label text-muted-foreground">
             Next instalment{' '}
-            <span className="font-bold text-foreground">
+            <span className="font-semibold text-foreground tabular-nums">
               {finalBalanceDueNow ? 'Final balance due now' : formatSensitive(loan.snapshot.scheduledPayment)}
             </span>
           </p>
         </div>
       )}
 
-      <details className="group/loan-details mt-3 w-full min-w-0 rounded-xl border border-border/50 bg-muted/15 lg:mt-4 lg:bg-muted/20" open={isLoanDetailsOpen} onToggle={event => setIsLoanDetailsOpen(event.currentTarget.open)}>
-        <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-2.5 text-xs font-bold text-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50 min-[1280px]:hidden">
+      <details className="group/loan-details mt-3 w-full min-w-0 rounded-control bg-surface-2/70 lg:mt-4" open={isLoanDetailsOpen} onToggle={event => setIsLoanDetailsOpen(event.currentTarget.open)}>
+        <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-2.5 text-caption font-semibold text-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50 min-[1280px]:hidden">
           <span>Loan details</span>
           <ChevronDown className="size-3.5 text-muted-foreground transition-transform group-open/loan-details:rotate-180" aria-hidden />
         </summary>
@@ -218,14 +225,14 @@ export function LoanCard({
       {/* The whole panel is the toggle, the same way the Loan details disclosure above it is: the
           padding belongs to the control, not to a wrapper around it, so the hover surface covers
           the box a reader is already pointing at instead of a text-sized strip inside it. */}
-      <div className="mt-3 w-full min-w-0 overflow-hidden rounded-xl border border-border/50 bg-background/40">
+      <div className="mt-3 w-full min-w-0 overflow-hidden rounded-control bg-surface-2/70">
         <Button
           variant="tertiary"
           type="button"
           aria-expanded={isScheduleOpen}
           aria-controls={isScheduleOpen ? `loan-schedule-${loan.id}` : undefined}
           onClick={handleScheduleToggle}
-          className="flex min-h-11 w-full cursor-pointer select-none items-center justify-between gap-3 rounded-none px-3 py-2.5 text-left text-xs font-bold text-foreground transition-colors hover:bg-muted/30 hover:text-accent-ink sm:min-h-0 sm:px-3.5"
+          className="flex min-h-11 w-full cursor-pointer select-none items-center justify-between gap-3 rounded-none px-3 py-2.5 text-left text-caption font-semibold text-foreground transition-colors hover:bg-muted/30 hover:text-accent-ink sm:min-h-0 sm:px-3.5"
         >
           <div className="flex items-center gap-2 min-w-0">
             <span className="truncate">Payment history and planned schedule</span>
@@ -238,7 +245,7 @@ export function LoanCard({
         {isScheduleOpen && (
           <div id={`loan-schedule-${loan.id}`} className="min-w-0 max-w-full overflow-hidden px-3 pb-3 sm:px-3.5 sm:pb-3.5">
             {scheduleLoadingKey === scheduleKey ? (
-              <div className="mt-3 flex min-h-28 items-center justify-center gap-2 rounded-lg border border-border/40 bg-card/40 text-xs font-semibold text-muted-foreground" role="status">
+              <div className="mt-3 flex min-h-28 items-center justify-center gap-2 rounded-control bg-surface-2/70 text-xs font-semibold text-muted-foreground" role="status">
                 <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
                 Loading full planned schedule…
               </div>
@@ -255,12 +262,12 @@ export function LoanCard({
           {[...actualRows, ...scheduleRows].map((row, index) => (
             <div
               key={`${row.occurrenceDate}-${row.kind}-${index}`}
-              className="rounded-lg border border-border/40 bg-card/60 p-2.5 text-xs transition-colors hover:bg-muted/20 min-w-0"
+              className="rounded-control bg-surface-2/70 p-2.5 text-xs transition-colors hover:bg-muted/20 min-w-0"
             >
               <div className="flex items-center justify-between gap-2 min-w-0">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <span className="font-semibold text-foreground truncate">{formatOccurrenceDate(row.occurrenceDate)}</span>
-                  <span className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-xs font-bold ${
+                  <span className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-caption font-semibold ${
                     row.kind === 'Paid'
                       ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                       : 'bg-muted text-muted-foreground'
@@ -283,7 +290,7 @@ export function LoanCard({
             </div>
 
             {/* Desktop schedule: tabular view */}
-            <div className="mt-3 hidden max-h-72 overflow-x-hidden overflow-y-auto rounded-lg border border-border/40 bg-card/60 min-[1280px]:block">
+            <div className="mt-3 hidden max-h-72 overflow-x-hidden overflow-y-auto rounded-control bg-surface-2/70 min-[1280px]:block">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Payment history and planned schedule for {loan.name}</caption>
             <thead className="sticky top-0 z-10 border-b border-border/40 bg-card text-xs text-muted-foreground shadow-2xs">

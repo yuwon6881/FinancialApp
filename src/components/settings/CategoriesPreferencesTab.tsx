@@ -230,7 +230,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                           role="img"
                           aria-label={`${item.name} is managed by FinancialApp; flow is ${activeType === 'inflow' ? 'money in' : activeType === 'outflow' ? 'money out' : 'money in and out'}`}
                           title="Managed category; its flow cannot be changed."
-                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold ${
+                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-caption font-semibold ${
                             activeType === 'inflow'
                               ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                               : activeType === 'outflow'
@@ -300,7 +300,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                 very click that summoned it. Sticky keeps Save reachable without displacing rows. */}
             {changedFlowTypeCategories.length > 0 && (
               <div className="sticky bottom-0 z-10 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 backdrop-blur-sm animate-in fade-in duration-150">
-                <span className="truncate text-xs font-bold text-accent-ink">
+                <span className="truncate text-caption font-semibold text-accent-ink">
                   {changedFlowTypeCategories.length} category flow type{changedFlowTypeCategories.length > 1 ? 's' : ''} modified
                 </span>
                 <div className="flex shrink-0 items-center justify-end gap-1.5">

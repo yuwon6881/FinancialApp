@@ -125,7 +125,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         </FormField>
       </div>
 
-      <div className="rounded-xl border border-border/50 bg-muted/20 p-3 space-y-3">
+      <div className="rounded-control bg-surface-2/70 p-3 space-y-3">
         <div className="flex items-center gap-2 select-none">
           <Checkbox
             id={`goal-recurring-${props.mode}`}
@@ -164,7 +164,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         </Button>
         <Button
           type="submit"
-          className="rounded-xl py-2.5 shadow-lg shadow-primary/25"
+          className="rounded-xl py-2.5 shadow-(--app-shadow-overlay) shadow-primary/25"
         >
           {isAdd ? 'Add Commitment' : 'Save Changes'}
         </Button>

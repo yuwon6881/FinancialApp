@@ -18,15 +18,16 @@ export function controlClassName({
   className?: string
 }) {
   return cn(
-    // A field is an inset well: one step *below* the card it sits on, so "type here" reads as a
-    // recess rather than another raised surface. Focus lifts it to the card colour with an Iris ring.
-    'w-full border bg-background text-foreground outline-none transition-[background-color,border-color,box-shadow] duration-200 ease-fluid',
+    // A field is a quiet well: in Day one step below the white card, in Night a faint tint over it
+    // (the canvas colour read as a hole punched through the card). Focus settles it on the card
+    // colour with an Iris ring.
+    'w-full border bg-background text-foreground outline-none dark:bg-surface-2/50 transition-[background-color,border-color,box-shadow] duration-200 ease-fluid',
     'placeholder:text-subtle-foreground',
     'disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-muted-foreground disabled:opacity-70',
     'read-only:cursor-default read-only:bg-surface-2/60',
     invalid
       ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/25'
-      : 'border-border hover:border-input focus:border-ring focus:bg-card focus:ring-2 focus:ring-ring/25',
+      : 'border-border hover:border-input focus:border-ring focus:bg-card focus:ring-2 focus:ring-ring/25 dark:focus:bg-card',
     CONTROL_SIZES[size],
     className,
   )

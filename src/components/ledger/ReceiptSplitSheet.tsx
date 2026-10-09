@@ -220,27 +220,27 @@ export function ReceiptSplitSheet({
     >
       {receipt && calculation && (
         <div className="space-y-5">
-          <section className="rounded-panel bg-primary/8 p-4">
-            <p className="text-label font-medium text-accent-ink">Your share</p>
+          <section className="rounded-panel bg-surface-2/70 p-5">
+            <p className="text-label text-muted-foreground">Your share</p>
             <div className="mt-1 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
-              <strong data-testid="receipt-share-total" className="text-2xl font-semibold tracking-tight text-foreground">
+              <strong data-testid="receipt-share-total" className="text-display font-semibold text-foreground tabular-nums">
                 {calculation.invalidSelectedItemIndexes.length > 0
                   ? 'Price needed'
                   : formatCurrencyVal(calculation.total, currency)}
               </strong>
-              <span className="pb-0.5 text-right text-xs text-muted-foreground">
+              <span className="pb-1 text-right text-label text-muted-foreground">
                 {calculation.selectedItemCount} selected item{calculation.selectedItemCount === 1 ? '' : 's'}
               </span>
             </div>
             {receipt.total != null && (
-              <p data-testid="receipt-share-context" className="mt-1 text-xs text-muted-foreground">
+              <p data-testid="receipt-share-context" className="mt-1 text-label text-muted-foreground tabular-nums">
                 Whole receipt: {formatCurrencyVal(receipt.total, currency)}
               </p>
             )}
           </section>
 
           <details className="group rounded-control bg-surface-2/70">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-3 text-xs font-bold text-foreground">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-3 text-label font-medium text-foreground">
               Receipt details
               <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
             </summary>
@@ -349,7 +349,7 @@ export function ReceiptSplitSheet({
           </section>
 
           <details className="group rounded-panel bg-primary/6">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-xs font-bold text-foreground">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-caption font-semibold text-foreground">
               How your total was calculated
               <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
             </summary>

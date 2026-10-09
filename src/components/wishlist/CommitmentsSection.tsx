@@ -8,12 +8,9 @@ import { Button } from '../ui/Button'
 import { HorizontalRail } from '../ui/HorizontalRail'
 import { InfoHint } from '../ui/InfoHint'
 import { SavingsGoalCard } from './SavingsGoalCard'
-import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { useIsCompact } from '../../lib/breakpoints'
 import { DataTablePagination } from '../ui/DataTable'
 import { useClientPagination } from '../ui/useClientPagination'
-import { cn } from '../../lib/utils'
-import { panelFromMediumClass } from '../ui/panelStyles'
 import { EmptyState } from '../ui/EmptyState'
 import { Badge } from '../ui/Badge'
 
@@ -91,18 +88,18 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
     <div
       key={goal.id}
       id={`commitment-card-${goal.id}`}
-      className={`flex flex-col justify-center gap-1 rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4 ${
+      className={`flex flex-col justify-center gap-1 rounded-panel border border-dashed border-border/70 p-4 ${
         isSolo ? 'w-full lg:max-w-xl' : 'snap-start shrink-0 w-36 sm:w-40'
       }`}
     >
-      <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-500">
+      <span className="flex items-center gap-1.5 text-label font-medium text-emerald-700 dark:text-emerald-300">
         <CheckCircle2 className="size-3 shrink-0" /> Done
       </span>
-      <span className="text-xs font-bold text-foreground truncate">{goal.name}</span>
-      <span className={`w-fit rounded-full border px-1.5 py-0.5 text-xs ${getCategoryBadgeClass(goal.fundingBucket ?? 'Rewards')}`}>
+      <span className="truncate text-body font-medium text-foreground">{goal.name}</span>
+      <span className="w-fit text-label text-muted-foreground">
         {goal.fundingBucket ?? 'Rewards'}
       </span>
-      <span className="text-xs font-semibold text-muted-foreground">
+      <span className="text-label text-muted-foreground">
         {formatSensitive(goal.targetAmount)}
       </span>
     </div>
@@ -120,12 +117,12 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
        application from the rest of the app. */
     <section
       aria-labelledby="commitments-rewards-commitments-heading"
-      className={cn(panelFromMediumClass, 'space-y-3')}
+      className="space-y-3"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h3 id="commitments-rewards-commitments-heading" className="flex items-center gap-1.5 text-subsection text-foreground">
-            <CommitmentIcon className="size-4 text-accent-ink" aria-hidden />
+            <CommitmentIcon className="size-4 text-muted-foreground" aria-hidden />
             Commitments
             {pool.activeGoals.length + completedGoals.length > 0 && (
               <Badge tone="neutral">
@@ -138,8 +135,8 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
             />
           </h3>
         </div>
-        <Button variant="secondary" size="sm" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5" onClick={onAddGoal} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a commitment' : undefined} aria-label="Add commitment">
-          <Plus className="size-3" aria-hidden /> <span className="hidden sm:inline">Add commitment</span>
+        <Button variant="secondary" size="sm" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3" onClick={onAddGoal} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a commitment' : undefined} aria-label="Add commitment">
+          <Plus className="size-4" aria-hidden /> <span className="hidden sm:inline">Add commitment</span>
         </Button>
       </div>
 

@@ -148,7 +148,7 @@ export function LoansSection({
       )}
 
       {loadStatus === 'loading' && loans.length === 0 ? (
-        <div className="rounded-2xl border border-border/60 bg-muted/15 p-8 text-center" aria-busy="true">
+        <div className="rounded-control bg-surface-2/70 p-8 text-center" aria-busy="true">
           <RefreshCw className="mx-auto size-5 animate-spin text-muted-foreground" aria-hidden="true" />
           <p className="mt-2 text-xs font-medium text-muted-foreground">Loading loans…</p>
         </div>

@@ -34,7 +34,7 @@ describe('RecurringPaymentsHeader', () => {
     expect(screen.getByText('$3000')).not.toBeNull()
     expect(screen.getByText('Loans tracked')).not.toBeNull()
     expect(screen.getByText('2')).not.toBeNull()
-    expect(screen.queryByRole('button', { name: /new subscription/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /new bill/i })).toBeNull()
     expect(screen.queryByText('Next payment')).toBeNull()
     expect(screen.getByRole('button', { name: /new loan/i })).not.toBeNull()
   })
@@ -51,13 +51,13 @@ describe('RecurringPaymentsHeader', () => {
   it('keeps the recurring summary and add action on the recurring tab', () => {
     render(<RecurringPaymentsHeader {...baseProps} activeView="recurring" />)
 
-    expect(screen.getByRole('heading', { name: 'Recurring Bills & Subscriptions' })).not.toBeNull()
+    expect(screen.getByRole('heading', { name: 'Bills & subscriptions' })).not.toBeNull()
     expect(screen.getByText('Monthly Total')).not.toBeNull()
     expect(screen.getByText('Yearly Total')).not.toBeNull()
     expect(screen.getByText('$5040')).not.toBeNull()
     expect(screen.getByText('Daily Cost')).not.toBeNull()
     expect(screen.getByText('$13.81')).not.toBeNull()
-    expect(screen.getByRole('button', { name: /new subscription/i })).not.toBeNull()
+    expect(screen.getByRole('button', { name: /new bill/i })).not.toBeNull()
     expect(screen.queryByRole('button', { name: /new loan/i })).toBeNull()
   })
 
