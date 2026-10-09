@@ -39,7 +39,7 @@ interface TierPresentation {
   /** The same standing, worded for a cycle that has already closed. */
   finishedRank: string
   Icon: LucideIcon
-  /** Rank line and medallion colour. Both themes are Ayu, so each needs its own step. */
+  /** Rank line and medallion colour; each theme needs its own step. */
   accent: string
   /** Medallion chip fill, the ring's progress stroke, and the bar's fill. */
   chip: string
@@ -61,7 +61,7 @@ const TIER_PRESENTATION: Record<EssentialsChallengeTier, TierPresentation> = {
     finishedRank: 'Finished way under',
     Icon: Rocket,
     accent: 'text-emerald-600 dark:text-emerald-300',
-    chip: 'border-emerald-500/25 bg-emerald-500/12',
+    chip: 'bg-emerald-500/12 hover:bg-emerald-500/20',
     stroke: 'stroke-emerald-500',
     fill: 'bg-emerald-500',
     panelTone: 'default',
@@ -71,7 +71,7 @@ const TIER_PRESENTATION: Record<EssentialsChallengeTier, TierPresentation> = {
     finishedRank: 'Finished under',
     Icon: ShieldCheck,
     accent: 'text-emerald-600 dark:text-emerald-300',
-    chip: 'border-emerald-500/25 bg-emerald-500/12',
+    chip: 'bg-emerald-500/12 hover:bg-emerald-500/20',
     stroke: 'stroke-emerald-500',
     fill: 'bg-emerald-500',
     panelTone: 'default',
@@ -81,7 +81,7 @@ const TIER_PRESENTATION: Record<EssentialsChallengeTier, TierPresentation> = {
     finishedRank: 'Finished on plan',
     Icon: BadgeCheck,
     accent: 'text-blue-600 dark:text-blue-300',
-    chip: 'border-blue-500/25 bg-blue-500/12',
+    chip: 'bg-blue-500/12 hover:bg-blue-500/20',
     stroke: 'stroke-blue-500',
     fill: 'bg-blue-500',
     panelTone: 'default',
@@ -91,7 +91,7 @@ const TIER_PRESENTATION: Record<EssentialsChallengeTier, TierPresentation> = {
     finishedRank: 'Finished just inside',
     Icon: Gauge,
     accent: 'text-amber-700 dark:text-amber-300',
-    chip: 'border-amber-500/25 bg-amber-500/15',
+    chip: 'bg-amber-500/15 hover:bg-amber-500/20',
     stroke: 'stroke-amber-500',
     fill: 'bg-amber-500',
     panelTone: 'warning',
@@ -101,7 +101,7 @@ const TIER_PRESENTATION: Record<EssentialsChallengeTier, TierPresentation> = {
     finishedRank: 'Closed short',
     Icon: TrendingUp,
     accent: 'text-orange-600 dark:text-orange-300',
-    chip: 'border-orange-500/25 bg-orange-500/15',
+    chip: 'bg-orange-500/15 hover:bg-orange-500/20',
     stroke: 'stroke-orange-500',
     fill: 'bg-orange-500',
     panelTone: 'urgent',
@@ -111,7 +111,7 @@ const TIER_PRESENTATION: Record<EssentialsChallengeTier, TierPresentation> = {
     finishedRank: 'Finished just over',
     Icon: AlertTriangle,
     accent: 'text-orange-600 dark:text-orange-300',
-    chip: 'border-orange-500/25 bg-orange-500/15',
+    chip: 'bg-orange-500/15 hover:bg-orange-500/20',
     stroke: 'stroke-orange-500',
     fill: 'bg-orange-500',
     panelTone: 'urgent',
@@ -121,7 +121,7 @@ const TIER_PRESENTATION: Record<EssentialsChallengeTier, TierPresentation> = {
     finishedRank: 'Finished well over',
     Icon: Flame,
     accent: 'text-red-600 dark:text-red-300',
-    chip: 'border-red-500/25 bg-red-500/15',
+    chip: 'bg-red-500/15 hover:bg-red-500/20',
     stroke: 'stroke-red-500',
     fill: 'bg-red-500',
     panelTone: 'urgent',
@@ -131,7 +131,7 @@ const TIER_PRESENTATION: Record<EssentialsChallengeTier, TierPresentation> = {
     finishedRank: 'Never funded',
     Icon: Wallet,
     accent: 'text-muted-foreground',
-    chip: 'border-border/60 bg-muted/50',
+    chip: 'bg-surface-2 hover:bg-surface-3',
     stroke: 'stroke-muted-foreground',
     fill: 'bg-muted-foreground',
     panelTone: 'default',
@@ -141,7 +141,7 @@ const TIER_PRESENTATION: Record<EssentialsChallengeTier, TierPresentation> = {
     finishedRank: 'Never started',
     Icon: CalendarClock,
     accent: 'text-blue-600 dark:text-blue-300',
-    chip: 'border-blue-500/25 bg-blue-500/12',
+    chip: 'bg-blue-500/12 hover:bg-blue-500/20',
     stroke: 'stroke-blue-500',
     fill: 'bg-blue-500',
     panelTone: 'default',
@@ -290,8 +290,8 @@ export function EssentialsChallengeCard({
           ? `Essentials challenge score: ${scoreText}. Click to view details`
           : 'Essentials challenge. Click to view details'}
         className={cn(
-          'rounded-full font-bold tabular-nums shrink-0 gap-1.5 border shadow-xs',
-          challenge.score !== null ? presentation.chip : 'border-border/60 bg-muted/40 hover:bg-muted/60 text-muted-foreground',
+          'shrink-0 gap-1.5 border-transparent font-semibold tabular-nums',
+          challenge.score !== null ? presentation.chip : 'bg-surface-2 text-muted-foreground hover:bg-surface-3',
           challenge.score !== null ? presentation.accent : '',
         )}
       >
@@ -306,7 +306,7 @@ export function EssentialsChallengeCard({
         initialFocusRef={titleRef}
         title={
           <div className="flex items-center gap-1.5">
-            <span ref={titleRef} tabIndex={-1} className="text-base font-bold text-foreground">Essentials challenge</span>
+            <span ref={titleRef} tabIndex={-1} className="text-section text-foreground">Essentials challenge</span>
             <InfoHint inline label="How the Essentials score is worked out" text={SCORE_EXPLANATION} />
           </div>
         }
@@ -347,32 +347,32 @@ export function EssentialsChallengeCard({
                     <AnimatedNumber
                       value={challenge.score}
                       formatFn={value => Math.round(value).toString()}
-                      className={cn('text-3xl font-black leading-none', presentation.accent)}
+                      className={cn('text-display leading-none tabular-nums', presentation.accent)}
                     />
-                    <span className="mt-1 text-eyebrow uppercase text-muted-foreground">score</span>
+                    <span className="mt-1 text-caption text-muted-foreground">score</span>
                   </div>
                 </div>
               )}
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-lg border', presentation.chip, presentation.accent)}>
+                  <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-full', presentation.chip, presentation.accent)}>
                     <Icon className="size-3.5" aria-hidden />
                   </span>
                   <h3 id="essentials-challenge-heading" className={cn('text-section', presentation.accent)}>
                     {rank}
                   </h3>
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{headline}</p>
-                {result && <p className="mt-2 text-sm font-semibold leading-relaxed text-foreground">{result}</p>}
+                <p className="mt-2 text-body text-muted-foreground">{headline}</p>
+                {result && <p className="mt-2 text-body font-medium text-foreground">{result}</p>}
               </div>
             </div>
 
             {!unranked && (
               <div className="mt-5 border-t border-border/40 pt-4">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-xs font-semibold text-muted-foreground">Essentials money committed</span>
-                  <span className="text-xs font-bold tabular-nums text-foreground">{usedPercent}</span>
+                  <span className="text-label text-muted-foreground">Essentials money committed</span>
+                  <span className="text-label font-semibold tabular-nums text-foreground">{usedPercent}</span>
                 </div>
                 <div className="relative mt-1.5">
                   <Meter
@@ -395,8 +395,8 @@ export function EssentialsChallengeCard({
           {!unranked && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground">Badges</span>
-                <span className="text-xs font-bold tabular-nums text-muted-foreground">
+                <span className="text-label text-muted-foreground">Badges</span>
+                <span className="text-label tabular-nums text-muted-foreground">
                   {challenge.earnedBadgeCount} of {challenge.badges.length}
                 </span>
               </div>
@@ -412,9 +412,9 @@ export function EssentialsChallengeCard({
                     <li
                       key={badge.id}
                       className={cn(
-                        'flex w-full min-w-0 items-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-semibold sm:w-auto sm:rounded-full sm:py-1',
+                        'flex w-full min-w-0 items-center gap-1.5 rounded-control border px-2.5 py-2 text-label font-medium sm:w-auto sm:rounded-full sm:py-1',
                         badge.earned
-                          ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                          ? 'border-transparent bg-emerald-500/12 text-emerald-700 dark:text-emerald-300'
                           : 'border-dashed border-border/70 bg-muted/25 text-muted-foreground',
                       )}
                     >
@@ -441,7 +441,7 @@ export function EssentialsChallengeCard({
                   setIsOpen(false)
                   onReviewEssentials()
                 }}
-                className="w-full justify-center gap-1.5 font-semibold text-foreground"
+                className="w-full justify-center gap-1.5"
               >
                 Review Essentials spending
                 <ArrowRight className="size-4" aria-hidden="true" />

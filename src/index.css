@@ -674,6 +674,23 @@ html, body {
     transform: scale(0.97);
 }
 
+/* Today's hero: one soft brand glow behind the balance -- the page's only light source. A radial
+   gradient rather than a blurred blob, so it costs no filter pass on low-end phones. */
+.today-hero-glow {
+    inset: -45% auto auto -12%;
+    width: 72%;
+    height: 170%;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--primary) 14%, transparent), transparent);
+}
+.dark .today-hero-glow {
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--primary) 26%, transparent), transparent);
+}
+
+/* "Needs attention" is exception-only: when none of its notices rendered, the heading goes too. */
+.attention-section:not(:has([data-notice])) {
+    display: none;
+}
+
 .metric-card {
     position: relative;
     overflow: hidden;
@@ -683,7 +700,9 @@ html, body {
    ratios are relative to whatever type role the caller set, so one rule serves a ledger row and a
    56px balance alike. */
 .amount-currency {
-    font-size: 0.62em;
+    /* Never below 12px (or the figure's own size, if that is smaller): the ratio is for hero
+       figures, and at caption size it shrank the marker past legibility. */
+    font-size: max(0.62em, min(1em, 0.75rem));
     font-weight: 500;
     margin-right: 0.28em;
     color: var(--muted-foreground);
@@ -694,8 +713,8 @@ html, body {
     margin-left: 0.28em;
 }
 .amount-fraction {
-    font-size: 0.72em;
-    opacity: 0.62;
+    font-size: max(0.72em, min(1em, 0.8125rem));
+    opacity: 0.66;
     letter-spacing: 0;
 }
 .amount-sign {

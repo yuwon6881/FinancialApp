@@ -1,13 +1,12 @@
 import React from 'react'
-import { m, useReducedMotion } from 'framer-motion'
 import { ChevronRight, ShieldAlert } from 'lucide-react'
 import type { StabilityRecovery, StabilityReloadFilter } from '../../types'
 import { Button } from '../ui/Button'
 import { BottomSheet } from '../ui/BottomSheet'
 import { InfoHint } from '../ui/InfoHint'
-import { cn } from '../../lib/utils'
 import { describeStabilityRecovery } from '../../lib/stabilityRecoveryNarrative'
-import { PANEL_TONES, panelClass } from '../ui/panelStyles'
+import { Badge } from '../ui/Badge'
+import { NoticeCard } from './NoticeCard'
 import { StabilityRecoveryDetails } from './StabilityRecoveryDetails'
 
 export interface StabilityRecoveryLedgerJump {
@@ -53,7 +52,6 @@ export function StabilityRecoveryExceptionCard({
   isMasked = false,
   onNavigateToLedger,
 }: StabilityRecoveryExceptionCardProps) {
-  const reduceMotion = useReducedMotion()
   const [isBreakdownOpen, setIsBreakdownOpen] = React.useState(false)
 
   if (!recovery || !recovery.isActive) return null
@@ -73,105 +71,82 @@ export function StabilityRecoveryExceptionCard({
   // The jump needs a window to filter on, and only the server can say when the fund was last full.
   const canShowMovements = Boolean(onNavigateToLedger && recovery.recoveryFromDate)
 
+  const statusBadge = status === 'deferred'
+    ? <Badge tone="neutral">Starts next cycle</Badge>
+    : status === 'aheadOfPace'
+      ? <Badge tone="success">Ahead of plan</Badge>
+      : status === 'overdue'
+        ? <Badge tone="danger">Plan overdue</Badge>
+        : status === 'finalCycle'
+          ? <Badge tone="warning">Final cycle</Badge>
+          : null
+
   return (
-    <m.section
-      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      aria-labelledby="stability-recovery-exception"
-      className={cn(panelClass, PANEL_TONES.warning, 'relative overflow-hidden p-4 shadow-xs sm:p-5')}
+    <NoticeCard
+      tone={status === 'overdue' ? 'urgent' : 'attention'}
+      icon={<ShieldAlert />}
+      titleId="stability-recovery-exception"
+      title={(
+        <>
+          Emergency fund recovery
+          <InfoHint
+            label="How putting money back is worked out"
+            text="Only money you mark as needing to go back creates this reminder. Your normal salary share does not count as putting it back; reaching your target clears it."
+            inline
+            className="ml-1"
+          />
+        </>
+      )}
+      badge={statusBadge}
+      description={status === 'deferred' ? (
+        <>{formatSensitive(shortfall)} still short · recovery starts next cycle.</>
+      ) : status === 'aheadOfPace' ? (
+        <>{formatSensitive(shortfall)} still short · nothing due this cycle.</>
+      ) : askIsWholeShortfall ? (
+        <>Put back {formatSensitive(askThisCycle)} this cycle to clear the shortfall.</>
+      ) : (
+        <>Put back {formatSensitive(askThisCycle)} this cycle · {formatSensitive(shortfall)} still short.</>
+      )}
+      actions={(
+        <Button
+          variant="secondary"
+          size="sm"
+          type="button"
+          aria-haspopup="dialog"
+          aria-expanded={isBreakdownOpen}
+          aria-label="See recovery details"
+          onClick={() => setIsBreakdownOpen(true)}
+        >
+          Details
+          <ChevronRight className="size-3.5" aria-hidden="true" />
+        </Button>
+      )}
     >
-      <div className="space-y-3">
-        <div className="flex items-start justify-between gap-2.5">
-          <div className="flex items-start gap-2.5 min-w-0 flex-1">
-            <div className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 mt-0.5">
-              <ShieldAlert className="size-4.5 sm:size-5" />
-            </div>
-            <h3
-              id="stability-recovery-exception"
-              className="text-subsection leading-snug text-amber-700 dark:text-amber-300"
-            >
-              Emergency fund recovery
-              <InfoHint
-                label="How putting money back is worked out"
-                text="Only money you mark as needing to go back creates this reminder. Your normal salary share does not count as putting it back; reaching your target clears it."
-                inline
-                className="ml-1"
-              />
-            </h3>
-          </div>
-
-          {status === 'deferred' ? (
-            <span className="shrink-0 rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-xs font-bold text-muted-foreground">
-              Starts next cycle
-            </span>
-          ) : status === 'aheadOfPace' ? (
-            <span className="shrink-0 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-              Ahead of plan
-            </span>
-          ) : status === 'overdue' ? (
-            <span className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-bold text-destructive">
-              Plan overdue
-            </span>
-          ) : status === 'finalCycle' ? (
-            <span className="shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400">
-              Final cycle
-            </span>
-          ) : null}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <span className="text-label text-muted-foreground">This cycle</span>
+          <span className="text-label font-semibold tabular-nums text-foreground">
+            {status === 'deferred' || cyclePlanPercent === null
+              ? '—'
+              : <>{formatSensitive(cyclePlanFunded)} of {formatSensitive(recovery.requiredThisCycle)}</>}
+          </span>
         </div>
-
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          {status === 'deferred' ? (
-            <>{formatSensitive(shortfall)} still short · recovery starts next cycle.</>
-          ) : status === 'aheadOfPace' ? (
-            <>{formatSensitive(shortfall)} still short · nothing due this cycle.</>
-          ) : askIsWholeShortfall ? (
-            <>Put back {formatSensitive(askThisCycle)} this cycle to clear the shortfall.</>
-          ) : (
-            <>Put back {formatSensitive(askThisCycle)} this cycle · {formatSensitive(shortfall)} still short.</>
-          )}
-        </p>
-
-        <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-3.5">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs">
-            <span className="font-semibold text-muted-foreground">This cycle</span>
-            <span className="font-extrabold text-amber-600 dark:text-amber-400 tabular-nums">
-              {status === 'deferred' || cyclePlanPercent === null
-                ? '—'
-                : <>{formatSensitive(cyclePlanFunded)} of {formatSensitive(recovery.requiredThisCycle)}</>}
-            </span>
-          </div>
-          {cyclePlanPercent !== null && (
-            <div
-              className="h-2 w-full overflow-hidden rounded-full border border-border/40 bg-muted/70"
-              role="progressbar"
-              aria-label="This cycle's recovery plan"
-              aria-valuemin={isMasked ? undefined : 0}
-              aria-valuemax={isMasked ? undefined : 100}
-              aria-valuenow={isMasked ? undefined : cyclePlanPercent}
-              aria-valuetext={isMasked ? 'Hidden' : undefined}
-            >
-              <div
-                className="h-full rounded-full bg-amber-500 transition-all duration-300"
-                style={{ width: `${isMasked ? 0 : cyclePlanPercent}%` }}
-              />
-            </div>
-          )}
-        </div>
-        <div className="flex justify-end">
-          <Button
-            variant="secondary"
-            size="sm"
-            type="button"
-            aria-haspopup="dialog"
-            aria-expanded={isBreakdownOpen}
-            aria-label="See recovery details"
-            onClick={() => setIsBreakdownOpen(true)}
-            className="w-full justify-center border-amber-500/30 bg-card/60 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 sm:w-auto"
+        {cyclePlanPercent !== null && (
+          <div
+            className="h-1.5 w-full overflow-hidden rounded-full bg-foreground/8 dark:bg-foreground/10"
+            role="progressbar"
+            aria-label="This cycle's recovery plan"
+            aria-valuemin={isMasked ? undefined : 0}
+            aria-valuemax={isMasked ? undefined : 100}
+            aria-valuenow={isMasked ? undefined : cyclePlanPercent}
+            aria-valuetext={isMasked ? 'Hidden' : undefined}
           >
-            Details
-            <ChevronRight className="ml-1 size-3.5" aria-hidden="true" />
-          </Button>
-        </div>
+            <div
+              className="h-full rounded-full bg-amber-500 transition-[width] duration-500 ease-fluid"
+              style={{ width: `${isMasked ? 0 : cyclePlanPercent}%` }}
+            />
+          </div>
+        )}
       </div>
 
       {/* The breakdown names the ledger obligation and its repayments. Keep it out of the dashboard
@@ -221,6 +196,6 @@ export function StabilityRecoveryExceptionCard({
           )}
         </div>
       </BottomSheet>
-    </m.section>
+    </NoticeCard>
   )
 }

@@ -1,27 +1,28 @@
 import React from 'react'
+import { BellRing, ChevronRight } from 'lucide-react'
 import type { AppNavigationOptions, LedgerRouteRange } from '../lib/appLocation'
 import type { DashboardData, SavingsGoal, WishlistItem, AppTab, InvestmentAllocationOverview, StabilityReloadFilter } from '../types'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useAppPrefs } from '../contexts/AppContext'
-import { DashboardHeader } from './dashboard/DashboardHeader'
-import { TodayFocusCards } from './dashboard/TodayFocusCards'
 import { CategoryWatchExceptionCard } from './dashboard/CategoryWatchExceptionCard'
 import { useDashboardView } from './dashboard/useDashboardView'
-import { AlertCircle, BarChart3, ChevronRight } from 'lucide-react'
 import { Button } from './ui/Button'
-import { InteractiveCard } from './ui/InteractiveCard'
+import { PageHeader } from './ui/PageHeader'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
 import { evaluateEssentialsChallenge } from '../lib/essentialsChallenge'
 import { EssentialsChallengeCard } from './dashboard/EssentialsChallengeCard'
 import { InvestmentPlanExceptionCard } from './dashboard/InvestmentPlanExceptionCard'
 import { StabilityRecoveryExceptionCard } from './dashboard/StabilityRecoveryExceptionCard'
 import { RecurringAccountShortfallCard } from './dashboard/RecurringAccountShortfallCard'
+import { NoticeCard } from './dashboard/NoticeCard'
+import { TodayHero } from './dashboard/TodayHero'
+import { PlanSnapshot } from './dashboard/PlanSnapshot'
+import { RewardGoalCard } from './dashboard/RewardGoalCard'
+import { UpcomingBills } from './dashboard/UpcomingBills'
 import { getDocumentRetentionReview } from '../lib/api/documents'
 import { EMPTY_RETENTION_REVIEW } from '../lib/documentRetention'
 import { VaultRetentionNotice } from './documents/VaultRetentionNotice'
 import type { DocumentRetentionReview } from '../types'
-import { cn } from '../lib/utils'
-import { PANEL_TONES, panelClass } from './ui/panelStyles'
 
 interface DashboardViewProps {
   dashboardData: DashboardData | null
@@ -100,185 +101,127 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     exceededCategoryLimits: view.categoryLimitProgress.filter(item => item.status === 'Exceeded').length,
     cycle: cycleProgress,
   }), [cycleProgress, view.categoryLimitProgress, view.essentialsMetric, view.todayPlanInsights])
-  const hasEndedCycle = cycleProgress.phase === 'ended'
-  const spendDays = challenge.spendDays
-  const dailySpendingRoom = challenge.dailyAllowance
-  const currentDailyPace = challenge.currentDailyPace
-  const paceDifference = challenge.paceDifference
 
   if (isSwitchingCycle) {
     return <CycleSkeleton variant="dashboard" />
   }
 
+  const currency = view.activeSettings.currency || 'USD'
+  const openBill = onNavigateToRecurring ?? (() => onNavigate('recurring'))
+  const hasSideColumn = Boolean(view.wishlistGoal) || view.activeRecurring.some(payment => payment.status === 'Pending' || payment.status === 'PartiallyPaid')
+
   return (
-    <div className="space-y-6">
+    <div className="@container space-y-8">
+      <PageHeader
+        title="Today"
+        description={`Current cycle · ${formatCycleRange(view.cycleLabel)}`}
+      />
 
-      <DashboardHeader
-        cycleLabel={view.cycleLabel}
-        cycleDay={view.activeSettings.cycleDay}
+      <TodayHero
         walletBalance={dashboardData?.stats.totalBalance ?? 0}
-        areBalanceAmountsMasked={view.areBalanceAmountsMasked}
-        hideSensitive={hideSensitive}
+        currency={currency}
+        isMasked={view.areBalanceAmountsMasked}
         hideBalanceAmounts={hideBalanceAmounts}
-        formatCurrency={view.formatCurrency}
         onToggleBalanceAmounts={onToggleBalanceAmounts}
+        cycle={cycleProgress}
       />
 
-      {/* Attention panels are exception-only: a clear day should show nothing here rather
-          than a card whose whole message is that it has no message. */}
-      {pendingNotificationCount > 0 && (
-        <section aria-labelledby="attention-heading" className={cn(panelClass, PANEL_TONES.warning, 'p-4 shadow-xs sm:p-5')}>
-          <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3 min-w-0 flex-1">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/12 text-amber-600 dark:text-amber-400">
-                <AlertCircle className="size-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 id="attention-heading" className="text-subsection text-amber-700 dark:text-amber-300">
-                  {pendingNotificationCount} bill{pendingNotificationCount === 1 ? '' : 's'} need review
-                </h3>
-              </div>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onOpenNotifications}
-              className="w-full justify-center sm:w-auto shrink-0 border-amber-500/30 bg-card/60 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
-            >
-              Review bills
-              <ChevronRight className="size-3.5 ml-1" />
-            </Button>
-          </div>
-        </section>
-      )}
+      {/* Exceptions only, worst first. A clear day draws nothing here -- not even the heading:
+          the section hides itself in CSS once none of its notices rendered. */}
+      <section aria-labelledby="attention-heading" className="attention-section space-y-3">
+        <h2 id="attention-heading" className="flex items-center gap-2 text-section text-foreground">
+          <span aria-hidden="true" className="size-2 rounded-full bg-amber-500" />
+          Needs attention
+        </h2>
+        <div className="grid gap-3 @4xl:grid-cols-2 @4xl:[&>*:last-child:nth-child(odd)]:col-span-2">
+          <RecurringAccountShortfallCard
+            shortfalls={view.recurringAccountShortfalls}
+            formatSensitive={view.formatSensitive}
+            onTransferMoney={onNavigateToTransfer}
+            onNavigateToRecurring={openBill}
+          />
+          {pendingNotificationCount > 0 && (
+            <NoticeCard
+              tone="attention"
+              icon={<BellRing />}
+              titleId="bill-review-heading"
+              title={`${pendingNotificationCount} bill${pendingNotificationCount === 1 ? '' : 's'} need review`}
+              description="Confirm what was paid so the plan stays true to your accounts."
+              actions={(
+                <Button variant="primary" size="sm" onClick={onOpenNotifications}>
+                  Review bills
+                  <ChevronRight className="size-3.5" aria-hidden="true" />
+                </Button>
+              )}
+            />
+          )}
+          <CategoryWatchExceptionCard
+            items={view.categoryLimitProgress}
+            formatSensitive={view.formatSensitive}
+            isMasked={hideSensitive}
+            onOpenCategoryLimits={category => (onNavigateToCategoryLimits ? onNavigateToCategoryLimits(category) : onNavigate('reports'))}
+          />
+          <StabilityRecoveryExceptionCard
+            recovery={dashboardData?.stabilityRecovery}
+            formatSensitive={view.formatSensitive}
+            isMasked={hideSensitive}
+            onNavigateToLedger={onNavigateToLedger}
+          />
+          <InvestmentPlanExceptionCard allocation={investmentAllocation} onNavigate={onNavigate} />
+          <VaultRetentionNotice review={retentionReview} onOpenVault={() => onNavigate('documents')} />
+        </div>
+      </section>
 
-      <VaultRetentionNotice review={retentionReview} onOpenVault={() => onNavigate('documents')} />
+      <div className="grid gap-8 @4xl:grid-cols-12 @4xl:gap-6">
+        <div data-testid="today-plan-grid" className={hasSideColumn ? '@4xl:col-span-8' : '@4xl:col-span-12'}>
+          <PlanSnapshot
+            currency={currency}
+            hideSensitive={hideSensitive}
+            cycle={cycleProgress}
+            challenge={challenge}
+            essentials={view.essentialsMetric}
+            stability={view.stabilityMetric}
+            insights={view.todayPlanInsights}
+            recurring={view.activeRecurring}
+            scoreChip={(
+              <EssentialsChallengeCard
+                challenge={challenge}
+                cycle={cycleProgress}
+                formatSensitive={view.formatSensitive}
+                onReviewEssentials={onNavigateToLedger ? () => onNavigateToLedger({ category: 'Essentials', txType: 'outflow' }) : undefined}
+              />
+            )}
+            onOpenLedger={onNavigateToLedger}
+            onOpenBills={() => onNavigate('recurring')}
+            onOpenReports={() => onNavigate('reports')}
+          />
+        </div>
 
-      <InvestmentPlanExceptionCard allocation={investmentAllocation} onNavigate={onNavigate} />
-
-      <CategoryWatchExceptionCard
-        items={view.categoryLimitProgress}
-        formatSensitive={view.formatSensitive}
-        onOpenCategoryLimits={category => (onNavigateToCategoryLimits ? onNavigateToCategoryLimits(category) : onNavigate('reports'))}
-      />
-
-      <StabilityRecoveryExceptionCard
-        recovery={dashboardData?.stabilityRecovery}
-        formatSensitive={view.formatSensitive}
-        isMasked={hideSensitive}
-        onNavigateToLedger={onNavigateToLedger}
-      />
-
-      <RecurringAccountShortfallCard
-        shortfalls={view.recurringAccountShortfalls}
-        formatSensitive={view.formatSensitive}
-        onTransferMoney={onNavigateToTransfer}
-        onNavigateToRecurring={onNavigateToRecurring ?? (() => onNavigate?.('recurring'))}
-      />
-
-      {/* Today-focused metric cards: cycle progress, safe-to-spend, and the active wish goal */}
-      <TodayFocusCards
-        selectedMonth={view.activeSettings.selectedMonth}
-        selectedYear={view.activeSettings.selectedYear}
-        cycleDay={view.activeSettings.cycleDay}
-        wishlistGoal={view.wishlistGoal}
-        hideSensitive={hideSensitive}
-        formatCurrency={view.formatCurrency}
-        formatSensitive={view.formatSensitive}
-        onNavigate={onNavigate}
-      />
-
-      <div data-testid="today-plan-grid">
-        <section aria-labelledby="plan-snapshot-heading" className={cn(panelClass, 'flex flex-col p-5')}>
-          <div className="flex items-start justify-between gap-4">
-            <h3 id="plan-snapshot-heading" className="text-section text-foreground">Plan snapshot</h3>
-            <EssentialsChallengeCard
-              challenge={challenge}
-              cycle={cycleProgress}
-              formatSensitive={view.formatSensitive}
-              onReviewEssentials={onNavigateToLedger ? () => onNavigateToLedger({ category: 'Essentials', txType: 'outflow' }) : undefined}
+        {hasSideColumn && (
+          <div className="grid content-start items-start gap-6 @2xl:grid-cols-2 @4xl:col-span-4 @4xl:grid-cols-1 @4xl:pt-14">
+            {view.wishlistGoal && (
+              <RewardGoalCard
+                goal={view.wishlistGoal}
+                currency={currency}
+                hideSensitive={hideSensitive}
+                onOpen={() => onNavigate('wishlist')}
+              />
+            )}
+            <UpcomingBills
+              payments={view.activeRecurring}
+              currency={currency}
+              hideSensitive={hideSensitive}
+              onOpenBill={openBill}
+              onOpenAll={() => onNavigate('recurring')}
             />
           </div>
-          <div className="mt-5 grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2">
-            <InteractiveCard onClick={() => onNavigateToLedger?.({ category: 'Essentials' })} className="rounded-xl border-border/50 bg-muted/25 p-4">
-              <span className="text-xs font-semibold text-muted-foreground">Essentials remaining</span>
-              <span className="mt-1 block text-xl font-black text-foreground">{view.formatSensitive(view.essentialsMetric.projectedRemaining)}</span>
-              <span className="mt-1 block text-xs text-muted-foreground">After pending bills</span>
-            </InteractiveCard>
-            <InteractiveCard onClick={() => onNavigateToLedger?.({ category: 'Stability', showAllCycles: true })} className="rounded-xl border-border/50 bg-muted/25 p-4">
-              <span className="text-xs font-semibold text-muted-foreground">Emergency fund progress</span>
-              <span className="mt-1 block text-xl font-black text-foreground">{(view.stabilityMetric.projectedPct * 100).toFixed(0)}%</span>
-              <span className="mt-1 block text-xs text-muted-foreground">{view.formatSensitive(view.stabilityMetric.projectedBalance)} saved</span>
-            </InteractiveCard>
-            <div className="rounded-xl border border-border/50 bg-muted/25 p-4">
-              <span className="text-xs font-semibold text-muted-foreground">{hasEndedCycle ? 'Essentials left' : 'Daily spending room'}</span>
-              <span className="mt-1 block text-xl font-black text-foreground">
-                {view.formatSensitive(hasEndedCycle ? Math.max(0, view.essentialsMetric.projectedRemaining) : dailySpendingRoom)}
-                {!hasEndedCycle && <span className="text-sm font-bold text-muted-foreground">/day</span>}
-              </span>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {hasEndedCycle
-                  ? 'This selected cycle has ended.'
-                  : `Based on ${spendDays} day${spendDays === 1 ? '' : 's'} of Essentials remaining.`}
-              </span>
-            </div>
-
-            <InteractiveCard
-              onClick={() => onNavigate('recurring')}
-              disabled={view.todayPlanInsights.unpaidRecurringCount === 0}
-              className="rounded-xl border-border/50 bg-muted/25 p-4 disabled:cursor-default"
-            >
-              <span className="text-xs font-semibold text-muted-foreground">Unpaid recurring bills</span>
-              <span className="mt-1 block text-xl font-black text-foreground">
-                {view.formatSensitive(view.todayPlanInsights.unpaidRecurringTotal)}
-              </span>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {view.todayPlanInsights.unpaidRecurringCount === 0
-                  ? 'No bills are awaiting payment.'
-                  : `${view.todayPlanInsights.unpaidRecurringCount} bill${view.todayPlanInsights.unpaidRecurringCount === 1 ? '' : 's'} pending.`}
-              </span>
-            </InteractiveCard>
-
-            <InteractiveCard
-              onClick={() => onNavigateToLedger?.({ category: 'Essentials', txType: 'outflow' })}
-              className="rounded-xl border-border/50 bg-muted/25 p-4"
-            >
-              <span className="text-xs font-semibold text-muted-foreground">Essentials spending pace</span>
-              <span className="mt-1 block text-xl font-black text-foreground">
-                {view.formatSensitive(currentDailyPace)}
-                <span className="text-sm font-bold text-muted-foreground">/day</span>
-              </span>
-              <span className={`mt-1 block text-xs ${!hasEndedCycle && paceDifference > 0.05 ? 'font-semibold text-amber-500' : 'text-muted-foreground'}`}>
-                {hasEndedCycle
-                  ? 'Non-recurring Essentials daily average.'
-                  : paceDifference > 0.05
-                    ? dailySpendingRoom <= 0
-                      ? 'No daily Essentials allowance remains.'
-                      : `${Math.round(paceDifference * 100)}% faster than your remaining daily allowance.`
-                    : 'Within your remaining daily allowance.'}
-              </span>
-            </InteractiveCard>
-
-            <InteractiveCard
-              onClick={() => onNavigateToLedger?.({ category: 'Essentials' })}
-              className={`rounded-xl p-4 ${view.todayPlanInsights.projectedEssentialsEndingBalance < 0 ? 'border-orange-500/30 bg-orange-500/5' : 'border-border/50 bg-muted/25'}`}
-            >
-              <span className="text-xs font-semibold text-muted-foreground">{hasEndedCycle ? 'Cycle-end Essentials' : 'Projected cycle finish'}</span>
-              <span className={`mt-1 block text-xl font-black ${view.todayPlanInsights.projectedEssentialsEndingBalance < 0 ? 'text-orange-500' : 'text-foreground'}`}>
-                {view.formatSensitive(view.todayPlanInsights.projectedEssentialsEndingBalance)}
-              </span>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {hasEndedCycle ? 'Actual Essentials balance at close.' : 'After unpaid bills and the current pace.'}
-              </span>
-            </InteractiveCard>
-          </div>
-          <div className="mt-4 flex justify-end">
-            <Button variant="tertiary" onClick={() => onNavigate('reports')}>
-              <BarChart3 className="size-4" /> View full reports
-            </Button>
-          </div>
-        </section>
+        )}
       </div>
     </div>
   )
+}
+
+/** "Jul 28th ~ Aug 27th, 2026" → "Jul 28 – Aug 27, 2026": the ordinals and tilde are the API's. */
+function formatCycleRange(label: string): string {
+  return label.replace(/(\d+)(st|nd|rd|th)\b/g, '$1').replace(/\s*~\s*/, ' – ')
 }

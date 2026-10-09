@@ -6,7 +6,6 @@ import {
   PlainHeaderSkeleton,
   SettingsHeaderSkeleton,
   ReportsHeaderSkeleton,
-  DashboardHeaderSkeleton,
   WishlistHeaderSkeleton,
   RewardsPoolSkeleton,
   RecurringHeaderSkeleton,
@@ -114,18 +113,28 @@ const PanelSkeleton = ({ height = 'h-40' }: { height?: string }) => (
 
 export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: boolean }> = ({ variant, fullPage = false }) => {
   if (variant === 'dashboard') {
+    // Mirrors Today's layout -- title, hero, plan tiles beside the reward and bills column -- so
+    // the page settles into place rather than reflowing when the data lands.
     return (
-      <div data-testid="dashboard-skeleton" className="space-y-6">
-        <DashboardHeaderSkeleton />
-        <div className={`${panelClass} flex items-center gap-3 p-5`}><Skeleton className="size-10 rounded-xl" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-36" /><Skeleton className="h-3 w-2/3" /></div><Skeleton className="hidden h-9 w-28 rounded-xl sm:block" /></div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <CardSkeleton />
-          <CardSkeleton />
+      <div data-testid="dashboard-skeleton" className="@container space-y-8">
+        <div className="space-y-2.5 pt-1"><Skeleton className="h-8 w-32" /><Skeleton className="h-4 w-60 max-w-full" /></div>
+        <div className={cn(panelClass, 'flex flex-col gap-6 p-5 sm:p-7 @xl:flex-row @xl:items-end @xl:justify-between')}>
+          <div className="space-y-3"><Skeleton className="h-4 w-28" /><Skeleton className="h-11 w-64 max-w-full @3xl:h-14 @3xl:w-80" /></div>
+          <div className="flex items-center gap-4"><Skeleton className="size-16 rounded-full" /><div className="space-y-2"><Skeleton className="h-3.5 w-24" /><Skeleton className="h-4 w-28" /><Skeleton className="h-3 w-40" /></div></div>
         </div>
-        <div className={`${panelClass} space-y-5 p-5`}>
-          <div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-3 w-72 max-w-full" /></div>
-          <CompactMetricGridSkeleton count={6} />
-          <div className="flex justify-end"><Skeleton className="h-8 w-32 rounded-lg" /></div>
+        <div className="grid gap-8 @4xl:grid-cols-12 @4xl:gap-6">
+          <div className="space-y-3 @4xl:col-span-8">
+            <Skeleton className="h-5 w-32" />
+            <div className="grid gap-3 @lg:grid-cols-2">
+              {Array.from({ length: 6 }, (_, index) => (
+                <div key={index} className={cn(panelClass, 'space-y-2.5 p-5')}><Skeleton className="h-3.5 w-32" /><Skeleton className="h-6 w-36" /><Skeleton className="h-3 w-44 max-w-full" /></div>
+              ))}
+            </div>
+          </div>
+          <div className="grid content-start gap-6 @2xl:grid-cols-2 @4xl:col-span-4 @4xl:grid-cols-1 @4xl:pt-14">
+            <CardSkeleton />
+            <PanelSkeleton height="h-48" />
+          </div>
         </div>
       </div>
     )

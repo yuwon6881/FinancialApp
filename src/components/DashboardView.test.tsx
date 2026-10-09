@@ -72,6 +72,10 @@ const wishlist: WishlistItem[] = [
   { id: 1, name: 'Camera', price: 300, priority: 'High', isPurchased: false, createdAt: '2026-07-01T00:00:00Z', isActive: true },
 ]
 
+/** Amounts are set as marker, units and fraction spans; match on the whole figure. */
+const amount = (text: string) => (_content: string, element: Element | null) =>
+  Boolean(element?.classList.contains('amount-text') && element.textContent === text)
+
 const makeProps = (overrides: Partial<React.ComponentProps<typeof DashboardView>> = {}) => ({
   dashboardData,
   onNavigate: vi.fn(),
@@ -101,7 +105,7 @@ describe('DashboardView focused Today experience', () => {
 
     expect(screen.getByText('Today')).toBeTruthy()
     expect(screen.getByText('Available now')).toBeTruthy()
-    expect(screen.getByText('$4,456.00')).toBeTruthy()
+    expect(screen.getByText(amount('$4,456.00'))).toBeTruthy()
     expect(screen.getByText('2 bills need review')).toBeTruthy()
     expect(screen.getByText('Plan snapshot')).toBeTruthy()
     expect(screen.getByText('Essentials remaining')).toBeTruthy()
@@ -184,13 +188,13 @@ describe('DashboardView focused Today experience', () => {
 
   it('renders the today focus cards and the focused reward', () => {
     render(<DashboardView {...makeProps()} />)
-    expect(screen.getByText('$4,456.00')).toBeTruthy()
+    expect(screen.getByText(amount('$4,456.00'))).toBeTruthy()
     expect(screen.getByText('Cycle progress')).toBeTruthy()
     expect(screen.getByText('Reward: Camera')).toBeTruthy()
     expect(screen.getByText('40%')).toBeTruthy()
     // Cycle inflow/outflow moved to the Reports tab.
     expect(screen.queryByText('Cycle Inflow')).toBeNull()
-    expect(screen.queryByText('$3,210.55')).toBeNull()
+    expect(screen.queryByText(amount('$3,210.55'))).toBeNull()
   })
 
   it('shows Today rewards after active commitments and pending Rewards bills', () => {
@@ -224,7 +228,7 @@ describe('DashboardView focused Today experience', () => {
 
     // 600 balance - 300 earmarked - 80 pending bill = 220 free; 220/300 rounds to 73%.
     expect(screen.getByText('73%')).toBeTruthy()
-    expect(screen.getByText('$220.00')).toBeTruthy()
+    expect(screen.getByText(amount('$220.00'))).toBeTruthy()
   })
 
   it('shows the next cycle start and keeps daily spending room in the plan snapshot', () => {
@@ -296,8 +300,8 @@ describe('DashboardView focused Today experience', () => {
 
   it('masks amounts in sensitive mode', () => {
     render(<DashboardView {...makeProps({ hideSensitive: true })} />)
-    expect(screen.queryByText('$1,234.56')).toBeNull()
-    expect(screen.queryByText('$3,210.55')).toBeNull()
+    expect(screen.queryByText(amount('$1,234.56'))).toBeNull()
+    expect(screen.queryByText(amount('$3,210.55'))).toBeNull()
     expect(screen.getAllByText(SENSITIVE_AMOUNT_MASK).length).toBeGreaterThan(2)
   })
   it('toggles device-only balance visibility', () => {
@@ -310,10 +314,11 @@ describe('DashboardView focused Today experience', () => {
   it('hides the total wallet amount only when balance hiding is toggled on', () => {
     render(<DashboardView {...makeProps({ hideBalanceAmounts: true, hideSensitive: false })} />)
     // The total wallet balance ($4,456.00) should be hidden
-    expect(screen.queryByText('$4,456.00')).toBeNull()
+    expect(screen.queryByText(amount('$4,456.00'))).toBeNull()
     // Other metrics on screen should remain visible
-    expect(screen.getByText('$1,185.00')).toBeDefined()
-    expect(screen.getByText('$15.00')).toBeDefined()
+    expect(screen.getByText(amount('$1,185.00'))).toBeDefined()
+    // The unpaid total and the bill's own row both name it.
+    expect(screen.getAllByText(amount('$15.00')).length).toBe(2)
     // Only 1 masked amount (the total wallet balance)
     expect(screen.getAllByText(SENSITIVE_AMOUNT_MASK).length).toBe(1)
   })

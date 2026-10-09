@@ -42,15 +42,6 @@ export const ReportsHeaderSkeleton: React.FC = () => (
   </div>
 )
 
-export const DashboardHeaderSkeleton: React.FC = () => (
-  <div className={`${panelClass} overflow-hidden`}>
-    <div className="grid gap-5 rounded-2xl bg-linear-to-br from-blue-500/10 via-transparent to-teal-500/10 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,25rem)] lg:items-center">
-      <div className="flex items-center gap-3"><Skeleton className="size-11 rounded-xl" /><div className="space-y-2"><Skeleton className="h-6 w-32" /><Skeleton className="h-3 w-48" /></div></div>
-      <div className="min-w-0 w-full space-y-3 rounded-2xl border border-border/60 bg-background/65 p-4"><Skeleton className="h-3 w-28" /><Skeleton className="h-7 w-36" /><Skeleton className="h-3 w-40" /></div>
-    </div>
-  </div>
-)
-
 export const WishlistHeaderSkeleton: React.FC = () => (
   <div data-testid="wishlist-header-skeleton" className={`${panelClass} flex items-center justify-between gap-3 p-4 sm:p-5`}>
     <div className="min-w-0 space-y-2">
