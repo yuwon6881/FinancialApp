@@ -1,15 +1,13 @@
 import React from 'react'
-import { CheckCircle2, Edit2, Minus, Plus, Trash2 } from 'lucide-react'
+import { CheckCircle2, ChevronDown, Edit2, Minus, Plus, Trash2 } from 'lucide-react'
 import type { SavingsGoal } from '../../types'
 import type { GoalPace, GoalPaceStatus } from '../../lib/savingsGoals'
 import { MONTH_NAMES } from '../../lib/cycle'
 import { parseGoalDate } from '../../lib/savingsGoals'
-import { useDetailDisclosure } from '../../lib/useDetailDisclosure'
+import { cn } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
-import { Card } from '../ui/Card'
-import { DetailDisclosure } from '../ui/DetailDisclosure'
-import { Meter } from '../ui/Meter'
+import { ProgressRing } from '../ui/ProgressRing'
 import { OverflowMenu } from '../ui/OverflowMenu'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { getCategoryChartColor } from '../../lib/categoryColors'
@@ -23,11 +21,6 @@ interface SavingsGoalCardProps {
   hideSensitive: boolean
   isSyncing: boolean
   isDeleting: boolean
-  /**
-   * Set when the card is the only thing in its row and so is rendered outside the rail. The peek-cut
-   * `80vw` is a scroll affordance, and with nothing to scroll to it reads as a clipped card instead.
-   */
-  fullWidth?: boolean
   /** DOM id the shared highlight helper scrolls to when search jumps to this commitment. */
   elementId?: string
   onEdit: (goal: SavingsGoal) => void
@@ -39,11 +32,11 @@ interface SavingsGoalCardProps {
 
 // Pace, not percent, is the signal. 3% of a six-year house fund is fine; 33% of a three-month car
 // service is a problem — a percentage alone cannot tell those apart.
-const STATUS: Record<GoalPaceStatus, { label: string; dot: string; text: string; bar: string }> = {
-  funded: { label: 'Ready', dot: 'bg-emerald-500', text: 'text-emerald-700 dark:text-emerald-300', bar: 'bg-emerald-500' },
-  onPace: { label: 'On pace', dot: 'bg-emerald-500', text: 'text-muted-foreground', bar: 'bg-pink-500' },
-  needsFunding: { label: 'Needs funding', dot: 'bg-amber-500', text: 'text-muted-foreground', bar: 'bg-pink-500' },
-  overdue: { label: 'Overdue', dot: 'bg-destructive', text: 'text-destructive', bar: 'bg-destructive' },
+const STATUS: Record<GoalPaceStatus, { label: string; text: string; ring?: string }> = {
+  funded: { label: 'Ready', text: 'text-emerald-700 dark:text-emerald-300', ring: 'var(--color-emerald-500)' },
+  onPace: { label: 'On pace', text: 'text-muted-foreground' },
+  needsFunding: { label: 'Needs funding', text: 'text-muted-foreground' },
+  overdue: { label: 'Overdue', text: 'text-destructive', ring: 'var(--destructive)' },
 }
 
 function formatDeadline(targetDate: string): string {
@@ -60,6 +53,11 @@ function describeHorizon(pace: GoalPace): string {
   return `${years.toFixed(years < 10 ? 1 : 0)} years left`
 }
 
+/**
+ * One commitment as a row of the commitments list: a ring for how much is set aside, the name and
+ * its deadline, what this cycle still needs, and the saved / target figures. The money actions sit
+ * on the row; the pacing figures fold away under Details.
+ */
 export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
   goal,
   pace,
@@ -68,7 +66,6 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
   hideSensitive,
   isSyncing,
   isDeleting,
-  fullWidth = false,
   elementId,
   onEdit,
   onDelete,
@@ -81,173 +78,164 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
     : 0
   const style = STATUS[status]
   const fundingBucket = goal.fundingBucket ?? 'Rewards'
-  const bucketColor = getCategoryChartColor(fundingBucket)
-  // Overfunding a goal by hand fills the meter rather than overflowing it.
+  // Overfunding a goal by hand fills the ring rather than overflowing it.
   const cycleTarget = Math.max(pace.requiredPerCycle, pace.fundedThisCycle)
   const cyclePct = cycleTarget > 0 ? Math.min(100, (pace.fundedThisCycle / cycleTarget) * 100) : 100
   const cycleDone = pace.outstandingThisCycle <= 0
   const isBusy = isSyncing || isDeleting || goal.isPendingSync === true
-  const detail = useDetailDisclosure()
+  const [showDetails, setShowDetails] = React.useState(false)
+  const detailsId = React.useId()
 
   return (
-    <Card
-      id={elementId}
-      className={`flex flex-col gap-3.5 p-5 transition-colors duration-300 ${
-        fullWidth ? 'w-full lg:max-w-xl' : 'w-[calc(100vw-3.5rem)] shrink-0 snap-start sm:w-full sm:min-w-0'
-      } ${status === 'overdue' ? 'border-destructive/40' : 'border-border/70'}`}
-    >
-      <div className="min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className={`size-2 rounded-full shrink-0 ${style.dot}`} aria-hidden />
-          <h4 className="min-w-0 flex-1 truncate text-subsection text-foreground">{goal.name}</h4>
-          <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={goal.isPendingSync} entityLabel="goal" />
-        </div>
-        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-label text-muted-foreground">
-          <LedgerAllocationBadge ledgerCategory={fundingBucket} transactionId={String(goal.id)} />
-          <span aria-hidden="true">·</span>
-          <span>{formatDeadline(goal.targetDate)}</span>
-        </p>
-      </div>
+    <li id={elementId} className={cn('px-4 py-4 transition-colors duration-300 sm:px-5', status === 'overdue' && 'bg-destructive/4')}>
+      <div className="flex items-start gap-3.5">
+        <ProgressRing
+          percent={pct}
+          size={52}
+          thickness={5}
+          color={style.ring ?? getCategoryChartColor(fundingBucket)}
+          label={`${pct.toFixed(0)}% of this commitment set aside`}
+        >
+          <span className="text-caption font-semibold tabular-nums text-foreground">{pct.toFixed(0)}%</span>
+        </ProgressRing>
 
-      {/* One headline: saved against target, with the percentage that was already computed here and
-          never shown. */}
-      <div>
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="text-title text-foreground tabular-nums">{formatSensitive(goal.earmarkedAmount)}</span>
-          <span className="text-label text-muted-foreground tabular-nums">
-            of {formatSensitive(goal.targetAmount)}
-          </span>
-        </div>
-        <div className="mt-1.5 flex items-center gap-2">
-          <Meter
-            percent={pct}
-            label={`${pct.toFixed(0)}% of this commitment set aside`}
-            tone={style.bar}
-            color={status === 'onPace' || status === 'needsFunding' ? bucketColor : undefined}
-          />
-          <span className="shrink-0 text-label font-medium tabular-nums text-muted-foreground">{pct.toFixed(0)}%</span>
-        </div>
-      </div>
-
-      {/* One status line. The per-cycle figures behind it used to sit in an always-open inset that
-          repeated what the Rewards pool panel and its Committed tile already said — with a single
-          commitment the same number appeared three times on one screen. */}
-      <p className={`text-label font-medium ${pace.isFunded || cycleDone ? 'text-emerald-700 dark:text-emerald-300' : style.text}`}>
-        {pace.isFunded ? (
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Ready to use
-          </span>
-        ) : cycleDone ? (
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Done for this cycle
-          </span>
-        ) : (
-          <><span className="font-semibold text-foreground tabular-nums">{formatSensitive(pace.outstandingThisCycle)}</span> still to set aside this cycle</>
-        )}
-      </p>
-
-      <DetailDisclosure
-        label="Details"
-        open={detail.isOpen}
-        onOpenChange={detail.setOpen}
-        expandedFrom="lg"
-      >
-        {/* Label and figure on one line per row, stacked on compact. Two columns inside a
-            phone-width card left each pair about 130px, which wrapped "Still to save" and "Every 3
-            months" into stacks of single words; the card is wide enough for label and figure side
-            by side once the row owns the whole line. */}
-        <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-label sm:grid-cols-2">
-          <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="text-muted-foreground">Per cycle</dt>
-            <dd className="font-medium text-foreground tabular-nums">{formatSensitive(pace.requiredPerCycle)}</dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="text-muted-foreground">Time left</dt>
-            <dd className="font-medium text-foreground tabular-nums">{describeHorizon(pace)}</dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="text-muted-foreground">Still to save</dt>
-            <dd className="font-medium text-foreground tabular-nums">{formatSensitive(pace.remaining)}</dd>
-          </div>
-          {goal.isRecurring && (
-            <div className="flex items-baseline justify-between gap-2 sm:block">
-              <dt className="text-muted-foreground">Repeats</dt>
-              <dd className="font-medium text-foreground tabular-nums">Every {goal.recurrenceMonths} months</dd>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h4 className="flex min-w-0 items-center gap-1.5 text-body font-medium text-foreground">
+                <span className="truncate">{goal.name}</span>
+                <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={goal.isPendingSync} entityLabel="goal" />
+              </h4>
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-caption text-muted-foreground">
+                <LedgerAllocationBadge ledgerCategory={fundingBucket} transactionId={String(goal.id)} />
+                <span aria-hidden="true">·</span>
+                <span>by {formatDeadline(goal.targetDate)}</span>
+                {status === 'overdue' && <span className="font-medium text-destructive">· {style.label}</span>}
+              </p>
             </div>
-          )}
-          {/* Figures, not a second bar. The headline bar above already draws this commitment's
-              progress; a thin track under it for the cycle's own share made every card carry two
-              bars, and a page of commitments read as a stack of tracks with no hierarchy. */}
-          <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="text-muted-foreground">This cycle</dt>
-            <dd className={`text-right font-medium tabular-nums sm:text-left ${cycleDone ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground'}`}>
-              {formatSensitive(pace.fundedThisCycle)}
-              <span className="font-normal text-muted-foreground"> of {formatSensitive(pace.requiredPerCycle)} · {cyclePct.toFixed(0)}%</span>
-            </dd>
+            <div className="shrink-0 text-right">
+              <p className="text-body font-semibold text-foreground tabular-nums">{formatSensitive(goal.earmarkedAmount)}</p>
+              <p className="text-caption text-muted-foreground tabular-nums">of {formatSensitive(goal.targetAmount)}</p>
+            </div>
           </div>
-        </dl>
-      </DetailDisclosure>
 
-      <div className="mt-auto flex items-center gap-1.5 border-t border-border/60 pt-3">
-        <IconButton
-          variant="secondary"
-          className="shrink-0"
-          onClick={() => onTopUp(goal)}
-          disabled={isBusy || hideSensitive || pace.isFunded}
-          label={`Add money to ${goal.name}`}
-          tooltip={pace.isFunded ? 'This goal already has everything it needs' : `Move free ${fundingBucket.toLowerCase()} money into this goal`}
-        >
-          <Plus className="size-3.5" />
-        </IconButton>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="shrink-0"
-          onClick={() => onComplete(goal.id)}
-          disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
-          aria-label={goal.isRecurring ? `Complete this cycle for ${goal.name}` : `Mark ${goal.name} done`}
-          title={goal.earmarkedAmount <= 0
-            ? `Set aside some ${fundingBucket.toLowerCase()} money before marking this commitment done`
-            : goal.isRecurring
-              ? 'Spend the saved amount and roll the deadline forward'
-              : 'Spend the saved amount and mark this commitment done'}
-        >
-          <CheckCircle2 className="size-3.5 shrink-0" /> Done
-        </Button>
-        {/* One primary pair plus a menu, so releasing money and editing no longer have to replace
-            the money actions to fit at rail width. */}
-        <OverflowMenu
-          className="ml-auto"
-          entityLabel={goal.name}
-          disabled={isBusy}
-          items={[
-            {
-              label: 'Release money',
-              icon: Minus,
-              onSelect: () => onRelease(goal),
-              disabled: hideSensitive || goal.earmarkedAmount <= 0,
-              hint: hideSensitive
-                ? 'Unhide balances to release money'
-                : `Nothing is set aside in ${goal.name} yet`,
-            },
-            {
-              label: 'Edit',
-              icon: Edit2,
-              onSelect: () => onEdit(goal),
-              disabled: hideSensitive,
-              hint: 'Unhide balances to edit',
-            },
-            {
-              label: 'Delete',
-              icon: Trash2,
-              tone: 'danger',
-              onSelect: () => onDelete(goal.id),
-              disabled: hideSensitive,
-              hint: 'Unhide balances to delete',
-            },
-          ]}
-        />
+          {/* One status line. The per-cycle figures behind it fold away under Details, so the same
+              number is not said by the pool, its tiles and every row at once. */}
+          <p className={cn('mt-2 text-label font-medium', pace.isFunded || cycleDone ? 'text-emerald-700 dark:text-emerald-300' : style.text)}>
+            {pace.isFunded ? (
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Ready to use
+              </span>
+            ) : cycleDone ? (
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Done for this cycle
+              </span>
+            ) : (
+              <><span className="font-semibold text-foreground tabular-nums">{formatSensitive(pace.outstandingThisCycle)}</span> still to set aside this cycle</>
+            )}
+          </p>
+
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <IconButton
+              variant="secondary"
+              className="shrink-0"
+              onClick={() => onTopUp(goal)}
+              disabled={isBusy || hideSensitive || pace.isFunded}
+              label={`Add money to ${goal.name}`}
+              tooltip={pace.isFunded ? 'This goal already has everything it needs' : `Move free ${fundingBucket.toLowerCase()} money into this goal`}
+            >
+              <Plus className="size-3.5" />
+            </IconButton>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="shrink-0"
+              onClick={() => onComplete(goal.id)}
+              disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
+              aria-label={goal.isRecurring ? `Complete this cycle for ${goal.name}` : `Mark ${goal.name} done`}
+              title={goal.earmarkedAmount <= 0
+                ? `Set aside some ${fundingBucket.toLowerCase()} money before marking this commitment done`
+                : goal.isRecurring
+                  ? 'Spend the saved amount and roll the deadline forward'
+                  : 'Spend the saved amount and mark this commitment done'}
+            >
+              <CheckCircle2 className="size-3.5 shrink-0" /> Done
+            </Button>
+            <Button
+              variant="tertiary"
+              size="sm"
+              aria-expanded={showDetails}
+              aria-controls={detailsId}
+              onClick={() => setShowDetails(open => !open)}
+              className="gap-1 text-muted-foreground hover:text-foreground"
+            >
+              Details
+              <ChevronDown className={cn('size-3.5 transition-transform', showDetails && 'rotate-180')} aria-hidden="true" />
+            </Button>
+            <OverflowMenu
+              className="ml-auto"
+              entityLabel={goal.name}
+              disabled={isBusy}
+              items={[
+                {
+                  label: 'Release money',
+                  icon: Minus,
+                  onSelect: () => onRelease(goal),
+                  disabled: hideSensitive || goal.earmarkedAmount <= 0,
+                  hint: hideSensitive
+                    ? 'Unhide balances to release money'
+                    : `Nothing is set aside in ${goal.name} yet`,
+                },
+                {
+                  label: 'Edit',
+                  icon: Edit2,
+                  onSelect: () => onEdit(goal),
+                  disabled: hideSensitive,
+                  hint: 'Unhide balances to edit',
+                },
+                {
+                  label: 'Delete',
+                  icon: Trash2,
+                  tone: 'danger',
+                  onSelect: () => onDelete(goal.id),
+                  disabled: hideSensitive,
+                  hint: 'Unhide balances to delete',
+                },
+              ]}
+            />
+          </div>
+
+          {showDetails && (
+            <dl id={detailsId} className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 rounded-control bg-surface-2/70 p-3 text-label dark:bg-surface-3/70 sm:grid-cols-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <dt className="text-muted-foreground">Per cycle</dt>
+                <dd className="font-medium text-foreground tabular-nums">{formatSensitive(pace.requiredPerCycle)}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-2">
+                <dt className="text-muted-foreground">Time left</dt>
+                <dd className="font-medium text-foreground tabular-nums">{describeHorizon(pace)}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-2">
+                <dt className="text-muted-foreground">Still to save</dt>
+                <dd className="font-medium text-foreground tabular-nums">{formatSensitive(pace.remaining)}</dd>
+              </div>
+              {goal.isRecurring && (
+                <div className="flex items-baseline justify-between gap-2">
+                  <dt className="text-muted-foreground">Repeats</dt>
+                  <dd className="font-medium text-foreground tabular-nums">Every {goal.recurrenceMonths} months</dd>
+                </div>
+              )}
+              <div className="flex items-baseline justify-between gap-2">
+                <dt className="text-muted-foreground">This cycle</dt>
+                <dd className={cn('text-right font-medium tabular-nums', cycleDone ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground')}>
+                  {formatSensitive(pace.fundedThisCycle)}
+                  <span className="font-normal text-muted-foreground"> of {formatSensitive(pace.requiredPerCycle)} · {cyclePct.toFixed(0)}%</span>
+                </dd>
+              </div>
+            </dl>
+          )}
+        </div>
       </div>
-    </Card>
+    </li>
   )
 }

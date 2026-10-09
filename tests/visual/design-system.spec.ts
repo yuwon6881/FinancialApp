@@ -415,69 +415,7 @@ test('investment activity table explains fees and taxes beside the gross amount'
   await expect(page.getByText(/After charges/).last()).toBeVisible()
 })
 
-test('rewards rail responds to a desktop mouse wheel and releases page scrolling at its edge', async ({ page }) => {
-  test.skip(test.info().project.name.startsWith('mobile'), 'Touch projects use native horizontal swiping, not a mouse-wheel handoff.')
-
-  const rewardItems: WishlistItem[] = Array.from({ length: 5 }, (_, index) => ({
-    id: index + 1,
-    name: `Reward ${index + 1}`,
-    price: 100 + index * 25,
-    priority: index === 0 ? 'High' : 'Medium',
-    isPurchased: false,
-    createdAt: `2026-07-${String(index + 1).padStart(2, '0')}`,
-    isActive: index === 0,
-  }))
-
-  await establishSession(page)
-  await mockApi(page, { wishlist: rewardItems })
-  // The rail is a compact-tier affordance: medium and expanded lay the cards out as a grid.
-  // A narrow window on a fine pointer is the case this handoff actually has to serve.
-  await page.setViewportSize({ width: 390, height: 600 })
-  await page.goto('/commitments-rewards', { waitUntil: 'domcontentloaded' })
-  await page.getByRole('tab', { name: /^Rewards/ }).click()
-
-  const rail = page.getByRole('group', { name: 'Rewards' })
-  await expect(rail).toBeVisible()
-  const dimensions = await rail.evaluate(element => ({
-    clientWidth: element.clientWidth,
-    scrollWidth: element.scrollWidth,
-  }))
-  expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.clientWidth)
-
-  await rail.scrollIntoViewIfNeeded()
-  const box = await rail.boundingBox()
-  if (!box) throw new Error('Rewards rail did not have a layout box')
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-
-  await expect(rail).toHaveCSS('scroll-snap-type', 'none')
-  await page.mouse.wheel(0, 100)
-  await expect.poll(() => rail.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
-  await rail.evaluate(element => { element.scrollLeft = element.scrollWidth })
-
-  const EDGE_HANDOFF_HEADROOM = 120
-  await page.evaluate(headroom => {
-    window.scrollTo(0, Math.max(0, document.documentElement.scrollHeight - window.innerHeight - headroom))
-  }, EDGE_HANDOFF_HEADROOM)
-
-  const edgeBox = await rail.boundingBox()
-  if (!edgeBox) throw new Error('Rewards rail did not have a layout box at the page edge')
-  const viewport = page.viewportSize()
-  if (!viewport) throw new Error('Viewport size was unavailable')
-  const hoverY = Math.min(edgeBox.y + edgeBox.height / 2, viewport.height - 4)
-  expect(hoverY, 'the hover point must sit inside the rail').toBeGreaterThan(edgeBox.y)
-  await page.mouse.move(edgeBox.x + edgeBox.width / 2, hoverY)
-
-  const pageOffsetBeforeEdgeWheel = await page.evaluate(() => window.scrollY)
-  const remainingPageScroll = await page.evaluate(
-    () => document.documentElement.scrollHeight - window.innerHeight - window.scrollY,
-  )
-  expect(remainingPageScroll, 'the page needs somewhere to scroll for the handoff to be observable').toBeGreaterThan(0)
-
-  await page.mouse.wheel(0, 240)
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(pageOffsetBeforeEdgeWheel)
-})
-
-test('global search reveals and horizontally centers far commitment and reward cards', async ({ page }) => {
+test('global search reveals far commitment and reward cards in place', async ({ page }) => {
   const rewardItems: WishlistItem[] = Array.from({ length: 5 }, (_, index) => ({
     id: index + 1,
     name: `Search Reward ${index + 1}`,
@@ -504,7 +442,7 @@ test('global search reveals and horizontally centers far commitment and reward c
 
   await establishSession(page)
   await mockApi(page, { wishlist: rewardItems, savingsGoals: goals })
-  // Horizontal centering is a compact-tier behaviour; above it the cards are a grid.
+  // Checked on a phone, where the page is longest and the targets start furthest off-screen.
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
   await openGlobalSearch(page)
@@ -514,12 +452,9 @@ test('global search reveals and horizontally centers far commitment and reward c
   await expect(page).toHaveURL(/\/plan\/goals\?.*commitment=5/)
   const commitment = page.locator('#commitment-card-5')
   await expect(commitment).toHaveClass(/search-target-highlight/)
-  const commitmentsRail = page.getByRole('group', { name: 'Commitments' })
-  await expect.poll(() => commitmentsRail.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
-  expect(await commitment.evaluate(element => {
-    const targetRect = element.getBoundingClientRect()
-    const railRect = element.closest('.horizontal-rail')!.getBoundingClientRect()
-    return targetRect.left >= railRect.left - 1 && targetRect.right <= railRect.right + 1
+  await expect.poll(() => commitment.evaluate(element => {
+    const rect = element.getBoundingClientRect()
+    return rect.top >= 0 && rect.top < window.innerHeight
   })).toBe(true)
 
   await openGlobalSearch(page)
@@ -529,17 +464,10 @@ test('global search reveals and horizontally centers far commitment and reward c
   await expect(page).toHaveURL(/\/plan\/goals\?.*reward=5/)
   const target = page.locator('#reward-card-5')
   await expect(target).toHaveClass(/search-target-highlight/)
-  const rail = page.getByRole('group', { name: 'Rewards' })
-  await expect.poll(() => rail.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
-  const visibility = await target.evaluate(element => {
-    const targetRect = element.getBoundingClientRect()
-    const railRect = element.closest('.horizontal-rail')!.getBoundingClientRect()
-    return {
-      left: targetRect.left >= railRect.left - 1,
-      right: targetRect.right <= railRect.right + 1,
-    }
-  })
-  expect(visibility).toEqual({ left: true, right: true })
+  await expect.poll(() => target.evaluate(element => {
+    const rect = element.getBoundingClientRect()
+    return rect.top >= 0 && rect.top < window.innerHeight
+  })).toBe(true)
 })
 
 test('global search uses the shared highlight on the responsive Ledger row', async ({ page }) => {

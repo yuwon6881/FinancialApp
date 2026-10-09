@@ -101,33 +101,36 @@ export const CarryoverLedgerSkeleton: React.FC = () => (
   </div>
 )
 
-export const HorizontalRailSkeleton: React.FC<{ kind: 'commitments' | 'rewards'; cards?: number }> = ({ kind, cards = 3 }) => (
-  <section className={cn(panelFromMediumClass, 'space-y-3 sm:shadow-xs')}>
+/** Commitments as a list of progress rows; rewards as a grid of tiles. */
+export const GoalsSectionSkeleton: React.FC<{ kind: 'commitments' | 'rewards'; items?: number }> = ({ kind, items = 3 }) => (
+  <section className="space-y-3">
     <div className="flex items-center justify-between gap-3 px-1">
       <div className="space-y-1.5"><Skeleton className="h-4 w-28" /><Skeleton className="h-2.5 w-64 max-w-full" /></div>
-      <Skeleton className="h-8 w-24 rounded-lg" />
+      <Skeleton className="h-9 w-24 rounded-full" />
     </div>
-    <div className="group/horizontal-rail relative min-w-0">
-      <div className="horizontal-rail no-scrollbar flex w-full min-w-0 gap-3 overflow-hidden pb-1">
-      {Array.from({ length: cards }, (_, i) => (
-        <div key={i} className="snap-start flex w-[calc(100vw-3.5rem)] shrink-0 flex-col gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-xs sm:w-[22rem]">
-          <div className="space-y-1.5"><Skeleton className="h-4 w-32" /><Skeleton className="h-2.5 w-28" /></div>
-          <div className="space-y-2"><div className="flex justify-between"><Skeleton className="h-5 w-24" /><Skeleton className="h-3 w-20" /></div><Skeleton className="h-1.5 w-full rounded-full" /></div>
-          {/* One status line plus a collapsed detail summary, for both card kinds. */}
-          <Skeleton className="h-3 w-36" />
-          <Skeleton className="h-9 w-full rounded-lg" />
-          <div className="mt-auto flex items-center gap-1.5 border-t border-border/30 pt-3">
-            {kind === 'commitments'
-              ? <><Skeleton className="size-8 rounded-lg" /><Skeleton className="h-8 w-16 rounded-lg" /></>
-              : <Skeleton className="h-8 w-20 rounded-lg" />}
-            <Skeleton className="ml-auto size-8 rounded-lg" />
+    {kind === 'commitments' ? (
+      <div className={cn(panelClass, 'divide-y divide-border/60 p-0')}>
+        {Array.from({ length: items }, (_, i) => (
+          <div key={i} className="flex items-start gap-3.5 px-4 py-4 sm:px-5">
+            <Skeleton className="size-[3.25rem] shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-40" /><Skeleton className="h-9 w-40 rounded-full" /></div>
+            <Skeleton className="h-4 w-16" />
           </div>
-        </div>
-      ))}
+        ))}
       </div>
-      <Skeleton className="absolute left-2 top-1/2 size-8 -translate-y-1/2 rounded-full" />
-      <Skeleton className="absolute right-2 top-1/2 size-8 -translate-y-1/2 rounded-full" />
-    </div>
+    ) : (
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 2xl:grid-cols-4">
+        {Array.from({ length: items }, (_, i) => (
+          <div key={i} className="space-y-3 rounded-panel border border-border/60 bg-card p-4">
+            <Skeleton className="h-5 w-14 rounded-full" />
+            <Skeleton className="h-4 w-28 max-w-full" />
+            <Skeleton className="h-6 w-24 max-w-full" />
+            <Skeleton className="h-1.5 w-full rounded-full" />
+            <Skeleton className="h-9 w-full rounded-full" />
+          </div>
+        ))}
+      </div>
+    )}
   </section>
 )
 

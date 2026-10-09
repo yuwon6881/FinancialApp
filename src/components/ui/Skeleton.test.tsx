@@ -23,11 +23,11 @@ describe('CycleSkeleton', () => {
     expect(container.querySelectorAll('section')).toHaveLength(2)
   })
 
-  it('adds both horizontal rails for a full-page wishlist skeleton', () => {
+  it('adds the commitments list and the rewards grid for a full-page wishlist skeleton', () => {
     const { container } = render(<CycleSkeleton variant="wishlist" fullPage />)
 
     expect(screen.getByTestId('wishlist-header-skeleton')).toBeTruthy()
     expect(container.querySelectorAll('section')).toHaveLength(2)
-    expect(container.querySelectorAll('.app-panel')).toHaveLength(4)
+    expect(container.querySelectorAll('.app-panel')).toHaveLength(3)
   })
 })

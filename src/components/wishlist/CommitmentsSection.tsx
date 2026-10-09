@@ -5,10 +5,10 @@ import type { SavingsGoal } from '../../types'
 import type { GoalPoolSummary } from '../../lib/savingsGoals'
 import { getPaceStatus } from '../../lib/savingsGoals'
 import { Button } from '../ui/Button'
-import { HorizontalRail } from '../ui/HorizontalRail'
 import { InfoHint } from '../ui/InfoHint'
 import { SavingsGoalCard } from './SavingsGoalCard'
-import { useIsCompact } from '../../lib/breakpoints'
+import { cn } from '../../lib/utils'
+import { panelClass } from '../ui/panelStyles'
 import { DataTablePagination } from '../ui/DataTable'
 import { useClientPagination } from '../ui/useClientPagination'
 import { EmptyState } from '../ui/EmptyState'
@@ -30,16 +30,9 @@ interface CommitmentsSectionProps {
 }
 
 /**
- * The commitments row.
- *
- * A rail only when there is something to scroll to: one lone card in a rail is rendered at the
- * peek-cut `80vw` with no second card behind it, so the affordance that means "there is more this
- * way" reads as a card that simply does not fit the screen. Completed goals ride along as chips and
- * count toward that decision, since they occupy the same track.
- *
- * That lone card stops growing at `lg`: stretched to a desktop panel's full width its content —
- * a name, two short bars and a row of small buttons — sat in a field of empty space that read as
- * a broken layout rather than one goal, and the same card in a rail is only `22rem` wide.
+ * The commitments list: one panel of progress rows, the active commitments first and the finished
+ * ones after them as quiet one-line rows. A list reads the same at every width, where the old rail
+ * of tall cards hid most commitments off-screen on a phone and left a lone card floating on desktop.
  */
 export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
   pool,
@@ -55,9 +48,6 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
   onTopUp,
   onRelease,
 }) => {
-  const isCompact = useIsCompact()
-  const isSolo = pool.activeGoals.length + completedGoals.length === 1
-
   const goalCards = pool.activeGoals.map(goal => {
     const pace = pool.paces.get(goal.id)
     if (!pace) return null
@@ -72,7 +62,6 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
         hideSensitive={hideSensitive}
         isSyncing={isGoalSyncing(goal.id)}
         isDeleting={isGoalDeleting(goal.id)}
-        fullWidth={isSolo}
         onEdit={onEditGoal}
         onDelete={onDeleteGoal}
         onComplete={onCompleteGoal}
@@ -82,27 +71,18 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
     )
   })
 
-  // Completed goals ride along as compact chips rather than a second card below: they are history,
-  // but throwing them away entirely would lose the record.
+  // Finished commitments stay on the list as history, one quiet line each.
   const completedChips = completedGoals.map(goal => (
-    <div
-      key={goal.id}
-      id={`commitment-card-${goal.id}`}
-      className={`flex flex-col justify-center gap-1 rounded-panel border border-dashed border-border/70 p-4 ${
-        isSolo ? 'w-full lg:max-w-xl' : 'snap-start shrink-0 w-36 sm:w-40'
-      }`}
-    >
-      <span className="flex items-center gap-1.5 text-label font-medium text-emerald-700 dark:text-emerald-300">
-        <CheckCircle2 className="size-3 shrink-0" /> Done
+    <li key={goal.id} id={`commitment-card-${goal.id}`} className="flex items-center gap-3.5 px-4 py-3 sm:px-5">
+      <span className="grid size-[3.25rem] shrink-0 place-items-center">
+        <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400" aria-hidden />
       </span>
-      <span className="truncate text-body font-medium text-foreground">{goal.name}</span>
-      <span className="w-fit text-label text-muted-foreground">
-        {goal.fundingBucket ?? 'Rewards'}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-body font-medium text-foreground">{goal.name}</span>
+        <span className="block text-caption text-muted-foreground">Done · {goal.fundingBucket ?? 'Rewards'}</span>
       </span>
-      <span className="text-label text-muted-foreground">
-        {formatSensitive(goal.targetAmount)}
-      </span>
-    </div>
+      <span className="shrink-0 text-label text-muted-foreground tabular-nums">{formatSensitive(goal.targetAmount)}</span>
+    </li>
   ))
 
   const hasAny = pool.activeGoals.length > 0 || completedGoals.length > 0
@@ -146,16 +126,10 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
           title="No commitments yet. Add one to save a set amount each cycle."
           actions={<Button variant="secondary" size="sm" onClick={onAddGoal} disabled={hideSensitive}>Add commitment</Button>}
         />
-      ) : isSolo ? (
-        <div>{visibleCollection}</div>
-      ) : isCompact ? (
-        <HorizontalRail label="Commitments" showControls>
-          {visibleCollection}
-        </HorizontalRail>
       ) : (
-        <div className="grid min-w-0 gap-3 sm:grid-cols-2 min-[1280px]:grid-cols-3">
+        <ul className={cn(panelClass, 'divide-y divide-border/60 overflow-hidden p-0')}>
           {visibleCollection}
-        </div>
+        </ul>
       )}
       {collection.length > pagination.pageSize && (
         <DataTablePagination

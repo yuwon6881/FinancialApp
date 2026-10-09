@@ -3,9 +3,7 @@ import type { WishlistItem } from '../../types'
 import { Plus } from 'lucide-react'
 import { RewardIcon } from '../semanticIcons'
 import { Button } from '../ui/Button'
-import { HorizontalRail } from '../ui/HorizontalRail'
 import { RewardCard } from './RewardCard'
-import { useIsCompact } from '../../lib/breakpoints'
 import { DataTablePagination } from '../ui/DataTable'
 import { useClientPagination } from '../ui/useClientPagination'
 import { EmptyState } from '../ui/EmptyState'
@@ -30,7 +28,6 @@ interface RewardsSectionProps {
 }
 
 export function RewardsSection(props: RewardsSectionProps) {
-  const isCompact = useIsCompact()
   const activeIndex = props.activeItem ? props.items.findIndex(item => item.id === props.activeItem?.id) : -1
   const pagination = useClientPagination(props.items.length, 9, activeIndex)
   const visibleItems = props.items.slice(pagination.start, pagination.end)
@@ -49,6 +46,9 @@ export function RewardsSection(props: RewardsSectionProps) {
           </h3>
           <p className="mt-0.5 text-label text-muted-foreground">
             From your {props.formatSensitive(props.claimableBalance)} free rewards
+            {props.freeAfterGoalPace < props.claimableBalance && (
+              <> · {props.formatSensitive(props.freeAfterGoalPace)} after this cycle&rsquo;s commitments</>
+            )}
           </p>
         </div>
         <Button variant="secondary" size="sm" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3" onClick={props.onAdd} disabled={props.hideSensitive} title={props.hideSensitive ? 'Unhide balances to add a reward' : undefined} aria-label="Add reward">
@@ -56,8 +56,10 @@ export function RewardsSection(props: RewardsSectionProps) {
         </Button>
       </div>
 
-      {props.items.length > 0 && isCompact ? (
-        <HorizontalRail label="Rewards" showControls>
+      {props.items.length > 0 ? (
+        /* A wish grid: two tiles a row even on a phone, so several rewards can be compared at a
+           glance, where the old rail showed one card at a time. */
+        <div className="grid min-w-0 grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 2xl:grid-cols-4">
           {visibleItems.map(item => (
             <RewardCard
               key={item.id}
@@ -77,57 +79,6 @@ export function RewardsSection(props: RewardsSectionProps) {
               onFocus={props.onFocus}
               onEdit={props.onEdit}
               onDelete={props.onDelete}
-              fullWidth={visibleItems.length === 1}
-            />
-          ))}
-        </HorizontalRail>
-      ) : props.items.length === 1 ? (
-        <div>
-          {visibleItems.map(item => (
-            <RewardCard
-              key={item.id}
-              elementId={`reward-card-${item.id}`}
-              item={item}
-              isFocused={props.activeItem?.id === item.id}
-              timeline={props.activeItem?.id === item.id && props.claimableBalance < item.price
-                ? props.rewardTimeline(item.price)
-                : null}
-              claimableBalance={props.claimableBalance}
-              freeAfterGoalPace={props.freeAfterGoalPace}
-              formatSensitive={props.formatSensitive}
-              hideSensitive={props.hideSensitive}
-              isSyncing={props.isSyncing(item.id)}
-              isDeleting={props.isDeleting(item.id)}
-              onClaim={props.onClaim}
-              onFocus={props.onFocus}
-              onEdit={props.onEdit}
-              onDelete={props.onDelete}
-              fullWidth
-            />
-          ))}
-        </div>
-      ) : props.items.length > 0 ? (
-        <div className="grid min-w-0 gap-3 grid-cols-1 lg:grid-cols-2 min-[1280px]:grid-cols-3">
-          {visibleItems.map(item => (
-            <RewardCard
-              key={item.id}
-              elementId={`reward-card-${item.id}`}
-              item={item}
-              isFocused={props.activeItem?.id === item.id}
-              timeline={props.activeItem?.id === item.id && props.claimableBalance < item.price
-                ? props.rewardTimeline(item.price)
-                : null}
-              claimableBalance={props.claimableBalance}
-              freeAfterGoalPace={props.freeAfterGoalPace}
-              formatSensitive={props.formatSensitive}
-              hideSensitive={props.hideSensitive}
-              isSyncing={props.isSyncing(item.id)}
-              isDeleting={props.isDeleting(item.id)}
-              onClaim={props.onClaim}
-              onFocus={props.onFocus}
-              onEdit={props.onEdit}
-              onDelete={props.onDelete}
-              fullWidth={false}
             />
           ))}
         </div>

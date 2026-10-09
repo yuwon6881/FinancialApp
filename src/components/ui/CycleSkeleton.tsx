@@ -11,7 +11,7 @@ import {
   RecurringHeaderSkeleton,
   BillDayStripSkeleton,
   CarryoverLedgerSkeleton,
-  HorizontalRailSkeleton,
+  GoalsSectionSkeleton,
   InvestmentSummarySkeleton,
   CycleCalendarSkeleton,
 } from './skeletons/FeatureSkeletons'
@@ -225,8 +225,8 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
             </div>
           </div>
         )}
-        <HorizontalRailSkeleton kind="commitments" />
-        <HorizontalRailSkeleton kind="rewards" />
+        <GoalsSectionSkeleton kind="commitments" />
+        <GoalsSectionSkeleton kind="rewards" />
       </div>
     )
   }

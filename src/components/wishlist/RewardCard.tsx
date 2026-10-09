@@ -3,16 +3,13 @@ import { Edit2, Trash2 } from 'lucide-react'
 import { RewardIcon } from '../semanticIcons'
 import type { WishlistItem } from '../../types'
 import { Button } from '../ui/Button'
-import { Card } from '../ui/Card'
-import { DetailDisclosure } from '../ui/DetailDisclosure'
 import { Meter } from '../ui/Meter'
 import { OverflowMenu } from '../ui/OverflowMenu'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
-import { useDetailDisclosure } from '../../lib/useDetailDisclosure'
+import { cn } from '../../lib/utils'
 
 interface RewardCardProps {
   item: WishlistItem
-  fullWidth?: boolean
   /** DOM id the shared highlight helper scrolls to when search jumps to this reward. */
   elementId?: string
   /** The one reward being saved toward: pinned leftmost and visually lifted out of the row. */
@@ -36,9 +33,19 @@ interface RewardCardProps {
   onDelete: (id: number) => void
 }
 
+const PRIORITY_TONE: Record<string, string> = {
+  High: 'bg-pink-500/12 text-pink-600 dark:text-pink-300',
+  Medium: 'bg-surface-3 text-foreground',
+  Low: 'bg-surface-2 text-muted-foreground dark:bg-surface-3',
+}
+
+/**
+ * One reward as a tile of the wish grid: what it is, what it costs, how much of it the free rewards
+ * money already covers, and Claim once it is all there. The pool-wide figures (free rewards, what is
+ * left after commitments) are said once above the grid rather than on every tile.
+ */
 export const RewardCard: React.FC<RewardCardProps> = ({
   item,
-  fullWidth = false,
   elementId,
   isFocused,
   claimableBalance,
@@ -59,103 +66,22 @@ export const RewardCard: React.FC<RewardCardProps> = ({
   const canAfford = claimableBalance >= item.price
   const goalPaceShortfall = Math.max(0, item.price - freeAfterGoalPace)
   const isBusy = isSyncing || isDeleting || item.isPendingSync === true
-  const detail = useDetailDisclosure()
 
   return (
-    <Card
+    <article
       id={elementId}
-      className={`${fullWidth ? 'w-full' : 'w-[calc(100vw-3.5rem)] shrink-0 snap-start sm:w-full sm:min-w-0'} flex flex-col gap-3.5 p-5 transition-colors duration-300 ${
-        isFocused ? 'border-pink-500/50 ring-1 ring-pink-500/20' : ''
-      }`}
-    >
-      <div className="min-w-0">
-        <div className="flex items-center gap-1.5">
-          {/* A dot, not a star. The commitment card beside this one already says "this row is
-              special" with a coloured dot, and two different glyphs for the same idea is most of
-              why the two rails read as parts of different pages. */}
-          {isFocused && (
-            <span className="size-2 shrink-0 rounded-full bg-pink-500" aria-label="Focused reward" />
-          )}
-          <h4 className="min-w-0 flex-1 truncate text-subsection text-foreground">{item.name}</h4>
-          <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={item.isPendingSync} entityLabel="item" />
-        </div>
-      </div>
-
-      <div>
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="text-title text-foreground tabular-nums">{formatSensitive(item.price)}</span>
-          <span className={`text-label font-medium ${canAfford ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}`}>
-            {pct.toFixed(0)}%
-          </span>
-        </div>
-        {/* pink is the Rewards bucket colour everywhere else in the app — its ledger badge, its
-            chart slice, its filter chip. This bar was blue, which is what Income and Transfer are
-            painted with, so the one page about Rewards money was the one page not using its colour. */}
-        <Meter
-          className="mt-1.5"
-          percent={pct}
-          tone={canAfford ? 'bg-emerald-500' : 'bg-pink-500'}
-          label={canAfford
-            ? 'Enough free rewards to claim this'
-            : `${pct.toFixed(0)}% of this reward covered by free rewards`}
-        />
-      </div>
-
-      <p className={`text-label font-medium ${canAfford ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}`}>
-        {canAfford
-          ? 'Ready to claim'
-          : <>Need {formatSensitive(item.price - claimableBalance)} more</>}
-      </p>
-
-      {canAfford && item.price > freeAfterGoalPace && (
-        <p className="text-label text-muted-foreground">
-          Buying this leaves your commitments <span className="font-semibold text-amber-700 dark:text-amber-300">{formatSensitive(goalPaceShortfall)}</span> short this cycle.
-        </p>
+      className={cn(
+        'flex min-w-0 flex-col rounded-panel border bg-card p-3.5 shadow-xs transition-colors duration-300 sm:p-4',
+        isFocused ? 'border-pink-500/50 ring-1 ring-pink-500/20' : 'border-border/70',
       )}
-
-      <DetailDisclosure
-        label="Details"
-        open={detail.isOpen}
-        onOpenChange={detail.setOpen}
-        expandedFrom="lg"
-      >
-        {/* One row per line on compact, label and figure on the same line — the same contract the
-            commitment card's detail grid uses, and for the same reason: two columns inside a
-            phone-width card wrapped "Free after commitments" into a stack of single words. */}
-        <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-label sm:grid-cols-2">
-          <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="text-muted-foreground">Priority</dt>
-            <dd className="font-medium text-foreground tabular-nums">{item.priority}</dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="text-muted-foreground">Free rewards</dt>
-            <dd className="font-medium text-foreground tabular-nums">{formatSensitive(claimableBalance)}</dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-2 sm:block">
-            <dt className="text-muted-foreground">Free after commitments</dt>
-            <dd className="font-medium text-foreground tabular-nums">{formatSensitive(freeAfterGoalPace)}</dd>
-          </div>
-          {timeline && (
-            <div className="flex items-baseline justify-between gap-2 sm:block">
-              <dt className="text-muted-foreground">Affordable in</dt>
-              <dd className="font-medium text-foreground tabular-nums">{timeline}</dd>
-            </div>
-          )}
-        </dl>
-      </DetailDisclosure>
-
-      <div className="mt-auto flex items-center gap-1.5 border-t border-border/60 pt-3">
-        <Button
-          size="sm"
-          className="shrink-0"
-          onClick={() => onClaim(item)}
-          disabled={!canAfford || isBusy || hideSensitive}
-          title={canAfford ? 'Claim this reward and log it to your ledger' : 'Not enough free rewards yet'}
-        >
-          Claim
-        </Button>
+    >
+      <div className="flex items-start justify-between gap-2">
+        <span className={cn('rounded-full px-2 py-0.5 text-caption font-medium', PRIORITY_TONE[item.priority] ?? PRIORITY_TONE.Low)}>
+          {isFocused ? 'Saving for this' : item.priority}
+          <span className="sr-only"> priority</span>
+        </span>
         <OverflowMenu
-          className="ml-auto"
+          className="-mr-2 -mt-1.5"
           entityLabel={item.name}
           disabled={isBusy}
           items={[
@@ -184,6 +110,51 @@ export const RewardCard: React.FC<RewardCardProps> = ({
           ]}
         />
       </div>
-    </Card>
+
+      <h4 className="mt-2 flex min-w-0 items-start gap-1.5 text-body font-medium text-foreground">
+        {isFocused && <span className="sr-only">Focused reward: </span>}
+        <span className="line-clamp-2 min-w-0 break-words">{item.name}</span>
+        <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={item.isPendingSync} entityLabel="item" />
+      </h4>
+      <p className="mt-1 text-title text-foreground tabular-nums">{formatSensitive(item.price)}</p>
+
+      <div className="mt-auto pt-3">
+        {/* Pink is the Rewards bucket colour everywhere else in the app; the bar turns green once the
+            free money covers the whole price. */}
+        <Meter
+          percent={pct}
+          tone={canAfford ? 'bg-emerald-500' : 'bg-pink-500'}
+          label={canAfford
+            ? 'Enough free rewards to claim this'
+            : `${pct.toFixed(0)}% of this reward covered by free rewards`}
+        />
+        <p className={cn('mt-1.5 text-caption font-medium', canAfford ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground')}>
+          {canAfford
+            ? 'Ready to claim'
+            : <>Need {formatSensitive(item.price - claimableBalance)} more</>}
+        </p>
+        {!canAfford && timeline && (
+          <p className="text-caption text-muted-foreground" title={timeline}>
+            {/* The date in brackets is for the tooltip; the tile only has room for the span. */}
+            {timeline.replace(/ \(.*\)$/, '').replace(/^about/, 'In about')}
+          </p>
+        )}
+        {canAfford && item.price > freeAfterGoalPace && (
+          <p className="mt-0.5 text-caption text-amber-700 dark:text-amber-300" title="Buying this leaves your commitments short of what they need this cycle">
+            Leaves commitments <span className="font-semibold tabular-nums">{formatSensitive(goalPaceShortfall)}</span> short
+          </p>
+        )}
+        <Button
+          size="sm"
+          variant={canAfford ? 'primary' : 'secondary'}
+          className="mt-3 w-full"
+          onClick={() => onClaim(item)}
+          disabled={!canAfford || isBusy || hideSensitive}
+          title={canAfford ? 'Claim this reward and log it to your ledger' : 'Not enough free rewards yet'}
+        >
+          Claim
+        </Button>
+      </div>
+    </article>
   )
 }
