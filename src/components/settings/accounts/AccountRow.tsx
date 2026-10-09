@@ -1,10 +1,12 @@
-import { CircleHelp } from 'lucide-react'
+import { CircleHelp, Pencil, Trash2 } from 'lucide-react'
 import type { LedgerAccount } from '../../../types'
 import type { AccountBillRoster as AccountBillRosterType } from '../../../lib/accountBillRoster'
 import { cardAvailableCredit, cardOwed, isCreditCard } from '../../../lib/creditCards'
 import { formatCurrencyVal } from '../../../lib/utils'
-import { getCategoryBadgeClass } from '../../../lib/categoryColors'
+import { getCategoryChartColor } from '../../../lib/categoryColors'
 import { Button } from '../../ui/Button'
+import { IconButton } from '../../ui/IconButton'
+import { Meter } from '../../ui/Meter'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { AccountBillRoster } from './AccountBillRoster'
@@ -38,7 +40,7 @@ export function AccountRow({
   onClearCard,
 }: AccountRowProps) {
   const AccountIcon = ACCOUNT_KIND_ICONS[account.kind] ?? CircleHelp
-  const bucketClass = getCategoryBadgeClass(account.bucket)
+  const bucketColor = getCategoryChartColor(account.bucket)
   const isCard = isCreditCard(account)
   const owed = cardOwed(account)
   const availableCredit = cardAvailableCredit(account)
@@ -47,9 +49,7 @@ export function AccountRow({
   return (
     <div
       id={`account-row-${account.id}`}
-      className={`flex flex-col gap-2 rounded-xl border p-3 transition duration-150 ${
-        account.isArchived ? 'border-dashed border-border/70 bg-card/40 opacity-75' : 'border-border/60 bg-card/70'
-      }`}
+      className={`flex flex-col gap-2.5 py-3.5 first:pt-1 last:pb-1 ${account.isArchived ? 'opacity-70' : ''}`}
     >
       {/* Wraps on the row's own width rather than the window's. Inside a bucket card the row is
           about 300px wide at the narrow end of the expanded tier, where the media-query row put the
@@ -58,14 +58,18 @@ export function AccountRow({
           drop to their own line instead of squeezing it out. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <div className="flex min-w-[9rem] flex-1 items-center gap-3 overflow-hidden">
-          <div className={`grid size-9 shrink-0 place-items-center rounded-xl border ${bucketClass}`} aria-hidden="true">
-            <AccountIcon className="size-4" />
+          <div
+            className="grid size-10 shrink-0 place-items-center rounded-xl"
+            style={{ backgroundColor: `color-mix(in srgb, ${bucketColor} 14%, transparent)`, color: bucketColor }}
+            aria-hidden="true"
+          >
+            <AccountIcon className="size-[1.125rem]" />
           </div>
           <div className="min-w-0 flex-1 space-y-0.5">
-            <p title={account.name} className={`truncate text-xs font-semibold sm:text-sm ${account.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
+            <p title={account.name} className={`truncate text-body font-medium ${account.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
               {account.name}
             </p>
-            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-1.5 text-caption text-muted-foreground">
               <span>{ACCOUNT_KIND_LABELS[account.kind] ?? account.kind}</span>
               {account.isArchived && (
                 <>
@@ -87,8 +91,8 @@ export function AccountRow({
           <div className="flex shrink-0 items-center gap-2">
             {/* A card's balance reads as what is owed; its signed figure is still what the bucket counts. */}
             {isCard && (owed > 0 || account.remaining >= 0.005) ? (
-              <span className={`text-xs font-bold sm:text-sm ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}>
-                {owed > 0 ? 'Owed ' : 'In credit '}
+              <span className={`text-body font-semibold tabular-nums ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}>
+                <span className="font-normal text-muted-foreground">{owed > 0 ? 'Owed ' : 'In credit '}</span>
                 <SensitiveAmount value={owed > 0 ? owed : account.remaining} isMasked={hideSensitive} formatFn={formatMoney} />
               </span>
             ) : (
@@ -96,7 +100,7 @@ export function AccountRow({
                 value={account.remaining}
                 isMasked={hideSensitive}
                 formatFn={formatMoney}
-                className={`text-xs font-bold sm:text-sm ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}
+                className={`text-body font-semibold tabular-nums ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}
               />
             )}
             <RowSyncStatus
@@ -122,32 +126,40 @@ export function AccountRow({
                 Clear balance
               </Button>
             )}
-            <Button
+            <IconButton
               type="button"
-              variant="tertiary"
-              size="sm"
               onClick={() => onEdit(account)}
               disabled={disabled || isDeleting}
-              aria-label={`Edit ${account.name}`}
+              label={`Edit ${account.name}`}
+              tooltip="Edit"
+              className="text-muted-foreground hover:text-foreground"
             >
-              Edit
-            </Button>
-            <Button
+              <Pencil className="size-4" aria-hidden="true" />
+            </IconButton>
+            <IconButton
               type="button"
-              variant="destructive"
-              size="sm"
               onClick={() => onDelete(account.id)}
               disabled={disabled || isDeleting}
-              aria-label={`Delete ${account.name}`}
+              label={`Delete ${account.name}`}
+              tooltip="Delete"
+              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
             >
-              Delete
-            </Button>
+              <Trash2 className="size-4" aria-hidden="true" />
+            </IconButton>
           </div>
         </div>
       </div>
 
       {isCard && availableCredit !== null && !account.isArchived && (
-        <dl className="grid grid-cols-2 gap-3 rounded-lg bg-muted/20 px-3 py-2 text-xs">
+        <div className="space-y-2 rounded-control bg-surface-2/60 px-3.5 py-3">
+        <Meter
+          size="sm"
+          percent={account.creditLimit ? (owed / account.creditLimit) * 100 : 0}
+          tone={availableCredit < 0 ? 'bg-destructive' : 'bg-foreground/50'}
+          label={`${account.name} credit used`}
+          valueHidden={hideSensitive}
+        />
+        <dl className="grid grid-cols-2 gap-3 text-label">
           <div className="min-w-0 space-y-1">
             <dt className="text-muted-foreground">{availableCredit < 0 ? 'Over limit by' : 'Available credit'}</dt>
             <dd className="break-words font-semibold tabular-nums text-foreground">
@@ -161,6 +173,7 @@ export function AccountRow({
             </dd>
           </div>
         </dl>
+        </div>
       )}
 
       <AccountBillRoster

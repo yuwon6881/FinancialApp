@@ -77,7 +77,7 @@ export const AccountsAndInstruments: React.FC<AccountsAndInstrumentsProps> = ({
             <Input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${tab}`} />
           </FormField>
           {tab === 'accounts' && <div id="portfolio-panel-accounts" role="tabpanel" aria-labelledby="portfolio-tab-accounts">
-            <h3 className="text-eyebrow uppercase text-muted-foreground">Accounts</h3>
+            <h3 className="text-label font-medium text-muted-foreground">Accounts</h3>
             <div className="mt-2 space-y-2">
               {portfolio.accounts.filter(value => matches(`${value.name} ${value.baseCurrency}`)).map(value => (
                 <PortfolioManagementRow
@@ -95,7 +95,7 @@ export const AccountsAndInstruments: React.FC<AccountsAndInstrumentsProps> = ({
             </div>
           </div>}
           {tab === 'investments' && <div id="portfolio-panel-investments" role="tabpanel" aria-labelledby="portfolio-tab-investments">
-            <h3 className="text-eyebrow uppercase text-muted-foreground">Investments</h3>
+            <h3 className="text-label font-medium text-muted-foreground">Investments</h3>
             <div className="mt-2 space-y-2">
               {portfolio.instruments.filter(value => matches(`${value.symbol} ${value.name} ${value.currency}`)).map(value => (
                 <PortfolioManagementRow

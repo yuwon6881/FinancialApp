@@ -3,7 +3,9 @@ import type { LedgerAccount } from '../../../types'
 import type { AccountBillRoster as AccountBillRosterType } from '../../../lib/accountBillRoster'
 import { formatCurrencyVal } from '../../../lib/utils'
 import { splitBucketCards } from '../../../lib/creditCards'
-import { getCategoryBadgeClass } from '../../../lib/categoryColors'
+import { getCategoryChartColor } from '../../../lib/categoryColors'
+import { cn } from '../../../lib/utils'
+import { panelClass } from '../../ui/panelStyles'
 import { Button } from '../../ui/Button'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { AccountRow } from './AccountRow'
@@ -52,7 +54,7 @@ export function BucketAccountGroup({
 }: BucketAccountGroupProps) {
   const pagination = useClientPagination(accounts.length, 10)
   const visibleAccounts = accounts.slice(pagination.start, pagination.end)
-  const bucketBadgeClass = getCategoryBadgeClass(bucket)
+  const bucketColor = getCategoryChartColor(bucket)
   const openCount = allBucketAccounts.filter(account => !account.isArchived).length
   const totalBalance = allBucketAccounts.reduce((sum, account) => sum + account.remaining, 0)
   const hasAnyAccounts = allBucketAccounts.length > 0
@@ -61,63 +63,55 @@ export function BucketAccountGroup({
   return (
     <div
       id={`bucket-account-group-${bucket}`}
-      className={`relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-background/40 p-4 sm:p-5 transition duration-150 ${
-        hasAnyAccounts ? 'border-border/60' : 'border-dashed border-border/70'
-      }`}
+      className={cn(panelClass, 'relative flex flex-col justify-between p-5', !hasAnyAccounts && 'border-dashed')}
     >
       <div className="space-y-4">
-        {/* Bucket header */}
-        <div className="flex flex-col gap-2 border-b border-border/30 pb-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <span className={`rounded-md border px-2 py-0.5 text-xs font-bold ${bucketBadgeClass}`}>
-              {bucket}
-            </span>
-            <span className="text-xs text-muted-foreground">·</span>
-            <span className="text-xs text-muted-foreground">{description}</span>
+        {/* Bucket header: which bucket, what it is for, and what it holds. */}
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span aria-hidden="true" className="size-2.5 rounded-full" style={{ backgroundColor: bucketColor }} />
+              <span className="text-subsection text-foreground">{bucket}</span>
+            </div>
+            <p className="mt-0.5 flex flex-wrap gap-x-1.5 text-label text-muted-foreground">
+              <span>{description}</span>
+              <span aria-hidden="true">·</span>
+              <span>{openCount ? `${openCount} open ${openCount === 1 ? 'account' : 'accounts'}` : 'Empty'}</span>
+            </p>
           </div>
-
-          <div className="flex items-center gap-2 text-xs">
-            <span className="font-semibold text-muted-foreground">
-              {openCount ? `${openCount} open ${openCount === 1 ? 'account' : 'accounts'}` : 'Empty'}
-            </span>
-          </div>
-        </div>
-
-        {/* Bucket total balance */}
-        <div className="flex items-baseline justify-between gap-3">
-          <div>
-            <span className="text-eyebrow uppercase text-muted-foreground">
-              Bucket total
-            </span>
+          <div className="text-right">
+            <span className="sr-only">Bucket total</span>
             <SensitiveAmount
               value={totalBalance}
               isMasked={hideSensitive}
               formatFn={value => formatCurrencyVal(value, currency)}
-              className="mt-0.5 block text-lg font-extrabold text-foreground sm:text-xl"
+              className="block text-title text-foreground tabular-nums"
             />
-            {/* The total already counts card debt; this line shows the two halves so the total
-                is never mistaken for cash in hand. */}
-            {cardSplit && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                <SensitiveAmount value={cardSplit.cash} isMasked={hideSensitive} formatFn={value => formatCurrencyVal(value, currency)} className="font-semibold text-foreground" />
-                {' in accounts · '}
-                <SensitiveAmount value={cardSplit.owed} isMasked={hideSensitive} formatFn={value => formatCurrencyVal(value, currency)} className="font-semibold text-foreground" />
-                {' owed on cards'}
-              </p>
-            )}
-            {cardSplit?.isShort && !hideSensitive && (
-              <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+          </div>
+        </div>
+
+        {/* The total already counts card debt; this line shows the two halves so the total
+            is never mistaken for cash in hand. */}
+        {cardSplit && (
+          <div className="-mt-2 space-y-1">
+            <p className="text-caption text-muted-foreground">
+              <SensitiveAmount value={cardSplit.cash} isMasked={hideSensitive} formatFn={value => formatCurrencyVal(value, currency)} className="font-semibold text-foreground" />
+              {' in accounts · '}
+              <SensitiveAmount value={cardSplit.owed} isMasked={hideSensitive} formatFn={value => formatCurrencyVal(value, currency)} className="font-semibold text-foreground" />
+              {' owed on cards'}
+            </p>
+            {cardSplit.isShort && !hideSensitive && (
+              <p className="text-caption font-medium text-amber-700 dark:text-amber-300">
                 Your {bucket} accounts can't pay off its cards in full today.
               </p>
             )}
           </div>
-        </div>
+        )}
 
         {/* Account list or empty state */}
         {!hasAnyAccounts ? (
           <EmptyState
             density="compact"
-            className="bg-card/40"
             title={`No accounts added for ${bucket} yet.`}
             actions={(
               <Button
@@ -133,11 +127,11 @@ export function BucketAccountGroup({
             )}
           />
         ) : accounts.length === 0 ? (
-          <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-4 text-center text-xs text-muted-foreground">
+          <div className="rounded-control bg-surface-2/60 px-4 py-4 text-center text-label text-muted-foreground">
             {searchQuery ? `No accounts in ${bucket} match "${searchQuery}".` : `No accounts in ${bucket}.`}
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-border/60 border-t border-border/60">
             {visibleAccounts.map(account => (
               <AccountRow
                 key={account.id}
@@ -172,10 +166,10 @@ export function BucketAccountGroup({
 
       {/* Footer action row */}
       {hasAnyAccounts && (
-        <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-border/30 pt-3">
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-border/60 pt-3">
           <Button
             type="button"
-            variant="secondary"
+            variant="tertiary"
             size="sm"
             onClick={() => onAdd(bucket)}
             disabled={disabled || hideSensitive}
@@ -186,7 +180,7 @@ export function BucketAccountGroup({
           {openCount >= 2 && (
             <Button
               type="button"
-              variant="secondary"
+              variant="tertiary"
               size="sm"
               onClick={() => onMoveMoney(bucket)}
               disabled={disabled || hideSensitive}

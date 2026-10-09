@@ -246,7 +246,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
           </div>
         ) : <>
           <FormField label="Documents" required error={validationErrors.files}>
-            <Button variant="tertiary" type="button" onClick={() => inputRef.current?.click()} className="mt-1.5 flex w-full flex-col items-center rounded-xl border-2 border-dashed border-border px-4 py-7 hover:bg-muted/40 cursor-pointer">
+            <Button variant="tertiary" type="button" onClick={() => inputRef.current?.click()} className="mt-1.5 flex w-full flex-col items-center rounded-xl border border-dashed border-border px-4 py-7 hover:bg-muted/40 cursor-pointer">
               <UploadCloud className="mb-2 size-8 text-muted-foreground/60" /><span className="text-body font-bold text-foreground">Choose one or multiple files</span>
               <span className="mt-1 text-caption text-muted-foreground">Up to {constraints.maxBulkDocuments} files · {formatMb(constraints.maxDocumentBytes)} each</span>
             </Button>

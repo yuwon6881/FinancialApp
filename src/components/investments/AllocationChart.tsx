@@ -124,14 +124,14 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
           further down the page: that table is off-screen on a phone, so a click
           previously looked like it had done nothing at all. */}
       {selectedLabel && (
-        <div className="mt-4 rounded-xl border border-border/50 bg-muted/20 p-3">
+        <div className="mt-4 rounded-control bg-surface-2/70 p-3">
           <div className="flex items-baseline justify-between gap-2">
-            <h3 className="min-w-0 truncate text-xs font-bold text-foreground">Inside {selectedLabel}</h3>
+            <h3 className="min-w-0 truncate text-caption font-semibold text-foreground">Inside {selectedLabel}</h3>
             <Button
               variant="tertiary"
               type="button"
               onClick={() => onSelect(null)}
-              className="shrink-0 cursor-pointer text-xs font-bold text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground"
+              className="shrink-0 cursor-pointer text-caption font-semibold text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground"
             >
               Show everything
             </Button>

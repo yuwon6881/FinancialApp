@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Building2 } from 'lucide-react'
 import type { LedgerAccount, RecurringPayment, Transaction, TransactionCategory } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
-import { cn, formatCurrencyVal } from '../../../lib/utils'
+import { formatCurrencyVal } from '../../../lib/utils'
+import { getCategoryChartColor } from '../../../lib/categoryColors'
 import { roundMoney } from '../../../lib/money'
 import { CustomConfirmModal } from '../../ui/CustomConfirmModal'
 import { Input } from '../../ui/Input'
@@ -22,7 +22,7 @@ import {
 } from './view/useBucketAccountSetupView'
 import { useAccountsView } from './view/useAccountsView'
 import { AlertBanner } from '../../ui/AlertBanner'
-import { panelClass } from '../../ui/panelStyles'
+import { SegmentedMeter } from '../../ui/SegmentedMeter'
 
 interface AccountsSectionProps {
   accounts: LedgerAccount[]
@@ -254,6 +254,12 @@ export function AccountsSection({
     }
   }
 
+  const bucketTotals = bucketGroups.map(group => ({
+    bucket: group.bucket,
+    total: group.allBucketAccounts.filter(account => !account.isArchived).reduce((sum, account) => sum + account.remaining, 0),
+  }))
+  const netTotal = bucketTotals.reduce((sum, item) => sum + item.total, 0)
+
   const activeGroup = editingAccount
     ? bucketGroups.find(g => g.bucket === editingAccount.bucket)
     : bucketGroups.find(g => g.bucket === formDefaultBucket)
@@ -264,29 +270,44 @@ export function AccountsSection({
         id="settings-panel-accounts"
         role="tabpanel"
         aria-labelledby="settings-tab-accounts"
-        className={cn(panelClass, 'space-y-6 p-4 animate-in fade-in duration-200 sm:p-5')}
+        className="space-y-6 animate-in fade-in duration-200"
       >
-        {/* Panel Header */}
-        <div className="flex flex-col gap-3 border-b border-border/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="grid size-10 shrink-0 place-items-center rounded-2xl border border-accent-ink/20 bg-accent/50 text-accent-ink">
-              <Building2 className="size-5" aria-hidden="true" />
+        <h3 className="sr-only">Accounts</h3>
+        {/* What all the accounts add up to, card balances already netted off, then how that total
+            divides across the four buckets -- the one figure the bucket cards below never state. */}
+        {openAccountCount > 0 && (
+          <div className="rounded-panel bg-surface-2/70 p-5 sm:p-6">
+            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+              <div className="min-w-0">
+                <p className="text-label text-muted-foreground">Total across accounts</p>
+                <SensitiveAmount
+                  value={netTotal}
+                  isMasked={hideSensitive}
+                  formatFn={value => formatCurrencyVal(value, currency)}
+                  className="mt-1 block text-display text-foreground tabular-nums sm:text-hero"
+                />
+              </div>
+              <p className="text-label text-muted-foreground">
+                {openAccountCount} open {openAccountCount === 1 ? 'account' : 'accounts'}
+                {archivedAccountCount > 0 && <> · {archivedAccountCount} closed</>}
+              </p>
             </div>
-            <div className="min-w-0">
-              <h3 className="text-section text-foreground">Accounts</h3>
-            </div>
+            <SegmentedMeter
+              className="mt-5"
+              label={bucketTotals.map(item => `${item.bucket} ${hideSensitive ? '' : formatCurrencyVal(item.total, currency)}`.trim()).join(', ')}
+              segments={bucketTotals.map(item => ({ label: item.bucket, value: Math.max(0, item.total), color: getCategoryChartColor(item.bucket) }))}
+            />
+            <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-label">
+              {bucketTotals.map(item => (
+                <li key={item.bucket} className="flex items-center gap-1.5">
+                  <span aria-hidden="true" className="size-2 rounded-full" style={{ backgroundColor: getCategoryChartColor(item.bucket) }} />
+                  <span className="text-muted-foreground">{item.bucket}</span>
+                  <SensitiveAmount value={item.total} isMasked={hideSensitive} formatFn={value => formatCurrencyVal(value, currency)} className="font-medium text-foreground tabular-nums" />
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground">
-            <span className="rounded-lg border border-border/60 bg-background/50 px-2.5 py-1">
-              {openAccountCount} open {openAccountCount === 1 ? 'account' : 'accounts'}
-            </span>
-            {archivedAccountCount > 0 && (
-              <span className="rounded-lg border border-border/60 bg-background/50 px-2.5 py-1">
-                {archivedAccountCount} closed
-              </span>
-            )}
-          </div>
-        </div>
+        )}
 
         {!isCurrentCycle && (
           <AlertBanner variant="info" title="Balances shown here are today's">
@@ -298,6 +319,7 @@ export function AccountsSection({
         {rows.length > 0 && (
           <div className="max-w-sm">
             <Input
+              className="rounded-full px-4"
               type="search"
               value={searchQuery}
               onChange={event => setSearchQuery(event.target.value)}
@@ -394,7 +416,7 @@ export function AccountsSection({
                 ? <>The amount owed on <span className="font-semibold text-foreground">{pendingBalanceCorrection.account.name}</span> will be corrected from <span className="font-semibold text-foreground">{formatCurrencyVal(Math.max(0, -pendingBalanceCorrection.account.remaining), currency)}</span> to <span className="font-semibold text-foreground">{formatCurrencyVal(Math.max(0, -pendingBalanceCorrection.targetBalance), currency)}</span>.</>
                 : <>The balance for <span className="font-semibold text-foreground">{pendingBalanceCorrection.account.name}</span> will be corrected from <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.account.remaining, currency)}</span> to <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.targetBalance, currency)}</span>.</>}
             </p>
-            <div className="space-y-1.5 rounded-xl border border-border/60 bg-muted/30 p-3 text-xs">
+            <div className="space-y-1.5 rounded-control bg-surface-2/70 p-3 text-label">
               <div className="flex items-center justify-between gap-3">
                 <span>Current {pendingBalanceCorrection.account.bucket} total</span>
                 <span className="font-bold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.bucketTotal, currency)}</span>

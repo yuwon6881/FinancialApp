@@ -46,13 +46,13 @@ export function DepositGuide({ allocation, money, colors }: DepositGuideProps) {
 
   return (
     <div
-      className={`mt-5 rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm ${canPlan ? 'cursor-pointer' : ''}`}
+      className={`mt-5 rounded-control bg-surface-2/70 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm ${canPlan ? 'cursor-pointer' : ''}`}
       onClick={handleToggle}
       role="group"
       aria-label="Putting money in"
     >
       <div className="flex items-center justify-between gap-2">
-        <h3 className="hidden items-center gap-1 text-xs font-bold text-foreground sm:flex">
+        <h3 className="hidden items-center gap-1 text-caption font-semibold text-foreground sm:flex">
           <PiggyBank className="size-3.5 text-muted-foreground" /> Putting money in
           <InfoHint
             label="putting money in"
@@ -94,7 +94,7 @@ export function DepositGuide({ allocation, money, colors }: DepositGuideProps) {
               How much do you want to put in?
             </label>
             <div className="mt-1.5 flex items-center gap-2">
-              <span className="shrink-0 text-xs font-bold text-muted-foreground">{allocation.appCurrency}</span>
+              <span className="shrink-0 text-caption font-semibold text-muted-foreground">{allocation.appCurrency}</span>
               <SmartAmountInput
                 id="deposit-amount"
                 value={amountText}
@@ -112,7 +112,7 @@ export function DepositGuide({ allocation, money, colors }: DepositGuideProps) {
                   <li key={sleeve.sleeve} className="rounded-lg border border-border/50 bg-background/50 p-3">
                     <div className="flex items-center gap-2">
                       <span className={`size-2 shrink-0 rounded-full ${colors[index]}`} aria-hidden="true" />
-                      <span className="min-w-0 truncate text-xs font-bold text-foreground">{sleeve.label}</span>
+                      <span className="min-w-0 truncate text-caption font-semibold text-foreground">{sleeve.label}</span>
                     </div>
                     <strong className="mt-2 block text-lg text-foreground">
                       {sleeve.amount > 0 ? money(sleeve.amount) : 'Skip'}

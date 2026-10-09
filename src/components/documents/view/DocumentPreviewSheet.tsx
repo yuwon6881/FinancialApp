@@ -202,7 +202,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
         </div>
 
         {isZoomable && !isLoading && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 rounded-full border border-border/60 bg-card/90 px-3 py-1.5 backdrop-blur-md shadow-lg text-caption">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 rounded-full border border-border/60 bg-card/90 px-3 py-1.5 backdrop-blur-md shadow-(--app-shadow-overlay) text-caption">
             <IconButton
               className="size-11 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40 sm:size-8"
               onClick={handleZoomOut}

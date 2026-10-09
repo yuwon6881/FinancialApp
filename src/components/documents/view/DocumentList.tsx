@@ -157,7 +157,7 @@ export function DocumentList({
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {isLoading && documents.length === 0 ? (
             Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="rounded-xl border border-border/50 bg-muted/20 p-3">
+              <div key={index} className="rounded-control bg-surface-2/70 p-3">
                 <div className="flex items-center gap-2.5">
                   <Skeleton className="size-9 shrink-0 rounded-lg" />
                   <div className="min-w-0 flex-1 space-y-2">

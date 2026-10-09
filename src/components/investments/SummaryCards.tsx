@@ -31,14 +31,11 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
   const annualReturn = portfolio.summary.annualReturn
 
   const tone = (value?: number) => {
-    if (value === undefined) return 'text-amber-500'
-    if (value > 0) return 'text-emerald-500'
-    if (value < 0) return 'text-orange-500'
+    // An unknown figure is quiet, not a warning: it is waiting on prices, nothing is wrong.
+    if (value === undefined) return 'text-muted-foreground'
+    if (value > 0) return 'text-emerald-600 dark:text-emerald-400'
+    if (value < 0) return 'text-red-600 dark:text-red-400'
     return 'text-foreground'
-  }
-  const cardTone = (value?: number) => {
-    if (value === undefined || value === 0) return 'bg-card/92 border-border/60'
-    return value > 0 ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-orange-500/5 border-orange-500/20'
   }
 
   const earmarked = portfolio.summary.growthContributions ?? 0
@@ -52,20 +49,20 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
       label: 'Set aside to invest',
       value: format(earmarked),
       hint: 'Total your budget has earmarked for investing so far.',
-      color: 'text-blue-500',
+      color: 'text-foreground',
     },
     undeployed !== undefined && undeployed < -0.005
       ? {
           label: 'More sent than set aside',
           value: format(Math.abs(undeployed)),
           hint: 'Your broker received more than you set aside in Growth.',
-          color: 'text-amber-500',
+          color: 'text-muted-foreground',
         }
       : {
           label: 'Waiting to be sent',
           value: format(undeployed === undefined ? undefined : Math.max(0, undeployed)),
           hint: 'Earmarked money your broker has not received yet: what you set aside minus what you sent.',
-          color: (undeployed ?? 0) > 0.005 ? 'text-foreground' : 'text-emerald-500',
+          color: (undeployed ?? 0) > 0.005 ? 'text-foreground' : 'text-emerald-600 dark:text-emerald-400',
         },
     {
       label: 'Share sent',
@@ -73,7 +70,7 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
         ? '—'
         : masked ? '••••' : `${deployedPercent.toFixed(0)}%`,
       hint: 'How much of the money set aside has reached your broker.',
-      color: deployedPercent === undefined || deployedPercent >= 95 ? 'text-foreground' : 'text-amber-500',
+      color: deployedPercent === undefined || deployedPercent >= 95 ? 'text-foreground' : 'text-amber-700 dark:text-amber-300',
     },
   ]
 
@@ -87,8 +84,8 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
     {
       label: 'What it is worth',
       hint: `Latest saved value of your investments and broker cash, shown in ${currency}.`,
-      bg: 'bg-card/92 border-border/60',
-      hero: { label: 'Latest total', value: format(portfolio.summary.totalValue), color: portfolio.summary.totalValue === undefined ? 'text-amber-500' : 'text-foreground' },
+      bg: '',
+      hero: { label: 'Latest total', value: format(portfolio.summary.totalValue), color: portfolio.summary.totalValue === undefined ? 'text-muted-foreground' : 'text-foreground' },
       rows: [
         { label: 'Investments', value: format(portfolio.summary.marketValue), hint: 'Value of the shares and funds you hold, at their latest saved prices.' },
         { label: 'Broker cash', value: format(portfolio.summary.cashValue), hint: 'Money sitting uninvested in your broker accounts.' },
@@ -98,14 +95,14 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
     {
       label: 'Money sent to broker',
       hint: 'Tracks money added to and withdrawn from your broker accounts.',
-      bg: 'bg-blue-500/5 border-blue-500/20',
-      hero: { label: 'Deposits minus withdrawals', value: format(portfolio.summary.netDeposits), color: portfolio.summary.netDeposits === undefined ? 'text-amber-500' : 'text-foreground' },
+      bg: '',
+      hero: { label: 'Deposits minus withdrawals', value: format(portfolio.summary.netDeposits), color: portfolio.summary.netDeposits === undefined ? 'text-muted-foreground' : 'text-foreground' },
       rows: moneyInRows,
     },
     {
       label: 'Profit and loss',
       hint: 'Your gain or loss so far: what is still on paper, plus what you have already banked.',
-      bg: cardTone(unrealised),
+      bg: '',
       hero: {
         label: 'On paper',
         value: unrealised === undefined || masked
@@ -126,7 +123,7 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
     {
       label: 'Income and latest move',
       hint: 'Dividends received, plus the move between the two latest saved market values. It may be from an earlier market day.',
-      bg: cardTone(daily),
+      bg: '',
       hero: { label: 'Latest value move', value: signed(daily), color: tone(daily) },
       // A move stated in one currency cannot say whether the shares fell or the ringgit rose, and
       // those two regularly point opposite ways: a portfolio can be up on the year and report a
@@ -150,23 +147,23 @@ export const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortf
       {cards.map(({ label, hint, hero, rows, bg }, index) => (
         <article
           key={label}
-          className={cn('list-card-enter interactive-card', panelClass, 'flex flex-col p-4', bg)}
+          className={cn('list-card-enter', panelClass, 'flex flex-col p-5', bg)}
           style={index === 0 ? undefined : { animationDelay: `${index * 35}ms` }}
         >
           <div className="flex items-center justify-between gap-2">
-            <p className="text-eyebrow uppercase text-muted-foreground">{label}</p>
+            <p className="text-label font-medium text-muted-foreground">{label}</p>
             <InfoHint label={label} text={hint} />
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{hero.label}</p>
-          <strong className={`block break-words text-xl font-black leading-tight ${hero.color ?? 'text-foreground'}`}>{hero.value}</strong>
-          <div className="mt-3 divide-y divide-border/40 border-t border-border/40 pt-1">
+          <p className="mt-3 text-caption text-muted-foreground">{hero.label}</p>
+          <strong className={`mt-0.5 block break-words text-title font-semibold tabular-nums ${hero.color ?? 'text-foreground'}`}>{hero.value}</strong>
+          <div className="mt-4 divide-y divide-border/60 border-t border-border/60">
             {rows.map(row => (
               <div key={row.label} className="flex items-center justify-between gap-2 py-2">
-                <span className="flex min-w-0 items-center gap-0.5 text-xs text-muted-foreground">
+                <span className="flex min-w-0 items-center gap-0.5 text-label text-muted-foreground">
                   <span className="truncate">{row.label}</span>
                   <InfoHint label={row.label} text={row.hint} />
                 </span>
-                <strong className={`shrink-0 break-words text-right text-sm ${row.color ?? 'text-foreground'}`}>{row.value}</strong>
+                <strong className={`shrink-0 break-words text-right text-label font-semibold tabular-nums ${row.color ?? 'text-foreground'}`}>{row.value}</strong>
               </div>
             ))}
           </div>

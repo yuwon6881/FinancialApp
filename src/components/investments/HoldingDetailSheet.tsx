@@ -91,7 +91,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
         <div className="space-y-5">
           <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
             {rows.map(row => (
-              <div key={row.label} className="rounded-xl border border-border/50 bg-muted/20 p-2.5 sm:p-3">
+              <div key={row.label} className="rounded-control bg-surface-2/70 p-2.5 sm:p-3">
                 <dt className="text-xs leading-tight text-muted-foreground">{row.label}</dt>
                 <dd className={`mt-1 break-words text-sm font-bold ${row.tone === undefined ? 'text-foreground' : row.tone >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
                   {row.value}
@@ -101,7 +101,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
             ))}
           </dl>
 
-          <div className="rounded-xl border border-border/50 bg-muted/20 p-3 sm:p-4">
+          <div className="rounded-control bg-surface-2/70 p-3 sm:p-4">
             {/* One scrolling line rather than a wrapping block: seven buttons wrapped
                 to two ragged rows on a phone. */}
             <div className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto rounded-xl bg-muted/40 p-1 sm:mx-0 sm:justify-end" role="group" aria-label="Price history range">
@@ -112,7 +112,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
                   variant="tertiary"
                   onClick={() => setRange(item.value)}
                   aria-pressed={range === item.value}
-                  className={`cursor-pointer whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${range === item.value ? 'bg-background hover:bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`cursor-pointer whitespace-nowrap rounded-lg px-2.5 py-1 text-caption font-semibold transition-colors ${range === item.value ? 'bg-background hover:bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                 >
                   {item.label}
                 </Button>
@@ -159,8 +159,8 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
             )}
           </div>
 
-          <details className="rounded-xl border border-border/50 bg-muted/20 p-3">
-            <summary className="cursor-pointer select-none text-xs font-bold text-muted-foreground outline-none">
+          <details className="rounded-control bg-surface-2/70 p-3">
+            <summary className="cursor-pointer select-none text-caption font-semibold text-muted-foreground outline-none">
               How this was worked out
             </summary>
             <div className="mt-2 space-y-1 text-xs text-muted-foreground">

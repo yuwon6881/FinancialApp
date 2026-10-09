@@ -389,7 +389,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
             type="button"
             onClick={() => setGlobalTargetLock(!globalTargetLock)}
             disabled={hideSensitive}
-            className="mt-0.5 inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
+            className="mt-0.5 inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-caption font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
           >
             {globalTargetLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
             {globalTargetLock ? 'Locked' : 'Unlocked'}
@@ -407,7 +407,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
             // name, the empty gap, or the percentage badge silently toggled the lock. The slider
             // carries its own aria-label, so the label element was contributing nothing anyway.
             <div key={key} className="space-y-2 block w-full min-w-0">
-              <div className="flex justify-between items-center text-xs font-bold min-w-0 w-full gap-2">
+              <div className="flex justify-between items-center text-caption font-semibold min-w-0 w-full gap-2">
                 <span className="text-muted-foreground flex items-center gap-1.5 min-w-0">
                   <span className="uppercase tracking-wider truncate">{label}</span>
                   <IconButton type="button" label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" disabled={hideSensitive || (lockedSleeve !== null && lockedSleeve !== key)} tooltip={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</IconButton>
@@ -426,8 +426,8 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
               />
             </div>
           ))}
-          <div className="rounded-xl bg-muted/30 px-3 py-2 text-xs font-bold text-foreground w-full">Total: {total}%</div>
-          <div className="rounded-xl border border-border/50 bg-muted/20 p-3 w-full min-w-0">
+          <div className="rounded-xl bg-muted/30 px-3 py-2 text-caption font-semibold text-foreground w-full">Total: {total}%</div>
+          <div className="rounded-control bg-surface-2/70 p-3 w-full min-w-0">
             {/* Two sliders on one shared scale, stacked. A drift band is a threshold on the same
                 axis the sleeve targets above already use, and typing it into a number box gave no
                 sense of how far apart the two bands were. Each keeps its own colour -- amber for
@@ -447,7 +447,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
                   <div key={band.key} className={`rounded-xl border p-3 w-full min-w-0 ${band.surface}`}>
                     <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                       <span className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-xs font-bold text-foreground">{band.label}</span>
+                        <span className="text-caption font-semibold text-foreground">{band.label}</span>
                         <IconButton
                           type="button"
                           label={`${isLocked ? 'Unlock' : 'Lock'} ${band.key === 'watchDrift' ? 'watch' : 'alert'} drift threshold`}
@@ -462,7 +462,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
                           {isLocked ? <Lock className={`size-3.5 ${band.lockColor}`} /> : <Unlock className="size-3.5" />}
                         </IconButton>
                       </span>
-                      <span className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-black tabular-nums ${band.badge}`}>
+                      <span className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums ${band.badge}`}>
                         {plan[band.key]} pp
                       </span>
                     </div>

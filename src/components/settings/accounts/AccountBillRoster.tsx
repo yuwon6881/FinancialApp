@@ -47,7 +47,7 @@ function BillItemRow({
   return (
     <div
       data-testid={`bill-roster-item-${payment.id}`}
-      className={`flex flex-col gap-2 rounded-lg border border-border/40 bg-muted/20 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${
+      className={`flex flex-col gap-2 rounded-control bg-surface-2/70 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${
         isPaused ? 'opacity-70' : ''
       }`}
     >
@@ -111,7 +111,7 @@ function BillItemRow({
           value={payment.amount}
           isMasked={hideSensitive}
           formatFn={val => formatCurrencyVal(val, currency)}
-          className="text-xs font-bold text-foreground"
+          className="text-caption font-semibold text-foreground"
         />
 
         <Button
@@ -208,7 +208,7 @@ export function AccountBillRoster({
 
             {pausedBills.length > 0 && (
               <div className="space-y-1.5 pt-1">
-                <p className="text-eyebrow uppercase text-muted-foreground">
+                <p className="text-label font-medium text-muted-foreground">
                   Paused or ended bills ({pausedBills.length})
                 </p>
                 {pausedBills.map(summary => (

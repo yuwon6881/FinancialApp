@@ -32,7 +32,7 @@ export function ForecastControls({
   money: (value: number) => string
 }) {
   return (
-    <div className="space-y-5 rounded-2xl border border-border/50 bg-muted/15 p-4">
+    <div className="space-y-5 rounded-control bg-surface-2/70 p-4">
       <FormField
         label={<span className="flex justify-between gap-3"><span>Years ahead</span><strong className="text-foreground">{years} years</strong></span>}
       >
@@ -45,13 +45,13 @@ export function ForecastControls({
         <RangeInput aria-label="Hypothetical monthly contribution" min={0} max={contributionMax} step={contributionStep} value={Math.min(monthlyContribution, contributionMax)} disabled={masked} onChange={event => onMonthlyContributionChange(Number(event.target.value))} />
       </FormField>
       {years > 30 && (
-        <p className="rounded-xl border border-border/60 bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground">Years 31–50 use a less certain part of the model.</p>
+        <p className="rounded-control bg-surface-2/70 p-3 text-xs leading-relaxed text-muted-foreground">Years 31–50 use a less certain part of the model.</p>
       )}
 
       <div className="space-y-3 border-t border-border/50 pt-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-bold text-foreground">Show in today’s money</p>
+            <p className="text-caption font-semibold text-foreground">Show in today’s money</p>
           </div>
           <PillSwitch checked={todayMoney} onChange={onTodayMoneyChange} ariaLabel="Show in today’s money" disabled={masked} />
         </div>

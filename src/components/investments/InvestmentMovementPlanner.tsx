@@ -81,7 +81,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
   ) : [], [allocation.appCurrency, fxRates, holdings, instruments, mode, plan, selections])
 
   return (
-    <section className="mt-5 overflow-hidden rounded-xl border border-border/60 bg-muted/20">
+    <section className="mt-5 overflow-hidden rounded-control bg-surface-2/70">
       <Button type="button" variant="tertiary" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex min-h-14 w-full items-center justify-between gap-3 rounded-none px-4 py-3 text-left transition hover:bg-muted/30">
         <span className="flex min-w-0 items-center gap-2.5"><span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/10 text-blue-500"><WalletCards className="size-4" /></span><span><strong className="block text-xs text-foreground">Plan money in or out</strong><span className="block text-xs text-muted-foreground">See the app-currency plan and each ETF’s trading-currency equivalent.</span></span></span>
         <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -107,7 +107,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
 
         <label className="block text-xs font-semibold text-muted-foreground">
           {mode === 'deposit' ? 'How much do you want to invest?' : 'How much do you need to withdraw?'}
-          <div className="mt-1.5 flex items-center gap-2"><span className="shrink-0 text-xs font-bold">{allocation.appCurrency}</span><SmartAmountInput value={amountText} onChange={event => setAmountText(maskCurrencyInput(event.target.value, amountText))} placeholder="0.00" aria-label={`${mode === 'deposit' ? 'Amount to invest' : 'Amount to withdraw'} in ${allocation.appCurrency}`} /></div>
+          <div className="mt-1.5 flex items-center gap-2"><span className="shrink-0 text-caption font-semibold">{allocation.appCurrency}</span><SmartAmountInput value={amountText} onChange={event => setAmountText(maskCurrencyInput(event.target.value, amountText))} placeholder="0.00" aria-label={`${mode === 'deposit' ? 'Amount to invest' : 'Amount to withdraw'} in ${allocation.appCurrency}`} /></div>
         </label>
 
         {!canPlan && <p className="rounded-lg border border-orange-500/25 bg-orange-500/8 p-3 text-xs text-orange-700 dark:text-orange-300">{!valuesKnown || !cashKnown ? 'Update the missing market or cash exchange rate before using this planner.' : mode === 'deposit' ? 'Classify at least one investment into a plan basket first.' : 'There is nothing to withdraw yet.'}</p>}

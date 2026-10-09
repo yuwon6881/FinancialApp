@@ -45,7 +45,7 @@ export function AccountsSkeleton({ isCurrentCycle = true }: { isCurrentCycle?: b
 
             <div className="space-y-2">
               {[1, 2].map(rowIdx => (
-                <div key={rowIdx} className="space-y-2.5 rounded-xl border border-border/60 bg-card/70 p-3">
+                <div key={rowIdx} className="space-y-2.5 rounded-control bg-surface-2/70 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <Skeleton className="size-9 rounded-xl" />

@@ -119,7 +119,7 @@ export function AmountReview({ document, updateDocument, currency, disabled = fa
   </div>
 }
 
-const ACTION_CLASS = 'inline-flex cursor-pointer items-center justify-center rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50'
+const ACTION_CLASS = 'inline-flex cursor-pointer items-center justify-center rounded-control bg-surface-2/70 p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50'
 
 /**
  * The three row actions, each exported on its own so the phone card can keep Preview on its face and
@@ -184,7 +184,7 @@ export function DeleteDocumentButton({ document, setDocToDelete, disabled = fals
       type="button"
       disabled={hideSensitive || disabled}
       onClick={() => setDocToDelete(document.id)}
-      className={className ?? 'inline-flex cursor-pointer items-center justify-center rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50'}
+      className={className ?? 'inline-flex cursor-pointer items-center justify-center rounded-control bg-surface-2/70 p-2 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50'}
       aria-label={`Delete ${document.originalFileName}`}
     >
       <Trash2 className="size-3.5" />

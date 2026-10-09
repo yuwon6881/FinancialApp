@@ -39,9 +39,9 @@ export function ForecastTargetSection({
 }) {
   if (target === null) {
     return (
-      <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-border/50 bg-muted/15 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-5 flex flex-col gap-3 rounded-control bg-surface-2/70 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-bold text-foreground">Want to aim for a number?</p>
+          <p className="text-caption font-semibold text-foreground">Want to aim for a number?</p>
         </div>
         <Button variant="primary" size="sm" disabled={masked} onClick={onAdd} className="w-full shrink-0 justify-center sm:w-auto sm:self-auto">Add a target</Button>
       </div>
@@ -52,7 +52,7 @@ export function ForecastTargetSection({
   const canUseRequired = hasRequired && requiredContribution <= maxMonthlyContribution
 
   return (
-    <div className="mt-5 space-y-4 rounded-2xl border border-border/50 bg-muted/15 p-4">
+    <div className="mt-5 space-y-4 rounded-control bg-surface-2/70 p-4">
       <FormField
         label={<span className="flex justify-between gap-3"><span>Target amount</span><strong className="text-foreground">{money(target)}</strong></span>}
       >
@@ -60,9 +60,9 @@ export function ForecastTargetSection({
       </FormField>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <article className="rounded-xl border border-border/50 bg-muted/15 p-3">
+        <article className="rounded-control bg-surface-2/70 p-3">
           <div className="flex items-center gap-1">
-            <p className="text-eyebrow uppercase text-muted-foreground">Chance of reaching your target</p>
+            <p className="text-label font-medium text-muted-foreground">Chance of reaching your target</p>
             <InfoHint
               label="the chance of reaching your target"
               text="Share of simulated paths that reach the target with your chosen amount."
@@ -74,7 +74,7 @@ export function ForecastTargetSection({
         </article>
         <article className="rounded-xl border border-primary/25 bg-primary/5 p-3">
           <div className="flex items-center gap-1">
-            <p className="text-eyebrow uppercase text-muted-foreground">Monthly amount for your target</p>
+            <p className="text-label font-medium text-muted-foreground">Monthly amount for your target</p>
             <InfoHint
               label="the monthly amount for your target"
               text="Amount for the middle outcome; markets may vary."

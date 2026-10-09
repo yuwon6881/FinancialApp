@@ -58,7 +58,7 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
               type="button"
               variant="tertiary"
               onClick={() => onRangeChange(item.value)}
-              className={`cursor-pointer whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${range === item.value ? 'bg-background hover:bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`cursor-pointer whitespace-nowrap rounded-lg px-2.5 py-1 text-caption font-semibold transition-colors ${range === item.value ? 'bg-background hover:bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
               aria-pressed={range === item.value}
             >
               {item.label}
@@ -114,11 +114,11 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
             {hoveredIndex !== null && portfolio.chart[hoveredIndex] && (
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute z-20 w-36 rounded-xl border border-border/60 bg-card/95 p-2 text-center shadow-xl backdrop-blur-md"
+                className="pointer-events-none absolute z-20 w-36 rounded-control bg-surface-2/70 p-2 text-center shadow-(--app-shadow-overlay) backdrop-blur-md"
                 style={{ left: `clamp(0px, calc(${portfolio.chart.length <= 1 ? 50 : hoveredIndex / (portfolio.chart.length - 1) * 100}% - 72px), calc(100% - 144px))`, top: 4 }}
               >
                 <b className="block text-xs text-muted-foreground">{portfolio.chart[hoveredIndex].date}</b>
-                <span className="mt-0.5 block text-xs font-black text-violet-500">
+                <span className="mt-0.5 block text-xs font-semibold text-violet-500">
                   {portfolio.chart[hoveredIndex].totalValue === undefined ? 'Incomplete' : money(portfolio.chart[hoveredIndex].totalValue!, portfolio.appCurrency)}
                 </span>
                 <span className="block text-xs text-muted-foreground">

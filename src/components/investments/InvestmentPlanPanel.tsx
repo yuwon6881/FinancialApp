@@ -13,11 +13,11 @@ import { panelClass } from '../ui/panelStyles'
 import type { AppNavigationOptions } from '../../lib/appLocation'
 
 const tone: Record<InvestmentAllocationStatus, string> = {
-  NotStarted: 'border-border/60 bg-muted/20 text-muted-foreground',
-  Incomplete: 'border-amber-500/30 bg-amber-500/8 text-amber-600 dark:text-amber-300',
-  OnTrack: 'border-emerald-500/25 bg-emerald-500/7 text-emerald-600 dark:text-emerald-300',
-  Watch: 'border-amber-500/25 bg-amber-500/7 text-amber-600 dark:text-amber-300',
-  Alert: 'border-orange-500/30 bg-orange-500/8 text-orange-600 dark:text-orange-300',
+  NotStarted: 'bg-surface-2 text-muted-foreground',
+  Incomplete: 'bg-amber-500/12 text-amber-700 dark:text-amber-300',
+  OnTrack: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300',
+  Watch: 'bg-amber-500/12 text-amber-700 dark:text-amber-300',
+  Alert: 'bg-red-500/12 text-red-700 dark:text-red-300',
 }
 
 const colors = ['bg-blue-500', 'bg-amber-500', 'bg-emerald-500']
@@ -67,7 +67,7 @@ export function InvestmentPlanPanel({
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: 'easeOut' }}
-      className={cn(panelClass, 'group/plan p-5 transition-[border-color,box-shadow] duration-300 hover:border-primary/25 hover:shadow-lg hover:shadow-primary/5')}
+      className={cn(panelClass, 'group/plan p-5 transition-[border-color,box-shadow] duration-300 hover:border-primary/25 hover:shadow-(--app-shadow-overlay) hover:shadow-primary/5')}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
@@ -120,8 +120,8 @@ export function InvestmentPlanPanel({
       <InvestmentMovementPlanner allocation={allocation} holdings={holdings} instruments={instruments} fxRates={fxRates} masked={masked} money={money} colors={colors} />
 
       <div className={`mt-5 grid gap-4 ${showGuidance ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]' : ''}`}>
-        <div className="rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
-          <h3 className="flex items-center gap-1 text-xs font-bold text-foreground">
+        <div className="rounded-control bg-surface-2/70 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
+          <h3 className="flex items-center gap-1 text-caption font-semibold text-foreground">
             What you hold vs your target
             <InfoHint
               label="what you hold versus your target"
@@ -155,9 +155,9 @@ export function InvestmentPlanPanel({
           </p>
         </div>
 
-        {showGuidance && <div className="rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
+        {showGuidance && <div className="rounded-control bg-surface-2/70 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
           <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-1 text-xs font-bold text-foreground">
+            <h3 className="flex items-center gap-1 text-caption font-semibold text-foreground">
               {classificationIncomplete ? 'What to do next' : 'Why guidance is unavailable'}
               <InfoHint
                 label="what to do next"

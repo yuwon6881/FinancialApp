@@ -307,7 +307,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         {stagedCategories.staged.size > 0 && (
           <div className="mb-3 flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-bold">{stagedCategories.staged.size} tax relief categor{stagedCategories.staged.size === 1 ? 'y change' : 'y changes'} staged</p>
+              <p className="text-caption font-semibold">{stagedCategories.staged.size} tax relief categor{stagedCategories.staged.size === 1 ? 'y change' : 'y changes'} staged</p>
             </div>
             <div className="flex shrink-0 justify-end gap-2">
               <Button
@@ -325,7 +325,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 disabled={stagedCategories.isSaving}
                 aria-busy={stagedCategories.isSaving}
                 onClick={() => void stagedCategories.save()}
-                className="rounded-lg bg-primary hover:bg-primary/90 px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
+                className="rounded-lg bg-primary hover:bg-primary/90 px-3 py-2 text-caption font-semibold text-primary-foreground disabled:opacity-50"
               >
                 {stagedCategories.isSaving ? 'Saving…' : 'Save categories'}
               </Button>
@@ -336,7 +336,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         <div className="relative" aria-busy={isLoading}>
           {isLoading && documents.length > 0 && (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-              <div className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-card/90 px-3 py-2 text-xs font-semibold text-muted-foreground shadow-lg backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 rounded-control bg-surface-2/70 px-3 py-2 text-xs font-semibold text-muted-foreground shadow-(--app-shadow-overlay) backdrop-blur-sm">
                 <Loader2 className="size-3.5 animate-spin text-accent-ink" aria-hidden="true" />
                 Updating documents…
               </div>

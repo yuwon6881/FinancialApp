@@ -18,7 +18,7 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
 
   if (prices.length < 2) {
     return (
-      <p className="rounded-xl border border-border/50 bg-muted/20 p-4 text-xs text-muted-foreground">
+      <p className="rounded-control bg-surface-2/70 p-4 text-xs text-muted-foreground">
         Not enough price history yet.
       </p>
     )
@@ -43,7 +43,7 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
     <section aria-labelledby="fund-price-title">
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h3 id="fund-price-title" className="text-xs font-bold text-foreground">Price history</h3>
+          <h3 id="fund-price-title" className="text-caption font-semibold text-foreground">Price history</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
             One unit, in {history.currency}.
           </p>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, Loader2, Search } from 'lucide-react'
+import { ChevronDown, Loader2, Pencil, Search, Trash2 } from 'lucide-react'
 import type { InvestmentActivity, InvestmentCashFlow, InvestmentPortfolio, InvestmentTransactionType } from '../../types'
 import * as api from '../../lib/api'
 import { applyOpsToList, type QueuedOp } from '../../lib/outbox'
@@ -10,6 +10,7 @@ import { filterHoldings } from '../../lib/investmentHoldingFilter'
 import { investmentActivityCashAfterCharges, investmentActivityCharges } from '../../lib/investmentActivityDisplay'
 import { Badge, type BadgeTone } from '../ui/Badge'
 import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
@@ -51,7 +52,7 @@ const activityLabel = (type: InvestmentTransactionType) =>
 function InstrumentChip({ symbol }: { symbol?: string }) {
   if (!symbol) return <span className="text-muted-foreground">—</span>
   return (
-    <span className="inline-flex max-w-full items-center truncate rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-xs font-bold text-foreground">
+    <span className="inline-flex max-w-full items-center truncate rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-caption font-semibold text-foreground">
       {symbol}
     </span>
   )
@@ -131,13 +132,13 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
     <div className="p-4 sm:p-5"><h2 id="holdings-title" className="text-section text-foreground">What you hold</h2>{filter && <p className="mt-1 text-xs text-muted-foreground">Showing only {filterLabel}.</p>}</div>
     <div className="grid gap-3 px-4 pb-4 sm:px-5 sm:pb-5 sm:grid-cols-2 lg:grid-cols-3">
       {accountGroups.map(({ account, holdings: accountHoldings, cash, total }) => (
-        <article key={account.id} className="interactive-card rounded-xl border border-border/50 bg-muted/15 p-4">
+        <article key={account.id} className="interactive-card rounded-control bg-surface-2/70 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0"><h3 className="truncate text-subsection">{account.name}</h3><p className="text-xs text-muted-foreground">Base currency {account.baseCurrency} · {accountHoldings.length} holding{accountHoldings.length === 1 ? '' : 's'}</p></div>
             <strong className="shrink-0 text-xs">{masked ? '••••' : total === undefined ? 'Exchange rate missing' : money(total, portfolio.appCurrency)}</strong>
           </div>
           {cash.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{cash.map(balance => (
-            <span key={balance.currency} className={`rounded-full px-2.5 py-1 text-xs font-bold ${balance.amount < 0 ? 'bg-orange-500/10 text-orange-700 dark:text-orange-300' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'}`}>
+            <span key={balance.currency} className={`rounded-full px-2.5 py-1 text-caption font-semibold ${balance.amount < 0 ? 'bg-orange-500/10 text-orange-700 dark:text-orange-300' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'}`}>
               Cash · {masked ? '••••' : money(balance.amount, balance.currency)}
             </span>
           ))}</div>}
@@ -182,8 +183,8 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
               provenance began, and neither column had a straight edge. Now the sum sits in its own
               inset with room to wrap, and each source is a labelled block whose name and date share
               a baseline and wrap under it when they cannot. */}
-          <details className="mt-3 group min-w-0 rounded-xl border border-border/50 bg-muted/20">
-            <summary className="flex min-h-11 cursor-pointer select-none items-center justify-between gap-2 px-3 py-2 text-eyebrow uppercase text-muted-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50">
+          <details className="mt-3 group min-w-0 rounded-control bg-surface-2/70">
+            <summary className="flex min-h-11 cursor-pointer select-none items-center justify-between gap-2 px-3 py-2 text-label font-medium text-muted-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50">
               <span>How this was worked out</span>
               <ChevronDown className="size-3.5 shrink-0 transition-transform duration-200 group-open:rotate-180" aria-hidden="true" />
             </summary>
@@ -194,7 +195,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
               </p>
               <dl className="grid gap-2.5 sm:grid-cols-2">
                 <div className="min-w-0">
-                  <dt className="text-eyebrow uppercase text-muted-foreground">Price from</dt>
+                  <dt className="text-label font-medium text-muted-foreground">Price from</dt>
                   <dd className="mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-1.5">
                     <span className="min-w-0 break-words font-semibold text-foreground/90">{holding.priceSource ?? 'Price source unavailable'}</span>
                     <span className="tabular-nums">{holding.priceDate ?? 'No date'}</span>
@@ -202,7 +203,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
                 </div>
                 {holding.fxSource && (
                   <div className="min-w-0">
-                    <dt className="text-eyebrow uppercase text-muted-foreground">Rate from</dt>
+                    <dt className="text-label font-medium text-muted-foreground">Rate from</dt>
                     <dd className="mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-1.5">
                       <span className="min-w-0 break-words font-semibold text-foreground/90">{holding.fxSource}</span>
                       <span className="tabular-nums">{holding.fxDate ?? 'No date'}</span>
@@ -231,7 +232,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
           <col className="w-[11%]" />
           <col className="w-[15%]" />
         </colgroup>
-        <DataTableHeader className="text-xs uppercase tracking-wide">
+        <DataTableHeader>
           <DataTableHeaderCell>Investment</DataTableHeaderCell>
           <DataTableHeaderCell>Account</DataTableHeaderCell>
           <DataTableHeaderCell className="text-right">Units</DataTableHeaderCell>
@@ -407,8 +408,8 @@ export const PagedActivityTable = ({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><h2 id="activity-title" className="text-section text-foreground">Activity</h2><p className="mt-1 text-xs text-muted-foreground">{total} matching record{total === 1 ? '' : 's'}{activeLabel ? ` · ${activeLabel}` : ''}</p></div>
           <div className="flex rounded-xl bg-muted/40 p-1">
-            <Button variant="tertiary" onClick={() => resetPage(() => { setMode('investments'); setType(''); setAppliedFilters(value => ({ ...value, type: '' })) })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'investments' ? 'bg-background hover:bg-background shadow-sm' : 'text-muted-foreground'}`}>Investments</Button>
-            <Button variant="tertiary" onClick={() => resetPage(() => { setMode('cash'); setType(''); setInstrumentId(''); setAppliedFilters(value => ({ ...value, type: '', instrumentId: '' })) })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'cash' ? 'bg-background hover:bg-background shadow-sm' : 'text-muted-foreground'}`}>Cash flow</Button>
+            <Button variant="tertiary" onClick={() => resetPage(() => { setMode('investments'); setType(''); setAppliedFilters(value => ({ ...value, type: '' })) })} className={`rounded-lg px-3 py-1.5 text-caption font-semibold ${mode === 'investments' ? 'bg-background hover:bg-background shadow-sm' : 'text-muted-foreground'}`}>Investments</Button>
+            <Button variant="tertiary" onClick={() => resetPage(() => { setMode('cash'); setType(''); setInstrumentId(''); setAppliedFilters(value => ({ ...value, type: '', instrumentId: '' })) })} className={`rounded-lg px-3 py-1.5 text-caption font-semibold ${mode === 'cash' ? 'bg-background hover:bg-background shadow-sm' : 'text-muted-foreground'}`}>Cash flow</Button>
           </div>
         </div>
         {/* Three filters to a row at the widest tier, not five. `xl` is an alias of `lg` in this
@@ -452,28 +453,28 @@ export const PagedActivityTable = ({
                 const instrument = instruments.get(value.instrumentId)
                 const isActive = isActiveRecord(value.id, 'investmentActivity')
                 const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-                return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
+                return <article key={value.id} className="min-w-0 rounded-control bg-surface-2/50 p-3.5">
                   <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-1.5"><Badge tone={ACTIVITY_TONES[value.type]}>{activityLabel(value.type)}</Badge><InstrumentChip symbol={instrument?.symbol} /><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="text-xs text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span></div><InvestmentActivityAmount activity={value} currency={instrument?.currency ?? portfolio.appCurrency} masked={masked} mobile /></div>
                   <div className="mt-2 flex items-center justify-end gap-1">
-                    <Button variant="tertiary" size="sm" disabled={isBusy || masked} onClick={() => onEdit(value)}>Edit</Button>
-                    <Button variant="destructive" size="sm" disabled={isBusy || masked} onClick={() => onDelete(value)}>Delete</Button>
+                    <IconButton label={`Edit ${activityLabel(value.type)} ${value.tradeDate}`} tooltip="Edit" disabled={isBusy || masked} onClick={() => onEdit(value)} className="text-muted-foreground hover:text-foreground"><Pencil className="size-4" aria-hidden="true" /></IconButton>
+                    <IconButton label={`Delete ${activityLabel(value.type)} ${value.tradeDate}`} tooltip="Delete" disabled={isBusy || masked} onClick={() => onDelete(value)} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" aria-hidden="true" /></IconButton>
                   </div>
                 </article>
               }) : displayCashFlows.map(value => {
                 const isActive = isActiveRecord(value.id, 'investmentCashFlow')
                 const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-                return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
-                  <div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-1.5"><Badge tone={CASH_FLOW_TONES[value.type] ?? 'neutral'}>{value.type}</Badge><span className="truncate text-xs font-semibold text-foreground">{accounts.get(value.accountId)}</span><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="text-xs text-muted-foreground">{value.date}</span></div><strong className={`shrink-0 text-xs font-bold ${value.type === 'Conversion' ? '' : value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}`}>{cashFlowAmount(value, masked)}</strong></div>
+                return <article key={value.id} className="min-w-0 rounded-control bg-surface-2/50 p-3.5">
+                  <div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-1.5"><Badge tone={CASH_FLOW_TONES[value.type] ?? 'neutral'}>{value.type}</Badge><span className="truncate text-xs font-semibold text-foreground">{accounts.get(value.accountId)}</span><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="text-xs text-muted-foreground">{value.date}</span></div><strong className={`shrink-0 text-caption font-semibold ${value.type === 'Conversion' ? '' : value.amount < 0 ? 'text-foreground' : 'text-emerald-600 dark:text-emerald-400'}`}>{cashFlowAmount(value, masked)}</strong></div>
                   <div className="mt-2 flex items-center justify-end gap-1">
-                    <Button variant="tertiary" size="sm" disabled={isBusy || masked} onClick={() => onEditCashFlow(value)}>Edit</Button>
-                    <Button variant="destructive" size="sm" disabled={isBusy || masked} onClick={() => onDeleteCashFlow(value)}>Delete</Button>
+                    <IconButton label={`Edit ${value.type} ${value.date}`} tooltip="Edit" disabled={isBusy || masked} onClick={() => onEditCashFlow(value)} className="text-muted-foreground hover:text-foreground"><Pencil className="size-4" aria-hidden="true" /></IconButton>
+                    <IconButton label={`Delete ${value.type} ${value.date}`} tooltip="Delete" disabled={isBusy || masked} onClick={() => onDeleteCashFlow(value)} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" aria-hidden="true" /></IconButton>
                   </div>
                 </article>
               })}
               </div>
               <div className="hidden lg:block">
                 <DataTable embedded horizontalOverflow="auto" tableClassName="min-w-[650px]">
-                  <DataTableHeader className="text-xs uppercase">
+                  <DataTableHeader>
                     <DataTableHeaderCell className="min-w-24">Date</DataTableHeaderCell>
                     <DataTableHeaderCell className="min-w-28">Type</DataTableHeaderCell>
                     <DataTableHeaderCell className="min-w-28">Account</DataTableHeaderCell>
@@ -484,11 +485,11 @@ export const PagedActivityTable = ({
                   <DataTableBody>{mode === 'investments' ? displayTransactions.map(value => {
                     const isActive = isActiveRecord(value.id, 'investmentActivity')
                     const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-                    return <tr key={value.id} className="transition-colors hover:bg-muted/25"><td className="px-4 py-3 tabular-nums text-muted-foreground">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2"><Badge tone={ACTIVITY_TONES[value.type]}>{activityLabel(value.type)}</Badge><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3 text-muted-foreground">{accounts.get(value.accountId)}</td><td className="px-4 py-3"><InstrumentChip symbol={instruments.get(value.instrumentId)?.symbol} /></td><td className="px-4 py-3 text-right"><InvestmentActivityAmount activity={value} currency={instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency} masked={masked} /></td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="tertiary" size="sm" disabled={isBusy || masked} onClick={() => onEdit(value)}>Edit</Button><Button variant="destructive" size="sm" disabled={isBusy || masked} onClick={() => onDelete(value)}>Delete</Button></span></td></tr>
+                    return <tr key={value.id} className="transition-colors hover:bg-surface-2/50"><td className="px-4 py-3 tabular-nums text-muted-foreground">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2"><Badge tone={ACTIVITY_TONES[value.type]}>{activityLabel(value.type)}</Badge><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3 text-muted-foreground">{accounts.get(value.accountId)}</td><td className="px-4 py-3"><InstrumentChip symbol={instruments.get(value.instrumentId)?.symbol} /></td><td className="px-4 py-3 text-right"><InvestmentActivityAmount activity={value} currency={instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency} masked={masked} /></td><td className="px-4 py-3"><span className="flex justify-end gap-1"><IconButton label={`Edit ${activityLabel(value.type)} ${value.tradeDate}`} tooltip="Edit" disabled={isBusy || masked} onClick={() => onEdit(value)} className="text-muted-foreground hover:text-foreground"><Pencil className="size-4" aria-hidden="true" /></IconButton><IconButton label={`Delete ${activityLabel(value.type)} ${value.tradeDate}`} tooltip="Delete" disabled={isBusy || masked} onClick={() => onDelete(value)} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" aria-hidden="true" /></IconButton></span></td></tr>
                   }) : displayCashFlows.map(value => {
                     const isActive = isActiveRecord(value.id, 'investmentCashFlow')
                     const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-                    return <tr key={value.id} className="transition-colors hover:bg-muted/25"><td className="px-4 py-3 tabular-nums text-muted-foreground">{value.date}</td><td className="px-4 py-3"><span className="flex items-center gap-2"><Badge tone={CASH_FLOW_TONES[value.type] ?? 'neutral'}>{value.type}</Badge><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3 text-muted-foreground">{accounts.get(value.accountId)}</td><td className={`px-4 py-3 text-right font-bold tabular-nums ${value.type === 'Conversion' ? 'text-foreground' : value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}`}>{cashFlowAmount(value, masked)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="tertiary" size="sm" disabled={isBusy || masked} onClick={() => onEditCashFlow(value)}>Edit</Button><Button variant="destructive" size="sm" disabled={isBusy || masked} onClick={() => onDeleteCashFlow(value)}>Delete</Button></span></td></tr>
+                    return <tr key={value.id} className="transition-colors hover:bg-surface-2/50"><td className="px-4 py-3 tabular-nums text-muted-foreground">{value.date}</td><td className="px-4 py-3"><span className="flex items-center gap-2"><Badge tone={CASH_FLOW_TONES[value.type] ?? 'neutral'}>{value.type}</Badge><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3 text-muted-foreground">{accounts.get(value.accountId)}</td><td className={`px-4 py-3 text-right font-bold tabular-nums ${value.type === 'Conversion' ? 'text-foreground' : value.amount < 0 ? 'text-foreground' : 'text-emerald-600 dark:text-emerald-400'}`}>{cashFlowAmount(value, masked)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><IconButton label={`Edit ${value.type} ${value.date}`} tooltip="Edit" disabled={isBusy || masked} onClick={() => onEditCashFlow(value)} className="text-muted-foreground hover:text-foreground"><Pencil className="size-4" aria-hidden="true" /></IconButton><IconButton label={`Delete ${value.type} ${value.date}`} tooltip="Delete" disabled={isBusy || masked} onClick={() => onDeleteCashFlow(value)} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" aria-hidden="true" /></IconButton></span></td></tr>
                   })}</DataTableBody>
                 </DataTable>
               </div>

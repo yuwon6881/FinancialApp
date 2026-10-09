@@ -200,15 +200,15 @@ export function AccountFormSheet({
     >
       <form id="ledger-account-form" noValidate onSubmit={submit} className="space-y-4">
         {/* Header summary banner */}
-        <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/15 p-3.5">
+        <div className="flex items-center gap-3 rounded-control bg-surface-2/70 p-3.5">
           <div className={`grid size-10 shrink-0 place-items-center rounded-xl border ${bucketBadgeClass}`} aria-hidden="true">
             <AccountIcon className="size-5" />
           </div>
           <div className="min-w-0 flex-1 space-y-0.5">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-bold text-foreground">{isEditing ? 'Update this account' : 'New account'}</p>
+              <p className="text-caption font-semibold text-foreground">{isEditing ? 'Update this account' : 'New account'}</p>
               {isEditing && isArchived && (
-                <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-eyebrow uppercase text-muted-foreground">
+                <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-label font-medium text-muted-foreground">
                   Closed
                 </span>
               )}
@@ -356,7 +356,7 @@ export function AccountFormSheet({
                         Mark account as closed
                       </span>
                       {isArchived && (
-                        <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 text-eyebrow uppercase text-muted-foreground">
+                        <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 text-label font-medium text-muted-foreground">
                           Closed
                         </span>
                       )}

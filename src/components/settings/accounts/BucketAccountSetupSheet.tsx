@@ -73,7 +73,7 @@ function NewAccountRow({
     <div className="space-y-3 rounded-2xl border border-accent-ink/20 bg-accent/10 p-3.5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-bold text-foreground">New account row</p>
+          <p className="text-caption font-semibold text-foreground">New account row</p>
         </div>
         <IconButton type="button" onClick={onRemove} label={`Remove ${draft.name || 'new account row'}`}>
           <Trash2 className="size-4 text-destructive" aria-hidden="true" />
@@ -164,8 +164,8 @@ export function BucketAccountSetupSheet({
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <div className="rounded-xl border border-border/60 bg-muted/15 p-3"><span className="block text-xs font-semibold text-muted-foreground">Current bucket total</span><span className="mt-1 block text-sm">{formatAmount(bucketTotal)}</span></div>
-            <div className="rounded-xl border border-border/60 bg-muted/15 p-3"><span className="block text-xs font-semibold text-muted-foreground">Current account total</span><span className="mt-1 block text-sm">{view.preview ? formatAmount(view.preview.currentAccountTotal) : 'Enter balances'}</span></div>
+            <div className="rounded-control bg-surface-2/70 p-3"><span className="block text-xs font-semibold text-muted-foreground">Current bucket total</span><span className="mt-1 block text-sm">{formatAmount(bucketTotal)}</span></div>
+            <div className="rounded-control bg-surface-2/70 p-3"><span className="block text-xs font-semibold text-muted-foreground">Current account total</span><span className="mt-1 block text-sm">{view.preview ? formatAmount(view.preview.currentAccountTotal) : 'Enter balances'}</span></div>
             <div className={`rounded-xl border p-3 ${view.preview?.bucketDifference && Math.abs(view.preview.bucketDifference) >= view.epsilon ? 'border-accent-ink/30 bg-accent/15' : 'border-border/60 bg-muted/15'}`}><span className="block text-xs font-semibold text-muted-foreground">Change to {bucket ?? 'bucket'} total</span><span className="mt-1 block text-sm">{view.preview ? <SignedAmount value={view.preview.bucketDifference} currency={currency} hideSensitive={hideSensitive} /> : 'Enter balances'}</span></div>
           </div>
           {view.errors.form && <div className="flex items-start gap-2 rounded-xl border border-destructive/25 bg-destructive/10 p-3 text-xs leading-relaxed text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" /><p>{view.errors.form}</p></div>}
@@ -188,7 +188,7 @@ export function BucketAccountSetupSheet({
             {bucket && view.drafts.map(draft => <NewAccountRow key={draft.id} draft={draft} bucket={bucket} currency={currency} error={view.errors[draft.id]} targetError={view.errors[`${draft.id}-target`]} onChange={change => view.updateDraft(draft.id, change)} onTargetChange={value => view.updateDraftTarget(draft.id, value)} onRemove={() => view.removeDraft(draft.id)} />)}
             {view.bucketAccounts.length === 0 && view.drafts.length === 0 && <EmptyState density="compact" className="rounded-2xl bg-card/40" title="Add at least one account row to start this bucket." />}
           </div>
-          {view.preview && view.preview.accountAdjustments.length > 0 && <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/15 p-3.5"><div className="flex items-center gap-2 text-xs font-bold text-foreground"><CheckCircle2 className="size-4 text-accent-ink" aria-hidden="true" />Planned balance changes</div>{view.preview.accountAdjustments.map(account => <div key={account.id} className="flex items-center justify-between gap-3 text-xs"><span className="min-w-0 truncate">{account.name}</span><SignedAmount value={account.diff} currency={currency} hideSensitive={hideSensitive} /></div>)}</div>}
+          {view.preview && view.preview.accountAdjustments.length > 0 && <div className="space-y-2 rounded-control bg-surface-2/70 p-3.5"><div className="flex items-center gap-2 text-caption font-semibold text-foreground"><CheckCircle2 className="size-4 text-accent-ink" aria-hidden="true" />Planned balance changes</div>{view.preview.accountAdjustments.map(account => <div key={account.id} className="flex items-center justify-between gap-3 text-xs"><span className="min-w-0 truncate">{account.name}</span><SignedAmount value={account.diff} currency={currency} hideSensitive={hideSensitive} /></div>)}</div>}
         </div>
       </BottomSheet>
       <CustomConfirmModal
@@ -197,7 +197,7 @@ export function BucketAccountSetupSheet({
         confirmText="Apply account setup"
         cancelText="Go back"
         variant="primary"
-        message={view.pending && <div className="space-y-3"><div className="space-y-1.5 rounded-xl border border-border/60 bg-muted/30 p-3"><div className="flex items-center justify-between gap-3"><span>Current bucket total</span><span>{formatAmount(view.pending.preview.bucketTotal)}</span></div><div className="flex items-center justify-between gap-3"><span>Target account total</span><span>{formatAmount(view.pending.preview.targetAccountTotal)}</span></div><div className="flex items-center justify-between gap-3 border-t border-border/50 pt-1.5"><span>Net bucket change</span><SignedAmount value={view.pending.preview.bucketDifference} currency={currency} hideSensitive={hideSensitive} /></div></div><p className="text-xs text-muted-foreground">A real transfer between accounts remains a separate Transfer entry in the Ledger.</p></div>}
+        message={view.pending && <div className="space-y-3"><div className="space-y-1.5 rounded-control bg-surface-2/70 p-3"><div className="flex items-center justify-between gap-3"><span>Current bucket total</span><span>{formatAmount(view.pending.preview.bucketTotal)}</span></div><div className="flex items-center justify-between gap-3"><span>Target account total</span><span>{formatAmount(view.pending.preview.targetAccountTotal)}</span></div><div className="flex items-center justify-between gap-3 border-t border-border/50 pt-1.5"><span>Net bucket change</span><SignedAmount value={view.pending.preview.bucketDifference} currency={currency} hideSensitive={hideSensitive} /></div></div><p className="text-xs text-muted-foreground">A real transfer between accounts remains a separate Transfer entry in the Ledger.</p></div>}
         onCancel={view.clearPending}
         onConfirm={() => { void handleConfirm() }}
         isConfirming={isApplying}

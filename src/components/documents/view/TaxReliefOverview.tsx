@@ -246,7 +246,7 @@ export function TaxReliefOverview({
   }
 
   return (
-    <section className="mb-4 rounded-2xl border border-border/60 bg-muted/20 p-4" aria-labelledby="tax-relief-overview">
+    <section className="mb-4 rounded-control bg-surface-2/70 p-4" aria-labelledby="tax-relief-overview">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 id="tax-relief-overview" className="flex items-center gap-2 text-subsection">
@@ -276,7 +276,7 @@ export function TaxReliefOverview({
 
       <div className="mt-4 min-h-[8.25rem]" aria-busy={isLoading}>
         {isLoading ? (
-          <div className="flex min-h-[8.25rem] items-center justify-center gap-2 rounded-xl border border-border/50 bg-card/60 text-caption font-semibold text-muted-foreground" role="status">
+          <div className="flex min-h-[8.25rem] items-center justify-center gap-2 rounded-control bg-surface-2/70 text-caption font-semibold text-muted-foreground" role="status">
             <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
             Loading tax relief tracker…
           </div>

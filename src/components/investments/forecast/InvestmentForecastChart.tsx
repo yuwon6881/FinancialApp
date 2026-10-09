@@ -84,11 +84,11 @@ export function InvestmentForecastChart({
         {hovered && (
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute z-20 w-40 rounded-xl border border-border/60 bg-card/95 p-2 text-center shadow-xl backdrop-blur-md"
+            className="pointer-events-none absolute z-20 w-40 rounded-control bg-surface-2/70 p-2 text-center shadow-(--app-shadow-overlay) backdrop-blur-md"
             style={{ left: `clamp(0px, calc(${points.length <= 1 ? 50 : hoveredX / (points.length - 1) * 100}% - 80px), calc(100% - 160px))`, top: 4 }}
           >
             <b className="block text-xs text-muted-foreground">{hovered.year === 0 ? 'Today' : `In ${hovered.year} years`}</b>
-            <span className="mt-0.5 block text-xs font-black text-violet-500">{money(hovered.median)}</span>
+            <span className="mt-0.5 block text-xs font-semibold text-violet-500">{money(hovered.median)}</span>
             <span className="block text-xs text-muted-foreground">Could be {money(hovered.lower)} to {money(hovered.upper)}</span>
           </div>
         )}
