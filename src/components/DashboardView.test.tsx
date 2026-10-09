@@ -243,16 +243,6 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.getByText(amount('$220.00'))).toBeTruthy()
   })
 
-  it('navigates to Essentials outflows when Review Essentials spending is clicked', () => {
-    const props = makeProps()
-    render(<DashboardView {...props} />)
-
-    fireEvent.click(screen.getByRole('button', { name: /Essentials challenge/i }))
-    const reviewButton = screen.getByRole('button', { name: /Review Essentials spending/i })
-    fireEvent.click(reviewButton)
-    expect(props.onNavigateToLedger).toHaveBeenCalledWith({ category: 'Essentials', txType: 'outflow' })
-  })
-
   it('keeps long-term Growth Investments out of the Today view', () => {
     render(<DashboardView {...makeProps()} />)
 

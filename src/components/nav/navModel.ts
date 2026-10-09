@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { ArrowLeftRight, ChartSpline, House, Landmark, Target } from 'lucide-react'
+import { ArrowLeftRight, ChartPie, ChartSpline, House, Landmark } from 'lucide-react'
 import type { AppTab } from '../../types'
 import { isLoansLocation } from '../../lib/appLocation'
 
@@ -41,7 +41,7 @@ export const DESTINATIONS: readonly Destination[] = [
   {
     id: 'plan',
     label: 'Plan',
-    Icon: Target,
+    Icon: ChartPie,
     tabs: ['budget', 'recurring', 'wishlist'],
     sections: [
       { id: 'budget', label: 'Budget', tab: 'budget' },

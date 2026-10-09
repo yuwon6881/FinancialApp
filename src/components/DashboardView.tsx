@@ -9,8 +9,6 @@ import { useDashboardView } from './dashboard/useDashboardView'
 import { Button } from './ui/Button'
 import { PageHeader } from './ui/PageHeader'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
-import { evaluateEssentialsChallenge } from '../lib/essentialsChallenge'
-import { EssentialsChallengeCard } from './dashboard/EssentialsChallengeCard'
 import { InvestmentPlanExceptionCard } from './dashboard/InvestmentPlanExceptionCard'
 import { StabilityRecoveryExceptionCard } from './dashboard/StabilityRecoveryExceptionCard'
 import { RecurringAccountShortfallCard } from './dashboard/RecurringAccountShortfallCard'
@@ -89,15 +87,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const safeMonthIndex = monthIndex > 0 ? monthIndex : new Date().getMonth() + 1
     return getCycleProgress(view.activeSettings.selectedYear || new Date().getFullYear(), safeMonthIndex, view.activeSettings.cycleDay || 28)
   }, [view.activeSettings.cycleDay, view.activeSettings.selectedMonth, view.activeSettings.selectedYear])
-  const challenge = React.useMemo(() => evaluateEssentialsChallenge({
-    totalAvailable: view.essentialsMetric.totalAvailable,
-    projectedRemaining: view.essentialsMetric.projectedRemaining,
-    projectedEndingBalance: view.todayPlanInsights.projectedEssentialsEndingBalance,
-    currentDailyPace: view.todayPlanInsights.nonRecurringEssentialsDailyAverage,
-    unpaidRecurringCount: view.todayPlanInsights.unpaidRecurringCount,
-    exceededCategoryLimits: view.categoryLimitProgress.filter(item => item.status === 'Exceeded').length,
-    cycle: cycleProgress,
-  }), [cycleProgress, view.categoryLimitProgress, view.essentialsMetric, view.todayPlanInsights])
 
   if (isSwitchingCycle) {
     return <CycleSkeleton variant="dashboard" />
@@ -112,14 +101,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <PageHeader
         title="Today"
         description={`Current cycle · ${formatCycleRange(view.cycleLabel)}`}
-        actions={(
-          <EssentialsChallengeCard
-            challenge={challenge}
-            cycle={cycleProgress}
-            formatSensitive={view.formatSensitive}
-            onReviewEssentials={onNavigateToLedger ? () => onNavigateToLedger({ category: 'Essentials', txType: 'outflow' }) : undefined}
-          />
-        )}
       />
 
       <TodayHero

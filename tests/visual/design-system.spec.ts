@@ -163,68 +163,6 @@ test('emergency fund recovery card reports a plan that starts next cycle', async
   await expect(card).toHaveScreenshot('stability-recovery-deferred.png')
 })
 
-// A funded Essentials envelope, mid-cycle. The shared fixture allocates nothing to Essentials, so
-// its dashboard shows the card's unranked state; these two specs are the only place the ranked
-// layout — score ring, pace marker on the bar, badge grid — is drawn at every viewport.
-const essentialsCycle = { cycleDay: 15 }
-const fundedEssentials = (remaining: number, endingBalance: number) => ({
-  categories: [
-    { id: 'essentials', name: 'Essentials', allocation: 0.5, target: 2_400, incomeAllocated: 2_400, budget: 0, netChange: -(2_400 - remaining), spent: 2_400 - remaining, remaining },
-    { id: 'salary', name: 'Salary', allocation: 0, target: 0, incomeAllocated: 0, budget: 0, netChange: 5_500, spent: 0, remaining: 5_500 },
-  ],
-  todayPlanInsights: {
-    unpaidRecurringCount: 1,
-    unpaidRecurringTotal: 120,
-    unpaidEssentialsTotal: 0,
-    nonRecurringEssentialsSpent: 2_400 - remaining,
-    nonRecurringEssentialsDailyAverage: 55,
-    projectedEssentialsEndingBalance: endingBalance,
-  },
-})
-
-test('essentials challenge ranks a cycle that is holding its plan', async ({ page }) => {
-  await establishSession(page)
-  await mockApi(page, { setting: essentialsCycle, dashboard: fundedEssentials(1_320, 240) })
-  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
-
-  await page.getByRole('button', { name: /Essentials challenge/i }).click()
-  const card = page.getByRole('heading', { name: 'Ahead of plan' }).locator('xpath=ancestor::section[1]')
-  await expect(card).toBeVisible()
-  await waitForStableLayout(page)
-
-  await expect(card).toHaveScreenshot('essentials-challenge-ahead.png')
-})
-
-test('essentials on-plan score and details use a check badge', async ({ page }) => {
-  await establishSession(page)
-  await mockApi(page, { setting: essentialsCycle, dashboard: fundedEssentials(1_320, 50) })
-  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
-  const trigger = page.getByRole('button', { name: /Essentials challenge score/i })
-  await expect(trigger.locator('.lucide-badge-check')).toBeVisible()
-  await expect(trigger.locator('.lucide-target')).toHaveCount(0)
-  await expect(trigger).toHaveScreenshot('essentials-score-on-plan.png')
-  await trigger.click()
-  const dialog = page.getByRole('dialog', { name: 'Essentials challenge' })
-  await expect(dialog.getByRole('heading', { name: 'On plan' })).toBeVisible()
-  await expect(dialog.locator('.lucide-badge-check')).toBeVisible()
-  await expect(dialog.locator('.lucide-target')).toHaveCount(0)
-  await waitForStableLayout(page)
-  await expect(dialog).toHaveScreenshot('essentials-challenge-on-plan.png')
-})
-
-test('essentials challenge ranks a cycle that has run past its money', async ({ page }) => {
-  await establishSession(page)
-  await mockApi(page, { setting: essentialsCycle, dashboard: fundedEssentials(-300, -300) })
-  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
-
-  await page.getByRole('button', { name: /Essentials challenge/i }).click()
-  const card = page.getByRole('heading', { name: 'Well over' }).locator('xpath=ancestor::section[1]')
-  await expect(card).toBeVisible()
-  await waitForStableLayout(page)
-
-  await expect(card).toHaveScreenshot('essentials-challenge-over.png')
-})
-
 // The route-level commitments-rewards baselines are all captured with no savings goals, so the
 // pool card's active state -- the claim tiles, the outstanding wording, the cycle pacing line --
 // appeared in none of them. Scoped to the card, so one line moving is a real share of the image
