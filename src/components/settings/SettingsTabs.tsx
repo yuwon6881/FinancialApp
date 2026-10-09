@@ -2,7 +2,6 @@ import { Tabs } from '../ui/Tabs'
 
 import { SETTINGS_TABS_BY_SCOPE, type SettingsScope, type SettingsTabId } from './settingsScopes'
 
-export type { SettingsScope, SettingsTabId }
 
 interface SettingsTabsProps {
   scope?: SettingsScope

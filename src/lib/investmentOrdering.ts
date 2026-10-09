@@ -19,7 +19,7 @@ const created = (value?: string) => {
  * Mirrors the server ordering (trade date desc, created desc, id desc) so an edited
  * date moves the row immediately and the backend response only confirms the position.
  */
-export function compareActivityNewestFirst(a: InvestmentActivity, b: InvestmentActivity): number {
+function compareActivityNewestFirst(a: InvestmentActivity, b: InvestmentActivity): number {
   const dayDiff = day(b.tradeDate) - day(a.tradeDate)
   if (dayDiff !== 0) return dayDiff
   // Compared, not subtracted, because a missing timestamp resolves to Infinity.
@@ -30,7 +30,7 @@ export function compareActivityNewestFirst(a: InvestmentActivity, b: InvestmentA
 }
 
 /** Cash movements use creation time for same-day ordering, matching the server. */
-export function compareCashFlowNewestFirst(a: InvestmentCashFlow, b: InvestmentCashFlow): number {
+function compareCashFlowNewestFirst(a: InvestmentCashFlow, b: InvestmentCashFlow): number {
   const dayDiff = day(b.date) - day(a.date)
   if (dayDiff !== 0) return dayDiff
   const createdA = created(a.createdAt)

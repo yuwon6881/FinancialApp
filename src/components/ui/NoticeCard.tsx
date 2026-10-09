@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils'
 import { DURATION, EASE_FLUID } from '../../lib/animations'
 import { panelClass } from './panelStyles'
 
-export type NoticeTone = 'attention' | 'urgent' | 'neutral'
+type NoticeTone = 'attention' | 'urgent' | 'neutral'
 
 const TONE_WELL: Record<NoticeTone, string> = {
   attention: 'bg-amber-500/12 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400',

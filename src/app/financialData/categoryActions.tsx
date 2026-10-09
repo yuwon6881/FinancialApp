@@ -27,7 +27,7 @@ import { Button } from '../../components/ui/Button'
  * CustomSelect is already present at no extra cost, so the confirmation renders complete on its
  * first open with no runtime import anywhere in the path.
  */
-export type CategoryReplacementSelectComponent = (props: {
+type CategoryReplacementSelectComponent = (props: {
   options: { id: string; name: string }[]
   onChange: (selected: string) => void
 }) => ReactNode

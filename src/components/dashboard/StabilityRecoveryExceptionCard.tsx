@@ -9,7 +9,7 @@ import { Badge } from '../ui/Badge'
 import { NoticeCard } from '../ui/NoticeCard'
 import { StabilityRecoveryDetails } from './StabilityRecoveryDetails'
 
-export interface StabilityRecoveryLedgerJump {
+interface StabilityRecoveryLedgerJump {
   category?: string | null
   startDate?: string | null
   endDate?: string | null

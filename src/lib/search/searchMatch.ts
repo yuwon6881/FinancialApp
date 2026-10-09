@@ -14,7 +14,7 @@ export const FIELD_WEIGHTS = {
   amount: 20,
 } as const
 
-export type SearchFieldKind = keyof typeof FIELD_WEIGHTS
+type SearchFieldKind = keyof typeof FIELD_WEIGHTS
 
 export interface SearchField {
   kind: SearchFieldKind

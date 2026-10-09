@@ -68,13 +68,13 @@ const units = (value: number) =>
   new Intl.NumberFormat(undefined, { maximumFractionDigits: 8 }).format(value)
 
 /** Cash an account currently holds in one currency, as reported by the portfolio. */
-export const availableCash = (portfolio: InvestmentPortfolio | null, accountId: string, currency: string) =>
+const availableCash = (portfolio: InvestmentPortfolio | null, accountId: string, currency: string) =>
   (portfolio?.cashBalances ?? [])
     .filter(balance => balance.accountId === accountId && same(balance.currency, currency))
     .reduce((total, balance) => total + balance.amount, 0)
 
 /** Units of one instrument currently held in one account. */
-export const availableUnits = (portfolio: InvestmentPortfolio | null, accountId: string, instrumentId: string) =>
+const availableUnits = (portfolio: InvestmentPortfolio | null, accountId: string, instrumentId: string) =>
   (portfolio?.holdings ?? [])
     .filter(holding => holding.accountId === accountId && holding.instrumentId === instrumentId)
     .reduce((total, holding) => total + holding.units, 0)
@@ -110,17 +110,6 @@ const activityUnitsEffect = (draft: ActivityBalanceDraft) => {
   }
 }
 
-const activityCashEffectFor = (
-  portfolio: InvestmentPortfolio | null,
-  activity: InvestmentActivity | null | undefined,
-  accountId: string,
-  currency: string,
-) => {
-  if (!activity || activity.accountId !== accountId) return 0
-  const instrument = portfolio?.instruments.find(value => value.id === activity.instrumentId)
-  return instrument && same(instrument.currency, currency) ? activityCashEffect(activity) : 0
-}
-
 const activityUnitsEffectFor = (
   activity: InvestmentActivity | null | undefined,
   accountId: string,
@@ -139,23 +128,7 @@ const originalActivity = (
     : initial?.isPendingSync ? null : initial ?? null
 }
 
-/** Cash and units after applying the net changes from locally queued activity. */
-export const availableActivityCash = (
-  portfolio: InvestmentPortfolio | null,
-  accountId: string,
-  currency: string,
-  pendingActivities: PendingInvestmentActivity[] = [],
-  initial?: InvestmentActivity | null,
-) => {
-  const replacement = originalActivity(pendingActivities, initial)
-  const pending = pendingActivities.filter(activity => activity.id !== initial?.id)
-  return availableCash(portfolio, accountId, currency) + pending.reduce((total, activity) => total +
-    activityCashEffectFor(portfolio, activity, accountId, currency) -
-    activityCashEffectFor(portfolio, activity.pendingOriginal ?? undefined, accountId, currency), 0) -
-    (replacement ? activityCashEffectFor(portfolio, replacement, accountId, currency) : 0)
-}
-
-export const availableActivityUnits = (
+const availableActivityUnits = (
   portfolio: InvestmentPortfolio | null,
   accountId: string,
   instrumentId: string,
@@ -233,7 +206,7 @@ const originalCashFlow = (
 }
 
 /** Cash after applying net changes from locally queued cash movements. */
-export const availableCashFlow = (
+const availableCashFlow = (
   portfolio: InvestmentPortfolio | null,
   accountId: string,
   currency: string,

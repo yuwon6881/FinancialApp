@@ -3,11 +3,8 @@ import { m } from 'framer-motion'
 import { Bell, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings, Sparkles } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { AppLogo } from '../ui/AppLogo'
-import { ProgressRing } from '../ui/ProgressRing'
 import { SPRING } from '../../lib/animations'
 import { cn } from '../../lib/utils'
-import { getCurrentCycleYearAndMonth, getCycleProgress, MONTH_NAMES } from '../../lib/cycle'
-import { getCycleLabelForDropdown } from '../../lib/cycleLabels'
 import type { AppTab } from '../../types'
 import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
 import { DESTINATIONS, destinationForTab, type Destination } from './navModel'
@@ -37,6 +34,9 @@ export interface SidebarProps {
   onToggleDarkMode: () => void
   onLogout: () => void
 }
+
+// The cycle card is decoration beside the navigation, so it loads after the shell rather than with it.
+const CycleCard = React.lazy(() => import('./SidebarCycleCard').then(module => ({ default: module.SidebarCycleCard })))
 
 const COLLAPSED_KEY = 'lumen:sidebar-collapsed'
 
@@ -252,7 +252,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
         {navItem('settings', 'Settings', <Settings className="size-[1.125rem]" strokeWidth={1.9} />, () => onTabChange('settings'), { active: activeTab === 'settings' })}
 
-        {cycleDay !== undefined && !collapsed && <CycleCard cycleDay={cycleDay} />}
+        {cycleDay !== undefined && !collapsed && (
+          <React.Suspense fallback={null}>
+            <CycleCard cycleDay={cycleDay} />
+          </React.Suspense>
+        )}
 
         <div className="mt-2 border-t border-sidebar-border pt-3">
           <UserProfileDropdown
@@ -286,30 +290,3 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </aside>
   )
 }
-
-/** Where today falls in the cycle, as a ring and two lines of text. Desktop only. */
-const CycleCard: React.FC<{ cycleDay: number }> = ({ cycleDay }) => {
-  const { progress, label } = React.useMemo(() => {
-    const { year, monthIndex } = getCurrentCycleYearAndMonth(cycleDay)
-    return {
-      progress: getCycleProgress(year, monthIndex, cycleDay),
-      label: getCycleLabelForDropdown(MONTH_NAMES[monthIndex - 1], year, cycleDay),
-    }
-  }, [cycleDay])
-  const headline = progress.phase === 'upcoming'
-    ? `Starts in ${progress.daysUntilStart} ${progress.daysUntilStart === 1 ? 'day' : 'days'}`
-    : `Day ${progress.dayNumber} of ${progress.totalDays}`
-  const detail = progress.phase === 'ended'
-    ? 'Cycle closed'
-    : `${progress.daysLeft} ${progress.daysLeft === 1 ? 'day' : 'days'} left`
-  return (
-    <div className="mt-3 hidden items-center gap-3 rounded-2xl bg-surface-2/70 p-3 lg:flex">
-      <ProgressRing percent={progress.progressPct} label="Cycle progress" size={38} thickness={4} />
-      <div className="min-w-0">
-        <p className="text-label font-semibold text-foreground tabular-nums">{headline}</p>
-        <p className="truncate text-caption text-muted-foreground">{detail} · {label}</p>
-      </div>
-    </div>
-  )
-}
-

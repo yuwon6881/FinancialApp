@@ -3,11 +3,11 @@ import type { InvestmentPlan } from '../types'
 export const FORECAST_MIN_YEARS = 5
 export const FORECAST_MAX_YEARS = 50
 export const FORECAST_DEFAULT_YEARS = 10
-export const FORECAST_PATHS = 10_000
+const FORECAST_PATHS = 10_000
 export const FORECAST_MAX_TARGET = 10_000_000
 export const FORECAST_MAX_MONTHLY_CONTRIBUTION = 10_000
 
-export interface ForecastAssetAssumption {
+interface ForecastAssetAssumption {
   key: 'USEquity' | 'InternationalExUS' | 'Bonds'
   label: string
   annualReturn: number
@@ -176,7 +176,7 @@ export function selectKth(values: Float64Array, rank: number) {
   return values[target]
 }
 
-export function percentile(values: Float64Array, value: number) {
+function percentile(values: Float64Array, value: number) {
   if (values.length === 0) return 0
   return selectKth(values, Math.round((values.length - 1) * value))
 }

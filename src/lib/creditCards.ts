@@ -6,9 +6,7 @@ import { roundMoney } from './money'
 // nothing here adds it to a balance. Mirrors LedgerAccountKind on the server.
 
 /** Debt sits only in spending buckets: Stability is a reserve and Growth is savings. */
-export const CREDIT_CARD_BUCKETS: ReadonlyArray<LedgerAccount['bucket']> = ['Essentials', 'Rewards']
-
-export const CREDIT_CARD_BUCKET_ERROR = 'Credit cards can only be added to Essentials or Rewards.'
+const CREDIT_CARD_BUCKETS: ReadonlyArray<LedgerAccount['bucket']> = ['Essentials', 'Rewards']
 
 export const isCreditCardKind = (kind: LedgerAccountKind | null | undefined): boolean => kind === 'CreditCard'
 

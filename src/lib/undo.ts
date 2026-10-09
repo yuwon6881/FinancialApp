@@ -1,6 +1,6 @@
 import type { ToastAction } from '../components/ui/ToastViewport'
 import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, LedgerAccount, Loan, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, VaultDocument, WishlistItem } from '../types'
-import { createFinalId, createLocalNumericId, createLocalWishlistId, type DispatchResult, type EntityKind, type OutboxPayload, type QueuedOp } from './outbox'
+import { createFinalId, createLocalNumericId, type DispatchResult, type EntityKind, type OutboxPayload, type QueuedOp } from './outbox'
 
 /**
  * Note this union does NOT police which entities have undo support: its loosest member only
@@ -201,7 +201,7 @@ export function buildUndoAction(
       if (!before) return undefined
       const payload = toPayload(before)
       delete payload.id
-      return action('wishlistItem', 'add', String(createLocalWishlistId()), payload)
+      return action('wishlistItem', 'add', String(createLocalNumericId()), payload)
     }
     case 'savingsGoal:delete': {
       // The dedicated restore endpoint preserves the deleted row's cycle tally and revalidates its

@@ -72,7 +72,7 @@ export function isStabilityReloadFormDrawdown(input: {
     (input.transactionType === 'transfer' && input.transferSource.toLowerCase() === 'stability')
 }
 
-export function stabilityReloadIntentLabel(intent: string | null | undefined) {
+function stabilityReloadIntentLabel(intent: string | null | undefined) {
   return normalizeReloadIntent(intent) === 'NotRequired' ? 'Spent for good' : 'Put back'
 }
 
@@ -94,7 +94,7 @@ export function stabilityReloadStatusLabel(
   }
 }
 
-export function describeReloadMovement(
+function describeReloadMovement(
   transaction: Transaction,
   stabilityAlloc: number,
   change = bucketAmount(transaction, 'Stability'),

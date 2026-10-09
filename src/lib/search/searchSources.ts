@@ -330,7 +330,7 @@ export const buildSearchResults = (
 }
 
 /** Display order of the result groups, most-searched-for first. */
-export const SEARCH_GROUP_ORDER: readonly SearchResultKind[] = [
+const SEARCH_GROUP_ORDER: readonly SearchResultKind[] = [
   'transaction',
   'draft',
   'account',
@@ -341,7 +341,7 @@ export const SEARCH_GROUP_ORDER: readonly SearchResultKind[] = [
 ]
 
 /** Plain-language group headings. No jargon: "Bills", not "Recurring payment entities". */
-export const SEARCH_GROUP_LABELS: Record<SearchResultKind, string> = {
+const SEARCH_GROUP_LABELS: Record<SearchResultKind, string> = {
   transaction: 'Transactions in this cycle',
   draft: 'Drafts waiting to be added',
   account: 'Accounts',

@@ -14,7 +14,7 @@ export interface DepositSleeveInput {
   value?: number
 }
 
-export interface DepositSleevePlan {
+interface DepositSleevePlan {
   sleeve: string
   label: string
   /** How much of this deposit goes into this basket. */

@@ -1,4 +1,4 @@
-export interface StabilityRecoveryDraw {
+interface StabilityRecoveryDraw {
   bucket: string
   /** Fraction of a top-up this bucket contributes. The three sum to exactly 1. */
   share: number

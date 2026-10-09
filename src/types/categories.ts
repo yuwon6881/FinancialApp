@@ -34,7 +34,7 @@ export interface WishlistItem {
   isPendingDelete?: boolean
 }
 
-export type SavingsGoalStatus = 'active' | 'completed'
+type SavingsGoalStatus = 'active' | 'completed'
 export type SavingsGoalFundingBucket = 'Essentials' | 'Rewards'
 
 /**

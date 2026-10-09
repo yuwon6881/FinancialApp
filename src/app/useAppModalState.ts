@@ -3,7 +3,7 @@ import type { InvestmentAllocationOverview } from '../types'
 import type { UsePushNotificationsResult } from './usePushNotifications'
 import type { ScanPollingResults } from './RuntimeBackgroundBridges'
 
-export const EMPTY_PUSH: UsePushNotificationsResult = {
+const EMPTY_PUSH: UsePushNotificationsResult = {
   supported: true,
   loading: true,
   busy: false,
@@ -18,7 +18,7 @@ export const EMPTY_PUSH: UsePushNotificationsResult = {
   refresh: async () => null,
 }
 
-export const EMPTY_SCANS: ScanPollingResults = {
+const EMPTY_SCANS: ScanPollingResults = {
   receiptScan: { activeReceiptScanDraft: null, failedScanJob: null, receiptScanJobIds: [], handleReceiptScanStarted: () => undefined, clearReceiptScanJob: async () => undefined },
   receiptSplit: { activeReceiptSplitDraft: null, failedReceiptSplitJob: null, receiptSplitJobIds: [], handleReceiptSplitStarted: () => undefined, releaseReceiptSplitReview: () => undefined, clearReceiptSplitJob: async () => undefined },
   investmentScan: { activeInvestmentScanDraft: null, failedInvestmentScanJob: null, investmentScanJobIds: [], handleInvestmentScanStarted: () => undefined, clearInvestmentScanJob: async () => undefined },

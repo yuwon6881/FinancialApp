@@ -2,7 +2,6 @@ import type { Loan, LoanPaymentSplit, LoanScheduleEntry } from '../types'
 import { roundMoney } from './money'
 import { compareIdsOrdinal } from './ordinalCompare'
 
-export { roundMoney } from './money'
 
 export interface LoanPaymentInput {
   occurrenceDate: string
@@ -24,10 +23,10 @@ export interface LoanReplayResult {
   futureSchedule: LoanScheduleEntry[]
 }
 
-export const periodsPerYear = (frequency?: string | null) =>
+const periodsPerYear = (frequency?: string | null) =>
   frequency?.toLowerCase() === 'annually' ? 1 : 12
 
-export const annualRate = (annualRatePercent: number) => annualRatePercent / 100
+const annualRate = (annualRatePercent: number) => annualRatePercent / 100
 
 export function totalScheduledInterest(loan: Pick<Loan, 'openingPrincipal' | 'annualRatePercent' | 'termPeriods' | 'interestMethod'>, frequency?: string | null): number {
   const periods = periodsPerYear(frequency)
@@ -96,7 +95,7 @@ export function applyPayment(
   }
 }
 
-export function applyScheduledPayment(
+function applyScheduledPayment(
   loan: Pick<Loan, 'openingPrincipal' | 'annualRatePercent' | 'termPeriods' | 'interestMethod'>,
   frequency: string | null | undefined,
   occurrenceDate: string,

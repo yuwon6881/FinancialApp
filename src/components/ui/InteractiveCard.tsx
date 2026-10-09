@@ -9,7 +9,7 @@ import { panelClass } from './panelStyles'
  * state. Both keep the interaction contract: block flow, full width, left-aligned text, the shared
  * hover lift, and the primitive's own focus ring.
  */
-export type InteractiveCardSurface = 'panel' | 'plain'
+type InteractiveCardSurface = 'panel' | 'plain'
 
 export interface InteractiveCardProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   surface?: InteractiveCardSurface

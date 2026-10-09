@@ -1,4 +1,4 @@
-export { ApiError, invalidateCache, noteSessionUnlocked, SESSION_LOCKED_EVENT } from './client'
+export { invalidateCache, noteSessionUnlocked, SESSION_LOCKED_EVENT } from './client'
 export * from './auth'
 export * from './bootstrap'
 export * from './categories'

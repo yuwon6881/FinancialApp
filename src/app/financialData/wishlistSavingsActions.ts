@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react'
 import type { SavingsGoal, Transaction, WishlistItem } from '../../types'
 import { CACHE_KEYS, setCachedJSON } from '../../lib/cache'
-import { createFinalId, createLocalNumericId, createLocalWishlistId, type OutboxPayload } from '../../lib/outbox'
+import { createFinalId, createLocalNumericId, type OutboxPayload } from '../../lib/outbox'
 import { triggerHaptic } from '../../lib/haptics'
 import type { UseOutboxResult } from '../../lib/useOutbox'
 import type { AppDialogs } from '../useAppDialogs'
@@ -64,7 +64,7 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
 
   const handleAddWishlistItem = (newWish: Partial<WishlistItem>) => {
     if (!guardSensitive()) return
-    const placeholderId = String(createLocalWishlistId())
+    const placeholderId = String(createLocalNumericId())
     const payload = {
       name: newWish.name || '',
       price: newWish.price || 0,

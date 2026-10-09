@@ -9,7 +9,7 @@ import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
 import { HorizontalRail } from '../../ui/HorizontalRail'
 import { orderTaxReliefCategories } from '../../../lib/taxReliefOrdering'
 import { mapServerErrorToField, type ServerFieldRule } from '../../../lib/formErrors'
-import { revealFirstFieldError } from '../../ui/formValidation'
+import { focusFirstInvalidField } from '../../ui/formValidation'
 import { useSyncStatus } from '../../../lib/useOptimisticList'
 import { TaxReliefLimitsSheet } from './TaxReliefLimitsSheet'
 import { EmptyState } from '../../ui/EmptyState'
@@ -172,7 +172,7 @@ export function TaxReliefOverview({
     const validation = validate(draft, categoryId)
     if (!validation.value) {
       setDraftErrors(validation.errors)
-      revealFirstFieldError(sheetBodyRef)
+      focusFirstInvalidField(sheetBodyRef)
       return
     }
     const input = validation.value
@@ -185,7 +185,7 @@ export function TaxReliefOverview({
       const mapped = mapServerErrorToField(error, SAVE_ERROR_RULES)
       if (mapped) {
         setDraftErrors({ [mapped.field]: mapped.message })
-        revealFirstFieldError(sheetBodyRef)
+        focusFirstInvalidField(sheetBodyRef)
         return
       }
       showToast(getErrorMessage(error, 'The tax relief category could not be updated.'), 'Tax relief update failed', 'error')
@@ -198,7 +198,7 @@ export function TaxReliefOverview({
     const validation = validate(newCategory)
     if (!validation.value) {
       setNewCategoryErrors(validation.errors)
-      revealFirstFieldError(sheetBodyRef)
+      focusFirstInvalidField(sheetBodyRef)
       return
     }
     const input = validation.value
@@ -211,7 +211,7 @@ export function TaxReliefOverview({
       const mapped = mapServerErrorToField(error, SAVE_ERROR_RULES)
       if (mapped) {
         setNewCategoryErrors({ [mapped.field]: mapped.message })
-        revealFirstFieldError(sheetBodyRef)
+        focusFirstInvalidField(sheetBodyRef)
         return
       }
       showToast(getErrorMessage(error, 'The tax relief category could not be added.'), 'Tax relief add failed', 'error')
@@ -236,7 +236,7 @@ export function TaxReliefOverview({
       const mapped = mapServerErrorToField(error, DELETE_ERROR_RULES)
       if (mapped) {
         setDeleteError({ id: category.id, message: mapped.message })
-        revealFirstFieldError(sheetBodyRef)
+        focusFirstInvalidField(sheetBodyRef)
         return
       }
       showToast(getErrorMessage(error, 'The tax relief category could not be deleted.'), 'Tax relief delete failed', 'error')

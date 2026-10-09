@@ -4,7 +4,7 @@ type Holding = InvestmentPortfolio['holdings'][number]
 type Instrument = InvestmentPortfolio['instruments'][number]
 type FxRate = NonNullable<InvestmentPortfolio['planFxRates']>[number]
 
-export interface EtfPlanLine {
+interface EtfPlanLine {
   instrumentId: string
   symbol: string
   name: string

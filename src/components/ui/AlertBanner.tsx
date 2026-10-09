@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
-export type AlertBannerVariant = 'error' | 'warning' | 'info' | 'success'
+type AlertBannerVariant = 'error' | 'warning' | 'info' | 'success'
 
 const STYLES: Record<AlertBannerVariant, string> = {
   error: 'border-destructive/25 bg-destructive/10 text-destructive',

@@ -4,7 +4,7 @@ import { AnchoredPopover } from './AnchoredPopover'
 import { Button } from './Button'
 import { cn } from '../../lib/utils'
 
-export interface OverflowMenuItem {
+interface OverflowMenuItem {
   label: string
   icon?: React.ComponentType<{ className?: string }>
   onSelect: () => void

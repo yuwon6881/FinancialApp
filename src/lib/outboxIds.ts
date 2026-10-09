@@ -21,8 +21,6 @@ export function createLocalNumericId(): number {
   return Math.floor(Date.now() * 1000 + Math.random() * 1000)
 }
 
-export const createLocalWishlistId = createLocalNumericId
-
 export function createOpId(): string {
   return `op-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }

@@ -57,14 +57,3 @@ export function mergeTransactionsNewestFirst(
   return [...byId.values()].sort(compareTransactionsNewestFirst)
 }
 
-export function mergeTransactions(
-  serverTransactions: Transaction[],
-  optimisticTransactions: Transaction[],
-  sort: TransactionSort,
-): Transaction[] {
-  const byId = new Map(serverTransactions.map(transaction => [String(transaction.id), transaction]))
-  for (const transaction of optimisticTransactions) {
-    byId.set(String(transaction.id), transaction)
-  }
-  return [...byId.values()].sort((a, b) => compareTransactions(a, b, sort))
-}

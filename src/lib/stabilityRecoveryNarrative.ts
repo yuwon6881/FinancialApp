@@ -9,7 +9,7 @@
 import type { StabilityRecovery } from '@/types'
 
 /** Which sentence and badge the card leads with. Ordered by precedence in `describe`. */
-export type StabilityRecoveryStatus =
+type StabilityRecoveryStatus =
   /** The money left this cycle: the plan is known but opens next cycle, so nothing is due. */
   | 'deferred'
   /** More has gone back this cycle than the plan asked for. */

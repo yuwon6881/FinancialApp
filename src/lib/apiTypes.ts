@@ -300,7 +300,7 @@ export interface WireDashboardInsights {
   availableYears: number[]
 }
 
-export interface WireRecurringAccountShortfall {
+interface WireRecurringAccountShortfall {
   recurringPaymentId: string
   name: string
   amount: WireAmount
@@ -329,7 +329,7 @@ export type WirePayEarlyResult = Omit<PayEarlyResult, 'transaction'> & {
   transaction: WireTransaction
 }
 
-export type WireLoanRepaymentPreviewCycle = Omit<LoanRepaymentPreviewCycle, 'payment' | 'interest' | 'principal' | 'balanceAfter'> & {
+type WireLoanRepaymentPreviewCycle = Omit<LoanRepaymentPreviewCycle, 'payment' | 'interest' | 'principal' | 'balanceAfter'> & {
   payment: WireAmount
   interest: WireAmount
   principal: WireAmount

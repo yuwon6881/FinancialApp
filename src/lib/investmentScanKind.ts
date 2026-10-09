@@ -5,7 +5,7 @@ import type { InvestmentActivityScanResult } from './api'
  * union covering both, and three places used to re-list the cash types inline — a new type added
  * to only some of them would have routed the user to a form that then discards the draft.
  */
-export const CASH_MOVEMENT_SCAN_TYPES = ['Deposit', 'Withdrawal', 'Conversion'] as const
+const CASH_MOVEMENT_SCAN_TYPES = ['Deposit', 'Withdrawal', 'Conversion'] as const
 
 type ScanType = InvestmentActivityScanResult['type']
 

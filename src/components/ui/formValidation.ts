@@ -33,9 +33,3 @@ export function focusFirstInvalidField(target: FieldRoot) {
     reveal(root.querySelector<HTMLElement>(ERROR_TEXT_SELECTOR), false)
   })
 }
-
-/**
- * Same behaviour for forms that are not submitted through a `<form>` element —
- * pass the container ref that wraps the fields.
- */
-export const revealFirstFieldError = focusFirstInvalidField

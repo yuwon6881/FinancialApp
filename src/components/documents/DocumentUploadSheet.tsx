@@ -15,7 +15,7 @@ import type { TaxReliefCategoryDefinition } from '../../types'
 import { FormField } from '../ui/FormField'
 import { ModalActions } from '../ui/ModalActions'
 import { mapServerErrorToField, type ServerFieldRule } from '../../lib/formErrors'
-import { revealFirstFieldError } from '../ui/formValidation'
+import { focusFirstInvalidField } from '../ui/formValidation'
 
 import {
   FALLBACK_DOCUMENT_CONSTRAINTS as FALLBACK_CONSTRAINTS,
@@ -109,7 +109,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
     const unsupported = selected.find(file => !isSupportedDocumentUpload(file, constraints.acceptedUploadTypes))
     if (unsupported) {
       setValidationErrors({ files: UNSUPPORTED_DOCUMENT_TYPE_MESSAGE })
-      revealFirstFieldError(sheetBodyRef)
+      focusFirstInvalidField(sheetBodyRef)
       return
     }
     const limited = selected.slice(0, constraints.maxBulkDocuments)
@@ -143,7 +143,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
     }
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors)
-      revealFirstFieldError(sheetBodyRef)
+      focusFirstInvalidField(sheetBodyRef)
       return
     }
     setValidationErrors({})
@@ -203,7 +203,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
       const mapped = mapServerErrorToField(error, UPLOAD_ERROR_RULES)
       if (mapped) {
         setValidationErrors({ [mapped.field]: mapped.message })
-        revealFirstFieldError(sheetBodyRef)
+        focusFirstInvalidField(sheetBodyRef)
         return
       }
       showToast(getErrorMessage(error, 'The documents could not be uploaded.'), 'Upload Failed', 'error')

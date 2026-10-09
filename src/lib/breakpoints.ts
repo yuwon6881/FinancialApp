@@ -41,7 +41,7 @@ function readSizeClass(): SizeClass {
  * Queries are phrased as the negation of the matching min-width query rather than
  * a max-width query, so JavaScript and Tailwind agree at fractional viewport widths.
  */
-export function useSizeClass(): SizeClass {
+function useSizeClass(): SizeClass {
   const [sizeClass, setSizeClass] = useState<SizeClass>(readSizeClass)
 
   useEffect(() => {

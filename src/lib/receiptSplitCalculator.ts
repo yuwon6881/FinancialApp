@@ -65,7 +65,7 @@ function selectedBaseForCharge(
   return { selected, full, missingFromBase }
 }
 
-export interface ReceiptShareChargeLine {
+interface ReceiptShareChargeLine {
   label: string
   operation: ReceiptSplitCharge['operation']
   amount: number

@@ -9,7 +9,7 @@ import { Button } from '../ui/Button'
 import { ResponsiveChartFrame } from '../ui/ResponsiveChartFrame'
 import { panelClass } from '../ui/panelStyles'
 
-export type { AllocationMode, AllocationFilter } from '../../lib/investmentHoldingFilter'
+export type { AllocationFilter } from '../../lib/investmentHoldingFilter'
 
 
 const money = (value: number, currency: string) =>

@@ -441,4 +441,3 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   )
 }
 
-export default InvestmentsView

@@ -20,7 +20,7 @@ export const SERVER_WAKE_BACKOFF_MS = 15000
 /** Ceiling for the escalating wait. A dead backend is then polled twice a minute, not four times. */
 export const MAX_SYNC_BACKOFF_MS = 120000
 /** Fraction of the computed wait spread randomly, so many clients do not retry in lockstep. */
-export const BACKOFF_JITTER_RATIO = 0.25
+const BACKOFF_JITTER_RATIO = 0.25
 
 /**
  * Statuses in the 4xx range that are **not** a verdict on the request. 429 is the server

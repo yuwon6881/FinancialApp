@@ -11,7 +11,7 @@ export interface BulkTransactionMutationResult {
   created?: Transaction[]
 }
 
-export async function bulkDeleteTransactions(ids: string[]): Promise<BulkTransactionMutationResult> {
+async function bulkDeleteTransactions(ids: string[]): Promise<BulkTransactionMutationResult> {
   const data = await request<{ deleted: WireTransaction[] }>('/transactions/bulk-delete', {
     method: 'POST',
     ...jsonBody({ ids }),
@@ -21,7 +21,7 @@ export async function bulkDeleteTransactions(ids: string[]): Promise<BulkTransac
   return { deleted: (data.deleted || []).map(deobfuscateTransaction), restored: [], moved: [] }
 }
 
-export async function bulkRestoreTransactions(transactions: Transaction[]): Promise<BulkTransactionMutationResult> {
+async function bulkRestoreTransactions(transactions: Transaction[]): Promise<BulkTransactionMutationResult> {
   const data = await request<{ restored: WireTransaction[] }>('/transactions/bulk-restore', {
     method: 'POST',
     ...jsonBody({ transactions: transactions.map(transaction => ({
@@ -37,7 +37,7 @@ export async function bulkRestoreTransactions(transactions: Transaction[]): Prom
   return { deleted: [], restored: (data.restored || []).map(deobfuscateTransaction), moved: [] }
 }
 
-export async function bulkMoveTransactions(moves: { id: string; targetDate: string }[]): Promise<BulkTransactionMutationResult> {
+async function bulkMoveTransactions(moves: { id: string; targetDate: string }[]): Promise<BulkTransactionMutationResult> {
   const data = await request<{ moved: WireTransaction[] }>('/transactions/bulk-move', {
     method: 'POST',
     ...jsonBody({ moves }),
@@ -47,7 +47,7 @@ export async function bulkMoveTransactions(moves: { id: string; targetDate: stri
   return { deleted: [], restored: [], moved: (data.moved || []).map(deobfuscateTransaction) }
 }
 
-export async function bulkCreateTransactions(
+async function bulkCreateTransactions(
   transactions: Array<Partial<Transaction>>,
 ): Promise<BulkTransactionMutationResult> {
   const data = await request<{ created: WireTransaction[] }>('/transactions/bulk-create', {

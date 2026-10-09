@@ -5,7 +5,7 @@ import { AnchoredPopover } from './AnchoredPopover'
 import { controlTriggerClassName, type ControlSize } from './controlStyles'
 import { useFormFieldControlProps } from './formFieldControl'
 
-export interface SelectOption<T extends string | number = string | number> {
+interface SelectOption<T extends string | number = string | number> {
   value: T
   label: string
   badge?: string

@@ -52,12 +52,6 @@ function DropdownMenuContent({
   )
 }
 
-function DropdownMenuGroup({
-  ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Group>) {
-  return <DropdownMenuPrimitive.Group {...props} />
-}
-
 function DropdownMenuItem({
   className,
   ...props
@@ -88,9 +82,7 @@ function DropdownMenuSeparator({
 export {
   DropdownMenu,
   DropdownMenuTrigger,
-  DropdownMenuPortal,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
 }

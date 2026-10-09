@@ -32,7 +32,7 @@ export type EssentialsChallengeTier =
 
 export type EssentialsChallengeBadgeId = 'bills-clear' | 'under-pace' | 'buffer-held' | 'limits-clean'
 
-export interface EssentialsChallengeBadge {
+interface EssentialsChallengeBadge {
   id: EssentialsChallengeBadgeId
   earned: boolean
 }

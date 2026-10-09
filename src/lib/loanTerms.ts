@@ -29,7 +29,7 @@ export const LOAN_INTEREST_METHOD_COPY: Record<LoanInterestMethod, LoanInterestM
   },
 }
 
-export const LOAN_INTEREST_METHOD_ORDER: LoanInterestMethod[] = [
+const LOAN_INTEREST_METHOD_ORDER: LoanInterestMethod[] = [
   'ReducingBalance',
   'ReducingBalanceDaily',
   'Flat',

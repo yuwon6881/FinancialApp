@@ -132,7 +132,7 @@ export const HorizontalRailSkeleton: React.FC<{ kind: 'commitments' | 'rewards';
   </section>
 )
 
-export const LoanCardSkeleton: React.FC = () => (
+const LoanCardSkeleton: React.FC = () => (
   <div className="space-y-3 rounded-2xl border border-border/60 bg-card/85 p-4 shadow-sm sm:p-5">
     <div className="space-y-1.5"><Skeleton className="h-5 w-40" /><Skeleton className="h-3 w-32" /></div>
     <div className="space-y-2">

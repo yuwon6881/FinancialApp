@@ -134,7 +134,7 @@ export function dispatchAiActionsForApp(
 }
 
 /** Actions that open the single shared confirm modal before anything is applied. */
-export const AI_CONFIRMATION_TYPES = new Set<string>([
+const AI_CONFIRMATION_TYPES = new Set<string>([
   'requestDeleteLedger', 'requestDeleteRecurring', 'requestDeleteWishlist',
   'requestConfirmRecurringBill', 'requestDiscardRecurringBill',
   'requestPurchaseWishlist', 'requestUnpurchaseWishlist',
@@ -204,7 +204,7 @@ export interface AiActionsDeps {
 }
 
 /** Build the confirm-delete flow for an AI-requested ledger deletion. */
-export async function requestAiLedgerDelete(
+async function requestAiLedgerDelete(
   id: string,
   deps: Pick<AiActionsDeps, 'showToast' | 'setConfirmModalData'> & {
     allTransactions: Transaction[]

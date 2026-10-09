@@ -6,7 +6,7 @@ import { Badge } from './Badge'
 import { Button } from './Button'
 import { HorizontalRail } from './HorizontalRail'
 
-export interface TabOption<T extends string> {
+interface TabOption<T extends string> {
   value: T
   label: ReactNode
   count?: number

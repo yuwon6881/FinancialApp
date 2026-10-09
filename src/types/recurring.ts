@@ -44,7 +44,7 @@ export interface RecurringPayment {
 
 export type LoanInterestMethod = 'ReducingBalance' | 'ReducingBalanceDaily' | 'Flat' | 'InterestOnly'
 export type LoanRateBasis = 'Yearly' | 'Monthly'
-export type LoanScheduleStatus = 'Complete' | 'Incomplete'
+type LoanScheduleStatus = 'Complete' | 'Incomplete'
 
 export interface LoanPaymentSplit {
   occurrenceDate: string
@@ -66,7 +66,7 @@ export interface LoanScheduleEntry {
   balanceAfter: number
 }
 
-export interface LoanSnapshot {
+interface LoanSnapshot {
   outstandingBalance: number
   scheduledPayment: number
   totalScheduledInterest: number

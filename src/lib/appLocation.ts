@@ -7,7 +7,7 @@ import type {
 } from './transactionFilters'
 
 export type LedgerRouteRange = 'monthly' | '3month' | '6month' | 'yearly' | 'all'
-export type LedgerRouteTxType = TxTypeFilter
+type LedgerRouteTxType = TxTypeFilter
 
 export interface LedgerRouteState {
   filters: string[]
@@ -73,7 +73,7 @@ const PATH_BY_TAB: Record<AppTab, string> = {
 }
 
 /** Loans live on the Recurring tab but have an address of their own. */
-export const LOANS_PATH = '/plan/loans'
+const LOANS_PATH = '/plan/loans'
 
 /**
  * Every address the app has published before keeps resolving: push notifications (the API still
@@ -326,8 +326,6 @@ export const navigateToAppTab = (tab: AppTab, options: AppNavigationOptions = {}
 }
 
 /** The canonical path a tab is published at. */
-export const pathForTab = (tab: AppTab) => PATH_BY_TAB[tab]
-
 export const updateAppSearch = (
   updates: Record<string, string | number | boolean | null | undefined>,
   options: { replace?: boolean } = { replace: true },

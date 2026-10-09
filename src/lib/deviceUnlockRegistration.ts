@@ -9,7 +9,7 @@ export function getLastEnrolledUsername(): string | null {
   return localStorage.getItem(LAST_ENROLLED_USERNAME_KEY) || null
 }
 
-export function rememberEnrolledUsername(username: string): void {
+function rememberEnrolledUsername(username: string): void {
   if (typeof localStorage === 'undefined' || !username.trim()) return
   localStorage.setItem(LAST_ENROLLED_USERNAME_KEY, username.trim())
 }

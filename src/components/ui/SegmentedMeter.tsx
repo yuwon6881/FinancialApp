@@ -1,6 +1,6 @@
 import { cn } from '../../lib/utils'
 
-export interface MeterSegment {
+interface MeterSegment {
   /** Any non-negative magnitude; segments are drawn in proportion to `total`. */
   value: number
   /** Fill as a CSS colour or variable. */

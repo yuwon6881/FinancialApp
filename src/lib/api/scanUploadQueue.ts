@@ -45,7 +45,7 @@ const QUEUED_MESSAGES: Record<ScanUploadKind, string> = {
  * the request cap the server answers 413 with a non-JSON body, and the generic start-scan
  * fallback would tell the user to try a clearer photo when the problem is the file size.
  */
-export async function prepareScanImage(imageFile: File): Promise<File> {
+async function prepareScanImage(imageFile: File): Promise<File> {
   const { compressImageFile } = await import('../imageCompression')
   const compressed = await compressImageFile(imageFile, { maxEdge: 2400, quality: 0.85 })
   if (compressed.size > MAX_SCAN_IMAGE_BYTES) {
@@ -144,7 +144,7 @@ export async function startScanUpload(
   }
 }
 
-export interface DrainedScanUpload {
+interface DrainedScanUpload {
   kind: ScanUploadKind
   scanId: string
 }

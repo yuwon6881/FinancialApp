@@ -19,7 +19,7 @@ export interface NewReconciliationAccountInput {
   target: number
 }
 
-export interface AccountReconciliationLine extends ReconciliationAccountInput {
+interface AccountReconciliationLine extends ReconciliationAccountInput {
   diff: number
 }
 

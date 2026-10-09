@@ -22,9 +22,9 @@ export interface ReceiptScanJob {
   completedAt?: string | null
 }
 
-export type ReceiptSplitChargeKind = 'tax' | 'service' | 'tip' | 'discount' | 'rounding' | 'other'
-export type ReceiptSplitChargeOperation = 'add' | 'subtract' | 'included'
-export type ReceiptSplitChargeBasis = 'subtotal' | 'runningTotal'
+type ReceiptSplitChargeKind = 'tax' | 'service' | 'tip' | 'discount' | 'rounding' | 'other'
+type ReceiptSplitChargeOperation = 'add' | 'subtract' | 'included'
+type ReceiptSplitChargeBasis = 'subtotal' | 'runningTotal'
 
 export interface ReceiptSplitItem {
   name: string
@@ -46,7 +46,7 @@ export interface ReceiptSplitCharge {
   confidence: number
 }
 
-export interface ReceiptSplitFieldConfidence {
+interface ReceiptSplitFieldConfidence {
   description: number
   date: number
   currency: number

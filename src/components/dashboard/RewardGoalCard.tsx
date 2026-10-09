@@ -7,7 +7,7 @@ import { Badge } from '../ui/Badge'
 import { InteractiveCard } from '../ui/InteractiveCard'
 import { ProgressRing } from '../ui/ProgressRing'
 
-export interface WishlistGoal {
+interface WishlistGoal {
   item: WishlistItem
   rewardsBalance: number
   pct: number

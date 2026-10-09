@@ -46,7 +46,7 @@ const getInitials = (name: string) => {
 }
 
 /** The account monogram: Iris in both themes, so "you" reads the same everywhere. */
-export const Avatar: React.FC<{ username: string; className?: string }> = ({ username, className }) => (
+const Avatar: React.FC<{ username: string; className?: string }> = ({ username, className }) => (
   <span
     aria-hidden="true"
     className={cn('grid size-8 shrink-0 place-items-center rounded-full bg-primary text-caption font-semibold text-primary-foreground', className)}

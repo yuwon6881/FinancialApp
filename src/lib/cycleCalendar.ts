@@ -57,7 +57,7 @@ export interface CycleWeekSummary {
   elapsedDayCount: number
 }
 
-export interface CycleCalendarStats {
+interface CycleCalendarStats {
   totalInflow: number
   totalOutflow: number
   totalNet: number

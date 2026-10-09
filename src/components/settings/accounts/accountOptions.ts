@@ -2,14 +2,14 @@ import { Banknote, CircleHelp, CreditCard, Landmark, Wallet, WalletCards, type L
 import type { LedgerAccount, LedgerAccountKind } from '../../../types'
 import { isKindAllowedInBucket } from '../../../lib/creditCards'
 
-export const ACCOUNT_BUCKET_OPTIONS: Array<{ value: LedgerAccount['bucket']; label: string }> = [
+const ACCOUNT_BUCKET_OPTIONS: Array<{ value: LedgerAccount['bucket']; label: string }> = [
   { value: 'Essentials', label: 'Essentials' },
   { value: 'Growth', label: 'Growth' },
   { value: 'Stability', label: 'Stability' },
   { value: 'Rewards', label: 'Rewards' },
 ]
 
-export const ACCOUNT_KIND_OPTIONS: Array<{ value: LedgerAccountKind; label: string }> = [
+const ACCOUNT_KIND_OPTIONS: Array<{ value: LedgerAccountKind; label: string }> = [
   { value: 'Bank', label: 'Bank account' },
   { value: 'EWallet', label: 'E-wallet' },
   { value: 'Cash', label: 'Cash' },

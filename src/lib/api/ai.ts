@@ -11,7 +11,7 @@ export interface AiChatMessage {
   content: string
 }
 
-export const AI_ACTION_TYPES = [
+const AI_ACTION_TYPES = [
   'openLedger', 'openDashboard', 'openRecurring', 'openWishlist', 'openReports', 'openInvestments',
   'openAddLedgerDraft', 'openAddRecurringDraft', 'openAddWishlistDraft', 'openEditLedgerDraft',
   'openEditRecurringDraft', 'openEditWishlistDraft', 'openAddSavingsGoalDraft', 'openEditSavingsGoalDraft',
@@ -20,7 +20,7 @@ export const AI_ACTION_TYPES = [
   'updateRecurringReminder', 'openLedgerExport',
 ] as const
 
-export type AiActionType = typeof AI_ACTION_TYPES[number]
+type AiActionType = typeof AI_ACTION_TYPES[number]
 
 export interface AiUiAction {
   type: AiActionType
@@ -47,8 +47,8 @@ export interface AiConversationState {
   pendingLedgerRequest?: string | null
 }
 
-export type AiInvocationPreset = 'report-review' | 'investment-explain' | 'rewards-plan' | 'loan-explain'
-export type AiInvestmentRange = '1m' | '3m' | '6m' | '1y' | '3y' | '5y' | 'all'
+type AiInvocationPreset = 'report-review' | 'investment-explain' | 'rewards-plan' | 'loan-explain'
+type AiInvestmentRange = '1m' | '3m' | '6m' | '1y' | '3y' | '5y' | 'all'
 
 export interface AiInvocationContext {
   surface: AppTab

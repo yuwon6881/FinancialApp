@@ -1,5 +1,5 @@
 export type InvestmentRange = '1m' | '3m' | '6m' | '1y' | '3y' | '5y' | 'all'
-export type InvestmentInstrumentType = 'Stock' | 'ETF' | 'MutualFund'
+type InvestmentInstrumentType = 'Stock' | 'ETF' | 'MutualFund'
 export type InvestmentAllocationSleeve = 'USEquity' | 'InternationalExUS' | 'Bonds'
 export type InvestmentAllocationStatus = 'NotStarted' | 'Incomplete' | 'OnTrack' | 'Watch' | 'Alert'
 export type InvestmentTransactionType =
@@ -233,7 +233,7 @@ export interface InvestmentAllocationOverview {
   contributionPlan?: InvestmentContributionPlan
 }
 
-export interface InvestmentContributionPlan {
+interface InvestmentContributionPlan {
   /** Total cash and new money being split, in the app currency. */
   amount: number
   /** Observed completed-cycle contribution, excluding broker cash and one-time catch-up money. */

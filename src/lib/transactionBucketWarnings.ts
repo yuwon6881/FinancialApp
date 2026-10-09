@@ -3,7 +3,7 @@ import { isActiveGoal, pendingRecurringAmount } from './freeRewards'
 
 export type OutflowBucket = 'Essentials' | 'Growth' | 'Stability' | 'Rewards'
 
-export interface BucketWarningContext {
+interface BucketWarningContext {
   categories?: readonly CategorySummary[]
   savingsGoals?: readonly SavingsGoal[]
   activeRecurringPayments?: readonly Pick<ActiveRecurringPayment, 'status' | 'amount' | 'remainingAmount' | 'ledgerCategory'>[]

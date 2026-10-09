@@ -1,4 +1,4 @@
-export type MutationMode = 'queued' | 'direct-online' | 'local-only' | 'irreversible' | 'security-sensitive'
+type MutationMode = 'queued' | 'direct-online' | 'local-only' | 'irreversible' | 'security-sensitive'
 
 export interface MutationPolicy {
   mode: MutationMode
@@ -56,11 +56,3 @@ export const QUEUED_MUTATION_POLICIES: Record<string, MutationPolicy> = {
   'taxReliefCategory:delete': queued('supported'), 'vaultDocument:update': queued('supported'),
 }
 
-export const DIRECT_MUTATION_POLICIES = {
-  'vaultDocument:upload': { mode: 'direct-online', projection: 'busy-state', retry: 'user', toast: 'caller', undo: 'supported' },
-  'vaultDocument:delete': { mode: 'irreversible', projection: 'busy-state', retry: 'user', toast: 'caller', undo: 'exempt', undoExemption: 'Storage deletion cannot be restored.' },
-  'draft:delete': { mode: 'local-only', projection: 'local', retry: 'none', toast: 'caller', undo: 'supported' },
-  'pushChannel:update': { mode: 'security-sensitive', projection: 'busy-state', retry: 'user', toast: 'caller', undo: 'supported' },
-  'savingsGoal:fundCycle': { mode: 'direct-online', projection: 'busy-state', retry: 'user', toast: 'caller', undo: 'supported' },
-  'authentication:update': { mode: 'security-sensitive', projection: 'busy-state', retry: 'user', toast: 'caller', undo: 'exempt', undoExemption: 'Authentication and credential changes require a fresh verified action.' },
-} as const satisfies Record<string, MutationPolicy>

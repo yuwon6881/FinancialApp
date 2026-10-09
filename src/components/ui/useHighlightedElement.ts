@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { motionSafeScrollBehavior } from '../../lib/motionPreference'
 
 const HIGHLIGHT_CLASS = 'search-target-highlight'
-export const SEARCH_TARGET_HIGHLIGHT_MS = 2600
+const SEARCH_TARGET_HIGHLIGHT_MS = 2600
 
 export interface HighlightedElementOptions {
   /** Resolve responsive or otherwise non-standard target markup. */
@@ -18,7 +18,7 @@ const clamp = (value: number, minimum: number, maximum: number) =>
  * Reveal a target without relying on `scrollIntoView` to guess which axis owns a nested rail.
  * The page owns vertical movement; HorizontalRail owns horizontal movement.
  */
-export function revealHighlightedElement(element: HTMLElement) {
+function revealHighlightedElement(element: HTMLElement) {
   const behavior = motionSafeScrollBehavior()
   const rail = element.closest<HTMLElement>('.horizontal-rail')
   if (!rail) {

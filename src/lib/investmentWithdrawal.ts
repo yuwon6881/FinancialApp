@@ -15,7 +15,7 @@ export interface WithdrawalSleeveInput {
   unrealisedProfitLoss?: number
 }
 
-export interface WithdrawalSleevePlan {
+interface WithdrawalSleevePlan {
   sleeve: string
   label: string
   /** How much of this basket to sell. */

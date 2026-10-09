@@ -38,7 +38,7 @@ const SCROLLABLE_OVERFLOW = new Set(['auto', 'scroll', 'overlay'])
  * merely below the fold of the page, and scrolling the page in response to a hover is jarring
  * rather than helpful.
  */
-export function findScrollableAncestor(element: HTMLElement): HTMLElement | null {
+function findScrollableAncestor(element: HTMLElement): HTMLElement | null {
   if (typeof window === 'undefined' || typeof window.getComputedStyle !== 'function') return null
   let parent = element.parentElement
   while (parent && parent !== document.body && parent !== document.documentElement) {

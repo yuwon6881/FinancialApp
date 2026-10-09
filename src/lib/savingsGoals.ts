@@ -138,7 +138,7 @@ export function computePace(
 }
 
 /** Cycle key ("yyyy-MM") for a date, matching the backend's key format exactly. */
-export function cycleKeyFor(date: Date, cycleDay: number): string {
+function cycleKeyFor(date: Date, cycleDay: number): string {
   const { year, monthIndex } = getCycleYearAndMonthForDate(date, cycleDay)
   return `${String(year).padStart(4, '0')}-${String(monthIndex).padStart(2, '0')}`
 }

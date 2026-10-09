@@ -1,4 +1,4 @@
-export const RECONCILIATION_OPERATION_ID_LIMIT = 60
+const RECONCILIATION_OPERATION_ID_LIMIT = 60
 
 export function sanitizeReconciliationOperationId(value: string): string {
   const safe = [...value]

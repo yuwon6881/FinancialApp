@@ -32,7 +32,7 @@ export interface AccountMentionTextPart {
 }
 
 const MAX_MENTION_QUERY_LENGTH = 40
-export const MAX_AI_ACCOUNT_MENTIONS = 6
+const MAX_AI_ACCOUNT_MENTIONS = 6
 
 const liveAccounts = (accounts: LedgerAccount[]) => accounts.filter(account => !account.isArchived)
 

@@ -193,7 +193,7 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
 }
 
 /** Match anywhere by default, or require equality with one complete searchable field. */
-export function matchesTransactionText(value: string, search: string, mode: TransactionSearchMode): boolean {
+function matchesTransactionText(value: string, search: string, mode: TransactionSearchMode): boolean {
   // Locale-invariant on both sides. toLocaleLowerCase folds differently per locale — in tr-TR an
   // uppercase I becomes a dotless ı — so a needle and a haystack folded under different rules
   // could fail to match text the server's ILIKE happily finds.

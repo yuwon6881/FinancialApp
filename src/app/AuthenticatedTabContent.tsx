@@ -14,11 +14,13 @@ import type { useReceiptScanPolling } from '../lib/useReceiptScanPolling'
 import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
 import type { AiInvocationContext } from '../lib/api/ai'
 import { AuthenticatedSettingsRoute } from './AuthenticatedSettingsRoute'
-import { HubNav } from '../components/nav/HubNav'
 import { activeSectionId, destinationForTab, rememberSection } from '../components/nav/navModel'
 import { useAppLocationKey } from '../lib/useAppLocationKey'
 // Lazy like the views it sits above: the picker's select control is not part of the eager
 // critical path, and the pages that need it are lazily loaded anyway.
+// The section row only exists on hub destinations, so it travels with their lazy views rather than
+// with the shell; the placeholder keeps its height so the page does not shift when it lands.
+const HubNav = lazy(() => import('../components/nav/HubNav').then(module => ({ default: module.HubNav })))
 const CycleSwitcher = lazy(() => import('../components/ui/CycleSwitcher').then(module => ({ default: module.CycleSwitcher })))
 
 /** Tabs whose figures are read from the selected financial cycle rather than from today. */
@@ -156,21 +158,25 @@ export function AuthenticatedTabContent({
   const sectionId = destination
     ? activeSectionId(destination, prefs.activeTab, window.location.pathname, window.location.search)
     : null
-  const showHubNav = Boolean(destination?.sections)
+  // Review only appears while drafts wait, so Activity alone has a single section and no row.
+  const hiddenSections = draftCount > 0 ? undefined : ['review']
+  const showHubNav = (destination?.sections ?? []).filter(section => !hiddenSections?.includes(section.id)).length > 1
   // A section row and a cycle picker share one line on wide screens: where you are, and when.
   const pageBar = (showHubNav || showCycleSwitcher) && (
     <div className="mb-6 flex flex-col gap-3 sm:mb-8 lg:flex-row lg:items-center lg:justify-between">
       {showHubNav && destination && (
-        <HubNav
-          destination={destination}
-          activeSectionId={sectionId}
-          hidden={draftCount > 0 ? undefined : ['review']}
-          counts={{ review: draftCount }}
-          onSelect={section => {
-            if (section.id !== 'review') rememberSection(destination.id, section.id)
-            prefs.setActiveTab(section.tab, section.search ? { search: section.search } : undefined)
-          }}
-        />
+        <Suspense fallback={<div className="h-13 w-64 max-w-full rounded-full bg-surface-2 lg:h-11" aria-hidden />}>
+          <HubNav
+            destination={destination}
+            activeSectionId={sectionId}
+            hidden={hiddenSections}
+            counts={{ review: draftCount }}
+            onSelect={section => {
+              if (section.id !== 'review') rememberSection(destination.id, section.id)
+              prefs.setActiveTab(section.tab, section.search ? { search: section.search } : undefined)
+            }}
+          />
+        </Suspense>
       )}
       {showCycleSwitcher && (
         <Suspense fallback={<div className="h-12 w-72 max-w-full rounded-full border border-border/60 bg-card" aria-hidden />}>
