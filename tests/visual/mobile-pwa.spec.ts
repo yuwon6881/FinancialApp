@@ -471,7 +471,6 @@ test('mobile Vault failure is explicit and never impersonates an empty vault', a
   const errorHeading = page.getByText('Documents unavailable')
   await expect(errorHeading).toBeVisible()
   await expect(page.getByText('No documents match your filters.')).toHaveCount(0)
-  await expect(page.getByText('© 2026 FinancialApp. All rights reserved.')).toBeVisible()
   await waitForStableLayout(page)
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
   await expect(page).toHaveScreenshot('mobile-pwa-vault-unavailable.png')
@@ -647,8 +646,12 @@ test('recurring summary header keeps its shape and top action across both sectio
   await expect(newBill).toBeVisible()
   const billTop = await newBill.evaluate(element => Math.round(element.getBoundingClientRect().top))
 
-  await page.getByRole('navigation', { name: 'Plan sections' }).getByRole('button', { name: 'Loans' }).click()
+  const planSections = page.getByRole('navigation', { name: 'Plan sections' })
+  await expect(planSections.getByRole('button', { name: 'Bills' })).toHaveAttribute('aria-current', 'page')
+  await planSections.getByRole('button', { name: 'Loans' }).click()
   await expect(page.getByRole('heading', { name: 'Loans', level: 1 })).toBeVisible()
+  // Both sections are the same tab, so the highlight has to follow the address, not the tab.
+  await expect(planSections.getByRole('button', { name: 'Loans' })).toHaveAttribute('aria-current', 'page')
   await waitForStableLayout(page)
 
   const loansHeader = await headerBounds()

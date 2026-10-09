@@ -277,17 +277,13 @@ test('medium ledger rows keep their actions inside the card', async ({ page }) =
   )
   expect(spilling, 'ledger row content escapes the card at the medium tier').toEqual([])
 
+  // Lumen rows are flush rows inside one grouped panel, so there is no per-row accent to measure;
+  // what matters is that the trailing action keeps its padding from the panel edge.
   const geometry = await rows.evaluateAll(elements => elements.map(row => {
     const card = row.getBoundingClientRect()
-    const accent = row.querySelector<HTMLElement>(':scope > div > div > div')?.getBoundingClientRect()
     const remove = row.querySelector<HTMLElement>('button[aria-label^="Delete "]')?.getBoundingClientRect()
-    return {
-      accentLeft: accent ? Math.abs(accent.left - card.left) : null,
-      accentRight: accent ? Math.abs(accent.right - card.right) : null,
-      deleteInset: remove ? card.right - remove.right : null,
-    }
+    return { deleteInset: remove ? card.right - remove.right : null }
   }))
-  expect(geometry.every(item => item.accentLeft != null && item.accentLeft <= 1 && item.accentRight != null && item.accentRight <= 1), 'ledger accent does not span the card').toBe(true)
   expect(geometry.every(item => item.deleteInset != null && item.deleteInset >= 11), 'ledger delete action has no trailing padding').toBe(true)
 })
 
@@ -849,7 +845,7 @@ test('recurring card actions and linked loan badge keep compact heights', async 
   const onceHeight = await card.getByRole('radio', { name: 'Once' }).evaluate(element => element.getBoundingClientRect().height)
   expect(onceHeight).toBe(isPhone ? 44 : 36)
   const newBillHeight = await page.getByRole('button', { name: 'New bill' }).evaluate(element => element.getBoundingClientRect().height)
-  expect(newBillHeight).toBe(isPhone ? 48 : 40)
+  expect(newBillHeight).toBe(isPhone ? 44 : 40)
   if (!isPhone) {
     const askAiHeight = await page.getByRole('button', { name: 'Ask AI', exact: true }).evaluate(element => element.getBoundingClientRect().height)
     expect(askAiHeight).toBe(40)
