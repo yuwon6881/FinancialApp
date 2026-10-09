@@ -78,10 +78,11 @@ export function DocumentCard({
 }: DocumentCardProps) {
   const { hideSensitive } = useAppPrefs()
   const isBusy = isDeleting || isSyncing
+  // A confirmed figure needs no caption; only a guess or a missing amount says something.
   const amountCaption = document.amountStatus === 'NeedsReview'
     ? 'AI suggestion · please confirm'
     : document.amountStatus === 'Confirmed'
-      ? 'Confirmed amount'
+      ? null
       : document.amountExtractionMessage || 'No amount confirmed'
 
   // A document that already has a category shows it as a chip. Leaving every row's picker expanded
@@ -115,8 +116,8 @@ export function DocumentCard({
   return (
     <div data-testid={`document-card-${document.id}`} aria-busy={isBusy}>
       <SwipeableRow
-        className="rounded-2xl border border-border/60 shadow-[var(--app-shadow-soft)]"
-        contentClassName="p-3"
+        variant="flush"
+        contentClassName="px-4 py-3.5"
         disabled={isBusy || hideSensitive}
         actionsWidth={128}
         actions={
@@ -158,11 +159,14 @@ export function DocumentCard({
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-1.5">
-                <p className="truncate text-body font-semibold leading-snug text-foreground" title={document.originalFileName}>
+                <p className="truncate text-body font-medium leading-snug text-foreground" title={document.originalFileName}>
                   {document.originalFileName}
                 </p>
                 <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isFailed={isFailed} isPending={document.isPendingSync} entityLabel="document" />
               </div>
+              <p className="mt-0.5 truncate text-caption text-muted-foreground tabular-nums">
+                {formatDate(document.uploadedAt)} · {formatBytes(document.sizeBytes)}
+              </p>
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <PreviewDocumentButton document={document} onPreview={onPreview} disabled={isBusy} />
@@ -173,13 +177,13 @@ export function DocumentCard({
             </div>
           </div>
 
-          <div className="mt-3 flex flex-col items-stretch gap-2 min-[360px]:flex-row min-[360px]:items-end min-[360px]:justify-between sm:gap-3">
+          <div className="mt-2.5 flex flex-col items-stretch gap-2 min-[360px]:flex-row min-[360px]:items-end min-[360px]:justify-between sm:gap-3">
             <div className="min-w-0 max-w-full">
               <AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />
               {/* Wraps rather than truncates: with a ledger link now sharing this row, a card
                   narrow enough to squeeze the caption was clipping it to "Confirmed amo…", and
                   the caption is the line that says whether the figure is confirmed or a guess. */}
-              <p className="mt-0.5 text-caption text-muted-foreground">{amountCaption}</p>
+              {amountCaption && <p className="mt-0.5 text-caption text-muted-foreground">{amountCaption}</p>}
             </div>
             {/* Both chips travel together on the trailing edge of this row. The ledger link used to
                 hang under the file name, where its 44px touch target stretched the header block and
@@ -252,26 +256,17 @@ export function DocumentCard({
             </div>
           )}
 
-          <details className="group/filing mt-3 border-t border-border/40">
-            <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-0 py-2 text-label font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
+          <details className="group/filing mt-1.5">
+            <summary className="-mx-1 flex min-h-11 w-fit sm:min-h-9 cursor-pointer select-none items-center gap-1 rounded-full px-1 text-caption font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
               <span>Filing details</span>
               <ChevronDown className="size-3.5 transition-transform duration-200 group-open/filing:rotate-180" aria-hidden="true" />
             </summary>
-            {/* Four items in two columns. The same grid held three and always left an empty cell,
-                which is the hole that used to sit under "Uploaded"; keep-until was a stray line
-                below it. */}
-            <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border/30 py-2.5 text-caption">
+            {/* The upload date and size are on the face of the row; what is left is when the
+                document counts and how long it is kept. */}
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 rounded-control bg-surface-2/70 p-3 text-caption dark:bg-surface-3/70">
               <div>
                 <dt className="text-label font-medium text-muted-foreground">Tax year</dt>
                 <dd className="mt-0.5 font-semibold text-foreground tabular-nums">{document.taxYear}</dd>
-              </div>
-              <div>
-                <dt className="text-label font-medium text-muted-foreground">Size</dt>
-                <dd className="mt-0.5 font-semibold text-foreground tabular-nums">{formatBytes(document.sizeBytes)}</dd>
-              </div>
-              <div>
-                <dt className="text-label font-medium text-muted-foreground">Uploaded</dt>
-                <dd className="mt-0.5 font-semibold text-foreground">{formatDate(document.uploadedAt)}</dd>
               </div>
               <div>
                 <dt className="text-label font-medium text-muted-foreground">Keep until</dt>

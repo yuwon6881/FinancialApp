@@ -15,6 +15,8 @@ import { DocumentCard } from './DocumentCard'
 import { AmountReview, DocumentActions, DocumentTypeIcon, EmptyState, LinkedTransactionButton, type UpdateDocumentFn } from './documentRowParts'
 import { DOCUMENT_BULK_LIMIT } from '../../../lib/api/documents'
 import { useIsDenseContent } from '../../../lib/breakpoints'
+import { cn } from '../../../lib/utils'
+import { panelClass } from '../../ui/panelStyles'
 
 interface DocumentListProps {
   documents: VaultDocument[]
@@ -154,10 +156,10 @@ export function DocumentList({
       )}
       <div data-testid="document-results">
         {!showDenseTable ? (
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div className={cn(panelClass, 'divide-y divide-border/60 overflow-hidden p-0')}>
           {isLoading && documents.length === 0 ? (
             Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="rounded-control bg-surface-2/70 p-3">
+              <div key={index} className="px-4 py-3.5">
                 <div className="flex items-center gap-2.5">
                   <Skeleton className="size-9 shrink-0 rounded-lg" />
                   <div className="min-w-0 flex-1 space-y-2">
@@ -169,9 +171,7 @@ export function DocumentList({
               </div>
             ))
           ) : documents.length === 0 ? (
-            <div className="lg:col-span-2">
-              <EmptyState isFiltered={isFiltered} />
-            </div>
+            <EmptyState isFiltered={isFiltered} />
           ) : documents.map(document => (
             <DocumentCard
               key={document.id}

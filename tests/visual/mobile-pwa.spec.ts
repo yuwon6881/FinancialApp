@@ -488,7 +488,7 @@ test('vault controls stay beside the results and selection actions do not shift 
   await expect(documentsRegion).toBeVisible()
   await expect(documentsRegion.getByPlaceholder('Search file names or notes...')).toHaveCount(0)
   await expect(documentsRegion.getByRole('combobox', { name: 'Sort vault documents' })).toBeVisible()
-  await expect(documentsRegion.getByRole('combobox', { name: 'Filter by tax year' })).toBeVisible()
+  await expect(documentsRegion.getByRole('group', { name: 'Filter by tax year' })).toBeVisible()
 
   const filterBar = documentsRegion.getByTestId('document-filter-bar')
   const toolbar = documentsRegion.getByTestId('document-selection-toolbar')

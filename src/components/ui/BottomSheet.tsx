@@ -32,6 +32,8 @@ interface BottomSheetProps {
    * rather than over it. Phones always get the bottom sheet.
    */
   placement?: 'center' | 'end'
+  /** Width of the docked panel when `placement` is 'end' and the screen is wider than a phone. */
+  dockedMaxWidthClassName?: string
 }
 
 const openModalIds: string[] = []
@@ -53,6 +55,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   backdropClassName = '',
   panelClassName = '',
   placement = 'center',
+  dockedMaxWidthClassName = 'max-w-[28rem]',
 }) => {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -333,7 +336,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               : isMobile
                 ? { type: "tween", ease: EASE_FLUID, duration: slideDuration }
                 : { type: "tween", ease: EASE_FLUID, duration: 0.24 }}
-            className={`sheet-enter w-full ${docked ? 'flex max-w-[28rem]' : maxWidthClassName}`}
+            className={`sheet-enter w-full ${docked ? `flex ${dockedMaxWidthClassName}` : maxWidthClassName}`}
           >
           <m.div
             key="sheet"

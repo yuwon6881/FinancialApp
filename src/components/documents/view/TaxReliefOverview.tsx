@@ -6,13 +6,11 @@ import { InteractiveCard } from '../../ui/InteractiveCard'
 import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
 import { getErrorMessage } from '../../../lib/errors'
 import { cn, formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
-import { HorizontalRail } from '../../ui/HorizontalRail'
 import { orderTaxReliefCategories } from '../../../lib/taxReliefOrdering'
 import { mapServerErrorToField, type ServerFieldRule } from '../../../lib/formErrors'
 import { focusFirstInvalidField } from '../../ui/formValidation'
 import { useSyncStatus } from '../../../lib/useOptimisticList'
 import { TaxReliefLimitsSheet } from './TaxReliefLimitsSheet'
-import { EmptyState } from '../../ui/EmptyState'
 import { Meter } from '../../ui/Meter'
 import { panelClass } from '../../ui/panelStyles'
 
@@ -262,12 +260,12 @@ export function TaxReliefOverview({
         </div>
         {selectedYear !== undefined && (
           <Button
-            variant="primary"
+            variant="secondary"
             size="sm"
             type="button"
             disabled={hideSensitive}
             onClick={() => setEditorOpen(true)}
-            className="w-full self-center justify-center sm:w-auto sm:self-start"
+            className="self-start"
           >
             <Pencil className="size-3.5" />
             Manage limits
@@ -275,84 +273,69 @@ export function TaxReliefOverview({
         )}
       </div>
 
-      <div className="mt-4 min-h-[8.25rem]" aria-busy={isLoading}>
+      <div className="mt-4" aria-busy={isLoading}>
         {isLoading ? (
-          <div className="flex min-h-[8.25rem] items-center justify-center gap-2 rounded-control bg-surface-2/70 text-caption font-semibold text-muted-foreground" role="status">
+          <div className="flex min-h-24 items-center justify-center gap-2 rounded-control bg-surface-2/70 text-caption font-semibold text-muted-foreground" role="status">
             <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
             Loading tax relief tracker…
           </div>
         ) : trackerCategories.length === 0 ? (
-          <EmptyState
-            density="compact"
-            className="flex min-h-[8.25rem] items-center justify-center bg-transparent p-4"
-            title="No categories yet."
-          />
+          <p className="rounded-control bg-surface-2/70 px-3.5 py-3 text-label text-muted-foreground dark:bg-surface-3/70">
+            No categories yet. Use Manage limits to add the reliefs you claim.
+          </p>
         ) : (
-          <HorizontalRail label="Tax relief categories" className="items-stretch" showControls>
+          /* One row per category: what is used against the limit, as a bar and as figures. The row
+             is also the filter toggle for the documents below. */
+          <ul aria-label="Tax relief categories" className="-mx-2 space-y-0.5">
             {orderedTrackerCategories.map(category => {
               const progress = category.limit > 0 ? Math.min(100, category.confirmedAmount / category.limit * 100) : 0
               const full = category.limit > 0 && progress >= 100
               const selected = selectedReliefCategories.includes(category.id)
               return (
-                <InteractiveCard
-                  surface="plain"
-                  key={category.id}
-                  onClick={() => onToggleReliefCategory(category.id)}
-                  aria-pressed={selected}
-                  aria-label={selected ? `Remove ${category.name} from the documents filter` : `Add ${category.name} to the documents filter`}
-                  title={selected ? `Remove ${category.name} from the document filter` : `Filter documents by ${category.name}`}
-                  className={`group flex min-h-32 w-full sm:w-[22rem] shrink-0 cursor-pointer snap-start flex-col gap-3 rounded-2xl border p-4 text-left transition duration-200 ${
-                    full
-                      ? 'border-emerald-500/45 bg-emerald-500/10 hover:border-emerald-500/70 hover:bg-emerald-500/14'
-                      : 'border-border/60 bg-card hover:border-primary/45 hover:bg-muted/60'
-                  } ${
-                    selected ? 'ring-2 ring-inset ring-primary/80' : 'hover:shadow-md hover:shadow-primary/5'
-                  }`}
-                >
-                  <div className="flex min-w-0 items-start justify-between gap-2">
-                    <p className="min-w-0 truncate text-subsection text-foreground" title={category.name}>{category.name}</p>
-                    <span className="flex shrink-0 items-center gap-1.5 transition">
-                      {selected && (
-                        <span className="flex items-center gap-1 rounded-full bg-primary/14 px-2 py-0.5 text-caption font-semibold text-accent-ink">
-                          <Filter className="size-2.5" aria-hidden="true" />
-                          Filtering
+                <li key={category.id}>
+                  <InteractiveCard
+                    surface="plain"
+                    onClick={() => onToggleReliefCategory(category.id)}
+                    aria-pressed={selected}
+                    aria-label={selected ? `Remove ${category.name} from the documents filter` : `Add ${category.name} to the documents filter`}
+                    title={selected ? `Remove ${category.name} from the document filter` : `Filter documents by ${category.name}`}
+                    className={cn(
+                      'group grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 rounded-control px-2 py-2.5 text-left transition-colors sm:grid-cols-[minmax(7rem,11rem)_minmax(0,1fr)_auto]',
+                      selected ? 'bg-primary/8 ring-1 ring-inset ring-primary/40' : 'hover:bg-surface-2/70',
+                    )}
+                  >
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate text-body font-medium text-foreground" title={category.name}>{category.name}</span>
+                      {selected
+                        ? <Filter className="size-3 shrink-0 text-accent-ink" aria-hidden="true" />
+                        : full && <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" aria-label="Relief limit reached" />}
+                    </span>
+                    <span className="text-right text-label tabular-nums sm:order-last">
+                      <span className="font-semibold text-foreground">{money(category.confirmedAmount)}</span>
+                      <span className="text-muted-foreground"> of {money(category.limit)}</span>
+                    </span>
+                    <span className="col-span-2 min-w-0 sm:col-span-1">
+                      <Meter
+                        percent={progress}
+                        tone={full ? 'bg-emerald-500' : 'bg-primary'}
+                        valueHidden={hideSensitive}
+                        label={hideSensitive ? `${category.name} confirmed amount hidden` : `${category.name} confirmed amount`}
+                      />
+                      <span className="mt-1 flex flex-wrap justify-between gap-x-3 text-caption">
+                        <span className={full ? 'font-medium text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
+                          {full ? 'Limit reached' : `${money(Math.max(0, category.limit - category.confirmedAmount))} room left`}
                         </span>
-                      )}
-                      {full
-                        ? <CheckCircle2 className="size-3.5 text-emerald-500" aria-label="Relief limit reached" />
-                        : !selected && <Filter className="size-3.5 text-muted-foreground/30 transition group-hover:text-accent-ink" aria-hidden="true" />}
+                        {category.pendingReviewAmount > 0 && <span className="font-medium text-amber-700 dark:text-amber-300">+{money(category.pendingReviewAmount)} review</span>}
+                        {Boolean(category.otherCurrencyDocumentCount && category.otherCurrencyDocumentCount > 0) && (
+                          <span className="text-muted-foreground">{category.otherCurrencyDocumentCount} not in {currency}</span>
+                        )}
+                      </span>
                     </span>
-                  </div>
-                  <div>
-                    <div className="flex items-baseline justify-between gap-2 text-caption tabular-nums">
-                      <span className="font-semibold text-foreground">{money(category.confirmedAmount)} used</span>
-                      <span className="text-muted-foreground">{money(category.limit)} limit</span>
-                    </div>
-                    <Meter
-                      className="mt-1.5"
-                      percent={progress}
-                      tone={full ? 'bg-emerald-500' : 'bg-primary'}
-                      valueHidden={hideSensitive}
-                      label={hideSensitive ? `${category.name} confirmed amount hidden` : `${category.name} confirmed amount`}
-                    />
-                  </div>
-                  <div className="mt-auto flex items-start justify-between gap-2 text-caption">
-                    <span className={full ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
-                      {full ? 'Limit reached' : `${money(Math.max(0, category.limit - category.confirmedAmount))} room left`}
-                    </span>
-                    <span className="flex flex-col items-end gap-0.5">
-                      {category.pendingReviewAmount > 0 && <span className="text-right font-semibold text-amber-700 dark:text-amber-300">+{money(category.pendingReviewAmount)} review</span>}
-                      {Boolean(category.otherCurrencyDocumentCount && category.otherCurrencyDocumentCount > 0) && (
-                        <span className="text-right text-muted-foreground">
-                          {category.otherCurrencyDocumentCount} not in {currency}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                </InteractiveCard>
+                  </InteractiveCard>
+                </li>
               )
             })}
-          </HorizontalRail>
+          </ul>
         )}
       </div>
 

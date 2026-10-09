@@ -1,4 +1,5 @@
 import { Filter, X } from 'lucide-react'
+import { cn } from '../../../lib/utils'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { Button } from '../../ui/Button'
 import { DOCUMENT_SORT_OPTIONS, type DocumentSort } from '../../../lib/documentOrdering'
@@ -29,34 +30,48 @@ export function DocumentFilterBar({
   onClearReliefCategory,
   onClearAllReliefCategories,
 }: DocumentFilterBarProps) {
+  const yearChip = (selected: boolean) => cn(
+    'shrink-0 border px-3.5 tabular-nums',
+    selected
+      ? 'border-foreground/80 bg-card font-semibold text-foreground hover:bg-card'
+      : 'border-border/70 font-medium text-muted-foreground hover:text-foreground',
+  )
+
   return (
-    <div data-testid="document-filter-bar" className="mb-3 rounded-control bg-surface-2/70 p-3">
+    <div data-testid="document-filter-bar" className="mb-3">
+      {/* Years as chips, newest first, with the sort beside them: a handful of years never needed a
+          dropdown to hide them in. */}
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-        {/* Hidden below sm, where it spent a whole line telling a phone what two labelled selects
-            already say. The group keeps the name for screen readers either way. */}
-        <span className="hidden items-center gap-1.5 text-label font-medium text-muted-foreground sm:flex">
-          <Filter className="size-3.5" aria-hidden="true" />
-          Document filters
-        </span>
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto" role="group" aria-label="Document filters">
-          <CustomSelect
-            value={sortOrder}
-            onChange={value => setSortOrder(value as DocumentSort)}
-            options={DOCUMENT_SORT_OPTIONS.map(option => ({ ...option, label: `Sort: ${option.label}` }))}
-            ariaLabel="Sort vault documents"
-            className="w-full sm:w-44 sm:shrink-0"
-          />
-          <CustomSelect
-            value={taxYear ?? ''}
-            onChange={value => setTaxYear(value === '' ? undefined : Number(value))}
-            options={[
-              { value: '', label: 'All tax years' },
-              ...availableYears.map(year => ({ value: year, label: `Tax year: ${year}` })),
-            ]}
-            ariaLabel="Filter by tax year"
-            className="w-full sm:w-40 sm:shrink-0"
-          />
+        <div role="group" aria-label="Filter by tax year" className="no-scrollbar -mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 py-0.5">
+          {[...availableYears].sort((left, right) => right - left).map(year => (
+            <Button
+              key={year}
+              variant="tertiary"
+              size="sm"
+              aria-pressed={taxYear === year}
+              onClick={() => setTaxYear(year)}
+              className={yearChip(taxYear === year)}
+            >
+              {year}
+            </Button>
+          ))}
+          <Button
+            variant="tertiary"
+            size="sm"
+            aria-pressed={taxYear === undefined}
+            onClick={() => setTaxYear(undefined)}
+            className={yearChip(taxYear === undefined)}
+          >
+            All years
+          </Button>
         </div>
+        <CustomSelect
+          value={sortOrder}
+          onChange={value => setSortOrder(value as DocumentSort)}
+          options={DOCUMENT_SORT_OPTIONS.map(option => ({ ...option, label: `Sort: ${option.label}` }))}
+          ariaLabel="Sort vault documents"
+          className="w-full sm:w-48 sm:shrink-0"
+        />
       </div>
 
       {selectedReliefCategories.length > 0 && (

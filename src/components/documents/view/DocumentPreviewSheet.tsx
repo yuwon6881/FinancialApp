@@ -117,7 +117,10 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
       title={document?.originalFileName ?? 'Document preview'}
       onClose={onClose}
       maxWidthClassName="max-w-5xl"
-      panelClassName="h-[90vh]"
+      // A drawer along the side from the medium tier up, rather than a dialog centred over the list.
+      placement="end"
+      dockedMaxWidthClassName="max-w-[min(44rem,60vw)]"
+      panelClassName="h-[90vh] sm:h-full"
       headerActions={document ? (
         <Button
           variant="secondary"
