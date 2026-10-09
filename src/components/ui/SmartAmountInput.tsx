@@ -3,8 +3,24 @@ import { Button } from './Button'
 import { evaluateMathString } from '../../lib/math'
 import { Input } from './Input'
 
-export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>((props, forwardedRef) => {
-  const { className, onChange, onKeyDown, onFocus, onBlur, value, ...inputProps } = props
+interface SmartAmountInputProps extends InputHTMLAttributes<HTMLInputElement> {
+  /**
+   * `inline` tucks the operator keys inside the field while it has focus (compact forms).
+   * `tray` gives them a full-width row of their own under the field, always visible, for a form
+   * where the amount is the hero.
+   */
+  calculator?: 'inline' | 'tray'
+}
+
+const OPERATOR_KEYS = [
+  ['+', '+', 'Add'],
+  ['−', '-', 'Subtract'],
+  ['×', '×', 'Multiply'],
+  ['÷', '÷', 'Divide'],
+] as const
+
+export const SmartAmountInput = React.forwardRef<HTMLInputElement, SmartAmountInputProps>((props, forwardedRef) => {
+  const { className, onChange, onKeyDown, onFocus, onBlur, value, calculator = 'inline', ...inputProps } = props
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [focused, setFocused] = useState(false)
   const [inputWidth, setInputWidth] = useState(0)
@@ -74,7 +90,12 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
   }
 
   const isReadOnly = Boolean(inputProps.readOnly || inputProps.disabled)
-  const showCalculator = focused && allowCalculator && !isReadOnly
+  const isTray = calculator === 'tray'
+  const showCalculator = !isTray && focused && allowCalculator && !isReadOnly
+  // The answer before "=": once the field holds an operator (a leading minus is just a sign),
+  // show what it works out to, so nobody has to commit an expression to check it.
+  const expression = String(value ?? '')
+  const liveResult = /[+\-×÷*/]/.test(expression.slice(1)) ? evaluateMathString(expression) : null
 
   return (
     <div className="relative w-full">
@@ -107,18 +128,53 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
         }}
       />
 
+      {!isTray && liveResult !== null && (
+        <p aria-live="polite" className="mt-1.5 px-1 text-caption text-muted-foreground tabular-nums">
+          {expression} = <span className="font-semibold text-foreground">{liveResult.toFixed(2)}</span>
+        </p>
+      )}
+
+      {isTray && !isReadOnly && (
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <p aria-live="polite" className="min-w-0 truncate text-caption text-muted-foreground tabular-nums">
+            {liveResult !== null
+              ? <>= <span className="text-label font-semibold text-foreground">{liveResult.toFixed(2)}</span></>
+              : 'Type a sum, like 12.50 × 3'}
+          </p>
+          <div data-smart-amount-calculator className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 p-1">
+            {OPERATOR_KEYS.map(([label, operator, ariaLabel]) => (
+              <Button
+                variant="tertiary"
+                size="icon"
+                key={operator}
+                type="button"
+                aria-label={ariaLabel}
+                onMouseDown={event => { event.preventDefault(); appendOperator(operator) }}
+                className="rounded-full text-callout text-foreground hover:bg-surface-3 lg:size-9"
+              >
+                {label}
+              </Button>
+            ))}
+            <Button
+              size="icon"
+              type="button"
+              aria-label="Calculate result"
+              onMouseDown={event => { event.preventDefault(); evaluate() }}
+              className="rounded-full bg-primary text-callout font-semibold text-primary-foreground hover:bg-primary/90 lg:size-9"
+            >
+              =
+            </Button>
+          </div>
+        </div>
+      )}
+
       {showCalculator && (
         // Five keyboard-accessible compound keys kept dense and flush so the amount itself remains readable.
         <div
           data-smart-amount-calculator
           className="absolute right-2 top-1/2 flex -translate-y-1/2 items-stretch overflow-hidden rounded-full border border-border/70 bg-card shadow-(--app-shadow) [&_button]:!h-8 [&_button]:!min-h-0 [&_button]:!min-w-0"
         >
-          {[
-            ['+', '+', 'Add'],
-            ['−', '-', 'Subtract'],
-            ['×', '×', 'Multiply'],
-            ['÷', '÷', 'Divide'],
-          ].map(([label, operator, ariaLabel]) => (
+          {OPERATOR_KEYS.map(([label, operator, ariaLabel]) => (
             <Button
               variant="tertiary"
               size="sm"

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { Transaction } from '../../../types'
 import type { TransactionFormState } from './transactionFormReducer'
-import { getBucketOutflowWarning, type BucketOutflowWarning, type OutflowBucket } from '../../../lib/transactionBucketWarnings'
+import { getBucketImpact, getBucketOutflowWarning, type BucketImpact, type BucketOutflowWarning, type OutflowBucket } from '../../../lib/transactionBucketWarnings'
 import type { UseTransactionFormOptions } from './useTransactionFormOptions'
 
 export function useTransactionOutflowWarning(
@@ -67,5 +67,15 @@ export function useTransactionOutflowWarning(
     options.stabilityTarget,
   ])
 
-  return bucketOutflowWarning
+  const bucketImpact = useMemo<BucketImpact | null>(() => {
+    if (!outflowBucket) return null
+    return getBucketImpact({
+      bucket: outflowBucket,
+      amount: parseFloat(state.amount),
+      existingAmountInBucket,
+      context: { categories: options.ledgerSummaries },
+    })
+  }, [outflowBucket, state.amount, existingAmountInBucket, options.ledgerSummaries])
+
+  return { bucketOutflowWarning, bucketImpact }
 }

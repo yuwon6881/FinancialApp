@@ -19,11 +19,12 @@ beforeAll(() => {
 // Rendered through a portal to document.body to reproduce the real modal --
 // a native `input` event would not reach React's root listener from there, so
 // this guards against relying on dispatchEvent.
-function MaskedWrapper() {
+function MaskedWrapper({ calculator }: { calculator?: 'inline' | 'tray' } = {}) {
   const [value, setValue] = useState('')
   return createPortal(
     <SmartAmountInput
       aria-label="amount"
+      calculator={calculator}
       value={value}
       onChange={e => setValue(maskCurrencyInput(e.target.value, value))}
     />,
@@ -98,5 +99,30 @@ describe('SmartAmountInput calculator', () => {
     expect(input.value).toBe('42.00')
     fireEvent.blur(input)
     expect(input.value).toBe('42.00')
+  })
+})
+
+describe('SmartAmountInput live result', () => {
+  it('shows what an expression works out to before = is pressed', () => {
+    render(<MaskedWrapper />)
+    const input = screen.getByLabelText('amount') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '12.50*3' } })
+    expect(screen.getByText('37.50')).toBeTruthy()
+    fireEvent.keyDown(input, { key: '=' })
+    expect(input.value).toBe('37.50')
+    // A plain figure has nothing to work out, so the line goes away.
+    expect(screen.queryByText(/=/)).toBeNull()
+  })
+
+  it('gives the tray its own always-visible keys that build and resolve the sum', () => {
+    render(<MaskedWrapper calculator="tray" />)
+    const input = screen.getByLabelText('amount') as HTMLInputElement
+    expect(screen.getByText('Type a sum, like 12.50 × 3')).toBeTruthy()
+    fireEvent.change(input, { target: { value: '12.00' } })
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Multiply' }))
+    fireEvent.change(input, { target: { value: `${input.value}2` } })
+    expect(screen.getByText('24.00')).toBeTruthy()
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Calculate result' }))
+    expect(input.value).toBe('24.00')
   })
 })

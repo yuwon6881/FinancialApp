@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getBucketOutflowWarning } from './transactionBucketWarnings'
+import { getBucketImpact, getBucketOutflowWarning } from './transactionBucketWarnings'
 import type { ActiveRecurringPayment, CategorySummary, SavingsGoal } from '../types'
 
 function cat(name: string, remaining: number): CategorySummary {
@@ -160,5 +160,23 @@ describe('getBucketOutflowWarning', () => {
     }
     // Both goals are inactive/released -> headroom is 800. Spending 700 is fine.
     expect(getBucketOutflowWarning({ bucket: 'Rewards', amount: 700, context })).toBeNull()
+  })
+})
+
+describe('getBucketImpact', () => {
+  it('reports what the bucket has left before and after the amount', () => {
+    expect(getBucketImpact({ bucket: 'Essentials', amount: 53, context: { categories: [cat('Essentials', 1240)] } }))
+      .toEqual({ bucket: 'Essentials', before: 1240, after: 1187 })
+  })
+
+  it('adds an edited transaction back before taking the new amount', () => {
+    expect(getBucketImpact({ bucket: 'Rewards', amount: 80, existingAmountInBucket: 50, context: { categories: [cat('Rewards', 100)] } }))
+      .toEqual({ bucket: 'Rewards', before: 150, after: 70 })
+  })
+
+  it('goes below zero rather than clamping, and stays quiet without an amount or a bucket summary', () => {
+    expect(getBucketImpact({ bucket: 'Growth', amount: 30, context: { categories: [cat('Growth', 10)] } })?.after).toBe(-20)
+    expect(getBucketImpact({ bucket: 'Growth', amount: 0, context: { categories: [cat('Growth', 10)] } })).toBeNull()
+    expect(getBucketImpact({ bucket: 'Growth', amount: 5, context: { categories: [] } })).toBeNull()
   })
 })

@@ -420,7 +420,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     scanner,
   })
 
-  const bucketOutflowWarning = useTransactionOutflowWarning(state, transactions, options)
+  const { bucketOutflowWarning, bucketImpact } = useTransactionOutflowWarning(state, transactions, options)
 
   return {
     state,
@@ -449,6 +449,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     topUpOffer,
     topUpBuckets,
     bucketOutflowWarning,
+    bucketImpact,
     stabilityTopUpError: savedTopUpMovedAcrossCycles
       ? 'Remove this reimbursement before moving the salary to another cycle.'
       : undefined,

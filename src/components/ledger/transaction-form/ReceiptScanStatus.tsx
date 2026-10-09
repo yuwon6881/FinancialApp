@@ -31,9 +31,9 @@ export function ReceiptScanStatus({
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className="flex items-start justify-between gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400"
+            className="flex items-start justify-between gap-2 rounded-control bg-emerald-500/10 px-3.5 py-2.5 text-emerald-700 dark:text-emerald-400"
           >
-            <div className="flex min-w-0 items-center gap-1.5 break-words text-xs font-medium">
+            <div className="flex min-w-0 items-center gap-1.5 break-words text-caption font-medium">
               <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
               {successMessage}
             </div>
@@ -41,7 +41,7 @@ export function ReceiptScanStatus({
               type="button"
               onClick={() => setShowScanBanner(false)}
               label="Dismiss receipt scan success"
-              className="-my-2 -mr-2 shrink-0 rounded-lg text-emerald-600 transition hover:bg-emerald-500/10 dark:text-emerald-400"
+              className="-my-2 -mr-2 shrink-0 rounded-full text-emerald-700 transition hover:bg-emerald-500/10 dark:text-emerald-400"
             >
               <X className="size-4" aria-hidden="true" />
             </IconButton>
@@ -58,7 +58,7 @@ export function ReceiptScanStatus({
             transition={{ duration: reduceMotion ? 0 : 0.18 }}
             role="alert"
             aria-atomic="true"
-            className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs"
+            className="flex items-center justify-between gap-2 rounded-control bg-destructive/10 px-3.5 py-2.5 text-caption text-destructive"
           >
             <div className="flex min-w-0 items-center gap-2">
               <AlertCircle className="size-4 shrink-0" aria-hidden="true" />
@@ -68,7 +68,7 @@ export function ReceiptScanStatus({
               type="button"
               onClick={() => setScanError(null)}
               label="Dismiss receipt scan error"
-              className="-my-2 -mr-2 shrink-0 rounded-lg text-destructive transition hover:bg-destructive/10"
+              className="-my-2 -mr-2 shrink-0 rounded-full text-destructive transition hover:bg-destructive/10"
             >
               <X className="size-4" aria-hidden="true" />
             </IconButton>

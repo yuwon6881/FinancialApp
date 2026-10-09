@@ -1,5 +1,5 @@
 import React from 'react'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { TransactionFormFields } from './TransactionFormFields'
 import { getInitialState } from './transactionFormReducer'
@@ -47,12 +47,50 @@ describe('TransactionFormFields', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('combobox', { name: /Category/ }))
+    // Four categories fit the tiles, so there is no overflow select; the suggestion leads them.
+    const tiles = screen.getByRole('radiogroup', { name: 'Quick categories' })
+    expect(within(tiles).getAllByRole('radio')[0].textContent).toContain('Food')
+    expect(within(tiles).getByRole('radio', { name: 'Food, Suggested 92%' })).toBeTruthy()
+    expect(within(tiles).queryByRole('radio', { name: /Transfer/ })).toBeNull()
+    expect(within(tiles).queryByRole('radio', { name: /Adjustment/ })).toBeNull()
+    expect(screen.queryByRole('combobox', { name: /Category/ })).toBeNull()
+  })
 
-    expect(screen.queryByRole('combobox', { name: 'Search category' })).toBeNull()
-    expect(screen.getByRole('option', { name: 'Food, Suggested 92%' })).toBeTruthy()
-    expect(screen.queryByRole('option', { name: 'Transfer' })).toBeNull()
-    expect(screen.queryByRole('option', { name: 'Adjustment' })).toBeNull()
+  it('keeps the full category select once there are more categories than tiles', () => {
+    const many = Array.from({ length: 10 }, (_, index) => ({ id: `c${index}`, name: `Category ${index + 1}` }))
+    render(
+      <TransactionFormFields
+        state={{ ...getInitialState('2026-08-01', 'Category 1'), showAddForm: true }}
+        firstInputRef={React.createRef<HTMLInputElement>()}
+        descriptionRef={{ current: '' }}
+        autocompletedDescriptionRef={{ current: null }}
+        currency="MYR"
+        categories={many}
+        errors={{}}
+        onSetField={vi.fn()}
+        onSelectSuggestion={vi.fn()}
+        onSuggestNotes={vi.fn()}
+        onSuggestCategory={vi.fn()}
+        filteredSuggestions={[]}
+        quickSuggestionEntries={[]}
+        suggestions={{
+          categorySuggestions: [],
+          isSuggestingCategory: false,
+          categorySuggestionUnavailable: false,
+          isSuggestingNote: false,
+          noteSuggestions: [],
+          showNoteSuggestions: false,
+          noteSuggestionUnavailable: false,
+          setShowNoteSuggestions: vi.fn(),
+          setNoteSuggestions: vi.fn(),
+          setIsSuggestingNote: vi.fn(),
+        }}
+      />,
+    )
+
+    expect(within(screen.getByRole('radiogroup', { name: 'Quick categories' })).getAllByRole('radio')).toHaveLength(8)
+    fireEvent.click(screen.getByRole('combobox', { name: /Category/ }))
+    expect(screen.getByRole('option', { name: 'Category 10' })).toBeTruthy()
   })
 
   // A cross-bucket transfer needs both legs named. The source picker used to render only in the

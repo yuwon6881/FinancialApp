@@ -43,7 +43,7 @@ export function ReceiptScanPicker({
   scanGalleryInputRef,
   handleScanReceipt,
   setScanError,
-  label = 'Scan Receipt',
+  label = 'Scan receipt',
   scanningLabel = 'Scanning receipt...',
   handleSplitScan,
   isSplitScanning = false,
@@ -125,15 +125,16 @@ export function ReceiptScanPicker({
       )}
 
       {!pickingSource && (
-        <div className={splitEnabled ? 'grid grid-cols-1 gap-2 sm:grid-cols-2' : ''}>
+        <div className={splitEnabled ? 'grid grid-cols-2 gap-2' : 'flex'}>
           <Button variant="tertiary"
+            size="sm"
             type="button"
             disabled={busy}
             onClick={() => {
               setScanError(null)
               if (!busy) setShowScanPicker(true)
             }}
-            className={`w-full gap-2 border border-border/70 font-medium ${
+            className={`w-full min-w-0 gap-2 border border-border/70 font-medium ${
               isScanning
                 ? 'perimeter-beam-host relative cursor-not-allowed overflow-hidden bg-primary/8 text-accent-ink hover:bg-primary/8'
                 : 'bg-surface-2/60 text-foreground hover:bg-surface-2'
@@ -143,18 +144,19 @@ export function ReceiptScanPicker({
             {isScanning ? (
               <><Loader2 className="size-3.5 animate-spin" /> {scanningLabel}</>
             ) : (
-              <><Camera className="size-4 text-muted-foreground" aria-hidden="true" /><span>{label}</span></>
+              <><Camera className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /><span className="truncate">{label}</span></>
             )}
           </Button>
           {splitEnabled && (
             <Button variant="tertiary"
+              size="sm"
               type="button"
               disabled={busy}
               onClick={() => {
                 setScanError(null)
                 if (!busy) setShowSplitPicker?.(true)
               }}
-              className={`w-full gap-2 border border-border/70 font-medium ${
+              className={`w-full min-w-0 gap-2 border border-border/70 font-medium ${
                 isSplitScanning
                   ? 'perimeter-beam-host relative cursor-not-allowed overflow-hidden bg-primary/8 text-accent-ink hover:bg-primary/8'
                   : 'bg-surface-2/60 text-foreground hover:bg-surface-2'
@@ -162,9 +164,9 @@ export function ReceiptScanPicker({
             >
               {isSplitScanning && <PerimeterBeam size={40} />}
               {isSplitScanning ? (
-                <><Loader2 className="size-3.5 animate-spin" /> Reading receipt items...</>
+                <><Loader2 className="size-3.5 shrink-0 animate-spin" /><span className="truncate">Reading items…</span></>
               ) : (
-                <><Calculator className="size-4 text-muted-foreground" aria-hidden="true" /> Calculate My Share</>
+                <><Calculator className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /><span className="truncate">Calculate my share</span></>
               )}
             </Button>
           )}

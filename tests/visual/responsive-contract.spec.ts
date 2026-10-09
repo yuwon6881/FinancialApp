@@ -261,30 +261,22 @@ test('compact compound controls keep their buttons inside their own boundaries',
   const amount = dialog.getByRole('textbox', { name: /Amount/ })
   await expect.poll(() => amount.evaluate(input => input.getBoundingClientRect().width)).toBeGreaterThanOrEqual(260)
   await amount.focus()
-  await expect(dialog.locator('[data-smart-amount-calculator]')).toBeVisible()
-  const amountGeometry = await amount.evaluate(input => {
-    const field = input.parentElement?.parentElement
-    const toolbar = input.parentElement?.querySelector<HTMLElement>('[data-smart-amount-calculator]')
-    const fieldBounds = field?.getBoundingClientRect()
-    const toolbarBounds = toolbar?.getBoundingClientRect()
-    return {
-      field: fieldBounds && { left: fieldBounds.left, right: fieldBounds.right, top: fieldBounds.top, bottom: fieldBounds.bottom },
-      toolbar: toolbarBounds && { left: toolbarBounds.left, right: toolbarBounds.right, top: toolbarBounds.top, bottom: toolbarBounds.bottom },
-      buttonOverflow: toolbar
-        ? Array.from(toolbar.querySelectorAll('button')).some(button => {
-            const buttonBounds = button.getBoundingClientRect()
-            return buttonBounds.left < toolbarBounds!.left - 1 || buttonBounds.right > toolbarBounds!.right + 1
-              || buttonBounds.top < toolbarBounds!.top - 1 || buttonBounds.bottom > toolbarBounds!.bottom + 1
-          })
-        : null,
-    }
+  // The transaction form gives the calculator a tray of its own under the amount: every key must
+  // stay inside the tray, and the tray inside the form's width.
+  const tray = dialog.locator('[data-smart-amount-calculator]')
+  await expect(tray).toBeVisible()
+  const trayGeometry = await tray.evaluate(element => {
+    const bounds = element.getBoundingClientRect()
+    const form = element.closest('form')!.getBoundingClientRect()
+    const escaped = Array.from(element.querySelectorAll('button')).some(button => {
+      const key = button.getBoundingClientRect()
+      return key.left < bounds.left - 1 || key.right > bounds.right + 1 || key.top < bounds.top - 1 || key.bottom > bounds.bottom + 1
+    })
+    return { escaped, insideForm: bounds.left >= form.left - 1 && bounds.right <= form.right + 1, keyHeight: element.querySelector('button')!.getBoundingClientRect().height }
   })
-  expect(amountGeometry.toolbar, 'focused amount field did not expose its calculator').toBeTruthy()
-  expect(amountGeometry.buttonOverflow, `calculator button escaped its toolbar: ${JSON.stringify(amountGeometry)}`).toBe(false)
-  expect(amountGeometry.toolbar!.left).toBeGreaterThanOrEqual(amountGeometry.field!.left - 1)
-  expect(amountGeometry.toolbar!.right).toBeLessThanOrEqual(amountGeometry.field!.right + 1)
-  expect(amountGeometry.toolbar!.top).toBeGreaterThanOrEqual(amountGeometry.field!.top - 1)
-  expect(amountGeometry.toolbar!.bottom).toBeLessThanOrEqual(amountGeometry.field!.bottom + 1)
+  expect(trayGeometry.escaped, 'a calculator key escaped its tray').toBe(false)
+  expect(trayGeometry.insideForm, 'the calculator tray overflows the form').toBe(true)
+  expect(trayGeometry.keyHeight, 'calculator keys keep the 44px touch floor').toBeGreaterThanOrEqual(44)
   const date = dialog.getByRole('button', { name: /Posting date/i })
   await date.click()
   const calendar = page.getByRole('dialog', { name: 'Choose date' })
@@ -300,10 +292,6 @@ test('compact compound controls keep their buttons inside their own boundaries',
   })
   expect(calendarGeometry.panelScrollWidth).toBeLessThanOrEqual(calendarGeometry.panelClientWidth + 1)
   expect(calendarGeometry.gridScrollWidth).toBeLessThanOrEqual((calendarGeometry.gridClientWidth ?? 0) + 1)
-  expect(
-    amountGeometry.toolbar!.right - amountGeometry.toolbar!.left,
-    `calculator consumes the amount-entry area: ${JSON.stringify(amountGeometry)}`,
-  ).toBeLessThanOrEqual((amountGeometry.field!.right - amountGeometry.field!.left) * 0.6)
 })
 
 test('laptop-width Ledger and carryover views avoid horizontal data scrolling', async ({ page }) => {

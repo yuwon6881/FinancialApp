@@ -28,6 +28,30 @@ function toCents(value: number): number {
   return Math.round(value * 100) / 100
 }
 
+export interface BucketImpact {
+  bucket: OutflowBucket
+  /** What the bucket has left this cycle before this transaction (an edit adds its own amount back). */
+  before: number
+  after: number
+}
+
+/**
+ * The preview line under the transaction form: what the bucket has left now and after saving.
+ * Reads the same `remaining` figure the shortfall warning starts from, so the two never disagree.
+ */
+export function getBucketImpact({
+  bucket,
+  amount,
+  context,
+  existingAmountInBucket = 0,
+}: BucketOutflowWarningOptions): BucketImpact | null {
+  if (!Number.isFinite(amount) || amount <= 0) return null
+  const category = context.categories?.find(c => c.name.toLowerCase() === bucket.toLowerCase())
+  if (!category) return null
+  const before = toCents((category.remaining ?? 0) + Math.max(0, existingAmountInBucket))
+  return { bucket, before, after: toCents(before - amount) }
+}
+
 /**
  * Pure calculation that assesses whether an outgoing expense or transfer leaves a bucket
  * short of its obligations (e.g. pending bills in Essentials, goal earmarks in Rewards/Essentials,

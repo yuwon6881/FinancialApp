@@ -157,7 +157,8 @@ test('native purchase tap opens the real Ledger form with unknown fields empty',
   await expect(form.getByLabel('Amount', { exact: false }).first()).toHaveValue('')
   await expect(form.getByRole('button', { name: 'Posting date (required)', exact: true })).not.toHaveText('Select date')
   await expect(form.getByText('Date is taken from when the alert arrived. Change it if the payment happened on another day.')).toBeVisible()
-  await expect(form.getByRole('combobox', { name: 'Ledger category', exact: true })).toHaveText('Select a ledger category')
+  // No bucket is guessed for a detected purchase: none of the bucket pills starts selected.
+  await expect(form.getByRole('radiogroup', { name: 'From bucket' }).getByRole('radio', { checked: true })).toHaveCount(0)
   await expect(form.getByText('The alert did not show a currency. Enter the amount in MYR.')).toBeVisible()
   const overflow = await form.evaluate(element => element.scrollWidth > element.clientWidth)
   expect(overflow).toBe(false)
@@ -187,7 +188,8 @@ test('transfer notification opens as an outflow purchase draft', async ({ page }
   const form = page.getByRole('dialog').filter({ has: page.getByText('Detected from Example bank') })
   await expect(form).toBeVisible()
   await expect(form.getByRole('radio', { name: /Outflow/ })).toBeChecked()
-  await expect(form.getByRole('combobox', { name: 'Ledger category', exact: true })).toHaveText('Select a ledger category')
+  // No bucket is guessed for a detected purchase: none of the bucket pills starts selected.
+  await expect(form.getByRole('radiogroup', { name: 'From bucket' }).getByRole('radio', { checked: true })).toHaveCount(0)
 })
 
 test('Android settings select notification source apps with usable controls', async ({ page }) => {

@@ -18,6 +18,9 @@ import { TransactionDescriptionField } from './TransactionDescriptionField'
 import { AccountTransferFields } from './AccountTransferFields'
 import { IncomeSplitAccountsCard } from './IncomeSplitAccountsCard'
 import { StabilityReloadIntentCard } from './StabilityReloadIntentCard'
+import { CategoryTiles, ChipPicker } from './TransactionPickers'
+import { getCategoryChartColor } from '../../../lib/categoryColors'
+import { cn } from '../../../lib/utils'
 
 interface TransactionFormFieldsProps {
   state: TransactionFormState
@@ -58,7 +61,13 @@ interface TransactionFormFieldsProps {
   selectedMonth?: string
   selectedYear?: number
   cycleDay?: number
+  /** Sits directly under the amount: the receipt scan and split shortcuts. */
+  amountAccessory?: React.ReactNode
 }
+
+const BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
+const QUICK_CATEGORY_COUNT = 8
+const MAX_ACCOUNT_CHIPS = 4
 
 export function TransactionFormFields({
   state,
@@ -87,6 +96,7 @@ export function TransactionFormFields({
   selectedMonth,
   selectedYear,
   cycleDay = 28,
+  amountAccessory,
 }: TransactionFormFieldsProps) {
   const getCurrencySymbol = (code: string) => {
     if (code === 'USD') return '$'
@@ -126,6 +136,19 @@ export function TransactionFormFields({
       }),
     ]
   }, [categories, suggestions.categorySuggestions, state.transactionType])
+
+  // The tiles: suggestions first (they lead the options), with the current choice always among them.
+  const quickCategoryOptions = React.useMemo(() => {
+    const quick = categorySelectOptions.slice(0, QUICK_CATEGORY_COUNT)
+    const current = categorySelectOptions.find(option => option.value === state.category)
+    if (current && !quick.includes(current)) quick.splice(QUICK_CATEGORY_COUNT - 1, 1, current)
+    return quick
+  }, [categorySelectOptions, state.category])
+
+  const bucketOptions = React.useMemo(() => [
+    ...(state.transactionType === 'inflow' ? [{ value: 'Income', label: 'Split income', swatch: 'var(--primary)' }] : []),
+    ...BUCKETS.map(bucket => ({ value: bucket, label: bucket, swatch: getCategoryChartColor(bucket) })),
+  ], [state.transactionType])
 
   const isAccountMove = state.ledgerCategory === 'AccountMove'
   const accountMoveBucket = accounts.find(account => account.id === state.accountId)?.bucket
@@ -176,6 +199,37 @@ export function TransactionFormFields({
 
   return (
     <>
+      <FormField
+        className="sm:col-span-2"
+        label={`Amount (${getCurrencySymbol(currency).trim()})`}
+        required
+        error={errors.amount}
+      >
+        {/* The figure the whole form is about, set at hero size so it reads before anything else;
+            inflow reads green as it does everywhere else in the app. */}
+        <div className="relative">
+          <span className="pointer-events-none absolute left-4 top-10 z-10 -translate-y-1/2 select-none text-section font-medium text-muted-foreground lg:top-9">
+            {getCurrencySymbol(currency).trim()}
+          </span>
+          <SmartAmountInput
+            type="text"
+            placeholder="0.00"
+            value={state.amount}
+            calculator="tray"
+            onChange={e => {
+              onSetField('amount', maskCurrencyInput(e.target.value, state.amount))
+            }}
+            className={cn(
+              'input-display h-20 w-full pr-4 text-hero font-semibold tabular-nums lg:h-[4.5rem]',
+              state.transactionType === 'inflow' && 'text-emerald-600 dark:text-emerald-400',
+              getCurrencySymbol(currency).trim().length > 2 ? 'pl-[4.75rem]' : getCurrencySymbol(currency).trim().length > 1 ? 'pl-16' : 'pl-11',
+            )}
+          />
+        </div>
+      </FormField>
+
+      {amountAccessory}
+
       <TransactionDescriptionField
         key={state.transactionType}
         state={state}
@@ -191,31 +245,6 @@ export function TransactionFormFields({
         quickSuggestionEntries={quickSuggestionEntries}
         suggestions={suggestions}
       />
-
-      <FormField
-        className="sm:col-span-2"
-        label={`Amount (${getCurrencySymbol(currency).trim()})`}
-        required
-        error={errors.amount}
-      >
-        {/* The figure the whole form is about, set at display size so it reads before anything else. */}
-        <div className="relative flex items-center">
-          <span className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 select-none text-section font-medium text-muted-foreground">
-            {getCurrencySymbol(currency).trim()}
-          </span>
-          <SmartAmountInput
-            type="text"
-            placeholder="0.00"
-            value={state.amount}
-            onChange={e => {
-              onSetField('amount', maskCurrencyInput(e.target.value, state.amount))
-            }}
-            className={`input-display h-16 w-full pr-4 text-display font-semibold tabular-nums lg:h-16 ${
-              getCurrencySymbol(currency).trim().length > 2 ? 'pl-[4.25rem]' : getCurrencySymbol(currency).trim().length > 1 ? 'pl-14' : 'pl-10'
-            }`}
-          />
-        </div>
-      </FormField>
 
       {isAccountMove || state.transactionType === 'transfer' ? (
         <AccountTransferFields
@@ -245,32 +274,36 @@ export function TransactionFormFields({
                   AI unavailable
                 </span>
               ) : null}
-            <CustomSelect
-              ariaLabel="Category"
+            <CategoryTiles
               value={state.category}
-              placeholder="Select a category"
+              options={quickCategoryOptions}
               onChange={val => onSetField('category', val)}
-              options={categorySelectOptions}
-              className="w-full"
             />
+            {categorySelectOptions.length > quickCategoryOptions.length && (
+              <CustomSelect
+                ariaLabel="Category"
+                value={state.category}
+                placeholder="More categories"
+                onChange={val => onSetField('category', val)}
+                options={categorySelectOptions}
+                className="mt-2 w-full"
+              />
+            )}
           </FormField>
 
-          <FormField label="Ledger category" error={errors.ledgerCategory}>
-            <CustomSelect
-              ariaLabel="Ledger category"
-              value={state.ledgerCategory}
-              placeholder="Select a ledger category"
+          <div className="space-y-2 sm:col-span-2">
+            <p className="text-label font-medium text-muted-foreground" aria-hidden="true">
+              {state.transactionType === 'inflow' ? 'Into bucket' : 'From bucket'}
+            </p>
+            <ChipPicker
+              label={state.transactionType === 'inflow' ? 'Into bucket' : 'From bucket'}
+              value={state.ledgerCategory || null}
+              options={bucketOptions}
               onChange={val => onSetField('ledgerCategory', val as SelectableLedgerCategory)}
-              options={[
-                ...(state.transactionType === 'inflow' ? [{ value: 'Income', label: 'Income (Allocate Split)' }] : []),
-                { value: 'Essentials', label: 'Essentials' },
-                { value: 'Growth', label: 'Growth' },
-                { value: 'Stability', label: 'Stability' },
-                { value: 'Rewards', label: 'Rewards' }
-              ]}
-              className="w-full"
+              className="grid grid-cols-2 sm:grid-cols-4 [&>*]:w-full [&>*]:justify-start"
             />
-          </FormField>
+            {errors.ledgerCategory && <p className="text-caption text-destructive" role="alert">{errors.ledgerCategory}</p>}
+          </div>
 
           {state.ledgerCategory === 'Income' && (
             <IncomeSplitAccountsCard
@@ -282,19 +315,38 @@ export function TransactionFormFields({
           )}
 
           {accountBucket && (
-            <FormField
-              label="Account"
-              required
-              error={errors.accountId}
-            >
-              <CustomSelect
-                ariaLabel="Account"
-                value={state.accountId ?? ''}
-                onChange={value => onSetField('accountId', value || null)}
-                options={accountOptions}
-                className="w-full"
-              />
-            </FormField>
+            accountOptions.length - 1 <= MAX_ACCOUNT_CHIPS ? (
+              <div className="space-y-2 sm:col-span-2">
+                <p className="text-label font-medium text-muted-foreground" aria-hidden="true">
+                  Account<span className="text-destructive"> *</span>
+                </p>
+                {accountOptions.length > 1 ? (
+                  <ChipPicker
+                    label="Account"
+                    value={state.accountId}
+                    options={accountOptions.slice(1)}
+                    onChange={value => onSetField('accountId', value || null)}
+                  />
+                ) : (
+                  <p className="text-caption text-muted-foreground">No {accountBucket} account yet. Add one in Wealth › Accounts.</p>
+                )}
+                {errors.accountId && <p className="text-caption text-destructive" role="alert">{errors.accountId}</p>}
+              </div>
+            ) : (
+              <FormField
+                label="Account"
+                required
+                error={errors.accountId}
+              >
+                <CustomSelect
+                  ariaLabel="Account"
+                  value={state.accountId ?? ''}
+                  onChange={value => onSetField('accountId', value || null)}
+                  options={accountOptions}
+                  className="w-full"
+                />
+              </FormField>
+            )
           )}
 
           <FormField label="Posting date" required error={errors.date}>

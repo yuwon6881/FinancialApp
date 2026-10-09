@@ -26,6 +26,7 @@ import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
 import { Button } from '../ui/Button'
 import { ModalActions } from '../ui/ModalActions'
 import { CapturedAlertNotice } from './transaction-form/CapturedAlertNotice'
+import { BucketImpactLine } from './transaction-form/BucketImpactLine'
 import type { StabilityTopUpContext } from './transaction-form/useTransactionFormOptions'
 
 const ReceiptSplitSheet = lazy(() =>
@@ -205,29 +206,6 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             disabled={form.state.mode === 'edit'}
           />
 
-          {!form.state.captureId && <ReceiptScanPicker
-            isScanning={form.scanner.isScanning}
-            showScanPicker={form.scanner.showScanPicker}
-            setShowScanPicker={form.scanner.setShowScanPicker}
-            scanFileInputRef={form.scanner.scanFileInputRef}
-            scanGalleryInputRef={form.scanner.scanGalleryInputRef}
-            handleScanReceipt={form.scanner.handleScanReceipt}
-            setScanError={form.scanner.setScanError}
-            handleSplitScan={splitScan.handleScan}
-            isSplitScanning={splitScan.isScanning}
-            showSplitPicker={splitScan.showPicker}
-            setShowSplitPicker={splitScan.setShowPicker}
-            splitCameraInputRef={splitScan.cameraInputRef}
-            splitGalleryInputRef={splitScan.galleryInputRef}
-          />}
-
-          <ReceiptScanStatus
-            showScanBanner={form.scanner.showScanBanner}
-            setShowScanBanner={form.scanner.setShowScanBanner}
-            scanError={form.scanner.scanError}
-            setScanError={form.scanner.setScanError}
-          />
-
           <TransactionFormFields
             state={form.state}
             firstInputRef={form.firstInputRef}
@@ -260,6 +238,31 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             selectedMonth={props.selectedMonth}
             selectedYear={props.selectedYear}
             cycleDay={props.cycleDay}
+            amountAccessory={(
+              <>
+                {!form.state.captureId && <ReceiptScanPicker
+              isScanning={form.scanner.isScanning}
+              showScanPicker={form.scanner.showScanPicker}
+              setShowScanPicker={form.scanner.setShowScanPicker}
+              scanFileInputRef={form.scanner.scanFileInputRef}
+              scanGalleryInputRef={form.scanner.scanGalleryInputRef}
+              handleScanReceipt={form.scanner.handleScanReceipt}
+              setScanError={form.scanner.setScanError}
+              handleSplitScan={splitScan.handleScan}
+              isSplitScanning={splitScan.isScanning}
+              showSplitPicker={splitScan.showPicker}
+              setShowSplitPicker={splitScan.setShowPicker}
+              splitCameraInputRef={splitScan.cameraInputRef}
+              splitGalleryInputRef={splitScan.galleryInputRef}
+            />}
+                <ReceiptScanStatus
+              showScanBanner={form.scanner.showScanBanner}
+              setShowScanBanner={form.scanner.setShowScanBanner}
+              scanError={form.scanner.scanError}
+              setScanError={form.scanner.setScanError}
+            />
+              </>
+            )}
           />
 
           {form.state.transactionType === 'outflow' && !form.state.captureId && (
@@ -277,6 +280,10 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             </div>
           )}
         </div>
+
+        {form.bucketImpact && (
+          <BucketImpactLine impact={form.bucketImpact} currency={props.currency} masked={Boolean(props.hideSensitive)} />
+        )}
 
         <ModalActions className="pt-2">
           {form.state.errors.submit && (
