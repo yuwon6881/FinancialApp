@@ -4,19 +4,23 @@
  * can compose the same shell without becoming a `Panel` element. Same split as `controlStyles.ts`.
  */
 
-export const panelClass = 'app-panel rounded-panel border border-border/60 bg-card/92'
+/**
+ * The Lumen card: an opaque surface one luminance step above the canvas, outlined by a hairline.
+ * Night carries no drop shadow (depth is luminance); Day adds a whisper of one through `app-panel`.
+ */
+export const panelClass = 'app-panel rounded-panel border border-border/70 bg-card'
 
 export const panelVariantClasses = {
   default: panelClass,
-  subtle: 'rounded-panel border border-border/50 bg-muted/20',
-  dashed: 'rounded-panel border border-dashed border-border/70 bg-card/75',
+  subtle: 'rounded-panel border border-transparent bg-surface-2/70',
+  dashed: 'rounded-panel border border-dashed border-border bg-transparent',
 } as const
 
 export const panelPaddingClasses = {
   none: '',
   compact: 'p-4',
   default: 'p-4 sm:p-5',
-  spacious: 'p-4 sm:p-6',
+  spacious: 'p-5 sm:p-6',
 } as const
 
 /**
@@ -31,7 +35,7 @@ export const panelPaddingClasses = {
 export const PANEL_TONES = {
   default: '',
   /** Something needs attention but nothing has gone wrong yet. */
-  warning: 'border-amber-500/30',
+  warning: 'border-amber-500/25',
   /** A limit is already exceeded or a payment is already short. */
   urgent: 'border-orange-500/30',
   /** Neutral explanation of state the reader did not ask about. */
@@ -47,4 +51,4 @@ export type PanelTone = keyof typeof PANEL_TONES
  * class constant rather than a variant the `padding` prop would fight with.
  */
 export const panelFromMediumClass =
-  'app-panel rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-panel sm:border sm:border-border/60 sm:bg-card/92 sm:p-5'
+  'app-panel rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-panel sm:border sm:border-border/70 sm:bg-card sm:p-5'

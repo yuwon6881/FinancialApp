@@ -37,7 +37,7 @@ function cspMetaPlugin(apiUrl: string | undefined): Plugin {
         "default-src 'self'",
         "script-src 'self'",
         // 'unsafe-inline' covers the inline splash <style> + Radix/Tailwind inline styles.
-        // Inter is self-hosted (fontsource), so no Google Fonts hosts are needed.
+        // Geist is self-hosted (fontsource), so no Google Fonts hosts are needed.
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: blob:",
         "font-src 'self' data:",
@@ -103,13 +103,13 @@ export default defineConfig(({ mode }) => {
         // requiring an initial swipe to reveal them from fullscreen mode.
         display: 'standalone',
         // Android uses this fixed value behind its generated install splash.
-        background_color: '#0b0e14',
+        background_color: '#090b11',
         // Read when the WebAPK is installed and then used for Android's system
         // bars, so it has to be the dark surface rather than the light one --
         // Chromium does not apply the document's live theme-color updates there.
         // Matches the static fallback in index.html. Changing it needs a reinstall
         // (or Chrome's periodic WebAPK update) before installed devices pick it up.
-        theme_color: '#0b0e14',
+        theme_color: '#090b11',
         orientation: 'portrait-primary',
         shortcuts: [
           {
@@ -163,9 +163,9 @@ export default defineConfig(({ mode }) => {
       },
       injectManifest: {
         rollupFormat: 'iife',
-        // Precache only the latin Inter subsets for offline first paint; the other
+        // Precache only the latin Geist subset for offline first paint; the other
         // unicode-range subsets are never requested for this app's English UI.
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}', '**/inter-latin-opsz-normal-*.woff2'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}', '**/geist-latin-wght-normal-*.woff2'],
         // Browser-only design specimen: it is a visual-test surface, not an offline app route.
         // pdfjs-dist renders a vault document fetched from object storage, so the preview can
         // never work offline regardless; precaching 417 kB of renderer for it buys nothing. It

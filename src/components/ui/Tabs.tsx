@@ -1,5 +1,7 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react'
+import { m } from 'framer-motion'
 import { cn } from '../../lib/utils'
+import { SPRING } from '../../lib/animations'
 import { Badge } from './Badge'
 import { Button } from './Button'
 import { HorizontalRail } from './HorizontalRail'
@@ -17,6 +19,11 @@ interface TabsProps<T extends string> {
   options: readonly TabOption<T>[]
   label: string
   idPrefix: string
+  /**
+   * `underline` is page-level navigation between sibling views; `segmented` is a compact switch
+   * between two to four modes of the same content. Both slide their selection marker between
+   * options rather than snapping, so the eye follows the change.
+   */
   variant?: 'underline' | 'segmented'
   scrollable?: boolean
   className?: string
@@ -46,13 +53,17 @@ export function Tabs<T extends string>({
     window.requestAnimationFrame(() => refs.current[next]?.focus({ preventScroll: true }))
   }
 
+  const segmented = variant === 'segmented'
+
   const list = (
     <div
       role="tablist"
       aria-label={label}
       className={cn(
         'flex min-w-max items-center select-none',
-        variant === 'underline' ? 'gap-3 border-b border-border/40 sm:gap-5' : 'gap-1 rounded-xl border border-border/70 bg-background p-1',
+        segmented
+          ? 'gap-0.5 rounded-full bg-surface-2 p-1 dark:bg-surface-2'
+          : 'gap-1 border-b border-border/70 sm:gap-2',
         className,
       )}
     >
@@ -63,7 +74,7 @@ export function Tabs<T extends string>({
             key={option.value}
             ref={node => { refs.current[index] = node }}
             id={`${idPrefix}-${option.value}`}
-            variant={variant === 'segmented' && active ? 'secondary' : 'tertiary'}
+            variant="tertiary"
             size="sm"
             role="tab"
             aria-selected={active}
@@ -72,12 +83,28 @@ export function Tabs<T extends string>({
             onClick={() => onValueChange(option.value)}
             onKeyDown={event => onKeyDown(event, index)}
             className={cn(
-              'relative shrink-0',
-              variant === 'underline' && 'rounded-none border-x-0 border-t-0 px-1.5 pb-3 shadow-none',
-              variant === 'underline' && active && 'text-accent-ink after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary',
-              variant === 'underline' && !active && 'text-muted-foreground',
+              'relative shrink-0 isolate',
+              segmented
+                ? cn('px-3.5 hover:bg-transparent', active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')
+                : cn(
+                  'rounded-none border-x-0 border-t-0 px-2.5 pb-3 hover:bg-transparent',
+                  active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                ),
             )}
           >
+            {active && (
+              <m.span
+                aria-hidden="true"
+                layoutId={`${idPrefix}-tab-marker`}
+                transition={SPRING.snappy}
+                className={cn(
+                  'pointer-events-none absolute -z-10',
+                  segmented
+                    ? 'inset-0 rounded-full bg-card shadow-xs ring-1 ring-border/60 dark:bg-surface-3 dark:ring-0'
+                    : 'inset-x-1.5 -bottom-px h-0.5 rounded-full bg-primary',
+                )}
+              />
+            )}
             {option.label}
             {option.count !== undefined && <Badge tone={active ? 'accent' : 'neutral'}>{option.count}</Badge>}
           </Button>

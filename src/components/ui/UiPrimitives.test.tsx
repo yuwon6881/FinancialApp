@@ -8,11 +8,11 @@ import { Tabs } from './Tabs'
 
 describe('canonical UI primitives', () => {
   it.each(['primary', 'secondary', 'tertiary', 'destructive'] as const)(
-    'renders the %s action with the shared control geometry',
+    'renders the %s action as a pill on the shared control scale',
     variant => {
       render(<Button variant={variant}>Continue</Button>)
       const button = screen.getByRole('button', { name: 'Continue' })
-      expect(button.className).toContain('rounded-control')
+      expect(button.className).toContain('rounded-full')
       expect(button.className).toContain('min-h-12')
     },
   )

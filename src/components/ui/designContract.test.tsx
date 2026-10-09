@@ -43,6 +43,8 @@ describe('radius contract', () => {
     const css = fs.readFileSync(path.join(process.cwd(), 'src/index.css'), 'utf8')
     expect(css).toMatch(/--radius-control:/)
     expect(css).toMatch(/--radius-panel:/)
+    expect(css).toMatch(/--radius-overlay:/)
+    expect(css).toMatch(/--radius-sheet:/)
   })
 
   // Tailwind v4 emits its utilities inside `@layer utilities`, and unlayered CSS beats every
@@ -57,10 +59,14 @@ describe('radius contract', () => {
     expect(css).toMatch(/@layer\s+base\s*\{\s*button\s*\{[^}]*min-height:\s*1\.75rem/)
   })
 
+  // Lumen actions are pills. A button and a text field are two families with two shapes: the pill
+  // says "press me", the rounded rectangle says "type here", and neither borrows the other's radius.
   it.each(VARIANTS.flatMap(variant => BUTTON_SIZES.map(size => [variant, size] as const)))(
-    'Button %s/%s uses the control radius',
+    'Button %s/%s is a pill',
     (variant, size) => {
-      expect(buttonClasses(variant, size)).toContain('rounded-control')
+      const classes = buttonClasses(variant, size)
+      expect(classes).toContain('rounded-full')
+      expect(classes).not.toContain('rounded-control')
     },
   )
 
@@ -69,13 +75,13 @@ describe('radius contract', () => {
     expect(controlTriggerClassName({ size })).toContain('rounded-control')
   })
 
-  // The point of the two blocks above: a button and a field of the same size must agree. Asserting
-  // it directly means a change to one that forgets the other fails here rather than in review.
-  it.each(CONTROL_SIZES)('a %s button and a %s field round identically', size => {
+  // The point of the two blocks above: a button and a field of the same size sit side by side in a
+  // toolbar, so they must agree on *height* even though they differ in shape.
+  it.each(CONTROL_SIZES)('a %s button and a %s field share a height floor', size => {
     const button = buttonClasses('secondary', size)
     const field = controlClassName({ size })
-    const radiusOf = (value: string) => value.split(/\s+/).find(token => token.startsWith('rounded-'))
-    expect(radiusOf(button)).toBe(radiusOf(field))
+    expect(button).toMatch(/\bmin-h-1[1234]\b/)
+    expect(field).toMatch(/\bh-1[12]\b/)
   })
 
   it.each(Object.entries(panelVariantClasses))('panel variant %s uses the panel radius', (_name, classes) => {
@@ -95,7 +101,7 @@ describe('radius contract', () => {
 })
 
 describe('type role contract', () => {
-  const ROLES = ['eyebrow', 'caption', 'label', 'body', 'subsection', 'section', 'title', 'display']
+  const ROLES = ['micro', 'eyebrow', 'caption', 'label', 'body', 'callout', 'subsection', 'section', 'title', 'display', 'hero', 'jumbo']
 
   it.each(ROLES)('declares the %s role', role => {
     const css = fs.readFileSync(path.join(process.cwd(), 'src/index.css'), 'utf8')
@@ -138,14 +144,14 @@ describe('class-merge contract', () => {
   // two as one conflict and DELETED the role, dropping the size and weight wherever a colour arrived
   // in a different argument. 206 class lists in this codebase were exposed to that. `cn` now declares
   // the scales; these assertions are what stop a future edit to `cn` from silently undoing it.
-  const ROLES = ['eyebrow', 'caption', 'label', 'body', 'subsection', 'section', 'title', 'display']
+  const ROLES = ['micro', 'eyebrow', 'caption', 'label', 'body', 'callout', 'subsection', 'section', 'title', 'display', 'hero', 'jumbo']
 
   it.each(ROLES)('cn keeps text-%s when a text colour is merged alongside it', role => {
     expect(cn(`text-${role} uppercase`, 'text-muted-foreground')).toContain(`text-${role}`)
     expect(cn(`text-${role}`, 'text-foreground')).toContain(`text-${role}`)
   })
 
-  it.each([['rounded-control'], ['rounded-panel']])('cn keeps %s alongside a border colour', radius => {
+  it.each([['rounded-control'], ['rounded-panel'], ['rounded-overlay'], ['rounded-sheet']])('cn keeps %s alongside a border colour', radius => {
     expect(cn(radius, 'border-border/60 bg-card/92')).toContain(radius)
   })
 

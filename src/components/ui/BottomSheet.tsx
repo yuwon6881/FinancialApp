@@ -7,6 +7,7 @@ import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
 import { Z_LAYERS } from '../../lib/zLayers'
 import { motionSafeScrollBehavior } from '../../lib/motionPreference'
 import { APP_CONTEXT_WILL_CHANGE_EVENT } from '../../lib/appLocation'
+import { EASE_FLUID } from '../../lib/animations'
 
 interface BottomSheetProps {
   isOpen: boolean
@@ -301,7 +302,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             }
             backdropMouseDownRef.current = false
           }}
-          className={`sheet-backdrop fixed inset-0 ${layerClassName} flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm ${backdropClassName}`}
+          className={`sheet-backdrop fixed inset-0 ${layerClassName} flex items-center justify-center p-4 bg-(--app-scrim) backdrop-blur-[2px] ${backdropClassName}`}
         >
           {/* Entrance/exit slide lives on this OUTER wrapper, deliberately kept
               separate from the drag below. framer's drag gesture takes ownership
@@ -313,10 +314,17 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               rest at a height-paced duration, deterministically, on every open. */}
           <m.div
             key="sheet-enter"
-            initial={reduceMotion ? false : isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
+            // Phones: the sheet rides up on the fluid ease, paced by its height. Wider screens:
+            // a dialog that settles into place from slightly below and slightly smaller -- it never
+            // travels the full viewport, which read as a slow slide on a large monitor.
+            initial={reduceMotion ? false : isMobile ? { y: "100%" } : { y: 16, scale: 0.97, opacity: 0 }}
             animate={isMobile ? { y: 0 } : { y: 0, scale: 1, opacity: 1 }}
-            exit={reduceMotion ? undefined : isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
-            transition={{ type: "tween", ease: [0.22, 1, 0.36, 1], duration: reduceMotion ? 0 : slideDuration }}
+            exit={reduceMotion ? undefined : isMobile ? { y: "100%" } : { y: 12, scale: 0.98, opacity: 0 }}
+            transition={reduceMotion
+              ? { duration: 0 }
+              : isMobile
+                ? { type: "tween", ease: EASE_FLUID, duration: slideDuration }
+                : { type: "tween", ease: EASE_FLUID, duration: 0.24 }}
             className={`sheet-enter w-full ${maxWidthClassName}`}
           >
           <m.div
@@ -362,17 +370,17 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             // pan-y lets inner content scroll natively; the non-passive
             // touchmove listener above preventDefaults only the dismiss gesture,
             // so the drag still engages reliably over scrollable content.
-            className={`touch-pan-y sheet-panel no-scrollbar w-full bg-card border border-border/80 rounded-2xl shadow-2xl p-4 sm:p-6 flex flex-col gap-4 max-h-[90vh] overflow-x-hidden overflow-y-auto focus:outline-none ${panelClassName}`}
+            className={`touch-pan-y sheet-panel no-scrollbar w-full bg-popover text-popover-foreground border border-border/70 rounded-sheet shadow-(--app-shadow-overlay) p-4 sm:p-6 flex flex-col gap-4 max-h-[90vh] overflow-x-hidden overflow-y-auto focus:outline-none ${panelClassName}`}
           >
             <div
-              className="touch-none pb-3 shrink-0"
+              className="touch-none shrink-0"
             >
-              {isMobile && <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-2 shrink-0" />}
-              <div className="flex min-h-9 items-center justify-between gap-3 border-b border-border/40 pb-3">
+              {isMobile && <div className="mx-auto -mt-1 mb-3 h-1.5 w-10 shrink-0 rounded-full bg-foreground/15" />}
+              <div className="flex min-h-9 items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 id={titleId} className="text-base font-bold text-foreground">{title}</h2>
+                  <h2 id={titleId} className="text-section text-foreground">{title}</h2>
                   {description && (
-                    <div id={descriptionId} className="mt-1 text-xs font-normal leading-relaxed text-muted-foreground">
+                    <div id={descriptionId} className="mt-1 text-body text-muted-foreground">
                       {description}
                     </div>
                   )}
@@ -381,7 +389,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               </div>
             </div>
             {children}
-            {footer && <div className="border-t border-border/40 pt-4">{footer}</div>}
+            {footer && <div className="border-t border-border/60 pt-4">{footer}</div>}
           </m.div>
           </m.div>
         </m.div>

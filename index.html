@@ -13,7 +13,7 @@
          one is glaring against the dark surface. theme-init.js and
          useAppThemeAndShortcuts.ts still track the saved theme wherever the browser
          honours live theme-color changes, notably browser tabs. -->
-    <meta name="theme-color" content="#0b0e14" />
+    <meta name="theme-color" content="#090b11" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -26,10 +26,10 @@
         margin: 0;
         padding: 0;
         min-height: 100%;
-        background: var(--launch-surface, #0b0e14);
+        background: var(--launch-surface, #090b11);
       }
       html {
-        --launch-surface: #0b0e14;
+        --launch-surface: #090b11;
       }
       body {
         min-height: 100vh;
@@ -45,7 +45,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--launch-surface, #0b0e14);
+        background: var(--launch-surface, #090b11);
       }
       #__splash svg {
         width: 56px;
@@ -53,7 +53,7 @@
         animation: __splash-pulse 1.8s ease-in-out infinite;
       }
       #__splash svg path {
-        fill: var(--launch-accent, #e6b450);
+        fill: var(--launch-accent, #8e8fff);
       }
       @keyframes __splash-pulse {
         0%, 100% { opacity: .35; }
@@ -63,7 +63,7 @@
     <!-- Apply the saved app theme after the critical splash CSS is available.
          External because the production CSP intentionally blocks inline scripts. -->
     <script src="/theme-init.js"></script>
-    <!-- Inter is self-hosted via @fontsource-variable/inter (imported in index.css);
+    <!-- Geist is self-hosted via @fontsource-variable/geist (imported in index.css);
          degrades to SF Pro / Segoe UI while it loads -->
     <title>FinancialApp — Ledger</title>
   </head>
@@ -71,7 +71,7 @@
     <!-- Logo-only launch surface. It intentionally contains no visible title. -->
     <div id="__splash" aria-hidden="true">
       <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M30 32h40v8H38v12h28v8H38v16h-8V32z" fill="var(--launch-accent, #e6b450)"/>
+        <path d="M30 32h40v8H38v12h28v8H38v16h-8V32z" fill="var(--launch-accent, #8e8fff)"/>
       </svg>
     </div>
     <div id="root"></div>

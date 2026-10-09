@@ -4,6 +4,7 @@ import { Button } from './Button'
 import { AlertCircle, CheckCircle2, Info, Undo2, X, type LucideIcon } from 'lucide-react'
 import { m, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Z_LAYERS } from '../../lib/zLayers'
+import { SPRING } from '../../lib/animations'
 
 export type ToastTone = 'info' | 'success' | 'warning' | 'error'
 
@@ -28,15 +29,17 @@ interface ToastViewportProps {
   onDismiss: (id: string) => void
 }
 
+// Lumen toasts are one neutral raised surface; the icon carries the tone. A tinted border on a
+// floating card read as a second, competing signal.
 const toneClass: Record<ToastTone, string> = {
-  info: 'border-blue-500/25 bg-card text-foreground',
-  success: 'border-emerald-500/25 bg-card text-foreground',
-  warning: 'border-amber-500/30 bg-card text-foreground',
-  error: 'border-orange-500/30 bg-card text-foreground',
+  info: 'border-border/70 bg-popover text-foreground',
+  success: 'border-border/70 bg-popover text-foreground',
+  warning: 'border-amber-500/30 bg-popover text-foreground',
+  error: 'border-orange-500/30 bg-popover text-foreground',
 }
 
 const toneIcon: Record<ToastTone, React.ReactNode> = {
-  info: <Info className="size-5 text-blue-500" />,
+  info: <Info className="size-5 text-accent-ink" />,
   success: <CheckCircle2 className="size-5 text-emerald-500" />,
   warning: <AlertCircle className="size-5 text-amber-500" />,
   error: <AlertCircle className="size-5 text-orange-500" />,
@@ -159,9 +162,10 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
             <m.div
               key={toast.id}
               layout={!reduceMotion}
-              initial={reduceMotion ? false : { opacity: 0, y: -20, scale: 0.95 }}
+              initial={reduceMotion ? false : { opacity: 0, y: -16, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={reduceMotion ? undefined : { opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+              transition={SPRING.smooth}
+              exit={reduceMotion ? undefined : { opacity: 0, y: -8, scale: 0.96, transition: { duration: 0.18 } }}
               drag={!reduceMotion}
               dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
               dragElastic={0.8}
@@ -188,12 +192,12 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
               // had nothing translucent to blur while still forcing a backdrop-filter
               // layer per toast — and toasts are dragged, so that layer was recomposited
               // on every pointer move.
-              className={`pointer-events-auto flex items-start gap-3 rounded-xl border p-4 shadow-xl cursor-grab active:cursor-grabbing ${toneClass[tone]}`}
+              className={`pointer-events-auto flex items-start gap-3 rounded-overlay border p-3.5 pl-4 shadow-(--app-shadow-overlay) cursor-grab active:cursor-grabbing ${toneClass[tone]}`}
             >
               <div className="mt-0.5 shrink-0">{toneIcon[tone]}</div>
               <div className="min-w-0 flex-1 pointer-events-none">
-                {toast.title && <div className="text-sm font-bold text-foreground">{toast.title}</div>}
-                <div className="text-body leading-relaxed text-muted-foreground">{toast.message}</div>
+                {toast.title && <div className="text-subsection text-foreground">{toast.title}</div>}
+                <div className="text-body text-muted-foreground">{toast.message}</div>
                 {toast.action && (() => {
                   const ActionIcon = toast.action.icon ?? Undo2
                   return (
@@ -204,7 +208,7 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
                       toast.action?.onAction()
                       onDismiss(toast.id)
                     }}
-                    className="pointer-events-auto mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-muted/60 px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted transition cursor-pointer sm:min-h-8"
+                    className="pointer-events-auto mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3.5 py-1 text-label font-medium text-foreground hover:bg-surface-3 transition cursor-pointer lg:min-h-8"
                   >
                     <ActionIcon className="size-3.5" />
                     {toast.action.label}
@@ -219,7 +223,7 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
                   e.stopPropagation()
                   onDismiss(toast.id)
                 }}
-                className="-m-2 size-11 shrink-0 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer sm:-m-1 sm:size-8"
+                className="-m-2 size-11 shrink-0 rounded-full text-muted-foreground hover:bg-surface-2 hover:text-foreground transition cursor-pointer lg:-m-1 lg:size-8"
                 aria-label="Dismiss notification"
               >
                 <X className="size-4" />

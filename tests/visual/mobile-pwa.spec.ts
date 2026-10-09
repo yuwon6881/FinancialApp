@@ -80,7 +80,7 @@ test('saved theme is applied before the PWA application bundle runs', async ({ p
   await page.goto('/', { waitUntil: 'domcontentloaded' })
 
   await expect(page.locator('html')).toHaveClass(/\bdark\b/)
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#0b0e14')
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#090b11')
 
   // An installed WebAPK paints Android's status and navigation bars from the value
   // baked in at install time and ignores the live updates asserted above, so both
@@ -89,16 +89,16 @@ test('saved theme is applied before the PWA application bundle runs', async ({ p
   const documentResponse = await page.request.get('/')
   expect(documentResponse.ok()).toBe(true)
   const documentHtml = await documentResponse.text()
-  expect(documentHtml).toContain('<meta name="theme-color" content="#0b0e14" />')
-  expect(documentHtml).not.toContain('#fcfcfc')
+  expect(documentHtml).toContain('<meta name="theme-color" content="#090b11" />')
+  expect(documentHtml).not.toContain('#f5f6f8')
 
   const manifestResponse = await page.request.get('/manifest.webmanifest')
   expect(manifestResponse.ok()).toBe(true)
   const manifest = await manifestResponse.json()
   expect(manifest).toMatchObject({
     display: 'standalone',
-    background_color: '#0b0e14',
-    theme_color: '#0b0e14',
+    background_color: '#090b11',
+    theme_color: '#090b11',
     orientation: 'portrait-primary',
   })
 })

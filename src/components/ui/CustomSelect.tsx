@@ -202,7 +202,7 @@ export function CustomSelect<T extends string | number>({
           className: 'cursor-pointer disabled:cursor-not-allowed',
         })}
       >
-        <span className={`min-w-0 flex-1 truncate ${isPlaceholderDisplayed ? 'text-muted-foreground/70 font-normal' : ''}`}>{displayLabel}</span>
+        <span className={`min-w-0 flex-1 truncate ${isPlaceholderDisplayed ? 'text-subtle-foreground font-normal' : ''}`}>{displayLabel}</span>
         <ChevronDown className={`size-3.5 text-muted-foreground/80 transition duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </Button>
 
@@ -217,7 +217,7 @@ export function CustomSelect<T extends string | number>({
         minWidth={180}
         role="listbox"
         aria-label={ariaLabel ?? 'Select an option'}
-        className={`bg-popover text-popover-foreground border border-border rounded-xl shadow-xl p-1 z-[200] overflow-y-auto overscroll-contain animate-in fade-in ${direction === 'up' ? 'slide-in-from-bottom-1' : 'slide-in-from-top-1'} duration-100 space-y-0.5`}
+        className={`bg-popover text-popover-foreground border border-border/70 rounded-overlay shadow-(--app-shadow-overlay) p-1.5 z-[200] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-[0.98] ${direction === 'up' ? 'slide-in-from-bottom-1' : 'slide-in-from-top-1'} duration-150 space-y-0.5`}
       >
         {options.map((option, index) => (
           <Button variant="tertiary"
@@ -232,10 +232,10 @@ export function CustomSelect<T extends string | number>({
             tabIndex={-1}
             onMouseEnter={() => setActiveIndex(index)}
             onClick={() => selectIndex(index)}
-            className={`h-auto min-h-9 w-full min-w-0 shrink-0 px-3.5 py-2 text-left text-xs leading-4 rounded-lg transition duration-100 cursor-pointer ${option.badge ? 'flex items-center justify-between gap-2' : 'block truncate whitespace-nowrap'} ${
+            className={`h-auto min-h-9 w-full min-w-0 shrink-0 px-3 py-2 text-left text-body leading-5 rounded-[0.625rem] transition duration-100 cursor-pointer ${option.badge ? 'flex items-center justify-between gap-2' : 'block truncate whitespace-nowrap'} ${
               index === activeIndex
-                ? 'bg-primary hover:bg-primary text-primary-foreground font-bold shadow-xs'
-                : 'hover:bg-muted/80 text-foreground font-medium disabled:cursor-not-allowed disabled:opacity-45'
+                ? 'bg-primary/12 hover:bg-primary/16 text-accent-ink font-semibold'
+                : 'hover:bg-surface-2 dark:hover:bg-surface-3 text-foreground font-normal disabled:cursor-not-allowed disabled:opacity-45'
             }`}
           >
             {option.badge ? (
@@ -244,7 +244,7 @@ export function CustomSelect<T extends string | number>({
                 <span
                   className={`shrink-0 rounded border px-1.5 py-0.5 text-eyebrow uppercase ${
                     option.value === value
-                      ? 'border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground'
+                      ? 'border-primary/30 bg-primary/10 text-accent-ink'
                       : 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-300'
                   }`}
                 >

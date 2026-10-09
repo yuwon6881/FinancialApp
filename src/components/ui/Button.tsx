@@ -9,17 +9,23 @@ export type ButtonVariant =
   | 'destructive'
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon'
 
+/**
+ * Lumen actions are pills. `primary` is ink -- near-black in Day, near-white in Night -- so the one
+ * action that matters is the most decisive shape on the page without spending the brand colour,
+ * which stays reserved for "you are here". `secondary` is a quiet filled pill, `tertiary` is text
+ * until it is hovered, and `destructive` is the one place red appears on an action.
+ */
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'border border-transparent bg-primary text-primary-foreground shadow-sm hover:bg-primary/90',
-  secondary: 'border border-border bg-background text-foreground shadow-xs hover:bg-muted/70',
-  tertiary: 'border border-transparent bg-transparent text-foreground hover:bg-muted/70',
-  destructive: 'border border-transparent bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
+  primary: 'border border-transparent bg-ink text-ink-foreground shadow-xs hover:bg-ink/88',
+  secondary: 'border border-border/80 bg-background text-foreground hover:bg-surface-2 dark:bg-surface-2 dark:hover:bg-surface-3',
+  tertiary: 'border border-transparent bg-transparent text-foreground hover:bg-surface-2',
+  destructive: 'border border-transparent bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90',
 }
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'min-h-11 px-3 py-2.5 text-xs gap-1.5',
-  md: 'min-h-12 px-4 text-sm gap-2',
-  lg: 'min-h-13 px-5 text-sm gap-2.5',
+  sm: 'min-h-11 px-3.5 py-2 text-label gap-1.5 lg:min-h-9',
+  md: 'min-h-12 px-4.5 text-body font-semibold gap-2 lg:min-h-10',
+  lg: 'min-h-13 px-6 text-callout font-semibold gap-2.5 lg:min-h-12',
   icon: 'size-11 p-0 lg:size-9',
 }
 
@@ -30,8 +36,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loadingLabel?: ReactNode
 }
 
-// Shared chip/solid button primitive -- extracted from the repeated
-// edit/delete/confirm button markup duplicated across the list views.
+// The shared action primitive. Every feature action composes this rather than a raw <button>.
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant = 'primary', size = 'md', loading = false, loadingLabel, className, type = 'button', children, disabled, 'aria-busy': ariaBusy, ...props }, ref) => (
     <button
@@ -41,8 +46,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       aria-busy={loading || ariaBusy || undefined}
       disabled={disabled || loading}
       className={cn(
-        'shared-button relative inline-flex select-none items-center justify-center rounded-control font-bold transition duration-150',
-        'cursor-pointer active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45',
+        'shared-button relative inline-flex select-none items-center justify-center rounded-full font-medium',
+        'transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-150 ease-fluid',
+        'cursor-pointer active:scale-[0.97] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],

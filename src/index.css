@@ -1,48 +1,70 @@
 @import "tailwindcss";
 @import "shadcn/tailwind.css";
-/* Self-hosted Inter (wght + opsz axes): no render-blocking third-party CSS, and the
-   PWA precache makes offline first-paint typography reliable. */
-@import "@fontsource-variable/inter/opsz.css";
+/* Self-hosted Geist (wght axis): no render-blocking third-party CSS, and the PWA precache makes
+   offline first-paint typography reliable. Geist carries true tabular figures (`tnum`), which every
+   amount in the app depends on, at well under half the bytes of the Inter opsz file it replaced. */
+@import "@fontsource-variable/geist/wght.css";
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── Lumen ─────────────────────────────────────────────────────────────────────
+   The design language is documented in docs/design/README.md. In one line: calm, achromatic
+   chrome on a deep canvas, so that money, status and categories are the only things carrying
+   colour ("the data is the light"). Every token below is checked against WCAG AA on the canvas,
+   card and muted surfaces of its own theme, including the 10% tinted chips that badges sit on. */
 @theme inline {
     --breakpoint-sm: 40rem;
     --breakpoint-md: 40rem;
     --breakpoint-lg: 64rem;
     --breakpoint-xl: 64rem;
     --spacing: 0.25rem;
-    /* Semantic type roles. A role carries its own size, leading and weight, so "this is a section
-       heading" is one decision instead of three separate utilities that drift apart -- section
-       headings had been authored at five different sizes and three weights before these existed.
-       Values match what the shared primitives already rendered, so adopting a role is inert; it is
-       the feature call sites that change as they move onto one. */
-    --text-eyebrow: 0.75rem;
+    --font-sans: "Geist Variable", "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    /* Semantic type roles. A role carries its own size, leading, weight and tracking, so "this is a
+       section heading" is one decision instead of three utilities that drift apart. Names are one
+       word: a hyphenated `--text-*` name emits no utility. Every role is also registered with the
+       class merger in lib/utils.ts, or `cn` would read it as a colour and drop it. */
+    --text-micro: 0.6875rem;
+    --text-micro--line-height: 0.875rem;
+    --text-micro--font-weight: 500;
+    --text-eyebrow: 0.6875rem;
     --text-eyebrow--line-height: 1rem;
-    --text-eyebrow--font-weight: 700;
-    --text-eyebrow--letter-spacing: 0.025em;
+    --text-eyebrow--font-weight: 600;
+    --text-eyebrow--letter-spacing: 0.06em;
     --text-caption: 0.75rem;
     --text-caption--line-height: 1rem;
-    --text-label: 0.75rem;
-    --text-label--line-height: 1rem;
-    --text-label--font-weight: 600;
+    --text-label: 0.8125rem;
+    --text-label--line-height: 1.125rem;
+    --text-label--font-weight: 500;
     --text-body: 0.875rem;
     --text-body--line-height: 1.25rem;
-    /* Two heading levels, because the application genuinely has two: `section` heads a whole panel
-       and `subsection` heads a block inside one. Collapsing them onto a single role would have
-       promoted about thirty in-panel headings to panel weight and made every card and sheet
-       heavier. What was actually inconsistent was the weight at each level -- semibold, bold and
-       black all appeared on sibling headings -- which the roles now decide. */
-    --text-subsection: 0.875rem;
+    --text-callout: 0.9375rem;
+    --text-callout--line-height: 1.375rem;
+    /* Two heading levels inside a page: `section` heads a block, `subsection` heads a group inside
+       one. Both are semibold -- Lumen carries hierarchy with size and space, not weight. */
+    --text-subsection: 0.9375rem;
     --text-subsection--line-height: 1.25rem;
-    --text-subsection--font-weight: 700;
-    --text-section: 1rem;
+    --text-subsection--font-weight: 600;
+    --text-section: 1.0625rem;
     --text-section--line-height: 1.5rem;
-    --text-section--font-weight: 700;
-    --text-title: 1.25rem;
+    --text-section--font-weight: 600;
+    --text-section--letter-spacing: -0.01em;
+    --text-title: 1.375rem;
     --text-title--line-height: 1.75rem;
-    --text-display: 1.5rem;
-    --text-display--line-height: 2rem;
+    --text-title--font-weight: 600;
+    --text-title--letter-spacing: -0.02em;
+    --text-display: 1.75rem;
+    --text-display--line-height: 2.125rem;
+    --text-display--font-weight: 600;
+    --text-display--letter-spacing: -0.025em;
+    /* Money as the hero: the large balance figures. Always rendered with tabular figures. */
+    --text-hero: 2.5rem;
+    --text-hero--line-height: 2.75rem;
+    --text-hero--font-weight: 600;
+    --text-hero--letter-spacing: -0.035em;
+    --text-jumbo: 3.5rem;
+    --text-jumbo--line-height: 3.75rem;
+    --text-jumbo--font-weight: 600;
+    --text-jumbo--letter-spacing: -0.04em;
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-card: var(--card);
@@ -51,10 +73,16 @@
     --color-popover-foreground: var(--popover-foreground);
     --color-primary: var(--primary);
     --color-primary-foreground: var(--primary-foreground);
+    /* The action fill: near-black in Day, near-white in Night. */
+    --color-ink: var(--ink);
+    --color-ink-foreground: var(--ink-foreground);
+    /* Switch thumbs stay white in both themes, as on every platform switch. */
+    --color-thumb: #ffffff;
     --color-secondary: var(--secondary);
     --color-secondary-foreground: var(--secondary-foreground);
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);
+    --color-subtle-foreground: var(--subtle-foreground);
     --color-accent: var(--accent);
     --color-accent-foreground: var(--accent-foreground);
     --color-destructive: var(--destructive);
@@ -62,6 +90,19 @@
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
+    /* Lumen surfaces, stepped by luminance rather than shadow. `surface` is the card, `surface-2`
+       an inset well or hover, `surface-3` a pressed or selected fill. */
+    --color-surface: var(--card);
+    --color-surface-2: var(--surface-2);
+    --color-surface-3: var(--surface-3);
+    /* Iris -- the one brand colour. Used sparingly: the selected destination, the add action,
+       focus, links, progress and AI. Never for a status. */
+    --color-brand: var(--brand);
+    --color-brand-foreground: var(--brand-foreground);
+    --color-brand-soft: var(--brand-soft);
+    --color-positive: var(--ledger-income-500);
+    --color-negative: var(--ledger-expense-500);
+    --color-warning: var(--ledger-pending-500);
     --color-chart-1: var(--chart-1);
     --color-chart-2: var(--chart-2);
     --color-chart-3: var(--chart-3);
@@ -74,13 +115,14 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
-    /* Semantic radii, so the contract is written in the class name rather than in a t-shirt size
-       that has to be mentally multiplied. --radius is 0.75rem and the scale multiplies it, so these
-       compute to 16.8px and 21.6px -- not the 12px/16px earlier drafts of the audit claimed. Every
-       button, input, select, date picker and segmented control is rounded-control; every panel is
-       rounded-panel; rounded-full stays for badges, counts, avatars and switches. */
-    --radius-control: calc(var(--radius) * 1.4);
-    --radius-panel: calc(var(--radius) * 1.8);
+    /* Semantic radii, so the contract is written in the class name. `control` is a text field,
+       select or date trigger; `panel` is a card; `overlay` is a popover, menu or toast; `sheet` is
+       the top edge of a bottom sheet. Actions, chips, segmented controls and badges are pills
+       (`rounded-full`). Registered with the class merger in lib/utils.ts. */
+    --radius-control: 0.75rem;
+    --radius-panel: 1.25rem;
+    --radius-overlay: 1rem;
+    --radius-sheet: 1.75rem;
     --color-sidebar: var(--sidebar);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
@@ -90,17 +132,17 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-chart-line: var(--chart-line);
-    /* Accent *ink*: the accent colour at a weight that can be read as text or an
-       icon on a page/card surface. Not interchangeable with `--primary`, which is
-       a fill: Ayu Light's gold is 2.2:1 on white, so `text-primary` is unreadable
-       there even though it is perfect in dark mode. */
+    /* Accent *ink*: the brand colour at a weight that reads as text or an icon on any surface.
+       Not interchangeable with `--primary`, which is a fill. */
     --color-accent-ink: var(--accent-ink);
     --color-on-vivid: var(--on-vivid);
-    /* Tailwind's stock palette is remapped onto the app's semantic ledger ramps so
-       that a utility like `text-emerald-500` is a *theme* reference, not a literal
-       colour. Every step a component actually uses must be listed here — an
-       unmapped step (e.g. `-300`) silently falls back to stock Tailwind and breaks
-       out of the theme. */
+    /* Motion. One easing family and four durations; framer springs live in lib/animations.ts. */
+    --ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+    /* Tailwind's stock palette is remapped onto the app's semantic ledger ramps so that a utility
+       like `text-emerald-500` is a *theme* reference, not a literal colour. Every step a component
+       actually uses must be listed here -- an unmapped step silently falls back to stock Tailwind
+       and breaks out of the theme. */
     --color-blue-300: var(--ledger-blue-300);
     --color-blue-400: var(--ledger-blue-400);
     --color-blue-500: var(--ledger-blue-500);
@@ -198,323 +240,276 @@
     --radius: 0.75rem;
     --app-nav-height: 6rem;
     --app-fab-offset: 6rem;
-    /* Height of the visual viewport (area NOT covered by the on-screen keyboard).
-       Kept in sync by the visualViewport listener in App.tsx; falls back to the
-       full dynamic viewport before JS runs or on desktop. */
+    /* Height of the visual viewport (area NOT covered by the on-screen keyboard). Kept in sync by
+       the visualViewport listener; falls back to the full dynamic viewport before JS runs. */
     --app-vvh: 100dvh;
     --app-vvw: 100vw;
     --app-vv-top: 0px;
     --app-vv-left: 0px;
-    /* ── Light theme: Ayu Light ─────────────────────────────────────────────
-       Ported from the official palette (`ayu` npm package, dist/light.js):
-       bg #fcfcfc, ink #5c6166, accent #f29718, error #e65050, plus the syntax
-       hues (entity #399ee6, string #86b300, regexp #4cbf99, constant #a37acc,
-       func #f2a300, removed #ff7383).
-
-       One thing to understand before editing a value here. Ayu Light is an
-       editor theme on a near-white page, so *none* of its hues survive as small
-       text: measured on #fcfcfc they land at 2.0–3.6:1, and most miss even the
-       3:1 non-text floor. Ayu's own accent pairing (#804b00 on #f29718) is
-       3.15:1. This app puts those colours on amounts, badges and chart legends,
-       where they have to be read.
-
-       So this is a *hue*-faithful port, not a hex-faithful one: every ramp keeps
-       its Ayu hue and is darkened until it clears AA on all three surfaces
-       (page, card and muted). That is the mirror image of the dark theme, whose
-       600–700 steps are darkened for the opposite reason — to back white text.
-       Contrast wins ties; the hue is what carries the theme.
-
-       The -300 steps exist only so `dark:text-*-300` variants have a light-mode
-       counterpart; they are intentionally the AA-safe dark tint, not a pale one. */
-    --background: #fcfcfc;
-    --foreground: #53575c; /* Ayu's ink #5c6166 nudged to 7.09:1 (AAA body text); visually the same warm grey */
+    --duration-press: 120ms;
+    --duration-quick: 180ms;
+    --duration-enter: 240ms;
+    --duration-large: 320ms;
+    /* ── Lumen Day ────────────────────────────────────────────────────────────
+       A cool paper canvas with white cards. Ink is near-black, not grey, so body copy reads at
+       AAA; secondary ink clears 5.2:1 on every surface. Each ledger ramp keeps one hue across
+       themes and is darkened here until it clears AA on the page, the card, the muted well and
+       its own 10% chip. The -300/-400 steps exist so `dark:text-*-300` variants have a
+       light-mode counterpart; they are intentionally the AA-safe tint, not a pale one. */
+    --background: #f5f6f8;
+    --foreground: #0d1017;
     --card: #ffffff;
-    --card-foreground: #53575c;
+    --card-foreground: #0d1017;
     --popover: #ffffff;
-    --popover-foreground: #53575c;
-    /* Primary = Ayu's warm gold accent. Its foreground is a deep brown, never
-       white (white on #f29718 is 2.28:1); this pairing is 6.59:1. */
-    --primary: #f29718;
-    --primary-foreground: #3a2100;
-    --secondary: #f1f2f4;
-    --secondary-foreground: #53575c;
-    --muted: #f1f2f4;
-    /* Ayu's own UI grey (#828e9f) is 3.24:1 here — the same call the dark theme
-       made about #565b66: keep the hue, take the lightest tint that clears AA. */
-    --muted-foreground: #646f7a;
-    --accent: #fdf0dc;
-    --accent-foreground: #7a4f00;
-    --accent-ink: #7a4f00; /* 7.09:1 on the page — the accent as text/icon */
-    --destructive: #c0392f; /* Ayu error #e65050, darkened so white text clears AA (5.43:1) */
+    --popover-foreground: #0d1017;
+    --surface-2: #eef0f3;
+    --surface-3: #e5e8ed;
+    /* `primary` is the brand accent (Iris): selection, progress, focus, "you are here". The
+       action fill is `ink` instead -- a near-black pill is the most decisive thing on a light page,
+       and it leaves Iris free to mean a place rather than a press. */
+    --primary: #4f49e6;
+    --primary-foreground: #ffffff;
+    --ink: #0d1017;
+    --ink-foreground: #ffffff;
+    --secondary: #ffffff;
+    --secondary-foreground: #0d1017;
+    --muted: #eef0f3;
+    --muted-foreground: #596172;
+    --subtle-foreground: #737a8a;
+    --accent: #eceef2;
+    --accent-foreground: #0d1017;
+    --accent-ink: #4b44d9;
+    --brand: #4f49e6;
+    --brand-foreground: #ffffff;
+    --brand-soft: #eceafd;
+    --destructive: #c02828;
     --destructive-foreground: #ffffff;
     --on-vivid: #ffffff;
-    /* Ayu ui.line (#6b7d8f at 12%) flattened. Cards are #ffffff on a #fcfcfc
-       page — 1.03:1 — so as in dark mode the border is the only thing carrying
-       structure and has to stay visible. */
-    --border: #e3e6e9;
-    --input: #e3e6e9;
-    --ring: #f29718;
-    /* Chart marks take the darkened text steps, not the raw hues: a 2px trend
-       line or a legend swatch at 2.2:1 is not readable. All ≥3.5:1. */
-    --chart-line: #966200;
-    --chart-1: #b57a00;
-    --chart-2: #457f28;
-    --chart-3: #176fad;
-    --chart-4: #7c4fb2;
-    --chart-5: #c0392f;
+    --border: #e2e5ea;
+    --input: #d8dce3;
+    --ring: #5b57ee;
+    --chart-line: #4f49e6;
+    --chart-1: #4f49e6;
+    --chart-2: #0e7341;
+    --chart-3: #086c8c;
+    --chart-4: #6a47d6;
+    --chart-5: #c02828;
     --sidebar: #ffffff;
-    --sidebar-foreground: #53575c;
-    --sidebar-primary: #f29718;
-    --sidebar-primary-foreground: #3a2100;
-    --sidebar-accent: #f1f2f4;
-    --sidebar-accent-foreground: #53575c;
-    --sidebar-border: #e3e6e9;
-    --sidebar-ring: #f29718;
-    /* Blue — Ayu's entity blue. Brand / links / credits-as-actions. */
-    --ledger-blue-300: #176fad;
-    --ledger-blue-400: #176fad;
-    --ledger-blue-500: #176fad;
-    --ledger-blue-600: #15628f;
-    --ledger-blue-700: #114f73;
-    --ledger-blue-800: #0e4460;
-    /* Teal — Ayu's regexp colour. Deliberately teal rather than a second azure:
-       sky and blue sit next to each other in doughnut slices, and Ayu Light's
-       own tag cyan (#55b4d4) is too close to its entity blue to tell apart once
-       both are darkened to AA. */
-    --ledger-sky-300: #1d7a5e;
-    --ledger-sky-400: #1d7a5e;
-    --ledger-sky-500: #1d7a5e;
-    --ledger-sky-600: #176249;
-    /* Green — Ayu Light's vcs-added #6cbf43, not its string olive #86b300. Positive
-       cash flow & credits. Darkening the olive landed the whole family at hue ~80°,
-       which reads as mustard rather than green on solid fills ("Set up this device")
-       and on the queue's credit amounts. vcs-added darkens to the same hue ~101° the
-       dark theme already uses, so one number reads as the same colour in both. */
-    --ledger-income-300: #3f7a26;
-    --ledger-income-400: #3f7a26;
-    --ledger-income-500: #3f7a26; /* the lightest step that still clears AA on its own 10% chip (4.58:1) */
-    --ledger-income-600: #3d7524; /* solid fill under white `--on-vivid` (5.57:1) */
-    --ledger-income-700: #33621d;
-    /* Red — Ayu error/vcs-removed. Debits, expenses, destructive. */
-    --ledger-expense-300: #c0392f;
-    --ledger-expense-400: #c0392f;
-    --ledger-expense-500: #c0392f;
-    --ledger-expense-600: #a32b2b;
-    --ledger-expense-700: #8f2424;
-    /* Gold — Ayu accent/func. Pending, warnings, "needs attention". Shares the
-       accent hue exactly as the dark theme does. */
-    --ledger-pending-300: #966200;
-    --ledger-pending-400: #966200;
-    --ledger-pending-500: #966200;
-    --ledger-pending-600: #8a5a00;
-    --ledger-pending-700: #744b00;
-    /* Violet — Ayu constant. Transfers and AI surfaces. */
-    --ledger-transfer-300: #8055b5;
-    --ledger-transfer-400: #8055b5;
-    --ledger-transfer-500: #8055b5;
-    --ledger-transfer-600: #6b41a0;
-    /* Purple — same Ayu constant hue, one step deeper. Investments. */
-    --ledger-purple-300: #7c4fb2;
-    --ledger-purple-400: #7c4fb2;
-    --ledger-purple-500: #7c4fb2;
-    --ledger-purple-600: #6a3f9c;
-    /* Rose — no Ayu source colour; derived from markup #f07171 rotated toward
-       magenta, matching how the dark theme derives its wishlist rose. */
-    --ledger-wishlist-300: #c03a6b;
-    --ledger-wishlist-400: #c03a6b;
-    --ledger-wishlist-500: #c03a6b;
-    --ledger-wishlist-600: #a32b57;
-    /* Neutral — Ayu's UI grey, darkened through the ramp. */
-    --ledger-neutral-300: #5f6b75;
-    --ledger-neutral-400: #5f6b75;
-    --ledger-neutral-500: #5f6b75;
-    --ledger-neutral-600: #4a545d;
-    --ledger-neutral-700: #3f4a54;
-    --ledger-neutral-800: #2e363d;
-    --ledger-neutral-900: #1f252a;
-    /* Ambient wash: gold-led, mirroring the dark theme's warm bloom. */
-    --app-grid: rgba(242, 151, 24, 0.05);
-    --app-surface-a: rgba(242, 151, 24, 0.16);
-    --app-surface-b: rgba(108, 191, 67, 0.12);
-    --app-surface-c: rgba(163, 122, 204, 0.10);
-    /* Elevation ramp, tinted with Ayu's own panel-shadow hue (#6b7d8f) rather
-       than slate. Previously these were literal rgba(0,0,0,0.05)-ish values
-       inline on .app-panel / .glass-nav / the mobile nav, which vanished on a dark
-       surface — shadows must deepen, not lighten, when the background does. */
-    --app-shadow: 0 24px 60px -12px rgba(107, 125, 143, 0.16), 0 12px 24px -8px rgba(107, 125, 143, 0.08);
-    --app-shadow-soft: 0 8px 32px 0 rgba(107, 125, 143, 0.10);
-    --app-shadow-nav: 0 10px 30px rgba(107, 125, 143, 0.12);
-    --app-shadow-nav-up: 0 -12px 30px rgba(107, 125, 143, 0.14);
-    /* Inner top highlight on chips/pills — a white sheen reads as grime on light
-       surfaces and as a bevel on dark ones, so it is a token, not a literal. */
-    --app-inner-highlight: rgba(255, 255, 255, 0.12);
-    /* Deep-link "jump to transaction" cue; follows the focus/brand colour. */
-    --app-highlight: #f29718;
-    /* Doughnut/pie slots for user-defined categories. Colourblind-aware and
-       distinct from each other in *both* themes; see lib/categoryColors.ts.
-       Re-hued to Ayu Light and kept in the same hue order (red, olive, magenta,
-       teal, ochre, plum) — categoryColors maps categories to slots by index, so
+    --sidebar-foreground: #0d1017;
+    --sidebar-primary: #4f49e6;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #eef0f3;
+    --sidebar-accent-foreground: #0d1017;
+    --sidebar-border: #e2e5ea;
+    --sidebar-ring: #5b57ee;
+    /* Blue -- salary, income and links-as-data. */
+    --ledger-blue-300: #1f5fd1;
+    --ledger-blue-400: #1f5fd1;
+    --ledger-blue-500: #1f5fd1;
+    --ledger-blue-600: #1a52b5;
+    --ledger-blue-700: #164496;
+    --ledger-blue-800: #123878;
+    /* Sky -- Essentials. A clear cyan, held apart from the blue it sits beside in charts. */
+    --ledger-sky-300: #086c8c;
+    --ledger-sky-400: #086c8c;
+    --ledger-sky-500: #086c8c;
+    --ledger-sky-600: #075b76;
+    /* Green -- positive cash flow, Stability, "on plan". */
+    --ledger-income-300: #0e7341;
+    --ledger-income-400: #0e7341;
+    --ledger-income-500: #0e7341;
+    --ledger-income-600: #0c6638; /* solid fill under white `--on-vivid` */
+    --ledger-income-700: #0a552f;
+    /* Red -- overspend, destructive, a limit already passed. Outflow itself is neutral ink. */
+    --ledger-expense-300: #c02828;
+    --ledger-expense-400: #c02828;
+    --ledger-expense-500: #c02828;
+    --ledger-expense-600: #a82222;
+    --ledger-expense-700: #8f1d1d;
+    /* Amber -- pending, "needs attention eventually". */
+    --ledger-pending-300: #9a5800;
+    --ledger-pending-400: #9a5800;
+    --ledger-pending-500: #9a5800;
+    --ledger-pending-600: #8a4f00;
+    --ledger-pending-700: #744200;
+    /* Violet -- Growth and investments. */
+    --ledger-transfer-300: #6a47d6;
+    --ledger-transfer-400: #6a47d6;
+    --ledger-transfer-500: #6a47d6;
+    --ledger-transfer-600: #5a39c2;
+    /* Purple -- a magenta-leaning violet, kept distinct from Growth in shared charts. */
+    --ledger-purple-300: #9132c4;
+    --ledger-purple-400: #9132c4;
+    --ledger-purple-500: #9132c4;
+    --ledger-purple-600: #7c28aa;
+    /* Rose -- Rewards and the wishlist. */
+    --ledger-wishlist-300: #b22963;
+    --ledger-wishlist-400: #b22963;
+    --ledger-wishlist-500: #b22963;
+    --ledger-wishlist-600: #982253;
+    /* Neutral -- cool slate, matching the canvas. */
+    --ledger-neutral-300: #5e6676;
+    --ledger-neutral-400: #5e6676;
+    --ledger-neutral-500: #5e6676;
+    --ledger-neutral-600: #485062;
+    --ledger-neutral-700: #363d4c;
+    --ledger-neutral-800: #222833;
+    --ledger-neutral-900: #12161d;
+    /* Ambient light: one faint Iris bloom behind the top of the page. */
+    --app-glow: rgba(79, 73, 230, 0.06);
+    --app-glow-2: rgba(8, 108, 140, 0.04);
+    /* Elevation. Light theme lifts cards with a whisper of shadow under a hairline; overlays get a
+       real, soft shadow. Shadows deepen rather than lighten when the background does, which is why
+       they are tokens and not literals. */
+    --app-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 32px -12px rgba(16, 24, 40, 0.14);
+    --app-shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.04);
+    --app-shadow-overlay: 0 1px 2px rgba(16, 24, 40, 0.06), 0 24px 48px -12px rgba(16, 24, 40, 0.22);
+    --app-shadow-nav: 0 1px 0 rgba(16, 24, 40, 0.04);
+    --app-shadow-nav-up: 0 -1px 0 rgba(16, 24, 40, 0.04), 0 12px 40px -8px rgba(16, 24, 40, 0.18);
+    --app-inner-highlight: rgba(255, 255, 255, 0.7);
+    --app-glass: rgba(255, 255, 255, 0.72);
+    --app-scrim: rgba(9, 11, 17, 0.38);
+    --app-glass-border: rgba(13, 16, 23, 0.08);
+    /* Deep-link "jump to transaction" cue; follows the brand colour. */
+    --app-highlight: #4f49e6;
+    /* Doughnut/pie slots for user-defined categories. Same hue order as before (red, green,
+       magenta, teal, ochre, plum) -- categoryColors maps categories to slots by index, so
        reordering would silently recolour every existing chart. */
-    --chart-custom-1: #c9434a;
-    --chart-custom-2: #6f9400;
-    --chart-custom-3: #c03a6b;
-    --chart-custom-4: #2e8f70;
-    --chart-custom-5: #b57a00;
-    --chart-custom-6: #7c4fb2;
+    --chart-custom-1: #c63c48;
+    --chart-custom-2: #5e8a00;
+    --chart-custom-3: #b5336f;
+    --chart-custom-4: #12866a;
+    --chart-custom-5: #a86a00;
+    --chart-custom-6: #7247c2;
 }
 
-/* ── Dark theme: Ayu Dark ───────────────────────────────────────────────────
-   Ported from the Ayu Dark editor palette (surface #0b0e14, ink #bfbdb6,
-   accent #e6b450). Two consequences worth knowing before editing values here:
-
-   1. The accent is *warm gold*, not blue. So `--primary` is gold and every
-      primary surface pairs with the near-black `--primary-foreground` — never
-      white. Anything that hard-codes `text-white` on a primary background will
-      fail contrast; use the token pair.
-   2. Ayu is a low-chroma, low-contrast-by-design palette. The ink (#bfbdb6) is
-      warm off-grey rather than white, and panels step up by only a few points of
-      luminance. Resist "fixing" that by brightening `--foreground` — the
-      per-family ramps below are where saturation is meant to live.
-
-   Semantic anchors taken verbatim from the source theme: diff-added #7fd962
-   (income), diff-removed #ea6c73 (expense), skill #cda1fa (transfer/AI). */
+/* ── Lumen Night ──────────────────────────────────────────────────────────────
+   The primary showcase: a deep blue-black canvas where the chrome steps up only in luminance and
+   the figures glow. Ink is a cool near-white; vivid ramps are lifted into a bright, even band so
+   that categories read as one family. Solid vivid fills take dark ink (`--on-vivid`), never
+   white. */
 .dark {
     color-scheme: dark;
-    --background: #0b0e14;
-    --foreground: #bfbdb6;
-    --card: #0f131a;
-    --card-foreground: #bfbdb6;
-    --popover: #0f131a;
-    --popover-foreground: #bfbdb6;
-    /* Primary = Ayu's gold accent. Foreground is the surface, not white. */
-    --primary: #e6b450;
-    --primary-foreground: #0b0e14;
-    --secondary: #151a23;
-    --secondary-foreground: #bfbdb6;
-    --muted: #151a23;
-    /* Ayu's own comment grey (#565b66) is below AA against #0b0e14; this is the
-       lightest tint that still reads as "secondary" while clearing 4.5:1. */
-    --muted-foreground: #8a9199;
-    --accent: #1b2130;
-    --accent-foreground: #e6b450;
-    --accent-ink: #e6b450; /* 9.76:1 on a card — the accent reads as text unchanged here */
-    --destructive: #ea6c73;
-    --destructive-foreground: #0b0e14;
-    --on-vivid: #0b0e14;
-    /* Lifted above Ayu's own UI line (~#1b1f27). Ayu is an editor theme, where a
-       panel edge is incidental; here the border is the *only* thing separating a
-       card from the page (card:background is 1.04:1 by design), so it has to be
-       readable as structure. */
-    --border: #242c3a;
-    --input: #242c3a;
-    --ring: #e6b450;
-    --chart-line: #e6b450;
-    --chart-1: #e6b450;
-    --chart-2: #7fd962;
-    --chart-3: #39bae6;
-    --chart-4: #cda1fa;
-    --chart-5: #ea6c73;
-    --sidebar: #0f131a;
-    --sidebar-foreground: #bfbdb6;
-    --sidebar-primary: #e6b450;
-    --sidebar-primary-foreground: #0b0e14;
-    --sidebar-accent: #151a23;
-    --sidebar-accent-foreground: #bfbdb6;
-    --sidebar-border: #242c3a;
-    --sidebar-ring: #e6b450;
-    /* Blue family — Ayu's tag/entity blue. The 600–800 steps are deliberately
-       *darker* than the 500 because they back solid `text-white` CTA buttons; a
-       bright #39bae6 fill would leave white text at ~1.9:1. */
-    --ledger-blue-300: #a3e3ff;
-    --ledger-blue-400: #73d0ff;
-    --ledger-blue-500: #39bae6;
-    --ledger-blue-600: #1f7d9e;
-    --ledger-blue-700: #186580;
-    --ledger-blue-800: #114f65;
-    /* Cyan/teal-leaning accent (Ayu regexp + Mirage cyan) */
-    --ledger-sky-300: #b6f0dd;
-    --ledger-sky-400: #95e6cb;
-    --ledger-sky-500: #5ccfe6;
-    --ledger-sky-600: #2b9cb8;
-    /* Green — Ayu diffAdded / string. Positive cash flow. */
-    --ledger-income-300: #cbeda7;
-    --ledger-income-400: #a8e07d;
-    --ledger-income-500: #7fd962;
-    /* 600/700 back solid fills (the `success` Button, the FAB) whose ink is
-       `--on-vivid` — near-black here, as on the gold primary. So they stay in Ayu's
-       bright green rather than the muddy forest green a white-ink era needed: white
-       forced them below the 500, which read as a dead olive slab on the dark page.
-       Dark ink over these clears 9.8:1 (600) and 8.1:1 (700). */
-    --ledger-income-600: #6fce4e;
-    --ledger-income-700: #5cbd3c;
-    /* Red — Ayu diffRemoved. Debits, expenses, destructive. */
-    --ledger-expense-300: #f7b8bc;
-    --ledger-expense-400: #f2949a;
-    --ledger-expense-500: #ea6c73;
-    --ledger-expense-600: #c94a51;
-    --ledger-expense-700: #a83c42;
-    /* Gold — Ayu accent / func. Pending, warnings, "needs attention". */
-    --ledger-pending-300: #ffe2a3;
-    --ledger-pending-400: #ffcb6b;
-    --ledger-pending-500: #e6b450;
-    --ledger-pending-600: #a87f2c;
-    --ledger-pending-700: #8a6721;
-    /* Violet — Ayu's `skill` colour. Transfers and AI surfaces. */
-    --ledger-transfer-300: #e6d4ff;
-    --ledger-transfer-400: #ddc0ff;
-    --ledger-transfer-500: #cda1fa;
-    --ledger-transfer-600: #9a6ed0;
-    /* Purple — Ayu constant/number. Investments. */
-    --ledger-purple-300: #ecdcff;
-    --ledger-purple-400: #e3ccff;
-    --ledger-purple-500: #d2a6ff;
-    --ledger-purple-600: #9f72d8;
-    /* Rose — no Ayu source colour; derived from `skill` rotated toward red so it
-       stays inside the palette's chroma band. Wishlist. */
-    --ledger-wishlist-300: #f9c4d9;
-    --ledger-wishlist-400: #f5a8c8;
-    --ledger-wishlist-500: #e885ae;
-    --ledger-wishlist-600: #bf5f86;
-    /* Neutral — Ayu UI greys, ending on the panel colour so `dark:bg-slate-900`
-       popovers land on the card surface instead of a foreign navy. */
-    --ledger-neutral-300: #a6acb5;
-    --ledger-neutral-400: #8a9199;
-    --ledger-neutral-500: #868d97; /* above Ayu's grey ramp: `text-slate-500` is used bare, with no dark: override, incl. on a slate-500/10 chip -- the authentic #737a85 lands at 3.9:1 there */
-    --ledger-neutral-600: #565b66;
-    --ledger-neutral-700: #3b414d;
-    --ledger-neutral-800: #151a23;
-    --ledger-neutral-900: #0f131a;
-    /* Ambient wash: gold-led, far dimmer than the indigo original — Ayu's surface
-       is meant to read as flat obsidian with a warm bloom, not a gradient. */
-    --app-grid: rgba(230, 180, 80, 0.06);
-    --app-surface-a: rgba(230, 180, 80, 0.10);
-    --app-surface-b: rgba(127, 217, 98, 0.055);
-    --app-surface-c: rgba(205, 161, 250, 0.06);
-    --app-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.7);
-    --app-shadow-soft: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
-    --app-shadow-nav: 0 10px 30px rgba(0, 0, 0, 0.5);
-    --app-shadow-nav-up: 0 -12px 30px rgba(0, 0, 0, 0.5);
-    --app-inner-highlight: rgba(191, 189, 182, 0.1);
-    --app-highlight: #e6b450;
-    /* Re-tuned for the Ayu surface: the light-mode slots are too dark to separate
-       from #0b0e14, so each is lifted into the palette's mid-luminance band while
-       keeping the same hue order (and therefore the same category→colour mapping). */
-    --chart-custom-1: #ef7f8b;
-    --chart-custom-2: #9dcf5f;
-    --chart-custom-3: #e58ac9;
-    --chart-custom-4: #5fc7a4;
-    --chart-custom-5: #dda05c;
-    --chart-custom-6: #b394e6;
+    --background: #090b11;
+    --foreground: #eceef4;
+    --card: #11141c;
+    --card-foreground: #eceef4;
+    --popover: #161a24;
+    --popover-foreground: #eceef4;
+    --surface-2: #171b25;
+    --surface-3: #1e2330;
+    --primary: #5e5eef;
+    --primary-foreground: #ffffff;
+    --ink: #f1f3f8;
+    --ink-foreground: #0a0c12;
+    --secondary: #171b25;
+    --secondary-foreground: #eceef4;
+    --muted: #171b25;
+    --muted-foreground: #9ba2b3;
+    --subtle-foreground: #737b8d;
+    --accent: #1c2130;
+    --accent-foreground: #eceef4;
+    --accent-ink: #a7a8ff;
+    --brand: #5e5eef;
+    --brand-foreground: #ffffff;
+    --brand-soft: #1d1f3d;
+    --destructive: #ff6e6e;
+    --destructive-foreground: #0a0c12;
+    --on-vivid: #0a0c12;
+    /* A hairline is the only thing separating a card from the canvas (they differ by a few points
+       of luminance by design), so it has to stay visible as structure. */
+    --border: #232837;
+    --input: #2b3142;
+    --ring: #8e8fff;
+    --chart-line: #8e8fff;
+    --chart-1: #8e8fff;
+    --chart-2: #43d692;
+    --chart-3: #45c8eb;
+    --chart-4: #ac90ff;
+    --chart-5: #ff6e6e;
+    --sidebar: #0d1017;
+    --sidebar-foreground: #eceef4;
+    --sidebar-primary: #5e5eef;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #171b25;
+    --sidebar-accent-foreground: #eceef4;
+    --sidebar-border: #1d2230;
+    --sidebar-ring: #8e8fff;
+    --ledger-blue-300: #a9c9ff;
+    --ledger-blue-400: #82b2ff;
+    --ledger-blue-500: #5e9eff;
+    --ledger-blue-600: #3f86f5;
+    --ledger-blue-700: #2f6fd8;
+    --ledger-blue-800: #2558b0;
+    --ledger-sky-300: #aeeaf9;
+    --ledger-sky-400: #79daf2;
+    --ledger-sky-500: #45c8eb;
+    --ledger-sky-600: #22a9cf;
+    --ledger-income-300: #aaf0cd;
+    --ledger-income-400: #73e3ac;
+    --ledger-income-500: #43d692;
+    --ledger-income-600: #2fc27e; /* solid fill under dark `--on-vivid` (8.5:1) */
+    --ledger-income-700: #25a96b;
+    --ledger-expense-300: #ffc1c1;
+    --ledger-expense-400: #ff9a9a;
+    --ledger-expense-500: #ff6e6e;
+    --ledger-expense-600: #ef5050;
+    --ledger-expense-700: #d43f3f;
+    --ledger-pending-300: #ffe2a8;
+    --ledger-pending-400: #ffcd6e;
+    --ledger-pending-500: #f5b547;
+    --ledger-pending-600: #dc9c2e;
+    --ledger-pending-700: #bd8424;
+    --ledger-transfer-300: #ddd0ff;
+    --ledger-transfer-400: #c4b0ff;
+    --ledger-transfer-500: #ac90ff;
+    --ledger-transfer-600: #9474f5;
+    --ledger-purple-300: #f0d2ff;
+    --ledger-purple-400: #e2b0fb;
+    --ledger-purple-500: #d08df5;
+    --ledger-purple-600: #b56ce0;
+    --ledger-wishlist-300: #ffcfe2;
+    --ledger-wishlist-400: #ffa6ca;
+    --ledger-wishlist-500: #ff7db2;
+    --ledger-wishlist-600: #ea5f98;
+    /* Neutral ends on the card colour so `dark:bg-slate-900` lands on a Lumen surface. */
+    --ledger-neutral-300: #b4bac7;
+    --ledger-neutral-400: #9ba2b3;
+    --ledger-neutral-500: #8d94a4;
+    --ledger-neutral-600: #5c6374;
+    --ledger-neutral-700: #383e4e;
+    --ledger-neutral-800: #171b25;
+    --ledger-neutral-900: #11141c;
+    --app-glow: rgba(94, 94, 239, 0.16);
+    --app-glow-2: rgba(69, 200, 235, 0.06);
+    /* Night has no drop shadows on content -- depth is luminance. Overlays keep a deep shadow so
+       they separate from whatever they float over. */
+    --app-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02), 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+    --app-shadow-soft: none;
+    --app-shadow-overlay: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 24px 64px -12px rgba(0, 0, 0, 0.8);
+    --app-shadow-nav: none;
+    --app-shadow-nav-up: 0 16px 48px -8px rgba(0, 0, 0, 0.7);
+    --app-inner-highlight: rgba(255, 255, 255, 0.05);
+    --app-glass: rgba(17, 20, 28, 0.72);
+    --app-scrim: rgba(0, 0, 0, 0.62);
+    --app-glass-border: rgba(255, 255, 255, 0.08);
+    --app-highlight: #8e8fff;
+    --chart-custom-1: #ff8a8f;
+    --chart-custom-2: #b2d96a;
+    --chart-custom-3: #f08bcc;
+    --chart-custom-4: #4fd1b0;
+    --chart-custom-5: #f0b35e;
+    --chart-custom-6: #b99bff;
 }
 
 .app-shell {
     position: relative;
     isolation: isolate;
-    background:
-        linear-gradient(180deg, color-mix(in srgb, var(--card) 42%, var(--background)), var(--background) 34rem),
-        var(--background);
+    background: var(--background);
 }
 
+/* One faint bloom of brand light behind the top of the page -- enough to give the dark canvas
+   depth without turning chrome into decoration. Fixed, so it never scrolls with content. */
 .app-shell::before {
     content: "";
     position: fixed;
@@ -522,24 +517,46 @@
     z-index: -1;
     pointer-events: none;
     background:
-        linear-gradient(90deg, transparent, var(--app-surface-a) 18%, transparent 44%),
-        linear-gradient(115deg, transparent 36%, var(--app-surface-b) 58%, transparent 82%),
-        linear-gradient(180deg, var(--app-surface-c), transparent 26rem);
-    opacity: 0.42;
-    mask-image: linear-gradient(to bottom, black 0, transparent 34rem);
+        radial-gradient(60rem 28rem at 12% -8rem, var(--app-glow), transparent 70%),
+        radial-gradient(48rem 24rem at 92% -6rem, var(--app-glow-2), transparent 70%);
 }
 
+/* Glass chrome: the top bar, the tab bar and floating overlays. Falls back to a solid surface where
+   backdrop filters are unsupported or the user has asked for less transparency. */
 .glass-nav {
-    background:
-        linear-gradient(180deg, color-mix(in srgb, var(--background) 92%, transparent), color-mix(in srgb, var(--background) 78%, transparent)),
-        linear-gradient(90deg, var(--app-surface-a), var(--app-surface-c));
+    background: var(--app-glass);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
     box-shadow: var(--app-shadow-nav);
 }
 
+.glass-surface {
+    background: var(--app-glass);
+    border: 1px solid var(--app-glass-border);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass-nav,
+    .glass-surface {
+        background: var(--card);
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .glass-nav,
+    .glass-surface {
+        background: var(--card);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+}
+
+/* Cards are flat surfaces. Night separates them from the canvas by luminance plus a hairline;
+   Day adds a whisper of shadow. No blur: a card is content, not chrome. */
 .app-panel {
-    box-shadow: var(--app-shadow-soft);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--app-shadow-soft), inset 0 1px 0 var(--app-inner-highlight);
     background-clip: padding-box;
 }
 
@@ -551,13 +568,6 @@ button, [role="button"], a, input, select, textarea {
 
 html, body {
     -webkit-tap-highlight-color: transparent;
-}
-
-@media (max-width: 639px) {
-    .app-panel {
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-    }
 }
 
 /* Bottom padding for any scroll container that sits under the floating action
@@ -632,22 +642,23 @@ html, body {
 
 .interactive-card {
     transform: translateZ(0);
-    transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out,
-        transform 150ms ease-in-out, background-color 150ms ease-in-out;
+    transition: border-color var(--duration-quick) var(--ease-fluid), box-shadow var(--duration-quick) var(--ease-fluid),
+        transform var(--duration-quick) var(--ease-fluid), background-color var(--duration-quick) var(--ease-fluid);
 }
 
-/* Hover lift only on devices with a real pointer — on touch screens the
-   effect "sticks" after a tap, so it is gated off entirely. */
+/* Hover only on devices with a real pointer -- on touch screens the effect "sticks" after a tap.
+   The card brightens its hairline and lifts one pixel; Day adds a soft shadow, Night does not. */
 @media (hover: hover) {
     .interactive-card:hover {
-        transform: translateY(-2px);
+        transform: translateY(-1px);
+        border-color: color-mix(in srgb, var(--foreground) 16%, transparent);
         box-shadow: var(--app-shadow);
     }
 }
 
 .interactive-card:active {
-    transform: translateY(0) scale(0.995);
-    transition-duration: 90ms;
+    transform: translateY(0) scale(0.99);
+    transition-duration: var(--duration-press);
 }
 
 /* Gentle scale-down feedback for primary buttons on press */
@@ -655,7 +666,7 @@ html, body {
     transition: transform 120ms ease-out;
 }
 .press-scale:active {
-    transform: scale(0.96);
+    transform: scale(0.97);
 }
 
 .metric-card {
@@ -663,10 +674,64 @@ html, body {
     overflow: hidden;
 }
 
+/* AmountText: the currency marker and the cents sit smaller and quieter than the whole units. The
+   ratios are relative to whatever type role the caller set, so one rule serves a ledger row and a
+   56px balance alike. */
+.amount-currency {
+    font-size: 0.62em;
+    font-weight: 500;
+    margin-right: 0.28em;
+    color: var(--muted-foreground);
+    letter-spacing: 0;
+}
+.amount-currency-after {
+    margin-right: 0;
+    margin-left: 0.28em;
+}
+.amount-fraction {
+    font-size: 0.72em;
+    opacity: 0.62;
+    letter-spacing: 0;
+}
+.amount-sign {
+    margin-right: 0.08em;
+}
+
+/* RangeInput: a brand-filled track up to the value and a white thumb, in place of the browser's
+   default grey line. `--range-fill` is set by the component from its value. */
+.range-input {
+    background:
+        linear-gradient(to right, var(--primary) 0 var(--range-fill, 0%), color-mix(in srgb, var(--foreground) 12%, transparent) var(--range-fill, 0%) 100%)
+        content-box;
+    background-clip: content-box;
+    padding: 0 !important;
+    margin: 0.5rem 0 !important;
+    height: 0.375rem;
+}
+.range-input::-webkit-slider-thumb {
+    appearance: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 9999px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(9, 11, 17, 0.35), 0 0 0 1px rgba(9, 11, 17, 0.08);
+    transition: transform var(--duration-quick) var(--ease-fluid);
+}
+.range-input:active::-webkit-slider-thumb {
+    transform: scale(1.12);
+}
+.range-input::-moz-range-thumb {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 0;
+    border-radius: 9999px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(9, 11, 17, 0.35), 0 0 0 1px rgba(9, 11, 17, 0.08);
+}
+
 .status-chip {
-    border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-    background: color-mix(in srgb, var(--card) 82%, transparent);
-    box-shadow: inset 0 1px 0 var(--app-inner-highlight);
+    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+    background: var(--card);
 }
 
 
@@ -676,7 +741,7 @@ html, body {
 @keyframes view-enter {
     from {
         opacity: 0;
-        transform: translateY(6px);
+        transform: translateY(8px);
     }
     to {
         opacity: 1;
@@ -685,7 +750,7 @@ html, body {
 }
 
 .view-enter {
-    animation: view-enter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: view-enter var(--duration-enter) var(--ease-fluid) both;
 }
 
 /* Elegant shimmering skeleton loaders (replaces jarring spinners) */
@@ -695,18 +760,18 @@ html, body {
 }
 
 .skeleton-shimmer {
-    background-color: color-mix(in srgb, var(--muted) 70%, transparent);
+    background-color: color-mix(in srgb, var(--foreground) 6%, transparent);
     background-image: linear-gradient(
         90deg,
         transparent 0%,
-        color-mix(in srgb, var(--foreground) 8%, transparent) 45%,
-        color-mix(in srgb, var(--foreground) 12%, transparent) 50%,
-        color-mix(in srgb, var(--foreground) 8%, transparent) 55%,
+        color-mix(in srgb, var(--foreground) 5%, transparent) 40%,
+        color-mix(in srgb, var(--foreground) 8%, transparent) 50%,
+        color-mix(in srgb, var(--foreground) 5%, transparent) 60%,
         transparent 100%
     );
     background-size: 200% 100%;
     background-repeat: no-repeat;
-    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    animation: skeleton-shimmer 1.6s var(--ease-fluid) infinite;
 }
 
 /* A single short color trace travels on the perimeter. The two-layer mask
@@ -980,7 +1045,7 @@ html {
         width: 100%;
         max-width: none;
         max-height: calc(var(--app-vvh, 100dvh) - env(safe-area-inset-top, 0px) - 0.5rem);
-        border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+        border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
         padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
         overscroll-behavior: contain;
         touch-action: pan-y;
@@ -1115,10 +1180,7 @@ html {
         caret-color: transparent;
     }
     html {
-        font-family: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text",
-            "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        /* Inter's optical-size + contextual alternates for a sharper, premium read */
-        font-feature-settings: "cv11", "ss01", "cv02";
+        font-family: var(--font-sans);
         text-rendering: optimizeLegibility;
     }
     body {
@@ -1127,7 +1189,7 @@ html {
         scrollbar-color: var(--border) transparent;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        letter-spacing: -0.011em;
+        letter-spacing: -0.006em;
     }
     :is(input, textarea, [contenteditable]:not([contenteditable="false"])) {
         caret-color: auto;
@@ -1146,7 +1208,6 @@ html {
     input,
     table {
         font-variant-numeric: tabular-nums lining-nums;
-        font-feature-settings: "tnum" 1, "lnum" 1, "cv11", "ss01";
     }
     /* Hide number input spinners (arrows) */
     input[type="number"]::-webkit-outer-spin-button,
@@ -1159,7 +1220,7 @@ html {
         appearance: textfield;
     }
     h1, h2, h3, h4 {
-        letter-spacing: -0.02em;
+        letter-spacing: -0.015em;
         text-wrap: balance;
     }
 

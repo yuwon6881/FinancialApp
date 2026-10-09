@@ -262,8 +262,8 @@ export function DatePicker({
         aria-label={ariaLabel}
         style={{ width: PANEL_WIDTH }}
         className={cn(
-          'z-[210] overflow-y-auto overscroll-contain rounded-xl border border-border',
-          'bg-popover p-3 text-popover-foreground shadow-xl animate-in fade-in zoom-in-95 duration-100',
+          'z-[210] overflow-y-auto overscroll-contain rounded-overlay border border-border/70',
+          'bg-popover p-3 text-popover-foreground shadow-(--app-shadow-overlay) animate-in fade-in zoom-in-[0.98] duration-150',
           popoverClassName,
         )}
         onKeyDown={event => {
@@ -369,9 +369,9 @@ export function DatePicker({
                   className={cn(
                     // Seven global 44px targets cannot fit the fixed calendar panel; the grid
                     // supplies spacing and keyboard navigation while each cell stays contained.
-                    'flex h-8 !min-h-8 !min-w-0 cursor-pointer items-center justify-center rounded-lg text-xs transition duration-100',
+                    'flex h-8 !min-h-8 !min-w-0 cursor-pointer items-center justify-center rounded-full text-label transition duration-100',
                     isDisabled && 'cursor-not-allowed text-muted-foreground/35',
-                    !isDisabled && isSelected && 'bg-primary hover:bg-primary font-bold text-primary-foreground shadow-xs',
+                    !isDisabled && isSelected && 'bg-primary hover:bg-primary font-semibold text-primary-foreground',
                     !isDisabled && !isSelected && isToday
                       && 'font-bold text-blue-600 hover:bg-muted/80 dark:text-blue-400',
                     !isDisabled && !isSelected && !isToday

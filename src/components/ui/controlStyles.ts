@@ -3,9 +3,9 @@ import { cn } from '../../lib/utils'
 export type ControlSize = 'sm' | 'md' | 'lg'
 
 const CONTROL_SIZES: Record<ControlSize, string> = {
-  sm: 'h-11 rounded-control px-3 text-xs lg:h-9',
-  md: 'h-11 rounded-control px-3.5 text-sm lg:h-10',
-  lg: 'h-12 rounded-control px-4 text-sm',
+  sm: 'h-11 rounded-control px-3 text-label lg:h-9',
+  md: 'h-11 rounded-control px-3.5 text-body lg:h-10',
+  lg: 'h-12 rounded-control px-4 text-callout',
 }
 
 export function controlClassName({
@@ -18,13 +18,15 @@ export function controlClassName({
   className?: string
 }) {
   return cn(
-    'w-full border bg-background text-foreground shadow-xs outline-none transition duration-200',
-    'placeholder:text-muted-foreground/70',
-    'disabled:cursor-not-allowed disabled:bg-muted/40 disabled:text-muted-foreground disabled:opacity-70',
-    'read-only:cursor-default read-only:bg-muted/20',
+    // A field is an inset well: one step *below* the card it sits on, so "type here" reads as a
+    // recess rather than another raised surface. Focus lifts it to the card colour with an Iris ring.
+    'w-full border bg-background text-foreground outline-none transition-[background-color,border-color,box-shadow] duration-200 ease-fluid',
+    'placeholder:text-subtle-foreground',
+    'disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-muted-foreground disabled:opacity-70',
+    'read-only:cursor-default read-only:bg-surface-2/60',
     invalid
       ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/25'
-      : 'border-border focus:border-ring focus:ring-2 focus:ring-ring/25',
+      : 'border-border hover:border-input focus:border-ring focus:bg-card focus:ring-2 focus:ring-ring/25',
     CONTROL_SIZES[size],
     className,
   )
@@ -43,8 +45,8 @@ export function controlTriggerClassName({
     size,
     invalid,
     className: cn(
-      'flex items-center justify-between gap-2 text-left font-semibold select-none',
-      'hover:bg-muted/30 focus-visible:outline-none',
+      'flex items-center justify-between gap-2 text-left font-medium select-none',
+      'hover:bg-surface-2/60 focus-visible:outline-none',
       className,
     ),
   })

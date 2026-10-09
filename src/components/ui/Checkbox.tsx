@@ -19,7 +19,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
         type="checkbox"
         {...accessibleProps}
         className={cn(
-          'size-4 shrink-0 cursor-pointer rounded border border-border bg-background accent-primary',
+          'size-4.5 shrink-0 cursor-pointer rounded-md border border-border bg-background accent-primary',
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
           'disabled:cursor-not-allowed disabled:opacity-50',
           (accessibleProps['aria-invalid'] === true || accessibleProps['aria-invalid'] === 'true')

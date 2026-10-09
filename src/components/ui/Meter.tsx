@@ -50,8 +50,8 @@ export const Meter: React.FC<MeterProps> = ({
   return (
     <div
       className={cn(
-        'w-full overflow-hidden rounded-full bg-muted',
-        size === 'sm' ? 'h-1' : 'h-1.5',
+        'w-full overflow-hidden rounded-full bg-foreground/8 dark:bg-foreground/10',
+        size === 'sm' ? 'h-1' : 'h-2',
         className,
       )}
       role="progressbar"
@@ -63,7 +63,7 @@ export const Meter: React.FC<MeterProps> = ({
       aria-label={label}
     >
       <div
-        className={cn('h-full rounded-full transition-[width] duration-500', !color && tone)}
+        className={cn('h-full rounded-full transition-[width] duration-700 ease-fluid', !color && tone)}
         style={{ width: `${clamped}%`, ...(color ? { backgroundColor: color } : {}) }}
       />
     </div>

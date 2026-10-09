@@ -149,8 +149,8 @@ describe('floating form controls', () => {
     render(<PillSwitch checked={false} onChange={onChange} ariaLabel="Recurring transactions only" />)
 
     const toggle = screen.getByRole('switch', { name: 'Recurring transactions only' })
+    // The state is carried by role and aria-checked; the track is a drawing, not a word.
     expect(toggle.getAttribute('aria-checked')).toBe('false')
-    expect(toggle.textContent).toContain('Off')
 
     fireEvent.click(toggle)
     expect(onChange).toHaveBeenCalledWith(true)

@@ -68,10 +68,9 @@ const LABEL_WRAPPED_BUTTON_EXCEPTIONS = new Set([
 const THEME_EXCEPTIONS = new Map([
   // The installed-PWA system bars need real hex: they are baked into the WebAPK and cannot read a
   // CSS variable. See INVARIANTS.md DS-07.
-  ['src/lib/nativeUi.ts', ['#0b0e14', '#fcfcfc']],
+  ['src/lib/nativeUi.ts', ['#090b11', '#f5f6f8']],
   ['src/components/TwoFactorSection.tsx', ['bg-white']],
-  ['src/components/ui/BottomSheet.tsx', ['bg-black/70']],
-])
+  ])
 
 // Every quoted string that plausibly holds a Tailwind class list, so a rule can test the set of
 // classes rather than their order. Deliberately loose: a false positive costs one extra check, a
@@ -192,7 +191,7 @@ const AUTHORED_PADDING = /(^|\s|:)(p-\d|px-\d|pl-\d|pr-\d|p-0|px-0)/
 // dropdown option turned dark-on-dark exactly this way.
 const AUTHORED_BACKGROUND = /(^|\s)bg-(?!transparent(?:\s|$))[\w./[\]-]+/
 const HOVER_BACKGROUND = /(^|\s)hover:bg-/
-const VARIANT_BACKGROUND = { primary: 'bg-primary', secondary: 'bg-background', tertiary: null, destructive: 'bg-destructive' }
+const VARIANT_BACKGROUND = { primary: 'bg-ink', secondary: 'bg-background', tertiary: null, destructive: 'bg-destructive' }
 // `Button` centres its label, which is right for an action and wrong for a row. A call site that
 // says `text-left` and stops there gets a left-aligned *text run* inside a centred flex line.
 // A control stretched over the content it activates -- the clickable face of a card, a bill node,
@@ -410,7 +409,7 @@ for (const file of allSourceFiles(SRC)) {
     if (THEME_CSS.includes(`--color-${match[1]}:`)) continue
     const prefix = sourceText.slice(0, match.index)
     const line = prefix.split(/\r?\n/).length
-    errors.push(`${fileName}:${line} Unmapped palette utility "${match[0]}"; map it to an Ayu theme token in src/index.css.`)
+    errors.push(`${fileName}:${line} Unmapped palette utility "${match[0]}"; map it to a Lumen theme token in src/index.css.`)
   }
 
   const ledgerUtilityPattern = /\b(?:bg|text|border|ring|outline|fill|stroke)-ledger-[^\s'"`]+\b/g
