@@ -141,7 +141,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, SmartAmountIn
               ? <>= <span className="text-label font-semibold text-foreground">{liveResult.toFixed(2)}</span></>
               : 'Type a sum, like 12.50 × 3'}
           </p>
-          <div data-smart-amount-calculator className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 p-1">
+          <div data-smart-amount-calculator className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 p-1 dark:bg-surface-3">
             {OPERATOR_KEYS.map(([label, operator, ariaLabel]) => (
               <Button
                 variant="tertiary"
@@ -150,7 +150,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, SmartAmountIn
                 type="button"
                 aria-label={ariaLabel}
                 onMouseDown={event => { event.preventDefault(); appendOperator(operator) }}
-                className="rounded-full text-callout text-foreground hover:bg-surface-3 lg:size-9"
+                className="rounded-full text-callout text-foreground hover:bg-surface-3 dark:hover:bg-card lg:size-9"
               >
                 {label}
               </Button>

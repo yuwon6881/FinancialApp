@@ -88,7 +88,7 @@ export function CategoryTiles({ value, options, onChange }: CategoryTilesProps) 
               'relative h-auto min-h-0 min-w-0 flex-col gap-1.5 rounded-control border px-1 py-2.5 lg:min-h-0',
               selected
                 ? 'border-foreground/80 bg-card hover:bg-card'
-                : 'border-transparent bg-surface-2/70 hover:bg-surface-2',
+                : 'border-transparent bg-surface-2/70 hover:bg-surface-2 dark:bg-surface-3/70 dark:hover:bg-surface-3',
             )}
           >
             <CategoryIcon category={option.value} size="sm" />
