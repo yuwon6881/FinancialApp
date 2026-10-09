@@ -1,7 +1,8 @@
+import { useId, useState } from 'react'
 import { ChevronDown, Lock, Minus, Plus, Trash2, Unlock } from 'lucide-react'
 import type { ReceiptSplitItem } from '../../lib/api'
 import type { ReceiptShareCalculation } from '../../lib/receiptSplitCalculator'
-import { formatCurrencyVal } from '../../lib/utils'
+import { cn, formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
 import { InfoHint } from '../ui/InfoHint'
@@ -30,7 +31,8 @@ function inputNumber(value: number | null): string {
 }
 
 /**
- * One scanned line, with the two different ways to take it off your bill.
+ * One scanned line as one flat row of the receipt list: what it is, how many are yours, and what
+ * that costs you. The price and its share of tax and service fold away underneath.
  *
  * Setting the quantity to 0 means "none of this one is mine" and is the one to reach for: the line
  * stays on the receipt, so a printed charge (a flat service fee, say) keeps being spread over the
@@ -51,6 +53,8 @@ export function ReceiptSplitItemRow({
   onUpdatePrice,
   onRemove,
 }: Props) {
+  const [showBreakdown, setShowBreakdown] = useState(false)
+  const breakdownId = useId()
   const isExcluded = selected <= 0
   const lowConfidence = item.confidence < 0.65
   const itemLabel = item.name.trim() || `Item ${index + 1}`
@@ -60,171 +64,203 @@ export function ReceiptSplitItemRow({
   const chargePercent = itemCalculation && itemCalculation.itemSubtotal > 0
     ? (chargeAmount / itemCalculation.itemSubtotal) * 100
     : 0
+  const priceLine = unitPrice == null
+    ? 'No readable price'
+    : `${maximum > 1 ? `${maximum} × ` : ''}${formatCurrencyVal(unitPrice, currency)}`
 
   return (
     <SwipeableRow
+      variant="flush"
       actionsWidth={88}
       actions={(
         <Button variant="tertiary"
           type="button"
           onClick={() => onRemove(index)}
-          className="flex h-full w-full items-center justify-center gap-1 bg-destructive hover:bg-destructive/90 px-3 text-caption font-semibold text-destructive-foreground cursor-pointer"
+          className="flex h-full w-full items-center justify-center gap-1 bg-destructive px-3 text-caption font-semibold text-destructive-foreground hover:bg-destructive/90"
           aria-label={`Delete ${itemLabel}`}
         >
           <Trash2 className="size-4" /> Delete
         </Button>
       )}
-      // Delete belongs beside the line's name, not in the trailing slot. From `sm:` up there is no
-      // drawer, so SwipeableRow parked it in a column of its own and centred it against a card four
-      // rows tall -- it came out floating beside the price disclosure, reading as that row's
-      // control rather than the whole line's. The row renders its own instead, on the name's line.
       desktopActions={false}
-      className={`rounded-panel border ${lowConfidence ? 'border-amber-500/40' : 'border-border/70'}`}
-      contentClassName={`rounded-panel p-3 sm:p-4 bg-card ${lowConfidence ? 'before:absolute before:inset-0 before:bg-amber-500/8 before:rounded-panel before:pointer-events-none relative' : ''}`}
+      contentClassName={cn('group/line px-4 py-3.5', lowConfidence && 'bg-amber-500/6')}
     >
-      <div className={`relative space-y-3 transition-opacity ${isExcluded ? 'opacity-60' : ''}`}>
-        <div className="flex min-w-0 items-start gap-2 px-1">
-          <h4 className="min-w-0 flex-1 text-subsection text-foreground">{itemLabel}</h4>
+      <div className="flex items-start gap-3">
+        <div className={cn('min-w-0 flex-1 transition-opacity', isExcluded && 'opacity-55')}>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <h4 className="min-w-0 truncate text-body font-medium text-foreground">{itemLabel}</h4>
+            {lowConfidence && (
+              <span className="shrink-0 rounded-full bg-amber-500/12 px-1.5 text-micro text-amber-700 dark:text-amber-300">Check</span>
+            )}
+          </div>
+          <p className="mt-0.5 truncate text-caption text-muted-foreground tabular-nums">{priceLine}</p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1">
+          <span
+            className={cn(
+              'text-right text-body font-semibold tabular-nums',
+              isExcluded ? 'text-muted-foreground font-normal' : needsPrice ? 'text-amber-700 dark:text-amber-300' : 'text-foreground',
+            )}
+          >
+            {isExcluded ? 'Not yours' : needsPrice ? 'Price needed' : formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
+          </span>
+          {/* Delete sits on the line it removes; phones reach it by swiping the row instead. */}
           <IconButton
             variant="tertiary"
             type="button"
             onClick={() => onRemove(index)}
             label={`Delete ${itemLabel}`}
             tooltip="Delete this line"
-            className="-mt-1 hidden shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:inline-flex"
+            className="-mr-2 hidden shrink-0 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover/line:opacity-100 sm:inline-flex"
           >
             <Trash2 className="size-4" />
           </IconButton>
         </div>
+      </div>
 
-        <div className="flex items-center justify-between gap-3 rounded-control bg-surface-2/70 px-3.5 py-2.5">
-          <div className="min-w-0">
-            <span className="block text-label text-muted-foreground">
-              {isExcluded ? 'Not yours' : 'Your share for this item'}
-            </span>
-            <strong className={`mt-0.5 block truncate text-callout font-semibold tabular-nums ${isExcluded ? 'text-muted-foreground' : 'text-foreground'}`}>
-              {isExcluded ? 'Nothing to pay' : needsPrice ? 'Price needed' : formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
-            </strong>
-          </div>
-          <span className="shrink-0 text-label text-muted-foreground tabular-nums">{selected} of {maximum}</span>
-        </div>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <Button
+          variant="tertiary"
+          size="sm"
+          type="button"
+          aria-expanded={showBreakdown}
+          aria-controls={breakdownId}
+          onClick={() => setShowBreakdown(open => !open)}
+          className="-ml-2.5 min-w-0 gap-1 whitespace-nowrap px-2.5 text-caption font-medium text-muted-foreground hover:bg-transparent hover:text-foreground"
+        >
+          Price details
+          <ChevronDown className={cn('size-3.5 shrink-0 transition-transform', showBreakdown && 'rotate-180')} aria-hidden="true" />
+        </Button>
 
-        <details className="group rounded-control bg-surface-2/70">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-caption font-semibold text-muted-foreground">
-            Price and charge breakdown
-            <ChevronDown className="size-3.5 shrink-0 transition-transform group-open:rotate-180" />
-          </summary>
-          {/* Price takes the whole first line on a phone. Sharing a 2-column row with Extras left
-              each tile under a hundred pixels of content: the number input was clipped to a couple
-              of digits, and its 44px lock button took most of what was left. Extras and With
-              extras are short enough to keep sharing the second line at every width. */}
-          <div className="grid min-w-0 grid-cols-2 gap-2 border-t border-border/40 p-2.5 sm:grid-cols-3">
-            <div className="col-span-2 min-w-0 rounded-control bg-surface-2/70 p-2.5 sm:col-span-1">
-              <span className="block text-label font-medium text-muted-foreground">Price</span>
-              <div className="mt-1 flex min-w-0 items-center gap-1">
-                <Input
-                  aria-label={`Item ${index + 1} price`}
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.01"
-                  value={inputNumber(unitPrice)}
-                  onChange={event => onUpdatePrice(index, event.target.value)}
-                  disabled={!priceUnlocked}
-                  controlSize="sm"
-                  className="min-w-0 flex-1 font-semibold"
-                />
-                <Button
-                  size="icon"
-                  variant="tertiary"
-                  type="button"
-                  onClick={() => onTogglePriceLock(index)}
-                  className="shrink-0 rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                  title={priceUnlocked ? 'Lock' : 'Unlock'}
-                  aria-label={`${priceUnlocked ? 'Lock' : 'Unlock'} price for item ${index + 1}`}
-                >
-                  {priceUnlocked ? <Unlock className="size-3.5" /> : <Lock className="size-3.5 text-accent-ink" />}
-                </Button>
-              </div>
-            </div>
-
-            <div className="min-w-0 rounded-control bg-surface-2/70 p-2.5">
-              {/* Height pinned to the eyebrow line box, and the hint uses its inline variant. The
-                  hint is a button, so the sub-1024px interaction floor gives it a 44px min-height
-                  no authored size can undo; in an auto-height label row that made this tile's
-                  eyebrow 44px against the 16px of Price and With extras, and every figure below it
-                  sat that much lower than its neighbour's. The inline variant carries its target on
-                  a pseudo-element instead, and the fixed height keeps the button's box out of the
-                  row's measurement at every tier. */}
-              <span className="flex h-4 items-center gap-1 text-label font-medium text-muted-foreground">
-                {/* The rate lives under the figure, not inside the label. Appended to "Extras" it
-                    made a string no phone-width tile could hold, and `truncate` ate it. */}
-                <span className="min-w-0 truncate">Extras</span>
-                <InfoHint
-                  label="What the extras on this line are"
-                  text="Tax, service charges, and discounts are split across applicable items. This line's share."
-                  align="left"
-                  inline
-                />
-              </span>
-              {/* A line nobody is taking pays none of the receipt's extras. The figures here are
-                  costed at one unit so the panel can still show what the line is worth, which read
-                  as a bill for something the summary above had already called "Nothing to pay". */}
-              <span className={`mt-2 block truncate text-caption font-semibold ${isExcluded ? 'text-muted-foreground' : chargeAmount < 0 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
-                {isExcluded || needsPrice
-                  ? '—'
-                  : <>{chargeAmount < 0 ? '−' : '+'}{formatCurrencyVal(Math.abs(chargeAmount), currency)}</>}
-              </span>
-              {!isExcluded && !needsPrice && Math.abs(chargePercent) >= 0.05 && (
-                <span className="mt-0.5 block truncate text-eyebrow text-muted-foreground">
-                  {Math.abs(chargePercent).toFixed(1)}% of this line
-                </span>
-              )}
-            </div>
-
-            <div className="min-w-0 rounded-xl border border-primary/25 bg-primary/10 p-2.5">
-              <span className="block text-label font-medium text-accent-ink">With extras</span>
-              <span className="mt-2 block truncate text-xs font-semibold text-accent-ink">
-                {isExcluded || needsPrice ? '—' : formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
-              </span>
-            </div>
-          </div>
-        </details>
-
-        {/* The stepper is three 44px targets wide on a phone, which left its caption about 180px
-            and broke "0 if none is yours" over three lines with one word alone on the last. Below
-            the medium tier the caption takes the line and the stepper sits on the trailing edge
-            under it. */}
-        <div className="flex flex-col gap-2 border-t border-border/40 pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-          <div className="min-w-0">
-            <span className="block text-label font-medium text-muted-foreground">How many are yours</span>
-            <span className="text-xs text-muted-foreground">{maximum} on the receipt · 0 if none is yours</span>
-          </div>
-          <div className="flex shrink-0 items-center self-end rounded-xl border border-border bg-background p-1 shadow-xs sm:self-auto">
-            <Button size="icon" variant="tertiary"
-              type="button"
-              onClick={() => onChangeQuantity(index, -1)}
-              disabled={selected <= 0}
-              className="rounded-lg text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
-              aria-label={`Decrease quantity for item ${index + 1}`}
-            >
-              <Minus className="size-3.5" />
-            </Button>
-            <span className="min-w-9 text-center text-sm font-semibold text-foreground" aria-label={`Quantity for item ${index + 1}`}>
-              {selected}
-            </span>
-            <Button size="icon" variant="tertiary"
-              type="button"
-              onClick={() => onChangeQuantity(index, 1)}
-              disabled={selected >= maximum}
-              className="rounded-lg text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
-              aria-label={`Increase quantity for item ${index + 1}`}
-            >
-              <Plus className="size-3.5" />
-            </Button>
-          </div>
+        <div className="flex shrink-0 items-center rounded-full bg-surface-2 p-0.5">
+          <Button size="icon" variant="tertiary"
+            type="button"
+            onClick={() => onChangeQuantity(index, -1)}
+            disabled={selected <= 0}
+            className="rounded-full text-foreground hover:bg-surface-3 disabled:opacity-30 lg:size-8"
+            aria-label={`Decrease quantity for item ${index + 1}`}
+          >
+            <Minus className="size-3.5" />
+          </Button>
+          <span className="min-w-12 text-center text-label tabular-nums text-foreground">
+            <span aria-label={`Quantity for item ${index + 1}`}>{selected}</span>
+            <span className="text-muted-foreground" aria-hidden="true"> / {maximum}</span>
+          </span>
+          <Button size="icon" variant="tertiary"
+            type="button"
+            onClick={() => onChangeQuantity(index, 1)}
+            disabled={selected >= maximum}
+            className="rounded-full text-foreground hover:bg-surface-3 disabled:opacity-30 lg:size-8"
+            aria-label={`Increase quantity for item ${index + 1}`}
+          >
+            <Plus className="size-3.5" />
+          </Button>
         </div>
       </div>
+
+      {showBreakdown && <BreakdownPanel
+        id={breakdownId}
+        index={index}
+        currency={currency}
+        unitPrice={unitPrice}
+        priceUnlocked={priceUnlocked}
+        isExcluded={isExcluded}
+        needsPrice={needsPrice}
+        chargeAmount={chargeAmount}
+        chargePercent={chargePercent}
+        withExtras={itemCalculation?.total ?? 0}
+        onTogglePriceLock={onTogglePriceLock}
+        onUpdatePrice={onUpdatePrice}
+      />}
     </SwipeableRow>
+  )
+}
+
+/** The folded detail under a line, as three plain rows rather than three tiles. */
+function BreakdownPanel({
+  id,
+  index,
+  currency,
+  unitPrice,
+  priceUnlocked,
+  isExcluded,
+  needsPrice,
+  chargeAmount,
+  chargePercent,
+  withExtras,
+  onTogglePriceLock,
+  onUpdatePrice,
+}: {
+  id: string
+  index: number
+  currency: string
+  unitPrice: number | null
+  priceUnlocked: boolean
+  isExcluded: boolean
+  needsPrice: boolean
+  chargeAmount: number
+  chargePercent: number
+  withExtras: number
+  onTogglePriceLock: (index: number) => void
+  onUpdatePrice: (index: number, value: string) => void
+}) {
+  return (
+    <dl id={id} className="mt-2 space-y-2 rounded-control bg-surface-2/70 p-3 text-caption">
+      <div className="flex items-center justify-between gap-3">
+        <dt className="text-muted-foreground">Price each</dt>
+        <dd className="flex min-w-0 items-center gap-1">
+          <Input
+            aria-label={`Item ${index + 1} price`}
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={inputNumber(unitPrice)}
+            onChange={event => onUpdatePrice(index, event.target.value)}
+            disabled={!priceUnlocked}
+            controlSize="sm"
+            className="w-28 text-right font-semibold"
+          />
+          <Button
+            size="icon"
+            variant="tertiary"
+            type="button"
+            onClick={() => onTogglePriceLock(index)}
+            className="shrink-0 rounded-full text-muted-foreground hover:bg-surface-3 hover:text-foreground lg:size-8"
+            title={priceUnlocked ? 'Lock' : 'Unlock'}
+            aria-label={`${priceUnlocked ? 'Lock' : 'Unlock'} price for item ${index + 1}`}
+          >
+            {priceUnlocked ? <Unlock className="size-3.5" /> : <Lock className="size-3.5 text-accent-ink" />}
+          </Button>
+        </dd>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <dt className="flex items-center gap-1 text-muted-foreground">
+          Tax, service and discounts
+          <InfoHint
+            label="What the extras on this line are"
+            text="Tax, service charges, and discounts are split across applicable items. This line's share."
+            align="left"
+            inline
+          />
+        </dt>
+        {/* A line nobody is taking pays none of the receipt's extras. */}
+        <dd className={cn('tabular-nums', !isExcluded && !needsPrice && chargeAmount < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground')}>
+          {isExcluded || needsPrice
+            ? '—'
+            : <>
+                {chargeAmount < 0 ? '−' : '+'}{formatCurrencyVal(Math.abs(chargeAmount), currency)}
+                {Math.abs(chargePercent) >= 0.05 && <span className="text-muted-foreground"> · {Math.abs(chargePercent).toFixed(1)}%</span>}
+              </>}
+        </dd>
+      </div>
+      <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-2">
+        <dt className="font-medium text-foreground">With extras</dt>
+        <dd className="font-semibold text-foreground tabular-nums">
+          {isExcluded || needsPrice ? '—' : formatCurrencyVal(withExtras, currency)}
+        </dd>
+      </div>
+    </dl>
   )
 }

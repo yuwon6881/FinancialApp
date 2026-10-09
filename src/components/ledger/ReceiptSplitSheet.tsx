@@ -195,125 +195,114 @@ export function ReceiptSplitSheet({
     })
   }
 
+  const selectedLines = receipt ? selectedQuantities.filter(quantity => quantity > 0).length : 0
+  const hasNotices = Boolean(receipt && calculation && (receipt.truncated || receipt.warnings.length > 0
+    || receipt.confidence < 0.7 || calculation.hasMismatch || calculation.chargeBaseIncomplete || printedCurrency))
+  const shareReady = Boolean(calculation && calculation.invalidSelectedItemIndexes.length === 0)
+  // The bar beside the hero figure: your share against the printed receipt, so "how much of this
+  // bill is mine" reads at a glance before any line is opened.
+  const shareOfReceipt = receipt?.total && calculation && shareReady && receipt.total > 0
+    ? Math.min(100, Math.max(0, (calculation.total / receipt.total) * 100))
+    : null
+
   return (
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      title="Split Receipt"
-      maxWidthClassName="max-w-3xl"
+      title="Split receipt"
+      maxWidthClassName="max-w-2xl"
       footer={receipt ? (
         <ModalActions>
-          <Button variant="secondary" type="button" onClick={discardAndClose} className="rounded-xl py-2.5">
+          <Button variant="secondary" type="button" onClick={discardAndClose}>
             Discard
           </Button>
-          <Button
-            variant="primary"
-            type="button"
-            disabled={!canUse}
-            onClick={useResult}
-            className="rounded-xl py-2.5 shadow-md"
-          >
-            Use This Amount
+          <Button type="button" disabled={!canUse} onClick={useResult}>
+            {canUse && calculation ? `Use ${formatCurrencyVal(calculation.total, currency)}` : 'Use this amount'}
           </Button>
         </ModalActions>
       ) : undefined}
     >
       {receipt && calculation && (
-        <div className="space-y-5">
-          <section className="rounded-panel bg-surface-2/70 p-5">
-            <p className="text-label text-muted-foreground">Your share</p>
-            <div className="mt-1 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
-              <strong data-testid="receipt-share-total" className="text-display font-semibold text-foreground tabular-nums">
-                {calculation.invalidSelectedItemIndexes.length > 0
-                  ? 'Price needed'
-                  : formatCurrencyVal(calculation.total, currency)}
-              </strong>
-              <span className="pb-1 text-right text-label text-muted-foreground">
-                {calculation.selectedItemCount} selected item{calculation.selectedItemCount === 1 ? '' : 's'}
+        <div className="space-y-6">
+          {/* The answer first, and it stays in view while the lines below are adjusted. */}
+          {/* Pinned over the sheet's own padding (the whole sheet scrolls), so lines never show
+              through the strip above it. */}
+          <section aria-label="Your share" className="sticky -top-4 z-10 -mx-4 -mt-4 bg-popover px-4 pb-4 pt-4 sm:-top-6 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6">
+            <div className="flex items-end justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-label text-muted-foreground">Your share</p>
+                <strong
+                  data-testid="receipt-share-total"
+                  className={`mt-1 block text-display font-semibold tabular-nums sm:text-hero ${shareReady ? 'text-foreground' : 'text-amber-700 dark:text-amber-300'}`}
+                >
+                  {shareReady ? formatCurrencyVal(calculation.total, currency) : 'Price needed'}
+                </strong>
+              </div>
+              <span className="shrink-0 pb-1.5 text-label text-muted-foreground tabular-nums">
+                {selectedLines} of {receipt.items.length} item{receipt.items.length === 1 ? '' : 's'}
               </span>
             </div>
             {receipt.total != null && (
-              <p data-testid="receipt-share-context" className="mt-1 text-label text-muted-foreground tabular-nums">
-                Whole receipt: {formatCurrencyVal(receipt.total, currency)}
-              </p>
+              <>
+                {shareOfReceipt != null && (
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-3" aria-hidden="true">
+                    <div className="h-full rounded-full bg-primary transition-[width] duration-300 ease-fluid" style={{ width: `${shareOfReceipt}%` }} />
+                  </div>
+                )}
+                <p data-testid="receipt-share-context" className="mt-2 text-caption text-muted-foreground tabular-nums">
+                  of {formatCurrencyVal(receipt.total, currency)} on the receipt
+                  {shareOfReceipt != null && <> · {Math.round(shareOfReceipt)}%</>}
+                </p>
+              </>
             )}
           </section>
 
-          <details className="group rounded-control bg-surface-2/70">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-3 text-label font-medium text-foreground">
-              Receipt details
-              <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
-            </summary>
-            <div className="grid gap-3 border-t border-border/50 p-3.5 sm:grid-cols-[minmax(0,2fr)_minmax(12rem,1fr)]">
-              <FormField
-                label="Description"
-                labelClassName={receipt.fieldConfidence.description < 0.65 ? 'text-amber-600 dark:text-amber-400' : undefined}
-              >
-                <Input
-                  aria-label="Description"
-                  value={receipt.description}
-                  onChange={event => setReceipt({ ...receipt, description: event.target.value })}
-                />
-              </FormField>
-              <FormField
-                label="Date"
-                labelClassName={receipt.fieldConfidence.date < 0.65 ? 'text-amber-600 dark:text-amber-400' : undefined}
-              >
-                <DatePicker
-                  value={receipt.date ?? ''}
-                  onChange={value => setReceipt({ ...receipt, date: value || null })}
-                  className="w-full"
-                  align="right"
-                />
-              </FormField>
-            </div>
-          </details>
-
-          {(receipt.truncated || receipt.warnings.length > 0 || receipt.confidence < 0.7
-            || calculation.hasMismatch || calculation.chargeBaseIncomplete || printedCurrency) && (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-              <div className="flex items-center gap-2 font-semibold">
-                <AlertTriangle className="size-4" /> Review the extracted receipt
+          {hasNotices && (
+            <div className="rounded-control bg-amber-500/10 px-3.5 py-3 text-caption text-amber-700 dark:text-amber-300">
+              <p className="flex items-center gap-2 font-semibold">
+                <AlertTriangle className="size-4 shrink-0" aria-hidden="true" /> Review the extracted receipt
+              </p>
+              <div className="mt-1 space-y-1 pl-6">
+                {receipt.truncated && <p>Some visible receipt lines may be missing.</p>}
+                {/* Nothing here converts: the figures are the receipt's own numbers, and saving one
+                    records it as {currency}. Say so rather than relabel a foreign total silently. */}
+                {printedCurrency && (
+                  <p>
+                    This receipt is printed in {printedCurrency}, but every amount here is shown and
+                    saved as {currency}. Convert your share yourself before saving it.
+                  </p>
+                )}
+                {receipt.warnings.map((warning, index) => <p key={index}>{warning}</p>)}
+                {/* The lines and charges we read add up to something the receipt itself does not
+                    print, so at least one of them is wrong — and your share is built from them. */}
+                {calculation.hasMismatch && receipt.total != null && (
+                  <p>
+                    These lines add up to {formatCurrencyVal(calculation.receiptComputedTotal, currency)},
+                    but the receipt says {formatCurrencyVal(receipt.total, currency)}. Fix the prices before
+                    trusting your share.
+                  </p>
+                )}
+                {calculation.chargeBaseIncomplete && (
+                  <p>
+                    A charge is being split across lines with no readable price, which overstates your
+                    share of it. Unlock those prices — including lines that are not yours.
+                  </p>
+                )}
               </div>
-              {receipt.truncated && <p className="mt-1">Some visible receipt lines may be missing.</p>}
-              {/* Nothing here converts: the figures are the receipt's own numbers, and saving one
-                  records it as {currency}. Say so rather than relabel a foreign total silently. */}
-              {printedCurrency && (
-                <p className="mt-1">
-                  This receipt is printed in {printedCurrency}, but every amount here is shown and
-                  saved as {currency}. Convert your share yourself before saving it.
-                </p>
-              )}
-              {receipt.warnings.map((warning, index) => <p key={index} className="mt-1">{warning}</p>)}
-              {/* The lines and charges we read add up to something the receipt itself does not
-                  print, so at least one of them is wrong — and your share is built from them. */}
-              {calculation.hasMismatch && receipt.total != null && (
-                <p className="mt-1">
-                  These lines add up to {formatCurrencyVal(calculation.receiptComputedTotal, currency)},
-                  but the receipt says {formatCurrencyVal(receipt.total, currency)}. Fix the prices before
-                  trusting your share.
-                </p>
-              )}
-              {calculation.chargeBaseIncomplete && (
-                <p className="mt-1">
-                  A charge is being split across lines with no readable price, which overstates your
-                  share of it. Unlock those prices — including lines that are not yours.
-                </p>
-              )}
             </div>
           )}
 
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
-              <div className="min-w-0">
-                <h3 className="text-subsection">Items</h3>
-              </div>
+          <section aria-labelledby="receipt-items-heading">
+            <div className="mb-2 flex items-center justify-between gap-3 px-1">
+              <h3 id="receipt-items-heading" className="text-subsection text-foreground">
+                Items
+              </h3>
               {receipt.items.length > 0 && (
-                <div className="ml-auto flex shrink-0 items-center gap-1">
-                  <Button variant="tertiary" size="sm" type="button" onClick={() => selectEvery(true)}>
+                <div className="-mr-2.5 flex shrink-0 items-center">
+                  <Button variant="tertiary" size="sm" type="button" onClick={() => selectEvery(true)} className="text-accent-ink">
                     Select all
                   </Button>
-                  <Button variant="tertiary" size="sm" type="button" onClick={() => selectEvery(false)}>
+                  <Button variant="tertiary" size="sm" type="button" onClick={() => selectEvery(false)} className="text-muted-foreground">
                     Clear all
                   </Button>
                 </div>
@@ -321,69 +310,104 @@ export function ReceiptSplitSheet({
             </div>
 
             {/* A receipt with nothing left on it is a dead end otherwise: the total reads zero,
-                Use This Amount is disabled, and nothing says why or what to do about it. */}
-            {receipt.items.length === 0 && (
-              <p className="rounded-control bg-surface-2/70 px-3 py-4 text-center text-xs text-muted-foreground">
+                Use is disabled, and nothing says why or what to do about it. */}
+            {receipt.items.length === 0 ? (
+              <p className="rounded-control bg-surface-2/70 px-3 py-4 text-center text-caption text-muted-foreground">
                 No lines were read off this receipt, so there is nothing to split. Discard the scan
                 and enter the amount yourself, or scan the receipt again.
               </p>
+            ) : (
+              <div className="divide-y divide-border/60 overflow-hidden rounded-panel border border-border/70 bg-card">
+                {receipt.items.map((item, index) => (
+                  <ReceiptSplitItemRow
+                    key={index}
+                    item={item}
+                    index={index}
+                    currency={currency}
+                    maximum={receiptQuantity(item)}
+                    selected={selectedQuantities[index] ?? receiptQuantity(item)}
+                    priceUnlocked={unlockedPriceIndexes.has(index)}
+                    unitPrice={editableUnitPrice(item)}
+                    itemCalculation={itemCalculations[index]}
+                    onChangeQuantity={changeQuantity}
+                    onTogglePriceLock={togglePriceLock}
+                    onUpdatePrice={updatePrice}
+                    onRemove={removeItem}
+                  />
+                ))}
+              </div>
             )}
-
-            {receipt.items.map((item, index) => (
-              <ReceiptSplitItemRow
-                key={index}
-                item={item}
-                index={index}
-                currency={currency}
-                maximum={receiptQuantity(item)}
-                selected={selectedQuantities[index] ?? receiptQuantity(item)}
-                priceUnlocked={unlockedPriceIndexes.has(index)}
-                unitPrice={editableUnitPrice(item)}
-                itemCalculation={itemCalculations[index]}
-                onChangeQuantity={changeQuantity}
-                onTogglePriceLock={togglePriceLock}
-                onUpdatePrice={updatePrice}
-                onRemove={removeItem}
-              />
-            ))}
           </section>
 
-          <details className="group rounded-panel bg-primary/6">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-caption font-semibold text-foreground">
-              How your total was calculated
-              <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
-            </summary>
-            <div className="space-y-2 border-t border-primary/20 p-4 text-xs">
-              <div className="flex justify-between gap-4 text-muted-foreground">
-                <span>The items you picked</span>
-                <span className="font-semibold text-foreground">{formatCurrencyVal(calculation.itemSubtotal, currency)}</span>
-              </div>
-              <div className="flex justify-between gap-4 text-muted-foreground">
-                <span>Your share of tax, service and discounts</span>
-                <span className="font-semibold text-foreground">
-                  {formatCurrencyVal(calculation.total - calculation.itemSubtotal, currency)}
-                </span>
-              </div>
-              <div className="flex justify-between gap-4 border-t border-primary/20 pt-3 text-sm font-semibold text-accent-ink">
-                <span>What you pay</span>
-                <span>{formatCurrencyVal(calculation.total, currency)}</span>
-              </div>
-            </div>
-          </details>
-
           {calculation.invalidSelectedItemIndexes.length > 0 && (
-            <div className="rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            <p className="rounded-control bg-destructive/10 px-3.5 py-2.5 text-caption text-destructive">
               Unlock and correct the price for every selected item without a readable amount.
-            </div>
+            </p>
           )}
 
-          {/* Use This Amount is disabled below zero; without this the button was simply dead. */}
+          {/* Use is disabled below zero; without this the button was simply dead. */}
           {calculation.total < 0 && calculation.selectedItemCount > 0 && (
-            <div className="rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            <p className="rounded-control bg-destructive/10 px-3.5 py-2.5 text-caption text-destructive">
               The discounts read off this receipt come to more than the items you picked, so your
               share works out below zero. Check the discount lines before using this amount.
-            </div>
+            </p>
           )}
+
+          {/* The secondary material, folded: what the receipt was, and how the answer was reached. */}
+          <div className="divide-y divide-border/60 overflow-hidden rounded-panel border border-border/70 bg-card">
+            <details className="group">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-body font-medium text-foreground">
+                <span className="shrink-0">Receipt details</span>
+                <span className="flex min-w-0 items-center gap-2 text-caption font-normal text-muted-foreground">
+                  <span className="truncate">{[receipt.description, receipt.date].filter(Boolean).join(' · ')}</span>
+                  <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
+                </span>
+              </summary>
+              <div className="grid gap-3 px-4 pb-4 sm:grid-cols-[minmax(0,2fr)_minmax(12rem,1fr)]">
+                <FormField
+                  label="Description"
+                  labelClassName={receipt.fieldConfidence.description < 0.65 ? 'text-amber-700 dark:text-amber-300' : undefined}
+                >
+                  <Input
+                    aria-label="Description"
+                    value={receipt.description}
+                    onChange={event => setReceipt({ ...receipt, description: event.target.value })}
+                  />
+                </FormField>
+                <FormField
+                  label="Date"
+                  labelClassName={receipt.fieldConfidence.date < 0.65 ? 'text-amber-700 dark:text-amber-300' : undefined}
+                >
+                  <DatePicker
+                    value={receipt.date ?? ''}
+                    onChange={value => setReceipt({ ...receipt, date: value || null })}
+                    className="w-full"
+                    align="right"
+                  />
+                </FormField>
+              </div>
+            </details>
+            <details className="group">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-body font-medium text-foreground">
+                How your total was calculated
+                <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+              </summary>
+              <dl className="space-y-2 px-4 pb-4 text-caption">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">The items you picked</dt>
+                  <dd className="text-foreground tabular-nums">{formatCurrencyVal(calculation.itemSubtotal, currency)}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">Your share of tax, service and discounts</dt>
+                  <dd className="text-foreground tabular-nums">{formatCurrencyVal(calculation.total - calculation.itemSubtotal, currency)}</dd>
+                </div>
+                <div className="flex justify-between gap-4 border-t border-border/60 pt-2 text-body font-semibold text-foreground">
+                  <dt>What you pay</dt>
+                  <dd className="tabular-nums">{formatCurrencyVal(calculation.total, currency)}</dd>
+                </div>
+              </dl>
+            </details>
+          </div>
         </div>
       )}
     </BottomSheet>

@@ -83,7 +83,7 @@ function renderSheet(scanResult = result(), currency = 'MYR') {
 describe('ReceiptSplitSheet', () => {
   it('starts with every scanned item selected and saves only calculated ledger fields', () => {
     const { onUseResult, onClear } = renderSheet()
-    fireEvent.click(screen.getByRole('button', { name: 'Use This Amount' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Use / }))
 
     expect(onUseResult).toHaveBeenCalledWith({
       description: 'Shared Dinner',
@@ -105,7 +105,7 @@ describe('ReceiptSplitSheet', () => {
 
   it('keeps prices locked until the matching settings-style lock button is used', () => {
     renderSheet()
-    fireEvent.click(screen.getAllByText('Price and charge breakdown')[0])
+    fireEvent.click(screen.getAllByRole('button', { name: 'Price details' })[0])
     const price = screen.getByLabelText('Item 1 price') as HTMLInputElement
     expect(price.disabled).toBe(true)
 
@@ -122,8 +122,10 @@ describe('ReceiptSplitSheet', () => {
 
     expect(screen.getByText('Your share')).toBeTruthy()
     expect(screen.getAllByText('23.20', { exact: false }).length).toBeGreaterThan(0)
+    // The action names the amount it will use, so it never has to be read back from the hero.
+    expect(screen.getByRole('button', { name: /^Use .*23\.20$/ })).toBeTruthy()
     expect((screen.getByText('Receipt details').closest('details') as HTMLDetailsElement).open).toBe(false)
-    expect((screen.getAllByText('Price and charge breakdown')[0].closest('details') as HTMLDetailsElement).open).toBe(false)
+    expect(screen.getAllByRole('button', { name: 'Price details' })[0].getAttribute('aria-expanded')).toBe('false')
     expect((screen.getByText('How your total was calculated').closest('details') as HTMLDetailsElement).open).toBe(false)
   })
 
@@ -150,7 +152,7 @@ describe('ReceiptSplitSheet', () => {
     expect(screen.getByText('Not yours')).toBeTruthy()
 
     // Water alone: 4.00 plus its own 10% tax and 6% service, not the whole bill's charges.
-    fireEvent.click(screen.getByRole('button', { name: 'Use This Amount' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Use / }))
     expect(onUseResult).toHaveBeenCalledWith(expect.objectContaining({ amount: 4.64 }))
   })
 
@@ -186,7 +188,7 @@ describe('ReceiptSplitSheet', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Decrease quantity for item 1' }))
     fireEvent.click(screen.getByRole('button', { name: 'Decrease quantity for item 2' }))
 
-    expect((screen.getByRole('button', { name: 'Use This Amount' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: /^Use / }) as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('calculates the per-row share using the chosen quantity', () => {
@@ -230,7 +232,7 @@ describe('ReceiptSplitSheet', () => {
 
     // Food (16) + Coffee (5) + Coffee Fee (20% of 5 = 1) = 22.00.
     // Water Tax was exclusive to Water, so it was dropped and NOT applied globally.
-    fireEvent.click(screen.getByRole('button', { name: 'Use This Amount' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Use / }))
     expect(onUseResult).toHaveBeenCalledWith(expect.objectContaining({ amount: 22 }))
   })
 
