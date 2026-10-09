@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { establishSession, mockApi, seedDraftTransaction, vaultDocuments, waitForStableLayout } from './visualTestSupport'
+import { establishSession, mockApi, seedDraftTransaction, vaultDocuments, waitForStableLayout, openTransactionForm } from './visualTestSupport'
 import { coveredRecovery } from './recoveryFixtures'
 
 test('covered recovery separates this cycle from the remaining balance', async ({ page }) => {
@@ -327,7 +327,7 @@ test('compact compound controls keep their buttons inside their own boundaries',
   test.skip((test.info().project.use.viewport?.width ?? 0) >= 640, 'Compound-control containment is compact-only.')
 
   await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
-  await page.getByRole('button', { name: /Post Transaction/i }).first().click()
+  await openTransactionForm(page)
   const dialog = page.getByRole('dialog', { name: 'Add Transaction' })
   await expect(dialog).toBeVisible()
 
@@ -507,29 +507,31 @@ test('dense report charts and limit cards keep every value inside its own contro
   expect(Math.min(...cardWidths)).toBeGreaterThanOrEqual(208)
 })
 
-test('navigation rail packs its destinations under the header and pins settings to its foot', async ({ page }) => {
-  test.skip((test.info().project.use.viewport?.width ?? 0) < 640, 'The compact tier uses bottom navigation.')
+test('the sidebar packs its destinations under its actions and pins the account to its foot', async ({ page }) => {
+  test.skip((test.info().project.use.viewport?.width ?? 0) < 640, 'The compact tier uses the tab bar.')
   await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
   await waitForStableLayout(page)
 
-  // The rail is viewport-tall and the destinations are not. Centring them left a gap at both ends
-  // and detached the list from the header it belongs to, so the destinations are grouped and packed
-  // under the header while the utility destination holds the foot.
-  const geometry = await page.locator('aside nav[aria-label="Primary"]').evaluate(nav => {
-    const items = Array.from(nav.querySelectorAll<HTMLElement>('button'))
-    const navRect = nav.getBoundingClientRect()
-    // Measured from the first rendered child, not the first button: the expanded rail puts a
-    // group label above its destinations, and that label is content rather than empty space.
-    const first = nav.firstElementChild
+  // The sidebar is viewport-tall and the destinations are not. Centring them would detach the list
+  // from the search and New transaction actions it belongs under, so the destinations pack beneath
+  // them while the utilities and the account hold the foot.
+  const geometry = await page.locator('aside[aria-label="Sidebar"]').evaluate(aside => {
+    const nav = aside.querySelector<HTMLElement>('nav[aria-label="Primary"]')!
+    const destinations = Array.from(nav.querySelectorAll<HTMLElement>('button'))
+    const above = nav.previousElementSibling!.getBoundingClientRect()
+    const account = aside.querySelector<HTMLElement>('[aria-label="Account menu"]')!
+    const settings = Array.from(aside.querySelectorAll<HTMLElement>('button')).find(button => button.getAttribute('aria-label') === 'Settings')!
     return {
-      above: (first?.getBoundingClientRect().top ?? navRect.top) - navRect.top,
-      below: navRect.bottom - (items.at(-1)?.getBoundingClientRect().bottom ?? navRect.bottom),
-      groups: nav.querySelectorAll('[role="group"]').length,
+      count: destinations.length,
+      gapAbove: nav.getBoundingClientRect().top - above.bottom,
+      settingsBelowDestinations: settings.getBoundingClientRect().top - destinations.at(-1)!.getBoundingClientRect().bottom,
+      accountToFoot: aside.getBoundingClientRect().bottom - account.getBoundingClientRect().bottom,
     }
   })
-  expect(geometry.above, 'navigation destinations are packed under the header').toBeLessThanOrEqual(24)
-  expect(geometry.below, 'the utility destination holds the foot of the rail').toBeLessThanOrEqual(24)
-  expect(geometry.groups, 'destinations are grouped rather than one flat list').toBeGreaterThanOrEqual(2)
+  expect(geometry.count, 'five destinations').toBe(5)
+  expect(geometry.gapAbove, 'destinations are packed under the sidebar actions').toBeLessThanOrEqual(24)
+  expect(geometry.settingsBelowDestinations, 'utilities sit apart from the destinations').toBeGreaterThan(24)
+  expect(geometry.accountToFoot, 'the account holds the foot of the sidebar').toBeLessThanOrEqual(24)
 })
 
 test('AI page actions stay beside their page titles', async ({ page }) => {
@@ -725,7 +727,8 @@ test('commitments and rewards detail labels are never clipped', async ({ page })
 test('bill review never auto-opens and exposes no automatic-open preference', async ({ page }) => {
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
   await waitForStableLayout(page)
-  await expect(page.getByText('Bills to review')).toHaveCount(0)
+  // The sidebar labels its entry point "Bills to review"; what must not appear is the sheet itself.
+  await expect(page.getByRole('dialog', { name: 'Bills to review' })).toHaveCount(0)
 
   await page.goto('/settings', { waitUntil: 'domcontentloaded' })
   await waitForStableLayout(page)
@@ -753,7 +756,7 @@ test('bill review centers text-only actions and defaults to full payment', async
     }],
   })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
-  await page.getByRole('button', { name: 'Review 1 pending bills' }).click()
+  await page.getByRole('button', { name: /^(Review 1 pending bills|Bills to review, 1)$/ }).click()
   const dialog = page.getByRole('dialog', { name: 'Bills to review' })
   await expect(dialog).toBeVisible()
 
@@ -803,7 +806,7 @@ test('investment plan Configure opens its settings tab', async ({ page }) => {
   await page.getByRole('button', { name: 'Configure' }).click()
 
   await expect(page).toHaveURL(/\/settings\?.*section=investment-plan/)
-  await expect(page.getByRole('tab', { name: 'Investment Plan' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('tab', { name: 'Investment plan' })).toHaveAttribute('aria-selected', 'true')
 })
 
 test('recurring card actions and linked loan badge keep compact heights', async ({ page }) => {
@@ -834,20 +837,22 @@ test('recurring card actions and linked loan badge keep compact heights', async 
   const card = page.locator('#recur-card-linked-bill')
   await expect(card).toBeVisible()
 
-  const badgeHeight = await card.getByText('Loan', { exact: true }).first().evaluate(element => element.getBoundingClientRect().height)
+  // Phones keep the 44px touch floor on every control; the expanded tier steps down to its compact
+  // pointer sizes.
+  const isPhone = test.info().project.name === 'mobile-dark'
   const linkHeight = await card.getByRole('link', { name: 'View linked loan: PTPTN' }).evaluate(element => element.getBoundingClientRect().height)
-  expect(Math.abs(linkHeight - badgeHeight)).toBeLessThanOrEqual(1)
+  expect(linkHeight).toBe(isPhone ? 44 : 36)
   for (const name of ['Edit PTPTN', 'Delete PTPTN']) {
     const height = await card.getByRole('button', { name }).evaluate(element => element.getBoundingClientRect().height)
-    expect(height).toBe(44)
+    expect(height).toBe(isPhone ? 44 : 36)
   }
   const onceHeight = await card.getByRole('radio', { name: 'Once' }).evaluate(element => element.getBoundingClientRect().height)
-  expect(onceHeight).toBe(44)
-  const newSubscriptionHeight = await page.getByRole('button', { name: 'New Subscription' }).evaluate(element => element.getBoundingClientRect().height)
-  expect(newSubscriptionHeight).toBe(test.info().project.name === 'mobile-dark' ? 44 : 52)
-  if (test.info().project.name === 'desktop-dark') {
-    const askAiHeight = await page.getByRole('button', { name: 'ASK AI' }).evaluate(element => element.getBoundingClientRect().height)
-    expect(askAiHeight).toBe(44)
+  expect(onceHeight).toBe(isPhone ? 44 : 36)
+  const newBillHeight = await page.getByRole('button', { name: 'New bill' }).evaluate(element => element.getBoundingClientRect().height)
+  expect(newBillHeight).toBe(isPhone ? 48 : 40)
+  if (!isPhone) {
+    const askAiHeight = await page.getByRole('button', { name: 'Ask AI', exact: true }).evaluate(element => element.getBoundingClientRect().height)
+    expect(askAiHeight).toBe(40)
   }
 })
 
@@ -889,6 +894,7 @@ test('vault keeps the linked-ledger action adjacent to its document name', async
 })
 
 test('the header action cluster stays pinned to the trailing edge', async ({ page }) => {
+  test.skip((test.info().project.use.viewport?.width ?? 0) >= 640, 'Only phones have a top bar; wider tiers use the sidebar.')
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
   await expect(page.locator('main')).toBeVisible()
   await waitForStableLayout(page)
@@ -896,7 +902,7 @@ test('the header action cluster stays pinned to the trailing edge', async ({ pag
   // Between md and xl both clusters lost their growth (`md:flex-initial` / `md:ml-0`, restored only
   // at `xl`), so every header control bunched against the leading edge instead of splitting.
   const gap = await page.evaluate(() => {
-    const header = document.querySelector('header')
+    const header = document.querySelector('header[aria-label="App bar"]')
     const account = header?.querySelector<HTMLElement>('button[aria-label="Account menu"]')
     if (!header || !account) return null
     // Walk out to the cluster that sits directly inside the header's own flex container.
@@ -1051,8 +1057,9 @@ test('hovering an allocation arc scrolls its legend row into the legend view', a
  */
 test('the page heading keeps its type role at every tier', async ({ page }) => {
   const width = page.viewportSize()?.width ?? 0
-  // The role steps up once, at the medium tier boundary the shared breakpoints define.
-  const expected = width >= 640 ? 24 : 20
+  // The role steps up once, at the medium tier boundary the shared breakpoints define: Lumen's
+  // `title` (22px) on phones, `display` (28px) from there up.
+  const expected = width >= 640 ? 28 : 22
 
   let checked = 0
   for (const route of routes) {
@@ -1095,7 +1102,8 @@ test('portfolio archive restrictions stay readable and actions remain contained'
   await expect(reopen).toBeEnabled()
   await reopen.scrollIntoViewIfNeeded()
   const box = await reopen.boundingBox()
-  expect(box!.height).toBeGreaterThanOrEqual(44)
+  // 44px wherever the layout is touch-first; the expanded tier steps down to its 36px compact size.
+  expect(box!.height).toBeGreaterThanOrEqual((page.viewportSize()?.width ?? 0) >= 1024 ? 36 : 44)
   expect(await reopen.evaluate(element => {
     const rect = element.getBoundingClientRect()
     return element.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2))

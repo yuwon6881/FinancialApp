@@ -3,12 +3,8 @@ import { establishSession, mockApi } from './visualTestSupport'
 
 async function openChat(page: Page) {
   await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
-  if ((page.viewportSize()?.width ?? 0) < 640) {
-    await page.getByRole('button', { name: 'Open Menu' }).click()
-    await page.getByRole('menuitem', { name: 'Ask AI', exact: true }).click()
-  } else {
-    await page.getByRole('button', { name: 'ASK AI', exact: true }).click()
-  }
+  // The phone top bar and the sidebar both carry Ask AI directly.
+  await page.getByRole('button', { name: 'Ask AI', exact: true }).click()
 }
 
 async function holdHistory(page: Page) {
@@ -70,7 +66,7 @@ test('an explicitly sent startup message waits for history and then opens its tr
   await expect(page.getByText(/Your message will send when/)).toBeVisible()
   expect(requests).toHaveLength(0)
   release()
-  await expect(page).toHaveURL(/\/drafts/)
+  await expect(page).toHaveURL(/\/activity\/review/)
   await expect(page.getByText('Badminton', { exact: true })).toBeVisible()
   expect(requests).toHaveLength(1)
   expect(requests[0]).toMatchObject({ message: 'Badminton 20', conversationId: 'saved-chat', conversationVersion: 4 })

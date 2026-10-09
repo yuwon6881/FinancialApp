@@ -7,6 +7,7 @@ import {
   mockApi,
   stabilityRecoveryFixture,
   waitForStableLayout,
+  openTransactionForm,
 } from './visualTestSupport'
 
 test.beforeEach(async ({ page }) => {
@@ -26,12 +27,8 @@ test('covered recovery shows completed spending cycles without a countdown', asy
 })
 
 async function openGlobalSearch(page: import('@playwright/test').Page) {
-  if ((page.viewportSize()?.width ?? 0) < 640) {
-    await page.getByRole('button', { name: 'Open Menu' }).click()
-    await page.getByRole('menuitem', { name: 'Search' }).click()
-  } else {
-    await page.getByRole('button', { name: 'Search your records' }).click()
-  }
+  // The phone top bar and the sidebar both carry search directly.
+  await page.getByRole('button', { name: 'Search your records' }).click()
 }
 
 test('authentication required validation', async ({ page }) => {
@@ -272,15 +269,16 @@ test('rewards pool reports this cycle pacing for an active commitment', async ({
   await expect(card).toHaveScreenshot('commitments-pool-active.png')
 })
 
-test('accounts settings panel uses the complete card shell', async ({ page }) => {
+test('accounts bucket groups use the complete card shell', async ({ page }) => {
   await establishSession(page)
   await mockApi(page)
-  await page.goto('/settings?section=accounts', { waitUntil: 'domcontentloaded' })
+  await page.goto('/wealth/accounts', { waitUntil: 'domcontentloaded' })
 
-  const panel = page.getByRole('tabpanel', { name: 'Accounts' })
-  await expect(panel).toBeVisible({ timeout: 15_000 })
+  // The page sits on the canvas; each bucket's accounts are the card. Measure the first of them.
+  await expect(page.getByRole('region', { name: 'Accounts', exact: true })).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('Everyday bank')).toBeVisible()
   await waitForStableLayout(page)
+  const panel = page.locator('[id^="bucket-account-group-"]').first()
 
   const shell = await panel.evaluate(element => {
     const style = getComputedStyle(element)
@@ -362,27 +360,21 @@ test('device unlock offers setup without a restore action after the browser lose
   expect(layout.pageWidth).toBeLessThanOrEqual(layout.viewportWidth + 1)
 })
 
-test('desktop top-bar icon actions stay compact', async ({ page }) => {
+test('desktop sidebar actions stay compact', async ({ page }) => {
   test.skip(!test.info().project.name.startsWith('desktop'), 'Desktop navigation uses compact pointer targets.')
 
   await establishSession(page)
   await mockApi(page)
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
-  const sizes = await Promise.all([
-    page.getByRole('button', { name: 'Commitments and Rewards', exact: true }).evaluate(element => {
-      const bounds = element.getBoundingClientRect()
-      return { width: bounds.width, height: bounds.height }
-    }),
-    page.getByRole('button', { name: 'Bills: all caught up' }).evaluate(element => {
-      const bounds = element.getBoundingClientRect()
-      return { width: bounds.width, height: bounds.height }
-    }),
-  ])
-  expect(sizes).toEqual([
-    { width: 36, height: 36 },
-    { width: 36, height: 36 },
-  ])
+  const sidebar = page.locator('aside[aria-label="Sidebar"]')
+  const measure = (name: string) => sidebar.getByRole('button', { name, exact: true }).evaluate(element => {
+    const bounds = element.getBoundingClientRect()
+    return { width: Math.round(bounds.width), height: Math.round(bounds.height) }
+  })
+  expect(await measure('Collapse sidebar')).toEqual({ width: 36, height: 36 })
+  expect((await measure('Today')).height).toBe(40)
+  expect((await measure('Settings')).height).toBe(40)
 })
 
 test('every corner of a header action is clickable, not just its rounded middle', async ({ page }) => {
@@ -397,7 +389,7 @@ test('every corner of a header action is clickable, not just its rounded middle'
   // Chrome hit-tests through border-radius, so the corners of a rounded control belong to
   // whatever is behind it — while :hover and active:scale-95 still fire, which is why this
   // read as a button that responded and did nothing. jsdom has no hit-testing and cannot see
-  // it, so the guard has to be a real browser. The header's own ::after rectangle is the fix.
+  // it, so the guard has to be a real browser. The app chrome's own ::after rectangle is the fix.
   const trigger = page.getByRole('button', { name: 'Search your records' })
   const box = (await trigger.boundingBox())!
   const corners = [
@@ -423,7 +415,7 @@ test('mixed input select date form sheet', async ({ page }) => {
   await mockApi(page)
   await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
   await expect(page.getByText('Neighbourhood Grocer')).toBeVisible()
-  await page.getByRole('button', { name: /Post Transaction/i }).first().click()
+  await openTransactionForm(page)
   const dialog = page.getByRole('dialog', { name: 'Add Transaction' })
   await expect(dialog).toBeVisible()
   const dimensions = await dialog.evaluate(element => ({
@@ -581,7 +573,7 @@ test('global search reveals and horizontally centers far commitment and reward c
   await page.getByRole('combobox', { name: 'Search query' }).fill('Search Commitment 5')
   await page.getByRole('option', { name: /^Search Commitment 5 / }).click()
 
-  await expect(page).toHaveURL(/\/commitments-rewards\?.*commitment=5/)
+  await expect(page).toHaveURL(/\/plan\/goals\?.*commitment=5/)
   const commitment = page.locator('#commitment-card-5')
   await expect(commitment).toHaveClass(/search-target-highlight/)
   const commitmentsRail = page.getByRole('group', { name: 'Commitments' })
@@ -596,7 +588,7 @@ test('global search reveals and horizontally centers far commitment and reward c
   await page.getByRole('combobox', { name: 'Search query' }).fill('Search Reward 5')
   await page.getByRole('option', { name: /^Search Reward 5 / }).click()
 
-  await expect(page).toHaveURL(/\/commitments-rewards\?.*reward=5/)
+  await expect(page).toHaveURL(/\/plan\/goals\?.*reward=5/)
   const target = page.locator('#reward-card-5')
   await expect(target).toHaveClass(/search-target-highlight/)
   const rail = page.getByRole('group', { name: 'Rewards' })
@@ -620,27 +612,23 @@ test('global search uses the shared highlight on the responsive Ledger row', asy
   await page.getByRole('combobox', { name: 'Search query' }).fill('Neighbourhood Grocer')
   await page.getByRole('option', { name: /^Neighbourhood Grocer / }).click()
 
-  await expect(page).toHaveURL(/\/ledger\?.*tx=tx-visual-1/)
+  await expect(page).toHaveURL(/\/activity\?.*tx=tx-visual-1/)
   const isCompactLedger = (page.viewportSize()?.width ?? 0) < 1024
   const target = page.locator(`#tx-row-${isCompactLedger ? 'mobile' : 'desktop'}-tx-visual-1`)
   await expect(target).toHaveClass(/search-target-highlight/)
   await expect(target).toBeInViewport()
 })
 
-// The account dropdown and the quick-add menu are the app's only Radix consumers, so they are
-// the only surfaces that mount Radix's FocusScope. radix-ui 1.4.3 composed that scope's container
-// ref with an inline arrow, so `useComposedRefs`'s `useCallback` deps changed on every render;
-// React 19 re-attaches a ref whose identity changed by calling it with `null` and then the node,
-// and each of those is a real `setContainer` update, so opening the menu started a self-sustaining
-// detach/attach loop and tripped React's nested-update ceiling (#185) before the menu could paint.
-// jsdom cannot see it -- TopNav.test.tsx opens the same menu happily -- so the guard has to run in
-// a real browser. It asserts on console/page errors rather than pixels: a downgrade or a similar
-// unstable-ref regression in any menu primitive would surface here first.
-for (const trigger of ['Account menu', 'Quick Add']) {
+// The account dropdown is the app's only Radix menu consumer, so it is the only surface that
+// mounts Radix's FocusScope. radix-ui 1.4.3 composed that scope's container ref with an inline
+// arrow, so `useComposedRefs`'s `useCallback` deps changed on every render; React 19 re-attaches a
+// ref whose identity changed by calling it with `null` and then the node, and each of those is a
+// real `setContainer` update, so opening the menu started a self-sustaining detach/attach loop and
+// tripped React's nested-update ceiling (#185) before the menu could paint. jsdom cannot see it,
+// so the guard has to run in a real browser. It asserts on console/page errors rather than pixels:
+// a downgrade or a similar unstable-ref regression in any menu primitive would surface here first.
+for (const trigger of ['Account menu']) {
   test(`${trigger} opens without a React update loop`, async ({ page }) => {
-    // Quick Add is a desktop-rail action (`hidden lg:block`); the account menu is on every width.
-    test.skip(trigger === 'Quick Add' && !test.info().project.name.startsWith('desktop'),
-      'Quick Add is only rendered from the lg breakpoint upward.')
     const failures: string[] = []
     page.on('console', message => { if (message.type() === 'error') failures.push(message.text()) })
     page.on('pageerror', error => failures.push(`pageerror: ${error.message}`))
@@ -652,7 +640,7 @@ for (const trigger of ['Account menu', 'Quick Add']) {
 
     await page.getByRole('button', { name: trigger }).click()
     await expect(page.getByRole('menu')).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: trigger === 'Quick Add' ? 'Post Transaction' : 'Settings' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible()
 
     expect(failures.join('\n')).not.toMatch(/Maximum update depth|React error #185/)
   })

@@ -401,3 +401,16 @@ export async function seedDraftTransaction(page: Page) {
     amount: -42.5,
   })
 }
+
+/**
+ * Opens a blank transaction form. Phones start it from the tab bar's quick-add sheet; from 640px up
+ * the Activity toolbar carries Post Transaction.
+ */
+export async function openTransactionForm(page: Page) {
+  if ((page.viewportSize()?.width ?? 0) < 640) {
+    await page.getByRole('button', { name: 'Quick add', exact: true }).click()
+    await page.getByRole('menuitem', { name: /Expense/ }).click()
+  } else {
+    await page.getByRole('button', { name: /Post Transaction/i }).first().click()
+  }
+}

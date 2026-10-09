@@ -9,18 +9,19 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page)
 })
 
-test('menu and global search restore focus after Escape', async ({ page }) => {
+test('quick add and global search restore focus after Escape', async ({ page }) => {
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
-  const menuButton = page.getByRole('button', { name: 'Open Menu' })
-  await menuButton.focus()
-  await menuButton.press('Enter')
-  await expect(page.getByRole('menu')).toBeVisible()
+  const quickAdd = page.getByRole('button', { name: 'Quick add', exact: true })
+  await quickAdd.focus()
+  await quickAdd.press('Enter')
+  const sheet = page.getByRole('dialog', { name: 'Quick add' })
+  await expect(sheet.getByRole('menu', { name: 'Quick actions' })).toBeVisible()
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('menu')).toBeHidden()
-  await expect(menuButton).toBeFocused()
+  await expect(sheet).toBeHidden()
+  await expect(quickAdd).toBeFocused()
 
-  await menuButton.press('Enter')
-  await page.getByRole('menuitem', { name: 'Search' }).press('Enter')
+  await quickAdd.press('Enter')
+  await sheet.getByRole('menuitem', { name: /Search/ }).press('Enter')
   const search = page.getByRole('combobox', { name: 'Search query' })
   await expect(search).toBeFocused()
   await page.keyboard.press('Escape')

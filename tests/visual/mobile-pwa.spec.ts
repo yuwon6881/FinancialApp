@@ -6,6 +6,7 @@ import {
   seedDraftTransaction,
   vaultDocuments,
   waitForStableLayout,
+  openTransactionForm,
 } from './visualTestSupport'
 
 test.beforeEach(async ({ page }) => {
@@ -39,8 +40,8 @@ test('production routes do not create viewport horizontal overflow', async ({ pa
   }
 
   if (test.info().project.name.startsWith('mobile')) {
-    await page.goto('/settings?section=accounts', { waitUntil: 'domcontentloaded' })
-    const panel = page.getByRole('tabpanel', { name: 'Accounts' })
+    await page.goto('/wealth/accounts', { waitUntil: 'domcontentloaded' })
+    const panel = page.getByRole('region', { name: 'Accounts', exact: true })
     const searchInput = panel.getByRole('searchbox', { name: 'Filter accounts' })
     const firstAddButton = panel.getByRole('button', { name: 'Add account' }).first()
 
@@ -122,20 +123,21 @@ test('mobile PWA runs with touch input and an active service worker', async ({ p
   ).toBeGreaterThan(0)
 })
 
-test('mobile quick actions move focus into the menu and restore it on Escape', async ({ page }) => {
-  test.skip(!test.info().project.name.startsWith('mobile'), 'The floating action menu is mobile-only.')
+test('mobile quick add moves focus into the sheet and restores it on Escape', async ({ page }) => {
+  test.skip(!test.info().project.name.startsWith('mobile'), 'The tab bar and its add button are mobile-only.')
 
   await establishSession(page)
   await mockApi(page)
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
-  const trigger = page.getByRole('button', { name: 'Open Menu' })
+  const trigger = page.getByRole('button', { name: 'Quick add', exact: true })
   await trigger.click()
 
-  // The menu grows upwards, so its first item is the topmost one: the reads sit there and
-  // Post Transaction sits last, nearest the thumb.
-  const firstAction = page.getByRole('menuitem', { name: 'Search' })
-  await expect(firstAction).toBeFocused()
+  const sheet = page.getByRole('dialog', { name: 'Quick add' })
+  await expect(sheet).toBeVisible()
+  await expect(sheet.getByRole('menuitem', { name: /Expense/ })).toBeVisible()
+  await expect.poll(() => sheet.evaluate(element => element.contains(document.activeElement))).toBe(true)
   await page.keyboard.press('Escape')
+  await expect(sheet).toHaveCount(0)
   await expect(trigger).toBeFocused()
 })
 
@@ -145,11 +147,11 @@ test('settings tabs support roving keyboard focus on mobile', async ({ page }) =
   await establishSession(page)
   await mockApi(page)
   await page.goto('/settings', { waitUntil: 'domcontentloaded' })
-  const planTab = page.getByRole('tab', { name: 'Plan & Preferences' })
-  await planTab.focus()
+  const preferencesTab = page.getByRole('tab', { name: 'Preferences' })
+  await preferencesTab.focus()
   await page.keyboard.press('ArrowRight')
 
-  const investmentTab = page.getByRole('tab', { name: 'Investment Plan' })
+  const investmentTab = page.getByRole('tab', { name: 'Investment plan' })
   await expect(investmentTab).toBeFocused()
   await expect(investmentTab).toHaveAttribute('aria-selected', 'true')
 })
@@ -159,11 +161,11 @@ test('Investment Plan and Security settings render without a suspended chunk', a
   await mockApi(page)
   await page.goto('/settings', { waitUntil: 'domcontentloaded' })
 
-  await page.getByRole('tab', { name: 'Investment Plan' }).click()
+  await page.getByRole('tab', { name: 'Investment plan' }).click()
   await expect(page.getByRole('heading', { name: /Portfolio targets/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: /Investment classification/ })).toBeVisible()
 
-  await page.getByRole('tab', { name: 'Security & Devices' }).click()
+  await page.getByRole('tab', { name: 'Security & devices' }).click()
   for (const heading of ['Active Devices', 'Change Password', 'Two-Factor Authentication', 'Device Unlock']) {
     await expect(page.getByRole('heading', { name: heading })).toBeVisible()
   }
@@ -176,7 +178,7 @@ test('mobile transaction sheet remains contained at keyboard height', async ({ p
   await establishSession(page)
   await mockApi(page)
   await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
-  await page.getByRole('button', { name: /Post Transaction/i }).first().click()
+  await openTransactionForm(page)
   const dialog = page.getByRole('dialog', { name: 'Add Transaction' })
   await expect(dialog).toBeVisible()
   expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true)
@@ -258,13 +260,13 @@ test('draft attachments survive a reload before the batch is added', async ({ pa
 
 const responsiveRoutes = [
   { path: '/reports', slug: 'reports', readyText: 'Carryover Rolling Ledgers' },
-  { path: '/recurring', slug: 'recurring', readyText: 'Recurring Bills & Subscriptions' },
+  { path: '/recurring', slug: 'recurring', readyText: 'Bills & subscriptions' },
   { path: '/ledger', slug: 'ledger', readyText: 'Neighbourhood Grocer' },
   { path: '/ledger?all=1', slug: 'ledger-all-cycles', readyText: 'Neighbourhood Grocer' },
-  { path: '/commitments-rewards', slug: 'commitments-rewards', readyText: 'Commitments & Rewards' },
-  { path: '/settings', slug: 'settings', readyText: 'Financial Model' },
+  { path: '/commitments-rewards', slug: 'commitments-rewards', readyText: 'Goals' },
+  { path: '/settings', slug: 'settings', readyText: 'App Preferences' },
   { path: '/investments', slug: 'investments', readyText: 'Build your investment view' },
-  { path: '/vault', slug: 'vault', readyText: '2 documents stored' },
+  { path: '/vault', slug: 'vault', readyText: '2026-tax-return.pdf' },
   { path: '/drafts', slug: 'drafts', readyText: 'Weekend market' },
 ] as const
 
@@ -343,7 +345,6 @@ test('mobile draft review queue clears fixed navigation at keyboard height', asy
   await expect(reorder).toBeVisible()
   await expect(addDraft).toBeVisible()
   await expect(batchAction).toBeEnabled()
-  await expect(page.getByRole('button', { name: 'Open Menu' })).toHaveCount(0)
 
   for (const control of [reorder, addDraft, batchAction]) {
     const box = await control.boundingBox()
@@ -353,11 +354,14 @@ test('mobile draft review queue clears fixed navigation at keyboard height', asy
     expect(box.height).toBeGreaterThanOrEqual(44)
   }
 
+  // The batch action rides in a floating bar across the page (status on the left, the action on
+  // the right) that has to clear the tab bar even at keyboard height.
   await batchAction.scrollIntoViewIfNeeded()
   const batchBox = await batchAction.boundingBox()
+  const barWidth = await batchAction.evaluate(element => element.parentElement!.getBoundingClientRect().width)
   expect(batchBox).not.toBeNull()
+  expect(barWidth).toBeGreaterThanOrEqual(300)
   if (batchBox) {
-    expect(batchBox.width).toBeGreaterThanOrEqual(300)
     expect(batchBox.y + batchBox.height).toBeLessThanOrEqual(500 - 76 + 1)
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
@@ -371,14 +375,15 @@ for (const route of responsiveRoutes) {
     await mockApi(page, { documents: vaultDocuments })
     await page.goto(route.path, { waitUntil: 'domcontentloaded' })
     await expect(page.locator('main')).toBeVisible()
-    // Scoped to main: the navigation rail carries the same destination labels in the shell,
-    // and at medium they are present but visually hidden.
+    // Scoped to main: the sidebar carries the same destination labels in the shell.
     await expect(page.locator('main').getByText(route.readyText, { exact: true }).first()).toBeVisible({ timeout: 15_000 })
-    const logo = page.getByRole('button', { name: 'Go to Today' })
-    const wishlistAction = page.locator('header').getByRole('button', { name: 'Commitments and Rewards', exact: true })
-    const billsAction = page.getByRole('button', { name: /Bills:/ })
+    // The shell's own actions: the phone top bar below 640px, the sidebar from there up.
+    const shell = page.locator('header[aria-label="App bar"], aside[aria-label="Sidebar"]')
+    const logo = shell.getByRole('button', { name: 'Go to Today' })
+    const searchAction = shell.getByRole('button', { name: 'Search your records' })
+    const billsAction = shell.getByRole('button', { name: /bills/i })
     await expect(logo).toBeVisible()
-    await expect(wishlistAction).toBeVisible()
+    await expect(searchAction).toBeVisible()
     await expect(billsAction).toBeVisible()
     await page.waitForFunction(() => document.fonts.status === 'loaded')
     await waitForStableLayout(page)
@@ -388,7 +393,7 @@ for (const route of responsiveRoutes) {
       page: document.documentElement.scrollWidth,
     }))
     expect(width.page).toBeLessThanOrEqual(width.viewport + 1)
-    for (const action of [logo, wishlistAction, billsAction]) {
+    for (const action of [logo, searchAction, billsAction]) {
       const bounds = await action.evaluate(element => {
         const rect = element.getBoundingClientRect()
         return { left: rect.left, right: rect.right }
@@ -422,8 +427,9 @@ for (const route of responsiveRoutes) {
     if (route.path === '/reports' || route.path === '/recurring' || route.path === '/ledger') {
       const cycleSelect = page.getByRole('combobox', {
         name: route.path === '/reports' ? 'Report cycle' : route.path === '/ledger' ? 'Ledger cycle' : 'Recurring cycle',
+        exact: true,
       })
-      const cycleLabel = cycleSelect.locator('span').first()
+      const cycleLabel = cycleSelect.locator('span.truncate')
       const cycleLabelWidth = await cycleLabel.evaluate(element => ({
         client: element.clientWidth,
         scroll: element.scrollWidth,
@@ -434,9 +440,9 @@ for (const route of responsiveRoutes) {
       const yearSelect = page.getByRole('combobox', {
         name: route.path === '/reports' ? 'Report cycle year' : 'Ledger cycle year',
       })
-      const yearWidth = await yearSelect.evaluate(element => element.getBoundingClientRect().width)
-      expect(yearWidth, `${route.path} year control must leave room for all four digits`).toBeGreaterThanOrEqual(108)
-      const yearLabel = yearSelect.locator('span').first()
+      // Content-sized on a phone so the month range beside it shows in full; the check that
+      // matters is that its four digits are not truncated.
+      const yearLabel = yearSelect.locator('span.truncate')
       const labelWidth = await yearLabel.evaluate(element => ({
         client: element.clientWidth,
         scroll: element.scrollWidth,
@@ -585,8 +591,8 @@ test('mobile category toolbar keeps the filter and Add action on one row', async
   await page.setViewportSize({ width: 320, height: 844 })
   await establishSession(page)
   await mockApi(page)
-  await page.goto('/settings', { waitUntil: 'domcontentloaded' })
-  await page.getByRole('tab', { name: 'Categories & Limits' }).click()
+  await page.goto('/plan/budget', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('tab', { name: 'Categories & limits' }).click()
 
   const search = page.getByRole('searchbox', { name: 'Search categories' })
   const filter = page.getByRole('combobox', { name: 'Filter transaction categories by flow' })
@@ -617,43 +623,43 @@ test('mobile category toolbar keeps the filter and Add action on one row', async
   expect(addBounds.bottom).toBeLessThanOrEqual(toolbarBounds.bottom)
 })
 
-// The two tabs share one summary card, so switching tabs must not change its shape or move its
-// primary action. This measures the card on both tabs rather than trusting the snapshot alone.
-test('recurring summary card keeps its shape and top action across both tabs', async ({ page }) => {
-  test.skip(!test.info().project.name.startsWith('mobile'), 'The tab summary card is measured on mobile.')
+// Bills and Loans share one page header, so switching sections must not change its shape or move
+// its primary action. This measures the header on both sections rather than trusting the snapshot.
+test('recurring summary header keeps its shape and top action across both sections', async ({ page }) => {
+  test.skip(!test.info().project.name.startsWith('mobile'), 'The section header is measured on mobile.')
 
   await establishSession(page)
   await mockApi(page)
   await page.goto('/recurring', { waitUntil: 'domcontentloaded' })
-  await expect(page.getByText('Recurring Bills & Subscriptions', { exact: true })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('heading', { name: 'Bills & subscriptions', level: 1 })).toBeVisible({ timeout: 15_000 })
   await page.waitForFunction(() => document.fonts.status === 'loaded')
   await waitForStableLayout(page)
 
-  const cardBounds = async () => page.getByRole('heading', { level: 1 })
+  const headerBounds = async () => page.getByRole('heading', { level: 1 })
     .evaluate(heading => {
-      const card = heading.closest('header') ?? heading.closest('div[class*="rounded"]') ?? heading.parentElement!.parentElement!
-      const rect = card.getBoundingClientRect()
+      const header = heading.closest('header') ?? heading.parentElement!.parentElement!
+      const rect = header.getBoundingClientRect()
       return { width: Math.round(rect.width), height: Math.round(rect.height) }
     })
 
-  const billsCard = await cardBounds()
-  const newSubscription = page.getByRole('button', { name: 'New Subscription' })
-  await expect(newSubscription).toBeVisible()
-  const subscriptionTop = await newSubscription.evaluate(element => Math.round(element.getBoundingClientRect().top))
+  const billsHeader = await headerBounds()
+  const newBill = page.getByRole('button', { name: 'New bill' })
+  await expect(newBill).toBeVisible()
+  const billTop = await newBill.evaluate(element => Math.round(element.getBoundingClientRect().top))
 
-  await page.getByRole('tab', { name: /Loans/ }).click()
+  await page.getByRole('navigation', { name: 'Plan sections' }).getByRole('button', { name: 'Loans' }).click()
   await expect(page.getByRole('heading', { name: 'Loans', level: 1 })).toBeVisible()
   await waitForStableLayout(page)
 
-  const loansCard = await cardBounds()
-  const newLoan = page.getByRole('button', { name: 'New Loan' })
+  const loansHeader = await headerBounds()
+  const newLoan = page.getByRole('button', { name: 'New loan' })
   await expect(newLoan).toBeVisible()
   const loanTop = await newLoan.evaluate(element => Math.round(element.getBoundingClientRect().top))
 
-  expect(loansCard.width).toBe(billsCard.width)
-  expect(Math.abs(loansCard.height - billsCard.height)).toBeLessThanOrEqual(24)
-  expect(Math.abs(loanTop - subscriptionTop)).toBeLessThanOrEqual(24)
-  // Adding a loan lives in the summary card now, not beside the "Tracked loans" sub-heading.
+  expect(loansHeader.width).toBe(billsHeader.width)
+  expect(Math.abs(loansHeader.height - billsHeader.height)).toBeLessThanOrEqual(24)
+  expect(Math.abs(loanTop - billTop)).toBeLessThanOrEqual(24)
+  // Adding a loan lives in the page header, not beside the "Tracked loans" sub-heading.
   await expect(page.getByRole('button', { name: 'Add loan' })).toHaveCount(0)
 
   await expect(page).toHaveScreenshot('mobile-pwa-recurring-loans.png')
@@ -668,8 +674,8 @@ test('editing a category flow type holds the row still and keeps a 44px target',
       { id: 'salary', name: 'Salary', type: 'inflow' },
     ],
   })
-  await page.goto('/settings', { waitUntil: 'domcontentloaded' })
-  await page.getByRole('tab', { name: 'Categories & Limits' }).click()
+  await page.goto('/plan/budget', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('tab', { name: 'Categories & limits' }).click()
 
   // The card starts collapsed on a phone, so the list is not interactive until it is opened.
   const categoriesHeader = page.getByRole('button', { name: /Transaction Categories/ })
