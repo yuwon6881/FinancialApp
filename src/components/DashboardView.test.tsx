@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { DashboardView } from './DashboardView'
 import type { DashboardData, SavingsGoal, WishlistItem } from '../types'
@@ -107,13 +107,11 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.getByText('Available now')).toBeTruthy()
     expect(screen.getByText(amount('$4,456.00'))).toBeTruthy()
     expect(screen.getByText('2 bills need review')).toBeTruthy()
-    expect(screen.getByText('Plan snapshot')).toBeTruthy()
-    expect(screen.getByText('Essentials remaining')).toBeTruthy()
-    expect(screen.getByText('Emergency fund progress')).toBeTruthy()
-    expect(screen.getByText('Unpaid recurring bills')).toBeTruthy()
-    expect(screen.getByText('Essentials spending pace')).toBeTruthy()
-    expect(screen.getByText('Projected cycle finish')).toBeTruthy()
     expect(screen.getByText(/Current cycle/)).toBeTruthy()
+    // The plan snapshot tiles were retired: Today answers "how much, how long, what needs me".
+    expect(screen.queryByText('Plan snapshot')).toBeNull()
+    expect(screen.queryByText('Essentials remaining')).toBeNull()
+    expect(screen.queryByText('Projected cycle finish')).toBeNull()
     expect(screen.queryByText('Subscriptions')).toBeNull()
     expect(screen.queryByText('Financial Plan Metrics')).toBeNull()
     expect(screen.queryByText('Carryover Rolling Ledgers')).toBeNull()
@@ -139,13 +137,6 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.getByText(/in about 5 months/)).toBeTruthy()
     // This promise is the reason nothing is auto-purged. It must never quietly fall off the screen.
     expect(screen.getByText(/Nothing is ever deleted for you/)).toBeTruthy()
-  })
-
-  it('gives the plan snapshot the full Today content width', () => {
-    render(<DashboardView {...makeProps()} />)
-
-    expect(screen.getByTestId('today-plan-grid').className).not.toContain('grid-cols')
-    expect(screen.queryByTestId('subscriptions-timeline-card')).toBeNull()
   })
 
   it('opens the one shared bill review surface', () => {
@@ -184,6 +175,27 @@ describe('DashboardView focused Today experience', () => {
 
     expect(screen.queryByText(/is close to its budget/)).toBeNull()
     expect(screen.queryByText(/is over its budget/)).toBeNull()
+  })
+
+  it('shows how far through the cycle Today is', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 6, 20))
+    try {
+      render(<DashboardView {...makeProps()} />)
+      expect(screen.getByText(/next cycle starts Aug 28/)).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('lists the bills still to pay and opens the one tapped', () => {
+    const onNavigateToRecurring = vi.fn()
+    render(<DashboardView {...makeProps({ onNavigateToRecurring })} />)
+    const bills = screen.getByRole('region', { name: 'Upcoming bills' })
+    fireEvent.click(within(bills).getByRole('button', { name: /Netflix/ }))
+    expect(onNavigateToRecurring).toHaveBeenCalledWith('rp-1')
+    // Paid bills are not "upcoming".
+    expect(within(bills).queryByText('Spotify')).toBeNull()
   })
 
   it('renders the today focus cards and the focused reward', () => {
@@ -231,57 +243,6 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.getByText(amount('$220.00'))).toBeTruthy()
   })
 
-  it('shows the next cycle start and keeps daily spending room in the plan snapshot', () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date(2026, 6, 20))
-
-    try {
-      render(<DashboardView {...makeProps()} />)
-
-      expect(screen.getByText(/next cycle starts Aug 28/)).toBeTruthy()
-      expect(screen.queryByText('Safe to spend / day')).toBeNull()
-      const dailySpendingRoom = screen.getByText('Daily spending room')
-      expect(dailySpendingRoom).toBeTruthy()
-      expect(dailySpendingRoom.parentElement?.textContent).toContain('$47.90/day')
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it('describes an unsustainable pace against the remaining daily allowance', () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date(2026, 6, 20))
-
-    try {
-      render(<DashboardView {...makeProps({
-        dashboardData: {
-          ...dashboardData,
-          todayPlanInsights: {
-            ...dashboardData.todayPlanInsights!,
-            nonRecurringEssentialsDailyAverage: 100,
-          },
-        },
-      })} />)
-
-      expect(screen.getByText(/faster than your remaining daily allowance/)).toBeTruthy()
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it('links the summary to reports and ledger details', () => {
-    const props = makeProps()
-    render(<DashboardView {...props} />)
-
-    const reportsButton = screen.getByRole('button', { name: /View full reports/ })
-    fireEvent.click(reportsButton)
-    expect(props.onNavigate).toHaveBeenCalledWith('reports')
-    expect(reportsButton.parentElement?.className).toContain('justify-end')
-
-    fireEvent.click(screen.getByText('Essentials remaining'))
-    expect(props.onNavigateToLedger).toHaveBeenCalledWith({ category: 'Essentials' })
-  })
-
   it('navigates to Essentials outflows when Review Essentials spending is clicked', () => {
     const props = makeProps()
     render(<DashboardView {...props} />)
@@ -316,9 +277,8 @@ describe('DashboardView focused Today experience', () => {
     // The total wallet balance ($4,456.00) should be hidden
     expect(screen.queryByText(amount('$4,456.00'))).toBeNull()
     // Other metrics on screen should remain visible
-    expect(screen.getByText(amount('$1,185.00'))).toBeDefined()
-    // The unpaid total and the bill's own row both name it.
-    expect(screen.getAllByText(amount('$15.00')).length).toBe(2)
+    expect(screen.getByText(amount('$15.00'))).toBeDefined()
+    expect(screen.getByText(amount('$300.00'))).toBeDefined()
     // Only 1 masked amount (the total wallet balance)
     expect(screen.getAllByText(SENSITIVE_AMOUNT_MASK).length).toBe(1)
   })

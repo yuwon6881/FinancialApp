@@ -1,4 +1,3 @@
-import { useId } from 'react'
 import { cn } from '../../lib/utils'
 
 interface SparklineProps {
@@ -24,7 +23,6 @@ export function Sparkline({
   area = true,
   className,
 }: SparklineProps) {
-  const gradientId = useId()
   const finite = values.filter(Number.isFinite)
   if (finite.length < 2) return null
   const min = Math.min(...finite)
@@ -49,13 +47,7 @@ export function Sparkline({
     >
       {area && (
         <>
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.28} />
-              <stop offset="100%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <path d={fill} fill={`url(#${gradientId})`} />
+          <path d={fill} fill={color} fillOpacity={0.12} />
         </>
       )}
       <path d={line} fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" />

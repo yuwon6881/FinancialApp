@@ -45,9 +45,7 @@ export function TodayHero({
       : `Ended ${shortDate(cycle.endDate)}`
 
   return (
-    <section aria-labelledby="today-hero-heading" className={cn(panelClass, 'relative isolate overflow-hidden p-5 sm:p-7')}>
-      {/* The page's one light source: a soft brand glow behind the balance. Decorative only. */}
-      <div aria-hidden="true" className="today-hero-glow pointer-events-none absolute -z-10" />
+    <section aria-labelledby="today-hero-heading" className={cn(panelClass, 'p-5 sm:p-7')}>
       <div className="flex flex-col gap-6 @xl:flex-row @xl:items-end @xl:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-1">

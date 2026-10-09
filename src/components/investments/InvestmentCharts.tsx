@@ -93,16 +93,11 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
             onTouchMove={event => selectNearest(event.touches[0].clientX)}
           >
             <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} className="h-full w-full overflow-visible" role="img" aria-label={summary}>
-              <defs>
-                <linearGradient id="investmentValueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--ledger-purple-500)" stopOpacity="0.24" />
-                  <stop offset="100%" stopColor="var(--ledger-purple-500)" stopOpacity="0" />
-                </linearGradient>
-              </defs>
               <m.polygon
                 key={`investment-area-${range}`}
                 points={`0,${height} ${line('totalValue')} ${width},${height}`}
-                fill="url(#investmentValueGradient)"
+                fill="var(--ledger-purple-500)"
+                fillOpacity={0.1}
                 initial={reduceMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.45 }}

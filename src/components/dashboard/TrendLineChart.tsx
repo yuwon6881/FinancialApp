@@ -116,12 +116,6 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
           {splinePath ? (
             <>
               <svg ref={svgRef} role="img" aria-label={chartSummary} className="h-full w-full overflow-visible" viewBox="0 0 500 120">
-                <defs>
-                  <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.28" />
-                    <stop offset="100%" stopColor="var(--chart-line)" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
                 {hoveredIndex !== null && positions[hoveredIndex] && (
                   <line
                     x1={positions[hoveredIndex].x}
@@ -138,7 +132,8 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                 {points.length > 1 && fillPath && <m.path
                   key={`fill-${range}`}
                   d={fillPath}
-                  fill="url(#growthGradient)"
+                  fill="var(--chart-line)"
+                  fillOpacity={0.1}
                   initial={reduceMotion ? false : { opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: reduceMotion ? 0 : 0.4, ease: 'easeInOut' }}

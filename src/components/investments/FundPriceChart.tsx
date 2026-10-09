@@ -79,15 +79,10 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
           role="img"
           aria-label={masked ? 'Fund price history values hidden' : summary}
         >
-          <defs>
-            <linearGradient id="fundPriceGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--ledger-purple-500)" stopOpacity="0.22" />
-              <stop offset="100%" stopColor="var(--ledger-purple-500)" stopOpacity="0" />
-            </linearGradient>
-          </defs>
           <m.polygon
             points={`0,${HEIGHT} ${polylinePoints(prices, geometry)} ${WIDTH},${HEIGHT}`}
-            fill="url(#fundPriceGradient)"
+            fill="var(--ledger-purple-500)"
+            fillOpacity={0.1}
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}

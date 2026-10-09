@@ -16,7 +16,6 @@ import { StabilityRecoveryExceptionCard } from './dashboard/StabilityRecoveryExc
 import { RecurringAccountShortfallCard } from './dashboard/RecurringAccountShortfallCard'
 import { NoticeCard } from './dashboard/NoticeCard'
 import { TodayHero } from './dashboard/TodayHero'
-import { PlanSnapshot } from './dashboard/PlanSnapshot'
 import { RewardGoalCard } from './dashboard/RewardGoalCard'
 import { UpcomingBills } from './dashboard/UpcomingBills'
 import { getDocumentRetentionReview } from '../lib/api/documents'
@@ -90,8 +89,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const safeMonthIndex = monthIndex > 0 ? monthIndex : new Date().getMonth() + 1
     return getCycleProgress(view.activeSettings.selectedYear || new Date().getFullYear(), safeMonthIndex, view.activeSettings.cycleDay || 28)
   }, [view.activeSettings.cycleDay, view.activeSettings.selectedMonth, view.activeSettings.selectedYear])
-  // One evaluation feeds both the challenge card and the plan snapshot's daily figures, so Today
-  // cannot quote two different allowances for the same money.
   const challenge = React.useMemo(() => evaluateEssentialsChallenge({
     totalAvailable: view.essentialsMetric.totalAvailable,
     projectedRemaining: view.essentialsMetric.projectedRemaining,
@@ -108,13 +105,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const currency = view.activeSettings.currency || 'USD'
   const openBill = onNavigateToRecurring ?? (() => onNavigate('recurring'))
-  const hasSideColumn = Boolean(view.wishlistGoal) || view.activeRecurring.some(payment => payment.status === 'Pending' || payment.status === 'PartiallyPaid')
+  const hasOutstandingBills = view.activeRecurring.some(payment => payment.status === 'Pending' || payment.status === 'PartiallyPaid')
 
   return (
     <div className="@container space-y-8">
       <PageHeader
         title="Today"
         description={`Current cycle · ${formatCycleRange(view.cycleLabel)}`}
+        actions={(
+          <EssentialsChallengeCard
+            challenge={challenge}
+            cycle={cycleProgress}
+            formatSensitive={view.formatSensitive}
+            onReviewEssentials={onNavigateToLedger ? () => onNavigateToLedger({ category: 'Essentials', txType: 'outflow' }) : undefined}
+          />
+        )}
       />
 
       <TodayHero
@@ -172,51 +177,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </section>
 
-      <div className="grid gap-8 @4xl:grid-cols-12 @4xl:gap-6">
-        <div data-testid="today-plan-grid" className={hasSideColumn ? '@4xl:col-span-8' : '@4xl:col-span-12'}>
-          <PlanSnapshot
-            currency={currency}
-            hideSensitive={hideSensitive}
-            cycle={cycleProgress}
-            challenge={challenge}
-            essentials={view.essentialsMetric}
-            stability={view.stabilityMetric}
-            insights={view.todayPlanInsights}
-            recurring={view.activeRecurring}
-            scoreChip={(
-              <EssentialsChallengeCard
-                challenge={challenge}
-                cycle={cycleProgress}
-                formatSensitive={view.formatSensitive}
-                onReviewEssentials={onNavigateToLedger ? () => onNavigateToLedger({ category: 'Essentials', txType: 'outflow' }) : undefined}
-              />
-            )}
-            onOpenLedger={onNavigateToLedger}
-            onOpenBills={() => onNavigate('recurring')}
-            onOpenReports={() => onNavigate('reports')}
-          />
-        </div>
-
-        {hasSideColumn && (
-          <div className="grid content-start items-start gap-6 @2xl:grid-cols-2 @4xl:col-span-4 @4xl:grid-cols-1 @4xl:pt-14">
-            {view.wishlistGoal && (
-              <RewardGoalCard
-                goal={view.wishlistGoal}
-                currency={currency}
-                hideSensitive={hideSensitive}
-                onOpen={() => onNavigate('wishlist')}
-              />
-            )}
-            <UpcomingBills
-              payments={view.activeRecurring}
+      {(view.wishlistGoal || hasOutstandingBills) && (
+        <div className="grid items-start gap-6 @3xl:grid-cols-2">
+          {view.wishlistGoal && (
+            <RewardGoalCard
+              goal={view.wishlistGoal}
               currency={currency}
               hideSensitive={hideSensitive}
-              onOpenBill={openBill}
-              onOpenAll={() => onNavigate('recurring')}
+              onOpen={() => onNavigate('wishlist')}
             />
-          </div>
-        )}
-      </div>
+          )}
+          <UpcomingBills
+            payments={view.activeRecurring}
+            currency={currency}
+            hideSensitive={hideSensitive}
+            onOpenBill={openBill}
+            onOpenAll={() => onNavigate('recurring')}
+          />
+        </div>
+      )}
     </div>
   )
 }
