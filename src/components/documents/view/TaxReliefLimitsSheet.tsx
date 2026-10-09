@@ -112,7 +112,7 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
                 key={category.id}
                 className={`rounded-lg border p-2.5 transition-all duration-150 ${
                   isDraftChanged
-                    ? 'border-blue-500/40 bg-blue-500/5 ring-2 ring-blue-500/50'
+                    ? 'border-primary/40 bg-primary/5 ring-2 ring-primary/50'
                     : 'border-border/60'
                 }`}
               >
@@ -123,8 +123,8 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
                     {draftErrors.form && <p role="alert" className="text-caption font-semibold text-destructive sm:col-span-2">{draftErrors.form}</p>}
                     <div className="flex items-center justify-end gap-1.5 sm:col-span-2">
                       {isDraftChanged && (
-                        <span className="mr-auto flex items-center gap-1 text-caption font-semibold text-blue-500">
-                          <span className="inline-block size-1.5 rounded-full bg-blue-500" title="Unsaved change" />
+                        <span className="mr-auto flex items-center gap-1 text-caption font-semibold text-accent-ink">
+                          <span className="inline-block size-1.5 rounded-full bg-primary" title="Unsaved change" />
                           Unsaved changes
                         </span>
                       )}
@@ -136,7 +136,7 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
                   <div className="space-y-1.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="min-w-0 flex-1 text-caption text-muted-foreground">
-                        Delete <span className="font-bold text-foreground">{category.name}</span> from YA {selectedYear}? Documents already filed under it must be moved first.
+                        Delete <span className="font-semibold text-foreground">{category.name}</span> from YA {selectedYear}? Documents already filed under it must be moved first.
                       </p>
                       <div className="flex shrink-0 gap-1.5">
                         <Button
@@ -162,7 +162,7 @@ export const TaxReliefLimitsSheet: React.FC<TaxReliefLimitsSheetProps> = ({
                   <div className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-center gap-2">
-                        <p className="truncate text-body font-bold">{category.name}</p>
+                        <p className="truncate text-body font-semibold">{category.name}</p>
                         <RowSyncStatus
                           entityLabel="tax relief category"
                           isDeleting={isCategoryDeleting(category.id)}

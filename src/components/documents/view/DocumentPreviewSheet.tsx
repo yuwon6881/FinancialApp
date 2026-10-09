@@ -191,7 +191,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
           {(preview.status === 'unsupported' || preview.status === 'error') && (
             <div className="m-auto max-w-sm p-8 text-center">
               <FileWarning className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
-              <p className="mt-3 text-sm font-bold text-foreground">Preview unavailable</p>
+              <p className="mt-3 text-subsection text-foreground">Preview unavailable</p>
               <p className="mt-1 text-caption leading-relaxed text-muted-foreground">
                 {preview.status === 'unsupported'
                   ? 'This file format is not supported by the preview. Download it to open it with another app.'
@@ -216,7 +216,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
               variant="tertiary"
               size="sm"
               onClick={handleResetZoom}
-              className="h-11 min-w-14 px-2 text-caption font-bold text-foreground hover:bg-muted/50 transition sm:h-8 sm:min-w-12"
+              className="h-11 min-w-14 px-2 text-caption font-semibold text-foreground hover:bg-muted/50 transition sm:h-8 sm:min-w-12"
               title="Reset zoom to fit screen"
             >
               {Math.round(zoomScale * 100)}%

@@ -153,12 +153,12 @@ export function DocumentCard({
                 className="size-4 shrink-0 accent-primary"
               />
             )}
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink">
+            <span className="grid size-10 shrink-0 place-items-center rounded-control bg-primary/10 text-accent-ink">
               <DocumentTypeIcon contentType={document.contentType} className="size-4" />
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-1.5">
-                <p className="truncate text-body font-bold leading-snug text-foreground" title={document.originalFileName}>
+                <p className="truncate text-body font-semibold leading-snug text-foreground" title={document.originalFileName}>
                   {document.originalFileName}
                 </p>
                 <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isFailed={isFailed} isPending={document.isPendingSync} entityLabel="document" />
@@ -201,14 +201,14 @@ export function DocumentCard({
                   disabled={hideSensitive || isBusy}
                   onClick={() => setEditingRelief(true)}
                   aria-label={`Change tax relief category for ${document.originalFileName}`}
-                  className={`inline-flex min-h-11 max-w-full shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 text-caption font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-8 ${
+                  className={`inline-flex min-h-11 max-w-full shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-caption font-medium text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-8 ${
                     isReliefDraftChanged
-                      ? 'border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/10 ring-2 ring-blue-500/50'
+                      ? 'border-primary/40 bg-primary/10 hover:bg-primary/10 ring-2 ring-primary/50'
                       : 'border-border/60 bg-muted/40 hover:bg-muted/40'
                   }`}
                 >
                   <span className="max-w-32 truncate">{reliefName}</span>
-                  {isReliefDraftChanged && <span className="inline-block size-1.5 rounded-full bg-blue-500" title="Unsaved change" />}
+                  {isReliefDraftChanged && <span className="inline-block size-1.5 rounded-full bg-primary" title="Unsaved change" />}
                   <Pencil className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
                 </Button>
               )}
@@ -220,7 +220,7 @@ export function DocumentCard({
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <p className="flex items-center gap-1.5 text-label font-medium text-muted-foreground">
                   Tax relief category <span className="text-destructive">*</span>
-                  {isReliefDraftChanged && <span className="inline-block size-1.5 rounded-full bg-blue-500" title="Unsaved change" />}
+                  {isReliefDraftChanged && <span className="inline-block size-1.5 rounded-full bg-primary" title="Unsaved change" />}
                 </p>
                 {canCancelRelief && (
                   <Button size="icon"
@@ -247,7 +247,7 @@ export function DocumentCard({
                   ...reliefCategories.map(category => ({ value: category.id, label: category.name })),
                 ]}
                 ariaLabel={`Tax relief category for ${document.originalFileName}`}
-                className={`w-full ${isReliefDraftChanged ? 'rounded-lg ring-2 ring-blue-500/50' : ''}`}
+                className={`w-full ${isReliefDraftChanged ? 'rounded-lg ring-2 ring-primary/50' : ''}`}
               />
             </div>
           )}
@@ -263,7 +263,7 @@ export function DocumentCard({
             <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border/30 py-2.5 text-caption">
               <div>
                 <dt className="text-label font-medium text-muted-foreground">Tax year</dt>
-                <dd className="mt-0.5 font-bold text-foreground tabular-nums">{document.taxYear}</dd>
+                <dd className="mt-0.5 font-semibold text-foreground tabular-nums">{document.taxYear}</dd>
               </div>
               <div>
                 <dt className="text-label font-medium text-muted-foreground">Size</dt>

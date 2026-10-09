@@ -5,7 +5,7 @@ import { Button } from '../../ui/Button'
 import { InteractiveCard } from '../../ui/InteractiveCard'
 import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
 import { getErrorMessage } from '../../../lib/errors'
-import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
+import { cn, formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
 import { HorizontalRail } from '../../ui/HorizontalRail'
 import { orderTaxReliefCategories } from '../../../lib/taxReliefOrdering'
 import { mapServerErrorToField, type ServerFieldRule } from '../../../lib/formErrors'
@@ -14,6 +14,7 @@ import { useSyncStatus } from '../../../lib/useOptimisticList'
 import { TaxReliefLimitsSheet } from './TaxReliefLimitsSheet'
 import { EmptyState } from '../../ui/EmptyState'
 import { Meter } from '../../ui/Meter'
+import { panelClass } from '../../ui/panelStyles'
 
 type CategoryInput = { name: string; limit: number }
 type CategoryDraft = { name: string; limit: string }
@@ -246,7 +247,7 @@ export function TaxReliefOverview({
   }
 
   return (
-    <section className="mb-4 rounded-control bg-surface-2/70 p-4" aria-labelledby="tax-relief-overview">
+    <section className={cn(panelClass, 'p-5')} aria-labelledby="tax-relief-overview">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 id="tax-relief-overview" className="flex items-center gap-2 text-subsection">
@@ -309,10 +310,10 @@ export function TaxReliefOverview({
                   }`}
                 >
                   <div className="flex min-w-0 items-start justify-between gap-2">
-                    <p className="min-w-0 truncate text-sm font-bold text-foreground" title={category.name}>{category.name}</p>
+                    <p className="min-w-0 truncate text-subsection text-foreground" title={category.name}>{category.name}</p>
                     <span className="flex shrink-0 items-center gap-1.5 transition">
                       {selected && (
-                        <span className="flex items-center gap-1 rounded-md border border-primary/40 bg-primary/15 px-1.5 py-0.5 text-caption font-bold text-accent-ink">
+                        <span className="flex items-center gap-1 rounded-full bg-primary/14 px-2 py-0.5 text-caption font-semibold text-accent-ink">
                           <Filter className="size-2.5" aria-hidden="true" />
                           Filtering
                         </span>
@@ -336,11 +337,11 @@ export function TaxReliefOverview({
                     />
                   </div>
                   <div className="mt-auto flex items-start justify-between gap-2 text-caption">
-                    <span className={full ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
+                    <span className={full ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
                       {full ? 'Limit reached' : `${money(Math.max(0, category.limit - category.confirmedAmount))} room left`}
                     </span>
                     <span className="flex flex-col items-end gap-0.5">
-                      {category.pendingReviewAmount > 0 && <span className="text-right font-semibold text-amber-600 dark:text-amber-400">+{money(category.pendingReviewAmount)} review</span>}
+                      {category.pendingReviewAmount > 0 && <span className="text-right font-semibold text-amber-700 dark:text-amber-300">+{money(category.pendingReviewAmount)} review</span>}
                       {Boolean(category.otherCurrencyDocumentCount && category.otherCurrencyDocumentCount > 0) && (
                         <span className="text-right text-muted-foreground">
                           {category.otherCurrencyDocumentCount} not in {currency}

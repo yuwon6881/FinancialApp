@@ -224,30 +224,29 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
     <BottomSheet isOpen={isOpen} onClose={onClose} maxWidthClassName="max-w-2xl"
       title={<span className="flex items-center gap-2"><UploadCloud className="size-4" />Upload tax documents</span>}
       footer={<ModalActions>
-        <Button variant="secondary" type="button" onClick={onClose} className="rounded-xl px-4">{results ? 'Done' : 'Cancel'}</Button>
+        <Button variant="secondary" type="button" onClick={onClose}>{results ? 'Done' : 'Cancel'}</Button>
         {/* Deliberately not disabled on missing files/category: an inert button
             explains nothing, while submitting surfaces the reason on the field. */}
-        {!results && <Button type="button" onClick={upload} disabled={isPreparing || isUploading}
-          className="rounded-xl px-5 shadow-md">
+        {!results && <Button type="button" onClick={upload} disabled={isPreparing || isUploading}>
           {isPreparing ? 'Preparing…' : isUploading ? 'Uploading and reading amounts…' : `Upload ${files.length || ''}`}
         </Button>}
       </ModalActions>}>
       <div className="space-y-4" ref={sheetBodyRef}>
         {results ? (
           <div className="space-y-3" role="status">
-            <div className={`rounded-xl border p-3 ${failedCount ? 'border-amber-500/30 bg-amber-500/8' : 'border-emerald-500/30 bg-emerald-500/8'}`}>
-              <p className="text-sm font-bold text-foreground">{results.filter(result => result.uploaded).length} saved · {failedCount} failed</p>
+            <div className={`rounded-control p-3 ${failedCount ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}>
+              <p className="text-body font-semibold text-foreground">{results.filter(result => result.uploaded).length} saved · {failedCount} failed</p>
             </div>
-            {results.map(result => <div key={result.fileName} className="flex items-start gap-2 rounded-xl border border-border/60 p-3">
+            {results.map(result => <div key={result.fileName} className="flex items-start gap-2 rounded-control bg-surface-2/70 p-3">
               {result.uploaded ? <CheckCircle2 className="mt-0.5 size-4 text-emerald-500" /> : <XCircle className="mt-0.5 size-4 text-destructive" />}
-              <div className="min-w-0"><p className="truncate text-body font-bold">{result.fileName}</p>
+              <div className="min-w-0"><p className="truncate text-body font-semibold">{result.fileName}</p>
                 <p className="text-caption text-muted-foreground">{result.uploaded ? 'Saved. Amount extraction is ready for review.' : result.message || 'Upload failed.'}</p></div>
             </div>)}
           </div>
         ) : <>
           <FormField label="Documents" required error={validationErrors.files}>
-            <Button variant="tertiary" type="button" onClick={() => inputRef.current?.click()} className="mt-1.5 flex w-full flex-col items-center rounded-xl border border-dashed border-border px-4 py-7 hover:bg-muted/40 cursor-pointer">
-              <UploadCloud className="mb-2 size-8 text-muted-foreground/60" /><span className="text-body font-bold text-foreground">Choose one or multiple files</span>
+            <Button variant="tertiary" type="button" onClick={() => inputRef.current?.click()} className="mt-1.5 flex w-full flex-col items-center rounded-panel border border-dashed border-border px-4 py-7 hover:bg-surface-2/60 cursor-pointer">
+              <UploadCloud className="mb-2 size-8 text-muted-foreground/60" /><span className="text-body font-semibold text-foreground">Choose one or multiple files</span>
               <span className="mt-1 text-caption text-muted-foreground">Up to {constraints.maxBulkDocuments} files · {formatMb(constraints.maxDocumentBytes)} each</span>
             </Button>
             <Input ref={inputRef} type="file" multiple={!defaultTransactionId} className="hidden"
@@ -259,7 +258,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
               const tooLarge = file.size > constraints.maxDocumentBytes
               return <div key={`${file.name}-${index}`} className={`flex items-center gap-2 rounded-lg border p-2 ${tooLarge ? 'border-destructive/40 bg-destructive/5' : 'border-border/60'}`}>
                 <FileText className="size-4 shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1">
-                  <p className="truncate text-body font-bold">{file.name}</p><p className={`text-caption ${tooLarge ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  <p className="truncate text-body font-semibold">{file.name}</p><p className={`text-caption ${tooLarge ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {formatMb(file.size)}{tooLarge ? ` · exceeds ${formatMb(constraints.maxDocumentBytes)}` : ''}</p></div>
                 <IconButton type="button" label={`Remove ${file.name}`} onClick={() => setFiles(current => current.filter((_, itemIndex) => itemIndex !== index))} className="size-11 cursor-pointer rounded-lg transition-colors hover:bg-muted/50 sm:size-8"><X className="size-4" /></IconButton>
               </div>

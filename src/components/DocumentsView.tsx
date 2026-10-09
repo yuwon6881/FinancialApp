@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
-import { Download, Loader2, ShieldCheck, UploadCloud } from 'lucide-react'
+import { Download, Loader2, UploadCloud } from 'lucide-react'
 import { DocumentUploadSheet } from './documents/DocumentUploadSheet'
 import { VaultRetentionNotice } from './documents/VaultRetentionNotice'
 import { useDocumentsView } from './documents/view/useDocumentsView'
@@ -195,12 +195,11 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Document Vault"
-        icon={<span className="grid size-10 place-items-center rounded-xl bg-accent text-accent-ink"><ShieldCheck className="size-5" /></span>}
+        title="Vault"
+        description="Receipts, invoices and statements, kept for tax season."
         actions={<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
           <Button
             variant="secondary"
-            size="lg"
             type="button"
             disabled={hideSensitive || isDownloadingArchive || availableYears.length === 0}
             onClick={() => {
@@ -210,20 +209,19 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 showToast(getErrorMessage(error, 'The ZIP archive could not be prepared.'), 'Download Failed', 'error'))
                 .finally(() => setIsDownloadingArchive(false))
             }}
-            className="w-full justify-center rounded-xl bg-card hover:bg-card text-xs sm:w-auto"
+            className="w-full justify-center sm:w-auto"
           >
             <Download className="size-4" /> {isDownloadingArchive ? 'Preparing ZIP…' : taxYear ? `Download ${taxYear}` : 'Download all'}
           </Button>
           <Button
             variant="primary"
-            size="lg"
             type="button"
             disabled={hideSensitive}
             onClick={() => {
               if (!guardSensitive()) return
               setIsUploadSheetOpen(true)
             }}
-            className="w-full shrink-0 justify-center rounded-xl text-xs shadow-md sm:w-auto"
+            className="w-full shrink-0 justify-center sm:w-auto"
           >
             <UploadCloud className="size-4" />
             Upload
@@ -234,7 +232,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
       <VaultRetentionNotice review={retentionReview} />
 
       {/* Vault insights */}
-      <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs sm:p-4">
+      <div className="space-y-4">
         <StorageUsageMeter usage={usage} />
 
         <TaxReliefOverview
@@ -280,12 +278,12 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
       </div>
 
       {/* Documents */}
-      <section className="rounded-none border-0 bg-transparent p-0 shadow-none sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card sm:p-4 sm:shadow-xs" aria-labelledby="vault-documents-heading">
+      <section aria-labelledby="vault-documents-heading">
         <SectionHeader
           title="Your documents"
           titleId="vault-documents-heading"
           meta={<Badge>{totalCount} file{totalCount === 1 ? '' : 's'}</Badge>}
-          className="mb-3 sm:px-3"
+          className="mb-3"
         />
 
         <DocumentFilterBar
@@ -305,27 +303,26 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         {loadError && <DocumentsLoadError message={loadError} isLoading={isLoading} onRetry={() => void loadDocuments()} />}
 
         {stagedCategories.staged.size > 0 && (
-          <div className="mb-3 flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-3 flex flex-col gap-3 rounded-control bg-primary/8 p-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-caption font-semibold">{stagedCategories.staged.size} tax relief categor{stagedCategories.staged.size === 1 ? 'y change' : 'y changes'} staged</p>
             </div>
             <div className="flex shrink-0 justify-end gap-2">
               <Button
-                variant="tertiary"
+                variant="secondary"
+                size="sm"
                 type="button"
                 disabled={stagedCategories.isSaving}
                 onClick={() => stagedCategories.clear()}
-                className="rounded-lg border border-border bg-card hover:bg-card px-3 py-2 text-xs font-semibold text-muted-foreground disabled:opacity-50"
               >
                 Discard
               </Button>
               <Button
-                variant="tertiary"
+                size="sm"
                 type="button"
                 disabled={stagedCategories.isSaving}
                 aria-busy={stagedCategories.isSaving}
                 onClick={() => void stagedCategories.save()}
-                className="rounded-lg bg-primary hover:bg-primary/90 px-3 py-2 text-caption font-semibold text-primary-foreground disabled:opacity-50"
               >
                 {stagedCategories.isSaving ? 'Saving…' : 'Save categories'}
               </Button>

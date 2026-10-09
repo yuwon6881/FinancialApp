@@ -147,7 +147,7 @@ export function DocumentList({
           it changes the list's position the moment a box is ticked. The buttons above are disabled
           at this point, and a disabled button with no stated reason reads as broken. */}
       {exceedsSelectionLimit && (
-        <p role="alert" className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/8 px-3 py-2 text-caption font-semibold text-amber-700 dark:text-amber-300">
+        <p role="alert" className="mb-3 rounded-control bg-amber-500/10 px-3 py-2 text-caption font-medium text-amber-700 dark:text-amber-300">
           You have {selectedIds.size} files picked, and these buttons work on up to {DOCUMENT_BULK_LIMIT} at a time.
           Untick {selectedIds.size - DOCUMENT_BULK_LIMIT} to carry on, or do it in two goes.
         </p>
@@ -169,7 +169,7 @@ export function DocumentList({
               </div>
             ))
           ) : documents.length === 0 ? (
-            <div className="rounded-xl border border-border/40 lg:col-span-2">
+            <div className="lg:col-span-2">
               <EmptyState isFiltered={isFiltered} />
             </div>
           ) : documents.map(document => (
@@ -199,15 +199,15 @@ export function DocumentList({
         ) : (
         <div className="w-full">
           <DataTable>
-            <DataTableHeader className="text-caption uppercase tracking-wider">
-              {isSelecting && <DataTableHeaderCell className="w-8 font-bold"><span className="sr-only">Select</span></DataTableHeaderCell>}
-              <DataTableHeaderCell className="font-bold">Document</DataTableHeaderCell>
-              <DataTableHeaderCell className="font-bold">Tax relief</DataTableHeaderCell>
-              <DataTableHeaderCell className="font-bold">Tax Year</DataTableHeaderCell>
-              <DataTableHeaderCell className="font-bold">Size</DataTableHeaderCell>
-              <DataTableHeaderCell className="font-bold">Amount</DataTableHeaderCell>
-              <DataTableHeaderCell className="font-bold">Uploaded</DataTableHeaderCell>
-              <DataTableHeaderCell className="text-right font-bold">Actions</DataTableHeaderCell>
+            <DataTableHeader>
+              {isSelecting && <DataTableHeaderCell className="w-8"><span className="sr-only">Select</span></DataTableHeaderCell>}
+              <DataTableHeaderCell>Document</DataTableHeaderCell>
+              <DataTableHeaderCell>Tax relief</DataTableHeaderCell>
+              <DataTableHeaderCell>Tax year</DataTableHeaderCell>
+              <DataTableHeaderCell>Size</DataTableHeaderCell>
+              <DataTableHeaderCell>Amount</DataTableHeaderCell>
+              <DataTableHeaderCell>Uploaded</DataTableHeaderCell>
+              <DataTableHeaderCell className="text-right">Actions</DataTableHeaderCell>
             </DataTableHeader>
             <DataTableBody>
               {isLoading && documents.length === 0 ? (
@@ -247,7 +247,7 @@ export function DocumentList({
                         </span>
                         <div className="min-w-0 max-w-[22rem]">
                           <div className="flex items-center gap-1.5">
-                            <p className="truncate font-bold text-foreground" title={document.originalFileName}>
+                            <p className="truncate font-semibold text-foreground" title={document.originalFileName}>
                               {document.originalFileName}
                             </p>
                             <LinkedTransactionButton
@@ -272,17 +272,17 @@ export function DocumentList({
                               ...documentReliefCategories.map(category => ({ value: category.id, label: category.name })),
                             ]}
                             ariaLabel={`Tax relief category for ${document.originalFileName}`}
-                            className={`w-40 max-w-40 ${isReliefDraftChanged ? 'rounded-lg ring-2 ring-blue-500/50' : ''}`}
+                            className={`w-40 max-w-40 ${isReliefDraftChanged ? 'rounded-lg ring-2 ring-primary/50' : ''}`}
                           />
                         ) : (
                           <Skeleton className="h-9 w-40" />
                         )}
-                        {isReliefDraftChanged && <span className="inline-block size-1.5 shrink-0 rounded-full bg-blue-500" title="Unsaved change" />}
+                        {isReliefDraftChanged && <span className="inline-block size-1.5 shrink-0 rounded-full bg-primary" title="Unsaved change" />}
                       </div>
                     </td>
-                    <td className="px-3 py-2.5 font-bold text-foreground tabular-nums">{document.taxYear}</td>
+                    <td className="px-3 py-2.5 font-semibold text-foreground tabular-nums">{document.taxYear}</td>
                     <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{formatBytes(document.sizeBytes)}</td>
-                    <td className="px-3 py-2.5"><AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />{document.amountStatus === 'NeedsReview' && <p className="mt-0.5 text-caption text-amber-600">AI · review</p>}</td>
+                    <td className="px-3 py-2.5"><AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />{document.amountStatus === 'NeedsReview' && <p className="mt-0.5 text-caption text-amber-700 dark:text-amber-300">AI · review</p>}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">
                       <div className="whitespace-nowrap">{formatDate(document.uploadedAt)}</div>
                       <div className="whitespace-nowrap text-caption">Keep until {formatDate(document.retentionUntil)}</div>
