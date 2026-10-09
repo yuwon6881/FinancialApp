@@ -54,7 +54,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
   const renderProjected = (pending: number, value: number) => {
     if (pending <= 0) return null
     return (
-      <span className="block mt-1 text-orange-500 font-semibold">
+      <span className="mt-1 block font-medium text-amber-700 dark:text-amber-300">
         Projected after pending: {formatSensitive(value)}
       </span>
     )
@@ -82,7 +82,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Growth', showAllCycles: true }))}
           role="button"
           tabIndex={0}
-          className="interactive-card space-y-2.5 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-violet-500/40 shadow-xs hover:shadow-lg hover:shadow-violet-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
+          className="interactive-card space-y-2.5 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-violet-500/40 shadow-xs hover:shadow-(--app-shadow-overlay) hover:shadow-violet-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
         >
           <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold">
             <span className="text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
@@ -92,7 +92,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
             <span className="text-foreground font-bold tabular-nums">
               {(growthMetric.currentPct * 100).toFixed(1)}%
               {growthMetric.pending > 0 && (
-                <span className="text-orange-500 ml-1">{'→'} {(growthMetric.safePct * 100).toFixed(1)}%</span>
+                <span className="ml-1 text-amber-700 dark:text-amber-300">{'→'} {(growthMetric.safePct * 100).toFixed(1)}%</span>
               )}
             </span>
           </div>
@@ -120,7 +120,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Essentials', showAllCycles: false }))}
           role="button"
           tabIndex={0}
-          className="interactive-card space-y-2.5 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-sky-500/40 shadow-xs hover:shadow-lg hover:shadow-sky-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
+          className="interactive-card space-y-2.5 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-sky-500/40 shadow-xs hover:shadow-(--app-shadow-overlay) hover:shadow-sky-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
         >
           <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold">
             <span className="text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
@@ -130,7 +130,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
             <span className="text-foreground font-bold tabular-nums">
               {(essentialsMetric.currentPct * 100).toFixed(1)}%
               {essentialsMetric.pending > 0 && (
-                <span className="text-orange-500 ml-1">{'→'} {(essentialsMetric.projectedPct * 100).toFixed(1)}%</span>
+                <span className="ml-1 text-amber-700 dark:text-amber-300">{'→'} {(essentialsMetric.projectedPct * 100).toFixed(1)}%</span>
               )}
             </span>
           </div>
@@ -158,7 +158,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Stability', showAllCycles: true }))}
           role="button"
           tabIndex={0}
-          className="interactive-card space-y-2.5 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-emerald-500/40 shadow-xs hover:shadow-lg hover:shadow-emerald-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
+          className="interactive-card space-y-2.5 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-emerald-500/40 shadow-xs hover:shadow-(--app-shadow-overlay) hover:shadow-emerald-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
         >
           <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold">
             <span className="text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
@@ -168,7 +168,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
             <span className="text-foreground font-bold tabular-nums">
               {stabilityMetric.hasTarget ? `${(stabilityMetric.currentPct * 100).toFixed(1)}%` : 'No limit set'}
               {stabilityMetric.pending > 0 && (
-                <span className="text-orange-500 ml-1">{'→'} {(stabilityMetric.projectedPct * 100).toFixed(1)}%</span>
+                <span className="ml-1 text-amber-700 dark:text-amber-300">{'→'} {(stabilityMetric.projectedPct * 100).toFixed(1)}%</span>
               )}
             </span>
           </div>

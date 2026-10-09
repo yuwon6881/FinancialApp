@@ -68,7 +68,7 @@ describe('ReportsView', () => {
       />,
     )
 
-    expect(screen.getByRole('heading', { name: 'Reports' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Insights' })).toBeTruthy()
     expect(screen.getByText('Carryover report')).toBeTruthy()
     expect(screen.getByText('Plan performance report')).toBeTruthy()
     expect(screen.getByText('Cycle flow report')).toBeTruthy()

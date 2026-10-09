@@ -30,16 +30,16 @@ export function CategoryLimitPerformance({
       <section className={cn(panelClass, 'flex h-full flex-col justify-between p-5')}>
         <div className="flex items-center justify-between gap-3">
           <h3 className="flex items-center gap-1.5 text-subsection text-foreground">
-            <Gauge className="size-4 text-blue-500" /> Category limit performance
+            <Gauge className="size-4 text-muted-foreground" /> Category limit performance
           </h3>
         </div>
         <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-border/70 bg-muted/15 px-6 py-7 text-center sm:flex-row sm:justify-between sm:text-left">
           <div className="flex flex-col items-center gap-3.5 sm:flex-row sm:gap-4">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-500 shadow-sm">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted-foreground">
               <SlidersHorizontal className="size-5" />
             </div>
             <div className="space-y-1">
-              <h4 className="text-xs font-bold text-foreground">No category spending guides configured</h4>
+              <h4 className="text-caption font-semibold text-foreground">No category spending guides configured</h4>
               <p className="max-w-md text-xs text-muted-foreground leading-relaxed">
                 Set category limits to track spending pace and warnings.
               </p>
@@ -49,7 +49,7 @@ export function CategoryLimitPerformance({
             <Button variant="tertiary"
               type="button"
               onClick={() => onNavigate('budget', { search: { section: 'categories' } })}
-              className="mt-4 inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3.5 py-2 text-xs font-bold text-blue-500 transition hover:border-blue-500/50 hover:bg-blue-500/20 cursor-pointer sm:mt-0"
+              className="mt-4 inline-flex min-h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-border/70 px-4 text-label font-medium text-foreground transition hover:bg-surface-2 sm:mt-0"
             >
               <span>Set Up Limits</span>
               <ArrowRight className="size-3.5" />
@@ -74,7 +74,7 @@ export function CategoryLimitPerformance({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-1.5 text-subsection text-foreground">
-            <Gauge className="size-4 text-blue-500" /> Category limit performance
+            <Gauge className="size-4 text-muted-foreground" /> Category limit performance
             <InfoHint
               label="category limit performance"
               text="Bars show spending against your limit; marker projects the cycle-end total."
@@ -87,7 +87,7 @@ export function CategoryLimitPerformance({
         {exceptionCount === 0 ? (
           <CheckCircle2 className="size-5 shrink-0 text-emerald-500" />
         ) : (
-          <AlertTriangle className="size-5 shrink-0 text-amber-500" />
+          <AlertTriangle className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
         )}
       </div>
 
@@ -110,9 +110,9 @@ export function CategoryLimitPerformance({
                 // status colour rather than fade out under the primitive's disabled treatment.
                 !onNavigateToLedger && 'disabled:cursor-default disabled:opacity-100',
                 exceeded
-                  ? 'border-orange-500/30 bg-orange-500/5'
+                  ? 'border-red-500/35'
                   : watch
-                    ? 'border-amber-500/30 bg-amber-500/5'
+                    ? 'border-amber-500/35'
                     : 'border-border/50 bg-muted/20',
               )}
             >
@@ -120,18 +120,18 @@ export function CategoryLimitPerformance({
                 <span className={`min-w-0 truncate rounded-md border px-2 py-0.5 text-xs font-semibold ${getCategoryBadgeClass(item.category)}`}>
                   {item.category}
                 </span>
-                <span className={`shrink-0 text-eyebrow uppercase ${exceeded ? 'text-orange-500' : watch ? 'text-amber-500' : 'text-emerald-500'}`}>
+                <span className={`shrink-0 text-label font-medium ${exceeded ? 'text-red-600 dark:text-red-400' : watch ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-600 dark:text-emerald-400'}`}>
                   {exceeded ? 'Exceeded' : watch ? 'Watch' : 'On track'}
                 </span>
               </div>
 
               <div className="mt-3 flex items-baseline justify-between gap-2">
-                <span className="text-sm font-extrabold text-foreground tabular-nums">{formatSensitive(item.spent)}</span>
+                <span className="text-sm font-semibold text-foreground tabular-nums">{formatSensitive(item.spent)}</span>
                 <span className="text-xs font-medium text-muted-foreground tabular-nums">of {formatSensitive(item.limit)}</span>
               </div>
               <div className="relative mt-2.5 h-2.5 overflow-hidden rounded-full bg-muted/80">
                 <div
-                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${exceeded ? 'bg-orange-500' : watch ? 'bg-amber-500' : 'bg-blue-500'}`}
+                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${exceeded ? 'bg-red-500' : watch ? 'bg-amber-500' : 'bg-primary'}`}
                   style={{ width: `${Math.min(100, usedPct)}%` }}
                 />
                 {!exceeded && projectedPct > usedPct && (
@@ -144,11 +144,11 @@ export function CategoryLimitPerformance({
               </div>
 
               <div className="mt-2.5 flex items-center justify-between gap-2 text-xs font-medium">
-                <span className={exceeded ? 'font-bold text-orange-500 tabular-nums' : 'text-muted-foreground tabular-nums'}>
+                <span className={exceeded ? 'font-semibold text-red-600 dark:text-red-400 tabular-nums' : 'text-muted-foreground tabular-nums'}>
                   {exceeded ? <>{formatSensitive(Math.abs(item.remaining))} over</> : <>{formatSensitive(item.remaining)} left</>}
                 </span>
                 {watch && (
-                  <span className="flex items-center gap-1 font-semibold text-amber-500 tabular-nums">
+                  <span className="flex items-center gap-1 font-medium text-amber-700 dark:text-amber-300 tabular-nums">
                     <TrendingUp className="size-3.5" /> projects {formatSensitive(item.projectedSpend)}
                   </span>
                 )}

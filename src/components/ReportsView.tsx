@@ -133,7 +133,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   return (
     <div className="min-w-0 space-y-6 overflow-x-hidden">
       <PageHeader
-        title="Reports"
+        title="Insights"
         description={view.cycleLabel}
         icon={<span className="flex size-10 items-center justify-center rounded-xl border border-blue-500/15 bg-blue-500/10 text-blue-500"><BarChart3 className="size-5" /></span>}
         titleActions={onExplainWithAi && (
@@ -207,8 +207,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </span>
         <span className="flex items-center justify-between gap-4 border-t border-violet-500/10 pt-3 sm:shrink-0 sm:border-0 sm:pt-0 sm:text-right">
           <span>
-            <span className="block text-eyebrow uppercase text-muted-foreground">Growth ledger balance</span>
-            <span className="block truncate text-lg font-black text-foreground sm:mt-1">
+            <span className="block text-label font-medium text-muted-foreground">Growth ledger balance</span>
+            <span className="block truncate text-lg font-semibold text-foreground sm:mt-1">
               {view.formatSensitive(view.categories.find(category => category.name === 'Growth')?.remaining ?? 0)}
             </span>
           </span>

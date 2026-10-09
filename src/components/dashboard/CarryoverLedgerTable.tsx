@@ -79,17 +79,17 @@ export function CarryoverLedgerTable({
                 <div className="text-muted-foreground font-medium">{(category.allocation * 100).toFixed(0)}%</div>
                 <div className="text-right font-medium text-foreground">{amount(category.incomeAllocated ?? category.target)}</div>
                 <div className="text-right text-muted-foreground font-medium">{amount(category.budget)}</div>
-                <div className={`text-right font-medium ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : ''}`}>
+                <div className={`text-right font-medium ${category.netChange > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
                   <div><SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} /></div>
                   {rewards ? <div className="mt-0.5 text-xs font-normal text-muted-foreground">Committed: {amount(rewards.committed)}</div>
                     : pending > 0 && <div className="mt-0.5 flex items-center justify-end gap-1 text-xs font-normal text-yellow-500"><Clock className="size-3 shrink-0" />Pending: -{amount(pending)}</div>}
                 </div>
                 <div className="text-right">
-                  <div className={`font-bold ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
+                  <div className={`font-bold ${category.remaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
                     <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                   </div>
                   {rewards ? <div className="mt-0.5 text-xs font-semibold text-foreground">Free to spend: {amount(rewards.freeToSpend)}</div>
-                    : pending > 0 && <div className={`mt-0.5 text-xs font-semibold ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</div>}
+                    : pending > 0 && <div className={`mt-0.5 text-xs font-semibold ${(category.remaining - pending) < 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>Projected: {amount(category.remaining - pending)}</div>}
                 </div>
               </div>
             )
@@ -139,7 +139,7 @@ export function CarryoverLedgerTable({
                 <div className="min-w-0">
                   <span className="text-muted-foreground text-xs block mb-0.5">Net Change</span>
                   <div className="min-w-0">
-                    <span className={`font-bold tabular-nums [overflow-wrap:anywhere] ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
+                    <span className={`font-bold tabular-nums [overflow-wrap:anywhere] ${category.netChange > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
                       <SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} />
                     </span>
                   </div>
@@ -149,12 +149,12 @@ export function CarryoverLedgerTable({
                 <div className="min-w-0">
                   <span className="text-muted-foreground text-xs block mb-0.5">Remaining Balance</span>
                   <div className="min-w-0">
-                    <span className={`font-bold tabular-nums [overflow-wrap:anywhere] ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
+                    <span className={`font-bold tabular-nums [overflow-wrap:anywhere] ${category.remaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
                       <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                     </span>
                   </div>
                   {rewards ? <SubMetric label="Free to spend" value={amount(rewards.freeToSpend)} />
-                    : pending > 0 && <SubMetric label="Projected" value={amount(category.remaining - pending)} className={(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'} />}
+                    : pending > 0 && <SubMetric label="Projected" value={amount(category.remaining - pending)} className={(category.remaining - pending) < 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'} />}
                 </div>
               </div>
             </div>
@@ -175,7 +175,7 @@ export function CarryoverLedgerTable({
             </div>
           }
           headerActions={
-            <span className={`rounded-md border px-2 py-0.5 text-xs font-bold shrink-0 ${getCategoryBadgeClass(selectedCategory.name)}`}>
+            <span className={`rounded-md border px-2 py-0.5 text-caption font-semibold shrink-0 ${getCategoryBadgeClass(selectedCategory.name)}`}>
               {(selectedCategory.allocation * 100).toFixed(0)}% Allocation
             </span>
           }
@@ -239,7 +239,7 @@ export function CarryoverLedgerTable({
                         value={account.remaining}
                         isMasked={amountsMasked}
                         formatFn={formatCurrency}
-                        className={`font-bold tabular-nums text-sm ${account.remaining < 0 ? 'text-orange-500 dark:text-orange-400' : 'text-foreground'}`}
+                        className={`font-bold tabular-nums text-sm ${account.remaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}
                       />
                       {onNavigateToAccounts && (
                         <Button
@@ -261,10 +261,10 @@ export function CarryoverLedgerTable({
                   </div>
                 ))}
               </div>
-              <div className="flex items-center justify-between gap-2 border-t border-border/70 bg-muted/40 px-4 py-3.5 text-xs font-bold">
+              <div className="flex items-center justify-between gap-2 border-t border-border/70 bg-muted/40 px-4 py-3.5 text-caption font-semibold">
                 <div className="flex min-w-0 items-center gap-2 text-foreground">
                   <span className="whitespace-nowrap">{isCurrentCycle ? 'Total accounts balance' : 'Total balance at close'}</span>
-                  <span className={`rounded-md border px-1.5 py-0.5 text-xs font-bold shrink-0 whitespace-nowrap ${getCategoryBadgeClass(selectedCategory.name)}`}>
+                  <span className={`rounded-md border px-1.5 py-0.5 text-caption font-semibold shrink-0 whitespace-nowrap ${getCategoryBadgeClass(selectedCategory.name)}`}>
                     {selectedCategory.accounts?.length ?? 0} {selectedCategory.accounts?.length === 1 ? 'account' : 'accounts'}
                   </span>
                 </div>
@@ -272,7 +272,7 @@ export function CarryoverLedgerTable({
                   value={selectedCategory.accounts?.reduce((sum, a) => sum + a.remaining, 0) ?? 0}
                   isMasked={amountsMasked}
                   formatFn={formatCurrency}
-                  className="shrink-0 text-base font-extrabold tabular-nums text-foreground"
+                  className="shrink-0 text-base font-semibold tabular-nums text-foreground"
                 />
               </div>
             </div>

@@ -29,7 +29,7 @@ export const AccountMentionMenu: React.FC<AccountMentionMenuProps> = ({
     id="ai-account-mentions"
     role="listbox"
     aria-label="Ledger accounts"
-    className="absolute bottom-full left-0 z-20 mb-2 max-h-60 w-full max-w-sm overflow-y-auto overscroll-contain rounded-xl border border-border/60 bg-card p-1 shadow-lg"
+    className="absolute bottom-full left-0 z-20 mb-2 max-h-60 w-full max-w-sm overflow-y-auto overscroll-contain rounded-xl border border-border/60 bg-card p-1 shadow-(--app-shadow-overlay)"
   >
     {accounts.map((account, index) => (
       <li key={account.id} role="none">

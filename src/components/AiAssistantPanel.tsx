@@ -169,11 +169,11 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
       onClose={handleClose}
       maxWidthClassName="max-w-2xl"
       placement="end"
-      ariaLabel="ASK AI"
+      ariaLabel="Ask AI"
       title={
         <span className="flex items-center gap-2">
-          <Sparkles className="size-4 text-accent-ink" />
-          ASK AI
+          <Sparkles className="size-4 text-accent-ink" aria-hidden="true" />
+          Ask AI
         </span>
       }
       headerActions={
@@ -183,7 +183,8 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               type="button"
               onClick={() => void handleNewChat()}
               disabled={isResetting || isHydrating}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer sm:min-h-9"
+              size="sm"
+              className="gap-1.5 text-muted-foreground hover:text-foreground"
               title="Start a new chat (clears history)"
               aria-label="Start a new chat"
             >
@@ -194,7 +195,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
           <IconButton
             type="button"
             onClick={handleClose}
-            className="inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer sm:size-9"
+            className="text-muted-foreground hover:text-foreground"
             tooltip="Close"
             label="Close Ask AI"
           >
@@ -207,9 +208,11 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
           (`.sheet-panel` measures `--app-vvh`), so a fixed 55vh made the conversation taller than
           the sheet holding it the moment the input was focused. Taking the smaller of the two keeps
           the same height with no keyboard and shrinks to what is actually visible with one. */}
-      <div className="flex h-[min(55vh,calc(var(--app-vvh,100dvh)-13rem))] min-h-[220px] flex-col gap-3 sm:h-[480px]">
+      {/* On a phone the sheet sizes to its content, so the conversation takes a measured height;
+          docked beside the page from the small tier up it fills whatever the drawer has. */}
+      <div className="flex h-[min(55vh,calc(var(--app-vvh,100dvh)-13rem))] min-h-[220px] flex-col gap-3 sm:h-auto sm:min-h-0 sm:flex-1">
         {historyRedacted && (
-          <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          <p className="rounded-control bg-surface-2/70 px-3 py-2 text-label text-muted-foreground">
             Earlier replies are hidden while sensitive mode is active.
           </p>
         )}
@@ -217,7 +220,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             replays it, which is the only way to get back anything it prepared -- so keep the offer
             available even after later questions, with a free way out of it. */}
         {recoverableTurn && (
-          <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 rounded-control bg-surface-2/70 px-3 py-2 text-label text-muted-foreground">
             <span className="min-w-0 flex-1">
               A stopped question may already have been answered. Ask it again to get anything it prepared.
             </span>
@@ -242,7 +245,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
           </div>
         )}
         {pendingActionBatches[0] && (
-          <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 rounded-control bg-surface-2/70 px-3 py-2 text-label text-muted-foreground">
             <span className="min-w-0 flex-1">
               {pendingActionBatches[0].actions.length === 1
                 ? 'One AI-prepared review is waiting.'
@@ -277,7 +280,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             role="log"
             aria-live="polite"
             aria-busy={isSending}
-            className={`h-full space-y-3 rounded-xl border border-border/60 bg-muted/10 p-3 ${messages.length > 0 ? 'overflow-y-auto' : 'overflow-y-hidden'}`}
+            className={`h-full space-y-3 py-1 ${messages.length > 0 ? 'overflow-y-auto' : 'overflow-y-hidden'}`}
           >
           {/* The spinner and the perimeter beam are both decorative, so announce
               progress separately for screen readers. */}
@@ -285,22 +288,22 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             {isHydrating ? 'Loading conversation…' : isSending ? `${pendingReply.status ?? 'Thinking'}…` : ''}
           </span>
           {resetError && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            <div className="rounded-control bg-destructive/10 px-3 py-2 text-label text-destructive">
               {resetError}
             </div>
           )}
           {waitingForHistory && (
-            <p role="status" className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            <p role="status" className="rounded-control bg-surface-2/70 px-3 py-2 text-label text-muted-foreground">
               Your message will send when the saved conversation is ready. You can keep typing or stop it below.
             </p>
           )}
           {messages.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center text-center text-xs text-muted-foreground">
-              <div className="mb-3 grid size-11 place-items-center rounded-xl border border-border/60 bg-muted/40 shadow-xs">
-                <Sparkles className="size-5 text-muted-foreground" />
+            <div className="flex h-full flex-col items-center justify-center text-center text-label text-muted-foreground">
+              <div className="mb-3 grid size-12 place-items-center rounded-full bg-primary/10">
+                <Sparkles className="size-5 text-accent-ink" aria-hidden="true" />
               </div>
-              <p className="font-medium text-foreground">{isHydrating ? 'Loading saved conversation…' : 'Ready.'}</p>
-              {isOffline && <p className="mt-2 text-xs font-medium text-orange-500">Ask AI requires an internet connection.</p>}
+              <p className="text-section text-foreground">{isHydrating ? 'Loading saved conversation…' : 'What would you like to know?'}</p>
+              {isOffline && <p className="mt-2 text-label font-medium text-amber-700 dark:text-amber-300">Ask AI requires an internet connection.</p>}
               <div role="group" aria-label="Suggested questions" className="mt-4 flex w-full max-w-md flex-col items-center gap-2">
                 {suggestedPrompts.map(prompt => (
                   <Button variant="tertiary"
@@ -308,13 +311,13 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
                     type="button"
                     disabled={isOffline}
                     onClick={() => setInput(prompt)}
-                    className="min-h-11 w-auto max-w-full rounded-full border border-border/60 bg-background hover:bg-background px-4 py-2 text-center text-xs leading-4 text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                    className="min-h-10 w-auto max-w-full rounded-full border border-border/70 bg-transparent px-4 py-2 text-center text-label text-foreground transition hover:bg-surface-2 hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
                   >
                     {prompt}
                   </Button>
                 ))}
               </div>
-              <p className="mt-4 max-w-md text-xs leading-relaxed text-muted-foreground">
+              <p className="mt-4 max-w-md text-caption text-muted-foreground">
                 Details go to the configured AI provider.{sensitiveMode ? ' Amounts are hidden.' : ''}
               </p>
             </div>
@@ -326,10 +329,10 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               >
                 <div className={`flex flex-col gap-1 items-start ${message.role === 'user' ? 'items-end' : ''} max-w-[85%]`}>
                   <div
-                    className={`whitespace-pre-wrap rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                    className={`whitespace-pre-wrap px-3.5 py-2.5 text-body ${
                       message.role === 'user'
-                        ? 'bg-primary text-primary-foreground shadow-xs'
-                        : 'border border-border/50 bg-card text-foreground shadow-xs'
+                        ? 'rounded-[1.25rem] rounded-br-md bg-primary text-primary-foreground'
+                        : 'rounded-[1.25rem] rounded-bl-md bg-surface-2 text-foreground'
                     }`}
                   >
                     <AiMessageContent content={message.content} accounts={accounts} role={message.role} />
@@ -353,7 +356,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
           </div>
         </div>
 
-        <form noValidate onSubmit={event => { event.preventDefault(); void sendMessage() }} className="relative flex items-center gap-2 rounded-xl border border-border bg-card p-1.5 shadow-xs transition-[border-color,box-shadow] focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/25">
+        <form noValidate onSubmit={event => { event.preventDefault(); void sendMessage() }} className="relative flex items-end gap-2 rounded-[1.5rem] border border-border/70 bg-card p-1.5 transition-[border-color,box-shadow] focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/20">
           {mentions.isOpen && (
             <AccountMentionMenu
               accounts={mentions.options}
@@ -408,7 +411,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             type={isSending ? 'button' : 'submit'}
             onClick={isSending ? () => cancelInFlight({ recoverable: true }) : undefined}
             disabled={isSending ? false : (!input.trim() || isOffline || isResetting)}
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl shadow-xs"
+            className="size-11 shrink-0"
             tooltip={isSending ? 'Stop' : 'Send'}
             label={isSending ? 'Stop generating' : 'Send message'}
           >

@@ -75,7 +75,7 @@ export function CycleSummaryModal({
       ariaLabel="Cycle summary"
       title={
         <div ref={headingRef} tabIndex={-1} className="flex items-center gap-2.5 outline-none">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-accent-ink">
             <ChartNoAxesCombined className="size-4" />
           </span>
           <div className="min-w-0">
@@ -89,11 +89,11 @@ export function CycleSummaryModal({
       footer={
         <div className="flex gap-2 sm:justify-end">
           {onViewLedger && summary?.hasActivity && (
-            <Button variant="tertiary" onClick={onViewLedger} className="flex-1 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs font-bold text-foreground transition hover:bg-muted/70 sm:flex-none">
+            <Button variant="tertiary" onClick={onViewLedger} className="flex-1 rounded-control bg-surface-2/70 px-3 py-2 text-caption font-semibold text-foreground transition hover:bg-muted/70 sm:flex-none">
               View ledger
             </Button>
           )}
-          <Button variant="tertiary" onClick={onClose} className="flex-1 rounded-lg bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:bg-foreground/90 sm:flex-none">
+          <Button variant="tertiary" onClick={onClose} className="flex-1 rounded-lg bg-foreground px-4 py-2 text-caption font-semibold text-background transition hover:bg-foreground/90 sm:flex-none">
             {variant === 'auto' ? 'Got it' : 'Close'}
           </Button>
         </div>
@@ -101,12 +101,12 @@ export function CycleSummaryModal({
     >
       {isLoading ? (
         <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-8 text-center text-xs text-muted-foreground">
-          <LoaderCircle className="size-5 animate-spin text-blue-500" />
+          <LoaderCircle className="size-5 animate-spin text-accent-ink" />
           Loading cycle summary…
         </div>
       ) : !summary ? (
         <div className="flex min-h-64 flex-col items-center justify-center px-6 py-10 text-center">
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-500">
+          <span className="flex size-12 items-center justify-center rounded-full bg-surface-2 text-muted-foreground">
             <FileBarChart className="size-6" />
           </span>
           <h3 className="mt-4 text-subsection text-foreground">Summary unavailable</h3>
@@ -128,23 +128,23 @@ export function CycleSummaryModal({
         <div className="space-y-7 text-sm leading-relaxed">
           <div className="grid gap-3 sm:grid-cols-[1.25fr_1fr]">
             <div className={`rounded-2xl border p-4 sm:p-5 ${summary.positive ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-orange-500/20 bg-orange-500/5'}`}>
-              <div className="flex items-center gap-1.5 text-eyebrow uppercase text-muted-foreground">
-                {summary.positive ? <TrendingUp className="size-3.5 text-emerald-500" /> : <TrendingDown className="size-3.5 text-orange-500" />}
+              <div className="flex items-center gap-1.5 text-label font-medium text-muted-foreground">
+                {summary.positive ? <TrendingUp className="size-3.5 text-emerald-600 dark:text-emerald-400" /> : <TrendingDown className="size-3.5 text-muted-foreground" />}
                 Net cash flow
               </div>
-              <div className={`mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl ${summary.positive ? 'text-emerald-500' : 'text-orange-500'}`}>
+              <div className={`mt-2 text-display tabular-nums sm:text-hero ${summary.positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
                 {summary.net < 0 ? '−' : '+'}{formatSensitive(Math.abs(summary.net))}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{summary.positive ? 'Left after spending' : 'Spent beyond inflow'}</p>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-1">
               <StatTile icon={<ArrowDownRight className="size-3.5 text-emerald-500" />} label="In" value={formatSensitive(summary.inflow)} />
-              <StatTile icon={<ArrowUpRight className="size-3.5 text-orange-500" />} label="Out" value={formatSensitive(summary.expenses)} />
+              <StatTile icon={<ArrowUpRight className="size-3.5 text-muted-foreground" />} label="Out" value={formatSensitive(summary.expenses)} />
               {/* Only when it differs from total inflow: the savings rate divides by income, not
                   by everything that came in, and with refunds or transfers in the mix the two
                   figures disagree. Showing just "In" left that rate impossible to reconcile. */}
               {Math.abs(summary.income - summary.inflow) > 0.005 && (
-                <StatTile icon={<Wallet className="size-3.5 text-blue-500" />} label="Income" value={formatSensitive(summary.income)} />
+                <StatTile icon={<Wallet className="size-3.5 text-muted-foreground" />} label="Income" value={formatSensitive(summary.income)} />
               )}
             </div>
           </div>
@@ -154,9 +154,9 @@ export function CycleSummaryModal({
           <Section title="Envelopes">
             <div className="grid gap-3 sm:grid-cols-2">
               {summary.envelopes.map(envelope => (
-                <div key={envelope.name} className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                <div key={envelope.name} className="rounded-control bg-surface-2/70 p-3.5">
                   <div className="mb-2.5 flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-foreground">{envelope.name}</span>
+                    <span className="text-caption font-semibold text-foreground">{envelope.name}</span>
                     {envelope.overspent && (
                       <Badge tone="urgent">
                         Overspent
@@ -165,12 +165,12 @@ export function CycleSummaryModal({
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="flex flex-col gap-0.5 rounded-lg bg-muted/40 px-2.5 py-2">
-                      <span className="text-eyebrow uppercase text-muted-foreground">Allocated</span>
-                      <span className="truncate text-xs font-bold text-foreground">{formatSensitive(envelope.allocated)}</span>
+                      <span className="text-label font-medium text-muted-foreground">Allocated</span>
+                      <span className="truncate text-caption font-semibold text-foreground">{formatSensitive(envelope.allocated)}</span>
                     </div>
                     <div className="flex flex-col gap-0.5 rounded-lg bg-muted/40 px-2.5 py-2">
-                      <span className="text-eyebrow uppercase text-muted-foreground">Spent</span>
-                      <span className={`text-xs font-bold ${envelope.overspent ? 'text-orange-500' : 'text-foreground'}`}>
+                      <span className="text-label font-medium text-muted-foreground">Spent</span>
+                      <span className={`text-caption font-semibold ${envelope.overspent ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
                         {formatSensitive(envelope.spent)}
                       </span>
                     </div>
@@ -181,10 +181,10 @@ export function CycleSummaryModal({
                           ? 'bg-emerald-500/10'
                           : 'bg-muted/40'
                     }`}>
-                      <span className="text-eyebrow uppercase text-muted-foreground">Carry forward</span>
-                      <span className={`text-xs font-bold ${
+                      <span className="text-label font-medium text-muted-foreground">Carry forward</span>
+                      <span className={`text-caption font-semibold ${
                         envelope.overspent
-                          ? 'text-orange-500'
+                          ? 'text-red-600 dark:text-red-400'
                           : envelope.remaining > 0
                             ? 'text-emerald-400'
                             : 'text-muted-foreground'
@@ -196,7 +196,7 @@ export function CycleSummaryModal({
                   {envelope.accounts.length > 0 && (
                     <div className="mt-3 border-t border-border/40 pt-3">
                       <div className="mb-2 flex items-center gap-1.5">
-                        <span className="text-eyebrow uppercase text-muted-foreground">Accounts at cycle close</span>
+                        <span className="text-label font-medium text-muted-foreground">Accounts at cycle close</span>
                         <InfoHint label={`${envelope.name} account balances`} text="These account balances add up to the bucket's carry-forward amount at the end of this cycle." />
                       </div>
                       <div className="space-y-1.5">
@@ -218,15 +218,15 @@ export function CycleSummaryModal({
           </Section>
 
           {summary.categoryLimits.length > 0 && (
-            <Section title="Cycle spending guides" icon={<Gauge className="size-3 text-blue-500" />}>
-              <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+            <Section title="Cycle spending guides" icon={<Gauge className="size-3 text-muted-foreground" />}>
+              <div className="rounded-control bg-surface-2/70 p-3.5">
                 <div className="mb-3 flex items-center justify-between gap-3 border-b border-border/40 pb-3">
                   <div>
-                    <p className="text-xs font-bold text-foreground">
+                    <p className="text-caption font-semibold text-foreground">
                       {summary.categoryLimitsMet} of {summary.categoryLimits.length} within guide
                     </p>
                   </div>
-                  <span className={`rounded-full px-2 py-1 text-eyebrow uppercase ${summary.categoryLimitsMet === summary.categoryLimits.length ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>
+                  <span className={`rounded-full px-2 py-1 text-label font-medium ${summary.categoryLimitsMet === summary.categoryLimits.length ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>
                     {summary.categoryLimitsMet === summary.categoryLimits.length ? 'All met' : `${summary.categoryLimits.length - summary.categoryLimitsMet} over`}
                   </span>
                 </div>
@@ -237,10 +237,10 @@ export function CycleSummaryModal({
                     return (
                       <div key={limit.category}>
                         <div className="flex items-center justify-between gap-2">
-                          <span className={`max-w-32 truncate rounded border px-1.5 py-0.5 text-xs font-bold ${getCategoryBadgeClass(limit.category)}`}>
+                          <span className={`max-w-32 truncate rounded border px-1.5 py-0.5 text-caption font-semibold ${getCategoryBadgeClass(limit.category)}`}>
                             {limit.category}
                           </span>
-                          <span className={`text-xs font-bold ${exceeded ? 'text-orange-500' : 'text-foreground'}`}>
+                          <span className={`text-caption font-semibold ${exceeded ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
                             {exceeded
                               ? <>{formatSensitive(Math.abs(limit.remaining))} over</>
                               : <>{formatSensitive(limit.remaining)} left</>}
@@ -249,7 +249,7 @@ export function CycleSummaryModal({
                         <Meter
                           className="mt-1.5"
                           percent={limit.percentUsed * 100}
-                          tone={exceeded ? 'bg-orange-500' : 'bg-blue-500'}
+                          tone={exceeded ? 'bg-red-500' : 'bg-primary'}
                           valueHidden={hideSensitive}
                           label={`${limit.category} limit used`}
                         />
@@ -335,38 +335,38 @@ export function CycleSummaryModal({
             <Section title="Spending insights" icon={<Zap className="size-3 text-amber-400" />}>
               <div className="grid gap-3 sm:grid-cols-2">
                 {summary.largestTxn && (
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                    <p className="text-eyebrow uppercase text-muted-foreground">Largest single expense</p>
-                    <p className="mt-1 truncate text-xs font-bold text-foreground" title={summary.largestTxn.description}>{summary.largestTxn.description}</p>
-                    <p className="mt-0.5 text-xs font-bold text-orange-400">{formatSensitive(Math.abs(summary.largestTxn.amount))}</p>
+                  <div className="rounded-control bg-surface-2/70 p-3.5">
+                    <p className="text-label font-medium text-muted-foreground">Largest single expense</p>
+                    <p className="mt-1 truncate text-caption font-semibold text-foreground" title={summary.largestTxn.description}>{summary.largestTxn.description}</p>
+                    <p className="mt-0.5 text-caption font-semibold text-orange-400">{formatSensitive(Math.abs(summary.largestTxn.amount))}</p>
                   </div>
                 )}
                 {summary.biggestDay && (
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                    <p className="text-eyebrow uppercase text-muted-foreground">Highest spending day</p>
-                    <p className="mt-1 text-xs font-bold text-foreground">
+                  <div className="rounded-control bg-surface-2/70 p-3.5">
+                    <p className="text-label font-medium text-muted-foreground">Highest spending day</p>
+                    <p className="mt-1 text-caption font-semibold text-foreground">
                       {new Date(summary.biggestDay.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </p>
-                    <p className="mt-0.5 text-xs font-bold text-orange-400">{formatSensitive(summary.biggestDay.total)}</p>
+                    <p className="mt-0.5 text-caption font-semibold text-orange-400">{formatSensitive(summary.biggestDay.total)}</p>
                   </div>
                 )}
                 {summary.avgDailySpend !== null && (
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                    <p className="text-eyebrow uppercase text-muted-foreground">Average daily spend</p>
-                    <p className="mt-1 text-xs font-bold text-foreground">{formatSensitive(summary.avgDailySpend)} / day</p>
+                  <div className="rounded-control bg-surface-2/70 p-3.5">
+                    <p className="text-label font-medium text-muted-foreground">Average daily spend</p>
+                    <p className="mt-1 text-caption font-semibold text-foreground">{formatSensitive(summary.avgDailySpend)} / day</p>
                   </div>
                 )}
-                <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                  <p className="text-eyebrow uppercase text-muted-foreground">No-spend days</p>
-                  <p className="mt-1 text-xs font-bold text-emerald-500">{summary.noSpendDays} days</p>
+                <div className="rounded-control bg-surface-2/70 p-3.5">
+                  <p className="text-label font-medium text-muted-foreground">No-spend days</p>
+                  <p className="mt-1 text-caption font-semibold text-emerald-500">{summary.noSpendDays} days</p>
                 </div>
-                <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                  <p className="text-eyebrow uppercase text-muted-foreground">Transaction count</p>
-                  <p className="mt-1 text-xs font-bold text-foreground">{summary.transactionCount} expense entries</p>
+                <div className="rounded-control bg-surface-2/70 p-3.5">
+                  <p className="text-label font-medium text-muted-foreground">Transaction count</p>
+                  <p className="mt-1 text-caption font-semibold text-foreground">{summary.transactionCount} expense entries</p>
                 </div>
                 {summary.committedSpend + summary.discretionarySpend > 0 && (
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                    <p className="text-eyebrow uppercase text-muted-foreground">Spend Type</p>
+                  <div className="rounded-control bg-surface-2/70 p-3.5">
+                    <p className="text-label font-medium text-muted-foreground">Spend Type</p>
                     <div className="mt-2 space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">Committed</span>
@@ -378,14 +378,14 @@ export function CycleSummaryModal({
                       </div>
                     </div>
                     <div className="mt-2 flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                      <div className="bg-blue-500" style={{ width: `${(summary.committedSpend / (summary.committedSpend + summary.discretionarySpend)) * 100}%` }} />
+                      <div className="bg-primary" style={{ width: `${(summary.committedSpend / (summary.committedSpend + summary.discretionarySpend)) * 100}%` }} />
                       <div className="bg-purple-500" style={{ width: `${(summary.discretionarySpend / (summary.committedSpend + summary.discretionarySpend)) * 100}%` }} />
                     </div>
                   </div>
                 )}
                 {summary.velocityFirstHalf !== null && summary.velocitySecondHalf !== null && (
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5 sm:col-span-2">
-                    <p className="text-eyebrow uppercase text-muted-foreground">Spending velocity</p>
+                  <div className="rounded-control bg-surface-2/70 p-3.5 sm:col-span-2">
+                    <p className="text-label font-medium text-muted-foreground">Spending velocity</p>
                     <div className="mt-2 space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">First half</span>
@@ -407,13 +407,13 @@ export function CycleSummaryModal({
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
                 <Section title="Where it went">
-                  <div className="space-y-2.5 rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                  <div className="space-y-2.5 rounded-control bg-surface-2/70 p-3.5">
                     {summary.topCategories.map(category => (
                       <div key={category.category} className="flex items-center gap-2">
                         {/* Badge Container: fixed width so all bars start at the same X position without stretching the badge */}
                         <div className="w-20 shrink-0 flex items-center sm:w-24">
                           <span
-                            className={`max-w-full truncate rounded border px-1.5 py-0.5 text-xs font-bold leading-tight ${getCategoryBadgeClass(category.category)}`}
+                            className={`max-w-full truncate rounded border px-1.5 py-0.5 text-caption font-semibold leading-tight ${getCategoryBadgeClass(category.category)}`}
                             title={category.category}
                           >
                             {category.category}
@@ -427,7 +427,7 @@ export function CycleSummaryModal({
                           />
                         </div>
                         {/* Amount: fixed right-aligned column */}
-                        <span className="shrink-0 text-right text-xs font-bold tabular-nums text-foreground">
+                        <span className="shrink-0 text-right text-caption font-semibold tabular-nums text-foreground">
                           {formatSensitive(category.amount)}
                         </span>
                       </div>

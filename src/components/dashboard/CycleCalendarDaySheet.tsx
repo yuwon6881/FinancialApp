@@ -65,7 +65,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
         <Button
           variant="secondary"
           size="sm"
-          className="w-full gap-1.5 text-xs font-bold"
+          className="w-full gap-1.5 text-caption font-semibold"
           onClick={() => {
             onViewInLedger(day.dateKey)
             onClose()
@@ -77,25 +77,25 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
       ) : undefined}
     >
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="rounded-xl border border-border/40 bg-muted/20 p-2">
+        <div className="rounded-control bg-surface-2/70 p-2">
           <span className="block text-xs text-muted-foreground">Money in</span>
           <span className="font-bold text-emerald-500">
             {day.inflow > 0 ? formatAmount(day.inflow) : '—'}
           </span>
         </div>
-        <div className="rounded-xl border border-border/40 bg-muted/20 p-2">
+        <div className="rounded-control bg-surface-2/70 p-2">
           <span className="block text-xs text-muted-foreground">Money out</span>
-          <span className="font-bold text-orange-500">
+          <span className="font-semibold text-foreground">
             {day.outflow > 0 ? formatAmount(-day.outflow) : '—'}
           </span>
         </div>
-        <div className="rounded-xl border border-border/40 bg-muted/20 p-2">
+        <div className="rounded-control bg-surface-2/70 p-2">
           <span className="block text-xs text-muted-foreground">Net</span>
           <span
             className={cn(
               'font-bold',
               day.net !== undefined && day.net > 0 && 'text-emerald-500',
-              day.net !== undefined && day.net < 0 && 'text-orange-500',
+              day.net !== undefined && day.net < 0 && 'text-foreground',
               (day.net === undefined || day.net === 0) && 'text-muted-foreground',
             )}
           >
@@ -127,7 +127,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
               return (
                 <div
                   key={bill.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-border/30 bg-muted/15 px-2 py-1.5 text-xs"
+                  className="flex items-center justify-between gap-2 rounded-control bg-surface-2/70 px-2 py-1.5 text-xs"
                 >
                   <span className="min-w-0 flex-1 truncate font-medium text-foreground">{bill.name}</span>
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -137,7 +137,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
                     </span>
                     <span
                       className={cn(
-                        'inline-flex items-center rounded px-1 py-0.5 text-xs font-bold',
+                        'inline-flex items-center rounded px-1 py-0.5 text-caption font-semibold',
                         isSettled && 'bg-emerald-500/15 text-emerald-500',
                         isPartial && 'bg-amber-500/15 text-amber-500',
                         !isSettled && !isPartial && 'bg-blue-500/15 text-blue-500',
@@ -168,7 +168,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
               return (
                 <div
                   key={tx.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-border/30 bg-muted/15 px-2 py-1.5 text-xs"
+                  className="flex items-center justify-between gap-2 rounded-control bg-surface-2/70 px-2 py-1.5 text-xs"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium text-foreground">{tx.description}</p>
@@ -177,7 +177,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
                   <span
                     className={cn(
                       'shrink-0 font-bold',
-                      isPositive ? 'text-emerald-500' : 'text-orange-500',
+                      isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground',
                     )}
                   >
                     {formatAmount(tx.amount)}

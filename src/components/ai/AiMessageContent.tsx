@@ -7,9 +7,9 @@ const AI_MARKDOWN_TOKEN = /(\*\*[^*\r\n]+?\*\*|__[^_\r\n]+?__)/g
 type MentionStyle = 'composer' | 'user' | 'assistant'
 
 const mentionClass: Record<MentionStyle, string> = {
-  composer: 'rounded-sm bg-accent/20 font-black text-accent-ink',
-  user: 'rounded-md border border-primary-foreground/30 bg-primary-foreground/15 px-1 py-0.5 font-black text-primary-foreground',
-  assistant: 'rounded-md border border-accent/25 bg-accent/15 px-1 py-0.5 font-black text-accent-ink',
+  composer: 'rounded-sm bg-accent/20 font-semibold text-accent-ink',
+  user: 'rounded-md border border-primary-foreground/30 bg-primary-foreground/15 px-1 py-0.5 font-semibold text-primary-foreground',
+  assistant: 'rounded-md border border-accent/25 bg-accent/15 px-1 py-0.5 font-semibold text-accent-ink',
 }
 
 export function AccountMentionText({

@@ -61,7 +61,7 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
           <div>
             <h3 className="text-section text-foreground">Outflow Categories</h3>
           </div>
-          <div role="group" aria-label="Breakdown range" className="grid w-full grid-cols-4 items-center rounded-lg border border-border/40 bg-muted/40 p-0.5 text-xs sm:flex sm:w-auto sm:shrink-0">
+          <div role="group" aria-label="Breakdown range" className="grid w-full grid-cols-4 items-center rounded-control bg-surface-2/70 p-0.5 text-xs sm:flex sm:w-auto sm:shrink-0">
             {(['monthly', '3month', '6month', 'yearly'] as const).map(view => (
               <Button variant="tertiary"
                 key={view}

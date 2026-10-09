@@ -18,8 +18,8 @@ const HEADINGS: Record<CycleHeatmapMode, string> = {
 }
 
 const TONE_CLASS: Record<CycleMetricTone, string> = {
-  inflow: 'text-blue-500',
-  outflow: 'text-orange-500',
+  inflow: 'text-emerald-600 dark:text-emerald-400',
+  outflow: 'text-foreground',
   neutral: 'text-foreground/80',
 }
 
@@ -43,7 +43,7 @@ export const CycleWeeklyPacing: React.FC<CycleWeeklyPacingProps> = ({
   return (
     <div className="mt-4 border-t border-border/50 pt-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h4 className="text-eyebrow uppercase text-muted-foreground sm:text-xs">
+        <h4 className="text-label font-medium text-muted-foreground sm:text-xs">
           {HEADINGS[mode]}
         </h4>
         <span className="text-xs text-muted-foreground">
@@ -75,7 +75,7 @@ export const CycleWeeklyPacing: React.FC<CycleWeeklyPacingProps> = ({
                 </span>
               </div>
               <div className="mt-1.5 flex w-full items-baseline justify-between gap-1">
-                <span className={cn('text-xs font-bold', notStarted ? 'text-muted-foreground' : TONE_CLASS[metric.tone])}>
+                <span className={cn('text-caption font-semibold', notStarted ? 'text-muted-foreground' : TONE_CLASS[metric.tone])}>
                   {headline}
                 </span>
                 {!notStarted && week.elapsedDayCount < week.dayCount && (

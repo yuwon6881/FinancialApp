@@ -50,7 +50,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
           <div>
             <h3 className="text-section text-foreground">Subscriptions</h3>
           </div>
-          <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 shrink-0">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted-foreground">
             <Calendar className="size-4" />
           </div>
         </div>
@@ -68,13 +68,13 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
               type="button"
               variants={subItemVariants}
               onClick={() => (onNavigateToRecurring ? onNavigateToRecurring(rp.recurringPaymentId) : onNavigate('recurring'))}
-              className={`group relative flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-transparent py-2 pl-3 pr-2 text-left text-xs cursor-pointer transition-colors duration-150 hover:bg-blue-500/[0.06] hover:border-blue-500/25 hover:shadow-xs ${rp.isDiscarded ? 'opacity-50' : ''}`}
+              className={`group relative flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-transparent py-2 pl-3 pr-2 text-left text-xs cursor-pointer transition-colors duration-150 hover:bg-surface-2 hover:border-transparent hover:shadow-xs ${rp.isDiscarded ? 'opacity-50' : ''}`}
             >
               {/* Accent bar that grows on hover to signal the row is clickable */}
-              <span className="pointer-events-none absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-full bg-blue-500 transition-all duration-200 group-hover:h-7" />
+              <span className="pointer-events-none absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-full bg-primary transition-all duration-200 group-hover:h-7" />
 
               <div className="min-w-0 flex-1">
-                <span className={`font-bold text-foreground truncate block transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400 ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
+                <span className={`font-bold text-foreground truncate block ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
                 <div className="mt-1 flex min-w-0 items-center gap-1.5 select-none">
                   <span
                     title={rp.category}
@@ -98,13 +98,13 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
                 </div>
               </div>
               <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
-                <span className={`font-bold tabular-nums block ${rp.isDiscarded ? 'text-slate-500 line-through' : 'text-orange-500'}`}>
+                <span className={`font-bold tabular-nums block ${rp.isDiscarded ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
                   {rp.amount == null ? 'Unavailable' : <>-{formatSensitive(rp.amount)}</>}
                 </span>
                 <span className="text-muted-foreground text-xs font-medium">Due {rp.dueDate}</span>
               </div>
               {/* Chevron affordance: fades and slides in on hover */}
-              <ChevronRight className="size-4 shrink-0 text-blue-500 opacity-70 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 sm:-translate-x-1 sm:opacity-0" aria-hidden="true" />
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground opacity-70 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 sm:-translate-x-1 sm:opacity-0" aria-hidden="true" />
             </m.button>
           ))}
           {activeRecurring.length === 0 && (
@@ -116,7 +116,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
       <Button
         variant="tertiary"
         onClick={() => onNavigate('recurring')}
-        className="mt-4 min-h-11 w-full shrink-0 rounded-xl border border-blue-500/10 bg-blue-500/5 py-2 text-center text-xs font-semibold text-blue-500 transition duration-200 cursor-pointer hover:border-blue-500/20 hover:bg-blue-500/10 hover:text-blue-600"
+        className="mt-4 min-h-11 w-full shrink-0 rounded-full border border-border/70 py-2 text-center text-label font-medium text-foreground transition-colors hover:bg-surface-2 cursor-pointer"
       >
         Manage Subscriptions
       </Button>

@@ -92,13 +92,13 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
           <div>
             <h3 className="text-section text-foreground">Growth ledger balance</h3>
           </div>
-          <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+          <div className="flex size-8 items-center justify-center rounded-full bg-surface-2 text-muted-foreground">
             <TrendingUp className="size-4" />
           </div>
         </div>
         <div role="group" aria-label="Trend range" className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-xs mb-3 w-fit">
           {(['3month', '6month', 'yearly'] as const).map(value => (
-            <Button variant="tertiary" key={value} type="button" onClick={() => setRange(value)} aria-pressed={range === value} aria-label={value === '3month' ? 'Last 3 months' : value === '6month' ? 'Last 6 months' : 'Full year'} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2.5 py-1 text-xs font-bold transition cursor-pointer sm:min-h-8 sm:min-w-8 ${range === value ? 'bg-background hover:bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
+            <Button variant="tertiary" key={value} type="button" onClick={() => setRange(value)} aria-pressed={range === value} aria-label={value === '3month' ? 'Last 3 months' : value === '6month' ? 'Last 6 months' : 'Full year'} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2.5 py-1 text-caption font-semibold transition cursor-pointer sm:min-h-8 sm:min-w-8 ${range === value ? 'bg-background hover:bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
               {value === '3month' ? '3M' : value === '6month' ? '6M' : 'Year'}
             </Button>
           ))}
@@ -174,11 +174,11 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                 return (
                   <div
                     aria-hidden="true"
-                    className="absolute z-20 bg-card/95 backdrop-blur-md border border-border/80 rounded-xl p-2 shadow-xl text-center"
+                    className="absolute z-20 bg-card/95 backdrop-blur-md border border-border/80 rounded-xl p-2 shadow-(--app-shadow-overlay) text-center"
                     style={{ left: `clamp(4px, calc(${position.left}% - 55px), calc(100% - 114px))`, top: `clamp(4px, calc(${position.top}% - 50px), calc(100% - 46px))`, width: 110 }}
                   >
                     <b className="block text-xs font-semibold text-muted-foreground">{trendLabel(point)}</b>
-                    <span className="text-xs font-black tabular-nums text-blue-500">
+                    <span className="text-caption font-semibold tabular-nums text-foreground">
                       {hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(point.balance, currency)}
                     </span>
                   </div>

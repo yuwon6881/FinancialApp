@@ -348,7 +348,7 @@ describe('App behaviors', () => {
 
       // The panel is lazy behind a null fallback, so this waits on a real dynamic import
       // rather than a render; the default 1s is not enough for its chunk here.
-      expect(await screen.findByRole('dialog', { name: 'ASK AI' }, { timeout: 5000 })).toBeDefined()
+      expect(await screen.findByRole('dialog', { name: 'Ask AI' }, { timeout: 5000 })).toBeDefined()
       await waitFor(() => {
         expect(screen.queryByRole('menuitem', { name: /^Ask AI/ })).toBeNull()
       })

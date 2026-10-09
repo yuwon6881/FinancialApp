@@ -15,12 +15,12 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border/60 bg-card/60 p-4">
+      <div className="rounded-control bg-surface-2/70 p-4">
         <p className="text-sm text-muted-foreground">Total still to put back</p>
-        <p className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{formatSensitive(shortfall)}</p>
+        <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{formatSensitive(shortfall)}</p>
       </div>
 
-      <section aria-label="Current cycle recovery" className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-4">
+      <section aria-label="Current cycle recovery" className="space-y-2 rounded-control bg-surface-2/70 p-4">
         <h3 className="text-sm font-semibold text-foreground">
           {status === 'deferred' ? 'Starts next cycle' : covered ? 'This cycle covered' : 'Still due this cycle'}
         </h3>
@@ -45,7 +45,7 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
       {(recovery.recoveryCohorts?.length ?? 0) > 0 && (
         <section aria-label="Recovery by spending cycle" className="space-y-2">
           <h3 className="text-sm font-semibold text-foreground">By spending cycle</h3>
-          <ul className="divide-y divide-border/50 rounded-xl border border-border/60 bg-card/60" aria-label="Stability recovery plans">
+          <ul className="divide-y divide-border/50 rounded-control bg-surface-2/70" aria-label="Stability recovery plans">
             {recovery.recoveryCohorts?.map(cohort => {
               const complete = cohort.remainingShortfall <= 0
               // The three repayment cycles follow the spending cycle; the last one is the deadline.
@@ -72,7 +72,7 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
         </section>
       )}
 
-      <details className="rounded-xl border border-border/60 bg-card/60 p-3.5 text-sm">
+      <details className="rounded-control bg-surface-2/70 p-3.5 text-sm">
         <summary className="min-h-11 cursor-pointer content-center rounded-md text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:min-h-9">
           How the total is calculated
         </summary>

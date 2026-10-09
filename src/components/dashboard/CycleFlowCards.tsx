@@ -44,7 +44,7 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
             <ArrowDownLeft className="size-4.5" />
           </div>
         </div>
-        <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground tabular-nums">
+        <div className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground tabular-nums">
           <SensitiveAmount value={stats.monthlyInflow} isMasked={hideSensitive} formatFn={formatCurrency} />
         </div>
         <p className="text-xs mt-2 text-muted-foreground font-medium">
@@ -62,15 +62,15 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
       >
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-muted-foreground">Cycle Outflow</span>
-          <div className="flex size-9 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 ring-1 ring-orange-500/20 group-hover:scale-105 transition-transform duration-300">
+          <div className="flex size-9 items-center justify-center rounded-full bg-surface-2 text-muted-foreground">
             <ArrowUpRight className="size-4.5" />
           </div>
         </div>
-        <div className="text-2xl sm:text-3xl font-black tracking-tight text-foreground tabular-nums">
+        <div className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground tabular-nums">
           <SensitiveAmount value={stats.monthlyExpenses} isMasked={hideSensitive} formatFn={formatCurrency} />
         </div>
         <p className="text-xs text-muted-foreground mt-2 font-medium">
-          <span className="hidden sm:inline">Active </span>Bills<span className="hidden sm:inline"> (monthly equivalent)</span>: <span className="font-bold text-orange-500 tabular-nums">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
+          <span className="hidden sm:inline">Active </span>Bills<span className="hidden sm:inline"> (monthly equivalent)</span>: <span className="font-semibold text-foreground tabular-nums">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
         </p>
       </div>
     </div>

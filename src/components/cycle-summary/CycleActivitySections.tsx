@@ -17,20 +17,20 @@ export function CycleActivitySections({
     <>
       {summary.loanActivity.length > 0 && (
         <Section title="Loan progress">
-          <div className="space-y-3 rounded-xl border border-border/50 bg-muted/20 p-3.5">
+          <div className="space-y-3 rounded-control bg-surface-2/70 p-3.5">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <Landmark className="size-3.5 shrink-0 text-blue-500" aria-hidden />
-                  <span className="text-xs font-bold text-foreground">Paid toward loans</span>
+                  <Landmark className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="text-caption font-semibold text-foreground">Paid toward loans</span>
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {summary.loanPaymentCount} ledger {summary.loanPaymentCount === 1 ? 'payment' : 'payments'} across {summary.loanActivity.length} {summary.loanActivity.length === 1 ? 'loan' : 'loans'}
                 </p>
               </div>
               <div className="shrink-0 text-right">
-                <span className="block text-xs font-extrabold text-foreground">{formatSensitive(summary.loanPaymentTotal)}</span>
-                <span className="block text-eyebrow uppercase text-muted-foreground">Total paid</span>
+                <span className="block text-xs font-semibold text-foreground">{formatSensitive(summary.loanPaymentTotal)}</span>
+                <span className="block text-label font-medium text-muted-foreground">Total paid</span>
               </div>
             </div>
 
@@ -52,14 +52,14 @@ export function CycleActivitySections({
               {summary.loanActivity.map(loan => (
                 <div key={loan.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-background/50 px-3 py-2">
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-bold text-foreground">{loan.name}</p>
+                    <p className="truncate text-caption font-semibold text-foreground">{loan.name}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {loan.paymentCount} {loan.paymentCount === 1 ? 'payment' : 'payments'}
                       {loan.paidAheadCount > 0 ? ` · ${loan.paidAheadCount} ahead of schedule` : ''}
                       {loan.paidOffThisCycle ? ' · Paid off' : ''}
                     </p>
                   </div>
-                  <span className="shrink-0 text-xs font-bold text-foreground">{formatSensitive(loan.total)}</span>
+                  <span className="shrink-0 text-caption font-semibold text-foreground">{formatSensitive(loan.total)}</span>
                 </div>
               ))}
             </div>
@@ -69,12 +69,12 @@ export function CycleActivitySections({
 
       {summary.billsCount > 0 && (
         <Section title="Bills">
-          <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+          <div className="rounded-control bg-surface-2/70 p-3.5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <Receipt className="size-3.5 shrink-0 text-amber-500" />
-                  <span className="text-xs font-bold text-foreground">
+                  <span className="text-caption font-semibold text-foreground">
                     {summary.outstandingCount === 0
                       ? 'No bills left open'
                       : `${summary.outstandingCount} ${summary.outstandingCount === 1 ? 'bill' : 'bills'} still open`}
@@ -96,8 +96,8 @@ export function CycleActivitySections({
                 </div>
               </div>
               <div className="shrink-0 text-right">
-                <span className="block text-xs font-extrabold text-foreground">{formatSensitive(summary.paidTotal)}</span>
-                <span className="block text-eyebrow uppercase text-muted-foreground">Recorded paid</span>
+                <span className="block text-xs font-semibold text-foreground">{formatSensitive(summary.paidTotal)}</span>
+                <span className="block text-label font-medium text-muted-foreground">Recorded paid</span>
               </div>
             </div>
           </div>
@@ -106,20 +106,20 @@ export function CycleActivitySections({
 
       {summary.purchasedThisCycle.length > 0 && (
         <Section title="Claimed rewards">
-          <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5 space-y-3">
+          <div className="rounded-control bg-surface-2/70 p-3.5 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <RewardIcon className="size-3.5 shrink-0 text-pink-500" aria-hidden />
-                  <span className="text-xs font-bold text-foreground">
+                  <span className="text-caption font-semibold text-foreground">
                     {summary.purchasedThisCycle.length} {summary.purchasedThisCycle.length === 1 ? 'reward claimed' : 'rewards claimed'}
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground truncate">Rewards claimed during this cycle</p>
               </div>
               <div className="text-right shrink-0">
-                <span className="text-xs font-extrabold text-foreground block">{formatSensitive(summary.purchasedTotal)}</span>
-                <span className="text-eyebrow uppercase text-muted-foreground block">Total value</span>
+                <span className="text-xs font-semibold text-foreground block">{formatSensitive(summary.purchasedTotal)}</span>
+                <span className="text-label font-medium text-muted-foreground block">Total value</span>
               </div>
             </div>
             <div className="space-y-1.5 pt-1">
@@ -127,7 +127,7 @@ export function CycleActivitySections({
                 <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-background/50 px-3 py-2 text-xs">
                   <div className="min-w-0 flex items-center gap-2">
                     <span className="font-bold text-foreground truncate">{item.name}</span>
-                    {item.priority && <span className={`shrink-0 rounded px-1.5 py-0.5 text-eyebrow uppercase ${priorityClass(item.priority)}`}>{item.priority}</span>}
+                    {item.priority && <span className={`shrink-0 rounded px-1.5 py-0.5 text-label font-medium ${priorityClass(item.priority)}`}>{item.priority}</span>}
                   </div>
                   <span className="shrink-0 font-bold text-foreground">{formatSensitive(item.price)}</span>
                 </div>
@@ -156,7 +156,7 @@ export function StabilityFundSection({
 }) {
   return (
     <Section title="Stability fund">
-      <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+      <div className="rounded-control bg-surface-2/70 p-3.5">
         <div className="flex items-center justify-between text-xs">
           <span className="font-semibold text-foreground">Funded</span>
           <span className="font-bold text-foreground">{Math.round(summary.stabilityPct * 100)}%</span>
@@ -178,7 +178,7 @@ export function StabilityFundSection({
 }
 
 export function Section({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
-  return <section><h3 className="mb-3 flex items-center gap-1.5 text-eyebrow uppercase text-muted-foreground">{icon}{title}</h3>{children}</section>
+  return <section><h3 className="mb-3 flex items-center gap-1.5 text-label font-medium text-muted-foreground">{icon}{title}</h3>{children}</section>
 }
 
 function StatusPill({ tone, children }: { tone: 'emerald' | 'amber' | 'blue' | 'muted'; children: ReactNode }) {
@@ -187,14 +187,14 @@ function StatusPill({ tone, children }: { tone: 'emerald' | 'amber' | 'blue' | '
     : tone === 'amber'
       ? 'bg-amber-500/10 text-amber-500'
       : tone === 'blue'
-        ? 'bg-blue-500/10 text-blue-500'
+        ? 'bg-primary/10 text-accent-ink'
         : 'bg-muted text-muted-foreground'
   const dot = tone === 'emerald'
     ? 'bg-emerald-500'
     : tone === 'amber'
       ? 'bg-amber-500'
       : tone === 'blue'
-        ? 'bg-blue-500'
+        ? 'bg-primary'
         : 'bg-muted-foreground'
   return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold text-xs ${classes}`}><span className={`w-1.5 h-1.5 rounded-full ${dot}`} />{children}</span>
 }

@@ -41,8 +41,8 @@ const MODES: { mode: CycleHeatmapMode; label: string; shortLabel: string }[] = [
 ]
 
 const TONE_CLASS: Record<CycleMetricTone, string> = {
-  inflow: 'text-blue-500',
-  outflow: 'text-orange-500',
+  inflow: 'text-emerald-600 dark:text-emerald-400',
+  outflow: 'text-foreground',
   neutral: 'text-foreground/80',
 }
 
@@ -111,7 +111,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
         </div>
 
         {/* Heatmap Mode Selector */}
-        <div className="flex items-center gap-1 self-stretch rounded-xl border border-border/60 bg-muted/25 p-1 sm:self-start">
+        <div className="flex items-center gap-1 self-stretch rounded-control bg-surface-2/70 p-1 sm:self-start">
           {MODES.map(entry => (
             <Button
               key={entry.mode}
@@ -183,7 +183,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
               <div
                 key={day}
                 className={cn(
-                  'pb-1.5 text-xs font-bold',
+                  'pb-1.5 text-caption font-semibold',
                   isWeekendHeader ? 'text-muted-foreground/70' : 'text-muted-foreground'
                 )}
               >
@@ -237,8 +237,8 @@ export function CycleCalendar(props: CycleCalendarProps) {
               >
                 <span
                   className={cn(
-                    'text-xs font-bold sm:text-sm',
-                    isToday ? 'text-blue-500' : day.isFuture ? 'text-muted-foreground/70' : 'text-foreground/90'
+                    'text-caption font-semibold sm:text-sm',
+                    isToday ? 'text-accent-ink' : day.isFuture ? 'text-muted-foreground/70' : 'text-foreground/90'
                   )}
                 >
                   {day.date.getDate()}
@@ -249,14 +249,14 @@ export function CycleCalendar(props: CycleCalendarProps) {
                 {metric.value !== undefined ? (
                   <span
                     className={cn(
-                      'hidden max-w-full truncate text-xs font-bold leading-tight md:inline md:text-xs',
+                      'hidden max-w-full truncate text-caption font-semibold leading-tight md:inline md:text-xs',
                       TONE_CLASS[metric.tone]
                     )}
                   >
                     {props.formatNet(metric.value)}
                   </span>
                 ) : day.isFuture && day.projectedBillsAmount > 0 ? (
-                  <span className="hidden max-w-full truncate text-xs font-medium leading-tight text-amber-500/90 md:inline md:text-xs">
+                  <span className="hidden max-w-full truncate text-xs font-medium leading-tight text-amber-600 dark:text-amber-400 md:inline md:text-xs">
                     ~{props.formatNet(-day.projectedBillsAmount)}
                   </span>
                 ) : null}
@@ -278,7 +278,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
                   day.recurring.length > 1 ? (
                     <span
                       className={cn(
-                        'absolute top-1 right-1 flex size-3 items-center justify-center rounded-full text-xs font-bold sm:size-3.5 sm:text-xs',
+                        'absolute top-1 right-1 flex size-3 items-center justify-center rounded-full text-caption font-semibold sm:size-3.5 sm:text-xs',
                         day.hasPendingBills
                           ? 'bg-amber-500/20 text-amber-500 ring-1 ring-amber-500/40 animate-pulse'
                           : 'bg-emerald-500/20 text-emerald-500 ring-1 ring-emerald-500/40'
