@@ -44,8 +44,8 @@ export function DeleteTransactionModal({
       onClose={onCancel}
       maxWidthClassName="max-w-md"
       title={
-        <div className="flex items-center gap-2 text-orange-500">
-          <span className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500">
+        <div className="flex items-center gap-2 text-foreground">
+          <span className="grid size-8 place-items-center rounded-full bg-amber-500/12 text-amber-600 dark:text-amber-400">
             <AlertCircle className="size-5" />
           </span>
           <span>Confirm Deletion</span>
@@ -83,7 +83,7 @@ export function DeleteTransactionModal({
             <p>
               Deleting this entry restores the amount and deadline for the commitment.
             </p>
-            <div className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-2.5">
+            <div className="rounded-control bg-surface-2/70 p-4 space-y-2.5">
               <div className="flex items-start justify-between gap-4">
                 <span className="font-semibold text-foreground shrink-0">Commitment</span>
                 <span className="break-words text-right min-w-0">{transaction.description}</span>
@@ -99,7 +99,7 @@ export function DeleteTransactionModal({
             <p>
               Deleting this entry restores the reward so it can be claimed again.
             </p>
-            <div className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-2.5">
+            <div className="rounded-control bg-surface-2/70 p-4 space-y-2.5">
               <div className="flex items-start justify-between gap-4">
                 <span className="font-semibold text-foreground shrink-0">Reward</span>
                 <span className="break-words text-right min-w-0">{transaction.description}</span>
@@ -113,7 +113,7 @@ export function DeleteTransactionModal({
         ) : (
           <div className="space-y-2">
             <p>Are you sure you want to delete this transaction?</p>
-            <div className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-2.5">
+            <div className="rounded-control bg-surface-2/70 p-4 space-y-2.5">
               <div className="flex items-start justify-between gap-4">
                 <span className="font-semibold text-foreground shrink-0">Description</span>
                 <span className="break-words text-right min-w-0">{transaction.description}</span>
@@ -126,12 +126,12 @@ export function DeleteTransactionModal({
           </div>
         )}
         {areAttachedDocumentsLoading && (
-          <p className="rounded-lg border border-border/60 bg-muted/20 p-3 text-muted-foreground">
+          <p className="rounded-control bg-surface-2/70 p-3 text-muted-foreground">
             Checking for attached vault documents...
           </p>
         )}
         {!areAttachedDocumentsLoading && attachedDocumentCount > 0 && (
-          <div className="space-y-3 p-3 rounded-lg border border-border/60 bg-muted/20">
+          <div className="space-y-3 p-3 rounded-control bg-surface-2/70">
             <p className="font-medium text-foreground">
               {attachedDocumentCount} document{attachedDocumentCount === 1 ? '' : 's'} {attachedDocumentCount === 1 ? 'is' : 'are'} attached — {attachedDocumentCount === 1 ? 'it' : 'they'} will be kept in your Document Vault
             </p>
@@ -150,7 +150,7 @@ export function DeleteTransactionModal({
                   <span className="text-xs text-muted-foreground block">Cannot delete vault documents while offline.</span>
                 )}
                 {isOnline && alsoDeleteDocuments && (
-                  <span className="text-xs text-orange-500/90 font-medium block">
+                  <span className="block text-caption font-medium text-amber-700 dark:text-amber-300">
                     The files are removed from your vault once this deletion syncs. Undo brings the
                     transaction back, but not the files.
                   </span>
@@ -159,7 +159,7 @@ export function DeleteTransactionModal({
             </label>
           </div>
         )}
-        <p className="text-xs text-orange-500/90 font-medium bg-orange-500/5 p-2 rounded-lg border border-orange-500/10">
+        <p className="rounded-control bg-amber-500/10 p-2.5 text-caption font-medium text-amber-700 dark:text-amber-300">
           Are you sure you want to delete this transaction?
         </p>
       </div>

@@ -283,6 +283,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     onResetFilters: ledger.handleResetFilters,
     onAddTransaction: ledger.onAddTransactionStable,
     formatSensitive,
+    groupByDay: ledger.sortOrder === 'date-desc' || ledger.sortOrder === 'date-asc',
   }
 
   if (props.isSwitchingCycle) {

@@ -64,7 +64,8 @@ describe('LedgerTransactionList layout selection', () => {
     expect(document.getElementById('tx-row-desktop-tx-1')).not.toBeNull()
     // The mobile card for the same transaction must not exist at all.
     expect(document.getElementById('tx-row-mobile-tx-1')).toBeNull()
-    expect(screen.queryByText('Page Total Summary')).toBeNull()
+    // Both layouts close on the same totals strip.
+    expect(screen.getByRole('region', { name: 'Page totals' })).not.toBeNull()
   })
 
   it('renders only the mobile card list below 1280px', () => {
@@ -74,7 +75,7 @@ describe('LedgerTransactionList layout selection', () => {
     expect(document.querySelector('table')).toBeNull()
     expect(document.getElementById('tx-row-mobile-tx-1')).not.toBeNull()
     expect(document.getElementById('tx-row-desktop-tx-1')).toBeNull()
-    expect(screen.getByText('Page Total Summary')).not.toBeNull()
+    expect(screen.getByRole('region', { name: 'Page totals' })).not.toBeNull()
   })
 
   it('treats a fractional width just under the breakpoint as mobile, like Tailwind does', () => {
@@ -105,30 +106,42 @@ describe('LedgerTransactionList layout selection', () => {
     expect(document.querySelector('tbody')).toBe(body)
   })
 
-  it('removes duplicate bucket movement when it matches Net Position', () => {
+  it('removes duplicate bucket movement when it matches the net', () => {
     setViewport(1024)
     renderList({
       pageTotals: { inflow: 0, outflow: 12.5, transfer: 0, bucket: 'Essentials', bucketNet: -12.5 },
     })
 
-    expect(screen.queryByText('Essentials movement on this page')).toBeNull()
-    expect(screen.getByText('Net Position')).not.toBeNull()
+    expect(screen.queryByText('Essentials movement')).toBeNull()
+    expect(screen.getByText('Net')).not.toBeNull()
   })
 
-  it('shows bucket movement when it differs from Net Position', () => {
+  it('shows bucket movement when it differs from the net', () => {
     setViewport(1024)
     renderList({
       pageTotals: { inflow: 100, outflow: 0, transfer: 0, bucket: 'Essentials', bucketNet: 25 },
     })
 
-    expect(screen.getByText('Essentials movement on this page')).not.toBeNull()
-    expect(screen.queryByText('Net Position')).toBeNull()
+    expect(screen.getByText('Essentials movement')).not.toBeNull()
+    expect(screen.queryByText('Net')).toBeNull()
   })
 
-  it('keeps Net Position for an unfiltered page on mobile', () => {
+  it('groups rows under their day while sorted by date, and lists them flat otherwise', () => {
+    setViewport(390)
+    const second = { ...tx, id: 'tx-2', date: '2026-06-30', description: 'Bus fare' }
+    const { unmount } = renderList({ transactions: [tx, second], groupByDay: true })
+    expect(screen.getAllByRole('region').map(region => region.getAttribute('aria-label')))
+      .toEqual(['Wed, Jul 1', 'Tue, Jun 30', 'Page totals'])
+    unmount()
+
+    renderList({ transactions: [tx, second], groupByDay: false })
+    expect(screen.queryByRole('region', { name: 'Wed, Jul 1' })).toBeNull()
+  })
+
+  it('keeps the net for an unfiltered page on mobile', () => {
     setViewport(390)
     renderList()
 
-    expect(screen.getByText('Net Position')).not.toBeNull()
+    expect(screen.getByText('Net')).not.toBeNull()
   })
 })

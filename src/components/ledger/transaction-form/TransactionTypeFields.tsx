@@ -1,5 +1,8 @@
+import { m } from 'framer-motion'
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, type LucideIcon } from 'lucide-react'
+import { SPRING } from '../../../lib/animations'
 import { Button } from '../../ui/Button'
-import { MinusCircle, PlusCircle, RefreshCw } from 'lucide-react'
+import { cn } from '../../../lib/utils'
 import type { TransactionType } from './transactionFormReducer'
 
 interface TransactionTypeFieldsProps {
@@ -9,64 +12,55 @@ interface TransactionTypeFieldsProps {
   disabled?: boolean
 }
 
-export function TransactionTypeFields({ txType, onChangeTxType, disabled = false }: TransactionTypeFieldsProps) {
-  const base = `min-w-0 flex-1 flex items-center justify-center gap-1 px-1 py-2 text-xs sm:text-xs whitespace-nowrap font-semibold rounded-xl border transition ${
-    disabled ? 'cursor-not-allowed disabled:pointer-events-none' : 'cursor-pointer'
-  }`
+const OPTIONS: Array<{ type: TransactionType; label: string; Icon: LucideIcon }> = [
+  { type: 'outflow', label: 'Outflow', Icon: ArrowUpRight },
+  { type: 'inflow', label: 'Inflow', Icon: ArrowDownLeft },
+  { type: 'transfer', label: 'Transfer', Icon: ArrowLeftRight },
+]
 
+/**
+ * Money out, money in, or money moved: one segmented control whose selected pill slides between
+ * the three. Still a radio group underneath, so it reads as one choice of three.
+ */
+export function TransactionTypeFields({ txType, onChangeTxType, disabled = false }: TransactionTypeFieldsProps) {
   return (
-    <fieldset className="min-w-0 space-y-1.5 sm:col-span-2">
-      <legend className="text-xs font-bold text-muted-foreground">
-        Transaction Type
-      </legend>
+    <fieldset className="min-w-0 sm:col-span-2">
+      <legend className="sr-only">Transaction Type</legend>
       <div
         role="radiogroup"
         aria-label="Transaction type"
-        className="flex flex-wrap sm:flex-nowrap gap-2"
+        className={cn('grid grid-cols-3 gap-1 rounded-full bg-surface-2 p-1', disabled && 'opacity-60')}
         title={disabled ? 'Transaction type cannot be changed while editing. Delete and re-add to change it.' : undefined}
       >
-        <Button variant="tertiary"
-          type="button"
-          role="radio"
-          aria-checked={txType === 'outflow'}
-          disabled={disabled}
-          onClick={() => onChangeTxType('outflow')}
-          className={`${base} ${
-            txType === 'outflow'
-              ? 'bg-orange-500/10 hover:bg-orange-500/10 border-orange-500/30 text-orange-500'
-              : `border-border text-muted-foreground ${disabled ? 'opacity-45' : 'hover:bg-muted/50'}`
-          }`}
-        >
-          <MinusCircle className="size-3.5" /> Outflow <span className="hidden sm:inline">(Debit)</span>
-        </Button>
-        <Button variant="tertiary"
-          type="button"
-          role="radio"
-          aria-checked={txType === 'inflow'}
-          disabled={disabled}
-          onClick={() => onChangeTxType('inflow')}
-          className={`${base} ${
-            txType === 'inflow'
-              ? 'bg-blue-500/10 hover:bg-blue-500/10 border-blue-500/30 text-blue-500'
-              : `border-border text-muted-foreground ${disabled ? 'opacity-45' : 'hover:bg-muted/50'}`
-          }`}
-        >
-          <PlusCircle className="size-3.5" /> Inflow <span className="hidden sm:inline">(Credit)</span>
-        </Button>
-        <Button variant="tertiary"
-          type="button"
-          role="radio"
-          aria-checked={txType === 'transfer'}
-          disabled={disabled}
-          onClick={() => onChangeTxType('transfer')}
-          className={`${base} ${
-            txType === 'transfer'
-              ? 'bg-blue-500/10 hover:bg-blue-500/10 border-blue-500/30 text-blue-500'
-              : `border-border text-muted-foreground ${disabled ? 'opacity-45' : 'hover:bg-muted/50'}`
-          }`}
-        >
-          <RefreshCw className="size-3.5" /> Transfer
-        </Button>
+        {OPTIONS.map(({ type, label, Icon }) => {
+          const selected = txType === type
+          return (
+            <Button
+              key={type}
+              variant="tertiary"
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              disabled={disabled}
+              onClick={() => onChangeTxType(type)}
+              className={cn(
+                'relative min-h-10 min-w-0 gap-1.5 px-2 text-label font-medium hover:bg-transparent disabled:opacity-100 lg:min-h-10',
+                selected ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {selected && (
+                <m.span
+                  layoutId="transaction-type-pill"
+                  transition={SPRING.snappy}
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-full bg-card shadow-(--app-shadow) ring-1 ring-border/60"
+                />
+              )}
+              <Icon className={cn('relative size-4 shrink-0', selected && type === 'inflow' && 'text-emerald-600 dark:text-emerald-400')} aria-hidden="true" />
+              <span className="relative truncate">{label}</span>
+            </Button>
+          )
+        })}
       </div>
     </fieldset>
   )

@@ -3,7 +3,7 @@ import { AlertTriangle, ChevronRight, Gauge } from 'lucide-react'
 import type { CategoryLimitProgress } from '../../types'
 import { Button } from '../ui/Button'
 import { Meter } from '../ui/Meter'
-import { NoticeCard } from './NoticeCard'
+import { NoticeCard } from '../ui/NoticeCard'
 
 interface CategoryWatchExceptionCardProps {
   items: CategoryLimitProgress[]

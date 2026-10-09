@@ -161,7 +161,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
         onDismiss={() => suggestions.setShowNoteSuggestions(false)}
         matchAnchorWidth
         side="bottom"
-        className="z-[190] overflow-y-auto overscroll-contain bg-card border border-blue-500/25 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
+        className="z-[190] overflow-y-auto overscroll-contain bg-card border border-blue-500/25 rounded-xl shadow-(--app-shadow-overlay) animate-in fade-in slide-in-from-top-2 duration-150"
       >
         {suggestions.isSuggestingNote ? (
           <div className="flex items-center gap-2 px-3.5 py-3 text-xs font-semibold text-muted-foreground">
@@ -204,7 +204,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
         onDismiss={() => setShowSuggestions(false)}
         matchAnchorWidth
         side="bottom"
-        className="z-[210] overflow-y-auto overscroll-contain bg-card border border-border/80 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
+        className="z-[210] overflow-y-auto overscroll-contain bg-card border border-border/80 rounded-xl shadow-(--app-shadow-overlay) animate-in fade-in slide-in-from-top-2 duration-150"
       >
         {filteredSuggestions.map((s, idx) => {
           const query = state.description.toLowerCase().trim()

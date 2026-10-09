@@ -79,8 +79,8 @@ export function ReceiptSplitItemRow({
       // rows tall -- it came out floating beside the price disclosure, reading as that row's
       // control rather than the whole line's. The row renders its own instead, on the name's line.
       desktopActions={false}
-      className={`rounded-2xl border shadow-xs ${lowConfidence ? 'border-amber-500/40' : 'border-border'}`}
-      contentClassName={`rounded-2xl p-3 sm:p-4 bg-card ${lowConfidence ? 'before:absolute before:inset-0 before:bg-amber-500/10 before:rounded-2xl before:pointer-events-none relative' : ''}`}
+      className={`rounded-panel border ${lowConfidence ? 'border-amber-500/40' : 'border-border/70'}`}
+      contentClassName={`rounded-panel p-3 sm:p-4 bg-card ${lowConfidence ? 'before:absolute before:inset-0 before:bg-amber-500/8 before:rounded-panel before:pointer-events-none relative' : ''}`}
     >
       <div className={`relative space-y-3 transition-opacity ${isExcluded ? 'opacity-60' : ''}`}>
         <div className="flex min-w-0 items-start gap-2 px-1">
@@ -97,19 +97,19 @@ export function ReceiptSplitItemRow({
           </IconButton>
         </div>
 
-        <div className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 ${isExcluded ? 'bg-muted/30' : 'bg-accent'}`}>
+        <div className={`flex items-center justify-between gap-3 rounded-control px-3 py-2.5 ${isExcluded ? 'bg-surface-2/70' : 'bg-primary/8'}`}>
           <div className="min-w-0">
-            <span className={`block text-eyebrow uppercase ${isExcluded ? 'text-muted-foreground' : 'text-accent-ink'}`}>
+            <span className={`block text-label font-medium ${isExcluded ? 'text-muted-foreground' : 'text-accent-ink'}`}>
               {isExcluded ? 'Not yours' : 'Your share for this item'}
             </span>
-            <strong className="mt-0.5 block truncate text-sm font-extrabold text-foreground">
+            <strong className="mt-0.5 block truncate text-sm font-semibold text-foreground">
               {isExcluded ? 'Nothing to pay' : needsPrice ? 'Price needed' : formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
             </strong>
           </div>
           <span className="shrink-0 text-xs text-muted-foreground">{selected} of {maximum}</span>
         </div>
 
-        <details className="group rounded-xl border border-border/50 bg-muted/15">
+        <details className="group rounded-control bg-surface-2/70">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-xs font-bold text-muted-foreground">
             Price and charge breakdown
             <ChevronDown className="size-3.5 shrink-0 transition-transform group-open:rotate-180" />
@@ -119,8 +119,8 @@ export function ReceiptSplitItemRow({
               of digits, and its 44px lock button took most of what was left. Extras and With
               extras are short enough to keep sharing the second line at every width. */}
           <div className="grid min-w-0 grid-cols-2 gap-2 border-t border-border/40 p-2.5 sm:grid-cols-3">
-            <div className="col-span-2 min-w-0 rounded-xl border border-border/60 bg-muted/25 p-2.5 sm:col-span-1">
-              <span className="block text-eyebrow uppercase text-muted-foreground">Price</span>
+            <div className="col-span-2 min-w-0 rounded-control bg-surface-2/70 p-2.5 sm:col-span-1">
+              <span className="block text-label font-medium text-muted-foreground">Price</span>
               <div className="mt-1 flex min-w-0 items-center gap-1">
                 <Input
                   aria-label={`Item ${index + 1} price`}
@@ -148,7 +148,7 @@ export function ReceiptSplitItemRow({
               </div>
             </div>
 
-            <div className="min-w-0 rounded-xl border border-border/60 bg-muted/25 p-2.5">
+            <div className="min-w-0 rounded-control bg-surface-2/70 p-2.5">
               {/* Height pinned to the eyebrow line box, and the hint uses its inline variant. The
                   hint is a button, so the sub-1024px interaction floor gives it a 44px min-height
                   no authored size can undo; in an auto-height label row that made this tile's
@@ -156,7 +156,7 @@ export function ReceiptSplitItemRow({
                   sat that much lower than its neighbour's. The inline variant carries its target on
                   a pseudo-element instead, and the fixed height keeps the button's box out of the
                   row's measurement at every tier. */}
-              <span className="flex h-4 items-center gap-1 text-eyebrow uppercase text-muted-foreground">
+              <span className="flex h-4 items-center gap-1 text-label font-medium text-muted-foreground">
                 {/* The rate lives under the figure, not inside the label. Appended to "Extras" it
                     made a string no phone-width tile could hold, and `truncate` ate it. */}
                 <span className="min-w-0 truncate">Extras</span>
@@ -183,8 +183,8 @@ export function ReceiptSplitItemRow({
             </div>
 
             <div className="min-w-0 rounded-xl border border-primary/25 bg-primary/10 p-2.5">
-              <span className="block text-eyebrow uppercase text-accent-ink">With extras</span>
-              <span className="mt-2 block truncate text-xs font-extrabold text-accent-ink">
+              <span className="block text-label font-medium text-accent-ink">With extras</span>
+              <span className="mt-2 block truncate text-xs font-semibold text-accent-ink">
                 {isExcluded || needsPrice ? '—' : formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
               </span>
             </div>
@@ -197,7 +197,7 @@ export function ReceiptSplitItemRow({
             under it. */}
         <div className="flex flex-col gap-2 border-t border-border/40 pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <div className="min-w-0">
-            <span className="block text-eyebrow uppercase text-muted-foreground">How many are yours</span>
+            <span className="block text-label font-medium text-muted-foreground">How many are yours</span>
             <span className="text-xs text-muted-foreground">{maximum} on the receipt · 0 if none is yours</span>
           </div>
           <div className="flex shrink-0 items-center self-end rounded-xl border border-border bg-background p-1 shadow-xs sm:self-auto">
@@ -210,7 +210,7 @@ export function ReceiptSplitItemRow({
             >
               <Minus className="size-3.5" />
             </Button>
-            <span className="min-w-9 text-center text-sm font-extrabold text-foreground" aria-label={`Quantity for item ${index + 1}`}>
+            <span className="min-w-9 text-center text-sm font-semibold text-foreground" aria-label={`Quantity for item ${index + 1}`}>
               {selected}
             </span>
             <Button size="icon" variant="tertiary"

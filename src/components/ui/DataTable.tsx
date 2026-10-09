@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Button } from './Button'
 import { CustomSelect } from './CustomSelect'
+import { panelClass } from './panelStyles'
 
 export interface DataTableProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
@@ -14,22 +15,21 @@ export interface DataTableProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 /**
- * Shared visible-table frame. The Ledger desktop table is the visual baseline:
- * one bordered Ayu surface, a horizontally scrollable table, and the same
- * header/body rhythm wherever a desktop table is used.
+ * Shared visible-table frame: one hairline-bordered card, a horizontally scrollable table, quiet
+ * column labels, and hairlines between rows -- the same rhythm wherever a desktop table is used.
  */
 export function DataTable({ children, embedded = false, horizontalOverflow = 'auto', tableClassName, className, ...props }: DataTableProps) {
   return (
     <div
       className={cn(
         'overflow-hidden',
-        !embedded && 'rounded-2xl border border-border/60 bg-card shadow-xs',
+        !embedded && panelClass,
         className,
       )}
       {...props}
     >
       <div className={horizontalOverflow === 'hidden' ? 'overflow-x-hidden' : 'overflow-x-auto'}>
-        <table className={cn('w-full border-separate border-spacing-0 text-left text-xs', tableClassName)}>
+        <table className={cn('w-full border-separate border-spacing-0 text-left text-body', tableClassName)}>
           {children}
         </table>
       </div>
@@ -40,7 +40,7 @@ export function DataTable({ children, embedded = false, horizontalOverflow = 'au
 export function DataTableHeader({ children, className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <thead {...props}>
-      <tr className={cn('border-b border-border/50 bg-muted/20 text-xs font-semibold text-muted-foreground select-none', className)}>
+      <tr className={cn('text-caption font-medium text-muted-foreground select-none [&>th]:border-b [&>th]:border-border/60', className)}>
         {children}
       </tr>
     </thead>
@@ -49,7 +49,8 @@ export function DataTableHeader({ children, className, ...props }: HTMLAttribute
 
 export function DataTableBody({ children, className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
-    <tbody className={cn('divide-y divide-border/30 text-xs [&>tr>td]:p-4', className)} {...props}>
+    // Separate borders, so the hairline sits on the cells: a row border is not drawn in this model.
+    <tbody className={cn('[&>tr>td]:px-4 [&>tr>td]:py-3 [&>tr:not(:first-child)>td]:border-t [&>tr>td]:border-border/50', className)} {...props}>
       {children}
     </tbody>
   )
@@ -57,7 +58,7 @@ export function DataTableBody({ children, className, ...props }: HTMLAttributes<
 
 export function DataTableHeaderCell({ children, className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
-    <th scope="col" className={cn('p-4', className)} {...props}>
+    <th scope="col" className={cn('px-4 py-3 font-medium', className)} {...props}>
       {children}
     </th>
   )
@@ -74,8 +75,8 @@ export function DataTableFooter({ children, standalone = false, className, ...pr
     <div
       className={cn(
         standalone
-          ? 'rounded-2xl border border-border/60 bg-card p-4 shadow-xs'
-          : 'border-t border-border/50 p-3',
+          ? 'px-1 py-2'
+          : 'border-t border-border/60 p-3',
         className,
       )}
       {...props}
@@ -127,7 +128,7 @@ export function DataTablePagination({
   return (
     <div
       className={cn(
-        'flex flex-col gap-3 text-xs select-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-between',
+        'flex flex-col gap-3 text-label select-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-between',
         centerOnMobile && 'items-center',
       )}
       aria-busy={serverIsFetching || undefined}
@@ -173,7 +174,7 @@ export function DataTablePagination({
 
         <div className={cn('flex items-center gap-2', centerOnMobile && 'justify-center')}>
           <Button
-            variant="secondary"
+            variant="tertiary"
             size="sm"
             onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
             disabled={previousDisabled}
@@ -182,12 +183,12 @@ export function DataTablePagination({
             <ChevronLeft className="size-3.5" aria-hidden="true" />
             Prev
           </Button>
-          <span className="text-xs font-semibold text-muted-foreground sm:hidden">
+          <span className="text-label font-medium text-muted-foreground tabular-nums sm:hidden">
             Page {currentPage} / {safeTotalPages}
           </span>
           <div className="hidden items-center gap-1 sm:flex">
             <Button
-              variant="secondary"
+              variant="tertiary"
               size="sm"
               onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
               disabled={previousDisabled}
@@ -196,22 +197,22 @@ export function DataTablePagination({
               Previous
             </Button>
             {pageNumbers(currentPage, safeTotalPages).map((page, index) => page === '…' ? (
-              <span key={`dots-${index}`} className="px-2 py-1.5 text-xs text-muted-foreground" aria-hidden="true">…</span>
+              <span key={`dots-${index}`} className="px-2 py-1.5 text-label text-muted-foreground" aria-hidden="true">…</span>
             ) : (
               <Button
                 key={`page-${page}`}
-                variant={currentPage === page ? 'primary' : 'secondary'}
+                variant={currentPage === page ? 'primary' : 'tertiary'}
                 size="sm"
                 onClick={() => onPageChange(page)}
                 disabled={serverIsFetching}
                 aria-current={currentPage === page ? 'page' : undefined}
-                className="min-w-8 px-2"
+                className="min-w-9 px-2 tabular-nums"
               >
                 {page}
               </Button>
             ))}
             <Button
-              variant="secondary"
+              variant="tertiary"
               size="sm"
               onClick={() => onPageChange(Math.min(currentPage + 1, safeTotalPages))}
               disabled={nextDisabled}
@@ -221,7 +222,7 @@ export function DataTablePagination({
             </Button>
           </div>
           <Button
-            variant="secondary"
+            variant="tertiary"
             size="sm"
             onClick={() => onPageChange(Math.min(currentPage + 1, safeTotalPages))}
             disabled={nextDisabled}

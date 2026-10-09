@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { m, useReducedMotion } from 'framer-motion'
 import { cn } from '../../lib/utils'
 import { DURATION, EASE_FLUID } from '../../lib/animations'
-import { panelClass } from '../ui/panelStyles'
+import { panelClass } from './panelStyles'
 
 export type NoticeTone = 'attention' | 'urgent' | 'neutral'
 

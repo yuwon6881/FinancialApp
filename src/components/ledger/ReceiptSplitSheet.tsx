@@ -220,10 +220,10 @@ export function ReceiptSplitSheet({
     >
       {receipt && calculation && (
         <div className="space-y-5">
-          <section className="rounded-2xl border border-primary/25 bg-primary/10 p-4">
-            <p className="text-eyebrow uppercase text-accent-ink">Your share</p>
+          <section className="rounded-panel bg-primary/8 p-4">
+            <p className="text-label font-medium text-accent-ink">Your share</p>
             <div className="mt-1 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
-              <strong data-testid="receipt-share-total" className="text-2xl font-black tracking-tight text-foreground">
+              <strong data-testid="receipt-share-total" className="text-2xl font-semibold tracking-tight text-foreground">
                 {calculation.invalidSelectedItemIndexes.length > 0
                   ? 'Price needed'
                   : formatCurrencyVal(calculation.total, currency)}
@@ -239,7 +239,7 @@ export function ReceiptSplitSheet({
             )}
           </section>
 
-          <details className="group rounded-2xl border border-border/60 bg-muted/15">
+          <details className="group rounded-control bg-surface-2/70">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-3 text-xs font-bold text-foreground">
               Receipt details
               <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
@@ -323,7 +323,7 @@ export function ReceiptSplitSheet({
             {/* A receipt with nothing left on it is a dead end otherwise: the total reads zero,
                 Use This Amount is disabled, and nothing says why or what to do about it. */}
             {receipt.items.length === 0 && (
-              <p className="rounded-xl border border-border/60 bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
+              <p className="rounded-control bg-surface-2/70 px-3 py-4 text-center text-xs text-muted-foreground">
                 No lines were read off this receipt, so there is nothing to split. Discard the scan
                 and enter the amount yourself, or scan the receipt again.
               </p>
@@ -348,7 +348,7 @@ export function ReceiptSplitSheet({
             ))}
           </section>
 
-          <details className="group rounded-2xl border border-primary/20 bg-primary/5">
+          <details className="group rounded-panel bg-primary/6">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-xs font-bold text-foreground">
               How your total was calculated
               <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
@@ -364,7 +364,7 @@ export function ReceiptSplitSheet({
                   {formatCurrencyVal(calculation.total - calculation.itemSubtotal, currency)}
                 </span>
               </div>
-              <div className="flex justify-between gap-4 border-t border-primary/20 pt-3 text-sm font-extrabold text-accent-ink">
+              <div className="flex justify-between gap-4 border-t border-primary/20 pt-3 text-sm font-semibold text-accent-ink">
                 <span>What you pay</span>
                 <span>{formatCurrencyVal(calculation.total, currency)}</span>
               </div>

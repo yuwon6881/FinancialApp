@@ -89,7 +89,7 @@ describe('DraftStagingView', () => {
     await waitFor(() => {
       const surface = document.querySelector('[data-swipe-content]')
       expect(surface?.firstElementChild?.className).toContain('items-start')
-      expect(surface?.firstElementChild?.querySelector('span.text-orange-500')?.className).toContain('max-w-[45%]')
+      expect(surface?.firstElementChild?.querySelector('.amount-text')?.className).toContain('max-w-[45%]')
       expect(screen.getByText('Household essentials and school supplies').className).toContain('truncate')
     })
   })

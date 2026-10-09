@@ -56,7 +56,7 @@ export function StabilityTopUpOffer({
     hideSensitive ? <span aria-hidden="true">•••</span> : formatCurrencyVal(value, currency)
 
   return (
-    <div className="rounded-xl border border-border/60 bg-muted/25 p-3.5 sm:col-span-2">
+    <div className="rounded-control bg-surface-2/70 p-3.5 sm:col-span-2">
       <div className="flex items-center gap-3">
         <Checkbox
           id={checkboxId}
@@ -124,7 +124,7 @@ export function StabilityTopUpOffer({
             </p>
           )}
 
-          <details className="rounded-lg border border-border/40 bg-card/50 p-2.5">
+          <details className="rounded-control bg-surface-2/70 p-2.5">
             <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
               Where it comes from
             </summary>

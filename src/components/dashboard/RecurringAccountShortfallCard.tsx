@@ -3,7 +3,7 @@ import { AlertCircle, ArrowRightLeft, Calendar } from 'lucide-react'
 import type { RecurringAccountShortfall } from '../../types'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
-import { NoticeCard } from './NoticeCard'
+import { NoticeCard } from '../ui/NoticeCard'
 
 interface RecurringAccountShortfallCardProps {
   shortfalls: RecurringAccountShortfall[] | undefined

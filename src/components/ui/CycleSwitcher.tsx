@@ -73,7 +73,9 @@ export function CycleSwitcher({
 
   return (
     <div className={cn('relative z-40 flex min-w-0 flex-wrap items-center gap-2', className)}>
-      <div className="flex min-w-0 max-w-full items-center gap-0.5 rounded-full border border-border/70 bg-card p-1 shadow-xs dark:shadow-none">
+      {/* Full width on a phone: the month picker is the flexible part, and inside a shrink-wrapped
+          pill "flex-1" resolved to nothing, leaving only the year. */}
+      <div className="flex w-full min-w-0 max-w-full items-center gap-0.5 rounded-full border border-border/70 bg-card p-1 sm:w-auto">
         <IconButton
           label={periodMode === 'year' ? 'Previous year' : 'Previous cycle'}
           onClick={() => step(-1)}

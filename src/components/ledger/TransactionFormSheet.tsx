@@ -189,16 +189,22 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           <CapturedAlertNotice source={form.state.captureSource} notices={form.state.captureNotices} excerpt={form.state.captureExcerpt} />
         )}
         {securityPending && (
-          <p className="rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground" role="status">
+          <p className="rounded-control bg-surface-2 px-3.5 py-2.5 text-body text-muted-foreground" role="status">
             Finishing security check… You can fill this form in, but saving is temporarily disabled.
           </p>
         )}
         {accountsLoading && !props.hideSensitive && (
-          <p className="rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground" role="status">
+          <p className="rounded-control bg-surface-2 px-3.5 py-2.5 text-body text-muted-foreground" role="status">
             Loading accounts… This form will be ready to save when account data arrives.
           </p>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <TransactionTypeFields
+            txType={form.state.ledgerCategory === 'AccountMove' ? 'transfer' : form.state.transactionType}
+            onChangeTxType={(type: TransactionType) => form.changeTransactionType(type)}
+            disabled={form.state.mode === 'edit'}
+          />
+
           {!form.state.captureId && <ReceiptScanPicker
             isScanning={form.scanner.isScanning}
             showScanPicker={form.scanner.showScanPicker}
@@ -220,12 +226,6 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             setShowScanBanner={form.scanner.setShowScanBanner}
             scanError={form.scanner.scanError}
             setScanError={form.scanner.setScanError}
-          />
-
-          <TransactionTypeFields
-            txType={form.state.ledgerCategory === 'AccountMove' ? 'transfer' : form.state.transactionType}
-            onChangeTxType={(type: TransactionType) => form.changeTransactionType(type)}
-            disabled={form.state.mode === 'edit'}
           />
 
           <TransactionFormFields
@@ -280,13 +280,12 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
 
         <ModalActions className="pt-2">
           {form.state.errors.submit && (
-            <p className="basis-full text-sm text-destructive" role="alert">{form.state.errors.submit}</p>
+            <p className="basis-full text-body text-destructive" role="alert">{form.state.errors.submit}</p>
           )}
           <Button
             variant="secondary"
             type="button"
             onClick={form.handleCloseForm}
-            className="rounded-xl py-2.5"
           >
             Cancel
           </Button>
@@ -297,7 +296,6 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
               ? 'Finishing security check…'
               : props.hideSensitive ? 'Reveal sensitive data before saving'
                 : accountsLoading ? 'Loading accounts…' : undefined}
-            className="rounded-xl py-2.5 shadow-lg shadow-primary/10"
           >
             {form.isSubmitting
               ? 'Saving…'

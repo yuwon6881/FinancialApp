@@ -8,7 +8,7 @@ import {
 } from '../../lib/documentRetention'
 import { formatBytes, formatDate } from './view/formatters'
 import { Button } from '../ui/Button'
-import { NoticeCard } from '../dashboard/NoticeCard'
+import { NoticeCard } from '../ui/NoticeCard'
 
 /** Shown inline before the rest go behind a disclosure, so eight years cannot dominate a screen. */
 const INLINE_YEAR_LIMIT = 3

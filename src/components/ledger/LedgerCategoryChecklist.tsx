@@ -57,7 +57,7 @@ export const LedgerCategoryChecklist: React.FC<LedgerCategoryChecklistProps> = (
     <div className={cn('flex flex-col gap-4', !isMobile && 'h-full min-h-0')}>
       {/* Section 1: Ledger Allocation Buckets */}
       <div className="flex shrink-0 flex-col gap-2">
-        <span className="text-eyebrow uppercase text-muted-foreground block">
+        <span className="text-label font-medium text-muted-foreground block">
           Ledger Categories
         </span>
         <div className="flex flex-col gap-1.5">
@@ -83,7 +83,7 @@ export const LedgerCategoryChecklist: React.FC<LedgerCategoryChecklistProps> = (
 
       {/* Section 2: Transaction Categories */}
       <div className={cn('flex flex-col gap-2', !isMobile && 'min-h-0 flex-1')}>
-        <span className="text-eyebrow uppercase text-muted-foreground block">
+        <span className="text-label font-medium text-muted-foreground block">
           Categories
         </span>
         <div className={track}>

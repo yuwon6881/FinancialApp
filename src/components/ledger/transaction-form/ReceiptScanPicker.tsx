@@ -32,8 +32,8 @@ interface ReceiptScanPickerProps {
 // Shared by both pickers' source rows. The rows themselves are written inline
 // rather than extracted into a component: the file inputs are reached through refs,
 // and a ref passed as a component prop is a render-time read the compiler rejects.
-const SOURCE_BUTTON = 'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-primary/40 bg-primary/5 hover:bg-primary/10 text-accent-ink transition duration-200 text-xs font-semibold cursor-pointer'
-const CANCEL_BUTTON = 'flex items-center justify-center px-3 py-2.5 rounded-xl border border-border bg-muted hover:bg-muted/80 text-muted-foreground transition duration-200 text-xs font-semibold cursor-pointer'
+const SOURCE_BUTTON = 'flex-1 gap-2 border border-border/70 bg-surface-2/60 font-medium text-foreground hover:bg-surface-2'
+const CANCEL_BUTTON = 'px-3 text-muted-foreground hover:bg-surface-2 hover:text-foreground'
 
 export function ReceiptScanPicker({
   isScanning,
@@ -133,17 +133,17 @@ export function ReceiptScanPicker({
               setScanError(null)
               if (!busy) setShowScanPicker(true)
             }}
-            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
+            className={`w-full gap-2 border border-border/70 font-medium ${
               isScanning
-                ? 'perimeter-beam-host border-primary/20 bg-primary/5 hover:bg-primary/5 text-accent-ink cursor-not-allowed relative overflow-hidden'
-                : 'border-primary/40 bg-primary/5 hover:bg-primary/10 text-accent-ink disabled:opacity-45 disabled:cursor-not-allowed'
+                ? 'perimeter-beam-host relative cursor-not-allowed overflow-hidden bg-primary/8 text-accent-ink hover:bg-primary/8'
+                : 'bg-surface-2/60 text-foreground hover:bg-surface-2'
             }`}
           >
             {isScanning && <PerimeterBeam size={40} />}
             {isScanning ? (
               <><Loader2 className="size-3.5 animate-spin" /> {scanningLabel}</>
             ) : (
-              <><Camera className="size-3.5" /><span>{label}</span></>
+              <><Camera className="size-4 text-muted-foreground" aria-hidden="true" /><span>{label}</span></>
             )}
           </Button>
           {splitEnabled && (
@@ -154,17 +154,17 @@ export function ReceiptScanPicker({
                 setScanError(null)
                 if (!busy) setShowSplitPicker?.(true)
               }}
-              className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
+              className={`w-full gap-2 border border-border/70 font-medium ${
                 isSplitScanning
-                  ? 'perimeter-beam-host border-primary/20 bg-primary/5 hover:bg-primary/5 text-accent-ink cursor-not-allowed relative overflow-hidden'
-                  : 'border-primary/40 bg-primary/5 hover:bg-primary/10 text-accent-ink disabled:opacity-45 disabled:cursor-not-allowed'
+                  ? 'perimeter-beam-host relative cursor-not-allowed overflow-hidden bg-primary/8 text-accent-ink hover:bg-primary/8'
+                  : 'bg-surface-2/60 text-foreground hover:bg-surface-2'
               }`}
             >
               {isSplitScanning && <PerimeterBeam size={40} />}
               {isSplitScanning ? (
                 <><Loader2 className="size-3.5 animate-spin" /> Reading receipt items...</>
               ) : (
-                <><Calculator className="size-3.5" /> Calculate My Share</>
+                <><Calculator className="size-4 text-muted-foreground" aria-hidden="true" /> Calculate My Share</>
               )}
             </Button>
           )}

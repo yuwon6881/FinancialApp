@@ -913,9 +913,10 @@ html, body {
 }
 
 /* Prevent iOS Safari from auto-zooming the viewport when focusing a form field
-   (mobile browsers zoom in on inputs whose font-size is below 16px). */
+   (mobile browsers zoom in on inputs whose font-size is below 16px). `.input-display` marks a field
+   deliberately set larger than that -- the amount entry -- which this floor must not shrink. */
 @media (max-width: 767px) {
-    input,
+    input:not(.input-display),
     select,
     textarea {
         font-size: 16px !important;

@@ -34,43 +34,39 @@ export function LedgerToolbar({
 
   return (
     <PageHeader
-      title="Financial Ledger"
+      title="Transactions"
       titleActions={<Tabs
         value={showAllCycles ? 'all' : 'current'}
         onValueChange={value => onShowAllCyclesChange(value === 'all')}
         options={[
-          { value: 'current', label: 'Current cycle' },
+          { value: 'current', label: 'This cycle' },
           { value: 'all', label: 'All cycles' },
         ] as const}
         label="Ledger cycle scope"
         idPrefix="ledger-scope"
         variant="segmented"
       />}
-      description={showAllCycles ? scopeLabel : undefined}
-      actions={<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
-        {/* `lg`, like the action beside it: at the default size this button dropped to 40px on a
-            desktop while "Post Transaction" stayed at 44, so the pair sat at two heights and the
-            wider of the two was the shorter one. */}
+      description={showAllCycles ? `Showing ${scopeLabel}` : undefined}
+      actions={<div className="flex items-center gap-2">
         <Button
           variant="secondary"
-          size="lg"
           onClick={onOpenExport}
           disabled={hideSensitive}
-          className="flex-1 whitespace-nowrap lg:flex-initial"
+          className="whitespace-nowrap"
           title={hideSensitive ? 'CSV export disabled while sensitive amounts are masked' : 'Export CSV'}
         >
-          <Download className="size-3.5 text-muted-foreground" />
+          <Download className="size-4" aria-hidden="true" />
           Export CSV
         </Button>
         <Button
           variant="primary"
-          size="lg"
           onClick={onToggleForm}
           disabled={hideSensitive}
           title={hideSensitive ? 'Unhide balances to post a transaction' : undefined}
-          className="flex-1 whitespace-nowrap lg:flex-initial"
+          // A phone already has the + beside its tab bar for this, and the form opens over the page.
+          className={isFormOpen ? 'whitespace-nowrap' : 'hidden whitespace-nowrap sm:inline-flex'}
         >
-          {isFormOpen ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
+          {isFormOpen ? <X className="size-4" aria-hidden="true" /> : <Plus className="size-4" aria-hidden="true" />}
           {isFormOpen ? 'Cancel' : 'Post Transaction'}
         </Button>
       </div>}

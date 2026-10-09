@@ -35,4 +35,6 @@ export interface LedgerListProps {
   canSelect?: (t: Transaction) => boolean
   onToggleSelected?: (t: Transaction) => void
   formatSensitive: (val: number) => ReactNode
+  /** Groups rows under day headings. Only meaningful while the list is sorted by date. */
+  groupByDay?: boolean
 }

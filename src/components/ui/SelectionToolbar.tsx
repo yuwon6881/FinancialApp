@@ -54,38 +54,37 @@ export function SelectionToolbar({
   const hasSelection = selectedCount > 0
 
   return (
-    <div data-testid={testId} className={`mb-3 grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border px-3 py-2 transition-colors lg:min-h-16 ${hasSelection ? 'border-primary/30 bg-primary/5' : 'border-border/60 bg-muted/20'}`}>
+    <div data-testid={testId} className={`mb-3 grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-full py-1 pr-1 transition-colors ${isSelecting ? 'bg-surface-2 pl-3' : 'pl-1'} ${hasSelection ? 'bg-primary/8' : ''}`}>
       <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
         {isSelecting && (
           <>
-            <label className={`-mx-1.5 inline-flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 transition sm:min-h-9 ${itemCount > 0 ? 'cursor-pointer hover:bg-muted' : 'opacity-60'}`}>
+            <label className={`-mx-1.5 inline-flex min-h-11 min-w-0 items-center gap-2 rounded-full px-1.5 py-1 transition sm:min-h-9 ${itemCount > 0 ? 'cursor-pointer hover:bg-surface-3' : 'opacity-60'}`}>
               <Checkbox
                 ref={checkboxRef}
                 checked={allVisibleSelected}
                 onChange={onToggleSelectAll}
                 disabled={disabled || itemCount === 0}
                 aria-label={allVisibleSelected ? `Clear ${itemLabel} selection on this page` : `Select all ${itemLabel} on this page`}
-                className="size-4 border-primary/50 bg-card accent-primary"
               />
-              <span className="truncate text-xs font-black uppercase tracking-wide text-foreground">Select page</span>
+              <span className="truncate text-label font-medium text-foreground">Select page</span>
             </label>
             <span className="hidden h-5 w-px shrink-0 bg-border sm:block" aria-hidden="true" />
           </>
         )}
-        <p className={`truncate text-xs font-semibold sm:text-xs ${exceedsLimit ? 'text-destructive' : hasSelection ? 'text-accent-ink' : 'text-muted-foreground'}`} aria-live="polite">
+        <p className={`truncate text-label ${exceedsLimit ? 'text-destructive' : hasSelection ? 'font-medium text-accent-ink' : 'text-muted-foreground'}`} aria-live="polite">
           {hasSelection ? `${selectedCount} ${selectedLabel}${atLimit ? ` · max ${selectionLimit}` : ''}` : `${itemCount} on this page`}
         </p>
       </div>
 
       <div data-testid={actionsTestId ?? `${testId}-actions`} className="flex shrink-0 items-center justify-end gap-1.5">
         {!isSelecting ? (
-          <Button variant="secondary" size="sm" type="button" disabled={disabled || itemCount === 0} onClick={onStartSelection} className="min-h-11 bg-card hover:bg-card sm:min-h-0">
+          <Button variant="tertiary" size="sm" type="button" disabled={disabled || itemCount === 0} onClick={onStartSelection}>
             Select
           </Button>
         ) : (
           <>
             {actions}
-            <Button variant="secondary" size="sm" type="button" onClick={onLeaveSelection} aria-label="Leave selection mode" className="min-h-11 shrink-0 bg-card hover:bg-card sm:min-h-0">
+            <Button variant="primary" size="sm" type="button" onClick={onLeaveSelection} aria-label="Leave selection mode" className="shrink-0">
               Done
             </Button>
           </>

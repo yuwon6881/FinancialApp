@@ -6,7 +6,7 @@ import { BottomSheet } from '../ui/BottomSheet'
 import { InfoHint } from '../ui/InfoHint'
 import { describeStabilityRecovery } from '../../lib/stabilityRecoveryNarrative'
 import { Badge } from '../ui/Badge'
-import { NoticeCard } from './NoticeCard'
+import { NoticeCard } from '../ui/NoticeCard'
 import { StabilityRecoveryDetails } from './StabilityRecoveryDetails'
 
 export interface StabilityRecoveryLedgerJump {

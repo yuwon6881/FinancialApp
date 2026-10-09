@@ -74,7 +74,7 @@ describe('SwipeableRow closed-state opacity', () => {
     expect(surface?.className).toContain('border-border')
     expect(surface?.className).toContain('shadow-xs')
     expect(surface?.className).toContain('overflow-hidden')
-    expect(viewport?.className).toContain('rounded-2xl')
+    expect(viewport?.className).toContain('rounded-panel')
     expect(viewport?.className).toContain('bg-card')
     expect(viewport?.className).not.toContain('border-border')
   })

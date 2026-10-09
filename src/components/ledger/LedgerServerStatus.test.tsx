@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, cleanup, within } from '@testing-library/react'
+import { render, screen, cleanup } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { LedgerServerStatus } from './LedgerServerStatus'
 import type { LedgerListProps } from './ledgerListShared'
@@ -53,7 +53,8 @@ describe('LedgerServerStatus syncing panel', () => {
 
     // The one syncing row is 25. Inheriting the server page's figures put its 900 under a
     // heading that counts the syncing rows.
-    expect(within(panel as HTMLElement).getAllByText('25.00').length).toBeGreaterThan(0)
-    expect(within(panel as HTMLElement).queryByText('900.00')).toBeNull()
+    const amounts = Array.from((panel as HTMLElement).querySelectorAll('.amount-text')).map(node => node.textContent)
+    expect(amounts.some(text => text?.includes('25.00'))).toBe(true)
+    expect(amounts.some(text => text?.includes('900.00'))).toBe(false)
   })
 })

@@ -65,7 +65,7 @@ describe('LedgerRows move action', () => {
     const rowProps = props(transaction('NotRequired'))
     render(<table><tbody><DesktopLedgerRow {...rowProps} /></tbody></table>)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move' }))
+    fireEvent.click(screen.getByRole('button', { name: /^(Move|Cannot move)/ }))
 
     expect(rowProps.onMove).toHaveBeenCalledWith(rowProps.transaction)
   })
@@ -74,7 +74,7 @@ describe('LedgerRows move action', () => {
     const rowProps = props({ ...transaction('NotRequired'), wishlistItemId: 7 })
     render(<table><tbody><DesktopLedgerRow {...rowProps} /></tbody></table>)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Edit / }))
 
     expect(rowProps.onEditBlocked).toHaveBeenCalledWith(rowProps.transaction)
     expect(rowProps.onStartEdit).not.toHaveBeenCalled()
@@ -85,7 +85,7 @@ describe('LedgerRows move action', () => {
     ['commitment completion', { savingsGoalId: 4 }],
   ])('disables Move for a %s', (_label, changes) => {
     render(<table><tbody><DesktopLedgerRow {...props({ ...transaction('NotRequired'), ...changes })} /></tbody></table>)
-    const moveBtn = screen.getByRole('button', { name: 'Move' })
+    const moveBtn = screen.getByRole('button', { name: /^(Move|Cannot move)/ })
     expect(moveBtn).toBeDefined()
     expect(moveBtn.hasAttribute('disabled')).toBe(true)
   })

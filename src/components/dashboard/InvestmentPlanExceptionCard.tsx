@@ -2,7 +2,7 @@ import { AlertTriangle, ChevronRight, PieChart } from 'lucide-react'
 import type { AppNavigationOptions } from '../../lib/appLocation'
 import type { AppTab, InvestmentAllocationOverview } from '../../types'
 import { Button } from '../ui/Button'
-import { NoticeCard } from './NoticeCard'
+import { NoticeCard } from '../ui/NoticeCard'
 
 interface InvestmentPlanExceptionCardProps {
   allocation: InvestmentAllocationOverview | null

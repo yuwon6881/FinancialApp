@@ -136,17 +136,14 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
     : `Showing ${parts.join(', ')}`
 
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-blue-500/8 border border-blue-500/20 text-xs animate-in fade-in duration-200">
-      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-blue-500 font-medium leading-relaxed">
-        <span className="size-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse" />
+    <div className="flex items-center justify-between gap-3 rounded-full bg-primary/8 py-1 pl-4 pr-1 text-label animate-in fade-in duration-200">
+      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-accent-ink">
+        <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
         <span className="min-w-0 break-words">{label}</span>
       </div>
       {(hasAnyFilter || hasScopedRange) && (
-        <Button variant="tertiary"
-          onClick={onResetFilters}
-          className="flex shrink-0 items-center gap-1 whitespace-nowrap text-blue-500 hover:text-blue-500 text-xs font-semibold transition cursor-pointer"
-        >
-          <X className="size-3" /> Clear filters
+        <Button variant="tertiary" size="sm" onClick={onResetFilters} className="shrink-0 text-accent-ink hover:bg-primary/10">
+          <X className="size-3.5" aria-hidden="true" /> Clear filters
         </Button>
       )}
     </div>

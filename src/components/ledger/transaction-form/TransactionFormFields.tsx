@@ -194,13 +194,14 @@ export function TransactionFormFields({
 
       <FormField
         className="sm:col-span-2"
-        label={`Amount (${getCurrencySymbol(currency)})`}
+        label={`Amount (${getCurrencySymbol(currency).trim()})`}
         required
         error={errors.amount}
       >
+        {/* The figure the whole form is about, set at display size so it reads before anything else. */}
         <div className="relative flex items-center">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-sm font-semibold text-muted-foreground pointer-events-none select-none leading-none">
-            {getCurrencySymbol(currency)}
+          <span className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 select-none text-section font-medium text-muted-foreground">
+            {getCurrencySymbol(currency).trim()}
           </span>
           <SmartAmountInput
             type="text"
@@ -209,8 +210,8 @@ export function TransactionFormFields({
             onChange={e => {
               onSetField('amount', maskCurrencyInput(e.target.value, state.amount))
             }}
-            className={`w-full h-10 pr-3.5 ${
-              getCurrencySymbol(currency).length > 2 ? 'pl-12' : getCurrencySymbol(currency).length > 1 ? 'pl-10' : 'pl-8'
+            className={`input-display h-16 w-full pr-4 text-display font-semibold tabular-nums lg:h-16 ${
+              getCurrencySymbol(currency).trim().length > 2 ? 'pl-[4.25rem]' : getCurrencySymbol(currency).trim().length > 1 ? 'pl-14' : 'pl-10'
             }`}
           />
         </div>
@@ -236,11 +237,11 @@ export function TransactionFormFields({
             label="Category"
           >
             {suggestions.isSuggestingCategory ? (
-                <span className="absolute right-0 top-0 inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-blue-500">
+                <span className="absolute right-0 top-0 inline-flex items-center gap-1 whitespace-nowrap text-caption font-medium text-accent-ink">
                   <Loader2 className="size-3 animate-spin" /> Suggesting
                 </span>
               ) : suggestions.categorySuggestionUnavailable ? (
-                <span className="absolute right-0 top-0 whitespace-nowrap text-xs font-semibold text-amber-600 dark:text-amber-500">
+                <span className="absolute right-0 top-0 whitespace-nowrap text-caption font-medium text-amber-700 dark:text-amber-400">
                   AI unavailable
                 </span>
               ) : null}
@@ -331,11 +332,11 @@ export function TransactionFormFields({
         <div
           role="alert"
           aria-live="polite"
-          className="flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs sm:col-span-2"
+          className="flex items-start gap-3 rounded-control bg-amber-500/10 p-3.5 text-label sm:col-span-2"
         >
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" aria-hidden="true" />
-          <div className="space-y-0.5 min-w-0 flex-1">
-            <p className="font-bold text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p className="font-semibold text-foreground">
               {bucketOutflowWarning.message}
             </p>
             <p className="text-muted-foreground">

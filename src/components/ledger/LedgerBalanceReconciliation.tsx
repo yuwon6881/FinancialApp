@@ -19,20 +19,20 @@ export function LedgerBalanceReconciliation({ category, cycleLabel, formatSensit
         </div>
         <InfoHint label={`${category.name} balance calculation`} text="Debit and credit below cover the visible page and leave out internal transfers. This balance uses the complete cycle and includes your bucket’s share of allocations and transfers." />
       </div>
-      <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center">
-        <div className="rounded-xl border border-border/50 bg-muted/25 p-3">
-          <dt className="text-eyebrow uppercase text-muted-foreground">At cycle start</dt>
-          <dd className="mt-1 text-base font-extrabold tabular-nums text-foreground">{formatSensitive(category.budget)}</dd>
+      <dl className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center sm:gap-3">
+        <div className="rounded-control bg-surface-2/70 px-3.5 py-3">
+          <dt className="text-label text-muted-foreground">At cycle start</dt>
+          <dd className="mt-1 text-section tabular-nums text-foreground">{formatSensitive(category.budget)}</dd>
         </div>
-        <span className="hidden text-muted-foreground sm:block" aria-hidden="true">+</span>
-        <div className="rounded-xl border border-border/50 bg-muted/25 p-3">
-          <dt className="text-eyebrow uppercase text-muted-foreground">Movement this cycle</dt>
-          <dd className={`mt-1 text-base font-extrabold tabular-nums ${category.netChange >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{movementPrefix}{formatSensitive(Math.abs(category.netChange))}</dd>
+        <span className="hidden text-center text-section text-muted-foreground sm:block" aria-hidden="true">+</span>
+        <div className="rounded-control bg-surface-2/70 px-3.5 py-3">
+          <dt className="text-label text-muted-foreground">Movement this cycle</dt>
+          <dd className={`mt-1 text-section tabular-nums ${category.netChange > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>{movementPrefix}{formatSensitive(Math.abs(category.netChange))}</dd>
         </div>
-        <span className="hidden text-muted-foreground sm:block" aria-hidden="true">=</span>
-        <div className="rounded-xl border border-blue-500/25 bg-blue-500/8 p-3">
-          <dt className="text-eyebrow uppercase text-muted-foreground">Left after movement</dt>
-          <dd className="mt-1 text-base font-black tabular-nums text-foreground">{formatSensitive(category.remaining)}</dd>
+        <span className="hidden text-center text-section text-muted-foreground sm:block" aria-hidden="true">=</span>
+        <div className="rounded-control bg-primary/8 px-3.5 py-3">
+          <dt className="text-label text-muted-foreground">Left after movement</dt>
+          <dd className="mt-1 text-section font-semibold tabular-nums text-foreground">{formatSensitive(category.remaining)}</dd>
         </div>
       </dl>
     </Panel>

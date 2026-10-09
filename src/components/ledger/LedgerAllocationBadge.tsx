@@ -1,6 +1,6 @@
 import { ArrowRight } from 'lucide-react'
-import { getCategoryBadgeClass } from '../../lib/categoryColors'
-import { displayLedgerCategory } from '../../lib/utils'
+import { getCategoryChartColor } from '../../lib/categoryColors'
+import { cn, displayLedgerCategory } from '../../lib/utils'
 
 interface LedgerAllocationBadgeProps {
   ledgerCategory: string
@@ -23,8 +23,15 @@ function parseTransferRoute(ledgerCategory: string): TransferRoute | null {
   return source && target ? { source, target } : null
 }
 
-const badgeClass = (compact: boolean) =>
-  `${compact ? 'px-1.5' : 'px-2'} py-0.5 rounded-md border text-xs font-semibold whitespace-nowrap`
+/** A bucket written as its colour dot and its name: quiet enough to sit in every row. */
+function BucketMark({ name, compact }: { name: string; compact: boolean }) {
+  return (
+    <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap font-medium text-muted-foreground', compact ? 'text-caption' : 'text-label')}>
+      <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: getCategoryChartColor(name) }} />
+      {name}
+    </span>
+  )
+}
 
 export function LedgerAllocationBadge({
   ledgerCategory,
@@ -32,11 +39,7 @@ export function LedgerAllocationBadge({
   compact = false,
 }: LedgerAllocationBadgeProps) {
   if (ledgerCategory.toLowerCase() === 'accountmove') {
-    return (
-      <span className={`${badgeClass(compact)} ${getCategoryBadgeClass('Transfer')}`}>
-        Between accounts
-      </span>
-    )
+    return <BucketMark name="Between accounts" compact={compact} />
   }
   const route = parseTransferRoute(ledgerCategory)
   const generatedIncomeAllocation = transactionId.includes('-split-') || route?.source === 'Income'
@@ -48,17 +51,12 @@ export function LedgerAllocationBadge({
         aria-label={`Transfer from ${route.source} to ${route.target}`}
         title={`${route.source} to ${route.target}`}
       >
-        <span className={`${badgeClass(compact)} ${getCategoryBadgeClass(route.source)}`}>{route.source}</span>
-        <ArrowRight aria-hidden="true" className="size-3 shrink-0 text-blue-500/70" strokeWidth={2.5} />
-        <span className={`${badgeClass(compact)} ${getCategoryBadgeClass(route.target)}`}>{route.target}</span>
+        <BucketMark name={route.source} compact={compact} />
+        <ArrowRight aria-hidden="true" className="size-3 shrink-0 text-muted-foreground/70" strokeWidth={2.25} />
+        <BucketMark name={route.target} compact={compact} />
       </span>
     )
   }
 
-  const displayedCategory = displayLedgerCategory(ledgerCategory)
-  return (
-    <span className={`${badgeClass(compact)} ${getCategoryBadgeClass(displayedCategory)}`}>
-      {displayedCategory}
-    </span>
-  )
+  return <BucketMark name={displayLedgerCategory(ledgerCategory)} compact={compact} />
 }

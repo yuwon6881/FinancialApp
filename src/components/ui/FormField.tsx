@@ -45,7 +45,7 @@ export function FormField({
       id={labelId}
       htmlFor={controlId}
       className={cn(
-        'block text-xs font-bold text-muted-foreground',
+        'block text-label font-medium text-muted-foreground',
         labelClassName,
       )}
     >
@@ -69,7 +69,7 @@ export function FormField({
           : labelElement}
         {children}
         {hint && (
-          <p id={hintId} className={cn('text-xs leading-relaxed text-muted-foreground', hintClassName)}>
+          <p id={hintId} className={cn('text-caption text-muted-foreground', hintClassName)}>
             {hint}
           </p>
         )}
@@ -78,7 +78,7 @@ export function FormField({
             id={errorId}
             role="alert"
             className={cn(
-              'text-xs font-medium text-destructive animate-in fade-in slide-in-from-top-1 duration-150',
+              'text-caption font-medium text-destructive animate-in fade-in slide-in-from-top-1 duration-150',
               errorClassName,
             )}
           >

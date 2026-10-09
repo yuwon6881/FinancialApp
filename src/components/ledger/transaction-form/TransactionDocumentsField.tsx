@@ -42,7 +42,7 @@ interface TransactionDocumentsFieldProps {
   currency: string
 }
 
-const LABEL_CLASS = 'text-eyebrow uppercase text-muted-foreground'
+const LABEL_CLASS = 'text-label font-medium text-muted-foreground'
 const parseTransactionAmount = (value: string): number | undefined => {
   const trimmed = value.trim()
   if (!trimmed) return undefined
@@ -225,7 +225,7 @@ export const TransactionDocumentsField = React.forwardRef<
     return (
       <div className="flex flex-col gap-1.5">
         <span className={LABEL_CLASS}>Documents</span>
-        <p className="rounded-xl border border-border/60 bg-muted/40 px-3 py-3 text-center text-xs text-muted-foreground">
+        <p className="rounded-control bg-surface-2/70 px-3 py-3 text-center text-caption text-muted-foreground">
           Document uploads are unavailable while offline.
         </p>
       </div>
@@ -241,7 +241,7 @@ export const TransactionDocumentsField = React.forwardRef<
           ?? document.reliefCategory
           ?? 'Choose tax relief category'
         return (
-          <div key={document.id} className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border/60 bg-muted/30 p-2.5 shadow-[var(--app-shadow-soft)]">
+          <div key={document.id} className="flex min-w-0 items-center gap-2.5 rounded-control bg-surface-2/70 p-2.5">
             <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink ring-1 ring-accent/30">
               <FileText className="size-4" aria-hidden="true" />
             </span>
@@ -283,7 +283,7 @@ export const TransactionDocumentsField = React.forwardRef<
       )}
 
       {pendingDocs.map((document, index) => (
-        <div key={`${document.file.name}-${index}`} className="relative flex flex-col gap-2.5 overflow-hidden rounded-2xl border border-primary/30 bg-primary/5 p-3 shadow-sm shadow-primary/5">
+        <div key={`${document.file.name}-${index}`} className="relative flex flex-col gap-2.5 overflow-hidden rounded-control bg-surface-2/70 p-3">
           <div className="flex items-center gap-2.5">
             {document.previewUrl ? (
               <img src={document.previewUrl} alt="" className="size-9 shrink-0 rounded-lg object-cover" />
@@ -328,7 +328,7 @@ export const TransactionDocumentsField = React.forwardRef<
         type="button"
         disabled={disabled || !categoriesLoaded || reliefCategories.length === 0}
         onClick={() => fileInputRef.current?.click()}
-        className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 px-3 py-3 text-xs font-semibold text-muted-foreground transition hover:border-primary/60 hover:bg-primary/10 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-control border border-dashed border-border px-3 py-3 text-label font-medium text-muted-foreground transition hover:border-foreground/30 hover:bg-surface-2 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
       >
         <UploadCloud className="size-4" aria-hidden="true" />
         Attach Document

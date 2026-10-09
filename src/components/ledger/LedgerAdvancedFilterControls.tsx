@@ -72,7 +72,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
     <div className="space-y-4 border-t border-border/40 pt-4 lg:border-t-0 lg:pt-0">
       {/* Date Range */}
       <div className="space-y-1.5">
-        <span className="text-eyebrow uppercase flex items-center gap-1.5 text-muted-foreground">
+        <span className="text-label font-medium flex items-center gap-1.5 text-muted-foreground">
           <CalendarDays className="size-3 text-accent-ink" /> Date range
         </span>
         <div className="grid grid-cols-2 gap-2">
@@ -108,7 +108,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
 
       {/* Amount Range */}
       <div className="space-y-1.5">
-        <span className="text-eyebrow uppercase flex items-center gap-1.5 text-muted-foreground">
+        <span className="text-label font-medium flex items-center gap-1.5 text-muted-foreground">
           <Banknote className="size-3 text-accent-ink" /> Amount range
         </span>
         <div className="grid grid-cols-2 gap-2">
@@ -146,10 +146,10 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
 
       {/* Transaction Type Segmented Control */}
       <div className="space-y-1.5">
-        <span className="text-eyebrow uppercase text-muted-foreground block">
+        <span className="text-label font-medium text-muted-foreground block">
           Transaction type
         </span>
-        <div className="grid grid-cols-4 gap-1 rounded-xl border border-border/60 bg-muted/30 p-1">
+        <div className="grid grid-cols-4 gap-1 rounded-full bg-surface-2 p-1">
           {([
             [null, 'All'],
             ['inflow', 'Inflow'],
@@ -163,10 +163,10 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
                 type="button"
                 key={label}
                 onClick={() => onTxTypeChange(value)}
-                className={`rounded-lg py-1.5 text-center text-xs font-semibold transition cursor-pointer select-none ${
+                className={`min-h-9 px-1 text-center text-label font-medium select-none lg:min-h-8 ${
                   isSelected
-                    ? 'bg-card hover:bg-card text-blue-500 shadow-xs border border-border/80 font-bold'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                    ? 'bg-card text-foreground shadow-(--app-shadow) ring-1 ring-border/60 hover:bg-card'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-surface-3/60'
                 }`}
               >
                 {label}
@@ -178,7 +178,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
 
       {/* Grouped Property Filters */}
       <div className="space-y-1.5">
-        <span className="text-eyebrow uppercase flex items-center gap-1.5 text-muted-foreground">
+        <span className="text-label font-medium flex items-center gap-1.5 text-muted-foreground">
           <SlidersHorizontal className="size-3 text-accent-ink" /> Filters & Rules
         </span>
         <div className="space-y-2 rounded-xl border border-border/60 bg-background/50 p-2.5">
@@ -242,7 +242,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
       {/* Accounts List */}
       {accounts.length > 0 && (
         <fieldset className="space-y-1.5">
-          <legend className="text-eyebrow uppercase text-muted-foreground">Accounts</legend>
+          <legend className="text-label font-medium text-muted-foreground">Accounts</legend>
           <div className="max-h-44 space-y-2.5 overflow-y-auto rounded-xl border border-border/60 bg-background/50 p-2.5">
             {(['Essentials', 'Growth', 'Stability', 'Rewards'] as const).map(bucket => {
               const bucketAccounts = accounts
@@ -251,17 +251,17 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
               if (bucketAccounts.length === 0) return null
               return (
                 <div key={bucket} className="space-y-1">
-                  <span className="block px-1 text-eyebrow uppercase text-muted-foreground">{bucket}</span>
+                  <span className="block px-1 text-label font-medium text-muted-foreground">{bucket}</span>
                   <div className="space-y-0.5">
                     {bucketAccounts.map(account => (
-                      <label key={account.id} className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs hover:bg-muted/40 transition-colors">
+                      <label key={account.id} className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-label transition-colors hover:bg-surface-2">
                         <Checkbox
                           checked={accountIds.includes(account.id)}
                           onChange={() => onAccountToggle(account.id)}
                           aria-label={`Filter by ${account.name}${account.isArchived ? ', closed account' : ''}`}
                         />
                         <span className="min-w-0 flex-1 truncate font-medium text-foreground">{account.name}</span>
-                        {account.isArchived && <span className="shrink-0 text-xs text-muted-foreground bg-muted/60 px-1 rounded">Closed</span>}
+                        {account.isArchived && <span className="shrink-0 rounded-full bg-surface-2 px-1.5 text-caption text-muted-foreground">Closed</span>}
                       </label>
                     ))}
                   </div>

@@ -21,6 +21,11 @@ interface SwipeableRowProps {
   disabled?: boolean
   hint?: boolean
   id?: string
+  /**
+   * `card` is a free-standing rounded row; `flush` is a row inside a grouped list whose container
+   * owns the radius, so neither the row nor its action drawer rounds its own corners.
+   */
+  variant?: 'card' | 'flush'
 }
 
 export const SwipeableRow: React.FC<SwipeableRowProps> = ({
@@ -32,7 +37,9 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   contentClassName,
   disabled = false,
   id,
+  variant = 'card',
 }) => {
+  const flush = variant === 'flush'
   const isMobile = useIsCompact()
   const reduceMotion = useReducedMotion()
   const [open, setOpen] = useState(false)
@@ -251,7 +258,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   }
 
   return (
-    <div id={id} className="relative isolate w-full overflow-hidden rounded-2xl bg-card">
+    <div id={id} className={cn('relative isolate w-full overflow-hidden bg-card', !flush && 'rounded-panel')}>
       {/* Action drawer sitting behind the content */}
       <div
         ref={actionDrawerRef}
@@ -263,7 +270,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         // full-height tray with separators instead of floating as disconnected pills. Destructive
         // actions remain visually distinct through their own color, and every child keeps the
         // mobile touch target floor supplied by the shared Button or link primitive.
-        className="absolute inset-y-0 right-0 z-0 flex items-stretch divide-x divide-black/10 overflow-hidden rounded-r-2xl bg-muted/20 shadow-inner dark:divide-white/15 [&>*]:!h-full [&>*]:!rounded-none [&>*]:!shadow-none [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]"
+        className={cn('absolute inset-y-0 right-0 z-0 flex items-stretch divide-x divide-black/10 overflow-hidden bg-surface-2 dark:divide-white/10', !flush && 'rounded-r-panel', ' [&>*]:!h-full [&>*]:!rounded-none [&>*]:!shadow-none [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]')}
         style={{
           width: actionsWidth,
           touchAction: 'pan-y',

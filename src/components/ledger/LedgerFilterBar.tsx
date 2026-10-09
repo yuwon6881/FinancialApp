@@ -1,5 +1,7 @@
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
+import { IconButton } from '../ui/IconButton'
+import { cn } from '../../lib/utils'
 import { useRef, useMemo } from 'react'
 import { Search, Filter, X, Loader2, ChevronDown, Equal } from 'lucide-react'
 import type { LedgerAccount, TransactionCategory } from '../../types'
@@ -185,6 +187,7 @@ export function LedgerFilterBar({
   // the query; on its own the icon would be ambiguous and disconnected from the search it changes.
   const searchModeToggle = (
     <Button variant="tertiary"
+      size="sm"
       type="button"
       aria-pressed={isExactMatch}
       aria-label={isExactMatch ? 'Matching complete fields exactly' : 'Matching anywhere in the text'}
@@ -192,218 +195,174 @@ export function LedgerFilterBar({
         ? 'Exact match: "Badminton" skips "Badminton String". Tap to match anywhere in the text.'
         : 'Matching anywhere in the text: "Badminton" also finds "Badminton String". Tap to require an exact match.'}
       onClick={() => onSearchModeChange(isExactMatch ? 'contains' : 'exact')}
-      className={`mr-1.5 flex h-7 min-w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-1.5 text-xs font-bold transition cursor-pointer lg:h-7.5 lg:w-auto lg:px-2.5 ${isExactMatch
-        ? 'bg-primary/15 text-accent-ink hover:bg-primary/20'
-        : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+      className={cn('min-h-8 shrink-0 gap-1.5 px-2.5 text-caption lg:min-h-8', isExactMatch
+        ? 'bg-primary/12 text-accent-ink hover:bg-primary/18'
+        : 'text-muted-foreground hover:text-foreground')}
     >
-      <Equal className="size-3.5 shrink-0 lg:size-4" aria-hidden />
-      <span className="hidden lg:inline whitespace-nowrap">Exact match</span>
+      <Equal className="size-3.5 shrink-0" aria-hidden />
+      <span className="hidden whitespace-nowrap xl:inline">Exact</span>
+    </Button>
+  )
+
+  const searchField = (
+    <div className="group flex h-11 min-w-0 flex-1 items-center gap-1 rounded-full border border-border/70 bg-card pl-4 pr-1 transition focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/20">
+      <Search className="size-4 shrink-0 text-muted-foreground transition-colors group-focus-within:text-foreground" aria-hidden="true" />
+      <Input
+        type="text"
+        placeholder="Search"
+        aria-label={showAllCycles ? 'Search all transactions' : 'Search transactions'}
+        value={showAllCycles ? pendingSearchTerm : searchTerm}
+        onChange={e => (showAllCycles ? onPendingSearchChange(e.target.value) : onSearchTermChange(e.target.value))}
+        onKeyDown={showAllCycles ? (e => { if (e.key === 'Enter') onServerSearch() }) : undefined}
+        className="min-h-0 min-w-0 flex-1 rounded-none border-0 bg-transparent px-1.5 py-0 text-body shadow-none outline-none placeholder:text-subtle-foreground focus:border-transparent focus:bg-transparent focus:ring-0"
+      />
+      {(showAllCycles ? pendingSearchTerm : searchTerm) && (
+        <IconButton
+          type="button"
+          label="Clear search"
+          onClick={() => (showAllCycles ? onClearServerSearch() : onSearchTermChange(''))}
+          className="size-8 text-muted-foreground hover:text-foreground lg:size-8"
+        >
+          <X className="size-3.5" />
+        </IconButton>
+      )}
+      {searchModeToggle}
+      {showAllCycles && (
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={onServerSearch}
+          disabled={serverIsFetching}
+          className="min-h-9 shrink-0 px-3.5 lg:min-h-9"
+        >
+          {serverIsFetching
+            ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            : <Search className="size-3.5" aria-hidden="true" />}
+          <span>Search</span>
+        </Button>
+      )}
+    </div>
+  )
+
+  const applyButton = (afterApply?: () => void) => (
+    <Button
+      variant="primary"
+      onClick={() => {
+        onApplyFilters()
+        afterApply?.()
+      }}
+      disabled={serverIsFetching || hasInvalidRange}
+      className="w-full"
+    >
+      {serverIsFetching
+        ? <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        : <Filter className="size-4" aria-hidden="true" />}
+      Apply filters
+    </Button>
+  )
+
+  const clearAllButton = draftFilterCount > 0 && (
+    <Button variant="tertiary" size="sm" onClick={onClearFilters} className="text-accent-ink">
+      Clear all
     </Button>
   )
 
   return (
-    <Toolbar aria-label="Ledger filters" className="top-[calc(4rem+env(safe-area-inset-top,0px))] sticky z-30 gap-2 rounded-2xl bg-card p-2 shadow-sm lg:gap-4 lg:bg-card/90 lg:p-4 lg:supports-[backdrop-filter]:bg-card/75 lg:backdrop-blur-md">
-      {/* The search field takes a phone row of its own: sharing one row with the sort and filter
-          controls squeezed it down to little more than its own magnifier icon. */}
-      <div className="w-full min-w-0 lg:w-auto lg:flex-1">
-        {showAllCycles ? (
-          <div className="group flex min-w-0 items-stretch overflow-hidden rounded-xl border border-border bg-card shadow-sm transition duration-200 focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/25 hover:border-border lg:max-w-xl">
-            <div className="flex min-w-0 flex-1 items-center">
-              <Search className="ml-3 size-4 shrink-0 text-foreground transition-colors group-focus-within:text-accent-ink" />
-              <Input
-                type="text"
-                placeholder="Search all transactions..."
-                value={pendingSearchTerm}
-                onChange={e => onPendingSearchChange(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') onServerSearch() }}
-                className="min-w-0 flex-1 rounded-none border-0 bg-transparent px-2.5 py-2.5 text-xs text-foreground shadow-none outline-none placeholder:text-foreground/60 focus:border-transparent focus:ring-0"
-              />
-              {pendingSearchTerm && (
-                <Button size="icon" variant="tertiary"
-                  type="button"
-                  onClick={onClearServerSearch}
-                  aria-label="Clear search"
-                  className="mr-1 flex size-8 shrink-0 lg:size-8 items-center justify-center rounded-md text-foreground hover:bg-muted transition cursor-pointer"
-                >
-                  <X className="size-3.5" />
-                </Button>
-              )}
-              {searchModeToggle}
-            </div>
-            <Button variant="tertiary"
-              onClick={onServerSearch}
-              disabled={serverIsFetching}
-              className="flex min-h-11 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground whitespace-nowrap transition-colors duration-200 hover:bg-primary/90 active:bg-primary/80 disabled:cursor-wait cursor-pointer lg:px-5"
-            >
-              {serverIsFetching
-                ? <Loader2 className="size-3.5 animate-spin" />
-                : <Search className="size-3.5" />}
-              <span>Search</span>
-            </Button>
-          </div>
-        ) : (
-          <div className="group flex min-w-0 items-center gap-1 rounded-xl border border-border/70 bg-background pl-3 shadow-sm transition duration-200 hover:border-border focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/25 lg:max-w-md">
-            <Search className="size-4 shrink-0 text-muted-foreground transition-colors group-focus-within:text-accent-ink" />
-            <Input
-              type="text"
-              placeholder="Search description, category..."
-              value={searchTerm}
-              onChange={e => onSearchTermChange(e.target.value)}
-              className="min-w-0 flex-1 rounded-none border-0 bg-transparent px-2 py-2.5 text-xs shadow-none outline-none focus:border-transparent focus:ring-0"
-            />
-            {searchTerm && (
-              <Button size="icon" variant="tertiary"
-                type="button"
-                onClick={() => onSearchTermChange('')}
-                aria-label="Clear search"
-                className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground lg:size-8 hover:bg-muted hover:text-foreground transition cursor-pointer"
-              >
-                <X className="size-3.5" />
-              </Button>
-            )}
-            {searchModeToggle}
-          </div>
-        )}
-      </div>
+    <Toolbar
+      aria-label="Ledger filters"
+      className="sticky top-[calc(3.5rem+env(safe-area-inset-top,0px))] z-30 -mx-4 flex-nowrap gap-2 bg-background/90 px-4 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/75 sm:top-0 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+    >
+      {searchField}
 
-      <div className="flex w-full shrink-0 items-center justify-between gap-2 lg:w-auto lg:justify-end">
-        <CustomSelect
-          ariaLabel="Sort ledger transactions"
-          value={sortOrder}
-          onChange={onSortOrderChange}
-          options={SORT_OPTIONS}
-          align="right"
-          className="w-28 sm:w-40"
-        />
+      <CustomSelect
+        ariaLabel="Sort ledger transactions"
+        value={sortOrder}
+        onChange={onSortOrderChange}
+        options={SORT_OPTIONS}
+        align="right"
+        variant="ghost"
+        className="w-auto shrink-0"
+      />
 
-        <div
-          className="relative ledger-filter-dropdown shrink-0 flex justify-end"
-          onKeyDown={event => {
-            if (!isMobile && isFilterDropdownOpen && event.key === 'Escape') {
-              event.preventDefault()
-              event.stopPropagation()
-              onFilterDropdownOpenChange(false)
-              filterButtonRef.current?.focus()
-            }
-          }}
+      <div
+        className="ledger-filter-dropdown relative flex shrink-0 justify-end"
+        onKeyDown={event => {
+          if (!isMobile && isFilterDropdownOpen && event.key === 'Escape') {
+            event.preventDefault()
+            event.stopPropagation()
+            onFilterDropdownOpenChange(false)
+            filterButtonRef.current?.focus()
+          }
+        }}
+      >
+        <Button
+          variant="secondary"
+          ref={filterButtonRef}
+          onClick={() => onFilterDropdownOpenChange(!isFilterDropdownOpen)}
+          aria-haspopup="dialog"
+          aria-expanded={isFilterDropdownOpen}
+          aria-label={filterButtonLabel}
+          className={cn('relative min-h-11 shrink-0 gap-2 px-3 lg:min-h-11 lg:px-4', activeFilterCount > 0 && 'border-primary/40 bg-primary/8 text-accent-ink hover:bg-primary/12')}
         >
-          <Button variant="tertiary"
-            ref={filterButtonRef}
-            onClick={() => onFilterDropdownOpenChange(!isFilterDropdownOpen)}
-            aria-haspopup="dialog"
-            aria-expanded={isFilterDropdownOpen}
-            aria-label={filterButtonLabel}
-            className="relative flex items-center justify-center lg:justify-between gap-2 shrink-0 px-3 lg:px-4 py-2.5 lg:w-60 text-xs font-semibold bg-background border border-border/60 rounded-xl hover:bg-muted transition duration-200 cursor-pointer select-none"
-          >
-            <span className="flex items-center gap-2 text-muted-foreground">
-              <Filter className="size-4 lg:size-3.5" aria-hidden="true" />
-              <span className="hidden lg:inline truncate">{filterButtonLabel}</span>
+          <Filter className="size-4" aria-hidden="true" />
+          <span className="hidden lg:inline">Filters</span>
+          {activeFilterCount > 0 && (
+            <span className="grid min-w-5 place-items-center rounded-full bg-primary px-1.5 text-caption font-semibold text-primary-foreground tabular-nums">
+              {activeFilterCount}
             </span>
-            <ChevronDown className={`hidden size-3.5 text-muted-foreground transition-transform lg:block ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
-            {activeFilterCount > 0 && (
-              <span className="lg:hidden absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                {activeFilterCount}
-              </span>
-            )}
-          </Button>
-
-          <AnchoredPopover
-            ref={filterPanelRef}
-            open={isFilterDropdownOpen && !isMobile}
-            anchorRef={filterButtonRef}
-            align="right"
-            side="bottom"
-            role="dialog"
-            aria-label="Filter ledger entries"
-            className="ledger-filter-dropdown z-[200] flex w-[min(42rem,calc(100vw-16rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
-          >
-            <div className="mb-3 flex shrink-0 items-center justify-between border-b border-border/40 pb-2">
-              <span className="text-xs font-bold text-foreground">Filter Ledger Entries</span>
-              {draftFilterCount > 0 && (
-                <Button variant="tertiary"
-                  onClick={onClearFilters}
-                  className="text-xs font-bold text-orange-500 hover:underline cursor-pointer whitespace-nowrap"
-                >
-                  Clear All
-                </Button>
-              )}
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
-              <div className="grid grid-cols-2 gap-5">
-                <LedgerCategoryChecklist
-                  checkboxFilters={checkboxFilters}
-                  availableCategories={availableCategories}
-                  onToggleFilter={onToggleFilter}
-                  isMobile={false}
-                />
-                <LedgerAdvancedFilterControls {...advancedFilterProps} />
-              </div>
-            </div>
-
-            {showAllCycles && (
-              <div className="pt-3 mt-3 border-t border-border/40">
-                <Button variant="tertiary"
-                  onClick={onApplyFilters}
-                  disabled={serverIsFetching || hasInvalidRange}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs cursor-pointer transition duration-200 disabled:opacity-50
-                    bg-primary hover:bg-primary/90
-                    text-primary-foreground shadow-md shadow-primary/20 hover:shadow-primary/30"
-                >
-                  {serverIsFetching
-                    ? <Loader2 className="size-3.5 animate-spin" />
-                    : <Filter className="size-3.5" />}
-                  Apply Filters
-                </Button>
-              </div>
-            )}
-          </AnchoredPopover>
-
-          {isMobile && (
-            <BottomSheet
-              isOpen={isFilterDropdownOpen}
-              title="Filter Ledger Entries"
-              onClose={() => onFilterDropdownOpenChange(false)}
-              footer={showAllCycles ? (
-                <Button variant="tertiary"
-                  onClick={() => {
-                    onApplyFilters()
-                    onFilterDropdownOpenChange(false)
-                  }}
-                  disabled={serverIsFetching || hasInvalidRange}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs cursor-pointer transition duration-200 disabled:opacity-50
-                    bg-primary hover:bg-primary/90
-                    text-primary-foreground shadow-md shadow-primary/20 hover:shadow-primary/30"
-                >
-                  {serverIsFetching
-                    ? <Loader2 className="size-3.5 animate-spin" />
-                    : <Filter className="size-3.5" />}
-                  Apply Filters
-                </Button>
-              ) : undefined}
-            >
-              <div className="ledger-filter-dropdown space-y-4 pr-1">
-                {draftFilterCount > 0 && (
-                  <div className="flex justify-end">
-                    <Button variant="tertiary"
-                      onClick={onClearFilters}
-                      className="text-xs font-bold text-orange-500 hover:underline cursor-pointer"
-                    >
-                      Clear All
-                    </Button>
-                  </div>
-                )}
-                <LedgerCategoryChecklist
-                  checkboxFilters={checkboxFilters}
-                  availableCategories={availableCategories}
-                  onToggleFilter={onToggleFilter}
-                  isMobile={true}
-                />
-                <LedgerAdvancedFilterControls {...advancedFilterProps} />
-              </div>
-            </BottomSheet>
           )}
-        </div>
+          <ChevronDown className={cn('hidden size-3.5 text-muted-foreground transition-transform lg:block', isFilterDropdownOpen && 'rotate-180')} aria-hidden="true" />
+        </Button>
+
+        <AnchoredPopover
+          ref={filterPanelRef}
+          open={isFilterDropdownOpen && !isMobile}
+          anchorRef={filterButtonRef}
+          align="right"
+          side="bottom"
+          role="dialog"
+          aria-label="Filter ledger entries"
+          className="ledger-filter-dropdown z-[200] flex w-[min(42rem,calc(100vw-16rem))] flex-col overflow-hidden rounded-overlay border border-border/70 bg-popover p-4 shadow-(--app-shadow-overlay) animate-in fade-in slide-in-from-top-2 duration-150"
+        >
+          <div className="mb-3 flex shrink-0 items-center justify-between">
+            <span className="text-subsection text-foreground">Filters</span>
+            {clearAllButton}
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+            <div className="grid grid-cols-2 gap-5">
+              <LedgerCategoryChecklist
+                checkboxFilters={checkboxFilters}
+                availableCategories={availableCategories}
+                onToggleFilter={onToggleFilter}
+                isMobile={false}
+              />
+              <LedgerAdvancedFilterControls {...advancedFilterProps} />
+            </div>
+          </div>
+
+          {showAllCycles && <div className="mt-3 border-t border-border/60 pt-3">{applyButton()}</div>}
+        </AnchoredPopover>
+
+        {isMobile && (
+          <BottomSheet
+            isOpen={isFilterDropdownOpen}
+            title="Filters"
+            onClose={() => onFilterDropdownOpenChange(false)}
+            headerActions={clearAllButton || undefined}
+            footer={showAllCycles ? applyButton(() => onFilterDropdownOpenChange(false)) : undefined}
+          >
+            <div className="ledger-filter-dropdown space-y-5 pr-1">
+              <LedgerCategoryChecklist
+                checkboxFilters={checkboxFilters}
+                availableCategories={availableCategories}
+                onToggleFilter={onToggleFilter}
+                isMobile={true}
+              />
+              <LedgerAdvancedFilterControls {...advancedFilterProps} />
+            </div>
+          </BottomSheet>
+        )}
       </div>
     </Toolbar>
   )

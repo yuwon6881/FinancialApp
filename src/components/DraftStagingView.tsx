@@ -18,8 +18,6 @@ import { SensitiveMask } from './ui/SensitiveAmount'
 import { DraftQueueCard } from './drafts/DraftQueueCard'
 import { DraftReorderItem } from './drafts/DraftReorderItem'
 import { EmptyState } from './ui/EmptyState'
-import { cn } from '../lib/utils'
-import { panelClass } from './ui/panelStyles'
 import { Badge } from './ui/Badge'
 
 type EditorProps = Omit<TransactionFormSheetProps,
@@ -139,10 +137,10 @@ export function DraftStagingView({
       <PageHeader
         titleId="draft-transactions-title"
         leading={<IconButton onClick={onCancel} label="Back to Ledger" tooltip="Back to Ledger"><ArrowLeft className="size-4" aria-hidden="true" /></IconButton>}
-        title={<span data-page-title-text="draft-transactions" className="inline-block whitespace-nowrap">Draft Transactions</span>}
+        title={<span data-page-title-text="draft-transactions" className="inline-block whitespace-nowrap">Review drafts</span>}
         description={
           <div className="space-y-1">
-            <p className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+            <p className="flex flex-wrap items-center gap-1.5 text-body text-muted-foreground">
               <Badge tone="neutral">{draftTransactions.length}</Badge>
               <span>draft{draftTransactions.length === 1 ? '' : 's'} in queue</span>
               <InfoHint text={recordingOrderExplanation} label="draft recording order" align="left" inline />
@@ -164,22 +162,22 @@ export function DraftStagingView({
       ) : (
         <>
           <section
-            className={cn(panelClass, 'flex flex-wrap items-center gap-x-5 gap-y-2 bg-card/80 px-4 py-3 sm:px-5')}
+            className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-panel bg-surface-2/70 px-4 py-3.5 sm:px-5"
             aria-label="Batch overview"
           >
             <div className="mr-auto min-w-0">
-              <span className="block text-xs font-semibold text-muted-foreground">Batch total</span>
-              <span className="block truncate text-base font-extrabold text-foreground tabular-nums">
+              <span className="block text-label text-muted-foreground">Batch total</span>
+              <span className="block truncate text-title text-foreground tabular-nums">
                 {hideSensitive ? <SensitiveMask /> : formatCurrencyVal(draftTotal, currency)}
               </span>
             </div>
-            <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${invalidCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            <span className={`inline-flex items-center gap-1.5 text-label font-medium ${invalidCount > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
               {invalidCount > 0
                 ? <AlertTriangle className="size-3.5" aria-hidden="true" />
                 : <CheckCircle2 className="size-3.5" aria-hidden="true" />}
               {invalidCount > 0 ? `${invalidCount} need review` : 'All ready'}
             </span>
-            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${documentLoadError ? 'text-destructive' : 'text-muted-foreground'}`}>
+            <span className={`inline-flex items-center gap-1.5 text-label ${documentLoadError ? 'text-destructive' : 'text-muted-foreground'}`}>
               <Paperclip className="size-3.5" aria-hidden="true" />
               {attachmentsLoading
                 ? 'Checking attachments…'
@@ -191,7 +189,7 @@ export function DraftStagingView({
             </span>
           </section>
 
-          {documentLoadError && <div className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between" role="alert"><span>{documentLoadError}</span><Button variant="secondary" size="sm" onClick={() => setAttachmentRevision(revision => revision + 1)} className="shrink-0">Retry</Button></div>}
+          {documentLoadError && <div className="flex flex-col gap-3 rounded-control bg-destructive/10 px-4 py-3 text-body text-destructive sm:flex-row sm:items-center sm:justify-between" role="alert"><span>{documentLoadError}</span><Button variant="secondary" size="sm" onClick={() => setAttachmentRevision(revision => revision + 1)} className="shrink-0">Retry</Button></div>}
 
           <section aria-labelledby="draft-review-queue-title">
             <div className="mb-2.5 flex min-h-11 items-center justify-between gap-3 px-0.5 sm:min-h-9">
@@ -201,9 +199,10 @@ export function DraftStagingView({
                   variant="secondary"
                   onClick={onAddAnother}
                   disabled={hideSensitive}
-                  className="h-11 shrink-0 gap-1.5 px-3 sm:h-9"
+                  size="sm"
+                  className="shrink-0 gap-1.5"
                 >
-                  <Plus className="size-3.5" aria-hidden="true" />
+                  <Plus className="size-4" aria-hidden="true" />
                   Add draft
                 </Button>
               )}
@@ -217,8 +216,8 @@ export function DraftStagingView({
             </Reorder.Group>
           </section>
 
-          <div className="sticky bottom-[calc(76px+env(safe-area-inset-bottom,0px))] z-20 grid gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-[var(--app-shadow-elevated)] backdrop-blur sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-4 lg:bottom-4">
-            <p className="min-w-0 truncate px-1 text-xs font-semibold text-muted-foreground">
+          <div className="glass-surface sticky bottom-[calc(88px+env(safe-area-inset-bottom,0px))] z-20 grid gap-3 rounded-full p-2 pl-5 shadow-(--app-shadow-overlay) grid-cols-[minmax(0,1fr)_auto] items-center sm:bottom-4">
+            <p className="min-w-0 truncate text-label text-muted-foreground">
               <span className="text-foreground">{invalidCount > 0 ? `${invalidCount} need review` : 'Ready to add'}</span>
               <span aria-hidden="true"> · </span>
               {hideSensitive ? <SensitiveMask /> : formatCurrencyVal(draftTotal, currency)}
@@ -229,7 +228,7 @@ export function DraftStagingView({
                 ? `Review ${firstInvalidDraft.description || 'draft'}`
                 : `Add ${draftTransactions.length} draft${draftTransactions.length === 1 ? '' : 's'} to Ledger`}
               disabled={hideSensitive || Boolean(documentLoadError) || attachmentsLoading || isSubmitting}
-              className="h-11 w-full rounded-xl sm:w-auto sm:min-w-44"
+              className="sm:min-w-44"
             >
               {firstInvalidDraft ? 'Review' : isSubmitting ? 'Adding…' : 'Add to Ledger'}
             </Button>

@@ -1,7 +1,6 @@
 import { FileCheck2 } from 'lucide-react'
 import { Button } from '../ui/Button'
-import { cn } from '../../lib/utils'
-import { PANEL_TONES, panelClass } from '../ui/panelStyles'
+import { NoticeCard } from '../ui/NoticeCard'
 
 interface LedgerPendingReviewsProps {
   receiptReady: boolean
@@ -14,21 +13,18 @@ export function LedgerPendingReviews({ receiptReady, receiptSplitReady, onReview
   if (!receiptReady && !receiptSplitReady) return null
 
   return (
-    <section aria-labelledby="ledger-scan-ready-title" className={cn(panelClass, PANEL_TONES.info, 'p-4')}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/12 text-blue-500">
-            <FileCheck2 className="size-5" aria-hidden="true" />
-          </span>
-          <div className="min-w-0">
-            <h3 id="ledger-scan-ready-title" className="text-subsection text-foreground">Scan ready for review</h3>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          {receiptReady && onReviewReceipt && <Button type="button" variant="secondary" size="sm" onClick={onReviewReceipt}>Review transaction</Button>}
+    <NoticeCard
+      tone="neutral"
+      icon={<FileCheck2 />}
+      titleId="ledger-scan-ready-title"
+      title="Scan ready for review"
+      description="Check what was read from the receipt before it is saved."
+      actions={(
+        <>
+          {receiptReady && onReviewReceipt && <Button type="button" variant="primary" size="sm" onClick={onReviewReceipt}>Review transaction</Button>}
           {receiptSplitReady && onReviewReceiptSplit && <Button type="button" variant="secondary" size="sm" onClick={onReviewReceiptSplit}>Review receipt items</Button>}
-        </div>
-      </div>
-    </section>
+        </>
+      )}
+    />
   )
 }

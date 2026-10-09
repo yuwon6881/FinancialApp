@@ -40,9 +40,9 @@ export function DraftReorderItem({
         onMove(event.key === 'ArrowUp' ? -1 : 1)
       }}
       disabled={disabled}
-      className="mt-0.5 inline-flex size-11 shrink-0 touch-none cursor-grab items-center justify-center gap-0.5 self-start rounded-xl border border-border/60 bg-muted/35 text-muted-foreground transition hover:border-primary/30 hover:bg-muted/60 hover:text-foreground active:cursor-grabbing sm:size-9"
+      className="mt-0.5 inline-flex size-11 shrink-0 touch-none cursor-grab items-center justify-center gap-0.5 self-start rounded-control bg-surface-2/70 text-muted-foreground transition hover:border-primary/30 hover:bg-muted/60 hover:text-foreground active:cursor-grabbing sm:size-9"
     >
-      <span className="text-caption font-extrabold tabular-nums" aria-hidden="true">{position}</span>
+      <span className="text-caption font-semibold tabular-nums" aria-hidden="true">{position}</span>
       <GripVertical className="size-3.5 opacity-60" aria-hidden="true" />
     </Button>
   )
