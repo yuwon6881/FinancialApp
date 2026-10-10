@@ -627,9 +627,9 @@ test('commitments and rewards detail labels are never clipped', async ({ page })
     await waitForStableLayout(page)
 
     const measured = await page.evaluate(() => {
-      const bodies = Array.from(document.querySelectorAll<HTMLElement>('main button[aria-controls][aria-expanded="true"]'))
-        .map(button => document.getElementById(button.getAttribute('aria-controls') ?? ''))
-        .filter((body): body is HTMLElement => body !== null && body.offsetParent !== null)
+      // Every detail body: opened by its toggle on narrow screens, always shown on wide ones.
+      const bodies = Array.from(document.querySelectorAll<HTMLElement>('main [data-detail-body]'))
+        .filter(body => body.offsetParent !== null)
       return {
         rows: bodies.reduce((total, body) => total + body.querySelectorAll('*').length, 0),
         clipped: bodies.flatMap(body => Array.from(body.querySelectorAll<HTMLElement>('*'))

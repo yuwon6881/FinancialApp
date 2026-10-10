@@ -261,14 +261,15 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
                           </Button>
                         )
                       })}
-                      {isDraftChanged && (
-                        <span
-                          role="img"
-                          aria-label="Unsaved flow change"
-                          title="Unsaved change"
-                          className="mx-1 inline-block size-1.5 shrink-0 rounded-full bg-primary"
-                        />
-                      )}
+                      {/* Always in the layout, hidden until there is a change: appearing on
+                          the first edit widened the cluster enough to wrap the row, which moved
+                          the control out from under the pointer on the click that changed it. */}
+                      <span
+                        {...(isDraftChanged
+                          ? { role: 'img', 'aria-label': 'Unsaved flow change', title: 'Unsaved change' }
+                          : { 'aria-hidden': true })}
+                        className={cn('mx-1 inline-block size-1.5 shrink-0 rounded-full bg-primary', !isDraftChanged && 'invisible')}
+                      />
                     </div>
                   )}
                 </div>
