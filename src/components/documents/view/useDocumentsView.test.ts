@@ -276,5 +276,24 @@ describe('useDocumentsView', () => {
     act(() => result.current.toggleReliefCategory('education'))
     await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, 0, 10, ['medical'], 'uploaded-desc'))
   })
+  it('shows exactly one category from the tracker, moving to its tax year first when needed', async () => {
+    const { result } = renderHook(() => useDocumentsView())
+    await waitFor(() => expect(api.listDocuments).toHaveBeenCalledWith(2026, undefined, 0, 10, [], 'uploaded-desc'))
+
+    act(() => result.current.toggleReliefCategory('education'))
+    act(() => result.current.toggleReliefCategory('medical'))
+    // Replaces rather than adds: the tracker link means "these documents", not "these as well".
+    act(() => result.current.showReliefCategory('lifestyle', 2026))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, 0, 10, ['lifestyle'], 'uploaded-desc'))
+
+    // From an all-years list the link moves to the tracker's year, and the year change does not
+    // wipe the category it was asked to show.
+    act(() => result.current.setTaxYear(undefined))
+    await waitFor(() => expect(result.current.selectedReliefCategories).toEqual([]))
+    act(() => result.current.showReliefCategory('medical', 2025))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2025, undefined, 0, 10, ['medical'], 'uploaded-desc'))
+    expect(result.current.taxYear).toBe(2025)
+    expect(result.current.selectedReliefCategories).toEqual(['medical'])
+  })
 })
 

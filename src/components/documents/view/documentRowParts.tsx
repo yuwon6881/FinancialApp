@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, Download, ExternalLink, Eye, FileArchive, FileCode, FileImage, FileText, Link2, Loader2, Pencil, Trash2, X } from 'lucide-react'
+import { Check, Download, ExternalLink, Eye, FileArchive, FileCode, FileImage, FileText, Link2, Loader2, Pencil, SearchX, Trash2, UploadCloud, X } from 'lucide-react'
 import type { VaultDocument } from '../../../types'
 import { downloadDocument } from '../../../lib/api/documents'
 import { getErrorMessage } from '../../../lib/errors'
@@ -35,18 +35,36 @@ export function DocumentTypeIcon({ contentType, className }: { contentType: stri
   return <FileArchive className={className} aria-hidden="true" />
 }
 
-export function EmptyState({ isFiltered = false }: { isFiltered?: boolean }) {
+export function EmptyState({
+  isFiltered = false,
+  onClearFilters,
+  onUpload,
+}: {
+  isFiltered?: boolean
+  /** Offered when filters are hiding documents, so the way out sits in the empty space itself. */
+  onClearFilters?: () => void
+  /** Offered in a genuinely empty vault, where uploading is the only useful next step. */
+  onUpload?: () => void
+}) {
+  const action = isFiltered ? onClearFilters : onUpload
   return (
-    <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
-      <FileArchive className="mb-3 size-10 text-muted-foreground/30" aria-hidden="true" />
+    <div className="flex flex-col items-center justify-center px-4 py-10 text-center sm:py-12">
+      <span className="mb-3 grid size-12 place-items-center rounded-full bg-surface-2 text-muted-foreground dark:bg-surface-3">
+        {isFiltered ? <SearchX className="size-5" aria-hidden="true" /> : <FileArchive className="size-5" aria-hidden="true" />}
+      </span>
       <p className="text-body font-semibold text-foreground">
         {isFiltered ? 'No documents match your filters' : 'No documents yet'}
       </p>
-      <p className="mt-1 text-caption text-muted-foreground">
+      <p className="mt-1 max-w-xs text-caption text-muted-foreground">
         {isFiltered
-          ? 'Try adjusting your tax year or category filters above.'
+          ? 'Try another tax year or relief category.'
           : 'Upload receipts, invoices or statements to keep them for your tax records.'}
       </p>
+      {action && (
+        <Button variant="secondary" size="sm" type="button" onClick={action} className="mt-4">
+          {isFiltered ? 'Clear filters' : <><UploadCloud className="size-4" aria-hidden="true" />Upload a document</>}
+        </Button>
+      )}
     </div>
   )
 }
@@ -126,7 +144,7 @@ const ACTION_CLASS = 'inline-flex cursor-pointer items-center justify-center rou
  * hand Download and Delete to a swipe drawer, while the desktop table still shows all three inline.
  */
 
-export function PreviewDocumentButton({ document, onPreview, disabled = false }: { document: VaultDocument; onPreview: (document: VaultDocument) => void; disabled?: boolean }) {
+export function PreviewDocumentButton({ document, onPreview, disabled = false, className }: { document: VaultDocument; onPreview: (document: VaultDocument) => void; disabled?: boolean; className?: string }) {
   const { hideSensitive } = useAppPrefs()
   return (
     <Button
@@ -134,10 +152,11 @@ export function PreviewDocumentButton({ document, onPreview, disabled = false }:
       type="button"
       disabled={hideSensitive || disabled}
       onClick={() => onPreview(document)}
-      className={ACTION_CLASS}
+      className={className ?? ACTION_CLASS}
       aria-label={`Preview ${document.originalFileName}`}
     >
       <Eye className="size-3.5" aria-hidden="true" />
+      {className ? <span className="text-caption font-semibold">Preview</span> : null}
     </Button>
   )
 }

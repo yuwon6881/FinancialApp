@@ -191,8 +191,27 @@ export function useDocumentsView(showToast?: (message: string, title?: string, t
     }
   }, [documents])
 
+  // A year change starts the relief filter afresh, except when the change was made *by* a request
+  // to show one category's documents for that year (see showReliefCategory below).
+  const pendingReliefFocusRef = useRef<string | null>(null)
   useEffect(() => {
-    setSelectedReliefCategories([])
+    const pending = pendingReliefFocusRef.current
+    pendingReliefFocusRef.current = null
+    setSelectedReliefCategories(pending ? [pending] : [])
+  }, [taxYear])
+
+  /**
+   * Narrows the documents to exactly one relief category -- what the tracker's "n docs" link asks
+   * for. With `year`, the list moves to that tax year first, because the tracker's counts describe
+   * one year and an all-years list under them would not match.
+   */
+  const showReliefCategory = useCallback((categoryId: string, year?: number) => {
+    if (year !== undefined && year !== taxYear) {
+      pendingReliefFocusRef.current = categoryId
+      setTaxYear(year)
+      return
+    }
+    setSelectedReliefCategories([categoryId])
   }, [taxYear])
 
   const toggleReliefCategory = useCallback((categoryId: string) => {
@@ -289,6 +308,7 @@ export function useDocumentsView(showToast?: (message: string, title?: string, t
     setTaxYear,
     selectedReliefCategories,
     toggleReliefCategory,
+    showReliefCategory,
     clearReliefCategory,
     clearAllReliefCategories,
     sortOrder,

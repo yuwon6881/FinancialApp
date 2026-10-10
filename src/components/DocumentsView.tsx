@@ -16,7 +16,6 @@ import * as documentsApi from '../lib/api/documents'
 import { getErrorMessage } from '../lib/errors'
 import { buildMutationSuccessToast } from '../lib/mutationToast'
 import { Button } from './ui/Button'
-import { PageHeader } from './ui/PageHeader'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { createFinalId } from '../lib/outbox'
 import { useOptimisticList } from '../lib/useOptimisticList'
@@ -48,6 +47,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     setTaxYear,
     selectedReliefCategories,
     toggleReliefCategory,
+    showReliefCategory,
     clearReliefCategory,
     clearAllReliefCategories,
     sortOrder,
@@ -74,6 +74,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
   const [isDownloadingArchive, setIsDownloadingArchive] = useState(false)
   const [isDownloadingSelection, setIsDownloadingSelection] = useState(false)
   const refreshedCategoryOpsRef = useRef(new Set<string>())
+  const documentsSectionRef = useRef<HTMLElement>(null)
   const refreshedDocumentOpsRef = useRef(new Set<string>())
 
   const vaultDocumentOperations = useMemo(() => operations.filter(operation =>
@@ -183,6 +184,34 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     return <CycleSkeleton variant="documents" />
   }
 
+  const openUpload = () => {
+    if (!guardSensitive()) return
+    setIsUploadSheetOpen(true)
+  }
+  const downloadLabel = isDownloadingArchive ? 'Preparing ZIP…' : taxYear ? `Download ${taxYear}` : 'Download all'
+  const isFiltered = taxYear !== undefined || selectedReliefCategories.length > 0
+  const isEmptyVault = availableYears.length === 0 && totalCount === 0 && !isFiltered
+  // Counts come from the tracker's summary, which describes one tax year, so they are only shown
+  // when the list is showing that same year.
+  const countsByCategory = summary && summary.taxYear === taxYear
+    ? new Map(summary.categories.map(category => [category.id, category.documentCount]))
+    : null
+  const reliefOptions = reliefCategories.map(category => ({
+    id: category.id,
+    name: category.name,
+    count: countsByCategory ? countsByCategory.get(category.id) ?? 0 : undefined,
+  }))
+  // The tracker's "n docs" link: narrow the list to that one category, in the tracker's year, and
+  // bring the list into view with focus on it so a keyboard or screen reader follows the jump.
+  const showReliefDocuments = (categoryId: string) => {
+    showReliefCategory(categoryId, summary?.taxYear ?? selectedReliefYear)
+    const section = documentsSectionRef.current
+    if (!section) return
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    section.scrollIntoView?.({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
+    section.focus({ preventScroll: true })
+  }
+
   const toggleSelectAllVisible = () => {
     setSelectedIds(current => {
       const next = new Set(current)
@@ -194,47 +223,54 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="Vault"
-        description="Receipts, invoices and statements, kept for tax season."
-        actions={<div className="flex w-full flex-wrap gap-2 sm:w-auto">
-          <Button
-            variant="secondary"
-            type="button"
-            disabled={hideSensitive || isDownloadingArchive || availableYears.length === 0}
-            onClick={() => {
-              if (!guardSensitive()) return
-              setIsDownloadingArchive(true)
-              void documentsApi.downloadDocumentArchive(taxYear).catch(error =>
-                showToast(getErrorMessage(error, 'The ZIP archive could not be prepared.'), 'Download Failed', 'error'))
-                .finally(() => setIsDownloadingArchive(false))
-            }}
-            className="min-w-36 flex-1 justify-center whitespace-nowrap sm:flex-none"
-          >
-            <Download className="size-4" /> {isDownloadingArchive ? 'Preparing ZIP…' : taxYear ? `Download ${taxYear}` : 'Download all'}
-          </Button>
-          <Button
-            variant="primary"
-            type="button"
-            disabled={hideSensitive}
-            onClick={() => {
-              if (!guardSensitive()) return
-              setIsUploadSheetOpen(true)
-            }}
-            className="min-w-36 flex-1 justify-center whitespace-nowrap sm:flex-none"
-          >
-            <UploadCloud className="size-4" />
-            Upload
-          </Button>
-        </div>}
-      />
+      {/* A compact header: the title with its two actions on one line at every size, and storage
+          as a quiet line beneath. Upload is the page's one primary action; downloading the year's
+          archive is secondary and folds to an icon on a phone. */}
+      <header className="pt-1">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="min-w-0 text-title text-foreground sm:text-display">Vault</h1>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              variant="secondary"
+              type="button"
+              disabled={hideSensitive || isDownloadingArchive || availableYears.length === 0}
+              onClick={() => {
+                if (!guardSensitive()) return
+                setIsDownloadingArchive(true)
+                void documentsApi.downloadDocumentArchive(taxYear).catch(error =>
+                  showToast(getErrorMessage(error, 'The ZIP archive could not be prepared.'), 'Download Failed', 'error'))
+                  .finally(() => setIsDownloadingArchive(false))
+              }}
+              aria-label={downloadLabel}
+              title={downloadLabel}
+              className="size-11 shrink-0 p-0 sm:size-auto sm:px-4 lg:size-auto"
+            >
+              {isDownloadingArchive
+                ? <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                : <Download className="size-4" aria-hidden="true" />}
+              <span className="hidden whitespace-nowrap sm:inline">{downloadLabel}</span>
+            </Button>
+            <Button
+              variant="primary"
+              type="button"
+              disabled={hideSensitive}
+              onClick={openUpload}
+              className="shrink-0 whitespace-nowrap px-4"
+            >
+              <UploadCloud className="size-4" aria-hidden="true" />
+              Upload
+            </Button>
+          </div>
+        </div>
+        <p className="mt-1 hidden text-body text-muted-foreground sm:block">Receipts, invoices and statements, kept for tax season.</p>
+        <StorageUsageMeter usage={usage} className="mt-1.5 sm:mt-2" />
+      </header>
 
       <VaultRetentionNotice review={retentionReview} />
 
-      {/* Vault insights */}
-      <div className="space-y-4">
-        <StorageUsageMeter usage={usage} />
-
+      {/* The tracker needs a tax year to describe; an empty vault has none, and its "Manage limits"
+          could not open, so it would only have been a box saying there was nothing in it. */}
+      {(availableYears.length > 0 || optimisticReliefCategories.length > 0) && (
         <TaxReliefOverview
           summary={summary}
           categories={optimisticReliefCategories}
@@ -242,7 +278,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           currency={currency}
           isLoading={isTaxInsightsLoading}
           selectedReliefCategories={selectedReliefCategories}
-          onToggleReliefCategory={toggleReliefCategory}
+          onShowReliefDocuments={showReliefDocuments}
           onAddCategory={async input => {
             if (!guardSensitive()) return
             if (selectedReliefYear === undefined) throw new Error('Choose a tax year first.')
@@ -275,10 +311,10 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           activeSyncIds={activeSyncIds}
           deletingId={deletingId}
         />
-      </div>
+      )}
 
       {/* Documents */}
-      <section aria-labelledby="vault-documents-heading">
+      <section ref={documentsSectionRef} tabIndex={-1} aria-labelledby="vault-documents-heading" className="scroll-mt-20 outline-none">
         <SectionHeader
           title="Your documents"
           titleId="vault-documents-heading"
@@ -286,19 +322,20 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           className="mb-3"
         />
 
-        <DocumentFilterBar
-          taxYear={taxYear}
-          setTaxYear={setTaxYear}
-          availableYears={availableYears}
-          sortOrder={sortOrder}
-          setSortOrder={setSortOrder}
-          selectedReliefCategories={selectedReliefCategories
-            .map(id => reliefCategories.find(category => category.id === id))
-            .filter((category): category is NonNullable<typeof category> => Boolean(category))
-            .map(category => ({ id: category.id, name: category.name }))}
-          onClearReliefCategory={clearReliefCategory}
-          onClearAllReliefCategories={clearAllReliefCategories}
-        />
+        {(!isEmptyVault || loadError) && (
+          <DocumentFilterBar
+            taxYear={taxYear}
+            setTaxYear={setTaxYear}
+            availableYears={availableYears}
+            sortOrder={sortOrder}
+            setSortOrder={setSortOrder}
+            reliefOptions={reliefOptions}
+            selectedReliefIds={selectedReliefCategories}
+            onToggleReliefCategory={toggleReliefCategory}
+            onClearReliefCategory={clearReliefCategory}
+            onClearAllReliefCategories={clearAllReliefCategories}
+          />
+        )}
 
         {loadError && <DocumentsLoadError message={loadError} isLoading={isLoading} onRetry={() => void loadDocuments()} />}
 
@@ -344,7 +381,13 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               <DocumentList
                 documents={documents}
                 isLoading={isLoading}
-                isFiltered={taxYear !== undefined || selectedReliefCategories.length > 0}
+                isFiltered={isFiltered}
+                sortOrder={sortOrder}
+                onClearFilters={() => {
+                  clearAllReliefCategories()
+                  setTaxYear(undefined)
+                }}
+                onUpload={hideSensitive ? undefined : openUpload}
                 setDocToDelete={setDocToDelete}
                 selectedIds={selectedIds}
                 toggleSelected={id => setSelectedIds(current => {

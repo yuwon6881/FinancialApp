@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { CheckCircle2, CircleDollarSign, Filter, Loader2, Pencil } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Filter, Loader2, Pencil } from 'lucide-react'
 import type { TaxReliefCategoryDefinition, TaxReliefCategorySummary, TaxYearReliefSummary } from '../../../types'
 import { Button } from '../../ui/Button'
-import { InteractiveCard } from '../../ui/InteractiveCard'
+import { Badge } from '../../ui/Badge'
 import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
 import { getErrorMessage } from '../../../lib/errors'
 import { cn, formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
@@ -39,8 +39,10 @@ interface TaxReliefOverviewProps {
   taxYear?: number
   currency: string
   isLoading: boolean
+  /** The relief categories the document list is currently narrowed to, marked on their rows. */
   selectedReliefCategories?: string[]
-  onToggleReliefCategory: (categoryId: string) => void
+  /** Narrows the document list to one category and brings it into view (the row's "n docs" link). */
+  onShowReliefDocuments: (categoryId: string) => void
   onAddCategory: (input: CategoryInput) => Promise<unknown>
   onUpdateCategory: (categoryId: string, input: CategoryInput) => Promise<unknown>
   onDeleteCategory: (categoryId: string) => Promise<unknown>
@@ -78,7 +80,7 @@ export function TaxReliefOverview({
   currency,
   isLoading,
   selectedReliefCategories = [],
-  onToggleReliefCategory,
+  onShowReliefDocuments,
   onAddCategory,
   onUpdateCategory,
   onDeleteCategory,
@@ -245,19 +247,11 @@ export function TaxReliefOverview({
   }
 
   return (
-    <section className={cn(panelClass, 'p-5')} aria-labelledby="tax-relief-overview">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 id="tax-relief-overview" className="flex items-center gap-2 text-subsection">
-            <CircleDollarSign className="size-4 text-accent-ink" />
-            {selectedYear ? `${selectedYear} tax relief tracker` : 'Tax relief tracker'}
-          </h3>
-          <p className="mt-1 text-caption text-muted-foreground">
-            {summary
-              ? `${money(summary.confirmedAmount)} confirmed${summary.pendingReviewAmount > 0 ? ` · ${money(summary.pendingReviewAmount)} waiting for review` : ''}`
-              : 'Set your own categories and limits for the selected tax year.'}
-          </p>
-        </div>
+    <section className={cn(panelClass, '@container p-4 sm:p-5')} aria-labelledby="tax-relief-overview">
+      <div className="flex items-center justify-between gap-3">
+        <h3 id="tax-relief-overview" className="min-w-0 text-subsection text-foreground">
+          {selectedYear ? `${selectedYear} tax relief` : 'Tax relief'}
+        </h3>
         {selectedYear !== undefined && (
           <Button
             variant="secondary"
@@ -265,15 +259,23 @@ export function TaxReliefOverview({
             type="button"
             disabled={hideSensitive}
             onClick={() => setEditorOpen(true)}
-            className="self-start"
+            className="-my-1 shrink-0"
           >
-            <Pencil className="size-3.5" />
+            <Pencil className="size-3.5" aria-hidden="true" />
             Manage limits
           </Button>
         )}
       </div>
+      <p className="mt-0.5 text-caption text-muted-foreground">
+        {summary
+          ? <>
+              <span className="font-medium text-foreground tabular-nums">{money(summary.confirmedAmount)}</span> claimed
+              {summary.pendingReviewAmount > 0 && <> · <span className="whitespace-nowrap text-amber-700 dark:text-amber-300">{money(summary.pendingReviewAmount)} to review</span></>}
+            </>
+          : 'Set your own categories and limits for the selected tax year.'}
+      </p>
 
-      <div className="mt-4" aria-busy={isLoading}>
+      <div className="mt-3" aria-busy={isLoading}>
         {isLoading ? (
           <div className="flex min-h-24 items-center justify-center gap-2 rounded-control bg-surface-2/70 text-caption font-semibold text-muted-foreground" role="status">
             <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
@@ -284,54 +286,75 @@ export function TaxReliefOverview({
             No categories yet. Use Manage limits to add the reliefs you claim.
           </p>
         ) : (
-          /* One row per category: what is used against the limit, as a bar and as figures. The row
-             is also the filter toggle for the documents below. */
-          <ul aria-label="Tax relief categories" className="-mx-2 space-y-0.5">
+          /* One row per category: what is claimed against the limit, as a bar and as figures. The
+             row itself is not a control any more -- it used to be the documents filter, which
+             nothing on screen said. Its one action is the explicit "n docs" link at the end. */
+          <ul aria-label="Tax relief categories" className="divide-y divide-border/60">
             {orderedTrackerCategories.map(category => {
               const progress = category.limit > 0 ? Math.min(100, category.confirmedAmount / category.limit * 100) : 0
               const full = category.limit > 0 && progress >= 100
-              const selected = selectedReliefCategories.includes(category.id)
+              const filtered = selectedReliefCategories.includes(category.id)
+              const count = category.documentCount ?? 0
               return (
-                <li key={category.id}>
-                  <InteractiveCard
-                    surface="plain"
-                    onClick={() => onToggleReliefCategory(category.id)}
-                    aria-pressed={selected}
-                    aria-label={selected ? `Remove ${category.name} from the documents filter` : `Add ${category.name} to the documents filter`}
-                    title={selected ? `Remove ${category.name} from the document filter` : `Filter documents by ${category.name}`}
-                    className={cn(
-                      'group grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 rounded-control px-2 py-2.5 text-left transition-colors sm:grid-cols-[minmax(7rem,11rem)_minmax(0,1fr)_auto]',
-                      selected ? 'bg-primary/8 ring-1 ring-inset ring-primary/40' : 'hover:bg-surface-2/70',
-                    )}
-                  >
+                <li
+                  key={category.id}
+                  data-filtered={filtered || undefined}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 py-2.5 @2xl:grid-cols-[minmax(8rem,12rem)_minmax(0,1fr)_auto_6.5rem] @2xl:gap-x-5"
+                >
+                  {/* Name and claimed figure share the first line on a phone; from @2xl they are
+                      columns either side of the bar. */}
+                  <div className="flex min-w-0 items-baseline justify-between gap-3 @2xl:contents">
                     <span className="flex min-w-0 items-center gap-1.5">
                       <span className="truncate text-body font-medium text-foreground" title={category.name}>{category.name}</span>
-                      {selected
-                        ? <Filter className="size-3 shrink-0 text-accent-ink" aria-hidden="true" />
-                        : full && <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" aria-label="Relief limit reached" />}
+                      {full && <CheckCircle2 className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label="Relief limit reached" />}
+                      {filtered && (
+                        <Badge tone="accent" className="shrink-0">
+                          <Filter className="size-3" aria-hidden="true" />
+                          Filtering
+                        </Badge>
+                      )}
                     </span>
-                    <span className="text-right text-label tabular-nums sm:order-last">
+                    <span className="shrink-0 text-right text-label tabular-nums @2xl:order-3">
                       <span className="font-semibold text-foreground">{money(category.confirmedAmount)}</span>
-                      <span className="text-muted-foreground"> of {money(category.limit)}</span>
+                      <span className="hidden text-muted-foreground @2xl:inline"> of {money(category.limit)}</span>
                     </span>
-                    <span className="col-span-2 min-w-0 sm:col-span-1">
-                      <Meter
-                        percent={progress}
-                        tone={full ? 'bg-emerald-500' : 'bg-primary'}
-                        valueHidden={hideSensitive}
-                        label={hideSensitive ? `${category.name} confirmed amount hidden` : `${category.name} confirmed amount`}
-                      />
-                      <span className="mt-1 flex flex-wrap justify-between gap-x-3 text-caption">
-                        <span className={full ? 'font-medium text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
-                          {full ? 'Limit reached' : `${money(Math.max(0, category.limit - category.confirmedAmount))} room left`}
-                        </span>
-                        {category.pendingReviewAmount > 0 && <span className="font-medium text-amber-700 dark:text-amber-300">+{money(category.pendingReviewAmount)} review</span>}
-                        {Boolean(category.otherCurrencyDocumentCount && category.otherCurrencyDocumentCount > 0) && (
-                          <span className="text-muted-foreground">{category.otherCurrencyDocumentCount} not in {currency}</span>
-                        )}
+                  </div>
+                  <div className="col-start-1 mt-1.5 min-w-0 @2xl:col-start-auto @2xl:order-2 @2xl:mt-0">
+                    <Meter
+                      size="sm"
+                      percent={progress}
+                      tone={full ? 'bg-emerald-500' : 'bg-primary'}
+                      valueHidden={hideSensitive}
+                      label={hideSensitive ? `${category.name} confirmed amount hidden` : `${category.name} confirmed amount`}
+                    />
+                    <p className="mt-1 flex flex-wrap gap-x-2 text-caption text-muted-foreground">
+                      <span className={full ? 'font-medium text-emerald-600 dark:text-emerald-400' : undefined}>
+                        {full ? 'Limit reached' : `${money(Math.max(0, category.limit - category.confirmedAmount))} left`}
+                        <span className="@2xl:hidden"> of {money(category.limit)}</span>
                       </span>
-                    </span>
-                  </InteractiveCard>
+                      {category.pendingReviewAmount > 0 && <span className="font-medium text-amber-700 dark:text-amber-300">+{money(category.pendingReviewAmount)} review</span>}
+                      {Boolean(category.otherCurrencyDocumentCount && category.otherCurrencyDocumentCount > 0) && (
+                        <span>{category.otherCurrencyDocumentCount} not in {currency}</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="col-start-2 row-span-2 row-start-1 flex justify-end @2xl:order-4 @2xl:col-start-auto @2xl:row-span-1 @2xl:row-start-auto">
+                    {count > 0 ? (
+                      <Button
+                        variant="tertiary"
+                        size="sm"
+                        type="button"
+                        onClick={() => onShowReliefDocuments(category.id)}
+                        aria-label={`Show ${count} ${count === 1 ? 'doc' : 'docs'} in ${category.name}`}
+                        className="-mr-2 gap-0.5 px-2.5 text-accent-ink hover:text-accent-ink"
+                      >
+                        <span className="tabular-nums">{count} {count === 1 ? 'doc' : 'docs'}</span>
+                        <ChevronRight className="size-4" aria-hidden="true" />
+                      </Button>
+                    ) : (
+                      <span className="px-0.5 text-caption text-muted-foreground">No docs</span>
+                    )}
+                  </div>
                 </li>
               )
             })}

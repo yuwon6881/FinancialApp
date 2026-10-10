@@ -40,7 +40,7 @@ const renderOverview = ({ onAddCategory, onDeleteCategory, summary = null }: Ren
     taxYear={CURRENT_YEAR}
     currency="MYR"
     isLoading={false}
-    onToggleReliefCategory={vi.fn()}
+    onShowReliefDocuments={vi.fn()}
     onAddCategory={onAddCategory ?? vi.fn(async () => undefined)}
     onUpdateCategory={vi.fn(async () => undefined)}
     onDeleteCategory={onDeleteCategory ?? vi.fn(async () => undefined)}
@@ -152,7 +152,7 @@ describe('TaxReliefOverview category deletion', () => {
 })
 
 describe('TaxReliefOverview sync status', () => {
-  it('keeps the filtering ring inside a limit-reached card', () => {
+  it('marks the category the documents are filtered by, alongside limit reached', () => {
     const summary = summaryWithDocuments(0)
     summary.categories[0].confirmedAmount = 1000
 
@@ -164,16 +164,51 @@ describe('TaxReliefOverview sync status', () => {
         currency="MYR"
         isLoading={false}
         selectedReliefCategories={['education']}
-        onToggleReliefCategory={vi.fn()}
+        onShowReliefDocuments={vi.fn()}
         onAddCategory={vi.fn(async () => undefined)}
         onUpdateCategory={vi.fn(async () => undefined)}
         onDeleteCategory={vi.fn(async () => undefined)}
       />,
     )
 
-    const card = screen.getByRole('button', { name: 'Remove Education from the documents filter' })
-    expect(card.className).toContain('ring-inset')
+    const row = screen.getByText('Education').closest('li')!
+    expect(row.getAttribute('data-filtered')).toBe('true')
+    expect(row.textContent).toContain('Filtering')
     expect(screen.getByText('Limit reached')).toBeTruthy()
+  })
+
+  it('filters the documents through an explicit "n docs" link, not by clicking the bar', () => {
+    const onShowReliefDocuments = vi.fn()
+    render(
+      <TaxReliefOverview
+        summary={summaryWithDocuments(3)}
+        categories={[category]}
+        taxYear={CURRENT_YEAR}
+        currency="MYR"
+        isLoading={false}
+        onShowReliefDocuments={onShowReliefDocuments}
+        onAddCategory={vi.fn(async () => undefined)}
+        onUpdateCategory={vi.fn(async () => undefined)}
+        onDeleteCategory={vi.fn(async () => undefined)}
+      />,
+    )
+
+    // The row and its bar are plain content now: the old toggle was invisible as a control.
+    expect(screen.queryByRole('button', { name: /documents filter/ })).toBeNull()
+    fireEvent.click(screen.getByRole('progressbar', { name: 'Education confirmed amount' }))
+    expect(onShowReliefDocuments).not.toHaveBeenCalled()
+
+    const link = screen.getByRole('button', { name: 'Show 3 docs in Education' })
+    expect(link.textContent).toContain('3 docs')
+    fireEvent.click(link)
+    expect(onShowReliefDocuments).toHaveBeenCalledWith('education')
+  })
+
+  it('offers no documents link for a category with nothing filed under it', () => {
+    renderOverview({ summary: summaryWithDocuments(0) })
+
+    expect(screen.queryByRole('button', { name: /docs? in Education/ })).toBeNull()
+    expect(screen.getByText('No docs')).toBeTruthy()
   })
 
   it('shows the shared action wording for queued category mutations', () => {
@@ -184,7 +219,7 @@ describe('TaxReliefOverview sync status', () => {
         taxYear={CURRENT_YEAR}
         currency="MYR"
         isLoading={false}
-        onToggleReliefCategory={vi.fn()}
+        onShowReliefDocuments={vi.fn()}
         onAddCategory={vi.fn(async () => undefined)}
         onUpdateCategory={vi.fn(async () => undefined)}
         onDeleteCategory={vi.fn(async () => undefined)}
@@ -234,7 +269,7 @@ describe('TaxReliefOverview sensitive accessibility', () => {
           taxYear={CURRENT_YEAR}
           currency="MYR"
           isLoading={false}
-          onToggleReliefCategory={vi.fn()}
+          onShowReliefDocuments={vi.fn()}
           onAddCategory={vi.fn(async () => undefined)}
           onUpdateCategory={vi.fn(async () => undefined)}
           onDeleteCategory={vi.fn(async () => undefined)}

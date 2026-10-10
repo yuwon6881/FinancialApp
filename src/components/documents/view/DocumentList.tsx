@@ -17,6 +17,7 @@ import { DOCUMENT_BULK_LIMIT } from '../../../lib/api/documents'
 import { useIsDenseContent } from '../../../lib/breakpoints'
 import { cn } from '../../../lib/utils'
 import { panelClass } from '../../ui/panelStyles'
+import type { DocumentSort } from '../../../lib/documentOrdering'
 
 interface DocumentListProps {
   documents: VaultDocument[]
@@ -43,6 +44,36 @@ interface DocumentListProps {
   /** Drops every selection, so leaving selection mode leaves nothing selected behind it. */
   onClearSelection?: () => void
   isFiltered?: boolean
+  /** Rows are grouped under month headings only while the list is in upload-date order. */
+  sortOrder?: DocumentSort
+  onClearFilters?: () => void
+  onUpload?: () => void
+}
+
+interface MonthGroup {
+  key: string
+  label: string
+  documents: VaultDocument[]
+}
+
+/** Consecutive documents uploaded in the same month; the list arrives already sorted by date. */
+function groupByMonth(documents: VaultDocument[]): MonthGroup[] {
+  const groups: MonthGroup[] = []
+  for (const document of documents) {
+    const date = new Date(document.uploadedAt)
+    const key = Number.isNaN(date.getTime()) ? 'unknown' : `${date.getFullYear()}-${date.getMonth()}`
+    const last = groups[groups.length - 1]
+    if (last && last.key === key) {
+      last.documents.push(document)
+      continue
+    }
+    groups.push({
+      key,
+      label: key === 'unknown' ? 'Undated' : date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+      documents: [document],
+    })
+  }
+  return groups
 }
 
 export function DocumentList({
@@ -69,6 +100,9 @@ export function DocumentList({
   onNavigateToTransaction,
   onClearSelection,
   isFiltered = false,
+  sortOrder = 'uploaded-desc',
+  onClearFilters,
+  onUpload,
 }: DocumentListProps) {
   const { showToast } = useAppUi()
   const { hideSensitive } = useAppPrefs()
@@ -99,9 +133,43 @@ export function DocumentList({
     ? (transactionId: string) => void openLinkedTransaction(transactionId)
     : undefined
 
+  const isGroupedByMonth = sortOrder === 'uploaded-desc' || sortOrder === 'uploaded-asc'
+  const groups: MonthGroup[] = isGroupedByMonth
+    ? groupByMonth(documents)
+    : [{ key: 'all', label: '', documents }]
+  const emptyState = <EmptyState isFiltered={isFiltered} onClearFilters={onClearFilters} onUpload={onUpload} />
+  // Nothing to select on an empty page, so the toolbar would only be a count of zero and a dead
+  // Select button above the empty state.
+  const showToolbar = documents.length > 0 || isLoading || selectedIds.size > 0
+
+  const renderRow = (document: VaultDocument) => (
+    <DocumentCard
+      key={document.id}
+      document={document}
+      isSelected={selectedIds.has(document.id)}
+      isSyncing={syncingDocumentIds.has(document.id)}
+      isFailed={failedDocumentIds.has(document.id)}
+      isDeleting={deletingDocumentIds.has(document.id)}
+      isSelecting={isSelecting}
+      reliefCategories={reliefCategoriesByTaxYear[document.taxYear] ?? []}
+      areReliefCategoriesKnown={reliefCategoriesByTaxYear[document.taxYear] !== undefined}
+      pendingReliefCategory={pendingReliefCategories.get(document.id)}
+      openingTransactionId={openingTransactionId}
+      currency={currency}
+      dateStyle={isGroupedByMonth ? 'day' : 'full'}
+      toggleSelected={toggleSelected}
+      setDocToDelete={setDocToDelete}
+      downloadFailed={downloadFailed}
+      onPreview={setPreviewDocument}
+      onReliefCategoryChange={onReliefCategoryChange}
+      onOpenLinkedTransaction={onOpenLinkedTransaction}
+      updateDocument={updateDocument}
+    />
+  )
+
   return (
     <>
-      <SelectionToolbar
+      {showToolbar && <SelectionToolbar
         testId="document-selection-toolbar"
         actionsTestId="document-selection-actions"
         itemCount={documents.length}
@@ -144,7 +212,7 @@ export function DocumentList({
             <span className="hidden sm:inline">{isDeletingSelected ? 'Deleting…' : 'Delete'}</span>
           </Button>
         </>}
-      />
+      />}
       {/* Below the toolbar, never inside it: that row is a fixed one-row grid, and a second line in
           it changes the list's position the moment a box is ticked. The buttons above are disabled
           at this point, and a disabled button with no stated reason reads as broken. */}
@@ -155,47 +223,44 @@ export function DocumentList({
         </p>
       )}
       <div data-testid="document-results">
-        {!showDenseTable ? (
-        <div className={cn(panelClass, 'divide-y divide-border/60 overflow-hidden p-0')}>
-          {isLoading && documents.length === 0 ? (
-            Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="px-4 py-3.5">
-                <div className="flex items-center gap-2.5">
-                  <Skeleton className="size-9 shrink-0 rounded-lg" />
+        {/* An empty page is the same panel at every width: a table header over nothing reads as broken. */}
+        {!showDenseTable || (!isLoading && documents.length === 0) ? (
+          isLoading && documents.length === 0 ? (
+            <div className={cn(panelClass, 'divide-y divide-border/60 overflow-hidden p-0')}>
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="flex min-h-16 items-center gap-3 px-4 py-2.5">
+                  <Skeleton className="size-10 shrink-0 rounded-control" />
                   <div className="min-w-0 flex-1 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-3.5 w-3/5" />
+                    <Skeleton className="h-3 w-2/5" />
                   </div>
+                  <Skeleton className="h-3.5 w-16" />
                 </div>
-                <Skeleton className="mt-3 h-12 w-full" />
-              </div>
-            ))
+              ))}
+            </div>
           ) : documents.length === 0 ? (
-            <EmptyState isFiltered={isFiltered} />
-          ) : documents.map(document => (
-            <DocumentCard
-              key={document.id}
-              document={document}
-              isSelected={selectedIds.has(document.id)}
-              isSyncing={syncingDocumentIds.has(document.id)}
-              isFailed={failedDocumentIds.has(document.id)}
-              isDeleting={deletingDocumentIds.has(document.id)}
-              isSelecting={isSelecting}
-              reliefCategories={reliefCategoriesByTaxYear[document.taxYear] ?? []}
-              areReliefCategoriesKnown={reliefCategoriesByTaxYear[document.taxYear] !== undefined}
-              pendingReliefCategory={pendingReliefCategories.get(document.id)}
-              openingTransactionId={openingTransactionId}
-              currency={currency}
-              toggleSelected={toggleSelected}
-              setDocToDelete={setDocToDelete}
-              downloadFailed={downloadFailed}
-              onPreview={setPreviewDocument}
-              onReliefCategoryChange={onReliefCategoryChange}
-              onOpenLinkedTransaction={onOpenLinkedTransaction}
-              updateDocument={updateDocument}
-            />
-          ))}
-        </div>
+            <div className={cn(panelClass, 'overflow-hidden p-0')}>{emptyState}</div>
+          ) : (
+            // Grouped by upload month, the way the ledger groups by day: a heading on the canvas and
+            // the month's rows in one panel beneath it.
+            <div className="space-y-4">
+              {groups.map(group => (
+                <section key={group.key} aria-label={group.label || 'Documents'}>
+                  {group.label && (
+                    <h3 className="mb-1.5 flex items-baseline justify-between gap-3 px-1 text-label font-semibold text-foreground">
+                      {group.label}
+                      <span className="text-caption font-normal text-muted-foreground tabular-nums">
+                        {group.documents.length} file{group.documents.length === 1 ? '' : 's'}
+                      </span>
+                    </h3>
+                  )}
+                  <div className={cn(panelClass, 'divide-y divide-border/60 overflow-hidden p-0')}>
+                    {group.documents.map(renderRow)}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )
         ) : (
         <div className="w-full">
           <DataTable>
@@ -224,7 +289,7 @@ export function DocumentList({
                   </tr>
                 ))
               ) : documents.length === 0 ? (
-                <tr><td colSpan={isSelecting ? 8 : 7}><EmptyState isFiltered={isFiltered} /></td></tr>
+                <tr><td colSpan={isSelecting ? 8 : 7}>{emptyState}</td></tr>
               ) : documents.map(document => {
                 const documentReliefCategories = reliefCategoriesByTaxYear[document.taxYear]
                 // Absent, not empty: this year's categories have not arrived yet. A select whose

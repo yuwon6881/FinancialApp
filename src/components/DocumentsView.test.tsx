@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { VaultDocument } from '../types'
 import { EMPTY_RETENTION_REVIEW } from '../lib/documentRetention'
@@ -164,5 +164,38 @@ describe('DocumentsView', () => {
     await waitFor(() => expect(api.deleteDocument).toHaveBeenCalledWith(1))
     await waitFor(() =>
       expect(api.getDocumentOverview.mock.calls.length).toBeGreaterThan(overviewCallsBefore))
+  })
+  it('filters by relief through the explicit Relief control and the tracker link, never the bar', async () => {
+    api.getDocumentOverview.mockResolvedValue({
+      ...documentOverview,
+      summary: {
+        ...documentOverview.summary,
+        categories: [
+          { id: 'lifestyle', name: 'Lifestyle', limit: 2500, confirmedAmount: 0, pendingReviewAmount: 0, documentCount: 1, pendingReviewCount: 0 },
+          { id: 'medical', name: 'Medical', limit: 8000, confirmedAmount: 0, pendingReviewAmount: 0, documentCount: 0, pendingReviewCount: 0 },
+        ],
+      },
+    })
+    render(<DocumentsView />)
+    await waitFor(() => expect(screen.getAllByText('tax.pdf').length).toBeGreaterThan(0))
+
+    // The tracker's link narrows the list to its category.
+    fireEvent.click(screen.getByRole('button', { name: 'Show 1 doc in Lifestyle' }))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, 0, 10, ['lifestyle'], 'uploaded-desc'))
+
+    // The active filter is spelled out above the list and removable from there.
+    expect(screen.getByRole('button', { name: 'Filter documents by relief, 1 selected' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Lifestyle relief filter' }))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, 0, 10, [], 'uploaded-desc'))
+
+    // The Relief control lists every category, with this year's counts, and each one toggles.
+    fireEvent.click(screen.getByRole('button', { name: 'Filter documents by relief' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Filter documents by relief' })
+    const medical = within(dialog).getByRole('button', { name: /Medical/ })
+    expect(medical.getAttribute('aria-pressed')).toBe('false')
+    expect(medical.textContent).toContain('0')
+    fireEvent.click(medical)
+    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, 0, 10, ['medical'], 'uploaded-desc'))
+    expect(within(dialog).getByRole('button', { name: /Medical/ }).getAttribute('aria-pressed')).toBe('true')
   })
 })

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { VaultDocument } from '../../../types'
 import { DocumentList } from './DocumentList'
 import { AppPrefsContext } from '../../../contexts/AppContext'
@@ -43,6 +43,10 @@ const baseProps = {
 }
 
 describe('DocumentList selection toolbar', () => {
+  afterEach(() => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+  })
+
   it('stays out of selection mode until asked, then offers the bulk actions', () => {
     render(<DocumentList {...baseProps} selectedIds={new Set()} />)
 
@@ -261,16 +265,71 @@ describe('DocumentList selection toolbar', () => {
     expect(screen.getAllByText('Education').length).toBeGreaterThan(0)
   })
 
-  it('keeps the filing facts behind a closed disclosure on the mobile card', () => {
+  it('keeps the filing facts folded inside the row until the row is opened', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
     render(<DocumentList {...baseProps} selectedIds={new Set()} />)
 
-    // The card is what a phone gets, and its filing block is collapsed by default: expanded, ten
-    // documents ran to roughly 3,300px of scrolling. The detail is still present, not dropped.
-    const filing = screen.getByText('Filing details').closest('details')
-    expect(filing).not.toBeNull()
-    expect(filing!.open).toBe(false)
-    expect(filing!.querySelector('dl')?.textContent).toContain('Keep until')
+    // A phone row shows only the name, relief, date and amount. The amount editor, the relief
+    // picker, the filing facts and the actions are behind the row itself -- a real button that says
+    // it expands -- rather than stacked on every row. Nothing is dropped, only folded.
+    const toggle = screen.getByRole('button', { name: 'Details for tax.pdf' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    const details = window.document.getElementById(toggle.getAttribute('aria-controls')!)!
+    expect(details.className).toContain('hidden')
+    expect(details.querySelector('dl')?.textContent).toContain('Keep until')
+
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(details.className).not.toContain('hidden')
+
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('groups phone rows under their upload month while sorted by date, and not otherwise', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
+    const documents = [
+      { ...document, id: 1, uploadedAt: '2026-09-21T09:00:00Z' },
+      { ...document, id: 2, originalFileName: 'two.pdf', uploadedAt: '2026-09-02T09:00:00Z' },
+      { ...document, id: 3, originalFileName: 'three.pdf', uploadedAt: '2026-08-10T09:00:00Z' },
+    ]
+    const { rerender } = render(<DocumentList {...baseProps} documents={documents} selectedIds={new Set()} />)
+
+    const september = new Date('2026-09-21T09:00:00Z').toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+    const august = new Date('2026-08-10T09:00:00Z').toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+    expect(screen.getByRole('region', { name: september }).textContent).toContain('2 files')
+    expect(screen.getByRole('region', { name: august }).textContent).toContain('1 file')
+
+    rerender(<DocumentList {...baseProps} documents={documents} selectedIds={new Set()} sortOrder="name-asc" />)
+    expect(screen.queryByRole('region', { name: september })).toBeNull()
+  })
+
+  it('makes the whole row the selection target in selection mode', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
+    const toggleSelected = vi.fn()
+    render(<DocumentList {...baseProps} toggleSelected={toggleSelected} selectedIds={new Set()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    // The expand control steps aside so a tap on the row can only mean "pick this one".
+    expect(screen.queryByRole('button', { name: 'Details for tax.pdf' })).toBeNull()
+    fireEvent.click(screen.getByLabelText('Select tax.pdf'))
+    expect(toggleSelected).toHaveBeenCalledWith(1)
+  })
+
+  it('offers the way out of an empty list inside it', () => {
+    const onClearFilters = vi.fn()
+    const onUpload = vi.fn()
+    const { rerender } = render(<DocumentList {...baseProps} documents={[]} selectedIds={new Set()} isFiltered onClearFilters={onClearFilters} onUpload={onUpload} />)
+
+    // No selection toolbar over an empty page: a count of zero and a dead Select button.
+    expect(screen.queryByTestId('document-selection-toolbar')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(onClearFilters).toHaveBeenCalledTimes(1)
+
+    rerender(<DocumentList {...baseProps} documents={[]} selectedIds={new Set()} onClearFilters={onClearFilters} onUpload={onUpload} />)
+    expect(screen.getByText('No documents yet')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Upload a document' }))
+    expect(onUpload).toHaveBeenCalledTimes(1)
   })
 
   it('shows direct document mutation state on each rendered row', () => {
