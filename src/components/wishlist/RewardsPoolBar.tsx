@@ -276,7 +276,7 @@ interface PoolsPanelProps {
  * rather than a tall card each.
  */
 export const PoolsPanel: React.FC<PoolsPanelProps> = ({ children, className }) => (
-  <section aria-label="Pools" className={cn(panelClass, 'divide-y divide-border/60 overflow-hidden', className)}>
+  <div role="region" aria-label="Pools" className={cn(panelClass, 'divide-y divide-border/60 overflow-hidden', className)}>
     {children}
-  </section>
+  </div>
 )

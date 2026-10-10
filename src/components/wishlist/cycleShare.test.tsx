@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { SavingsGoal, WishlistItem } from '../../types'
 import type { GoalPace, GoalPoolSummary } from '../../lib/savingsGoals'
 import { RewardsPoolBar } from './RewardsPoolBar'
@@ -12,8 +12,10 @@ import { SavingsGoalCard } from './SavingsGoalCard'
 // Secondary figures now live behind a "Details" tail, closed by default at phone widths. Tests that
 // assert one open it first; tests that assert the visible summary deliberately do not.
 
+// Wide screens show the pool's tail open with no toggle at all, so there is nothing to press there.
 const openDetails = (index = 0) => {
-  fireEvent.click(screen.getAllByText('Details')[index])
+  const toggle = screen.queryAllByText('Details')[index]
+  if (toggle) fireEvent.click(toggle)
 }
 
 /**
@@ -26,7 +28,8 @@ const openDetails = (index = 0) => {
 const visible = (matcher: Parameters<typeof screen.queryAllByText>[0]) =>
   screen.queryAllByText(matcher).filter(node => {
     const details = node.closest('details')
-    return details === null || details.open
+    // The pool's detail tail stays mounted and is hidden with the `hidden` attribute.
+    return (details === null || details.open) && node.closest('[hidden]') === null
   })
 
 const goal: SavingsGoal = {
@@ -129,7 +132,7 @@ function renderRewardsBar(over: Partial<GoalPoolSummary> = {}) {
   )
 }
 
-function renderCard(over: Partial<GoalPace> = {}) {
+function renderCard(over: Partial<GoalPace> = {}, handlers: { onComplete?: (id: number) => void } = {}) {
   const p = pace(over)
   render(
     <SavingsGoalCard
@@ -142,7 +145,7 @@ function renderCard(over: Partial<GoalPace> = {}) {
       isDeleting={false}
       onEdit={() => undefined}
       onDelete={() => undefined}
-      onComplete={() => undefined}
+      onComplete={handlers.onComplete ?? (() => undefined)}
       onTopUp={() => undefined}
       onRelease={() => undefined}
     />,
@@ -313,7 +316,7 @@ describe('SavingsGoalCard cycle share', () => {
     renderCard({ fundedThisCycle: 70, outstandingThisCycle: 105 })
     // The figure is set apart from its sentence, so match the whole status line.
     expect(screen.getByText((_, element) => element?.tagName === 'P'
-      && /RM 105\.00 still to set aside this cycle/.test(element.textContent ?? ''))).toBeTruthy()
+      && /RM 105\.00 needed this cycle/.test(element.textContent ?? ''))).toBeTruthy()
 
     openDetails()
     // One bar per card: the commitment's own progress. This cycle's share is a figure beside it,
@@ -336,18 +339,41 @@ describe('SavingsGoalCard cycle share', () => {
     expect(screen.queryByText(/still to set aside/)).toBeNull()
   })
 
-  // The money actions used to be replaced by Edit/Delete, because six controls would not fit at
-  // rail width. They now coexist: the primary pair stays put and the rest sit in a menu.
-  it('keeps the money actions available while offering edit and delete in a menu', async () => {
-    renderCard()
+  // One action on the row -- the one the commitment needs next -- and the rest in its menu, so no
+  // action is lost while the row stops carrying three loose buttons.
+  it('keeps adding money on the row while short, with every other action in the menu', async () => {
+    const onComplete = vi.fn()
+    renderCard({}, { onComplete })
     const topUp = screen.getByRole('button', { name: 'Add money to Car Maintenance' })
+    expect(screen.queryByRole('button', { name: 'Complete this cycle for Car Maintenance' })).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Car Maintenance' }))
 
     expect(await screen.findByRole('menuitem', { name: 'Delete' })).toBeTruthy()
     expect(screen.getByRole('menuitem', { name: 'Release money' })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeTruthy()
     expect(topUp).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Complete this cycle for Car Maintenance' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Complete this cycle' }))
+    expect(onComplete).toHaveBeenCalledWith(7)
+  })
+
+  it('puts completing on the row once the commitment is fully funded', () => {
+    const onComplete = vi.fn()
+    renderCard({ isFunded: true, remaining: 0 }, { onComplete })
+    fireEvent.click(screen.getByRole('button', { name: 'Complete this cycle for Car Maintenance' }))
+    expect(onComplete).toHaveBeenCalledWith(7)
+    expect(screen.queryByRole('button', { name: 'Add money to Car Maintenance' })).toBeNull()
+  })
+
+  it('opens the pacing details from the row figures', () => {
+    asMobile()
+    renderCard()
+    const toggle = screen.getByRole('button', { name: /Car Maintenance.*Details/ })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText('Per cycle')).toBeNull()
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByText('Per cycle')).toBeTruthy()
   })
 })
 
@@ -363,8 +389,21 @@ describe('RewardCard management actions', () => {
     expect(screen.queryByText(/Leaves commitments/)).toBeNull()
   })
 
+  // Claim only appears once the free money covers the price; until then the row says how much is
+  // still needed instead of showing a button that cannot be pressed.
+  it('says what is still needed instead of offering a Claim it cannot honour', () => {
+    renderRewardCard(100, 100)
+    expect(screen.queryByRole('button', { name: 'Claim' })).toBeNull()
+    expect(screen.getByText((_, element) => element?.tagName === 'P' && /Need RM 150\.00 more/.test(element.textContent ?? ''))).toBeTruthy()
+  })
+
+  it('reads as ready to claim when nothing else needs the money', () => {
+    renderRewardCard(300, 300)
+    expect(screen.getByText('Ready to claim')).toBeTruthy()
+  })
+
   it('keeps Claim in place while offering the rest in a menu', async () => {
-    renderRewardCard()
+    renderRewardCard(300, 300)
     const claimButton = screen.getByRole('button', { name: 'Claim' })
 
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Noise-cancelling headphones' }))

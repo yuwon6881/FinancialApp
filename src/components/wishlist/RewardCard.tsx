@@ -115,7 +115,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
             title={cutsIntoCommitments ? 'Buying this leaves your commitments short of what they need this cycle' : timeline ?? undefined}
           >
             {cutsIntoCommitments ? (
-              <>Claimable, but leaves commitments <span className="font-semibold tabular-nums">{formatSensitive(goalPaceShortfall)}</span> short</>
+              <>Leaves commitments <span className="font-semibold tabular-nums">{formatSensitive(goalPaceShortfall)}</span> short</>
             ) : canAfford ? (
               'Ready to claim'
             ) : (

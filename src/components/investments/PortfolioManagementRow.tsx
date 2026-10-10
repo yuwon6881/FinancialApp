@@ -34,10 +34,10 @@ export function PortfolioManagementRow({
     : undefined
 
   return (
-    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 rounded-xl bg-muted/25 p-3" aria-busy={pending}>
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 rounded-control bg-surface-2/70 p-3" aria-busy={pending}>
       <div className="min-w-0 self-center">
         <div className="flex min-w-0 items-center gap-2">
-          <strong className="min-w-0 break-words text-sm text-foreground">{name}</strong>
+          <strong className="min-w-0 break-words text-body font-medium text-foreground">{name}</strong>
           {pending && <RowSyncStatus
             isDeleting={Boolean(isPendingDelete)}
             isSyncing={isSyncing}

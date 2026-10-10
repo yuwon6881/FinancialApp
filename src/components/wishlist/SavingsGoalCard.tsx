@@ -157,7 +157,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
                 <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Done for this cycle
               </span>
             ) : (
-              <><span className="font-semibold text-foreground tabular-nums">{formatSensitive(pace.outstandingThisCycle)}</span> still to set aside this cycle</>
+              <><span className="font-semibold text-foreground tabular-nums">{formatSensitive(pace.outstandingThisCycle)}</span> needed this cycle</>
             )}
           </p>
 

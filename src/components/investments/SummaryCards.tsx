@@ -223,7 +223,7 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
             </div>
             <dl className="mt-1 divide-y divide-border/50">
               {rows.map(row => (
-                <div key={row.label} className="flex min-h-10 items-center justify-between gap-3 py-1.5">
+                <div key={row.label} className="flex min-h-10 items-center justify-between gap-3 py-0.5">
                   <dt className="flex min-w-0 items-center gap-0.5 text-label text-muted-foreground">
                     <span className="truncate">{row.label}</span>
                     <InfoHint label={row.label} text={row.hint} />

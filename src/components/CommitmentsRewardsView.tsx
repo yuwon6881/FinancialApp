@@ -9,7 +9,7 @@ import { useWishlistForm } from './wishlist/useWishlistForm'
 import { useSavingsGoalForm } from './wishlist/useSavingsGoalForm'
 import { useHighlightedElement } from './ui/useHighlightedElement'
 import { CommitmentsSection } from './wishlist/CommitmentsSection'
-import { RewardsPoolBar } from './wishlist/RewardsPoolBar'
+import { PoolsPanel, RewardsPoolBar } from './wishlist/RewardsPoolBar'
 import type { ContributeMode } from './wishlist/SavingsGoalContributeSheet'
 import { CommitmentsRewardsTabs, type CommitmentsRewardsTabId } from './wishlist/CommitmentsRewardsTabs'
 import { useCommitmentsRewardsData } from './wishlist/useCommitmentsRewardsData'
@@ -18,6 +18,13 @@ import { CommitmentsRewardsSheets } from './wishlist/CommitmentsRewardsSheets'
 import { Sparkles } from 'lucide-react'
 import { APP_LOCATION_CHANGED_EVENT, updateAppSearch } from '../lib/appLocation'
 import { PageHeader } from './ui/PageHeader'
+
+// The list leads and the pools sit beside it once the page is wide enough for both; on a phone the
+// pools come first, as one compact panel, so the cycle's "set aside" action is the first thing seen.
+// Placed by grid position rather than DOM order, so the pools stay first for keyboard and reading.
+const PANEL_GRID = 'grid min-w-0 items-start gap-5 @5xl:grid-cols-[minmax(0,1fr)_22rem] @5xl:gap-6'
+const POOLS_COLUMN = '@5xl:sticky @5xl:top-6 @5xl:col-start-2 @5xl:row-start-1'
+const LIST_COLUMN = 'min-w-0 @5xl:col-start-1 @5xl:row-start-1'
 
 function parseInitialCommitmentsRewardsTab(highlightedRewardId: string | null | undefined, highlightedCommitmentId: string | null | undefined): CommitmentsRewardsTabId {
   if (highlightedRewardId) return 'rewards'
@@ -320,7 +327,7 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="@container space-y-5">
       <PageHeader
         title={<span className="flex items-center gap-1">Goals <InfoHint label="this page" text="Set money aside for commitments, then see what is free for rewards." /></span>}
         titleActions={onExplainWithAi && (
@@ -341,68 +348,76 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
       {isSwitchingCycle ? (
         <CycleSkeleton variant="wishlist" />
       ) : activeTab === 'commitments' ? (
-        <div id="commitments-rewards-panel-commitments" role="tabpanel" aria-labelledby="commitments-rewards-tab-commitments" className="space-y-5">
-          <RewardsPoolBar
-            summary={rewardsPool}
-            activeView="commitments"
-            bucket="Rewards"
-            expectedInflow={rewardsTarget}
-            formatSensitive={formatSensitive}
-            hideSensitive={hideSensitive}
-            isOffline={isOffline}
-            isFunding={isFunding}
-            onFundCycle={() => { void onFundGoalsForCycle('Rewards') }}
-            onViewRewardsHistory={onNavigateToLedger ? () => onNavigateToLedger({ category: 'Rewards', showAllCycles: true }) : undefined}
-          />
-          {essentialsPool.activeGoals.length > 0 && (
-            <RewardsPoolBar summary={essentialsPool} bucket="Essentials" expectedInflow={essentialsTarget} formatSensitive={formatSensitive} hideSensitive={hideSensitive} isOffline={isOffline} isFunding={isFunding} onFundCycle={() => { void onFundGoalsForCycle('Essentials') }} />
-          )}
-          <CommitmentsSection
-            pool={commitmentsPool}
-            completedGoals={completedGoals}
-            formatSensitive={formatSensitive}
-            hideSensitive={hideSensitive}
-            isGoalSyncing={isGoalSyncing}
-            isGoalDeleting={isGoalDeleting}
-            onAddGoal={goalForm.handleOpenAddModal}
-            onEditGoal={goalForm.handleOpenEditModal}
-            onDeleteGoal={onDeleteGoal}
-            onCompleteGoal={handleRequestCompleteGoal}
-            onTopUp={target => setContributeTarget({ goal: target, mode: 'topUp' })}
-            onRelease={target => setContributeTarget({ goal: target, mode: 'release' })}
-          />
+        <div id="commitments-rewards-panel-commitments" role="tabpanel" aria-labelledby="commitments-rewards-tab-commitments" className={PANEL_GRID}>
+          <PoolsPanel className={POOLS_COLUMN}>
+            <RewardsPoolBar
+              summary={rewardsPool}
+              activeView="commitments"
+              bucket="Rewards"
+              expectedInflow={rewardsTarget}
+              formatSensitive={formatSensitive}
+              hideSensitive={hideSensitive}
+              isOffline={isOffline}
+              isFunding={isFunding}
+              onFundCycle={() => { void onFundGoalsForCycle('Rewards') }}
+              onViewRewardsHistory={onNavigateToLedger ? () => onNavigateToLedger({ category: 'Rewards', showAllCycles: true }) : undefined}
+            />
+            {essentialsPool.activeGoals.length > 0 && (
+              <RewardsPoolBar summary={essentialsPool} bucket="Essentials" expectedInflow={essentialsTarget} formatSensitive={formatSensitive} hideSensitive={hideSensitive} isOffline={isOffline} isFunding={isFunding} onFundCycle={() => { void onFundGoalsForCycle('Essentials') }} />
+            )}
+          </PoolsPanel>
+          <div className={LIST_COLUMN}>
+            <CommitmentsSection
+              pool={commitmentsPool}
+              completedGoals={completedGoals}
+              formatSensitive={formatSensitive}
+              hideSensitive={hideSensitive}
+              isGoalSyncing={isGoalSyncing}
+              isGoalDeleting={isGoalDeleting}
+              onAddGoal={goalForm.handleOpenAddModal}
+              onEditGoal={goalForm.handleOpenEditModal}
+              onDeleteGoal={onDeleteGoal}
+              onCompleteGoal={handleRequestCompleteGoal}
+              onTopUp={target => setContributeTarget({ goal: target, mode: 'topUp' })}
+              onRelease={target => setContributeTarget({ goal: target, mode: 'release' })}
+            />
+          </div>
         </div>
       ) : (
-        <div id="commitments-rewards-panel-rewards" role="tabpanel" aria-labelledby="commitments-rewards-tab-rewards" className="space-y-5">
-          <RewardsPoolBar
-            summary={rewardsPool}
-            activeView="rewards"
-            bucket="Rewards"
-            expectedInflow={rewardsTarget}
-            formatSensitive={formatSensitive}
-            hideSensitive={hideSensitive}
-            isOffline={isOffline}
-            isFunding={isFunding}
-            onFundCycle={() => { void onFundGoalsForCycle('Rewards') }}
-            onViewRewardsHistory={onNavigateToLedger ? () => onNavigateToLedger({ category: 'Rewards', showAllCycles: true }) : undefined}
-          />
-          <RewardsSection
-            items={rewardItems}
-            activeItem={activeItem}
-            affordableCount={affordableCount}
-            claimableBalance={claimableBalance}
-            freeAfterGoalPace={freeAfterGoalPace}
-            formatSensitive={formatSensitive}
-            hideSensitive={hideSensitive}
-            rewardTimeline={rewardTimeline}
-            isSyncing={isItemSyncing}
-            isDeleting={isItemDeleting}
-            onAdd={wishlistForm.handleOpenAddModal}
-            onClaim={handleOpenClaimModal}
-            onFocus={target => { void handleToggleActive(target) }}
-            onEdit={wishlistForm.handleOpenEditModal}
-            onDelete={onDeleteItem}
-          />
+        <div id="commitments-rewards-panel-rewards" role="tabpanel" aria-labelledby="commitments-rewards-tab-rewards" className={PANEL_GRID}>
+          <PoolsPanel className={POOLS_COLUMN}>
+            <RewardsPoolBar
+              summary={rewardsPool}
+              activeView="rewards"
+              bucket="Rewards"
+              expectedInflow={rewardsTarget}
+              formatSensitive={formatSensitive}
+              hideSensitive={hideSensitive}
+              isOffline={isOffline}
+              isFunding={isFunding}
+              onFundCycle={() => { void onFundGoalsForCycle('Rewards') }}
+              onViewRewardsHistory={onNavigateToLedger ? () => onNavigateToLedger({ category: 'Rewards', showAllCycles: true }) : undefined}
+            />
+          </PoolsPanel>
+          <div className={LIST_COLUMN}>
+            <RewardsSection
+              items={rewardItems}
+              activeItem={activeItem}
+              affordableCount={affordableCount}
+              claimableBalance={claimableBalance}
+              freeAfterGoalPace={freeAfterGoalPace}
+              formatSensitive={formatSensitive}
+              hideSensitive={hideSensitive}
+              rewardTimeline={rewardTimeline}
+              isSyncing={isItemSyncing}
+              isDeleting={isItemDeleting}
+              onAdd={wishlistForm.handleOpenAddModal}
+              onClaim={handleOpenClaimModal}
+              onFocus={target => { void handleToggleActive(target) }}
+              onEdit={wishlistForm.handleOpenEditModal}
+              onDelete={onDeleteItem}
+            />
+          </div>
         </div>
       )}
 

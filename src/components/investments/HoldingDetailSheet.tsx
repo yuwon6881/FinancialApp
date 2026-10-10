@@ -100,7 +100,9 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
       description={holding === null ? undefined : `Held in ${holding.accountName}${history?.firstBoughtOn ? ` · first bought ${history.firstBoughtOn}` : ''}`}
     >
       {holding !== null && (
-        <div ref={initialFocusRef} tabIndex={-1} className="space-y-5 outline-none">
+        <div className="space-y-5">
+          {/* A focus target already in view, so opening the sheet neither scrolls it nor opens a hint. */}
+          <div ref={initialFocusRef} tabIndex={-1} className="h-0 outline-none" />
           <div>
             <p className="text-label text-muted-foreground">Latest value ({appCurrency})</p>
             {holding.valueApp === undefined
@@ -117,7 +119,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
 
           <dl className="grid divide-y divide-border/50 rounded-control bg-surface-2/70 px-4 sm:grid-cols-2 sm:gap-x-6 sm:divide-y-0">
             {rows.map(row => (
-              <div key={row.label} className="flex min-h-11 items-center justify-between gap-3 py-2 sm:border-b sm:border-border/50 sm:[&:nth-last-child(-n+2)]:border-b-0">
+              <div key={row.label} className="flex min-h-11 items-center justify-between gap-3 py-0.5 sm:border-b sm:border-border/50 sm:[&:nth-last-child(-n+2)]:border-b-0">
                 <dt className="flex min-w-0 items-center gap-0.5 text-label text-muted-foreground">
                   <span className="truncate">{row.label}</span>
                   <InfoHint label={row.label} text={row.hint} />
