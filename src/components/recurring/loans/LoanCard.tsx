@@ -1,9 +1,10 @@
-import { Loader2, Pencil, Sparkles, Trash2 } from 'lucide-react'
+import { Loader2, Pencil, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { fetchLoanSchedule } from '../../../lib/api/loans'
 import { entryRateFromAnnual, formatRatePercent, loanPayoffProgress } from '../../../lib/loanTerms'
 import type { Loan, LoanScheduleEntry } from '../../../types'
 import { Button } from '../../ui/Button'
+import { AskAiButton } from '../../ui/AskAiButton'
 import { AlertBanner } from '../../ui/AlertBanner'
 import { ProgressRing } from '../../ui/ProgressRing'
 import { cn } from '../../../lib/utils'
@@ -235,18 +236,14 @@ export function LoanCard({
             <span>Make payment</span>
           </Button>
         )}
-        <Button
-          variant="secondary"
-          size="sm"
-          type="button"
-          aria-label={`Explain ${loan.name} with Ask AI`}
+        <AskAiButton
+          collapse="full"
+          label="Explain this loan"
+          ariaLabel={`Explain ${loan.name} with Ask AI`}
           title={hideSensitive ? 'Unhide balances to explain this loan' : 'Explain this loan with Ask AI'}
           onClick={onExplain}
           disabled={actionsDisabled}
-        >
-          <Sparkles className="size-3.5 shrink-0" aria-hidden="true" />
-          <span>Explain this loan</span>
-        </Button>
+        />
         {loan.settlementActionId && onUndoSettlement && (
           <Button
             variant="secondary"

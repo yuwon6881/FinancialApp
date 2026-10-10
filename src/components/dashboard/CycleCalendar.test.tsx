@@ -25,12 +25,12 @@ describe('CycleCalendar component', () => {
     )
 
     const calendarDays = screen.getByLabelText('Cycle days')
-    expect(calendarDays.className).not.toContain('min-w-[420px]')
-    expect(calendarDays.parentElement?.className).toContain('px-0.5')
-    // Figures are tablet/desktop detail; the phone column carries a presence dot instead.
+    expect(calendarDays.className).not.toMatch(/min-w-\[\d+px\]/)
+    expect(calendarDays.className).toContain('minmax(0,1fr)')
+    // Figures are tablet/desktop detail; a phone column carries the shading only.
     const amount = screen.getByText('$-100')
     expect(amount.className).toContain('hidden')
-    expect(amount.className).toContain('md:inline')
+    expect(amount.className).toContain('md:block')
     expect(screen.getByLabelText('Cash activity heat scale')).toBeTruthy()
   })
 
@@ -50,7 +50,8 @@ describe('CycleCalendar component', () => {
     const today = screen.getByTitle('Jul 25: No cash activity.')
     expect(today.className).toContain('ring-inset')
     expect(today.className).toContain('ring-primary')
-    expect(container.querySelector('[aria-label="Cycle days"]')?.parentElement?.className).toContain('px-0.5')
+    expect(today.getAttribute('aria-current')).toBe('date')
+    expect(container.querySelector('[aria-label="Cycle days"]')).toBeTruthy()
   })
 
   it('distinguishes a day the cycle has not reached from a day with no spending', () => {
@@ -69,39 +70,14 @@ describe('CycleCalendar component', () => {
     const future = screen.getByTitle('Jul 28: Not here yet.')
     const past = screen.getByTitle('Jul 20: No cash activity.')
 
-    expect(future.className).toContain('border-dashed')
-    expect(future.style.backgroundImage).toContain('repeating-linear-gradient')
-    expect(past.className).not.toContain('border-dashed')
-    expect(past.style.backgroundImage).toBe('')
+    // Not yet reached: an empty outlined cell. Came and went with nothing spent: a flat filled cell.
+    expect(future.className).toContain('ring-border/70')
+    expect(future.className).toContain('bg-transparent')
+    expect(past.className).not.toContain('ring-border/70')
+    expect(past.className).toContain('bg-surface-2/60')
   })
 
-  it('renders a centre dot for zero-spend days that remains visible on desktop', () => {
-    render(
-      <CycleCalendar
-        selectedMonth="Jul"
-        selectedYear={2026}
-        cycleDay={1}
-        cycleLabel="Jul 1 ~ Jul 31, 2026"
-        transactions={[]}
-        recurringPayments={[]}
-        formatNet={value => String(value)}
-      />,
-    )
-
-    const past = screen.getByTitle('Jul 20: No cash activity.')
-    const dot = past.querySelector('[aria-hidden="true"]') as HTMLElement
-    expect(dot).toBeTruthy()
-    expect(dot.className).toContain('rounded-full')
-    expect(dot.className).toContain('size-1')
-    expect(dot.className).toContain('bg-muted-foreground/40')
-    expect(dot.className).not.toContain('md:hidden')
-
-    const future = screen.getByTitle('Jul 28: Not here yet.')
-    const futureDot = future.querySelector('[aria-hidden="true"]')
-    expect(futureDot).toBeNull()
-  })
-
-  it('hides the presence dot on desktop when an amount figure is displayed', () => {
+  it('shades a day with spending and leaves a zero-spend day flat', () => {
     render(
       <CycleCalendar
         selectedMonth="Jul"
@@ -114,11 +90,12 @@ describe('CycleCalendar component', () => {
       />,
     )
 
-    const dayWithSpend = screen.getByTitle(/Jul 20:/)
-    const dot = dayWithSpend.querySelector('span[aria-hidden="true"]') as HTMLElement
-    expect(dot).toBeTruthy()
-    expect(dot.className).toContain('size-1.5')
-    expect(dot.className).toContain('md:hidden')
+    const dayWithSpend = screen.getByTitle(/Jul 20:/) as HTMLElement
+    expect(dayWithSpend.style.backgroundColor).toContain('color-mix')
+    const quietDay = screen.getByTitle('Jul 19: No cash activity.') as HTMLElement
+    expect(quietDay.style.backgroundColor).toBe('')
+    // No stray marks: the only corner mark a day carries is a bill.
+    expect(quietDay.querySelector('[aria-hidden="true"]')).toBeNull()
   })
 
   it('hides activity intensity with sensitive amounts', () => {

@@ -209,9 +209,13 @@ export function AuthenticatedTabContent({
     </div>
   )
 
+  // The section row sits outside the keyed page: switching Accounts to Investments keeps the row
+  // mounted, so its selection pill slides across instead of the whole row being torn down and
+  // faded back in with the next page. Only the content under it enters.
   return (
-    <div key={prefs.activeTab === 'recurring' ? `recurring-${sectionId}` : prefs.activeTab} className="w-full view-enter">
+    <div className="w-full">
       {pageBar}
+    <div key={prefs.activeTab === 'recurring' ? `recurring-${sectionId}` : prefs.activeTab} className="w-full view-enter">
       {prefs.activeTab === 'dashboard' && (
         <DashboardView
           dashboardData={todayDashboardData}
@@ -546,6 +550,7 @@ export function AuthenticatedTabContent({
       {prefs.activeTab === 'documents' && (
         <DocumentsView onNavigateToTransaction={openLinkedVaultTransaction} />
       )}
+    </div>
     </div>
   )
 }

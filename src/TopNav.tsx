@@ -1,5 +1,5 @@
 import React from 'react'
-import { Loader2, ShieldAlert } from 'lucide-react'
+import { EyeOff, Loader2, ShieldAlert } from 'lucide-react'
 import { Button } from './components/ui/Button'
 import { mutationBusyLabel } from './components/ui/rowSyncState'
 import { useIsCompact } from './lib/breakpoints'
@@ -173,6 +173,9 @@ const TopNav: React.FC<TopNavProps> = ({
         />
       )}
 
+      {/* A quiet glass pill, not a warning card: while the preference resolves nothing is wrong,
+          the amounts are simply held back. Only the failure case takes the amber attention tone
+          and an action. It floats over the page so it never takes layout space. */}
       {sensitivePreferenceStatus !== 'resolved' && (
         <div
           role="status"
@@ -180,36 +183,39 @@ const TopNav: React.FC<TopNavProps> = ({
           aria-atomic="true"
           data-testid="privacy-status"
           className={cn(
-            'pointer-events-none fixed left-1/2 top-[calc(4rem+env(safe-area-inset-top,0px))] z-50 w-max max-w-[calc(100vw_-_1.5rem)] -translate-x-1/2',
-            'rounded-overlay border border-amber-500/30 bg-popover p-4 shadow-(--app-shadow-overlay) transition-[opacity,transform] duration-200',
+            'pointer-events-none fixed left-1/2 top-[calc(0.75rem+env(safe-area-inset-top,0px))] z-50 w-max max-w-[calc(100vw_-_1.5rem)] -translate-x-1/2 lg:top-5',
+            'glass-surface rounded-full border border-border/70 shadow-(--app-shadow-overlay)',
+            'animate-in fade-in slide-in-from-top-2 duration-200',
+            sensitivePreferenceStatus === 'pending' ? 'py-2 pl-2 pr-4' : 'py-1.5 pl-2 pr-1.5',
           )}
         >
-          <span className="pointer-events-auto flex items-start gap-3">
+          <span className="pointer-events-auto flex items-center gap-2.5">
             {sensitivePreferenceStatus === 'pending' ? (
               <>
-                <div className="mt-0.5 shrink-0 text-amber-500">
-                  <Loader2 className="size-5 animate-spin" aria-hidden="true" />
-                </div>
-                <div className="min-w-0 flex-1 text-left">
-                  <div className="text-subsection text-foreground">Protecting your amounts</div>
-                  <div className="mt-0.5 text-body text-muted-foreground">Checking privacy settings before anything is revealed.</div>
-                </div>
+                <span className="relative grid size-7 shrink-0 place-items-center rounded-full bg-primary/12 text-accent-ink">
+                  <EyeOff className="size-3.5" aria-hidden="true" />
+                  <Loader2 className="absolute inset-0 size-7 animate-spin text-accent-ink/60 [stroke-width:1.25]" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 text-left">
+                  <span className="block text-label text-foreground">Protecting your amounts</span>
+                  <span className="sr-only">Checking privacy settings before anything is revealed.</span>
+                </span>
               </>
             ) : (
               <>
-                <div className="mt-0.5 shrink-0 text-amber-500">
-                  <ShieldAlert className="size-5" aria-hidden="true" />
-                </div>
-                <div className="min-w-0 flex-1 text-left">
-                  <div className="text-subsection text-foreground">Amounts remain protected</div>
-                  <div className="mt-0.5 text-body text-muted-foreground">Privacy settings couldn't be verified.</div>
-                </div>
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-amber-500/12 text-amber-700 dark:text-amber-300">
+                  <ShieldAlert className="size-3.5" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 text-left">
+                  <span className="block text-label text-foreground">Amounts remain protected</span>
+                  <span className="block text-caption text-muted-foreground">Privacy settings couldn't be verified.</span>
+                </span>
                 <Button
                   variant="secondary"
                   size="sm"
                   type="button"
                   onClick={onRetrySensitivePreference}
-                  className="ml-2 shrink-0 self-center"
+                  className="ml-1 shrink-0"
                 >
                   Retry
                 </Button>

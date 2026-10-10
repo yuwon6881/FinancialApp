@@ -2,7 +2,7 @@ import React from 'react'
 import type { LedgerAccount, WishlistItem, SavingsGoal, SavingsGoalFundingBucket } from '../types'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useSyncStatus } from '../lib/useOptimisticList'
-import { Button } from './ui/Button'
+import { AskAiButton } from './ui/AskAiButton'
 import { InfoHint } from './ui/InfoHint'
 import { useAppContext } from '../contexts/AppContext'
 import { useWishlistForm } from './wishlist/useWishlistForm'
@@ -15,7 +15,6 @@ import { CommitmentsRewardsTabs, type CommitmentsRewardsTabId } from './wishlist
 import { useCommitmentsRewardsData } from './wishlist/useCommitmentsRewardsData'
 import { RewardsSection } from './wishlist/RewardsSection'
 import { CommitmentsRewardsSheets } from './wishlist/CommitmentsRewardsSheets'
-import { Sparkles } from 'lucide-react'
 import { APP_LOCATION_CHANGED_EVENT, updateAppSearch } from '../lib/appLocation'
 import { PageHeader } from './ui/PageHeader'
 
@@ -331,10 +330,7 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
       <PageHeader
         title={<span className="flex items-center gap-1">Goals <InfoHint label="this page" text="Set money aside for commitments, then see what is free for rewards." /></span>}
         titleActions={onExplainWithAi && (
-            <Button variant="secondary" size="sm" type="button" onClick={onExplainWithAi} aria-label="Explain my commitments and rewards plan with Ask AI" className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5">
-              <Sparkles className="size-3.5" aria-hidden />
-              <span className="hidden sm:inline">Explain my plan</span>
-            </Button>
+            <AskAiButton label="Explain my plan" ariaLabel="Explain my commitments and rewards plan with Ask AI" onClick={onExplainWithAi} />
         )}
       />
 

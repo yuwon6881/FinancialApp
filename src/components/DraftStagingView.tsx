@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Reorder } from 'framer-motion'
-import { AlertTriangle, ArrowLeft, CheckCircle2, FileText, Paperclip, Plus } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, FileText, Paperclip, Plus } from 'lucide-react'
 import type { Transaction, TransactionCategory, TransactionDocumentChanges } from '../types'
 import { formatCurrencyVal } from '../lib/utils'
 import { getDraftTransactionIssues } from '../lib/draftTransactionValidation'
@@ -11,7 +11,6 @@ import {
   type TransactionFormSheetRef,
 } from './ledger/TransactionFormSheet'
 import { Button } from './ui/Button'
-import { IconButton } from './ui/IconButton'
 import { PageHeader } from './ui/PageHeader'
 import { InfoHint } from './ui/InfoHint'
 import { SensitiveMask } from './ui/SensitiveAmount'
@@ -136,7 +135,6 @@ export function DraftStagingView({
     <section className="mx-auto max-w-5xl space-y-4 sm:space-y-5" aria-labelledby="draft-transactions-title">
       <PageHeader
         titleId="draft-transactions-title"
-        leading={<IconButton onClick={onCancel} label="Back to Ledger" tooltip="Back to Ledger"><ArrowLeft className="size-4" aria-hidden="true" /></IconButton>}
         title={<span data-page-title-text="draft-transactions" className="inline-block whitespace-nowrap">Review drafts</span>}
         description={
           <div className="space-y-1">

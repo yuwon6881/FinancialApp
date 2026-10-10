@@ -1,5 +1,6 @@
 import { m, useReducedMotion } from 'framer-motion'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type React from 'react'
 import type { ActiveRecurringPayment, Transaction } from '../../types'
 import {
   buildCycleCalendar,
@@ -9,6 +10,7 @@ import {
   type CycleHeatmapMode,
   type CycleMetricTone,
   type CycleWeekSummary,
+  cycleWeekMetric,
 } from '../../lib/cycleCalendar'
 import { InfoHint } from '../ui/InfoHint'
 import { SectionHeader } from '../ui/SectionHeader'
@@ -17,6 +19,7 @@ import { CycleCalendarDaySheet } from './CycleCalendarDaySheet'
 import { CycleWeeklyPacing } from './CycleWeeklyPacing'
 import { cn } from '../../lib/utils'
 import { panelClass } from '../ui/panelStyles'
+import { InteractiveCard } from '../ui/InteractiveCard'
 
 interface CycleCalendarProps {
   selectedMonth: string
@@ -31,7 +34,9 @@ interface CycleCalendarProps {
   onSelectWeek?: (week: CycleWeekSummary, mode: CycleHeatmapMode) => void
 }
 
-const HEAT_PERCENT = [0, 10, 18, 27, 38] as const
+// Fill strength per heat level, mixed into the card colour. Capped so a day's number stays legible
+// on the strongest fill in both themes.
+const HEAT_PERCENT = [0, 12, 22, 32, 44] as const
 const HEAT_LABELS = ['No cash activity', 'Low cash activity', 'Some cash activity', 'High cash activity', 'Busiest cash activity'] as const
 type HeatLevel = 0 | 1 | 2 | 3 | 4
 
@@ -47,40 +52,46 @@ const TONE_CLASS: Record<CycleMetricTone, string> = {
   neutral: 'text-foreground/80',
 }
 
-// Phone cells show a presence dot where the tablet/desktop cell shows the figure.
-const TONE_DOT_CLASS: Record<CycleMetricTone, string> = {
-  inflow: 'bg-emerald-500',
-  outflow: 'bg-orange-500',
-  neutral: 'bg-foreground/60',
-}
-
 const heatStyle = (level: HeatLevel, mode: CycleHeatmapMode, net?: number) => {
   if (level === 0) return undefined
-  if (mode === 'net') {
-    const colorVar = (net ?? 0) >= 0 ? 'var(--ledger-income-500)' : 'var(--ledger-expense-500)'
-    return {
-      backgroundColor: `color-mix(in srgb, ${colorVar} ${HEAT_PERCENT[level]}%, var(--card))`,
-      borderColor: `color-mix(in srgb, ${colorVar} ${Math.min(60, HEAT_PERCENT[level] + 12)}%, var(--border))`,
-    }
-  }
-  return {
-    backgroundColor: `color-mix(in srgb, var(--ledger-purple-500) ${HEAT_PERCENT[level]}%, var(--card))`,
-    borderColor: `color-mix(in srgb, var(--ledger-purple-500) ${Math.min(60, HEAT_PERCENT[level] + 12)}%, var(--border))`,
-  }
+  // Spending is never red: a net outflow day is shaded in plain ink, a net inflow day in green,
+  // and spending/activity in Iris, the one colour the app spends on "how much".
+  const colorVar = mode === 'net'
+    ? (net ?? 0) >= 0 ? 'var(--color-emerald-500)' : 'var(--foreground)'
+    : 'var(--primary)'
+  const percent = mode === 'net' && (net ?? 0) < 0 ? Math.round(HEAT_PERCENT[level] * 0.55) : HEAT_PERCENT[level]
+  return { backgroundColor: `color-mix(in srgb, ${colorVar} ${percent}%, var(--card))` }
 }
 
-// A day the cycle has not reached yet has no history to shade, which used to render identically to
-// a day that came and went without a single transaction. The diagonal hatch says "not yet"; a flat
-// cell with a centre dot says "nothing happened".
-const NOT_YET_REACHED_STYLE = {
-  backgroundImage:
-    'repeating-linear-gradient(135deg, color-mix(in srgb, var(--border) 65%, transparent) 0 1px, transparent 1px 6px)',
-} as const
+function formatShortDate(dateStr: string): string {
+  const [, month, day] = dateStr.split('-').map(Number)
+  if (!month || !day) return dateStr
+  return `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month - 1]} ${day}`
+}
+
+/** True once the calendar's own box is wide enough to give each week row a trailing total. */
+function useWideCalendar(ref: React.RefObject<HTMLElement | null>, minWidth: number) {
+  const [wide, setWide] = useState(false)
+  useEffect(() => {
+    const element = ref.current
+    if (!element || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(entries => {
+      const width = entries[0]?.contentRect.width ?? 0
+      setWide(width >= minWidth)
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [ref, minWidth])
+  return wide
+}
 
 export function CycleCalendar(props: CycleCalendarProps) {
   const reduceMotion = useReducedMotion()
   const [mode, setMode] = useState<CycleHeatmapMode>('expense')
   const [selectedDay, setSelectedDay] = useState<CycleCalendarDay | null>(null)
+  const gridBoxRef = useRef<HTMLDivElement | null>(null)
+  // Seven days plus a week total need about 40rem; below that the totals stay in their own list.
+  const wide = useWideCalendar(gridBoxRef, 640)
 
   useEffect(() => {
     setSelectedDay(null)
@@ -95,6 +106,120 @@ export function CycleCalendar(props: CycleCalendarProps) {
   }), [props.selectedMonth, props.selectedYear, props.cycleDay, props.transactions, props.recurringPayments])
 
   const today = formatCalendarDate(new Date())
+
+  // Rows of seven, Sunday first; the cycle's weeks are the same Sunday-to-Saturday rows, so each
+  // row can carry its own week's total at its trailing edge.
+  const rows = useMemo(() => {
+    const cells: (CycleCalendarDay | null)[] = [
+      ...Array.from({ length: calendar.startDayOfWeek }, () => null),
+      ...calendar.days,
+    ]
+    while (cells.length % 7 !== 0) cells.push(null)
+    return Array.from({ length: cells.length / 7 }, (_, index) => cells.slice(index * 7, index * 7 + 7))
+  }, [calendar])
+
+  const renderDay = (day: CycleCalendarDay) => {
+    const isToday = day.dateKey === today
+    const visibleHeatLevel = (props.hideSensitive ? 0 : day.heatLevels[mode]) as HeatLevel
+    const metric = cycleDayMetric(day, mode)
+    const label = day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const stateLabel = props.hideSensitive
+      ? 'Cash activity hidden'
+      : day.isFuture
+        ? 'Not here yet'
+        : HEAT_LABELS[visibleHeatLevel]
+    const billsLabel = day.recurringNames.length ? ` Bills due: ${day.recurringNames.join(', ')}.` : ''
+
+    return (
+      <m.button
+        type="button"
+        key={day.dateKey}
+        whileTap={reduceMotion ? undefined : { scale: 0.96 }}
+        title={`${label}: ${stateLabel}.${billsLabel}`}
+        aria-label={`${label}. ${stateLabel}.${billsLabel}`}
+        aria-current={isToday ? 'date' : undefined}
+        style={heatStyle(visibleHeatLevel, mode, day.net)}
+        className={cn(
+          'relative flex h-11 min-w-0 cursor-pointer flex-col items-center justify-center rounded-[10px] text-center transition-[background-color,box-shadow] duration-150',
+          'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
+          'sm:h-[4.25rem] sm:items-start sm:justify-between sm:p-2 sm:text-left',
+          isToday && 'ring-2 ring-inset ring-primary',
+          day.isFuture
+            ? 'bg-transparent ring-1 ring-inset ring-border/70 hover:bg-surface-2/60'
+            : visibleHeatLevel === 0 && 'bg-surface-2/60 hover:bg-surface-2 dark:bg-surface-2/50',
+          visibleHeatLevel > 0 && 'hover:brightness-110',
+        )}
+        onClick={() => setSelectedDay(day)}
+      >
+        <span
+          className={cn(
+            'text-caption font-semibold tabular-nums sm:text-label',
+            isToday ? 'text-accent-ink' : day.isFuture ? 'text-muted-foreground' : 'text-foreground',
+          )}
+        >
+          {day.date.getDate()}
+        </span>
+
+        {/* The figure is tablet/desktop detail; a phone column carries the shading only and the
+            exact numbers stay one tap away. */}
+        {metric.value !== undefined ? (
+          <span className={cn('hidden max-w-full truncate text-caption font-medium tabular-nums leading-tight md:block', TONE_CLASS[metric.tone])}>
+            {props.formatNet(metric.value)}
+          </span>
+        ) : day.isFuture && day.projectedBillsAmount > 0 ? (
+          <span className="hidden max-w-full truncate text-caption leading-tight text-muted-foreground tabular-nums md:block">
+            ~{props.formatNet(day.projectedBillsAmount)}
+          </span>
+        ) : null}
+
+        {/* A bill on this day: amber while it is still to pay, green once paid. */}
+        {day.recurring.length > 0 && (
+          <span
+            aria-hidden="true"
+            className={cn(
+              'absolute right-1.5 top-1.5 flex items-center justify-center rounded-full',
+              day.recurring.length > 1 ? 'h-3.5 min-w-3.5 px-0.5 text-micro font-semibold leading-none' : 'size-1.5',
+              day.hasPendingBills
+                ? day.recurring.length > 1 ? 'bg-amber-500/18 text-amber-700 dark:text-amber-300' : 'bg-amber-500'
+                : day.recurring.length > 1 ? 'bg-emerald-500/18 text-emerald-700 dark:text-emerald-300' : 'bg-emerald-500',
+            )}
+          >
+            {day.recurring.length > 1 ? day.recurring.length : null}
+          </span>
+        )}
+      </m.button>
+    )
+  }
+
+  const renderWeekTotal = (week: CycleWeekSummary | undefined) => {
+    if (!week) return <div />
+    const metric = cycleWeekMetric(week, mode)
+    const notStarted = week.elapsedDayCount === 0
+    const isDisabled = notStarted && week.transactionCount === 0
+    const figure = notStarted
+      ? week.projectedBillsAmount > 0 ? <>~{props.formatNet(week.projectedBillsAmount)}</> : '—'
+      : props.formatNet(metric.value ?? 0)
+    const caption = notStarted
+      ? week.projectedBillsAmount > 0 ? 'Bills due' : 'Not here yet'
+      : week.elapsedDayCount < week.dayCount ? `${week.elapsedDayCount}/${week.dayCount} days` : `Week ${week.weekNumber}`
+    const content = (
+      <span className="flex h-full flex-col items-end justify-center gap-0.5 text-right">
+        <span className={cn('text-label tabular-nums', notStarted ? 'text-muted-foreground' : metric.tone === 'inflow' ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground')}>{figure}</span>
+        <span className="text-caption text-muted-foreground tabular-nums">{caption}</span>
+      </span>
+    )
+    return props.onSelectWeek ? (
+      <InteractiveCard
+        surface="plain"
+        disabled={isDisabled}
+        onClick={() => props.onSelectWeek?.(week, mode)}
+        aria-label={`View Week ${week.weekNumber} transactions in Ledger (${formatShortDate(week.startDate)} to ${formatShortDate(week.endDate)})`}
+        className="h-[4.25rem] rounded-[10px] px-2.5 hover:bg-surface-2 focus-visible:outline-offset-[-2px] disabled:opacity-100"
+      >
+        {content}
+      </InteractiveCard>
+    ) : <div className="h-[4.25rem] px-2.5">{content}</div>
+  }
 
   return (
     <section id="report-section-calendar" aria-labelledby="report-calendar-heading" className="@container space-y-3">
@@ -114,202 +239,96 @@ export function CycleCalendar(props: CycleCalendarProps) {
       />
       {/* Below 360px seven 44px day targets do not fit inside the page gutters, so the panel runs
           edge to edge there and the days sit a hairline apart instead of overlapping. */}
-      <div className={cn(panelClass, 'grid min-w-0 gap-5 p-3 sm:p-5 @4xl:grid-cols-[minmax(0,1fr)_16rem] @4xl:gap-0 max-[359px]:-mx-4 max-[359px]:rounded-none max-[359px]:border-x-0 max-[359px]:px-0.5')}>
-      <div className="min-w-0 @4xl:pr-6">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 max-[359px]:px-2.5">
-        <ReportSegmented
-          label="Calendar shading"
-          value={mode}
-          onChange={setMode}
-          options={MODES.map(entry => ({
-            value: entry.mode,
-            label: <><span className="@xl:hidden">{entry.shortLabel}</span><span className="hidden @xl:inline">{entry.label}</span></>,
-          }))}
-        />
-        <p className="flex items-center gap-2 px-1 text-caption text-muted-foreground">
-          <span className="tabular-nums">{calendar.stats.noSpendDaysCount} zero-spend days</span>
-          <span aria-hidden="true">·</span>
-          <span className="tabular-nums">Avg {props.formatNet(-Math.round(calendar.stats.averageDailySpend))}/day</span>
-        </p>
-      </div>
-      {/* Legend & Summary Subtitle -- the legend is desktop/tablet detail; phones get the summary
-          line only, since the grid itself already carries the shading. */}
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1 text-caption empty:hidden max-[359px]:px-3">
-        {props.hideSensitive ? (
-          <p className="text-xs font-medium text-muted-foreground">Activity shading is hidden while amounts are hidden.</p>
-        ) : mode === 'net' ? (
-          <div aria-label="Cash activity heat scale" className="hidden items-center gap-1.5 text-xs font-medium text-muted-foreground sm:flex">
-            <span>Net outflow</span>
-            <span className="size-3 rounded-sm border" style={heatStyle(3, 'net', -100)} aria-hidden="true" />
-            <span className="size-3 rounded-sm border" style={heatStyle(1, 'net', -10)} aria-hidden="true" />
-            <span className="size-3 rounded-sm border border-border/60 bg-muted/20" aria-hidden="true" />
-            <span className="size-3 rounded-sm border" style={heatStyle(1, 'net', 10)} aria-hidden="true" />
-            <span className="size-3 rounded-sm border" style={heatStyle(3, 'net', 100)} aria-hidden="true" />
-            <span>Net inflow</span>
-          </div>
-        ) : (
-          <div aria-label="Cash activity heat scale" className="hidden items-center gap-1.5 text-xs font-medium text-muted-foreground sm:flex">
-            <span>{mode === 'expense' ? 'Less spending' : 'Less activity'}</span>
-            {([1, 2, 3, 4] as const).map(level => (
-              <span key={level} className="size-3 rounded-sm border" style={heatStyle(level, mode)} aria-hidden="true" />
-            ))}
-            <span>{mode === 'expense' ? 'More spending' : 'More activity'}</span>
-          </div>
-        )}
-
-        {/* Tells apart the two cells that used to look alike. */}
-        <div className="hidden items-center gap-2.5 text-xs font-medium text-muted-foreground lg:flex">
-          <span className="flex items-center gap-1">
-            <span className="flex size-3 items-center justify-center rounded-sm border border-border/40 bg-muted/25" aria-hidden="true">
-              <span className="size-1 rounded-full bg-muted-foreground/40" />
-            </span>
-            <span>Nothing spent</span>
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="size-3 rounded-sm border border-dashed border-border/70" style={NOT_YET_REACHED_STYLE} aria-hidden="true" />
-            <span>Not here yet</span>
-          </span>
+      <div className={cn(panelClass, 'min-w-0 p-3 sm:p-5 max-[359px]:-mx-4 max-[359px]:rounded-none max-[359px]:border-x-0 max-[359px]:px-0.5')}>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 max-[359px]:px-2.5">
+          <ReportSegmented
+            label="Calendar shading"
+            value={mode}
+            onChange={setMode}
+            options={MODES.map(entry => ({
+              value: entry.mode,
+              label: <><span className="@xl:hidden">{entry.shortLabel}</span><span className="hidden @xl:inline">{entry.label}</span></>,
+            }))}
+          />
+          <dl className="flex items-center gap-4 text-caption">
+            <div>
+              <dt className="text-muted-foreground">Zero-spend days</dt>
+              <dd className="text-label text-foreground tabular-nums">{calendar.stats.noSpendDaysCount}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Average a day</dt>
+              <dd className="text-label text-foreground tabular-nums">{props.formatNet(-Math.round(calendar.stats.averageDailySpend))}</dd>
+            </div>
+          </dl>
         </div>
 
-      </div>
-
-      {/* Calendar Grid */}
-      <div className="px-0.5 py-1 sm:px-1">
-        <div aria-label="Cycle days" className="grid w-full min-w-0 grid-cols-[repeat(7,minmax(0,1fr))] gap-1 text-center sm:gap-2 max-[359px]:gap-px">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => {
-            const isWeekendHeader = idx === 0 || idx === 6
-            return (
+        <div ref={gridBoxRef} className="mt-4 min-w-0">
+          <div
+            aria-label="Cycle days"
+            className={cn(
+              'grid w-full min-w-0 gap-1 sm:gap-1.5 max-[359px]:gap-px',
+              wide ? 'grid-cols-[repeat(7,minmax(0,1fr))_minmax(6.5rem,8rem)]' : 'grid-cols-[repeat(7,minmax(0,1fr))]',
+            )}
+          >
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
               <div
                 key={day}
-                className={cn(
-                  'pb-1.5 text-caption text-muted-foreground',
-                  // Weekends step down in weight, not colour: a fainter grey would fall below AA.
-                  isWeekendHeader ? 'font-medium' : 'font-semibold'
-                )}
+                className={cn('pb-1 text-center text-caption text-muted-foreground sm:px-2 sm:text-left', index === 0 || index === 6 ? 'font-normal' : 'font-medium')}
               >
                 {/* Single letter on phones: three-letter headers crowd a 40px column. */}
                 <span className="sm:hidden">{day.charAt(0)}</span>
                 <span className="hidden sm:inline">{day}</span>
               </div>
-            )
-          })}
-          {Array.from({ length: calendar.startDayOfWeek }).map((_, index) => <div key={`empty-${index}`} />)}
-          {calendar.days.map((day, index) => {
-            const isToday = day.dateKey === today
-            const activeHeatLevel = day.heatLevels[mode]
-            const visibleHeatLevel = props.hideSensitive ? 0 : activeHeatLevel
-            const metric = cycleDayMetric(day, mode)
-
-            const color = isToday
-              ? 'border-primary ring-2 ring-inset ring-primary bg-card'
-              : day.isFuture
-                ? 'border-dashed border-border/70 hover:border-border'
-                : visibleHeatLevel > 0
-                  ? 'border-border/50 hover:brightness-110'
-                  : day.isWeekend
-                    ? 'bg-muted/30 border-border/40 hover:bg-muted/45'
-                    : 'bg-muted/25 border-border/40 hover:bg-muted/40'
-
-            const label = day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-            const stateLabel = props.hideSensitive
-              ? 'Cash activity hidden'
-              : day.isFuture
-                ? 'Not here yet'
-                : HEAT_LABELS[visibleHeatLevel]
-            const billsLabel = day.recurringNames.length ? ` Bills due: ${day.recurringNames.join(', ')}.` : ''
-
-            return (
-              <m.button
-                type="button"
-                key={day.dateKey}
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={reduceMotion ? { duration: 0 } : { duration: 0.3, delay: index * 0.01 }}
-                whileTap={reduceMotion ? undefined : { scale: 0.95 }}
-                title={`${label}: ${stateLabel}.${billsLabel}`}
-                aria-label={`${label}. ${stateLabel}.${billsLabel}`}
-                style={{
-                  ...(day.isFuture && !isToday ? NOT_YET_REACHED_STYLE : {}),
-                  ...heatStyle(visibleHeatLevel, mode, day.net),
-                }}
-                className={`relative flex h-11 min-w-0 cursor-pointer flex-col items-center justify-center rounded-lg border text-xs sm:h-14 sm:rounded-xl md:h-16 ${color}`}
-                onClick={() => setSelectedDay(day)}
-              >
-                <span
-                  className={cn(
-                    'text-caption font-semibold sm:text-sm',
-                    isToday ? 'text-accent-ink' : day.isFuture ? 'text-muted-foreground' : 'text-foreground/90'
-                  )}
-                >
-                  {day.date.getDate()}
-                </span>
-
-                {/* Amounts are tablet/desktop detail. A phone column cannot hold a legible figure,
-                    so it carries a presence dot instead and the exact numbers stay one tap away. */}
-                {metric.value !== undefined ? (
-                  <span
-                    className={cn(
-                      'hidden max-w-full truncate text-caption font-semibold leading-tight md:inline md:text-xs',
-                      TONE_CLASS[metric.tone]
-                    )}
-                  >
-                    {props.formatNet(metric.value)}
-                  </span>
-                ) : day.isFuture && day.projectedBillsAmount > 0 ? (
-                  <span className="hidden max-w-full truncate text-xs font-medium leading-tight text-amber-600 dark:text-amber-400 md:inline md:text-xs">
-                    ~{props.formatNet(-day.projectedBillsAmount)}
-                  </span>
-                ) : null}
-
-                {!day.isFuture && !props.hideSensitive && (
-                  <span
-                    className={cn(
-                      'mt-0.5 rounded-full',
-                      metric.value !== undefined
-                        ? cn('size-1.5 md:hidden', TONE_DOT_CLASS[metric.tone])
-                        : 'size-1 bg-muted-foreground/40'
-                    )}
-                    aria-hidden="true"
-                  />
-                )}
-
-                {/* Recurring Bills Status Badge */}
-                {day.recurring.length > 0 && (
-                  day.recurring.length > 1 ? (
-                    <span
-                      className={cn(
-                        'absolute top-1 right-1 flex size-3 items-center justify-center rounded-full text-caption font-semibold sm:size-3.5 sm:text-xs',
-                        day.hasPendingBills
-                          ? 'bg-amber-500/20 text-amber-500 ring-1 ring-amber-500/40 animate-pulse'
-                          : 'bg-emerald-500/20 text-emerald-500 ring-1 ring-emerald-500/40'
-                      )}
-                    >
-                      {day.recurring.length}
-                    </span>
-                  ) : (
-                    <span
-                      className={cn(
-                        'absolute top-1 right-1 size-1.5 rounded-full',
-                        day.hasPendingBills ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
-                      )}
-                    />
-                  )
-                )}
-              </m.button>
-            )
-          })}
+            ))}
+            {wide && <div className="pb-1 pr-2.5 text-right text-caption font-medium text-muted-foreground">Week</div>}
+            {rows.map((row, rowIndex) => (
+              <div key={rowIndex} className="contents">
+                {row.map((day, index) => day ? renderDay(day) : <div key={`blank-${rowIndex}-${index}`} aria-hidden="true" />)}
+                {wide && renderWeekTotal(calendar.weeks[rowIndex])}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
-      </div>
+        {/* One quiet legend line: what the shading means, and what the corner dot means. */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-caption text-muted-foreground max-[359px]:px-2.5">
+          {props.hideSensitive ? (
+            <p>Activity shading is hidden while amounts are hidden.</p>
+          ) : mode === 'net' ? (
+            <div aria-label="Cash activity heat scale" className="flex items-center gap-1.5">
+              <span>Net outflow</span>
+              <span className="size-3 rounded-[4px]" style={heatStyle(4, 'net', -100)} aria-hidden="true" />
+              <span className="size-3 rounded-[4px]" style={heatStyle(2, 'net', -10)} aria-hidden="true" />
+              <span className="size-3 rounded-[4px] bg-surface-2" aria-hidden="true" />
+              <span className="size-3 rounded-[4px]" style={heatStyle(2, 'net', 10)} aria-hidden="true" />
+              <span className="size-3 rounded-[4px]" style={heatStyle(4, 'net', 100)} aria-hidden="true" />
+              <span>Net inflow</span>
+            </div>
+          ) : (
+            <div aria-label="Cash activity heat scale" className="flex items-center gap-1.5">
+              <span>{mode === 'expense' ? 'Less spending' : 'Less activity'}</span>
+              {([1, 2, 3, 4] as const).map(level => (
+                <span key={level} className="size-3 rounded-[4px]" style={heatStyle(level, mode)} aria-hidden="true" />
+              ))}
+              <span>{mode === 'expense' ? 'More spending' : 'More activity'}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-amber-500" aria-hidden="true" />Bill due</span>
+            <span className="flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />Bill paid</span>
+            <span className="hidden items-center gap-1.5 sm:flex"><span className="size-3 rounded-[4px] ring-1 ring-inset ring-border/70" aria-hidden="true" />Not here yet</span>
+          </div>
+        </div>
 
-      <CycleWeeklyPacing
-        weeks={calendar.weeks}
-        mode={mode}
-        formatAmount={props.formatNet}
-        onSelectWeek={props.onSelectWeek}
-        className="border-t border-border/60 px-1 pt-4 @4xl:border-l @4xl:border-t-0 @4xl:pl-6 @4xl:pr-0 @4xl:pt-0 max-[359px]:px-3"
-      />
+        {!wide && (
+          <CycleWeeklyPacing
+            weeks={calendar.weeks}
+            mode={mode}
+            formatAmount={props.formatNet}
+            onSelectWeek={props.onSelectWeek}
+            className="mt-4 border-t border-border/60 px-1 pt-4 max-[359px]:px-3"
+          />
+        )}
       </div>
 
       <CycleCalendarDaySheet

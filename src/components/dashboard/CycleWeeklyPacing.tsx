@@ -58,7 +58,7 @@ export const CycleWeeklyPacing: React.FC<CycleWeeklyPacingProps> = ({
           // "nothing spent" when it actually means "not here yet".
           const headline = notStarted
             ? week.projectedBillsAmount > 0
-              ? <>~{formatAmount(-week.projectedBillsAmount)}</>
+              ? <>~{formatAmount(week.projectedBillsAmount)}</>
               : 'Not here yet'
             : formatAmount(metric.value ?? 0)
           const progress = notStarted

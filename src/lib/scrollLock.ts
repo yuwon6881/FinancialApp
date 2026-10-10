@@ -46,7 +46,12 @@ export function lockBodyScroll(): void {
     scrollY,
   }
 
-  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+  // From 768px the root reserves the scrollbar's lane (`scrollbar-gutter: stable`), so hiding the
+  // scrollbar leaves the width unchanged. Padding the body as well narrowed the page by a scrollbar
+  // on every open and widened it on every close, and each of those width changes replayed the
+  // layout animations under the sheet (tab pills, chart legends sliding into place again).
+  const gutterReserved = getComputedStyle(document.documentElement).scrollbarGutter?.includes('stable') ?? false
+  const scrollbarWidth = gutterReserved ? 0 : window.innerWidth - document.documentElement.clientWidth
 
   body.style.position = 'fixed'
   body.style.top = `-${scrollY}px`

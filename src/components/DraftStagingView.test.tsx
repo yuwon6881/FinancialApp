@@ -155,7 +155,8 @@ describe('DraftStagingView', () => {
     expect(screen.getByRole('heading', { name: 'Your draft queue is clear' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Post Transaction' }))
     expect(onAddAnother).toHaveBeenCalledTimes(1)
-    expect(screen.getAllByRole('button', { name: 'Back to Ledger' })).toHaveLength(2)
+    // The Activity section row is the way back; the empty state keeps its own exit.
+    expect(screen.getAllByRole('button', { name: 'Back to Ledger' })).toHaveLength(1)
   })
 
   it('routes an incomplete Stability drawdown to review instead of syncing', async () => {

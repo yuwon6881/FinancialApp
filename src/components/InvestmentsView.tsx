@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
-  ArrowLeft,
   AlertCircle,
   CloudOff,
   Info,
   RefreshCw,
-  Sparkles,
 } from 'lucide-react'
 import type {
   AppTab,
@@ -16,6 +14,7 @@ import type {
 import type { AppNavigationOptions } from '../lib/appLocation'
 import { useAppContext } from '../contexts/AppContext'
 import { Button } from './ui/Button'
+import { AskAiButton } from './ui/AskAiButton'
 import { PageHeader } from './ui/PageHeader'
 import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/CycleSkeleton'
@@ -200,23 +199,9 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
 
   if (loading && !portfolio) return <CycleSkeleton variant="investments" />
 
-  const back = () => {
-    if (window.history.length > 1) window.history.back()
-    else onNavigate('dashboard')
-  }
-
   return (
     <div className="@container min-w-0 max-w-full space-y-6 overflow-x-clip">
       <PageHeader
-        leading={<Button
-          variant="tertiary"
-          type="button"
-          onClick={back}
-          className="mt-0.5 inline-flex size-9 cursor-pointer items-center justify-center rounded-xl border border-border/60 p-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
-          aria-label="Back to Today"
-        >
-          <ArrowLeft className="size-4" />
-        </Button>}
         title={<span className="flex flex-wrap items-center gap-2.5">Growth Investments
             {isBackgroundRefreshing && (
               <span
@@ -228,17 +213,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
               </span>
             )}</span>}
         titleActions={onExplainWithAi && (
-          <Button
-            variant="secondary"
-            size="sm"
-            type="button"
-            className="size-11 shrink-0 p-0 sm:size-auto sm:px-3 sm:py-1.5"
-            aria-label="Explain my portfolio"
-            onClick={() => onExplainWithAi(range)}
-          >
-            <Sparkles className="size-3.5" aria-hidden="true" />
-            <span className="hidden sm:inline">Explain my portfolio</span>
-          </Button>
+          <AskAiButton label="Explain my portfolio" onClick={() => onExplainWithAi(range)} />
         )}
       />
 

@@ -1,6 +1,7 @@
 import { Button } from './ui/Button'
+import { AskAiButton } from './ui/AskAiButton'
 import React from 'react'
-import { ChartNoAxesCombined, Sparkles } from 'lucide-react'
+import { ChartNoAxesCombined } from 'lucide-react'
 import type { AppTab, DashboardData, SavingsGoal, Transaction, WishlistItem } from '../types'
 import { useAppPrefs } from '../contexts/AppContext'
 import { getCycleProgress } from '../lib/cycle'
@@ -134,16 +135,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         title="Insights"
         description={view.cycleLabel}
         titleActions={onExplainWithAi && (
-          <Button
-            variant="secondary"
-            size="sm"
+          <AskAiButton
+            label="Explain this cycle"
+            ariaLabel="Explain this cycle with Ask AI"
             onClick={() => onExplainWithAi(`${view.activeSettings.selectedYear}-${String(selectedMonthIndex).padStart(2, '0')}`)}
-            aria-label="Explain this cycle with Ask AI"
-            className="size-11 shrink-0 p-0 sm:size-auto sm:px-3"
-          >
-            <Sparkles className="size-3.5" />
-            <span className="hidden sm:inline">Explain this cycle</span>
-          </Button>
+          />
         )}
         actions={selectedCycleEnded && onViewCycleSummary && (
           <Button
