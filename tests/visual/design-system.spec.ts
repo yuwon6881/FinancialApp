@@ -195,10 +195,9 @@ test('rewards pool reports this cycle pacing for an active commitment', async ({
   const card = page.locator('#commitments-rewards-panel-commitments > div').first()
   await expect(card).toBeVisible()
 
-  // Below the expanded tier the pacing block sits inside a collapsed native <details>. A <summary>
-  // carries no button role, so it cannot be reached through getByRole('button').
-  const disclosure = card.locator('summary').filter({ hasText: 'Details' }).first()
-  if (await disclosure.isVisible()) {
+  // On narrow screens each pool folds its pacing behind a Details toggle; wide screens show it.
+  const disclosure = card.getByRole('button', { name: /Details/ }).first()
+  if (await disclosure.isVisible() && await disclosure.getAttribute('aria-expanded') !== 'true') {
     await disclosure.click()
   }
   await expect(card.getByText(/This cycle:/)).toBeVisible()

@@ -259,7 +259,7 @@ test('draft attachments survive a reload before the batch is added', async ({ pa
 })
 
 const responsiveRoutes = [
-  { path: '/reports', slug: 'reports', readyText: 'Carryover Rolling Ledgers' },
+  { path: '/reports', slug: 'reports', readyText: 'Net this cycle' },
   { path: '/recurring', slug: 'recurring', readyText: 'Bills & subscriptions' },
   { path: '/ledger', slug: 'ledger', readyText: 'Neighbourhood Grocer' },
   { path: '/ledger?all=1', slug: 'ledger-all-cycles', readyText: 'Neighbourhood Grocer' },
@@ -534,8 +534,8 @@ test('vault controls stay beside the results and selection actions do not shift 
   await expect(results).toBeVisible()
 })
 
-test('mobile document cards keep amount editing and tax relief controls aligned', async ({ page }) => {
-  test.skip(!test.info().project.name.startsWith('mobile'), 'The card layout is mobile-only.')
+test('mobile document rows keep amount editing and tax relief controls inside the row', async ({ page }) => {
+  test.skip(!test.info().project.name.startsWith('mobile'), 'The row layout is mobile-only.')
 
   const document: VaultDocument = {
     ...vaultDocuments[0],
@@ -556,6 +556,8 @@ test('mobile document cards keep amount editing and tax relief controls aligned'
 
   const card = page.getByTestId('document-card-3')
   await expect(card).toBeVisible()
+  // A phone row folds its editors away; opening the row reveals them in place.
+  await card.getByRole('button', { name: 'Details for INV-049837.pdf' }).click()
   await card.getByRole('button', { name: /56\.00/ }).click()
 
   const amountInput = card.getByRole('textbox', { name: 'Amount for INV-049837.pdf' })
@@ -563,25 +565,19 @@ test('mobile document cards keep amount editing and tax relief controls aligned'
   await expect(amountInput).toBeVisible()
   await expect(reliefButton).toBeVisible()
 
-  const amountControls = await amountInput.evaluate(element => {
-    const row = element.parentElement
-    const bounds = row?.getBoundingClientRect()
-    return bounds ? { top: bounds.top, bottom: bounds.bottom } : null
-  })
-  const reliefBounds = await reliefButton.evaluate(element => {
-    const bounds = element.getBoundingClientRect()
-    return { top: bounds.top, bottom: bounds.bottom, left: bounds.left, right: bounds.right }
-  })
   const cardBounds = await card.evaluate(element => {
     const bounds = element.getBoundingClientRect()
     return { left: bounds.left, right: bounds.right }
   })
-
-  expect(amountControls).not.toBeNull()
-  expect(reliefBounds.top).toBeLessThanOrEqual(amountControls!.bottom)
-  expect(reliefBounds.bottom).toBeGreaterThanOrEqual(amountControls!.top)
-  expect(reliefBounds.left).toBeGreaterThanOrEqual(cardBounds.left)
-  expect(reliefBounds.right).toBeLessThanOrEqual(cardBounds.right)
+  for (const control of [amountInput, reliefButton]) {
+    const bounds = await control.evaluate(element => {
+      const box = element.getBoundingClientRect()
+      return { left: box.left, right: box.right }
+    })
+    expect(bounds.left).toBeGreaterThanOrEqual(cardBounds.left)
+    expect(bounds.right).toBeLessThanOrEqual(cardBounds.right)
+  }
+  expect(await card.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
 })
 
 test('mobile category toolbar keeps the filter and Add action on one row', async ({ page }) => {
@@ -679,13 +675,6 @@ test('editing a category flow type holds the row still and keeps a 44px target',
   })
   await page.goto('/plan/budget', { waitUntil: 'domcontentloaded' })
   await page.getByRole('tab', { name: 'Categories & limits' }).click()
-
-  // The card starts collapsed on a phone, so the list is not interactive until it is opened.
-  const categoriesHeader = page.getByRole('button', { name: /Transaction Categories/ })
-  if (await categoriesHeader.getAttribute('aria-expanded') === 'false') {
-    await categoriesHeader.click()
-    await expect(categoriesHeader).toHaveAttribute('aria-expanded', 'true')
-  }
 
   const groups = page.getByRole('group', { name: /^Flow restriction for / })
   const order = () => groups.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')))

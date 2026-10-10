@@ -294,7 +294,7 @@ test('compact compound controls keep their buttons inside their own boundaries',
   expect(calendarGeometry.gridScrollWidth).toBeLessThanOrEqual((calendarGeometry.gridClientWidth ?? 0) + 1)
 })
 
-test('laptop-width Ledger and carryover views avoid horizontal data scrolling', async ({ page }) => {
+test('laptop-width Ledger and bucket views avoid horizontal data scrolling', async ({ page }) => {
   const width = test.info().project.use.viewport?.width ?? 0
   test.skip(width < 1024 || width >= 1280, 'The rail-constrained laptop contract is measured from 1024 through 1279px.')
 
@@ -320,7 +320,8 @@ test('laptop-width Ledger and carryover views avoid horizontal data scrolling', 
   })
   await page.goto('/reports', { waitUntil: 'domcontentloaded' })
   await waitForStableLayout(page)
-  const carryover = page.getByRole('heading', { name: 'Carryover Rolling Ledgers' }).locator('..')
+  const carryover = page.locator('#report-section-buckets')
+  await expect(carryover.getByRole('heading', { name: 'Buckets' })).toBeVisible()
   await expect(carryover.locator('table')).toHaveCount(0)
   const clippedAmounts = await carryover.locator('span').evaluateAll(elements =>
     elements.filter(element => element.scrollWidth > element.clientWidth + 1 && getComputedStyle(element).textOverflow === 'ellipsis')
@@ -329,7 +330,7 @@ test('laptop-width Ledger and carryover views avoid horizontal data scrolling', 
   expect(clippedAmounts).toEqual([])
 })
 
-test('Rewards carryover card keeps committed and free amounts readable across widths', async ({ page }) => {
+test('Rewards bucket keeps committed and free amounts readable across widths', async ({ page }) => {
   const width = test.info().project.use.viewport?.width ?? 0
 
   await mockApi(page, {
@@ -354,7 +355,11 @@ test('Rewards carryover card keeps committed and free amounts readable across wi
   })
   await page.goto('/reports', { waitUntil: 'domcontentloaded' })
   await waitForStableLayout(page)
-  const card = page.getByTestId(width >= 1280 ? 'carryover-row-rewards' : 'carryover-card-rewards')
+  const card = page.getByTestId('bucket-rewards')
+  await expect(card).toBeVisible()
+  // Phones fold a bucket's detail behind its row; wider containers always show it.
+  const toggle = card.getByRole('button', { name: 'Rewards details' })
+  if (await toggle.isVisible() && await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click()
   await expect(card.getByText('Committed')).toBeVisible()
   await expect(card.getByText('Free to spend')).toBeVisible()
   await expect(card.getByText('Pending')).toHaveCount(0)
@@ -369,14 +374,10 @@ test('Rewards carryover card keeps committed and free amounts readable across wi
   }))
   expect(geometry.contentWidth).toBeLessThanOrEqual(geometry.ownWidth + 1)
   expect(geometry.clippedValues).toEqual([])
-  if (width === 320) {
-    const net = await card.getByText('Net Change').boundingBox()
-    const remaining = await card.getByText('Remaining Balance').boundingBox()
-    expect(Math.abs((net?.y ?? 0) - (remaining?.y ?? 0))).toBeLessThan(3)
-  }
+  await expect(card.getByText('Net change')).toBeVisible()
   if (test.info().project.name === 'compact-320-light' ||
       (width === 390 && (test.info().project.name === 'mobile-light' || test.info().project.name === 'mobile-dark'))) {
-    await expect(card).toHaveScreenshot('rewards-carryover-card.png')
+    await expect(card).toHaveScreenshot('rewards-bucket.png')
   }
 })
 
@@ -618,13 +619,17 @@ test('commitments and rewards detail labels are never clipped', async ({ page })
     if (tab === 'rewards') await page.getByRole('tab', { name: /^Rewards/ }).click()
     await waitForStableLayout(page)
 
-    for (const summary of await page.locator('main summary', { hasText: 'Details' }).all()) {
-      if (await summary.isVisible()) await summary.click()
+    // Pools and commitments fold their detail behind disclosure buttons on narrow screens. Open
+    // every one that is closed; wide screens already show the detail.
+    for (const toggle of await page.locator('main button[aria-controls][aria-expanded="false"]').all()) {
+      if (await toggle.isVisible()) await toggle.click()
     }
     await waitForStableLayout(page)
 
     const measured = await page.evaluate(() => {
-      const bodies = Array.from(document.querySelectorAll<HTMLElement>('main details[open] > div'))
+      const bodies = Array.from(document.querySelectorAll<HTMLElement>('main button[aria-controls][aria-expanded="true"]'))
+        .map(button => document.getElementById(button.getAttribute('aria-controls') ?? ''))
+        .filter((body): body is HTMLElement => body !== null && body.offsetParent !== null)
       return {
         rows: bodies.reduce((total, body) => total + body.querySelectorAll('*').length, 0),
         clipped: bodies.flatMap(body => Array.from(body.querySelectorAll<HTMLElement>('*'))
