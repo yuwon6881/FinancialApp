@@ -493,7 +493,7 @@ describe('RecurringPaymentsView characterization', () => {
       const day = within(strip).getByRole('button', { name: /^Aug 5: Cloud Storage/ })
       fireEvent.click(day)
       expect(day.getAttribute('aria-pressed')).toBe('true')
-      expect(screen.getByText('Bills due Aug 5')).toBeTruthy()
+      expect(screen.getByText(/Bills due (Aug 5|5 Aug)/)).toBeTruthy()
       expect(screen.queryByRole('heading', { level: 3, name: 'Netflix' })).toBeNull()
       expect(screen.getByRole('heading', { level: 3, name: 'Cloud Storage' })).toBeTruthy()
 

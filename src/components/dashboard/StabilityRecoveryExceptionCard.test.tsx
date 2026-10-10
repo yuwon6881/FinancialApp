@@ -30,7 +30,7 @@ function openRecoveryDetails() {
 }
 
 describe('StabilityRecoveryExceptionCard', () => {
-  it('separates a covered current plan from remaining debt and a fully repaid spending cycle', () => {
+  it('separates a covered current plan from remaining debt and omits fully repaid cycles', () => {
     render(<StabilityRecoveryExceptionCard recovery={recovery({
       markedTotal: 696.05, repaidTotal: 10.16, outstandingShortfall: 685.89,
       requiredThisCycle: 416.23, toppedUpThisCycle: 416.23, outstandingThisCycle: 0,
@@ -45,9 +45,8 @@ describe('StabilityRecoveryExceptionCard', () => {
     const dialog = screen.getByRole('dialog', { name: 'Emergency fund recovery details' })
     expect(within(dialog).getByText('This cycle covered')).toBeTruthy()
     expect(within(dialog).getByText('$416.23 of $416.23')).toBeTruthy()
-    const july = within(dialog).getByText('Jul 2026 cycle').closest('li')!
-    expect(within(july).getByText('Fully put back')).toBeTruthy()
-    expect(within(july).queryByText(/cycles left|Plan ends|Planned this cycle/)).toBeNull()
+    expect(within(dialog).queryByText('Jul 2026 cycle')).toBeNull()
+    expect(within(dialog).queryByText('Fully put back')).toBeNull()
     const august = within(dialog).getByText('Aug 2026 cycle').closest('li')!
     expect(within(august).getByText('Plan ends Nov 2026 cycle')).toBeTruthy()
     expect(within(august).getByText('$685.89')).toBeTruthy()

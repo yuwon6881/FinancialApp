@@ -48,7 +48,7 @@ export interface StabilityRecoveryNarrative {
 export function describeStabilityRecovery(recovery: StabilityRecovery): StabilityRecoveryNarrative {
   const shortfall = Math.max(0, recovery.outstandingShortfall)
   const askThisCycle = Math.max(0, recovery.outstandingThisCycle)
-  const cohorts = recovery.recoveryCohorts ?? []
+  const cohorts = (recovery.recoveryCohorts ?? []).filter(cohort => cohort.remainingShortfall > 0)
   const hasOverlappingPlans = cohorts.length > 1
   // Overdue is checked before the final cycle: past the window `cyclesRemaining` sits at 1 forever,
   // so treating that as the final cycle announced "the last cycle of the plan" every cycle from then

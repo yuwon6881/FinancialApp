@@ -50,8 +50,8 @@ const shortDate = (iso: string) => formatOccurrenceDate(iso, iso.slice(0, 4) ===
   : { month: 'short', day: 'numeric', year: 'numeric' })
 
 /**
- * Bills as one list, grouped by what needs doing: overdue first, then due this week, later, paid
- * and paused. Picking a bill opens its detail beside the list on wide screens and in a sheet below that.
+ * Bills as one list, grouped by what needs doing: overdue first, then due this week, paid this cycle,
+ * later and paused. Picking a bill opens its detail beside the list on wide screens and in a sheet below that.
  */
 export const RecurringBills: React.FC<RecurringBillsProps> = ({
   payments,

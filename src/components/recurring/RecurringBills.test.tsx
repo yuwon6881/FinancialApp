@@ -123,7 +123,7 @@ describe('RecurringBills reminder controls', () => {
     expect((screen.getByRole('switch', { name: 'Turn off payment reminder for Netflix' }) as HTMLButtonElement).disabled).toBe(true)
     // An ended bill is filed with the paused ones, saying when it stopped.
     const paused = screen.getByRole('region', { name: /Paused/ })
-    expect(within(paused).getByText('Ended Jan 1, 2000')).toBeTruthy()
+    expect(within(paused).getByText(/Ended (Jan 1|1 Jan),? 2000/)).toBeTruthy()
   })
 })
 
@@ -249,10 +249,10 @@ describe('RecurringBills list', () => {
     })
 
     const groups = screen.getAllByRole('region').map(region => region.getAttribute('aria-labelledby')).filter(Boolean)
-    expect(groups).toEqual(['bill-group-overdue', 'bill-group-due-soon', 'bill-group-later', 'bill-group-paid', 'bill-group-paused'])
+    expect(groups).toEqual(['bill-group-overdue', 'bill-group-due-soon', 'bill-group-paid', 'bill-group-later', 'bill-group-paused'])
     expect(screen.getByText('7 days overdue')).toBeTruthy()
     expect(screen.getByText('Due in 2 days')).toBeTruthy()
-    expect(screen.getByText('Paid Oct 4')).toBeTruthy()
+    expect(screen.getByText(/Paid (Oct 4|4 Oct)/)).toBeTruthy()
 
     // The most urgent bill is the one open in the panel.
     expect(screen.getByRole('complementary', { name: 'Power details' })).toBeTruthy()

@@ -75,4 +75,15 @@ describe('groupBills', () => {
       ['Later', ['a', 'c']],
     ])
   })
+
+  it('places Paid this cycle before Later', () => {
+    const rows = [
+      { name: 'youtube', state: getBillCycleState(bill({ nextDueDate: '2027-08-01' }), [], today) },
+      { name: 'gym', state: getBillCycleState(bill(), [occ({ status: 'Paid', isPaid: true, paidDate: '2026-10-01' })], today) },
+    ]
+    expect(groupBills(rows).map(group => [group.label, group.rows.map(row => row.name)])).toEqual([
+      ['Paid this cycle', ['gym']],
+      ['Later', ['youtube']],
+    ])
+  })
 })
