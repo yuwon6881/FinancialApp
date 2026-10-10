@@ -1,26 +1,22 @@
 import { Button } from './ui/Button'
 import React from 'react'
-import { ChartNoAxesCombined, ChevronRight, Sparkles, TrendingUp } from 'lucide-react'
+import { ChartNoAxesCombined, Sparkles } from 'lucide-react'
 import type { AppTab, DashboardData, SavingsGoal, Transaction, WishlistItem } from '../types'
 import { useAppPrefs } from '../contexts/AppContext'
 import { getCycleProgress } from '../lib/cycle'
 import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useDashboardView } from './dashboard/useDashboardView'
-import { CarryoverLedgerTable } from './dashboard/CarryoverLedgerTable'
-import { FinancialPlanMetrics } from './dashboard/FinancialPlanMetrics'
-import { CycleFlowCards } from './dashboard/CycleFlowCards'
 import { TrendLineChart } from './dashboard/TrendLineChart'
-import { DoughnutChart } from './dashboard/DoughnutChart'
 import { CycleCalendar } from './dashboard/CycleCalendar'
-import { CategoryLimitPerformance } from './dashboard/CategoryLimitPerformance'
 import { getCategoryLimitCardId } from './dashboard/types'
 import { SubscriptionsTimelineCard } from './dashboard/SubscriptionsTimelineCard'
 import { useHighlightedElement } from './ui/useHighlightedElement'
 import { buildBillTimelineModel } from '../lib/billTimeline'
-import { CycleInsightsCard } from './reports/CycleInsightsCard'
 import { isReportableOutflow } from '../lib/transactionReportSemantics'
 import { PageHeader } from './ui/PageHeader'
-import { InteractiveCard } from './ui/InteractiveCard'
+import { CycleReportHero } from './reports/CycleReportHero'
+import { BucketsSection } from './reports/BucketsSection'
+import { SpendingSection } from './reports/SpendingSection'
 
 interface ReportsViewProps {
   dashboardData: DashboardData | null
@@ -128,10 +124,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     return largest
   }, [transactions, dashboardData?.cycleSummaryInsights])
 
+  const currency = view.activeSettings.currency || 'USD'
+
   if (isSwitchingCycle) return <CycleSkeleton variant="reports" />
 
   return (
-    <div className="min-w-0 space-y-6 overflow-x-hidden">
+    <div className="@container min-w-0 space-y-8">
       <PageHeader
         title="Insights"
         description={view.cycleLabel}
@@ -160,72 +158,47 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         )}
       />
 
-      {dashboardData?.cycleSummaryInsights && (
-        <CycleInsightsCard
-          insights={dashboardData.cycleSummaryInsights}
-          formatSensitive={view.formatSensitive}
-          hasLargestExpense={Boolean(largestExpenseTransaction)}
-          onSelectLargestExpense={largestExpenseTransaction ? () => onNavigateToLedger?.({ highlightedTxId: largestExpenseTransaction.id }) : undefined}
-        />
-      )}
+      <CycleReportHero
+        stats={view.stats}
+        insights={dashboardData?.cycleSummaryInsights}
+        currency={currency}
+        isMasked={hideSensitive}
+        formatSensitive={view.formatSensitive}
+        onNavigateToLedger={onNavigateToLedger}
+        onSelectLargestExpense={largestExpenseTransaction ? () => onNavigateToLedger?.({ highlightedTxId: largestExpenseTransaction.id }) : undefined}
+      />
 
-      <CarryoverLedgerTable
+      <BucketsSection
         categories={view.categories}
         isCurrentCycle={isCurrentCycle}
         cycleLabel={view.cycleLabel}
         pendingDeductionsByCategory={view.pendingDeductionsByCategory}
         savingsGoals={savingsGoals}
+        currency={currency}
         amountsMasked={view.areBalanceAmountsMasked}
-        hideSensitive={hideSensitive}
         formatCurrency={view.formatCurrency}
-        onNavigateToAccounts={onNavigateToAccounts}
-      />
-
-      <FinancialPlanMetrics
+        formatSensitive={view.formatSensitive}
         growthMetric={view.growthMetric}
         essentialsMetric={view.essentialsMetric}
         stabilityMetric={view.stabilityMetric}
         growthAlloc={view.activeSettings.growthAlloc}
         targetStabilityFund={view.activeSettings.targetStabilityFund}
-        formatSensitive={view.formatSensitive}
+        onNavigateToAccounts={onNavigateToAccounts}
         onNavigateToLedger={onNavigateToLedger}
+        onNavigate={onNavigate}
       />
 
-      <InteractiveCard
-        onClick={() => onNavigate('investments')}
-        className="group flex flex-col gap-3 border-violet-500/20 bg-violet-500/5 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-5"
-      >
-        <span className="flex min-w-0 items-center gap-3 sm:gap-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/12 text-violet-500 transition-transform duration-200 group-hover:scale-105 sm:size-11">
-            <TrendingUp className="size-5" />
-          </span>
-          <span className="min-w-0">
-            <strong className="block truncate text-sm text-foreground">Growth Investments</strong>
-            <span className="mt-0.5 block text-xs text-muted-foreground sm:mt-1">Open your long-term portfolio, broker accounts, and market performance.</span>
-          </span>
-        </span>
-        <span className="flex items-center justify-between gap-4 border-t border-violet-500/10 pt-3 sm:shrink-0 sm:border-0 sm:pt-0 sm:text-right">
-          <span>
-            <span className="block text-label font-medium text-muted-foreground">Growth ledger balance</span>
-            <span className="block truncate text-lg font-semibold text-foreground sm:mt-1">
-              {view.formatSensitive(view.categories.find(category => category.name === 'Growth')?.remaining ?? 0)}
-            </span>
-          </span>
-          <ChevronRight className="size-4 text-violet-500 transition-transform duration-200 group-hover:translate-x-1" />
-        </span>
-      </InteractiveCard>
-
-      {/* Cycle inflow / outflow summary — moved here from the Today tab so the
-          dashboard stays focused on daily status while Reports holds analysis. */}
-      <CycleFlowCards
-        stats={view.stats}
-        hideSensitive={hideSensitive}
-        formatCurrency={view.formatCurrency}
+      <SpendingSection
+        dashboardData={dashboardData}
+        selectedYear={view.activeSettings.selectedYear}
+        limits={view.categoryLimitProgress}
         formatSensitive={view.formatSensitive}
         onNavigateToLedger={onNavigateToLedger}
+        onNavigate={onNavigate}
+        highlightedCategory={highlightedCategory}
       />
 
-      <div className="grid min-w-0 grid-cols-1 gap-6 min-[1280px]:grid-cols-[minmax(18rem,0.8fr)_minmax(0,2fr)] min-[1280px]:items-stretch">
+      <div className="grid min-w-0 grid-cols-1 gap-8 @4xl:grid-cols-2 @4xl:gap-6">
         <SubscriptionsTimelineCard
           activeRecurring={selectedCycleRecurring}
           formatSensitive={view.formatSensitive}
@@ -233,25 +206,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           onNavigateToRecurring={onNavigateToRecurring}
           cycleKey={`${view.activeSettings.selectedMonth}-${view.activeSettings.selectedYear}`}
         />
-        <div id="report-section-category-limits" className="min-w-0 rounded-2xl">
-          <CategoryLimitPerformance
-            items={view.categoryLimitProgress}
-            formatSensitive={view.formatSensitive}
-            onNavigateToLedger={onNavigateToLedger}
-            onNavigate={onNavigate}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 min-[1360px]:grid-cols-2">
         <TrendLineChart
           dashboardData={dashboardData}
           growthBalance={view.categories.find(category => category.name === 'Growth')?.remaining ?? 0}
-        />
-        <DoughnutChart
-          dashboardData={dashboardData}
-          selectedYear={view.activeSettings.selectedYear}
-          onNavigateToLedger={onNavigateToLedger}
         />
       </div>
 

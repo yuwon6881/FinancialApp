@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
 import type { WishlistItem } from '../../types'
 import { Plus } from 'lucide-react'
-import { RewardIcon } from '../semanticIcons'
+import { panelClass } from '../ui/panelStyles'
+import { cn } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { RewardCard } from './RewardCard'
 import { DataTablePagination } from '../ui/DataTable'
@@ -33,10 +34,9 @@ export function RewardsSection(props: RewardsSectionProps) {
   const visibleItems = props.items.slice(pagination.start, pagination.end)
   return (
     <section aria-labelledby="commitments-rewards-rewards-heading" className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 px-1">
         <div className="min-w-0">
-          <h3 id="commitments-rewards-rewards-heading" className="flex items-center gap-1.5 text-subsection text-foreground">
-            <RewardIcon className="size-4 text-muted-foreground" aria-hidden />
+          <h3 id="commitments-rewards-rewards-heading" className="flex items-center gap-1.5 text-section text-foreground">
             Rewards
             {props.affordableCount > 0 && (
               <Badge tone="success">
@@ -44,7 +44,7 @@ export function RewardsSection(props: RewardsSectionProps) {
               </Badge>
             )}
           </h3>
-          <p className="mt-0.5 text-label text-muted-foreground">
+          <p className="mt-0.5 text-caption text-muted-foreground">
             From your {props.formatSensitive(props.claimableBalance)} free rewards
             {props.freeAfterGoalPace < props.claimableBalance && (
               <> · {props.formatSensitive(props.freeAfterGoalPace)} after this cycle&rsquo;s commitments</>
@@ -57,9 +57,10 @@ export function RewardsSection(props: RewardsSectionProps) {
       </div>
 
       {props.items.length > 0 ? (
-        /* A wish grid: two tiles a row even on a phone, so several rewards can be compared at a
-           glance, where the old rail showed one card at a time. */
-        <div className="grid min-w-0 grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 2xl:grid-cols-4">
+        /* One list, built like the commitments list: each reward reads on a single row with its
+           claim state in words, where a two-tile grid at phone width wrapped every title and
+           stacked "Ready to claim" over the warning that contradicted it. */
+        <ul className={cn(panelClass, 'divide-y divide-border/60 overflow-hidden p-0')}>
           {visibleItems.map(item => (
             <RewardCard
               key={item.id}
@@ -81,7 +82,7 @@ export function RewardsSection(props: RewardsSectionProps) {
               onDelete={props.onDelete}
             />
           ))}
-        </div>
+        </ul>
       ) : (
         <EmptyState
           density="compact"

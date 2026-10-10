@@ -1,10 +1,11 @@
 import React from 'react'
-import { m, useReducedMotion, type Variants } from 'framer-motion'
-import { Calendar, ChevronRight, CheckCircle2, Clock, Minus } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import type { ActiveRecurringPayment } from '../../types'
-import { getCategoryBadgeClass } from '../../lib/categoryColors'
-import { Button } from '../ui/Button'
 import { cn } from '../../lib/utils'
+import { Button } from '../ui/Button'
+import { CategoryIcon } from '../ui/CategoryIcon'
+import { InteractiveCard } from '../ui/InteractiveCard'
+import { SectionHeader } from '../ui/SectionHeader'
 import { panelClass } from '../ui/panelStyles'
 
 interface SubscriptionsTimelineCardProps {
@@ -12,114 +13,94 @@ interface SubscriptionsTimelineCardProps {
   formatSensitive: (val: number) => React.ReactNode
   onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'settings') => void
   onNavigateToRecurring?: (recurringPaymentId: string) => void
+  /** Kept for callers that key the list by cycle; the rows no longer animate in. */
   cycleKey?: string
 }
 
-const listContainerVariants: Variants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.03,
-    },
-  },
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function formatDue(value: string): string {
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number)
+  if (!year || !month || !day) return value
+  return `${MONTHS[month - 1]} ${day}`
 }
 
-const subItemVariants: Variants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { duration: 0.15, ease: 'easeOut' },
-  },
-}
-
+/**
+ * The cycle's bills and subscriptions as a compact list: what each was, when it fell due, and
+ * whether it was paid. Every row opens that bill on the Bills page.
+ */
 export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps> = ({
   activeRecurring,
   formatSensitive,
   onNavigate,
   onNavigateToRecurring,
-  cycleKey,
 }) => {
-  const reduceMotion = useReducedMotion()
-  const containerKey = cycleKey || activeRecurring.map(r => r.id).join(',')
+  const paidCount = activeRecurring.filter(rp => rp.isPaid && !rp.isDiscarded).length
 
   return (
-    <div data-testid="subscriptions-timeline-card" className={cn(panelClass, 'flex h-full min-w-0 flex-col p-6 lg:max-h-[24rem]')}>
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h3 className="text-section text-foreground">Subscriptions</h3>
-          </div>
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted-foreground">
-            <Calendar className="size-4" />
-          </div>
-        </div>
-
-        <m.div
-          key={containerKey}
-          initial={reduceMotion ? false : 'hidden'}
-          animate="show"
-          variants={listContainerVariants}
-          className="-mx-1 mt-3 flex-1 min-h-0 space-y-1.5 overflow-x-hidden overflow-y-auto p-1 no-scrollbar"
-        >
-          {activeRecurring.map((rp: ActiveRecurringPayment) => (
-            <m.button
-              key={rp.id}
-              type="button"
-              variants={subItemVariants}
-              onClick={() => (onNavigateToRecurring ? onNavigateToRecurring(rp.recurringPaymentId) : onNavigate('recurring'))}
-              className={`group relative flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-transparent py-2 pl-3 pr-2 text-left text-xs cursor-pointer transition-colors duration-150 hover:bg-surface-2 hover:border-transparent hover:shadow-xs ${rp.isDiscarded ? 'opacity-50' : ''}`}
-            >
-              {/* Accent bar that grows on hover to signal the row is clickable */}
-              <span className="pointer-events-none absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-full bg-primary transition-all duration-200 group-hover:h-7" />
-
-              <div className="min-w-0 flex-1">
-                <span className={`font-semibold text-foreground truncate block ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
-                <div className="mt-1 flex min-w-0 items-center gap-1.5 select-none">
-                  <span
-                    title={rp.category}
-                    className={`min-w-0 truncate text-xs px-2 py-0.5 font-semibold rounded-md border ${getCategoryBadgeClass(rp.category)}`}
+    <section
+      id="report-section-subscriptions"
+      aria-labelledby="report-subscriptions-heading"
+      data-testid="subscriptions-timeline-card"
+      className="flex min-w-0 flex-col gap-3"
+    >
+      <SectionHeader
+        titleId="report-subscriptions-heading"
+        title="Subscriptions"
+        description={activeRecurring.length > 0 ? `${paidCount} of ${activeRecurring.length} paid this cycle` : 'Bills due in this cycle'}
+        actions={(
+          <Button variant="tertiary" size="sm" onClick={() => onNavigate('recurring')} aria-label="Manage subscriptions" className="-mr-2 text-accent-ink">
+            Manage
+            <ChevronRight className="size-3.5" aria-hidden="true" />
+          </Button>
+        )}
+      />
+      <div className={cn(panelClass, 'flex-1 p-2')}>
+        {activeRecurring.length === 0 ? (
+          <p className="flex min-h-24 items-center justify-center text-caption text-muted-foreground">No subscriptions for this cycle.</p>
+        ) : (
+          <ul>
+            {activeRecurring.map(rp => {
+              const status = rp.isDiscarded ? 'Discarded' : rp.isPaid ? 'Paid' : 'Pending'
+              return (
+                <li key={rp.id}>
+                  <InteractiveCard
+                    surface="plain"
+                    onClick={() => (onNavigateToRecurring ? onNavigateToRecurring(rp.recurringPaymentId) : onNavigate('recurring'))}
+                    className="group rounded-control px-2.5 py-2 hover:bg-surface-2 focus-visible:outline-offset-[-2px]"
                   >
-                    {rp.category}
-                  </span>
-                  {rp.isDiscarded ? (
-                    <Minus className="size-3.5 shrink-0 text-slate-500" aria-label="Discarded" role="img">
-                      <title>Discarded</title>
-                    </Minus>
-                  ) : rp.isPaid ? (
-                    <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" aria-label="Paid" role="img">
-                      <title>Paid</title>
-                    </CheckCircle2>
-                  ) : (
-                    <Clock className="size-3.5 shrink-0 text-amber-500 animate-pulse" aria-label="Pending" role="img">
-                      <title>Pending</title>
-                    </Clock>
-                  )}
-                </div>
-              </div>
-              <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
-                <span className={`font-semibold tabular-nums block ${rp.isDiscarded ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                  {rp.amount == null ? 'Unavailable' : <>-{formatSensitive(rp.amount)}</>}
-                </span>
-                <span className="text-muted-foreground text-xs font-medium">Due {rp.dueDate}</span>
-              </div>
-              {/* Chevron affordance: fades and slides in on hover */}
-              <ChevronRight className="size-4 shrink-0 text-muted-foreground opacity-70 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 sm:-translate-x-1 sm:opacity-0" aria-hidden="true" />
-            </m.button>
-          ))}
-          {activeRecurring.length === 0 && (
-            <div className="text-xs text-muted-foreground py-10 text-center">No subscriptions for this cycle.</div>
-          )}
-        </m.div>
+                    <span className="flex min-h-10 min-w-0 items-center gap-3">
+                      <span className={cn(rp.isDiscarded && 'opacity-50')}>
+                        <CategoryIcon category={rp.category} size="sm" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className={cn('block truncate text-body font-medium', rp.isDiscarded ? 'text-muted-foreground line-through' : 'text-foreground')}>
+                          {rp.name}
+                        </span>
+                        <span className="mt-0.5 flex min-w-0 items-center gap-1 text-caption">
+                          <span
+                            className={cn(
+                              'shrink-0 font-medium',
+                              status === 'Pending' ? 'text-amber-700 dark:text-amber-300' : status === 'Paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
+                            )}
+                          >
+                            {status}
+                          </span>
+                          <span className="min-w-0 truncate text-muted-foreground">· Due {formatDue(rp.dueDate)} · {rp.category}</span>
+                        </span>
+                      </span>
+                      <span className={cn('shrink-0 text-body font-medium tabular-nums', rp.isDiscarded ? 'text-muted-foreground line-through' : 'text-foreground')}>
+                        {rp.amount == null ? 'Unavailable' : <>-{formatSensitive(rp.amount)}</>}
+                      </span>
+                      <ChevronRight className="hidden size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 sm:block" aria-hidden="true" />
+                    </span>
+                  </InteractiveCard>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </div>
-
-      <Button
-        variant="tertiary"
-        onClick={() => onNavigate('recurring')}
-        className="mt-4 min-h-11 w-full shrink-0 rounded-full border border-border/70 py-2 text-center text-label font-medium text-foreground transition-colors hover:bg-surface-2 cursor-pointer"
-      >
-        Manage Subscriptions
-      </Button>
-    </div>
+    </section>
   )
 }

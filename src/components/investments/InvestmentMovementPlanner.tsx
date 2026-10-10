@@ -81,14 +81,21 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
   ) : [], [allocation.appCurrency, fxRates, holdings, instruments, mode, plan, selections])
 
   return (
-    <section className="mt-5 overflow-hidden rounded-control bg-surface-2/70">
-      <Button type="button" variant="tertiary" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex min-h-14 w-full items-center justify-between gap-3 rounded-none px-4 py-3 text-left transition hover:bg-muted/30">
-        <span className="flex min-w-0 items-center gap-2.5"><span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-accent-ink"><WalletCards className="size-4" /></span><span><strong className="block text-xs text-foreground">Plan money in or out</strong><span className="block text-xs text-muted-foreground">See the app-currency plan and each ETF’s trading-currency equivalent.</span></span></span>
-        <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+    <section className="border-t border-border/60">
+      {/* A full-width row flush with the panel: the panel clips it, so its hover has no corners. */}
+      <Button type="button" variant="tertiary" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex min-h-16 w-full items-center justify-between gap-3 rounded-none px-5 py-3 text-left hover:bg-surface-2/60 sm:px-6">
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2 text-muted-foreground dark:bg-surface-3"><WalletCards className="size-4" aria-hidden="true" /></span>
+          <span className="min-w-0">
+            <span className="block text-body font-medium text-foreground">Plan money in or out</span>
+            <span className="block truncate text-caption font-normal text-muted-foreground">Split a deposit or withdrawal across your baskets</span>
+          </span>
+        </span>
+        <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </Button>
 
-      {open && <div className="space-y-4 border-t border-border/50 p-4">
-        <div role="group" aria-label="Investment movement type" className="grid grid-cols-2 rounded-lg border border-border/60 bg-background/50 p-1">
+      {open && <div className="space-y-4 px-5 pb-5 sm:px-6">
+        <div role="group" aria-label="Investment movement type" className="grid grid-cols-2 gap-1 rounded-full bg-surface-2 p-1">
           {(['deposit', 'withdrawal'] as const).map(value => (
             <Button
               key={value}
@@ -97,7 +104,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
               size="sm"
               aria-pressed={mode === value}
               onClick={() => { setMode(value); setAmountText('') }}
-              className={`min-h-11 capitalize sm:min-h-9 ${mode === value ? '' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`capitalize ${mode === value ? 'dark:bg-surface-3' : 'text-muted-foreground hover:text-foreground'}`}
             >
               {value === 'deposit' ? <ArrowDownToLine className="size-3.5" /> : <ArrowUpFromLine className="size-3.5" />}
               {value}
@@ -105,31 +112,31 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
           ))}
         </div>
 
-        <label className="block text-xs font-semibold text-muted-foreground">
+        <label className="block text-label font-medium text-muted-foreground">
           {mode === 'deposit' ? 'How much do you want to invest?' : 'How much do you need to withdraw?'}
           <div className="mt-1.5 flex items-center gap-2"><span className="shrink-0 text-caption font-semibold">{allocation.appCurrency}</span><SmartAmountInput value={amountText} onChange={event => setAmountText(maskCurrencyInput(event.target.value, amountText))} placeholder="0.00" aria-label={`${mode === 'deposit' ? 'Amount to invest' : 'Amount to withdraw'} in ${allocation.appCurrency}`} /></div>
         </label>
 
-        {!canPlan && <p className="rounded-lg border border-orange-500/25 bg-orange-500/8 p-3 text-xs text-orange-700 dark:text-orange-300">{!valuesKnown || !cashKnown ? 'Update the missing market or cash exchange rate before using this planner.' : mode === 'deposit' ? 'Classify at least one investment into a plan basket first.' : 'There is nothing to withdraw yet.'}</p>}
+        {!canPlan && <p className="rounded-control bg-surface-2/70 p-3 text-caption text-muted-foreground">{!valuesKnown || !cashKnown ? 'Update the missing market or cash exchange rate before using this planner.' : mode === 'deposit' ? 'Classify at least one investment into a plan basket first.' : 'There is nothing to withdraw yet.'}</p>}
 
         {plan && <>
-          <div className="flex flex-wrap gap-2 text-xs">
+          <div className="flex flex-wrap gap-2 text-caption">
             {mode === 'deposit' && <Badge tone="info">{money(requested)} to invest</Badge>}
             {plan.fromCash > 0 && <Badge tone="success">{money(plan.fromCash)} {mode === 'deposit' ? 'from spare broker cash' : 'spare broker cash'}</Badge>}
             {mode === 'deposit' && depositFunding.cashRemaining > 0 && <Badge tone="neutral">{money(depositFunding.cashRemaining)} broker cash remaining</Badge>}
             {mode === 'deposit' && depositFunding.newFundsRequired > 0 && <Badge tone="warning">{money(depositFunding.newFundsRequired)} new funds required</Badge>}
             {mode === 'withdrawal' && plan.fromHoldings > 0 && <Badge tone="neutral">{money(plan.fromHoldings)} raised by selling</Badge>}
           </div>
-          {plan.shortfall > 0 && <p className="rounded-lg border border-orange-500/30 bg-orange-500/8 p-2.5 text-xs text-orange-700 dark:text-orange-300">{money(plan.shortfall)} short.</p>}
+          {plan.shortfall > 0 && <p className="rounded-control bg-orange-500/8 p-2.5 text-caption text-orange-700 dark:text-orange-300">{money(plan.shortfall)} short.</p>}
           <ul className="grid gap-2 lg:grid-cols-3">
             {plan.sleeves.map((sleeve, index) => {
               const etfPlan = etfPlans.find(item => item.sleeve === sleeve.sleeve)
-              return <li key={sleeve.sleeve} className="rounded-xl border border-border/50 bg-background/55 p-3">
-                <div className="flex items-center gap-2"><span className={`size-2 rounded-full ${colors[index]}`} /><strong className="text-xs text-foreground">{sleeve.label}</strong></div>
-                <strong className="mt-2 block text-lg text-foreground">{sleeve.amount > 0 ? money(sleeve.amount) : mode === 'deposit' ? 'Skip' : 'Leave alone'}</strong>
-                <p className="text-xs text-muted-foreground">Leaves {sleeve.projectedPercentage.toFixed(1)}%</p>
+              return <li key={sleeve.sleeve} className="rounded-control bg-surface-2/70 p-3">
+                <div className="flex items-center gap-2"><span className={`size-2 rounded-full ${colors[index]}`} /><strong className="text-caption text-foreground">{sleeve.label}</strong></div>
+                <strong className="mt-2 block text-section tabular-nums text-foreground">{sleeve.amount > 0 ? money(sleeve.amount) : mode === 'deposit' ? 'Skip' : 'Leave alone'}</strong>
+                <p className="text-caption text-muted-foreground">Leaves {sleeve.projectedPercentage.toFixed(1)}%</p>
                 {etfPlan?.requiresChoice && <CustomSelect ariaLabel={`ETF for ${sleeve.label}`} value={selections[sleeve.sleeve] ?? ''} onChange={value => setSelections(previous => ({ ...previous, [sleeve.sleeve]: String(value) }))} options={[{ value: '', label: 'Choose an ETF' }, ...etfPlan.choices.map(choice => ({ value: choice.id, label: `${choice.symbol} · ${choice.currency}` }))]} className="mt-2 w-full" />}
-                {etfPlan && etfPlan.lines.length > 0 && <ul className="mt-2 space-y-1.5 border-t border-border/40 pt-2">{etfPlan.lines.map(line => <li key={line.instrumentId} className="text-xs"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate font-semibold text-foreground">{line.symbol}</span><span className="shrink-0 font-semibold text-foreground">{masked ? '••••' : money(line.amountApp)}</span></div>{line.currency !== allocation.appCurrency.toUpperCase() && <div className="mt-0.5 flex items-start justify-between gap-2 text-muted-foreground"><span className="truncate">{line.currency}{line.fx?.asOf ? ` · FX ${line.fx.asOf}` : ''}</span><span className="shrink-0">{masked ? '••••' : line.amountNative === undefined ? 'Exchange rate unavailable' : `≈ ${formatCurrencyVal(line.amountNative, line.currency)}`}</span></div>}</li>)}</ul>}
+                {etfPlan && etfPlan.lines.length > 0 && <ul className="mt-2 space-y-1.5 border-t border-border/40 pt-2">{etfPlan.lines.map(line => <li key={line.instrumentId} className="text-caption"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate font-semibold text-foreground">{line.symbol}</span><span className="shrink-0 font-semibold text-foreground">{masked ? '••••' : money(line.amountApp)}</span></div>{line.currency !== allocation.appCurrency.toUpperCase() && <div className="mt-0.5 flex items-start justify-between gap-2 text-muted-foreground"><span className="truncate">{line.currency}{line.fx?.asOf ? ` · FX ${line.fx.asOf}` : ''}</span><span className="shrink-0">{masked ? '••••' : line.amountNative === undefined ? 'Exchange rate unavailable' : `≈ ${formatCurrencyVal(line.amountNative, line.currency)}`}</span></div>}</li>)}</ul>}
               </li>
             })}
           </ul>

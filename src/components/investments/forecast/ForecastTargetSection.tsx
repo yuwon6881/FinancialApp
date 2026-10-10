@@ -60,7 +60,7 @@ export function ForecastTargetSection({
       </FormField>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <article className="rounded-control bg-surface-2/70 p-3">
+        <article className="rounded-control bg-card p-3 dark:bg-surface-3">
           <div className="flex items-center gap-1">
             <p className="text-label font-medium text-muted-foreground">Chance of reaching your target</p>
             <InfoHint
@@ -68,11 +68,11 @@ export function ForecastTargetSection({
               text="Share of simulated paths that reach the target with your chosen amount."
             />
           </div>
-          <strong className="mt-1 block break-words text-base text-foreground">
+          <strong className="mt-1 block break-words text-section tabular-nums text-foreground">
             {targetChance === undefined ? 'Calculating…' : `${Math.round(targetChance * 100)}%`}
           </strong>
         </article>
-        <article className="rounded-xl border border-primary/25 bg-primary/5 p-3">
+        <article className="rounded-control bg-card p-3 dark:bg-surface-3">
           <div className="flex items-center gap-1">
             <p className="text-label font-medium text-muted-foreground">Monthly amount for your target</p>
             <InfoHint
@@ -82,8 +82,8 @@ export function ForecastTargetSection({
           </div>
           <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <strong className="block text-xl text-foreground">{isCalculating || !hasRequired ? 'Calculating…' : money(requiredContribution)}</strong>
-              <span className="text-xs text-muted-foreground">Middle estimate · {hasRequired ? money(requiredContribution * 12) : '—'} a year</span>
+              <strong className="block text-title tabular-nums text-foreground">{isCalculating || !hasRequired ? 'Calculating…' : money(requiredContribution)}</strong>
+              <span className="text-caption text-muted-foreground">Middle estimate · {hasRequired ? money(requiredContribution * 12) : '—'} a year</span>
             </div>
             <Button variant="secondary" size="sm" disabled={masked || !canUseRequired} onClick={onUseRequiredAmount} className="w-full justify-center sm:w-auto sm:self-auto">
               {requiredContribution !== undefined && requiredContribution > maxMonthlyContribution

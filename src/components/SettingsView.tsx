@@ -266,6 +266,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           hasSpendingGuides={hasSpendingGuides}
           onNavigateToCategoryLimits={() => navigateToAppTab('budget', { search: { section: 'categories' } })}
           part={scope === 'budget' ? 'plan' : 'preferences'}
+          dashboardData={props.dashboardData}
         />
       )}
 

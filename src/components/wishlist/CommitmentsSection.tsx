@@ -1,6 +1,5 @@
 import React from 'react'
 import { CheckCircle2, Plus } from 'lucide-react'
-import { CommitmentIcon } from '../semanticIcons'
 import type { SavingsGoal } from '../../types'
 import type { GoalPoolSummary } from '../../lib/savingsGoals'
 import { getPaceStatus } from '../../lib/savingsGoals'
@@ -73,8 +72,8 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
 
   // Finished commitments stay on the list as history, one quiet line each.
   const completedChips = completedGoals.map(goal => (
-    <li key={goal.id} id={`commitment-card-${goal.id}`} className="flex items-center gap-3.5 px-4 py-3 sm:px-5">
-      <span className="grid size-[3.25rem] shrink-0 place-items-center">
+    <li key={goal.id} id={`commitment-card-${goal.id}`} className="flex min-h-14 items-center gap-3 px-4 py-2.5 sm:px-5">
+      <span className="grid size-11 shrink-0 place-items-center">
         <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
@@ -99,10 +98,9 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
       aria-labelledby="commitments-rewards-commitments-heading"
       className="space-y-3"
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 px-1">
         <div className="min-w-0">
-          <h3 id="commitments-rewards-commitments-heading" className="flex items-center gap-1.5 text-subsection text-foreground">
-            <CommitmentIcon className="size-4 text-muted-foreground" aria-hidden />
+          <h3 id="commitments-rewards-commitments-heading" className="flex items-center gap-1.5 text-section text-foreground">
             Commitments
             {pool.activeGoals.length + completedGoals.length > 0 && (
               <Badge tone="neutral">
@@ -127,7 +125,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
           actions={<Button variant="secondary" size="sm" onClick={onAddGoal} disabled={hideSensitive}>Add commitment</Button>}
         />
       ) : (
-        <ul className={cn(panelClass, 'divide-y divide-border/60 overflow-hidden p-0')}>
+        <ul className={cn(panelClass, '@container divide-y divide-border/60 overflow-hidden p-0')}>
           {visibleCollection}
         </ul>
       )}

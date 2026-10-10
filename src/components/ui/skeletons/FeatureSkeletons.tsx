@@ -33,12 +33,11 @@ export const SettingsHeaderSkeleton: React.FC = () => (
   </div>
 )
 
+/** Insights' page header: the title and its Explain action on the canvas, the cycle under it. */
 export const ReportsHeaderSkeleton: React.FC = () => (
-  <div className={`${panelClass} p-4 sm:p-6`}>
-    <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex items-center gap-3"><Skeleton className="size-10 rounded-xl" /><div className="space-y-2"><Skeleton className="h-6 w-28" /><Skeleton className="h-3 w-72 max-w-full" /></div></div>
-      <div data-testid="reports-skeleton-controls" className="flex w-full min-w-0 flex-nowrap items-center gap-1.5 sm:gap-2 lg:w-auto"><Skeleton className="h-11 w-0 min-w-0 flex-1 rounded-xl sm:h-10 sm:w-52 sm:flex-initial" /><Skeleton className="h-11 w-28 shrink-0 rounded-xl sm:h-10" /><Skeleton className="size-11 shrink-0 rounded-lg sm:h-10 sm:w-24" /><Skeleton className="size-11 shrink-0 rounded-lg sm:h-10 sm:w-40" /></div>
-    </div>
+  <div className="space-y-2.5 pt-1">
+    <div className="flex items-center gap-2.5"><Skeleton className="h-7 w-28 sm:h-8" /><Skeleton className="size-11 rounded-full sm:h-8 sm:w-36" /></div>
+    <Skeleton className="h-4 w-48 max-w-full" />
   </div>
 )
 
@@ -90,14 +89,26 @@ export const BillDayStripSkeleton: React.FC = () => (
   </div>
 )
 
-export const CarryoverLedgerSkeleton: React.FC = () => (
-  <div className={`${panelClass} space-y-4 p-6`}>
-    <div className="space-y-2"><Skeleton className="h-5 w-56" /><Skeleton className="h-3 w-80 max-w-full" /></div>
-    <div className="hidden overflow-x-hidden min-[1280px]:block">
-      <div className="grid grid-cols-6 gap-4 border-b border-border/50 px-4 pb-2"><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-28" /></div>
-      <div className="space-y-1.5 pt-2">{[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="grid grid-cols-6 items-center gap-4 rounded-xl px-4 py-3"><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-14" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-16" /><Skeleton className="h-5 w-24 justify-self-end rounded-lg" /></div>)}</div>
+/** The Insights buckets: list rows on a phone, two or four columns from a medium container. */
+export const ReportBucketsSkeleton: React.FC = () => (
+  <div className="@container space-y-3">
+    <div className="space-y-2"><Skeleton className="h-5 w-24" /><Skeleton className="h-3.5 w-72 max-w-full" /></div>
+    <div className={cn(panelClass, 'grid gap-px overflow-hidden bg-border/60 p-0 @xl:grid-cols-2 @4xl:grid-cols-4')}>
+      {[1, 2, 3, 4].map(i => (
+        <div key={i} className="space-y-3 bg-card px-4 py-3.5 @xl:px-5 @xl:py-5">
+          <div className="flex items-center gap-3">
+            <Skeleton className="size-8 shrink-0 rounded-[0.625rem]" />
+            <div className="min-w-0 flex-1 space-y-1.5"><Skeleton className="h-4 w-24" /><Skeleton className="h-3 w-20" /></div>
+            <Skeleton className="h-5 w-24 @xl:hidden" />
+          </div>
+          <Skeleton className="hidden h-7 w-32 @xl:block" />
+          <Skeleton className="h-1.5 w-full rounded-full" />
+          <div className="hidden space-y-2 border-t border-border/60 pt-3 @xl:block">
+            {[1, 2, 3, 4].map(row => <div key={row} className="flex justify-between gap-3"><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-16" /></div>)}
+          </div>
+        </div>
+      ))}
     </div>
-    <div className="grid grid-cols-1 gap-4 min-[1280px]:hidden">{[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="space-y-3 rounded-xl border border-border bg-background/50 p-4"><div className="flex flex-wrap justify-between gap-2"><Skeleton className="h-4 w-28" /><Skeleton className="h-4 w-16 rounded-md" /></div><div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,5.5rem),1fr))] gap-4 border-t border-border/30 pt-3"><Skeleton className="h-6 w-24" /><Skeleton className="h-6 w-24" /></div><div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,5.5rem),1fr))] gap-4 border-t border-border/30 pt-3"><Skeleton className="h-11 w-24" /><Skeleton className="h-11 w-24" /></div></div>)}</div>
   </div>
 )
 
@@ -170,38 +181,24 @@ export const InvestmentSummarySkeleton: React.FC = () => (
   </div>
 )
 
+/** The cycle calendar beside its weekly pacing rows, which drop under it below a wide container. */
 export const CycleCalendarSkeleton: React.FC = () => (
-  <div className={`${panelClass} p-3 sm:p-6`}>
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-2"><Skeleton className="h-5 w-28" /><Skeleton className="size-7 rounded-full" /></div>
-        <Skeleton className="h-3 w-40" />
+  <div className="@container space-y-3">
+    <div className="space-y-2"><Skeleton className="h-5 w-36" /><Skeleton className="h-3.5 w-48" /></div>
+    <div className={cn(panelClass, 'grid gap-5 p-3 sm:p-5 @4xl:grid-cols-[minmax(0,1fr)_16rem] @4xl:gap-0')}>
+      <div className="min-w-0 space-y-3 @4xl:pr-6">
+        <div className="flex flex-wrap items-center justify-between gap-3"><Skeleton className="h-11 w-48 rounded-full lg:h-9" /><Skeleton className="h-3 w-44" /></div>
+        <div className="grid grid-cols-7 gap-1 sm:gap-2">
+          {Array.from({ length: 7 }).map((_, index) => <Skeleton key={`weekday-${index}`} className="mx-auto h-3 w-3 sm:w-7" />)}
+          {Array.from({ length: 35 }).map((_, index) => <Skeleton key={`day-${index}`} className="h-11 w-full rounded-lg sm:h-14 sm:rounded-xl md:h-16" />)}
+        </div>
       </div>
-      <div className="flex gap-1 self-stretch rounded-control bg-surface-2/70 p-1 sm:self-start">
-        <Skeleton className="h-7 flex-1 rounded-md sm:h-6 sm:w-16 sm:flex-none" />
-        <Skeleton className="h-7 flex-1 rounded-md sm:h-6 sm:w-16 sm:flex-none" />
-        <Skeleton className="h-7 flex-1 rounded-md sm:h-6 sm:w-16 sm:flex-none" />
-      </div>
-    </div>
-    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2.5">
-      <div className="hidden items-center gap-1.5 sm:flex"><Skeleton className="h-3 w-16" />{[1, 2, 3, 4].map(level => <Skeleton key={level} className="size-3 rounded-sm" />)}<Skeleton className="h-3 w-20" /></div>
-      <div className="hidden items-center gap-2.5 lg:flex"><Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-20" /></div>
-      <div className="flex items-center gap-2"><Skeleton className="h-3 w-28" /><Skeleton className="h-3 w-20" /></div>
-    </div>
-    <div className="mt-4 grid grid-cols-7 gap-1 sm:gap-2">
-      {Array.from({ length: 7 }).map((_, index) => <Skeleton key={`weekday-${index}`} className="mx-auto h-3 w-3 sm:w-7" />)}
-      {Array.from({ length: 35 }).map((_, index) => <Skeleton key={`day-${index}`} className="h-11 w-full rounded-lg sm:h-14 sm:rounded-xl md:h-16" />)}
-    </div>
-    <div className="mt-4 border-t border-border/50 pt-3">
-      <div className="mb-2 flex items-center justify-between">
-        <Skeleton className="h-3 w-32" />
-        <Skeleton className="h-3 w-16" />
-      </div>
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 min-[1280px]:grid-cols-5">
+      <div className="space-y-3 border-t border-border/60 pt-4 @4xl:border-l @4xl:border-t-0 @4xl:pl-6 @4xl:pt-0">
+        <div className="flex justify-between"><Skeleton className="h-4 w-36" /><Skeleton className="h-3 w-12" /></div>
         {Array.from({ length: 5 }).map((_, index) => (
-          <div key={`week-${index}`} className="space-y-2 rounded-control bg-surface-2/70 p-2 sm:p-2.5">
-            <div className="flex justify-between"><Skeleton className="h-3 w-12" /><Skeleton className="hidden h-2.5 w-16 min-[1280px]:block" /></div>
-            <div className="flex justify-between"><Skeleton className="h-3 w-14" /><Skeleton className="h-2.5 w-8" /></div>
+          <div key={`week-${index}`} className="flex items-center justify-between gap-3 py-1">
+            <div className="space-y-1.5"><Skeleton className="h-4 w-16" /><Skeleton className="h-3 w-24" /></div>
+            <Skeleton className="h-4 w-16" />
           </div>
         ))}
       </div>

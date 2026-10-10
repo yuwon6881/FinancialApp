@@ -1,14 +1,21 @@
 import { m, useReducedMotion } from 'framer-motion'
-import { TrendingUp } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import type { DashboardData, TrendPoint } from '../../types'
 import { cn, formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
 import { useAppPrefs } from '../../contexts/AppContext'
-import { Button } from '../ui/Button'
+import { AmountText } from '../ui/AmountText'
+import { SectionHeader } from '../ui/SectionHeader'
+import { ReportSegmented } from '../reports/ReportSegmented'
 import { ResponsiveChartFrame } from '../ui/ResponsiveChartFrame'
 import { panelClass } from '../ui/panelStyles'
 
 type TrendRange = '3month' | '6month' | 'yearly'
+
+const RANGE_OPTIONS = [
+  { value: '3month', label: '3M', ariaLabel: 'Last 3 months' },
+  { value: '6month', label: '6M', ariaLabel: 'Last 6 months' },
+  { value: 'yearly', label: 'Year', ariaLabel: 'Full year' },
+] as const
 
 const chartPosition = (points: TrendPoint[], index: number) => {
   const min = Math.min(...points.map(point => point.balance), 0)
@@ -86,22 +93,19 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
   }
 
   return (
-    <div className={cn(panelClass, 'flex flex-col justify-between p-6')}>
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h3 className="text-section text-foreground">Growth ledger balance</h3>
+    <section id="report-section-growth" aria-labelledby="report-growth-heading" className="flex min-w-0 flex-col gap-3">
+      <SectionHeader
+        titleId="report-growth-heading"
+        title="Growth ledger balance"
+        description="How the Growth bucket has built up over time."
+      />
+      <div className={cn(panelClass, 'flex flex-1 flex-col p-4 sm:p-5')}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-label text-muted-foreground">Growth savings</p>
+            <AmountText value={growthBalance} currency={currency} isMasked={hideSensitive} className="mt-0.5 text-title text-foreground" />
           </div>
-          <div className="flex size-8 items-center justify-center rounded-full bg-surface-2 text-muted-foreground">
-            <TrendingUp className="size-4" />
-          </div>
-        </div>
-        <div role="group" aria-label="Trend range" className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-xs mb-3 w-fit">
-          {(['3month', '6month', 'yearly'] as const).map(value => (
-            <Button variant="tertiary" key={value} type="button" onClick={() => setRange(value)} aria-pressed={range === value} aria-label={value === '3month' ? 'Last 3 months' : value === '6month' ? 'Last 6 months' : 'Full year'} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2.5 py-1 text-caption font-semibold transition cursor-pointer sm:min-h-8 sm:min-w-8 ${range === value ? 'bg-background hover:bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
-              {value === '3month' ? '3M' : value === '6month' ? '6M' : 'Year'}
-            </Button>
-          ))}
+          <ReportSegmented label="Trend range" value={range} onChange={setRange} options={RANGE_OPTIONS} />
         </div>
         {hideSensitive && <p className="sr-only">Growth balance trend values are hidden.</p>}
         <ResponsiveChartFrame
@@ -159,7 +163,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                       cx={position.x}
                       cy={position.y}
                       r={isHovered ? 4.5 : 2.75}
-                      className={isHovered ? 'fill-blue-500 stroke-background stroke-2' : 'fill-sky-400'}
+                      className={isHovered ? 'fill-chart-line stroke-card stroke-2' : 'fill-chart-line'}
                       initial={reduceMotion ? false : { scale: 0, opacity: 0 }}
                       animate={{ scale: isHovered ? 1.3 : 1, opacity: 1 }}
                       transition={{ duration: reduceMotion ? 0 : 0.2, ease: 'easeOut', delay: reduceMotion ? 0 : index * 0.03 }}
@@ -174,10 +178,10 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                 return (
                   <div
                     aria-hidden="true"
-                    className="absolute z-20 bg-card/95 backdrop-blur-md border border-border/80 rounded-xl p-2 shadow-(--app-shadow-overlay) text-center"
+                    className="absolute z-20 rounded-overlay border border-border/80 bg-card p-2 text-center shadow-(--app-shadow-overlay)"
                     style={{ left: `clamp(4px, calc(${position.left}% - 55px), calc(100% - 114px))`, top: `clamp(4px, calc(${position.top}% - 50px), calc(100% - 46px))`, width: 110 }}
                   >
-                    <b className="block text-xs font-semibold text-muted-foreground">{trendLabel(point)}</b>
+                    <b className="block text-caption font-medium text-muted-foreground">{trendLabel(point)}</b>
                     <span className="text-caption font-semibold tabular-nums text-foreground">
                       {hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(point.balance, currency)}
                     </span>
@@ -203,14 +207,11 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                 </table>
               </div>}
             </>
-          ) : <div className="text-xs text-muted-foreground pb-12 text-center">Calculating trend points...</div>}
+          ) : <div className="pb-12 text-center text-caption text-muted-foreground">Calculating trend points...</div>}
         </ResponsiveChartFrame>
-        <div aria-hidden="true" className="flex px-[3%] mt-1.5">{points.map((point, index) => <span key={point.cycleKey || `${point.month}-${index}`} className="flex-1 min-w-0 text-center truncate text-xs text-muted-foreground font-medium">{axisLabel(point, points.length)}</span>)}</div>
+        <div aria-hidden="true" className="mt-1.5 flex px-[3%]">{points.map((point, index) => <span key={point.cycleKey || `${point.month}-${index}`} className="min-w-0 flex-1 truncate text-center text-caption text-muted-foreground">{axisLabel(point, points.length)}</span>)}</div>
+        <p className="mt-auto pt-3 text-caption text-muted-foreground">{range === '3month' ? 'Last 3 cycles' : range === '6month' ? 'Last 6 cycles' : `${dashboardData?.setting.selectedYear || new Date().getFullYear()} full year`}</p>
       </div>
-      <div className="border-t border-border/50 pt-3 mt-3 flex justify-between text-xs text-muted-foreground">
-        <span>{range === '3month' ? 'Last 3 cycles' : range === '6month' ? 'Last 6 cycles' : `${dashboardData?.setting.selectedYear || new Date().getFullYear()} full year`}</span>
-        <span className="font-medium">Growth Savings: <strong className="font-semibold text-foreground tabular-nums">{formatSensitive(growthBalance)}</strong></span>
-      </div>
-    </div>
+    </section>
   )
 }

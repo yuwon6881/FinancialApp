@@ -45,7 +45,7 @@ export function PortfolioManagementRow({
             entityLabel={entityLabel}
           />}
         </div>
-        <p className="mt-1 break-words text-xs text-muted-foreground">{details}{isArchived ? ' · Archived' : ''}</p>
+        <p className="mt-1 break-words text-caption text-muted-foreground">{details}{isArchived ? ' · Archived' : ''}</p>
       </div>
       <Button
         variant={!isArchived && canDelete ? 'destructive' : 'secondary'}
@@ -57,7 +57,7 @@ export function PortfolioManagementRow({
       >
         {action}
       </Button>
-      {blocked && <p id={reasonId} className="col-span-2 break-words text-xs leading-relaxed text-muted-foreground">
+      {blocked && <p id={reasonId} className="col-span-2 break-words text-caption leading-relaxed text-muted-foreground">
         <span className="font-semibold text-foreground">Before archiving: </span>{reason}
       </p>}
     </div>

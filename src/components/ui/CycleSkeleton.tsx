@@ -10,7 +10,7 @@ import {
   RewardsPoolSkeleton,
   RecurringHeaderSkeleton,
   BillDayStripSkeleton,
-  CarryoverLedgerSkeleton,
+  ReportBucketsSkeleton,
   GoalsSectionSkeleton,
   InvestmentSummarySkeleton,
   CycleCalendarSkeleton,
@@ -51,21 +51,6 @@ const CompactMetricGridSkeleton: React.FC<{ count: number; className?: string }>
         <Skeleton className="h-3 w-3/4" />
       </div>
     ))}
-  </div>
-)
-
-const CategoryWatchSkeleton: React.FC = () => (
-  <div className={`${panelClass} space-y-4 p-5`}>
-    <div className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-56 max-w-full" /></div>
-    <CompactMetricGridSkeleton count={3} className="lg:grid-cols-3" />
-  </div>
-)
-
-const FinancialPlanSkeleton: React.FC = () => (
-  <div className={`${panelClass} space-y-4 p-6`}>
-    <div className="space-y-2"><Skeleton className="h-5 w-44" /><Skeleton className="h-3 w-80 max-w-full" /></div>
-    <div className="flex gap-4"><Skeleton className="h-2 w-24" /><Skeleton className="h-2 w-32" /></div>
-    <CompactMetricGridSkeleton count={3} className="gap-6 xl:grid-cols-3" />
   </div>
 )
 
@@ -141,24 +126,45 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
   }
 
   if (variant === 'reports') {
+    // Mirrors Insights: the cycle hero with its glance strip, the buckets, "Where it went", the
+    // subscriptions beside the Growth trend, then the calendar with its weekly pacing.
     return (
-      <div data-testid="reports-skeleton" className="space-y-6">
+      <div data-testid="reports-skeleton" className="@container space-y-8">
         <ReportsHeaderSkeleton />
-        <PanelSkeleton height="h-20" />
-        <CarryoverLedgerSkeleton />
-        <FinancialPlanSkeleton />
-        <div className={`${panelClass} flex items-center justify-between gap-4 p-5`}><div className="flex items-center gap-3"><Skeleton className="size-11 rounded-xl" /><div className="space-y-2"><Skeleton className="h-4 w-36" /><Skeleton className="h-3 w-64 max-w-full" /></div></div><Skeleton className="h-6 w-28" /></div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <CardSkeleton />
-          <CardSkeleton />
+        <div className={cn(panelClass, '@container overflow-hidden')}>
+          <div className="flex flex-col gap-5 p-5 sm:p-6 @3xl:flex-row @3xl:items-end @3xl:justify-between @3xl:gap-10">
+            <div className="space-y-3 @3xl:max-w-md @3xl:flex-1"><Skeleton className="h-3.5 w-24" /><Skeleton className="h-10 w-52 max-w-full @xs:h-11" /><Skeleton className="h-1.5 w-full rounded-full" /><Skeleton className="h-3 w-40" /></div>
+            <div className="grid grid-cols-1 gap-2 @xs:grid-cols-2 @3xl:w-[26rem]">
+              {[1, 2].map(i => <div key={i} className="space-y-2 rounded-control bg-surface-2/70 p-3.5"><Skeleton className="h-3.5 w-16" /><Skeleton className="h-5 w-24" /><Skeleton className="h-3 w-28 max-w-full" /></div>)}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-px border-t border-border/60 bg-border/60 @xl:grid-cols-4">
+            {[1, 2, 3, 4].map(i => <div key={i} className="space-y-1.5 bg-card px-4 py-3.5 sm:px-6"><Skeleton className="h-3 w-20" /><Skeleton className="h-4 w-14" /></div>)}
+          </div>
         </div>
-        <div className="grid grid-cols-1 gap-6 min-[1280px]:grid-cols-[minmax(18rem,0.8fr)_minmax(0,2fr)]">
-          <PanelSkeleton height="h-56" />
-          <CategoryWatchSkeleton />
+        <ReportBucketsSkeleton />
+        <div className="space-y-3">
+          <div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-3.5 w-80 max-w-full" /></div>
+          <div className={cn(panelClass, 'grid gap-6 p-4 sm:p-5 @4xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]')}>
+            <div className="space-y-5">
+              <div className="flex flex-wrap justify-between gap-3"><div className="space-y-1.5"><Skeleton className="h-4 w-36" /><Skeleton className="h-3 w-44" /></div><Skeleton className="h-11 w-48 rounded-full lg:h-9" /></div>
+              <div className="flex flex-col items-center gap-5 @sm:flex-row"><Skeleton className="size-44 shrink-0 rounded-full" /><div className="w-full space-y-3">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-3.5 w-full" />)}</div></div>
+            </div>
+            <div className="space-y-4 border-t border-border/60 pt-5 @4xl:border-l @4xl:border-t-0 @4xl:pl-6 @4xl:pt-0">
+              <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-28" /></div>
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="flex items-center gap-3"><Skeleton className="size-8 shrink-0 rounded-[0.625rem]" /><div className="flex-1 space-y-2"><div className="flex justify-between"><Skeleton className="h-4 w-24" /><Skeleton className="h-3.5 w-28" /></div><Skeleton className="h-1.5 w-full rounded-full" /></div></div>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-1 gap-6 min-[1360px]:grid-cols-2">
-          <PanelSkeleton height="h-64" />
-          <PanelSkeleton height="h-64" />
+        <div className="grid grid-cols-1 gap-8 @4xl:grid-cols-2 @4xl:gap-6">
+          {[1, 2].map(i => (
+            <div key={i} className="space-y-3">
+              <div className="space-y-2"><Skeleton className="h-5 w-40" /><Skeleton className="h-3.5 w-48" /></div>
+              <PanelSkeleton height="h-48" />
+            </div>
+          ))}
         </div>
         <CycleCalendarSkeleton />
       </div>

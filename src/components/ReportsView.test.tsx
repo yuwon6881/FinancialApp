@@ -22,6 +22,7 @@ vi.mock('./dashboard/useDashboardView', () => ({
     },
     cycleLabel: 'Jun 01 ~ Jun 30, 2026',
     categories: [{ name: 'Growth', remaining: 400 }],
+    stats: { monthlyIncome: 1000, monthlyInflow: 1200, monthlyExpenses: 300, activeRecurringTotal: 80 },
     pendingDeductionsByCategory: {},
     areBalanceAmountsMasked: false,
     growthMetric: {},
@@ -35,9 +36,14 @@ vi.mock('./dashboard/useDashboardView', () => ({
   }),
 }))
 
-vi.mock('./dashboard/CarryoverLedgerTable', () => ({ CarryoverLedgerTable: () => <div>Carryover report</div> }))
-vi.mock('./dashboard/FinancialPlanMetrics', () => ({ FinancialPlanMetrics: () => <div>Plan performance report</div> }))
-vi.mock('./dashboard/CycleFlowCards', () => ({ CycleFlowCards: () => <div>Cycle flow report</div> }))
+vi.mock('./reports/BucketsSection', () => ({
+  BucketsSection: ({ onNavigate }: { onNavigate?: (tab: string) => void }) => (
+    <div>
+      Buckets report
+      <Button variant="tertiary" onClick={() => onNavigate?.('investments')}>View Growth Investments</Button>
+    </div>
+  ),
+}))
 vi.mock('./dashboard/SubscriptionsTimelineCard', () => ({ SubscriptionsTimelineCard: subscriptionsTimelineCard }))
 vi.mock('./dashboard/TrendLineChart', () => ({ TrendLineChart: () => <div>Trend report</div> }))
 vi.mock('./dashboard/DoughnutChart', () => ({ DoughnutChart: () => <div>Category report</div> }))
@@ -69,9 +75,9 @@ describe('ReportsView', () => {
     )
 
     expect(screen.getByRole('heading', { name: 'Insights' })).toBeTruthy()
-    expect(screen.getByText('Carryover report')).toBeTruthy()
-    expect(screen.getByText('Plan performance report')).toBeTruthy()
-    expect(screen.getByText('Cycle flow report')).toBeTruthy()
+    expect(screen.getByText('Buckets report')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Net this cycle' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Where it went' })).toBeTruthy()
     expect(screen.getByText(/Selected-cycle subscriptions/)).toBeTruthy()
     expect(screen.getByText('Trend report')).toBeTruthy()
     expect(screen.getByText('Category report')).toBeTruthy()
@@ -129,7 +135,45 @@ describe('ReportsView', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Growth Investments/ }))
     expect(onNavigate).toHaveBeenCalledWith('investments')
-    expect(screen.getByText('Growth ledger balance')).toBeTruthy()
+  })
+
+  it('opens the cycle inflow and outflow in the ledger from the hero', () => {
+    const onNavigateToLedger = vi.fn()
+    render(
+      <ReportsView
+        dashboardData={null}
+        transactions={[]}
+        hideBalanceAmounts={false}
+        onNavigateToLedger={onNavigateToLedger}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /^Inflow/ }))
+    expect(onNavigateToLedger).toHaveBeenCalledWith({ txType: 'inflow' })
+    fireEvent.click(screen.getByRole('button', { name: /^Outflow/ }))
+    expect(onNavigateToLedger).toHaveBeenCalledWith({ txType: 'outflow' })
+  })
+
+  it('reads the net, the glance facts and the biggest expense as one aligned strip', () => {
+    render(
+      <ReportsView
+        dashboardData={{
+          cycleSummaryInsights: {
+            transactionCount: 7, noSpendDays: 4, avgDailySpend: 10, largestExpenseAmount: 120,
+            largestExpenseDescription: 'Groceries', cycleLengthDays: 30, committedSpend: 0, discretionarySpend: 300,
+          },
+        } as any}
+        transactions={[]}
+        hideBalanceAmounts={false}
+      />,
+    )
+    expect(screen.getByTestId('cycle-net').textContent).toContain('900')
+    expect(screen.getByText('Kept 75% of what came in.')).toBeTruthy()
+    const strip = document.querySelector('dl[aria-label="This cycle at a glance"]')!
+    expect(strip.textContent).toContain('Transactions7')
+    expect(strip.textContent).toContain('No-spend days4')
+    expect(strip.textContent).toContain('Biggest expense$120Groceries')
+    // Nothing in the ledger matched the expense, so the cell stays a plain figure.
+    expect(screen.queryByRole('button', { name: /View biggest expense/ })).toBeNull()
   })
 
   it('offers a compact summary action for an ended cycle', () => {

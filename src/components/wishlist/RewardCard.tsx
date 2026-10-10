@@ -3,7 +3,8 @@ import { Edit2, Trash2 } from 'lucide-react'
 import { RewardIcon } from '../semanticIcons'
 import type { WishlistItem } from '../../types'
 import { Button } from '../ui/Button'
-import { Meter } from '../ui/Meter'
+import { ProgressRing } from '../ui/ProgressRing'
+import { getCategoryChartColor } from '../../lib/categoryColors'
 import { OverflowMenu } from '../ui/OverflowMenu'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { cn } from '../../lib/utils'
@@ -12,7 +13,7 @@ interface RewardCardProps {
   item: WishlistItem
   /** DOM id the shared highlight helper scrolls to when search jumps to this reward. */
   elementId?: string
-  /** The one reward being saved toward: pinned leftmost and visually lifted out of the row. */
+  /** The one reward being saved toward: listed first and marked "Saving for this". */
   isFocused: boolean
   /**
    * Free-to-spend rewards. Progress is measured against this rather than the whole Rewards balance,
@@ -33,16 +34,13 @@ interface RewardCardProps {
   onDelete: (id: number) => void
 }
 
-const PRIORITY_TONE: Record<string, string> = {
-  High: 'bg-pink-500/12 text-pink-600 dark:text-pink-300',
-  Medium: 'bg-surface-3 text-foreground',
-  Low: 'bg-surface-2 text-muted-foreground dark:bg-surface-3',
-}
-
 /**
- * One reward as a tile of the wish grid: what it is, what it costs, how much of it the free rewards
- * money already covers, and Claim once it is all there. The pool-wide figures (free rewards, what is
- * left after commitments) are said once above the grid rather than on every tile.
+ * One reward as a row of the rewards list, built like a commitment row: a ring for how much of the
+ * price the free rewards money already covers, the name over its priority, the price, and one
+ * status line that says plainly whether it can be claimed -- and, when claiming would cut into
+ * what this cycle's commitments still need, says that on the same line instead of under a
+ * contradictory "Ready". Claim sits on that line once the money is there; the rest is in the menu.
+ * The pool-wide figures (free rewards, what is left after commitments) are said once above the list.
  */
 export const RewardCard: React.FC<RewardCardProps> = ({
   item,
@@ -65,96 +63,110 @@ export const RewardCard: React.FC<RewardCardProps> = ({
     : 0
   const canAfford = claimableBalance >= item.price
   const goalPaceShortfall = Math.max(0, item.price - freeAfterGoalPace)
+  const cutsIntoCommitments = canAfford && item.price > freeAfterGoalPace
   const isBusy = isSyncing || isDeleting || item.isPendingSync === true
+  // The date in brackets is for the tooltip; the row only has room for the span.
+  const timelineShort = timeline ? timeline.replace(/ \(.*\)$/, '').replace(/^about/, 'in about') : null
 
   return (
-    <article
-      id={elementId}
-      className={cn(
-        'flex min-w-0 flex-col rounded-panel border bg-card p-3.5 shadow-xs transition-colors duration-300 sm:p-4',
-        isFocused ? 'border-pink-500/50 ring-1 ring-pink-500/20' : 'border-border/70',
-      )}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <span className={cn('rounded-full px-2 py-0.5 text-caption font-medium', PRIORITY_TONE[item.priority] ?? PRIORITY_TONE.Low)}>
-          {isFocused ? 'Saving for this' : item.priority}
-          <span className="sr-only"> priority</span>
-        </span>
-        <OverflowMenu
-          className="-mr-2 -mt-1.5"
-          entityLabel={item.name}
-          disabled={isBusy}
-          items={[
-            ...(isFocused ? [] : [{
-              label: 'Save toward this next',
-              icon: RewardIcon,
-              onSelect: () => onFocus(item),
-              disabled: hideSensitive,
-              hint: 'Unhide balances to change focus',
-            }]),
-            {
-              label: 'Edit',
-              icon: Edit2,
-              onSelect: () => onEdit(item),
-              disabled: hideSensitive,
-              hint: 'Unhide balances to edit',
-            },
-            {
-              label: 'Delete',
-              icon: Trash2,
-              tone: 'danger' as const,
-              onSelect: () => onDelete(item.id),
-              disabled: hideSensitive,
-              hint: 'Unhide balances to delete',
-            },
-          ]}
-        />
-      </div>
+    <li id={elementId} className="flex gap-3 py-3 pl-4 pr-2 transition-colors duration-300 sm:pl-5 sm:pr-3">
+      {/* Pink is the Rewards bucket colour everywhere else in the app; the ring turns green once
+          the free money covers the whole price. */}
+      <ProgressRing
+        percent={pct}
+        size={44}
+        thickness={4}
+        color={canAfford ? 'var(--color-emerald-500)' : getCategoryChartColor('Rewards')}
+        label={canAfford
+          ? 'Enough free rewards to claim this'
+          : hideSensitive ? 'Share of this reward covered by free rewards' : `${pct.toFixed(0)}% of this reward covered by free rewards`}
+        valueHidden={hideSensitive}
+        className="mt-0.5"
+      >
+        <span className="text-micro font-semibold tabular-nums text-foreground">{hideSensitive ? '•' : `${pct.toFixed(0)}%`}</span>
+      </ProgressRing>
 
-      <h4 className="mt-2 flex min-w-0 items-start gap-1.5 text-body font-medium text-foreground">
-        {isFocused && <span className="sr-only">Focused reward: </span>}
-        <span className="line-clamp-2 min-w-0 break-words">{item.name}</span>
-        <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={item.isPendingSync} entityLabel="item" />
-      </h4>
-      <p className="mt-1 text-title text-foreground tabular-nums">{formatSensitive(item.price)}</p>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-3 pr-2">
+          <div className="min-w-0">
+            <h4 className="flex min-w-0 items-center gap-1.5 text-body font-medium text-foreground">
+              {isFocused && <span className="sr-only">Focused reward: </span>}
+              <span className="truncate">{item.name}</span>
+              <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={item.isPendingSync} entityLabel="item" />
+            </h4>
+            <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-caption text-muted-foreground">
+              {isFocused && (
+                <span className="shrink-0 rounded-full bg-pink-500/12 px-1.5 font-medium text-pink-700 dark:text-pink-300">Saving for this</span>
+              )}
+              <span className="truncate">{item.priority} priority</span>
+            </p>
+          </div>
+          <p className="shrink-0 text-body font-semibold text-foreground tabular-nums">{formatSensitive(item.price)}</p>
+        </div>
 
-      <div className="mt-auto pt-3">
-        {/* Pink is the Rewards bucket colour everywhere else in the app; the bar turns green once the
-            free money covers the whole price. */}
-        <Meter
-          percent={pct}
-          tone={canAfford ? 'bg-emerald-500' : 'bg-pink-500'}
-          label={canAfford
-            ? 'Enough free rewards to claim this'
-            : `${pct.toFixed(0)}% of this reward covered by free rewards`}
-        />
-        <p className={cn('mt-1.5 text-caption font-medium', canAfford ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground')}>
-          {canAfford
-            ? 'Ready to claim'
-            : <>Need {formatSensitive(item.price - claimableBalance)} more</>}
-        </p>
-        {!canAfford && timeline && (
-          <p className="text-caption text-muted-foreground" title={timeline}>
-            {/* The date in brackets is for the tooltip; the tile only has room for the span. */}
-            {timeline.replace(/ \(.*\)$/, '').replace(/^about/, 'In about')}
+        <div className="mt-1 flex min-h-11 items-center gap-1 lg:min-h-9">
+          <p
+            className={cn(
+              'min-w-0 flex-1 text-label',
+              cutsIntoCommitments
+                ? 'text-amber-700 dark:text-amber-300'
+                : canAfford ? 'font-medium text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground',
+            )}
+            title={cutsIntoCommitments ? 'Buying this leaves your commitments short of what they need this cycle' : timeline ?? undefined}
+          >
+            {cutsIntoCommitments ? (
+              <>Claimable, but leaves commitments <span className="font-semibold tabular-nums">{formatSensitive(goalPaceShortfall)}</span> short</>
+            ) : canAfford ? (
+              'Ready to claim'
+            ) : (
+              <>
+                Need <span className="font-medium text-foreground tabular-nums">{formatSensitive(item.price - claimableBalance)}</span> more
+                {timelineShort && <> · {timelineShort}</>}
+              </>
+            )}
           </p>
-        )}
-        {canAfford && item.price > freeAfterGoalPace && (
-          <p className="mt-0.5 text-caption text-amber-700 dark:text-amber-300" title="Buying this leaves your commitments short of what they need this cycle">
-            Leaves commitments <span className="font-semibold tabular-nums">{formatSensitive(goalPaceShortfall)}</span> short
-          </p>
-        )}
-        <Button
-          size="sm"
-          variant={canAfford ? 'primary' : 'secondary'}
-          className="mt-3 w-full"
-          onClick={() => onClaim(item)}
-          disabled={!canAfford || isBusy || hideSensitive}
-          title={canAfford ? 'Claim this reward and log it to your ledger' : 'Not enough free rewards yet'}
-        >
-          Claim
-        </Button>
+          {canAfford && (
+            <Button
+              size="sm"
+              variant={cutsIntoCommitments ? 'secondary' : 'primary'}
+              className="shrink-0"
+              onClick={() => onClaim(item)}
+              disabled={isBusy || hideSensitive}
+              title="Claim this reward and log it to your ledger"
+            >
+              Claim
+            </Button>
+          )}
+          <OverflowMenu
+            entityLabel={item.name}
+            disabled={isBusy}
+            items={[
+              ...(isFocused ? [] : [{
+                label: 'Save toward this next',
+                icon: RewardIcon,
+                onSelect: () => onFocus(item),
+                disabled: hideSensitive,
+                hint: 'Unhide balances to change focus',
+              }]),
+              {
+                label: 'Edit',
+                icon: Edit2,
+                onSelect: () => onEdit(item),
+                disabled: hideSensitive,
+                hint: 'Unhide balances to edit',
+              },
+              {
+                label: 'Delete',
+                icon: Trash2,
+                tone: 'danger' as const,
+                onSelect: () => onDelete(item.id),
+                disabled: hideSensitive,
+                hint: 'Unhide balances to delete',
+              },
+            ]}
+          />
+        </div>
       </div>
-    </article>
+    </li>
   )
 }

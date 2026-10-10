@@ -46,19 +46,19 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
     : 'No chart data is available.'
 
   return (
-    <section aria-labelledby="value-chart-title" className={cn(panelClass, 'min-w-0 p-5')}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 id="value-chart-title" className="text-section text-foreground">Portfolio value</h2>
-        </div>
-        <div className="flex max-w-full flex-wrap gap-1 self-start rounded-xl bg-muted/40 p-1" role="group" aria-label="Chart range">
+    <section aria-labelledby="value-chart-title" className={cn(panelClass, 'min-w-0 p-5 sm:p-6')}>
+      <div className="flex flex-col gap-3 @container sm:flex-row sm:items-center sm:justify-between">
+        <h2 id="value-chart-title" className="text-section text-foreground">Portfolio value</h2>
+        {/* One scrolling line of ranges: seven pills wrapped onto two rows on a phone. */}
+        <div className="no-scrollbar -mx-1 flex max-w-full gap-0.5 self-start overflow-x-auto rounded-full bg-surface-2 p-1 sm:mx-0" role="group" aria-label="Chart range">
           {chartRanges.map(item => (
             <Button
               key={item.value}
               type="button"
               variant="tertiary"
+              size="sm"
               onClick={() => onRangeChange(item.value)}
-              className={`cursor-pointer whitespace-nowrap rounded-lg px-2.5 py-1 text-caption font-semibold transition-colors ${range === item.value ? 'bg-background hover:bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`shrink-0 px-2.5 sm:px-3 ${range === item.value ? 'bg-card text-foreground shadow-xs hover:bg-card dark:bg-surface-3' : 'text-muted-foreground hover:text-foreground'}`}
               aria-pressed={range === item.value}
             >
               {item.label}
@@ -68,24 +68,23 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
       </div>
       <p className="sr-only">{summary}</p>
       {portfolio.chart.length === 0 ? (
-        <div className="flex h-60 items-center justify-center text-xs text-muted-foreground">Add some activity to start the history.</div>
+        <div className="mt-4 flex h-32 items-center justify-center rounded-control bg-surface-2/70 px-4 text-center text-label text-muted-foreground">Add some activity to start the history.</div>
       ) : !hasAnyMarketValue ? (
-        <div className="flex h-60 flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
-          <span className="text-amber-500 font-semibold">Chart unavailable</span>
-          <span className="max-w-xs">Some prices are missing. Try "Update prices" or check the investment's market-data mapping.</span>
+        <div className="mt-4 flex min-h-32 flex-col items-center justify-center gap-1 rounded-control bg-surface-2/70 px-4 py-5 text-center">
+          <span className="text-label font-medium text-foreground">Chart unavailable</span>
+          <span className="max-w-xs text-caption text-muted-foreground">Some prices are missing. Try "Update prices" or check the investment's market-data mapping.</span>
         </div>
       ) : (
         <div className="relative mt-5">
           {isFetching && (
             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-              <div className="flex items-center gap-2 rounded-lg bg-background/80 px-4 py-2 shadow-sm backdrop-blur-sm border border-border/50">
-                <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                <span className="text-xs font-semibold text-muted-foreground">Loading…</span>
-              </div>
+              <span className="flex items-center gap-2 rounded-full bg-card px-3.5 py-1.5 text-caption font-medium text-muted-foreground shadow-(--app-shadow-overlay)">
+                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> Loading…
+              </span>
             </div>
           )}
           <ResponsiveChartFrame
-            className={`relative cursor-crosshair ${masked || isFetching ? 'select-none blur-md pointer-events-none transition-[filter,opacity] duration-200' : 'transition-[filter,opacity] duration-200'}`}
+            className={`relative cursor-crosshair ${masked ? 'select-none blur-md pointer-events-none transition-[filter,opacity] duration-200' : isFetching ? 'pointer-events-none opacity-50 transition-[filter,opacity] duration-200' : 'transition-[filter,opacity] duration-200'}`}
             aria-hidden={masked}
             onMouseMove={event => selectNearest(event.clientX)}
             onMouseLeave={() => setHoveredIndex(null)}
@@ -102,12 +101,12 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.45 }}
               />
-              <m.polyline key={`investment-total-${range}`} points={line('totalValue')} fill="none" stroke="var(--ledger-purple-500)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="nonScalingStroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45 }} />
-              <m.polyline key={`investment-deposits-${range}`} points={line('netDeposits')} fill="none" stroke="var(--ledger-pending-500)" strokeWidth="2" strokeDasharray="7 6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="nonScalingStroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45, delay: 0.08 }} />
+              <m.polyline key={`investment-total-${range}`} points={line('totalValue')} fill="none" stroke="var(--ledger-purple-500)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45 }} />
+              <m.polyline key={`investment-deposits-${range}`} points={line('netDeposits')} fill="none" stroke="var(--ledger-pending-500)" strokeWidth="2" strokeDasharray="7 6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45, delay: 0.08 }} />
               {hoveredIndex !== null && portfolio.chart[hoveredIndex]?.totalValue !== undefined && (
                 <>
-                  <line x1={x(hoveredIndex)} x2={x(hoveredIndex)} y1="0" y2={height} stroke="var(--border)" strokeWidth="1" strokeDasharray="3 4" vectorEffect="nonScalingStroke" />
-                  <circle cx={x(hoveredIndex)} cy={y(portfolio.chart[hoveredIndex].totalValue!)} r="5" fill="var(--ledger-purple-500)" stroke="var(--card)" strokeWidth="3" vectorEffect="nonScalingStroke" />
+                  <line x1={x(hoveredIndex)} x2={x(hoveredIndex)} y1="0" y2={height} stroke="var(--border)" strokeWidth="1" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+                  <circle cx={x(hoveredIndex)} cy={y(portfolio.chart[hoveredIndex].totalValue!)} r="5" fill="var(--ledger-purple-500)" stroke="var(--card)" strokeWidth="3" vectorEffect="non-scaling-stroke" />
                 </>
               )}
             </svg>
@@ -117,11 +116,11 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
                 className="pointer-events-none absolute z-20 w-36 rounded-control bg-surface-2/70 p-2 text-center shadow-(--app-shadow-overlay) backdrop-blur-md"
                 style={{ left: `clamp(0px, calc(${portfolio.chart.length <= 1 ? 50 : hoveredIndex / (portfolio.chart.length - 1) * 100}% - 72px), calc(100% - 144px))`, top: 4 }}
               >
-                <b className="block text-xs text-muted-foreground">{portfolio.chart[hoveredIndex].date}</b>
-                <span className="mt-0.5 block text-xs font-semibold text-violet-500">
+                <b className="block text-caption text-muted-foreground">{portfolio.chart[hoveredIndex].date}</b>
+                <span className="mt-0.5 block text-caption font-semibold text-accent-ink">
                   {portfolio.chart[hoveredIndex].totalValue === undefined ? 'Incomplete' : money(portfolio.chart[hoveredIndex].totalValue!, portfolio.appCurrency)}
                 </span>
-                <span className="block text-xs text-muted-foreground">
+                <span className="block text-caption text-muted-foreground">
                   Deposits {portfolio.chart[hoveredIndex].netDeposits === undefined ? 'incomplete' : money(portfolio.chart[hoveredIndex].netDeposits!, portfolio.appCurrency)}
                 </span>
               </div>
@@ -129,8 +128,8 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
           </ResponsiveChartFrame>
         </div>
       )}
-      <div className="mt-3 flex flex-wrap gap-4 text-xs font-semibold text-muted-foreground">
-        <span><i className="mr-1 inline-block size-2 rounded-full bg-violet-500" /> Total value</span>
+      <div className="mt-3 flex flex-wrap gap-4 text-caption font-medium text-muted-foreground">
+        <span><i className="mr-1 inline-block size-2 rounded-full" style={{ backgroundColor: 'var(--ledger-purple-500)' }} /> Total value</span>
         <span><i className="mr-1 inline-block w-4 border-t-2 border-dashed border-amber-500 align-middle" /> Net deposits</span>
       </div>
       <div className="sr-only">

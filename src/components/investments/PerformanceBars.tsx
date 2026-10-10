@@ -41,8 +41,8 @@ export function PerformanceBars({ portfolio, masked, onSelectHolding }: {
   }
 
   return (
-    <Panel as="section" aria-labelledby="performance-title">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <Panel as="section" padding="spacious" aria-labelledby="performance-title">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h2 id="performance-title" className="text-section text-foreground">How each fund is doing</h2>
         </div>
@@ -63,30 +63,30 @@ export function PerformanceBars({ portfolio, masked, onSelectHolding }: {
           const positive = value >= 0
           const ratio = Math.abs(value) / scale
           return (
-            <div key={`${holding.accountId}-${holding.instrumentId}`} className="grid grid-cols-[64px_minmax(0,1fr)_auto] items-center gap-3 text-xs">
+            <div key={`${holding.accountId}-${holding.instrumentId}`} className="grid grid-cols-[64px_minmax(0,1fr)_auto] items-center gap-3 text-label">
               <Button
                 variant="tertiary"
                 onClick={() => onSelectHolding(holding)}
-                className="min-w-0 cursor-pointer truncate justify-start text-left font-semibold text-foreground underline decoration-dotted underline-offset-4 hover:text-accent-ink"
+                className="min-w-0 justify-start truncate px-2 text-left font-semibold text-foreground"
               >
                 {holding.symbol}
               </Button>
-              <div className="relative h-3 rounded-full bg-muted">
+              <div className="relative h-2 rounded-full bg-foreground/8 dark:bg-foreground/10">
                 <div className="absolute left-1/2 top-0 h-full w-px bg-border" />
                 <m.div
-                  className={`absolute top-0 h-full w-1/2 rounded-full ${positive ? 'origin-left bg-emerald-500' : 'right-1/2 origin-right bg-orange-500'}`}
+                  className={`absolute top-0 h-full w-1/2 rounded-full ${positive ? 'origin-left bg-emerald-500' : 'right-1/2 origin-right bg-red-500'}`}
                   initial={reduceMotion ? false : { scaleX: 0 }}
                   animate={{ scaleX: ratio }}
                   transition={{ duration: 0.55, ease: 'easeOut' }}
                   style={positive ? { left: '50%' } : undefined}
                 />
               </div>
-              <span className={`min-w-13 text-right font-semibold ${positive ? 'text-emerald-500' : 'text-orange-500'}`}>{label(holding)}</span>
+              <span className={`min-w-13 text-right font-semibold tabular-nums ${positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{label(holding)}</span>
             </div>
           )
         })}
         {holdings.length === 0 && (
-          <p className="text-xs text-muted-foreground">
+          <p className="rounded-control bg-surface-2/70 px-4 py-6 text-center text-label text-muted-foreground">
             Needs latest prices and your cost.
           </p>
         )}

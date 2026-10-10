@@ -217,14 +217,14 @@ describe('CycleCalendar component', () => {
       />,
     )
 
-    expect(screen.getByText('Weekly Spend Pacing')).toBeTruthy()
+    expect(screen.getByText('Weekly spend pacing')).toBeTruthy()
     expect(screen.getByText('Week 1')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: /Net Flow/ }))
-    expect(screen.getByText('Weekly Net Pacing')).toBeTruthy()
+    expect(screen.getByText('Weekly net pacing')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: /Activity/ }))
-    expect(screen.getByText('Weekly Activity Pacing')).toBeTruthy()
+    expect(screen.getByText('Weekly activity pacing')).toBeTruthy()
   })
 
   it('triggers onSelectWeek when an active week pacing tile is clicked', () => {

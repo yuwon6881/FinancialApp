@@ -51,8 +51,8 @@ export function ForecastSummary({
             text="Half of outcomes finish above this amount and half below; it is not a promise."
           />
         </div>
-        <strong className="mt-1 block break-words text-xl text-foreground">{money(ending)}</strong>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+        <strong className="mt-1 block break-words text-title tabular-nums text-foreground">{money(ending)}</strong>
+        <p className="mt-1 text-caption leading-relaxed text-muted-foreground">
           {ending === undefined
             ? 'Calculating…'
             : `Could reasonably range from ${money(lower)} to ${money(upper)}, based on 10,000 simulated paths.`}
@@ -64,7 +64,7 @@ export function ForecastSummary({
             <p className="text-label font-medium text-muted-foreground">{tile.label}</p>
             <InfoHint label={tile.label.toLowerCase()} text={tile.hint} />
           </div>
-          <strong className="mt-1 block break-words text-base text-foreground">{tile.value}</strong>
+          <strong className="mt-1 block break-words text-section tabular-nums text-foreground">{tile.value}</strong>
         </article>
       ))}
     </div>

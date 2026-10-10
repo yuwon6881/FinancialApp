@@ -190,7 +190,8 @@ describe('InvestmentPlanPanel sleeve holdings', () => {
     expect(screen.getByText('Gain unavailable')).toBeTruthy()
     const disclosures = screen.getAllByText(/See the 1 fund in this basket/)
     expect(disclosures.length).toBe(2)
-    expect(disclosures[0].closest('article')?.className).toContain('self-start')
-    expect(disclosures[0].closest('article')?.parentElement?.className).toContain('items-start')
+    // Each basket is a row of one list, with its funds one tap away rather than always open.
+    disclosures.forEach(disclosure => expect(disclosure.closest('details')?.open).toBe(false))
+    expect(screen.getByRole('list', { name: 'Plan baskets' }).children).toHaveLength(4)
   })
 })

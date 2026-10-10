@@ -1,10 +1,11 @@
 import React from 'react'
-import { AlertTriangle, CheckCircle2, History, Loader2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronDown, History, Loader2 } from 'lucide-react'
 import { CommitmentIcon } from '../semanticIcons'
-import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
-import { DetailDisclosure } from '../ui/DetailDisclosure'
+import { CategoryIcon } from '../ui/CategoryIcon'
 import { OverflowMenu } from '../ui/OverflowMenu'
+import { panelClass } from '../ui/panelStyles'
+import { cn } from '../../lib/utils'
 import { useDetailDisclosure } from '../../lib/useDetailDisclosure'
 import type { GoalPoolSummary } from '../../lib/savingsGoals'
 import type { SavingsGoalFundingBucket } from '../../types'
@@ -92,48 +93,39 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         ? `No free ${bucketLabel.toLowerCase()} money left to set aside`
         : 'Set aside what your commitments still need this cycle'
 
+  const detailsId = React.useId()
+  const detailsOpen = detail.isOpen || !detail.isMobile
+
   return (
-    <Card className="space-y-4 p-5">
-      <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-start sm:justify-between">
-        <div className="min-w-0">
+    <div className="space-y-3 px-4 py-4 sm:px-5">
+      <div className="flex items-start gap-3">
+        <CategoryIcon category={bucketLabel} size="sm" className="mt-0.5" />
+        <div className="min-w-0 flex-1">
           <span className="block text-label text-muted-foreground">
             {bucketLabel} pool
           </span>
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className="text-display text-foreground tabular-nums">{formatSensitive(bucketBalance)}</span>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="text-title text-foreground tabular-nums">{formatSensitive(bucketBalance)}</span>
             {expectedInflow > 0 && (
-              <span className="text-label text-muted-foreground tabular-nums">
+              <span className="text-caption text-muted-foreground tabular-nums">
                 +{formatSensitive(expectedInflow)}/cycle
               </span>
             )}
           </div>
         </div>
-        <div className="flex items-center justify-end gap-2 sm:flex-wrap">
-          {showFundAction && !cycleDone && (
-            <Button
-              size="sm"
-              onClick={onFundCycle}
-              disabled={hideSensitive || isOffline || !canFund || isFunding}
-              aria-busy={isFunding}
-              title={fundTitle}
-            >
-              {isFunding ? <Loader2 className="size-3 animate-spin" /> : <CommitmentIcon className="size-3" aria-hidden />}
-              {isFunding ? 'Setting aside…' : <>Set aside {formatSensitive(fundableNow)}</>}
-            </Button>
-          )}
-          {onViewRewardsHistory && (
-            <OverflowMenu
-              entityLabel={`your ${bucketLabel.toLowerCase()} pool`}
-              items={[{ label: 'View history', icon: History, onSelect: onViewRewardsHistory }]}
-            />
-          )}
-        </div>
+        {onViewRewardsHistory && (
+          <OverflowMenu
+            className="-mr-2 -mt-1"
+            entityLabel={`your ${bucketLabel.toLowerCase()} pool`}
+            items={[{ label: 'View history', icon: History, onSelect: onViewRewardsHistory }]}
+          />
+        )}
       </div>
 
       {/* The selected view leads the bar, matching the tab order above. Both claims use a full,
-          distinct Ayu color so the split never depends on a low-contrast opacity difference. */}
+          distinct colour so the split never depends on a low-contrast opacity difference. */}
       <div
-        className="flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-foreground/8"
+        className="flex h-1.5 w-full gap-0.5 overflow-hidden rounded-full bg-foreground/8"
         role="img"
         aria-label={hasGoals
           ? `${committedPct.toFixed(0)}% of your ${bucketLabel.toLowerCase()} money is set aside for commitments`
@@ -187,20 +179,45 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         </p>
       )}
 
-      <DetailDisclosure
-        label="Details"
-        open={detail.isOpen}
-        onOpenChange={detail.setOpen}
-        expandedFrom="lg"
-        bodyClassName="space-y-3"
-      >
-        {/* The one place the Committed figure is spelled out. Keeping it here and nowhere else is
-            what stops the pool, the legend and the commitment card from all repeating it.
+      {/* The pool's one action and its detail toggle share a row, so the card ends on a single
+          line instead of a floating pill over a separate disclosure strip. */}
+      {((showFundAction && !cycleDone) || detail.isMobile) && (
+        <div className="flex items-center justify-between gap-2">
+          {showFundAction && !cycleDone ? (
+            <Button
+              size="sm"
+              onClick={onFundCycle}
+              disabled={hideSensitive || isOffline || !canFund || isFunding}
+              aria-busy={isFunding}
+              title={fundTitle}
+              className="min-w-0"
+            >
+              {isFunding ? <Loader2 className="size-3 animate-spin" /> : <CommitmentIcon className="size-3" aria-hidden />}
+              <span className="truncate">{isFunding ? 'Setting aside…' : <>Set aside {formatSensitive(fundableNow)}</>}</span>
+            </Button>
+          ) : <span />}
+          {detail.isMobile && (
+            <Button
+              variant="tertiary"
+              size="sm"
+              aria-expanded={detail.isOpen}
+              aria-controls={detailsId}
+              onClick={() => detail.setOpen(!detail.isOpen)}
+              className="-mr-2 shrink-0 gap-1 text-muted-foreground hover:text-foreground"
+            >
+              Details
+              <ChevronDown className={cn('size-3.5 transition-transform duration-200', detail.isOpen && 'rotate-180')} aria-hidden="true" />
+            </Button>
+          )}
+        </div>
+      )}
 
-            One tile per line on compact. Two 132px columns inside a phone-width card could not fit
-            "Free to spend" beside its amount, so the labels truncated to "Free to..." and
-            "Commitm..." — the figures were legible and the thing they measured was not. */}
-        <div className="grid max-w-2xl grid-cols-1 gap-2 text-label sm:grid-cols-2 sm:gap-3">
+      {/* Kept mounted and hidden rather than unmounted, so a breakpoint change re-opens it in place. */}
+      <div id={detailsId} hidden={!detailsOpen} className="space-y-2">
+        {/* The one place the Committed figure is spelled out. Keeping it here and nowhere else is
+            what stops the pool, the legend and the commitment card from all repeating it. */}
+        <div className="space-y-1.5 rounded-control bg-surface-2/70 p-3 text-label">
+        <dl className="grid grid-cols-1 gap-y-1.5">
           {(activeView === 'commitments'
             ? [
                 { key: 'committed', label: 'Committed', amount: totalEarmarked, color: committedColor },
@@ -211,35 +228,28 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
                 { key: 'committed', label: 'Committed', amount: totalEarmarked, color: committedColor },
               ]
           ).map(item => (
-            <span key={item.key} className="flex min-w-0 items-center gap-2 rounded-control bg-surface-2/70 px-3 py-2.5">
+            <div key={item.key} className="flex min-w-0 items-center gap-2">
               <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} aria-hidden />
-              <span className="min-w-0 text-muted-foreground">{item.label}</span>
-              <span className="ml-auto shrink-0 font-semibold text-foreground tabular-nums">{formatSensitive(item.amount)}</span>
-            </span>
+              <dt className="min-w-0 text-muted-foreground">{item.label}</dt>
+              <dd className="ml-auto shrink-0 font-medium text-foreground tabular-nums">{formatSensitive(item.amount)}</dd>
+            </div>
           ))}
+        </dl>
+          {/* A figure and a share, not another track: the pool's split bar above is the headline. */}
+          {cycleTarget > 0 && (
+              <p className="border-t border-border/60 pt-1.5 text-muted-foreground">
+                This cycle:{' '}
+                <span className={`font-medium tabular-nums ${cycleDone ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
+                  {formatSensitive(fundedThisCycleTotal)}
+                </span>
+                {' '}of {formatSensitive(requiredPerCycleTotal)} set aside
+                {' '}<span className="font-medium tabular-nums text-foreground">· {cyclePct.toFixed(0)}%</span>
+              </p>
+          )}
         </div>
 
-        {/* A figure and a share, not another track. The pool's split bar above is the headline;
-            this cycle's pacing is a footnote, and drawing it as a second bar here -- with a third
-            on every commitment card below -- was what made the page read as a stack of bars.
-
-            Centred only where the sentence fills its line. From the medium tier up the card is
-            wide enough that centring leaves it floating between two left-aligned neighbours --
-            the claim tiles above and the notes below -- so it reads as a stray caption rather
-            than part of the column. */}
-        {cycleTarget > 0 && (
-          <p className="max-w-2xl text-center text-label text-muted-foreground sm:text-left">
-            This cycle:{' '}
-            <span className={`font-semibold tabular-nums ${cycleDone ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
-              {formatSensitive(fundedThisCycleTotal)}
-            </span>
-            {' '}of {formatSensitive(requiredPerCycleTotal)} set aside
-            {' '}<span className="font-semibold tabular-nums text-foreground">· {cyclePct.toFixed(0)}%</span>
-          </p>
-        )}
-
         {overCommitted > 0 && (
-          <p className="text-label font-medium text-destructive">
+          <p className="text-label text-destructive">
             {bucket === 'Rewards'
               ? <>Something has been spent from Rewards since it was set aside — release money from a commitment, or let this cycle's rewards money refill the pool.</>
               : <>Something has been spent from {bucketLabel} since it was set aside — release money from a commitment, or let this cycle's {bucketLabel.toLowerCase()} money refill the pool.</>}
@@ -247,11 +257,26 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         )}
 
         {paceShortfall > 0 && (
-          <p className="text-label font-medium text-amber-700 dark:text-amber-300">
+          <p className="text-label text-amber-700 dark:text-amber-300">
             Extend a deadline, lower a target, or raise your {bucketLabel} share.
           </p>
         )}
-      </DetailDisclosure>
-    </Card>
+      </div>
+    </div>
   )
 }
+
+interface PoolsPanelProps {
+  children: React.ReactNode
+  className?: string
+}
+
+/**
+ * The bucket pools as one panel of rows -- Rewards always, Essentials once it funds a commitment --
+ * rather than a tall card each.
+ */
+export const PoolsPanel: React.FC<PoolsPanelProps> = ({ children, className }) => (
+  <section aria-label="Pools" className={cn(panelClass, 'divide-y divide-border/60 overflow-hidden', className)}>
+    {children}
+  </section>
+)

@@ -11,7 +11,8 @@ import {
   type CycleWeekSummary,
 } from '../../lib/cycleCalendar'
 import { InfoHint } from '../ui/InfoHint'
-import { Button } from '../ui/Button'
+import { SectionHeader } from '../ui/SectionHeader'
+import { ReportSegmented } from '../reports/ReportSegmented'
 import { CycleCalendarDaySheet } from './CycleCalendarDaySheet'
 import { CycleWeeklyPacing } from './CycleWeeklyPacing'
 import { cn } from '../../lib/utils'
@@ -96,41 +97,44 @@ export function CycleCalendar(props: CycleCalendarProps) {
   const today = formatCalendarDate(new Date())
 
   return (
-    <div className={cn(panelClass, 'h-full p-3 sm:p-6')}>
-      {/* Header */}
-      <div className="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-        <div>
-          <div className="flex items-center gap-1">
-            <h3 className="text-subsection text-foreground sm:text-section">Cycle Calendar</h3>
+    <section id="report-section-calendar" aria-labelledby="report-calendar-heading" className="@container space-y-3">
+      <SectionHeader
+        titleId="report-calendar-heading"
+        title={(
+          <span className="flex items-center gap-1">
+            Cycle calendar
             <InfoHint
+              inline
               label="cycle calendar shading"
               text="Shows cashflow rhythms across this billing cycle. Toggle between Spending, Net Flow, and Gross Activity to spot trends and upcoming bills. Tap any day for its full breakdown."
             />
-          </div>
-          <p className="text-xs text-muted-foreground mt-0.5">{props.cycleLabel}</p>
-        </div>
-
-        {/* Heatmap Mode Selector */}
-        <div className="flex items-center gap-1 self-stretch rounded-control bg-surface-2/70 p-1 sm:self-start">
-          {MODES.map(entry => (
-            <Button
-              key={entry.mode}
-              size="sm"
-              variant={mode === entry.mode ? 'primary' : 'tertiary'}
-              className={cn('h-7 flex-1 px-2.5 text-xs font-semibold sm:h-7 sm:flex-none', mode !== entry.mode && 'text-muted-foreground hover:text-foreground')}
-              onClick={() => setMode(entry.mode)}
-              aria-pressed={mode === entry.mode}
-            >
-              <span className="sm:hidden">{entry.shortLabel}</span>
-              <span className="hidden sm:inline">{entry.label}</span>
-            </Button>
-          ))}
-        </div>
+          </span>
+        )}
+        description={props.cycleLabel}
+      />
+      {/* Below 360px seven 44px day targets do not fit inside the page gutters, so the panel runs
+          edge to edge there and the days sit a hairline apart instead of overlapping. */}
+      <div className={cn(panelClass, 'grid min-w-0 gap-5 p-3 sm:p-5 @4xl:grid-cols-[minmax(0,1fr)_16rem] @4xl:gap-0 max-[359px]:-mx-4 max-[359px]:rounded-none max-[359px]:border-x-0 max-[359px]:px-0.5')}>
+      <div className="min-w-0 @4xl:pr-6">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 max-[359px]:px-2.5">
+        <ReportSegmented
+          label="Calendar shading"
+          value={mode}
+          onChange={setMode}
+          options={MODES.map(entry => ({
+            value: entry.mode,
+            label: <><span className="@xl:hidden">{entry.shortLabel}</span><span className="hidden @xl:inline">{entry.label}</span></>,
+          }))}
+        />
+        <p className="flex items-center gap-2 px-1 text-caption text-muted-foreground">
+          <span className="tabular-nums">{calendar.stats.noSpendDaysCount} zero-spend days</span>
+          <span aria-hidden="true">·</span>
+          <span className="tabular-nums">Avg {props.formatNet(-Math.round(calendar.stats.averageDailySpend))}/day</span>
+        </p>
       </div>
-
       {/* Legend & Summary Subtitle -- the legend is desktop/tablet detail; phones get the summary
           line only, since the grid itself already carries the shading. */}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2.5">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1 text-caption empty:hidden max-[359px]:px-3">
         {props.hideSensitive ? (
           <p className="text-xs font-medium text-muted-foreground">Activity shading is hidden while amounts are hidden.</p>
         ) : mode === 'net' ? (
@@ -167,16 +171,11 @@ export function CycleCalendar(props: CycleCalendarProps) {
           </span>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-          <span>{calendar.stats.noSpendDaysCount} zero-spend days</span>
-          <span>•</span>
-          <span className="tabular-nums">Avg: {props.formatNet(-Math.round(calendar.stats.averageDailySpend))}/day</span>
-        </div>
       </div>
 
       {/* Calendar Grid */}
       <div className="px-0.5 py-1 sm:px-1">
-        <div aria-label="Cycle days" className="grid w-full min-w-0 grid-cols-[repeat(7,minmax(0,1fr))] gap-1 text-center sm:gap-2">
+        <div aria-label="Cycle days" className="grid w-full min-w-0 grid-cols-[repeat(7,minmax(0,1fr))] gap-1 text-center sm:gap-2 max-[359px]:gap-px">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => {
             const isWeekendHeader = idx === 0 || idx === 6
             return (
@@ -302,15 +301,17 @@ export function CycleCalendar(props: CycleCalendarProps) {
         </div>
       </div>
 
-      {/* Weekly Pacing Breakdown */}
+      </div>
+
       <CycleWeeklyPacing
         weeks={calendar.weeks}
         mode={mode}
         formatAmount={props.formatNet}
         onSelectWeek={props.onSelectWeek}
+        className="border-t border-border/60 px-1 pt-4 @4xl:border-l @4xl:border-t-0 @4xl:pl-6 @4xl:pr-0 @4xl:pt-0 max-[359px]:px-3"
       />
+      </div>
 
-      {/* Day breakdown */}
       <CycleCalendarDaySheet
         day={selectedDay}
         isOpen={!!selectedDay}
@@ -318,6 +319,6 @@ export function CycleCalendar(props: CycleCalendarProps) {
         onViewInLedger={props.onSelectDate}
         formatAmount={props.formatNet}
       />
-    </div>
+    </section>
   )
 }

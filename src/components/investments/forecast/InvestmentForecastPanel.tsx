@@ -1,16 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import type { InvestmentPortfolio } from '../../../types'
-import { cn, formatCurrencyVal } from '../../../lib/utils'
+import { formatCurrencyVal } from '../../../lib/utils'
 import { BottomSheet } from '../../ui/BottomSheet'
-import { Button } from '../../ui/Button'
-import { ChevronDown } from 'lucide-react'
+import { LineChart } from 'lucide-react'
 import { ForecastControls } from './ForecastControls'
 import { ForecastSummary } from './ForecastSummary'
 import { ForecastTargetSection } from './ForecastTargetSection'
 import { InvestmentForecastChart } from './InvestmentForecastChart'
 import { useInvestmentForecastView } from './useInvestmentForecastView'
-import { Panel } from '../../ui/Panel'
-import { panelClass } from '../../ui/panelStyles'
+import { InvestmentToolRow } from '../InvestmentToolRow'
 
 const mask = '••••'
 
@@ -52,27 +50,26 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
 
   if (view.startValue <= 0) {
     return (
-      <Panel as="section" aria-labelledby="forecast-title">
-        <h2 id="forecast-title" className="text-section text-foreground">Investment forecast</h2>
-        <p className="mt-2 text-xs text-muted-foreground">A complete current portfolio value is needed to calculate this.</p>
-      </Panel>
+      <InvestmentToolRow
+        icon={<LineChart className="size-4" />}
+        title="Investment forecast"
+        titleId="forecast-title"
+        subtitle="A complete current portfolio value is needed to calculate this."
+      />
     )
   }
 
   return (
     <>
-      <Button
+      <InvestmentToolRow
         ref={triggerRef}
-        variant="tertiary"
+        icon={<LineChart className="size-4" />}
+        title="Investment forecast"
+        titleId="forecast-title"
+        subtitle="Where today’s portfolio and a monthly amount could go"
         onClick={() => setIsOpen(true)}
-        aria-expanded={isOpen}
-        className={cn(panelClass, 'group flex w-full cursor-pointer items-center justify-between p-5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring')}
-      >
-        <div>
-          <h2 id="forecast-title" className="text-section text-foreground">Investment forecast</h2>
-        </div>
-        <ChevronDown className="size-4 -rotate-90 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-foreground" />
-      </Button>
+        expanded={isOpen}
+      />
 
       <BottomSheet
         isOpen={isOpen}
@@ -112,11 +109,11 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
           </div>
 
           {forecast.error ? (
-            <p role="alert" className="mt-5 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">{forecast.error}</p>
+            <p role="alert" className="mt-5 rounded-control bg-destructive/8 p-3 text-caption text-destructive">{forecast.error}</p>
           ) : view.displayedPoints.length > 0 ? (
             <InvestmentForecastChart points={view.displayedPoints} target={view.displayedTarget} currency={portfolio.appCurrency} masked={masked} />
           ) : (
-            <div role="status" className="mt-5 flex h-48 items-center justify-center text-xs text-muted-foreground">Preparing possible paths…</div>
+            <div role="status" className="mt-5 flex h-48 items-center justify-center text-caption text-muted-foreground">Preparing possible paths…</div>
           )}
 
           <ForecastTargetSection
@@ -137,8 +134,8 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
           />
 
           <details className="mt-3 rounded-control bg-surface-2/70 p-3">
-            <summary className="cursor-pointer text-caption font-semibold text-foreground">How this forecast was worked out</summary>
-            <div className="mt-3 space-y-2 text-xs leading-relaxed text-muted-foreground">
+            <summary className="cursor-pointer text-label font-medium text-foreground">How this forecast was worked out</summary>
+            <div className="mt-3 space-y-2 text-caption leading-relaxed text-muted-foreground">
               <p>It tests 10,000 outcomes using your plan. The model uses {percentage(model.annualReturn)} average annual growth and about {percentage(model.annualVolatility)} annual variation. Past returns are context, not a promise.</p>
               <p>Growth and variation come from a published long-term capital-markets model, not your history. It follows today’s portfolio and plan, adding deposits at month-end.</p>
               <p>Results are hypothetical, not guaranteed, and exclude future tax, expenses, and exchange-rate changes.</p>

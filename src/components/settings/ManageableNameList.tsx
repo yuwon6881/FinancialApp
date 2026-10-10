@@ -4,6 +4,7 @@ import { CollapsibleBody } from '../ui/CollapsibleBody'
 import { MutationStatusAnnouncement } from '../ui/MutationButtonContent'
 import { Loader2, Lock, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
+import { cn } from '../../lib/utils'
 import type { ReactNode } from 'react'
 
 export interface ManageableNameItem {
@@ -114,57 +115,62 @@ export function ManageableNameList<T extends ManageableNameItem>({
 
   return (
     <div className="space-y-3">
-      {/* Search field has its own row so it is never squeezed by action controls */}
-      <label className="group relative block w-full min-w-0">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
-        <Input
-          type="text"
-          role="searchbox"
-          value={search}
-          onChange={event => setSearch(event.target.value)}
-          placeholder={`Search ${pluralItemLabel}`}
-          aria-label={`Search ${pluralItemLabel}`}
-          className="h-9 w-full rounded-lg border border-border/70 bg-background py-2 pl-9 pr-9 text-xs transition placeholder:text-muted-foreground hover:border-border focus:border-ring/70 focus:outline-none focus:ring-2 focus:ring-ring/15"
-        />
-        {search && (
-          <Button size="icon" variant="tertiary"
+      {/* One toolbar: search takes the row and wraps the filter and Add under it when the
+          container is too narrow for all three. Padded here, so the list below can run edge to edge
+          as a flush grouped list inside its panel. */}
+      <div className="flex flex-wrap items-center gap-2 px-4 sm:px-5">
+        <label className="group relative block min-w-0 flex-[1_1_12rem]">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
+          <Input
+            type="text"
+            role="searchbox"
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+            placeholder={`Search ${pluralItemLabel}`}
+            aria-label={`Search ${pluralItemLabel}`}
+            controlSize="sm"
+            className="pl-9 pr-11 lg:pr-9"
+          />
+          {search && (
+            <Button size="icon" variant="tertiary"
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label={`Clear ${lowerItemLabel} search`}
+              className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full text-muted-foreground hover:text-foreground lg:size-9"
+            >
+              <X className="size-3.5" />
+            </Button>
+          )}
+        </label>
+
+        <div className="flex min-w-0 flex-[1_1_auto] items-center justify-between gap-2">
+          {filterSlot ? (
+            <div className="min-w-0">{filterSlot}</div>
+          ) : <div />}
+
+          <Button
+            variant={isAddOpen ? 'secondary' : 'primary'}
+            size="sm"
             type="button"
-            onClick={() => setSearch('')}
-            aria-label={`Clear ${lowerItemLabel} search`}
-            className="absolute right-0 top-1/2 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground sm:right-1 sm:size-8 lg:size-8"
+            onClick={onAddClick ?? toggleAdd}
+            disabled={disabled}
+            aria-expanded={isAddOpen}
+            aria-controls={onAddClick ? undefined : addPanelId}
+            className="shrink-0 whitespace-nowrap"
           >
-            <X className="size-3.5" />
+            {isAddOpen ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
+            {isAddOpen ? 'Cancel' : 'Add'}
           </Button>
-        )}
-      </label>
-
-      <div className="flex items-center justify-between gap-2">
-        {filterSlot ? (
-          <div className="min-w-0 flex-1">{filterSlot}</div>
-        ) : <div />}
-
-        <Button
-          variant={isAddOpen ? 'secondary' : 'primary'}
-          size="sm"
-          type="button"
-          onClick={onAddClick ?? toggleAdd}
-          disabled={disabled}
-          aria-expanded={isAddOpen}
-          aria-controls={onAddClick ? undefined : addPanelId}
-          className="h-9 shrink-0 whitespace-nowrap px-2 sm:px-2.5"
-        >
-          {isAddOpen ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
-          {isAddOpen ? 'Cancel' : 'Add'}
-        </Button>
+        </div>
       </div>
 
-      {!onAddClick && <div id={addPanelId}>
+      {!onAddClick && <div id={addPanelId} className="px-4 sm:px-5">
         <CollapsibleBody open={isAddOpen}>
           <div className="space-y-3 rounded-control bg-surface-2/70 p-3">
             {addFormTitle && (
               <div className="space-y-0.5">
                 <p className="text-caption font-semibold text-foreground">{addFormTitle}</p>
-                {addFormDescription && <p className="text-xs leading-relaxed text-muted-foreground">{addFormDescription}</p>}
+                {addFormDescription && <p className="text-caption text-muted-foreground">{addFormDescription}</p>}
               </div>
             )}
             {addFormFields}
@@ -181,7 +187,8 @@ export function ManageableNameList<T extends ManageableNameItem>({
                   aria-label={`New ${lowerItemLabel} name`}
                   disabled={disabled}
                   maxLength={40}
-                  className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
+                  controlSize="sm"
+                  className="min-w-0 flex-1"
                 />
                 <Button size="icon" variant="tertiary"
                   type="button"
@@ -189,35 +196,34 @@ export function ManageableNameList<T extends ManageableNameItem>({
                   disabled={!trimmedName || duplicate || Boolean(validationError) || disabled || busyId !== null}
                   aria-label={`Add ${itemLabel}`}
                   aria-busy={busyId === 'new'}
-                  className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground sm:size-9 lg:size-9"
+                  className="shrink-0 rounded-full bg-foreground text-background hover:bg-foreground/90 disabled:bg-surface-3 disabled:text-muted-foreground"
                 >
                   {busyId === 'new' ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
                   <MutationStatusAnnouncement state={busyId === 'new' ? 'saving' : null} entityLabel={lowerItemLabel} />
                 </Button>
               </div>
             </div>
-            {duplicate && <p className="text-xs font-semibold text-destructive">{itemLabel} already exists.</p>}
-            {validationError && <p className="text-xs font-semibold text-destructive">{validationError}</p>}
+            {duplicate && <p className="text-caption font-medium text-destructive">{itemLabel} already exists.</p>}
+            {validationError && <p className="text-caption font-medium text-destructive">{validationError}</p>}
           </div>
         </CollapsibleBody>
       </div>}
 
-      {/* overscroll-contain, not just overflow-y-auto: without it the browser latches the wheel
-          to this container and then pauses before handing the scroll to the page at each end,
-          which reads as the list lagging a beat behind the wheel. Containing it also stops the
-          page moving under the cursor while the list still has room. */}
+      {/* The list grows with the page rather than scrolling inside a box: a nested scroller on a
+          phone traps the thumb, and search already narrows a long list. A consumer that needs a
+          cap passes one through `listClassName`. */}
       <div
-        className={`space-y-1.5 overflow-y-auto overscroll-contain pr-1 ${listClassName ?? 'max-h-72'}`}
+        className={cn('divide-y divide-border/60 border-t border-border/60', listClassName)}
         aria-busy={isLoading}
       >
         {isLoading ? (
-          <div role="status" className="flex min-h-24 items-center justify-center gap-2 text-xs font-semibold text-muted-foreground">
+          <div role="status" className="flex min-h-24 items-center justify-center gap-2 text-caption font-medium text-muted-foreground">
             <Loader2 className="size-4 animate-spin text-accent-ink" />
             Loading…
           </div>
         ) : filtered.length === 0 ? (
           search || !emptyState ? (
-            <p className="py-6 text-center text-xs text-muted-foreground">
+            <p className="px-4 py-6 text-center text-caption text-muted-foreground">
               {search ? `No ${pluralItemLabel} match your search.` : `No ${pluralItemLabel} yet.`}
             </p>
           ) : emptyState
@@ -226,16 +232,16 @@ export function ManageableNameList<T extends ManageableNameItem>({
           return (
             <div
               key={item.id}
-              className={`flex justify-between gap-2 rounded-lg border border-border/50 bg-background px-2.5 py-2 text-xs ${
-                stackActionsOnMobile ? 'flex-col items-stretch sm:flex-row sm:items-center' : 'items-center'
-              } ${
-                typeof itemClassName === 'function' ? itemClassName(item) : itemClassName ?? ''
-              }`}
+              className={cn(
+                'flex min-h-14 justify-between gap-2 py-2 pl-4 pr-2 sm:pl-5 sm:pr-3',
+                stackActionsOnMobile ? 'flex-col items-stretch sm:flex-row sm:items-center' : 'items-center',
+                typeof itemClassName === 'function' ? itemClassName(item) : itemClassName,
+              )}
             >
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                {renderName ? renderName(item) : <span className="truncate font-semibold">{item.name}</span>}
+                {renderName ? renderName(item) : <span className="truncate text-body font-medium text-foreground">{item.name}</span>}
               </div>
-              <div className={`flex shrink-0 items-center gap-2 ${stackActionsOnMobile ? 'self-end sm:self-auto' : ''}`}>
+              <div className={cn('flex shrink-0 items-center gap-1', stackActionsOnMobile && 'self-end sm:self-auto')}>
                 {renderStatus?.(item)}
                 {onEdit && !itemReadOnly && (
                   <Button size="icon" variant="tertiary"
@@ -243,7 +249,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
                     disabled={disabled || busyId !== null}
                     onClick={() => onEdit(item)}
                     aria-label={`Edit ${item.name}`}
-                    className="inline-grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 sm:size-8 lg:size-8"
+                    className="shrink-0 rounded-full text-muted-foreground hover:text-foreground lg:size-8"
                   >
                     <Pencil className="size-3.5" />
                   </Button>
@@ -253,7 +259,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
                     role="img"
                     aria-label={`${item.name} is managed by FinancialApp`}
                     title={`${item.name} is managed by FinancialApp`}
-                    className="inline-grid size-8 shrink-0 place-items-center text-muted-foreground/70"
+                    className="inline-grid size-11 shrink-0 place-items-center text-muted-foreground lg:size-8"
                   >
                     <Lock className="size-3.5" aria-hidden="true" />
                   </span>
@@ -271,7 +277,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
                     }}
                     aria-label={`Delete ${item.name}`}
                     aria-busy={busyId === item.id}
-                    className="inline-grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50 sm:size-8 lg:size-8"
+                    className="shrink-0 rounded-full text-muted-foreground hover:text-destructive lg:size-8"
                   >
                     {busyId === item.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
                     <MutationStatusAnnouncement state={busyId === item.id ? 'deleting' : null} entityLabel={item.name} />

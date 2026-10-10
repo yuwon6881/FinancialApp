@@ -82,6 +82,15 @@ const context: AppContextValue = {
   queueMutation: vi.fn(),
 }
 
+// The hero total is an AmountText (marker, units and cents in separate spans) that ticks to a new
+// value, so it is read as one string from its container and given time to settle.
+const heroTotal = () => screen.queryByTestId('investment-total')?.textContent ?? ''
+const expectHeroTotal = (text: string) =>
+  waitFor(() => expect(heroTotal()).toBe(text), { timeout: 4000 })
+
+const heroFact = (label: string) =>
+  screen.getByText(label).closest('div')?.querySelector('dd')?.textContent ?? ''
+
 const renderView = (props: Partial<ComponentProps<typeof InvestmentsView>> = {}) => render(
   <AppProvider value={context}>
     <InvestmentsView onNavigate={vi.fn()} {...props} />
@@ -152,8 +161,8 @@ describe('InvestmentsView provider call boundaries', () => {
       .mockResolvedValueOnce(afterSync)
 
     renderView()
-    expect(await screen.findByText('$100.00')).toBeTruthy()
-    expect(screen.getByText('$25.00')).toBeTruthy()
+    await expectHeroTotal('$100.00')
+    expect(heroFact('Broker cash')).toBe('$25.00')
 
     let reconciliation: Promise<void> | undefined
     fireEvent(window, new CustomEvent('investment-sync', {
@@ -165,8 +174,8 @@ describe('InvestmentsView provider call boundaries', () => {
 
     await waitFor(() => expect(api.fetchInvestmentPortfolio).toHaveBeenCalledTimes(2))
     await reconciliation
-    expect(await screen.findByText('$160.00')).toBeTruthy()
-    expect(screen.getByText('$85.00')).toBeTruthy()
+    await expectHeroTotal('$160.00')
+    expect(heroFact('Broker cash')).toBe('$85.00')
   })
 
   it('does not let an older chart-range response replace the latest portfolio', async () => {
@@ -191,15 +200,15 @@ describe('InvestmentsView provider call boundaries', () => {
     }))
 
     renderView()
-    expect(await screen.findByText('$100.00')).toBeTruthy()
+    await expectHeroTotal('$100.00')
     fireEvent.click(screen.getByRole('button', { name: '1Y' }))
     resolveLatest(latest)
-    expect(await screen.findByText('$300.00')).toBeTruthy()
+    await expectHeroTotal('$300.00')
 
     resolveInitial(stale)
     await Promise.resolve()
-    expect(screen.queryByText('$200.00')).toBeNull()
-    expect(screen.getByText('$300.00')).toBeTruthy()
+    expect(heroTotal()).not.toBe('$200.00')
+    expect(heroTotal()).toBe('$300.00')
   })
 
   it('lists investments in the portfolio manager', async () => {
@@ -210,7 +219,7 @@ describe('InvestmentsView provider call boundaries', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Manage portfolio/ }))
     fireEvent.click(screen.getByRole('tab', { name: 'Investments (1)' }))
-    expect(screen.getByRole('tabpanel').textContent).toContain('VOO')
+    expect(screen.getByRole('tabpanel', { name: 'Investments (1)' }).textContent).toContain('VOO')
   })
 
   it('debounces explicit searches and starts at three characters', async () => {

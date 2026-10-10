@@ -3,9 +3,7 @@ import type { DashboardData } from '../../types'
 import { useAppPrefs } from '../../contexts/AppContext'
 import { getCategoryChartColor } from '../../lib/categoryColors'
 import { InteractiveDoughnutChart } from '../ui/InteractiveDoughnutChart'
-import { Button } from '../ui/Button'
-import { cn } from '../../lib/utils'
-import { panelClass } from '../ui/panelStyles'
+import { ReportSegmented } from '../reports/ReportSegmented'
 
 type ChartRange = 'monthly' | '3month' | '6month' | 'yearly'
 
@@ -15,6 +13,18 @@ interface DoughnutChartProps {
   onNavigateToLedger?: (options: { category?: string | null; range?: ChartRange }) => void
 }
 
+const RANGE_OPTIONS = [
+  { value: 'monthly', label: '1M', ariaLabel: 'Selected cycle' },
+  { value: '3month', label: '3M', ariaLabel: 'Last 3 months' },
+  { value: '6month', label: '6M', ariaLabel: 'Last 6 months' },
+  { value: 'yearly', label: 'Year', ariaLabel: 'Full year' },
+] as const
+
+/**
+ * Outflow by category: the ring and its legend side by side once the block has room, stacked on a
+ * phone. Drawn without a surface of its own -- it is one half of the report's "Where it went"
+ * panel, beside the category limits.
+ */
 export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger }: DoughnutChartProps) {
   const prefs = useAppPrefs()
   const { formatSensitive } = prefs
@@ -53,58 +63,40 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
     : total > 0
     ? `Expense breakdown for ${rangeLabel}. Total ${formatSensitive(total)} across ${slices.length} categor${slices.length === 1 ? 'y' : 'ies'}. Largest: ${largest?.category} at ${largest ? (largest.amount / total * 100).toFixed(0) : 0}%.`
     : `Expense breakdown for ${rangeLabel}. No outflows logged.`
+  const shareCaption = chartView === 'monthly' ? 'Selected cycle outflow share'
+    : chartView === '3month' ? 'Last 3 cycles outflow share'
+      : chartView === '6month' ? 'Last 6 cycles outflow share'
+        : `Full ${selectedYear} outflow share`
 
   return (
-    <div className={cn(panelClass, 'flex min-w-0 flex-col justify-between p-4 sm:p-6')}>
-      <div>
-        <div className="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-2">
-          <div>
-            <h3 className="text-section text-foreground">Outflow Categories</h3>
-          </div>
-          <div role="group" aria-label="Breakdown range" className="grid w-full grid-cols-4 items-center rounded-control bg-surface-2/70 p-0.5 text-xs sm:flex sm:w-auto sm:shrink-0">
-            {(['monthly', '3month', '6month', 'yearly'] as const).map(view => (
-              <Button variant="tertiary"
-                key={view}
-                type="button"
-                onClick={() => setChartView(view)}
-                aria-pressed={chartView === view}
-                aria-label={view === 'monthly' ? 'Selected cycle' : view === '3month' ? 'Last 3 months' : view === '6month' ? 'Last 6 months' : 'Full year'}
-                className={`inline-flex min-h-11 min-w-0 items-center justify-center rounded-md px-2.5 py-1 font-semibold transition cursor-pointer sm:min-h-8 ${
-                  chartView === view ? 'bg-background hover:bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {view === 'monthly' ? '1M' : view === '3month' ? '3M' : view === '6month' ? '6M' : 'Year'}
-              </Button>
-            ))}
-          </div>
+    <div className="@container min-w-0">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+        <div className="min-w-0">
+          <h3 id="report-outflow-heading" className="text-subsection text-foreground">Outflow categories</h3>
+          <p className="mt-0.5 text-caption text-muted-foreground">{shareCaption}</p>
         </div>
+        <ReportSegmented label="Breakdown range" value={chartView} onChange={setChartView} options={RANGE_OPTIONS} />
+      </div>
 
-        {total > 0 ? (
-          <div className="mt-2 flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
-            <InteractiveDoughnutChart
-              slices={slices}
-              ariaLabel={chartSummary}
-              centerLabel="Total"
-              centerValue={formatSensitive(total)}
-              formatValue={formatSensitive}
-              masked={hideSensitive}
-              chartClassName="mx-auto size-52 sm:mx-0 sm:size-44 2xl:size-52"
-              legendClassName="grid max-h-40 w-full min-w-0 grid-cols-1 content-start gap-y-1 overflow-y-auto pr-0.5 no-scrollbar"
-              onActivate={slice => onNavigateToLedger?.({ category: slice.label, range: chartView })}
-            />
-          </div>
-        ) : (
-          <div className="h-52 flex flex-col items-center justify-center text-center p-4">
-            <span className="text-xs text-muted-foreground">No outflows logged.</span>
-          </div>
-        )}
-      </div>
-      <div className="border-t border-border/50 pt-3 mt-3 text-xs text-muted-foreground text-center">
-        {chartView === 'monthly' ? 'Selected Cycle Outflow Share'
-          : chartView === '3month' ? 'Last 3 Cycles Outflow Share'
-            : chartView === '6month' ? 'Last 6 Cycles Outflow Share'
-              : `Full ${selectedYear} Outflow Share`}
-      </div>
+      {total > 0 ? (
+        <div className="mt-5 flex min-w-0 flex-col items-center gap-5 @sm:flex-row @sm:items-center @sm:gap-5">
+          <InteractiveDoughnutChart
+            slices={slices}
+            ariaLabel={chartSummary}
+            centerLabel="Total"
+            centerValue={formatSensitive(total)}
+            formatValue={formatSensitive}
+            masked={hideSensitive}
+            chartClassName="size-48 @sm:size-44 @2xl:size-48"
+            legendClassName="grid max-h-56 w-full min-w-0 flex-1 @sm:max-w-sm content-start gap-y-0.5 overflow-y-auto no-scrollbar [&>button]:min-h-11 lg:[&>button]:min-h-9"
+            onActivate={slice => onNavigateToLedger?.({ category: slice.label, range: chartView })}
+          />
+        </div>
+      ) : (
+        <div className="mt-4 flex h-40 items-center justify-center rounded-control bg-surface-2/70 p-4 text-center">
+          <span className="text-caption text-muted-foreground">No outflows logged.</span>
+        </div>
+      )}
     </div>
   )
 }

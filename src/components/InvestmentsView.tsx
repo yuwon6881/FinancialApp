@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   ArrowLeft,
+  AlertCircle,
   CloudOff,
+  Info,
   RefreshCw,
   Sparkles,
 } from 'lucide-react'
@@ -35,6 +37,7 @@ import type { InvestmentActivityScanResult } from '../lib/api'
 import { SummaryCards } from './investments/SummaryCards'
 import { AccountsAndInstruments } from './investments/AccountsAndInstruments'
 import { ActionToolbar, EmptyState } from './investments/InvestmentToolbars'
+import { ChevronDown } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { PANEL_TONES, panelClass } from './ui/panelStyles'
 
@@ -203,7 +206,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   }
 
   return (
-    <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
+    <div className="@container min-w-0 max-w-full space-y-6 overflow-x-clip">
       <PageHeader
         leading={<Button
           variant="tertiary"
@@ -218,9 +221,9 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
             {isBackgroundRefreshing && (
               <span
                 role="status"
-                className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-xs font-medium text-purple-500 dark:text-purple-300"
+                className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-0.5 text-caption font-medium text-muted-foreground dark:bg-surface-3"
               >
-                <RefreshCw className="size-3 animate-spin text-purple-500 dark:text-purple-300" />
+                <RefreshCw className="size-3 animate-spin" aria-hidden="true" />
                 <span>Updating prices…</span>
               </span>
             )}</span>}
@@ -258,14 +261,15 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
       )}
 
       {(isOffline || loadError) && (
-        <div role="status" className="flex items-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
+        <div role="status" className="flex items-center gap-2 rounded-control bg-amber-500/10 px-4 py-3 text-caption text-amber-700 dark:text-amber-300">
           <CloudOff className="size-4 shrink-0" />
           {isOffline ? 'Offline: showing saved data. Edits queue; prices cannot refresh.' : loadError}
         </div>
       )}
 
       {!portfolio?.marketDataConfigured && (
-        <div className="rounded-xl border border-primary/20 bg-primary/7 px-4 py-3 text-xs text-muted-foreground">
+        <div className="flex items-start gap-2 rounded-control bg-surface-2/70 px-4 py-3 text-caption text-muted-foreground">
+          <Info className="mt-px size-4 shrink-0" aria-hidden="true" />
           Live prices are unavailable. You can still record activity; values update when market data is configured.
         </div>
       )}
@@ -314,17 +318,20 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
         />
       ) : (
         <>
-          <SummaryCards portfolio={portfolio} masked={passiveMask} />
-          <ActionToolbar
-            portfolio={setupPortfolio ?? portfolio}
-            isOffline={isOffline}
-            refreshing={refreshing}
-            mutationsDisabled={hideSensitive}
-            onAddActivity={() => openPanel('activity')}
-            onManageCash={() => openPanel('cash')}
-            onAddAccount={() => openPanel('account')}
-            onAddInvestment={() => openPanel('instrument')}
-            onUpdatePrices={() => void updatePrices()}
+          <SummaryCards
+            portfolio={portfolio}
+            masked={passiveMask}
+            actions={<ActionToolbar
+              portfolio={setupPortfolio ?? portfolio}
+              isOffline={isOffline}
+              refreshing={refreshing}
+              mutationsDisabled={hideSensitive}
+              onAddActivity={() => openPanel('activity')}
+              onManageCash={() => openPanel('cash')}
+              onAddAccount={() => openPanel('account')}
+              onAddInvestment={() => openPanel('instrument')}
+              onUpdatePrices={() => void updatePrices()}
+            />}
           />
           <InvestmentPlanPanel
             allocation={portfolio.allocation}
@@ -334,77 +341,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
             masked={passiveMask}
             onNavigate={onNavigate}
           />
-          <AccountsAndInstruments
-            portfolio={setupPortfolio ?? portfolio}
-            mutationsDisabled={hideSensitive}
-            onArchiveAccount={id => {
-              const account = portfolio.accounts.find(a => a.id === id)
-              if (account) queueInvestment('investmentAccount', 'update', id, { name: account.name, baseCurrency: account.baseCurrency, isArchived: true, undoSnapshot: account })
-            }}
-            onUnarchiveAccount={(id, name, currency) => {
-              const account = setupPortfolio?.accounts.find(value => value.id === id)
-              return queueInvestment('investmentAccount', 'update', id, {
-                name,
-                baseCurrency: currency,
-                isArchived: false,
-                undoSnapshot: account,
-              })
-            }}
-            onDeleteAccount={id => {
-              const account = portfolio.accounts.find(a => a.id === id)
-              confirm({
-                title: 'Delete investment account?',
-                message: 'Only accounts without activity can be deleted.',
-                confirmText: 'Delete',
-                onConfirm: () => { queueInvestment('investmentAccount', 'delete', id, { undoSnapshot: account }) },
-              })
-            }}
-            onDeleteInstrument={id => {
-              const instrument = portfolio.instruments.find(i => i.id === id)
-              confirm({
-                title: 'Delete investment?',
-                message: 'Only investments without activity can be deleted.',
-                confirmText: 'Delete',
-                onConfirm: () => { queueInvestment('investmentInstrument', 'delete', id, { undoSnapshot: instrument }) },
-              })
-            }}
-            onArchiveInstrument={id => {
-              const instrument = portfolio.instruments.find(value => value.id === id)
-              if (instrument) queueInvestment('investmentInstrument', 'update', id, {
-                ...instrument,
-                isArchived: true,
-                undoSnapshot: instrument,
-              })
-            }}
-            onUnarchiveInstrument={id => {
-              const instrument = portfolio.instruments.find(value => value.id === id)
-              if (instrument) queueInvestment('investmentInstrument', 'update', id, {
-                ...instrument,
-                isArchived: false,
-                undoSnapshot: instrument,
-              })
-            }}
-            activeSyncIds={activeSyncIds.length > 0 ? activeSyncIds : activeSyncId ? [activeSyncId] : []}
-          />
-          {portfolio.warnings.length > 0 && (
-            <details className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
-              <summary id="calculation-warnings" className="cursor-pointer text-sm font-semibold text-foreground">Why some figures are missing</summary>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-                {portfolio.warnings.map(warning => <li key={warning}>{warning}</li>)}
-              </ul>
-            </details>
-          )}
-          <div className="grid gap-6 grid-cols-1 2xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-            <ValueChart portfolio={portfolio} masked={passiveMask} range={range} isFetching={loading} onRangeChange={setRange} />
-            <AllocationChart portfolio={portfolio} masked={passiveMask} selected={allocationFilter} onSelect={setAllocationFilter} />
-          </div>
-          <InvestmentForecastPanel
-            key={`${portfolio.summary.totalValue ?? 'incomplete'}-${portfolio.allocation.plan.updatedAt ?? 'default'}-${portfolio.allocation.contributionPlan?.amount ?? 0}-${portfolio.allocation.contributionPlan?.routineContribution ?? 'unknown'}-${portfolio.allocation.contributionPlan?.isEstimated ?? false}`}
+          <HoldingsTable
             portfolio={portfolio}
             masked={passiveMask}
+            filter={allocationFilter}
+            onClearFilter={() => setAllocationFilter(null)}
+            onSelectHolding={holding => setDetailHoldingKey({ accountId: holding.accountId, instrumentId: holding.instrumentId })}
           />
-          <PerformanceBars portfolio={portfolio} masked={passiveMask} onSelectHolding={holding => setDetailHoldingKey({ accountId: holding.accountId, instrumentId: holding.instrumentId })} />
-          <HoldingsTable portfolio={portfolio} masked={passiveMask} filter={allocationFilter} onSelectHolding={holding => setDetailHoldingKey({ accountId: holding.accountId, instrumentId: holding.instrumentId })} />
           <HoldingDetailSheet
             holding={detailHolding}
             appCurrency={portfolio.appCurrency}
@@ -412,6 +355,92 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
             portfolioUpdatedAt={portfolio.pricesUpdatedAt}
             onClose={() => setDetailHoldingKey(null)}
           />
+          <div className="grid grid-cols-1 gap-6 @5xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+            <ValueChart portfolio={portfolio} masked={passiveMask} range={range} isFetching={loading} onRangeChange={setRange} />
+            <AllocationChart portfolio={portfolio} masked={passiveMask} selected={allocationFilter} onSelect={setAllocationFilter} />
+          </div>
+          <div className="grid grid-cols-1 items-start gap-6 @5xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+            <PerformanceBars portfolio={portfolio} masked={passiveMask} onSelectHolding={holding => setDetailHoldingKey({ accountId: holding.accountId, instrumentId: holding.instrumentId })} />
+            <section aria-label="Portfolio tools" className={cn(panelClass, 'divide-y divide-border/60 overflow-hidden')}>
+              <InvestmentForecastPanel
+                key={`${portfolio.summary.totalValue ?? 'incomplete'}-${portfolio.allocation.plan.updatedAt ?? 'default'}-${portfolio.allocation.contributionPlan?.amount ?? 0}-${portfolio.allocation.contributionPlan?.routineContribution ?? 'unknown'}-${portfolio.allocation.contributionPlan?.isEstimated ?? false}`}
+                portfolio={portfolio}
+                masked={passiveMask}
+              />
+              <AccountsAndInstruments
+                portfolio={setupPortfolio ?? portfolio}
+                mutationsDisabled={hideSensitive}
+                onArchiveAccount={id => {
+                  const account = portfolio.accounts.find(a => a.id === id)
+                  if (account) queueInvestment('investmentAccount', 'update', id, { name: account.name, baseCurrency: account.baseCurrency, isArchived: true, undoSnapshot: account })
+                }}
+                onUnarchiveAccount={(id, name, currency) => {
+                  const account = setupPortfolio?.accounts.find(value => value.id === id)
+                  return queueInvestment('investmentAccount', 'update', id, {
+                    name,
+                    baseCurrency: currency,
+                    isArchived: false,
+                    undoSnapshot: account,
+                  })
+                }}
+                onDeleteAccount={id => {
+                  const account = portfolio.accounts.find(a => a.id === id)
+                  confirm({
+                    title: 'Delete investment account?',
+                    message: 'Only accounts without activity can be deleted.',
+                    confirmText: 'Delete',
+                    onConfirm: () => { queueInvestment('investmentAccount', 'delete', id, { undoSnapshot: account }) },
+                  })
+                }}
+                onDeleteInstrument={id => {
+                  const instrument = portfolio.instruments.find(i => i.id === id)
+                  confirm({
+                    title: 'Delete investment?',
+                    message: 'Only investments without activity can be deleted.',
+                    confirmText: 'Delete',
+                    onConfirm: () => { queueInvestment('investmentInstrument', 'delete', id, { undoSnapshot: instrument }) },
+                  })
+                }}
+                onArchiveInstrument={id => {
+                  const instrument = portfolio.instruments.find(value => value.id === id)
+                  if (instrument) queueInvestment('investmentInstrument', 'update', id, {
+                    ...instrument,
+                    isArchived: true,
+                    undoSnapshot: instrument,
+                  })
+                }}
+                onUnarchiveInstrument={id => {
+                  const instrument = portfolio.instruments.find(value => value.id === id)
+                  if (instrument) queueInvestment('investmentInstrument', 'update', id, {
+                    ...instrument,
+                    isArchived: false,
+                    undoSnapshot: instrument,
+                  })
+                }}
+                activeSyncIds={activeSyncIds.length > 0 ? activeSyncIds : activeSyncId ? [activeSyncId] : []}
+              />
+              {portfolio.warnings.length > 0 && (
+                <details className="group">
+                  <summary id="calculation-warnings" className="flex min-h-16 cursor-pointer select-none items-center gap-3 px-5 py-3 outline-none transition-colors hover:bg-surface-2/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50 sm:px-6">
+                    <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-amber-500/12 text-amber-700 dark:text-amber-300"><AlertCircle className="size-4" /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-body font-medium text-foreground">Why some figures are missing</span>
+                      <span className="block text-caption text-muted-foreground">{portfolio.warnings.length} note{portfolio.warnings.length === 1 ? '' : 's'} from the last calculation</span>
+                    </span>
+                    <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180" aria-hidden="true" />
+                  </summary>
+                  <ul className="space-y-1.5 px-5 pb-4 sm:px-6">
+                    {portfolio.warnings.map(warning => (
+                      <li key={warning} className="flex items-start gap-2 text-caption text-muted-foreground">
+                        <span aria-hidden="true" className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground" />
+                        <span className="min-w-0">{warning}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </section>
+          </div>
           <PagedActivityTable
             portfolio={setupPortfolio ?? portfolio}
             masked={passiveMask}

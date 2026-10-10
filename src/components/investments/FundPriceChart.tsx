@@ -18,7 +18,7 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
 
   if (prices.length < 2) {
     return (
-      <p className="rounded-control bg-surface-2/70 p-4 text-xs text-muted-foreground">
+      <p className="rounded-control bg-surface-2/70 p-4 text-caption text-muted-foreground">
         Not enough price history yet.
       </p>
     )
@@ -43,16 +43,16 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
     <section aria-labelledby="fund-price-title">
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h3 id="fund-price-title" className="text-caption font-semibold text-foreground">Price history</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <h3 id="fund-price-title" className="text-label font-medium text-foreground">Price history</h3>
+          <p className="mt-0.5 text-caption text-muted-foreground">
             One unit, in {history.currency}.
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <strong className={`block text-sm ${rising ? 'text-emerald-500' : 'text-orange-500'}`}>
+          <strong className={`block text-body font-semibold tabular-nums ${rising ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
             {masked ? '••••' : `${rising ? '+' : '−'}${money(Math.abs(change))}`}
           </strong>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-caption text-muted-foreground">
             {changePercent === undefined ? 'over this period' : masked ? 'Change hidden over this period' : `${rising ? '+' : ''}${changePercent.toFixed(1)}% over this period`}
           </span>
         </div>
@@ -62,9 +62,9 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
           question most people are asking — they want the price against what they
           themselves paid. Both are shown so neither is mistaken for the other. */}
       {paidComparison !== undefined && (
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-2 text-caption text-muted-foreground">
           The latest price is{' '}
-          <b className={paidComparison >= 0 ? 'text-emerald-500 tabular-nums' : 'text-orange-500 tabular-nums'}>
+          <b className={paidComparison >= 0 ? 'text-emerald-600 dark:text-emerald-400 tabular-nums' : 'text-red-600 dark:text-red-400 tabular-nums'}>
             {masked ? '••••' : `${money(Math.abs(paidComparison))} ${paidComparison >= 0 ? 'above' : 'below'}`}
           </b>{' '}
           what you paid on average.
@@ -94,7 +94,7 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
-            vectorEffect="nonScalingStroke"
+            vectorEffect="non-scaling-stroke"
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
@@ -108,13 +108,13 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
               stroke="var(--ledger-pending-500)"
               strokeWidth="2"
               strokeDasharray="7 6"
-              vectorEffect="nonScalingStroke"
+              vectorEffect="non-scaling-stroke"
             />
           )}
         </svg>
       </ResponsiveChartFrame>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-medium text-muted-foreground">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-caption font-medium text-muted-foreground">
         <span className="flex items-center gap-1.5"><i className="inline-block size-2 rounded-full bg-violet-500 ring-1 ring-background" /> Price</span>
         {history.averageCostNative !== undefined && (
           <span className="flex items-center gap-1.5"><i className="inline-block w-4 border-t-2 border-dashed border-amber-500 align-middle" /> What you paid on average</span>

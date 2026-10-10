@@ -85,8 +85,8 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
   }
 
   return (
-    <section aria-labelledby="allocation-title" className={cn(panelClass, 'flex min-w-0 flex-col p-5')}>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <section aria-labelledby="allocation-title" className={cn(panelClass, '@container flex min-w-0 flex-col p-5 sm:p-6')}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0"><h2 id="allocation-title" className="text-section text-foreground">Where your money sits</h2></div>
         <div className="w-full shrink-0 sm:w-auto">
           <CustomSelect
@@ -99,8 +99,8 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
           />
         </div>
       </div>
-      <div className="mt-5 flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden sm:flex-row 2xl:flex-col 2xl:justify-start">
-        {groups.length > 0 ? (
+      <div className="mt-4 flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden @xl:flex-row">
+        {groups.length > 0 && total > 0 ? (
           <InteractiveDoughnutChart
             key={mode}
             slices={slices}
@@ -111,14 +111,14 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
             masked={masked}
             selectedKey={selectedLabel}
             onActivate={slice => selectSlice(slice.label)}
-            chartClassName="mx-auto aspect-square w-full max-w-52 sm:mx-0 sm:w-48 2xl:mx-auto 2xl:w-56 2xl:max-w-56"
+            chartClassName="mx-auto aspect-square w-full max-w-48 @xl:mx-0 @xl:w-44"
             // Scrolls rather than clips. "Individual fund" mode lists one row per holding, and
             // under overflow-hidden the rows past the panel's height were unreachable, so the
             // shared arc-hover reveal had nowhere to scroll either. Matches the outflow legend's
             // bounded, scrollbar-less box.
-            legendClassName="w-full min-w-0 flex-1 max-h-56 space-y-1 overflow-y-auto no-scrollbar 2xl:max-h-64 2xl:flex-none"
+            legendClassName="w-full min-w-0 flex-1 max-h-56 space-y-1 overflow-y-auto no-scrollbar"
           />
-        ) : <p className="text-xs text-muted-foreground">Add prices to see what you hold.</p>}
+        ) : <p className="w-full rounded-control bg-surface-2/70 px-4 py-6 text-center text-label text-muted-foreground">Add prices to see what you hold.</p>}
       </div>
       {/* The slice's contents are listed here rather than only filtering the table
           further down the page: that table is off-screen on a phone, so a click
@@ -137,14 +137,14 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
             </Button>
           </div>
           {selectedHoldings.length === 0 ? (
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="mt-2 text-caption text-muted-foreground">
               This slice is cash rather than funds, so there is nothing to list.
             </p>
           ) : (
             <>
               <ul className="mt-2 space-y-1.5">
                 {selectedHoldings.map(holding => (
-                  <li key={`${holding.accountId}-${holding.instrumentId}`} className="flex items-baseline justify-between gap-3 text-xs">
+                  <li key={`${holding.accountId}-${holding.instrumentId}`} className="flex items-baseline justify-between gap-3 text-caption">
                     <span className="min-w-0 truncate">
                       <b className="text-foreground">{holding.symbol}</b>
                       <span className="text-muted-foreground"> · {holding.accountName}</span>
@@ -155,7 +155,7 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-caption text-muted-foreground">
                 The holdings table below is showing only these.
               </p>
             </>

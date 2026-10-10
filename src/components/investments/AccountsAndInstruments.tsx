@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { FolderCog } from 'lucide-react'
 import type { InvestmentPortfolio } from '../../types'
 import { PortfolioManagementRow } from './PortfolioManagementRow'
 import { FormField } from '../ui/FormField'
 import { Input } from '../ui/Input'
 import { BottomSheet } from '../ui/BottomSheet'
-import { InteractiveCard } from '../ui/InteractiveCard'
+import { InvestmentToolRow } from './InvestmentToolRow'
 import { Tabs } from '../ui/Tabs'
-import { Badge } from '../ui/Badge'
 
 export interface AccountsAndInstrumentsProps {
   portfolio: InvestmentPortfolio
@@ -44,21 +43,14 @@ export const AccountsAndInstruments: React.FC<AccountsAndInstrumentsProps> = ({
 
   return (
     <>
-      <InteractiveCard
+      <InvestmentToolRow
+        icon={<FolderCog className="size-4" />}
+        title="Manage portfolio"
+        subtitle={`${portfolio.accounts.length} account${portfolio.accounts.length === 1 ? '' : 's'} · ${portfolio.instruments.length} investment${portfolio.instruments.length === 1 ? '' : 's'}`}
         onClick={() => setOpen(true)}
         disabled={mutationsDisabled}
-        aria-expanded={open}
-        className="interactive-card group flex w-full cursor-pointer items-center justify-between p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      >
-        <span className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
-          <strong className="text-sm text-foreground">Manage portfolio</strong>
-          <span className="mt-2 flex flex-wrap items-center gap-2 sm:mt-0">
-            <Badge tone="info">{portfolio.accounts.length} account{portfolio.accounts.length === 1 ? '' : 's'}</Badge>
-            <Badge tone="accent">{portfolio.instruments.length} investment{portfolio.instruments.length === 1 ? '' : 's'}</Badge>
-          </span>
-        </span>
-        <ChevronDown className="size-4 -rotate-90 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-foreground" />
-      </InteractiveCard>
+        expanded={open}
+      />
       <BottomSheet isOpen={open} onClose={() => setOpen(false)} title="Manage portfolio" maxWidthClassName="max-w-2xl">
         <div className="space-y-4">
           <Tabs

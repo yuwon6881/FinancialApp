@@ -45,7 +45,7 @@ export function ForecastControls({
         <RangeInput aria-label="Hypothetical monthly contribution" min={0} max={contributionMax} step={contributionStep} value={Math.min(monthlyContribution, contributionMax)} disabled={masked} onChange={event => onMonthlyContributionChange(Number(event.target.value))} />
       </FormField>
       {years > 30 && (
-        <p className="rounded-control bg-surface-2/70 p-3 text-xs leading-relaxed text-muted-foreground">Years 31–50 use a less certain part of the model.</p>
+        <p className="text-caption leading-relaxed text-muted-foreground">Years 31–50 use a less certain part of the model.</p>
       )}
 
       <div className="space-y-3 border-t border-border/50 pt-4">
