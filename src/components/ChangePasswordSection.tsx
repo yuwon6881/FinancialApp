@@ -1,16 +1,15 @@
 import { Input } from './ui/Input'
 import React, { useState } from 'react'
-import { KeyRound, ChevronDown, ChevronUp } from 'lucide-react'
+import { KeyRound } from 'lucide-react'
 import * as api from '../lib/api'
 import type { ToastTone } from './ui/ToastViewport'
-import { CollapsibleBody } from './ui/CollapsibleBody'
+import { DisclosurePanel } from './ui/DisclosurePanel'
 import { getErrorMessage } from '../lib/errors'
 import { buildMutationSuccessToast } from '../lib/mutationToast'
 import { Button } from './ui/Button'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
 import { getNewPasswordError } from '../lib/passwordPolicy'
-import { Panel } from './ui/Panel'
 
 interface ChangePasswordSectionProps {
   hideSensitive: boolean
@@ -70,23 +69,12 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
   }
 
   return (
-    <Panel as="section" padding="none" className="overflow-hidden shadow-sm">
-      <Button
-        variant="tertiary"
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open}
-        className="w-full flex items-center gap-2.5 p-5 justify-start text-left cursor-pointer"
-      >
-        <KeyRound className="size-5 text-accent-ink shrink-0" />
-        <div className="flex-1 min-w-0">
-          <h3 className="text-subsection text-foreground">Change Password</h3>
-        </div>
-        {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
-      </Button>
-
-      <CollapsibleBody open={open}>
-      <div className="px-5 pb-5 border-t border-border/40 pt-4">
+    <DisclosurePanel
+      open={open}
+      onToggle={() => setOpen(o => !o)}
+      icon={<KeyRound className="text-accent-ink" />}
+      title="Change Password"
+    >
       <form noValidate onSubmit={handleSubmit} className="space-y-2.5">
         <FormField label="Current password" error={errors.currentPassword} required>
           <Input
@@ -118,13 +106,11 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
         <Button
           type="submit"
           disabled={busy || hideSensitive || !currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()}
-          className="press-scale w-full rounded-xl py-2.5"
+          className="w-full"
         >
           {busy ? 'Updating…' : 'Change password'}
         </Button>
       </form>
-      </div>
-      </CollapsibleBody>
-    </Panel>
+    </DisclosurePanel>
   )
 }

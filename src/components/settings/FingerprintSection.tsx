@@ -1,4 +1,4 @@
-import { CheckCircle2, KeyRound, Loader2, ShieldCheck, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { CheckCircle2, KeyRound, Loader2, ShieldCheck, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import * as api from '../../lib/api'
@@ -17,10 +17,9 @@ import {
   rememberDeviceUnlockCredential,
 } from '../../lib/deviceUnlockRegistration'
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
-import { CollapsibleBody } from '../ui/CollapsibleBody'
+import { DisclosurePanel } from '../ui/DisclosurePanel'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
-import { Panel } from '../ui/Panel'
 import { MutationButtonContent, MutationStatusAnnouncement } from '../ui/MutationButtonContent'
 
 export function FingerprintSection() {
@@ -77,7 +76,7 @@ export function FingerprintSection() {
     : credentialsError
       ? { label: 'Unavailable', className: 'text-destructive' }
     : enrolledHere
-      ? { label: 'Enabled here', className: 'text-emerald-500' }
+      ? { label: 'Enabled here', className: 'text-emerald-600 dark:text-emerald-400' }
       : enabledOnAccount
         ? { label: 'Available', className: 'text-accent-ink' }
         : { label: 'Not enabled', className: 'text-muted-foreground' }
@@ -170,135 +169,123 @@ export function FingerprintSection() {
   }
 
   return (
-    <Panel as="section" padding="none" className="overflow-hidden shadow-sm animate-in fade-in duration-200">
-      <Button variant="tertiary"
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open}
-        className="w-full flex items-center gap-2.5 p-5 justify-start text-left cursor-pointer"
-      >
-        <ShieldCheck className="size-5 text-emerald-500 shrink-0" />
-        <div className="flex-1 min-w-0">
-          <h3 className="text-subsection text-foreground">Device Unlock</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={`text-xs font-medium ${status.className}`}>{status.label}</span>
-          {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
-        </div>
-      </Button>
-
-      <CollapsibleBody open={open}>
-        <div className="px-5 pb-5 pt-0 space-y-4 border-t border-border/40">
-          <div className="rounded-control bg-surface-2/70 p-4 sm:p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-accent-ink">
-                  <KeyRound className="size-3.5" />
-                </span>
-                <span className="text-xs font-semibold text-foreground">Device Authentication</span>
-              </div>
-              {needsLocalSetup && !enrolledHere && (
-                <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-                  Confirm with your fingerprint, face, PIN, or screen lock to use this account’s device credential here.
-                </p>
-              )}
-              {capability === 'checking' && (
-                <p className="mt-1 text-xs text-muted-foreground">Checking whether this device can add a credential…</p>
-              )}
-              {capability === 'unsupported' && (
-                <p className="mt-1 text-xs text-muted-foreground">This device cannot add a local biometric or screen-lock credential. You can still manage credentials already registered to the account.</p>
-              )}
-            </div>
-            <div className="flex w-full shrink-0 items-center justify-center gap-2 sm:w-auto sm:justify-end">
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                disabled={busy || hideSensitive || capability !== 'supported'}
-                onClick={enroll}
-                className="w-full justify-center sm:w-auto shrink-0 shadow-sm"
-              >
-                <MutationButtonContent
-                  state={busy ? 'saving' : null}
-                  entityLabel="device credential"
-                  idleLabel={enrolledHere ? 'Add another credential' : enabledOnAccount ? 'Set up this device' : 'Enable on this device'}
-                  busyLabel="Setting up…"
-                  idleIcon={<ShieldCheck className="size-3.5" />}
-                />
-              </Button>
-            </div>
+    <DisclosurePanel
+      open={open}
+      onToggle={() => setOpen(o => !o)}
+      icon={<ShieldCheck className="text-emerald-500" />}
+      title="Device Unlock"
+      status={<span className={status.className}>{status.label}</span>}
+    >
+      <div className="@container rounded-control bg-surface-2/70 p-4">
+        <div className="flex flex-col gap-4 @md:flex-row @md:items-center @md:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-accent-ink">
+              <KeyRound className="size-3.5" />
+            </span>
+            <span className="text-label text-foreground">Device Authentication</span>
           </div>
-
-          {credentialsError && (
-            <div role="alert" className="flex flex-col gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive sm:flex-row sm:items-center sm:justify-between">
-              <span>{credentialsError}</span>
-              <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={!credentialsLoaded}>
-                Retry
-              </Button>
-            </div>
+          {needsLocalSetup && !enrolledHere && (
+            <p className="mt-2 text-caption text-muted-foreground">
+              Confirm with your fingerprint, face, PIN, or screen lock to use this account’s device credential here.
+            </p>
           )}
+          {capability === 'checking' && (
+            <p className="mt-2 text-caption text-muted-foreground">Checking whether this device can add a credential…</p>
+          )}
+          {capability === 'unsupported' && (
+            <p className="mt-2 text-caption text-muted-foreground">This device cannot add a local biometric or screen-lock credential. You can still manage credentials already registered to the account.</p>
+          )}
+        </div>
+        <div className="flex w-full shrink-0 @md:w-auto">
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            disabled={busy || hideSensitive || capability !== 'supported'}
+            onClick={enroll}
+            className="w-full shrink-0 @md:w-auto"
+          >
+            <MutationButtonContent
+              state={busy ? 'saving' : null}
+              entityLabel="device credential"
+              idleLabel={enrolledHere ? 'Add another credential' : enabledOnAccount ? 'Set up this device' : 'Enable on this device'}
+              busyLabel="Setting up…"
+              idleIcon={<ShieldCheck className="size-3.5" />}
+            />
+          </Button>
+        </div>
+        </div>
+      </div>
 
-          {credentials.length > 0 && (
-            <div className="space-y-2 pt-2 border-t border-border/40">
-              <span className="text-label font-medium text-muted-foreground">
-                Registered Credentials ({credentials.length})
-              </span>
-              <div className="space-y-1.5">
-                {credentials.map(c => {
-                  const isRemoving = removingCredentialId === c.id
-                  const isCurrent = getDeviceUnlockRegistrationMarker(username) === c.id.toUpperCase()
-                  return (
-                    <div
-                      key={c.id}
-                      aria-busy={isRemoving}
-                      className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-border/50 bg-background/50 text-xs"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        {isCurrent ? (
-                          <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-                        ) : (
-                          <KeyRound className="size-4 text-muted-foreground shrink-0" />
+      {credentialsError && (
+        <div role="alert" className="flex flex-col gap-2 rounded-control bg-destructive/8 px-4 py-3 text-caption text-red-600 dark:text-red-400 sm:flex-row sm:items-center sm:justify-between">
+          <span>{credentialsError}</span>
+          <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={!credentialsLoaded}>
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {credentials.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-label text-muted-foreground">
+            Registered credentials ({credentials.length})
+          </h4>
+          <div className="space-y-1.5">
+            {credentials.map(c => {
+              const isRemoving = removingCredentialId === c.id
+              const isCurrent = getDeviceUnlockRegistrationMarker(username) === c.id.toUpperCase()
+              return (
+                <div
+                  key={c.id}
+                  aria-busy={isRemoving}
+                  className="flex items-center justify-between gap-3 rounded-control bg-surface-2/70 py-2 pl-4 pr-2 text-caption"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {isCurrent ? (
+                      <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                    ) : (
+                      <KeyRound className="size-4 text-muted-foreground shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 items-center gap-1.5 truncate text-label text-foreground">
+                        <span>{c.deviceLabel || 'Unnamed credential'}</span>
+                        {isCurrent && (
+                          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-micro text-emerald-700 dark:text-emerald-300">
+                            This device
+                          </span>
                         )}
-                        <div className="min-w-0">
-                          <div className="font-medium text-foreground truncate flex items-center gap-1.5">
-                            <span>{c.deviceLabel || 'Unnamed credential'}</span>
-                            {isCurrent && (
-                              <span className="text-xs bg-emerald-500/10 text-emerald-500 font-semibold px-1.5 py-0.5 rounded-full">
-                                This device
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <span>Added {new Date(c.createdAt).toLocaleDateString()}</span>
-                          </div>
-                        </div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        <IconButton
-                          type="button"
-                          disabled={busy || removingCredentialId !== null || hideSensitive}
-                          onClick={() => remove(c.id)}
-                          className="size-11 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 sm:size-8"
-                          tooltip={`Remove ${c.deviceLabel || 'credential'}`}
-                          label={`Remove ${c.deviceLabel || 'credential'}`}
-                          aria-busy={isRemoving}
-                        >
-                          {isRemoving ? (
-                            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                          ) : (
-                            <Trash2 className="size-3.5" />
-                          )}
-                          <MutationStatusAnnouncement state={isRemoving ? 'deleting' : null} entityLabel={c.deviceLabel || 'credential'} />
-                        </IconButton>
+                      <div className="mt-0.5 flex items-center gap-1.5 text-caption text-muted-foreground">
+                        <span>Added {new Date(c.createdAt).toLocaleDateString()}</span>
                       </div>
                     </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <IconButton
+                      type="button"
+                      disabled={busy || removingCredentialId !== null || hideSensitive}
+                      onClick={() => remove(c.id)}
+                      className="size-11 shrink-0 text-muted-foreground hover:text-red-600 dark:hover:text-red-400 sm:size-9"
+                      tooltip={`Remove ${c.deviceLabel || 'credential'}`}
+                      label={`Remove ${c.deviceLabel || 'credential'}`}
+                      aria-busy={isRemoving}
+                    >
+                      {isRemoving ? (
+                        <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                      ) : (
+                        <Trash2 className="size-3.5" />
+                      )}
+                      <MutationStatusAnnouncement state={isRemoving ? 'deleting' : null} entityLabel={c.deviceLabel || 'credential'} />
+                    </IconButton>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
-      </CollapsibleBody>
-    </Panel>
+      )}
+    </DisclosurePanel>
   )
 }

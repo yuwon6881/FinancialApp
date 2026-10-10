@@ -401,7 +401,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               onKeyUp={mentions.syncCaret}
               placeholder={isOffline ? 'Write a message to send when online…' : 'Ask about your finances…'}
               rows={1}
-              className="ai-composer-text relative z-10 min-h-11 max-h-40 w-full resize-none rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-sm leading-6 text-transparent caret-foreground outline-hidden selection:bg-primary/25 focus:border-transparent focus:ring-0 focus:outline-hidden placeholder:text-muted-foreground"
+              className="ai-composer-text relative z-10 h-auto min-h-11 max-h-40 w-full resize-none rounded-[1.125rem] border-transparent bg-transparent px-3 py-2.5 text-sm leading-6 text-transparent caret-foreground outline-hidden selection:bg-primary/25 hover:border-transparent focus:border-transparent focus:bg-transparent focus:ring-0 focus:outline-hidden placeholder:text-muted-foreground lg:h-auto dark:bg-transparent dark:focus:bg-transparent"
             />
           </div>
           {/* While a turn is in flight the primary control becomes Stop, so a slow
@@ -411,7 +411,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             type={isSending ? 'button' : 'submit'}
             onClick={isSending ? () => cancelInFlight({ recoverable: true }) : undefined}
             disabled={isSending ? false : (!input.trim() || isOffline || isResetting)}
-            className="size-11 shrink-0"
+            className="size-11 shrink-0 lg:size-11"
             tooltip={isSending ? 'Stop' : 'Send'}
             label={isSending ? 'Stop generating' : 'Send message'}
           >

@@ -63,7 +63,7 @@ export function BucketAccountGroup({
   return (
     <div
       id={`bucket-account-group-${bucket}`}
-      className={cn(panelClass, 'relative flex flex-col justify-between p-5', !hasAnyAccounts && 'border-dashed')}
+      className={cn(panelClass, 'relative flex flex-col justify-between p-4 sm:p-5', !hasAnyAccounts && 'border-dashed')}
     >
       <div className="space-y-4">
         {/* Bucket header: which bucket, what it is for, and what it holds. */}

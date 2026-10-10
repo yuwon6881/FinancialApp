@@ -68,9 +68,9 @@ describe('InvestmentPlanSection sliders', () => {
     fireEvent.click(internationalLock)
     expect(screen.getByRole('button', { name: 'Unlock US Equity target' })).toBeTruthy()
 
-    expect(screen.getByRole('slider', { name: 'US Equity target' }).className).toContain('accent-blue-500')
-    expect(screen.getByRole('slider', { name: 'International ex-US target' }).className).toContain('accent-amber-500')
-    expect(screen.getByRole('slider', { name: 'Bonds target' }).className).toContain('accent-emerald-500')
+    const fill = (name: string) => (screen.getByRole('slider', { name }) as HTMLInputElement).style.getPropertyValue('--range-color')
+    expect(new Set([fill('US Equity target'), fill('International ex-US target'), fill('Bonds target')]).size).toBe(3)
+    expect(fill('International ex-US target')).toBe('var(--color-amber-500)')
   })
 
   it('lets a keyboard user reorder classifications with the grip arrow keys', async () => {

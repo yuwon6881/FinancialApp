@@ -2,11 +2,11 @@ import { CircleHelp, Pencil, Trash2 } from 'lucide-react'
 import type { LedgerAccount } from '../../../types'
 import type { AccountBillRoster as AccountBillRosterType } from '../../../lib/accountBillRoster'
 import { cardAvailableCredit, cardOwed, isCreditCard } from '../../../lib/creditCards'
-import { formatCurrencyVal } from '../../../lib/utils'
+import { cn, formatCurrencyVal } from '../../../lib/utils'
 import { getCategoryChartColor } from '../../../lib/categoryColors'
 import { Button } from '../../ui/Button'
-import { IconButton } from '../../ui/IconButton'
 import { Meter } from '../../ui/Meter'
+import { OverflowMenu } from '../../ui/OverflowMenu'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { AccountBillRoster } from './AccountBillRoster'
@@ -46,75 +46,116 @@ export function AccountRow({
   const availableCredit = cardAvailableCredit(account)
   const formatMoney = (value: number) => formatCurrencyVal(value, currency)
 
+  const balanceClass = account.isArchived ? 'text-muted-foreground' : 'text-foreground'
+
   return (
     <div
       id={`account-row-${account.id}`}
-      className={`flex flex-col gap-2.5 py-3.5 first:pt-1 last:pb-1 ${account.isArchived ? 'opacity-70' : ''}`}
+      className={cn('py-2 first:pt-2.5 last:pb-1', account.isArchived && 'opacity-70')}
     >
-      {/* Wraps on the row's own width rather than the window's. Inside a bucket card the row is
-          about 300px wide at the narrow end of the expanded tier, where the media-query row put the
-          name, the balance and both actions on one line: the name collapsed to a single letter with
-          the balance printed against it. The name keeps a floor width, so the balance and actions
-          drop to their own line instead of squeezing it out. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <div className="flex min-w-[9rem] flex-1 items-center gap-3 overflow-hidden">
-          <div
-            className="grid size-10 shrink-0 place-items-center rounded-xl"
+      {/* One line per account, the way a bank lists them: tapping the row edits it, the balance
+          sits on the trailing edge, and the rarer actions live behind one menu. The row used to
+          stack the name, the balance, Edit, Delete and a bills disclosure on separate lines,
+          which made a phone screen of four accounts the height of a page. */}
+      <div className="flex min-w-0 items-center gap-1">
+        <Button
+          type="button"
+          variant="tertiary"
+          onClick={() => onEdit(account)}
+          disabled={disabled || isDeleting}
+          aria-label={`Edit ${account.name}`}
+          className="-ml-2 h-auto min-h-14 min-w-0 flex-1 justify-start gap-2.5 rounded-control px-2 py-2 text-left font-normal active:scale-100 hover:bg-surface-2/70 lg:min-h-12"
+        >
+          <span
+            className="grid size-9 shrink-0 place-items-center rounded-full"
             style={{ backgroundColor: `color-mix(in srgb, ${bucketColor} 14%, transparent)`, color: bucketColor }}
             aria-hidden="true"
           >
             <AccountIcon className="size-[1.125rem]" />
-          </div>
-          <div className="min-w-0 flex-1 space-y-0.5">
-            <p title={account.name} className={`truncate text-body font-medium ${account.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
+          </span>
+          {/* The name keeps a floor width; on a narrow phone the balance wraps under it on the
+              trailing edge rather than squeezing the name down to a letter. */}
+          <span className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
+          <span className="min-w-[6rem] flex-1">
+            <span title={account.name} className={cn('line-clamp-2 break-words text-body font-medium', account.isArchived ? 'text-muted-foreground line-through decoration-border' : 'text-foreground')}>
               {account.name}
-            </p>
-            <div className="flex flex-wrap items-center gap-1.5 text-caption text-muted-foreground">
-              <span>{ACCOUNT_KIND_LABELS[account.kind] ?? account.kind}</span>
-              {account.isArchived && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span className="font-semibold text-muted-foreground">Closed</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Compact takes the whole line and spreads it: the balance is a figure, so it belongs on
-            the reading edge under the account name, while Edit and Delete belong on the trailing
-            edge. Bunching all three at the right left the balance floating mid-row with nothing
-            under the name. From `sm:` the group hugs the trailing edge again -- there it usually
-            shares a line with the name, and `ml-auto` is what keeps it off the left when a narrow
-            bucket card forces it onto its own. */}
-        <div className="flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:ml-auto sm:w-auto sm:shrink-0 sm:justify-end">
-          <div className="flex shrink-0 items-center gap-2">
+            </span>
+            <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-caption text-muted-foreground">
+              <span className="truncate">
+                {ACCOUNT_KIND_LABELS[account.kind] ?? account.kind}
+                {account.isArchived && ' · Closed'}
+              </span>
+              <RowSyncStatus
+                isDeleting={isDeleting}
+                isSyncing={isSyncing}
+                isPending={account.isPendingSync}
+                entityLabel="account"
+              />
+            </span>
+          </span>
+          <span className="ml-auto shrink-0 text-right">
             {/* A card's balance reads as what is owed; its signed figure is still what the bucket counts. */}
             {isCard && (owed > 0 || account.remaining >= 0.005) ? (
-              <span className={`text-body font-semibold tabular-nums ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}>
-                <span className="font-normal text-muted-foreground">{owed > 0 ? 'Owed ' : 'In credit '}</span>
-                <SensitiveAmount value={owed > 0 ? owed : account.remaining} isMasked={hideSensitive} formatFn={formatMoney} />
-              </span>
+              <>
+                <SensitiveAmount
+                  value={owed > 0 ? owed : account.remaining}
+                  isMasked={hideSensitive}
+                  formatFn={formatMoney}
+                  className={cn('block text-body font-semibold tabular-nums', balanceClass)}
+                />
+                <span className="mt-0.5 block text-caption text-muted-foreground">{owed > 0 ? 'Owed' : 'In credit'}</span>
+              </>
             ) : (
               <SensitiveAmount
                 value={account.remaining}
                 isMasked={hideSensitive}
                 formatFn={formatMoney}
-                className={`text-body font-semibold tabular-nums ${account.isArchived ? 'text-muted-foreground' : 'text-foreground'}`}
+                className={cn('block text-body font-semibold tabular-nums', account.remaining < 0 && !account.isArchived ? 'text-red-600 dark:text-red-400' : balanceClass)}
               />
             )}
-            <RowSyncStatus
-              isDeleting={isDeleting}
-              isSyncing={isSyncing}
-              isPending={account.isPendingSync}
-              entityLabel="account"
-            />
-          </div>
+          </span>
+          </span>
+        </Button>
+        <OverflowMenu
+          entityLabel={account.name}
+          disabled={disabled || isDeleting}
+          items={[
+            { label: 'Edit', icon: Pencil, onSelect: () => onEdit(account) },
+            { label: 'Delete', icon: Trash2, tone: 'danger', onSelect: () => onDelete(account.id) },
+          ]}
+          className="shrink-0 text-muted-foreground"
+        />
+      </div>
 
-          {/* A card's extra action can push the buttons onto their own line; ml-auto keeps them on
-              the trailing edge there instead of stranding them on the left. */}
-          <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-1.5">
-            {isCard && owed > 0 && !account.isArchived && onClearCard && (
+      {isCard && !account.isArchived && (availableCredit !== null || (owed > 0 && onClearCard)) && (
+        <div className="mt-1 space-y-2 pb-1 pl-[3.125rem] pr-1">
+          {availableCredit !== null && (
+          <Meter
+            size="sm"
+            percent={account.creditLimit ? (owed / account.creditLimit) * 100 : 0}
+            tone={availableCredit < 0 ? 'bg-destructive' : 'bg-foreground/50'}
+            label={`${account.name} credit used`}
+            valueHidden={hideSensitive}
+          />
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            {availableCredit !== null && (
+            <dl className="flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-caption">
+              <div className="flex min-w-0 gap-1.5">
+                <dt className="text-muted-foreground">{availableCredit < 0 ? 'Over limit by' : 'Available credit'}</dt>
+                <dd className={cn('font-semibold tabular-nums', availableCredit < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground')}>
+                  <SensitiveAmount value={Math.abs(availableCredit)} isMasked={hideSensitive} formatFn={formatMoney} />
+                </dd>
+              </div>
+              <div className="flex min-w-0 gap-1.5">
+                <dt className="text-muted-foreground">Credit limit</dt>
+                <dd className="font-semibold tabular-nums text-foreground">
+                  <SensitiveAmount value={account.creditLimit!} isMasked={hideSensitive} formatFn={formatMoney} />
+                </dd>
+              </div>
+            </dl>
+            )}
+            {owed > 0 && onClearCard && (
               <Button
                 type="button"
                 variant="secondary"
@@ -126,53 +167,7 @@ export function AccountRow({
                 Clear balance
               </Button>
             )}
-            <IconButton
-              type="button"
-              onClick={() => onEdit(account)}
-              disabled={disabled || isDeleting}
-              label={`Edit ${account.name}`}
-              tooltip="Edit"
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <Pencil className="size-4" aria-hidden="true" />
-            </IconButton>
-            <IconButton
-              type="button"
-              onClick={() => onDelete(account.id)}
-              disabled={disabled || isDeleting}
-              label={`Delete ${account.name}`}
-              tooltip="Delete"
-              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-            >
-              <Trash2 className="size-4" aria-hidden="true" />
-            </IconButton>
           </div>
-        </div>
-      </div>
-
-      {isCard && availableCredit !== null && !account.isArchived && (
-        <div className="space-y-2 rounded-control bg-surface-2/60 px-3.5 py-3">
-        <Meter
-          size="sm"
-          percent={account.creditLimit ? (owed / account.creditLimit) * 100 : 0}
-          tone={availableCredit < 0 ? 'bg-destructive' : 'bg-foreground/50'}
-          label={`${account.name} credit used`}
-          valueHidden={hideSensitive}
-        />
-        <dl className="grid grid-cols-2 gap-3 text-label">
-          <div className="min-w-0 space-y-1">
-            <dt className="text-muted-foreground">{availableCredit < 0 ? 'Over limit by' : 'Available credit'}</dt>
-            <dd className="break-words font-semibold tabular-nums text-foreground">
-              <SensitiveAmount value={Math.abs(availableCredit)} isMasked={hideSensitive} formatFn={formatMoney} />
-            </dd>
-          </div>
-          <div className="min-w-0 space-y-1 text-right">
-            <dt className="text-muted-foreground">Credit limit</dt>
-            <dd className="break-words font-semibold tabular-nums text-foreground">
-              <SensitiveAmount value={account.creditLimit!} isMasked={hideSensitive} formatFn={formatMoney} />
-            </dd>
-          </div>
-        </dl>
         </div>
       )}
 

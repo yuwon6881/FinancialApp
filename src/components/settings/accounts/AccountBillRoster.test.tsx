@@ -78,10 +78,10 @@ describe('AccountBillRoster', () => {
       />,
     )
 
-    expect(screen.getByText(/Bills paid from here · 3/)).toBeDefined()
+    expect(screen.getByText(/3 bills/)).toBeDefined()
     expect(screen.getByText('about')).toBeDefined()
     expect(screen.getByText('$950.00')).toBeDefined()
-    expect(screen.getByText('/ mo')).toBeDefined()
+    expect(screen.getByText('/mo')).toBeDefined()
   })
 
   it('renders bill details when expanded and calls onNavigateToRecurring on click', () => {
@@ -120,7 +120,7 @@ describe('AccountBillRoster', () => {
     expect(screen.queryByText('$150.00')).toBeNull()
   })
 
-  it('renders empty dashed container when roster has no active or paused bills', () => {
+  it('renders nothing when the account pays no bills', () => {
     const emptyRoster: AccountBillRosterType = {
       accountId: 'acc-empty',
       active: [],
@@ -137,7 +137,7 @@ describe('AccountBillRoster', () => {
       />,
     )
 
-    expect(screen.getByText(/Bills paid from here · 0/)).toBeDefined()
-    expect(screen.getByText('No recurring bills paid from this account.')).toBeDefined()
+    // Nothing to disclose: no "· 0" row under an account that pays no bills.
+    expect(screen.queryByText(/bills?/)).toBeNull()
   })
 })

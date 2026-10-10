@@ -85,7 +85,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
               : 'min-h-11 w-full justify-center gap-2.5 rounded-xl px-2 hover:bg-surface-2 lg:justify-start',
           )}
         >
-          <Avatar username={username} className={trigger === 'avatar' ? 'size-8' : 'size-8'} />
+          <Avatar username={username} className="size-8" />
           {trigger === 'row' && (
             <>
               <span className="hidden min-w-0 flex-1 truncate text-left text-body font-medium text-foreground lg:block">{username || 'Account'}</span>

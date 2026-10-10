@@ -47,7 +47,7 @@ export function InvestmentClassificationRow({
       // from 640px of *window* up, but this card sits in a half-width column, so the name was left
       // with about thirty pixels and showed one letter. Both parts keep a floor width and the
       // select drops below the name when the row cannot hold them side by side.
-      className="flex flex-wrap items-center gap-x-3 gap-y-2.5 rounded-control bg-surface-2/70 p-3 shadow-2xs transition-colors hover:border-border/80 w-full min-w-0 overflow-hidden"
+      className="flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-2 bg-card py-3"
     >
       <div className="flex min-w-[10rem] flex-1 items-center gap-2.5">
         <Button size="icon"
@@ -62,19 +62,19 @@ export function InvestmentClassificationRow({
             onMove(event.key === 'ArrowUp' ? -1 : 1)
           }}
           disabled={isBusy}
-          className="inline-flex size-8 shrink-0 touch-none lg:size-8 cursor-grab items-center justify-center rounded-lg text-muted-foreground/70 transition hover:bg-muted/40 hover:text-foreground active:cursor-grabbing"
+          className="-ml-2 shrink-0 touch-none cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
         >
           <GripVertical className="size-4" />
         </Button>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 min-w-0">
-            <strong className="block truncate text-caption font-semibold text-foreground">{value.symbol}</strong>
+            <strong className="block truncate text-label text-foreground">{value.symbol}</strong>
             <RowSyncStatus isSyncing={isSyncing} isPending={isPending} entityLabel="classification" />
           </div>
-          <span className="block truncate text-xs text-muted-foreground">{value.name}</span>
+          <span className="block truncate text-caption text-muted-foreground">{value.name}</span>
         </div>
       </div>
-      <div className="w-full min-w-[10rem] flex-1 sm:w-auto sm:max-w-[190px]">
+      <div className="w-full min-w-[10rem] flex-1 pl-9 sm:w-auto sm:max-w-[13rem] sm:pl-0">
         <CustomSelect
           ariaLabel={`Classify ${value.symbol}`}
           value={value.sleeve ?? ''}

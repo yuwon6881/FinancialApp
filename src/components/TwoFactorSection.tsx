@@ -1,10 +1,10 @@
 import { Input } from './ui/Input'
 import React, { useEffect, useState } from 'react'
-import { ShieldCheck, ShieldOff, KeyRound, ChevronDown, ChevronUp } from 'lucide-react'
+import { ShieldCheck, ShieldOff, KeyRound } from 'lucide-react'
 import * as api from '../lib/api'
 import type { ToastTone } from './ui/ToastViewport'
 import { RecoveryCodesModal } from './ui/RecoveryCodesModal'
-import { CollapsibleBody } from './ui/CollapsibleBody'
+import { DisclosurePanel } from './ui/DisclosurePanel'
 import { PasswordEntryModal } from './ui/PasswordEntryModal'
 import { getErrorMessage } from '../lib/errors'
 import { buildMutationSuccessToast } from '../lib/mutationToast'
@@ -12,7 +12,6 @@ import { Button } from './ui/Button'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
 import { ModalActions } from './ui/ModalActions'
-import { Panel } from './ui/Panel'
 
 interface TwoFactorSectionProps {
   hideSensitive: boolean
@@ -150,29 +149,20 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
   }
 
   return (
-    <Panel as="section" padding="none" className="overflow-hidden shadow-sm">
-      <Button
-        variant="tertiary"
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open}
-        className="w-full flex items-center gap-2.5 p-5 justify-start text-left cursor-pointer"
-      >
-        {loaded && enabled ? <ShieldCheck className="size-5 text-emerald-500 shrink-0" /> : <ShieldOff className="size-5 text-muted-foreground shrink-0" />}
-        <div className="flex-1 min-w-0">
-          <h3 className="text-subsection text-foreground">Two-Factor Authentication</h3>
-        </div>
-        <span className={`shrink-0 text-label font-medium ${loaded && enabled ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+    <>
+    <DisclosurePanel
+      open={open}
+      onToggle={() => setOpen(o => !o)}
+      icon={loaded && enabled ? <ShieldCheck className="text-emerald-500" /> : <ShieldOff className="text-muted-foreground" />}
+      title="Two-Factor Authentication"
+      status={(
+        <span className={loaded && enabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
           {loaded ? (enabled ? 'Enabled' : 'Disabled') : 'Checking…'}
         </span>
-        {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
-      </Button>
-
-      <CollapsibleBody open={open}>
-      <div className="px-5 pb-5 space-y-4 border-t border-border/40 pt-4">
-
+      )}
+    >
       {!loaded && (
-        <p className="text-xs text-muted-foreground animate-pulse">Checking two-factor status…</p>
+        <p className="text-caption text-muted-foreground animate-pulse">Checking two-factor status…</p>
       )}
 
       {loaded && enabled && !showDisableForm && (
@@ -182,7 +172,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
             type="button"
             onClick={() => setShowRegenerateModal(true)}
             disabled={hideSensitive}
-            className="press-scale w-full rounded-xl py-2.5"
+            className="w-full"
           >
             <KeyRound className="size-3.5" /> Regenerate recovery codes
           </Button>
@@ -191,7 +181,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
             type="button"
             onClick={() => setShowDisableForm(true)}
             disabled={hideSensitive}
-            className="press-scale w-full rounded-xl py-2.5"
+            className="w-full"
           >
             Disable two-factor authentication
           </Button>
@@ -222,7 +212,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
               variant="secondary"
               type="button"
               onClick={() => { setShowDisableForm(false); setDisableErrors({}) }}
-              className="press-scale flex-1 rounded-xl py-2.5"
+              className="flex-1"
             >
               Cancel
             </Button>
@@ -231,7 +221,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
               type="submit"
               disabled={disableBusy}
               aria-busy={disableBusy}
-              className="press-scale flex-1 rounded-xl py-2.5"
+              className="flex-1"
             >
               {disableBusy ? 'Disabling…' : 'Confirm disable'}
             </Button>
@@ -247,7 +237,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
           disabled={setupBusy || hideSensitive}
           title={hideSensitive ? 'Unhide balances to edit' : undefined}
           aria-busy={setupBusy}
-          className="press-scale w-full rounded-xl py-2.5"
+          className="w-full"
         >
           {setupBusy ? (
             <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
@@ -270,7 +260,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
           )}
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground text-center">Can't scan? Enter this code manually:</p>
-            <p className="text-xs font-mono text-center text-foreground break-all bg-muted/20 border border-border/40 rounded-lg px-2 py-1.5">{setupSecret}</p>
+            <p className="text-xs font-mono text-center text-foreground break-all rounded-control bg-surface-2/70 px-3 py-2">{setupSecret}</p>
           </div>
           <form noValidate onSubmit={handleConfirmSetup} className="space-y-2.5">
             <FormField
@@ -294,7 +284,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
                 variant="secondary"
                 type="button"
                 onClick={handleCancelSetup}
-                className="press-scale flex-1 rounded-xl py-2.5"
+                className="flex-1"
               >
                 Cancel
               </Button>
@@ -302,7 +292,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
                 type="submit"
                 disabled={setupBusy}
                 aria-busy={setupBusy}
-                className="press-scale flex-1 rounded-xl py-2.5"
+                className="flex-1"
               >
                 {setupBusy ? 'Verifying…' : 'Confirm'}
               </Button>
@@ -311,8 +301,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
         </div>
       )}
 
-      </div>
-      </CollapsibleBody>
+    </DisclosurePanel>
 
       <RecoveryCodesModal
         isOpen={recoveryCodes !== null}
@@ -328,6 +317,6 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
         onClose={() => setShowRegenerateModal(false)}
         onSubmit={handleRegenerateRecoveryCodes}
       />
-    </Panel>
+    </>
   )
 }

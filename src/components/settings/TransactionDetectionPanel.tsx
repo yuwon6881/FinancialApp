@@ -64,7 +64,7 @@ export function TransactionDetectionPanel({ detection, tab, hidden, formOpen }: 
                   <h3 className="text-subsection text-foreground">Transaction detection</h3>
                   <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
                 </div>
-                <p className="text-xs leading-snug text-muted-foreground">{status.detail}</p>
+                <p className="text-caption text-muted-foreground">{status.detail}</p>
               </div>
             </div>
             <ToggleButton
@@ -75,9 +75,9 @@ export function TransactionDetectionPanel({ detection, tab, hidden, formOpen }: 
             />
           </div>
           {!hidden && candidates.length > 0 && (
-            <p className="text-xs text-muted-foreground">{candidates.length} waiting for review in Ledger.</p>
+            <p className="text-caption text-muted-foreground">{candidates.length} waiting for review in Ledger.</p>
           )}
-          {hidden && <p className="text-xs text-muted-foreground">Reveal financial data to change detection settings.</p>}
+          {hidden && <p className="text-caption text-muted-foreground">Reveal financial data to change detection settings.</p>}
           {errorRow}
           <div className="flex justify-end">
             <Button variant={state?.enabled && !status.listening ? 'primary' : 'secondary'} size="sm" disabled={unavailable} onClick={() => setSettingsOpen(true)}>
@@ -93,7 +93,7 @@ export function TransactionDetectionPanel({ detection, tab, hidden, formOpen }: 
             </span>
             <div className="min-w-0 flex-1">
               <h3 className="text-subsection text-foreground">Detected transactions</h3>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-caption text-muted-foreground">
                 {hidden ? 'Reveal financial data to review them.'
                   : candidates.length ? `${candidates.length} waiting for your review`
                   : status.listening ? 'All caught up' : status.detail}

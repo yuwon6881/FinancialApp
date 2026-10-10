@@ -1,7 +1,8 @@
 import { RangeInput } from '../ui/RangeInput'
+import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Reorder } from 'framer-motion'
-import { AlertCircle, Loader2, Save, SlidersHorizontal, Lock, Unlock, WifiOff } from 'lucide-react'
+import { AlertCircle, Loader2, Save, Lock, Unlock, WifiOff } from 'lucide-react'
 import type {
   InvestmentAllocationOverview,
   InvestmentAllocationSleeve,
@@ -16,6 +17,9 @@ import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { redistributeInvestmentTargets, validateInvestmentPlan } from '../../lib/investmentAllocation'
 import { InvestmentClassificationRow } from './InvestmentClassificationRow'
 import { EmptyState } from '../ui/EmptyState'
+import { SegmentedMeter } from '../ui/SegmentedMeter'
+import { panelClass } from '../ui/panelStyles'
+import { cn } from '../../lib/utils'
 
 type TargetKey = 'usEquityTarget' | 'internationalExUsTarget' | 'bondsTarget'
 type DriftKey = 'watchDrift' | 'alertDrift'
@@ -25,31 +29,32 @@ type DriftKey = 'watchDrift' | 'alertDrift'
  * same amber/orange pair `PANEL_TONES` uses for "worth a look" and "already past it" -- because the
  * two sliders are otherwise identical controls sitting one above the other.
  */
+// The same three fills the Investments page draws its sleeves with.
+const SLEEVE_COLORS = ['var(--primary)', 'var(--color-amber-500)', 'var(--color-emerald-500)'] as const
+
 const DRIFT_BANDS: ReadonlyArray<{
   key: DriftKey
   label: string
   hint: string
-  surface: string
   badge: string
-  accent: string
+  /** Slider fill. */
+  color: string
   lockColor: string
 }> = [
   {
     key: 'watchDrift',
     label: 'Watch when off by',
     hint: 'Early warning threshold before rebalancing.',
-    surface: 'border-amber-500/25 bg-amber-500/5',
-    badge: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
-    accent: 'accent-amber-500',
+    badge: 'bg-amber-500/12 text-amber-700 dark:text-amber-300',
+    color: 'var(--color-amber-500)',
     lockColor: 'text-amber-500',
   },
   {
     key: 'alertDrift',
     label: 'Alert when off by',
     hint: 'Marks a larger mismatch that triggers alerts.',
-    surface: 'border-orange-500/25 bg-orange-500/5',
-    badge: 'bg-orange-500/15 text-orange-700 dark:text-orange-300',
-    accent: 'accent-orange-500',
+    badge: 'bg-orange-500/12 text-orange-700 dark:text-orange-300',
+    color: 'var(--color-orange-500)',
     lockColor: 'text-orange-500',
   },
 ]
@@ -367,52 +372,75 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
   }, [hideSensitive])
 
   if (!overview && isOffline) {
-    return <div role="status" className="flex h-40 flex-col items-center justify-center gap-2 rounded-2xl border border-border/60 bg-card p-5 text-center"><WifiOff className="size-6 text-muted-foreground" /><p className="text-sm font-semibold text-foreground">Investment plan unavailable offline</p><p className="text-xs text-muted-foreground">Connect once to load your investment plan on this device.</p></div>
+    return <div role="status" className={cn(panelClass, 'flex h-40 flex-col items-center justify-center gap-2 p-5 text-center')}><WifiOff className="size-6 text-muted-foreground" /><p className="text-subsection text-foreground">Investment plan unavailable offline</p><p className="text-caption text-muted-foreground">Connect once to load your investment plan on this device.</p></div>
   }
   if (!overview && loading) {
     return <div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>
   }
 
+  const sleeveRows = [
+    ['US Equity', 'usEquityTarget', SLEEVE_COLORS[0]],
+    ['International ex-US', 'internationalExUsTarget', SLEEVE_COLORS[1]],
+    ['Bonds', 'bondsTarget', SLEEVE_COLORS[2]],
+  ] as const
+
   return (
-    <div id="settings-panel-investment-plan" role="tabpanel" aria-labelledby="settings-tab-investment-plan" className="w-full min-w-0 grid grid-cols-1 gap-6 lg:grid-cols-2 items-start animate-in fade-in duration-200">
-      <section className="w-full min-w-0 rounded-2xl border border-border/60 bg-card p-4 sm:p-6 shadow-xs">
-        <div className="flex items-start justify-between gap-3 border-b border-border/40 pb-4 min-w-0 w-full">
-          <div className="flex items-start gap-3 min-w-0 flex-1">
-            <div className="rounded-xl bg-violet-500/10 p-2 text-violet-500 shrink-0"><SlidersHorizontal className="size-4" /></div>
-            <div className="min-w-0 flex-1">
-              <h3 className="flex flex-wrap items-center gap-2 text-subsection text-foreground">
-                Portfolio targets
-              </h3>
-            </div>
+    <div id="settings-panel-investment-plan" role="tabpanel" aria-labelledby="settings-tab-investment-plan" className="grid w-full min-w-0 grid-cols-1 items-start gap-6 animate-in fade-in duration-200 xl:grid-cols-2">
+      <section aria-labelledby="investment-targets-title" className={cn(panelClass, 'w-full min-w-0 p-4 sm:p-6')}>
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 id="investment-targets-title" className="text-section text-foreground">Portfolio targets</h3>
+            <p className="mt-1 text-caption text-muted-foreground">The mix your Growth money should hold.</p>
           </div>
-          <Button variant="tertiary"
+          <Button
+            variant="secondary"
+            size="sm"
             type="button"
             onClick={() => setGlobalTargetLock(!globalTargetLock)}
             disabled={hideSensitive}
-            className="mt-0.5 inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-caption font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
+            aria-pressed={globalTargetLock}
+            className="shrink-0"
           >
-            {globalTargetLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
+            {globalTargetLock ? <Lock className="size-3.5" /> : <Unlock className="size-3.5" />}
             {globalTargetLock ? 'Locked' : 'Unlocked'}
           </Button>
         </div>
-        <div className="mt-5 space-y-5 w-full min-w-0">
-          {([
-            ['US Equity', 'usEquityTarget', 'accent-blue-500'],
-            ['International ex-US', 'internationalExUsTarget', 'accent-amber-500'],
-            ['Bonds', 'bondsTarget', 'accent-emerald-500'],
-          ] as const).map(([label, key, accentClass]) => (
-            // A div, not a label. `<Button variant="tertiary">` is a labelable element, so a <label> wrapping this
-            // row took the *lock button* as its labelled control (first labelable descendant, ahead
-            // of the slider) and forwarded every click in the row to it -- clicking the basket
-            // name, the empty gap, or the percentage badge silently toggled the lock. The slider
-            // carries its own aria-label, so the label element was contributing nothing anyway.
-            <div key={key} className="space-y-2 block w-full min-w-0">
-              <div className="flex justify-between items-center text-caption font-semibold min-w-0 w-full gap-2">
-                <span className="text-muted-foreground flex items-center gap-1.5 min-w-0">
-                  <span className="truncate">{label}</span>
-                  <IconButton type="button" label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" disabled={hideSensitive || (lockedSleeve !== null && lockedSleeve !== key)} tooltip={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-accent-ink" /> : <Unlock className="size-3.5" />}</IconButton>
+
+        {/* The whole mix first, as one bar, so a change to one sleeve visibly takes from the others. */}
+        <div className="mt-5 space-y-2">
+          <SegmentedMeter
+            size="md"
+            total={100}
+            label={`Target mix: ${sleeveRows.map(([label, key]) => `${label} ${plan[key]}%`).join(', ')}`}
+            segments={sleeveRows.map(([label, key, color]) => ({ label, value: plan[key], color }))}
+          />
+          <p className={cn('text-right text-caption tabular-nums', total === 100 ? 'text-muted-foreground' : 'text-red-600 dark:text-red-400')}>
+            Total: {total}%
+          </p>
+        </div>
+
+        <div className="mt-2 divide-y divide-border/60">
+          {sleeveRows.map(([label, key, color]) => (
+            // A div, not a label. A <label> wrapping this row took the *lock button* as its labelled
+            // control (first labelable descendant, ahead of the slider) and forwarded every click in
+            // the row to it. The slider carries its own aria-label.
+            <div key={key} className="w-full min-w-0 space-y-2 py-4">
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                  <span className="truncate text-label text-foreground">{label}</span>
+                  <IconButton
+                    type="button"
+                    label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`}
+                    onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }}
+                    className="-my-2 shrink-0 text-muted-foreground hover:text-foreground"
+                    disabled={hideSensitive || (lockedSleeve !== null && lockedSleeve !== key)}
+                    tooltip={lockedSleeve === key ? 'Unlock target' : lockedSleeve ? 'Unlock the current target before locking another' : 'Lock target'}
+                  >
+                    {lockedSleeve === key ? <Lock className="size-3.5 text-accent-ink" /> : <Unlock className="size-3.5" />}
+                  </IconButton>
                 </span>
-                <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md shrink-0">{plan[key]}%</span>
+                <span className="shrink-0 text-subsection text-foreground tabular-nums">{plan[key]}%</span>
               </div>
               <RangeInput
                 aria-label={`${label} target`}
@@ -422,92 +450,94 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
                 disabled={hideSensitive || globalTargetLock || lockedSleeve === key}
                 value={plan[key]}
                 onChange={event => changeTarget(key, Number(event.target.value))}
-                className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`}
+                style={{ '--range-color': color } as React.CSSProperties}
               />
             </div>
           ))}
-          <div className="rounded-xl bg-muted/30 px-3 py-2 text-caption font-semibold text-foreground w-full">Total: {total}%</div>
-          <div className="rounded-control bg-surface-2/70 p-3 w-full min-w-0">
-            {/* Two sliders on one shared scale, stacked. A drift band is a threshold on the same
-                axis the sleeve targets above already use, and typing it into a number box gave no
-                sense of how far apart the two bands were. Each keeps its own colour -- amber for
-                the early warning, orange for the one that means rebalance -- and the handler holds
-                Alert above Watch, so the pair cannot be dragged into an invalid plan. */}
-            <div className="mt-3 space-y-2.5 w-full min-w-0">
-              {DRIFT_BANDS.map(band => {
-                const isLocked = lockedDrift[band.key]
-                const minVal = band.key === 'watchDrift'
-                  ? 1
-                  : (lockedDrift.watchDrift ? plan.watchDrift + 1 : 2)
-                const maxVal = band.key === 'watchDrift'
-                  ? (lockedDrift.alertDrift ? Math.min(driftMax - 1, plan.alertDrift - 1) : driftMax - 1)
-                  : driftMax
+        </div>
 
-                return (
-                  <div key={band.key} className={`rounded-xl border p-3 w-full min-w-0 ${band.surface}`}>
-                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                      <span className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-caption font-semibold text-foreground">{band.label}</span>
-                        <IconButton
-                          type="button"
-                          label={`${isLocked ? 'Unlock' : 'Lock'} ${band.key === 'watchDrift' ? 'watch' : 'alert'} drift threshold`}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            toggleDriftLock(band.key)
-                          }}
-                          className="shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition"
-                          disabled={hideSensitive}
-                          tooltip={isLocked ? `Unlock ${band.key === 'watchDrift' ? 'watch' : 'alert'} drift threshold` : `Lock ${band.key === 'watchDrift' ? 'watch' : 'alert'} drift threshold`}
-                        >
-                          {isLocked ? <Lock className={`size-3.5 ${band.lockColor}`} /> : <Unlock className="size-3.5" />}
-                        </IconButton>
-                      </span>
-                      <span className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums ${band.badge}`}>
-                        {plan[band.key]} pp
-                      </span>
-                    </div>
-                    <RangeInput
-                      aria-label={`${band.label}, in percentage points`}
-                      min={minVal}
-                      max={maxVal}
-                      step="1"
-                      disabled={hideSensitive || isLocked}
-                      value={plan[band.key]}
-                      onChange={event => changeDrift(band.key, Number(event.target.value))}
-                      className={`mt-2.5 h-2 rounded-full bg-border ${band.accent} disabled:opacity-50 disabled:cursor-not-allowed`}
-                    />
-                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground break-words">{band.hint}</p>
+        {/* Two sliders on one shared scale. A drift band is a threshold on the same axis the sleeve
+            targets use; the handler holds Alert above Watch, so the pair cannot be dragged into an
+            invalid plan. Amber is the early warning, orange the one that means rebalance. */}
+        <div className="mt-2 border-t border-border/60 pt-5">
+          <h4 className="text-subsection text-foreground">Drift alerts</h4>
+          <p className="mt-1 text-caption text-muted-foreground">How far a holding may stray from its target before you hear about it.</p>
+          <div className="mt-2 divide-y divide-border/60">
+            {DRIFT_BANDS.map(band => {
+              const isLocked = lockedDrift[band.key]
+              const minVal = band.key === 'watchDrift'
+                ? 1
+                : (lockedDrift.watchDrift ? plan.watchDrift + 1 : 2)
+              const maxVal = band.key === 'watchDrift'
+                ? (lockedDrift.alertDrift ? Math.min(driftMax - 1, plan.alertDrift - 1) : driftMax - 1)
+                : driftMax
+
+              return (
+                <div key={band.key} className="w-full min-w-0 space-y-2 py-4">
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-label text-foreground">{band.label}</span>
+                      <IconButton
+                        type="button"
+                        label={`${isLocked ? 'Unlock' : 'Lock'} ${band.key === 'watchDrift' ? 'watch' : 'alert'} drift threshold`}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          toggleDriftLock(band.key)
+                        }}
+                        className="-my-2 shrink-0 text-muted-foreground hover:text-foreground"
+                        disabled={hideSensitive}
+                        tooltip={isLocked ? `Unlock ${band.key === 'watchDrift' ? 'watch' : 'alert'} drift threshold` : `Lock ${band.key === 'watchDrift' ? 'watch' : 'alert'} drift threshold`}
+                      >
+                        {isLocked ? <Lock className={`size-3.5 ${band.lockColor}`} /> : <Unlock className="size-3.5" />}
+                      </IconButton>
+                    </span>
+                    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-label tabular-nums ${band.badge}`}>
+                      {plan[band.key]} pp
+                    </span>
                   </div>
-                )
-              })}
-            </div>
+                  <RangeInput
+                    aria-label={`${band.label}, in percentage points`}
+                    min={minVal}
+                    max={maxVal}
+                    step="1"
+                    disabled={hideSensitive || isLocked}
+                    value={plan[band.key]}
+                    onChange={event => changeDrift(band.key, Number(event.target.value))}
+                    style={{ '--range-color': band.color } as React.CSSProperties}
+                  />
+                  <p className="text-caption text-muted-foreground">{band.hint}</p>
+                </div>
+              )
+            })}
           </div>
-          {(validation || error) && <p role="alert" className="flex gap-2 text-xs text-destructive"><AlertCircle className="size-4 shrink-0" />{validation || error}</p>}
-          <div className="flex justify-end">
-            <Button variant="primary" disabled={hideSensitive || Boolean(validation) || planSyncing || planPending} aria-busy={planSyncing} onClick={save}>
-              <MutationButtonContent
-                state={planSyncing ? 'syncing' : planPending ? 'pending' : null}
-                entityLabel="investment plan"
-                idleLabel="Save targets"
-                busyLabel={planSyncing ? 'Saving…' : 'Pending'}
-                idleIcon={<Save className="size-4" />}
-              />
-            </Button>
-          </div>
+        </div>
+
+        {(validation || error) && <p role="alert" className="mt-2 flex gap-2 text-caption text-red-600 dark:text-red-400"><AlertCircle className="size-4 shrink-0" />{validation || error}</p>}
+        <div className="mt-4 flex justify-end">
+          <Button variant="primary" disabled={hideSensitive || Boolean(validation) || planSyncing || planPending} aria-busy={planSyncing} onClick={save}>
+            <MutationButtonContent
+              state={planSyncing ? 'syncing' : planPending ? 'pending' : null}
+              entityLabel="investment plan"
+              idleLabel="Save targets"
+              busyLabel={planSyncing ? 'Saving…' : 'Pending'}
+              idleIcon={<Save className="size-4" />}
+            />
+          </Button>
         </div>
       </section>
 
-      <section className="w-full min-w-0 rounded-2xl border border-border/60 bg-card p-4 sm:p-6 shadow-xs">
+      <section aria-labelledby="investment-classification-title" className={cn(panelClass, 'w-full min-w-0 p-4 sm:p-6')}>
         <div className="min-w-0">
-          <h3 className="flex flex-wrap items-center gap-2 text-subsection text-foreground">
+          <h3 id="investment-classification-title" className="flex flex-wrap items-center gap-2 text-section text-foreground">
             Investment classification <RowSyncStatus isSyncing={orderSyncing} isPending={orderPending} entityLabel="classification order" />
           </h3>
+          <p className="mt-1 text-caption text-muted-foreground">Which target each holding counts towards. Drag to set the order money is planned in.</p>
         </div>
         <Reorder.Group
           axis="y"
           values={orderedAssignments}
           onReorder={reorderAssignments}
-          className="mt-4 space-y-2.5 max-h-[380px] overflow-y-auto pr-1 w-full min-w-0"
+          className="mt-3 max-h-[28rem] w-full min-w-0 divide-y divide-border/60 overflow-y-auto"
         >
           {orderedAssignments.map((value, index) => (
             <InvestmentClassificationRow

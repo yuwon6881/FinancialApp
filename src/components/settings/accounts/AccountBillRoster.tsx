@@ -10,7 +10,6 @@ import { Badge } from '../../ui/Badge'
 import { Button } from '../../ui/Button'
 import { InfoHint } from '../../ui/InfoHint'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
-import { EmptyState } from '../../ui/EmptyState'
 
 /**
  * The geometry the `Badge` primitive uses, on a squared-off chip. Every chip on a bill row shares
@@ -151,15 +150,19 @@ export function AccountBillRoster({
     }
   }
 
+  // An account that pays no bills has nothing to disclose; a "· 0" row under every such account
+  // only made the list longer.
+  if (totalCount === 0) return null
+
   return (
     <details
-      className="group/roster border-t border-border/30 pt-2"
+      className="group/roster ml-[3.125rem] mt-1 rounded-control"
       open={isOpen}
       onToggle={event => setIsOpen(event.currentTarget.open)}
     >
-      <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span>Bills paid from here · {totalCount}</span>
+      <summary className="-mx-2 flex min-h-11 cursor-pointer select-none items-center justify-between gap-2 rounded-control px-2 text-caption text-muted-foreground outline-none transition-colors hover:bg-surface-2/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 lg:min-h-9">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          <span>{totalCount} {totalCount === 1 ? 'bill' : 'bills'}<span className="hidden sm:inline"> paid from here</span></span>
           {monthlyTotal > 0 && (
             <>
               <span aria-hidden="true">·</span>
@@ -171,7 +174,7 @@ export function AccountBillRoster({
                   formatFn={val => formatCurrencyVal(val, currency)}
                   className="font-semibold text-foreground"
                 />
-                <span>/ mo</span>
+                <span>/mo</span>
                 <InfoHint
                   label="Monthly bill estimate"
                   text="Annual bills are averaged to a monthly equivalent (amount / 12)."
@@ -187,11 +190,7 @@ export function AccountBillRoster({
         />
       </summary>
 
-      <div className="mt-2.5 space-y-3 pt-1">
-        {totalCount === 0 ? (
-          <EmptyState density="compact" className="px-3 py-3" title="No recurring bills paid from this account." />
-        ) : (
-          <>
+      <div className="mt-1 space-y-3 pb-2">
             {activeBills.length > 0 && (
               <div className="space-y-1.5">
                 {activeBills.map(summary => (
@@ -223,8 +222,6 @@ export function AccountBillRoster({
                 ))}
               </div>
             )}
-          </>
-        )}
       </div>
     </details>
   )

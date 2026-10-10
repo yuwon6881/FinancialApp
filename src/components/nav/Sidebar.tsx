@@ -260,9 +260,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </React.Suspense>
         )}
 
-        <div className="mt-2 border-t border-sidebar-border pt-3">
+        {/* Folded to the rail, the account control is just the avatar: the row's name and
+            up-down chevron have no room there and would hang past the rail's edge. */}
+        <div className={cn('mt-2 border-t border-sidebar-border pt-3', collapsed && 'flex justify-center')}>
           <UserProfileDropdown
-            trigger="row"
+            trigger={collapsed ? 'avatar' : 'row'}
             align="start"
             side="top"
             username={username}

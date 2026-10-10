@@ -176,7 +176,8 @@ by `tests/visual/design-system.spec.ts`.
   (multi-segment bars), `CategoryIcon` (a tinted rounded square), `Badge`, `RowSyncBadge`,
   `DataTable`.
 - **Structure:** `PageHeader`, `SectionHeader`, `Panel`/`Card`/`panelClass`, `InteractiveCard`,
-  `NoticeCard` (the one anatomy for every "needs attention" card), `EmptyState`, `Tabs`,
+  `NoticeCard` (the one anatomy for every "needs attention" card), `DisclosurePanel` (a panel
+  whose full-bleed header opens its body; the Security sections), `EmptyState`, `Tabs`,
   `Toolbar`, `SelectionToolbar`, `SwipeableRow` (`card` or `flush`).
 - **Overlays:** `BottomSheet` (phone sheet, desktop dialog or side panel), `AnchoredPopover`,
   `dropdown-menu`, `CustomAlertModal`, `CustomConfirmModal`, `ToastViewport`.

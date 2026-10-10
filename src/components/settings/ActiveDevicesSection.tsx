@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronDown, ChevronUp, Loader2, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
+import { CalendarDays, Loader2, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
 import { useEffect, useState } from 'react'
@@ -7,8 +7,7 @@ import type { SessionSummary } from '../../lib/api'
 import { getErrorMessage } from '../../lib/errors'
 import { buildMutationSuccessToast } from '../../lib/mutationToast'
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
-import { CollapsibleBody } from '../ui/CollapsibleBody'
-import { Panel } from '../ui/Panel'
+import { DisclosurePanel } from '../ui/DisclosurePanel'
 import { MutationButtonContent, MutationStatusAnnouncement } from '../ui/MutationButtonContent'
 
 const relativeTime = (iso: string | null): string => {
@@ -79,38 +78,33 @@ export function ActiveDevicesSection() {
   const anyRevokeInProgress = revokingSessionId !== null || revokingOthers
 
   return (
-    <Panel as="section" padding="none" className="overflow-hidden shadow-sm">
-      {/* Same header shape as the other three Security panels: a bare 20px icon, one gap, then the
-          title block. This one carried a boxed icon, which made its row the odd one out in the
-          grid. */}
-      <Button variant="tertiary" type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex w-full min-w-0 items-center gap-2.5 p-5 justify-start text-left cursor-pointer">
-        <MonitorSmartphone className="size-5 shrink-0 text-accent-ink" />
-        <div className="min-w-0 flex-1"><h3 className="truncate text-subsection text-foreground">Active Devices</h3></div>
-        <span className="inline-flex shrink-0 items-center gap-1 text-caption font-semibold text-muted-foreground">
+    <DisclosurePanel
+      open={open}
+      onToggle={() => setOpen(value => !value)}
+      icon={<MonitorSmartphone className="text-accent-ink" />}
+      title="Active Devices"
+      status={(
+        <span className="inline-flex items-center gap-1 text-muted-foreground tabular-nums">
           {loading ? <><Loader2 className="size-3 animate-spin" /> Checking…</> : sessions.length}
         </span>
-        {open ? <ChevronUp className="size-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="size-4 shrink-0 text-muted-foreground" />}
-      </Button>
-      <CollapsibleBody open={open}>
-        <div className="px-5 pb-5 border-t border-border/40 pt-4 space-y-4">
-          <div className="space-y-1.5">
-            {sessions.map(session => {
-              const isRevoking = revokingSessionId === session.id || (revokingOthers && !session.isCurrent)
-              return (
-                <div key={session.id} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs" aria-busy={isRevoking}>
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="flex min-w-0 flex-wrap items-center gap-2 font-semibold"><MonitorSmartphone className="size-3.5 shrink-0 text-accent-ink" />{session.deviceName || 'Unknown Device'}{session.isCurrent && <small className="shrink-0 text-accent-ink">Current</small>}</span>
-                    <span className="text-xs text-muted-foreground"><CalendarDays className="inline size-3" /> Logged in: {new Date(session.createdAt).toLocaleDateString()} · Last active: {relativeTime(session.lastActiveAt)}</span>
-                    {session.ipAddress && <span className="text-xs text-muted-foreground">IP: {session.ipAddress}</span>}
-                  </div>
-                  {!session.isCurrent && <IconButton type="button" onClick={() => void revoke(session.id)} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingSessionId === session.id} label={`Revoke ${session.deviceName || 'device session'}`} className="size-11 shrink-0 rounded-lg text-muted-foreground hover:bg-muted hover:text-red-500 disabled:opacity-40 sm:size-8">{revokingSessionId === session.id ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="size-3.5" aria-hidden="true" />}<MutationStatusAnnouncement state={revokingSessionId === session.id ? 'deleting' : null} entityLabel={session.deviceName || 'device session'} /></IconButton>}
-                </div>
-              )
-            })}
-          </div>
-          {sessions.length > 1 && <Button variant="tertiary" type="button" onClick={() => void revokeOthers()} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingOthers} className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-caption font-semibold text-red-500 border border-red-500/30 disabled:opacity-40"><MutationButtonContent state={revokingOthers ? 'deleting' : null} entityLabel="other device sessions" idleLabel="Log out all other devices" busyLabel="Revoking…" idleIcon={<LogOut className="size-3.5" />} /></Button>}
-        </div>
-      </CollapsibleBody>
-    </Panel>
+      )}
+    >
+      <div className="space-y-1.5">
+        {sessions.map(session => {
+          const isRevoking = revokingSessionId === session.id || (revokingOthers && !session.isCurrent)
+          return (
+            <div key={session.id} className="flex items-center justify-between gap-3 rounded-control bg-surface-2/70 px-4 py-3 text-caption" aria-busy={isRevoking}>
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span className="flex min-w-0 flex-wrap items-center gap-2 text-label text-foreground"><MonitorSmartphone className="size-3.5 shrink-0 text-accent-ink" />{session.deviceName || 'Unknown Device'}{session.isCurrent && <small className="shrink-0 text-accent-ink">Current</small>}</span>
+                <span className="text-xs text-muted-foreground"><CalendarDays className="inline size-3" /> Logged in: {new Date(session.createdAt).toLocaleDateString()} · Last active: {relativeTime(session.lastActiveAt)}</span>
+                {session.ipAddress && <span className="text-xs text-muted-foreground">IP: {session.ipAddress}</span>}
+              </div>
+              {!session.isCurrent && <IconButton type="button" onClick={() => void revoke(session.id)} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingSessionId === session.id} label={`Revoke ${session.deviceName || 'device session'}`} className="size-11 shrink-0 text-muted-foreground hover:text-red-600 dark:hover:text-red-400 sm:size-8">{revokingSessionId === session.id ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="size-3.5" aria-hidden="true" />}<MutationStatusAnnouncement state={revokingSessionId === session.id ? 'deleting' : null} entityLabel={session.deviceName || 'device session'} /></IconButton>}
+            </div>
+          )
+        })}
+      </div>
+      {sessions.length > 1 && <Button variant="tertiary" type="button" onClick={() => void revokeOthers()} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingOthers} className="w-full gap-2 border-red-500/30 text-red-600 hover:bg-red-500/10 dark:text-red-400"><MutationButtonContent state={revokingOthers ? 'deleting' : null} entityLabel="other device sessions" idleLabel="Log out all other devices" busyLabel="Revoking…" idleIcon={<LogOut className="size-3.5" />} /></Button>}
+    </DisclosurePanel>
   )
 }
