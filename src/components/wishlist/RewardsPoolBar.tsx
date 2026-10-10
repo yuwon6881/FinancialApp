@@ -182,7 +182,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
       {/* The pool's one action and its detail toggle share a row, so the card ends on a single
           line instead of a floating pill over a separate disclosure strip. */}
       {((showFundAction && !cycleDone) || detail.isMobile) && (
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
           {showFundAction && !cycleDone ? (
             <Button
               size="sm"
@@ -190,10 +190,10 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
               disabled={hideSensitive || isOffline || !canFund || isFunding}
               aria-busy={isFunding}
               title={fundTitle}
-              className="min-w-0"
+              className="shrink-0"
             >
               {isFunding ? <Loader2 className="size-3 animate-spin" /> : <CommitmentIcon className="size-3" aria-hidden />}
-              <span className="truncate">{isFunding ? 'Setting aside…' : <>Set aside {formatSensitive(fundableNow)}</>}</span>
+              {isFunding ? 'Setting aside…' : <>Set aside {formatSensitive(fundableNow)}</>}
             </Button>
           ) : <span />}
           {detail.isMobile && (
@@ -203,7 +203,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
               aria-expanded={detail.isOpen}
               aria-controls={detailsId}
               onClick={() => detail.setOpen(!detail.isOpen)}
-              className="-mr-2 shrink-0 gap-1 text-muted-foreground hover:text-foreground"
+              className="-mr-2 ml-auto shrink-0 gap-1 text-muted-foreground hover:text-foreground"
             >
               Details
               <ChevronDown className={cn('size-3.5 transition-transform duration-200', detail.isOpen && 'rotate-180')} aria-hidden="true" />

@@ -217,7 +217,7 @@ export function CategoryLimitsCard({
                       {limit != null
                         ? <AmountText value={limit} currency={currency} isMasked={hideSensitive} />
                         : <span className="text-muted-foreground">Set</span>}
-                      <ChevronDown aria-hidden="true" className={cn('size-3.5 text-muted-foreground transition-transform duration-200', open && 'rotate-180')} />
+                      <ChevronDown aria-hidden="true" className={cn('hidden size-3.5 text-muted-foreground transition-transform duration-200 @xs:block', open && 'rotate-180')} />
                     </span>
                   )}
                 </>
@@ -307,7 +307,7 @@ export function CategoryLimitsCard({
 
 
   return (
-    <section ref={sectionRef} id="category-limits-card" aria-labelledby={`${idPrefix}-heading`} className={cn(panelClass, 'min-w-0 overflow-hidden')}>
+    <section ref={sectionRef} id="category-limits-card" aria-labelledby={`${idPrefix}-heading`} className={cn(panelClass, '@container min-w-0 overflow-hidden')}>
       <div className="flex items-start justify-between gap-3 px-4 pb-2 pt-4 sm:px-5 sm:pt-5">
         <div className="min-w-0">
           <h2 id={`${idPrefix}-heading`} className="text-section text-foreground">Spending limits</h2>

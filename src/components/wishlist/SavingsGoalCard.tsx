@@ -11,7 +11,6 @@ import { ProgressRing } from '../ui/ProgressRing'
 import { OverflowMenu } from '../ui/OverflowMenu'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { getCategoryChartColor } from '../../lib/categoryColors'
-import { LedgerAllocationBadge } from '../ledger/LedgerAllocationBadge'
 
 interface SavingsGoalCardProps {
   goal: SavingsGoal
@@ -127,8 +126,12 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
                 <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={goal.isPendingSync} entityLabel="goal" />
               </span>
               <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-caption text-muted-foreground">
-                <LedgerAllocationBadge ledgerCategory={fundingBucket} transactionId={String(goal.id)} compact />
-                <span aria-hidden="true">·</span>
+                {/* The bucket's dot always; its name once the row has room for it. */}
+                <span className="inline-flex items-center gap-1.5 font-medium">
+                  <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: getCategoryChartColor(fundingBucket) }} />
+                  <span className="sr-only @xs:not-sr-only">{fundingBucket}</span>
+                </span>
+                <span aria-hidden="true" className="hidden @xs:inline">·</span>
                 <span>by {formatDeadline(goal.targetDate)}</span>
                 {status === 'overdue' && <span className="font-medium text-destructive">· {style.label}</span>}
               </span>
@@ -137,17 +140,17 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
               <span className="block text-body font-semibold text-foreground tabular-nums">{formatSensitive(goal.earmarkedAmount)}</span>
               <span className="flex items-center justify-end gap-1 text-caption text-muted-foreground tabular-nums">
                 of {formatSensitive(goal.targetAmount)}
-                <ChevronDown className={cn('size-3 transition-transform duration-200', showDetails && 'rotate-180')} aria-hidden="true" />
+                <ChevronDown className={cn('hidden size-3 transition-transform duration-200 @xs:block', showDetails && 'rotate-180')} aria-hidden="true" />
                 <span className="sr-only">Details</span>
               </span>
             </span>
           </span>
         </Button>
 
-        <div className="mt-1 flex min-h-11 items-center gap-1 lg:min-h-9">
+        <div className="mt-1 flex min-h-11 flex-wrap items-center justify-end gap-x-1 gap-y-1 lg:min-h-9">
           {/* One status line. The per-cycle figures behind it fold away under Details, so the same
               number is not said by the pool, its tiles and every row at once. */}
-          <p className={cn('min-w-0 flex-1 text-label', pace.isFunded || cycleDone ? 'font-medium text-emerald-700 dark:text-emerald-300' : style.text)}>
+          <p className={cn('min-w-0 flex-[1_1_9rem] text-label', pace.isFunded || cycleDone ? 'font-medium text-emerald-700 dark:text-emerald-300' : style.text)}>
             {pace.isFunded ? (
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Ready to use
@@ -234,27 +237,27 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
 
         {showDetails && (
           <dl id={detailsId} className="mb-1 mr-2 mt-1 grid grid-cols-1 gap-x-6 gap-y-1.5 rounded-control bg-surface-2/70 p-3 text-label @lg:grid-cols-2">
-            <div className="flex items-baseline justify-between gap-2">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-2">
               <dt className="text-muted-foreground">Per cycle</dt>
               <dd className="font-medium text-foreground tabular-nums">{formatSensitive(pace.requiredPerCycle)}</dd>
             </div>
-            <div className="flex items-baseline justify-between gap-2">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-2">
               <dt className="text-muted-foreground">Time left</dt>
               <dd className="font-medium text-foreground tabular-nums">{describeHorizon(pace)}</dd>
             </div>
-            <div className="flex items-baseline justify-between gap-2">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-2">
               <dt className="text-muted-foreground">Still to save</dt>
               <dd className="font-medium text-foreground tabular-nums">{formatSensitive(pace.remaining)}</dd>
             </div>
             {goal.isRecurring && (
-              <div className="flex items-baseline justify-between gap-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-2">
                 <dt className="text-muted-foreground">Repeats</dt>
                 <dd className="font-medium text-foreground tabular-nums">Every {goal.recurrenceMonths} months</dd>
               </div>
             )}
-            <div className="flex items-baseline justify-between gap-2">
-              <dt className="text-muted-foreground">This cycle</dt>
-              <dd className={cn('text-right font-medium tabular-nums', cycleDone ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground')}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+              <dt className="shrink-0 text-muted-foreground">This cycle</dt>
+              <dd className={cn('ml-auto text-right font-medium tabular-nums', cycleDone ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground')}>
                 {formatSensitive(pace.fundedThisCycle)}
                 <span className="font-normal text-muted-foreground"> of {formatSensitive(pace.requiredPerCycle)} · {cyclePct.toFixed(0)}%</span>
               </dd>

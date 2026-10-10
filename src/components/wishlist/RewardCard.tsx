@@ -96,7 +96,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
             </h4>
             <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-caption text-muted-foreground">
               {isFocused && (
-                <span className="shrink-0 rounded-full bg-pink-500/12 px-1.5 font-medium text-pink-700 dark:text-pink-300">Saving for this</span>
+                <span className="shrink-0 rounded-full bg-pink-500/12 px-1.5 font-medium text-pink-600 dark:text-pink-300">Saving for this</span>
               )}
               <span className="truncate">{item.priority} priority</span>
             </p>
@@ -104,10 +104,10 @@ export const RewardCard: React.FC<RewardCardProps> = ({
           <p className="shrink-0 text-body font-semibold text-foreground tabular-nums">{formatSensitive(item.price)}</p>
         </div>
 
-        <div className="mt-1 flex min-h-11 items-center gap-1 lg:min-h-9">
+        <div className="mt-1 flex min-h-11 flex-wrap items-center justify-end gap-x-1 gap-y-1 lg:min-h-9">
           <p
             className={cn(
-              'min-w-0 flex-1 text-label',
+              'min-w-0 flex-[1_1_10rem] text-label',
               cutsIntoCommitments
                 ? 'text-amber-700 dark:text-amber-300'
                 : canAfford ? 'font-medium text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground',
@@ -125,6 +125,9 @@ export const RewardCard: React.FC<RewardCardProps> = ({
               </>
             )}
           </p>
+          {/* Claim and the menu travel together: when the status line needs the whole width,
+              both drop below it as one group instead of the menu wrapping onto a line of its own. */}
+          <div className="ml-auto flex shrink-0 items-center gap-1">
           {canAfford && (
             <Button
               size="sm"
@@ -165,6 +168,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
               },
             ]}
           />
+          </div>
         </div>
       </div>
     </li>
