@@ -4,7 +4,7 @@ import { hasBillingEnded } from './recurringPayments'
 /** Where a bill sits on the Bills list: what needs paying first comes first. */
 export type BillGroupId = 'overdue' | 'due-soon' | 'later' | 'paid' | 'paused'
 
-export const BILL_GROUP_ORDER: readonly BillGroupId[] = ['overdue', 'due-soon', 'later', 'paid', 'paused']
+export const BILL_GROUP_ORDER: readonly BillGroupId[] = ['overdue', 'due-soon', 'paid', 'later', 'paused']
 
 export const BILL_GROUP_LABELS: Record<BillGroupId, string> = {
   overdue: 'Overdue',

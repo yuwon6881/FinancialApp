@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-07-30T10:00:00+08:00'))
 })
 
-test('covered recovery shows completed spending cycles without a countdown', async ({ page }) => {
+test('covered recovery shows active spending cycles without completed cycles', async ({ page }) => {
   await establishSession(page)
   await mockApi(page, { stabilityRecovery: coveredRecovery })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })

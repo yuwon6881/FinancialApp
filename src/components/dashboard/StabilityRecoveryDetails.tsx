@@ -13,6 +13,8 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
   const { status, shortfall, askThisCycle, cyclePlanFunded } = describeStabilityRecovery(recovery)
   const covered = status === 'aheadOfPace'
 
+  const activeCohorts = (recovery.recoveryCohorts ?? []).filter(cohort => cohort.remainingShortfall > 0)
+
   return (
     <div className="space-y-4">
       <div className="rounded-control bg-surface-2/70 p-4">
@@ -42,12 +44,11 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
         ) : null}
       </section>
 
-      {(recovery.recoveryCohorts?.length ?? 0) > 0 && (
+      {activeCohorts.length > 0 && (
         <section aria-label="Recovery by spending cycle" className="space-y-2">
           <h3 className="text-sm font-semibold text-foreground">By spending cycle</h3>
           <ul className="divide-y divide-border/50 rounded-control bg-surface-2/70" aria-label="Stability recovery plans">
-            {recovery.recoveryCohorts?.map(cohort => {
-              const complete = cohort.remainingShortfall <= 0
+            {activeCohorts.map(cohort => {
               // The three repayment cycles follow the spending cycle; the last one is the deadline.
               const endCycle = getMonthCycleLabel(cohort.originCycleKey,
                 STABILITY_RECOVERY_GRACE_CYCLES + STABILITY_RECOVERY_PLAN_CYCLES - 1)
@@ -56,15 +57,13 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                     <p className="font-semibold text-foreground">{getMonthCycleLabel(cohort.originCycleKey) ?? cohort.originCycleKey}</p>
                     <p className="font-semibold tabular-nums text-foreground">
-                      {complete ? 'Fully put back' : formatSensitive(cohort.remainingShortfall)}
+                      {formatSensitive(cohort.remainingShortfall)}
                     </p>
                   </div>
-                  {!complete && (
-                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-muted-foreground">
-                      <p>{cohort.isOverdue ? 'Overdue' : cohort.isDeferred ? 'Starts next cycle' : 'Remaining'}</p>
-                      {endCycle && <p>Plan ends {endCycle}</p>}
-                    </div>
-                  )}
+                  <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-muted-foreground">
+                    <p>{cohort.isOverdue ? 'Overdue' : cohort.isDeferred ? 'Starts next cycle' : 'Remaining'}</p>
+                    {endCycle && <p>Plan ends {endCycle}</p>}
+                  </div>
                 </li>
               )
             })}
