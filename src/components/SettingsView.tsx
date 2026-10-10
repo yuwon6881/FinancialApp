@@ -314,15 +314,21 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         </React.Suspense>
       )}
 
-      {/* Four cards in one grid, not two stacked columns. As columns, each side grew to its own
-          content height and the pairs stopped lining up -- a one-line card sat beside a three-line
-          one with a ragged gap between them. In one grid each row shares a height. */}
+      {/* Four disclosures in two columns that grow on their own. In one grid, a row took the
+          height of its taller card, so opening Active Devices stretched a closed Two-Factor card
+          beside it into a tall empty panel. Closed, every header is the same height, so the two
+          columns still line up; open, only the column holding the open panel grows. Sign-in (devices,
+          password) reads first, then the second factors. */}
       {activeTab === 'security' && (
-        <div id="settings-panel-security" role="tabpanel" aria-labelledby="settings-tab-security" className="grid grid-cols-1 gap-6 lg:grid-cols-2 animate-in fade-in duration-200">
-          <ActiveDevicesSection />
-          <TwoFactorSection hideSensitive={hideSensitive} />
-          <ChangePasswordSection hideSensitive={hideSensitive} />
-          <FingerprintSection />
+        <div id="settings-panel-security" role="tabpanel" aria-labelledby="settings-tab-security" className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start animate-in fade-in duration-200">
+          <div className="flex min-w-0 flex-col gap-6">
+            <ActiveDevicesSection />
+            <ChangePasswordSection hideSensitive={hideSensitive} />
+          </div>
+          <div className="flex min-w-0 flex-col gap-6">
+            <TwoFactorSection hideSensitive={hideSensitive} />
+            <FingerprintSection />
+          </div>
         </div>
       )}
       </div>

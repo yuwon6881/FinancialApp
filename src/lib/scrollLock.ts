@@ -12,52 +12,47 @@
 // Centralising here fixes that: the real body styles are captured only on the
 // first lock and restored only when the last locker releases. Any number of
 // overlapping callers is safe, and order no longer matters.
+//
+// It freezes the page with `overflow: hidden` on the root rather than the older `position: fixed`
+// body with a negative `top`. Pinning the body set the window's scroll to 0 for as long as a sheet
+// was open and put it back on close, and framer's layout animations (the section and tab pills,
+// the chart legend rows) measure in page coordinates: a re-render that straddled the restore saw
+// every animated element jump by the scroll offset and slid it back into place, so closing Ask AI
+// or Bills to review halfway down a page replayed the animations under it. Hiding the overflow
+// leaves the scroll position alone, so nothing moves. Every browser the app supports (Safari 16+
+// included) honours it for touch scrolling as well.
 
-interface SavedBodyStyle {
-  position: string
-  top: string
-  left: string
-  right: string
-  width: string
-  overflow: string
-  paddingRight: string
-  scrollY: number
+interface SavedStyle {
+  htmlOverflow: string
+  bodyOverflow: string
+  bodyPaddingRight: string
 }
 
 let lockCount = 0
-let saved: SavedBodyStyle | null = null
+let saved: SavedStyle | null = null
 
 export function lockBodyScroll(): void {
   lockCount += 1
   // Only the first locker touches the DOM; later ones just bump the count.
   if (lockCount > 1) return
 
+  const root = document.documentElement
   const { body } = document
-  const scrollY = window.scrollY
 
   saved = {
-    position: body.style.position,
-    top: body.style.top,
-    left: body.style.left,
-    right: body.style.right,
-    width: body.style.width,
-    overflow: body.style.overflow,
-    paddingRight: body.style.paddingRight,
-    scrollY,
+    htmlOverflow: root.style.overflow,
+    bodyOverflow: body.style.overflow,
+    bodyPaddingRight: body.style.paddingRight,
   }
 
   // From 768px the root reserves the scrollbar's lane (`scrollbar-gutter: stable`), so hiding the
   // scrollbar leaves the width unchanged. Padding the body as well narrowed the page by a scrollbar
   // on every open and widened it on every close, and each of those width changes replayed the
   // layout animations under the sheet (tab pills, chart legends sliding into place again).
-  const gutterReserved = getComputedStyle(document.documentElement).scrollbarGutter?.includes('stable') ?? false
-  const scrollbarWidth = gutterReserved ? 0 : window.innerWidth - document.documentElement.clientWidth
+  const gutterReserved = getComputedStyle(root).scrollbarGutter?.includes('stable') ?? false
+  const scrollbarWidth = gutterReserved ? 0 : window.innerWidth - root.clientWidth
 
-  body.style.position = 'fixed'
-  body.style.top = `-${scrollY}px`
-  body.style.left = '0'
-  body.style.right = '0'
-  body.style.width = '100%'
+  root.style.overflow = 'hidden'
   body.style.overflow = 'hidden'
   if (scrollbarWidth > 0) {
     body.style.paddingRight = `${scrollbarWidth}px`
@@ -71,17 +66,8 @@ export function unlockBodyScroll(): void {
   if (lockCount > 0) return
   if (!saved) return
 
-  const { body } = document
-  const { scrollY } = saved
-
-  body.style.position = saved.position
-  body.style.top = saved.top
-  body.style.left = saved.left
-  body.style.right = saved.right
-  body.style.width = saved.width
-  body.style.overflow = saved.overflow
-  body.style.paddingRight = saved.paddingRight
+  document.documentElement.style.overflow = saved.htmlOverflow
+  document.body.style.overflow = saved.bodyOverflow
+  document.body.style.paddingRight = saved.bodyPaddingRight
   saved = null
-
-  window.scrollTo(0, scrollY)
 }

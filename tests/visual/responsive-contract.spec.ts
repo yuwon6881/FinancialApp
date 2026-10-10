@@ -692,17 +692,23 @@ test('bill review centers text-only actions and defaults to full payment', async
     expect(Math.abs((centers[0]!.x + centers[0]!.width / 2) - (centers[1]!.x + centers[1]!.width / 2))).toBeLessThanOrEqual(1)
   }
 
-  const discardBox = await dialog.getByRole('button', { name: 'Discard' }).boundingBox()
-  const removeBox = await dialog.getByRole('button', { name: 'Remove' }).boundingBox()
-  expect(discardBox).not.toBeNull()
-  expect(removeBox).not.toBeNull()
-  expect(
-    Math.abs(discardBox!.width - removeBox!.width),
-    'Discard should use its natural idle width rather than reserving the longer busy label',
-  ).toBeLessThanOrEqual(12)
+  // Discard is sized by its idle label and padding, not by the longer "Discarding…" busy label.
+  const discardFit = await dialog.getByRole('button', { name: 'Discard' }).evaluate(button => {
+    const content = button.querySelector<HTMLElement>('[data-mutation-visible-content]')!
+    const style = getComputedStyle(button)
+    const chrome = Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight)
+      + Number.parseFloat(style.borderLeftWidth) + Number.parseFloat(style.borderRightWidth)
+    return button.getBoundingClientRect().width - (content.getBoundingClientRect().width + chrome)
+  })
+  const compact = (page.viewportSize()?.width ?? 0) < 640
+  // On a phone Discard shares a two-column row with Remove, so it fills its cell instead.
+  if (!compact) {
+    expect(discardFit, 'Discard should use its natural idle width rather than reserving the longer busy label').toBeLessThanOrEqual(2)
+  }
 
   await expect(dialog.getByRole('status')).toHaveCount(0)
-  await expect(dialog.getByText(/-.*172.80/)).toBeVisible()
+  // Outflow is ink and unsigned on the bill itself; the sheet's summary line repeats the total.
+  await expect(dialog.getByRole('article', { name: 'Gym' }).getByText(/172\.80/)).toBeVisible()
   await dialog.getByRole('switch', { name: 'Pay partial amount for Gym' }).click()
   const amount = dialog.getByLabel('Amount paid')
   await amount.fill('100')

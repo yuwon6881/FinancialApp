@@ -61,7 +61,7 @@ describe('PendingSubscriptionsModal', () => {
   it('shows confirmation progress and prevents duplicate actions', () => {
     const { onConfirmSubscription } = renderModal()
     expect(screen.queryByRole('status')).toBeNull()
-    expect(screen.getByText('-RM 870.00')).toBeTruthy()
+    expect(screen.getByText('RM 870.00')).toBeTruthy()
     expect(screen.queryByLabelText('Amount paid')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Paid' }))
 
