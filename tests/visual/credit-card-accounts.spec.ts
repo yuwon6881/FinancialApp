@@ -16,6 +16,8 @@ test('credit card figures and balance fields keep long names contained', async (
   const card = page.locator('#account-row-visa')
   await expect(card.getByText('Available credit', { exact: true })).toBeVisible()
   await expect(card.getByText('Credit limit', { exact: true })).toBeVisible()
+  // Centre the row so the floating phone tab bar cannot sit over it in the capture.
+  await card.evaluate(element => element.scrollIntoView({ block: 'center' }))
   await waitForStableLayout(page)
   expect(await card.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
   await expect(card).toHaveScreenshot('credit-card-row.png')
