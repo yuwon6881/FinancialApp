@@ -377,6 +377,9 @@ test('Rewards bucket keeps committed and free amounts readable across widths', a
   await expect(card.getByText('Net change')).toBeVisible()
   if (test.info().project.name === 'compact-320-light' ||
       (width === 390 && (test.info().project.name === 'mobile-light' || test.info().project.name === 'mobile-dark'))) {
+    // Centre the card so the floating tab bar cannot sit over its actions in the capture.
+    await card.evaluate(element => element.scrollIntoView({ block: 'center' }))
+    await waitForStableLayout(page)
     await expect(card).toHaveScreenshot('rewards-bucket.png')
   }
 })
