@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status-bar icon for pushes: the app icon's segmented ring on a transparent field. Android keeps
+     only the alpha channel of a small icon, so the coloured tile cannot be used here. The group
+     scales the 100-unit favicon artwork so the ring fills the 24dp icon box. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group
+        android:scaleX="0.4"
+        android:scaleY="0.4"
+        android:translateX="-8"
+        android:translateY="-8">
+        <path
+            android:pathData="M51.83,29.08A21,21 0 0,1 55.44,70.28"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="12" />
+        <path
+            android:pathData="M51.83,70.92A21,21 0 0,1 29.72,55.44"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="12" />
+        <path
+            android:pathData="M29.08,51.83A21,21 0 0,1 34.64,35.68"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="12" />
+        <path
+            android:pathData="M37.36,33.23A21,21 0 0,1 48.17,29.08"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="12" />
+    </group>
+</vector>

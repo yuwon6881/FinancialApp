@@ -49,6 +49,14 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+        <!-- Without these, a push shown by the system falls back to the opaque launcher icon, which
+             Android flattens into a plain square. The colour tints the icon in the shade. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_financialapp" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/ic_launcher_background" />
             <!-- CapacitorPasskey auto-configuration -->
         <meta-data
             android:name="asset_statements"
