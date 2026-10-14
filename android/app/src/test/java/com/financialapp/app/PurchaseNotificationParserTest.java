@@ -25,6 +25,25 @@ public class PurchaseNotificationParserTest {
         assertEquals(body, amount, result.amount);
         assertEquals(body, description, result.description);
     }
+    @Test public void readsTheAtSignMerchantNotTheCallTheCardFooter() {
+        // The "at the back of your card" footer once beat the real "@Courtsite" merchant to the description.
+        assertCaptured("CIMB:MYR 59.36 was charged on your card num 1181 @Courtsite on 13/10.Pls call the num at the back of your card for any queries.", "59.36", "Courtsite");
+        assertCaptured("CIMB:MYR 12.00 was charged on your card num 1181 @GRAB* A-123 on 13/10. Please call the number at the back of your card for any enquiries.", "12.00", "GRAB* A-123");
+        assertCaptured("Kad anda dicaj RM30.00 @MYDIN pada 13/10. Sila hubungi nombor di belakang kad anda untuk sebarang pertanyaan.", "30.00", "MYDIN");
+        assertCaptured("Card txn RM20.00 at KFC. If this wasn't you, please call the number at the back of your card.", "20.00", "KFC");
+    }
+    @Test public void leavesTheDescriptionEmptyWhenOnlyAFooterNamesAPlace() {
+        PurchaseNotificationParser.Result result = PurchaseNotificationParser.parse(
+            "CIMB OCTO MY", "CIMB:MYR 59.36 was charged on your card num 1181. Pls call the num at the back of your card for any queries.");
+        assertNotNull(result);
+        assertEquals("59.36", result.amount);
+        assertNull(result.description);
+    }
+    @Test public void keepsMerchantsWhoseNamesOpenWithAFooterWord() {
+        assertCaptured("Payment of RM9.00 to CALL CENTRE CAFE successful", "9.00", "CALL CENTRE CAFE");
+        assertCaptured("Payment of RM9.00 to IFFAH BAKERY successful", "9.00", "IFFAH BAKERY");
+        assertCaptured("You paid RM50.00 to ACME SDN. BHD. on 13/10. If you did not make this payment, call 1300 88 1234.", "50.00", "ACME SDN. BHD");
+    }
     @Test public void recognizesCimbRailsWithoutPaymentWordOrAuxiliaryVerb() {
         assertCaptured("FPX Payment RM515.00 To MOOMOO successful on 28 sep 2026", "515.00", "MOOMOO");
         assertCaptured("Payment RM50.00 to RESTORAN ALI successful", "50.00", "RESTORAN ALI");

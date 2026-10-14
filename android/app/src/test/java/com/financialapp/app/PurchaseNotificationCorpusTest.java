@@ -58,6 +58,12 @@ public class PurchaseNotificationCorpusTest {
         {"Bank", "Transaction of RM5.00 at SHELL has been authorised", "5.00", "MYR", "SHELL", null},
         {"Bank", "Card transaction: RM45.00 at IKEA. Not you? Call 1300 88 1234", "45.00", "MYR", "IKEA", null},
         {"Bank", "Payment of RM2.50 at PLUS toll was successful", "2.50", "MYR", "PLUS toll", null},
+        {"CIMB OCTO MY", "CIMB:MYR 59.36 was charged on your card num 1181 @Courtsite on 13/10/2026.Pls call the num at the back of your card for any queries.", "59.36", "MYR", "Courtsite", "2026-10-13"},
+        {"Messages", "RM0 Maybank: Your card ending 1234 was charged RM45.90 at SHOPEE MALAYSIA on 28/09/26. If unauthorised, call the number at the back of your card.", "45.90", "MYR", "SHOPEE MALAYSIA", "2026-09-28"},
+        {"Bank", "Your card ending 1234 was used for RM30.00 at TESCO. Contact us at the back of your card if you did not make this transaction.", "30.00", "MYR", "TESCO", null},
+        {"Bank", "Payment of RM88.00 to TNB successful. For assistance, contact customer care at 1300-88-1234.", "88.00", "MYR", "TNB", null},
+        {"Bank", "Kad anda dicaj RM30.00 @MYDIN pada 13/10/2026. Sila hubungi nombor di belakang kad anda untuk sebarang pertanyaan.", "30.00", "MYR", "MYDIN", "2026-10-13"},
+        {"Bank", "Anda telah membayar RM12.00 kepada KEDAI RUNCIT. Sila hubungi nombor di belakang kad anda jika ada pertanyaan.", "12.00", "MYR", "KEDAI RUNCIT", null},
     };
 
     private static final String[][] SKIPPED = {

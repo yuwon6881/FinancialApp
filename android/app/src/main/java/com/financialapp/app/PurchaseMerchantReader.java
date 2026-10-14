@@ -34,6 +34,19 @@ final class PurchaseMerchantReader {
             // A bare network name with its masked number: "Visa 1234", "Mastercard ending 5678".
             + "|^(?:visa|master(?:card)?|amex|mydebit|unionpay)(?:\\s+(?:debit|credit|card))*(?:\\s+(?:ending|no\\.?|number))?(?:\\s*[0-9x*•#.-]+)?$",
         Pattern.CASE_INSENSITIVE);
+    /**
+     * The customer-service footer banks append ("Pls call the num at the back of your card for any queries", "If this
+     * wasn't you, call 1300…", "Sila hubungi nombor di belakang kad anda"). It is advice, never a payee, yet it is full
+     * of "at"/"to"/"for" cues; each sentence that opens this way is dropped before any payee is read. The break before
+     * it may be a full stop with no space ("13/10.Pls"), and "SDN. BHD." is safe because "BHD" opens no footer.
+     */
+    private static final Pattern FOOTER = Pattern.compile(
+        "(?:^|(?<=[.!?])|(?<=\\n))[ \\t]*(?:(?:pls|please|kindly|sila)\\b|if\\b|jika\\b|sekiranya\\b|not\\s+you\\b|bukan\\s+anda\\b"
+            + "|(?:call|contact|dial|hubungi)\\b|for\\s+(?:any|more|further|other)\\s+(?:queries|query|enquiries|enquiry|inquiries|info|information|assistance|help|details)\\b)"
+            + "[^\\n]*", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+    /** Where to call, not who was paid: should a footer survive in a shape the footer rule misses, it still never becomes the description. */
+    private static final Pattern FOOTER_NAME = Pattern.compile(
+        "\\b(?:back\\s+of|belakang|queries|query|enquiries|inquiries|pertanyaan|hotline|helpline|customer\\s+(?:service|care))\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern OWNED = Pattern.compile("^(?:your|my|anda)\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern LETTER = Pattern.compile("\\p{L}");
     private static final Pattern MASKED = Pattern.compile("^[0-9xX*•#\\s-]+$");
@@ -41,13 +54,15 @@ final class PurchaseMerchantReader {
     private static final Pattern FIGURE = Pattern.compile(PurchaseAmountReader.FIGURE_START, Pattern.CASE_INSENSITIVE);
     private static final Pattern TRIM = Pattern.compile("^[\"'\\s]+|[\"'\\s.,:;-]+$");
 
-    static String read(String text) {
+    static String read(String alert) {
+        String text = FOOTER.matcher(alert).replaceAll("");
         String labelled = first(LABELLED.matcher(text));
         if (labelled != null) return labelled;
-        String inline = first(INLINE.matcher(text));
-        if (inline != null) return inline;
+        // An "@" is a deliberate merchant marker, so it outranks the looser "at"/"to" wording.
         String atSign = first(AT_SIGN.matcher(text));
-        return atSign != null ? atSign : first(PURPOSE.matcher(text));
+        if (atSign != null) return atSign;
+        String inline = first(INLINE.matcher(text));
+        return inline != null ? inline : first(PURPOSE.matcher(text));
     }
 
     private static String first(Matcher match) {
@@ -55,7 +70,7 @@ final class PurchaseMerchantReader {
             String name = TRIM.matcher(match.group(1)).replaceAll("");
             if (name.length() < 2 || name.length() > 120 || !LETTER.matcher(name).find() || MASKED.matcher(name).matches()) continue;
             if (OWNED.matcher(name).find() || INSTRUMENT.matcher(name).matches() || TIME.matcher(name).find() || FIGURE.matcher(name).find()) continue;
-            if (PurchaseDateReader.read(name) != null) continue;
+            if (FOOTER_NAME.matcher(name).find() || PurchaseDateReader.read(name) != null) continue;
             return name;
         }
         return null;
