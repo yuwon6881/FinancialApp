@@ -20,20 +20,25 @@ function setup() {
 }
 
 describe('useCapturedPurchaseForm suggestions', () => {
-  it('asks the AI once per capture, not once per edit to its description', () => {
+  it('asks the AI for categories once per capture, not once per edit to its description', () => {
     const { suggestions, state, hook } = setup()
     for (const typed of ['G', 'Gr', 'Gra', 'Grab', 'Grab lunch']) hook.rerender({ form: state(typed) })
 
     expect(suggestions.requestCategorySuggestions).toHaveBeenCalledTimes(1)
     expect(suggestions.requestCategorySuggestions).toHaveBeenCalledWith('GRAB*FOOD', null)
-    expect(suggestions.requestNoteSuggestions).toHaveBeenCalledTimes(1)
   })
 
-  it('suggests again for the next capture', () => {
+  it('never opens the AI description cleanup on its own; that stays behind the AI button', () => {
+    const { suggestions, state, hook } = setup()
+    hook.rerender({ form: state('TNG*PARKING', 'capture-2') })
+
+    expect(suggestions.requestNoteSuggestions).not.toHaveBeenCalled()
+  })
+
+  it('suggests categories again for the next capture', () => {
     const { suggestions, state, hook } = setup()
     hook.rerender({ form: state('TNG*PARKING', 'capture-2') })
 
     expect(suggestions.requestCategorySuggestions).toHaveBeenCalledTimes(2)
-    expect(suggestions.requestNoteSuggestions).toHaveBeenCalledTimes(2)
   })
 })

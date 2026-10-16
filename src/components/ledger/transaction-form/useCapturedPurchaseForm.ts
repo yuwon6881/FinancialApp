@@ -11,9 +11,11 @@ export function capturedPurchaseEdits(state: TransactionFormState): Record<strin
 }
 
 /**
- * Suggestions run once per capture, for the description it arrived with, and never apply
- * themselves. Keying on the edited description would spend two AI calls per keystroke and
- * trip the per-user AI rate limit; later edits use the form's own blur and AI button paths.
+ * Category suggestions run once per capture, for the description it arrived with, and never apply
+ * themselves. Keying on the edited description would spend an AI call per keystroke and trip the
+ * per-user AI rate limit; later edits use the form's own blur path. The description cleanup is
+ * deliberately not requested here: it opens a popover over a field the user has not touched, so
+ * it stays behind the AI button.
  */
 export function useCapturedPurchaseForm(state: TransactionFormState, suggestions: ReturnType<typeof useTransactionSuggestions>, hidden: boolean) {
   const capture = usePurchaseCaptureActions()
@@ -23,7 +25,6 @@ export function useCapturedPurchaseForm(state: TransactionFormState, suggestions
     if (suggested.current === state.captureId) return
     suggested.current = state.captureId
     void suggestions.requestCategorySuggestions(state.description.trim(), null)
-    void suggestions.requestNoteSuggestions(state.description.trim())
   }, [state.captureId, state.showAddForm, state.description, suggestions, hidden])
 
   useEffect(() => {
