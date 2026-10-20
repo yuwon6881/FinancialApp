@@ -83,18 +83,26 @@ export function AuthHeader({
   icon,
   title,
   description,
+  titleId,
+  descriptionId,
+  headingLevel = 1,
 }: {
   icon: ReactNode
   title: ReactNode
   description?: ReactNode
+  /** Ids for a dialog that names itself from this header (the lock screen overlays the app). */
+  titleId?: string
+  descriptionId?: string
+  headingLevel?: 1 | 2
 }) {
+  const Heading = headingLevel === 1 ? 'h1' : 'h2'
   return (
     <header className="space-y-3 select-none">
       <div className="flex size-12 items-center justify-center">
         {icon}
       </div>
-      <h1 className="text-display text-foreground">{title}</h1>
-      {description && <p className="text-body text-muted-foreground">{description}</p>}
+      <Heading id={titleId} className="text-display text-foreground">{title}</Heading>
+      {description && <p id={descriptionId} className="text-body text-muted-foreground">{description}</p>}
     </header>
   )
 }

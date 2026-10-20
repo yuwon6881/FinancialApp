@@ -98,35 +98,70 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, SmartAmountIn
   const liveResult = /[+\-×÷*/]/.test(expression.slice(1)) ? evaluateMathString(expression) : null
 
   return (
-    <div className="relative w-full">
-      <Input
-        {...inputProps}
-        ref={setRef}
-        value={value}
-        type="text"
-        inputMode="decimal"
-        className={`${className ?? ''} text-left transition-all duration-200 ${showCalculator ? 'pr-40' : ''}`}
-        onChange={event => {
-          if (isReadOnly) return
-          if (/^-?[0-9.()+\-*/×÷\s]*$/.test(event.target.value)) onChange?.(event)
-        }}
-        onFocus={event => { if (!isReadOnly) setFocused(true); onFocus?.(event) }}
-        onBlur={event => {
-          // Resolve any pending expression (e.g. "12.00×5.00") when leaving the
-          // field, matching the =/Enter behaviour.
-          if (!isReadOnly) evaluate()
-          setFocused(false)
-          onBlur?.(event)
-        }}
-        onKeyDown={event => {
-          if (isReadOnly) return
-          if (event.key === 'Enter' || event.key === '=') {
-            event.preventDefault()
-            evaluate()
-          }
-          onKeyDown?.(event)
-        }}
-      />
+    <div className="w-full">
+      {/* The inline keys centre on this box alone; the live-result line below must not shift them. */}
+      <div className="relative">
+        <Input
+          {...inputProps}
+          ref={setRef}
+          value={value}
+          type="text"
+          inputMode="decimal"
+          className={`${className ?? ''} text-left transition-all duration-200 ${showCalculator ? 'pr-40' : ''}`}
+          onChange={event => {
+            if (isReadOnly) return
+            if (/^-?[0-9.()+\-*/×÷\s]*$/.test(event.target.value)) onChange?.(event)
+          }}
+          onFocus={event => { if (!isReadOnly) setFocused(true); onFocus?.(event) }}
+          onBlur={event => {
+            // Resolve any pending expression (e.g. "12.00×5.00") when leaving the
+            // field, matching the =/Enter behaviour.
+            if (!isReadOnly) evaluate()
+            setFocused(false)
+            onBlur?.(event)
+          }}
+          onKeyDown={event => {
+            if (isReadOnly) return
+            if (event.key === 'Enter' || event.key === '=') {
+              event.preventDefault()
+              evaluate()
+            }
+            onKeyDown?.(event)
+          }}
+        />
+
+        {showCalculator && (
+          // Five keyboard-accessible compound keys kept dense and flush so the amount itself remains readable.
+          <div
+            data-smart-amount-calculator
+            className="absolute right-2 top-1/2 flex -translate-y-1/2 items-stretch overflow-hidden rounded-full border border-border/70 bg-card shadow-(--app-shadow) [&_button]:!h-8 [&_button]:!min-h-0 [&_button]:!min-w-0"
+          >
+            {OPERATOR_KEYS.map(([label, operator, ariaLabel]) => (
+              <Button
+                variant="tertiary"
+                size="sm"
+                key={operator}
+                type="button"
+                aria-label={ariaLabel}
+                onMouseDown={event => { event.preventDefault(); appendOperator(operator) }}
+                className="h-8 rounded-none border-r border-border/60 px-2.5 text-body font-medium text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground active:scale-95"
+              >
+                {label}
+              </Button>
+            ))}
+            <Button
+              variant="tertiary"
+              size="sm"
+              type="button"
+              aria-label="Calculate result"
+              onMouseDown={event => { event.preventDefault(); evaluate() }}
+              className="h-8 rounded-none bg-primary px-3 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-95"
+            >
+              =
+            </Button>
+          </div>
+        )}
+      </div>
 
       {!isTray && liveResult !== null && (
         <p aria-live="polite" className="mt-1.5 px-1 text-caption text-muted-foreground tabular-nums">
@@ -165,38 +200,6 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, SmartAmountIn
               =
             </Button>
           </div>
-        </div>
-      )}
-
-      {showCalculator && (
-        // Five keyboard-accessible compound keys kept dense and flush so the amount itself remains readable.
-        <div
-          data-smart-amount-calculator
-          className="absolute right-2 top-1/2 flex -translate-y-1/2 items-stretch overflow-hidden rounded-full border border-border/70 bg-card shadow-(--app-shadow) [&_button]:!h-8 [&_button]:!min-h-0 [&_button]:!min-w-0"
-        >
-          {OPERATOR_KEYS.map(([label, operator, ariaLabel]) => (
-            <Button
-              variant="tertiary"
-              size="sm"
-              key={operator}
-              type="button"
-              aria-label={ariaLabel}
-              onMouseDown={event => { event.preventDefault(); appendOperator(operator) }}
-              className="h-8 rounded-none border-r border-border/60 px-2.5 text-body font-medium text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground active:scale-95"
-            >
-              {label}
-            </Button>
-          ))}
-          <Button
-            variant="tertiary"
-            size="sm"
-            type="button"
-            aria-label="Calculate result"
-            onMouseDown={event => { event.preventDefault(); evaluate() }}
-            className="h-8 rounded-none bg-primary px-3 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-95"
-          >
-            =
-          </Button>
         </div>
       )}
     </div>

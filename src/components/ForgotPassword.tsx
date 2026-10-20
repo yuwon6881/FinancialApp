@@ -113,17 +113,12 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
       <AuthCard>
 
         {success ? (
-          <div className="flex flex-col items-center text-center space-y-4 select-none">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-emerald-500/10">
-              <CheckCircle2 className="size-6 text-emerald-500" />
-            </div>
-            <div className="space-y-1.5">
-              <h1 className="text-display text-foreground">Password reset</h1>
-              <p className="text-xs text-muted-foreground">
-                Your password has been updated and all other sessions were signed out. You can now log
-                in with your new password.
-              </p>
-            </div>
+          <>
+            <AuthHeader
+              icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-emerald-500/10"><CheckCircle2 className="size-6 text-emerald-600 dark:text-emerald-400" aria-hidden="true" /></span>}
+              title="Password reset"
+              description="Your password has been updated and all other sessions were signed out. You can now log in with your new password."
+            />
             <Button
               onClick={onBackToLogin}
               size="lg"
@@ -131,7 +126,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
             >
               Return to login
             </Button>
-          </div>
+          </>
         ) : (
           <>
             {/* Header */}

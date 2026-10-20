@@ -20,9 +20,10 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
-  const [q1, setQ1] = useState<number>(-1)
-  const [q2, setQ2] = useState<number>(-1)
-  const [q3, setQ3] = useState<number>(-1)
+  // '' is "not chosen yet", which the select renders as its muted placeholder.
+  const [q1, setQ1] = useState<number | ''>('')
+  const [q2, setQ2] = useState<number | ''>('')
+  const [q3, setQ3] = useState<number | ''>('')
 
   const [a1, setA1] = useState('')
   const [a2, setA2] = useState('')
@@ -43,10 +44,10 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
     const questions = [q1, q2, q3]
     const answers = [a1, a2, a3]
     questions.forEach((question, index) => {
-      if (question === -1) nextErrors[`q${index + 1}`] = `Question ${index + 1} is required.`
+      if (question === '') nextErrors[`q${index + 1}`] = `Question ${index + 1} is required.`
     })
     questions.forEach((question, index) => {
-      if (question !== -1 && questions.filter(candidate => candidate === question).length > 1) {
+      if (question !== '' && questions.filter(candidate => candidate === question).length > 1) {
         nextErrors[`q${index + 1}`] = 'Choose a different security question.'
       }
     })
@@ -62,11 +63,9 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
 
     setSubmitting(true)
     try {
-      await api.setupSecurityQuestions([
-        { questionId: q1, answer: a1 },
-        { questionId: q2, answer: a2 },
-        { questionId: q3, answer: a3 },
-      ])
+      // Validation above guarantees all three are chosen; the flatMap narrows '' away for the type.
+      await api.setupSecurityQuestions(questions.flatMap((questionId, index) =>
+        questionId === '' ? [] : [{ questionId, answer: answers[index] }]))
       onComplete()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -100,12 +99,9 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
         <form noValidate onSubmit={handleSubmit} className="space-y-5">
           {rows.map((item, idx) => {
             const chosenElsewhere = rows.filter(r => r.id !== item.id).map(r => r.val)
-            const options = [
-              { value: -1, label: 'Select a question…' },
-              ...availableQuestions
-                .map((q, i) => ({ value: i, label: q }))
-                .filter(opt => !chosenElsewhere.includes(opt.value)),
-            ]
+            const options = availableQuestions
+              .map((q, i) => ({ value: i, label: q }))
+              .filter(opt => !chosenElsewhere.includes(opt.value))
             return (
               <div key={item.id} className="space-y-3">
                 <div className="flex items-center gap-2 text-label font-medium text-muted-foreground">
@@ -120,8 +116,9 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
                   error={fieldErrors[`q${idx + 1}`]}
                   labelClassName="sr-only"
                 >
-                  <CustomSelect<number>
+                  <CustomSelect<number | ''>
                     ariaLabel={`Security question ${idx + 1}`}
+                    placeholder="Select a question…"
                     value={item.val}
                     onChange={next => {
                       item.setVal(next)

@@ -12,6 +12,7 @@ import {
 } from '../lib/fingerprintOptionsCache'
 import { getErrorCode, getErrorMessage, getStatus } from '../lib/errors'
 import { AlertBanner } from './ui/AlertBanner'
+import { AuthHeader } from './ui/AuthLayout'
 import { Button } from './ui/Button'
 import { Z_LAYERS } from '../lib/zLayers'
 import { FormField } from './ui/FormField'
@@ -270,25 +271,24 @@ export function LockScreen({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         tabIndex={-1}
-        className="view-enter my-auto flex w-full max-w-sm flex-col items-center gap-6 outline-none"
+        className="view-enter my-auto flex w-full max-w-sm flex-col gap-6 outline-none"
       >
-        <AppLogo className="size-14 rounded-2xl" />
-        <div className="text-center">
-          <h2 id={titleId} className="text-title text-foreground">
-            {mode !== 'session-timeout' ? 'Unlock FinancialApp' : 'Session locked'}
-          </h2>
-          <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
-            {mode === 'native-app'
-              ? 'Verify with biometrics or your device PIN before opening your saved session.'
-              : mode === 'pwa-launch'
-              ? isOnline
-                ? 'Verify with your device to open FinancialApp. Password unlock needs an internet connection.'
-                : 'Verify with your device to open FinancialApp. You are offline, so password unlock is unavailable.'
-              : fingerprintAvailable
-              ? 'You were inactive for 5 minutes. Use your device unlock or enter your password to continue.'
-              : 'You were inactive for 5 minutes. Enter your password to continue.'}
-          </p>
-        </div>
+        <AuthHeader
+          icon={<AppLogo className="size-12 rounded-2xl" />}
+          headingLevel={2}
+          titleId={titleId}
+          descriptionId={descriptionId}
+          title={mode !== 'session-timeout' ? 'Unlock FinancialApp' : 'Session locked'}
+          description={mode === 'native-app'
+            ? 'Verify with biometrics or your device PIN before opening your saved session.'
+            : mode === 'pwa-launch'
+            ? isOnline
+              ? 'Verify with your device to open FinancialApp. Password unlock needs an internet connection.'
+              : 'Verify with your device to open FinancialApp. You are offline, so password unlock is unavailable.'
+            : fingerprintAvailable
+            ? 'You were inactive for 5 minutes. Use your device unlock or enter your password to continue.'
+            : 'You were inactive for 5 minutes. Enter your password to continue.'}
+        />
 
         {lockError && <AlertBanner variant="error" className="w-full">{lockError}</AlertBanner>}
         {mode === 'native-app' && !nativeAuthenticationChecked && (
@@ -309,9 +309,9 @@ export function LockScreen({
             disabled={fingerprintVerifying || passwordVerifying}
             className="w-full"
           >
-            <ShieldCheck className="size-5 text-emerald-400 animate-pulse" />
+            <ShieldCheck className="size-5 text-emerald-600 dark:text-emerald-400 animate-pulse" aria-hidden="true" />
             {fingerprintVerifying
-              ? 'Verifying device...'
+              ? 'Verifying device…'
               : mode !== 'session-timeout' && hasAttemptedDeviceUnlock
                 ? 'Try again'
                 : 'Unlock with device'}
@@ -376,13 +376,13 @@ export function LockScreen({
             disabled={passwordVerifying || fingerprintVerifying || !lockPassword || (mode === 'pwa-launch' && !isOnline)}
             className="w-full"
           >
-            {passwordVerifying ? 'Unlocking…' : 'Unlock with Password'}
+            {passwordVerifying ? 'Unlocking…' : 'Unlock with password'}
           </Button>
         </form>}
         <Button
           variant="tertiary"
           onClick={handleSignOut}
-          className="text-xs text-muted-foreground hover:text-foreground transition cursor-pointer underline"
+          className="self-center text-xs text-muted-foreground hover:text-foreground transition cursor-pointer underline"
         >
           Sign out instead
         </Button>

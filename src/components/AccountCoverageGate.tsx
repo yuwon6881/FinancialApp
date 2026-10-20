@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { CheckCircle2, LockKeyhole, Plus, RotateCcw, Wallet } from 'lucide-react'
+import { CheckCircle2, Plus, RotateCcw, Wallet } from 'lucide-react'
 import type { LedgerAccount } from '../types'
 import { AuthCard, AuthHeader, AuthLoadingState, AuthShell } from './ui/AuthLayout'
 import { AlertBanner } from './ui/AlertBanner'
 import { Button } from './ui/Button'
+import { Panel } from './ui/Panel'
 import { AccountFormSheet } from './settings/accounts/AccountFormSheet'
 import type { LedgerAccountInput } from '../app/financialData/accountActions'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
@@ -52,8 +53,9 @@ export function AccountCoverageGate({
     <AuthShell brand={false}>
       <AuthCard className="max-w-2xl">
         <AuthHeader
-          icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10"><LockKeyhole className="size-6 text-accent-ink" /></span>}
+          icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10"><Wallet className="size-6 text-accent-ink" aria-hidden="true" /></span>}
           title="Set up your four accounts"
+          description="Every pay is split across four buckets, so each one needs at least one open account to hold its money. Add one to each bucket to continue."
         />
 
         {error && (
@@ -65,10 +67,6 @@ export function AccountCoverageGate({
           </div>
         )}
 
-        <div className="rounded-2xl border border-accent-ink/20 bg-accent/15 p-4 text-xs leading-relaxed text-muted-foreground">
-          <p className="font-semibold text-foreground">You need one open account in every bucket.</p>
-        </div>
-
         <div className="grid gap-3 sm:grid-cols-2">
           {LEDGER_ACCOUNT_BUCKETS.map(bucket => {
             const rows = accounts.filter(account => account.bucket === bucket.name)
@@ -76,12 +74,12 @@ export function AccountCoverageGate({
             const complete = accounts.some(account => account.bucket === bucket.name && !account.isArchived && !account.isPendingSync)
             const pending = live.some(account => account.isPendingSync)
             return (
-              <section key={bucket.name} className={complete ? 'rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4' : 'rounded-control bg-surface-2/70 p-4'} aria-labelledby={'account-gate-' + bucket.name}>
+              <Panel as="section" key={bucket.name} padding="compact" aria-labelledby={'account-gate-' + bucket.name}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h2 id={'account-gate-' + bucket.name} className="flex items-center gap-2 text-subsection text-foreground">
                       <span className={'rounded-md border px-1.5 py-0.5 text-xs ' + getCategoryBadgeClass(bucket.name)}>{bucket.name}</span>
-                      {complete && <CheckCircle2 className="size-4 text-emerald-500" aria-label="Complete" />}
+                      {complete && <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" aria-label="Complete" />}
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">{bucket.description}</p>
                   </div>
@@ -91,7 +89,7 @@ export function AccountCoverageGate({
                 <div className="mt-3 space-y-2">
                   {rows.length === 0 && <p className="text-xs text-muted-foreground">No account yet.</p>}
                   {rows.map(account => (
-                    <div key={account.id} className="flex items-center justify-between gap-2 rounded-xl border border-border/50 bg-background/50 px-3 py-2">
+                    <div key={account.id} className="flex items-center justify-between gap-2 rounded-control bg-surface-2/70 px-3 py-2">
                       <div className="flex min-w-0 items-center gap-2">
                         <Wallet className="size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
                         <span className={'truncate text-xs font-semibold ' + (account.isArchived ? 'text-muted-foreground line-through' : 'text-foreground')}>{account.name}</span>
@@ -104,7 +102,7 @@ export function AccountCoverageGate({
                   ))}
                 </div>
 
-                {pending && <p className="mt-2 text-xs font-semibold text-amber-500">Saving this account… waiting for server confirmation.</p>}
+                {pending && <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">Saving this account… waiting for server confirmation.</p>}
                 {!complete && rows.some(account => account.isArchived) && (
                   <Button type="button" variant="secondary" size="sm" className="mt-3 min-h-11 w-full justify-center" onClick={() => openForm(bucket.name, rows.find(account => account.isArchived) ?? null)}>
                     Reopen an account
@@ -115,7 +113,7 @@ export function AccountCoverageGate({
                     <Plus className="size-3.5" aria-hidden="true" /> Add account
                   </Button>
                 )}
-              </section>
+              </Panel>
             )
           })}
         </div>

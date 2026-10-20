@@ -42,3 +42,31 @@ test('credit card figures and balance fields keep long names contained', async (
   expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
   await expect(dialog).toHaveScreenshot('credit-card-balances.png')
 })
+
+test('inline calculator keys stay on the balance field once the live result appears', async ({ page }) => {
+  const accounts = ['Essentials', 'Growth', 'Stability', 'Rewards'].map((bucket, index) => ({
+    id: `account-${index}`, name: index === 0 ? 'CIMB' : bucket, bucket, kind: 'Bank',
+    interestEnabled: false, interestRatePercent: 0, interestFrequency: 'Monthly',
+    isArchived: false, remaining: index === 0 ? 63.08 : 0,
+    createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+  }))
+  await establishSession(page)
+  await mockApi(page, { accounts })
+  await page.goto('/settings?section=accounts', { waitUntil: 'domcontentloaded' })
+  await page.locator('#account-row-account-0').getByRole('button', { name: 'Edit CIMB', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Edit account' })
+  const balance = dialog.getByRole('textbox', { name: /Balance today/ })
+  await balance.focus()
+  const keys = dialog.locator('[data-smart-amount-calculator]')
+  // The sheet's balance field is wide enough for the inline keys at every tier this suite runs.
+  await expect(keys).toBeVisible()
+  await dialog.getByRole('button', { name: 'Subtract' }).dispatchEvent('mousedown')
+  await balance.press('End')
+  await balance.pressSequentially('2419.44')
+  await expect(dialog.getByText(/= -?2,?356\.36/)).toBeVisible()
+  const field = await balance.boundingBox()
+  const bar = await keys.boundingBox()
+  expect(field && bar).toBeTruthy()
+  // Centred on the input itself, not on the input plus the live-result line beneath it.
+  expect(Math.abs((bar!.y + bar!.height / 2) - (field!.y + field!.height / 2))).toBeLessThanOrEqual(1)
+})
