@@ -4,6 +4,8 @@ import { establishSession, mockApi } from './visualTestSupport'
 /** Native bridge simulation exercises the actual shipped React UI; it is not handset proof. */
 async function nativeCapture(page: Page, tapped: boolean, access = true, transactionType: 'outflow' | 'transfer' = 'outflow', recovery = false) {
   await page.addInitScript(({ tapped, access, transactionType, recovery }) => {
+    // These cases start past the first-run permissions offer, which has its own spec.
+    localStorage.setItem('financialapp.permissionSetup.v1', 'completed')
     const candidate: Record<string, unknown> = { id: 'capture-one', transactionId: '11111111-1111-4111-8111-111111111111', sourcePackage: 'bank.example', sourceLabel: 'Example bank', capturedAt: Date.now(), excerpt: 'Payment successful at COFFEE HOUSE', description: 'COFFEE HOUSE', transactionType, possibleDuplicate: false }
     let tapId: string | undefined = tapped ? 'capture-one' : undefined
     let completed = false

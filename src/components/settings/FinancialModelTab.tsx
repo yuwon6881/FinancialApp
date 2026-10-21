@@ -10,6 +10,7 @@ import {
 import type { DashboardData, PushChannel } from '../../types'
 import { ToggleButton } from '../ui/ToggleButton'
 import { NotificationsCard } from './NotificationsCard'
+import { PermissionsCard } from './PermissionsCard'
 import { PurchaseCapturePanelSlot } from '../../app/PurchaseCaptureBoundary'
 import type { PushBusyAction } from '../../app/usePushNotifications'
 import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
@@ -164,6 +165,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
 
       </div>
         <div>
+          <PermissionsCard />
           <PurchaseCapturePanelSlot />
           <NotificationsCard
             pushSupported={pushSupported !== false}

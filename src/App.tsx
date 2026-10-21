@@ -37,6 +37,7 @@ import { useTabNavigationCleanup } from './app/useTabNavigationCleanup'
 import { useAppThemeAndShortcuts } from './app/useAppThemeAndShortcuts'
 import { useNativePushActions } from './app/useNativePushActions'
 import { PurchaseCaptureBoundary, PurchaseCapturePanelSlot } from './app/PurchaseCaptureBoundary'
+import { PermissionSetupBoundary } from './app/PermissionSetupBoundary'
 import type { PurchaseCaptureOptions } from './app/usePurchaseCapture'
 import { useNativeNavigation } from './lib/useNativeNavigation'
 
@@ -368,6 +369,20 @@ function App() {
     >
       <AppProvider value={appContextValue}>
         <PurchaseCaptureBoundary options={captureOptions} tab={prefs.activeTab}>
+        <PermissionSetupBoundary
+          ready={captureOptions.eligible
+            && !cycleSummary.isOpen
+            && !dialogs.showLoginModal
+            && !dialogs.showFailedOpsModal
+            && !dialogs.showSearch
+            && !session.showPasswordPrompt
+            && !modals.isLedgerAddOpen
+            && !isAiOpen
+            && !fabMenu.isOpen}
+          push={push}
+          hidden={prefs.hideSensitive}
+          onReveal={openSensitivePrompt}
+        >
         <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-primary/25 selection:text-foreground">
         {enableRuntimeBackgroundBridges && <Suspense fallback={null}>
           <RuntimeBackgroundBridges
@@ -519,6 +534,7 @@ function App() {
           />
         </Suspense>
       </div>
+    </PermissionSetupBoundary>
     </PurchaseCaptureBoundary>
     </AppProvider>
     </AppGateways>
