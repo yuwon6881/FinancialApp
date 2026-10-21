@@ -77,9 +77,10 @@ export function FormField({
       value={{ controlId, labelledBy: labelId, describedBy, invalid: Boolean(error), required }}
     >
       <div className={cn('min-w-0 space-y-1.5', className)}>
-        {labelAction
-          ? <div className="flex min-w-0 items-center gap-1">{labelElement}{labelAction}</div>
-          : labelElement}
+        <div className="flex min-w-0 items-center gap-1 min-h-5">
+          {labelElement}
+          {labelAction}
+        </div>
         {children}
         {hint && (
           <p id={hintId} className={cn('text-caption text-muted-foreground', hintClassName)}>

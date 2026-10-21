@@ -9,6 +9,7 @@ import { Button } from '../ui/Button'
 import { ModalActions } from '../ui/ModalActions'
 import { InfoHint } from '../ui/InfoHint'
 import type { SavingsGoalFundingBucket } from '../../types'
+import { cn } from '../../lib/utils'
 
 interface SavingsGoalFormProps {
   mode: 'add' | 'edit'
@@ -37,6 +38,13 @@ interface SavingsGoalFormProps {
   onCancel: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
 }
+
+const RECURRENCE_PRESETS = [
+  { label: 'Monthly', months: '1' },
+  { label: 'Quarterly', months: '3' },
+  { label: 'Semi-annual', months: '6' },
+  { label: 'Annual', months: '12' },
+] as const
 
 export function SavingsGoalForm(props: SavingsGoalFormProps) {
   const isAdd = props.mode === 'add'
@@ -92,6 +100,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
           label="Funding source"
           labelAction={(
             <InfoHint
+              inline
               label="commitment funding bucket"
               text="Essentials is the money your bills come out of. Rewards is the money you set aside for treats and rewards."
             />
@@ -125,36 +134,74 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         </FormField>
       </div>
 
-      <div className="rounded-control bg-surface-2/70 p-3 space-y-3">
-        <div className="flex items-center gap-2 select-none">
+      <div className="rounded-control bg-surface-2/70 p-3.5 space-y-3 border border-border/40 transition-colors">
+        <div className="flex items-start gap-2.5 select-none">
           <Checkbox
             id={`goal-recurring-${props.mode}`}
             checked={props.isRecurring}
             onChange={event => props.onRecurringChange(event.target.checked)}
+            className="mt-0.5"
           />
-          <label htmlFor={`goal-recurring-${props.mode}`} className="text-foreground font-semibold cursor-pointer">
-            This repeats
-          </label>
+          <div className="min-w-0 flex-1">
+            <label htmlFor={`goal-recurring-${props.mode}`} className="text-foreground font-semibold cursor-pointer block text-body">
+              This repeats
+            </label>
+            <p className="text-caption text-muted-foreground font-normal mt-0.5 leading-relaxed">
+              Automatically restarts saving and advances the deadline once completed.
+            </p>
+          </div>
         </div>
         {props.isRecurring && (
-          <FormField
-            label="Repeat every (months)"
-            error={props.errors.recurrence}
-            hint={!props.errors.recurrence ? 'Marking it done moves the deadline forward and restarts saving.' : undefined}
-          >
-            <Input
-              type="number"
-              min={1}
-              max={120}
-              inputMode="numeric"
-              value={props.recurrenceMonths}
-              onChange={event => {
-                props.onRecurrenceMonthsChange(event.target.value)
-                props.onClearError('recurrence')
-              }}
-              className="font-medium [appearance:textfield]"
-            />
-          </FormField>
+          <div className="pt-2.5 border-t border-border/40 space-y-3">
+            <FormField
+              label="Repeat every (months)"
+              error={props.errors.recurrence}
+              hint={!props.errors.recurrence ? 'Marking it done moves the deadline forward and restarts saving.' : undefined}
+            >
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={120}
+                    inputMode="numeric"
+                    value={props.recurrenceMonths}
+                    onChange={event => {
+                      props.onRecurrenceMonthsChange(event.target.value)
+                      props.onClearError('recurrence')
+                    }}
+                    placeholder="12"
+                    className="font-medium [appearance:textfield] flex-1"
+                  />
+                  <span className="text-body font-medium text-muted-foreground shrink-0 pr-1">months</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <span className="text-caption text-muted-foreground mr-1">Presets:</span>
+                  {RECURRENCE_PRESETS.map(preset => {
+                    const isSelected = props.recurrenceMonths === preset.months
+                    return (
+                      <Button
+                        key={preset.months}
+                        type="button"
+                        variant={isSelected ? 'primary' : 'secondary'}
+                        size="sm"
+                        onClick={() => {
+                          props.onRecurrenceMonthsChange(preset.months)
+                          props.onClearError('recurrence')
+                        }}
+                        className={cn(
+                          'h-7 min-h-7 px-2.5 text-caption font-medium rounded-full cursor-pointer',
+                          isSelected && 'bg-ink text-ink-foreground',
+                        )}
+                      >
+                        {preset.label}
+                      </Button>
+                    )
+                  })}
+                </div>
+              </div>
+            </FormField>
+          </div>
         )}
       </div>
 
@@ -164,7 +211,6 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         </Button>
         <Button
           type="submit"
-          
         >
           {isAdd ? 'Add Commitment' : 'Save Changes'}
         </Button>
