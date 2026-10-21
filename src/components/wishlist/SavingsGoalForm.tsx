@@ -63,7 +63,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         />
       </FormField>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <FormField
           label={`Target (${props.currency})`}
           required
@@ -95,7 +95,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         </FormField>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <FormField
           label="Funding source"
           labelAction={(

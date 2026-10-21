@@ -68,7 +68,7 @@ export const InfoHint: React.FC<InfoHintProps> = ({ text, label, align = 'right'
           // tier -- including expanded, which the icon size would otherwise take back to 36px --
           // and buys its 44px target from the invisible `before` overlay instead.
           inline
-            ? 'relative inline-flex size-5 align-middle before:absolute before:-inset-2.5 sm:size-5 lg:size-5'
+            ? 'relative inline-flex size-5 min-h-0 min-w-0 align-middle before:absolute before:-inset-2.5 sm:size-5 lg:size-5'
             : 'inline-flex size-11 sm:size-7 lg:size-7',
           className
         )}

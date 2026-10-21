@@ -29,7 +29,7 @@ const portfolio = (appCurrency?: string): InvestmentPortfolio => ({
 } as unknown as InvestmentPortfolio)
 
 const noop = () => undefined
-const inputFor = (label: string) => screen.getByText(label).parentElement!.querySelector('input') as HTMLInputElement
+const inputFor = (label: string) => (screen.getByText(label).closest('[class*="space-y"]') ?? screen.getByText(label).parentElement)!.querySelector('input') as HTMLInputElement
 const chooseOption = (selectLabel: string, optionLabel: string) => {
   fireEvent.click(screen.getByRole('combobox', { name: selectLabel }))
   fireEvent.click(screen.getByRole('option', { name: optionLabel }))
