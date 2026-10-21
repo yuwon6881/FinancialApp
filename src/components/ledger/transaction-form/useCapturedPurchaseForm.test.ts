@@ -13,32 +13,21 @@ function setup() {
   } as unknown as ReturnType<typeof useTransactionSuggestions>
   const state = (description: string, captureId = 'capture-1') =>
     ({ captureId, showAddForm: true, description } as TransactionFormState)
-  const hook = renderHook(({ form }) => useCapturedPurchaseForm(form, suggestions, false), {
+  const hook = renderHook(({ form }) => useCapturedPurchaseForm(form, false), {
     initialProps: { form: state('GRAB*FOOD') },
   })
   return { suggestions, state, hook }
 }
 
+// The hook no longer takes the suggestions; these stand in for the form's own, to prove that
+// opening or editing a capture leaves them untouched.
 describe('useCapturedPurchaseForm suggestions', () => {
-  it('asks the AI for categories once per capture, not once per edit to its description', () => {
+  it('asks the AI for nothing when a capture opens or its description is edited', () => {
     const { suggestions, state, hook } = setup()
     for (const typed of ['G', 'Gr', 'Gra', 'Grab', 'Grab lunch']) hook.rerender({ form: state(typed) })
-
-    expect(suggestions.requestCategorySuggestions).toHaveBeenCalledTimes(1)
-    expect(suggestions.requestCategorySuggestions).toHaveBeenCalledWith('GRAB*FOOD', null)
-  })
-
-  it('never opens the AI description cleanup on its own; that stays behind the AI button', () => {
-    const { suggestions, state, hook } = setup()
     hook.rerender({ form: state('TNG*PARKING', 'capture-2') })
 
+    expect(suggestions.requestCategorySuggestions).not.toHaveBeenCalled()
     expect(suggestions.requestNoteSuggestions).not.toHaveBeenCalled()
-  })
-
-  it('suggests categories again for the next capture', () => {
-    const { suggestions, state, hook } = setup()
-    hook.rerender({ form: state('TNG*PARKING', 'capture-2') })
-
-    expect(suggestions.requestCategorySuggestions).toHaveBeenCalledTimes(2)
   })
 })

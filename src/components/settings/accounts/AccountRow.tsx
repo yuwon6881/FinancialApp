@@ -128,7 +128,11 @@ export function AccountRow({
       </div>
 
       {isCard && !account.isArchived && (availableCredit !== null || (owed > 0 && onClearCard)) && (
-        <div className="mt-1 space-y-2 pb-1 pl-[3.125rem] pr-1">
+        // One inset block for the card's credit, full width on a phone (the icon gutter used to
+        // squeeze it) and under the name from 640px up. The two figures sit side by side as
+        // label-over-value pairs, and Clear balance takes the trailing edge rather than a row of
+        // its own.
+        <div className="mb-1 mt-1.5 space-y-3 rounded-control bg-surface-2/70 p-3 sm:ml-[3.125rem]">
           {availableCredit !== null && (
           <Meter
             size="sm"
@@ -138,18 +142,18 @@ export function AccountRow({
             valueHidden={hideSensitive}
           />
           )}
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
             {availableCredit !== null && (
-            <dl className="flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-caption">
-              <div className="flex min-w-0 gap-1.5">
-                <dt className="text-muted-foreground">{availableCredit < 0 ? 'Over limit by' : 'Available credit'}</dt>
-                <dd className={cn('font-semibold tabular-nums', availableCredit < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground')}>
+            <dl className="grid min-w-0 grid-cols-2 gap-x-5">
+              <div className="min-w-0">
+                <dt className="text-caption text-muted-foreground">{availableCredit < 0 ? 'Over limit by' : 'Available credit'}</dt>
+                <dd className={cn('mt-0.5 text-label font-semibold tabular-nums', availableCredit < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground')}>
                   <SensitiveAmount value={Math.abs(availableCredit)} isMasked={hideSensitive} formatFn={formatMoney} />
                 </dd>
               </div>
-              <div className="flex min-w-0 gap-1.5">
-                <dt className="text-muted-foreground">Credit limit</dt>
-                <dd className="font-semibold tabular-nums text-foreground">
+              <div className="min-w-0">
+                <dt className="text-caption text-muted-foreground">Credit limit</dt>
+                <dd className="mt-0.5 text-label font-semibold tabular-nums text-foreground">
                   <SensitiveAmount value={account.creditLimit!} isMasked={hideSensitive} formatFn={formatMoney} />
                 </dd>
               </div>
@@ -163,6 +167,7 @@ export function AccountRow({
                 onClick={() => onClearCard(account)}
                 disabled={disabled || isDeleting || hideSensitive}
                 aria-label={`Clear ${account.name} balance`}
+                className="ml-auto"
               >
                 Clear balance
               </Button>

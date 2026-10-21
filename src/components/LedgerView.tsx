@@ -23,7 +23,7 @@ import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../lib/useReceiptSp
 import { calculateLedgerTotals } from '../lib/ledgerTotals'
 import { splitFilterSelections, type TransactionLinkFilter } from '../lib/transactionFilters'
 import type { LedgerRouteState } from '../lib/appLocation'
-import { useIsExpanded } from '../lib/breakpoints'
+import { useIsCompact, useIsExpanded } from '../lib/breakpoints'
 import { formatCurrencyVal } from '../lib/utils'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { LedgerMoveSheet } from './ledger/LedgerMoveSheet'
@@ -150,6 +150,8 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
       : (app.activeSyncIds?.length ? app.activeSyncIds : (app.activeSyncId ? [app.activeSyncId] : [])))
   const deletingTxId = props.deletingTxId ?? app.deletingId
   const isMobile = !useIsExpanded()
+  // Phones export from the filter bar's icon button; the page header carries the labelled one.
+  const isCompact = useIsCompact()
 
   const formRef = useRef<TransactionFormSheetRef>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -304,6 +306,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
           }
         }}
         onOpenExport={() => ledger.setShowExportModal(true)}
+        showExport={!isCompact}
         showAllCycles={props.showAllCycles}
         onShowAllCyclesChange={props.onShowAllCyclesChange}
         cyclesRange={props.cyclesRange}
@@ -400,6 +403,8 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
       />
 
       <LedgerFilterBar
+        onOpenExport={isCompact ? () => ledger.setShowExportModal(true) : undefined}
+        exportDisabled={hideSensitive}
         showAllCycles={props.showAllCycles}
         isMobile={isMobile}
         serverIsFetching={ledger.serverIsFetching}

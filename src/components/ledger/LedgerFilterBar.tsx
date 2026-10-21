@@ -3,7 +3,7 @@ import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
 import { cn } from '../../lib/utils'
 import { useRef, useMemo } from 'react'
-import { Search, Filter, X, Loader2, ChevronDown, Equal } from 'lucide-react'
+import { Search, Filter, X, Loader2, ChevronDown, Equal, Download } from 'lucide-react'
 import type { LedgerAccount, TransactionCategory } from '../../types'
 import { allowsCategoryFlow } from '../../lib/categoryFlow'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -31,6 +31,9 @@ const SORT_OPTIONS: { value: TransactionSort; label: string }[] = [
 ]
 
 interface LedgerFilterBarProps {
+  /** Passed on phones only: the page header drops its Export CSV button there, so the bar carries it. */
+  onOpenExport?: () => void
+  exportDisabled?: boolean
   showAllCycles: boolean
   isMobile: boolean
   serverIsFetching: boolean
@@ -76,6 +79,8 @@ interface LedgerFilterBarProps {
 }
 
 export function LedgerFilterBar({
+  onOpenExport,
+  exportDisabled = false,
   showAllCycles,
   isMobile,
   serverIsFetching,
@@ -205,7 +210,7 @@ export function LedgerFilterBar({
   )
 
   const searchField = (
-    <div className="group flex h-11 min-w-44 flex-1 items-center gap-1 rounded-full border border-border/70 bg-card pl-4 pr-1 transition focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/20">
+    <div className="group flex h-11 min-w-36 flex-1 items-center gap-1 rounded-full border border-border/70 bg-card pl-4 pr-1 transition focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/20">
       <Search className="size-4 shrink-0 text-muted-foreground transition-colors group-focus-within:text-foreground" aria-hidden="true" />
       <Input
         type="text"
@@ -214,7 +219,7 @@ export function LedgerFilterBar({
         value={showAllCycles ? pendingSearchTerm : searchTerm}
         onChange={e => (showAllCycles ? onPendingSearchChange(e.target.value) : onSearchTermChange(e.target.value))}
         onKeyDown={showAllCycles ? (e => { if (e.key === 'Enter') onServerSearch() }) : undefined}
-        className="min-h-0 min-w-0 flex-1 rounded-none border-0 bg-transparent px-1.5 py-0 text-body shadow-none outline-none placeholder:text-subtle-foreground focus:border-transparent focus:bg-transparent focus:ring-0"
+        className="min-h-0 min-w-0 flex-1 rounded-none border-0 bg-transparent px-1.5 py-0 text-body shadow-none outline-none placeholder:text-subtle-foreground focus:border-transparent focus:bg-transparent focus:ring-0 dark:bg-transparent dark:focus:bg-transparent"
       />
       {(showAllCycles ? pendingSearchTerm : searchTerm) && (
         <IconButton
@@ -367,6 +372,18 @@ export function LedgerFilterBar({
             </BottomSheet>
           )}
         </div>
+
+        {onOpenExport && (
+          <IconButton
+            variant="secondary"
+            label="Export CSV"
+            tooltip={exportDisabled ? 'CSV export disabled while sensitive amounts are masked' : 'Export CSV'}
+            onClick={onOpenExport}
+            disabled={exportDisabled}
+          >
+            <Download className="size-4" aria-hidden="true" />
+          </IconButton>
+        )}
       </div>
     </Toolbar>
   )

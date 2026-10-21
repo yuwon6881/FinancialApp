@@ -7,6 +7,8 @@ interface PageHeaderProps {
   leading?: ReactNode
   titleActions?: ReactNode
   actions?: ReactNode
+  /** Extra classes for the actions row, e.g. to drop it on phones when every action lives elsewhere there. */
+  actionsClassName?: string
   children?: ReactNode
   className?: string
   titleId?: string
@@ -23,6 +25,7 @@ export function PageHeader({
   leading,
   titleActions,
   actions,
+  actionsClassName,
   children,
   className,
   titleId,
@@ -32,7 +35,8 @@ export function PageHeader({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           {leading && <div className="shrink-0">{leading}</div>}
-          <div className="min-w-0">
+          {/* Spans the row on narrow screens so title actions can take the trailing edge. */}
+          <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-2">
               <h1 id={titleId} className="min-w-0 flex-[1_1_auto] text-title text-foreground sm:text-display">{title}</h1>
               {titleActions && <div data-page-title-actions className="flex shrink-0 flex-wrap items-center gap-2">{titleActions}</div>}
@@ -40,7 +44,7 @@ export function PageHeader({
             {description && <div className="mt-1.5 max-w-2xl text-body text-muted-foreground line-clamp-2 sm:line-clamp-none">{description}</div>}
           </div>
         </div>
-        {actions && <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-2 lg:justify-end">{actions}</div>}
+        {actions && <div className={cn('flex min-w-0 shrink-0 flex-wrap items-center gap-2 lg:justify-end', actionsClassName)}>{actions}</div>}
       </div>
       {children}
     </header>

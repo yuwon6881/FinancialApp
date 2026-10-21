@@ -40,9 +40,11 @@ const OVERFLOW_OPTIONS = [
   { value: 'Essentials 100%', label: '100% Essentials' },
   { value: 'Growth 100%', label: '100% Growth' },
   { value: 'Rewards 100%', label: '100% Rewards' },
-  { value: 'Split: Essentials 50%, Growth 50%', label: '50% Essentials / 50% Growth' },
-  { value: 'Split: Essentials 50%, Rewards 50%', label: '50% Essentials / 50% Rewards' },
-  { value: 'Split: Growth 50%, Rewards 50%', label: '50% Growth / 50% Rewards' },
+  // The pairs say "50/50" in the row's hint rather than in each label, so the longest choice still
+  // sits beside its label on a phone instead of dropping onto a row of its own.
+  { value: 'Split: Essentials 50%, Growth 50%', label: 'Essentials + Growth' },
+  { value: 'Split: Essentials 50%, Rewards 50%', label: 'Essentials + Rewards' },
+  { value: 'Split: Growth 50%, Rewards 50%', label: 'Growth + Rewards' },
 ]
 
 /** What each bucket is for, said once beside its share so the split reads as a plan. */
@@ -274,7 +276,7 @@ export function AllocationPlan({ view, hideSensitive, settingsSyncing, settingsP
                 value={view.cycleDayInput}
                 onChange={value => view.setCycleDayInput(String(value))}
                 options={CYCLE_DAY_OPTIONS}
-                className="w-28"
+                className="w-28 [&_[role=combobox]>span]:text-right"
               />
             </RuleRow>
 
@@ -291,7 +293,7 @@ export function AllocationPlan({ view, hideSensitive, settingsSyncing, settingsP
               />
             </RuleRow>
 
-            <RuleRow label="Once Stability is full" hint="Where its share goes instead">
+            <RuleRow label="Once Stability is full" hint="Where its share goes; pairs split 50/50">
               <CustomSelect
                 ariaLabel="Stability fund overflow redirect"
                 variant="ghost"
@@ -300,7 +302,7 @@ export function AllocationPlan({ view, hideSensitive, settingsSyncing, settingsP
                 value={view.stabilityOverflowRedirectInput}
                 onChange={value => view.setStabilityOverflowRedirectInput(String(value))}
                 options={OVERFLOW_OPTIONS}
-                className="w-56 max-w-full"
+                className="w-44 max-w-full [&_[role=combobox]>span]:text-right"
               />
             </RuleRow>
           </div>

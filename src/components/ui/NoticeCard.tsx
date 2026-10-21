@@ -19,7 +19,7 @@ interface NoticeCardProps {
   /** Id for the heading; the card is labelled by it. */
   titleId: string
   title: ReactNode
-  /** A short state chip beside the title, e.g. "Due tomorrow". */
+  /** A short state chip beside the title, or under it when the card is narrow, e.g. "Due tomorrow". */
   badge?: ReactNode
   /** One or two quiet sentences under the title. */
   description?: ReactNode
@@ -57,21 +57,22 @@ export function NoticeCard({
       data-notice={tone}
       className={cn(panelClass, 'relative flex min-w-0 flex-col p-4 sm:p-5', className)}
     >
-      <div className="flex min-w-0 items-start gap-3.5">
-        <span
-          aria-hidden="true"
-          className={cn('grid size-10 shrink-0 place-items-center rounded-full [&>svg]:size-[1.125rem]', TONE_WELL[tone])}
-        >
-          {icon}
-        </span>
-        <div className="min-w-0 flex-1 pt-0.5">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <h3 id={titleId} className="min-w-0 text-subsection text-foreground">{title}</h3>
-            {badge}
-          </div>
-          {description && <div className="mt-1 text-body text-muted-foreground">{description}</div>}
+      {/* The well sits beside the title only; the badge and description run the card's full width.
+          One wrapping row: where the title leaves room the badge sits beside it, and on a phone it
+          drops to the card's left edge instead of a 54px gutter under the icon. */}
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="flex min-w-0 max-w-full items-center gap-3">
+          <span
+            aria-hidden="true"
+            className={cn('grid size-10 shrink-0 place-items-center rounded-full [&>svg]:size-[1.125rem]', TONE_WELL[tone])}
+          >
+            {icon}
+          </span>
+          <h3 id={titleId} className="min-w-0 text-subsection text-foreground">{title}</h3>
         </div>
+        {badge && <div className="flex flex-wrap items-center gap-1.5">{badge}</div>}
       </div>
+      {description && <div className="mt-2 min-w-0 text-body text-muted-foreground">{description}</div>}
       {children && <div className="mt-4 min-w-0">{children}</div>}
       {actions && (
         <div className="mt-4 flex flex-wrap items-center gap-2 sm:mt-auto sm:pt-4 [&>*]:flex-1 sm:[&>*]:flex-initial">

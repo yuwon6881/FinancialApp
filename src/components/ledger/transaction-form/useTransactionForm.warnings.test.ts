@@ -152,6 +152,7 @@ describe('useTransactionForm bucket outflow warnings', () => {
       result.current.dispatch({ type: 'SET_FIELD', field: 'description', value: 'Grocery' })
       result.current.dispatch({ type: 'SET_FIELD', field: 'amount', value: '50' })
       result.current.dispatch({ type: 'SET_FIELD', field: 'category', value: 'Food' })
+      result.current.dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: 'Essentials' })
       result.current.dispatch({ type: 'SET_FIELD', field: 'accountId', value: 'acc-1' })
     })
 

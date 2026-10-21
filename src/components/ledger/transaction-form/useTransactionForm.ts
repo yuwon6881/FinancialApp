@@ -80,7 +80,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   const defaultCategory = categories.find(category => isSelectableTransactionCategory(category))?.name ?? ''
   const todayDate = getTodayDateString()
 
-  const [state, dispatch] = useReducer(transactionFormReducer, getInitialState(todayDate, defaultCategory))
+  const [state, dispatch] = useReducer(transactionFormReducer, getInitialState(todayDate, ''))
 
   const firstInputRef = useRef<HTMLInputElement>(null)
   const descriptionRef = useRef('')
@@ -190,9 +190,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     const selectableCategories = categories.filter(category => isSelectableTransactionCategory(category, 'outflow'))
     const category = selectableCategories.find(candidate =>
       candidate.name.trim().toLowerCase() === result.category?.trim().toLowerCase())?.name
-      ?? selectableCategories.find(candidate => candidate.name.trim().toLowerCase() === 'other')?.name
-      ?? selectableCategories[0]?.name
-      ?? defaultCategory
+      // A receipt that names no known category leaves the field for the user rather than guessing.
+      ?? ''
     dispatch({
       type: 'APPLY_RECEIPT',
       payload: { ...result, category, ledgerCategory, txType: 'outflow' },
@@ -202,7 +201,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       firstInputRef.current?.focus()
       firstInputRef.current?.select()
     }, 450)
-  }, [categories, defaultCategory, todayDate])
+  }, [categories, todayDate])
 
   const scanner = useReceiptScanDraft({
     autoOpenAddForm,
@@ -235,7 +234,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     ledgerCategory: state.ledgerCategory,
   })
 
-  useCapturedPurchaseForm(state, suggestions, Boolean(hideSensitive))
+  useCapturedPurchaseForm(state, Boolean(hideSensitive))
 
   const filteredSuggestions = useMemo(() => {
     if (!state.description.trim() || state.description.trim().length < 1) return []
@@ -265,43 +264,30 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     }
   }, [state.transactionType, suggestions])
 
-  // The defaults effect below reads these through a ref rather than depending on them. Depending
-  // on them would re-run it on every edit and snap the user's own choice back to the default: an
-  // inflow could then never be filed under a non-Salary category, nor as a direct bucket deposit.
+  // The type-change effect below reads the bucket through a ref rather than depending on it, so it
+  // runs once per type change and never reacts to the user's own later picks.
   const defaultsStateRef = useRef(state)
-  // Declared before the defaults effect so the ref is already current when that effect runs.
+  // Declared before the type-change effect so the ref is already current when that effect runs.
   useEffect(() => {
     defaultsStateRef.current = state
   }, [state])
 
-  // Cycle Category default side effects. These are a one-time seed keyed on the transaction type;
-  // once seeded, both fields belong to the user. Each dispatch is guarded against a no-op so an
-  // unstable `categories` identity cannot drive a render loop.
+  // Type-change side effects. A new entry is never given a bucket or category: income used to be
+  // seeded as "Income" + "Salary" and an expense as "Essentials", which were easy to save unread.
+  // What remains only clears a bucket the new type cannot hold, so the user picks again. Each
+  // dispatch is guarded against a no-op so it cannot loop.
   useEffect(() => {
+    const ledgerCategory = defaultsStateRef.current.ledgerCategory
     if (state.transactionType === 'inflow') {
-      if (!state.editingId) {
-        if (defaultsStateRef.current.ledgerCategory !== 'Income') {
-          dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: 'Income' })
-        }
-        // A scan already supplied a category; overwriting it here would discard what was read off
-        // the receipt. APPLY_RECEIPT sets the type and the flag in one dispatch, so the flag is
-        // current by the time this effect runs for that type change.
-        if (!defaultsStateRef.current.categoryFromReceipt) {
-          const hasSalary = categories.some(c => c.name === 'Salary')
-          const seeded = hasSalary ? 'Salary' : defaultCategory
-          if (defaultsStateRef.current.category !== seeded) {
-            dispatch({ type: 'SET_FIELD', field: 'category', value: seeded })
-          }
-        }
-      } else if (state.ledgerCategory.startsWith('Transfer:')) {
+      if (state.editingId && ledgerCategory.startsWith('Transfer:')) {
         dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: 'Income' })
       }
     } else if (state.transactionType === 'outflow') {
-      if (state.ledgerCategory === 'Income' || state.ledgerCategory.startsWith('IncomeSplit:') || state.ledgerCategory.startsWith('Transfer:')) {
-        dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: 'Essentials' })
+      if (ledgerCategory === 'Income' || ledgerCategory.startsWith('IncomeSplit:') || ledgerCategory.startsWith('Transfer:')) {
+        dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: '' })
       }
     }
-  }, [state.transactionType, categories, state.editingId, defaultCategory])
+  }, [state.transactionType, state.editingId])
 
   // Transfer text generator side effects
   useEffect(() => {
@@ -315,12 +301,6 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   }, [state.transactionType, state.transferSource, state.transferTarget, state.editingId, state.captureId])
 
   useTransactionFormAccountEffects(state, accounts, dispatch)
-
-  useEffect(() => {
-    if (!state.captureId && categories.length > 0 && !state.category) {
-      dispatch({ type: 'SET_FIELD', field: 'category', value: defaultCategory })
-    }
-  }, [categories, state.captureId, state.category, defaultCategory])
 
   const lifecycle = useTransactionFormLifecycle({
     state,
@@ -368,7 +348,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   const changeTransactionType = (type: 'inflow' | 'outflow' | 'transfer') => {
     suggestions.clearSuggestions()
     if (state.mode === 'create') {
-      dispatch({ type: 'RESET', todayDate, defaultCategory })
+      dispatch({ type: 'RESET', todayDate, defaultCategory: '' })
       dispatch({ type: 'SET_FIELD', field: 'showAddForm', value: true })
     }
     // Attachments clear with the rest of the form. Create mode relied on the field unmounting when
@@ -415,7 +395,6 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     cycleDay,
     onOutsideCycleSave,
     todayDate,
-    defaultCategory,
     clearFormDraft,
     scanner,
   })

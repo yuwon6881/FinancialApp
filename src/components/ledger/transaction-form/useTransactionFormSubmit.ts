@@ -40,7 +40,6 @@ export interface UseTransactionFormSubmitOptions extends Pick<
   topUpOffer: RecoveryOffer | null
   isRecoveryCycleDate: boolean
   todayDate: string
-  defaultCategory: string
   documentsFieldRef: RefObject<TransactionDocumentsFieldRef | null>
   clearFormDraft: () => void
   scanner: { clearScan: () => void }
@@ -76,7 +75,6 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
     cycleDay,
     onOutsideCycleSave,
     todayDate,
-    defaultCategory,
     clearFormDraft,
     scanner,
   } = options
@@ -109,6 +107,7 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
       date: state.date,
       transactionType: state.transactionType,
       ledgerCategory: state.ledgerCategory,
+      category: state.category,
       transferSource: state.transferSource,
       transferTarget: state.transferTarget,
       accountId: state.accountId,
@@ -118,10 +117,6 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
       stabilityReloadIntent: state.stabilityReloadIntent,
     })
 
-    if (state.captureId) {
-      if (!state.category) validationErrors.category = 'Choose a category.'
-      if (!state.ledgerCategory) validationErrors.ledgerCategory = 'Choose where this money came from.'
-    }
     if (Object.keys(validationErrors).length > 0) {
       dispatch({ type: 'SET_ERRORS', errors: validationErrors })
       focusFirstInvalidField(e.currentTarget)
@@ -194,7 +189,7 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
       if (isTransactionOutsideCycle(mapped.date, selectedMonth, selectedYear, cycleDay)) {
         onOutsideCycleSave?.(mapped.date)
       }
-      dispatch({ type: 'RESET', todayDate, defaultCategory })
+      dispatch({ type: 'RESET', todayDate, defaultCategory: '' })
       clearFormDraft()
       scanner.clearScan()
     } catch (error) {

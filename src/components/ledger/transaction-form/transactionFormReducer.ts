@@ -19,7 +19,8 @@ export interface TransactionFormState {
   amount: string
   transactionType: TransactionType
   category: string
-  ledgerCategory: SelectableLedgerCategory
+  /** Empty on a new entry until the user picks a bucket; nothing is chosen for them. */
+  ledgerCategory: SelectableLedgerCategory | ''
   transferSource: TransferBucket | ''
   transferTarget: TransferBucket | ''
   /** The selected account for the bucket leg; empty/null means the user must choose one. */
@@ -72,7 +73,7 @@ export const getInitialState = (todayDate: string, defaultCategory: string): Tra
   transactionType: 'outflow',
   category: defaultCategory,
   categoryFromReceipt: false,
-  ledgerCategory: 'Essentials',
+  ledgerCategory: '',
   transferSource: 'Essentials',
   transferTarget: 'Rewards',
   accountId: '',
@@ -112,7 +113,9 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         description: '',
         amount: '',
         transactionType: 'outflow',
-        ledgerCategory: 'Essentials',
+        // A new entry starts with no bucket and no category: a guessed default was easy to save
+        // unread, filing the money somewhere the user never chose.
+        ledgerCategory: '',
         transferSource: 'Essentials',
         transferTarget: 'Rewards',
         accountId: '',

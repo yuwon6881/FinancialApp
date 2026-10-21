@@ -367,7 +367,7 @@ export function CategoryLimitsCard({
           <p className="min-w-0 flex-[1_1_14rem] text-caption text-muted-foreground">
             Changes apply from this cycle on; earlier cycles keep their original limits.
           </p>
-          <Button type="button" size="sm" onClick={save} disabled className="shrink-0">
+          <Button type="button" size="sm" onClick={save} disabled className="ml-auto shrink-0">
             <Save className="size-3.5" aria-hidden="true" /> Save limits
           </Button>
         </div>

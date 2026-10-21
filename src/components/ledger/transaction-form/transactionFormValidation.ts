@@ -13,6 +13,7 @@ export function validateTransactionForm(state: {
   counterAccountId?: string | null
   splitAccountIds?: Partial<Record<'Essentials' | 'Growth' | 'Stability' | 'Rewards', string>>
   stabilityReloadIntent?: string
+  category?: string
   accounts?: LedgerAccount[]
 }) {
   const errors: Record<string, string> = {}
@@ -27,6 +28,14 @@ export function validateTransactionForm(state: {
   }
   if (!state.date) {
     errors.date = 'Posting date is required.'
+  }
+  // A new entry opens with neither picked, so both must be chosen before it saves. `category` is
+  // only checked when the caller passes it; a transfer carries neither.
+  if (state.transactionType !== 'transfer') {
+    if (state.category !== undefined && !state.category.trim()) errors.category = 'Choose a category.'
+    if (!state.ledgerCategory) {
+      errors.ledgerCategory = state.transactionType === 'inflow' ? 'Choose where this money goes.' : 'Choose the bucket this comes from.'
+    }
   }
   if (state.transactionType === 'transfer') {
     if (!state.transferSource) errors.transferSource = 'Choose the source category.'

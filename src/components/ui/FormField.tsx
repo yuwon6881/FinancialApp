@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react'
+import { useId, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { cn } from '../../lib/utils'
 import { FormFieldContext } from './formFieldControl'
 
@@ -39,11 +39,24 @@ export function FormField({
   const hintId = hint ? `${controlId}-hint` : undefined
   const errorId = error ? `${controlId}-error` : undefined
   const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined
+  const labelRef = useRef<HTMLLabelElement>(null)
+
+  // `for` is pointed at the control only while one carrying `controlId` is mounted. Some fields
+  // hold a group instead (the transaction form's category tiles, whose "More categories" select
+  // only appears past a certain count), and a `for` naming no element is flagged by the browser as
+  // a broken label. The group stays named through `labelledBy` either way. Runs on every render
+  // because the control can come and go with the field's own content.
+  useLayoutEffect(() => {
+    const label = labelRef.current
+    if (!label) return
+    if (document.getElementById(controlId)) label.htmlFor = controlId
+    else label.removeAttribute('for')
+  })
 
   const labelElement = (
     <label
+      ref={labelRef}
       id={labelId}
-      htmlFor={controlId}
       className={cn(
         'block text-label font-medium text-muted-foreground',
         labelClassName,

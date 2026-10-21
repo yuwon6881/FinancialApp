@@ -86,6 +86,7 @@ export function AuthHeader({
   titleId,
   descriptionId,
   headingLevel = 1,
+  align = 'start',
 }: {
   icon: ReactNode
   title: ReactNode
@@ -94,11 +95,13 @@ export function AuthHeader({
   titleId?: string
   descriptionId?: string
   headingLevel?: 1 | 2
+  /** `center` for a screen with nothing to fill in beside it, like unlock, whose actions are centred. */
+  align?: 'start' | 'center'
 }) {
   const Heading = headingLevel === 1 ? 'h1' : 'h2'
   return (
-    <header className="space-y-3 select-none">
-      <div className="flex size-12 items-center justify-center">
+    <header className={cn('space-y-3 select-none', align === 'center' && 'text-center')}>
+      <div className={cn('flex size-12 items-center justify-center', align === 'center' && 'mx-auto')}>
         {icon}
       </div>
       <Heading id={titleId} className="text-display text-foreground">{title}</Heading>

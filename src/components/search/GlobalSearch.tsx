@@ -108,36 +108,42 @@ export function GlobalSearch({
         // three times the width of the panel searching it.
         className="flex w-full max-w-xl flex-col overflow-hidden rounded-panel border border-border/70 bg-popover shadow-(--app-shadow-overlay) max-h-[min(80vh,calc(var(--app-vvh,100dvh)-6rem))] animate-in fade-in zoom-in-[0.98] slide-in-from-top-2 duration-200 lg:max-w-2xl"
       >
-        <div className="flex items-center gap-3 border-b border-border/60 px-4 py-3.5">
-          <Search className="size-4.5 shrink-0 text-muted-foreground" aria-hidden />
-          <Input
-            ref={inputRef}
-            type="text"
-            role="combobox"
-            value={query}
-            onChange={event => updateQuery(event.target.value)}
-            placeholder="Search transactions, accounts, bills, loans…"
-            // Named for what it is, not for what the trigger does: the header control keeps
-            // "Search your records", and two controls answering to one name is a maze.
-            aria-label="Search query"
-            aria-expanded
-            aria-autocomplete="list"
-            aria-controls="global-search-results"
-            aria-activedescendant={selectableCount > 0 ? optionId(activeIndex) : undefined}
-            className="w-full border-0 bg-transparent text-callout text-foreground shadow-none outline-hidden placeholder:text-subtle-foreground focus-visible:ring-0 focus:bg-transparent"
-          />
-          {hasQuery && (
-            <IconButton
-              onClick={() => {
-                updateQuery('')
-                inputRef.current?.focus()
-              }}
-              label="Clear search"
-              className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-3.5" />
-            </IconButton>
-          )}
+        {/* The field spans the whole header with the magnifier inside it, rather than a borderless
+            input beside a free-standing icon: the gutter the icon kept read as dead space on a
+            phone, and Night's field well showed through as a box inside the row. */}
+        <div className="border-b border-border/60 p-3">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-4.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <Input
+              ref={inputRef}
+              type="text"
+              role="combobox"
+              value={query}
+              onChange={event => updateQuery(event.target.value)}
+              placeholder="Search transactions, accounts, bills, loans…"
+              // Named for what it is, not for what the trigger does: the header control keeps
+              // "Search your records", and two controls answering to one name is a maze.
+              aria-label="Search query"
+              aria-expanded
+              aria-autocomplete="list"
+              aria-controls="global-search-results"
+              aria-activedescendant={selectableCount > 0 ? optionId(activeIndex) : undefined}
+              controlSize="lg"
+              className={hasQuery ? 'pl-11 pr-12' : 'pl-11'}
+            />
+            {hasQuery && (
+              <IconButton
+                onClick={() => {
+                  updateQuery('')
+                  inputRef.current?.focus()
+                }}
+                label="Clear search"
+                className="absolute right-1.5 top-1/2 size-9 -translate-y-1/2 text-muted-foreground hover:text-foreground lg:size-9"
+              >
+                <X className="size-3.5" />
+              </IconButton>
+            )}
+          </div>
         </div>
 
         <div
@@ -238,12 +244,13 @@ export function GlobalSearch({
         </div>
 
         <div className="flex items-center justify-between border-t border-border/60 px-4 py-2.5 text-caption text-muted-foreground select-none">
-          <span className="flex items-center gap-3">
+          {/* Keyboard hints only where there is a keyboard to use them. */}
+          <span className="hidden items-center gap-3 sm:flex">
             <span><kbd className="rounded-md border border-border bg-surface-2 px-1.5 py-0.5 font-medium">↑↓</kbd> Move</span>
             <span><kbd className="rounded-md border border-border bg-surface-2 px-1.5 py-0.5 font-medium">↵</kbd> Open</span>
             <span><kbd className="rounded-md border border-border bg-surface-2 px-1.5 py-0.5 font-medium">esc</kbd> Close</span>
           </span>
-          <span aria-live="polite" aria-atomic="true" className="font-semibold text-foreground/75">
+          <span aria-live="polite" aria-atomic="true" className="ml-auto font-semibold text-foreground/75">
             {isLoadingLoans
               ? 'Loading loans…'
               : hasQuery

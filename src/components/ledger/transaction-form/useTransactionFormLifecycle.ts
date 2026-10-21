@@ -215,8 +215,9 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
     documentsFieldRef.current?.reset()
     dispatch({
       type: 'OPEN_CREATE',
+      // Blank on purpose: the user picks the category, rather than saving a guessed one unread.
       payload: {
-        defaultCategory,
+        defaultCategory: '',
         todayDate,
       },
     })
@@ -262,7 +263,7 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
     }
     suggestions.clearSuggestions()
     openTransactionForm()
-  }, [hideSensitive, sensitivePreferenceStatus, defaultCategory, todayDate, autoOpenTxType, autoOpenPrefill, suggestions, openTransactionForm, setExistingDocuments, setInitialDocumentChanges, setDocumentFieldRevision, documentsFieldRef, dispatch, descriptionRef, autocompletedDescriptionRef])
+  }, [hideSensitive, sensitivePreferenceStatus, todayDate, autoOpenTxType, autoOpenPrefill, suggestions, openTransactionForm, setExistingDocuments, setInitialDocumentChanges, setDocumentFieldRevision, documentsFieldRef, dispatch, descriptionRef, autocompletedDescriptionRef])
 
   const openWithDraft = (draft: TransactionPrefillDraft) => {
     if (hideSensitive) return

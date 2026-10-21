@@ -9,6 +9,8 @@ interface LedgerToolbarProps {
   isFormOpen: boolean
   onToggleForm: () => void
   onOpenExport: () => void
+  /** False on a phone, where the filter bar carries Export as an icon button. */
+  showExport?: boolean
   showAllCycles: boolean
   onShowAllCyclesChange: (showAllCycles: boolean) => void
   cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly' | 'all'
@@ -20,6 +22,7 @@ export function LedgerToolbar({
   isFormOpen,
   onToggleForm,
   onOpenExport,
+  showExport = true,
   showAllCycles,
   onShowAllCyclesChange,
   cyclesRange,
@@ -47,8 +50,11 @@ export function LedgerToolbar({
         variant="segmented"
       />}
       description={showAllCycles ? `Showing ${scopeLabel}` : undefined}
+      // A phone exports from the filter bar's icon button and posts from the + beside the tab bar,
+      // so the row would only hold a lone full-width Export button there.
+      actionsClassName={isFormOpen ? undefined : 'max-sm:hidden'}
       actions={<div className="flex items-center gap-2">
-        <Button
+        {showExport && <Button
           variant="secondary"
           onClick={onOpenExport}
           disabled={hideSensitive}
@@ -57,7 +63,7 @@ export function LedgerToolbar({
         >
           <Download className="size-4" aria-hidden="true" />
           Export CSV
-        </Button>
+        </Button>}
         <Button
           variant="primary"
           onClick={onToggleForm}

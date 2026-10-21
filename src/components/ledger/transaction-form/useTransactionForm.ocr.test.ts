@@ -92,7 +92,7 @@ describe('useTransactionForm receipt cleanup', () => {
     expect(result.current.state.accountId).toBe('essentials-card')
   })
 
-  it('replaces a reserved category from a completed receipt scan before staging', async () => {
+  it('drops a reserved category and an invalid bucket from a completed receipt scan instead of guessing', async () => {
     const { result } = renderHook(() => useTransactionForm(createOptions({
       autoOpenAddForm: true,
       categories: [
@@ -111,8 +111,8 @@ describe('useTransactionForm receipt cleanup', () => {
 
     await waitFor(() => expect(result.current.state.showAddForm).toBe(true))
     expect(result.current.state.transactionType).toBe('outflow')
-    expect(result.current.state.category).toBe('Other')
-    expect(result.current.state.ledgerCategory).toBe('Essentials')
+    expect(result.current.state.category).toBe('')
+    expect(result.current.state.ledgerCategory).toBe('')
   })
 
   // The completion toast's "Review" action flags autoOpenAddForm, which schedules a
@@ -214,12 +214,11 @@ describe('useTransactionForm receipt cleanup', () => {
 
     expect(result.current.state.transactionType).toBe('inflow')
     expect(result.current.state.category).toBe('Refund')
-    expect(result.current.state.ledgerCategory).toBe('Income')
+    // The scan named no bucket, so none is chosen for the user.
+    expect(result.current.state.ledgerCategory).toBe('')
   })
 
-  // The inflow defaults are a one-time seed. Re-deriving them from the current category or ledger
-  // category would make both fields impossible to change, which also takes direct bucket deposits
-  // (an inflow filed straight to a bucket) off the table entirely.
+  // A new inflow starts with neither a category nor a bucket; whatever the user then picks stays.
   it('keeps a manually chosen category on an inflow', () => {
     const options = createOptions({
       categories: [
@@ -232,7 +231,7 @@ describe('useTransactionForm receipt cleanup', () => {
     act(() => {
       result.current.openFresh('inflow')
     })
-    expect(result.current.state.category).toBe('Salary')
+    expect(result.current.state.category).toBe('')
 
     act(() => {
       result.current.dispatch({ type: 'SET_FIELD', field: 'category', value: 'Bonus' })
@@ -248,7 +247,7 @@ describe('useTransactionForm receipt cleanup', () => {
     act(() => {
       result.current.openFresh('inflow')
     })
-    expect(result.current.state.ledgerCategory).toBe('Income')
+    expect(result.current.state.ledgerCategory).toBe('')
 
     act(() => {
       result.current.dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: 'Rewards' })

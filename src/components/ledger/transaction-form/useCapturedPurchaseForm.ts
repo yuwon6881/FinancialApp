@@ -1,7 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { usePurchaseCaptureActions } from '../../../contexts/PurchaseCaptureContext'
 import type { TransactionFormState } from './transactionFormReducer'
-import type { useTransactionSuggestions } from './useTransactionSuggestions'
 
 export function capturedPurchaseEdits(state: TransactionFormState): Record<string, unknown> {
   return { description: state.description, amount: state.amount, date: state.date,
@@ -11,22 +10,13 @@ export function capturedPurchaseEdits(state: TransactionFormState): Record<strin
 }
 
 /**
- * Category suggestions run once per capture, for the description it arrived with, and never apply
- * themselves. Keying on the edited description would spend an AI call per keystroke and trip the
- * per-user AI rate limit; later edits use the form's own blur path. The description cleanup is
- * deliberately not requested here: it opens a popover over a field the user has not touched, so
- * it stays behind the AI button.
+ * Keeps the native capture in step with the form. Opening a detected purchase makes no AI request
+ * of its own: neither the description cleanup nor the category suggestion runs until the user asks,
+ * through the AI button or by leaving the description field. Requesting them on open put an AI
+ * spinner and popover over a description the user had not touched.
  */
-export function useCapturedPurchaseForm(state: TransactionFormState, suggestions: ReturnType<typeof useTransactionSuggestions>, hidden: boolean) {
+export function useCapturedPurchaseForm(state: TransactionFormState, hidden: boolean) {
   const capture = usePurchaseCaptureActions()
-  const suggested = useRef<string | null>(null)
-  useEffect(() => {
-    if (!state.captureId || !state.showAddForm || hidden || state.description.trim().length < 2) return
-    if (suggested.current === state.captureId) return
-    suggested.current = state.captureId
-    void suggestions.requestCategorySuggestions(state.description.trim(), null)
-  }, [state.captureId, state.showAddForm, state.description, suggestions, hidden])
-
   useEffect(() => {
     if (!state.captureId || !state.showAddForm || hidden || !capture) return
     const id = state.captureId

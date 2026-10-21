@@ -276,6 +276,7 @@ export function LockScreen({
         <AuthHeader
           icon={<AppLogo className="size-12 rounded-2xl" />}
           headingLevel={2}
+          align="center"
           titleId={titleId}
           descriptionId={descriptionId}
           title={mode !== 'session-timeout' ? 'Unlock FinancialApp' : 'Session locked'}

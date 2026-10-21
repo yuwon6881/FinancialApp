@@ -46,7 +46,7 @@ function BillItemRow({
   return (
     <div
       data-testid={`bill-roster-item-${payment.id}`}
-      className={`flex flex-col gap-2 rounded-control bg-surface-2/70 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${
+      className={`flex items-start justify-between gap-3 rounded-control bg-surface-2/70 p-2.5 sm:items-center ${
         isPaused ? 'opacity-70' : ''
       }`}
     >
@@ -105,7 +105,9 @@ function BillItemRow({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 sm:justify-end">
+      {/* The amount and its link hold the trailing edge on every width; stacked under the chips on a
+          phone they used to take a third row of their own. */}
+      <div className="flex shrink-0 flex-col items-end gap-0.5 sm:flex-row sm:items-center sm:gap-3">
         <SensitiveAmount
           value={payment.amount}
           isMasked={hideSensitive}
@@ -119,7 +121,7 @@ function BillItemRow({
           size="sm"
           onClick={() => onNavigate(payment.id)}
           aria-label={`View ${payment.name} in recurring bills`}
-          className="h-7 px-2 text-xs"
+          className="-mr-1 h-7 px-2 text-xs"
         >
           View bill
         </Button>
@@ -156,13 +158,15 @@ export function AccountBillRoster({
 
   return (
     <details
-      className="group/roster ml-[3.125rem] mt-1 rounded-control"
+      // Aligned under the account name from 640px up; on a phone the 50px gutter under the icon cost
+      // every bill row a third of its width, so the list runs the row's full width there.
+      className="group/roster mt-1 rounded-control sm:ml-[3.125rem]"
       open={isOpen}
       onToggle={event => setIsOpen(event.currentTarget.open)}
     >
       <summary className="-mx-2 flex min-h-11 cursor-pointer select-none items-center justify-between gap-2 rounded-control px-2 text-caption text-muted-foreground outline-none transition-colors hover:bg-surface-2/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 lg:min-h-9">
         <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-          <span>{totalCount} {totalCount === 1 ? 'bill' : 'bills'}<span className="hidden sm:inline"> paid from here</span></span>
+          <span>{totalCount} {totalCount === 1 ? 'bill' : 'bills'} paid from here</span>
           {monthlyTotal > 0 && (
             <>
               <span aria-hidden="true">·</span>

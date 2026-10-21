@@ -239,21 +239,26 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
   const isLoansView = activeView === 'loans'
   const isMobile = useIsCompact()
 
+  const renderAddButton = (size?: 'sm') => isLoansView ? (
+    <Button variant="primary" size={size} onClick={onAddLoan} disabled={hideSensitive || !onAddLoan} title={hideSensitive ? 'Unhide balances to add a loan' : undefined}>
+      <Plus className="size-4" aria-hidden="true" />New loan
+    </Button>
+  ) : (
+    <Button variant="primary" size={size} onClick={onToggleForm} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a subscription' : undefined}>
+      {showAddForm ? <X className="size-4" /> : <Plus className="size-4" />}
+      {showAddForm ? 'Cancel' : 'New bill'}
+    </Button>
+  )
+
   return (
     <div className="w-full">
       <PageHeader
         titleId={isLoansView ? 'loans-heading' : 'recurring-payments-heading'}
         title={isLoansView ? 'Loans' : 'Bills & subscriptions'}
-        actions={isLoansView ? (
-          <Button variant="primary" onClick={onAddLoan} disabled={hideSensitive || !onAddLoan} title={hideSensitive ? 'Unhide balances to add a loan' : undefined}>
-            <Plus className="size-4" aria-hidden="true" />New loan
-          </Button>
-        ) : (
-          <Button variant="primary" onClick={onToggleForm} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a subscription' : undefined}>
-            {showAddForm ? <X className="size-4" /> : <Plus className="size-4" />}
-            {showAddForm ? 'Cancel' : 'New bill'}
-          </Button>
-        )}
+        // A phone carries the add action beside the title, where a compact button fits; a lone
+        // full-size button on a row of its own under the title only pushed the totals down.
+        titleActions={isMobile ? renderAddButton('sm') : undefined}
+        actions={isMobile ? undefined : renderAddButton()}
       >
           {/* Two figures per row until the rail-narrowed page can hold four. At the medium tier a
               four-column row gave each currency figure about a hundred pixels, so neighbouring
@@ -273,7 +278,7 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
                   className="pr-2"
                 />
                 <InteractiveStatTile
-                  label="Yearly Total"
+                  label="Yearly total"
                   value={loanTotalAnnual == null ? 'Unavailable' : formatSensitive(loanTotalAnnual)}
                   mode="loan-annual"
                   loans={loans}
@@ -292,9 +297,9 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
               </>
             ) : (
               <>
-                <StatTile label="Monthly Total" value={formatSensitive(totalCommittedMonthly)} className="pr-2" />
+                <StatTile label="Monthly total" value={formatSensitive(totalCommittedMonthly)} className="pr-2" />
                 <InteractiveStatTile
-                  label="Yearly Total"
+                  label="Yearly total"
                   value={formatSensitive(totalCommittedAnnual)}
                   mode="recurring-annual"
                   payments={payments}
@@ -305,7 +310,7 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
                   className="border-l border-border/70 pl-2 pr-1 lg:px-2"
                 />
                 <StatTile
-                  label="Daily Cost"
+                  label="Daily cost"
                   value={formatSensitive(totalCommittedDaily)}
                   className="border-t border-border/70 pr-2 pt-3 lg:border-t-0 lg:border-l lg:px-2 lg:pt-0"
                 />

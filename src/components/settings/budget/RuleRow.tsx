@@ -34,7 +34,7 @@ export function RuleRow({ label, hint, children, error, required = false, classN
     <FormFieldContext.Provider value={{ controlId, labelledBy: labelId, describedBy, invalid: Boolean(error), required }}>
       <div className={cn('px-4 py-3 sm:px-5', className)}>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <div className="min-w-0 flex-[1_1_9rem]">
+          <div className="min-w-0 flex-[1_1_8rem]">
             <label id={labelId} htmlFor={controlId} className="block text-body font-medium text-foreground">
               {label}
               {required && <span className="sr-only"> (required)</span>}
