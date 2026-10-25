@@ -38,7 +38,6 @@ const baseProps = {
   // Keyed by the document's own tax year: an absent key means that year's categories have not
   // loaded yet, which is a different state from a year that genuinely has none configured.
   reliefCategoriesByTaxYear: { [document.taxYear]: [] },
-  pendingReliefCategories: new Map<number, string>(),
   onReliefCategoryChange: vi.fn(),
 }
 
@@ -218,12 +217,53 @@ describe('DocumentList selection toolbar', () => {
     // `hidden sm:inline` on the label did nothing for the desktop table, which only renders from lg
     // up — it stripped the word only from the phone card, leaving a 12px glyph among status badges
     // with nothing to say it was a button or where it led.
+    // The table carries it as a named action in the row's action group, with an "In ledger" tag
+    // under the file name; the phone card's details spell out where it goes.
     const linked = screen.getAllByRole('button', { name: 'Open linked transaction for tax.pdf' })
     expect(linked.length).toBeGreaterThan(0)
-    expect(linked.every(button => button.textContent?.includes('Ledger'))).toBe(true)
+    expect(screen.getAllByText('In ledger').length).toBeGreaterThan(0)
 
     fireEvent.click(linked[0])
     expect(onNavigateToTransaction).toHaveBeenCalledWith('tx-1')
+  })
+
+  it('confirms an AI-read amount in one tap, without opening the editor', () => {
+    const updateDocument = vi.fn().mockResolvedValue(undefined)
+    render(
+      <DocumentList
+        {...baseProps}
+        updateDocument={updateDocument}
+        documents={[{ ...document, amount: 99, amountStatus: 'NeedsReview', amountConfidence: 0.92 }]}
+        selectedIds={new Set()}
+      />,
+    )
+
+    fireEvent.click(screen.getAllByRole('button', { name: /^Confirm RM\s?99\.00 for tax\.pdf$/ })[0])
+    expect(updateDocument).toHaveBeenCalledWith(1, { amount: 99, amountCurrency: 'MYR', amountStatus: 'Confirmed' })
+    expect(screen.queryAllByLabelText('Amount for tax.pdf')).toHaveLength(0)
+  })
+
+  it('saves a corrected amount with Enter and leaves with Escape', () => {
+    const updateDocument = vi.fn().mockResolvedValue(undefined)
+    render(
+      <DocumentList
+        {...baseProps}
+        updateDocument={updateDocument}
+        documents={[{ ...document, amount: 99, amountStatus: 'NeedsReview' }]}
+        selectedIds={new Set()}
+      />,
+    )
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Review the suggested amount for tax.pdf' })[0])
+    const input = screen.getAllByLabelText('Amount for tax.pdf')[0]
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(screen.queryAllByLabelText('Amount for tax.pdf')).toHaveLength(0)
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Review the suggested amount for tax.pdf' })[0])
+    const reopened = screen.getAllByLabelText('Amount for tax.pdf')[0]
+    fireEvent.change(reopened, { target: { value: '89.50' } })
+    fireEvent.keyDown(reopened, { key: 'Enter' })
+    expect(updateDocument).toHaveBeenCalledWith(1, { amount: 89.5, amountCurrency: 'MYR', amountStatus: 'Confirmed' })
   })
 
   it('does not expose the removed legacy document category label', () => {

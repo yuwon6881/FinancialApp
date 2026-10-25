@@ -30,7 +30,7 @@ describe('normalizeDocumentConstraints', () => {
     expect(normalized.maxBulkDocuments).toBe(FALLBACK_DOCUMENT_CONSTRAINTS.maxBulkDocuments)
     expect(normalized.acceptedUploadTypes).toEqual(FALLBACK_ACCEPTED_UPLOAD_TYPES)
     // Never renders as NaN wherever the limit is shown to the user.
-    expect(formatUploadMegabytes(normalized.maxDocumentBytes)).toBe('20.00 MB')
+    expect(formatUploadMegabytes(normalized.maxDocumentBytes)).toBe('20 MB')
   })
 
   it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, '20' as unknown as number])(

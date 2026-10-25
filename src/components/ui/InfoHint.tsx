@@ -79,6 +79,8 @@ export const InfoHint: React.FC<InfoHintProps> = ({ text, label, align = 'right'
         open={open}
         anchorRef={anchorRef}
         align={align}
+        placement="beside"
+        gap={8}
         minWidth={200}
         id={id}
         role="tooltip"

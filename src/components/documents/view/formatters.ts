@@ -9,6 +9,22 @@ export const formatBytes = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, index)).toFixed(2)) + ' ' + BYTE_UNITS[index]
 }
 
+/** "92% sure" from the extractor's confidence (a 0-1 fraction or a percentage), or nothing without one. */
+export const confidenceLabel = (confidence: number | null | undefined): string | null => {
+  if (confidence == null || !Number.isFinite(confidence)) return null
+  const percent = Math.round(confidence <= 1 ? confidence * 100 : confidence)
+  return `${Math.max(0, Math.min(100, percent))}% sure`
+}
+
+/** "PDF", "JPG", "WEBP"… -- what a person calls the file, not its MIME type. */
+export const formatFileKind = (contentType: string) => {
+  const type = contentType.split(';', 1)[0].trim().toLowerCase()
+  if (type === 'application/pdf') return 'PDF'
+  if (type === 'image/jpeg') return 'JPG'
+  if (type.startsWith('image/')) return type.slice('image/'.length).toUpperCase()
+  return 'File'
+}
+
 export const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString(undefined, {
     year: 'numeric',

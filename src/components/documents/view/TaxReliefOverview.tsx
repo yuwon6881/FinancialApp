@@ -134,6 +134,7 @@ export function TaxReliefOverview({
   )
   const deleteBlockedById = new Map(categories.map(category => [category.id, blockedDeleteReason(summaryByCategory.get(category.id))]))
   const money = (value: number) => hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(value, currency)
+  const totalLimit = categories.reduce((total, category) => total + category.limit, 0)
 
   const beginEdit = (category: TaxReliefCategoryDefinition) => {
     setEditingId(category.id)
@@ -270,6 +271,8 @@ export function TaxReliefOverview({
         {summary
           ? <>
               <span className="font-medium text-foreground tabular-nums">{money(summary.confirmedAmount)}</span> claimed
+              {totalLimit > 0 && <> of <span className="tabular-nums">{money(totalLimit)}</span></>}
+              {' '}across {categories.length} relief{categories.length === 1 ? '' : 's'}
               {summary.pendingReviewAmount > 0 && <> · <span className="whitespace-nowrap text-amber-700 dark:text-amber-300">{money(summary.pendingReviewAmount)} to review</span></>}
             </>
           : 'Set your own categories and limits for the selected tax year.'}
@@ -300,6 +303,7 @@ export function TaxReliefOverview({
                   key={category.id}
                   data-filtered={filtered || undefined}
                   className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 py-2.5 @2xl:grid-cols-[minmax(8rem,12rem)_minmax(0,1fr)_auto_6.5rem] @2xl:gap-x-5"
+                  data-testid={`relief-row-${category.id}`}
                 >
                   {/* Name and claimed figure share the first line on a phone; from @2xl they are
                       columns either side of the bar. */}
@@ -338,7 +342,9 @@ export function TaxReliefOverview({
                       )}
                     </p>
                   </div>
-                  <div className="col-start-2 row-span-2 row-start-1 flex justify-end @2xl:order-4 @2xl:col-start-auto @2xl:row-span-1 @2xl:row-start-auto">
+                  {/* A fixed-width slot, with the link and the "No docs" note both starting at the
+                      same inset, so the column reads as one straight edge whichever a row has. */}
+                  <div className="col-start-2 row-span-2 row-start-1 flex w-23 @2xl:order-4 @2xl:w-26 @2xl:col-start-auto @2xl:row-span-1 @2xl:row-start-auto">
                     {count > 0 ? (
                       <Button
                         variant="tertiary"
@@ -346,13 +352,13 @@ export function TaxReliefOverview({
                         type="button"
                         onClick={() => onShowReliefDocuments(category.id)}
                         aria-label={`Show ${count} ${count === 1 ? 'doc' : 'docs'} in ${category.name}`}
-                        className="-mr-2 gap-0.5 px-2.5 text-accent-ink hover:text-accent-ink"
+                        className="w-full justify-between gap-0.5 px-2.5 text-accent-ink hover:text-accent-ink"
                       >
                         <span className="tabular-nums">{count} {count === 1 ? 'doc' : 'docs'}</span>
                         <ChevronRight className="size-4" aria-hidden="true" />
                       </Button>
                     ) : (
-                      <span className="px-0.5 text-caption text-muted-foreground">No docs</span>
+                      <span className="inline-flex w-full items-center px-2.5 text-label text-muted-foreground">No docs</span>
                     )}
                   </div>
                 </li>

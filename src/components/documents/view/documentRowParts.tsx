@@ -1,14 +1,10 @@
-import { useEffect, useState } from 'react'
-import { Check, Download, ExternalLink, Eye, FileArchive, FileCode, FileImage, FileText, Link2, Loader2, Pencil, SearchX, Trash2, UploadCloud, X } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowUpRight, Download, Eye, FileArchive, FileCode, FileImage, FileText, Link2, Loader2, SearchX, Trash2, UploadCloud } from 'lucide-react'
 import type { VaultDocument } from '../../../types'
 import { downloadDocument } from '../../../lib/api/documents'
-import { getErrorMessage } from '../../../lib/errors'
 import { useAppPrefs } from '../../../contexts/AppContext'
-import { formatCurrencyVal, getCurrencySymbol } from '../../../lib/utils'
-import { Input } from '../../ui/Input'
 import { Button } from '../../ui/Button'
 import { IconButton } from '../../ui/IconButton'
-import { SensitiveMask } from '../../ui/SensitiveAmount'
 
 /**
  * The pieces a vault row is built from, shared by the mobile card and the desktop table so the two
@@ -69,75 +65,8 @@ export function EmptyState({
   )
 }
 
-export function AmountReview({ document, updateDocument, currency, disabled = false }: { document: VaultDocument; updateDocument: UpdateDocumentFn; currency?: string; disabled?: boolean }) {
-  const { currency: appCurrency, hideSensitive } = useAppPrefs()
-  const activeCurrency = currency ?? appCurrency
-  const [editing, setEditing] = useState(false)
-  const needsReview = document.amountStatus === 'NeedsReview'
-  const [value, setValue] = useState(document.amount?.toFixed(2) ?? '')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => setValue(document.amount?.toFixed(2) ?? ''), [document.amount])
-
-  // Leaving the editor must cost nothing. The only way out used to be the tick, and that writes to
-  // the server directly rather than through the outbox, so a mis-tap was a real edit with no undo.
-  const cancel = () => {
-    setValue(document.amount?.toFixed(2) ?? '')
-    setError(null)
-    setEditing(false)
-  }
-
-  const save = async () => {
-    if (disabled) return
-    const trimmed = value.trim()
-    // Both of these used to `return` in silence, so the tick looked broken rather than refusing.
-    // An empty field is refused outright: it used to save `null` *with* `Confirmed`, recording "there
-    // is definitively no amount here" from what is almost always a cleared field on the way to typing
-    // a new one. A document with no amount stays `Unavailable` and reads "No amount confirmed".
-    if (trimmed === '') {
-      setError('Enter an amount, or press ✕ to leave this unchanged.')
-      return
-    }
-    const amount = Number(trimmed)
-    if (!Number.isFinite(amount) || amount < 0) {
-      setError('Enter an amount of zero or more.')
-      return
-    }
-    setError(null)
-    setSaving(true)
-    try {
-      await updateDocument(document.id, {
-        amount,
-        amountCurrency: activeCurrency.toUpperCase() === 'MYR' ? 'MYR' : 'OTHER',
-        amountStatus: 'Confirmed',
-      })
-      setEditing(false)
-    } catch (error) {
-      // The server refuses this write for reasons the user can act on, and it names them. Without
-      // this the rejection was an unhandled promise: the editor stayed open, the value stayed
-      // typed, and nothing said why — the tick reading as broken, which is what the checks above
-      // were added to stop it doing.
-      setError(getErrorMessage(error, 'That amount could not be saved. Please try again.'))
-    } finally { setSaving(false) }
-  }
-  if (hideSensitive) return <SensitiveMask />
-  // An unreviewed suggestion is outlined rather than left as plain text, because it no longer opens by
-  // itself: something has to say "this figure is a guess and still needs you".
-  if (!editing) return <Button variant="tertiary" type="button" onClick={() => setEditing(true)} disabled={disabled} aria-label={needsReview ? `Review the suggested amount for ${document.originalFileName}` : undefined} className={`inline-flex min-h-11 items-center gap-1.5 rounded-full px-1.5 text-caption font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-8 ${needsReview ? 'bg-amber-500/12 px-2.5 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300' : 'text-accent-ink hover:bg-accent/60'}`}>
-    {document.amount != null ? formatCurrencyVal(document.amount, activeCurrency) : 'Add amount'}<Pencil className="size-3.5" />
-  </Button>
-  return <div>
-    <div className="flex items-center gap-1.5" onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); cancel() } }}>
-      <span className="text-caption font-semibold text-foreground">{getCurrencySymbol(activeCurrency)}</span>
-      <Input value={value} onChange={event => { setValue(event.target.value); setError(null) }} disabled={disabled || saving} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} aria-invalid={error ? true : undefined} className="h-9 w-20 rounded-lg border-border bg-background px-2 text-caption tabular-nums" />
-      <IconButton type="button" onClick={() => void save()} disabled={disabled || saving} label={`Confirm amount for ${document.originalFileName}`} tooltip="Confirm amount" className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:size-9"><Check className="size-4" strokeWidth={2.5} /></IconButton>
-      <IconButton type="button" onClick={cancel} disabled={saving} label={`Stop editing the amount for ${document.originalFileName}`} tooltip="Discard this edit" className="inline-grid size-11 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 sm:size-9"><X className="size-4" /></IconButton>
-    </div>
-    {error && <p className="mt-1 text-caption font-semibold text-destructive" role="alert">{error}</p>}
-  </div>
-}
-
-const ACTION_CLASS = 'inline-flex cursor-pointer items-center justify-center rounded-control bg-surface-2/70 p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50'
+// Quiet round icon actions at IconButton's size, so a row's actions read as one group.
+const ACTION_CLASS = 'size-11 min-h-0 p-0 text-muted-foreground hover:text-foreground lg:size-9'
 
 /**
  * The three row actions, each exported on its own so the phone card can keep Preview on its face and
@@ -203,7 +132,7 @@ export function DeleteDocumentButton({ document, setDocToDelete, disabled = fals
       type="button"
       disabled={hideSensitive || disabled}
       onClick={() => setDocToDelete(document.id)}
-      className={className ?? 'inline-flex cursor-pointer items-center justify-center rounded-control bg-surface-2/70 p-2 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50'}
+      className={className ?? `${ACTION_CLASS} hover:bg-destructive/10 hover:text-destructive`}
       aria-label={`Delete ${document.originalFileName}`}
     >
       <Trash2 className="size-3.5" />
@@ -218,15 +147,23 @@ export function DocumentActions({
   downloadFailed,
   onPreview,
   disabled = false,
+  openingTransactionId = null,
+  onOpenLinkedTransaction,
 }: {
   document: VaultDocument
   setDocToDelete: (id: number) => void
   downloadFailed: () => void
   onPreview: (document: VaultDocument) => void
   disabled?: boolean
+  openingTransactionId?: string | null
+  onOpenLinkedTransaction?: (transactionId: string) => void
 }) {
   return (
-    <div className="flex items-center justify-end gap-1.5">
+    <div className="flex items-center justify-end gap-0.5">
+      {/* The ledger slot is held open on unlinked rows so every row's icons line up in columns. */}
+      {document.transactionId && onOpenLinkedTransaction
+        ? <LinkedTransactionButton document={document} openingTransactionId={openingTransactionId} onOpen={onOpenLinkedTransaction} appearance="icon" />
+        : <span className="size-11 shrink-0 lg:size-9" aria-hidden="true" />}
       <PreviewDocumentButton document={document} onPreview={onPreview} disabled={disabled} />
       <DownloadDocumentButton document={document} downloadFailed={downloadFailed} disabled={disabled} />
       <DeleteDocumentButton document={document} setDocToDelete={setDocToDelete} disabled={disabled} />
@@ -234,48 +171,68 @@ export function DocumentActions({
   )
 }
 
+/**
+ * The way from a document to the ledger record it is filed against.
+ *
+ * `icon` is the table's form: one more action in the row's action group, so the name column stays
+ * a name. `labelled` is the phone card's form, where the details panel has room to say where it
+ * goes. With no way to open the record it is a quiet "Linked" tag.
+ */
 export function LinkedTransactionButton({
   document,
   openingTransactionId,
   onOpen,
+  appearance = 'labelled',
 }: {
   document: VaultDocument
   openingTransactionId: string | null
   onOpen?: (transactionId: string) => void
+  appearance?: 'icon' | 'labelled'
 }) {
   if (!document.transactionId) return null
   const isOpening = openingTransactionId === document.transactionId
-  // The label is unconditional. `hidden sm:inline` never did anything for the desktop table — that
-  // only renders from `lg` up, where `sm:` is always satisfied — so the one surface it stripped the
-  // word from was the phone card, leaving a bare 12px glyph in a row of status badges: no indication
-  // it was a button, no indication where it went, and a tap target well under 44px. The card is also
-  // the surface with the most room for it.
-  if (!onOpen) {
+  if (!onOpen) return <LinkedTransactionTag />
+  // Opening fetches the transaction before it can navigate, so it shows a spinner rather than only
+  // going disabled, which on a phone is indistinguishable from a tap that missed.
+  const icon = isOpening
+    ? <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden="true" />
+    : <ArrowUpRight className="size-4 shrink-0" aria-hidden="true" />
+  if (appearance === 'icon') {
     return (
-      <span className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-caption font-medium text-accent-ink" title="Attached to a ledger record">
-        <Link2 className="size-3 shrink-0" aria-hidden="true" />
-        Linked
-      </span>
+      <IconButton
+        label={`Open linked transaction for ${document.originalFileName}`}
+        tooltip="Open in ledger"
+        onClick={() => onOpen(document.transactionId!)}
+        disabled={isOpening}
+        aria-busy={isOpening}
+        className="text-accent-ink hover:bg-primary/10"
+      >
+        {icon}
+      </IconButton>
     )
   }
   return (
     <Button
       variant="secondary"
       size="sm"
-      type="button"
       onClick={() => onOpen(document.transactionId!)}
       disabled={isOpening}
       aria-busy={isOpening}
-      className="min-h-11 shrink-0 border-accent/30 bg-accent/10 px-2 text-caption text-accent-ink hover:border-accent/50 hover:bg-accent/20 sm:min-h-8"
-      title="Open linked ledger transaction"
       aria-label={`Open linked transaction for ${document.originalFileName}`}
+      className="shrink-0 text-accent-ink"
     >
-      {/* Opening fetches the transaction before it can navigate, and the button only went disabled —
-          on a phone that is indistinguishable from a tap that missed. */}
-      {isOpening
-        ? <Loader2 className="size-3 shrink-0 animate-spin" aria-hidden="true" />
-        : <ExternalLink className="size-3 shrink-0" aria-hidden="true" />}
-      {isOpening ? 'Opening…' : 'Ledger'}
+      {icon}
+      {isOpening ? 'Opening…' : 'Open in ledger'}
     </Button>
+  )
+}
+
+/** Says, without being a control, that a document is filed against a ledger record. */
+export function LinkedTransactionTag() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap align-bottom font-medium text-accent-ink" title="Attached to a ledger record">
+      <Link2 className="size-3 shrink-0" aria-hidden="true" />
+      In ledger
+    </span>
   )
 }

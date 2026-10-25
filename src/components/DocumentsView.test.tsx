@@ -32,6 +32,7 @@ const api = vi.hoisted(() => ({
 vi.mock('../lib/api/documents', () => ({ ...api, DOCUMENT_BULK_LIMIT: 100 }))
 
 import { DocumentsView } from './DocumentsView'
+import { AppSyncContext } from '../contexts/AppContext'
 
 const document: VaultDocument = {
   id: 1,
@@ -130,8 +131,13 @@ describe('DocumentsView', () => {
     await waitFor(() => expect(screen.queryByText(/categor(y|ies) changes? staged/i)).toBeNull())
   })
 
-  it('forgets staged category edits when the filters change', async () => {
-    render(<DocumentsView />)
+  it('saves a relief category the moment it is picked', async () => {
+    const queueMutation = vi.fn(() => true)
+    render(
+      <AppSyncContext.Provider value={{ queueMutation } as never}>
+        <DocumentsView />
+      </AppSyncContext.Provider>,
+    )
     await waitFor(() => expect(screen.getAllByText('tax.pdf').length).toBeGreaterThan(0))
 
     const changeButton = screen.queryByLabelText('Change tax relief category for tax.pdf')
@@ -142,14 +148,13 @@ describe('DocumentsView', () => {
     const selectButtons = await screen.findAllByLabelText('Tax relief category for tax.pdf')
     fireEvent.click(selectButtons[0])
     fireEvent.click((await screen.findAllByRole('option', { name: 'Medical' }))[0])
-    await waitFor(() => expect(screen.getByText(/categor(y|ies) changes? staged/i)).toBeTruthy())
 
-    // Changing the sort re-queries the server, so the staged rows are no longer the rows on screen.
-    // Left behind, the bar counted documents the user could not see and Save wrote them anyway.
-    fireEvent.click(screen.getByLabelText('Sort vault documents'))
-    fireEvent.click(screen.getByRole('option', { name: /Sort: Name A/ }))
-
-    await waitFor(() => expect(screen.queryByText(/categor(y|ies) changes? staged/i)).toBeNull())
+    // Saved on pick, through the outbox (which carries Undo), with no staged bar to remember.
+    expect(queueMutation).toHaveBeenCalledWith('vaultDocument', 'update', '1', expect.objectContaining({
+      reliefCategory: 'medical',
+      undoSnapshot: expect.objectContaining({ id: 1, reliefCategory: 'lifestyle' }),
+    }))
+    expect(screen.queryByRole('button', { name: 'Save categories' })).toBeNull()
   })
 
   it('refreshes the tax insights after a single delete, so the tracker cannot go stale', async () => {

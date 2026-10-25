@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react'
-import { ChevronDown, Link2, Pencil, X } from 'lucide-react'
+import { ChevronDown, Pencil, X } from 'lucide-react'
 import type { TaxReliefCategoryDefinition, VaultDocument } from '../../../types'
 import { useAppPrefs } from '../../../contexts/AppContext'
 import { cn } from '../../../lib/utils'
@@ -10,12 +10,13 @@ import { CustomSelect } from '../../ui/CustomSelect'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { SwipeableRow } from '../../ui/SwipeableRow'
 import { formatBytes, formatDate } from './formatters'
+import { DocumentAmountEditor } from './DocumentAmountEditor'
 import {
-  AmountReview,
   DeleteDocumentButton,
   DocumentTypeIcon,
   DownloadDocumentButton,
   LinkedTransactionButton,
+  LinkedTransactionTag,
   PreviewDocumentButton,
   type UpdateDocumentFn,
 } from './documentRowParts'
@@ -31,7 +32,6 @@ interface DocumentCardProps {
   reliefCategories: TaxReliefCategoryDefinition[]
   /** False while this document's tax year has no category list yet — absent, not empty. */
   areReliefCategoriesKnown?: boolean
-  pendingReliefCategory: string | undefined
   openingTransactionId: string | null
   currency: string
   /** Rows under a month heading show only the day and month; ungrouped rows show the full date. */
@@ -71,7 +71,6 @@ export function DocumentCard({
   isSelecting,
   reliefCategories,
   areReliefCategoriesKnown = true,
-  pendingReliefCategory,
   openingTransactionId,
   currency,
   dateStyle = 'day',
@@ -88,17 +87,15 @@ export function DocumentCard({
   const [expanded, setExpanded] = useState(false)
   const isBusy = isDeleting || isSyncing
   const needsReview = document.amountStatus === 'NeedsReview'
-  // A confirmed figure needs no caption; only a guess or a missing amount says something.
-  const amountCaption = needsReview
-    ? 'AI suggestion · please confirm'
-    : document.amountStatus === 'Confirmed'
-      ? null
-      : document.amountExtractionMessage || 'No amount confirmed'
+  // A confirmed figure needs no caption, and the editor captions an AI reading itself; only a
+  // missing amount says something here.
+  const amountCaption = needsReview || document.amountStatus === 'Confirmed'
+    ? null
+    : document.amountExtractionMessage || 'No amount confirmed'
 
   // A document that already has a category shows it as a chip; the picker opens on request.
-  const reliefId = pendingReliefCategory ?? document.reliefCategory ?? ''
+  const reliefId = document.reliefCategory ?? ''
   const reliefName = reliefCategories.find(category => category.id === reliefId)?.name
-  const isReliefDraftChanged = pendingReliefCategory !== undefined && pendingReliefCategory !== (document.reliefCategory ?? '')
   const [editingRelief, setEditingRelief] = useState(false)
   // An unset category has nothing to fall back to, so the picker stays open and there is no cancel —
   // the field is genuinely required. A name missing only because this year's categories have not
@@ -183,9 +180,6 @@ export function DocumentCard({
               <p className="truncate text-body font-medium text-foreground" title={document.originalFileName}>
                 {document.originalFileName}
               </p>
-              {document.transactionId && (
-                <Link2 className="size-3.5 shrink-0 text-muted-foreground" aria-label="Linked to a transaction" />
-              )}
               <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isFailed={isFailed} isPending={document.isPendingSync} entityLabel="document" />
             </div>
             <p className="mt-0.5 truncate text-caption text-muted-foreground tabular-nums">
@@ -195,6 +189,7 @@ export function DocumentCard({
               {(reliefName || missingRelief) && <span aria-hidden="true"> · </span>}
               {dateStyle === 'full' ? formatDate(document.uploadedAt) : dayMonth(document.uploadedAt)}
               <span className="hidden @md:inline"> · {formatBytes(document.sizeBytes)}</span>
+              {document.transactionId && <><span aria-hidden="true"> · </span><LinkedTransactionTag /></>}
             </p>
           </div>
 
@@ -235,8 +230,8 @@ export function DocumentCard({
             <div className="grid gap-3 @lg:grid-cols-2">
               <div className="min-w-0">
                 <p className="mb-1 text-label font-medium text-muted-foreground">Amount</p>
-                <div className="-ml-1.5">
-                  <AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />
+                <div className="pl-2">
+                  <DocumentAmountEditor document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />
                 </div>
                 {amountCaption && <p className="mt-0.5 text-caption text-muted-foreground">{amountCaption}</p>}
               </div>
@@ -245,7 +240,6 @@ export function DocumentCard({
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <p className="flex items-center gap-1.5 text-label font-medium text-muted-foreground">
                     Tax relief category{showReliefPicker && <span className="text-destructive">*</span>}
-                    {isReliefDraftChanged && <span className="inline-block size-1.5 rounded-full bg-primary" title="Unsaved change" />}
                   </p>
                   {canCancelRelief && (
                     <Button size="icon"
@@ -273,7 +267,7 @@ export function DocumentCard({
                       ...reliefCategories.map(category => ({ value: category.id, label: category.name })),
                     ]}
                     ariaLabel={`Tax relief category for ${document.originalFileName}`}
-                    className={`w-full ${isReliefDraftChanged ? 'rounded-lg ring-2 ring-primary/50' : ''}`}
+                    className="w-full"
                   />
                 ) : reliefName ? (
                   <Button
@@ -283,13 +277,9 @@ export function DocumentCard({
                     disabled={hideSensitive || isBusy}
                     onClick={() => setEditingRelief(true)}
                     aria-label={`Change tax relief category for ${document.originalFileName}`}
-                    className={cn(
-                      '-ml-1 max-w-full gap-1.5 px-2.5 font-medium',
-                      isReliefDraftChanged && 'bg-primary/10 ring-2 ring-primary/50 hover:bg-primary/10',
-                    )}
+                    className="-ml-1 max-w-full gap-1.5 px-2.5 font-medium"
                   >
                     <span className="truncate">{reliefName}</span>
-                    {isReliefDraftChanged && <span className="inline-block size-1.5 rounded-full bg-primary" title="Unsaved change" />}
                     <Pencil className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                   </Button>
                 ) : (

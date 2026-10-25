@@ -239,13 +239,11 @@ describe('TaxReliefOverview sync status', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
 
     // Initially draft matches server category, so no unsaved indicator is shown
-    expect(screen.queryByTitle('Unsaved change')).toBeNull()
+    expect(screen.queryByText('Unsaved changes')).toBeNull()
 
     // Modify the limit input
     fireEvent.change(screen.getByLabelText(/Limit \(MYR\)/), { target: { value: '2000' } })
 
-    // Unsaved indicator dot and text appear
-    expect(screen.getByTitle('Unsaved change')).toBeTruthy()
     expect(screen.getByText('Unsaved changes')).toBeTruthy()
   })
 })

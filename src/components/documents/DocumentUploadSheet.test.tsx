@@ -71,10 +71,16 @@ describe('DocumentUploadSheet validation', () => {
     expect(uploadDocuments).not.toHaveBeenCalled()
   })
 
-  it('reports a missing relief category on the field', async () => {
+  it('reports a missing relief category on the field, but only once Upload is pressed', async () => {
+    // Two categories, so there is a real choice; with one it is picked for the user.
+    getTaxReliefCategories.mockResolvedValueOnce([
+      { id: 'education', name: 'Education', limit: 1000, isInherited: false },
+      { id: 'medical', name: 'Medical', limit: 1000, isInherited: false },
+    ])
     renderSheet()
     await waitFor(() => expect(getTaxReliefCategories).toHaveBeenCalled())
     await chooseFile()
+    expect(screen.queryByText('Choose a tax relief category before uploading.')).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /^Upload/ }))
 

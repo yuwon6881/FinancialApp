@@ -12,7 +12,6 @@ export interface DocumentDeleteModalsProps {
   documents: VaultDocument[]
   deleteDocument: (id: number) => Promise<unknown>
   setSelectedIds: React.Dispatch<React.SetStateAction<Set<number>>>
-  stagedCategories: { forget: (ids: number[]) => void }
   showToast: (message: string, title?: string, tone?: any) => void
   guardSensitive: () => boolean
   addDocumentIds: (setter: React.Dispatch<React.SetStateAction<Set<number>>>, ids: number[]) => void
@@ -34,7 +33,6 @@ export const DocumentDeleteModals: React.FC<DocumentDeleteModalsProps> = ({
   documents,
   deleteDocument,
   setSelectedIds,
-  stagedCategories,
   showToast,
   guardSensitive,
   addDocumentIds,
@@ -74,7 +72,6 @@ export const DocumentDeleteModals: React.FC<DocumentDeleteModalsProps> = ({
               next.delete(docToDelete)
               return next
             })
-            stagedCategories.forget([docToDelete])
             const copy = buildMutationSuccessToast({
               entity: 'Document',
               action: 'Deleted',
@@ -118,7 +115,6 @@ export const DocumentDeleteModals: React.FC<DocumentDeleteModalsProps> = ({
               failed.forEach(result => next.add(result.id))
               return next
             })
-            stagedCategories.forget(results.filter(result => result.deleted).map(result => result.id))
             if (failed.length) {
               const reason = failed.find(result => result.message)?.message
               showToast(

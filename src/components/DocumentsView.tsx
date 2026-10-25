@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
-import { Download, Loader2, UploadCloud } from 'lucide-react'
+import { Download, Loader2, ScanSearch, Sparkles, UploadCloud } from 'lucide-react'
 import { DocumentUploadSheet } from './documents/DocumentUploadSheet'
 import { VaultRetentionNotice } from './documents/VaultRetentionNotice'
 import { useDocumentsView } from './documents/view/useDocumentsView'
@@ -8,7 +8,11 @@ import { StorageUsageMeter } from './documents/view/StorageUsageMeter'
 import { DocumentList } from './documents/view/DocumentList'
 import { DocumentPagination } from './documents/view/DocumentPagination'
 import { DocumentsLoadError } from './documents/view/DocumentsLoadError'
-import { useStagedReliefCategories } from './documents/view/useStagedReliefCategories'
+import { DocumentReviewSheet, type DocumentReviewRequest } from './documents/view/DocumentReviewSheet'
+import type { UpdateDocumentFn } from './documents/view/documentRowParts'
+import type { VaultDocument } from '../types'
+import { panelClass } from './ui/panelStyles'
+import { cn } from '../lib/utils'
 import { useAppPrefs, useAppSync, useAppUi } from '../contexts/AppContext'
 import { TaxReliefOverview } from './documents/view/TaxReliefOverview'
 import { DocumentDeleteModals } from './documents/view/DocumentDeleteModals'
@@ -66,7 +70,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
   const [isUploadSheetOpen, setIsUploadSheetOpen] = useState(false)
   const [docToDelete, setDocToDelete] = useState<number | null>(null)
   const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null)
-  const [syncingDocumentIds, setSyncingDocumentIds] = useState<Set<number>>(new Set())
   const [deletingDocumentIds, setDeletingDocumentIds] = useState<Set<number>>(new Set())
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
@@ -90,10 +93,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
       .filter(operation => operation.entity === 'vaultDocument')
       .map(operation => Number(operation.targetId)),
   ), [failedOperations])
-  const visibleSyncingDocumentIds = useMemo(
-    () => new Set([...syncingDocumentIds, ...outboxSyncingDocumentIds]),
-    [outboxSyncingDocumentIds, syncingDocumentIds],
-  )
+  const visibleSyncingDocumentIds = outboxSyncingDocumentIds
   const documents = useOptimisticList(serverDocuments, vaultDocumentOperations, 'vaultDocument')
 
   const addDocumentIds = (setter: Dispatch<SetStateAction<Set<number>>>, ids: number[]) => {
@@ -112,29 +112,18 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     })
   }
 
-  const stagedCategories = useStagedReliefCategories({
-    documents,
-    bulkUpdate: async updates => {
-      const results = updates.map(update => {
-        const document = documents.find(item => item.id === update.id)
-        if (!document || !queueMutation) return { id: update.id, updated: false, message: 'Document is no longer available.' }
-        const queued = queueMutation('vaultDocument', 'update', String(update.id), {
-          reliefCategory: update.reliefCategory,
-          name: document.originalFileName,
-          undoSnapshot: document,
-        })
-        return queued
-          ? { id: update.id, updated: true }
-          : { id: update.id, updated: false, message: 'Change could not be queued.' }
-      })
-      return results
-    },
-    isQueued: true,
-    setRowsSyncing: (ids, isSyncing) =>
-      (isSyncing ? addDocumentIds : removeDocumentIds)(setSyncingDocumentIds, ids),
-    showToast,
-    guardSensitive,
-  })
+  // Every document edit -- amount, relief category -- goes through the outbox: it shows at once,
+  // survives going offline, and the toast offers Undo. That is what lets a category change save on
+  // pick instead of waiting behind a separate "Save categories" step.
+  const queueDocumentUpdate = async (document: VaultDocument, updates: Parameters<UpdateDocumentFn>[1]) => {
+    if (!guardSensitive() || !queueMutation) return
+    queueMutation('vaultDocument', 'update', String(document.id), {
+      ...updates,
+      name: document.originalFileName,
+      undoSnapshot: document,
+    })
+  }
+  const [reviewRequest, setReviewRequest] = useState<DocumentReviewRequest | null>(null)
 
   const selectedReliefYear = taxYear ?? availableYears[0]
   const taxReliefOperations = useMemo(() => operations.filter(operation =>
@@ -170,12 +159,12 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
   useEffect(() => {
     setSelectedIds(new Set())
-    stagedCategories.clear()
   }, [taxYear, selectedReliefCategories, sortOrder, pageSize])
 
   useEffect(() => {
     if (!hideSensitive) return
     setIsUploadSheetOpen(false)
+    setReviewRequest(null)
     setDocToDelete(null)
     setIsBulkDeleteOpen(false)
   }, [hideSensitive])
@@ -211,6 +200,10 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     section.scrollIntoView?.({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
     section.focus({ preventScroll: true })
   }
+
+  // The tracker's own count, for the year it describes, so the notice and the "to review" figure
+  // under the tracker heading always agree.
+  const pendingReviewCount = summary?.categories.reduce((total, category) => total + (category.pendingReviewCount ?? 0), 0) ?? 0
 
   const toggleSelectAllVisible = () => {
     setSelectedIds(current => {
@@ -267,6 +260,29 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
       </header>
 
       <VaultRetentionNotice review={retentionReview} />
+
+      {/* One compact row: what needs a look, and the way to it on the trailing edge. */}
+      {pendingReviewCount > 0 && summary && !hideSensitive && (
+        <section aria-labelledby="vault-review-notice" className={cn(panelClass, 'flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4')}>
+          <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-amber-500/12 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400">
+              <Sparkles className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h2 id="vault-review-notice" className="text-body font-semibold text-foreground">
+                {pendingReviewCount} amount{pendingReviewCount === 1 ? '' : 's'} to check
+              </h2>
+              <p className="text-caption text-muted-foreground">
+                Read from your {summary.taxYear} receipts by AI. A quick look confirms {pendingReviewCount === 1 ? 'it counts' : 'they count'} towards your relief.
+              </p>
+            </div>
+          </div>
+          <Button size="sm" className="shrink-0 self-end sm:self-auto" onClick={() => { if (guardSensitive()) setReviewRequest({ taxYear: summary.taxYear }) }}>
+            <ScanSearch className="size-4" aria-hidden="true" />
+            Review now
+          </Button>
+        </section>
+      )}
 
       {/* The tracker needs a tax year to describe; an empty vault has none, and its "Manage limits"
           could not open, so it would only have been a box saying there was nothing in it. */}
@@ -339,34 +355,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
         {loadError && <DocumentsLoadError message={loadError} isLoading={isLoading} onRetry={() => void loadDocuments()} />}
 
-        {stagedCategories.staged.size > 0 && (
-          <div className="mb-3 flex flex-col gap-3 rounded-control bg-primary/8 p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-caption font-semibold">{stagedCategories.staged.size} tax relief categor{stagedCategories.staged.size === 1 ? 'y change' : 'y changes'} staged</p>
-            </div>
-            <div className="flex shrink-0 justify-end gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                disabled={stagedCategories.isSaving}
-                onClick={() => stagedCategories.clear()}
-              >
-                Discard
-              </Button>
-              <Button
-                size="sm"
-                type="button"
-                disabled={stagedCategories.isSaving}
-                aria-busy={stagedCategories.isSaving}
-                onClick={() => void stagedCategories.save()}
-              >
-                {stagedCategories.isSaving ? 'Saving…' : 'Save categories'}
-              </Button>
-            </div>
-          </div>
-        )}
-
         <div className="relative" aria-busy={isLoading}>
           {isLoading && documents.length > 0 && (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
@@ -435,17 +423,14 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 failedDocumentIds={failedDocumentIds}
                 deletingDocumentIds={deletingDocumentIds}
                 currency={currency}
-                pendingReliefCategories={stagedCategories.staged}
-                onReliefCategoryChange={stagedCategories.stage}
-                updateDocument={async (id, updates) => {
-                  if (!guardSensitive()) return
+                onReliefCategoryChange={(id, reliefCategory) => {
                   const document = documents.find(item => item.id === id)
-                  if (!document || !queueMutation) return
-                  queueMutation('vaultDocument', 'update', String(id), {
-                    ...updates,
-                    name: document.originalFileName,
-                    undoSnapshot: document,
-                  })
+                  if (!document || reliefCategory === (document.reliefCategory ?? '')) return
+                  void queueDocumentUpdate(document, { reliefCategory })
+                }}
+                updateDocument={async (id, updates) => {
+                  const document = documents.find(item => item.id === id)
+                  if (document) await queueDocumentUpdate(document, updates)
                 }}
                 reliefCategoriesByTaxYear={reliefCategoriesByTaxYear}
                 onNavigateToTransaction={onNavigateToTransaction}
@@ -472,7 +457,15 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           void loadDocuments(true)
           void loadOverview(taxYear)
         }}
+        onReviewUploaded={(documentIds, uploadedTaxYear) => setReviewRequest({ documentIds, taxYear: uploadedTaxYear })}
         currency={currency}
+      />
+
+      <DocumentReviewSheet
+        request={reviewRequest}
+        onClose={() => setReviewRequest(null)}
+        currency={currency}
+        saveReview={queueDocumentUpdate}
       />
 
       <DocumentDeleteModals
@@ -483,7 +476,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         documents={documents}
         deleteDocument={deleteDocument}
         setSelectedIds={setSelectedIds}
-        stagedCategories={stagedCategories}
         showToast={showToast}
         guardSensitive={guardSensitive}
         addDocumentIds={addDocumentIds}

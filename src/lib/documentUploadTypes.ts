@@ -54,7 +54,8 @@ export function normalizeDocumentConstraints(
   }
 }
 
-export const formatUploadMegabytes = (bytes: number): string => `${(bytes / 1024 / 1024).toFixed(2)} MB`
+// At most two decimals, and none that would only say ".00": "20 MB" reads as a limit, "20.00 MB" as a measurement.
+export const formatUploadMegabytes = (bytes: number): string => `${Number((bytes / 1024 / 1024).toFixed(2))} MB`
 
 export const oversizeUploadMessage = (fileName: string, maxDocumentBytes: number): string =>
   `${fileName}: exceeds the ${formatUploadMegabytes(maxDocumentBytes)} limit for a single document.`

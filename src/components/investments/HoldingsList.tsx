@@ -7,6 +7,7 @@ import { filterHoldings, type AllocationFilter } from '../../lib/investmentHoldi
 import { useIsExpanded } from '../../lib/breakpoints'
 import { AmountText } from '../ui/AmountText'
 import { Button } from '../ui/Button'
+import { Badge } from '../ui/Badge'
 import { DataTable, DataTableBody, DataTableFooter, DataTableHeader, DataTableHeaderCell, DataTablePagination } from '../ui/DataTable'
 import { panelClass } from '../ui/panelStyles'
 
@@ -165,18 +166,33 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding, onCl
         <>
           {/* One line per broker account instead of a card each: the table under it already
               names the account on every row. */}
-          <ul className="mt-3 flex flex-wrap gap-2 px-5 sm:px-6">
+          {/* Each broker account as a strip of figures -- value, holdings, and the cash waiting in
+              every currency -- each a label over a number, so the cash reads as money rather than
+              as a footnote in a sentence. */}
+          <ul className="mt-4 grid gap-3 px-5 sm:px-6 @4xl:grid-cols-2">
             {accountGroups.map(({ account, holdings: accountHoldings, cash, total: groupTotal }) => (
-              <li key={account.id} className="flex min-w-0 items-center gap-3 rounded-control bg-surface-2/70 px-3.5 py-2.5">
-                <span className="min-w-0">
-                  <span className="block truncate text-label font-medium text-foreground">{account.name}</span>
-                  <span className="flex flex-wrap gap-x-1.5 text-caption text-muted-foreground">
-                    <span>Base currency {account.baseCurrency} · {accountHoldings.length} holding{accountHoldings.length === 1 ? '' : 's'}</span>
-                    {cash.length > 0 && <span aria-hidden="true">·</span>}
-                    {cashLine(cash)}
+              <li key={account.id} className="min-w-0 rounded-control bg-surface-2/60 p-4 ring-1 ring-border/50 dark:bg-surface-2/80">
+                <div className="flex min-w-0 items-center justify-between gap-3">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-body font-semibold text-foreground">{account.name}</span>
+                    <Badge className="shrink-0">{account.baseCurrency}</Badge>
                   </span>
-                </span>
-                <span className="ml-4 shrink-0 text-label font-semibold tabular-nums">{accountTotal(groupTotal)}</span>
+                  <span className="shrink-0 text-subsection tabular-nums text-foreground">{accountTotal(groupTotal)}</span>
+                </div>
+                <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-2 border-t border-border/50 pt-3">
+                  <div className="min-w-0">
+                    <dt className="text-caption text-muted-foreground">Holdings</dt>
+                    <dd className="text-body font-semibold tabular-nums text-foreground">{accountHoldings.length}</dd>
+                  </div>
+                  {cash.map(balance => (
+                    <div key={balance.currency} className="min-w-0">
+                      <dt className="text-caption text-muted-foreground">Cash · {balance.currency}</dt>
+                      <dd className={cn('text-body font-semibold tabular-nums', !masked && balance.amount < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground')}>
+                        {masked ? <AmountText value={0} isMasked /> : money(balance.amount, balance.currency)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
               </li>
             ))}
           </ul>
@@ -210,13 +226,14 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding, onCl
                       variant="tertiary"
                       onClick={() => onSelectHolding(holding)}
                       aria-label={`${holding.symbol} · ${holding.name}`}
-                      className="-ml-2 flex h-auto min-h-0 w-[calc(100%+0.5rem)] items-center justify-start gap-3 rounded-control px-2 py-1.5 text-left font-normal lg:min-h-0"
+                      className="group -ml-2 flex h-auto min-h-0 w-[calc(100%+0.5rem)] items-center justify-start gap-3 rounded-control px-2 py-1.5 text-left font-normal lg:min-h-0"
                     >
                       <TickerTile symbol={holding.symbol} className="size-9" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-label font-semibold text-foreground">{holding.symbol} <span className="font-normal text-muted-foreground">{holding.type}</span></span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-label font-semibold text-foreground underline-offset-2 group-hover:underline">{holding.symbol} <span className="font-normal text-muted-foreground">{holding.type}</span></span>
                         <span className="block truncate text-caption text-muted-foreground" title={holding.name}>{holding.name}</span>
                       </span>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true" />
                     </Button>
                   </td>
                   <td className="px-3 py-2.5 text-muted-foreground"><span className="block truncate" title={holding.accountName}>{holding.accountName}</span></td>

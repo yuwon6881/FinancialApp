@@ -112,7 +112,7 @@ export const InstrumentForm = ({ busy, offline, existingInstruments = [], onCanc
   const selectedUnavailable = selected ? marketAvailability(selected) === 'Unavailable' : false
   return <div className="space-y-4">
     <>
-      <Field label="Symbol or company / fund name"><span className="relative block"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} placeholder="Search at least 3 characters" className="pl-9" />{searching && <Loader2 className="absolute right-3 top-3 size-4 animate-spin text-accent-ink" />}</span></Field>
+      <Field label="Symbol or company / fund name"><span className="relative block"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} onClear={() => { setQuery(''); setSelected(null) }} clearLabel="Clear search" placeholder="Search at least 3 characters" className="pl-9" />{searching && <Loader2 className="absolute right-12 top-3 size-4 animate-spin text-accent-ink lg:right-11" />}</span></Field>
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
       {selected ? (
         <div className="rounded-xl border border-primary bg-primary/5 p-3">
@@ -127,7 +127,8 @@ export const InstrumentForm = ({ busy, offline, existingInstruments = [], onCanc
         </Button>)}
       </div>}
       {alreadySaved && <p role="alert" className="text-xs font-semibold text-destructive">This investment is already saved. Pick a different one, or record activity against the existing entry.</p>}
-      <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border/40 bg-card py-3">
+      {/* The sheet's own surface, not the card's: a different fill read as a dark bar behind the buttons. */}
+      <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border/60 bg-popover pt-4">
         <Button type="button" variant="tertiary" onClick={onCancel}>Cancel</Button>
         <Button disabled={busy || !selected || selectedUnavailable || alreadySaved} aria-busy={busy} onClick={() => selected && !selectedUnavailable && !alreadySaved && void onSave({ symbol: selected.symbol, name: selected.name, type: selected.type, currency: selected.currency, exchange: selected.exchange, mic: selected.mic, country: selected.country, providerSymbol: selected.symbol, providerMic: selected.mic, marketDataReference: selected.marketDataReference, isCustom: false })}>
           <MutationButtonContent state={busy ? 'saving' : null} entityLabel="investment" idleLabel="Save investment" />

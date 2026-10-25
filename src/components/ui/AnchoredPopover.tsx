@@ -9,7 +9,7 @@ interface Position {
   left: number
   maxHeight: number
   anchorWidth: number
-  side: 'top' | 'bottom'
+  side: 'top' | 'bottom' | 'left' | 'right'
 }
 
 interface AnchoredPopoverProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
@@ -18,6 +18,8 @@ interface AnchoredPopoverProps extends Omit<React.HTMLAttributes<HTMLDivElement>
   children: React.ReactNode
   align?: PopoverAlign
   side?: PopoverSide
+  /** `beside` prefers the anchor's right, then its left, and only then above or below it. */
+  placement?: 'vertical' | 'beside'
   gap?: number
   matchAnchorWidth?: boolean
   minWidth?: number
@@ -39,6 +41,7 @@ export const AnchoredPopover = forwardRef<HTMLDivElement, AnchoredPopoverProps>(
   children,
   align = 'left',
   side = 'auto',
+  placement = 'vertical',
   gap = 6,
   matchAnchorWidth = false,
   minWidth = 0,
@@ -78,6 +81,27 @@ export const AnchoredPopover = forwardRef<HTMLDivElement, AnchoredPopoverProps>(
     const roomBelow = Math.max(0, viewportHeight - anchorRect.bottom - gap - viewportPadding)
     const measuredHeight = panel.scrollHeight || panelRect.height
 
+    // Beside the anchor, vertically centred on it, when a whole panel fits on either side. A small
+    // anchor in a row of figures -- a "?" by a label -- otherwise drops its panel straight over
+    // the value it explains while the space beside it sits empty.
+    if (placement === 'beside') {
+      const roomRight = viewportWidth - anchorRect.right - gap - viewportPadding
+      const roomLeft = anchorRect.left - gap - viewportPadding
+      const fitsHeight = measuredHeight <= viewportHeight - viewportPadding * 2
+      if (fitsHeight && (panelWidth <= roomRight || panelWidth <= roomLeft)) {
+        const onRight = panelWidth <= roomRight
+        const centredTop = anchorRect.top + anchorRect.height / 2 - measuredHeight / 2
+        setPosition({
+          top: Math.min(Math.max(viewportPadding, centredTop), viewportHeight - viewportPadding - measuredHeight),
+          left: onRight ? anchorRect.right + gap : anchorRect.left - gap - panelWidth,
+          maxHeight: viewportHeight - viewportPadding * 2,
+          anchorWidth: Math.min(Math.max(anchorRect.width, minWidth), maxPanelWidth),
+          side: onRight ? 'right' : 'left',
+        })
+        return
+      }
+    }
+
     let openAbove: boolean
     if (side === 'top') openAbove = measuredHeight <= roomAbove || roomAbove >= roomBelow
     else if (side === 'bottom') openAbove = measuredHeight > roomBelow && roomAbove > roomBelow
@@ -104,7 +128,7 @@ export const AnchoredPopover = forwardRef<HTMLDivElement, AnchoredPopoverProps>(
       anchorWidth: Math.min(Math.max(anchorRect.width, minWidth), maxPanelWidth),
       side: openAbove ? 'top' : 'bottom',
     })
-  }, [align, anchorRef, gap, matchAnchorWidth, minWidth, side, viewportPadding])
+  }, [align, anchorRef, gap, matchAnchorWidth, minWidth, placement, side, viewportPadding])
 
   useLayoutEffect(() => {
     if (!open) {

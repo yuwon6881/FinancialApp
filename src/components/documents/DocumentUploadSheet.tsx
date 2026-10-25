@@ -1,6 +1,6 @@
 import { Input } from '../ui/Input'
 import { useEffect, useRef, useState } from 'react'
-import { CheckCircle2, FileText, UploadCloud, X, XCircle } from 'lucide-react'
+import { CheckCircle2, FileImage, FileText, UploadCloud, X, XCircle } from 'lucide-react'
 import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
@@ -10,7 +10,8 @@ import { getErrorMessage } from '../../lib/errors'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from '../../lib/mutationToast'
 import * as api from '../../lib/api/documents'
 import { useAppUi } from '../../contexts/AppContext'
-import { formatCurrencyVal } from '../../lib/utils'
+import { cn, formatCurrencyVal } from '../../lib/utils'
+import { formatBytes } from './view/formatters'
 import type { TaxReliefCategoryDefinition } from '../../types'
 import { FormField } from '../ui/FormField'
 import { ModalActions } from '../ui/ModalActions'
@@ -33,6 +34,11 @@ interface Props {
   initialTaxYear?: number
   defaultTransactionId?: string
   currency: string
+  /**
+   * Hands a fully saved batch straight to the amount review, so the figures the AI just read are
+   * checked while the receipts are still in mind rather than found row by row later.
+   */
+  onReviewUploaded?: (documentIds: number[], taxYear: number) => void
 }
 
 const TAX_YEAR_LOOKBACK = 7
@@ -44,7 +50,7 @@ const UPLOAD_ERROR_RULES: ServerFieldRule<'taxYear' | 'reliefCategory' | 'files'
   { field: 'files', match: ['exceeds the maximum allowed size', 'unsupported file type', 'storage quota exceeded', 'upload a photo or a pdf'] },
 ]
 
-export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear, defaultTransactionId, currency }: Props) {
+export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear, defaultTransactionId, currency, onReviewUploaded }: Props) {
   const currentYear = new Date().getFullYear()
   const minimumTaxYear = currentYear - TAX_YEAR_LOOKBACK
   const safeInitialTaxYear = initialTaxYear !== undefined && Number.isInteger(initialTaxYear) && initialTaxYear >= minimumTaxYear && initialTaxYear <= currentYear
@@ -61,6 +67,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
   const [isUploading, setIsUploading] = useState(false)
   const [results, setResults] = useState<api.BulkDocumentResult[] | null>(null)
   const [validationErrors, setValidationErrors] = useState<UploadValidationErrors>({})
+  const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const sheetBodyRef = useRef<HTMLDivElement>(null)
   const { showToast } = useAppUi()
@@ -89,7 +96,10 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
     setCategoryLoadFailed(false)
     void api.getTaxReliefCategories(year)
       .then(categories => {
-        if (active) setReliefCategories(categories)
+        if (!active) return
+        setReliefCategories(categories)
+        // One category leaves nothing to choose.
+        if (categories.length === 1) setReliefCategory(categories[0].id)
       })
       .catch(() => {
         if (active) {
@@ -158,11 +168,18 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
       if (successCount > 0) onSuccess()
       if (uploadResults.every(result => result.uploaded)) {
         const uploadedIds = uploadResults.flatMap(result => result.uploaded && typeof result.id === 'number' ? [result.id] : [])
+        const handOff = Boolean(onReviewUploaded) && uploadedIds.length === successCount
         const copy = buildMutationSuccessToast({
           entity: 'Documents',
           action: 'Added',
-          message: `${successCount} document${successCount === 1 ? '' : 's'} were added. Review the extracted amount${successCount === 1 ? '' : 's'} in the Vault.`,
+          message: handOff
+            ? `${successCount} document${successCount === 1 ? '' : 's'} were added.`
+            : `${successCount} document${successCount === 1 ? '' : 's'} were added. Review the extracted amount${successCount === 1 ? '' : 's'} in the Vault.`,
         })
+        if (handOff) {
+          onClose()
+          onReviewUploaded?.(uploadedIds, selectedTaxYear)
+        }
         showToast(copy.message, copy.title, copy.tone, uploadedIds.length === successCount ? {
           label: 'Undo',
           onAction: () => {
@@ -215,16 +232,21 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
   const failedCount = results?.filter(result => !result.uploaded).length ?? 0
   const taxYearOptions = Array.from({ length: TAX_YEAR_LOOKBACK + 1 }, (_, index) => currentYear - index)
     .map(year => ({ value: String(year), label: String(year) }))
+  // Only what an Upload press found wrong. Flagging the category the moment a file was chosen put an
+  // error under a field the user had simply not reached yet.
   const reliefCategoryError = validationErrors.reliefCategory
-    ?? (files.length > 0 && !categoriesLoading && reliefCategories.length > 0 && !reliefCategory
-      ? 'Choose a tax relief category before uploading.'
-      : undefined)
+  const savedIds = results?.flatMap(result => result.uploaded && typeof result.id === 'number' ? [result.id] : []) ?? []
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} maxWidthClassName="max-w-2xl"
       title={<span className="flex items-center gap-2"><UploadCloud className="size-4" />Upload tax documents</span>}
       footer={<ModalActions>
         <Button variant="secondary" type="button" onClick={onClose}>{results ? 'Done' : 'Cancel'}</Button>
+        {results && savedIds.length > 0 && onReviewUploaded && (
+          <Button type="button" onClick={() => { onClose(); onReviewUploaded(savedIds, Number(taxYear)) }}>
+            Check {savedIds.length} amount{savedIds.length === 1 ? '' : 's'}
+          </Button>
+        )}
         {/* Deliberately not disabled on missing files/category: an inert button
             explains nothing, while submitting surfaces the reason on the field. */}
         {!results && <Button type="button" onClick={upload} disabled={isPreparing || isUploading}>
@@ -245,25 +267,54 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
           </div>
         ) : <>
           <FormField label="Documents" required error={validationErrors.files}>
-            <Button variant="tertiary" type="button" onClick={() => inputRef.current?.click()} className="mt-1.5 flex w-full flex-col items-center rounded-panel border border-dashed border-border px-4 py-7 hover:bg-surface-2/60 cursor-pointer">
-              <UploadCloud className="mb-2 size-8 text-muted-foreground/60" /><span className="text-body font-semibold text-foreground">Choose one or multiple files</span>
-              <span className="mt-1 text-caption text-muted-foreground">Up to {constraints.maxBulkDocuments} files · {formatMb(constraints.maxDocumentBytes)} each</span>
-            </Button>
+            {/* Tap to pick, or drop files onto it on a desktop. */}
+            <div
+              onDragOver={event => { event.preventDefault(); setIsDragging(true) }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={event => {
+                event.preventDefault()
+                setIsDragging(false)
+                void chooseFiles(Array.from(event.dataTransfer.files ?? []).slice(0, defaultTransactionId ? 1 : undefined))
+              }}
+            >
+              <Button
+                variant="tertiary"
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                className={cn(
+                  'mt-1.5 flex w-full flex-col items-center rounded-panel border border-dashed border-border px-4 py-8 hover:border-foreground/30 hover:bg-surface-2/60',
+                  isDragging && 'border-primary bg-primary/8 hover:bg-primary/8',
+                )}
+              >
+                <span className="mb-3 grid size-12 place-items-center rounded-full bg-surface-2 text-muted-foreground dark:bg-surface-3">
+                  <UploadCloud className="size-5" aria-hidden="true" />
+                </span>
+                <span className="text-body font-semibold text-foreground">{isDragging ? 'Drop to add' : 'Choose files or drop them here'}</span>
+                <span className="mt-1 text-caption font-normal text-muted-foreground">
+                  Photos or PDFs · up to {constraints.maxBulkDocuments} files · {formatMb(constraints.maxDocumentBytes)} each
+                </span>
+              </Button>
+            </div>
             <Input ref={inputRef} type="file" multiple={!defaultTransactionId} className="hidden"
               accept={buildDocumentAcceptAttribute(constraints.acceptedUploadTypes)}
               onChange={event => void chooseFiles(Array.from(event.target.files ?? []))} />
           </FormField>
-          {files.length > 0 && <div className="max-h-40 space-y-1.5 overflow-y-auto">
+          {files.length > 0 && <ul aria-label="Files to upload" className="max-h-56 divide-y divide-border/60 overflow-y-auto rounded-control bg-surface-2/50 ring-1 ring-border/60 dark:bg-surface-2/70">
             {files.map((file, index) => {
               const tooLarge = file.size > constraints.maxDocumentBytes
-              return <div key={`${file.name}-${index}`} className={`flex items-center gap-2 rounded-lg border p-2 ${tooLarge ? 'border-destructive/40 bg-destructive/5' : 'border-border/60'}`}>
-                <FileText className="size-4 shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1">
-                  <p className="truncate text-body font-semibold">{file.name}</p><p className={`text-caption ${tooLarge ? 'text-destructive' : 'text-muted-foreground'}`}>
-                    {formatMb(file.size)}{tooLarge ? ` · exceeds ${formatMb(constraints.maxDocumentBytes)}` : ''}</p></div>
-                <IconButton type="button" label={`Remove ${file.name}`} onClick={() => setFiles(current => current.filter((_, itemIndex) => itemIndex !== index))} className="size-11 cursor-pointer rounded-lg transition-colors hover:bg-muted/50 sm:size-8"><X className="size-4" /></IconButton>
-              </div>
+              const Icon = file.type.startsWith('image/') ? FileImage : FileText
+              return <li key={`${file.name}-${index}`} className={cn('flex items-center gap-3 px-3 py-2', tooLarge && 'bg-destructive/5')}>
+                <span className="grid size-9 shrink-0 place-items-center rounded-control bg-surface-2 text-muted-foreground dark:bg-surface-3"><Icon className="size-4" aria-hidden="true" /></span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-body font-medium text-foreground">{file.name}</p>
+                  <p className={cn('text-caption tabular-nums', tooLarge ? 'text-destructive' : 'text-muted-foreground')}>
+                    {formatBytes(file.size)}{tooLarge ? ` · exceeds ${formatMb(constraints.maxDocumentBytes)}` : ''}
+                  </p>
+                </div>
+                <IconButton label={`Remove ${file.name}`} tooltip="Remove" onClick={() => setFiles(current => current.filter((_, itemIndex) => itemIndex !== index))} className="shrink-0 text-muted-foreground hover:text-destructive"><X className="size-4" aria-hidden="true" /></IconButton>
+              </li>
             })}
-          </div>}
+          </ul>}
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField label="Tax year" error={validationErrors.taxYear}>
               <CustomSelect
@@ -284,7 +335,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
                   setReliefCategory(String(value))
                   setValidationErrors(current => ({ ...current, reliefCategory: undefined }))
                 }}
-                options={[{ value: '', label: 'Choose tax relief category' }, ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · ${formatCurrencyVal(category.limit, currency)}` }))]}
+                options={[{ value: '', label: categoriesLoading ? 'Loading categories…' : 'Choose tax relief category', disabled: true }, ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · ${formatCurrencyVal(category.limit, currency)}` }))]}
                 ariaLabel="Tax relief category"
                 className="w-full"
                 required

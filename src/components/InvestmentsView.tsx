@@ -3,8 +3,8 @@ import {
   AlertCircle,
   CloudOff,
   Info,
-  RefreshCw,
 } from 'lucide-react'
+import { PriceFreshness } from './investments/PriceFreshness'
 import type {
   AppTab,
   InvestmentActivity,
@@ -202,16 +202,8 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   return (
     <div className="@container min-w-0 max-w-full space-y-6 overflow-x-clip">
       <PageHeader
-        title={<span className="flex flex-wrap items-center gap-2.5">Growth Investments
-            {isBackgroundRefreshing && (
-              <span
-                role="status"
-                className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-0.5 text-caption font-medium text-muted-foreground dark:bg-surface-3"
-              >
-                <RefreshCw className="size-3 animate-spin" aria-hidden="true" />
-                <span>Updating prices…</span>
-              </span>
-            )}</span>}
+        title="Growth Investments"
+        description={<PriceFreshness holdings={portfolio?.holdings ?? []} isRefreshing={isBackgroundRefreshing} />}
         titleActions={onExplainWithAi && (
           <AskAiButton label="Explain my portfolio" onClick={() => onExplainWithAi(range)} />
         )}

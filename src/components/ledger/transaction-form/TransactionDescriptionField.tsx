@@ -151,6 +151,18 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
             }}
             onKeyDown={handleDescriptionKeyDown}
             autoComplete="off"
+            // One press clears a description read from a notification that is not what the user
+            // wants, rather than holding backspace through it.
+            onClear={() => {
+              descriptionRef.current = ''
+              autocompletedDescriptionRef.current = null
+              onSetField('description', '')
+              suggestions.setShowNoteSuggestions(false)
+              suggestions.setNoteSuggestions([])
+              setShowSuggestions(false)
+              setSelectedSuggestionIndex(-1)
+            }}
+            clearLabel="Clear description"
           />
         </div>
       </FormField>
