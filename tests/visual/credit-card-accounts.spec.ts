@@ -64,9 +64,15 @@ test('inline calculator keys stay on the balance field once the live result appe
   await balance.press('End')
   await balance.pressSequentially('2419.44')
   await expect(dialog.getByText(/= -?2,?356\.36/)).toBeVisible()
-  const field = await balance.boundingBox()
-  const bar = await keys.boundingBox()
-  expect(field && bar).toBeTruthy()
-  // Centred on the input itself, not on the input plus the live-result line beneath it.
-  expect(Math.abs((bar!.y + bar!.height / 2) - (field!.y + field!.height / 2))).toBeLessThanOrEqual(1)
+  // Both boxes are read in one frame and retried: reading them in two calls straddles the sheet
+  // still settling on a loaded runner and reports motion as misalignment.
+  await expect.poll(() => page.evaluate(() => {
+    const input = document.querySelector('[role="dialog"] input[inputmode="decimal"]')
+    const bar = document.querySelector('[role="dialog"] [data-smart-amount-calculator]')
+    if (!input || !bar) return Number.POSITIVE_INFINITY
+    const a = input.getBoundingClientRect()
+    const b = bar.getBoundingClientRect()
+    // Centred on the input itself, not on the input plus the live-result line beneath it.
+    return Math.abs((b.y + b.height / 2) - (a.y + a.height / 2))
+  }), { timeout: 5_000 }).toBeLessThanOrEqual(1)
 })
