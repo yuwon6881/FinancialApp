@@ -156,7 +156,7 @@ test('native purchase tap opens the real Ledger form with unknown fields empty',
   const form = page.getByRole('dialog').filter({ has: page.getByText('Detected from Example bank') })
   await expect(form).toBeVisible()
   // The textbox, not the "Clear description" button that sits inside it once it holds text.
-  await expect(form.getByRole('textbox', { name: /Description/ })).toHaveValue('COFFEE HOUSE')
+  await expect(form.getByRole('textbox', { name: /description/i })).toHaveValue('COFFEE HOUSE')
   await expect(form.getByRole('button', { name: 'Clear description' })).toBeVisible()
   await expect(form.getByLabel('Amount', { exact: false }).first()).toHaveValue('')
   await expect(form.getByRole('button', { name: 'Posting date (required)', exact: true })).not.toHaveText('Select date')

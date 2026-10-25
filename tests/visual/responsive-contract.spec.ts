@@ -790,7 +790,7 @@ test('recurring bill detail actions and linked loan badge keep compact heights',
   }
 })
 
-test('vault keeps the linked-ledger action adjacent to its document name', async ({ page }) => {
+test('vault tags a linked document under its name and keeps the ledger action in the row actions', async ({ page }) => {
   test.skip(
     test.info().project.name !== 'desktop-light',
     'The linked Ledger action is part of the expanded Vault table.',
@@ -809,22 +809,28 @@ test('vault keeps the linked-ledger action adjacent to its document name', async
   await expect(linked).toBeVisible()
   const geometry = await linked.evaluate(button => {
     const row = button.closest('tr')
-    const title = row?.querySelector<HTMLElement>('p[title="2026-tax-return.pdf"]')
-    const slot = row?.querySelector<HTMLElement>('[data-mutation-status-slot]')
-    if (!title || !slot) return null
-    const titleRect = title.getBoundingClientRect()
+    const preview = row?.querySelector<HTMLElement>('button[aria-label="Preview 2026-tax-return.pdf"]')
+    const tag = [...(row?.querySelectorAll<HTMLElement>('span') ?? [])].find(span => span.textContent?.trim() === 'In ledger')
+    const unlinkedRow = [...document.querySelectorAll('tr')].find(candidate => candidate.textContent?.includes('medical-receipt.png'))
+    const unlinkedPreview = unlinkedRow?.querySelector<HTMLElement>('button[aria-label="Preview medical-receipt.png"]')
+    if (!preview || !tag || !unlinkedPreview) return null
     const buttonRect = button.getBoundingClientRect()
+    const previewRect = preview.getBoundingClientRect()
     return {
-      gap: buttonRect.left - titleRect.right,
-      sameLine: Math.abs(buttonRect.top + buttonRect.height / 2 - (titleRect.top + titleRect.height / 2)),
-      statusFollowsAction: button.nextElementSibling === slot,
+      // One group: the ledger action sits immediately before Preview, on the same line.
+      gap: previewRect.left - buttonRect.right,
+      sameLine: Math.abs(buttonRect.top + buttonRect.height / 2 - (previewRect.top + previewRect.height / 2)),
+      // An unlinked row keeps the ledger slot open, so its Preview lines up with this one.
+      previewColumnDrift: Math.abs(unlinkedPreview.getBoundingClientRect().left - previewRect.left),
+      tagVisible: tag.getBoundingClientRect().width > 0,
     }
   })
 
   expect(geometry).not.toBeNull()
-  expect(geometry?.gap, 'the idle status slot should not separate the filename and Ledger action').toBeLessThanOrEqual(7)
+  expect(geometry?.gap).toBeLessThanOrEqual(4)
   expect(geometry?.sameLine).toBeLessThanOrEqual(1)
-  expect(geometry?.statusFollowsAction).toBe(true)
+  expect(geometry?.previewColumnDrift).toBeLessThanOrEqual(1)
+  expect(geometry?.tagVisible).toBe(true)
 })
 
 test('the header action cluster stays pinned to the trailing edge', async ({ page }) => {

@@ -66,7 +66,7 @@ export function EmptyState({
 }
 
 // Quiet round icon actions at IconButton's size, so a row's actions read as one group.
-const ACTION_CLASS = 'size-11 min-h-0 p-0 text-muted-foreground hover:text-foreground lg:size-9'
+const ACTION_CLASS = 'size-11 min-h-0 shrink-0 p-0 text-muted-foreground hover:text-foreground lg:size-9'
 
 /**
  * The three row actions, each exported on its own so the phone card can keep Preview on its face and
@@ -205,7 +205,7 @@ export function LinkedTransactionButton({
         onClick={() => onOpen(document.transactionId!)}
         disabled={isOpening}
         aria-busy={isOpening}
-        className="text-accent-ink hover:bg-primary/10"
+        className="shrink-0 text-accent-ink hover:bg-primary/10"
       >
         {icon}
       </IconButton>

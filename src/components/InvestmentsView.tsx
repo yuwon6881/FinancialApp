@@ -203,7 +203,10 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
     <div className="@container min-w-0 max-w-full space-y-6 overflow-x-clip">
       <PageHeader
         title="Growth Investments"
-        description={<PriceFreshness holdings={portfolio?.holdings ?? []} isRefreshing={isBackgroundRefreshing} />}
+        // Only when there is a freshness to state: an empty description row still takes its margin.
+        description={isBackgroundRefreshing || portfolio?.holdings.some(holding => holding.priceFetchedAt)
+          ? <PriceFreshness holdings={portfolio?.holdings ?? []} isRefreshing={isBackgroundRefreshing} />
+          : undefined}
         titleActions={onExplainWithAi && (
           <AskAiButton label="Explain my portfolio" onClick={() => onExplainWithAi(range)} />
         )}
