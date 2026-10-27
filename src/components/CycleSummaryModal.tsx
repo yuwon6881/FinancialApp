@@ -71,6 +71,25 @@ export function CycleSummaryModal({
 
   const savingsRateChange = savingsRatePointChange(summary?.savingsRate ?? null, summary?.previousSavingsRate ?? null)
 
+  const showsRecap = !isLoading && summary != null && summary.hasActivity
+  const dismissButton = (
+    <Button variant="tertiary" size="sm" onClick={onClose}>
+      {variant === 'auto' ? 'Got it' : 'Close'}
+    </Button>
+  )
+  const closeActions = (
+    <>
+      {onViewLedger && summary?.hasActivity && (
+        <Button variant="tertiary" onClick={onViewLedger} className="flex-1 rounded-control bg-surface-2/70 px-3 py-2 text-caption font-semibold text-foreground transition hover:bg-muted/70 sm:flex-none">
+          View ledger
+        </Button>
+      )}
+      <Button variant="tertiary" onClick={onClose} className="flex-1 rounded-lg bg-foreground px-4 py-2 text-caption font-semibold text-background transition hover:bg-foreground/90 sm:flex-none">
+        {variant === 'auto' ? 'Got it' : 'Close'}
+      </Button>
+    </>
+  )
+
   return (
     <BottomSheet
       isOpen={isOpen}
@@ -91,18 +110,10 @@ export function CycleSummaryModal({
           </div>
         </div>
       }
-      footer={
-        <div className="flex gap-2 sm:justify-end">
-          {onViewLedger && summary?.hasActivity && (
-            <Button variant="tertiary" onClick={onViewLedger} className="flex-1 rounded-control bg-surface-2/70 px-3 py-2 text-caption font-semibold text-foreground transition hover:bg-muted/70 sm:flex-none">
-              View ledger
-            </Button>
-          )}
-          <Button variant="tertiary" onClick={onClose} className="flex-1 rounded-lg bg-foreground px-4 py-2 text-caption font-semibold text-background transition hover:bg-foreground/90 sm:flex-none">
-            {variant === 'auto' ? 'Got it' : 'Close'}
-          </Button>
-        </div>
-      }
+      // The recap carries its own action row; the footer is only for the states that have no recap.
+      footer={showsRecap ? undefined : (
+        <div className="flex gap-2 sm:justify-end">{closeActions}</div>
+      )}
     >
       {isLoading ? (
         <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-8 text-center text-xs text-muted-foreground">
@@ -469,7 +480,7 @@ export function CycleSummaryModal({
               </>
             ) },
           ]
-          return <RecapStory steps={steps} step={Math.min(step, steps.length - 1)} onStepChange={setStep} />
+          return <RecapStory steps={steps} step={Math.min(step, steps.length - 1)} onStepChange={setStep} finalActions={closeActions} dismissAction={dismissButton} />
         })()
       )}
     </BottomSheet>

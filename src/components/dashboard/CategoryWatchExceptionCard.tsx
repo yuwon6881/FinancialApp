@@ -50,7 +50,7 @@ export function CategoryWatchExceptionCard({
           ) : (
             <>Spent {formatSensitive(worst.spent)} of {formatSensitive(worst.limit)}; at this pace, finish near {formatSensitive(worst.projectedSpend)}.</>
           )}
-          {others > 0 && ` ${others} more need a look.`}
+          {others > 0 && ` ${others} more ${others === 1 ? 'needs' : 'need'} a look.`}
         </>
       )}
       actions={(

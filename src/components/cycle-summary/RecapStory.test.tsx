@@ -53,4 +53,30 @@ describe('RecapStory', () => {
     fireEvent.touchEnd(content, { changedTouches: [{ clientX: 180, clientY: 410 }] })
     expect(screen.getByText('Bucket figures')).toBeTruthy()
   })
+
+  it('keeps every action in the one navigation row', () => {
+    function WithActions() {
+      const [step, setStep] = useState(0)
+      return (
+        <RecapStory
+          steps={steps}
+          step={step}
+          onStepChange={setStep}
+          dismissAction={<button type="button">Got it</button>}
+          finalActions={<><button type="button">View ledger</button><button type="button">Done</button></>}
+        />
+      )
+    }
+    render(<WithActions />)
+    const next = screen.getByRole('button', { name: /^Your buckets/ })
+    const dismiss = screen.getByRole('button', { name: 'Got it' })
+    expect(next.parentElement).toBe(dismiss.parentElement)
+    expect(screen.queryByRole('button', { name: 'View ledger' })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Chapter 3: Where it went' }))
+    const back = screen.getByRole('button', { name: /Back/ })
+    const ledger = screen.getByRole('button', { name: 'View ledger' })
+    expect(ledger.parentElement?.parentElement).toBe(back.parentElement)
+    expect(screen.queryByRole('button', { name: 'Got it' })).toBeNull()
+  })
 })

@@ -150,7 +150,7 @@ describe('DashboardView focused Today experience', () => {
     render(<DashboardView {...makeProps({ pendingNotificationCount: 0 })} />)
     expect(screen.queryByText('You are all caught up')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Review bills' })).toBeNull()
-    expect(screen.queryByText(/bills? need review/)).toBeNull()
+    expect(screen.queryByText(/bills? needs? review/)).toBeNull()
   })
 
   it('raises a category only when it needs attention, and opens the Reports breakdown', () => {

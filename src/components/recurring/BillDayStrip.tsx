@@ -72,6 +72,25 @@ export const BillDayStrip: React.FC<BillDayStripProps> = ({ model, formatSensiti
     rail.scrollLeft = Math.max(0, today.offsetLeft - rail.clientWidth / 2 + today.offsetWidth / 2)
   }, [days])
 
+  // Fade whichever edge still has days beyond it, so a row that scrolls never looks like it simply
+  // ends at the last visible day.
+  const [edges, setEdges] = React.useState({ start: false, end: false })
+  const measureEdges = React.useCallback(() => {
+    const rail = scrollRef.current
+    if (!rail) return
+    const start = rail.scrollLeft > 1
+    const end = rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 1
+    setEdges(prev => (prev.start === start && prev.end === end ? prev : { start, end }))
+  }, [])
+  React.useEffect(() => {
+    measureEdges()
+    window.addEventListener('resize', measureEdges)
+    return () => window.removeEventListener('resize', measureEdges)
+  }, [days, measureEdges])
+  const edgeMask = edges.start || edges.end
+    ? `linear-gradient(to right, ${edges.start ? 'transparent' : '#000'}, #000 2rem, #000 calc(100% - 2rem), ${edges.end ? 'transparent' : '#000'})`
+    : undefined
+
   const billCount = model.processedPayments.length
 
   return (
@@ -90,6 +109,10 @@ export const BillDayStrip: React.FC<BillDayStripProps> = ({ model, formatSensiti
 
       <ol
         ref={scrollRef}
+        onScroll={measureEdges}
+        data-fade-start={edges.start || undefined}
+        data-fade-end={edges.end || undefined}
+        style={edgeMask ? { maskImage: edgeMask, WebkitMaskImage: edgeMask } : undefined}
         aria-label="Days in this cycle"
         // Focusable so the row can be scrolled from the keyboard even on a cycle with no bills.
         tabIndex={0}

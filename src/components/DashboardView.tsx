@@ -131,7 +131,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               tone="attention"
               icon={<BellRing />}
               titleId="bill-review-heading"
-              title={`${pendingNotificationCount} bill${pendingNotificationCount === 1 ? '' : 's'} need review`}
+              title={`${pendingNotificationCount} bill${pendingNotificationCount === 1 ? ' needs' : 's need'} review`}
               description="Confirm what was paid so the plan stays true to your accounts."
               actions={(
                 <Button variant="primary" size="sm" onClick={onOpenNotifications}>

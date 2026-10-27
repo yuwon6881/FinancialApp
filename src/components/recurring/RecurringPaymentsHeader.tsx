@@ -263,7 +263,9 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
           {/* Two figures per row until the rail-narrowed page can hold four. At the medium tier a
               four-column row gave each currency figure about a hundred pixels, so neighbouring
               totals ran into the divider between them. */}
-          <div className="@container mt-5 grid min-w-0 grid-cols-2 gap-x-4 gap-y-4 rounded-panel bg-surface-2/70 px-4 py-4 sm:px-5 lg:grid-cols-4 lg:gap-y-0">
+          {/* Loans carry three figures, so they take three equal columns rather than leaving the
+              fourth column of the bills layout empty. */}
+          <div className={`@container mt-5 grid min-w-0 grid-cols-2 gap-x-4 gap-y-4 rounded-panel bg-surface-2/70 px-4 py-4 sm:px-5 lg:gap-y-0 ${isLoansView ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
             {isLoansView ? (
               <>
                 <InteractiveStatTile

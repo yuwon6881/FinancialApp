@@ -132,7 +132,7 @@ export function DraftStagingView({
   const recordingOrderExplanation = 'The top draft records first. In the Ledger’s default newest-first view, same-day drafts appear in reverse order.'
 
   return (
-    <section className="mx-auto max-w-5xl space-y-4 sm:space-y-5" aria-labelledby="draft-transactions-title">
+    <section className="max-w-5xl space-y-4 sm:space-y-5" aria-labelledby="draft-transactions-title">
       <PageHeader
         titleId="draft-transactions-title"
         title={<span data-page-title-text="draft-transactions" className="inline-block whitespace-nowrap">Review drafts</span>}
@@ -173,7 +173,7 @@ export function DraftStagingView({
               {invalidCount > 0
                 ? <AlertTriangle className="size-3.5" aria-hidden="true" />
                 : <CheckCircle2 className="size-3.5" aria-hidden="true" />}
-              {invalidCount > 0 ? `${invalidCount} need review` : 'All ready'}
+              {invalidCount > 0 ? `${invalidCount} ${invalidCount === 1 ? 'needs' : 'need'} review` : 'All ready'}
             </span>
             <span className={`inline-flex items-center gap-1.5 text-label ${documentLoadError ? 'text-destructive' : 'text-muted-foreground'}`}>
               <Paperclip className="size-3.5" aria-hidden="true" />
@@ -216,7 +216,7 @@ export function DraftStagingView({
 
           <div className="glass-surface sticky bottom-[calc(88px+env(safe-area-inset-bottom,0px))] z-20 grid gap-3 rounded-full p-2 pl-5 shadow-(--app-shadow-overlay) grid-cols-[minmax(0,1fr)_auto] items-center sm:bottom-4">
             <p className="min-w-0 truncate text-label text-muted-foreground">
-              <span className="text-foreground">{invalidCount > 0 ? `${invalidCount} need review` : 'Ready to add'}</span>
+              <span className="text-foreground">{invalidCount > 0 ? `${invalidCount} ${invalidCount === 1 ? 'needs' : 'need'} review` : 'Ready to add'}</span>
               <span aria-hidden="true"> · </span>
               {hideSensitive ? <SensitiveMask /> : formatCurrencyVal(draftTotal, currency)}
             </p>

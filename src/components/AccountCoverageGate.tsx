@@ -49,6 +49,10 @@ export function AccountCoverageGate({
     setEditingAccount(null)
   }
 
+  const isBucketComplete = (bucket: LedgerAccount['bucket']) =>
+    accounts.some(account => account.bucket === bucket && !account.isArchived && !account.isPendingSync)
+  const completeCount = LEDGER_ACCOUNT_BUCKETS.filter(bucket => isBucketComplete(bucket.name)).length
+
   return (
     <AuthShell brand={false}>
       <AuthCard className="max-w-2xl">
@@ -67,11 +71,16 @@ export function AccountCoverageGate({
           </div>
         )}
 
+        {/* On a phone the four panels stack past the fold; the count says how many are left. */}
+        <p className="text-label font-medium text-muted-foreground tabular-nums" aria-live="polite">
+          {completeCount} of {LEDGER_ACCOUNT_BUCKETS.length} set up
+        </p>
+
         <div className="grid gap-3 sm:grid-cols-2">
           {LEDGER_ACCOUNT_BUCKETS.map(bucket => {
             const rows = accounts.filter(account => account.bucket === bucket.name)
             const live = rows.filter(account => !account.isArchived)
-            const complete = accounts.some(account => account.bucket === bucket.name && !account.isArchived && !account.isPendingSync)
+            const complete = isBucketComplete(bucket.name)
             const pending = live.some(account => account.isPendingSync)
             return (
               <Panel as="section" key={bucket.name} padding="compact" aria-labelledby={'account-gate-' + bucket.name}>
