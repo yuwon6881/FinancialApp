@@ -31,6 +31,20 @@ export function getRewardsAvailability(
   }
 }
 
+/**
+ * How far free Rewards money goes towards a reward's price, as a 0–100 percentage, and whether it
+ * already covers it. A reward with no usable price (missing, zero or not a number) has no progress
+ * to show, so it reports 0% rather than the NaN a bare division would produce, and is never
+ * "ready to buy".
+ */
+export function rewardFundingProgress(freeBalance: number, price: number): { pct: number; canAfford: boolean } {
+  if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(freeBalance)) return { pct: 0, canAfford: false }
+  return {
+    pct: Math.max(0, Math.min(100, (freeBalance / price) * 100)),
+    canAfford: freeBalance >= price,
+  }
+}
+
 export function calculateFreeRewardsBalance(
   rewardsBalance: number,
   goals: readonly SavingsGoal[],

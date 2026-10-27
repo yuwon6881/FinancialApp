@@ -300,7 +300,7 @@ export function TransactionFormFields({
               value={state.ledgerCategory || null}
               options={bucketOptions}
               onChange={val => onSetField('ledgerCategory', val as SelectableLedgerCategory)}
-              className="grid grid-cols-2 sm:grid-cols-4 [&>*]:w-full [&>*]:justify-start"
+              className="grid grid-cols-2 [&>*]:w-full [&>*]:justify-start"
             />
             {errors.ledgerCategory && <p className="text-caption text-destructive" role="alert">{errors.ledgerCategory}</p>}
           </div>

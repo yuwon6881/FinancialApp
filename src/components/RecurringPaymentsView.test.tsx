@@ -69,7 +69,7 @@ describe('RecurringPaymentsView form', () => {
     // Placement is explicit, so the bill has to name the account that pays it.
     fireEvent.click(screen.getByRole('combobox', { name: /Paid from account/ }))
     fireEvent.click(screen.getByRole('option', { name: /Essentials balance/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add bill' }))
 
     expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Insurance',

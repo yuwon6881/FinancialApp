@@ -5,7 +5,7 @@ import type {
   WishlistItem,
 } from '../../types'
 import { getActiveWishlistItem } from '../../lib/wishlist'
-import { calculateFreeRewardsBalance, pendingRecurringAmount } from '../../lib/freeRewards'
+import { calculateFreeRewardsBalance, pendingRecurringAmount, rewardFundingProgress } from '../../lib/freeRewards'
 import { calculateEssentialsMetric, calculateGrowthMetric, calculateStabilityMetric } from '../../lib/financialPlanMetrics'
 import {
   formatCompactSensitiveAmount,
@@ -141,8 +141,7 @@ export function useDashboardView(options: UseDashboardViewOptions) {
     const rewardsCategory = categories.find(c => c.name === 'Rewards')
     const pending = pendingDeductionsByCategory['Rewards'] || 0
     const rewardsBalance = calculateFreeRewardsBalance(rewardsCategory?.remaining ?? 0, savingsGoals, pending)
-    const pct = Math.max(0, Math.min(100, (rewardsBalance / activeWishlistItem.price) * 100))
-    const canAfford = rewardsBalance >= activeWishlistItem.price
+    const { pct, canAfford } = rewardFundingProgress(rewardsBalance, activeWishlistItem.price)
     return { item: activeWishlistItem, rewardsBalance, pct, canAfford }
   }, [activeWishlistItem, categories, pendingDeductionsByCategory, savingsGoals])
 

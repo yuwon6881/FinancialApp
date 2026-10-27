@@ -48,7 +48,7 @@ interface RecurringPaymentFormSheetProps {
   onCancel: () => void
 }
 
-// Add / Edit Subscription Modal (bottom sheet on mobile)
+// Add / Edit bill Modal (bottom sheet on mobile)
 export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps> = ({
   isOpen,
   editingPayment,
@@ -90,7 +90,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
       title={
         <span className="flex items-center gap-2">
           {editingPayment ? <Edit className="size-4 text-accent-ink" /> : <Plus className="size-4 text-accent-ink" />}
-          {editingPayment ? 'Edit Subscription' : 'Add New Recurring Payment'}
+          {editingPayment ? 'Edit bill' : 'Add a bill'}
         </span>
       }
     >
@@ -105,7 +105,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
             Changes apply to unpaid and future bills. Paid bills keep their ledger details.
           </p>
         )}
-        <FormField label="Subscription name" required error={errors.name}>
+        <FormField label="Bill name" required error={errors.name}>
           <Input
             ref={firstInputRef}
             type="text"
@@ -144,9 +144,9 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
           />
         </FormField>
 
-        <FormField label="Ledger category">
+        <FormField label="Bucket">
           <CustomSelect
-            ariaLabel="Ledger category"
+            ariaLabel="Bucket"
             value={ledgerCategory}
             onChange={val => onLedgerCategoryChange(val)}
             options={[
@@ -250,7 +250,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
             title={securityPending && mutationBlocked ? 'Finishing security check…' : mutationBlocked ? 'Reveal sensitive data before saving' : undefined}
             
           >
-            {editingPayment ? 'Save Changes' : 'Add Subscription'}
+            {editingPayment ? 'Save Changes' : 'Add bill'}
           </Button>
         </ModalActions>
       </form>
