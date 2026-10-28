@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Button } from './Button'
 import { motionSafeScrollBehavior } from '../../lib/motionPreference'
+import { useScrollEdgeFade } from './useScrollEdgeFade'
 
 interface HorizontalRailProps {
   children: ReactNode
@@ -11,6 +12,8 @@ interface HorizontalRailProps {
   label: string
   /** Adds desktop previous/next controls when the rail actually overflows. */
   showControls?: boolean
+  /** Fades overflowing edges with a mask to hint at hidden content. */
+  fadeEdges?: boolean
 }
 
 /**
@@ -24,10 +27,11 @@ interface HorizontalRailProps {
  * wheel input and moves the rail sideways. Touch input remains entirely native, so a horizontal
  * finger swipe scrolls the rail and a vertical swipe continues scrolling the page.
  */
-export function HorizontalRail({ children, className, label, showControls = false }: HorizontalRailProps) {
+export function HorizontalRail({ children, className, label, showControls = false, fadeEdges = false }: HorizontalRailProps) {
   const wheelSurfaceRef = useRef<HTMLDivElement>(null)
   const railRef = useRef<HTMLDivElement>(null)
   const [scrollState, setScrollState] = useState({ canScrollBack: false, canScrollForward: false })
+  const fade = useScrollEdgeFade(railRef, children, fadeEdges)
 
   const updateScrollState = useCallback(() => {
     const rail = railRef.current
@@ -113,6 +117,10 @@ export function HorizontalRail({ children, className, label, showControls = fals
         ref={railRef}
         role="group"
         aria-label={label}
+        onScroll={fade.onScroll}
+        data-fade-start={fade.edges.start || undefined}
+        data-fade-end={fade.edges.end || undefined}
+        style={fade.style}
         className={cn(
           // No touch-action restriction: vertical finger gestures must remain available to the page.
           // Desktop CSS disables snapping so small mouse-wheel ticks cannot be rolled back between
