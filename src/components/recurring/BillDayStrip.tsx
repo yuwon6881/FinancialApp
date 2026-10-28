@@ -84,11 +84,18 @@ export const BillDayStrip: React.FC<BillDayStripProps> = ({ model, formatSensiti
   }, [])
   React.useEffect(() => {
     measureEdges()
+    const rail = scrollRef.current
+    // The rail settles after fonts and the surrounding layout do, so re-measure whenever it resizes.
+    const observer = rail && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measureEdges) : null
+    if (rail) observer?.observe(rail)
     window.addEventListener('resize', measureEdges)
-    return () => window.removeEventListener('resize', measureEdges)
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', measureEdges)
+    }
   }, [days, measureEdges])
   const edgeMask = edges.start || edges.end
-    ? `linear-gradient(to right, ${edges.start ? 'transparent' : '#000'}, #000 2rem, #000 calc(100% - 2rem), ${edges.end ? 'transparent' : '#000'})`
+    ? `linear-gradient(to right, ${edges.start ? 'transparent' : '#000'}, #000 4rem, #000 calc(100% - 4rem), ${edges.end ? 'transparent' : '#000'})`
     : undefined
 
   const billCount = model.processedPayments.length
