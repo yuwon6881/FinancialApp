@@ -32,7 +32,7 @@ interface ReceiptScanPickerProps {
 // Shared by both pickers' source rows. The rows themselves are written inline
 // rather than extracted into a component: the file inputs are reached through refs,
 // and a ref passed as a component prop is a render-time read the compiler rejects.
-const SOURCE_BUTTON = 'flex-1 gap-2 border border-border/70 bg-surface-2/60 font-medium text-foreground hover:bg-surface-2'
+const SOURCE_BUTTON = 'flex-1 min-w-0 whitespace-nowrap gap-2 border border-border/70 bg-surface-2/60 font-medium text-foreground hover:bg-surface-2'
 const CANCEL_BUTTON = 'px-3 text-muted-foreground hover:bg-surface-2 hover:text-foreground'
 
 export function ReceiptScanPicker({
@@ -142,7 +142,7 @@ export function ReceiptScanPicker({
           >
             {isScanning && <PerimeterBeam size={40} />}
             {isScanning ? (
-              <><Loader2 className="size-3.5 animate-spin" /> {scanningLabel}</>
+              <><Loader2 className="size-3.5 shrink-0 animate-spin" /><span className="truncate">{scanningLabel}</span></>
             ) : (
               <><Camera className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /><span className="truncate">{label}</span></>
             )}
@@ -182,14 +182,14 @@ export function ReceiptScanPicker({
               : scanFileInputRef.current?.click()}
             className={SOURCE_BUTTON}
           >
-            <Camera className="size-3.5" /> Take Photo
+            <Camera className="size-3.5 shrink-0" /><span className="truncate">Take Photo</span>
           </Button>
           <Button variant="tertiary"
             type="button"
             onClick={() => scanGalleryInputRef.current?.click()}
             className={SOURCE_BUTTON}
           >
-            <Image className="size-3.5" /> Upload Photo
+            <Image className="size-3.5 shrink-0" /><span className="truncate">Upload Photo</span>
           </Button>
           <Button variant="tertiary"
             type="button"
@@ -211,14 +211,14 @@ export function ReceiptScanPicker({
               : splitCameraInputRef?.current?.click()}
             className={SOURCE_BUTTON}
           >
-            <Camera className="size-3.5" /> Take Photo
+            <Camera className="size-3.5 shrink-0" /><span className="truncate">Take Photo</span>
           </Button>
           <Button variant="tertiary"
             type="button"
             onClick={() => splitGalleryInputRef?.current?.click()}
             className={SOURCE_BUTTON}
           >
-            <Image className="size-3.5" /> Upload Photo
+            <Image className="size-3.5 shrink-0" /><span className="truncate">Upload Photo</span>
           </Button>
           <Button variant="tertiary"
             type="button"
