@@ -195,3 +195,85 @@ describe('InvestmentPlanPanel sleeve holdings', () => {
     expect(screen.getByRole('list', { name: 'Plan baskets' }).children).toHaveLength(4)
   })
 })
+
+describe('InvestmentPlanPanel share rounding', () => {
+  const roundableAllocation: InvestmentAllocationOverview = {
+    ...allocation,
+    sleeves: [
+      { sleeve: 'USEquity', label: 'US Equity', targetPercentage: 66, currentPercentage: 75.04, value: 750.4, driftPercentagePoints: 9.04, status: 'Watch' },
+      { sleeve: 'InternationalExUS', label: 'International ex-US', targetPercentage: 10, currentPercentage: 10.02, value: 100.2, driftPercentagePoints: 0.02, status: 'OnTrack' },
+      { sleeve: 'Bonds', label: 'Bonds', targetPercentage: 24, currentPercentage: 14.94, value: 149.4, driftPercentagePoints: -9.06, status: 'Watch' },
+    ],
+  }
+
+  it('visibly adds up to 100.0% when all funds are assigned to plan baskets', () => {
+    render(
+      <InvestmentPlanPanel
+        allocation={roundableAllocation}
+        holdings={[]}
+        instruments={plannedInstruments}
+        masked={false}
+        onNavigate={vi.fn()}
+      />,
+    )
+
+    const basketList = screen.getByRole('list', { name: 'Plan baskets' })
+    const rows = basketList.querySelectorAll('li')
+    const shares = Array.from(rows).map(row => {
+      const match = row.textContent?.match(/(\d+\.\d+)%\s*of\s*\d+%/)
+      return match ? parseFloat(match[1]) : Number.NaN
+    })
+
+    expect(shares).toEqual([75.1, 10.0, 14.9])
+    const sum = shares.reduce((acc, v) => acc + v, 0)
+    expect(Math.round(sum * 10) / 10).toBe(100.0)
+  })
+
+  it('keeps plain toFixed(1) values unchanged when some funds are unsorted', () => {
+    const unsortedHolding: InvestmentPortfolio['holdings'] = [
+      {
+        accountId: 'a1',
+        accountName: 'Broker',
+        instrumentId: 'unsorted-1',
+        symbol: 'UNSORTED',
+        name: 'Unsorted Fund',
+        type: 'ETF',
+        currency: 'USD',
+        units: 1,
+        averageCostNative: 50,
+        valueApp: 50,
+        fxIncomplete: false,
+      },
+    ]
+    const unsortedInstruments: InvestmentPortfolio['instruments'] = [
+      {
+        id: 'unsorted-1',
+        symbol: 'UNSORTED',
+        name: 'Unsorted Fund',
+        type: 'ETF',
+        currency: 'USD',
+        isCustom: true,
+        isArchived: false,
+      },
+    ]
+
+    render(
+      <InvestmentPlanPanel
+        allocation={roundableAllocation}
+        holdings={unsortedHolding}
+        instruments={unsortedInstruments}
+        masked={false}
+        onNavigate={vi.fn()}
+      />,
+    )
+
+    const basketList = screen.getByRole('list', { name: 'Plan baskets' })
+    const rows = basketList.querySelectorAll('li')
+    const plainShares = Array.from(rows).slice(0, 3).map(row => {
+      const match = row.textContent?.match(/(\d+\.\d+)%\s*of\s*\d+%/)
+      return match ? parseFloat(match[1]) : Number.NaN
+    })
+
+    expect(plainShares).toEqual([75.0, 10.0, 14.9])
+  })
+})

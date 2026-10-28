@@ -24,12 +24,14 @@ const STATUS_TONES: Partial<Record<InvestmentAllocationStatus, BadgeTone>> = {
  */
 export function SleeveCard({
   sleeve,
+  displayPercentage,
   constituents,
   masked,
   money,
   color,
 }: {
   sleeve: SleeveSummary
+  displayPercentage?: string
   constituents: SleeveConstituent[]
   masked: boolean
   money: (value?: number) => string
@@ -49,7 +51,7 @@ export function SleeveCard({
         </span>
         {isPlannedBasket && (
           <span className="shrink-0 text-body font-semibold tabular-nums text-foreground">
-            {known ? `${sleeve.currentPercentage!.toFixed(1)}%` : <span className="font-normal text-muted-foreground">—</span>}
+            {known ? `${displayPercentage ?? sleeve.currentPercentage!.toFixed(1)}%` : <span className="font-normal text-muted-foreground">—</span>}
             <span className="ml-1 text-caption font-normal text-muted-foreground">of {sleeve.targetPercentage}%</span>
           </span>
         )}
@@ -64,7 +66,7 @@ export function SleeveCard({
             markerPercent={sleeve.targetPercentage}
             markerLabel={`Aim ${sleeve.targetPercentage}%`}
             label={known
-              ? `${sleeve.label}: ${sleeve.currentPercentage!.toFixed(1)}% held against an aim of ${sleeve.targetPercentage}%`
+              ? `${sleeve.label}: ${displayPercentage ?? sleeve.currentPercentage!.toFixed(1)}% held against an aim of ${sleeve.targetPercentage}%`
               : `${sleeve.label}: aim ${sleeve.targetPercentage}%, current share unknown`}
           />
           <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2">

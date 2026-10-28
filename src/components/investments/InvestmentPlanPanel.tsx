@@ -6,7 +6,12 @@ import { Badge, type BadgeTone } from '../ui/Badge'
 import { InfoHint } from '../ui/InfoHint'
 import { SegmentedMeter } from '../ui/SegmentedMeter'
 import { cn, formatCurrencyVal } from '../../lib/utils'
-import { allocationStatusLabel, buildSleeveIndex, UNASSIGNED_SLEEVE_KEY } from '../../lib/investmentAllocation'
+import {
+  allocationStatusLabel,
+  buildSleeveIndex,
+  roundSharesToTenth,
+  UNASSIGNED_SLEEVE_KEY,
+} from '../../lib/investmentAllocation'
 import { breakdownBySleeve } from '../../lib/investmentSleeveBreakdown'
 import { SleeveCard } from './SleeveCard'
 import { InvestmentMovementPlanner } from './InvestmentMovementPlanner'
@@ -66,6 +71,15 @@ export function InvestmentPlanPanel({
   const steps = showAllSteps ? allocation.incompleteReasons : allocation.incompleteReasons.slice(0, CHECKLIST_PREVIEW)
   const hiddenSteps = allocation.incompleteReasons.length - steps.length
   const actualKnown = allocation.sleeves.some(sleeve => sleeve.currentPercentage !== undefined)
+  const allCurrentPercentagesKnown = allocation.sleeves.every(sleeve => sleeve.currentPercentage !== undefined)
+  const shown = allCurrentPercentagesKnown && unassigned.length === 0
+    ? roundSharesToTenth(allocation.sleeves.map(s => s.currentPercentage!))
+    : null
+  const displayShare = (index: number): string => {
+    if (shown) return shown[index].toFixed(1)
+    const sleeve = allocation.sleeves[index]
+    return sleeve?.currentPercentage !== undefined ? sleeve.currentPercentage.toFixed(1) : 'unknown'
+  }
 
   return (
     <section aria-labelledby="investment-plan-heading" className={cn(panelClass, '@container overflow-hidden')}>
@@ -92,6 +106,7 @@ export function InvestmentPlanPanel({
             <SleeveCard
               key={sleeve.sleeve}
               sleeve={sleeve}
+              displayPercentage={shown ? shown[index].toFixed(1) : undefined}
               constituents={constituentsBySleeve.get(sleeve.sleeve) ?? []}
               masked={masked}
               money={money}
@@ -125,7 +140,7 @@ export function InvestmentPlanPanel({
                 ? <SegmentedMeter
                     size="md"
                     segments={allocation.sleeves.map((sleeve, index) => ({ value: sleeve.currentPercentage ?? 0, color: sleeveColors[index] ?? UNSORTED_COLOR, label: sleeve.label }))}
-                    label={`Current mix: ${allocation.sleeves.map(sleeve => `${sleeve.label} ${sleeve.currentPercentage === undefined ? 'unknown' : `${sleeve.currentPercentage.toFixed(1)}%`}`).join(', ')}`}
+                    label={`Current mix: ${allocation.sleeves.map((sleeve, index) => `${sleeve.label} ${displayShare(index) === 'unknown' ? 'unknown' : `${displayShare(index)}%`}`).join(', ')}`}
                   />
                 : <span>Waiting on prices</span>}
               <span>Target</span>
