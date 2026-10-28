@@ -8,6 +8,7 @@ import { Z_LAYERS } from '../../lib/zLayers'
 import { motionSafeScrollBehavior } from '../../lib/motionPreference'
 import { APP_CONTEXT_WILL_CHANGE_EVENT } from '../../lib/appLocation'
 import { EASE_FLUID } from '../../lib/animations'
+import { hasUserActivation } from '../../lib/userActivation'
 
 interface BottomSheetProps {
   isOpen: boolean
@@ -125,8 +126,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     const modalId = `modal-${titleId}-${++instanceCounterRef.current}`
     activeModalIdRef.current = modalId
     openModalIds.push(modalId)
-    // Push a dummy history state so back button pops it instead of exiting the PWA
-    window.history.pushState({ modalId }, '')
+    // Push history only after user activation so Chrome does not mark the entry skippable.
+    if (hasUserActivation()) {
+      window.history.pushState({ modalId }, '')
+    }
 
     const handlePopState = () => {
       if (suppressModalPopState || openModalIds.at(-1) !== modalId) return

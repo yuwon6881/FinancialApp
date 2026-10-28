@@ -145,4 +145,60 @@ describe('BottomSheet HCI contract', () => {
       window.innerWidth = previousWidth
     }
   })
+
+  it('does not push history state on open when user has not interacted with the page', () => {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(navigator, 'userActivation')
+    Object.defineProperty(navigator, 'userActivation', {
+      configurable: true,
+      value: { hasBeenActive: false },
+    })
+    const pushSpy = vi.spyOn(window.history, 'pushState')
+
+    try {
+      const { unmount } = render(
+        <BottomSheet isOpen title="Unactivated sheet" onClose={vi.fn()}>
+          <Button>Action</Button>
+        </BottomSheet>,
+      )
+      expect(pushSpy).not.toHaveBeenCalled()
+      unmount()
+    } finally {
+      pushSpy.mockRestore()
+      if (originalDescriptor) {
+        Object.defineProperty(navigator, 'userActivation', originalDescriptor)
+      } else {
+        delete (navigator as unknown as { userActivation?: unknown }).userActivation
+      }
+    }
+  })
+
+  it('pushes history state on open when user has interacted with the page', () => {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(navigator, 'userActivation')
+    Object.defineProperty(navigator, 'userActivation', {
+      configurable: true,
+      value: { hasBeenActive: true },
+    })
+    const pushSpy = vi.spyOn(window.history, 'pushState')
+
+    try {
+      const { unmount } = render(
+        <BottomSheet isOpen title="Activated sheet" onClose={vi.fn()}>
+          <Button>Action</Button>
+        </BottomSheet>,
+      )
+      expect(pushSpy).toHaveBeenCalledTimes(1)
+      expect(pushSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ modalId: expect.stringMatching(/^modal-/) }),
+        '',
+      )
+      unmount()
+    } finally {
+      pushSpy.mockRestore()
+      if (originalDescriptor) {
+        Object.defineProperty(navigator, 'userActivation', originalDescriptor)
+      } else {
+        delete (navigator as unknown as { userActivation?: unknown }).userActivation
+      }
+    }
+  })
 })
