@@ -1,4 +1,5 @@
 import { DataTableFooter, DataTablePagination } from '../../ui/DataTable'
+import { shouldShowPagination } from '../../ui/paginationVisibility'
 
 interface DocumentPaginationProps {
   page: number
@@ -10,7 +11,15 @@ interface DocumentPaginationProps {
 }
 
 export function DocumentPagination(props: DocumentPaginationProps) {
-  if (props.totalCount <= 0) return null
+  if (
+    !shouldShowPagination({
+      totalPages: props.totalPages,
+      totalItems: props.totalCount,
+      pageSizeOptions: [10, 25, 50],
+    })
+  ) {
+    return null
+  }
 
   return (
     <DataTableFooter className="mt-4">
