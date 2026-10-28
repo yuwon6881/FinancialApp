@@ -317,7 +317,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
               className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
             >
               <ArrowLeft className="size-3.5" />
-              Back to login
+              Back to sign in
             </Button>
           </>
         )}
