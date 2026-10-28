@@ -244,7 +244,13 @@ export function BucketsSection({
                       className="shrink-0"
                     >
                       <Wallet className="size-3.5" aria-hidden="true" />
-                      {accountCount} {accountCount === 1 ? 'account' : 'accounts'}
+                      {/* In the four-card row the cards get too narrow for three actions on one line below
+                          72rem, so the word folds away (the button's accessible name keeps it) and every
+                          footer stays one identical line instead of Growth's wrapping or clipping. */}
+                      <span>
+                        {accountCount}
+                        <span className="@4xl:@max-6xl:sr-only"> {accountCount === 1 ? 'account' : 'accounts'}</span>
+                      </span>
                     </Button>
                   )}
                   {onNavigateToLedger && (
