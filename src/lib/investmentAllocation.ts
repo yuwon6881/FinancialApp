@@ -108,3 +108,37 @@ export function redistributeInvestmentTargets(
     [others[1]]: remainder - first,
   }
 }
+
+/**
+ * Rounds shares to one decimal so the rounded numbers still add up to 100.0 (largest-remainder
+ * method). Independent rounding can leave a plan reading 99.9% or 100.1% although the exact
+ * shares sum to 100. Returns null when the shares are not a full split (they do not sum to
+ * about 100, e.g. some funds are not sorted into a basket), so callers fall back to plain rounding.
+ */
+export function roundSharesToTenth(shares: readonly number[]): number[] | null {
+  if (shares.length === 0) return null
+  if (shares.some(share => !Number.isFinite(share) || share < 0)) return null
+
+  const sum = shares.reduce((acc, v) => acc + v, 0)
+  if (Math.abs(sum - 100) > 0.2) return null
+
+  const scaled = shares.map(share => share * 10)
+  const floors = scaled.map(s => Math.floor(s + 1e-9))
+  const remainders = scaled.map((s, index) => s - floors[index])
+
+  const sumFloors = floors.reduce((acc, v) => acc + v, 0)
+  const missing = 1000 - sumFloors
+  if (missing < 0 || missing > shares.length) return null
+
+  // Entries with the largest remainders receive +1 tenth; ties favor the earlier index.
+  const rankedIndices = shares
+    .map((_, index) => index)
+    .sort((a, b) => remainders[b] - remainders[a] || a - b)
+
+  const bonusIndices = new Set(rankedIndices.slice(0, missing))
+  const result = floors.map((floor, index) => (floor + (bonusIndices.has(index) ? 1 : 0)) / 10)
+
+  if (Math.round(result.reduce((acc, v) => acc + v, 0) * 10) !== 1000) return null
+
+  return result
+}
