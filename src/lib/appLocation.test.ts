@@ -293,4 +293,28 @@ describe('app URL state', () => {
       reload: null,
     }))
   })
+
+  it('uses replaceState for navigation when user has not interacted with the page', () => {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(navigator, 'userActivation')
+    Object.defineProperty(navigator, 'userActivation', {
+      configurable: true,
+      value: { hasBeenActive: false },
+    })
+    const pushSpy = vi.spyOn(window.history, 'pushState')
+    const replaceSpy = vi.spyOn(window.history, 'replaceState')
+
+    try {
+      navigateToAppTab('reports')
+      expect(pushSpy).not.toHaveBeenCalled()
+      expect(replaceSpy).toHaveBeenCalled()
+    } finally {
+      pushSpy.mockRestore()
+      replaceSpy.mockRestore()
+      if (originalDescriptor) {
+        Object.defineProperty(navigator, 'userActivation', originalDescriptor)
+      } else {
+        delete (navigator as unknown as { userActivation?: unknown }).userActivation
+      }
+    }
+  })
 })

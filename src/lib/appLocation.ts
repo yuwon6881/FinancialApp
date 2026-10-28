@@ -1,4 +1,5 @@
 import { APP_TABS, type AppTab } from '../types'
+import { hasUserActivation } from './userActivation'
 import type {
   TransactionLinkFilter,
   TransactionSearchMode,
@@ -286,7 +287,8 @@ const writeUrl = (pathname: string, params: URLSearchParams, replace: boolean) =
   // dismiss it. App navigation must consume that sentinel instead of pushing
   // a route above it, or revisiting Back/Forward can resurrect the old sheet.
   const replaceModalEntry = contextWillChange && Boolean(window.history.state?.modalId)
-  window.history[replace || replaceModalEntry ? 'replaceState' : 'pushState']({}, '', nextUrl)
+  const useReplace = replace || replaceModalEntry || !hasUserActivation()
+  window.history[useReplace ? 'replaceState' : 'pushState']({}, '', nextUrl)
   window.dispatchEvent(new Event(APP_LOCATION_CHANGED_EVENT))
 }
 
