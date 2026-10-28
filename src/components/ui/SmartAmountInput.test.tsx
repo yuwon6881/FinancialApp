@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { SmartAmountInput } from './SmartAmountInput'
@@ -124,5 +124,98 @@ describe('SmartAmountInput live result', () => {
     expect(screen.getByText('24.00')).toBeTruthy()
     fireEvent.mouseDown(screen.getByRole('button', { name: 'Calculate result' }))
     expect(input.value).toBe('24.00')
+  })
+})
+
+// JSDOM does not implement keyboard focus navigation (tabbing).
+// This helper models moving focus to the next focusable tab stop in the DOM.
+const userEvent = {
+  tab: () => {
+    act(() => {
+      const focusable = Array.from(
+        document.querySelectorAll<HTMLElement>('input, button, select, textarea, a[href], [tabindex]')
+      ).filter(el => el.getAttribute('tabindex') !== '-1' && !(el as HTMLButtonElement).disabled)
+      const currentIndex = focusable.indexOf(document.activeElement as HTMLElement)
+      const next = focusable[currentIndex + 1]
+      if (next) {
+        next.focus()
+      }
+    })
+  },
+}
+
+describe('SmartAmountInput tab navigation', () => {
+  it('does not make inline calculator keys keyboard tab stops and tabs directly to next input', () => {
+    const origGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect
+    const origResizeObserver = globalThis.ResizeObserver
+
+    try {
+      HTMLElement.prototype.getBoundingClientRect = function () {
+        return {
+          width: 320,
+          height: 40,
+          top: 0,
+          left: 0,
+          bottom: 40,
+          right: 320,
+          x: 0,
+          y: 0,
+          toJSON: () => {},
+        } as DOMRect
+      }
+
+      globalThis.ResizeObserver = class {
+        private callback: ResizeObserverCallback
+        constructor(cb: ResizeObserverCallback) {
+          this.callback = cb
+        }
+        observe(target: Element) {
+          this.callback([{ target } as ResizeObserverEntry], this as unknown as ResizeObserver)
+        }
+        unobserve() {}
+        disconnect() {}
+      } as unknown as typeof ResizeObserver
+
+      render(
+        <>
+          <SmartAmountInput value="1.00" onChange={() => {}} />
+          <input aria-label="next" />
+        </>
+      )
+
+      const amountInput = screen.getByDisplayValue('1.00')
+      const nextInput = screen.getByLabelText('next')
+
+      act(() => {
+        amountInput.focus()
+        fireEvent.focus(amountInput)
+      })
+
+      const toolbar = document.querySelector('[data-smart-amount-calculator]')
+      expect(toolbar).not.toBeNull()
+
+      const buttons = toolbar!.querySelectorAll('button')
+      expect(buttons.length).toBeGreaterThan(0)
+      buttons.forEach(button => {
+        expect(button.getAttribute('tabindex')).toBe('-1')
+      })
+
+      userEvent.tab()
+      expect(document.activeElement).toBe(nextInput)
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = origGetBoundingClientRect
+      globalThis.ResizeObserver = origResizeObserver
+    }
+  })
+
+  it('does not force operator keys to tabindex="-1" in tray mode', () => {
+    render(<SmartAmountInput value="1.00" onChange={() => {}} calculator="tray" />)
+    const toolbar = document.querySelector('[data-smart-amount-calculator]')
+    expect(toolbar).not.toBeNull()
+    const buttons = toolbar!.querySelectorAll('button')
+    expect(buttons.length).toBeGreaterThan(0)
+    buttons.forEach(button => {
+      expect(button.getAttribute('tabindex')).not.toBe('-1')
+    })
   })
 })

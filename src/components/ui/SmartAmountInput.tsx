@@ -131,7 +131,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, SmartAmountIn
         />
 
         {showCalculator && (
-          // Five keyboard-accessible compound keys kept dense and flush so the amount itself remains readable.
+          // Pointer-only because it exists only while the field is focused, so a tab stop on it unmounts under the focus and drops focus to the page.
           <div
             data-smart-amount-calculator
             className="absolute right-2 top-1/2 flex -translate-y-1/2 items-stretch overflow-hidden rounded-full border border-border/70 bg-card shadow-(--app-shadow) [&_button]:!h-8 [&_button]:!min-h-0 [&_button]:!min-w-0"
@@ -142,6 +142,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, SmartAmountIn
                 size="sm"
                 key={operator}
                 type="button"
+                tabIndex={-1}
                 aria-label={ariaLabel}
                 onMouseDown={event => { event.preventDefault(); appendOperator(operator) }}
                 className="h-8 rounded-none border-r border-border/60 px-2.5 text-body font-medium text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground active:scale-95"
@@ -153,6 +154,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, SmartAmountIn
               variant="tertiary"
               size="sm"
               type="button"
+              tabIndex={-1}
               aria-label="Calculate result"
               onMouseDown={event => { event.preventDefault(); evaluate() }}
               className="h-8 rounded-none bg-primary px-3 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-95"
