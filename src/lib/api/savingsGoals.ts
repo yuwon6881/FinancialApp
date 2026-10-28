@@ -61,6 +61,22 @@ export async function contributeToSavingsGoal(id: number, amount: number): Promi
   return deobfuscateSavingsGoal(data)
 }
 
+/** Records pocket interest: credits `accountId` and raises the goal's earmark by the same amount, so free-to-spend does not move. */
+export async function recordSavingsGoalInterest(
+  id: number,
+  amount: number,
+  accountId: string,
+  operationId: string,
+): Promise<SavingsGoal> {
+  const data = await request<WireSavingsGoal>(`/savings-goals/${id}/interest`, {
+    method: 'POST',
+    ...jsonBody({ amount: obfuscateAmount(amount), accountId, operationId }),
+    errorMessage: 'Failed to record interest for this savings goal',
+  })
+  invalidateCache()
+  return deobfuscateSavingsGoal(data)
+}
+
 export interface SavingsGoalFundingResult {
   actionId?: string | null
   goals: SavingsGoal[]

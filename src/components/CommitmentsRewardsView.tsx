@@ -61,6 +61,7 @@ interface CommitmentsRewardsViewProps {
   onCompleteGoal: (id: number, accountId?: string) => Promise<void> | void
   /** Resolves to the server's rejection message, or null when the move stuck. */
   onContributeToGoal: (id: number, amount: number) => Promise<string | null> | void
+  onRecordGoalInterest?: (id: number, amount: number, accountId: string, operationId: string) => Promise<string | null> | void
   onFundGoalsForCycle: (bucket?: SavingsGoalFundingBucket) => Promise<void> | void
   isOffline?: boolean
   formatSensitive?: (val: number) => React.ReactNode
@@ -123,6 +124,7 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
   onDeleteGoal,
   onCompleteGoal,
   onContributeToGoal,
+  onRecordGoalInterest,
   onFundGoalsForCycle,
   isOffline = false,
   formatSensitive: formatSensitiveProp,
@@ -280,11 +282,13 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
   const { isSyncing: isGoalSyncing, isDeleting: isGoalDeleting } = useSyncStatus(savingsGoals, activeSyncIds, deletingId)
   const isFunding = activeSyncIds.some(id => String(id) === 'savings-goals-fund')
   const [contributeTarget, setContributeTarget] = React.useState<{ goal: SavingsGoal; mode: ContributeMode } | null>(null)
+  const [interestTarget, setInterestTarget] = React.useState<SavingsGoal | null>(null)
 
   React.useEffect(() => {
     if (!hideSensitive) return
     setPurchasingItem(null)
     setContributeTarget(null)
+    setInterestTarget(null)
   }, [hideSensitive])
 
   const {
@@ -376,6 +380,7 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
               onCompleteGoal={handleRequestCompleteGoal}
               onTopUp={target => setContributeTarget({ goal: target, mode: 'topUp' })}
               onRelease={target => setContributeTarget({ goal: target, mode: 'release' })}
+              onAddInterest={onRecordGoalInterest ? (target => setInterestTarget(target)) : undefined}
             />
           </div>
         </div>
@@ -439,6 +444,8 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
         goalForm={goalForm}
         contributeTarget={contributeTarget}
         setContributeTarget={setContributeTarget}
+        interestTarget={interestTarget}
+        setInterestTarget={setInterestTarget}
         rewardsPool={rewardsPool}
         essentialsPool={essentialsPool}
         claimableBalance={claimableBalance}
@@ -451,6 +458,7 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
         todayKey={todayKey}
         formatSensitive={formatSensitive}
         onContributeToGoal={onContributeToGoal}
+        onRecordGoalInterest={onRecordGoalInterest}
       />
     </div>
   )

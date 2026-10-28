@@ -8,6 +8,7 @@ import { CustomSelect } from '../ui/CustomSelect'
 import { Button } from '../ui/Button'
 import { ModalActions } from '../ui/ModalActions'
 import { SavingsGoalContributeSheet, type ContributeMode } from './SavingsGoalContributeSheet'
+import { SavingsGoalInterestSheet } from './SavingsGoalInterestSheet'
 import { SavingsGoalForm } from './SavingsGoalForm'
 import { WishlistItemForm } from './WishlistItemForm'
 import type { useSavingsGoalForm } from './useSavingsGoalForm'
@@ -45,6 +46,9 @@ interface Props {
   todayKey: string
   formatSensitive: (value: number) => ReactNode
   onContributeToGoal: (id: number, amount: number) => Promise<string | null> | void
+  interestTarget?: SavingsGoal | null
+  setInterestTarget?: Dispatch<SetStateAction<SavingsGoal | null>>
+  onRecordGoalInterest?: (id: number, amount: number, accountId: string, operationId: string) => Promise<string | null> | void
 }
 
 export function CommitmentsRewardsSheets(props: Props) {
@@ -138,6 +142,21 @@ export function CommitmentsRewardsSheets(props: Props) {
         <BottomSheet isOpen title="Edit Commitment" onClose={goalForm.closeEditModal} maxWidthClassName="max-w-md">
           <SavingsGoalForm mode="edit" currency={props.currency} name={goalForm.nameInput} target={goalForm.targetInput} fundingBucket={goalForm.fundingBucketInput} date={goalForm.dateInput} priority={goalForm.priorityInput} isRecurring={goalForm.isRecurringInput} recurrenceMonths={goalForm.recurrenceMonthsInput} errors={goalForm.errors} releasedByLowerTarget={goalForm.releasedByLowerTarget} requiredPerCycle={props.goalPacePreview} formatSensitive={props.formatSensitive} onNameChange={goalForm.setNameInput} onTargetChange={goalForm.handleTargetChange} onFundingBucketChange={goalForm.setFundingBucketInput} onDateChange={goalForm.setDateInput} onPriorityChange={goalForm.setPriorityInput} onRecurringChange={goalForm.setIsRecurringInput} onRecurrenceMonthsChange={goalForm.setRecurrenceMonthsInput} onClearError={field => goalForm.setErrors(previous => ({ ...previous, [field]: '' }))} onCancel={goalForm.closeEditModal} onSubmit={goalForm.handleSaveEdit} />
         </BottomSheet>
+      )}
+
+      {props.interestTarget && props.onRecordGoalInterest && (
+        <SavingsGoalInterestSheet
+          goal={props.interestTarget}
+          accounts={props.accounts}
+          currency={props.currency}
+          formatSensitive={props.formatSensitive}
+          onClose={() => props.setInterestTarget?.(null)}
+          onConfirm={async (amount, accountId, operationId) => {
+            const rejection = await props.onRecordGoalInterest!(props.interestTarget!.id, amount, accountId, operationId)
+            if (!rejection) props.setInterestTarget?.(null)
+            return rejection ?? null
+          }}
+        />
       )}
 
       {props.contributeTarget && (

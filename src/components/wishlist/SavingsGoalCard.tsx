@@ -1,5 +1,5 @@
 import React from 'react'
-import { CheckCircle2, ChevronDown, Edit2, Minus, Plus, Trash2 } from 'lucide-react'
+import { CheckCircle2, ChevronDown, Edit2, Minus, Plus, Trash2, TrendingUp } from 'lucide-react'
 import type { SavingsGoal } from '../../types'
 import type { GoalPace, GoalPaceStatus } from '../../lib/savingsGoals'
 import { MONTH_NAMES } from '../../lib/cycle'
@@ -27,6 +27,7 @@ interface SavingsGoalCardProps {
   onComplete: (id: number) => void
   onTopUp: (goal: SavingsGoal) => void
   onRelease: (goal: SavingsGoal) => void
+  onAddInterest?: (goal: SavingsGoal) => void
 }
 
 // Pace, not percent, is the signal. 3% of a six-year house fund is fine; 33% of a three-month car
@@ -72,6 +73,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
   onComplete,
   onTopUp,
   onRelease,
+  onAddInterest,
 }) => {
   const pct = goal.targetAmount > 0
     ? Math.max(0, Math.min(100, (goal.earmarkedAmount / goal.targetAmount) * 100))
@@ -216,6 +218,17 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
                   ? 'Unhide balances to release money'
                   : `Nothing is set aside in ${goal.name} yet`,
               },
+              ...(onAddInterest ? [{
+                label: 'Add interest',
+                icon: TrendingUp,
+                onSelect: () => onAddInterest(goal),
+                disabled: hideSensitive || goal.earmarkedAmount >= goal.targetAmount,
+                hint: hideSensitive
+                  ? 'Unhide balances to add interest'
+                  : goal.earmarkedAmount >= goal.targetAmount
+                    ? 'Raise the target before adding more'
+                    : undefined,
+              }] : []),
               {
                 label: 'Edit',
                 icon: Edit2,

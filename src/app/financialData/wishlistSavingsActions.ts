@@ -240,6 +240,23 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     }
   }
 
+  /** Resolves to the rejection message when recording interest was refused, else null. */
+  const handleRecordGoalInterest = async (
+    id: number,
+    amount: number,
+    accountId: string,
+    operationId: string,
+  ): Promise<string | null> => {
+    if (!guardSensitive()) return null
+    beginDirectSync([id])
+    try {
+      const { recordInterestOnGoal } = await import('../savingsGoalActions')
+      return await recordInterestOnGoal(savingsGoalDependencies(), id, amount, accountId, operationId)
+    } finally {
+      endDirectSync([id])
+    }
+  }
+
   const handleFundSavingsGoalsForCycle = async (bucket: 'Essentials' | 'Rewards' = 'Rewards') => {
     if (!guardSensitive()) return
     const syncIds = ['savings-goals-fund', ...getActiveGoalIds()]
@@ -284,6 +301,7 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     handleDeleteSavingsGoal,
     requestDeleteSavingsGoal,
     handleContributeToSavingsGoal,
+    handleRecordGoalInterest,
     handleFundSavingsGoalsForCycle,
     requestCompleteSavingsGoal,
   }
