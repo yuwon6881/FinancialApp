@@ -1,5 +1,5 @@
 import { lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
-import type { DashboardData } from '../types'
+import type { AppTab, DashboardData } from '../types'
 import type { useAiActionRouter } from './useAiActionRouter'
 import type { useAppDialogs } from './useAppDialogs'
 import type { useAppPreferences } from './useAppPreferences'
@@ -16,6 +16,7 @@ import type { AiInvocationContext } from '../lib/api/ai'
 import { AuthenticatedSettingsRoute } from './AuthenticatedSettingsRoute'
 import { activeSectionId, destinationForTab, rememberSection } from '../components/nav/navModel'
 import { useAppLocationKey } from '../lib/useAppLocationKey'
+import { deferTabChange } from '../lib/sheetMotion'
 // Lazy like the views it sits above: the picker's select control is not part of the eager
 // critical path, and the pages that need it are lazily loaded anyway.
 // The section row only exists on hub destinations, so it travels with their lazy views rather than
@@ -341,7 +342,14 @@ export function AuthenticatedTabContent({
           transactions={financial.allTransactions}
           accounts={financial.allAccounts}
           autocompleteSuggestions={financial.autocompleteSuggestions}
-          onAddTransaction={(tx, documents) => financial.handleAddTransaction(tx, prefs.setActiveTab, documents)}
+          onAddTransaction={async (tx, documents) => {
+            let deferredTab: AppTab | null = null
+            const draftId = await financial.handleAddTransaction(tx, tab => { deferredTab = tab }, documents)
+            if (deferredTab) {
+              deferTabChange(prefs.setActiveTab, deferredTab)
+            }
+            return draftId
+          }}
           onDeleteTransaction={financial.handleDeleteTransaction}
           onUpdateTransaction={financial.handleUpdateTransaction}
           activeSyncId={financial.activeTransactionSyncIds[0] ?? null}
