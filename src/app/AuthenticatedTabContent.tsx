@@ -458,6 +458,7 @@ export function AuthenticatedTabContent({
           onDeleteGoal={financial.requestDeleteSavingsGoal}
           onCompleteGoal={financial.requestCompleteSavingsGoal}
           onContributeToGoal={financial.handleContributeToSavingsGoal}
+          onRecordGoalInterest={financial.handleRecordGoalInterest}
           onFundGoalsForCycle={financial.handleFundSavingsGoalsForCycle}
           isOffline={financial.isOffline}
           autoOpenAddModal={nav.autoOpenWishlistAdd}

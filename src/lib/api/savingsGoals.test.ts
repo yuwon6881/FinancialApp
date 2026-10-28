@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fundSavingsGoalsForCycle, undoSavingsGoalsCycleFunding } from './savingsGoals'
+import { fundSavingsGoalsForCycle, recordSavingsGoalInterest, undoSavingsGoalsCycleFunding } from './savingsGoals'
 
 describe('savings-goal API contract', () => {
   afterEach(() => {
@@ -57,5 +57,36 @@ describe('savings-goal API contract', () => {
 
     expect(String(fetchMock.mock.calls[0][0])).toContain('/savings-goals/fund/fund%2Faction/undo')
     expect(fetchMock.mock.calls[0][1].method).toBe('POST')
+  })
+
+  it('posts interest records to the goal interest route with obfuscated wire amount and operation details', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({
+        id: 7,
+        name: 'Car service',
+        targetAmount: 'target',
+        earmarkedAmount: 'earmark',
+        targetDate: '2026-12-20',
+        priority: 'Medium',
+        status: 'active',
+        isRecurring: true,
+        recurrenceMonths: 3,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await recordSavingsGoalInterest(7, 50, 'acc-savings-1', 'op-interest-xyz')
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/savings-goals/7/interest')
+    expect(fetchMock.mock.calls[0][1].method).toBe('POST')
+    const body = JSON.parse(String(fetchMock.mock.calls[0][1].body))
+    expect(body.accountId).toBe('acc-savings-1')
+    expect(body.operationId).toBe('op-interest-xyz')
+    expect(typeof body.amount).toBe('string')
+    expect(body.amount).not.toBe(50)
   })
 })

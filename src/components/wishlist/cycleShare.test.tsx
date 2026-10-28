@@ -132,15 +132,19 @@ function renderRewardsBar(over: Partial<GoalPoolSummary> = {}) {
   )
 }
 
-function renderCard(over: Partial<GoalPace> = {}, handlers: { onComplete?: (id: number) => void } = {}) {
+function renderCard(
+  over: Partial<GoalPace> = {},
+  handlers: { onComplete?: (id: number) => void; onAddInterest?: (goal: SavingsGoal) => void } = {},
+  options: { goal?: Partial<SavingsGoal>; hideSensitive?: boolean } = {},
+) {
   const p = pace(over)
   render(
     <SavingsGoalCard
-      goal={goal}
+      goal={{ ...goal, ...(options.goal ?? {}) }}
       pace={p}
       status={p.isFunded ? 'funded' : p.outstandingThisCycle > 0 ? 'needsFunding' : 'onPace'}
       formatSensitive={money}
-      hideSensitive={false}
+      hideSensitive={options.hideSensitive ?? false}
       isSyncing={false}
       isDeleting={false}
       onEdit={() => undefined}
@@ -148,6 +152,7 @@ function renderCard(over: Partial<GoalPace> = {}, handlers: { onComplete?: (id: 
       onComplete={handlers.onComplete ?? (() => undefined)}
       onTopUp={() => undefined}
       onRelease={() => undefined}
+      onAddInterest={handlers.onAddInterest}
     />,
   )
 }
@@ -374,6 +379,42 @@ describe('SavingsGoalCard cycle share', () => {
     fireEvent.click(toggle)
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
     expect(screen.getByText('Per cycle')).toBeTruthy()
+  })
+
+  it('shows Add interest menu item only when onAddInterest is provided', () => {
+    renderCard()
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Car Maintenance' }))
+    expect(screen.queryByRole('menuitem', { name: 'Add interest' })).toBeNull()
+
+    const onAddInterest = vi.fn()
+    renderCard({}, { onAddInterest }, { goal: { id: 7, name: 'Pocket 2', earmarkedAmount: 50, targetAmount: 200 } })
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Pocket 2' }))
+    const item = screen.getByRole('menuitem', { name: 'Add interest' })
+    expect(item).toBeTruthy()
+    fireEvent.click(item)
+    expect(onAddInterest).toHaveBeenCalledTimes(1)
+  })
+
+  it('disables Add interest at target', () => {
+    const onAddInterest = vi.fn()
+    renderCard({}, { onAddInterest }, { goal: { id: 8, name: 'Funded Pocket', earmarkedAmount: 200, targetAmount: 200 } })
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Funded Pocket' }))
+    const atTargetItem = screen.getByRole('menuitem', { name: 'Add interest' })
+    expect(atTargetItem.getAttribute('aria-disabled')).toBe('true')
+    expect(atTargetItem.getAttribute('title')).toBe('Raise the target before adding more')
+    fireEvent.click(atTargetItem)
+    expect(onAddInterest).not.toHaveBeenCalled()
+  })
+
+  it('disables Add interest when hideSensitive', () => {
+    const onAddInterest = vi.fn()
+    renderCard({}, { onAddInterest }, { goal: { id: 9, name: 'Hidden Pocket', earmarkedAmount: 50, targetAmount: 200 }, hideSensitive: true })
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Hidden Pocket' }))
+    const hiddenItem = screen.getByRole('menuitem', { name: 'Add interest' })
+    expect(hiddenItem.getAttribute('aria-disabled')).toBe('true')
+    expect(hiddenItem.getAttribute('title')).toBe('Unhide balances to add interest')
+    fireEvent.click(hiddenItem)
+    expect(onAddInterest).not.toHaveBeenCalled()
   })
 })
 
