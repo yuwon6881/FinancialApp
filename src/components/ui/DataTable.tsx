@@ -4,6 +4,7 @@ import { cn } from '../../lib/utils'
 import { Button } from './Button'
 import { CustomSelect } from './CustomSelect'
 import { panelClass } from './panelStyles'
+import { DEFAULT_PAGE_SIZE_OPTIONS, shouldShowPagination } from './paginationVisibility'
 
 export interface DataTableProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
@@ -113,12 +114,16 @@ export function DataTablePagination({
   totalItems,
   totalPages,
   serverIsFetching = false,
-  pageSizeOptions = [10, 25, 50, 100],
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   showPageSize = true,
   centerOnMobile = false,
   onPageChange,
   onPageSizeChange,
 }: DataTablePaginationProps) {
+  if (!shouldShowPagination({ totalPages, totalItems, serverIsFetching, pageSizeOptions })) {
+    return null
+  }
+
   const safeTotalPages = Math.max(1, totalPages)
   const displayFrom = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1
   const displayTo = Math.min(currentPage * pageSize, totalItems)

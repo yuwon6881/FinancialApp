@@ -101,6 +101,38 @@ export async function contributeToGoal(
   }
 }
 
+export async function recordInterestOnGoal(
+  deps: SavingsGoalActionDeps,
+  id: number,
+  amount: number,
+  accountId: string,
+  operationId: string,
+): Promise<string | null> {
+  if (!isOnline()) {
+    showOnlineOnlyMessage(deps, 'Recording interest needs a live connection so your account balance can be updated.')
+    return null
+  }
+  const { recordSavingsGoalInterest, fetchSavingsGoals } = await import('../lib/api/savingsGoals')
+  deps.beginDirectSync?.([id])
+  try {
+    const { hints } = await collectRefreshHints(() => recordSavingsGoalInterest(id, amount, accountId, operationId))
+    deps.commitGoals(await fetchSavingsGoals())
+    await deps.refreshAll(hintedSlices(hints))
+    const goalName = deps.getGoalName(id) ?? 'this goal'
+    const copy = buildMutationSuccessToast({
+      entity: 'Interest',
+      action: 'Recorded',
+      message: `${formatCurrencyVal(amount, deps.currency)} of interest was added to ${goalName}. What you can spend is unchanged.`,
+    })
+    deps.showToast(copy.message, 'Interest recorded', copy.tone)
+    return null
+  } catch (error: unknown) {
+    return getErrorMessage(error, 'That interest could not be recorded.')
+  } finally {
+    deps.endDirectSync?.([id])
+  }
+}
+
 export async function fundGoalsForCycle(deps: SavingsGoalActionDeps, bucket: SavingsGoalFundingBucket = 'Rewards'): Promise<void> {
   if (!isOnline()) {
     showOnlineOnlyMessage(deps, 'Funding goals for a new cycle needs a live connection so the current bucket balances can be checked.')

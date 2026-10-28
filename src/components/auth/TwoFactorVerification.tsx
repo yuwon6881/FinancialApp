@@ -82,7 +82,7 @@ export const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
             onClick={onBackToLogin}
             className="w-full text-center text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
           >
-            Back to login
+            Back to sign in
           </Button>
         </form>
       </AuthCard>

@@ -32,7 +32,7 @@ const EMPTY_ACCOUNTS: LedgerAccount[] = []
 // Keep discovery prompts local: static UI copy does not justify an AI round trip.
 const SUGGESTED_PROMPTS = [
   'Which transaction exceeded 250 this cycle?',
-  'How long until my Growth reaches 50000?',
+  'How long until my Growth reaches 50,000?',
   'How much do my subscriptions cost me a month?',
   'Compare my spending this cycle vs last cycle',
   'Are there any duplicate transactions this cycle?',

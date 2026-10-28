@@ -401,29 +401,6 @@ for (const route of responsiveRoutes) {
       expect(bounds.left).toBeGreaterThanOrEqual(0)
       expect(bounds.right).toBeLessThanOrEqual(width.viewport)
     }
-    if ((route.path === '/vault' || route.path.startsWith('/ledger')) && width.viewport < 640) {
-      const resultsCount = page.locator('main [aria-live="polite"][aria-atomic="true"]').filter({ hasText: 'Showing' }).first()
-      await expect(resultsCount).toContainText('Showing')
-      const footer = resultsCount.locator('xpath=../..')
-      const alignment = await footer.evaluate(element => {
-        const rect = element.getBoundingClientRect()
-        const centerOf = (target: Element | null) => {
-          if (!target) throw new Error('Expected pagination group was not rendered.')
-          const bounds = target.getBoundingClientRect()
-          return (bounds.left + bounds.right) / 2
-        }
-        const controlRow = element.children.item(1)
-        return {
-          footerCenter: (rect.left + rect.right) / 2,
-          countCenter: centerOf(element.children.item(0)),
-          pageSizeCenter: centerOf(controlRow?.children.item(0) ?? null),
-          pagerCenter: centerOf(controlRow?.children.item(1) ?? null),
-        }
-      })
-      expect(Math.abs(alignment.countCenter - alignment.footerCenter)).toBeLessThanOrEqual(1)
-      expect(Math.abs(alignment.pageSizeCenter - alignment.footerCenter)).toBeLessThanOrEqual(1)
-      expect(Math.abs(alignment.pagerCenter - alignment.footerCenter)).toBeLessThanOrEqual(1)
-    }
     if (route.path === '/reports' || route.path === '/recurring' || route.path === '/ledger') {
       const cycleSelect = page.getByRole('combobox', {
         name: route.path === '/reports' ? 'Report cycle' : route.path === '/ledger' ? 'Ledger cycle' : 'Recurring cycle',
@@ -459,6 +436,55 @@ for (const route of responsiveRoutes) {
       expect(titleWidth.scroll, 'draft page title must remain visible').toBeLessThanOrEqual(titleWidth.client + 1)
     }
     await expect(page).toHaveScreenshot(`responsive-${route.slug}.png`)
+  })
+}
+
+const manyTransactions = Array.from({ length: 12 }, (_, index) => ({
+  id: `tx-visual-page-${index}`,
+  accountId: 'account-visual-essentials',
+  date: '2026-08-01',
+  description: `Neighbourhood Grocer ${index + 1}`,
+  category: 'Food',
+  ledgerCategory: 'Essentials',
+  amount: -10 - index,
+}))
+const manyDocuments = Array.from({ length: 12 }, (_, index) => ({
+  ...vaultDocuments[0],
+  id: 100 + index,
+  originalFileName: `receipt-${index + 1}.pdf`,
+}))
+
+// A single page of rows has no footer (see shouldShowPagination), so the footer's phone alignment is
+// measured on lists long enough to span pages.
+for (const route of [{ path: '/ledger', slug: 'ledger' }, { path: '/vault', slug: 'vault' }] as const) {
+  test(`pagination footer is centred on a phone: ${route.slug}`, async ({ page }) => {
+    test.skip(!test.info().project.name.startsWith('mobile'), 'The footer layout contract is a phone one.')
+    await establishSession(page)
+    await mockApi(page, { documents: manyDocuments, transactions: manyTransactions })
+    await page.goto(route.path, { waitUntil: 'domcontentloaded' })
+    await expect(page.locator('main')).toBeVisible()
+    await waitForStableLayout(page)
+    const resultsCount = page.locator('main [aria-live="polite"][aria-atomic="true"]').filter({ hasText: 'Showing' }).first()
+    await expect(resultsCount).toContainText('Showing')
+    const footer = resultsCount.locator('xpath=../..')
+    const alignment = await footer.evaluate(element => {
+      const rect = element.getBoundingClientRect()
+      const centerOf = (target: Element | null) => {
+        if (!target) throw new Error('Expected pagination group was not rendered.')
+        const bounds = target.getBoundingClientRect()
+        return (bounds.left + bounds.right) / 2
+      }
+      const controlRow = element.children.item(1)
+      return {
+        footerCenter: (rect.left + rect.right) / 2,
+        countCenter: centerOf(element.children.item(0)),
+        pageSizeCenter: centerOf(controlRow?.children.item(0) ?? null),
+        pagerCenter: centerOf(controlRow?.children.item(1) ?? null),
+      }
+    })
+    expect(Math.abs(alignment.countCenter - alignment.footerCenter)).toBeLessThanOrEqual(1)
+    expect(Math.abs(alignment.pageSizeCenter - alignment.footerCenter)).toBeLessThanOrEqual(1)
+    expect(Math.abs(alignment.pagerCenter - alignment.footerCenter)).toBeLessThanOrEqual(1)
   })
 }
 

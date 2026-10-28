@@ -156,6 +156,59 @@ describe('useCycleNavigation', () => {
     expect(showAlert).toHaveBeenCalledWith('The active month could not be updated. Please try again.', 'Cycle update failed')
   })
 
+  it('does not show alert or logout when cycle load is aborted, but restores the previous period', async () => {
+    const persistPeriod = vi.fn().mockResolvedValue(undefined)
+    const showAlert = vi.fn()
+    const handleLogout = vi.fn()
+    const { result } = renderHook(() => useCycleNavigation({
+      loadAll: vi.fn().mockRejectedValue(new DOMException('signal is aborted without reason', 'AbortError')),
+      handleLogout,
+      markSessionLocked: vi.fn(),
+      setDashboardData: vi.fn(),
+      setTransactions: vi.fn(),
+      setActiveTab: vi.fn(),
+      setLedgerCyclesRange: vi.fn(),
+      persistPeriod,
+      showAlert,
+    }))
+
+    await act(async () => result.current.handleSelectPeriod('Sep', 2026))
+
+    expect(showAlert).not.toHaveBeenCalled()
+    expect(handleLogout).not.toHaveBeenCalled()
+    expect(result.current.selectedMonth).toBe('Jun')
+    expect(result.current.selectedYear).toBe(2026)
+    expect(result.current.isSwitchingCycle).toBe(false)
+  })
+
+  it('shows alert when cycle load fails with Network down error', async () => {
+    const persistPeriod = vi.fn().mockResolvedValue(undefined)
+    const showAlert = vi.fn()
+    const handleLogout = vi.fn()
+    const { result } = renderHook(() => useCycleNavigation({
+      loadAll: vi.fn().mockRejectedValue(new Error('Network down')),
+      handleLogout,
+      markSessionLocked: vi.fn(),
+      setDashboardData: vi.fn(),
+      setTransactions: vi.fn(),
+      setActiveTab: vi.fn(),
+      setLedgerCyclesRange: vi.fn(),
+      persistPeriod,
+      showAlert,
+    }))
+
+    await act(async () => result.current.handleSelectPeriod('Sep', 2026))
+
+    expect(showAlert).toHaveBeenCalledWith(
+      'The active month could not be updated. Please try again.',
+      'Cycle update failed',
+    )
+    expect(handleLogout).not.toHaveBeenCalled()
+    expect(result.current.selectedMonth).toBe('Jun')
+    expect(result.current.selectedYear).toBe(2026)
+    expect(result.current.isSwitchingCycle).toBe(false)
+  })
+
   it('retains the applied Ledger route state for a later remount', () => {
     const setLedgerCyclesRange = vi.fn()
     const { result } = renderHook(() => useCycleNavigation({

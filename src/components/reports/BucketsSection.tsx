@@ -8,6 +8,7 @@ import { cn, SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
 import { AmountText } from '../ui/AmountText'
 import { Button } from '../ui/Button'
 import { CategoryIcon } from '../ui/CategoryIcon'
+import { IconButton } from '../ui/IconButton'
 import { SectionHeader } from '../ui/SectionHeader'
 import { SegmentedMeter } from '../ui/SegmentedMeter'
 import { panelClass } from '../ui/panelStyles'
@@ -194,7 +195,7 @@ export function BucketsSection({
                 </div>
               </div>
 
-              <div id={detailsId} className={cn('flex-1 flex-col px-4 pb-4 @xl:flex @xl:px-5 @xl:pb-5', open ? 'flex' : 'hidden')}>
+              <div id={detailsId} className={cn('min-w-0 flex-1 flex-col px-4 pb-4 @xl:flex @xl:px-5 @xl:pb-5', open ? 'flex' : 'hidden')}>
                 <dl className="space-y-2 rounded-control bg-surface-2/70 p-3 @xl:rounded-none @xl:border-t @xl:border-border/60 @xl:bg-transparent @xl:px-0 @xl:pb-0 @xl:pt-3">
                   <DetailRow label="Income added" value={amount(bucket.incomeAllocated ?? bucket.target)} />
                   <DetailRow label="Carried over" value={amount(bucket.budget)} />
@@ -232,7 +233,7 @@ export function BucketsSection({
                   )}
                 </dl>
 
-                <div className="mt-3 flex flex-wrap items-center gap-1.5 @xl:mt-auto @xl:pt-4">
+                <div className="mt-3 flex flex-nowrap items-center gap-1.5 @xl:mt-auto @xl:pt-4">
                   {accountCount > 0 && (
                     <Button
                       variant="secondary"
@@ -240,9 +241,16 @@ export function BucketsSection({
                       onClick={() => setAccountsBucket(bucket)}
                       title={`View ${accountCount} ${accountCount === 1 ? 'account' : 'accounts'} in ${bucket.name}`}
                       aria-label={`View account breakdown for ${bucket.name}`}
+                      className="shrink-0"
                     >
                       <Wallet className="size-3.5" aria-hidden="true" />
-                      {accountCount} {accountCount === 1 ? 'account' : 'accounts'}
+                      {/* In the four-card row the cards get too narrow for three actions on one line below
+                          72rem, so the word folds away (the button's accessible name keeps it) and every
+                          footer stays one identical line instead of Growth's wrapping or clipping. */}
+                      <span>
+                        {accountCount}
+                        <span className="@4xl:@max-6xl:sr-only"> {accountCount === 1 ? 'account' : 'accounts'}</span>
+                      </span>
                     </Button>
                   )}
                   {onNavigateToLedger && (
@@ -254,23 +262,22 @@ export function BucketsSection({
                         showAllCycles: bucket.name === 'Growth' || bucket.name === 'Stability',
                       })}
                       aria-label={`View ${bucket.name} activity in Ledger`}
-                      className="px-2.5"
+                      className="shrink-0 px-2.5"
                     >
                       Activity
                       <ChevronRight className="size-3.5" aria-hidden="true" />
                     </Button>
                   )}
                   {bucket.name === 'Growth' && onNavigate && (
-                    <Button
+                    <IconButton
                       variant="tertiary"
-                      size="sm"
+                      label="View Growth Investments"
+                      tooltip="Investments"
                       onClick={() => onNavigate('investments')}
-                      aria-label="View Growth Investments"
-                      className="px-2.5"
+                      className="shrink-0"
                     >
                       <TrendingUp className="size-3.5" aria-hidden="true" />
-                      Investments
-                    </Button>
+                    </IconButton>
                   )}
                 </div>
               </div>

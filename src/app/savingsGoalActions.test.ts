@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SavingsGoal, Transaction } from '../types'
-import { completeGoal, fundGoalsForCycle } from './savingsGoalActions'
-import { completeSavingsGoal, fundSavingsGoalsForCycle, undoSavingsGoalsCycleFunding } from '../lib/api/savingsGoals'
+import { completeGoal, fundGoalsForCycle, recordInterestOnGoal } from './savingsGoalActions'
+import { completeSavingsGoal, fetchSavingsGoals, fundSavingsGoalsForCycle, recordSavingsGoalInterest, undoSavingsGoalsCycleFunding } from '../lib/api/savingsGoals'
 import { deleteTransaction } from '../lib/api/transactions'
 
 vi.mock('../lib/api/savingsGoals', () => ({
   completeSavingsGoal: vi.fn(),
+  fetchSavingsGoals: vi.fn(),
   fundSavingsGoalsForCycle: vi.fn(),
+  recordSavingsGoalInterest: vi.fn(),
   undoSavingsGoalsCycleFunding: vi.fn(),
 }))
 
@@ -235,5 +237,84 @@ describe('fundGoalsForCycle', () => {
     undo.onAction()
     await vi.waitFor(() => expect(undoSavingsGoalsCycleFunding).toHaveBeenCalledWith('fund-action-1'))
     expect(commitGoals).toHaveBeenLastCalledWith([goal])
+  })
+})
+
+
+describe('recordInterestOnGoal', () => {
+  it('returns null and shows the online-only message when offline without calling the API', async () => {
+    vi.stubGlobal('navigator', { onLine: false })
+    const showToast = vi.fn()
+    const deps = {
+      currency: 'MYR',
+      commitGoals: vi.fn(),
+      commitGoal: vi.fn(),
+      getGoalName: () => 'Car service',
+      refreshAll: vi.fn(),
+      showToast,
+    }
+
+    const result = await recordInterestOnGoal(deps, 7, 50, 'acc-1', 'op-test')
+
+    expect(result).toBeNull()
+    expect(recordSavingsGoalInterest).not.toHaveBeenCalled()
+    expect(showToast).toHaveBeenCalledWith(
+      'Recording interest needs a live connection so your account balance can be updated.',
+      'Available online only',
+      'warning',
+    )
+    vi.unstubAllGlobals()
+  })
+
+  it('returns the rejection message when the API rejects', async () => {
+    vi.stubGlobal('navigator', { onLine: true })
+    vi.mocked(recordSavingsGoalInterest).mockRejectedValueOnce(
+      new Error('Only RM 20 of room is left before the target. Raise the target first.'),
+    )
+    const deps = {
+      currency: 'MYR',
+      commitGoals: vi.fn(),
+      commitGoal: vi.fn(),
+      getGoalName: () => 'Car service',
+      refreshAll: vi.fn(),
+      showToast: vi.fn(),
+    }
+
+    const result = await recordInterestOnGoal(deps, 7, 50, 'acc-1', 'op-test')
+
+    expect(result).toBe('Only RM 20 of room is left before the target. Raise the target first.')
+    vi.unstubAllGlobals()
+  })
+
+  it('commits goals and refreshes on success', async () => {
+    vi.stubGlobal('navigator', { onLine: true })
+    const updatedGoal = { ...goal, earmarkedAmount: 50 }
+    vi.mocked(recordSavingsGoalInterest).mockResolvedValueOnce(updatedGoal)
+    vi.mocked(fetchSavingsGoals).mockResolvedValueOnce([updatedGoal])
+    const commitGoals = vi.fn()
+    const refreshAll = vi.fn().mockResolvedValue(undefined)
+    const showToast = vi.fn()
+    const deps = {
+      currency: 'MYR',
+      commitGoals,
+      commitGoal: vi.fn(),
+      getGoalName: () => 'Car service',
+      refreshAll,
+      showToast,
+    }
+
+    const result = await recordInterestOnGoal(deps, 7, 50, 'acc-1', 'op-test')
+
+    expect(result).toBeNull()
+    expect(recordSavingsGoalInterest).toHaveBeenCalledWith(7, 50, 'acc-1', 'op-test')
+    expect(fetchSavingsGoals).toHaveBeenCalledOnce()
+    expect(commitGoals).toHaveBeenCalledWith([updatedGoal])
+    expect(refreshAll).toHaveBeenCalledOnce()
+    expect(showToast).toHaveBeenCalledWith(
+      expect.stringContaining('50'),
+      'Interest recorded',
+      'success',
+    )
+    vi.unstubAllGlobals()
   })
 })

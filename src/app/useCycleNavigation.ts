@@ -64,6 +64,9 @@ const areLedgerStatesEqual = (
   a.showAllCycles === b.showAllCycles &&
   a.range === b.range
 
+const isAbortError = (error: unknown): boolean =>
+  typeof error === 'object' && error !== null && (error as { name?: unknown }).name === 'AbortError'
+
 export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const { loadAll, handleLogout, markSessionLocked, setDashboardData, setTransactions, setActiveTab, setLedgerCyclesRange, showAlert, persistPeriod = api.selectPeriod } = options
 
@@ -182,7 +185,9 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
             console.error('Could not restore the previous cycle selection', rollbackError)
           }
         }
-        showAlert?.('The active month could not be updated. Please try again.', 'Cycle update failed')
+        if (!isAbortError(err)) {
+          showAlert?.('The active month could not be updated. Please try again.', 'Cycle update failed')
+        }
       }
     } finally {
       if (requestSeq === selectPeriodSeqRef.current) {

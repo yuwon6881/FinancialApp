@@ -26,6 +26,7 @@ interface CommitmentsSectionProps {
   onCompleteGoal: (id: number) => void
   onTopUp: (goal: SavingsGoal) => void
   onRelease: (goal: SavingsGoal) => void
+  onAddInterest?: (goal: SavingsGoal) => void
 }
 
 /**
@@ -46,6 +47,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
   onCompleteGoal,
   onTopUp,
   onRelease,
+  onAddInterest,
 }) => {
   const goalCards = pool.activeGoals.map(goal => {
     const pace = pool.paces.get(goal.id)
@@ -66,6 +68,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
         onComplete={onCompleteGoal}
         onTopUp={onTopUp}
         onRelease={onRelease}
+        onAddInterest={onAddInterest}
       />
     )
   })

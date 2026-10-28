@@ -85,6 +85,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   // What the tap will actually move. The waterfall grants min(outstanding, free), so labelling the
   // button with the outstanding figure promised money the pool did not have and moved less.
   const fundableNow = Math.min(outstandingThisCycleTotal, unassigned)
+  const showFundButton = showFundAction && !cycleDone && (fundableNow > 0 || isFunding)
   const fundTitle = isOffline
     ? `Funding needs a connection — it checks your real ${bucketLabel} balance`
     : hideSensitive
@@ -181,9 +182,9 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
 
       {/* The pool's one action and its detail toggle share a row, so the card ends on a single
           line instead of a floating pill over a separate disclosure strip. */}
-      {((showFundAction && !cycleDone) || detail.isMobile) && (
+      {(showFundButton || detail.isMobile) && (
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-          {showFundAction && !cycleDone ? (
+          {showFundButton ? (
             <Button
               size="sm"
               onClick={onFundCycle}

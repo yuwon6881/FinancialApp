@@ -4,6 +4,7 @@ import { getBillTimelineAmount, type BillTimelineModel } from '../../lib/billTim
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { panelClass } from '../ui/panelStyles'
+import { useScrollEdgeFade } from '../ui/useScrollEdgeFade'
 
 interface BillDayStripProps {
   model: BillTimelineModel
@@ -72,31 +73,7 @@ export const BillDayStrip: React.FC<BillDayStripProps> = ({ model, formatSensiti
     rail.scrollLeft = Math.max(0, today.offsetLeft - rail.clientWidth / 2 + today.offsetWidth / 2)
   }, [days])
 
-  // Fade whichever edge still has days beyond it, so a row that scrolls never looks like it simply
-  // ends at the last visible day.
-  const [edges, setEdges] = React.useState({ start: false, end: false })
-  const measureEdges = React.useCallback(() => {
-    const rail = scrollRef.current
-    if (!rail) return
-    const start = rail.scrollLeft > 1
-    const end = rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 1
-    setEdges(prev => (prev.start === start && prev.end === end ? prev : { start, end }))
-  }, [])
-  React.useEffect(() => {
-    measureEdges()
-    const rail = scrollRef.current
-    // The rail settles after fonts and the surrounding layout do, so re-measure whenever it resizes.
-    const observer = rail && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measureEdges) : null
-    if (rail) observer?.observe(rail)
-    window.addEventListener('resize', measureEdges)
-    return () => {
-      observer?.disconnect()
-      window.removeEventListener('resize', measureEdges)
-    }
-  }, [days, measureEdges])
-  const edgeMask = edges.start || edges.end
-    ? `linear-gradient(to right, ${edges.start ? 'transparent' : '#000'}, #000 4rem, #000 calc(100% - 4rem), ${edges.end ? 'transparent' : '#000'})`
-    : undefined
+  const { edges, onScroll, style: fadeStyle } = useScrollEdgeFade(scrollRef, days)
 
   const billCount = model.processedPayments.length
 
@@ -116,10 +93,10 @@ export const BillDayStrip: React.FC<BillDayStripProps> = ({ model, formatSensiti
 
       <ol
         ref={scrollRef}
-        onScroll={measureEdges}
+        onScroll={onScroll}
         data-fade-start={edges.start || undefined}
         data-fade-end={edges.end || undefined}
-        style={edgeMask ? { maskImage: edgeMask, WebkitMaskImage: edgeMask } : undefined}
+        style={fadeStyle}
         aria-label="Days in this cycle"
         // Focusable so the row can be scrolled from the keyboard even on a cycle with no bills.
         tabIndex={0}

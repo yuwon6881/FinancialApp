@@ -36,6 +36,11 @@ const rewardsCategory: CategorySummary = {
   budget: 100, spent: 0, netChange: 100, remaining: 200, accounts: [],
 }
 
+const stabilityCategory: CategorySummary = {
+  name: 'Stability', allocation: 0.15, target: 500, incomeAllocated: 500,
+  budget: 500, spent: 0, netChange: 500, remaining: 1000, accounts: [],
+}
+
 const format = (value: number) => `RM ${value.toFixed(2)}`
 
 function renderBuckets(overrides: Partial<BucketsSectionProps> = {}) {
@@ -140,6 +145,35 @@ describe('BucketsSection', () => {
     expect(onNavigateToLedger).toHaveBeenCalledWith({ category: 'Growth', showAllCycles: true })
     fireEvent.click(screen.getByRole('button', { name: /Growth Investments/ }))
     expect(onNavigate).toHaveBeenCalledWith('investments')
+  })
+
+  it('keeps all four bucket footers on a single line with an icon-only Growth Investments action', () => {
+    const onNavigateToLedger = vi.fn()
+    const onNavigate = vi.fn()
+    renderBuckets({
+      categories: [...mockCategories, stabilityCategory, rewardsCategory],
+      onNavigateToLedger,
+      onNavigate,
+    })
+
+    const growth = within(screen.getByTestId('bucket-growth'))
+    const investmentsButton = growth.getByRole('button', { name: 'View Growth Investments' })
+    expect(investmentsButton).toBeTruthy()
+    expect(within(investmentsButton).queryByText(/Investments/)).toBeNull()
+    expect(investmentsButton.textContent?.trim()).toBe('')
+
+    fireEvent.click(investmentsButton)
+    expect(onNavigate).toHaveBeenCalledWith('investments')
+
+    for (const key of ['essentials', 'growth', 'stability', 'rewards']) {
+      const card = screen.getByTestId(`bucket-${key}`)
+      const details = card.querySelector(`#bucket-details-${key}`)
+      expect(details).toBeTruthy()
+      const footer = details?.querySelector(':scope > div:last-child')
+      expect(footer).toBeTruthy()
+      expect(footer?.className).toContain('flex-nowrap')
+      expect(footer?.className).not.toContain('flex-wrap')
+    }
   })
 
   it('masks the rolling balances while amounts are hidden', () => {
