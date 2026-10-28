@@ -95,7 +95,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         </FormField>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField
           label="Funding source"
           labelAction={(
@@ -111,8 +111,8 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             value={props.fundingBucket}
             onChange={value => props.onFundingBucketChange(value as SavingsGoalFundingBucket)}
             options={[
-              { value: 'Essentials', label: 'Everyday money (Essentials)' },
-              { value: 'Rewards', label: 'Rewards money (Rewards)' },
+              { value: 'Essentials', label: 'Essentials (everyday)' },
+              { value: 'Rewards', label: 'Rewards (treats)' },
             ]}
             className="w-full"
           />

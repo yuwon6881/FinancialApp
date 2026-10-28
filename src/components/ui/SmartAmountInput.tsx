@@ -174,7 +174,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, SmartAmountIn
           <p aria-live="polite" className="min-w-0 truncate text-caption text-muted-foreground tabular-nums">
             {liveResult !== null
               ? <>= <span className="text-label font-semibold text-foreground">{liveResult.toFixed(2)}</span></>
-              : 'Type a sum, like 12.50 × 3'}
+              : 'Try 12.50 × 3'}
           </p>
           <div data-smart-amount-calculator className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 p-1 dark:bg-surface-3">
             {OPERATOR_KEYS.map(([label, operator, ariaLabel]) => (

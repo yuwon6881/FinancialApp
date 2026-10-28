@@ -176,6 +176,21 @@ describe('ReportsView', () => {
     expect(screen.queryByRole('button', { name: /View biggest expense/ })).toBeNull()
   })
 
+  it('shows a dash for a glance count the server left out', () => {
+    render(
+      <ReportsView
+        dashboardData={{
+          cycleSummaryInsights: { cycleLengthDays: 30, committedSpend: 0, discretionarySpend: 0 },
+        } as any}
+        transactions={[]}
+        hideBalanceAmounts={false}
+      />,
+    )
+    const strip = document.querySelector('dl[aria-label="This cycle at a glance"]')!
+    expect(strip.textContent).toContain('Transactions—')
+    expect(strip.textContent).toContain('No-spend days—')
+  })
+
   it('offers a compact summary action for an ended cycle', () => {
     const onViewCycleSummary = vi.fn()
     render(

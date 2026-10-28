@@ -117,7 +117,7 @@ describe('SmartAmountInput live result', () => {
   it('gives the tray its own always-visible keys that build and resolve the sum', () => {
     render(<MaskedWrapper calculator="tray" />)
     const input = screen.getByLabelText('amount') as HTMLInputElement
-    expect(screen.getByText('Type a sum, like 12.50 × 3')).toBeTruthy()
+    expect(screen.getByText('Try 12.50 × 3')).toBeTruthy()
     fireEvent.change(input, { target: { value: '12.00' } })
     fireEvent.mouseDown(screen.getByRole('button', { name: 'Multiply' }))
     fireEvent.change(input, { target: { value: `${input.value}2` } })

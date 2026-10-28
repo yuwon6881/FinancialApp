@@ -120,7 +120,7 @@ export function GlobalSearch({
               role="combobox"
               value={query}
               onChange={event => updateQuery(event.target.value)}
-              placeholder="Search transactions, accounts, bills, loans…"
+              placeholder="Search everything…"
               // Named for what it is, not for what the trigger does: the header control keeps
               // "Search your records", and two controls answering to one name is a maze.
               aria-label="Search query"

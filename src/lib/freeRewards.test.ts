@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SavingsGoal } from '../types'
-import { calculateFreeRewardsBalance, getRewardsAvailability, pendingRewardsAmount } from './freeRewards'
+import { calculateFreeRewardsBalance, getRewardsAvailability, pendingRewardsAmount, rewardFundingProgress } from './freeRewards'
 
 function goal(overrides: Partial<SavingsGoal> = {}): SavingsGoal {
   return {
@@ -44,5 +44,18 @@ describe('free Rewards calculation', () => {
       { status: 'Pending', amount: 60, ledgerCategory: '' },
       { status: 'Paid', amount: 40, ledgerCategory: 'Rewards' },
     ])).toBe(150)
+  })
+})
+
+describe('rewardFundingProgress', () => {
+  it('reports the share of the price the free balance covers', () => {
+    expect(rewardFundingProgress(375, 1_500)).toEqual({ pct: 25, canAfford: false })
+    expect(rewardFundingProgress(2_000, 1_500)).toEqual({ pct: 100, canAfford: true })
+  })
+
+  it('never yields NaN or a ready-to-buy reward when the price is unusable', () => {
+    for (const price of [0, -10, Number.NaN, undefined as unknown as number]) {
+      expect(rewardFundingProgress(0, price)).toEqual({ pct: 0, canAfford: false })
+    }
   })
 })

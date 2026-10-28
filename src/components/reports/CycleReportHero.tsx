@@ -187,10 +187,12 @@ function FlowTile({
 }
 
 function GlanceStat({ label, value }: { label: string; value: ReactNode }) {
+  // A count the server left out renders as an explicit dash, never as an empty cell.
+  const shown = value == null || (typeof value === 'number' && !Number.isFinite(value)) ? '—' : value
   return (
     <div className="min-w-0 bg-card px-4 py-3.5 @sm:px-5 sm:px-6">
       <dt className="truncate text-caption text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 truncate text-subsection text-foreground tabular-nums">{value}</dd>
+      <dd className="mt-0.5 truncate text-subsection text-foreground tabular-nums">{shown}</dd>
     </div>
   )
 }

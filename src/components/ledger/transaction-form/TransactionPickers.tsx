@@ -92,7 +92,7 @@ export function CategoryTiles({ value, options, onChange }: CategoryTilesProps) 
             )}
           >
             <CategoryIcon category={option.value} size="sm" />
-            <span className={cn('w-full truncate text-center text-caption', selected ? 'font-semibold text-foreground' : 'font-medium text-muted-foreground')}>
+            <span className={cn('line-clamp-2 w-full whitespace-normal break-words text-center text-caption leading-tight', selected ? 'font-semibold text-foreground' : 'font-medium text-muted-foreground')}>
               {option.label}
             </span>
             {option.badge && (

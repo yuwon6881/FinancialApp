@@ -257,7 +257,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
 
     const newErrors: Record<string, string> = {}
     if (!name.trim()) {
-      newErrors.name = 'Subscription name is required.'
+      newErrors.name = 'Bill name is required.'
     }
     const parsedAmount = parseFloat(amount)
     if (!amount.trim()) {

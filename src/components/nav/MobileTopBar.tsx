@@ -166,7 +166,7 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
         )}
         <IconButton
           label={hasAlerts ? `Review ${pendingNotificationCount} pending bills` : 'Bills: all caught up'}
-          tooltip={hasAlerts ? `${pendingNotificationCount} bills need review` : 'No bills need review'}
+          tooltip={hasAlerts ? `${pendingNotificationCount} bill${pendingNotificationCount === 1 ? ' needs' : 's need'} review` : 'No bills need review'}
           onClick={onOpenNotifications}
           className="relative text-muted-foreground"
         >

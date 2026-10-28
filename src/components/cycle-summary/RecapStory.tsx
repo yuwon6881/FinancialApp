@@ -13,6 +13,11 @@ interface RecapStoryProps {
   steps: RecapStep[]
   step: number
   onStepChange: (step: number) => void
+  /** Shown in the navigation row on the last chapter, where Next would be, so the recap ends in
+   * one row of actions instead of a second footer row stacked beneath it. */
+  finalActions?: ReactNode
+  /** A way out on every earlier chapter, beside Next. */
+  dismissAction?: ReactNode
 }
 
 const SWIPE_THRESHOLD = 48
@@ -21,7 +26,7 @@ const SWIPE_THRESHOLD = 48
  * The cycle recap told a chapter at a time. Segments along the top say where you are and jump to
  * any chapter; Back and Next, the arrow keys and a sideways swipe move one at a time.
  */
-export function RecapStory({ steps, step, onStepChange }: RecapStoryProps) {
+export function RecapStory({ steps, step, onStepChange, finalActions, dismissAction }: RecapStoryProps) {
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const current = steps[step]
   const isFirst = step === 0
@@ -78,11 +83,16 @@ export function RecapStory({ steps, step, onStepChange }: RecapStoryProps) {
         <Button variant="secondary" size="sm" onClick={() => go(step - 1)} disabled={isFirst}>
           <ChevronLeft className="size-4" aria-hidden="true" /> Back
         </Button>
-        {!isLast && (
-          <Button variant="primary" size="sm" onClick={() => go(step + 1)}>
-            {steps[step + 1].title} <ChevronRight className="size-4" aria-hidden="true" />
-          </Button>
-        )}
+        {!isLast ? (
+          <div className="flex items-center gap-2">
+            {dismissAction}
+            <Button variant="primary" size="sm" onClick={() => go(step + 1)}>
+              {steps[step + 1].title} <ChevronRight className="size-4" aria-hidden="true" />
+            </Button>
+          </div>
+        ) : finalActions ? (
+          <div className="flex items-center gap-2">{finalActions}</div>
+        ) : null}
       </div>
     </div>
   )
