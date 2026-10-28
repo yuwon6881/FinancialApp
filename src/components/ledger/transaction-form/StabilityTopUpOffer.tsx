@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { drawsFor, type RecoveryBucketState, type RecoveryOffer } from '../../../lib/stabilityRecovery'
 import { formatCurrencyVal, maskCurrencyInput } from '../../../lib/utils'
+import { Button } from '../../ui/Button'
 import { Checkbox } from '../../ui/Checkbox'
 import { InfoHint } from '../../ui/InfoHint'
 import { Input } from '../../ui/Input'
@@ -51,6 +52,10 @@ export function StabilityTopUpOffer({
   const invalid = chosen <= 0 || overMax || Boolean(error)
   const draws = invalid ? [] : drawsFor(chosen, buckets)
 
+  const isSuggestedPressed = amount.trim() === ''
+  const hasCustomAmount = amount.trim() !== '' && Number.isFinite(typed)
+  const isAllPressed = hasCustomAmount && (chosen === offer.maxTopUp || Math.abs(chosen - offer.maxTopUp) < 0.005)
+
   // Masked amounts are decoration for a screen reader; the labels carry the meaning.
   const money = (value: number) =>
     hideSensitive ? <span aria-hidden="true">•••</span> : formatCurrencyVal(value, currency)
@@ -68,17 +73,34 @@ export function StabilityTopUpOffer({
           <span>Put money back into your emergency fund</span>
           <InfoHint
             label="What putting money back means"
-            text="Put back used emergency-fund money; choose an amount, then tick the box."
+            text="Money you took out of your emergency fund can be put back from this income. Tick the box, then choose how much."
           />
         </label>
       </div>
 
+      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+        Up to {money(offer.maxTopUp)} can go back from this income.
+      </p>
+
       {!accepted && offer.proposedTopUp > 0 && (
-        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-          {offer.proposedTopUp >= offer.maxTopUp
-            ? <>Suggested: {money(offer.proposedTopUp)}, which clears what is left.</>
-            : <>Suggested: {money(offer.proposedTopUp)} of the {money(offer.maxTopUp)} still to go.</>}
-        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              onToggle(true)
+              onAmountChange('')
+            }}
+          >
+            Put back {money(offer.proposedTopUp)}
+          </Button>
+          {offer.proposedTopUp < offer.maxTopUp && (
+            <span className="text-xs text-muted-foreground">
+              of the {money(offer.maxTopUp)} still to go.
+            </span>
+          )}
+        </div>
       )}
 
       {/* Two different reasons to suggest nothing, and calling the first one "covered" told the user
@@ -93,6 +115,31 @@ export function StabilityTopUpOffer({
 
       {accepted && (
         <div className="mt-3 space-y-3">
+          <div role="group" aria-label="Amount to put back" className="flex flex-wrap items-center gap-2">
+            {offer.proposedTopUp > 0 && (
+              <Button
+                type="button"
+                size="sm"
+                variant={isSuggestedPressed ? 'primary' : 'secondary'}
+                aria-pressed={isSuggestedPressed}
+                onClick={() => onAmountChange('')}
+              >
+                Suggested {money(offer.proposedTopUp)}
+              </Button>
+            )}
+            {offer.maxTopUp > offer.proposedTopUp && (
+              <Button
+                type="button"
+                size="sm"
+                variant={isAllPressed ? 'primary' : 'secondary'}
+                aria-pressed={isAllPressed}
+                onClick={() => onAmountChange(offer.maxTopUp.toFixed(2))}
+              >
+                All {money(offer.maxTopUp)}
+              </Button>
+            )}
+          </div>
+
           <div>
             <label htmlFor={amountId} className="mb-1 block text-xs font-medium text-muted-foreground">
               Amount to put back (up to {money(offer.maxTopUp)})
@@ -124,7 +171,13 @@ export function StabilityTopUpOffer({
             </p>
           )}
 
-          <details className="rounded-control bg-surface-2/70 p-2.5">
+          {!invalid && (
+            <p className="text-xs text-muted-foreground">
+              {money(chosen)} goes back into your emergency fund.
+            </p>
+          )}
+
+          <details open className="rounded-control bg-surface-2/70 p-2.5">
             <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
               Where it comes from
             </summary>
@@ -137,7 +190,7 @@ export function StabilityTopUpOffer({
               ))}
             </ul>
             <p className="mt-2 text-xs text-muted-foreground border-t border-border/30 pt-1.5">
-              Plus the usual {Math.round(stabilityAlloc * 100)}% share, split by your current plan.
+              Your usual {Math.round(stabilityAlloc * 100)}% emergency-fund share is added on top, as set in your plan.
             </p>
           </details>
         </div>
