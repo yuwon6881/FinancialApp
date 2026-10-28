@@ -1217,20 +1217,113 @@ html {
     }
 }
 
-/* Table rows cannot paint one continuous animated outline reliably, so their cells use the
-   same destination colour and duration while cards and panels use the shared outline below. */
-@keyframes search-target-highlight-border {
+/* Table rows cannot paint one continuous animated outline reliably without shifting layout, so
+   their cells animate an inset box-shadow ring that stays strictly inside each cell. */
+@keyframes search-target-highlight-cell {
     0% {
-        border-color: color-mix(in srgb, var(--app-highlight) 90%, transparent);
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 90%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 90%, transparent);
     }
     30% {
-        border-color: color-mix(in srgb, var(--app-highlight) 65%, transparent);
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 65%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 65%, transparent);
     }
     70% {
-        border-color: color-mix(in srgb, var(--app-highlight) 25%, transparent);
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 25%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 25%, transparent);
     }
     100% {
-        border-color: transparent;
+        box-shadow:
+            inset 0 1.5px 0 0 transparent,
+            inset 0 -1.5px 0 0 transparent;
+    }
+}
+
+@keyframes search-target-highlight-cell-first {
+    0% {
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 90%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 90%, transparent),
+            inset 1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 90%, transparent);
+    }
+    30% {
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 65%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 65%, transparent),
+            inset 1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 65%, transparent);
+    }
+    70% {
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 25%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 25%, transparent),
+            inset 1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 25%, transparent);
+    }
+    100% {
+        box-shadow:
+            inset 0 1.5px 0 0 transparent,
+            inset 0 -1.5px 0 0 transparent,
+            inset 1.5px 0 0 0 transparent;
+    }
+}
+
+@keyframes search-target-highlight-cell-last {
+    0% {
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 90%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 90%, transparent),
+            inset -1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 90%, transparent);
+    }
+    30% {
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 65%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 65%, transparent),
+            inset -1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 65%, transparent);
+    }
+    70% {
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 25%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 25%, transparent),
+            inset -1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 25%, transparent);
+    }
+    100% {
+        box-shadow:
+            inset 0 1.5px 0 0 transparent,
+            inset 0 -1.5px 0 0 transparent,
+            inset -1.5px 0 0 0 transparent;
+    }
+}
+
+@keyframes search-target-highlight-cell-single {
+    0% {
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 90%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 90%, transparent),
+            inset 1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 90%, transparent),
+            inset -1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 90%, transparent);
+    }
+    30% {
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 65%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 65%, transparent),
+            inset 1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 65%, transparent),
+            inset -1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 65%, transparent);
+    }
+    70% {
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 25%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 25%, transparent),
+            inset 1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 25%, transparent),
+            inset -1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 25%, transparent);
+    }
+    100% {
+        box-shadow:
+            inset 0 1.5px 0 0 transparent,
+            inset 0 -1.5px 0 0 transparent,
+            inset 1.5px 0 0 0 transparent,
+            inset -1.5px 0 0 0 transparent;
     }
 }
 
@@ -1301,6 +1394,22 @@ html {
     animation: search-target-highlight-inset 2.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Card targets inside clipping panel lists (RecurringBills, Commitments, Rewards):
+   use the inset animation so outline-offset doesn't get clipped by the parent panel's overflow-hidden. */
+.search-target-highlight:is([id^="recur-card-"], [id^="commitment-card-"], [id^="reward-card-"]) {
+    animation: search-target-highlight-inset 2.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.search-target-highlight:is([id^="recur-card-"], [id^="commitment-card-"], [id^="reward-card-"]):first-child {
+    border-top-left-radius: calc(var(--radius-panel) - 1px);
+    border-top-right-radius: calc(var(--radius-panel) - 1px);
+}
+
+.search-target-highlight:is([id^="recur-card-"], [id^="commitment-card-"], [id^="reward-card-"]):last-child {
+    border-bottom-left-radius: calc(var(--radius-panel) - 1px);
+    border-bottom-right-radius: calc(var(--radius-panel) - 1px);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .search-target-highlight {
         animation: none;
@@ -1313,6 +1422,13 @@ html {
         outline: none;
         box-shadow: none;
     }
+
+    .search-target-highlight:is([id^="recur-card-"], [id^="commitment-card-"], [id^="reward-card-"]) {
+        animation: none;
+        outline: 3px solid color-mix(in srgb, var(--app-highlight) 72%, transparent);
+        outline-offset: -3px;
+        box-shadow: 0 10px 28px color-mix(in srgb, var(--app-highlight) 18%, transparent);
+    }
 }
 
 tr.search-target-highlight {
@@ -1322,22 +1438,32 @@ tr.search-target-highlight {
 }
 
 tr.search-target-highlight > td {
-    animation: search-target-highlight-border 2.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-    border-top: 1.5px solid color-mix(in srgb, var(--app-highlight) 90%, transparent);
-    border-bottom: 1.5px solid color-mix(in srgb, var(--app-highlight) 90%, transparent);
+    animation: search-target-highlight-cell 2.6s cubic-bezier(0.16, 1, 0.3, 1) both;
     background-color: transparent !important;
 }
 
 tr.search-target-highlight > td:first-child {
-    border-left: 1.5px solid color-mix(in srgb, var(--app-highlight) 90%, transparent);
+    animation-name: search-target-highlight-cell-first;
     border-top-left-radius: 0.75rem !important;
     border-bottom-left-radius: 0.75rem !important;
 }
 
 tr.search-target-highlight > td:last-child {
-    border-right: 1.5px solid color-mix(in srgb, var(--app-highlight) 90%, transparent);
+    animation-name: search-target-highlight-cell-last;
     border-top-right-radius: 0.75rem !important;
     border-bottom-right-radius: 0.75rem !important;
+}
+
+tr.search-target-highlight > td:first-child:last-child {
+    animation-name: search-target-highlight-cell-single;
+}
+
+tbody > tr:last-child.search-target-highlight > td:first-child {
+    border-bottom-left-radius: calc(var(--radius-panel) - 1px) !important;
+}
+
+tbody > tr:last-child.search-target-highlight > td:last-child {
+    border-bottom-right-radius: calc(var(--radius-panel) - 1px) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1350,8 +1476,32 @@ tr.search-target-highlight > td:last-child {
 
     tr.search-target-highlight > td {
         animation: none;
-        border-color: color-mix(in srgb, var(--app-highlight) 60%, transparent);
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 60%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 60%, transparent);
         background-color: transparent !important;
+    }
+
+    tr.search-target-highlight > td:first-child {
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 60%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 60%, transparent),
+            inset 1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 60%, transparent);
+    }
+
+    tr.search-target-highlight > td:last-child {
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 60%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 60%, transparent),
+            inset -1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 60%, transparent);
+    }
+
+    tr.search-target-highlight > td:first-child:last-child {
+        box-shadow:
+            inset 0 1.5px 0 0 color-mix(in srgb, var(--app-highlight) 60%, transparent),
+            inset 0 -1.5px 0 0 color-mix(in srgb, var(--app-highlight) 60%, transparent),
+            inset 1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 60%, transparent),
+            inset -1.5px 0 0 0 color-mix(in srgb, var(--app-highlight) 60%, transparent);
     }
 }
 
