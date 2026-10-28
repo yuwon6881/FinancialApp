@@ -79,4 +79,53 @@ describe('HorizontalRail', () => {
     expect(getByRole('button', { name: 'Scroll Commitments left' })).not.toBeNull()
     expect(queryByRole('button', { name: 'Scroll Commitments right' })).toBeNull()
   })
+
+  it('fades overflowing edges when fadeEdges is enabled', () => {
+    const { getByRole } = render(
+      <HorizontalRail label="Tabs" fadeEdges>
+        <div>First</div>
+        <div>Second</div>
+      </HorizontalRail>,
+    )
+    const rail = getByRole('group', { name: 'Tabs' })
+    let scrollLeft = 0
+
+    Object.defineProperties(rail, {
+      scrollWidth: { configurable: true, value: 1_000 },
+      clientWidth: { configurable: true, value: 300 },
+      scrollLeft: {
+        configurable: true,
+        get: () => scrollLeft,
+        set: (value: number) => { scrollLeft = value },
+      },
+    })
+    fireEvent.scroll(rail)
+
+    expect(rail.getAttribute('data-fade-end')).toBe('true')
+  })
+
+  it('renders without data-fade-end or style attribute when fadeEdges is disabled', () => {
+    const { getByRole } = render(
+      <HorizontalRail label="Tabs">
+        <div>First</div>
+        <div>Second</div>
+      </HorizontalRail>,
+    )
+    const rail = getByRole('group', { name: 'Tabs' })
+    let scrollLeft = 0
+
+    Object.defineProperties(rail, {
+      scrollWidth: { configurable: true, value: 1_000 },
+      clientWidth: { configurable: true, value: 300 },
+      scrollLeft: {
+        configurable: true,
+        get: () => scrollLeft,
+        set: (value: number) => { scrollLeft = value },
+      },
+    })
+    fireEvent.scroll(rail)
+
+    expect(rail.getAttribute('data-fade-end')).toBeNull()
+    expect(rail.getAttribute('style')).toBeNull()
+  })
 })

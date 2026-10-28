@@ -114,6 +114,6 @@ export function Tabs<T extends string>({
   )
 
   return scrollable
-    ? <HorizontalRail label={label} showControls className="p-0 scroll-px-0">{list}</HorizontalRail>
+    ? <HorizontalRail label={label} showControls fadeEdges className="p-0 scroll-px-0">{list}</HorizontalRail>
     : list
 }
