@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, type ReactNode } from 'react'
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '../../lib/utils'
 import { FormFieldContext } from './formFieldControl'
 
@@ -39,29 +39,22 @@ export function FormField({
   const hintId = hint ? `${controlId}-hint` : undefined
   const errorId = error ? `${controlId}-error` : undefined
   const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined
-  const labelRef = useRef<HTMLLabelElement>(null)
+  const labelRef = useRef<HTMLElement>(null)
+  const [hasControl, setHasControl] = useState(true)
 
-  // `for` is pointed at the control only while one carrying `controlId` is mounted. Some fields
-  // hold a group instead (the transaction form's category tiles, whose "More categories" select
-  // only appears past a certain count), and a `for` naming no element is flagged by the browser as
-  // a broken label. The group stays named through `labelledBy` either way. Runs on every render
-  // because the control can come and go with the field's own content.
+  // Render the label as a real `<label htmlFor={controlId}>` only while a control carrying
+  // `controlId` is mounted. Some fields hold a group instead (e.g. category tiles), where an
+  // orphan `<label>` without a control triggers Chrome's "No label associated with a form field"
+  // warning. When no control is mounted, the label renders as a `<span>` with the same id and
+  // classes, keeping `aria-labelledby` functional. Runs on every render because the control can
+  // come and go with the field's own content.
   useLayoutEffect(() => {
-    const label = labelRef.current
-    if (!label) return
-    if (document.getElementById(controlId)) label.htmlFor = controlId
-    else label.removeAttribute('for')
+    const next = Boolean(document.getElementById(controlId))
+    setHasControl(prev => (prev === next ? prev : next))
   })
 
-  const labelElement = (
-    <label
-      ref={labelRef}
-      id={labelId}
-      className={cn(
-        'block text-label font-medium text-muted-foreground',
-        labelClassName,
-      )}
-    >
+  const labelContent = (
+    <>
       {label}
       {required && (
         <>
@@ -69,7 +62,31 @@ export function FormField({
           <span className="sr-only"> (required)</span>
         </>
       )}
+    </>
+  )
+
+  const labelClasses = cn(
+    'block text-label font-medium text-muted-foreground',
+    labelClassName,
+  )
+
+  const labelElement = hasControl ? (
+    <label
+      ref={labelRef as React.Ref<HTMLLabelElement>}
+      id={labelId}
+      htmlFor={controlId}
+      className={labelClasses}
+    >
+      {labelContent}
     </label>
+  ) : (
+    <span
+      ref={labelRef as React.Ref<HTMLSpanElement>}
+      id={labelId}
+      className={labelClasses}
+    >
+      {labelContent}
+    </span>
   )
 
   return (
