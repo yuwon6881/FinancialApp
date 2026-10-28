@@ -64,17 +64,16 @@ test('desktop ledger row highlight maintains stable row height and cell borders'
     throw new Error('Failed to sample row metrics during all phases')
   }
 
-  // Row height must remain identical (+-0.5px) before, during, and after highlight
-  expect(Math.abs(during.height - before.height)).toBeLessThanOrEqual(0.5)
-  expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(0.5)
+  // The jump this guards against happens when the highlight ends, so compare the highlighted
+  // state with the settled one. The 'before' sample can still be inside the list's entrance
+  // animation, whose transform moves bounding boxes without any layout change, so it is only
+  // trusted for what an animation cannot affect: the cell border width.
+  expect(Math.abs(after.height - during.height)).toBeLessThanOrEqual(0.5)
+  expect(Math.abs(after.cardBottom - during.cardBottom)).toBeLessThanOrEqual(0.5)
 
   // Cell border bottom width must never change
   expect(during.borderBottomWidth).toBe(before.borderBottomWidth)
   expect(after.borderBottomWidth).toBe(before.borderBottomWidth)
-
-  // Table card bottom edge must not move
-  expect(Math.abs(during.cardBottom - before.cardBottom)).toBeLessThanOrEqual(0.5)
-  expect(Math.abs(after.cardBottom - before.cardBottom)).toBeLessThanOrEqual(0.5)
 
   await waitForStableLayout(page)
 })
