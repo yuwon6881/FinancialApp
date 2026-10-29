@@ -62,7 +62,7 @@ export function LedgerMoveSheet({ transactions, cycleDay, isOpen, onClose, onMov
     </div>}
   >
     <div className="space-y-4">
-      <div className="rounded-control bg-surface-2/70 p-3 text-sm">
+      <div className="rounded-control bg-inset p-3 text-sm">
         <p><span className="font-semibold">Current date{transactions.length === 1 ? '' : ' range'}:</span> {sourceRange}</p>
         <p><span className="font-semibold">Selected:</span> {transactions.length}</p>
       </div>

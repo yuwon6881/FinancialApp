@@ -83,7 +83,7 @@ export function DeleteTransactionModal({
             <p>
               Deleting this entry restores the amount and deadline for the commitment.
             </p>
-            <div className="rounded-control bg-surface-2/70 p-4 space-y-2.5">
+            <div className="rounded-control bg-inset p-4 space-y-2.5">
               <div className="flex items-start justify-between gap-4">
                 <span className="font-semibold text-foreground shrink-0">Commitment</span>
                 <span className="break-words text-right min-w-0">{transaction.description}</span>
@@ -99,7 +99,7 @@ export function DeleteTransactionModal({
             <p>
               Deleting this entry restores the reward so it can be claimed again.
             </p>
-            <div className="rounded-control bg-surface-2/70 p-4 space-y-2.5">
+            <div className="rounded-control bg-inset p-4 space-y-2.5">
               <div className="flex items-start justify-between gap-4">
                 <span className="font-semibold text-foreground shrink-0">Reward</span>
                 <span className="break-words text-right min-w-0">{transaction.description}</span>
@@ -113,7 +113,7 @@ export function DeleteTransactionModal({
         ) : (
           <div className="space-y-2">
             <p>Are you sure you want to delete this transaction?</p>
-            <div className="rounded-control bg-surface-2/70 p-4 space-y-2.5">
+            <div className="rounded-control bg-inset p-4 space-y-2.5">
               <div className="flex items-start justify-between gap-4">
                 <span className="font-semibold text-foreground shrink-0">Description</span>
                 <span className="break-words text-right min-w-0">{transaction.description}</span>
@@ -126,12 +126,12 @@ export function DeleteTransactionModal({
           </div>
         )}
         {areAttachedDocumentsLoading && (
-          <p className="rounded-control bg-surface-2/70 p-3 text-muted-foreground">
+          <p className="rounded-control bg-inset p-3 text-muted-foreground">
             Checking for attached vault documents...
           </p>
         )}
         {!areAttachedDocumentsLoading && attachedDocumentCount > 0 && (
-          <div className="space-y-3 p-3 rounded-control bg-surface-2/70">
+          <div className="space-y-3 p-3 rounded-control bg-inset">
             <p className="font-medium text-foreground">
               {attachedDocumentCount} document{attachedDocumentCount === 1 ? '' : 's'} {attachedDocumentCount === 1 ? 'is' : 'are'} attached — {attachedDocumentCount === 1 ? 'it' : 'they'} will be kept in your Document Vault
             </p>

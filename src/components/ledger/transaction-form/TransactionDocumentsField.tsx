@@ -254,7 +254,7 @@ export const TransactionDocumentsField = React.forwardRef<
     return (
       <div className="flex flex-col gap-1.5">
         <span className={LABEL_CLASS}>Documents</span>
-        <p className="rounded-control bg-surface-2/70 px-3 py-3 text-center text-caption text-muted-foreground">
+        <p className="rounded-control bg-inset px-3 py-3 text-center text-caption text-muted-foreground">
           Document uploads are unavailable while offline.
         </p>
       </div>
@@ -271,7 +271,7 @@ export const TransactionDocumentsField = React.forwardRef<
       </div>
 
       {hasRows && (
-        <ul aria-label="Attached documents" className="divide-y divide-border/60 overflow-hidden rounded-control bg-surface-2/50 ring-1 ring-border/60 dark:bg-surface-2/70">
+ <ul aria-label="Attached documents" className="divide-y divide-foreground/10 overflow-hidden rounded-control bg-inset ring-1 ring-border/60">
           {existingDocuments.map(document => (
             <FiledDocumentRow
               key={document.id}

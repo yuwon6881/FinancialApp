@@ -315,7 +315,7 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
         {failedOps.map((op) => {
           const curatedFields = getCuratedFields(op)
           return (
-            <div key={op.id} className="rounded-xl bg-muted/30 border border-destructive/20 shadow-xs flex flex-col gap-3 overflow-hidden">
+            <div key={op.id} className="rounded-xl bg-inset border border-destructive/20 shadow-xs flex flex-col gap-3 overflow-hidden">
               {/* Header */}
               <div className="flex items-start justify-between gap-3 px-4 pt-3">
                 <div className="min-w-0">
@@ -336,7 +336,7 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
 
               {/* Curated stat-card grid for known entity types */}
               {curatedFields !== null && curatedFields.length > 0 && (
-                <div className="grid grid-cols-2 gap-2.5 mx-4 p-3 bg-muted/30 border border-border/40 rounded-xl">
+                <div className="grid grid-cols-2 gap-2.5 mx-4 p-3 bg-card border border-foreground/10 rounded-xl">
                   {curatedFields.map((field) => (
                     <div key={field.label} className="flex flex-col gap-0.5 min-w-0">
                       <span className="text-xs text-muted-foreground font-normal">{field.label}</span>
@@ -354,7 +354,7 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
 
               {/* Generic fallback for uncurated entity types */}
               {curatedFields === null && getPayloadEntries(op).length > 0 && (
-                <div className="grid grid-cols-2 gap-2.5 mx-4 p-3 bg-muted/30 border border-border/40 rounded-xl">
+                <div className="grid grid-cols-2 gap-2.5 mx-4 p-3 bg-card border border-foreground/10 rounded-xl">
                   {getPayloadEntries(op).map(([key, value]) => (
                     <div key={key} className="flex flex-col gap-0.5 min-w-0">
                       <span className="text-xs text-muted-foreground font-normal">{formatFieldName(key)}</span>

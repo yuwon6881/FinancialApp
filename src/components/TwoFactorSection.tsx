@@ -260,7 +260,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
           )}
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground text-center">Can't scan? Enter this code manually:</p>
-            <p className="text-xs font-mono text-center text-foreground break-all rounded-control bg-surface-2/70 px-3 py-2">{setupSecret}</p>
+            <p className="text-xs font-mono text-center text-foreground break-all rounded-control bg-inset px-3 py-2">{setupSecret}</p>
           </div>
           <form noValidate onSubmit={handleConfirmSetup} className="space-y-2.5">
             <FormField

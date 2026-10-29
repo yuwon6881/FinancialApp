@@ -237,7 +237,7 @@ export function PendingSubscriptionsModal({
             key={noti.id}
             aria-label={noti.name}
             className={cn(
-              'space-y-4 rounded-[1.125rem] bg-surface-2/60 p-4 ring-1 ring-inset transition-shadow duration-200 sm:p-5',
+              'space-y-4 rounded-[1.125rem] bg-inset p-4 ring-1 ring-inset transition-shadow duration-200 sm:p-5',
               isPartial ? 'ring-primary/30' : 'ring-border/50',
             )}
           >
