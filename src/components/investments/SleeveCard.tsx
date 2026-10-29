@@ -89,7 +89,7 @@ export function SleeveCard({
             <span>See the {constituents.length} fund{constituents.length === 1 ? '' : 's'} in this basket</span>
             <ChevronDown className="size-3.5 shrink-0 transition-transform duration-200 group-open/holdings:rotate-180" aria-hidden="true" />
           </summary>
-          <ul className="mt-1 divide-y divide-border/50 rounded-control bg-surface-2/70 px-3">
+          <ul className="mt-1 divide-y divide-foreground/10 rounded-control bg-inset px-3">
             {constituents.map(holding => (
               <li key={`${holding.accountId}-${holding.instrumentId}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 py-2 text-caption">
                 <span className="truncate font-medium text-foreground">{holding.symbol} · {holding.name}</span>

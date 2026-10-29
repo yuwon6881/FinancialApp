@@ -68,9 +68,9 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
       </div>
       <p className="sr-only">{summary}</p>
       {portfolio.chart.length === 0 ? (
-        <div className="mt-4 flex h-32 items-center justify-center rounded-control bg-surface-2/70 px-4 text-center text-label text-muted-foreground">Add some activity to start the history.</div>
+        <div className="mt-4 flex h-32 items-center justify-center rounded-control bg-inset px-4 text-center text-label text-muted-foreground">Add some activity to start the history.</div>
       ) : !hasAnyMarketValue ? (
-        <div className="mt-4 flex min-h-32 flex-col items-center justify-center gap-1 rounded-control bg-surface-2/70 px-4 py-5 text-center">
+        <div className="mt-4 flex min-h-32 flex-col items-center justify-center gap-1 rounded-control bg-inset px-4 py-5 text-center">
           <span className="text-label font-medium text-foreground">Chart unavailable</span>
           <span className="max-w-xs text-caption text-muted-foreground">Some prices are missing. Try "Update prices" or check the investment's market-data mapping.</span>
         </div>

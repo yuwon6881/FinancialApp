@@ -117,7 +117,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
           <div className="mt-1.5 flex items-center gap-2"><span className="shrink-0 text-caption font-semibold">{allocation.appCurrency}</span><SmartAmountInput value={amountText} onChange={event => setAmountText(maskCurrencyInput(event.target.value, amountText))} placeholder="0.00" aria-label={`${mode === 'deposit' ? 'Amount to invest' : 'Amount to withdraw'} in ${allocation.appCurrency}`} /></div>
         </label>
 
-        {!canPlan && <p className="rounded-control bg-surface-2/70 p-3 text-caption text-muted-foreground">{!valuesKnown || !cashKnown ? 'Update the missing market or cash exchange rate before using this planner.' : mode === 'deposit' ? 'Classify at least one investment into a plan basket first.' : 'There is nothing to withdraw yet.'}</p>}
+        {!canPlan && <p className="rounded-control bg-inset p-3 text-caption text-muted-foreground">{!valuesKnown || !cashKnown ? 'Update the missing market or cash exchange rate before using this planner.' : mode === 'deposit' ? 'Classify at least one investment into a plan basket first.' : 'There is nothing to withdraw yet.'}</p>}
 
         {plan && <>
           <div className="flex flex-wrap gap-2 text-caption">
@@ -131,12 +131,12 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
           <ul className="grid gap-2 lg:grid-cols-3">
             {plan.sleeves.map((sleeve, index) => {
               const etfPlan = etfPlans.find(item => item.sleeve === sleeve.sleeve)
-              return <li key={sleeve.sleeve} className="rounded-control bg-surface-2/70 p-3">
+              return <li key={sleeve.sleeve} className="rounded-control bg-inset p-3">
                 <div className="flex items-center gap-2"><span className={`size-2 rounded-full ${colors[index]}`} /><strong className="text-caption text-foreground">{sleeve.label}</strong></div>
                 <strong className="mt-2 block text-section tabular-nums text-foreground">{sleeve.amount > 0 ? money(sleeve.amount) : mode === 'deposit' ? 'Skip' : 'Leave alone'}</strong>
                 <p className="text-caption text-muted-foreground">Leaves {sleeve.projectedPercentage.toFixed(1)}%</p>
                 {etfPlan?.requiresChoice && <CustomSelect ariaLabel={`ETF for ${sleeve.label}`} value={selections[sleeve.sleeve] ?? ''} onChange={value => setSelections(previous => ({ ...previous, [sleeve.sleeve]: String(value) }))} options={[{ value: '', label: 'Choose an ETF' }, ...etfPlan.choices.map(choice => ({ value: choice.id, label: `${choice.symbol} · ${choice.currency}` }))]} className="mt-2 w-full" />}
-                {etfPlan && etfPlan.lines.length > 0 && <ul className="mt-2 space-y-1.5 border-t border-border/40 pt-2">{etfPlan.lines.map(line => <li key={line.instrumentId} className="text-caption"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate font-semibold text-foreground">{line.symbol}</span><span className="shrink-0 font-semibold text-foreground">{masked ? '••••' : money(line.amountApp)}</span></div>{line.currency !== allocation.appCurrency.toUpperCase() && <div className="mt-0.5 flex items-start justify-between gap-2 text-muted-foreground"><span className="truncate">{line.currency}{line.fx?.asOf ? ` · FX ${line.fx.asOf}` : ''}</span><span className="shrink-0">{masked ? '••••' : line.amountNative === undefined ? 'Exchange rate unavailable' : `≈ ${formatCurrencyVal(line.amountNative, line.currency)}`}</span></div>}</li>)}</ul>}
+                {etfPlan && etfPlan.lines.length > 0 && <ul className="mt-2 space-y-1.5 border-t border-foreground/10 pt-2">{etfPlan.lines.map(line => <li key={line.instrumentId} className="text-caption"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate font-semibold text-foreground">{line.symbol}</span><span className="shrink-0 font-semibold text-foreground">{masked ? '••••' : money(line.amountApp)}</span></div>{line.currency !== allocation.appCurrency.toUpperCase() && <div className="mt-0.5 flex items-start justify-between gap-2 text-muted-foreground"><span className="truncate">{line.currency}{line.fx?.asOf ? ` · FX ${line.fx.asOf}` : ''}</span><span className="shrink-0">{masked ? '••••' : line.amountNative === undefined ? 'Exchange rate unavailable' : `≈ ${formatCurrencyVal(line.amountNative, line.currency)}`}</span></div>}</li>)}</ul>}
               </li>
             })}
           </ul>
