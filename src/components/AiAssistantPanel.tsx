@@ -212,7 +212,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
           docked beside the page from the small tier up it fills whatever the drawer has. */}
       <div className="flex h-[min(55vh,calc(var(--app-vvh,100dvh)-13rem))] min-h-[220px] flex-col gap-3 sm:h-auto sm:min-h-0 sm:flex-1">
         {historyRedacted && (
-          <p className="rounded-control bg-inset px-3 py-2 text-label text-muted-foreground">
+          <p className="rounded-control inset-group px-3 py-2 text-label text-muted-foreground">
             Earlier replies are hidden while sensitive mode is active.
           </p>
         )}
@@ -220,7 +220,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             replays it, which is the only way to get back anything it prepared -- so keep the offer
             available even after later questions, with a free way out of it. */}
         {recoverableTurn && (
-          <div className="flex items-center gap-2 rounded-control bg-inset px-3 py-2 text-label text-muted-foreground">
+          <div className="flex items-center gap-2 rounded-control inset-group px-3 py-2 text-label text-muted-foreground">
             <span className="min-w-0 flex-1">
               A stopped question may already have been answered. Ask it again to get anything it prepared.
             </span>
@@ -245,7 +245,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
           </div>
         )}
         {pendingActionBatches[0] && (
-          <div className="flex items-center gap-2 rounded-control bg-inset px-3 py-2 text-label text-muted-foreground">
+          <div className="flex items-center gap-2 rounded-control inset-group px-3 py-2 text-label text-muted-foreground">
             <span className="min-w-0 flex-1">
               {pendingActionBatches[0].actions.length === 1
                 ? 'One AI-prepared review is waiting.'
@@ -293,7 +293,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             </div>
           )}
           {waitingForHistory && (
-            <p role="status" className="rounded-control bg-inset px-3 py-2 text-label text-muted-foreground">
+            <p role="status" className="rounded-control inset-group px-3 py-2 text-label text-muted-foreground">
               Your message will send when the saved conversation is ready. You can keep typing or stop it below.
             </p>
           )}

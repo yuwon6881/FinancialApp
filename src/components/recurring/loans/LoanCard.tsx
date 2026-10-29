@@ -214,7 +214,7 @@ export function LoanCard({
       )}
 
       {!loan.isRecalculating && !scheduleUnavailable && (
-        <div className="mt-4 flex items-center justify-between gap-3 rounded-control bg-inset px-3.5 py-3 text-label">
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-control inset-group px-3.5 py-3 text-label">
           <span className="min-w-0 text-muted-foreground">Next instalment</span>
           <span className="shrink-0 text-body font-semibold text-foreground tabular-nums">
             {finalBalanceDueNow ? 'Final balance due now' : formatSensitive(loan.snapshot.scheduledPayment)}
@@ -340,7 +340,7 @@ function LoanScheduleList({ rows, caption, empty, formatSensitive }: {
   formatSensitive: (value: number) => ReactNode
 }) {
   if (rows.length === 0) {
-    return <p className="rounded-control bg-inset px-3.5 py-4 text-center text-label text-muted-foreground">{empty}</p>
+    return <p className="rounded-control inset-group px-3.5 py-4 text-center text-label text-muted-foreground">{empty}</p>
   }
   return (
     <div className="max-h-80 overflow-y-auto overscroll-contain rounded-control border border-border/60">

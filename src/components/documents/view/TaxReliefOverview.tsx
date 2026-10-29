@@ -285,7 +285,7 @@ export function TaxReliefOverview({
             Loading tax relief tracker…
           </div>
         ) : trackerCategories.length === 0 ? (
-          <p className="rounded-control bg-inset px-3.5 py-3 text-label text-muted-foreground">
+          <p className="rounded-control inset-group px-3.5 py-3 text-label text-muted-foreground">
             No categories yet. Use Manage limits to add the reliefs you claim.
           </p>
         ) : (

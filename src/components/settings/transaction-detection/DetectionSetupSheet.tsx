@@ -56,7 +56,7 @@ export function DetectionSetupSheet({ isOpen, onClose, state, status, busy, onCh
       title="Transaction detection setup"
     >
       <div className="space-y-4">
-        <section className="space-y-3 rounded-control bg-inset p-3" aria-label="Live detection connection">
+        <section className="space-y-3 rounded-control inset-group p-3" aria-label="Live detection connection">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 space-y-1">
               <p className="text-body font-medium text-foreground">Live detection</p>

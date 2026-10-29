@@ -61,7 +61,7 @@ export function SourceAppsSheet({ isOpen, onClose, applications, loading, busy, 
             {[0, 1, 2, 3].map(index => <Skeleton key={index} className="h-11 w-full rounded-control" />)}
           </div>
         ) : visible.length === 0 ? (
-          <p className="rounded-control bg-inset px-3 py-6 text-center text-sm text-muted-foreground">
+          <p className="rounded-control inset-group px-3 py-6 text-center text-sm text-muted-foreground">
             {query ? `No installed app matches “${search.trim()}”.` : 'No installed apps were found.'}
           </p>
         ) : (

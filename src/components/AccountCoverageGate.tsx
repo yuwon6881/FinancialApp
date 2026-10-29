@@ -98,7 +98,7 @@ export function AccountCoverageGate({
                 <div className="mt-3 space-y-2">
                   {rows.length === 0 && <p className="text-xs text-muted-foreground">No account yet.</p>}
                   {rows.map(account => (
-                    <div key={account.id} className="flex items-center justify-between gap-2 rounded-control bg-inset px-3 py-2">
+                    <div key={account.id} className="flex items-center justify-between gap-2 rounded-control inset-group px-3 py-2">
                       <div className="flex min-w-0 items-center gap-2">
                         <Wallet className="size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
                         <span className={'truncate text-xs font-semibold ' + (account.isArchived ? 'text-muted-foreground line-through' : 'text-foreground')}>{account.name}</span>

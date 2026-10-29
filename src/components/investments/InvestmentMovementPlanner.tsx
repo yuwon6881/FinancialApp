@@ -117,7 +117,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
           <div className="mt-1.5 flex items-center gap-2"><span className="shrink-0 text-caption font-semibold">{allocation.appCurrency}</span><SmartAmountInput value={amountText} onChange={event => setAmountText(maskCurrencyInput(event.target.value, amountText))} placeholder="0.00" aria-label={`${mode === 'deposit' ? 'Amount to invest' : 'Amount to withdraw'} in ${allocation.appCurrency}`} /></div>
         </label>
 
-        {!canPlan && <p className="rounded-control bg-inset p-3 text-caption text-muted-foreground">{!valuesKnown || !cashKnown ? 'Update the missing market or cash exchange rate before using this planner.' : mode === 'deposit' ? 'Classify at least one investment into a plan basket first.' : 'There is nothing to withdraw yet.'}</p>}
+        {!canPlan && <p className="rounded-control inset-group p-3 text-caption text-muted-foreground">{!valuesKnown || !cashKnown ? 'Update the missing market or cash exchange rate before using this planner.' : mode === 'deposit' ? 'Classify at least one investment into a plan basket first.' : 'There is nothing to withdraw yet.'}</p>}
 
         {plan && <>
           <div className="flex flex-wrap gap-2 text-caption">
@@ -131,7 +131,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
           <ul className="grid gap-2 lg:grid-cols-3">
             {plan.sleeves.map((sleeve, index) => {
               const etfPlan = etfPlans.find(item => item.sleeve === sleeve.sleeve)
-              return <li key={sleeve.sleeve} className="rounded-control bg-inset p-3">
+              return <li key={sleeve.sleeve} className="rounded-control inset-group p-3">
                 <div className="flex items-center gap-2"><span className={`size-2 rounded-full ${colors[index]}`} /><strong className="text-caption text-foreground">{sleeve.label}</strong></div>
                 <strong className="mt-2 block text-section tabular-nums text-foreground">{sleeve.amount > 0 ? money(sleeve.amount) : mode === 'deposit' ? 'Skip' : 'Leave alone'}</strong>
                 <p className="text-caption text-muted-foreground">Leaves {sleeve.projectedPercentage.toFixed(1)}%</p>

@@ -237,7 +237,7 @@ export function PendingSubscriptionsModal({
             key={noti.id}
             aria-label={noti.name}
             className={cn(
-              'space-y-4 rounded-[1.125rem] bg-inset p-4 ring-1 ring-inset transition-shadow duration-200 sm:p-5',
+              'space-y-4 rounded-[1.125rem] inset-group p-4 ring-1 ring-inset transition-shadow duration-200 sm:p-5',
               isPartial ? 'ring-primary/30' : 'ring-border/50',
             )}
           >
@@ -274,7 +274,7 @@ export function PendingSubscriptionsModal({
                   className="w-full"
                 />
               </div>
-              <div className="flex min-h-11 items-center gap-1 rounded-control bg-card/70 pr-3.5 sm:h-11">
+              <div className="flex min-h-11 items-center gap-1 rounded-control bg-muted dark:bg-card/70 pr-3.5 sm:h-11">
                 <ToggleButton
                   active={isPartial}
                   label={`Pay partial amount for ${noti.name}`}
@@ -292,7 +292,7 @@ export function PendingSubscriptionsModal({
             </div>
 
             {isPartial && (
-              <div className={cn('space-y-3 rounded-control bg-card/70 p-3 sm:p-4', isPending && 'pointer-events-none opacity-70')}>
+              <div className={cn('space-y-3 rounded-control bg-muted dark:bg-card/70 p-3 sm:p-4', isPending && 'pointer-events-none opacity-70')}>
                 <div className="flex items-center justify-between gap-2">
                   <label
                     htmlFor={`pending-amount-${noti.id}`}

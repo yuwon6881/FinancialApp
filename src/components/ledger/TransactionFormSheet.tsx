@@ -190,12 +190,12 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           <CapturedAlertNotice source={form.state.captureSource} notices={form.state.captureNotices} excerpt={form.state.captureExcerpt} />
         )}
         {securityPending && (
-          <p className="rounded-control bg-inset px-3.5 py-2.5 text-body text-muted-foreground" role="status">
+          <p className="rounded-control inset-group px-3.5 py-2.5 text-body text-muted-foreground" role="status">
             Finishing security check… You can fill this form in, but saving is temporarily disabled.
           </p>
         )}
         {accountsLoading && !props.hideSensitive && (
-          <p className="rounded-control bg-inset px-3.5 py-2.5 text-body text-muted-foreground" role="status">
+          <p className="rounded-control inset-group px-3.5 py-2.5 text-body text-muted-foreground" role="status">
             Loading accounts… This form will be ready to save when account data arrives.
           </p>
         )}

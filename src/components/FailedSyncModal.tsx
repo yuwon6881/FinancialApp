@@ -315,7 +315,7 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
         {failedOps.map((op) => {
           const curatedFields = getCuratedFields(op)
           return (
-            <div key={op.id} className="rounded-xl bg-inset border border-destructive/20 shadow-xs flex flex-col gap-3 overflow-hidden">
+            <div key={op.id} className="rounded-xl inset-group border border-destructive/20 shadow-xs flex flex-col gap-3 overflow-hidden">
               {/* Header */}
               <div className="flex items-start justify-between gap-3 px-4 pt-3">
                 <div className="min-w-0">

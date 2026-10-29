@@ -312,7 +312,7 @@ export function ReceiptSplitSheet({
             {/* A receipt with nothing left on it is a dead end otherwise: the total reads zero,
                 Use is disabled, and nothing says why or what to do about it. */}
             {receipt.items.length === 0 ? (
-              <p className="rounded-control bg-inset px-3 py-4 text-center text-caption text-muted-foreground">
+              <p className="rounded-control inset-group px-3 py-4 text-center text-caption text-muted-foreground">
                 No lines were read off this receipt, so there is nothing to split. Discard the scan
                 and enter the amount yourself, or scan the receipt again.
               </p>

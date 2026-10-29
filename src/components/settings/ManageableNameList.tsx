@@ -166,7 +166,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
 
       {!onAddClick && <div id={addPanelId} className="px-4 sm:px-5">
         <CollapsibleBody open={isAddOpen}>
-          <div className="space-y-3 rounded-control bg-inset p-3">
+          <div className="space-y-3 rounded-control inset-group p-3">
             {addFormTitle && (
               <div className="space-y-0.5">
                 <p className="text-caption font-semibold text-foreground">{addFormTitle}</p>

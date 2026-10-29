@@ -49,6 +49,11 @@ describe.each([['Day', ':root'], ['Night', '.dark']] as const)('%s inset surface
     expect(contrast(color('inset'), color(parent))).toBeGreaterThanOrEqual(VISIBLE_FLOOR)
   })
 
+  // `.inset-group` (a section on a card or sheet) draws its edge with --inset-line instead of a fill.
+  it.each(['card', 'popover'])('draws a visible outline on %s', parent => {
+    expect(contrast(color('inset-line'), color(parent))).toBeGreaterThanOrEqual(VISIBLE_FLOOR)
+  })
+
   it('shows a card-coloured tile nested inside it', () => {
     expect(contrast(color('card'), color('inset'))).toBeGreaterThanOrEqual(VISIBLE_FLOOR)
   })

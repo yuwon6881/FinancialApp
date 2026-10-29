@@ -46,7 +46,7 @@ function BillItemRow({
   return (
     <div
       data-testid={`bill-roster-item-${payment.id}`}
-      className={`flex items-start justify-between gap-3 rounded-control bg-inset p-2.5 sm:items-center ${
+      className={`flex items-start justify-between gap-3 rounded-control inset-group p-2.5 sm:items-center ${
         isPaused ? 'opacity-70' : ''
       }`}
     >

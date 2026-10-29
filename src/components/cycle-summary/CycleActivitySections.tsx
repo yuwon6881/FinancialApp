@@ -17,7 +17,7 @@ export function CycleActivitySections({
     <>
       {summary.loanActivity.length > 0 && (
         <Section title="Loan progress">
-          <div className="space-y-3 rounded-control bg-inset p-3.5">
+          <div className="space-y-3 rounded-control inset-group p-3.5">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -69,7 +69,7 @@ export function CycleActivitySections({
 
       {summary.billsCount > 0 && (
         <Section title="Bills">
-          <div className="rounded-control bg-inset p-3.5">
+          <div className="rounded-control inset-group p-3.5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -106,7 +106,7 @@ export function CycleActivitySections({
 
       {summary.purchasedThisCycle.length > 0 && (
         <Section title="Claimed rewards">
-          <div className="rounded-control bg-inset p-3.5 space-y-3">
+          <div className="rounded-control inset-group p-3.5 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -156,7 +156,7 @@ export function StabilityFundSection({
 }) {
   return (
     <Section title="Stability fund">
-      <div className="rounded-control bg-inset p-3.5">
+      <div className="rounded-control inset-group p-3.5">
         <div className="flex items-center justify-between text-xs">
           <span className="font-semibold text-foreground">Funded</span>
           <span className="font-semibold text-foreground">{Math.round(summary.stabilityPct * 100)}%</span>

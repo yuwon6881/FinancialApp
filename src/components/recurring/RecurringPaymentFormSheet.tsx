@@ -96,7 +96,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
     >
       <form noValidate onSubmit={onSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {securityPending && mutationBlocked && (
-          <p className="sm:col-span-2 rounded-control bg-inset px-3.5 py-2.5 text-xs leading-relaxed text-muted-foreground" role="status">
+          <p className="sm:col-span-2 rounded-control inset-group px-3.5 py-2.5 text-xs leading-relaxed text-muted-foreground" role="status">
             Finishing security check… You can fill this form in, but saving is temporarily disabled.
           </p>
         )}

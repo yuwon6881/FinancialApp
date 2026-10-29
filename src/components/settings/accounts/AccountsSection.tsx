@@ -416,7 +416,7 @@ export function AccountsSection({
                 ? <>The amount owed on <span className="font-semibold text-foreground">{pendingBalanceCorrection.account.name}</span> will be corrected from <span className="font-semibold text-foreground">{formatCurrencyVal(Math.max(0, -pendingBalanceCorrection.account.remaining), currency)}</span> to <span className="font-semibold text-foreground">{formatCurrencyVal(Math.max(0, -pendingBalanceCorrection.targetBalance), currency)}</span>.</>
                 : <>The balance for <span className="font-semibold text-foreground">{pendingBalanceCorrection.account.name}</span> will be corrected from <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.account.remaining, currency)}</span> to <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.targetBalance, currency)}</span>.</>}
             </p>
-            <div className="space-y-1.5 rounded-control bg-inset p-3 text-label">
+            <div className="space-y-1.5 rounded-control inset-group p-3 text-label">
               <div className="flex items-center justify-between gap-3">
                 <span>Current {pendingBalanceCorrection.account.bucket} total</span>
                 <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.bucketTotal, currency)}</span>

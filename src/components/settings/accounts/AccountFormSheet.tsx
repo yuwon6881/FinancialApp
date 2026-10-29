@@ -200,7 +200,7 @@ export function AccountFormSheet({
     >
       <form id="ledger-account-form" noValidate onSubmit={submit} className="space-y-4">
         {/* Header summary banner */}
-        <div className="flex items-center gap-3 rounded-control bg-inset p-3.5">
+        <div className="flex items-center gap-3 rounded-control inset-group p-3.5">
           <div className={`grid size-10 shrink-0 place-items-center rounded-xl border ${bucketBadgeClass}`} aria-hidden="true">
             <AccountIcon className="size-5" />
           </div>
@@ -328,7 +328,7 @@ export function AccountFormSheet({
             <div
               className={`rounded-2xl border transition duration-150 ${
                 isArchived
-                  ? 'border-foreground/10 bg-inset'
+                  ? 'border-foreground/10 inset-group'
                   : 'border-border/60 bg-muted/10 hover:bg-muted/15'
               }`}
             >

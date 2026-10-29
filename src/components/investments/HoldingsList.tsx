@@ -171,7 +171,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding, onCl
               as a footnote in a sentence. */}
           <ul className="mt-4 grid gap-3 px-5 sm:px-6 @4xl:grid-cols-2">
             {accountGroups.map(({ account, holdings: accountHoldings, cash, total: groupTotal }) => (
-              <li key={account.id} className="min-w-0 rounded-control bg-inset p-4 ring-1 ring-border/50">
+              <li key={account.id} className="min-w-0 rounded-control inset-group p-4 ring-1 ring-border/50">
                 <div className="flex min-w-0 items-center justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-body font-semibold text-foreground">{account.name}</span>

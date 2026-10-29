@@ -127,7 +127,7 @@ export function BucketAccountGroup({
             )}
           />
         ) : accounts.length === 0 ? (
-          <div className="rounded-control bg-inset px-4 py-4 text-center text-label text-muted-foreground">
+          <div className="rounded-control inset-group px-4 py-4 text-center text-label text-muted-foreground">
             {searchQuery ? `No accounts in ${bucket} match "${searchQuery}".` : `No accounts in ${bucket}.`}
           </div>
         ) : (

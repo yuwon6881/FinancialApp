@@ -125,7 +125,7 @@ export function InvestmentPlanPanel({
         </ul>
 
         <div className="space-y-3 px-5 pb-5 pt-2 sm:px-6 @4xl:pl-0 @4xl:pt-3.5">
-          <div className="rounded-control bg-inset p-4">
+          <div className="rounded-control inset-group p-4">
             <h3 className="flex items-center gap-1 text-label font-medium text-foreground">
               What you hold vs your target
               <InfoHint
@@ -158,7 +158,7 @@ export function InvestmentPlanPanel({
             </p>
           </div>
 
-          {showGuidance && <div className="rounded-control bg-inset p-4">
+          {showGuidance && <div className="rounded-control inset-group p-4">
             <h3 className="flex items-center gap-1 text-label font-medium text-foreground">
               {classificationIncomplete ? 'What to do next' : 'Why guidance is unavailable'}
               <InfoHint

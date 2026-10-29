@@ -117,7 +117,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
             )}
           </div>
 
-          <dl className="grid divide-y divide-foreground/10 rounded-control bg-inset px-4 sm:grid-cols-2 sm:gap-x-6 sm:divide-y-0">
+          <dl className="grid divide-y divide-foreground/10 rounded-control inset-group px-4 sm:grid-cols-2 sm:gap-x-6 sm:divide-y-0">
             {rows.map(row => (
               <div key={row.label} className="flex min-h-11 items-center justify-between gap-3 py-0.5 sm:border-b sm:border-foreground/10 sm:[&:nth-last-child(-n+2)]:border-b-0">
                 <dt className="flex min-w-0 items-center gap-0.5 text-label text-muted-foreground">
@@ -168,7 +168,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
               )}
             </div>
             {foreign && gainSplit !== undefined && (
-              <p className="mt-3 rounded-control bg-inset p-3 text-caption leading-relaxed text-muted-foreground">
+              <p className="mt-3 rounded-control inset-group p-3 text-caption leading-relaxed text-muted-foreground">
                 Of your {figure(holding.unrealisedProfitLossApp, appCurrency, masked)} gain on paper,{' '}
                 <b className={masked ? '' : toneClass(gainSplit.price)}>
                   {figure(gainSplit.price, appCurrency, masked)}
@@ -183,7 +183,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
             )}
           </div>
 
-          <details className="group rounded-control bg-inset">
+          <details className="group rounded-control inset-group">
             <summary className="flex min-h-11 cursor-pointer select-none items-center justify-between gap-2 px-4 text-label font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
               How this was worked out
               <ChevronDown className="size-4 shrink-0 transition-transform duration-200 group-open:rotate-180" aria-hidden="true" />

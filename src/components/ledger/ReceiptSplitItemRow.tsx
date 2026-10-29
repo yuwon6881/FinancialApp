@@ -206,7 +206,7 @@ function BreakdownPanel({
   onUpdatePrice: (index: number, value: string) => void
 }) {
   return (
-    <dl id={id} className="mt-2 space-y-2 rounded-control bg-inset p-3 text-caption">
+    <dl id={id} className="mt-2 space-y-2 rounded-control inset-group p-3 text-caption">
       <div className="flex items-center justify-between gap-3">
         <dt className="text-muted-foreground">Price each</dt>
         <dd className="flex min-w-0 items-center gap-1">

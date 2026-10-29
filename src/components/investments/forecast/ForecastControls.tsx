@@ -32,7 +32,7 @@ export function ForecastControls({
   money: (value: number) => string
 }) {
   return (
-    <div className="space-y-5 rounded-control bg-inset p-4">
+    <div className="space-y-5 rounded-control inset-group p-4">
       <FormField
         label={<span className="flex justify-between gap-3"><span>Years ahead</span><strong className="text-foreground">{years} years</strong></span>}
       >

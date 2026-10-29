@@ -132,7 +132,7 @@ export function AccountRow({
         // squeeze it) and under the name from 640px up. The two figures sit side by side as
         // label-over-value pairs, and Clear balance takes the trailing edge rather than a row of
         // its own.
-        <div className="mb-1 mt-1.5 space-y-3 rounded-control bg-inset p-3 sm:ml-[3.125rem]">
+        <div className="mb-1 mt-1.5 space-y-3 rounded-control inset-group p-3 sm:ml-[3.125rem]">
           {availableCredit !== null && owed > 0 && (
           <Meter
             size="sm"

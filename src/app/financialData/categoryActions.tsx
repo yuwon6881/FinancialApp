@@ -148,7 +148,7 @@ export function createCategoryActions(deps: CategoryActionDependencies) {
           </p>
           {requiresReplacement ? (
             <>
-              <div className="rounded-control bg-inset p-3 space-y-2.5 text-xs">
+              <div className="rounded-control inset-group p-3 space-y-2.5 text-xs">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted-foreground">Ledger transactions</span>
                   <div className="flex items-center gap-2">
@@ -204,7 +204,7 @@ export function createCategoryActions(deps: CategoryActionDependencies) {
               </div>
             </>
           ) : (
-            <div className="rounded-control bg-inset p-3 text-xs text-muted-foreground">
+            <div className="rounded-control inset-group p-3 text-xs text-muted-foreground">
               <p>No ledger transactions or recurring payments currently use this category. It can be safely deleted.</p>
             </div>
           )}

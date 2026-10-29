@@ -14,7 +14,7 @@ export function BucketImpactLine({ impact, currency, masked }: { impact: BucketI
     <div
       role="status"
       aria-live="polite"
- className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-control bg-inset px-3.5 py-3 text-label"
+ className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-control inset-group px-3.5 py-3 text-label"
     >
       <span className="flex items-center gap-2 font-medium text-foreground">
         <span aria-hidden="true" className="size-2 rounded-full" style={{ backgroundColor: getCategoryChartColor(impact.bucket) }} />

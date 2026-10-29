@@ -259,7 +259,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
             <div className={`rounded-control p-3 ${failedCount ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}>
               <p className="text-body font-semibold text-foreground">{results.filter(result => result.uploaded).length} saved · {failedCount} failed</p>
             </div>
-            {results.map(result => <div key={result.fileName} className="flex items-start gap-2 rounded-control bg-inset p-3">
+            {results.map(result => <div key={result.fileName} className="flex items-start gap-2 rounded-control inset-group p-3">
               {result.uploaded ? <CheckCircle2 className="mt-0.5 size-4 text-emerald-500" /> : <XCircle className="mt-0.5 size-4 text-destructive" />}
               <div className="min-w-0"><p className="truncate text-body font-semibold">{result.fileName}</p>
                 <p className="text-caption text-muted-foreground">{result.uploaded ? 'Saved. Amount extraction is ready for review.' : result.message || 'Upload failed.'}</p></div>

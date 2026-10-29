@@ -180,7 +180,7 @@ export function PayEarlySheet({
             )}
 
             {mode === 'full' ? (
-              <div className="rounded-control bg-inset p-4 space-y-2">
+              <div className="rounded-control inset-group p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Amount still due</span>
                   <span className="text-sm font-semibold text-foreground">
@@ -196,7 +196,7 @@ export function PayEarlySheet({
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="rounded-control bg-inset p-3.5 space-y-2">
+                <div className="rounded-control inset-group p-3.5 space-y-2">
                   <div className="flex items-center gap-1.5">
                     <span className="text-caption font-semibold text-foreground">Part payment</span>
                     <InfoHint label="Part payment" text="Pay a portion of this bill now. The rest stays due on the scheduled date." />
@@ -224,7 +224,7 @@ export function PayEarlySheet({
                 </FormField>
 
                 {parsedPartialAmount != null && (
-                  <div className="grid grid-cols-2 gap-2 rounded-control bg-inset p-3 text-xs">
+                  <div className="grid grid-cols-2 gap-2 rounded-control inset-group p-3 text-xs">
                     <div>
                       <span className="text-label font-medium text-muted-foreground block">Paying now</span>
                       <span className="font-semibold text-foreground">{formatCurrencyVal(parsedPartialAmount, currency)}</span>
@@ -239,7 +239,7 @@ export function PayEarlySheet({
             )}
 
             {assignedAccount ? (
-              <div className="flex items-center justify-between rounded-control bg-inset px-3.5 py-3">
+              <div className="flex items-center justify-between rounded-control inset-group px-3.5 py-3">
                 <span className="text-xs text-muted-foreground">Pay from account</span>
                 <span className="text-caption font-semibold text-foreground">{assignedAccount.name}</span>
               </div>

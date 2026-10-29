@@ -93,7 +93,7 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
           />
         </div>
       ) : (
-        <div className="mt-4 flex h-40 items-center justify-center rounded-control bg-inset p-4 text-center">
+        <div className="mt-4 flex h-40 items-center justify-center rounded-control inset-group p-4 text-center">
           <span className="text-caption text-muted-foreground">No outflows logged.</span>
         </div>
       )}

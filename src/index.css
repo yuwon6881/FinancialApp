@@ -99,6 +99,7 @@
        colour tuned to stay at least 1.15:1 against both `card` and `popover` in both themes
        (guarded by surfaceContrast.test.ts). */
     --color-inset: var(--inset);
+    --color-inset-line: var(--inset-line);
     /* Iris -- the one brand colour. Used sparingly: the selected destination, the add action,
        focus, links, progress and AI. Never for a status. */
     --color-brand: var(--brand);
@@ -270,6 +271,8 @@
     --surface-2: #eef0f3;
     --surface-3: #e5e8ed;
     --inset: #e5e8ed;
+    /* The hairline that draws a grouped section on a card or sheet (`.inset-group`). */
+    --inset-line: #cfd4dd;
     /* `primary` is the brand accent (Iris): selection, progress, focus, "you are here". The
        action fill is `ink` instead -- a near-black pill is the most decisive thing on a light page,
        and it leaves Iris free to mean a place rather than a press. */
@@ -404,6 +407,7 @@
     --surface-3: #1e2330;
     /* surface-2 at 70% sat 1.01:1 on a sheet here; this steps up to the weight of the hairline. */
     --inset: #222838;
+    --inset-line: #2e3548;
     --primary: #5e5eef;
     --primary-foreground: #ffffff;
     --ink: #f1f3f8;
@@ -1526,4 +1530,22 @@ a[href],
 }
 button[disabled] {
     cursor: not-allowed;
+}
+
+/* A grouped section inside a card or sheet: a hairline, no fill. A filled inset reads as a second,
+   lighter card on a card (it jumped to a bluish slab in Night); the outline groups without
+   competing. Page-level groups on the bare canvas keep the filled `bg-inset`. The hairline is an
+   inset shadow so it takes no layout space; forced-colors drops shadows, so it falls back to an
+   outline there. */
+@layer components {
+  .inset-group {
+    background-color: transparent;
+    box-shadow: inset 0 0 0 1px var(--inset-line);
+  }
+  @media (forced-colors: active) {
+    .inset-group {
+      outline: 1px solid CanvasText;
+      outline-offset: -1px;
+    }
+  }
 }

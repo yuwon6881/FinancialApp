@@ -118,13 +118,13 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
             // bounded, scrollbar-less box.
             legendClassName="w-full min-w-0 flex-1 max-h-56 space-y-1 overflow-y-auto no-scrollbar"
           />
-        ) : <p className="w-full rounded-control bg-inset px-4 py-6 text-center text-label text-muted-foreground">Add prices to see what you hold.</p>}
+        ) : <p className="w-full rounded-control inset-group px-4 py-6 text-center text-label text-muted-foreground">Add prices to see what you hold.</p>}
       </div>
       {/* The slice's contents are listed here rather than only filtering the table
           further down the page: that table is off-screen on a phone, so a click
           previously looked like it had done nothing at all. */}
       {selectedLabel && (
-        <div className="mt-4 rounded-control bg-inset p-3">
+        <div className="mt-4 rounded-control inset-group p-3">
           <div className="flex items-baseline justify-between gap-2">
             <h3 className="min-w-0 truncate text-caption font-semibold text-foreground">Inside {selectedLabel}</h3>
             <Button

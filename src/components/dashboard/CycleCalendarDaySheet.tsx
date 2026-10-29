@@ -77,19 +77,19 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
       ) : undefined}
     >
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="rounded-control bg-inset p-2">
+        <div className="rounded-control inset-group p-2">
           <span className="block text-xs text-muted-foreground">Money in</span>
           <span className="font-semibold text-emerald-500">
             {day.inflow > 0 ? formatAmount(day.inflow) : '—'}
           </span>
         </div>
-        <div className="rounded-control bg-inset p-2">
+        <div className="rounded-control inset-group p-2">
           <span className="block text-xs text-muted-foreground">Money out</span>
           <span className="font-semibold text-foreground">
             {day.outflow > 0 ? formatAmount(-day.outflow) : '—'}
           </span>
         </div>
-        <div className="rounded-control bg-inset p-2">
+        <div className="rounded-control inset-group p-2">
           <span className="block text-xs text-muted-foreground">Net</span>
           <span
             className={cn(
@@ -127,7 +127,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
               return (
                 <div
                   key={bill.id}
-                  className="flex items-center justify-between gap-2 rounded-control bg-inset px-2 py-1.5 text-xs"
+                  className="flex items-center justify-between gap-2 rounded-control inset-group px-2 py-1.5 text-xs"
                 >
                   <span className="min-w-0 flex-1 truncate font-medium text-foreground">{bill.name}</span>
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -168,7 +168,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
               return (
                 <div
                   key={tx.id}
-                  className="flex items-center justify-between gap-2 rounded-control bg-inset px-2 py-1.5 text-xs"
+                  className="flex items-center justify-between gap-2 rounded-control inset-group px-2 py-1.5 text-xs"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium text-foreground">{tx.description}</p>

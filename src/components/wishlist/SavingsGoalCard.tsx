@@ -249,7 +249,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
         </div>
 
         {showDetails && (
-          <dl id={detailsId} data-detail-body="" className="mb-1 mr-2 mt-1 grid grid-cols-1 gap-x-6 gap-y-1.5 rounded-control bg-inset p-3 text-label @lg:grid-cols-2">
+          <dl id={detailsId} data-detail-body="" className="mb-1 mr-2 mt-1 grid grid-cols-1 gap-x-6 gap-y-1.5 rounded-control inset-group p-3 text-label @lg:grid-cols-2">
             <div className="flex flex-wrap items-baseline justify-between gap-x-2">
               <dt className="text-muted-foreground">Per cycle</dt>
               <dd className="font-medium text-foreground tabular-nums">{formatSensitive(pace.requiredPerCycle)}</dd>

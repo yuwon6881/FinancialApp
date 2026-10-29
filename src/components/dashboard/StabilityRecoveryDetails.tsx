@@ -17,12 +17,12 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-control bg-inset p-4">
+      <div className="rounded-control inset-group p-4">
         <p className="text-sm text-muted-foreground">Total still to put back</p>
         <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{formatSensitive(shortfall)}</p>
       </div>
 
-      <section aria-label="Current cycle recovery" className="space-y-2 rounded-control bg-inset p-4">
+      <section aria-label="Current cycle recovery" className="space-y-2 rounded-control inset-group p-4">
         <h3 className="text-sm font-semibold text-foreground">
           {status === 'deferred' ? 'Starts next cycle' : covered ? 'This cycle covered' : 'Still due this cycle'}
         </h3>
@@ -47,7 +47,7 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
       {activeCohorts.length > 0 && (
         <section aria-label="Recovery by spending cycle" className="space-y-2">
           <h3 className="text-sm font-semibold text-foreground">By spending cycle</h3>
-          <ul className="divide-y divide-foreground/10 rounded-control bg-inset" aria-label="Stability recovery plans">
+          <ul className="divide-y divide-foreground/10 rounded-control inset-group" aria-label="Stability recovery plans">
             {activeCohorts.map(cohort => {
               // The three repayment cycles follow the spending cycle; the last one is the deadline.
               const endCycle = getMonthCycleLabel(cohort.originCycleKey,
@@ -73,7 +73,7 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
         </section>
       )}
 
-      <details className="rounded-control bg-inset p-3.5 text-sm">
+      <details className="rounded-control inset-group p-3.5 text-sm">
         <summary className="min-h-11 cursor-pointer content-center rounded-md text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:min-h-9">
           How the total is calculated
         </summary>

@@ -20,12 +20,12 @@ export function LedgerBalanceReconciliation({ category, cycleLabel, formatSensit
         <InfoHint label={`${category.name} balance calculation`} text="Debit and credit below cover the visible page and leave out internal transfers. This balance uses the complete cycle and includes your bucket’s share of allocations and transfers." />
       </div>
       <dl className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center sm:gap-3">
-        <div className="rounded-control bg-inset px-3.5 py-3">
+        <div className="rounded-control inset-group px-3.5 py-3">
           <dt className="text-label text-muted-foreground">At cycle start</dt>
           <dd className="mt-1 text-section tabular-nums text-foreground">{formatSensitive(category.budget)}</dd>
         </div>
         <span className="hidden text-center text-section text-muted-foreground sm:block" aria-hidden="true">+</span>
-        <div className="rounded-control bg-inset px-3.5 py-3">
+        <div className="rounded-control inset-group px-3.5 py-3">
           <dt className="text-label text-muted-foreground">Movement this cycle</dt>
           <dd className={`mt-1 text-section tabular-nums ${category.netChange > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>{movementPrefix}{formatSensitive(Math.abs(category.netChange))}</dd>
         </div>

@@ -39,7 +39,7 @@ export function ForecastTargetSection({
 }) {
   if (target === null) {
     return (
-      <div className="mt-5 flex flex-col gap-3 rounded-control bg-inset p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-5 flex flex-col gap-3 rounded-control inset-group p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-caption font-semibold text-foreground">Want to aim for a number?</p>
         </div>
@@ -52,7 +52,7 @@ export function ForecastTargetSection({
   const canUseRequired = hasRequired && requiredContribution <= maxMonthlyContribution
 
   return (
-    <div className="mt-5 space-y-4 rounded-control bg-inset p-4">
+    <div className="mt-5 space-y-4 rounded-control inset-group p-4">
       <FormField
         label={<span className="flex justify-between gap-3"><span>Target amount</span><strong className="text-foreground">{money(target)}</strong></span>}
       >
@@ -60,7 +60,7 @@ export function ForecastTargetSection({
       </FormField>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <article className="rounded-control bg-card p-3">
+        <article className="rounded-control bg-muted dark:bg-card p-3">
           <div className="flex items-center gap-1">
             <p className="text-label font-medium text-muted-foreground">Chance of reaching your target</p>
             <InfoHint
@@ -72,7 +72,7 @@ export function ForecastTargetSection({
             {targetChance === undefined ? 'Calculating…' : `${Math.round(targetChance * 100)}%`}
           </strong>
         </article>
-        <article className="rounded-control bg-card p-3">
+        <article className="rounded-control bg-muted dark:bg-card p-3">
           <div className="flex items-center gap-1">
             <p className="text-label font-medium text-muted-foreground">Monthly amount for your target</p>
             <InfoHint

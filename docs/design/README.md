@@ -43,7 +43,8 @@ All tokens live in `src/index.css`. Both themes are checked for WCAG AA by
 | `--background` (canvas) | `#f5f6f8` | `#090b11` |
 | `--card` | `#ffffff` | `#11141c` |
 | `--surface-2` / `--surface-3` | `#eef0f3` / `#e5e8ed` | `#171b25` / `#1e2330` |
-| `--inset` (a grouped section inside a card or sheet) | `#e5e8ed` | `#222838` |
+| `--inset` (a filled group on the bare canvas) | `#e5e8ed` | `#222838` |
+| `--inset-line` (the hairline of a group inside a card or sheet) | `#cfd4dd` | `#2e3548` |
 | `--foreground` | `#0d1017` | `#eceef4` |
 | `--muted-foreground` | `#596172` | `#9ba2b3` |
 | `--border` | `#e2e5ea` | `#232837` |
@@ -98,10 +99,12 @@ amount field, which is already larger.
   `rounded-overlay` 16px (popovers, menus, toasts), `rounded-sheet` 28px (bottom sheets).
 - **Pills** for buttons, chips, segmented controls, badges and the tab bar.
 - Surfaces: `panelClass` (`app-panel rounded-panel border border-border/70 bg-card`). Inset
-  content inside a panel or sheet uses `rounded-control bg-inset`, never a second bordered card.
+  content inside a panel or sheet uses `rounded-control inset-group` (a `--inset-line` hairline, no fill),
+  never a second bordered card. `bg-inset` is the filled form and is for groups on the bare canvas and
+  skeleton or code wells only: a fill on a card read as a second, lighter card.
   Never paint an inset with `bg-surface-2/70` or `bg-muted/NN`: that recipe measures 1.01:1 against
   a sheet in Night and 1.05:1 against a card, so the grouping it draws cannot be seen.
-  - A tile nested inside an inset is `bg-card`; dividers inside an inset are `divide-foreground/10`
+  - A tile nested inside a filled `bg-inset` is `bg-card`; inside an `inset-group` use `bg-muted dark:bg-card`, since `bg-card` alone would vanish into a Day sheet; dividers inside an inset are `divide-foreground/10`
     / `border-foreground/10`, because the border colour disappears against the inset.
   - A line that separates a footer or section from its neighbour is a solid `border-border`.
     Row dividers inside a list may stay a hairline but never weaker than `/50`.
