@@ -133,7 +133,7 @@ export function AccountRow({
         // label-over-value pairs, and Clear balance takes the trailing edge rather than a row of
         // its own.
         <div className="mb-1 mt-1.5 space-y-3 rounded-control bg-inset p-3 sm:ml-[3.125rem]">
-          {availableCredit !== null && (
+          {availableCredit !== null && owed > 0 && (
           <Meter
             size="sm"
             percent={account.creditLimit ? (owed / account.creditLimit) * 100 : 0}

@@ -131,6 +131,18 @@ describe('BucketAccountGroup credit card rows', () => {
     expect(screen.queryByText(/^Owed/)).toBeNull()
   })
 
+  // With nothing owed the usage bar has no fill, so it only read as an empty strip across the block.
+  it('shows the credit-used bar only while a card owes something', () => {
+    renderGroup(makeAccount({ id: 'acc-visa', name: 'Visa', kind: 'CreditCard', remaining: 0, creditLimit: 4000 }))
+    expect(screen.getByText('Available credit')).toBeDefined()
+    expect(screen.queryByRole('progressbar', { name: 'Visa credit used' })).toBeNull()
+  })
+
+  it('shows the credit-used bar when a card owes money', () => {
+    renderGroup(makeAccount({ id: 'acc-visa', name: 'Visa', kind: 'CreditCard', remaining: -280, creditLimit: 4000 }))
+    expect(screen.getByRole('progressbar', { name: 'Visa credit used' })).toBeDefined()
+  })
+
   it('offers Clear balance only on an open card that owes something', () => {
     const onClearCard = vi.fn()
     const owing = makeAccount({ id: 'acc-visa', name: 'Visa', kind: 'CreditCard', remaining: -280 })
