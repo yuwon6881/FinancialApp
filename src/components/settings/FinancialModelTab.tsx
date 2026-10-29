@@ -102,13 +102,13 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
       <>
       <div className="space-y-6">
         <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-border/40 pb-3">
+          <div className="flex items-center justify-between border-b border-border pb-3">
             <div>
               <h3 className="text-subsection text-foreground">App Preferences</h3>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-y-3">
-            <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
+            <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
               <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
                 {darkMode ? <Moon className="size-4 text-muted-foreground shrink-0" /> : <Sun className="size-4 text-muted-foreground shrink-0" />}
                 <span className="font-medium text-foreground truncate">Dark Mode</span>
@@ -122,7 +122,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
                 mutationEntityLabel="dark mode"
               />
             </div>
-            <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
+            <div className="flex items-center justify-between text-sm py-1 border-b border-border/50">
               <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
                 {hideSensitive ? <EyeOff className="size-4 text-muted-foreground shrink-0" /> : <Eye className="size-4 text-muted-foreground shrink-0" />}
                 <span className="font-medium text-foreground truncate">Sensitive Mode (Masked)</span>

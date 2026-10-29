@@ -47,7 +47,7 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
         </Button>
       )}
     >
-      <ul className="divide-y divide-border/60 rounded-control bg-surface-2/60 px-3">
+      <ul className="divide-y divide-foreground/10 rounded-control bg-inset px-3">
         {inline.map(year => <RetentionYearRow key={year.taxYear} year={year} />)}
       </ul>
       {rest.length > 0 && (
@@ -55,7 +55,7 @@ export function VaultRetentionNotice({ review, onOpenVault }: VaultRetentionNoti
           <summary className="cursor-pointer text-label font-medium text-accent-ink">
             Show all {ordered.length} years
           </summary>
-          <ul className="mt-2 divide-y divide-border/60 rounded-control bg-surface-2/60 px-3">
+          <ul className="mt-2 divide-y divide-foreground/10 rounded-control bg-inset px-3">
             {rest.map(year => <RetentionYearRow key={year.taxYear} year={year} />)}
           </ul>
         </details>

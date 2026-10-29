@@ -16,7 +16,7 @@ export function GlobalSearchLoading() {
       aria-label="Opening search"
     >
       <div className="flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-(--app-shadow-overlay)">
-        <div className="flex items-center gap-3 border-b border-border/50 bg-muted/20 px-4 py-3">
+        <div className="flex items-center gap-3 border-b border-foreground/10 bg-inset px-4 py-3">
           <Search className="size-4.5 shrink-0 text-muted-foreground" aria-hidden />
           <span className="text-sm font-semibold text-muted-foreground">Opening search…</span>
         </div>

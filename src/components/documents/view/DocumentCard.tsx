@@ -226,7 +226,7 @@ export function DocumentCard({
           data-testid={`document-details-${document.id}`}
           className={cn('px-3 pb-3', !showDetails && 'hidden')}
         >
-          <div className="space-y-3 rounded-control bg-surface-2/70 p-3 dark:bg-surface-3/60">
+          <div className="space-y-3 rounded-control bg-inset p-3">
             <div className="grid gap-3 @lg:grid-cols-2">
               <div className="min-w-0">
                 <p className="mb-1 text-label font-medium text-muted-foreground">Amount</p>

@@ -280,12 +280,12 @@ export function TaxReliefOverview({
 
       <div className="mt-3" aria-busy={isLoading}>
         {isLoading ? (
-          <div className="flex min-h-24 items-center justify-center gap-2 rounded-control bg-surface-2/70 text-caption font-semibold text-muted-foreground" role="status">
+          <div className="flex min-h-24 items-center justify-center gap-2 rounded-control bg-inset text-caption font-semibold text-muted-foreground" role="status">
             <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
             Loading tax relief tracker…
           </div>
         ) : trackerCategories.length === 0 ? (
-          <p className="rounded-control bg-surface-2/70 px-3.5 py-3 text-label text-muted-foreground dark:bg-surface-3/70">
+          <p className="rounded-control bg-inset px-3.5 py-3 text-label text-muted-foreground">
             No categories yet. Use Manage limits to add the reliefs you claim.
           </p>
         ) : (

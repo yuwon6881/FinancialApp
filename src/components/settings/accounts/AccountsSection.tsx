@@ -276,7 +276,7 @@ export function AccountsSection({
         {/* What all the accounts add up to, card balances already netted off, then how that total
             divides across the four buckets -- the one figure the bucket cards below never state. */}
         {openAccountCount > 0 && (
-          <div className="rounded-panel bg-surface-2/70 p-5 sm:p-6">
+          <div className="rounded-panel bg-inset p-5 sm:p-6">
             <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
               <div className="min-w-0">
                 <p className="text-label text-muted-foreground">Total across accounts</p>
@@ -416,7 +416,7 @@ export function AccountsSection({
                 ? <>The amount owed on <span className="font-semibold text-foreground">{pendingBalanceCorrection.account.name}</span> will be corrected from <span className="font-semibold text-foreground">{formatCurrencyVal(Math.max(0, -pendingBalanceCorrection.account.remaining), currency)}</span> to <span className="font-semibold text-foreground">{formatCurrencyVal(Math.max(0, -pendingBalanceCorrection.targetBalance), currency)}</span>.</>
                 : <>The balance for <span className="font-semibold text-foreground">{pendingBalanceCorrection.account.name}</span> will be corrected from <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.account.remaining, currency)}</span> to <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.targetBalance, currency)}</span>.</>}
             </p>
-            <div className="space-y-1.5 rounded-control bg-surface-2/70 p-3 text-label">
+            <div className="space-y-1.5 rounded-control bg-inset p-3 text-label">
               <div className="flex items-center justify-between gap-3">
                 <span>Current {pendingBalanceCorrection.account.bucket} total</span>
                 <span className="font-semibold text-foreground">{formatCurrencyVal(pendingBalanceCorrection.bucketTotal, currency)}</span>
@@ -427,7 +427,7 @@ export function AccountsSection({
                   {formatCurrencyVal(pendingBalanceCorrection.bucketTotal + (pendingBalanceCorrection.targetBalance - pendingBalanceCorrection.account.remaining), currency)}
                 </span>
               </div>
-              <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-1.5">
+              <div className="flex items-center justify-between gap-3 border-t border-foreground/10 pt-1.5">
                 <span>Adjustment</span>
                 <SignedAmount
                   value={pendingBalanceCorrection.targetBalance - pendingBalanceCorrection.account.remaining}

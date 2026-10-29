@@ -176,7 +176,7 @@ export function FingerprintSection() {
       title="Device Unlock"
       status={<span className={status.className}>{status.label}</span>}
     >
-      <div className="@container rounded-control bg-surface-2/70 p-4">
+      <div className="@container rounded-control bg-inset p-4">
         <div className="flex flex-col gap-4 @md:flex-row @md:items-center @md:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -240,7 +240,7 @@ export function FingerprintSection() {
                 <div
                   key={c.id}
                   aria-busy={isRemoving}
-                  className="flex items-center justify-between gap-3 rounded-control bg-surface-2/70 py-2 pl-4 pr-2 text-caption"
+                  className="flex items-center justify-between gap-3 rounded-control bg-inset py-2 pl-4 pr-2 text-caption"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     {isCurrent ? (
