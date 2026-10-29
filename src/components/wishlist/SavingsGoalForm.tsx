@@ -134,7 +134,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         </FormField>
       </div>
 
-      <div className="rounded-control bg-surface-2/70 p-3.5 space-y-3 border border-border/40 transition-colors">
+      <div className="rounded-control bg-inset p-3.5 space-y-3 border border-foreground/10 transition-colors">
         <div className="flex items-start gap-2.5 select-none">
           <Checkbox
             id={`goal-recurring-${props.mode}`}
@@ -152,7 +152,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
           </div>
         </div>
         {props.isRecurring && (
-          <div className="pt-2.5 border-t border-border/40 space-y-3">
+          <div className="pt-2.5 border-t border-foreground/10 space-y-3">
             <FormField
               label="Repeat every (months)"
               error={props.errors.recurrence}
@@ -205,7 +205,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         )}
       </div>
 
-      <ModalActions className="border-t border-border/30 pt-4 mt-6">
+      <ModalActions className="border-t border-border pt-4 mt-6">
         <Button variant="secondary" type="button" onClick={props.onCancel} className="rounded-xl py-2.5">
           Cancel
         </Button>

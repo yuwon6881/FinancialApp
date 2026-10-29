@@ -171,7 +171,7 @@ function FlowTile({
     <InteractiveCard
       surface="plain"
       onClick={onClick}
-      className="group min-w-0 rounded-control bg-surface-2/70 px-3.5 py-3 hover:bg-surface-2 sm:px-4"
+      className="group min-w-0 rounded-control bg-inset px-3.5 py-3 hover:bg-surface-2 sm:px-4"
     >
       <span className="flex items-center justify-between gap-2 text-label text-muted-foreground">
         <span className="flex min-w-0 items-center gap-1.5">
