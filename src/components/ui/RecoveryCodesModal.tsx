@@ -67,7 +67,7 @@ export const RecoveryCodesModal: React.FC<RecoveryCodesModalProps> = ({ isOpen, 
           Each code can be used once to sign in if you lose access to your authenticator app.
           They won't be shown again.
         </p>
-        <div className="grid grid-cols-2 gap-2 bg-muted/20 border border-border/40 rounded-xl p-3 font-mono text-xs">
+        <div className="grid grid-cols-2 gap-2 bg-inset border border-foreground/10 rounded-xl p-3 font-mono text-xs">
           {codes.map(code => (
             <div key={code} className="text-foreground text-center py-1">{code}</div>
           ))}

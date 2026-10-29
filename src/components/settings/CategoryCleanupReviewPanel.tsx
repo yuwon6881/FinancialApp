@@ -89,7 +89,7 @@ export function CategoryCleanupReviewPanel({
               </div>
               {suggestion.type === 'consolidate' && <label className="block space-y-1 text-xs font-semibold text-muted-foreground">Move its entries to:<CustomSelect ariaLabel="Category consolidation target" value={target} onChange={value => setConsolidateTargets(previous => ({ ...previous, [suggestion.id]: String(value) }))} options={[{ value: '', label: 'Choose a category' }, ...consolidateOptions.map(category => ({ value: category.name, label: category.name }))]} className="w-full" /></label>}
             </div>
-            <footer className="flex items-center justify-between gap-2 border-t border-border/50 bg-muted/15 px-3 py-2.5">
+            <footer className="flex items-center justify-between gap-2 border-t border-foreground/10 bg-inset px-3 py-2.5">
               <Button variant="tertiary" type="button" disabled={suggestion.affectedTransactionCount === 0 || !onNavigateToLedger} onClick={() => onNavigateToLedger?.({ category: suggestion.categories[0], txType: incompatibleType, showAllCycles: true })} className="min-h-11 min-w-0 rounded-lg px-2 justify-start text-left text-label font-medium text-orange-600 disabled:text-muted-foreground sm:min-h-8">
                 {suggestion.affectedTransactionCount > 0 ? `${suggestion.affectedTransactionCount} ledger ${suggestion.affectedTransactionCount === 1 ? 'entry' : 'entries'} need validation` : 'No ledger entries affected'}
               </Button>

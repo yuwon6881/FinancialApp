@@ -386,7 +386,7 @@ export function DatePicker({
           </div>
         </div>
 
-        <div className="mt-2.5 flex justify-end gap-1 border-t border-border/40 pt-2.5">
+        <div className="mt-2.5 flex justify-end gap-1 border-t border-border pt-2.5">
           <Button variant="tertiary"
             type="button"
             disabled={Boolean((min && yesterdayISO < min) || (max && yesterdayISO > max))}

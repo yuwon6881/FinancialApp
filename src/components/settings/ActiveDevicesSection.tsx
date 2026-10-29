@@ -93,7 +93,7 @@ export function ActiveDevicesSection() {
         {sessions.map(session => {
           const isRevoking = revokingSessionId === session.id || (revokingOthers && !session.isCurrent)
           return (
-            <div key={session.id} className="flex items-center justify-between gap-3 rounded-control bg-surface-2/70 px-4 py-3 text-caption" aria-busy={isRevoking}>
+            <div key={session.id} className="flex items-center justify-between gap-3 rounded-control bg-inset px-4 py-3 text-caption" aria-busy={isRevoking}>
               <div className="flex flex-col gap-0.5 min-w-0">
                 <span className="flex min-w-0 flex-wrap items-center gap-2 text-label text-foreground"><MonitorSmartphone className="size-3.5 shrink-0 text-accent-ink" />{session.deviceName || 'Unknown Device'}{session.isCurrent && <small className="shrink-0 text-accent-ink">Current</small>}</span>
                 <span className="text-xs text-muted-foreground"><CalendarDays className="inline size-3" /> Logged in: {new Date(session.createdAt).toLocaleDateString()} · Last active: {relativeTime(session.lastActiveAt)}</span>

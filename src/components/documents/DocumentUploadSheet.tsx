@@ -259,7 +259,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
             <div className={`rounded-control p-3 ${failedCount ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}>
               <p className="text-body font-semibold text-foreground">{results.filter(result => result.uploaded).length} saved · {failedCount} failed</p>
             </div>
-            {results.map(result => <div key={result.fileName} className="flex items-start gap-2 rounded-control bg-surface-2/70 p-3">
+            {results.map(result => <div key={result.fileName} className="flex items-start gap-2 rounded-control bg-inset p-3">
               {result.uploaded ? <CheckCircle2 className="mt-0.5 size-4 text-emerald-500" /> : <XCircle className="mt-0.5 size-4 text-destructive" />}
               <div className="min-w-0"><p className="truncate text-body font-semibold">{result.fileName}</p>
                 <p className="text-caption text-muted-foreground">{result.uploaded ? 'Saved. Amount extraction is ready for review.' : result.message || 'Upload failed.'}</p></div>
@@ -299,7 +299,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
               accept={buildDocumentAcceptAttribute(constraints.acceptedUploadTypes)}
               onChange={event => void chooseFiles(Array.from(event.target.files ?? []))} />
           </FormField>
-          {files.length > 0 && <ul aria-label="Files to upload" className="max-h-56 divide-y divide-border/60 overflow-y-auto rounded-control bg-surface-2/50 ring-1 ring-border/60 dark:bg-surface-2/70">
+          {files.length > 0 && <ul aria-label="Files to upload" className="max-h-56 divide-y divide-foreground/10 overflow-y-auto rounded-control bg-surface-2/50 ring-1 ring-border/60 dark:bg-surface-2/70">
             {files.map((file, index) => {
               const tooLarge = file.size > constraints.maxDocumentBytes
               const Icon = file.type.startsWith('image/') ? FileImage : FileText

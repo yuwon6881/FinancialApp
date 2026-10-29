@@ -99,7 +99,7 @@ export function PerformanceBars({ portfolio, masked, onSelectHolding }: {
         })}
       </ul>
       {holdings.length === 0 && (
-        <p className="mt-4 rounded-control bg-surface-2/70 px-4 py-6 text-center text-label text-muted-foreground">
+        <p className="mt-4 rounded-control bg-inset px-4 py-6 text-center text-label text-muted-foreground">
           Needs latest prices and your cost.
         </p>
       )}

@@ -134,7 +134,7 @@ export const RecurringBills: React.FC<RecurringBillsProps> = ({
           <div
             role="status"
             aria-live="polite"
-            className="flex min-h-28 items-center gap-3 rounded-panel bg-surface-2/70 p-4 text-left text-body text-muted-foreground sm:min-h-36 sm:flex-col sm:justify-center sm:gap-3 sm:p-12 sm:text-center"
+            className="flex min-h-28 items-center gap-3 rounded-panel bg-inset p-4 text-left text-body text-muted-foreground sm:min-h-36 sm:flex-col sm:justify-center sm:gap-3 sm:p-12 sm:text-center"
           >
             <span className="grid size-11 shrink-0 place-items-center rounded-full bg-card text-muted-foreground">
               <Repeat className="size-5" aria-hidden="true" />

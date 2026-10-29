@@ -355,7 +355,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           )}
 
           {!registering && loginStep === 2 && (
-            <div className="flex items-center justify-between gap-3 bg-muted/40 p-2.5 pl-3 rounded-2xl border border-border/50 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center justify-between gap-3 bg-inset p-2.5 pl-3 rounded-2xl border border-foreground/10 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-label font-semibold text-accent-ink select-none">
                   {username.trim().charAt(0).toUpperCase() || <User className="size-4" />}

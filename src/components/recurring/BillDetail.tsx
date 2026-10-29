@@ -97,7 +97,7 @@ export const BillDetail: React.FC<BillDetailProps> = ({
       </div>
 
       {occurrence && (
-        <section aria-label="This cycle" className="rounded-control bg-surface-2/70 p-3.5 dark:bg-surface-3/70">
+        <section aria-label="This cycle" className="rounded-control bg-inset p-3.5">
           <div className="flex items-center justify-between gap-3">
             <span className="text-label text-muted-foreground">This cycle</span>
             <BillStatusChip status={occurrence.status} />

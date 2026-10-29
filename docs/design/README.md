@@ -43,6 +43,7 @@ All tokens live in `src/index.css`. Both themes are checked for WCAG AA by
 | `--background` (canvas) | `#f5f6f8` | `#090b11` |
 | `--card` | `#ffffff` | `#11141c` |
 | `--surface-2` / `--surface-3` | `#eef0f3` / `#e5e8ed` | `#171b25` / `#1e2330` |
+| `--inset` (a grouped section inside a card or sheet) | `#e5e8ed` | `#222838` |
 | `--foreground` | `#0d1017` | `#eceef4` |
 | `--muted-foreground` | `#596172` | `#9ba2b3` |
 | `--border` | `#e2e5ea` | `#232837` |
@@ -97,7 +98,14 @@ amount field, which is already larger.
   `rounded-overlay` 16px (popovers, menus, toasts), `rounded-sheet` 28px (bottom sheets).
 - **Pills** for buttons, chips, segmented controls, badges and the tab bar.
 - Surfaces: `panelClass` (`app-panel rounded-panel border border-border/70 bg-card`). Inset
-  content inside a panel uses `rounded-control bg-surface-2/70`, never a second bordered card.
+  content inside a panel or sheet uses `rounded-control bg-inset`, never a second bordered card.
+  Never paint an inset with `bg-surface-2/70` or `bg-muted/NN`: that recipe measures 1.01:1 against
+  a sheet in Night and 1.05:1 against a card, so the grouping it draws cannot be seen.
+  - A tile nested inside an inset is `bg-card`; dividers inside an inset are `divide-foreground/10`
+    / `border-foreground/10`, because the border colour disappears against the inset.
+  - A line that separates a footer or section from its neighbour is a solid `border-border`.
+    Row dividers inside a list may stay a hairline but never weaker than `/50`.
+  - Day insets on the bare canvas are only 1.14:1. Put the content in a panel instead.
 - Night has no drop shadows: surfaces step up in lightness with a hairline. Day uses a hairline and a
   very faint shadow. `--app-shadow-overlay` is the only shadow an author reaches for.
 - Glass (`glass-nav`, `glass-surface`) is limited to the tab bar, the scrolled phone top bar and
@@ -205,7 +213,10 @@ asset come from one source, `scripts/brand-mark.mjs`:
    controls, canonical `Button` variants and sizes only, no `text-[Npx]`, no focus suppression on
    primitives, no hand-rolled panel shells (`app-panel` outside `panelStyles`), no literal colours,
    palette steps mapped for both themes.
-2. **`src/components/ui/designContract.test.tsx`** — the contract between primitives: matching radii
+2. **`src/lib/surfaceContrast.test.ts`** — reads the real tokens and fails if the inset, a nested
+   card tile or an inset divider drops below 1.15:1 against its parent in either theme, or if text
+   on the inset loses AA.
+   **`src/components/ui/designContract.test.tsx`** — the contract between primitives: matching radii
    and heights for a button and a field of one size, the 44px floor, the focus treatments, role
    names without hyphens, and `cn()` keeping a role beside a colour.
 3. **The Playwright matrix** (`npm run test:visual`, 14 projects) — screenshots, axe in both themes,

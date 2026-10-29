@@ -38,7 +38,7 @@ export function LedgerPageTotals({ count, totals, currency, masked }: LedgerPage
     />
   )
   return (
-    <section aria-label="Page totals" className="rounded-panel bg-surface-2/70 px-4 py-3.5 sm:px-5">
+    <section aria-label="Page totals" className="rounded-panel bg-inset px-4 py-3.5 sm:px-5">
       {/* Three even columns on every width: wrapped label/value pairs left a phone's strip ragged and
           piled to the left, while a fixed grid lines the three figures up like a summary should. */}
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">

@@ -32,7 +32,7 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
   return (
     <form noValidate onSubmit={props.onSubmit} className="space-y-4 text-xs font-semibold">
       {props.securityPending && mutationBlocked && (
-        <p className="rounded-control bg-surface-2/70 px-3 py-2 text-sm text-muted-foreground" role="status">
+        <p className="rounded-control bg-inset px-3 py-2 text-sm text-muted-foreground" role="status">
           Finishing security check… You can fill this form in, but saving is temporarily disabled.
         </p>
       )}
@@ -84,7 +84,7 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
         </label>
       </div>
 
-      <ModalActions className="border-t border-border/30 pt-4 mt-6">
+      <ModalActions className="border-t border-border pt-4 mt-6">
         <Button variant="secondary" type="button" onClick={props.onCancel} className="rounded-xl py-2.5">
           Cancel
         </Button>

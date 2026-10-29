@@ -317,7 +317,7 @@ export function CategoryLimitsCard({
       </div>
 
       {spendingCategories.length === 0 ? (
-        <p className="mx-4 mb-4 rounded-control bg-surface-2/70 p-3 text-caption text-muted-foreground sm:mx-5">
+        <p className="mx-4 mb-4 rounded-control bg-inset p-3 text-caption text-muted-foreground sm:mx-5">
           Inflow categories do not use spending limits.
         </p>
       ) : saved.tracked.length > 0 && (

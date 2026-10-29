@@ -180,7 +180,7 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
           {totalValue === undefined && <span>Waiting on prices or an exchange rate</span>}
         </p>
 
-        <dl className="mt-5 grid grid-cols-1 divide-y divide-border/50 rounded-control bg-surface-2/70 px-3.5 @md:grid-cols-3 @md:divide-x @md:divide-y-0 @md:px-0 @md:py-3">
+        <dl className="mt-5 grid grid-cols-1 divide-y divide-foreground/10 rounded-control bg-inset px-3.5 @md:grid-cols-3 @md:divide-x @md:divide-y-0 @md:px-0 @md:py-3">
           {facts.map(fact => (
             <div key={fact.label} className="flex min-h-10 min-w-0 items-center justify-between gap-3 py-2 @md:block @md:min-h-0 @md:px-4 @md:py-0">
               <dt className="flex min-w-0 items-center gap-0.5 text-label text-muted-foreground @md:text-caption">
