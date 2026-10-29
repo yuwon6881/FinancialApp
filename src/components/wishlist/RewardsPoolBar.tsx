@@ -217,7 +217,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
       <div id={detailsId} data-detail-body="" hidden={!detailsOpen} className="space-y-2">
         {/* The one place the Committed figure is spelled out. Keeping it here and nowhere else is
             what stops the pool, the legend and the commitment card from all repeating it. */}
-        <div className="space-y-1.5 rounded-control bg-surface-2/70 p-3 text-label">
+        <div className="space-y-1.5 rounded-control bg-inset p-3 text-label">
         <dl className="grid grid-cols-1 gap-y-1.5">
           {(activeView === 'commitments'
             ? [

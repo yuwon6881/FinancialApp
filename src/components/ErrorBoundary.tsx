@@ -145,7 +145,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               <summary className="cursor-pointer text-caption font-semibold text-muted-foreground">
                 What went wrong
               </summary>
-              <p className="mt-1.5 break-words rounded-lg bg-muted/60 p-2 text-xs leading-relaxed text-muted-foreground">
+              <p className="mt-1.5 break-words rounded-lg bg-inset p-2 text-xs leading-relaxed text-muted-foreground">
                 {error.message}
               </p>
             </details>

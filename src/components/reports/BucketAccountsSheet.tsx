@@ -72,7 +72,7 @@ export function BucketAccountsSheet({
             Account editing and corrections use today's balance, not this cycle's closing balance. Any correction posts to today's cycle.
           </AlertBanner>
         )}
-        <div className="overflow-hidden rounded-control bg-surface-2/70">
+        <div className="overflow-hidden rounded-control bg-inset">
           <div className="flex items-center justify-between gap-2 px-4 pb-1 pt-3 text-caption text-muted-foreground">
             <span>Account</span>
             <span>{isCurrentCycle ? 'Current balance' : 'Balance at close'}</span>

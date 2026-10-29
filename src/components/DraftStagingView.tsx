@@ -160,7 +160,7 @@ export function DraftStagingView({
       ) : (
         <>
           <section
-            className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-panel bg-surface-2/70 px-4 py-3.5 sm:px-5"
+            className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-panel bg-inset px-4 py-3.5 sm:px-5"
             aria-label="Batch overview"
           >
             <div className="mr-auto min-w-0">
