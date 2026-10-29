@@ -41,7 +41,7 @@ export function ForecastSummary({
 
   return (
     <div className="mt-5 grid gap-3 sm:grid-cols-3">
-      <article className="rounded-control bg-surface-2/70 p-3 sm:col-span-3">
+      <article className="rounded-control bg-inset p-3 sm:col-span-3">
         <div className="flex items-center gap-1">
           <p className="text-label font-medium text-muted-foreground">
             Middle estimate after {years} years
@@ -59,7 +59,7 @@ export function ForecastSummary({
         </p>
       </article>
       {tiles.map(tile => (
-        <article key={tile.label} className="rounded-control bg-surface-2/70 p-3">
+        <article key={tile.label} className="rounded-control bg-inset p-3">
           <div className="flex items-center gap-1">
             <p className="text-label font-medium text-muted-foreground">{tile.label}</p>
             <InfoHint label={tile.label.toLowerCase()} text={tile.hint} />

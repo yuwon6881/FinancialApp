@@ -171,7 +171,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding, onCl
               as a footnote in a sentence. */}
           <ul className="mt-4 grid gap-3 px-5 sm:px-6 @4xl:grid-cols-2">
             {accountGroups.map(({ account, holdings: accountHoldings, cash, total: groupTotal }) => (
-              <li key={account.id} className="min-w-0 rounded-control bg-surface-2/60 p-4 ring-1 ring-border/50 dark:bg-surface-2/80">
+              <li key={account.id} className="min-w-0 rounded-control bg-inset p-4 ring-1 ring-border/50">
                 <div className="flex min-w-0 items-center justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-body font-semibold text-foreground">{account.name}</span>
@@ -179,7 +179,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding, onCl
                   </span>
                   <span className="shrink-0 text-subsection tabular-nums text-foreground">{accountTotal(groupTotal)}</span>
                 </div>
-                <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-2 border-t border-border/50 pt-3">
+                <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-2 border-t border-foreground/10 pt-3">
                   <div className="min-w-0">
                     <dt className="text-caption text-muted-foreground">Holdings</dt>
                     <dd className="text-body font-semibold tabular-nums text-foreground">{accountHoldings.length}</dd>

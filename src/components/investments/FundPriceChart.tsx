@@ -18,7 +18,7 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
 
   if (prices.length < 2) {
     return (
-      <p className="rounded-control bg-surface-2/70 p-4 text-caption text-muted-foreground">
+      <p className="rounded-control bg-inset p-4 text-caption text-muted-foreground">
         Not enough price history yet.
       </p>
     )

@@ -238,7 +238,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
       )}
 
       {!portfolio?.marketDataConfigured && (
-        <div className="flex items-start gap-2 rounded-control bg-surface-2/70 px-4 py-3 text-caption text-muted-foreground">
+        <div className="flex items-start gap-2 rounded-control bg-inset px-4 py-3 text-caption text-muted-foreground">
           <Info className="mt-px size-4 shrink-0" aria-hidden="true" />
           Live prices are unavailable. You can still record activity; values update when market data is configured.
         </div>

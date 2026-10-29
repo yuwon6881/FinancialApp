@@ -133,7 +133,7 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
             money={money}
           />
 
-          <details className="mt-3 rounded-control bg-surface-2/70 p-3">
+          <details className="mt-3 rounded-control bg-inset p-3">
             <summary className="cursor-pointer text-label font-medium text-foreground">How this forecast was worked out</summary>
             <div className="mt-3 space-y-2 text-caption leading-relaxed text-muted-foreground">
               <p>It tests 10,000 outcomes using your plan. The model uses {percentage(model.annualReturn)} average annual growth and about {percentage(model.annualVolatility)} annual variation. Past returns are context, not a promise.</p>

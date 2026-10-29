@@ -152,7 +152,7 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
 
   return (
     <div className={`space-y-3 ${className}`}>
-      <div className="flex items-baseline justify-between gap-2 border-b border-border/40 pb-2.5">
+      <div className="flex items-baseline justify-between gap-2 border-b border-border pb-2.5">
         <div className="min-w-0">
           <h4 className="text-caption font-semibold text-foreground sm:text-sm">{title}</h4>
           <p className="text-xs text-muted-foreground sm:text-xs">{subtitle}</p>
