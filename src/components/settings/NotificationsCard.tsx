@@ -78,7 +78,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
       aria-labelledby="settings-notifications-heading"
       className={cn(panelClass, 'space-y-3 p-4 sm:space-y-4 sm:p-5')}
     >
-      <div className="border-b border-border/40 pb-2.5 sm:pb-3">
+      <div className="border-b border-border pb-2.5 sm:pb-3">
         <h3 id="settings-notifications-heading" className="text-subsection text-foreground">Notifications</h3>
       </div>
 
@@ -168,7 +168,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
         {/* The device roster is reference material, not a control: it answers "which browsers did
             I ever turn this on in", which is a question people ask occasionally and never on the
             way to changing a setting. Left open it was the tallest thing in the panel. */}
-        <details className="group border-t border-border/30 pt-3">
+        <details className="group border-t border-border pt-3">
           <summary className="flex cursor-pointer list-none items-center gap-1 text-label font-medium text-muted-foreground transition hover:text-foreground">
             <ChevronRight className="size-3 transition-transform group-open:rotate-90" aria-hidden="true" />
             Devices set up

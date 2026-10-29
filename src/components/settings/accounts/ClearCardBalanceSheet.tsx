@@ -118,7 +118,7 @@ export function ClearCardBalanceSheet({
       )}
     >
       <form id="clear-card-balance-form" noValidate onSubmit={submit} className="space-y-4">
-        <div className="flex items-center gap-3 rounded-control bg-surface-2/70 p-3.5">
+        <div className="flex items-center gap-3 rounded-control bg-inset p-3.5">
           <div className={`grid size-10 shrink-0 place-items-center rounded-xl border ${getCategoryBadgeClass(card.bucket)}`} aria-hidden="true">
             <CreditCard className="size-5" />
           </div>
@@ -131,7 +131,7 @@ export function ClearCardBalanceSheet({
         </div>
 
         {sources.length === 0 ? (
-          <p role="alert" className="rounded-control bg-surface-2/70 p-3 text-xs leading-relaxed text-muted-foreground">
+          <p role="alert" className="rounded-control bg-inset p-3 text-xs leading-relaxed text-muted-foreground">
             Add an account to Essentials or Rewards to pay this card from. A payment out of Stability or Growth goes through the ledger form.
           </p>
         ) : (
@@ -164,7 +164,7 @@ export function ClearCardBalanceSheet({
             </FormField>
 
             {rest > 0 && Number.isFinite(parsedAmount) && parsedAmount > 0 && (
-              <div className="space-y-2 rounded-control bg-surface-2/70 p-3">
+              <div className="space-y-2 rounded-control bg-inset p-3">
                 <p id="card-remainder-label" className="text-sm font-semibold text-foreground">
                   What about the other {money(rest)}?
                 </p>
@@ -223,7 +223,7 @@ export function ClearCardBalanceSheet({
             )}
 
             {plan.ok && source && (
-              <div className="space-y-1.5 rounded-control bg-surface-2/70 p-3 text-xs">
+              <div className="space-y-1.5 rounded-control bg-inset p-3 text-xs">
                 <dl className="space-y-1.5">
                 <div className="flex items-center justify-between gap-3">
                   <dt className="min-w-0 truncate text-muted-foreground">{source.name}</dt>
