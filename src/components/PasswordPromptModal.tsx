@@ -128,7 +128,7 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
       </form>
 
       {onTryFingerprint && (
-        <div className="space-y-3 border-t border-border/40 pt-4">
+        <div className="space-y-3 border-t border-border pt-4">
           <div
             role="separator"
             aria-label="Alternative verification"

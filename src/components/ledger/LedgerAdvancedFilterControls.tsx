@@ -69,7 +69,7 @@ export const LedgerAdvancedFilterControls: React.FC<LedgerAdvancedFilterControls
   const activeTxTypes = parseTxTypes(txType)
 
   return (
-    <div className="space-y-4 border-t border-border/40 pt-4 lg:border-t-0 lg:pt-0">
+    <div className="space-y-4 border-t border-border pt-4 lg:border-t-0 lg:pt-0">
       {/* Date Range */}
       <div className="space-y-1.5">
         <span className="text-label font-medium flex items-center gap-1.5 text-muted-foreground">

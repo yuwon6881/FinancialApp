@@ -51,7 +51,7 @@ export function CategoryLimitPerformance({
     return (
       <div className="min-w-0">
         <h3 id="report-category-limits-heading" className="text-subsection text-foreground">Category limits</h3>
-        <div className="mt-3 flex flex-col items-start gap-3 rounded-control bg-surface-2/70 p-4 @sm:flex-row @sm:items-center">
+        <div className="mt-3 flex flex-col items-start gap-3 rounded-control bg-inset p-4 @sm:flex-row @sm:items-center">
           <span className="grid size-10 shrink-0 place-items-center rounded-full bg-card text-muted-foreground">
             <SlidersHorizontal className="size-4.5" aria-hidden="true" />
           </span>

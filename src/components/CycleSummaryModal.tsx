@@ -173,7 +173,7 @@ export function CycleSummaryModal({
           <Section bare title="Envelopes">
             <div className="grid gap-3 sm:grid-cols-2">
               {summary.envelopes.map(envelope => (
-                <div key={envelope.name} className="rounded-control bg-surface-2/70 p-3.5">
+                <div key={envelope.name} className="rounded-control bg-inset p-3.5">
                   <div className="mb-2.5 flex items-center justify-between gap-2">
                     <span className="text-caption font-semibold text-foreground">{envelope.name}</span>
                     {envelope.overspent && (
@@ -183,11 +183,11 @@ export function CycleSummaryModal({
                     )}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col gap-0.5 rounded-lg bg-muted/40 px-2.5 py-2">
+                    <div className="flex flex-col gap-0.5 rounded-lg bg-card px-2.5 py-2">
                       <span className="text-label font-medium text-muted-foreground">Allocated</span>
                       <span className="truncate text-caption font-semibold text-foreground">{formatSensitive(envelope.allocated)}</span>
                     </div>
-                    <div className="flex flex-col gap-0.5 rounded-lg bg-muted/40 px-2.5 py-2">
+                    <div className="flex flex-col gap-0.5 rounded-lg bg-card px-2.5 py-2">
                       <span className="text-label font-medium text-muted-foreground">Spent</span>
                       <span className={`text-caption font-semibold ${envelope.overspent ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
                         {formatSensitive(envelope.spent)}
@@ -198,7 +198,7 @@ export function CycleSummaryModal({
                         ? 'bg-orange-500/10'
                         : envelope.remaining > 0
                           ? 'bg-emerald-500/10'
-                          : 'bg-muted/40'
+                          : 'bg-inset'
                     }`}>
                       <span className="text-label font-medium text-muted-foreground">Carry forward</span>
                       <span className={`text-caption font-semibold ${
@@ -238,7 +238,7 @@ export function CycleSummaryModal({
             ) },
             ...(summary.categoryLimits.length > 0 ? [{ id: 'guides', title: 'Spending guides', node: (
 <Section bare title="Cycle spending guides" icon={<Gauge className="size-3 text-muted-foreground" />}>
-              <div className="rounded-control bg-surface-2/70 p-3.5">
+              <div className="rounded-control bg-inset p-3.5">
                 <div className="mb-3 flex items-center justify-between gap-3 border-b border-border/40 pb-3">
                   <div>
                     <p className="text-caption font-semibold text-foreground">
@@ -351,14 +351,14 @@ export function CycleSummaryModal({
 <Section bare title="Spending insights" icon={<Zap className="size-3 text-amber-400" />}>
               <div className="grid gap-3 sm:grid-cols-2">
                 {summary.largestTxn && (
-                  <div className="rounded-control bg-surface-2/70 p-3.5">
+                  <div className="rounded-control bg-inset p-3.5">
                     <p className="text-label font-medium text-muted-foreground">Largest single expense</p>
                     <p className="mt-1 truncate text-caption font-semibold text-foreground" title={summary.largestTxn.description}>{summary.largestTxn.description}</p>
                     <p className="mt-0.5 text-caption font-semibold text-orange-400">{formatSensitive(Math.abs(summary.largestTxn.amount))}</p>
                   </div>
                 )}
                 {summary.biggestDay && (
-                  <div className="rounded-control bg-surface-2/70 p-3.5">
+                  <div className="rounded-control bg-inset p-3.5">
                     <p className="text-label font-medium text-muted-foreground">Highest spending day</p>
                     <p className="mt-1 text-caption font-semibold text-foreground">
                       {new Date(summary.biggestDay.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
@@ -367,21 +367,21 @@ export function CycleSummaryModal({
                   </div>
                 )}
                 {summary.avgDailySpend !== null && (
-                  <div className="rounded-control bg-surface-2/70 p-3.5">
+                  <div className="rounded-control bg-inset p-3.5">
                     <p className="text-label font-medium text-muted-foreground">Average daily spend</p>
                     <p className="mt-1 text-caption font-semibold text-foreground">{formatSensitive(summary.avgDailySpend)} / day</p>
                   </div>
                 )}
-                <div className="rounded-control bg-surface-2/70 p-3.5">
+                <div className="rounded-control bg-inset p-3.5">
                   <p className="text-label font-medium text-muted-foreground">No-spend days</p>
                   <p className="mt-1 text-caption font-semibold text-emerald-500">{summary.noSpendDays} days</p>
                 </div>
-                <div className="rounded-control bg-surface-2/70 p-3.5">
+                <div className="rounded-control bg-inset p-3.5">
                   <p className="text-label font-medium text-muted-foreground">Transaction count</p>
                   <p className="mt-1 text-caption font-semibold text-foreground">{summary.transactionCount} expense entries</p>
                 </div>
                 {summary.committedSpend + summary.discretionarySpend > 0 && (
-                  <div className="rounded-control bg-surface-2/70 p-3.5">
+                  <div className="rounded-control bg-inset p-3.5">
                     <p className="text-label font-medium text-muted-foreground">Spend Type</p>
                     <div className="mt-2 space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
@@ -400,7 +400,7 @@ export function CycleSummaryModal({
                   </div>
                 )}
                 {summary.velocityFirstHalf !== null && summary.velocitySecondHalf !== null && (
-                  <div className="rounded-control bg-surface-2/70 p-3.5 sm:col-span-2">
+                  <div className="rounded-control bg-inset p-3.5 sm:col-span-2">
                     <p className="text-label font-medium text-muted-foreground">Spending velocity</p>
                     <div className="mt-2 space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
@@ -423,7 +423,7 @@ export function CycleSummaryModal({
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
                 <Section bare title="Where it went">
-                  <div className="space-y-2.5 rounded-control bg-surface-2/70 p-3.5">
+                  <div className="space-y-2.5 rounded-control bg-inset p-3.5">
                     {summary.topCategories.map(category => (
                       <div key={category.category} className="flex items-center gap-2">
                         {/* Badge Container: fixed width so all bars start at the same X position without stretching the badge */}
