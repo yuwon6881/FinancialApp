@@ -53,16 +53,18 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
               const endCycle = getMonthCycleLabel(cohort.originCycleKey,
                 STABILITY_RECOVERY_GRACE_CYCLES + STABILITY_RECOVERY_PLAN_CYCLES - 1)
               return (
-                <li key={`${cohort.originCycleKey}-${cohort.fromDate}`} className="space-y-1.5 p-3.5 text-sm">
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                // Two columns, so each caption sits under the thing it describes: the deadline under
+                // the cycle name, the amount's status under the amount.
+                <li key={`${cohort.originCycleKey}-${cohort.fromDate}`} className="flex items-start justify-between gap-3 p-3.5 text-sm">
+                  <div className="min-w-0 space-y-1.5">
                     <p className="font-semibold text-foreground">{getMonthCycleLabel(cohort.originCycleKey) ?? cohort.originCycleKey}</p>
+                    {endCycle && <p className="text-muted-foreground">Plan ends {endCycle}</p>}
+                  </div>
+                  <div className="shrink-0 space-y-1.5 text-right">
                     <p className="font-semibold tabular-nums text-foreground">
                       {formatSensitive(cohort.remainingShortfall)}
                     </p>
-                  </div>
-                  <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-muted-foreground">
-                    <p>{cohort.isOverdue ? 'Overdue' : cohort.isDeferred ? 'Starts next cycle' : 'Remaining'}</p>
-                    {endCycle && <p>Plan ends {endCycle}</p>}
+                    <p className="text-muted-foreground">{cohort.isOverdue ? 'Overdue' : cohort.isDeferred ? 'Starts next cycle' : 'Remaining'}</p>
                   </div>
                 </li>
               )

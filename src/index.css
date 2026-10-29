@@ -1431,10 +1431,13 @@ html {
     }
 }
 
+/* The row keeps its own entrance animation while highlighted. Writing `animation: none` here made
+   removing the class restart that fade from opacity 0, which read as the row blinking when the
+   highlight ended. Same name and timing means the finished animation is left untouched. */
 tr.search-target-highlight {
     position: relative;
     z-index: 10;
-    animation: none;
+    animation: list-row-enter 180ms ease-out both;
 }
 
 tr.search-target-highlight > td {

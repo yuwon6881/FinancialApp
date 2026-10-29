@@ -1,6 +1,51 @@
 import { expect, test } from '@playwright/test'
 import { establishSession, mockApi, waitForStableLayout } from './visualTestSupport'
 
+// The suite runs with reduced motion, which switches the row entrance off and so hides the very
+// restart this guards against; this test needs the real animations.
+test.describe('with motion', () => {
+  test.use({ reducedMotion: 'no-preference' })
+
+  test('desktop ledger row never fades out again when its highlight ends', async ({ page }) => {
+    test.skip(!test.info().project.name.startsWith('desktop'), 'Desktop projects only')
+
+    const transactions = Array.from({ length: 3 }, (_, index) => ({
+      id: `tx-probe-${index + 1}`,
+      accountId: 'account-visual-essentials',
+      date: '2026-08-01',
+      description: `Probe row ${index + 1}`,
+      category: 'Food',
+      ledgerCategory: 'Essentials',
+      amount: -10 - (index + 1),
+    }))
+
+    await mockApi(page, { transactions })
+    await establishSession(page)
+    await page.goto('/ledger?tx=tx-probe-1', { waitUntil: 'domcontentloaded' })
+    const row = page.locator('tr').filter({ hasText: 'Probe row 1' })
+    await expect(row).toHaveClass(/search-target-highlight/, { timeout: 3000 })
+
+    // Sample the row's opacity every frame across the end of the highlight. Samples in the first
+    // second are skipped: a cold start can still be inside the row's own entrance fade, and only
+    // a dip after that is the row blinking.
+    const lowestOpacity = await row.evaluate(el => new Promise<number>(resolve => {
+      let lowest = 1
+      let sawRemoval = false
+      let settledFrames = 0
+      const startedAt = performance.now()
+      const sample = () => {
+        if (performance.now() - startedAt > 1000) lowest = Math.min(lowest, Number(getComputedStyle(el).opacity))
+        if (!el.classList.contains('search-target-highlight')) sawRemoval = true
+        settledFrames = sawRemoval ? settledFrames + 1 : 0
+        if (settledFrames > 30) resolve(lowest)
+        else requestAnimationFrame(sample)
+      }
+      requestAnimationFrame(sample)
+    }))
+    expect(lowestOpacity).toBe(1)
+  })
+})
+
 test('desktop ledger row highlight maintains stable row height and cell borders', async ({ page }) => {
   test.skip(!test.info().project.name.startsWith('desktop'), 'Desktop projects only')
 
