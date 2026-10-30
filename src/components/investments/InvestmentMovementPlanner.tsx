@@ -83,9 +83,15 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
   return (
     <section className="border-t border-border/60">
       {/* A full-width row flush with the panel: the panel clips it, so its hover has no corners. */}
-      <Button type="button" variant="tertiary" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex min-h-16 w-full items-center justify-between gap-3 rounded-none px-5 py-3 text-left hover:bg-surface-2/60 sm:px-6">
+      <Button
+        type="button"
+        variant="tertiary"
+        onClick={() => setOpen(value => !value)}
+        aria-expanded={open}
+        className="group flex min-h-16 w-full items-center justify-between gap-3 rounded-none px-5 py-3 text-left hover:bg-surface-2/60 active:scale-100 active:bg-surface-3 transition-colors duration-120 ease-fluid sm:px-6"
+      >
         <span className="flex min-w-0 items-center gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2 text-muted-foreground dark:bg-surface-3"><WalletCards className="size-4" aria-hidden="true" /></span>
+          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2 text-muted-foreground dark:bg-surface-3 dark:group-active:bg-surface-2"><WalletCards className="size-4" aria-hidden="true" /></span>
           <span className="min-w-0">
             <span className="block text-body font-medium text-foreground">Plan money in or out</span>
             <span className="block truncate text-caption font-normal text-muted-foreground">Split a deposit or withdrawal across your baskets</span>

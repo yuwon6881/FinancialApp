@@ -203,7 +203,7 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
         aria-expanded={breakdownOpen}
         aria-controls={breakdownId}
         onClick={() => setBreakdownOpen(value => !value)}
-        className="flex w-full justify-between rounded-none border-x-0 border-b-0 border-t border-t-border/60 px-5 text-muted-foreground hover:text-foreground sm:px-6 lg:hidden"
+        className="flex w-full justify-between rounded-none border-x-0 border-b-0 border-t border-t-border/60 px-5 text-muted-foreground hover:bg-surface-2/60 hover:text-foreground active:scale-100 active:bg-surface-3 transition-colors duration-120 ease-fluid sm:px-6 lg:hidden"
       >
         <span>{breakdownOpen ? 'Hide breakdown' : 'Show breakdown'}</span>
         <ChevronDown className={cn('size-4 transition-transform duration-200', breakdownOpen && 'rotate-180')} aria-hidden="true" />

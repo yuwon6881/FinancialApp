@@ -43,7 +43,7 @@ export const InvestmentToolRow = forwardRef<HTMLButtonElement, InvestmentToolRow
         onClick={onClick}
         disabled={disabled}
         aria-expanded={expanded}
-        className={cn('group flex min-h-16 w-full items-center justify-start gap-3 rounded-none px-5 py-3 text-left hover:bg-surface-2/60 sm:px-6 lg:min-h-16')}
+        className={cn('group flex min-h-16 w-full items-center justify-start gap-3 rounded-none px-5 py-3 text-left hover:bg-surface-2/60 active:scale-100 active:bg-surface-3 transition-colors duration-120 ease-fluid sm:px-6 lg:min-h-16')}
       >
         {body}
         <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />

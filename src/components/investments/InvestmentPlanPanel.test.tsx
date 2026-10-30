@@ -276,4 +276,21 @@ describe('InvestmentPlanPanel share rounding', () => {
 
     expect(plainShares).toEqual([75.0, 10.0, 14.9])
   })
+
+  it('keeps full-width planner trigger boundary-stable on active press', () => {
+    render(
+      <InvestmentPlanPanel
+        allocation={allocation}
+        holdings={[]}
+        instruments={[]}
+        masked={false}
+        onNavigate={vi.fn()}
+      />,
+    )
+
+    const plannerTrigger = screen.getByRole('button', { name: /Plan money in or out/ })
+    expect(plannerTrigger.className).toContain('active:scale-100')
+    expect(plannerTrigger.className).toContain('active:bg-surface-3')
+    expect(plannerTrigger.className).toContain('rounded-none')
+  })
 })
