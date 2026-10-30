@@ -160,4 +160,35 @@ describe('StabilityRecoveryDetails', () => {
     expect(screen.getByText('Starts next cycle')).toBeTruthy()
     expect(screen.getByText('Already put back early: $50.00')).toBeTruthy()
   })
+
+  it('renders multiple active cohorts in sorted chronological order even if input is unordered', () => {
+    const recovery = baseRecovery({
+      recoveryCohorts: [
+        {
+          originCycleKey: '2026-08',
+          fromDate: '2026-08-04',
+          transactionCount: 2,
+          remainingShortfall: 400,
+          cyclesRemaining: 3,
+          requiredThisCycle: 100,
+          isOverdue: false,
+        },
+        {
+          originCycleKey: '2026-06',
+          fromDate: '2026-06-04',
+          transactionCount: 1,
+          remainingShortfall: 600,
+          cyclesRemaining: 2,
+          requiredThisCycle: 300,
+          isOverdue: false,
+        },
+      ],
+    })
+
+    const { container } = render(<StabilityRecoveryDetails recovery={recovery} formatSensitive={format} />)
+    const listItems = container.querySelectorAll('li')
+    expect(listItems).toHaveLength(2)
+    expect(within(listItems[0]).getByText('Jun 2026 cycle')).toBeTruthy()
+    expect(within(listItems[1]).getByText('Aug 2026 cycle')).toBeTruthy()
+  })
 })

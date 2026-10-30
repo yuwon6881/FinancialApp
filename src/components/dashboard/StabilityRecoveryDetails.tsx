@@ -84,7 +84,7 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
         <section aria-label="Withdrawal plans" className="space-y-2">
           <h3 className="text-sm font-semibold text-foreground">Withdrawal plans</h3>
           <ul className="divide-y divide-foreground/10 rounded-control inset-group" aria-label="Withdrawal plans">
-            {activeCohorts.map(cohort => {
+            {sortedCohorts.map(cohort => {
               // The three repayment cycles follow the spending cycle; the last one is the deadline.
               const endCycle = getMonthCycleLabel(cohort.originCycleKey,
                 STABILITY_RECOVERY_GRACE_CYCLES + STABILITY_RECOVERY_PLAN_CYCLES - 1)
