@@ -198,7 +198,7 @@ export function CycleSummaryModal({
                         ? 'bg-orange-500/10'
                         : envelope.remaining > 0
                           ? 'bg-emerald-500/10'
-                          : 'inset-group'
+                          : 'bg-muted dark:bg-card'
                     }`}>
                       <span className="text-label font-medium text-muted-foreground">Carry forward</span>
                       <span className={`text-caption font-semibold ${

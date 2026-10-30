@@ -203,7 +203,7 @@ export function DocumentReviewSheet({ request, onClose, currency, saveReview }: 
                 </p>
               </div>
               {aiNote && (
-                <p className="flex items-start gap-2 rounded-control inset-group px-3 py-2.5 text-caption text-muted-foreground dark:bg-surface-3/60">
+                <p className="flex items-start gap-2 rounded-control inset-group px-3 py-2.5 text-caption text-muted-foreground">
                   <Sparkles className="mt-0.5 size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
                   {aiNote}
                 </p>

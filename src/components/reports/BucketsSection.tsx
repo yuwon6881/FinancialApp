@@ -196,7 +196,7 @@ export function BucketsSection({
               </div>
 
               <div id={detailsId} className={cn('min-w-0 flex-1 flex-col px-4 pb-4 @xl:flex @xl:px-5 @xl:pb-5', open ? 'flex' : 'hidden')}>
-                <dl className="space-y-2 rounded-control inset-group p-3 @xl:rounded-none @xl:border-t @xl:border-border/60 @xl:bg-transparent @xl:px-0 @xl:pb-0 @xl:pt-3">
+                <dl className="space-y-2 rounded-control inset-group p-3 @xl:rounded-none @xl:shadow-none @xl:border-t @xl:border-border/60 @xl:bg-transparent @xl:px-0 @xl:pb-0 @xl:pt-3">
                   <DetailRow label="Income added" value={amount(bucket.incomeAllocated ?? bucket.target)} />
                   <DetailRow label="Carried over" value={amount(bucket.budget)} />
                   <DetailRow

@@ -271,7 +271,7 @@ export const TransactionDocumentsField = React.forwardRef<
       </div>
 
       {hasRows && (
- <ul aria-label="Attached documents" className="divide-y divide-foreground/10 overflow-hidden rounded-control inset-group ring-1 ring-border/60">
+ <ul aria-label="Attached documents" className="divide-y divide-foreground/10 overflow-hidden rounded-control inset-group">
           {existingDocuments.map(document => (
             <FiledDocumentRow
               key={document.id}

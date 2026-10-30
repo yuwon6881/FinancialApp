@@ -134,7 +134,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         </FormField>
       </div>
 
-      <div className="rounded-control inset-group p-3.5 space-y-3 border border-foreground/10 transition-colors">
+      <div className="rounded-control inset-group p-3.5 space-y-3 transition-colors">
         <div className="flex items-start gap-2.5 select-none">
           <Checkbox
             id={`goal-recurring-${props.mode}`}

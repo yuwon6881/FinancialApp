@@ -328,7 +328,7 @@ export function AccountFormSheet({
             <div
               className={`rounded-2xl border transition duration-150 ${
                 isArchived
-                  ? 'border-foreground/10 inset-group'
+                  ? 'border-transparent inset-group'
                   : 'border-border/60 bg-muted/10 hover:bg-muted/15'
               }`}
             >
