@@ -188,10 +188,6 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
     return (
       <div data-testid="recurring-skeleton" className="space-y-6">
         <RecurringHeaderSkeleton />
-        <div className="flex gap-2 rounded-xl bg-muted/40 p-1">
-          <Skeleton className="h-9 flex-1 rounded-lg" />
-          <Skeleton className="h-9 flex-1 rounded-lg" />
-        </div>
         <BillDayStripSkeleton />
         <div className="flex items-center justify-between gap-3">
           <div className="flex gap-1.5">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-9 w-20 rounded-full" />)}</div>

@@ -17,6 +17,7 @@ import { AuthenticatedSettingsRoute } from './AuthenticatedSettingsRoute'
 import { activeSectionId, destinationForTab, rememberSection } from '../components/nav/navModel'
 import { useAppLocationKey } from '../lib/useAppLocationKey'
 import { deferTabChange } from '../lib/sheetMotion'
+import { ContentViewFallback } from './ContentViewFallback'
 // Lazy like the views it sits above: the picker's select control is not part of the eager
 // critical path, and the pages that need it are lazily loaded anyway.
 // The section row only exists on hub destinations, so it travels with their lazy views rather than
@@ -212,10 +213,13 @@ export function AuthenticatedTabContent({
 
   // The section row sits outside the keyed page: switching Accounts to Investments keeps the row
   // mounted, so its selection pill slides across instead of the whole row being torn down and
-  // faded back in with the next page. Only the content under it enters.
+  // faded back in with the next page. Only the content under it enters. The same holds while a
+  // view's chunk is still downloading: the boundary sits under the row, because one above it would
+  // swap the row for the page skeleton on a first visit and the control just pressed would vanish.
   return (
     <div className="w-full">
       {pageBar}
+    <Suspense fallback={<ContentViewFallback tab={prefs.activeTab} />}>
     <div key={prefs.activeTab === 'recurring' ? `recurring-${sectionId}` : prefs.activeTab} className="w-full view-enter">
       {prefs.activeTab === 'dashboard' && (
         <DashboardView
@@ -560,6 +564,7 @@ export function AuthenticatedTabContent({
         <DocumentsView onNavigateToTransaction={openLinkedVaultTransaction} />
       )}
     </div>
+    </Suspense>
     </div>
   )
 }

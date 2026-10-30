@@ -1,9 +1,8 @@
 import { lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
-import type { AppTab, DashboardData } from '../types'
+import type { DashboardData } from '../types'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { PullToRefresh } from '../components/ui/PullToRefresh'
 import { PageContainer } from '../components/ui/PageContainer'
-import { Skeleton } from '../components/ui/Skeleton'
 import { LaunchReady } from './LaunchReady'
 import type { useAiActionRouter } from './useAiActionRouter'
 import type { useAppDialogs } from './useAppDialogs'
@@ -24,18 +23,9 @@ import { getTransactionCyclePlacement } from '../lib/transactionCyclePlacement'
 import { openLedgerTransaction } from '../lib/openLedgerTransaction'
 import type { AiInvocationContext } from '../lib/api/ai'
 import { AuthenticatedTabContent } from './AuthenticatedTabContent'
-import { getPageSkeletonVariant } from './pageSkeletonUtils'
+import { ContentViewFallback } from './ContentViewFallback'
 
-const CycleSkeleton = lazy(() => import('../components/ui/CycleSkeleton').then(module => ({ default: module.CycleSkeleton })))
 const UiSpecimen = lazy(() => import('../components/ui/UiSpecimen').then(module => ({ default: module.UiSpecimen })))
-
-const ContentViewFallback = ({ tab }: { tab: AppTab }) => (
-  <div className="w-full pt-2 view-enter">
-    <Suspense fallback={<div className="space-y-6" aria-hidden="true"><Skeleton className="h-40 w-full rounded-2xl" /><Skeleton className="h-64 w-full rounded-2xl" /></div>}>
-      <CycleSkeleton variant={getPageSkeletonVariant(tab)} fullPage />
-    </Suspense>
-  </div>
-)
 
 interface AuthenticatedViewProps {
   prefs: ReturnType<typeof useAppPreferences>
