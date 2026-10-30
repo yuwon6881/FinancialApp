@@ -21,7 +21,8 @@ test('covered recovery shows active spending cycles without completed cycles', a
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
   await page.getByRole('button', { name: 'See recovery details' }).click()
   const dialog = page.getByRole('dialog', { name: 'Emergency fund recovery details' })
-  await expect(dialog.getByText('This cycle covered')).toBeVisible()
+  await expect(dialog.getByRole('heading', { name: 'This cycle' })).toBeVisible()
+  await expect(dialog.getByText(/Covered\. Remaining balance is for Nov 2026 cycle\./)).toBeVisible()
   await waitForStableLayout(page)
   await expect(dialog).toHaveScreenshot('stability-recovery-covered.png')
 })
@@ -118,7 +119,7 @@ test('emergency fund recovery card reads as one subtraction', async ({ page }) =
   if (test.info().project.name === 'mobile-light' || test.info().project.name === 'mobile-dark') {
     await expect(card).toHaveScreenshot('stability-recovery-plan-card.png')
   }
-  await expect(card.getByText('Withdrawals still being repaid')).toHaveCount(0)
+  await expect(card.getByText('Original withdrawals')).toHaveCount(0)
   await card.getByRole('button', { name: 'See recovery details' }).click()
   const dialog = page.getByRole('dialog', { name: 'Emergency fund recovery details' })
   await expect(dialog).toBeVisible()

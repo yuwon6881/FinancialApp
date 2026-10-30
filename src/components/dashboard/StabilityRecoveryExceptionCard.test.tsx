@@ -43,13 +43,14 @@ describe('StabilityRecoveryExceptionCard', () => {
     })} formatSensitive={format} />)
     openRecoveryDetails()
     const dialog = screen.getByRole('dialog', { name: 'Emergency fund recovery details' })
-    expect(within(dialog).getByText('This cycle covered')).toBeTruthy()
+    expect(within(dialog).getByText('This cycle')).toBeTruthy()
+    expect(within(dialog).getByText(/Covered\. Remaining balance is for Nov 2026 cycle\./)).toBeTruthy()
     expect(within(dialog).getByText('$416.23 of $416.23')).toBeTruthy()
     expect(within(dialog).queryByText('Jul 2026 cycle')).toBeNull()
     expect(within(dialog).queryByText('Fully put back')).toBeNull()
-    const august = within(dialog).getByText('Aug 2026 cycle').closest('li')!
-    expect(within(august).getByText('Plan ends Nov 2026 cycle')).toBeTruthy()
-    expect(within(august).getByText('$685.89')).toBeTruthy()
+    expect(within(dialog).getByText('Aug 2026 withdrawal · Plan ends Nov 2026')).toBeTruthy()
+    expect(within(dialog).getAllByText('$685.89').length).toBeGreaterThan(0)
+    expect(within(dialog).queryByRole('list')).toBeNull()
     expect(dialog.querySelector('time')).toBeNull()
     expect(within(dialog).queryByText(/cycles left|withdrawals since/)).toBeNull()
   })
@@ -199,7 +200,9 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.getByText(/Put back \$506\.64 this cycle/)).toBeTruthy()
     expect(screen.queryByText(/not money on top of it/)).toBeNull()
     openRecoveryDetails()
-    expect(screen.getByText('Still due this cycle')).toBeTruthy()
+    const dialog = screen.getByRole('dialog', { name: 'Emergency fund recovery details' })
+    expect(within(dialog).getByRole('heading', { name: 'This cycle' })).toBeTruthy()
+    expect(within(dialog).getByText('$506.64 still due this cycle.')).toBeTruthy()
   })
 
   // The reported complaint: the fund had just been tapped and the card asked for a third of it back
@@ -333,12 +336,15 @@ describe('StabilityRecoveryExceptionCard', () => {
   it('shows the subtraction the figure comes from', () => {
     render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
 
-    expect(screen.queryByText('Withdrawals still being repaid')).toBeNull()
+    expect(screen.queryByText('Original withdrawals')).toBeNull()
     openRecoveryDetails()
-    expect(screen.getByText('Withdrawals still being repaid')).toBeTruthy()
-    expect(screen.getByText('Put back against those withdrawals')).toBeTruthy()
-    expect(screen.getByText('Total still to put back')).toBeTruthy()
-    expect(screen.getByText('Still due this cycle')).toBeTruthy()
+    const dialog = screen.getByRole('dialog', { name: 'Emergency fund recovery details' })
+    expect(within(dialog).getByText('Original withdrawals')).toBeTruthy()
+    expect(within(dialog).getByText('Put back so far')).toBeTruthy()
+    expect(within(dialog).getByText('Total still to put back')).toBeTruthy()
+    expect(within(dialog).getByText('Remaining shortfall')).toBeTruthy()
+    expect(within(dialog).getByText('Calculation')).toBeTruthy()
+    expect(within(dialog).getByRole('heading', { name: 'This cycle' })).toBeTruthy()
   })
 
   // The reported defect showed up here: 800 asked back against 200 owed, because drawdowns already
@@ -354,7 +360,7 @@ describe('StabilityRecoveryExceptionCard', () => {
 
     openRecoveryDetails()
     expect(screen.getAllByText('$300.00').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('$100.00').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/100\.00/).length).toBeGreaterThan(0)
     expect(screen.getAllByText('$200.00').length).toBeGreaterThan(0)
     // 100 of this cycle's 300 plan is funded.
     expect(screen.getByRole('progressbar', { name: "This cycle's recovery plan" }).getAttribute('aria-valuenow')).toBe('33')
