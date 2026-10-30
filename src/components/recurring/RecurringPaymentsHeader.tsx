@@ -7,6 +7,7 @@ import { useIsCompact } from '../../lib/breakpoints'
 import type { Loan, RecurringPayment } from '../../types'
 import { StatDistributionBreakdown, type DistributionBreakdownMode } from './StatDistributionBreakdown'
 import { PageHeader } from '../ui/PageHeader'
+import { panelClass } from '../ui/panelStyles'
 
 interface RecurringPaymentsHeaderProps {
   activeView: 'recurring' | 'loans'
@@ -265,7 +266,7 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
               totals ran into the divider between them. */}
           {/* Loans carry three figures, so they take three equal columns rather than leaving the
               fourth column of the bills layout empty. */}
-          <div className={`@container mt-5 grid min-w-0 grid-cols-2 gap-x-4 gap-y-4 rounded-panel bg-inset px-4 py-4 sm:px-5 lg:gap-y-0 ${isLoansView ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+          <div className={`@container mt-5 grid min-w-0 grid-cols-2 gap-x-4 gap-y-4 ${panelClass} px-4 py-4 sm:px-5 lg:gap-y-0 ${isLoansView ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
             {isLoansView ? (
               <>
                 <InteractiveStatTile

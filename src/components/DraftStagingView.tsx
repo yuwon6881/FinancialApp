@@ -18,6 +18,7 @@ import { DraftQueueCard } from './drafts/DraftQueueCard'
 import { DraftReorderItem } from './drafts/DraftReorderItem'
 import { EmptyState } from './ui/EmptyState'
 import { Badge } from './ui/Badge'
+import { panelClass } from './ui/panelStyles'
 
 type EditorProps = Omit<TransactionFormSheetProps,
   | 'categories'
@@ -160,7 +161,7 @@ export function DraftStagingView({
       ) : (
         <>
           <section
-            className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-panel bg-inset px-4 py-3.5 sm:px-5"
+            className={`flex flex-wrap items-center gap-x-5 gap-y-2 ${panelClass} px-4 py-3.5 sm:px-5`}
             aria-label="Batch overview"
           >
             <div className="mr-auto min-w-0">
