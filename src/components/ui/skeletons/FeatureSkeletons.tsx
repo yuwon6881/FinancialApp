@@ -181,24 +181,20 @@ export const InvestmentSummarySkeleton: React.FC = () => (
   </div>
 )
 
-/** The cycle calendar beside its weekly pacing rows, which drop under it below a wide container. */
+/** The cycle calendar as week rows: dates and a total, with seven day bars under them on a narrow container. */
 export const CycleCalendarSkeleton: React.FC = () => (
   <div className="@container space-y-3">
     <div className="space-y-2"><Skeleton className="h-5 w-36" /><Skeleton className="h-3.5 w-48" /></div>
-    <div className={cn(panelClass, 'grid gap-5 p-3 sm:p-5 @4xl:grid-cols-[minmax(0,1fr)_16rem] @4xl:gap-0')}>
-      <div className="min-w-0 space-y-3 @4xl:pr-6">
-        <div className="flex flex-wrap items-center justify-between gap-3"><Skeleton className="h-11 w-48 rounded-full lg:h-9" /><Skeleton className="h-3 w-44" /></div>
-        <div className="grid grid-cols-7 gap-1 sm:gap-2">
-          {Array.from({ length: 7 }).map((_, index) => <Skeleton key={`weekday-${index}`} className="mx-auto h-3 w-3 sm:w-7" />)}
-          {Array.from({ length: 35 }).map((_, index) => <Skeleton key={`day-${index}`} className="h-11 w-full rounded-lg sm:h-14 sm:rounded-xl md:h-16" />)}
-        </div>
-      </div>
-      <div className="space-y-3 border-t border-border/60 pt-4 @4xl:border-l @4xl:border-t-0 @4xl:pl-6 @4xl:pt-0">
-        <div className="flex justify-between"><Skeleton className="h-4 w-36" /><Skeleton className="h-3 w-12" /></div>
+    <div className={cn(panelClass, 'space-y-3 p-3 sm:p-5')}>
+      <div className="flex flex-wrap items-center justify-between gap-3"><Skeleton className="h-11 w-48 rounded-full lg:h-9" /><Skeleton className="h-3 w-44" /></div>
+      <div className="divide-y divide-border/60">
         {Array.from({ length: 5 }).map((_, index) => (
-          <div key={`week-${index}`} className="flex items-center justify-between gap-3 py-1">
-            <div className="space-y-1.5"><Skeleton className="h-4 w-16" /><Skeleton className="h-3 w-24" /></div>
-            <Skeleton className="h-4 w-16" />
+          <div key={`week-${index}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-2.5 @xl:grid-cols-[8.5rem_minmax(0,1fr)_7.5rem] @xl:gap-x-5">
+            <div className="space-y-1.5"><Skeleton className="h-4 w-28" /><Skeleton className="h-3 w-14" /></div>
+            <div className="col-span-2 grid grid-cols-7 gap-1 @xl:col-span-1 @xl:col-start-2 @xl:row-start-1">
+              {Array.from({ length: 7 }).map((__, day) => <Skeleton key={`day-${day}`} className="h-14 w-full rounded-control" />)}
+            </div>
+            <Skeleton className="col-start-2 row-start-1 h-4 w-16 justify-self-end @xl:col-start-3" />
           </div>
         ))}
       </div>

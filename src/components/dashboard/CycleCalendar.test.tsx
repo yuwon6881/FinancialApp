@@ -1,3 +1,4 @@
+import type React from 'react'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CycleCalendar } from './CycleCalendar'
@@ -11,236 +12,112 @@ describe('CycleCalendar component', () => {
 
   afterEach(() => vi.useRealTimers())
 
-  it('fits its complete seven-day grid within the report on mobile', () => {
-    render(
-      <CycleCalendar
-        selectedMonth="Jul"
-        selectedYear={2026}
-        cycleDay={28}
-        cycleLabel="Jul 28th ~ Aug 27th, 2026"
-        transactions={[{ id: 'expense', date: '2026-07-28', description: 'Groceries', category: 'Food', ledgerCategory: 'Essentials', amount: -100 }]}
-        recurringPayments={[]}
-        formatNet={value => `$${value}`}
-      />,
-    )
+  const renderCalendar = (extra: Partial<React.ComponentProps<typeof CycleCalendar>> = {}) => render(
+    <CycleCalendar
+      selectedMonth="Jul"
+      selectedYear={2026}
+      cycleDay={1}
+      cycleLabel="Jul 1 ~ Jul 31, 2026"
+      transactions={[]}
+      recurringPayments={[]}
+      formatNet={value => `$${value}`}
+      {...extra}
+    />,
+  )
 
-    const calendarDays = screen.getByLabelText('Cycle days')
-    expect(calendarDays.className).not.toMatch(/min-w-\[\d+px\]/)
-    expect(calendarDays.className).toContain('minmax(0,1fr)')
-    // Figures are tablet/desktop detail; a phone column carries the shading only.
-    const amount = screen.getByText('$-100')
-    expect(amount.className).toContain('hidden')
-    expect(amount.className).toContain('md:block')
-    expect(screen.getByLabelText('Cash activity heat scale')).toBeTruthy()
+  const salaryAndGroceries = [
+    { id: '1', date: '2026-07-02', description: 'Salary', category: 'Salary', ledgerCategory: 'Income', amount: 500 },
+    { id: '2', date: '2026-07-02', description: 'Groceries', category: 'Food', ledgerCategory: 'Essentials', amount: -200 },
+  ]
+
+  it('lists the cycle one row per week, each with seven day slots at most', () => {
+    renderCalendar()
+
+    const weeks = within(screen.getByLabelText('Cycle weeks')).getAllByRole('listitem')
+    // Jul 1 is a Wednesday and the cycle ends Jul 31 (a Friday): five Sunday-first rows.
+    expect(weeks).toHaveLength(5)
+    expect(within(weeks[0]).getByText(/Jul 1 – Jul 4/)).toBeTruthy()
+    for (const week of weeks) expect(within(week).getAllByRole('button').length).toBeLessThanOrEqual(7 + 1)
   })
 
-  it('keeps the current-day ring inside the card at an edge column', () => {
-    const { container } = render(
-      <CycleCalendar
-        selectedMonth="Jul"
-        selectedYear={2026}
-        cycleDay={1}
-        cycleLabel="Jul 1 ~ Jul 31, 2026"
-        transactions={[]}
-        recurringPayments={[]}
-        formatNet={value => String(value)}
-      />,
-    )
+  it('marks today with a filled date and aria-current', () => {
+    renderCalendar()
 
     const today = screen.getByTitle('Jul 25: No cash activity.')
-    expect(today.className).toContain('ring-inset')
-    expect(today.className).toContain('ring-primary')
     expect(today.getAttribute('aria-current')).toBe('date')
-    expect(container.querySelector('[aria-label="Cycle days"]')).toBeTruthy()
+    expect(today.textContent).toContain('25')
+    expect(within(today).getByText('25').className).toContain('bg-primary')
   })
 
   it('distinguishes a day the cycle has not reached from a day with no spending', () => {
-    render(
-      <CycleCalendar
-        selectedMonth="Jul"
-        selectedYear={2026}
-        cycleDay={1}
-        cycleLabel="Jul 1 ~ Jul 31, 2026"
-        transactions={[]}
-        recurringPayments={[]}
-        formatNet={value => String(value)}
-      />,
-    )
+    renderCalendar()
 
     const future = screen.getByTitle('Jul 28: Not here yet.')
     const past = screen.getByTitle('Jul 20: No cash activity.')
 
-    // Not yet reached: an empty outlined cell. Came and went with nothing spent: a flat filled cell.
-    expect(future.className).toContain('ring-border/70')
-    expect(future.className).toContain('bg-transparent')
-    expect(past.className).not.toContain('ring-border/70')
-    expect(past.className).toContain('bg-surface-2/60')
+    // Not yet reached: a hollow stub. Came and went with nothing spent: a flat filled stub.
+    expect(future.getAttribute('data-state')).toBe('future')
+    expect(past.getAttribute('data-state')).toBe('quiet')
   })
 
-  it('shades a day with spending and leaves a zero-spend day flat', () => {
-    render(
-      <CycleCalendar
-        selectedMonth="Jul"
-        selectedYear={2026}
-        cycleDay={1}
-        cycleLabel="Jul 1 ~ Jul 31, 2026"
-        transactions={[{ id: '1', date: '2026-07-20', description: 'Groceries', category: 'Food', ledgerCategory: 'Essentials', amount: -50 }]}
-        recurringPayments={[]}
-        formatNet={value => `$${value}`}
-      />,
-    )
+  it('scales each bar against the busiest day and leaves a zero-spend day flat', () => {
+    renderCalendar({
+      transactions: [
+        { id: '1', date: '2026-07-20', description: 'Groceries', category: 'Food', ledgerCategory: 'Essentials', amount: -50 },
+        { id: '2', date: '2026-07-21', description: 'Rent', category: 'Bills', ledgerCategory: 'Essentials', amount: -200 },
+      ],
+    })
 
-    const dayWithSpend = screen.getByTitle(/Jul 20:/) as HTMLElement
-    expect(dayWithSpend.style.backgroundColor).toContain('color-mix')
-    const quietDay = screen.getByTitle('Jul 19: No cash activity.') as HTMLElement
-    expect(quietDay.style.backgroundColor).toBe('')
-    // No stray marks: the only corner mark a day carries is a bill.
-    expect(quietDay.querySelector('[aria-hidden="true"]')).toBeNull()
+    const bar = (title: RegExp | string) => screen.getByTitle(title).querySelector('[data-bar]') as HTMLElement
+    expect(bar(/Jul 21:/).style.height).toBe('100%')
+    expect(bar(/Jul 20:/).style.height).toBe('25%')
+    expect(bar('Jul 19: No cash activity.').style.height).toBe('')
+    expect(bar('Jul 19: No cash activity.').getAttribute('data-bar')).toBe('quiet')
   })
 
-  it('hides activity intensity with sensitive amounts', () => {
-    render(
-      <CycleCalendar
-        selectedMonth="Jul"
-        selectedYear={2026}
-        cycleDay={1}
-        cycleLabel="Jul 1 ~ Jul 31, 2026"
-        transactions={[{ id: 'income', date: '2026-07-01', description: 'Income', category: 'Salary', ledgerCategory: 'Income', amount: 100 }]}
-        recurringPayments={[]}
-        formatNet={() => '••••'}
-        hideSensitive
-      />,
-    )
+  it('hides bar heights with sensitive amounts', () => {
+    renderCalendar({
+      transactions: [{ id: 'income', date: '2026-07-01', description: 'Income', category: 'Salary', ledgerCategory: 'Income', amount: 100 }],
+      formatNet: () => '••••',
+      hideSensitive: true,
+    })
 
-    expect(screen.getByText('Activity shading is hidden while amounts are hidden.')).toBeTruthy()
-    expect(screen.queryByLabelText('Cash activity heat scale')).toBeNull()
-    expect((screen.getByLabelText('Jul 1. Cash activity hidden.') as HTMLElement).style.backgroundColor).toBe('')
+    expect(screen.getByText('Bars are hidden while amounts are hidden.')).toBeTruthy()
+    const day = screen.getByLabelText('Jul 1. Cash activity hidden.')
+    expect(day.getAttribute('data-state')).toBe('quiet')
   })
 
-  it('switches heatmap modes between Spending, Net Flow, and Activity', () => {
-    render(
-      <CycleCalendar
-        selectedMonth="Jul"
-        selectedYear={2026}
-        cycleDay={1}
-        cycleLabel="Jul 1 ~ Jul 31, 2026"
-        transactions={[
-          { id: '1', date: '2026-07-01', description: 'Groceries', category: 'Food', ledgerCategory: 'Essentials', amount: -50 },
-          { id: '2', date: '2026-07-02', description: 'Salary', category: 'Salary', ledgerCategory: 'Income', amount: 500 },
-        ]}
-        recurringPayments={[]}
-        formatNet={value => `$${value}`}
-      />,
-    )
+  it('tracks spending only, with no mode toggle', () => {
+    renderCalendar({ transactions: salaryAndGroceries })
 
-    const spendingBtn = screen.getByRole('button', { name: /Spending/ })
-    const netFlowBtn = screen.getByRole('button', { name: /Net Flow/ })
-    const activityBtn = screen.getByRole('button', { name: /Activity/ })
-
-    expect(spendingBtn.getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByText('Less spending')).toBeTruthy()
-
-    fireEvent.click(netFlowBtn)
-    expect(netFlowBtn.getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByText('Net outflow')).toBeTruthy()
-
-    fireEvent.click(activityBtn)
-    expect(activityBtn.getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getByText('Less activity')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Net Flow/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Activity/ })).toBeNull()
+    expect(screen.getByText(/more spending that day/)).toBeTruthy()
   })
 
-  it('shows only spending in Spending mode and follows the mode elsewhere', () => {
-    render(
-      <CycleCalendar
-        selectedMonth="Jul"
-        selectedYear={2026}
-        cycleDay={1}
-        cycleLabel="Jul 1 ~ Jul 31, 2026"
-        transactions={[
-          { id: '1', date: '2026-07-02', description: 'Salary', category: 'Salary', ledgerCategory: 'Income', amount: 500 },
-          { id: '2', date: '2026-07-02', description: 'Groceries', category: 'Food', ledgerCategory: 'Essentials', amount: -200 },
-        ]}
-        recurringPayments={[]}
-        formatNet={value => `$${value}`}
-      />,
-    )
+  it('shows the spending for the week, never the positive net of a salary day', () => {
+    renderCalendar({ transactions: salaryAndGroceries })
 
-    const grid = () => within(screen.getByLabelText('Cycle days'))
-
-    // Spending mode reports the outflow, never the day's positive net.
-    expect(grid().getByText('$-200')).toBeTruthy()
-    expect(grid().queryByText('$300')).toBeNull()
-
-    fireEvent.click(screen.getByRole('button', { name: /Net Flow/ }))
-    expect(grid().getByText('$300')).toBeTruthy()
-
-    fireEvent.click(screen.getByRole('button', { name: /Activity/ }))
-    expect(grid().getByText('$700')).toBeTruthy()
+    const week = within(within(screen.getByLabelText('Cycle weeks')).getAllByRole('listitem')[0])
+    expect(week.getByText('$-200')).toBeTruthy()
+    expect(week.queryByText('$300')).toBeNull()
   })
 
-  it('repaces the weekly breakdown when the mode changes', () => {
-    render(
-      <CycleCalendar
-        selectedMonth="Jul"
-        selectedYear={2026}
-        cycleDay={1}
-        cycleLabel="Jul 1 ~ Jul 31, 2026"
-        transactions={[
-          { id: '1', date: '2026-07-02', description: 'Salary', category: 'Salary', ledgerCategory: 'Income', amount: 500 },
-          { id: '2', date: '2026-07-02', description: 'Groceries', category: 'Food', ledgerCategory: 'Essentials', amount: -200 },
-        ]}
-        recurringPayments={[]}
-        formatNet={value => `$${value}`}
-      />,
-    )
-
-    expect(screen.getByText('Weekly spend pacing')).toBeTruthy()
-    expect(screen.getByText('Week 1')).toBeTruthy()
-
-    fireEvent.click(screen.getByRole('button', { name: /Net Flow/ }))
-    expect(screen.getByText('Weekly net pacing')).toBeTruthy()
-
-    fireEvent.click(screen.getByRole('button', { name: /Activity/ }))
-    expect(screen.getByText('Weekly activity pacing')).toBeTruthy()
-  })
-
-  it('triggers onSelectWeek when an active week pacing tile is clicked', () => {
+  it('triggers onSelectWeek when an active week total is clicked', () => {
     const onSelectWeek = vi.fn()
-    render(
-      <CycleCalendar
-        selectedMonth="Jul"
-        selectedYear={2026}
-        cycleDay={1}
-        cycleLabel="Jul 1 ~ Jul 31, 2026"
-        transactions={[
-          { id: '1', date: '2026-07-02', description: 'Groceries', category: 'Food', ledgerCategory: 'Essentials', amount: -200 },
-        ]}
-        recurringPayments={[]}
-        formatNet={value => `$${value}`}
-        onSelectWeek={onSelectWeek}
-      />,
-    )
+    renderCalendar({
+      transactions: [{ id: '1', date: '2026-07-02', description: 'Groceries', category: 'Food', ledgerCategory: 'Essentials', amount: -200 }],
+      onSelectWeek,
+    })
 
-    const week1Button = screen.getByRole('button', { name: /View Week 1 transactions in Ledger/ })
-    fireEvent.click(week1Button)
+    fireEvent.click(screen.getByRole('button', { name: /View Week 1 transactions in Ledger/ }))
     expect(onSelectWeek).toHaveBeenCalledWith(
       expect.objectContaining({ weekNumber: 1, totalOutflow: 200 }),
-      'expense',
     )
   })
 
-  it('marks a week the cycle has not reached instead of pacing it at zero', () => {
-    render(
-      <CycleCalendar
-        selectedMonth="Jul"
-        selectedYear={2026}
-        cycleDay={1}
-        cycleLabel="Jul 1 ~ Jul 31, 2026"
-        transactions={[]}
-        recurringPayments={[]}
-        formatNet={value => `$${value}`}
-      />,
-    )
+  it('marks a week the cycle has not reached instead of showing it at zero', () => {
+    renderCalendar()
 
     expect(screen.getAllByText('Not here yet').length).toBeGreaterThan(0)
   })

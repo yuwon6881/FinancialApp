@@ -7,8 +7,6 @@ const MONTH_INDEX: Record<string, number> = {
   Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
 }
 
-export type CycleHeatmapMode = 'expense' | 'net' | 'activity'
-
 export const formatCalendarDate = (date: Date): string => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -22,13 +20,8 @@ export interface CycleCalendarDay {
   net?: number
   inflow: number
   outflow: number
-  activity: number
+  /** How much was spent that day against the busiest day of the cycle, 0 (nothing) to 4. */
   heatLevel: 0 | 1 | 2 | 3 | 4
-  heatLevels: {
-    expense: 0 | 1 | 2 | 3 | 4
-    net: 0 | 1 | 2 | 3 | 4
-    activity: 0 | 1 | 2 | 3 | 4
-  }
   transactions: Transaction[]
   recurring: ActiveRecurringPayment[]
   recurringNames: string[]
@@ -47,8 +40,6 @@ export interface CycleWeekSummary {
   totalOutflow: number
   totalInflow: number
   totalNet: number
-  /** Gross cash moved (inflow + outflow), so the Activity mode has a figure of its own. */
-  totalActivity: number
   transactionCount: number
   /** Bills still owed on the week's upcoming days -- absent history, not zero spending. */
   projectedBillsAmount: number
@@ -63,7 +54,6 @@ interface CycleCalendarStats {
   totalNet: number
   averageDailySpend: number
   maxExpenseDay: number
-  maxActivityDay: number
   noSpendDaysCount: number
 }
 
@@ -92,7 +82,6 @@ export function buildCycleCalendar(options: {
   const netByDay = new Map<string, number>()
   const inflowByDay = new Map<string, number>()
   const outflowByDay = new Map<string, number>()
-  const activityByDay = new Map<string, number>()
 
   for (const transaction of options.transactions) {
     if (transaction.date < startKey || transaction.date > endKey || !isReportableCashMovement(transaction)) continue
@@ -109,8 +98,6 @@ export function buildCycleCalendar(options: {
     } else if (transaction.amount < 0) {
       outflowByDay.set(transaction.date, (outflowByDay.get(transaction.date) || 0) + Math.abs(transaction.amount))
     }
-
-    activityByDay.set(transaction.date, (activityByDay.get(transaction.date) || 0) + Math.abs(transaction.amount))
   }
 
   const recurringByDay = new Map<string, ActiveRecurringPayment[]>()
@@ -121,7 +108,7 @@ export function buildCycleCalendar(options: {
     recurringByDay.set(payment.dueDate, list)
   }
 
-  const rawDays: Omit<CycleCalendarDay, 'heatLevel' | 'heatLevels'>[] = []
+  const rawDays: Omit<CycleCalendarDay, 'heatLevel'>[] = []
   const cursor = new Date(start)
   while (cursor <= end) {
     const date = new Date(cursor)
@@ -135,7 +122,6 @@ export function buildCycleCalendar(options: {
     const dayRecurring = recurringByDay.get(dateKey) || []
     const inflow = inflowByDay.get(dateKey) || 0
     const outflow = outflowByDay.get(dateKey) || 0
-    const activity = activityByDay.get(dateKey) || 0
     const net = netByDay.get(dateKey)
 
     const projectedBillsAmount = dayRecurring.reduce((sum, p) => sum + (p.remainingAmount ?? p.scheduledAmount ?? p.amount ?? 0), 0)
@@ -148,7 +134,6 @@ export function buildCycleCalendar(options: {
       net,
       inflow,
       outflow,
-      activity,
       transactions: dayTransactions,
       recurring: dayRecurring,
       recurringNames: dayRecurring.map(p => p.name),
@@ -162,30 +147,17 @@ export function buildCycleCalendar(options: {
     cursor.setDate(cursor.getDate() + 1)
   }
 
-  const busiestActivity = Math.max(0, ...rawDays.map(d => d.activity))
   const busiestExpense = Math.max(0, ...rawDays.map(d => d.outflow))
-  const busiestNetAbs = Math.max(0, ...rawDays.map(d => Math.abs(d.net ?? 0)))
 
   const calculateHeatLevel = (value: number, max: number): 0 | 1 | 2 | 3 | 4 => {
     if (value <= 0 || max <= 0) return 0
     return Math.min(4, Math.max(1, Math.ceil((value / max) * 4))) as 0 | 1 | 2 | 3 | 4
   }
 
-  const days: CycleCalendarDay[] = rawDays.map(day => {
-    const expenseHeat = calculateHeatLevel(day.outflow, busiestExpense)
-    const activityHeat = calculateHeatLevel(day.activity, busiestActivity)
-    const netHeat = calculateHeatLevel(Math.abs(day.net ?? 0), busiestNetAbs)
-
-    return {
-      ...day,
-      heatLevel: expenseHeat,
-      heatLevels: {
-        expense: expenseHeat,
-        activity: activityHeat,
-        net: netHeat,
-      },
-    }
-  })
+  const days: CycleCalendarDay[] = rawDays.map(day => ({
+    ...day,
+    heatLevel: calculateHeatLevel(day.outflow, busiestExpense),
+  }))
 
   // Group into calendar weeks for weekly subtotals
   const weeks: CycleWeekSummary[] = []
@@ -200,7 +172,6 @@ export function buildCycleCalendar(options: {
       const totalOutflow = currentWeekDays.reduce((acc, d) => acc + d.outflow, 0)
       const totalInflow = currentWeekDays.reduce((acc, d) => acc + d.inflow, 0)
       const totalNet = currentWeekDays.reduce((acc, d) => acc + (d.net ?? 0), 0)
-      const totalActivity = currentWeekDays.reduce((acc, d) => acc + d.activity, 0)
       const transactionCount = currentWeekDays.reduce((acc, d) => acc + d.transactions.length, 0)
       const projectedBillsAmount = currentWeekDays
         .filter(d => d.isFuture)
@@ -213,7 +184,6 @@ export function buildCycleCalendar(options: {
         totalOutflow,
         totalInflow,
         totalNet,
-        totalActivity,
         transactionCount,
         projectedBillsAmount,
         dayCount: currentWeekDays.length,
@@ -241,42 +211,7 @@ export function buildCycleCalendar(options: {
       totalNet,
       averageDailySpend,
       maxExpenseDay: busiestExpense,
-      maxActivityDay: busiestActivity,
       noSpendDaysCount,
     },
   }
-}
-
-export type CycleMetricTone = 'inflow' | 'outflow' | 'neutral'
-
-export interface CycleMetric {
-  /** Signed figure to render, or undefined when the mode has nothing to say for this period. */
-  value?: number
-  tone: CycleMetricTone
-}
-
-/**
- * The figure a day or week shows has to match the mode being shaded, otherwise Spending mode
- * reports a salary as a positive number on a day with no spending at all.
- */
-export function cycleDayMetric(
-  day: Pick<CycleCalendarDay, 'net' | 'outflow' | 'activity'>,
-  mode: CycleHeatmapMode,
-): CycleMetric {
-  if (mode === 'expense') {
-    return { value: day.outflow > 0 ? -day.outflow : undefined, tone: 'outflow' }
-  }
-  if (mode === 'activity') {
-    return { value: day.activity > 0 ? day.activity : undefined, tone: 'neutral' }
-  }
-  return { value: day.net, tone: (day.net ?? 0) >= 0 ? 'inflow' : 'outflow' }
-}
-
-export function cycleWeekMetric(
-  week: Pick<CycleWeekSummary, 'totalOutflow' | 'totalNet' | 'totalActivity'>,
-  mode: CycleHeatmapMode,
-): CycleMetric {
-  if (mode === 'expense') return { value: -week.totalOutflow, tone: 'outflow' }
-  if (mode === 'activity') return { value: week.totalActivity, tone: 'neutral' }
-  return { value: week.totalNet, tone: week.totalNet >= 0 ? 'inflow' : 'outflow' }
 }

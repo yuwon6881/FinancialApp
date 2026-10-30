@@ -218,10 +218,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         formatNet={view.formatCompactSensitive}
         hideSensitive={hideSensitive}
         onSelectDate={date => onNavigateToLedger?.({ date })}
-        onSelectWeek={(week, mode) => onNavigateToLedger?.({
+        onSelectWeek={week => onNavigateToLedger?.({
           startDate: week.startDate,
           endDate: week.endDate,
-          txType: mode === 'expense' ? 'outflow' : null,
+          txType: 'outflow',
         })}
       />
 

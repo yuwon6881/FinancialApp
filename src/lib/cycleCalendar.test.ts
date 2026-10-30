@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCycleCalendar, cycleDayMetric, cycleWeekMetric } from './cycleCalendar'
+import { buildCycleCalendar } from './cycleCalendar'
 
 describe('buildCycleCalendar', () => {
   it('clamps the cycle day and excludes transfers and adjustments from daily net activity', () => {
@@ -19,12 +19,12 @@ describe('buildCycleCalendar', () => {
     expect(result.days[0].net).toBe(100)
     expect(result.days[0].inflow).toBe(100)
     expect(result.days[0].outflow).toBe(0)
-    expect(result.days[0].activity).toBe(100)
-    expect(result.days[0].heatLevels.activity).toBe(4)
+    // An inflow-only day is not spending, so it carries no heat.
+    expect(result.days[0].heatLevel).toBe(0)
     expect(result.days.at(-1)?.dateKey).toBe('2026-03-30')
   })
 
-  it('grades daily cash activity across expense, activity, and net modes', () => {
+  it('grades each day by its spending against the busiest day', () => {
     const result = buildCycleCalendar({
       selectedMonth: 'Jul', selectedYear: 2026, cycleDay: 1, recurringPayments: [],
       transactions: [
@@ -35,17 +35,8 @@ describe('buildCycleCalendar', () => {
       ],
     })
 
-    expect(result.days.slice(0, 4).map(day => ({
-      activity: day.activity,
-      activityHeat: day.heatLevels.activity,
-      expenseHeat: day.heatLevels.expense,
-      netHeat: day.heatLevels.net,
-    }))).toEqual([
-      { activity: 25, activityHeat: 1, expenseHeat: 1, netHeat: 2 },
-      { activity: 50, activityHeat: 1, expenseHeat: 2, netHeat: 4 },
-      { activity: 200, activityHeat: 4, expenseHeat: 4, netHeat: 0 },
-      { activity: 0, activityHeat: 0, expenseHeat: 0, netHeat: 0 },
-    ])
+    // Income and the rest of a day's cash movement never count towards the heat.
+    expect(result.days.slice(0, 4).map(day => day.heatLevel)).toEqual([1, 2, 4, 0])
   })
 
   it('groups recurring-payment names and identifies pending vs paid statuses', () => {
@@ -107,7 +98,7 @@ describe('buildCycleCalendar', () => {
     expect(result.days.at(-1)?.dateKey).toBe('2025-02-27')
   })
 
-  it('summarises each week by gross activity and elapsed days as well as flow', () => {
+  it('summarises each week by spending and elapsed days as well as flow', () => {
     const result = buildCycleCalendar({
       selectedMonth: 'Jul',
       selectedYear: 2026,
@@ -126,7 +117,6 @@ describe('buildCycleCalendar', () => {
     })
 
     const firstWeek = result.weeks[0]
-    expect(firstWeek.totalActivity).toBe(500)
     expect(firstWeek.totalOutflow).toBe(100)
     expect(firstWeek.totalNet).toBe(300)
     expect(firstWeek.elapsedDayCount).toBe(2)
@@ -135,33 +125,5 @@ describe('buildCycleCalendar', () => {
     const billWeek = result.weeks.find(week => week.startDate <= '2026-07-20' && week.endDate >= '2026-07-20')
     expect(billWeek?.elapsedDayCount).toBe(0)
     expect(billWeek?.projectedBillsAmount).toBe(60)
-  })
-})
-
-describe('cycle mode metrics', () => {
-  const day = { net: 350, outflow: 150, activity: 650 }
-
-  it('reports only spending in Spending mode so an inflow never reads as money spent', () => {
-    expect(cycleDayMetric(day, 'expense')).toEqual({ value: -150, tone: 'outflow' })
-    expect(cycleDayMetric({ net: 500, outflow: 0, activity: 500 }, 'expense'))
-      .toEqual({ value: undefined, tone: 'outflow' })
-  })
-
-  it('reports signed net in Net Flow mode and gross movement in Activity mode', () => {
-    expect(cycleDayMetric(day, 'net')).toEqual({ value: 350, tone: 'inflow' })
-    expect(cycleDayMetric({ net: -20, outflow: 20, activity: 20 }, 'net')).toEqual({ value: -20, tone: 'outflow' })
-    expect(cycleDayMetric(day, 'activity')).toEqual({ value: 650, tone: 'neutral' })
-  })
-
-  it('leaves a day with nothing recorded absent rather than showing zero', () => {
-    expect(cycleDayMetric({ net: undefined, outflow: 0, activity: 0 }, 'net').value).toBeUndefined()
-    expect(cycleDayMetric({ net: undefined, outflow: 0, activity: 0 }, 'activity').value).toBeUndefined()
-  })
-
-  it('paces weeks by the same figure the grid is shading', () => {
-    const week = { totalOutflow: 300, totalNet: -100, totalActivity: 500 }
-    expect(cycleWeekMetric(week, 'expense')).toEqual({ value: -300, tone: 'outflow' })
-    expect(cycleWeekMetric(week, 'net')).toEqual({ value: -100, tone: 'outflow' })
-    expect(cycleWeekMetric(week, 'activity')).toEqual({ value: 500, tone: 'neutral' })
   })
 })

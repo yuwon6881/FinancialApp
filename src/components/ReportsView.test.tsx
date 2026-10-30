@@ -53,11 +53,11 @@ vi.mock('./dashboard/CycleCalendar', () => ({
     onSelectWeek,
   }: {
     onSelectDate: (date: string) => void
-    onSelectWeek?: (week: { startDate: string; endDate: string; weekNumber: number }, mode: string) => void
+    onSelectWeek?: (week: { startDate: string; endDate: string; weekNumber: number }) => void
   }) => (
     <div>
       <Button variant="tertiary" onClick={() => onSelectDate('2026-07-30')}>Activity calendar</Button>
-      <Button variant="tertiary" onClick={() => onSelectWeek?.({ startDate: '2026-06-01', endDate: '2026-06-07', weekNumber: 1 }, 'expense')}>
+      <Button variant="tertiary" onClick={() => onSelectWeek?.({ startDate: '2026-06-01', endDate: '2026-06-07', weekNumber: 1 })}>
         Week 1 pacing
       </Button>
     </div>
