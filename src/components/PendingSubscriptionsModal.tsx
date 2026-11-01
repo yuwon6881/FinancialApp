@@ -274,7 +274,7 @@ export function PendingSubscriptionsModal({
                   className="w-full"
                 />
               </div>
-              <div className="flex min-h-11 items-center gap-1 rounded-control bg-muted dark:bg-card/70 pr-3.5 sm:h-11">
+              <div className="flex min-h-11 items-center gap-2 rounded-control bg-muted dark:bg-card/70 pr-3.5 sm:h-11">
                 <ToggleButton
                   active={isPartial}
                   label={`Pay partial amount for ${noti.name}`}
