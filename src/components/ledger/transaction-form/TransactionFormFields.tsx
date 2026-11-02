@@ -35,7 +35,7 @@ interface TransactionFormFieldsProps {
   onSetSplitAccountId?: (bucket: TransferBucket, accountId: string) => void
   onSwapTransfer?: () => void
   onSelectSuggestion: (s: any) => void
-  onSuggestNotes: () => Promise<void>
+  onSuggestNotes: (options?: { auto?: boolean }) => Promise<void>
   onSuggestCategory: () => Promise<void>
   filteredSuggestions: any[]
   quickSuggestionEntries: any[]

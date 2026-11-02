@@ -119,8 +119,13 @@ export function useTransactionSuggestions(options: UseTransactionSuggestionsOpti
     }
   }, [categories, categorySuggestions, editingTxId, showAddForm, txType])
 
-  const requestNoteSuggestions = useCallback(async (trimmedDescription: string) => {
+  /**
+   * An `auto` request comes from the typing pause, not a tap on the AI button, so it stays quiet:
+   * the popover opens only when there is something to offer, never to say "nothing found" or "unavailable".
+   */
+  const requestNoteSuggestions = useCallback(async (trimmedDescription: string, options?: { auto?: boolean }) => {
     if (!showAddForm || txType === 'transfer' || trimmedDescription.length < 2) return
+    const auto = options?.auto === true
 
     noteSuggestionAbortRef.current?.abort()
     const controller = new AbortController()
@@ -128,7 +133,7 @@ export function useTransactionSuggestions(options: UseTransactionSuggestionsOpti
     const requestSeq = noteSuggestionRequestSeqRef.current + 1
     noteSuggestionRequestSeqRef.current = requestSeq
 
-    setShowNoteSuggestions(true)
+    setShowNoteSuggestions(!auto)
     setIsSuggestingNote(true)
     setNoteSuggestionUnavailable(false)
 
@@ -147,11 +152,12 @@ export function useTransactionSuggestions(options: UseTransactionSuggestionsOpti
 
       if (noteSuggestionRequestSeqRef.current !== requestSeq) return
       setNoteSuggestions(suggestions)
+      if (auto && suggestions.length > 0) setShowNoteSuggestions(true)
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return
       if (noteSuggestionRequestSeqRef.current === requestSeq) {
         setNoteSuggestions([])
-        setNoteSuggestionUnavailable(true)
+        setNoteSuggestionUnavailable(!auto)
       }
       console.warn('Failed to suggest transaction notes', err)
     } finally {

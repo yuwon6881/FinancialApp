@@ -16,7 +16,7 @@ export interface TransactionDescriptionFieldProps {
   errors: Record<string, string>
   onSetField: (field: keyof TransactionFormState, value: any) => void
   onSelectSuggestion: (s: any) => void
-  onSuggestNotes: () => Promise<void>
+  onSuggestNotes: (options?: { auto?: boolean }) => Promise<void>
   onSuggestCategory: () => Promise<void>
   filteredSuggestions: any[]
   quickSuggestionEntries: any[]
@@ -33,6 +33,9 @@ export interface TransactionDescriptionFieldProps {
     setIsSuggestingNote: (v: boolean) => void
   }
 }
+
+/** How long the description must sit untouched before the AI cleanup runs by itself. */
+const AUTO_CLEANUP_IDLE_MS = 1000
 
 export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldProps> = ({
   state,
@@ -53,10 +56,34 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const descriptionAnchorRef = useRef<HTMLDivElement>(null)
   const blurTimeoutRef = useRef<number | undefined>(undefined)
+  const autoCleanupTimeoutRef = useRef<number | undefined>(undefined)
+  const lastAutoCleanupTextRef = useRef<string | null>(null)
 
-  useEffect(() => () => window.clearTimeout(blurTimeoutRef.current), [])
+  useEffect(() => () => {
+    window.clearTimeout(blurTimeoutRef.current)
+    window.clearTimeout(autoCleanupTimeoutRef.current)
+  }, [])
+
+  // Only typing schedules the cleanup, so a description read from a notification stays untouched
+  // until the user edits it. Picking an autocomplete entry or editing a saved transaction never does.
+  const scheduleAutoCleanup = (typed: string) => {
+    window.clearTimeout(autoCleanupTimeoutRef.current)
+    const text = typed.trim()
+    if (
+      state.mode === 'edit' ||
+      state.transactionType === 'transfer' ||
+      text.length < 2 ||
+      text === lastAutoCleanupTextRef.current ||
+      autocompletedDescriptionRef.current === text
+    ) return
+    autoCleanupTimeoutRef.current = window.setTimeout(() => {
+      lastAutoCleanupTextRef.current = text
+      void onSuggestNotes({ auto: true })
+    }, AUTO_CLEANUP_IDLE_MS)
+  }
 
   const handleDescriptionBlur = () => {
+    window.clearTimeout(autoCleanupTimeoutRef.current)
     window.clearTimeout(blurTimeoutRef.current)
     blurTimeoutRef.current = window.setTimeout(() => {
       setShowSuggestions(false)
@@ -113,7 +140,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
             size="sm"
             type="button"
             onMouseDown={e => e.preventDefault()}
-            onClick={onSuggestNotes}
+            onClick={() => void onSuggestNotes()}
             disabled={suggestions.isSuggestingNote || state.description.trim().length < 2}
             title={state.description.trim().length < 2 ? 'Enter a description first' : 'Suggest better notes'}
             className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2 py-1 text-caption font-semibold text-accent-ink hover:bg-primary/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
@@ -145,6 +172,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
               suggestions.setIsSuggestingNote(false)
               setShowSuggestions(true)
               setSelectedSuggestionIndex(-1)
+              scheduleAutoCleanup(nextVal)
             }}
             onFocus={() => {
               if (!suggestions.showNoteSuggestions && state.description.trim().length >= 1) setShowSuggestions(true)
