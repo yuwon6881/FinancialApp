@@ -58,32 +58,90 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
   const blurTimeoutRef = useRef<number | undefined>(undefined)
   const autoCleanupTimeoutRef = useRef<number | undefined>(undefined)
   const lastAutoCleanupTextRef = useRef<string | null>(null)
+  const isFocusedRef = useRef(false)
+  const scheduledTextRef = useRef<string | null>(null)
+  const localInputRef = useRef<HTMLInputElement | null>(null)
+  const suggestionsPropRef = useRef(suggestions)
+  const onSuggestNotesRef = useRef(onSuggestNotes)
 
-  useEffect(() => () => {
-    window.clearTimeout(blurTimeoutRef.current)
+  useEffect(() => {
+    suggestionsPropRef.current = suggestions
+    onSuggestNotesRef.current = onSuggestNotes
+  })
+
+  const getInputEl = () => localInputRef.current || (firstInputRef && 'current' in firstInputRef ? firstInputRef.current : null)
+
+  const cancelAutoCleanup = () => {
     window.clearTimeout(autoCleanupTimeoutRef.current)
+    autoCleanupTimeoutRef.current = undefined
+    scheduledTextRef.current = null
+  }
+
+  useEffect(() => {
+    const handleWindowBlur = () => {
+      isFocusedRef.current = false
+      cancelAutoCleanup()
+    }
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        isFocusedRef.current = false
+        cancelAutoCleanup()
+      }
+    }
+    window.addEventListener('blur', handleWindowBlur)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      window.clearTimeout(blurTimeoutRef.current)
+      cancelAutoCleanup()
+      window.removeEventListener('blur', handleWindowBlur)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [])
+
+  useEffect(() => {
+    if (!state.showAddForm || state.mode === 'edit' || state.transactionType === 'transfer') {
+      cancelAutoCleanup()
+      return
+    }
+    if (scheduledTextRef.current !== null && state.description.trim() !== scheduledTextRef.current) {
+      cancelAutoCleanup()
+    }
+  }, [state.description, state.mode, state.transactionType, state.showAddForm])
 
   // Only typing schedules the cleanup, so a description read from a notification stays untouched
   // until the user edits it. Picking an autocomplete entry or editing a saved transaction never does.
   const scheduleAutoCleanup = (typed: string) => {
-    window.clearTimeout(autoCleanupTimeoutRef.current)
+    cancelAutoCleanup()
     const text = typed.trim()
     if (
+      !state.showAddForm ||
       state.mode === 'edit' ||
       state.transactionType === 'transfer' ||
       text.length < 2 ||
       text === lastAutoCleanupTextRef.current ||
       autocompletedDescriptionRef.current === text
     ) return
+    scheduledTextRef.current = text
     autoCleanupTimeoutRef.current = window.setTimeout(() => {
+      autoCleanupTimeoutRef.current = undefined
+      scheduledTextRef.current = null
+      if (!isFocusedRef.current || suggestionsPropRef.current.isSuggestingNote) return
+      if (typeof document !== 'undefined') {
+        const active = document.activeElement
+        const inputEl = getInputEl()
+        if (!inputEl || !inputEl.isConnected || active !== inputEl) {
+          isFocusedRef.current = false
+          return
+        }
+      }
       lastAutoCleanupTextRef.current = text
-      void onSuggestNotes({ auto: true })
+      void onSuggestNotesRef.current({ auto: true })
     }, AUTO_CLEANUP_IDLE_MS)
   }
 
   const handleDescriptionBlur = () => {
-    window.clearTimeout(autoCleanupTimeoutRef.current)
+    isFocusedRef.current = false
+    cancelAutoCleanup()
     window.clearTimeout(blurTimeoutRef.current)
     blurTimeoutRef.current = window.setTimeout(() => {
       setShowSuggestions(false)
@@ -92,6 +150,9 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
   }
 
   const handleDescriptionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Tab' || e.key === 'Enter' || e.key === 'Escape' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      cancelAutoCleanup()
+    }
     if (!showSuggestions || filteredSuggestions.length === 0) return
 
     if (e.key === 'ArrowDown') {
@@ -114,7 +175,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
   useEffect(() => {
     if (selectedSuggestionIndex >= 0 && suggestionsRef.current) {
       const activeEl = suggestionsRef.current.children[selectedSuggestionIndex] as HTMLElement
-      if (activeEl) {
+      if (activeEl && typeof activeEl.scrollIntoView === 'function') {
         activeEl.scrollIntoView({ block: 'nearest' })
       }
     }
@@ -140,7 +201,10 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
             size="sm"
             type="button"
             onMouseDown={e => e.preventDefault()}
-            onClick={() => void onSuggestNotes()}
+            onClick={() => {
+              cancelAutoCleanup()
+              void onSuggestNotes()
+            }}
             disabled={suggestions.isSuggestingNote || state.description.trim().length < 2}
             title={state.description.trim().length < 2 ? 'Enter a description first' : 'Suggest better notes'}
             className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2 py-1 text-caption font-semibold text-accent-ink hover:bg-primary/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
@@ -155,17 +219,54 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
         <div ref={descriptionAnchorRef} className={`relative rounded-xl ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
           {suggestions.isSuggestingNote && <PerimeterBeam size={40} />}
           <Input
-            ref={firstInputRef}
+            ref={node => {
+              localInputRef.current = node
+              if (firstInputRef) {
+                if (typeof firstInputRef === 'function') {
+                  (firstInputRef as any)(node)
+                } else {
+                  (firstInputRef as any).current = node
+                }
+              }
+            }}
             type="text"
             placeholder="e.g. Grocery Store, Paycheck"
             value={state.description}
             onBlur={handleDescriptionBlur}
             onChange={e => {
+              const inputEl = getInputEl()
+              const isCurrentlyFocused = typeof document !== 'undefined' && inputEl
+                ? document.activeElement === inputEl
+                : isFocusedRef.current
+              if (!isCurrentlyFocused) {
+                // Programmatic change, extension, or autofill while not focused: do not schedule cleanup or steal focus
+                isFocusedRef.current = false
+                cancelAutoCleanup()
+                const nextVal = e.target.value
+                descriptionRef.current = nextVal
+                onSetField('description', nextVal)
+                if (autocompletedDescriptionRef.current && autocompletedDescriptionRef.current !== nextVal.trim()) {
+                  autocompletedDescriptionRef.current = null
+                }
+                if (nextVal.trim().length === 0) {
+                  lastAutoCleanupTextRef.current = null
+                }
+                suggestions.setShowNoteSuggestions(false)
+                suggestions.setNoteSuggestions([])
+                suggestions.setIsSuggestingNote(false)
+                setShowSuggestions(false)
+                setSelectedSuggestionIndex(-1)
+                return
+              }
+              isFocusedRef.current = true
               const nextVal = e.target.value
               descriptionRef.current = nextVal
               onSetField('description', nextVal)
               if (autocompletedDescriptionRef.current && autocompletedDescriptionRef.current !== nextVal.trim()) {
                 autocompletedDescriptionRef.current = null
+              }
+              if (nextVal.trim().length === 0) {
+                lastAutoCleanupTextRef.current = null
               }
               suggestions.setShowNoteSuggestions(false)
               suggestions.setNoteSuggestions([])
@@ -175,6 +276,7 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
               scheduleAutoCleanup(nextVal)
             }}
             onFocus={() => {
+              isFocusedRef.current = true
               if (!suggestions.showNoteSuggestions && state.description.trim().length >= 1) setShowSuggestions(true)
             }}
             onKeyDown={handleDescriptionKeyDown}
@@ -182,6 +284,8 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
             // One press clears a description read from a notification that is not what the user
             // wants, rather than holding backspace through it.
             onClear={() => {
+              cancelAutoCleanup()
+              lastAutoCleanupTextRef.current = null
               descriptionRef.current = ''
               autocompletedDescriptionRef.current = null
               onSetField('description', '')
@@ -216,6 +320,8 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
               type="button"
               onMouseDown={e => e.preventDefault()}
               onClick={() => {
+                cancelAutoCleanup()
+                autocompletedDescriptionRef.current = s.note.trim()
                 onSetField('description', s.note)
                 descriptionRef.current = s.note
                 suggestions.setShowNoteSuggestions(false)
@@ -263,9 +369,11 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
               data-suggestion
               type="button"
               onMouseDown={() => {
+                cancelAutoCleanup()
                 autocompletedDescriptionRef.current = s.description.trim()
               }}
               onClick={() => {
+                cancelAutoCleanup()
                 onSelectSuggestion(s)
                 setShowSuggestions(false)
               }}
@@ -292,9 +400,13 @@ export const TransactionDescriptionField: React.FC<TransactionDescriptionFieldPr
               key={s.description}
               type="button"
               onMouseDown={() => {
+                cancelAutoCleanup()
                 autocompletedDescriptionRef.current = s.description.trim()
               }}
-              onClick={() => onSelectSuggestion(s)}
+              onClick={() => {
+                cancelAutoCleanup()
+                onSelectSuggestion(s)
+              }}
               className="shrink-0 rounded-full border border-border bg-muted/30 px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
             >
               {s.description}
