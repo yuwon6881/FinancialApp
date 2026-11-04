@@ -48,6 +48,10 @@ describe('investment allocation sleeve index', () => {
     expect(sleeveLabelFor('Unassigned', index)).toBe('Not sorted yet')
     expect(sleeveLabelFor('Mystery', index)).toBe('Mystery')
   })
+
+  it('labels a known sleeve that no current instrument sits in, never showing its code', () => {
+    expect(sleeveLabelFor('USEquity', new Map())).toBe('US shares')
+  })
 })
 
 describe('allocationStatusLabel', () => {

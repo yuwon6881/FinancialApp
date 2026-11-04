@@ -34,6 +34,7 @@ import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import { isActivityScan, isCashMovementScan } from '../lib/investmentScanKind'
 import type { InvestmentActivityScanResult } from '../lib/api'
 import { SummaryCards } from './investments/SummaryCards'
+import { InvestmentHistoryPanel } from './investments/InvestmentHistoryPanel'
 import { AccountsAndInstruments } from './investments/AccountsAndInstruments'
 import { ActionToolbar, EmptyState } from './investments/InvestmentToolbars'
 import { ChevronDown } from 'lucide-react'
@@ -411,6 +412,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
               )}
             </section>
           </div>
+          <InvestmentHistoryPanel instruments={portfolio.instruments} masked={passiveMask} refreshToken={activityRevision} />
           <PagedActivityTable
             portfolio={setupPortfolio ?? portfolio}
             masked={passiveMask}

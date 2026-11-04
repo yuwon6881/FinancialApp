@@ -253,3 +253,62 @@ interface InvestmentContributionPlan {
     projectedDriftPercentagePoints: number
   }>
 }
+
+/**
+ * Settled month-end history from the server's snapshot cache. Absent figures are unknown (a
+ * missing price or exchange rate), never zero. Percentages are percent: 12.5 means 12.5%.
+ */
+export interface InvestmentHistorySegment {
+  segment: string
+  openingValue?: number
+  closingValue?: number
+  netContributions?: number
+  growth?: number
+  returnPercent?: number
+  isComplete: boolean
+}
+
+export interface InvestmentHistoryYear {
+  year: number
+  periodEnd: string
+  /** False while the year still has months to settle; its figures run only to periodEnd. */
+  isFullYear: boolean
+  openingValue?: number
+  closingValue?: number
+  netContributions?: number
+  dividends?: number
+  realisedProfitLoss?: number
+  growth?: number
+  returnPercent?: number
+  isComplete: boolean
+  missingReasons: string[]
+  segments: InvestmentHistorySegment[]
+}
+
+export interface InvestmentHistoryMonth {
+  periodEnd: string
+  closingValue?: number
+  netContributions?: number
+  cumulativeContributions?: number
+  returnPercent?: number
+  isComplete: boolean
+}
+
+export interface InvestmentHistory {
+  currency: string
+  lifetime: {
+    firstMonth?: string
+    asOf?: string
+    netContributions?: number
+    value?: number
+    growth?: number
+    dividends?: number
+    realisedProfitLoss?: number
+    cumulativeReturnPercent?: number
+    annualisedReturnPercent?: number
+    isComplete: boolean
+    segments: InvestmentHistorySegment[]
+  }
+  years: InvestmentHistoryYear[]
+  months: InvestmentHistoryMonth[]
+}
