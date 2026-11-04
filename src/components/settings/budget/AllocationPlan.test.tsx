@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { DashboardData } from '../../../types'
+import { AppUiContext } from '../../../contexts/AppContext'
 import { AllocationPlan } from './AllocationPlan'
 
 const savedSettings = {
@@ -96,5 +97,44 @@ describe('AllocationPlan', () => {
     expect(screen.queryByRole('textbox', { name: /Stability fund target/ })).toBeNull()
     expect(screen.queryByText(/3,600/)).toBeNull()
     expect((screen.getByRole('button', { name: 'Edit split' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+  it('asks before switching the currency and explains what happens to investment history', () => {
+    const confirm = vi.fn()
+    const view = makeView({ currencyInput: 'SGD' })
+    render(
+      <AppUiContext.Provider value={{ confirm, showToast: vi.fn(), guardSensitive: () => false }}>
+        <AllocationPlan view={view} hideSensitive={false} settingsSyncing={false} settingsPending={false} dashboardData={dashboard} />
+      </AppUiContext.Provider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Save rules/ }))
+
+    expect(view.handleSaveSettings).not.toHaveBeenCalled()
+    expect(confirm).toHaveBeenCalledTimes(1)
+    const request = confirm.mock.calls[0][0]
+    expect(request.title).toBe('Switch currency to SGD?')
+    expect(request.confirmText).toBe('Switch to SGD')
+    render(<>{request.message}</>)
+    expect(screen.getByText(/keep their numbers/)).toBeTruthy()
+    expect(screen.getByText(/each date.s exchange rate/)).toBeTruthy()
+    expect(screen.getByText(/never as zero/)).toBeTruthy()
+
+    request.onConfirm()
+    expect(view.handleSaveSettings).toHaveBeenCalledTimes(1)
+  })
+
+  it('saves other rule changes without asking', () => {
+    const confirm = vi.fn()
+    const view = makeView({ cycleDayInput: '15' })
+    render(
+      <AppUiContext.Provider value={{ confirm, showToast: vi.fn(), guardSensitive: () => false }}>
+        <AllocationPlan view={view} hideSensitive={false} settingsSyncing={false} settingsPending={false} dashboardData={dashboard} />
+      </AppUiContext.Provider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Save rules/ }))
+
+    expect(confirm).not.toHaveBeenCalled()
+    expect(view.handleSaveSettings).toHaveBeenCalledTimes(1)
   })
 })
