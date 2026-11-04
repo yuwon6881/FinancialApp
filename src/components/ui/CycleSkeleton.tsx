@@ -272,6 +272,8 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
           {[1, 2, 3, 4].map(i => <InvestmentSummarySkeleton key={i} />)}
         </div>
         <div className="flex flex-wrap gap-2 rounded-2xl border border-border/60 bg-card/92 p-3">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-9 w-28 rounded-xl" />)}</div>
+        {/* Portfolio | History | Activity */}
+        <div className="flex gap-4 border-b border-border/70 pb-3">{['w-20', 'w-16', 'w-18'].map(width => <Skeleton key={width} className={cn('h-4 rounded-md', width)} />)}</div>
         <div className={`${panelClass} space-y-5 p-5`}><div className="space-y-2"><Skeleton className="h-5 w-40" /><Skeleton className="h-3 w-72 max-w-full" /></div><CompactMetricGridSkeleton count={3} /></div>
         <div className={`${panelClass} flex items-center justify-between gap-3 p-4`}>
           <div className="flex items-center gap-3">

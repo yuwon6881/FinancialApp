@@ -411,6 +411,8 @@ test('investment activity table explains fees and taxes beside the gross amount'
   await establishSession(page)
   await mockApi(page, { investmentTransactions: [activity] })
   await page.goto('/investments', { waitUntil: 'domcontentloaded' })
+  // The record of trades is its own view beside the portfolio.
+  await page.getByRole('tab', { name: 'Activity' }).click()
 
   await expect(page.getByText('Gross amount')).toBeVisible()
   await expect(page.getByText(/Fees.*0\.02.*Taxes.*0\.21/).last()).toBeVisible()
