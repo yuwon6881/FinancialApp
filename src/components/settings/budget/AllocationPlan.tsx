@@ -2,6 +2,7 @@ import React from 'react'
 import { Lock, Pencil, Save, Unlock } from 'lucide-react'
 import type { DashboardData } from '../../../types'
 import type { AllocationKey } from '../../../lib/allocations'
+import { useAppUi } from '../../../contexts/AppContext'
 import { getCategoryChartColor } from '../../../lib/categoryColors'
 import { getCurrencySymbol } from '../../../lib/utils'
 import { cn } from '../../../lib/utils'
@@ -19,6 +20,7 @@ import { SegmentedMeter } from '../../ui/SegmentedMeter'
 import { SensitiveMask } from '../../ui/SensitiveAmount'
 import { panelClass } from '../../ui/panelStyles'
 import type { useSettingsView } from '../view/useSettingsView'
+import { CurrencySwitchNotice } from './CurrencySwitchNotice'
 import { RuleRow } from './RuleRow'
 
 const DEFAULT_OVERFLOW_REDIRECT = 'Split: Growth 50%, Rewards 50%'
@@ -126,8 +128,32 @@ export function AllocationPlan({ view, hideSensitive, settingsSyncing, settingsP
 
   const symbol = getCurrencySymbol(currency)
 
+  // A currency switch recalculates investment history, so it is confirmed before it is saved. The
+  // confirmed save resubmits the form, which keeps the view's own validation and focus handling.
+  const { confirm } = useAppUi()
+  const formRef = React.useRef<HTMLFormElement>(null)
+  const currencySwitchConfirmed = React.useRef(false)
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    const next = view.currencyInput
+    if (next !== currency && !currencySwitchConfirmed.current) {
+      event.preventDefault()
+      confirm({
+        title: `Switch currency to ${next}?`,
+        message: <CurrencySwitchNotice from={currency} to={next} />,
+        confirmText: `Switch to ${next}`,
+        onConfirm: () => {
+          currencySwitchConfirmed.current = true
+          formRef.current?.requestSubmit()
+        },
+      })
+      return
+    }
+    currencySwitchConfirmed.current = false
+    view.handleSaveSettings(event)
+  }
+
   return (
-    <form noValidate onSubmit={view.handleSaveSettings} className="@container min-w-0 space-y-4">
+    <form ref={formRef} noValidate onSubmit={submit} className="@container min-w-0 space-y-4">
       <div className="grid items-start gap-6 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
         <section aria-labelledby="budget-split-heading" className={cn(panelClass, 'min-w-0 overflow-hidden')}>
           <div className="space-y-4 p-4 sm:p-5">
