@@ -20,6 +20,9 @@ vi.mock('../lib/api', () => ({
   createManualInvestmentPrice: vi.fn(),
   deleteInvestmentActivity: vi.fn(),
   refreshInvestmentMarketData: vi.fn(),
+  // The year-by-year panel loads on its own; these tests are about the rest of the page.
+  readCachedInvestmentHistory: () => null,
+  fetchInvestmentHistory: () => Promise.resolve({ currency: 'USD', lifetime: { isComplete: true, segments: [] }, years: [], months: [] }),
 }))
 
 const emptyPortfolio: InvestmentPortfolio = {

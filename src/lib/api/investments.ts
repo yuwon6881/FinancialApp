@@ -6,6 +6,7 @@ import type {
   InvestmentInstrument,
   InvestmentPortfolio,
   InvestmentAllocationOverview,
+  InvestmentHistory,
   InvestmentAllocationSleeve,
   InvestmentPlan,
   InvestmentRange,
@@ -141,6 +142,28 @@ export async function fetchInvestmentPortfolio(
     setCachedJSON(CACHE_KEYS.investmentAllocation, portfolio.allocation)
   }
   return portfolio
+}
+
+export function readCachedInvestmentHistory(): InvestmentHistory | null {
+  return getCachedJSON<InvestmentHistory | null>(CACHE_KEYS.investmentHistory, null)
+}
+
+/** Settled month-end history. Falls back to the last saved copy when the server is unreachable. */
+export function fetchInvestmentHistory(signal?: AbortSignal): Promise<InvestmentHistory> {
+  const dataRevision = investmentDataRevision
+  return cachedGet(CACHE_KEYS.investmentHistory, async () => {
+    try {
+      const result = await request<InvestmentHistory>('/investments/history', {
+        errorMessage: 'Could not load investment history',
+      })
+      if (dataRevision === investmentDataRevision) setCachedJSON(CACHE_KEYS.investmentHistory, result)
+      return result
+    } catch (error) {
+      const cached = readCachedInvestmentHistory()
+      if (cached) return cached
+      throw error
+    }
+  }, { signal, staleTime: 5 * 60_000 })
 }
 
 export function fetchInstrumentHistory(

@@ -233,6 +233,8 @@ interface MockApiOptions {
    * there are some) asks for them.
    */
   investmentPortfolio?: Record<string, unknown>
+  /** The year-by-year history; empty unless a spec asks for one. */
+  investmentHistory?: Record<string, unknown>
   /** Lets a spec give categories explicit flow types; the default fixture leaves them all `both`. */
   categories?: Array<{ id: string; name: string; type?: string }>
   /** Adds ledger rows to exercise populated pagination states in browser tests. */
@@ -358,6 +360,9 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
     }
     if (pathname.endsWith('/investments/cash-flows')) return fulfill(route, { items: [], total: 0, page: 1, pageSize: 10 })
     if (pathname.endsWith('/investments/allocation')) return fulfill(route, emptyInvestmentAllocation)
+    if (pathname.endsWith('/investments/history')) {
+      return fulfill(route, options.investmentHistory ?? { currency: 'USD', lifetime: { isComplete: true, segments: [] }, years: [], months: [] })
+    }
     if (route.request().method() === 'GET') return fulfill(route, [])
     return fulfill(route, {})
   })

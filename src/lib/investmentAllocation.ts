@@ -45,7 +45,10 @@ export function sleeveOf(
 /** The human label for a sleeve key, for UI that only has the key to hand. */
 export function sleeveLabelFor(key: string, index: Map<string, SleeveIndexEntry>) {
   if (key === UNASSIGNED_SLEEVE_KEY) return unassignedSleeve.label
-  return [...index.values()].find(entry => entry.key === key)?.label ?? key
+  // History can name a sleeve no current instrument sits in; it still needs a person's label.
+  return [...index.values()].find(entry => entry.key === key)?.label
+    ?? sleeveLabels[key as InvestmentAllocationSleeve]
+    ?? key
 }
 
 const statusLabels: Record<InvestmentAllocationStatus, string> = {
