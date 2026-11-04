@@ -94,7 +94,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // `wide` is the labelled layout. CSS hides labels on the rail tier, and the fold hides them on
   // desktop, so every label carries both conditions.
   const label = collapsed ? 'hidden' : 'hidden lg:inline'
-  const wideOnly = collapsed ? 'hidden' : 'hidden lg:flex'
 
   const navItem = (
     key: string,
@@ -157,7 +156,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       aria-label="Sidebar"
       className="app-chrome fixed inset-y-0 left-0 z-40 hidden w-(--app-sidebar-w) flex-col border-r border-sidebar-border bg-sidebar pt-[env(safe-area-inset-top,0px)] transition-[width] duration-200 ease-fluid sm:flex"
     >
-      <div className={cn('flex h-16 shrink-0 items-center gap-2 px-3', collapsed ? 'justify-center' : 'justify-center lg:justify-between lg:pl-4')}>
+      <div
+        className={cn(
+          'shrink-0 px-3 flex items-center justify-center',
+          collapsed
+            ? 'h-16 lg:h-auto lg:flex-col lg:gap-1.5 lg:py-3'
+            : 'h-16 lg:justify-between lg:pl-4',
+        )}
+      >
         <Button
           variant="tertiary"
           type="button"
@@ -185,9 +191,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           onClick={() => setCollapsed(value => !value)}
-          className={cn('text-muted-foreground', wideOnly)}
+          className="hidden text-muted-foreground lg:inline-flex"
         >
-          <PanelLeftClose className="size-4" />
+          {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
         </Button>
       </div>
 
@@ -277,19 +283,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onLogout={onLogout}
           />
         </div>
-        {collapsed && (
-          <Button
-            variant="tertiary"
-            size="icon"
-            type="button"
-            aria-label="Expand sidebar"
-            title="Expand sidebar"
-            onClick={() => setCollapsed(false)}
-            className="mx-auto mt-1 hidden text-muted-foreground lg:inline-flex"
-          >
-            <PanelLeftOpen className="size-4" />
-          </Button>
-        )}
       </div>
     </aside>
   )
