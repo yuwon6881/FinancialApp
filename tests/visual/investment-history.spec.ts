@@ -34,6 +34,10 @@ test('year-by-year history reads and opens from anywhere on a year row', async (
   await page.goto('/investments', { waitUntil: 'domcontentloaded' })
   await waitForStableLayout(page)
 
+  // History is its own view: the tab sits under the summary, ahead of every panel.
+  const historyTab = page.getByRole('tab', { name: 'History' })
+  await historyTab.click()
+  await expect(historyTab).toHaveAttribute('aria-selected', 'true')
   const panel = page.getByRole('region', { name: 'Year by year' })
   await panel.scrollIntoViewIfNeeded()
   await expect(panel.getByText('Up to the end of Sep 2026.', { exact: false })).toBeVisible()

@@ -225,6 +225,27 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(screen.getByRole('tabpanel', { name: 'Investments (1)' }).textContent).toContain('VOO')
   })
 
+  it('shows one view at a time, starting on the portfolio, with the summary always above', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
+    renderView()
+
+    const views = await screen.findByRole('tablist', { name: 'Investment views' })
+    expect(screen.getByRole('tab', { name: 'Portfolio' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('tabpanel', { name: 'Portfolio' }).textContent).toContain('Manage portfolio')
+    expect(screen.queryByRole('region', { name: 'Year by year' })).toBeNull()
+    expect(views.compareDocumentPosition(screen.getByRole('button', { name: 'Add activity' })) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'History' }))
+    expect(await screen.findByRole('region', { name: 'Year by year' })).toBeTruthy()
+    expect(screen.queryByText('Manage portfolio')).toBeNull()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Activity' }))
+    expect(screen.getByRole('tabpanel', { name: 'Activity' }).querySelector('#activity-title')).toBeTruthy()
+    expect(screen.queryByRole('region', { name: 'Year by year' })).toBeNull()
+    // The summary actions stay reachable from every view.
+    expect(screen.getByRole('button', { name: 'Add activity' })).toBeTruthy()
+  })
+
   it('debounces explicit searches and starts at three characters', async () => {
     vi.mocked(api.searchInvestmentInstruments).mockResolvedValue({
       results: [],
