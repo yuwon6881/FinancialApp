@@ -14,6 +14,8 @@ import { AccountFormSheet, type AccountFormSaveInput } from './AccountFormSheet'
 import { BucketAccountGroup } from './BucketAccountGroup'
 import { BucketAccountSetupSheet } from './BucketAccountSetupSheet'
 import { ClearCardBalanceSheet } from './ClearCardBalanceSheet'
+import { InvestmentWorthLine } from './InvestmentWorthLine'
+import { useInvestmentMarketValue } from './view/useInvestmentMarketValue'
 import { useHighlightedElement } from '../../ui/useHighlightedElement'
 import {
   hasBucketAccountSetupChanged,
@@ -260,6 +262,8 @@ export function AccountsSection({
     total: group.allBucketAccounts.filter(account => !account.isArchived).reduce((sum, account) => sum + account.remaining, 0),
   }))
   const netTotal = bucketTotals.reduce((sum, item) => sum + item.total, 0)
+  // Today's prices belong only beside today's balances, never a past cycle's closing ones.
+  const investmentValue = useInvestmentMarketValue(currency, isCurrentCycle && openAccountCount > 0)
 
   const activeGroup = editingAccount
     ? bucketGroups.find(g => g.bucket === editingAccount.bucket)
@@ -307,6 +311,9 @@ export function AccountsSection({
                 </li>
               ))}
             </ul>
+            {investmentValue && (
+              <InvestmentWorthLine value={investmentValue} ledgerTotal={netTotal} currency={currency} hideSensitive={hideSensitive} />
+            )}
           </div>
         )}
 

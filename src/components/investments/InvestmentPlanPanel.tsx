@@ -124,8 +124,9 @@ export function InvestmentPlanPanel({
           )}
         </ul>
 
-        <div className="space-y-3 px-5 pb-5 pt-2 sm:px-6 @4xl:pl-0 @4xl:pt-3.5">
-          <div className="rounded-control inset-group p-4">
+        {/* Narrow screens drop the mix card: each basket row above already shows actual against target. */}
+        <div className={cn('space-y-3 px-5 pb-5 pt-2 sm:px-6 @4xl:pl-0 @4xl:pt-3.5', !showGuidance && 'hidden @4xl:block')}>
+          <div className="hidden rounded-control inset-group p-4 @4xl:block">
             <h3 className="flex items-center gap-1 text-label font-medium text-foreground">
               What you hold vs your target
               <InfoHint

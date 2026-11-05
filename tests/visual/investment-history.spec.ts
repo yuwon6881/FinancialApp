@@ -40,9 +40,9 @@ test('year-by-year history reads and opens from anywhere on a year row', async (
   await expect(historyTab).toHaveAttribute('aria-selected', 'true')
   const panel = page.getByRole('region', { name: 'Year by year' })
   await panel.scrollIntoViewIfNeeded()
-  await expect(panel.getByText('Up to the end of Sep 2026.', { exact: false })).toBeVisible()
+  await expect(panel.getByText('up to the end of Sep 2026', { exact: false })).toBeVisible()
   await expect(panel.getByText('+6.2%')).toBeVisible()
-  await expect(panel.getByText('2026 to Sep')).toBeVisible()
+  await expect(panel.getByText('Jan–Sep 2026')).toBeVisible()
 
   // The whole row is the target: a click anywhere on it, not only the label, opens the year.
   const year = panel.locator('details').filter({ has: page.locator('summary', { hasText: '2025' }) })

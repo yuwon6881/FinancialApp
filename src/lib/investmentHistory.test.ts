@@ -35,10 +35,16 @@ describe('investment history formatting', () => {
     expect(headlineReturn(history({})).value).toBeUndefined()
   })
 
-  it('labels an unfinished year by the month it runs to, without time-zone drift', () => {
+  it('labels a partial year by the months it covers, without time-zone drift', () => {
     expect(monthLabel('2026-10-31')).toBe('Oct 2026')
-    expect(yearLabel(year({ year: 2026, periodEnd: '2026-10-31', isFullYear: false }))).toBe('2026 to Oct')
-    expect(yearLabel(year({}))).toBe('2030')
+    const unfinished = year({ year: 2026, periodEnd: '2026-10-31', isFullYear: false })
+    expect(yearLabel(unfinished)).toBe('Jan–Oct 2026')
+    // The first year starts at the first settled month, not in January.
+    expect(yearLabel(unfinished, '2026-03-31')).toBe('Mar–Oct 2026')
+    expect(yearLabel(year({ year: 2026, periodEnd: '2026-12-31' }), '2026-03-31')).toBe('Mar–Dec 2026')
+    expect(yearLabel(unfinished, '2026-10-31')).toBe('Oct 2026')
+    // A history that began in an earlier year leaves this year starting in January.
+    expect(yearLabel(year({}), '2025-06-30')).toBe('2030')
   })
 
   it('scales bars to the largest added-plus-growth year and ignores unknown growth', () => {
