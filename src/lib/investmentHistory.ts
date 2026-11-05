@@ -24,9 +24,21 @@ export function monthLabel(isoDate: string): string {
   return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
 }
 
-/** `2026 so far` for a year that has not finished; a full year is just its number. */
-export function yearLabel(year: InvestmentHistoryYear): string {
-  return year.isFullYear ? String(year.year) : `${year.year} to ${monthLabel(year.periodEnd).split(' ')[0]}`
+const shortMonth = (month: number) =>
+  new Date(Date.UTC(2000, month - 1, 1)).toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })
+
+/**
+ * The months a year row covers. A whole calendar year is just its number; a year that started
+ * part-way (the first one) or has not finished (this one) names its months: `Jan–Sep 2026`, or
+ * `Sep 2026` for a single month. `firstMonth` is the history's first settled month-end.
+ */
+export function yearLabel(year: InvestmentHistoryYear, firstMonth?: string): string {
+  const first = firstMonth ? new Date(`${firstMonth}T00:00:00Z`) : undefined
+  const startMonth = first && first.getUTCFullYear() === year.year ? first.getUTCMonth() + 1 : 1
+  const endMonth = new Date(`${year.periodEnd}T00:00:00Z`).getUTCMonth() + 1
+  if (startMonth === 1 && endMonth === 12) return String(year.year)
+  if (startMonth === endMonth) return `${shortMonth(endMonth)} ${year.year}`
+  return `${shortMonth(startMonth)}–${shortMonth(endMonth)} ${year.year}`
 }
 
 /**

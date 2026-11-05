@@ -24,7 +24,6 @@ import { InvestmentPlanPanel } from './investments/InvestmentPlanPanel'
 import { ValueChart } from './investments/InvestmentCharts'
 import { AllocationChart } from './investments/AllocationChart'
 import type { AllocationFilter } from '../lib/investmentHoldingFilter'
-import { PerformanceBars } from './investments/PerformanceBars'
 import { HoldingsTable, PagedActivityTable } from './investments/InvestmentTables'
 import { HoldingDetailSheet } from './investments/HoldingDetailSheet'
 import { InvestmentForecastPanel } from './investments/forecast/InvestmentForecastPanel'
@@ -38,6 +37,7 @@ import { AccountsAndInstruments } from './investments/AccountsAndInstruments'
 import { ActionToolbar, EmptyState } from './investments/InvestmentToolbars'
 import { CalculationWarnings } from './investments/CalculationWarnings'
 import { Tabs } from './ui/Tabs'
+import { usePanelSwitchHold } from './ui/usePanelSwitchHold'
 import { cn } from '../lib/utils'
 import { PANEL_TONES, panelClass } from './ui/panelStyles'
 
@@ -100,6 +100,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   const busy = false
   const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>(null)
   const [view, setView] = useState<InvestmentView>('portfolio')
+  const { areaRef: viewAreaRef, style: viewAreaStyle, change: changeView } = usePanelSwitchHold<InvestmentView>(setView)
   const [detailHoldingKey, setDetailHoldingKey] = useState<{ accountId: string; instrumentId: string } | null>(null)
 
   const detailHolding = useMemo(() => detailHoldingKey
@@ -315,11 +316,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           />
           <Tabs
             value={view}
-            onValueChange={setView}
+            onValueChange={changeView}
             options={investmentViews}
             label="Investment views"
             idPrefix="investment-view"
           />
+          {/* Scroll anchoring must not latch onto a panel that is about to be swapped out. */}
+          <div ref={viewAreaRef} style={viewAreaStyle} className="[overflow-anchor:none]">
           {view === 'portfolio' && (
             <div role="tabpanel" id="investment-view-portfolio-panel" aria-labelledby="investment-view-portfolio" className="space-y-6">
               <InvestmentPlanPanel
@@ -348,69 +351,67 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
                 <ValueChart portfolio={portfolio} masked={passiveMask} range={range} isFetching={loading} onRangeChange={setRange} />
                 <AllocationChart portfolio={portfolio} masked={passiveMask} selected={allocationFilter} onSelect={setAllocationFilter} />
               </div>
-              <div className="grid grid-cols-1 items-start gap-6 @5xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-                <PerformanceBars portfolio={portfolio} masked={passiveMask} onSelectHolding={holding => setDetailHoldingKey({ accountId: holding.accountId, instrumentId: holding.instrumentId })} />
-                <section aria-label="Portfolio tools" className={cn(panelClass, 'divide-y divide-border/60 overflow-hidden')}>
-                  <InvestmentForecastPanel
-                    key={`${portfolio.summary.totalValue ?? 'incomplete'}-${portfolio.allocation.plan.updatedAt ?? 'default'}-${portfolio.allocation.contributionPlan?.amount ?? 0}-${portfolio.allocation.contributionPlan?.routineContribution ?? 'unknown'}-${portfolio.allocation.contributionPlan?.isEstimated ?? false}`}
-                    portfolio={portfolio}
-                    masked={passiveMask}
-                  />
-                  <AccountsAndInstruments
-                    portfolio={setupPortfolio ?? portfolio}
-                    mutationsDisabled={hideSensitive}
-                    onArchiveAccount={id => {
-                      const account = portfolio.accounts.find(a => a.id === id)
-                      if (account) queueInvestment('investmentAccount', 'update', id, { name: account.name, baseCurrency: account.baseCurrency, isArchived: true, undoSnapshot: account })
-                    }}
-                    onUnarchiveAccount={(id, name, currency) => {
-                      const account = setupPortfolio?.accounts.find(value => value.id === id)
-                      return queueInvestment('investmentAccount', 'update', id, {
-                        name,
-                        baseCurrency: currency,
-                        isArchived: false,
-                        undoSnapshot: account,
-                      })
-                    }}
-                    onDeleteAccount={id => {
-                      const account = portfolio.accounts.find(a => a.id === id)
-                      confirm({
-                        title: 'Delete investment account?',
-                        message: 'Only accounts without activity can be deleted.',
-                        confirmText: 'Delete',
-                        onConfirm: () => { queueInvestment('investmentAccount', 'delete', id, { undoSnapshot: account }) },
-                      })
-                    }}
-                    onDeleteInstrument={id => {
-                      const instrument = portfolio.instruments.find(i => i.id === id)
-                      confirm({
-                        title: 'Delete investment?',
-                        message: 'Only investments without activity can be deleted.',
-                        confirmText: 'Delete',
-                        onConfirm: () => { queueInvestment('investmentInstrument', 'delete', id, { undoSnapshot: instrument }) },
-                      })
-                    }}
-                    onArchiveInstrument={id => {
-                      const instrument = portfolio.instruments.find(value => value.id === id)
-                      if (instrument) queueInvestment('investmentInstrument', 'update', id, {
-                        ...instrument,
-                        isArchived: true,
-                        undoSnapshot: instrument,
-                      })
-                    }}
-                    onUnarchiveInstrument={id => {
-                      const instrument = portfolio.instruments.find(value => value.id === id)
-                      if (instrument) queueInvestment('investmentInstrument', 'update', id, {
-                        ...instrument,
-                        isArchived: false,
-                        undoSnapshot: instrument,
-                      })
-                    }}
-                    activeSyncIds={activeSyncIds.length > 0 ? activeSyncIds : activeSyncId ? [activeSyncId] : []}
-                  />
-                  <CalculationWarnings warnings={portfolio.warnings} />
-                </section>
-              </div>
+              {/* Each fund's gain already sits in What you hold, so the tools close the view. */}
+              <section aria-label="Portfolio tools" className={cn(panelClass, 'divide-y divide-border/60 overflow-hidden')}>
+                <InvestmentForecastPanel
+                  key={`${portfolio.summary.totalValue ?? 'incomplete'}-${portfolio.allocation.plan.updatedAt ?? 'default'}-${portfolio.allocation.contributionPlan?.amount ?? 0}-${portfolio.allocation.contributionPlan?.routineContribution ?? 'unknown'}-${portfolio.allocation.contributionPlan?.isEstimated ?? false}`}
+                  portfolio={portfolio}
+                  masked={passiveMask}
+                />
+                <AccountsAndInstruments
+                  portfolio={setupPortfolio ?? portfolio}
+                  mutationsDisabled={hideSensitive}
+                  onArchiveAccount={id => {
+                    const account = portfolio.accounts.find(a => a.id === id)
+                    if (account) queueInvestment('investmentAccount', 'update', id, { name: account.name, baseCurrency: account.baseCurrency, isArchived: true, undoSnapshot: account })
+                  }}
+                  onUnarchiveAccount={(id, name, currency) => {
+                    const account = setupPortfolio?.accounts.find(value => value.id === id)
+                    return queueInvestment('investmentAccount', 'update', id, {
+                      name,
+                      baseCurrency: currency,
+                      isArchived: false,
+                      undoSnapshot: account,
+                    })
+                  }}
+                  onDeleteAccount={id => {
+                    const account = portfolio.accounts.find(a => a.id === id)
+                    confirm({
+                      title: 'Delete investment account?',
+                      message: 'Only accounts without activity can be deleted.',
+                      confirmText: 'Delete',
+                      onConfirm: () => { queueInvestment('investmentAccount', 'delete', id, { undoSnapshot: account }) },
+                    })
+                  }}
+                  onDeleteInstrument={id => {
+                    const instrument = portfolio.instruments.find(i => i.id === id)
+                    confirm({
+                      title: 'Delete investment?',
+                      message: 'Only investments without activity can be deleted.',
+                      confirmText: 'Delete',
+                      onConfirm: () => { queueInvestment('investmentInstrument', 'delete', id, { undoSnapshot: instrument }) },
+                    })
+                  }}
+                  onArchiveInstrument={id => {
+                    const instrument = portfolio.instruments.find(value => value.id === id)
+                    if (instrument) queueInvestment('investmentInstrument', 'update', id, {
+                      ...instrument,
+                      isArchived: true,
+                      undoSnapshot: instrument,
+                    })
+                  }}
+                  onUnarchiveInstrument={id => {
+                    const instrument = portfolio.instruments.find(value => value.id === id)
+                    if (instrument) queueInvestment('investmentInstrument', 'update', id, {
+                      ...instrument,
+                      isArchived: false,
+                      undoSnapshot: instrument,
+                    })
+                  }}
+                  activeSyncIds={activeSyncIds.length > 0 ? activeSyncIds : activeSyncId ? [activeSyncId] : []}
+                />
+                <CalculationWarnings warnings={portfolio.warnings} />
+              </section>
             </div>
           )}
           {view === 'history' && (
@@ -445,6 +446,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
               />
             </div>
           )}
+          </div>
         </>
       )}
     </div>

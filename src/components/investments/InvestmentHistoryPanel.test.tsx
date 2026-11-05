@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { InvestmentHistory } from '../../types'
 import * as api from '../../lib/api'
@@ -44,12 +44,12 @@ describe('InvestmentHistoryPanel', () => {
 
     render(<InvestmentHistoryPanel instruments={[]} masked={false} refreshToken={0} />)
 
-    expect(await screen.findByText('2031 to Oct')).toBeTruthy()
-    expect(screen.getByText('Up to the end of Oct 2031. Money you add is not counted as growth.')).toBeTruthy()
+    expect(await screen.findByText('Jan–Oct 2031')).toBeTruthy()
+    expect(screen.getByText('Settled months up to the end of Oct 2031; Portfolio shows today’s prices. Money you add is not counted as growth.')).toBeTruthy()
     expect(screen.getByText('Yearly return')).toBeTruthy()
     expect(screen.getByText('+6.4%')).toBeTruthy()
     expect(screen.getByText('$12,000.00')).toBeTruthy()
-    expect(screen.getByLabelText(/^2031 to Oct: added \$6,000\.00, growth Unknown, return Unknown$/)).toBeTruthy()
+    expect(screen.getByLabelText(/^Jan–Oct 2031: added \$6,000\.00, growth Unknown, return Unknown$/)).toBeTruthy()
     expect(screen.getByLabelText(/^2030: added \$6,000\.00, growth \+\$200\.00, return \+3\.1%$/)).toBeTruthy()
     expect(screen.getByText('No price for VWRA on 2031-10-31.')).toBeTruthy()
     expect(screen.getByText('US shares')).toBeTruthy()
@@ -66,6 +66,23 @@ describe('InvestmentHistoryPanel', () => {
     await screen.findByText('2030')
     expect(container.textContent).not.toMatch(/\$|%/)
     expect(screen.getByLabelText('2030: added ••, growth ••, return ••')).toBeTruthy()
+  })
+
+  it('folds years beyond the latest five so a long history stays short', async () => {
+    const years = Array.from({ length: 15 }, (_, index) => ({
+      ...history.years[1], year: 2040 - index, periodEnd: `${2040 - index}-12-31`,
+    }))
+    vi.spyOn(api, 'readCachedInvestmentHistory').mockReturnValue(null)
+    vi.spyOn(api, 'fetchInvestmentHistory').mockResolvedValue({ ...history, years, lifetime: { ...history.lifetime, firstMonth: '2026-01-31' } })
+
+    render(<InvestmentHistoryPanel instruments={[]} masked={false} refreshToken={0} />)
+
+    expect(await screen.findByText('2040')).toBeTruthy()
+    expect(screen.getByText('2036')).toBeTruthy()
+    expect(screen.queryByText('2035')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Show 10 earlier years/ }))
+    expect(screen.getByText('2026')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Show recent years only/ }).getAttribute('aria-expanded')).toBe('true')
   })
 
   it('explains an empty history instead of showing zeroes', async () => {

@@ -1,13 +1,16 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { ChevronDown, Info } from 'lucide-react'
 import type { InvestmentHistorySegment, InvestmentHistoryYear, InvestmentInstrument } from '../../types'
 import { buildSleeveIndex, sleeveLabelFor } from '../../lib/investmentAllocation'
 import { formatSignedPercent, headlineReturn, monthLabel, yearBarScale, yearLabel } from '../../lib/investmentHistory'
 import { cn, formatCurrencyVal } from '../../lib/utils'
+import { Button } from '../ui/Button'
 import { Panel } from '../ui/Panel'
 import { useInvestmentHistory } from './useInvestmentHistory'
 
 const MASK = '••'
+// Years shown before the rest fold away: a decade of rows would bury the market breakdown.
+const RECENT_YEARS = 5
 const tone = (value: number | undefined) => value === undefined
   ? 'text-muted-foreground'
   : value >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
@@ -23,6 +26,7 @@ export function InvestmentHistoryPanel({ instruments, masked, refreshToken }: {
   refreshToken: number
 }) {
   const { history, error, loading } = useInvestmentHistory(refreshToken)
+  const [showAllYears, setShowAllYears] = useState(false)
   const sleeves = useMemo(() => buildSleeveIndex(instruments), [instruments])
   const currency = history?.currency ?? 'USD'
   const money = (value: number | undefined) =>
@@ -34,6 +38,8 @@ export function InvestmentHistoryPanel({ instruments, masked, refreshToken }: {
   const marketName = (segment: InvestmentHistorySegment) => sleeveLabelFor(segment.segment, sleeves)
 
   const years = history?.years ?? []
+  const shownYears = showAllYears ? years : years.slice(0, RECENT_YEARS)
+  const hiddenYears = years.length - shownYears.length
   const scale = yearBarScale(years)
   const headline = history ? headlineReturn(history) : null
   const asOf = history?.lifetime.asOf
@@ -43,7 +49,7 @@ export function InvestmentHistoryPanel({ instruments, masked, refreshToken }: {
       <h2 id="investment-history-title" className="text-section text-foreground">Year by year</h2>
       <p className="mt-1 text-caption text-muted-foreground">
         {asOf
-          ? `Up to the end of ${monthLabel(asOf)}. Money you add is not counted as growth.`
+          ? `Settled months up to the end of ${monthLabel(asOf)}; Portfolio shows today’s prices. Money you add is not counted as growth.`
           : 'Each month appears about a week after it ends, once its closing prices are final.'}
       </p>
 
@@ -77,12 +83,20 @@ export function InvestmentHistoryPanel({ instruments, masked, refreshToken }: {
             <span><i className="mr-1 inline-block h-1.5 w-3 rounded-full bg-red-500 align-middle" />Market loss</span>
           </div>
           <ul className="mt-2 divide-y divide-border/60" aria-label="Each year">
-            {years.map(year => (
+            {shownYears.map(year => (
               <li key={year.year}>
-                <YearRow year={year} scale={scale} masked={masked} money={money} signedMoney={signedMoney} percent={percent} marketName={marketName} />
+                <YearRow year={year} firstMonth={history.lifetime.firstMonth} scale={scale} masked={masked} money={money} signedMoney={signedMoney} percent={percent} marketName={marketName} />
               </li>
             ))}
           </ul>
+          {(hiddenYears > 0 || showAllYears) && years.length > RECENT_YEARS && (
+            <div className="mt-1 flex justify-center">
+              <Button variant="tertiary" size="sm" aria-expanded={showAllYears} onClick={() => setShowAllYears(value => !value)}>
+                {showAllYears ? 'Show recent years only' : `Show ${hiddenYears} earlier ${hiddenYears === 1 ? 'year' : 'years'}`}
+                <ChevronDown className={cn('size-4 transition-transform', showAllYears && 'rotate-180')} aria-hidden="true" />
+              </Button>
+            </div>
+          )}
 
           {history.lifetime.segments.length > 1 && (
             <div className="mt-5">
@@ -119,14 +133,15 @@ type Formatters = {
   marketName: (segment: InvestmentHistorySegment) => string
 }
 
-function YearRow({ year, scale, masked, money, signedMoney, percent, marketName }: Formatters & {
+function YearRow({ year, firstMonth, scale, masked, money, signedMoney, percent, marketName }: Formatters & {
   year: InvestmentHistoryYear
+  firstMonth?: string
   scale: number
   masked: boolean
 }) {
   const added = Math.abs(year.netContributions ?? 0) / scale * 100
   const grown = year.growth === undefined ? 0 : Math.abs(year.growth) / scale * 100
-  const label = yearLabel(year)
+  const label = yearLabel(year, firstMonth)
   return (
     <details className="group">
       <summary

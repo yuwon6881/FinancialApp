@@ -92,3 +92,21 @@ test('the transaction type pill slides sideways when the form changes height', a
     await expect(option).toHaveAttribute('aria-checked', 'true')
   }
 })
+
+test('switching investment views keeps the page where it is', async ({ page }) => {
+  await openInvestments(page)
+  const tabs = page.getByRole('tablist', { name: 'Investment views' })
+  const tabTop = () => tabs.evaluate(element => element.getBoundingClientRect().top)
+
+  for (const name of ['History', 'Activity', 'Portfolio', 'History']) {
+    // The reader is partway down the long Portfolio view, with the tab row near the top.
+    await page.evaluate(top => window.scrollBy({ top, behavior: 'instant' }), await tabTop() - 80)
+    await waitForStableLayout(page)
+    const before = await tabTop()
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+    await tabs.getByRole('tab', { name }).click()
+    await expect(tabs.getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true')
+    await waitForStableLayout(page)
+    expect(Math.abs(await tabTop() - before), `after switching to ${name}`).toBeLessThan(1.5)
+  }
+})
