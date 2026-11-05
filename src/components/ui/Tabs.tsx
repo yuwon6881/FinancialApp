@@ -1,10 +1,10 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react'
-import { m } from 'framer-motion'
 import { cn } from '../../lib/utils'
-import { SPRING } from '../../lib/animations'
 import { Badge } from './Badge'
 import { Button } from './Button'
 import { HorizontalRail } from './HorizontalRail'
+import { SlidingMarker } from './SlidingMarker'
+import { useSlidingMarker } from './useSlidingMarker'
 
 interface TabOption<T extends string> {
   value: T
@@ -40,6 +40,7 @@ export function Tabs<T extends string>({
   className,
 }: TabsProps<T>) {
   const refs = useRef<Array<HTMLButtonElement | null>>([])
+  const { rowRef, box, itemRef } = useSlidingMarker(options.findIndex(option => option.value === value), options.length)
 
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     let next: number | null = null
@@ -57,22 +58,30 @@ export function Tabs<T extends string>({
 
   const list = (
     <div
+      ref={rowRef}
       role="tablist"
       aria-label={label}
       className={cn(
-        'flex min-w-max items-center select-none',
+        'relative isolate flex min-w-max items-center select-none',
         segmented
           ? 'gap-0.5 rounded-full bg-surface-2 p-1 dark:bg-surface-2'
           : 'gap-1 border-b border-border/70 sm:gap-2',
         className,
       )}
     >
+      <SlidingMarker
+        box={box}
+        shape={segmented ? 'fill' : 'underline'}
+        className={segmented
+          ? 'rounded-full bg-card shadow-xs ring-1 ring-border/60 dark:bg-surface-3 dark:ring-0'
+          : 'rounded-full bg-primary'}
+      />
       {options.map((option, index) => {
         const active = option.value === value
         return (
           <Button
             key={option.value}
-            ref={node => { refs.current[index] = node }}
+            ref={node => { refs.current[index] = node; itemRef(index)(node) }}
             id={`${idPrefix}-${option.value}`}
             variant="tertiary"
             size="sm"
@@ -83,7 +92,7 @@ export function Tabs<T extends string>({
             onClick={() => onValueChange(option.value)}
             onKeyDown={event => onKeyDown(event, index)}
             className={cn(
-              'relative shrink-0 isolate',
+              'relative shrink-0',
               segmented
                 ? cn('px-3.5 hover:bg-transparent', active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')
                 : cn(
@@ -92,19 +101,6 @@ export function Tabs<T extends string>({
                 ),
             )}
           >
-            {active && (
-              <m.span
-                aria-hidden="true"
-                layoutId={`${idPrefix}-tab-marker`}
-                transition={SPRING.snappy}
-                className={cn(
-                  'pointer-events-none absolute -z-10',
-                  segmented
-                    ? 'inset-0 rounded-full bg-card shadow-xs ring-1 ring-border/60 dark:bg-surface-3 dark:ring-0'
-                    : 'inset-x-1.5 -bottom-px h-0.5 rounded-full bg-primary',
-                )}
-              />
-            )}
             {option.label}
             {option.count !== undefined && <Badge tone={active ? 'accent' : 'neutral'}>{option.count}</Badge>}
           </Button>

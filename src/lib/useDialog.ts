@@ -88,7 +88,14 @@ export function useDialog({ isOpen, onClose, ref, initialFocusRef, canClose, aut
         panel.focus({ preventScroll: true })
         return
       }
-      target.focus()
+      // Focus without letting the browser scroll: a tall focus target (a sheet's whole body) or a
+      // control further down would otherwise open the dialog part-way down, hiding its title.
+      // Only a target that sits entirely below the visible area is brought into view.
+      target.focus({ preventScroll: true })
+      if (target !== panel && typeof target.scrollIntoView === 'function') {
+        const visible = panel.getBoundingClientRect()
+        if (target.getBoundingClientRect().top >= visible.bottom) target.scrollIntoView({ block: 'nearest' })
+      }
     }, 40)
 
     const handleKeyDown = (e: KeyboardEvent) => {
