@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { ChevronDown, Info } from 'lucide-react'
 import type { InvestmentHistorySegment, InvestmentHistoryYear, InvestmentInstrument } from '../../types'
 import { buildSleeveIndex, sleeveLabelFor } from '../../lib/investmentAllocation'
-import { formatSignedPercent, headlineReturn, monthLabel, yearBarScale, yearLabel } from '../../lib/investmentHistory'
+import { formatSignedPercent, headlineReturn, monthLabel, shownDirection, yearBarScale, yearLabel } from '../../lib/investmentHistory'
 import { cn, formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { Panel } from '../ui/Panel'
@@ -11,9 +11,15 @@ import { useInvestmentHistory } from './useInvestmentHistory'
 const MASK = '••'
 // Years shown before the rest fold away: a decade of rows would bury the market breakdown.
 const RECENT_YEARS = 5
-const tone = (value: number | undefined) => value === undefined
-  ? 'text-muted-foreground'
-  : value >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+const MONEY_DIGITS = 2
+const PERCENT_DIGITS = 1
+// Coloured by the figure as printed, so a loss that rounds to 0.0% is not shown in red.
+const tone = (value: number | undefined, digits: number) => {
+  const direction = shownDirection(value, digits)
+  return direction === 'gain' ? 'text-emerald-600 dark:text-emerald-400'
+    : direction === 'loss' ? 'text-red-600 dark:text-red-400'
+      : 'text-muted-foreground'
+}
 
 /**
  * The long view: what was put in and what the market added, every calendar year and since the
@@ -73,8 +79,8 @@ export function InvestmentHistoryPanel({ instruments, masked, refreshToken }: {
           <dl className="mt-5 grid grid-cols-2 gap-3 @3xl:grid-cols-4">
             <Stat label="Put in" value={money(history.lifetime.netContributions)} />
             <Stat label="Worth" value={money(history.lifetime.value)} />
-            <Stat label="Growth" value={signedMoney(history.lifetime.growth)} valueClassName={masked ? undefined : tone(history.lifetime.growth)} />
-            <Stat label={headline.label} value={percent(headline.value)} valueClassName={masked ? undefined : tone(headline.value)} />
+            <Stat label="Growth" value={signedMoney(history.lifetime.growth)} valueClassName={masked ? undefined : tone(history.lifetime.growth, MONEY_DIGITS)} />
+            <Stat label={headline.label} value={percent(headline.value)} valueClassName={masked ? undefined : tone(headline.value, PERCENT_DIGITS)} />
           </dl>
 
           <div aria-hidden="true" className={cn('mt-5 flex flex-wrap gap-4 text-caption font-medium text-muted-foreground', masked && 'invisible')}>
@@ -155,8 +161,8 @@ function YearRow({ year, firstMonth, scale, masked, money, signedMoney, percent,
           </span>
         </span>
         <span className="text-right">
-          <span className={cn('block text-label font-semibold tabular-nums', masked ? 'text-foreground' : tone(year.returnPercent))}>{percent(year.returnPercent)}</span>
-          <span className={cn('block text-caption tabular-nums', masked ? 'text-muted-foreground' : tone(year.growth))}>{signedMoney(year.growth)}</span>
+          <span className={cn('block text-label font-semibold tabular-nums', masked ? 'text-foreground' : tone(year.returnPercent, PERCENT_DIGITS))}>{percent(year.returnPercent)}</span>
+          <span className={cn('block text-caption tabular-nums', masked ? 'text-muted-foreground' : tone(year.growth, MONEY_DIGITS))}>{signedMoney(year.growth)}</span>
         </span>
         <ChevronDown className="size-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" aria-hidden="true" />
         {/* What you added beside what the market did, on one scale across every year. */}

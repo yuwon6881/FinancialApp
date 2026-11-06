@@ -8,6 +8,16 @@ export function formatSignedPercent(value: number, digits = 1): string {
 }
 
 /**
+ * Which way a figure points as shown, after rounding to the digits it is displayed with: −0.04%
+ * prints as 0.0%, so it must read as flat, not as a loss. Unknown stays unknown.
+ */
+export function shownDirection(value: number | undefined, digits: number): 'gain' | 'loss' | 'flat' | undefined {
+  if (value === undefined) return undefined
+  const rounded = Number(value.toFixed(digits))
+  return rounded > 0 ? 'gain' : rounded < 0 ? 'loss' : 'flat'
+}
+
+/**
  * The one return figure that headlines the history. A yearly rate once a full year exists;
  * before that, the return since the start, labelled as such so a short run is never read as a
  * yearly pace.
