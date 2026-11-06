@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { InvestmentHistory, InvestmentHistoryYear } from '../types'
-import { formatSignedPercent, headlineReturn, monthLabel, yearBarScale, yearLabel } from './investmentHistory'
+import { formatSignedPercent, headlineReturn, monthLabel, shownDirection, yearBarScale, yearLabel } from './investmentHistory'
 
 const year = (overrides: Partial<InvestmentHistoryYear>): InvestmentHistoryYear => ({
   year: 2030,
@@ -45,6 +45,14 @@ describe('investment history formatting', () => {
     expect(yearLabel(unfinished, '2026-10-31')).toBe('Oct 2026')
     // A history that began in an earlier year leaves this year starting in January.
     expect(yearLabel(year({}), '2025-06-30')).toBe('2030')
+  })
+
+  it('reads a figure’s direction as printed, so a tiny loss shown as 0.0% is flat', () => {
+    expect(shownDirection(-0.04, 1)).toBe('flat')
+    expect(shownDirection(-0.05, 1)).toBe('loss')
+    expect(shownDirection(0.06, 1)).toBe('gain')
+    expect(shownDirection(-1.47, 2)).toBe('loss')
+    expect(shownDirection(undefined, 1)).toBeUndefined()
   })
 
   it('scales bars to the largest added-plus-growth year and ignores unknown growth', () => {
