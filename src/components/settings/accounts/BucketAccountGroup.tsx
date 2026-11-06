@@ -8,7 +8,9 @@ import { cn } from '../../../lib/utils'
 import { panelClass } from '../../ui/panelStyles'
 import { Button } from '../../ui/Button'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
+import type { InvestmentMarketValue } from '../../../lib/investmentMarketValue'
 import { AccountRow } from './AccountRow'
+import { BucketWorthFigures } from './BucketWorthFigures'
 import { DataTablePagination } from '../../ui/DataTable'
 import { useClientPagination } from '../../ui/useClientPagination'
 import { EmptyState } from '../../ui/EmptyState'
@@ -31,6 +33,8 @@ export interface BucketAccountGroupProps {
   onNavigateToRecurring?: (recurringId: string) => void
   onClearCard?: (card: LedgerAccount) => void
   searchQuery?: string
+  /** Only the Growth bucket is given this: what its investments are worth at today's prices. */
+  investmentValue?: InvestmentMarketValue | null
 }
 
 export function BucketAccountGroup({
@@ -51,6 +55,7 @@ export function BucketAccountGroup({
   onNavigateToRecurring,
   onClearCard,
   searchQuery,
+  investmentValue,
 }: BucketAccountGroupProps) {
   const pagination = useClientPagination(accounts.length, 10)
   const visibleAccounts = accounts.slice(pagination.start, pagination.end)
@@ -63,7 +68,7 @@ export function BucketAccountGroup({
   return (
     <div
       id={`bucket-account-group-${bucket}`}
-      className={cn(panelClass, 'relative flex flex-col justify-between p-4 sm:p-5', !hasAnyAccounts && 'border-dashed')}
+      className={cn(panelClass, '@container relative flex flex-col justify-between p-4 sm:p-5', !hasAnyAccounts && 'border-dashed')}
     >
       <div className="space-y-4">
         {/* Bucket header: which bucket, what it is for, and what it holds. */}
@@ -79,15 +84,19 @@ export function BucketAccountGroup({
               <span>{openCount ? `${openCount} open ${openCount === 1 ? 'account' : 'accounts'}` : 'Empty'}</span>
             </p>
           </div>
-          <div className="text-right">
-            <span className="sr-only">Bucket total</span>
-            <SensitiveAmount
-              value={totalBalance}
-              isMasked={hideSensitive}
-              formatFn={value => formatCurrencyVal(value, currency)}
-              className="block text-title text-foreground tabular-nums"
-            />
-          </div>
+          {investmentValue ? (
+            <BucketWorthFigures moneyIn={totalBalance} value={investmentValue} currency={currency} hideSensitive={hideSensitive} />
+          ) : (
+            <div className="text-right">
+              <span className="sr-only">Bucket total</span>
+              <SensitiveAmount
+                value={totalBalance}
+                isMasked={hideSensitive}
+                formatFn={value => formatCurrencyVal(value, currency)}
+                className="block text-title text-foreground tabular-nums"
+              />
+            </div>
+          )}
         </div>
 
         {/* The total already counts card debt; this line shows the two halves so the total

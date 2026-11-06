@@ -3,7 +3,6 @@ import type { LedgerAccount, RecurringPayment, Transaction, TransactionCategory 
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
 import { formatCurrencyVal } from '../../../lib/utils'
-import { getCategoryChartColor } from '../../../lib/categoryColors'
 import { roundMoney } from '../../../lib/money'
 import { CustomConfirmModal } from '../../ui/CustomConfirmModal'
 import { Input } from '../../ui/Input'
@@ -14,7 +13,7 @@ import { AccountFormSheet, type AccountFormSaveInput } from './AccountFormSheet'
 import { BucketAccountGroup } from './BucketAccountGroup'
 import { BucketAccountSetupSheet } from './BucketAccountSetupSheet'
 import { ClearCardBalanceSheet } from './ClearCardBalanceSheet'
-import { InvestmentWorthLine } from './InvestmentWorthLine'
+import { AccountsTotalCard } from './AccountsTotalCard'
 import { useInvestmentMarketValue } from './view/useInvestmentMarketValue'
 import { useHighlightedElement } from '../../ui/useHighlightedElement'
 import {
@@ -24,8 +23,6 @@ import {
 } from './view/useBucketAccountSetupView'
 import { useAccountsView } from './view/useAccountsView'
 import { AlertBanner } from '../../ui/AlertBanner'
-import { SegmentedMeter } from '../../ui/SegmentedMeter'
-import { panelClass } from '../../ui/panelStyles'
 
 interface AccountsSectionProps {
   accounts: LedgerAccount[]
@@ -281,40 +278,15 @@ export function AccountsSection({
         {/* What all the accounts add up to, card balances already netted off, then how that total
             divides across the four buckets -- the one figure the bucket cards below never state. */}
         {openAccountCount > 0 && (
-          <div className={`${panelClass} p-5 sm:p-6`}>
-            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-              <div className="min-w-0">
-                <p className="text-label text-muted-foreground">Total across accounts</p>
-                <SensitiveAmount
-                  value={netTotal}
-                  isMasked={hideSensitive}
-                  formatFn={value => formatCurrencyVal(value, currency)}
-                  className="mt-1 block text-display text-foreground tabular-nums sm:text-hero"
-                />
-              </div>
-              <p className="text-label text-muted-foreground">
-                {openAccountCount} open {openAccountCount === 1 ? 'account' : 'accounts'}
-                {archivedAccountCount > 0 && <> · {archivedAccountCount} closed</>}
-              </p>
-            </div>
-            <SegmentedMeter
-              className="mt-5"
-              label={bucketTotals.map(item => `${item.bucket} ${hideSensitive ? '' : formatCurrencyVal(item.total, currency)}`.trim()).join(', ')}
-              segments={bucketTotals.map(item => ({ label: item.bucket, value: Math.max(0, item.total), color: getCategoryChartColor(item.bucket) }))}
-            />
-            <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-label">
-              {bucketTotals.map(item => (
-                <li key={item.bucket} className="flex items-center gap-1.5">
-                  <span aria-hidden="true" className="size-2 rounded-full" style={{ backgroundColor: getCategoryChartColor(item.bucket) }} />
-                  <span className="text-muted-foreground">{item.bucket}</span>
-                  <SensitiveAmount value={item.total} isMasked={hideSensitive} formatFn={value => formatCurrencyVal(value, currency)} className="font-medium text-foreground tabular-nums" />
-                </li>
-              ))}
-            </ul>
-            {investmentValue && (
-              <InvestmentWorthLine value={investmentValue} ledgerTotal={netTotal} currency={currency} hideSensitive={hideSensitive} />
-            )}
-          </div>
+          <AccountsTotalCard
+            bucketTotals={bucketTotals}
+            netTotal={netTotal}
+            investmentValue={investmentValue}
+            openAccountCount={openAccountCount}
+            archivedAccountCount={archivedAccountCount}
+            currency={currency}
+            hideSensitive={hideSensitive}
+          />
         )}
 
         {!isCurrentCycle && (
@@ -360,6 +332,7 @@ export function AccountsSection({
               onNavigateToRecurring={onNavigateToRecurring}
               onClearCard={onSettleCard ? openClearCard : undefined}
               searchQuery={searchQuery}
+              investmentValue={group.bucket === 'Growth' ? investmentValue : null}
             />
           ))}
         </div>

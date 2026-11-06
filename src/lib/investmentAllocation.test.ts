@@ -49,6 +49,20 @@ describe('investment allocation sleeve index', () => {
     expect(sleeveLabelFor('Mystery', index)).toBe('Mystery')
   })
 
+  it('reads a basket the app has not met yet as words, never as a code', () => {
+    expect(sleeveLabelFor('EmergingMarkets', new Map())).toBe('Emerging markets')
+    expect(sleeveLabelFor('REITs', new Map())).toBe('REITs')
+  })
+
+  it('names a market by its basket, so adding funds never needs a new label', () => {
+    const index = buildSleeveIndex([
+      instrument({ id: 'a', allocationSleeve: 'Bonds' }),
+      instrument({ id: 'b', allocationSleeve: 'Bonds' }),
+    ])
+    expect(sleeveLabelFor('Bonds', index)).toBe('Bonds')
+    expect(index.get('b')?.label).toBe('Bonds')
+  })
+
   it('labels a known sleeve that no current instrument sits in, never showing its code', () => {
     expect(sleeveLabelFor('USEquity', new Map())).toBe('US shares')
   })

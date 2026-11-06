@@ -48,7 +48,13 @@ export function sleeveLabelFor(key: string, index: Map<string, SleeveIndexEntry>
   // History can name a sleeve no current instrument sits in; it still needs a person's label.
   return [...index.values()].find(entry => entry.key === key)?.label
     ?? sleeveLabels[key as InvestmentAllocationSleeve]
-    ?? key
+    ?? wordsFromCode(key)
+}
+
+/** `EmergingMarkets` -> `Emerging markets`: a basket this build has no label for still reads as words. */
+function wordsFromCode(code: string) {
+  const [first = '', ...rest] = code.replace(/([a-z])([A-Z])/g, '$1 $2').split(' ')
+  return [first, ...rest.map(word => (word === word.toUpperCase() ? word : word.toLowerCase()))].join(' ')
 }
 
 const statusLabels: Record<InvestmentAllocationStatus, string> = {
