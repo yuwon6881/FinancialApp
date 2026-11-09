@@ -231,7 +231,7 @@ export function CategoryLimitsCard({
                   onClick={() => setExpandedId(current => current === category.id ? null : category.id)}
                   aria-expanded={open}
                   aria-controls={open ? editorId : undefined}
-                  className={cn(rowClass, 'h-auto justify-start rounded-none font-normal hover:bg-transparent')}
+                  className={cn(rowClass, 'h-auto justify-start rounded-none font-normal hover:bg-surface-2/60 active:scale-100')}
                 >
                   {content}
                 </Button>
@@ -337,7 +337,7 @@ export function CategoryLimitsCard({
             onClick={() => setShowUntracked(open => !open)}
             aria-expanded={untrackedOpen}
             aria-controls={`${idPrefix}-untracked`}
-            className="h-auto min-h-12 w-full justify-between rounded-none px-4 py-3 font-medium text-muted-foreground hover:bg-transparent hover:text-foreground sm:px-5"
+            className="h-auto min-h-12 w-full justify-between rounded-none px-4 py-3 font-medium text-muted-foreground hover:bg-surface-2/60 hover:text-foreground active:scale-100 sm:px-5"
           >
             <span>{saved.tracked.length > 0 ? 'Without a limit' : 'Categories'} · {saved.untracked.length}</span>
             <ChevronDown aria-hidden="true" className={cn('size-4 transition-transform duration-200', untrackedOpen && 'rotate-180')} />

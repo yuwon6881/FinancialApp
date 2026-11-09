@@ -34,6 +34,7 @@ export interface BucketAccountGroupProps {
   onClearCard?: (card: LedgerAccount) => void
   searchQuery?: string
   /** Only the Growth bucket is given this: what its investments are worth at today's prices. */
+  rewardsAvailability?: { committed: number; freeToSpend: number }
   investmentValue?: InvestmentMarketValue | null
 }
 
@@ -56,6 +57,7 @@ export function BucketAccountGroup({
   onClearCard,
   searchQuery,
   investmentValue,
+  rewardsAvailability,
 }: BucketAccountGroupProps) {
   const pagination = useClientPagination(accounts.length, 10)
   const visibleAccounts = accounts.slice(pagination.start, pagination.end)
@@ -98,6 +100,13 @@ export function BucketAccountGroup({
             </div>
           )}
         </div>
+
+        {rewardsAvailability && rewardsAvailability.committed > 0 && (
+          <dl className="flex flex-wrap gap-x-6 gap-y-2 rounded-control inset-group px-3 py-2.5 text-label">
+            <div><dt className="text-muted-foreground">Committed</dt><dd><SensitiveAmount value={rewardsAvailability.committed} isMasked={hideSensitive} formatFn={value => formatCurrencyVal(value, currency)} className="font-semibold text-foreground tabular-nums" /></dd></div>
+            <div><dt className="text-muted-foreground">Free to spend</dt><dd><SensitiveAmount value={rewardsAvailability.freeToSpend} isMasked={hideSensitive} formatFn={value => formatCurrencyVal(value, currency)} className="font-semibold text-foreground tabular-nums" /></dd></div>
+          </dl>
+        )}
 
         {/* The total already counts card debt; this line shows the two halves so the total
             is never mistaken for cash in hand. */}

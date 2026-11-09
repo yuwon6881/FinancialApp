@@ -70,6 +70,19 @@ describe('BucketAccountGroup', () => {
     expect(screen.queryByRole('button', { name: 'Update balances' })).toBeNull()
   })
 
+  it('shows the Rewards split only when money is committed and masks its values', () => {
+    const account = makeAccount({ bucket: 'Rewards', remaining: 1000 })
+    const props = { bucket: 'Rewards' as const, description: 'Plans and treats', accounts: [account], allBucketAccounts: [account], currency: 'MYR', isDeleting: () => false, isSyncing: () => false, onAdd: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn(), onMoveMoney: vi.fn() }
+    const { rerender } = render(<BucketAccountGroup {...props} hideSensitive={false} rewardsAvailability={{ committed: 300, freeToSpend: 700 }} />)
+    expect(screen.getByText('Committed')).toBeTruthy()
+    expect(screen.getByText('Free to spend')).toBeTruthy()
+    expect(screen.getByText(/300.00/)).toBeTruthy()
+    rerender(<BucketAccountGroup {...props} hideSensitive rewardsAvailability={{ committed: 300, freeToSpend: 700 }} />)
+    expect(screen.queryByText(/300.00/)).toBeNull()
+    rerender(<BucketAccountGroup {...props} hideSensitive={false} rewardsAvailability={{ committed: 0, freeToSpend: 1000 }} />)
+    expect(screen.queryByText('Committed')).toBeNull()
+  })
+
   it('renders empty dashed state when bucket has no accounts', () => {
     render(
       <BucketAccountGroup

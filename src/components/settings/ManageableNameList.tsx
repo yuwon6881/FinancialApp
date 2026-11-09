@@ -120,7 +120,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
           as a flush grouped list inside its panel. */}
       <div className="flex flex-wrap items-center gap-2 px-4 sm:px-5">
         <label className="group relative block min-w-0 flex-[1_1_12rem]">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
+          <Search className="pointer-events-none absolute z-10 left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
           <Input
             type="text"
             role="searchbox"

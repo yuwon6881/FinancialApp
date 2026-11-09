@@ -4,6 +4,7 @@ import type {
   CategoryFlowType,
   DashboardData,
   LedgerAccount,
+  SavingsGoal,
   PushChannel,
   RecurringPayment,
   Transaction,
@@ -71,6 +72,7 @@ interface SettingsViewProps {
   onUpdateCategoryType?: (id: string, type: CategoryFlowType) => void
   onDeleteCategory: (id: string, options: RequestDeleteCategoryOptions) => void | Promise<void>
   onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
+  savingsGoals?: SavingsGoal[]
   accounts?: LedgerAccount[]
   recurringPayments?: RecurringPayment[]
   highlightedAccountId?: string | null
@@ -294,6 +296,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         <React.Suspense fallback={<AccountsSkeleton isCurrentCycle={props.isCurrentCycle !== false} />}>
           <AccountsSection
             accounts={props.accounts ?? []}
+            savingsGoals={props.savingsGoals}
+            activeRecurringPayments={props.dashboardData?.activeRecurringPayments}
             recurringPayments={props.recurringPayments}
             currency={view.activeSettings.currency || 'USD'}
             hideSensitive={hideSensitive}

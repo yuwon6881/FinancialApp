@@ -112,7 +112,7 @@ export const InstrumentForm = ({ busy, offline, existingInstruments = [], onCanc
   const selectedUnavailable = selected ? marketAvailability(selected) === 'Unavailable' : false
   return <div className="space-y-4">
     <>
-      <Field label="Symbol or company / fund name"><span className="relative block"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} onClear={() => { setQuery(''); setSelected(null) }} clearLabel="Clear search" placeholder="Search at least 3 characters" className="pl-9" />{searching && <Loader2 className="absolute right-12 top-3 size-4 animate-spin text-accent-ink lg:right-11" />}</span></Field>
+      <Field label="Symbol or company / fund name"><span className="relative block"><Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" /><Input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} onClear={() => { setQuery(''); setSelected(null) }} clearLabel="Clear search" placeholder="Search at least 3 characters" className="pl-9" />{searching && <Loader2 className="absolute right-12 top-3 size-4 animate-spin text-accent-ink lg:right-11" />}</span></Field>
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
       {selected ? (
         <div className="rounded-xl border border-primary bg-primary/5 p-3">

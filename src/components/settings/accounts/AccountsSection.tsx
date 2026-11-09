@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import type { LedgerAccount, RecurringPayment, Transaction, TransactionCategory } from '../../../types'
+import type { ActiveRecurringPayment, LedgerAccount, RecurringPayment, SavingsGoal, Transaction, TransactionCategory } from '../../../types'
 import type { LedgerAccountInput } from '../../../app/financialData/accountActions'
 import type { LedgerAccountReconcileInput } from '../../../lib/api/accounts'
 import { formatCurrencyVal } from '../../../lib/utils'
+import { getRewardsAvailability, pendingRewardsAmount } from '../../../lib/freeRewards'
 import { roundMoney } from '../../../lib/money'
 import { CustomConfirmModal } from '../../ui/CustomConfirmModal'
 import { Input } from '../../ui/Input'
@@ -25,6 +26,8 @@ import { useAccountsView } from './view/useAccountsView'
 import { AlertBanner } from '../../ui/AlertBanner'
 
 interface AccountsSectionProps {
+  savingsGoals?: SavingsGoal[]
+  activeRecurringPayments?: ActiveRecurringPayment[]
   accounts: LedgerAccount[]
   recurringPayments?: readonly RecurringPayment[]
   currency: string
@@ -71,6 +74,8 @@ function SignedAmount({ value, currency, hideSensitive }: { value: number; curre
 
 export function AccountsSection({
   accounts,
+  savingsGoals = [],
+  activeRecurringPayments,
   recurringPayments,
   currency,
   hideSensitive,
@@ -333,6 +338,7 @@ export function AccountsSection({
               onClearCard={onSettleCard ? openClearCard : undefined}
               searchQuery={searchQuery}
               investmentValue={group.bucket === 'Growth' ? investmentValue : null}
+              rewardsAvailability={group.bucket === 'Rewards' && isCurrentCycle ? getRewardsAvailability(group.balance, savingsGoals, pendingRewardsAmount(activeRecurringPayments)) : undefined}
             />
           ))}
         </div>

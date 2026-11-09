@@ -209,7 +209,7 @@ export function DatePicker({
       <div
         className={cn(
           controlTriggerClassName({ size: controlSize, invalid: isInvalid }),
-          'gap-0 p-0 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25',
+          'overflow-hidden gap-0 p-0 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25',
           isInvalid && 'focus-within:border-destructive focus-within:ring-destructive/25',
         )}
       >
@@ -227,7 +227,7 @@ export function DatePicker({
           aria-describedby={accessibleProps['aria-describedby']}
           aria-invalid={accessibleProps['aria-invalid']}
           aria-required={accessibleProps['aria-required']}
-          className="flex h-full min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-[inherit] px-3.5 text-left outline-none disabled:cursor-not-allowed"
+          className="flex h-full min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-[inherit] px-3.5 text-left outline-none hover:bg-transparent active:scale-100 disabled:cursor-not-allowed"
         >
           <span className={cn('truncate', !display && 'font-medium text-muted-foreground')}>
             {display ?? placeholder}

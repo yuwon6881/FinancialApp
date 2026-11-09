@@ -113,7 +113,7 @@ export function GlobalSearch({
             phone, and Night's field well showed through as a box inside the row. */}
         <div className="border-b border-border/60 p-3">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 size-4.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <Search className="pointer-events-none absolute z-10 left-4 top-1/2 size-4.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
             <Input
               ref={inputRef}
               type="text"

@@ -62,6 +62,7 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
       onDeleteCategory={financial.requestDeleteCategory}
       onApplyCategoryCleanupSuggestion={financial.handleApplyCategoryCleanupSuggestion}
       accounts={financial.allAccounts}
+      savingsGoals={financial.allSavingsGoals}
       recurringPayments={financial.allRecurringPayments}
       highlightedAccountId={nav.highlightedAccountId}
       onClearHighlightedAccount={nav.clearHighlightedAccount}
