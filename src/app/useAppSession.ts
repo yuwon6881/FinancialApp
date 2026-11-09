@@ -20,6 +20,7 @@ import { verifyMobilePwaDeviceGate } from '../lib/mobilePwaDeviceGate'
 import { updateAppSearch } from '../lib/appLocation'
 import { Capacitor } from '@capacitor/core'
 import { setNativeFinancialContentHidden } from '../lib/native/privacyScreen'
+import { clearSessionSafeDrafts } from '../lib/sessionSafeDrafts'
 
 function getRestoredUsername(): string {
   return localStorage.getItem('auth_username')?.trim()
@@ -140,6 +141,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   }, [])
 
   const markSessionLocked = useCallback(() => {
+    clearSessionSafeDrafts()
     loadAllAbortRef.current?.abort()
     api.invalidateCache()
     setIsLocked(true)
@@ -169,6 +171,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
       })
       return
     }
+    clearSessionSafeDrafts()
     setIsNativeAppGateLocked(true)
     try {
       await setNativeFinancialContentHidden(true)

@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAppPreferences } from './useAppPreferences'
+import { clearSessionSafeDrafts, isSessionSafeDraft, markSessionSafeDrafts } from '../lib/sessionSafeDrafts'
 
 describe('useAppPreferences', () => {
   beforeEach(() => {
@@ -127,5 +128,26 @@ describe('useAppPreferences', () => {
 
     expect(result.current.activeTab).toBe('wishlist')
     expect(window.location.search).toBe('?month=Jul&year=2026')
+  })
+
+  it('preserves current-session safe drafts when server resolves sensitive mode on, and clears them on account change', () => {
+    clearSessionSafeDrafts()
+    const { result } = renderHook(() => useAppPreferences())
+    act(() => {
+      result.current.setPreferenceOwner('alice')
+    })
+
+    markSessionSafeDrafts(['draft-boot-1'])
+    expect(isSessionSafeDraft('draft-boot-1')).toBe(true)
+
+    act(() => {
+      result.current.resolveHideSensitive(true)
+    })
+    expect(isSessionSafeDraft('draft-boot-1')).toBe(true)
+
+    act(() => {
+      result.current.setPreferenceOwner('bob')
+    })
+    expect(isSessionSafeDraft('draft-boot-1')).toBe(false)
   })
 })

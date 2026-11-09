@@ -31,14 +31,11 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
   const refreshRef = useRef<() => Promise<void>>(async () => undefined)
   const refreshing = useRef(false)
   const refreshRequested = useRef(false)
-  const revealedTap = useRef<string | null>(null)
-  /** A review asked for while balances were hidden opens once they are revealed. */
-  const reviewAfterReveal = useRef<string | null>(null)
   useEffect(() => { current.current = options }, [options])
 
   const save = useCallback(async (id: string, transaction: Omit<Transaction, 'id'>, recovering = false) => {
     const latest = current.current
-    if (!latest.owner || !latest.eligible || latest.hidden) throw new Error('Unlock and reveal financial data before saving.')
+    if (!latest.owner || !latest.eligible) throw new Error('Unlock the account before saving.')
     if (inFlight.current.has(id)) throw new Error('This transaction is already being saved.')
     const owner = latest.owner
     inFlight.current.add(id)
@@ -54,7 +51,7 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
       await saveCapturedPurchase(candidate, transaction, {
         prepare: data => PurchaseCapturePlugin.update({ owner, id, action: 'prepare', data: { ...data, postedAt: data.postedAt ?? new Date().toISOString() } }),
         enqueue: (transactionId, data) => {
-          if (current.current.owner !== owner || !current.current.eligible || current.current.hidden) throw new Error('The account was locked. Unlock to finish saving.')
+          if (current.current.owner !== owner || !current.current.eligible) throw new Error('The account was locked. Unlock to finish saving.')
           current.current.enqueue(transactionId, data)
         },
         complete: () => PurchaseCapturePlugin.update({ owner, id, action: 'complete' }),
@@ -75,11 +72,6 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
       setState({ ...snapshot, candidates: sortCaptures(snapshot.candidates) })
       setError(null)
       if (!current.current.eligible) return
-      if (snapshot.tapId && current.current.hidden && revealedTap.current !== snapshot.tapId) {
-        revealedTap.current = snapshot.tapId
-        current.current.reveal()
-      }
-      if (current.current.hidden) return
       // One interrupted approval must not hold every other capture, or the tapped one, hostage.
       let recoveryFailed = false
       for (const candidate of snapshot.candidates) {
@@ -87,15 +79,12 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
         try { await save(candidate.id, candidate.prepared, true) }
         catch { recoveryFailed = true }
       }
-      const wanted = snapshot.tapId ?? reviewAfterReveal.current
-      const candidate = snapshot.candidates.find(item => item.id === wanted && !item.prepared)
+      const candidate = snapshot.tapId ? snapshot.candidates.find(item => item.id === snapshot.tapId && !item.prepared) : undefined
       if (candidate && !current.current.formOpen && current.current.owner === owner) {
-        reviewAfterReveal.current = null
         current.current.open(capturePrefill(candidate, current.current.currency))
-        if (snapshot.tapId) await PurchaseCapturePlugin.consumeTap({ owner })
-      } else if (wanted && !candidate) {
-        reviewAfterReveal.current = null
-        if (snapshot.tapId) await PurchaseCapturePlugin.consumeTap({ owner })
+        await PurchaseCapturePlugin.consumeTap({ owner })
+      } else if (snapshot.tapId && !candidate) {
+        await PurchaseCapturePlugin.consumeTap({ owner })
       }
       if (recoveryFailed && current.current.owner === owner) {
         setError('An approved transaction has not reached the Ledger yet. It will retry automatically; you can also retry now.')
@@ -117,8 +106,6 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
     let disposed = false
     setState(null)
     setApplications([])
-    revealedTap.current = null
-    reviewAfterReveal.current = null
     void PurchaseCapturePlugin.activate({ owner: options.owner }).then(() => {
       if (!disposed && options.owner) return refresh()
     }).catch(() => { if (!disposed) setError('Transaction detection storage is unavailable. Try again.') })
@@ -139,8 +126,8 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
     return () => { disposed = true; removeCapture?.(); removeApp?.() }
   }, [refresh, supported])
   useEffect(() => {
-    if (options.eligible && !options.hidden) void refresh()
-  }, [options.eligible, options.hidden, options.formOpen, refresh])
+    if (options.eligible) void refresh()
+  }, [options.eligible, options.formOpen, refresh])
 
   const perform = async (operation: () => Promise<unknown>, failure = 'Could not update transaction detection. Try again.') => {
     setBusy(true)
@@ -150,7 +137,7 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
   }
   const edit = useCallback(async (id: string, fields: Record<string, unknown>) => {
     const latest = current.current
-    if (!latest.owner || !latest.eligible || latest.hidden) return
+    if (!latest.owner || !latest.eligible) return
     await PurchaseCapturePlugin.update({ owner: latest.owner, id, action: 'edit', data: fields })
   }, [])
 
@@ -184,7 +171,7 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
     accessSettings: () => perform(() => PurchaseCapturePlugin.openAccessSettings()),
     reconnect: () => perform(async () => {
       const latest = current.current
-      if (!latest.owner || !latest.eligible || latest.hidden) throw new Error('Unlock first')
+      if (!latest.owner || !latest.eligible) throw new Error('Unlock first')
       // Older installed shells do not implement reconnect; their existing state read already requests a rebind.
       if (state?.listenerRecovery !== undefined) await PurchaseCapturePlugin.reconnect({ owner: latest.owner })
     }, 'Detection could not reconnect. Review notification access in Android settings.'),
@@ -192,15 +179,10 @@ export function usePurchaseCapture(options: PurchaseCaptureOptions) {
     batterySettings: () => perform(() => PurchaseCapturePlugin.openBatterySettings()),
     review: (candidate: PurchaseCapture) => {
       if (!current.current.eligible || current.current.formOpen) return
-      if (current.current.hidden) {
-        reviewAfterReveal.current = candidate.id
-        current.current.reveal()
-        return
-      }
       current.current.open(capturePrefill(candidate, current.current.currency))
     },
     discard: (id: string) => perform(async () => {
-      if (!current.current.owner || !current.current.eligible || current.current.hidden) throw new Error('Unlock first')
+      if (!current.current.owner || !current.current.eligible) throw new Error('Unlock first')
       await PurchaseCapturePlugin.update({ owner: current.current.owner, id, action: 'discard' })
     }, 'This detected transaction could not be discarded. Try again.'),
   }

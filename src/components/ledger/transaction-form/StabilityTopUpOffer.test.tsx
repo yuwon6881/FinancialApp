@@ -189,6 +189,33 @@ describe('StabilityTopUpOffer', () => {
     expect(resultLine.textContent).not.toMatch(/\d/)
   })
 
+  it('prevents All chip, placeholder, and over-max/safe-cap threshold oracles when hideSensitive is true', () => {
+    const onAmountChange = vi.fn()
+    render(
+      <StabilityTopUpOffer
+        offer={{ ...offer, proposedTopUp: 150, maxTopUp: 450, safeCap: 300 }}
+        accepted
+        onToggle={vi.fn()}
+        amount="999"
+        onAmountChange={onAmountChange}
+        buckets={[]}
+        currency="USD"
+        hideSensitive
+        stabilityAlloc={0.15}
+      />,
+    )
+
+    const allChip = screen.getByRole('button', { name: /^All/i }) as HTMLButtonElement
+    expect(allChip.disabled).toBe(true)
+    fireEvent.click(allChip)
+    expect(onAmountChange).not.toHaveBeenCalled()
+
+    const input = screen.getByPlaceholderText('Enter an amount')
+    expect(input.getAttribute('aria-invalid')).not.toBe('true')
+    expect(screen.queryByText(/That is more than/i)).toBeNull()
+    expect(screen.queryByText(/bills or commitments may be short/i)).toBeNull()
+  })
+
   it('shows the result line for a valid amount and hides it for an over-max amount', () => {
     const { rerender } = render(
       <StabilityTopUpOffer

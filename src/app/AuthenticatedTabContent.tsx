@@ -502,6 +502,7 @@ export function AuthenticatedTabContent({
           onReorderDraftTransactions={financial.setDraftTransactions}
           onSyncDraftBatch={financial.handleSyncDraftBatch}
           hideSensitive={prefs.hideSensitive}
+          sensitivePreferenceStatus={prefs.sensitivePreferenceStatus}
           currency={financial.optimisticDashboardData?.setting?.currency || 'USD'}
           onCancel={() => prefs.setActiveTab('ledger')}
           onAddAnother={() => {

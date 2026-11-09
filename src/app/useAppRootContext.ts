@@ -32,7 +32,8 @@ export function useAppRootContext(options: {
     operations: financial.activeOps,
     failedOperations: financial.failedOps,
     queueMutation: (entity, type, targetId, payload, isUndo) => {
-      if (!guardSensitive()) return false
+      const isSafeTransactionMutation = entity === 'transaction' && (type === 'add' || type === 'bulkAdd')
+      if (!isSafeTransactionMutation && !guardSensitive()) return false
       return financial.queueMutation(entity, type, targetId, payload, isUndo)
     },
   }), [

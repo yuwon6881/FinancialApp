@@ -14,6 +14,8 @@ interface LedgerAccountActionDependencies {
   mutateQueue: UseOutboxResult['mutateQueue']
   snapshotForUndo: UseOutboxResult['snapshotForUndo']
   setConfirmModalData: AppDialogs['setConfirmModalData']
+  showToast?: (message: string, title?: string, tone?: import('../../components/ui/ToastViewport').ToastTone, action?: import('../../components/ui/ToastViewport').ToastAction) => void
+  isServerAwakeRef?: React.RefObject<boolean> | { current: boolean }
 }
 
 export interface LedgerAccountInput {
@@ -35,6 +37,8 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
     mutateQueue,
     snapshotForUndo,
     setConfirmModalData,
+    showToast,
+    isServerAwakeRef,
   } = deps
 
   const handleAddAccount = (value: LedgerAccountInput) => {
@@ -104,6 +108,10 @@ export function createLedgerAccountActions(deps: LedgerAccountActionDependencies
   }
 
   const handleReconcileAccounts = (input: LedgerAccountReconcileInput) => {
+    if (isServerAwakeRef && !isServerAwakeRef.current) {
+      showToast?.('Account reconciliation requires a live connection to verify current balances.', 'Live connection required', 'warning')
+      return
+    }
     if (!guardSensitive()) return
     const undoTargets = input.targets.map(target => {
       const account = target.id ? accounts.find(candidate => candidate.id === target.id) : undefined

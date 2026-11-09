@@ -7,7 +7,7 @@ import type { UseTransactionFormOptions } from './useTransactionFormOptions'
 export function useTransactionOutflowWarning(
   state: TransactionFormState,
   transactions: Transaction[],
-  options: Pick<UseTransactionFormOptions, 'ledgerSummaries' | 'savingsGoals' | 'activeRecurringPayments' | 'stabilityTarget'>,
+  options: Pick<UseTransactionFormOptions, 'ledgerSummaries' | 'savingsGoals' | 'activeRecurringPayments' | 'stabilityTarget' | 'hideSensitive'>,
 ) {
   const outflowBucket: OutflowBucket | null = useMemo(() => {
     if (state.transactionType === 'transfer') {
@@ -42,7 +42,7 @@ export function useTransactionOutflowWarning(
   }, [state.mode, state.editingId, transactions, outflowBucket])
 
   const bucketOutflowWarning = useMemo<BucketOutflowWarning | null>(() => {
-    if (!outflowBucket) return null
+    if (options.hideSensitive || !outflowBucket) return null
     const parsedAmount = parseFloat(state.amount)
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return null
 
@@ -64,7 +64,7 @@ export function useTransactionOutflowWarning(
     options.ledgerSummaries,
     options.savingsGoals,
     options.activeRecurringPayments,
-    options.stabilityTarget,
+    options.stabilityTarget, options.hideSensitive,
   ])
 
   const bucketImpact = useMemo<BucketImpact | null>(() => {

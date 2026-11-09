@@ -48,12 +48,12 @@ describe('purchase capture routing', () => {
     await waitFor(() => expect(open).toHaveBeenCalledWith(expect.objectContaining({ captureId: 'capture', amount: '12.50' })))
     expect(mocks.consumeTap).toHaveBeenCalledWith({ owner: 'one' })
   })
-  it('does not reveal a capture or consume its tap in sensitive mode', async () => {
+  it('opens a capture and consumes its tap in sensitive mode without calling reveal', async () => {
     const reveal = vi.fn(), open = vi.fn()
     renderHook(() => usePurchaseCapture({ owner: 'one', eligible: true, hidden: true, formOpen: false, currency: 'MYR', categories: [], reveal, open, enqueue: vi.fn() }))
-    await waitFor(() => expect(reveal).toHaveBeenCalledTimes(1))
-    expect(open).not.toHaveBeenCalled()
-    expect(mocks.consumeTap).not.toHaveBeenCalled()
+    await waitFor(() => expect(open).toHaveBeenCalledWith(expect.objectContaining({ captureId: 'capture', amount: '12.50' })))
+    expect(reveal).not.toHaveBeenCalled()
+    expect(mocks.consumeTap).toHaveBeenCalledWith({ owner: 'one' })
   })
   it('does not replace an existing financial form with a captured purchase', async () => {
     const open = vi.fn()
@@ -121,16 +121,14 @@ describe('purchase capture routing', () => {
     await waitFor(() => expect(result.current.error).toMatch(/has not reached the Ledger/))
     expect(mocks.update).not.toHaveBeenCalledWith(expect.objectContaining({ id: 'stuck', action: 'complete' }))
   })
-  it('opens a review requested in sensitive mode once balances are revealed', async () => {
+  it('opens a review requested in sensitive mode directly without requiring reveal', async () => {
     mocks.state.mockResolvedValue({ ...snapshot, tapId: undefined })
     const open = vi.fn(), reveal = vi.fn()
-    const { result, rerender } = renderHook(({ hidden }) => usePurchaseCapture({ owner: 'one', eligible: true, hidden, formOpen: false, currency: 'MYR', categories: [], reveal, open, enqueue: vi.fn() }), { initialProps: { hidden: true } })
+    const { result } = renderHook(() => usePurchaseCapture({ owner: 'one', eligible: true, hidden: true, formOpen: false, currency: 'MYR', categories: [], reveal, open, enqueue: vi.fn() }))
     await waitFor(() => expect(result.current.state).not.toBeNull())
     act(() => result.current.review(candidate))
-    expect(reveal).toHaveBeenCalled()
-    expect(open).not.toHaveBeenCalled()
-    rerender({ hidden: false })
-    await waitFor(() => expect(open).toHaveBeenCalledWith(expect.objectContaining({ captureId: 'capture' })))
+    expect(reveal).not.toHaveBeenCalled()
+    expect(open).toHaveBeenCalledWith(expect.objectContaining({ captureId: 'capture' }))
   })
   it('checks a fresh approval against the Ledger draft rules before storing it', async () => {
     mocks.state.mockResolvedValue({ ...snapshot, tapId: undefined })

@@ -49,7 +49,7 @@ export function StabilityTopUpOffer({
   const chosen = amount.trim() === '' || !Number.isFinite(typed) ? offer.proposedTopUp : typed
   const overMax = chosen > offer.maxTopUp
   const overSafe = !overMax && chosen > offer.safeCap
-  const invalid = chosen <= 0 || overMax || Boolean(error)
+  const invalid = (!hideSensitive && overMax) || chosen <= 0 || Boolean(error)
   const draws = invalid ? [] : drawsFor(chosen, buckets)
 
   const isSuggestedPressed = amount.trim() === ''
@@ -132,7 +132,7 @@ export function StabilityTopUpOffer({
                 type="button"
                 size="sm"
                 variant={isAllPressed ? 'primary' : 'secondary'}
-                aria-pressed={isAllPressed}
+                aria-pressed={isAllPressed} disabled={hideSensitive}
                 onClick={() => onAmountChange(offer.maxTopUp.toFixed(2))}
               >
                 All {money(offer.maxTopUp)}
@@ -148,24 +148,24 @@ export function StabilityTopUpOffer({
               id={amountId}
               inputMode="decimal"
               value={amount}
-              placeholder={offer.proposedTopUp > 0 ? offer.proposedTopUp.toFixed(2) : 'Enter an amount'}
+              placeholder={!hideSensitive && offer.proposedTopUp > 0 ? offer.proposedTopUp.toFixed(2) : 'Enter an amount'}
               invalid={invalid}
               onChange={event => onAmountChange(maskCurrencyInput(event.target.value, amount))}
               className="w-full"
             />
           </div>
 
-          {overMax && (
+          {!hideSensitive && overMax && (
             <p className="text-xs text-destructive">
               That is more than the {money(offer.maxTopUp)} this pay packet can put back.
             </p>
           )}
 
-          {error && !overMax && (
+          {error && (hideSensitive || !overMax) && (
             <p className="text-xs text-destructive">{error}</p>
           )}
 
-          {overSafe && (
+          {!hideSensitive && overSafe && (
             <p className="text-xs text-amber-600 dark:text-amber-400">
               Above {money(offer.safeCap)}, bills or commitments may be short this cycle. Still your call.
             </p>

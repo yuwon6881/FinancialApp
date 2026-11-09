@@ -1,22 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Transaction } from '../../../types'
-import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
 
 export interface UseLedgerDeleteModalOptions {
   hideSensitive: boolean
-  sensitivePreferenceStatus?: SensitivePreferenceStatus
   onDeleteTransaction: (id: string, transaction?: Transaction, attachedDocumentIdsToDelete?: number[]) => Promise<void> | void
   onShowAlert?: (message: string, title?: string) => void
-  formRef: React.RefObject<any>
 }
 
 export function useLedgerDeleteModal(options: UseLedgerDeleteModalOptions) {
   const {
     hideSensitive,
-    sensitivePreferenceStatus,
     onDeleteTransaction,
     onShowAlert,
-    formRef,
   } = options
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -38,8 +33,7 @@ export function useLedgerDeleteModal(options: UseLedgerDeleteModalOptions) {
     setAreAttachedDocumentsLoading(false)
     setShowEditDisabledModal(false)
     setEditBlockedTransaction(null)
-    if (sensitivePreferenceStatus !== 'pending') formRef.current?.handleCloseForm()
-  }, [hideSensitive, sensitivePreferenceStatus, formRef])
+  }, [hideSensitive])
 
   const handleDeleteClick = useCallback((t: Transaction) => {
     if (hideSensitive) return

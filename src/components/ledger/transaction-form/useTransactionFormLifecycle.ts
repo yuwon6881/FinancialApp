@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction, type MutableRefObject, type RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, type Dispatch, type SetStateAction, type MutableRefObject, type RefObject } from 'react'
 import type { LedgerAccount, Transaction, TransactionDocumentChanges, VaultDocument } from '../../../types'
 import type { TransactionFormAction, TransactionFormState, TransferBucket, SelectableLedgerCategory } from './transactionFormReducer'
 import type { TransactionPrefillDraft } from '../TransactionFormSheet'
 import type { TransactionDocumentsFieldRef } from './TransactionDocumentsField'
-import { canOpenBlankMutationForm } from '../../../lib/quickAddAvailability'
-import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
 import { usePurchaseCaptureActions } from '../../../contexts/PurchaseCaptureContext'
 import { capturedPurchaseEdits } from './useCapturedPurchaseForm'
+import { isSessionSafeDraft } from '../../../lib/sessionSafeDrafts'
 
 export interface UseTransactionFormLifecycleOptions {
   state: TransactionFormState
@@ -16,7 +15,6 @@ export interface UseTransactionFormLifecycleOptions {
   defaultCategory: string
   todayDate: string
   hideSensitive?: boolean
-  sensitivePreferenceStatus?: SensitivePreferenceStatus
   autoOpenTxType?: 'inflow' | 'outflow' | 'transfer' | null
   autoOpenPrefill?: any
   aiEditDraft?: { id: string | number; changes: any; nonce?: number } | null
@@ -48,7 +46,6 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
     defaultCategory,
     todayDate,
     hideSensitive,
-    sensitivePreferenceStatus,
     autoOpenTxType,
     autoOpenPrefill,
     aiEditDraft,
@@ -69,6 +66,8 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
     setDocumentFieldRevision,
     deriveIncomeSplitAccountIds,
   } = options
+  const hideSensitiveRef = useRef(hideSensitive)
+  useLayoutEffect(() => { hideSensitiveRef.current = hideSensitive }, [hideSensitive])
 
   /**
    * Invalidation token for the attached-document lookup.
@@ -134,11 +133,12 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
   }, [accounts, deriveIncomeSplitAccountIds, hideSensitive, suggestions, onStartEditPending, onShowAlert, openTransactionForm, setExistingDocuments, setInitialDocumentChanges, setDocumentFieldRevision, dispatch, descriptionRef, autocompletedDescriptionRef])
 
   const handleStartDraft = useCallback(async (draft: Transaction) => {
-    if (hideSensitive) return
+    if (hideSensitiveRef.current && !isSessionSafeDraft(draft.id)) return
     let changes: TransactionDocumentChanges = { pending: [], unlinkIds: [] }
     if (onLoadDraftDocumentChanges) {
       changes = await onLoadDraftDocumentChanges(draft.id)
     }
+    if (hideSensitiveRef.current && !isSessionSafeDraft(draft.id)) return
     documentLookupRef.current += 1
     setExistingDocuments([])
     setInitialDocumentChanges(changes)
@@ -207,7 +207,6 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
   }, [aiEditDraft?.nonce, handleStartEdit, transactions, onFetchTransactionById, onShowAlert, onAiEditDraftConsumed, dispatch, todayDate])
 
   const openFresh = useCallback((initialTxType?: 'inflow' | 'outflow' | 'transfer') => {
-    if (!canOpenBlankMutationForm(Boolean(hideSensitive), sensitivePreferenceStatus)) return
     documentLookupRef.current += 1
     setExistingDocuments([])
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
@@ -263,10 +262,9 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
     }
     suggestions.clearSuggestions()
     openTransactionForm()
-  }, [hideSensitive, sensitivePreferenceStatus, todayDate, autoOpenTxType, autoOpenPrefill, suggestions, openTransactionForm, setExistingDocuments, setInitialDocumentChanges, setDocumentFieldRevision, documentsFieldRef, dispatch, descriptionRef, autocompletedDescriptionRef])
+  }, [todayDate, autoOpenTxType, autoOpenPrefill, suggestions, openTransactionForm, setExistingDocuments, setInitialDocumentChanges, setDocumentFieldRevision, documentsFieldRef, dispatch, descriptionRef, autocompletedDescriptionRef])
 
   const openWithDraft = (draft: TransactionPrefillDraft) => {
-    if (hideSensitive) return
     documentLookupRef.current += 1
     setExistingDocuments([])
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })

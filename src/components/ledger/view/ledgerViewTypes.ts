@@ -11,7 +11,6 @@ import {
 } from '../../../lib/transactionFilters'
 import type { TransactionSort } from '../../../lib/transactionOrdering'
 import type { LedgerRouteRange } from '../../../lib/appLocation'
-import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
 import type { QueuedOp } from '../../../lib/outboxTypes'
 
 export type LedgerTxType = TxTypeFilter
@@ -112,7 +111,6 @@ export interface UseLedgerViewOptions {
   onAiExportRequestConsumed?: () => void
   aiExportRequest?: any
   hideSensitive: boolean
-  sensitivePreferenceStatus?: SensitivePreferenceStatus
   formRef: React.RefObject<any>
   preferredPageSize?: number
   preferredSortOrder?: TransactionSort

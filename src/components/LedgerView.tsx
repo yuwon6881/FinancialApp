@@ -175,7 +175,6 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     activeSyncIds,
     operations: app.operations,
     deletingTxId,
-    sensitivePreferenceStatus: app.sensitivePreferenceStatus,
     formRef,
   })
 

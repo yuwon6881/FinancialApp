@@ -94,20 +94,19 @@ export function TransactionDetectionPanel({ detection, tab, hidden, formOpen }: 
             <div className="min-w-0 flex-1">
               <h3 className="text-subsection text-foreground">Detected transactions</h3>
               <p className="text-caption text-muted-foreground">
-                {hidden ? 'Reveal financial data to review them.'
-                  : candidates.length ? `${candidates.length} waiting for your review`
+                {candidates.length ? `${candidates.length} waiting for your review`
                   : status.listening ? 'All caught up' : status.detail}
               </p>
             </div>
             <Button
-              variant={candidates.length && !hidden ? 'primary' : 'secondary'}
+              variant={candidates.length ? 'primary' : 'secondary'}
               size="sm"
-              disabled={hidden || formOpen}
-              aria-label={hidden ? 'Review detected transactions' : `Review ${candidates.length} detected ${candidates.length === 1 ? 'transaction' : 'transactions'}`}
+              disabled={formOpen}
+              aria-label={`Review ${candidates.length} detected ${candidates.length === 1 ? 'transaction' : 'transactions'}`}
               onClick={() => { setShowPending(true); void detection.refresh() }}
             >
               Review
-              {!hidden && candidates.length > 0 && <Badge tone="neutral" className="ml-1.5 border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground">{candidates.length}</Badge>}
+              {candidates.length > 0 && <Badge tone="neutral" className="ml-1.5 border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground">{candidates.length}</Badge>}
             </Button>
           </div>
           {errorRow}
@@ -149,11 +148,12 @@ export function TransactionDetectionPanel({ detection, tab, hidden, formOpen }: 
         onSave={packages => detection.configure(state?.enabled ?? false, packages)}
       />
       <DetectedTransactionsSheet
-        isOpen={showPending && !hidden}
+        isOpen={showPending}
         onClose={() => setShowPending(false)}
         candidates={candidates}
         busy={busy}
         formOpen={formOpen}
+        hideSensitive={hidden}
         onReview={candidate => { setShowPending(false); detection.review(candidate) }}
         onDiscard={detection.discard}
       />

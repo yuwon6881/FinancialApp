@@ -60,7 +60,6 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     onAiExportRequestConsumed,
     aiExportRequest,
     hideSensitive,
-    sensitivePreferenceStatus,
     formRef,
     preferredPageSize,
     preferredSortOrder,
@@ -310,10 +309,8 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   const deleteModal = useLedgerDeleteModal({
     hideSensitive,
-    sensitivePreferenceStatus,
     onDeleteTransaction,
     onShowAlert,
-    formRef,
   })
 
   const exportState = useLedgerExport({

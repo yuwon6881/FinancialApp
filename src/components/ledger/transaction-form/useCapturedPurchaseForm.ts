@@ -15,14 +15,14 @@ export function capturedPurchaseEdits(state: TransactionFormState): Record<strin
  * through the AI button or by leaving the description field. Requesting them on open put an AI
  * spinner and popover over a description the user had not touched.
  */
-export function useCapturedPurchaseForm(state: TransactionFormState, hidden: boolean) {
+export function useCapturedPurchaseForm(state: TransactionFormState, _hidden: boolean) {
   const capture = usePurchaseCaptureActions()
   useEffect(() => {
-    if (!state.captureId || !state.showAddForm || hidden || !capture) return
+    if (!state.captureId || !state.showAddForm || !capture) return
     const id = state.captureId
     const timer = window.setTimeout(() => {
       void capture.edit(id, capturedPurchaseEdits(state)).catch(() => { /* Close explicitly reports a failed persistence. */ })
     }, 300)
     return () => window.clearTimeout(timer)
-  }, [capture, state, hidden])
+  }, [capture, state])
 }

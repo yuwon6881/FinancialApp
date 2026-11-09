@@ -1,7 +1,7 @@
 import { Inbox } from 'lucide-react'
 import type { PurchaseCapture } from '../../../lib/native/purchaseCapture'
 import { formatAlertTime } from '../../../lib/native/purchaseCaptureStatus'
-import { formatCurrencyVal } from '../../../lib/utils'
+import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
 import { Badge } from '../../ui/Badge'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { Button } from '../../ui/Button'
@@ -13,6 +13,7 @@ interface Props {
   candidates: PurchaseCapture[]
   busy: boolean
   formOpen: boolean
+  hideSensitive?: boolean
   onReview: (candidate: PurchaseCapture) => void
   onDiscard: (id: string) => Promise<boolean>
 }
@@ -22,7 +23,7 @@ const detectedAmount = (candidate: PurchaseCapture) => {
   return candidate.currency && Number.isFinite(value) ? formatCurrencyVal(value, candidate.currency) : null
 }
 
-function CaptureRow({ candidate, busy, formOpen, onReview, onDiscard }: Omit<Props, 'isOpen' | 'onClose' | 'candidates'> & { candidate: PurchaseCapture }) {
+function CaptureRow({ candidate, busy, formOpen, hideSensitive, onReview, onDiscard }: Omit<Props, 'isOpen' | 'onClose' | 'candidates'> & { candidate: PurchaseCapture }) {
   const amount = detectedAmount(candidate)
   const finishing = Boolean(candidate.prepared)
   const title = candidate.description || 'Merchant not detected'
@@ -33,9 +34,11 @@ function CaptureRow({ candidate, busy, formOpen, onReview, onDiscard }: Omit<Pro
           <p className={candidate.description ? 'break-words text-body font-medium text-foreground' : 'text-body italic text-muted-foreground'}>{title}</p>
           <p className="text-caption text-muted-foreground">{candidate.sourceLabel} · {formatAlertTime(candidate.capturedAt)}</p>
         </div>
-        {amount
-          ? <p className="shrink-0 text-body font-medium tabular-nums text-foreground">{amount}</p>
-          : <p className="shrink-0 text-caption text-muted-foreground">Amount not shown</p>}
+        {hideSensitive
+          ? <p className="shrink-0 text-body font-medium tabular-nums text-foreground">{SENSITIVE_AMOUNT_MASK}</p>
+          : amount
+            ? <p className="shrink-0 text-body font-medium tabular-nums text-foreground">{amount}</p>
+            : <p className="shrink-0 text-caption text-muted-foreground">Amount not shown</p>}
       </div>
       {(candidate.possibleDuplicate || finishing) && (
         <div className="flex flex-wrap gap-1.5">

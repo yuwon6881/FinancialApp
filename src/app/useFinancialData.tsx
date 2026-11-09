@@ -402,6 +402,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     allLoans,
     allAccounts,
     onNavigateToLedger,
+    isServerAwakeRef,
   })
 
   return {

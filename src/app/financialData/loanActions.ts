@@ -14,6 +14,7 @@ interface LoanActionDependencies {
   snapshotForUndo: UseOutboxResult['snapshotForUndo']
   setConfirmModalData: AppDialogs['setConfirmModalData']
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
+  isServerAwakeRef?: React.RefObject<boolean> | { current: boolean }
 }
 
 const emptySnapshot = {
@@ -38,6 +39,7 @@ export function createLoanActions(deps: LoanActionDependencies) {
     snapshotForUndo,
     setConfirmModalData,
     showToast,
+    isServerAwakeRef,
   } = deps
 
   const handleAddLoan = (value: Partial<Loan>) => {
@@ -120,6 +122,10 @@ export function createLoanActions(deps: LoanActionDependencies) {
   }
 
   const handleAdvanceRepayment = async (id: string, cycles: number, accountId?: string, previewFingerprint?: string) => {
+    if (isServerAwakeRef && !isServerAwakeRef.current) {
+      showToast('Loan repayment actions require a live connection to verify current amortization.', 'Live connection required', 'warning')
+      return
+    }
     if (!guardSensitive()) return
     const loan = loans.find(item => item.id === id)
     if (!loan) return
@@ -132,6 +138,10 @@ export function createLoanActions(deps: LoanActionDependencies) {
   }
 
   const handleFullSettlement = async (id: string, lenderQuoteAmount: number, accountId?: string) => {
+    if (isServerAwakeRef && !isServerAwakeRef.current) {
+      showToast('Loan repayment actions require a live connection to verify current amortization.', 'Live connection required', 'warning')
+      return
+    }
     if (!guardSensitive()) return
     const loan = loans.find(item => item.id === id)
     if (!loan) return

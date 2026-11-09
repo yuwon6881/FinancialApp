@@ -1,7 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DraftStagingView } from './DraftStagingView'
 import type { Transaction } from '../types'
+import { SENSITIVE_AMOUNT_MASK } from '../lib/utils'
+import { clearSessionSafeDrafts, markSessionSafeDrafts } from '../lib/sessionSafeDrafts'
 
 const draft: Transaction = {
   id: 'draft-1',
@@ -48,6 +50,7 @@ function renderView(overrides: Partial<React.ComponentProps<typeof DraftStagingV
 
 describe('DraftStagingView', () => {
   beforeEach(() => {
+    clearSessionSafeDrafts()
     vi.stubGlobal('ResizeObserver', class {
       observe() {}
       unobserve() {}
@@ -232,5 +235,136 @@ describe('DraftStagingView', () => {
     expect(screen.queryByText('Checking attachments…')).toBeNull()
     expect(screen.getByText('No attachments')).toBeTruthy()
     expect(onLoadDraftDocumentChanges).toHaveBeenCalledTimes(2)
+  })
+
+  it('allows adding, reordering, deleting, editing current-session drafts, and submitting while sensitive mode masks amounts', async () => {
+    const onReorderDraftTransactions = vi.fn()
+    const onDeleteDraftTransaction = vi.fn()
+    const onSyncDraftBatch = vi.fn().mockResolvedValue(undefined)
+    const onAddAnother = vi.fn()
+    const secondDraft = { ...draft, id: 'draft-2', description: 'Groceries', amount: -45 }
+    markSessionSafeDrafts([draft.id, secondDraft.id])
+
+    renderView({
+      draftTransactions: [draft, secondDraft],
+      hideSensitive: true,
+      onReorderDraftTransactions,
+      onDeleteDraftTransaction,
+      onSyncDraftBatch,
+      onAddAnother,
+    })
+
+    await screen.findByText('No attachments')
+    expect(screen.getAllByText(SENSITIVE_AMOUNT_MASK).length).toBeGreaterThanOrEqual(2)
+    expect(document.body.textContent).not.toContain('30.00')
+    expect(document.body.textContent).not.toContain('45.00')
+
+    const addDraft = screen.getByRole('button', { name: 'Add draft' }) as HTMLButtonElement
+    expect(addDraft.disabled).toBe(false)
+    fireEvent.click(addDraft)
+    expect(onAddAnother).toHaveBeenCalledTimes(1)
+
+    const firstGrip = screen.getByRole('button', { name: /Reorder Car Fuel\. Position 1 of 2/i }) as HTMLButtonElement
+    expect(firstGrip.disabled).toBe(false)
+    fireEvent.keyDown(firstGrip, { key: 'ArrowDown' })
+    expect(onReorderDraftTransactions).toHaveBeenCalledWith([secondDraft, draft])
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Delete Car Fuel' })[0])
+    expect(onDeleteDraftTransaction).toHaveBeenCalledWith(draft.id)
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit Car Fuel' })[0])
+    expect(await screen.findByRole('heading', { name: 'Edit Draft' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /^Cancel$/ }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add 2 drafts to Ledger' }))
+    await waitFor(() => expect(onSyncDraftBatch).toHaveBeenCalledTimes(1))
+  })
+
+  it('keeps earlier-session draft editing and invalid review blocked while hideSensitive is true', async () => {
+    const onDeleteDraftTransaction = vi.fn()
+    const onReorderDraftTransactions = vi.fn()
+    const onSyncDraftBatch = vi.fn()
+    renderView({
+      draftTransactions: [{ ...draft, ledgerCategory: 'Stability', stabilityReloadIntent: 'Unanswered' }],
+      hideSensitive: true,
+      onDeleteDraftTransaction,
+      onReorderDraftTransactions,
+      onSyncDraftBatch,
+    })
+    await screen.findByText('No attachments')
+
+    for (const editButton of screen.getAllByRole('button', { name: 'Edit Car Fuel' })) {
+      expect((editButton as HTMLButtonElement).disabled).toBe(true)
+    }
+    expect((screen.getByRole('button', { name: 'Review' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getAllByRole('button', { name: 'Delete Car Fuel' })[0] as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: /Reorder Car Fuel/i }) as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.keyDown(screen.getByRole('button', { name: /Reorder Car Fuel/i }), { key: 'ArrowDown' })
+    fireEvent.click(screen.getAllByRole('button', { name: 'Delete Car Fuel' })[0])
+    expect(onDeleteDraftTransaction).not.toHaveBeenCalled()
+    expect(onReorderDraftTransactions).not.toHaveBeenCalled()
+    expect(onSyncDraftBatch).not.toHaveBeenCalled()
+  })
+
+  it('blocks submitting an earlier-session draft even when it is already valid', async () => {
+    const onSyncDraftBatch = vi.fn()
+    renderView({ hideSensitive: true, onSyncDraftBatch })
+    await screen.findByText('No attachments')
+
+    const addToLedger = screen.getByRole('button', { name: 'Reveal sensitive data to add earlier drafts to Ledger' }) as HTMLButtonElement
+    expect(addToLedger.disabled).toBe(true)
+    fireEvent.click(addToLedger)
+    expect(onSyncDraftBatch).not.toHaveBeenCalled()
+  })
+
+  it('lets current-session drafts submit while earlier drafts remain in the queue', async () => {
+    const earlierDraft = { ...draft, id: 'draft-earlier', description: 'Earlier purchase' }
+    const currentDraft = { ...draft, id: 'draft-current', description: 'Current purchase' }
+    markSessionSafeDrafts([currentDraft.id])
+    const onSyncDraftBatch = vi.fn()
+    renderView({
+      draftTransactions: [earlierDraft, currentDraft],
+      hideSensitive: true,
+      onSyncDraftBatch,
+    })
+    await screen.findByText('No attachments')
+
+    const addToLedger = screen.getByRole('button', { name: 'Add 1 draft to Ledger' }) as HTMLButtonElement
+    expect(addToLedger.disabled).toBe(false)
+    expect((screen.getAllByRole('button', { name: 'Delete Earlier purchase' })[0] as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getAllByRole('button', { name: 'Delete Current purchase' })[0] as HTMLButtonElement).disabled).toBe(false)
+
+    fireEvent.click(addToLedger)
+    await waitFor(() => expect(onSyncDraftBatch).toHaveBeenCalledTimes(1))
+  })
+
+  it('closes an open Edit Draft sheet if session-safe draft authorization is cleared while sensitive mode is active', async () => {
+    markSessionSafeDrafts([draft.id])
+    const props: React.ComponentProps<typeof DraftStagingView> = {
+      draftTransactions: [draft],
+      categories: [{ id: 'transport', name: 'Transport', type: 'outflow' }],
+      onUpdateDraftTransaction: vi.fn(),
+      onLoadDraftDocumentChanges: vi.fn().mockResolvedValue({ pending: [], unlinkIds: [] }),
+      onDeleteDraftTransaction: vi.fn(),
+      onReorderDraftTransactions: vi.fn(),
+      onSyncDraftBatch: vi.fn(),
+      hideSensitive: true,
+      sensitivePreferenceStatus: 'pending',
+      onCancel: vi.fn(),
+      editorProps,
+    }
+    const { rerender } = render(<DraftStagingView {...props} />)
+    await screen.findByText('No attachments')
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit Car Fuel' })[0])
+    expect(await screen.findByRole('heading', { name: 'Edit Draft' })).toBeTruthy()
+
+    rerender(<DraftStagingView {...props} sensitivePreferenceStatus="resolved" />)
+    expect(screen.getByRole('heading', { name: 'Edit Draft' })).toBeTruthy()
+
+    act(() => {
+      clearSessionSafeDrafts()
+    })
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Edit Draft' })).toBeNull())
   })
 })

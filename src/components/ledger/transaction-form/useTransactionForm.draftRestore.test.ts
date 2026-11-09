@@ -1,7 +1,9 @@
-import { renderHook } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTransactionForm, type UseTransactionFormOptions } from './useTransactionForm'
 import { setModalDraft } from '../../../lib/modalDrafts'
+import { clearSessionSafeDrafts, markSessionSafeDrafts } from '../../../lib/sessionSafeDrafts'
+import type { Transaction } from '../../../types'
 
 vi.mock('../../../lib/api', () => ({
   startReceiptScan: vi.fn(),
@@ -36,6 +38,7 @@ function createOptions(overrides: Partial<UseTransactionFormOptions> = {}): UseT
 describe('useTransactionForm stored draft', () => {
   beforeEach(() => {
     localStorage.clear()
+    clearSessionSafeDrafts()
   })
 
   // The Ledger tab remounts this form on every navigation into the page, so a stored draft
@@ -65,5 +68,38 @@ describe('useTransactionForm stored draft', () => {
     expect(result.current.state.showAddForm).toBe(false)
     expect(result.current.state.mode).toBe('create')
     expect(result.current.state.description).toBe('')
+  })
+
+  it('does not open a session-safe draft if authorization is cleared while attachments load', async () => {
+    const draftId = 'draft-authorization-revoked'
+    const draft = {
+      id: draftId,
+      description: 'Coffee',
+      amount: -12,
+      date: '2026-08-20',
+      category: 'Food',
+      ledgerCategory: 'Essentials',
+      isPendingSync: true,
+    } as Transaction
+    markSessionSafeDrafts([draftId])
+    let finishLoad!: (changes: { pending: []; unlinkIds: [] }) => void
+    const onLoadDraftDocumentChanges = vi.fn(() => new Promise<{ pending: []; unlinkIds: [] }>(resolve => { finishLoad = resolve }))
+    const onAddFormOpenChange = vi.fn()
+    const { result } = renderHook(() => useTransactionForm(createOptions({
+      hideSensitive: true,
+      onLoadDraftDocumentChanges,
+      onAddFormOpenChange,
+    })))
+
+    let opening!: Promise<void>
+    act(() => { opening = result.current.handleStartDraft(draft) })
+    act(() => { clearSessionSafeDrafts() })
+    await act(async () => {
+      finishLoad({ pending: [], unlinkIds: [] })
+      await opening
+    })
+
+    expect(result.current.state.showAddForm).toBe(false)
+    expect(onAddFormOpenChange).not.toHaveBeenCalledWith(true)
   })
 })

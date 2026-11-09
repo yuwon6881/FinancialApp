@@ -4,6 +4,8 @@ import { AlertTriangle, CheckCircle2, FileText, Paperclip, Plus } from 'lucide-r
 import type { Transaction, TransactionCategory, TransactionDocumentChanges } from '../types'
 import { formatCurrencyVal } from '../lib/utils'
 import { getDraftTransactionIssues } from '../lib/draftTransactionValidation'
+import { useSessionSafeDraftIds } from '../lib/sessionSafeDrafts'
+import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
 import { useHighlightedElement } from './ui/useHighlightedElement'
 import {
   TransactionFormSheet,
@@ -24,6 +26,7 @@ type EditorProps = Omit<TransactionFormSheetProps,
   | 'categories'
   | 'currency'
   | 'hideSensitive'
+  | 'sensitivePreferenceStatus'
   | 'onAddTransaction'
   | 'onUpdateTransaction'
   | 'onUpdateDraftTransaction'
@@ -39,6 +42,7 @@ interface DraftStagingViewProps {
   onSyncDraftBatch: () => Promise<void> | void
   categories: TransactionCategory[]
   hideSensitive: boolean
+  sensitivePreferenceStatus?: SensitivePreferenceStatus
   currency?: string
   onCancel: () => void
   onAddAnother?: () => void
@@ -50,7 +54,7 @@ interface DraftStagingViewProps {
 export function DraftStagingView({
   draftTransactions, highlightedDraftId = null, onClearHighlightedDraft,
   onUpdateDraftTransaction, onLoadDraftDocumentChanges, onDeleteDraftTransaction,
-  onReorderDraftTransactions, onSyncDraftBatch, categories, hideSensitive,
+  onReorderDraftTransactions, onSyncDraftBatch, categories, hideSensitive, sensitivePreferenceStatus,
   currency = 'USD', onCancel, onAddAnother, editorProps,
 }: DraftStagingViewProps) {
   const formRef = useRef<TransactionFormSheetRef>(null)
@@ -59,12 +63,18 @@ export function DraftStagingView({
   const [attachmentRevision, setAttachmentRevision] = useState(0)
   const [attachmentsLoading, setAttachmentsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const sessionSafeDraftIds = useSessionSafeDraftIds()
+  const canEditDraft = (id: string) => !hideSensitive || sessionSafeDraftIds.has(id)
 
   const issuesById = useMemo(() => new Map(
     draftTransactions.map(draft => [draft.id, getDraftTransactionIssues(draft, categories)]),
   ), [categories, draftTransactions])
-  const firstInvalidDraft = draftTransactions.find(draft => (issuesById.get(draft.id)?.length ?? 0) > 0)
-  const invalidCount = draftTransactions.filter(draft => (issuesById.get(draft.id)?.length ?? 0) > 0).length
+  const actionableDrafts = hideSensitive
+    ? draftTransactions.filter(draft => canEditDraft(draft.id))
+    : draftTransactions
+  const firstInvalidDraft = actionableDrafts.find(draft => (issuesById.get(draft.id)?.length ?? 0) > 0)
+  const primaryBlockedByPrivacy = hideSensitive && draftTransactions.length > 0 && actionableDrafts.length === 0
+  const invalidCount = actionableDrafts.filter(draft => (issuesById.get(draft.id)?.length ?? 0) > 0).length
   const draftTotal = useMemo(() => draftTransactions.reduce((sum, draft) => sum + Math.abs(draft.amount), 0), [draftTransactions])
   const attachmentCount = useMemo(() => Object.values(documentCounts).reduce((sum, count) => sum + count, 0), [documentCounts])
 
@@ -112,22 +122,29 @@ export function DraftStagingView({
   }
 
   const handlePrimaryAction = async () => {
-    if (firstInvalidDraft) { openDraft(firstInvalidDraft); return }
+    if (firstInvalidDraft) { if (canEditDraft(firstInvalidDraft.id)) openDraft(firstInvalidDraft); return }
+    if (actionableDrafts.length === 0) return
     if (documentLoadError || isSubmitting) return
     setIsSubmitting(true)
     try { await onSyncDraftBatch() } finally { setIsSubmitting(false) }
   }
 
+  const handleReorderDrafts = (reordered: Transaction[]) => {
+    if (hideSensitive && draftTransactions.some(draft => !canEditDraft(draft.id)
+      && reordered.findIndex(item => item.id === draft.id) !== draftTransactions.findIndex(item => item.id === draft.id))) return
+    onReorderDraftTransactions(reordered)
+  }
+
   const moveDraft = (draftId: string, direction: -1 | 1) => {
-    if (hideSensitive) return
     const sourceIndex = draftTransactions.findIndex(draft => draft.id === draftId)
     const targetIndex = sourceIndex + direction
     if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= draftTransactions.length) return
+    if (!canEditDraft(draftTransactions[sourceIndex].id) || !canEditDraft(draftTransactions[targetIndex].id)) return
     const reordered = [...draftTransactions]
     const [moved] = reordered.splice(sourceIndex, 1)
     if (!moved) return
     reordered.splice(targetIndex, 0, moved)
-    onReorderDraftTransactions(reordered)
+    handleReorderDrafts(reordered)
   }
 
   const recordingOrderExplanation = 'The top draft records first. In the Ledger’s default newest-first view, same-day drafts appear in reverse order.'
@@ -155,7 +172,7 @@ export function DraftStagingView({
           title="Your draft queue is clear"
           actions={<>
             <Button variant="secondary" onClick={onCancel}>Back to Ledger</Button>
-            {onAddAnother && <Button onClick={onAddAnother} disabled={hideSensitive}>Post Transaction</Button>}
+            {onAddAnother && <Button onClick={onAddAnother}>Post Transaction</Button>}
           </>}
         />
       ) : (
@@ -197,7 +214,6 @@ export function DraftStagingView({
                 <Button
                   variant="secondary"
                   onClick={onAddAnother}
-                  disabled={hideSensitive}
                   size="sm"
                   className="shrink-0 gap-1.5"
                 >
@@ -206,10 +222,10 @@ export function DraftStagingView({
                 </Button>
               )}
             </div>
-            <Reorder.Group axis="y" values={draftTransactions} onReorder={reordered => { if (!hideSensitive) onReorderDraftTransactions(reordered) }} className="space-y-3" aria-label="Draft transaction recording order">
+            <Reorder.Group axis="y" values={draftTransactions} onReorder={handleReorderDrafts} className="space-y-3" aria-label="Draft transaction recording order">
               {draftTransactions.map((draft, index) => (
-                <DraftReorderItem key={draft.id} value={draft} position={index + 1} count={draftTransactions.length} disabled={hideSensitive} onMove={direction => moveDraft(draft.id, direction)}>
-                  {grip => <DraftQueueCard draft={draft} grip={grip} issues={issuesById.get(draft.id) ?? []} documentCount={documentCounts[draft.id] ?? 0} currency={currency} hideSensitive={hideSensitive} hint={index === 0} onEdit={() => openDraft(draft)} onDelete={() => onDeleteDraftTransaction(draft.id)} />}
+                <DraftReorderItem key={draft.id} value={draft} position={index + 1} count={draftTransactions.length} disabled={!canEditDraft(draft.id)} onMove={direction => moveDraft(draft.id, direction)}>
+                  {grip => <DraftQueueCard draft={draft} grip={grip} issues={issuesById.get(draft.id) ?? []} documentCount={documentCounts[draft.id] ?? 0} currency={currency} hideSensitive={hideSensitive} canEdit={canEditDraft(draft.id)} hint={index === 0} onEdit={() => openDraft(draft)} onDelete={() => { if (canEditDraft(draft.id)) onDeleteDraftTransaction(draft.id) }} />}
                 </DraftReorderItem>
               ))}
             </Reorder.Group>
@@ -225,8 +241,13 @@ export function DraftStagingView({
               onClick={() => void handlePrimaryAction()}
               aria-label={firstInvalidDraft
                 ? `Review ${firstInvalidDraft.description || 'draft'}`
-                : `Add ${draftTransactions.length} draft${draftTransactions.length === 1 ? '' : 's'} to Ledger`}
-              disabled={hideSensitive || Boolean(documentLoadError) || attachmentsLoading || isSubmitting}
+                : primaryBlockedByPrivacy
+                  ? 'Reveal sensitive data to add earlier drafts to Ledger'
+                  : `Add ${actionableDrafts.length} draft${actionableDrafts.length === 1 ? '' : 's'} to Ledger`}
+              disabled={primaryBlockedByPrivacy || Boolean(documentLoadError) || attachmentsLoading || isSubmitting}
+              title={primaryBlockedByPrivacy
+                ? firstInvalidDraft ? 'Reveal sensitive data to review earlier drafts' : 'Reveal sensitive data to add earlier drafts to the Ledger'
+                : undefined}
               className="sm:min-w-44"
             >
               {firstInvalidDraft ? 'Review' : isSubmitting ? 'Adding…' : 'Add to Ledger'}
@@ -235,7 +256,7 @@ export function DraftStagingView({
         </>
       )}
 
-      <TransactionFormSheet ref={formRef} {...editorProps} categories={categories} currency={currency} hideSensitive={hideSensitive} onAddTransaction={() => undefined} onUpdateDraftTransaction={handleUpdateDraft} onLoadDraftDocumentChanges={onLoadDraftDocumentChanges} />
+      <TransactionFormSheet ref={formRef} {...editorProps} categories={categories} currency={currency} hideSensitive={hideSensitive} sensitivePreferenceStatus={sensitivePreferenceStatus} onAddTransaction={() => undefined} onUpdateDraftTransaction={handleUpdateDraft} onLoadDraftDocumentChanges={onLoadDraftDocumentChanges} />
     </section>
   )
 }

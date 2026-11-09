@@ -29,9 +29,10 @@ interface QuickAddSheetProps {
   isOpen: boolean
   onClose: () => void
   onAction: (action: QuickAddAction) => void
-  /** Sensitive mode blocks every action that opens a blank form; reads stay available. */
+  /** Sensitive mode blocks non-transaction blank forms while new transactions and reads stay available. */
   mutationsDisabled: boolean
   mutationsDisabledReason?: string
+  transactionsDisabled?: boolean
 }
 
 interface ActionSpec {
@@ -41,19 +42,19 @@ interface ActionSpec {
   icon: React.ReactNode
   /** Tint for the icon well, as a palette colour token. */
   tint: string
-  mutation: boolean
+  scope: 'transaction' | 'mutation' | 'read'
 }
 
 const ACTIONS: ActionSpec[] = [
-  { id: 'expense', label: 'Expense', hint: 'Money out', icon: <ArrowUpRight className="size-5" />, tint: 'var(--color-orange-500)', mutation: true },
-  { id: 'income', label: 'Income', hint: 'Money in', icon: <ArrowDownLeft className="size-5" />, tint: 'var(--color-emerald-500)', mutation: true },
-  { id: 'transfer', label: 'Transfer', hint: 'Between buckets', icon: <ArrowLeftRight className="size-5" />, tint: 'var(--color-sky-500)', mutation: true },
-  { id: 'scan-receipt', label: 'Scan receipt', hint: 'Read it for me', icon: <ScanLine className="size-5" />, tint: 'var(--color-blue-500)', mutation: true },
-  { id: 'bill', label: 'New bill', hint: 'Recurring payment', icon: <CalendarClock className="size-5" />, tint: 'var(--color-violet-500)', mutation: true },
-  { id: 'reward', label: 'New reward', hint: 'Something to save for', icon: <Gift className="size-5" />, tint: 'var(--color-pink-500)', mutation: true },
-  { id: 'investment', label: 'Investment', hint: 'Buy, sell or dividend', icon: <TrendingUp className="size-5" />, tint: 'var(--color-purple-500)', mutation: true },
-  { id: 'ask-ai', label: 'Ask AI', hint: 'Questions and drafts', icon: <Sparkles className="size-5" />, tint: 'var(--primary)', mutation: false },
-  { id: 'search', label: 'Search', hint: 'Find anything', icon: <Search className="size-5" />, tint: 'var(--color-slate-500)', mutation: false },
+  { id: 'expense', label: 'Expense', hint: 'Money out', icon: <ArrowUpRight className="size-5" />, tint: 'var(--color-orange-500)', scope: 'transaction' },
+  { id: 'income', label: 'Income', hint: 'Money in', icon: <ArrowDownLeft className="size-5" />, tint: 'var(--color-emerald-500)', scope: 'transaction' },
+  { id: 'transfer', label: 'Transfer', hint: 'Between buckets', icon: <ArrowLeftRight className="size-5" />, tint: 'var(--color-sky-500)', scope: 'transaction' },
+  { id: 'scan-receipt', label: 'Scan receipt', hint: 'Read it for me', icon: <ScanLine className="size-5" />, tint: 'var(--color-blue-500)', scope: 'mutation' },
+  { id: 'bill', label: 'New bill', hint: 'Recurring payment', icon: <CalendarClock className="size-5" />, tint: 'var(--color-violet-500)', scope: 'mutation' },
+  { id: 'reward', label: 'New reward', hint: 'Something to save for', icon: <Gift className="size-5" />, tint: 'var(--color-pink-500)', scope: 'mutation' },
+  { id: 'investment', label: 'Investment', hint: 'Buy, sell or dividend', icon: <TrendingUp className="size-5" />, tint: 'var(--color-purple-500)', scope: 'mutation' },
+  { id: 'ask-ai', label: 'Ask AI', hint: 'Questions and drafts', icon: <Sparkles className="size-5" />, tint: 'var(--primary)', scope: 'read' },
+  { id: 'search', label: 'Search', hint: 'Find anything', icon: <Search className="size-5" />, tint: 'var(--color-slate-500)', scope: 'read' },
 ]
 
 /**
@@ -67,6 +68,7 @@ export const QuickAddSheet: React.FC<QuickAddSheetProps> = ({
   onAction,
   mutationsDisabled,
   mutationsDisabledReason,
+  transactionsDisabled = false,
 }) => (
   <BottomSheet
     isOpen={isOpen}
@@ -77,7 +79,11 @@ export const QuickAddSheet: React.FC<QuickAddSheetProps> = ({
   >
     <div role="menu" aria-label="Quick actions" className="grid grid-cols-3 gap-2.5">
       {ACTIONS.map(action => {
-        const disabled = action.mutation && mutationsDisabled
+        const disabled = action.scope === 'mutation'
+          ? mutationsDisabled
+          : action.scope === 'transaction'
+            ? transactionsDisabled
+            : false
         return (
           <InteractiveCard
             key={action.id}

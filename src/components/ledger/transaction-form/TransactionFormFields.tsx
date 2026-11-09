@@ -359,18 +359,20 @@ export function TransactionFormFields({
             />
           </FormField>
 
-          <StabilityTopUpOffer
-            offer={topUpOffer}
-            accepted={state.stabilityTopUpAccepted}
-            onToggle={value => onSetField('stabilityTopUpAccepted', value)}
-            amount={state.stabilityTopUpAmount}
-            onAmountChange={value => onSetField('stabilityTopUpAmount', value)}
-            buckets={topUpBuckets}
-            currency={currency}
-            hideSensitive={hideSensitive}
-            stabilityAlloc={stabilityAlloc}
-            error={errors.stabilityTopUpAmount || stabilityTopUpError}
-          />
+          {!hideSensitive && (
+            <StabilityTopUpOffer
+              offer={topUpOffer}
+              accepted={state.stabilityTopUpAccepted}
+              onToggle={value => onSetField('stabilityTopUpAccepted', value)}
+              amount={state.stabilityTopUpAmount}
+              onAmountChange={value => onSetField('stabilityTopUpAmount', value)}
+              buckets={topUpBuckets}
+              currency={currency}
+              hideSensitive={hideSensitive}
+              stabilityAlloc={stabilityAlloc}
+              error={errors.stabilityTopUpAmount || stabilityTopUpError}
+            />
+          )}
         </>
       )}
 
@@ -380,7 +382,7 @@ export function TransactionFormFields({
         </AlertBanner>
       )}
 
-      {bucketOutflowWarning && (
+      {!hideSensitive && bucketOutflowWarning && (
         <div
           role="alert"
           aria-live="polite"

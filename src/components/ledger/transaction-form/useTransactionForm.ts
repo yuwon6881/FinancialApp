@@ -16,6 +16,7 @@ import type { ReceiptScanResult } from '../../../lib/api'
 import type { UseTransactionFormOptions } from './useTransactionFormOptions'
 import { isSelectableTransactionCategory } from '../../../lib/categoryFlow'
 import { canOpenBlankMutationForm } from '../../../lib/quickAddAvailability'
+import { useSessionSafeDraftIds } from '../../../lib/sessionSafeDrafts'
 import { useTransactionFormAccountEffects } from './useTransactionFormAccountEffects'
 import { useTransactionOutflowWarning } from './useTransactionOutflowWarning'
 import { useTransactionFormLifecycle } from './useTransactionFormLifecycle'
@@ -60,7 +61,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     onFetchTransactionById,
     onShowAlert,
     onOutsideCycleSave,
-    autocompleteSuggestions,
+    autocompleteSuggestions = [],
     transactions,
     hideSensitive,
     sensitivePreferenceStatus,
@@ -125,10 +126,10 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   })
 
   useEffect(() => {
-    if (state.mode !== 'create' || !state.stabilityTopUpAccepted || topUpOffer) return
+    if (state.mode !== 'create' || !state.stabilityTopUpAccepted || (topUpOffer && !hideSensitive)) return
     dispatch({ type: 'SET_FIELD', field: 'stabilityTopUpAccepted', value: false })
     dispatch({ type: 'SET_FIELD', field: 'stabilityTopUpAmount', value: '' })
-  }, [state.mode, state.stabilityTopUpAccepted, topUpOffer])
+  }, [hideSensitive, state.mode, state.stabilityTopUpAccepted, topUpOffer])
 
   const { clearDraft: clearFormDraft } = useFormDraft(
     'ledger-tx-form',
@@ -310,7 +311,6 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     defaultCategory,
     todayDate,
     hideSensitive,
-    sensitivePreferenceStatus,
     autoOpenTxType,
     autoOpenPrefill,
     aiEditDraft,
@@ -339,7 +339,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   useAutoOpenModal(
     autoOpenAddForm,
     () => {
-      if (receiptScanDraft && scanner.appliedReceiptScanJobRef.current === receiptScanDraft.jobId) return
+      if (receiptScanDraft && !autoOpenTxType && !autoOpenPrefill) return
       lifecycle.openFresh(autoOpenTxType || undefined)
     },
     onResetAutoOpen,
@@ -362,10 +362,13 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     dispatch({ type: 'SET_FIELD', field: 'transactionType', value: type })
   }
 
+  const sessionSafeDraftIds = useSessionSafeDraftIds()
+  const isRestrictedOpenMode = state.mode === 'edit'
+    || (state.mode === 'draft' && (!state.editingId || !sessionSafeDraftIds.has(state.editingId)))
   useEffect(() => {
-    if (!hideSensitive || sensitivePreferenceStatus === 'pending' || !state.showAddForm) return
-    if (state.mode === 'create') lifecycle.handleCloseForm()
-  }, [lifecycle.handleCloseForm, hideSensitive, sensitivePreferenceStatus, state.mode, state.showAddForm])
+    if (!hideSensitive || !state.showAddForm || !isRestrictedOpenMode) return
+    void lifecycle.handleCloseForm()
+  }, [hideSensitive, isRestrictedOpenMode, lifecycle.handleCloseForm, state.showAddForm])
 
   const { handleSubmit, isSubmitting } = useTransactionFormSubmit({
     state,

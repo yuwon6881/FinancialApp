@@ -6,10 +6,10 @@ import { AmountText } from '../../ui/AmountText'
 
 /**
  * The effect before the commit: what the bucket this comes out of has left this cycle, and what it
- * will have once this is saved. Red only when saving takes it below zero.
+ * will have once this is saved. Red only when visible and saving takes it below zero.
  */
 export function BucketImpactLine({ impact, currency, masked }: { impact: BucketImpact; currency: string; masked: boolean }) {
-  const overdrawn = impact.after < 0
+  const overdrawn = !masked && impact.after < 0
   return (
     <div
       role="status"

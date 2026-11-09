@@ -31,7 +31,8 @@ import { readAppLocation, updateAppSearch } from './lib/appLocation'
 import { mutationBusyLabel } from './components/ui/rowSyncState'
 import type { AiInvocationContext } from './lib/api/ai'
 import { calculateFreeRewardsBalance, pendingRecurringAmount, pendingRewardsAmount } from './lib/freeRewards'
-import { canOpenBlankMutationForm } from './lib/quickAddAvailability'
+import { canOpenTransactionForm } from './lib/quickAddAvailability'
+import { clearSessionSafeDrafts } from './lib/sessionSafeDrafts'
 import { AppGateways } from './app/AppGateways'
 import { useTabNavigationCleanup } from './app/useTabNavigationCleanup'
 import { useAppThemeAndShortcuts } from './app/useAppThemeAndShortcuts'
@@ -304,6 +305,7 @@ function App() {
     if (prefs.hideSensitive) {
       openSensitivePrompt()
     } else {
+      clearSessionSafeDrafts()
       prefs.setHideSensitive(true)
       if (session.hasFingerprintSetup) {
         void prefetchFingerprintAssertOptions().catch(() => undefined)
@@ -334,14 +336,13 @@ function App() {
 
   const captureOptions: PurchaseCaptureOptions = {
     owner: session.isSessionResolved && session.token ? session.username : null,
-    eligible: session.isSessionResolved && Boolean(session.token) && !session.isLocked && !session.isNativeAppGateLocked && !session.isPwaLaunchGateLocked && prefs.sensitivePreferenceStatus === 'resolved',
+    eligible: session.isSessionResolved && Boolean(session.token) && !session.isLocked && !session.isNativeAppGateLocked && !session.isPwaLaunchGateLocked,
     hidden: prefs.hideSensitive,
     formOpen: modals.isLedgerAddOpen,
     currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
     reveal: openSensitivePrompt,
     open: prefill => { nav.setAutoOpenLedgerPrefill(prefill); nav.handleQuickAction('transaction', { txType: prefill.transactionType ?? 'outflow' }) },
     enqueue: (id, transaction) => {
-      if (!guardSensitive()) throw new Error('Reveal financial data before saving.')
       // Already synced, queued, or held by the outbox as a recoverable failure: the outbox owns it now,
       // so the capture can complete instead of blocking every later refresh.
       const owned = (op: { entity: string; targetId?: string }) => op.entity === 'transaction' && op.targetId === id
@@ -409,7 +410,7 @@ function App() {
           quickAddOpen={fabMenu.isOpen}
           quickAddTriggerRef={fabTriggerRef}
           onNewTransaction={() => nav.handleQuickAction('transaction')}
-          newTransactionDisabled={!canOpenBlankMutationForm(prefs.hideSensitive, prefs.sensitivePreferenceStatus)}
+          newTransactionDisabled={!canOpenTransactionForm(prefs.hideSensitive, prefs.sensitivePreferenceStatus)}
           onAskAI={() => setIsAiOpen(true)}
           onOpenSearch={() => dialogs.setShowSearch(true)}
           hideSensitive={prefs.hideSensitive}

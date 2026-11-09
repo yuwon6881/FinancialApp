@@ -23,6 +23,7 @@ import type {
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../../lib/useReceiptSplitPolling'
 import type { ReceiptScanResult } from '../../lib/api'
 import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
+import { useSessionSafeDraftIds } from '../../lib/sessionSafeDrafts'
 import { Button } from '../ui/Button'
 import { ModalActions } from '../ui/ModalActions'
 import { CapturedAlertNotice } from './transaction-form/CapturedAlertNotice'
@@ -121,7 +122,13 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
   const form = useTransactionForm(props)
   const accountsLoading = props.accountsLoading ?? props.accounts === undefined
   const securityPending = props.sensitivePreferenceStatus === 'pending'
-  const saveDisabled = props.hideSensitive || securityPending || accountsLoading || form.isSubmitting
+  const sessionSafeDraftIds = useSessionSafeDraftIds()
+  const isEdit = form.state.mode === 'edit'
+  const isRestrictedDraft = form.state.mode === 'draft' && (!form.state.editingId || !sessionSafeDraftIds.has(form.state.editingId))
+  const saveDisabled = (isEdit && (props.hideSensitive || securityPending))
+    || (isRestrictedDraft && props.hideSensitive)
+    || accountsLoading
+    || form.isSubmitting
   const [isReceiptSplitOpen, setIsReceiptSplitOpen] = useState(false)
   const setReceiptSplitOpen = useCallback((open: boolean) => {
     setIsReceiptSplitOpen(open)
@@ -189,7 +196,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
         {form.state.captureId && !props.hideSensitive && (
           <CapturedAlertNotice source={form.state.captureSource} notices={form.state.captureNotices} excerpt={form.state.captureExcerpt} />
         )}
-        {securityPending && (
+        {isEdit && securityPending && (
           <p className="rounded-control inset-group px-3.5 py-2.5 text-body text-muted-foreground" role="status">
             Finishing security check… You can fill this form in, but saving is temporarily disabled.
           </p>
@@ -299,9 +306,9 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           <Button
             type="submit"
             disabled={saveDisabled}
-            title={securityPending
+            title={isEdit && securityPending
               ? 'Finishing security check…'
-              : props.hideSensitive ? 'Reveal sensitive data before saving'
+              : (isEdit || isRestrictedDraft) && props.hideSensitive ? 'Reveal sensitive data before saving'
                 : accountsLoading ? 'Loading accounts…' : undefined}
           >
             {form.isSubmitting

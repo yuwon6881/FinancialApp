@@ -67,8 +67,6 @@ export function LedgerToolbar({
         <Button
           variant="primary"
           onClick={onToggleForm}
-          disabled={hideSensitive}
-          title={hideSensitive ? 'Unhide balances to post a transaction' : undefined}
           // A phone already has the + beside its tab bar for this, and the form opens over the page.
           className={isFormOpen ? 'whitespace-nowrap' : 'hidden whitespace-nowrap sm:inline-flex'}
         >

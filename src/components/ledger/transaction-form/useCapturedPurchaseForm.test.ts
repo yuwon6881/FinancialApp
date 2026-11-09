@@ -4,7 +4,13 @@ import { useCapturedPurchaseForm } from './useCapturedPurchaseForm'
 import type { TransactionFormState } from './transactionFormReducer'
 import type { useTransactionSuggestions } from './useTransactionSuggestions'
 
-vi.mock('../../../contexts/PurchaseCaptureContext', () => ({ usePurchaseCaptureActions: () => null }))
+const mocks = vi.hoisted(() => ({
+  edit: vi.fn(async () => undefined),
+  enabled: false,
+}))
+vi.mock('../../../contexts/PurchaseCaptureContext', () => ({
+  usePurchaseCaptureActions: () => (mocks.enabled ? { edit: mocks.edit } : null),
+}))
 
 function setup() {
   const suggestions = {
@@ -29,5 +35,29 @@ describe('useCapturedPurchaseForm suggestions', () => {
 
     expect(suggestions.requestCategorySuggestions).not.toHaveBeenCalled()
     expect(suggestions.requestNoteSuggestions).not.toHaveBeenCalled()
+  })
+
+  it('persists debounced capture edits on device even while hideSensitive is true', () => {
+    vi.useFakeTimers()
+    try {
+      mocks.enabled = true
+      mocks.edit.mockClear()
+      renderHook(() =>
+        useCapturedPurchaseForm(
+          { captureId: 'capture-hidden-1', showAddForm: true, description: 'Coffee', amount: '12.50' } as TransactionFormState,
+          true,
+        ),
+      )
+
+      vi.advanceTimersByTime(350)
+      expect(mocks.edit).toHaveBeenCalledTimes(1)
+      expect(mocks.edit).toHaveBeenCalledWith('capture-hidden-1', expect.objectContaining({
+        description: 'Coffee',
+        amount: '12.50',
+      }))
+    } finally {
+      mocks.enabled = false
+      vi.useRealTimers()
+    }
   })
 })

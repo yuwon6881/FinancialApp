@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import type { AppTab } from '../types'
 import type { TransactionSort } from '../lib/transactionOrdering'
 import { canonicalizeAppLocation, navigateToAppTab, readAppLocation, type AppNavigationOptions } from '../lib/appLocation'
+import { clearSessionSafeDrafts } from '../lib/sessionSafeDrafts'
 
 export type SensitivePreferenceStatus = 'pending' | 'resolved' | 'unavailable'
 
@@ -81,6 +82,7 @@ export function useAppPreferences(): AppPreferences {
   }
 
   const setPreferenceOwner = (username: string | null) => {
+    clearSessionSafeDrafts()
     preferenceOwnerRef.current = username
     // Sensitive mode is server-backed. Keep the safe state until the signed-in
     // account's dashboard settings have loaded instead of reusing browser state.

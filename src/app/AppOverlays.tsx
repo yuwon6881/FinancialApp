@@ -6,7 +6,7 @@ import type { useAppPreferences } from './useAppPreferences'
 import type { useAppSession } from './useAppSession'
 import type { useCycleNavigation } from './useCycleNavigation'
 import type { useCycleSummary } from './useCycleSummary'
-import { canOpenBlankMutationForm } from '../lib/quickAddAvailability'
+import { canOpenBlankMutationForm, canOpenTransactionForm } from '../lib/quickAddAvailability'
 import { GlobalSearchLoading } from '../components/search/GlobalSearchLoading'
 import { loadGlobalSearch, preloadGlobalSearch } from '../components/search/globalSearchPreload'
 import type { useFabMenu } from './useFabMenu'
@@ -309,10 +309,11 @@ export function AppOverlays({
             isOpen={fabMenu.isOpen}
             onClose={closeQuickAdd}
             onAction={runQuickAdd}
+            transactionsDisabled={!canOpenTransactionForm(prefs.hideSensitive, prefs.sensitivePreferenceStatus)}
             mutationsDisabled={!canOpenBlankMutationForm(prefs.hideSensitive, prefs.sensitivePreferenceStatus)}
             mutationsDisabledReason={prefs.hideSensitive && prefs.sensitivePreferenceStatus === 'pending'
               ? 'Finishing security check…'
-              : 'Reveal sensitive data to make financial changes'}
+              : 'Reveal sensitive data for receipt scans, bills, rewards, and investments — new transactions, AI, and search are available.'}
           />
         </Suspense>
       )}

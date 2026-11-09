@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useLayoutEffect, useRef } from 'react'
 import type { AppTab, SavingsGoal, Transaction, TransactionCategory, TransactionDocumentChanges } from '../../types'
 import * as api from '../../lib/api'
 import { createFinalId, enqueue } from '../../lib/outbox'
@@ -9,6 +9,7 @@ import type { UseOutboxResult } from '../../lib/useOutbox'
 import type { AppDialogs } from '../useAppDialogs'
 import type { ToastAction, ToastTone } from '../../components/ui/ToastViewport'
 import { collectRefreshHints } from '../../lib/refreshSlices'
+import { isSessionSafeDraft, markSessionSafeDrafts } from '../../lib/sessionSafeDrafts'
 
 interface TransactionActionDependencies {
   username: string
@@ -19,6 +20,7 @@ interface TransactionActionDependencies {
   allTransactions: Transaction[]
   allCategories: TransactionCategory[]
   allSavingsGoals: SavingsGoal[]
+  hideSensitive: boolean
   guardSensitive: () => boolean
   createLocalId: (prefix: string, separator?: string) => string
   stageTransactionDocumentChanges: (targetId: string, changes: TransactionDocumentChanges) => void
@@ -59,6 +61,7 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
     allTransactions,
     allCategories,
     allSavingsGoals,
+    hideSensitive,
     guardSensitive,
     createLocalId,
     stageTransactionDocumentChanges,
@@ -76,6 +79,13 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
     setConfirmModalData,
     showToast,
   } = deps
+  const guardSensitiveRef = useRef(guardSensitive)
+  const hideSensitiveRef = useRef(hideSensitive)
+  useLayoutEffect(() => {
+    guardSensitiveRef.current = guardSensitive
+    hideSensitiveRef.current = hideSensitive
+  }, [guardSensitive, hideSensitive])
+  const canMutateDraft = (id: string) => isSessionSafeDraft(id) || guardSensitiveRef.current()
 
   const handleAddTransaction = async (
     newTx: Omit<Transaction, 'id'>,
@@ -98,13 +108,13 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
   }
 
   const handleStageDraftTransactions = (newTransactions: Omit<Transaction, 'id'>[]) => {
-    if (!guardSensitive()) return []
     if (newTransactions.length === 0) return []
     const drafts = newTransactions.map(transaction => ({
       ...transaction,
       id: createLocalId('draft'),
       isPendingSync: true,
     }))
+    markSessionSafeDrafts(drafts.map(draft => draft.id))
     setDraftTransactions(prev => [...prev, ...drafts])
     void triggerHaptic(15)
     return drafts
@@ -115,9 +125,11 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
     updated: Omit<Transaction, 'id'>,
     documentChanges: TransactionDocumentChanges = { pending: [], unlinkIds: [] },
   ) => {
-    if (!guardSensitive()) return
-    const { saveDraftTransactionDocumentChanges } = await import('../../lib/draftTransactionDocuments')
-    await saveDraftTransactionDocumentChanges(username, id, documentChanges)
+    if (!canMutateDraft(id)) return
+    const documents = await import('../../lib/draftTransactionDocuments')
+    if (!canMutateDraft(id)) return
+    await documents.saveDraftTransactionDocumentChanges(username, id, documentChanges)
+    if (!canMutateDraft(id)) return
     setDraftTransactions(prev => prev.map(t => t.id === id ? { ...updated, id, isPendingSync: true } : t))
     void triggerHaptic(15)
   }
@@ -128,15 +140,19 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
   }, [username])
 
   const handleDeleteDraftTransaction = async (id: string) => {
-    if (!guardSensitive()) return
     const index = draftTransactions.findIndex(draft => draft.id === id)
     const draft = index >= 0 ? draftTransactions[index] : undefined
-    if (!draft) return
+    if (!draft || !canMutateDraft(id)) return
     let documentChanges: TransactionDocumentChanges
     try {
       const documents = await import('../../lib/draftTransactionDocuments')
       documentChanges = await documents.loadDraftTransactionDocumentChanges(username, id)
+      if (!canMutateDraft(id)) return
       await documents.deleteDraftTransactionDocumentChanges(username, id)
+      if (!canMutateDraft(id)) {
+        await documents.saveDraftTransactionDocumentChanges(username, id, documentChanges)
+        return
+      }
     } catch (error) {
       showToast(getErrorMessage(error, 'The draft could not be removed because its attachments could not be preserved for Undo.'), 'Delete Failed', 'error')
       return
@@ -154,9 +170,12 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
       label: 'Undo',
       onAction: () => {
         void (async () => {
+          if (!canMutateDraft(id)) return
           try {
             const documents = await import('../../lib/draftTransactionDocuments')
+            if (!canMutateDraft(id)) return
             await documents.saveDraftTransactionDocumentChanges(username, id, documentChanges)
+            if (!canMutateDraft(id)) return
             pendingTransactionDocumentsRef.current.set(id, documentChanges)
             setDraftTransactions(previous => {
               if (previous.some(item => item.id === id)) return previous
@@ -175,8 +194,8 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
   }
 
   const requestDeleteDraftTransaction = (id: string) => {
-    if (!guardSensitive()) return
     const draft = draftTransactions.find(t => t.id === id)
+    if (!draft || !canMutateDraft(id)) return
     setConfirmModalData({
       title: 'Delete Draft',
       message: `Delete draft "${draft?.description || 'transaction'}"? This removes it from the draft queue before it is synced.`,
@@ -186,9 +205,17 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
   }
 
   const handleSyncDraftBatch = async () => {
-    if (!guardSensitive()) return
     if (draftTransactions.length === 0) return
-    const drafts = draftTransactions
+    const hasRestrictedDrafts = draftTransactions.some(draft => !isSessionSafeDraft(draft.id))
+    const restrictedDraftsBlocked = hasRestrictedDrafts
+      && (hideSensitiveRef.current || !guardSensitiveRef.current())
+    let drafts = restrictedDraftsBlocked
+      ? draftTransactions.filter(draft => isSessionSafeDraft(draft.id))
+      : draftTransactions
+    if (drafts.length === 0) {
+      if (hideSensitiveRef.current) guardSensitiveRef.current()
+      return
+    }
     const { getDraftTransactionIssues } = await import('../../lib/draftTransactionValidation')
     const invalidDraft = drafts.find(draft => getDraftTransactionIssues(draft, allCategories).length > 0)
     if (invalidDraft) {
@@ -210,6 +237,11 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
       showToast(getErrorMessage(error, 'Draft attachments could not be restored. Try again before adding these transactions.'), 'Draft files unavailable', 'error')
       return
     }
+    const hasRestrictedDraftsAfterLoad = drafts.some(draft => !isSessionSafeDraft(draft.id))
+    if (hasRestrictedDraftsAfterLoad && (hideSensitiveRef.current || !guardSensitiveRef.current())) {
+      drafts = drafts.filter(draft => isSessionSafeDraft(draft.id))
+      if (drafts.length === 0) return
+    }
     void triggerHaptic([25, 45, 25])
     const batchPostedAt = Date.now()
     const firstDraftPostedAt = batchPostedAt - Math.max(0, drafts.length - 1)
@@ -230,7 +262,8 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
       })
       return nextQueue
     })
-    setDraftTransactions([])
+    const postedDraftIds = new Set(drafts.map(draft => draft.id))
+    setDraftTransactions(prev => prev.filter(draft => !postedDraftIds.has(draft.id)))
     try {
       const { deleteDraftTransactionDocumentChanges } = await import('../../lib/draftTransactionDocuments')
       await Promise.all(drafts.map(draft => deleteDraftTransactionDocumentChanges(username, draft.id)))

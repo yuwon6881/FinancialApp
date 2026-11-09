@@ -86,6 +86,7 @@ export interface UseFinancialDomainActionsOptions {
     date?: string | null
     highlightedTxId?: string | null
   }) => void
+  isServerAwakeRef?: React.RefObject<boolean>
 }
 
 export function useFinancialDomainActions(options: UseFinancialDomainActionsOptions) {
@@ -132,6 +133,7 @@ export function useFinancialDomainActions(options: UseFinancialDomainActionsOpti
     replacePendingLedgerTransaction,
     allLoans,
     allAccounts,
+    isServerAwakeRef,
   } = options
 
   const settingsActions = createSettingsActions({
@@ -164,6 +166,7 @@ export function useFinancialDomainActions(options: UseFinancialDomainActionsOpti
     allTransactions,
     allCategories,
     allSavingsGoals,
+    hideSensitive,
     guardSensitive,
     createLocalId,
     stageTransactionDocumentChanges,
@@ -228,6 +231,7 @@ export function useFinancialDomainActions(options: UseFinancialDomainActionsOpti
     snapshotForUndo,
     setConfirmModalData,
     showToast,
+    isServerAwakeRef,
   })
 
   const accountActions = createLedgerAccountActions({
@@ -237,6 +241,8 @@ export function useFinancialDomainActions(options: UseFinancialDomainActionsOpti
     mutateQueue,
     snapshotForUndo,
     setConfirmModalData,
+    showToast,
+    isServerAwakeRef,
   })
 
   return {

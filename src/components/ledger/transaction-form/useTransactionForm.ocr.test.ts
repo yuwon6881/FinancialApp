@@ -255,4 +255,27 @@ describe('useTransactionForm receipt cleanup', () => {
 
     expect(result.current.state.ledgerCategory).toBe('Rewards')
   })
+
+  it('still opens an explicit quick-add transaction type when a masked scan draft is waiting', async () => {
+    const { result } = renderHook(() => useTransactionForm(createOptions({
+      hideSensitive: true,
+      autoOpenAddForm: true,
+      autoOpenTxType: 'outflow',
+      receiptScanDraft: {
+        jobId: 'masked-scan',
+        result: {
+          description: 'Corner Cafe', amount: 42.5, date: '2026-07-28', category: 'Food',
+          ledgerCategory: 'Essentials', txType: 'outflow', confidence: 0.9,
+        },
+      },
+    })))
+
+    await act(async () => {
+      await new Promise(resolve => requestAnimationFrame(() => resolve(null)))
+    })
+
+    expect(result.current.state.showAddForm).toBe(true)
+    expect(result.current.state.transactionType).toBe('outflow')
+    expect(result.current.state.description).toBe('')
+  })
 })

@@ -10,6 +10,7 @@ import type { TransactionDocumentsFieldRef } from './TransactionDocumentsField'
 import type { RecoveryOffer } from '../../../lib/stabilityRecovery'
 import type { UseTransactionFormOptions } from './useTransactionFormOptions'
 import { usePurchaseCaptureActions } from '../../../contexts/PurchaseCaptureContext'
+import { isSessionSafeDraft } from '../../../lib/sessionSafeDrafts'
 
 export interface UseTransactionFormSubmitOptions extends Pick<
   UseTransactionFormOptions,
@@ -86,11 +87,13 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isSubmitting) return
-    if (hideSensitive || sensitivePreferenceStatus === 'pending') {
+    const isRestrictedDraft = state.mode === 'draft' && (!state.editingId || !isSessionSafeDraft(state.editingId))
+    if ((state.mode === 'edit' && (hideSensitive || sensitivePreferenceStatus === 'pending'))
+      || (isRestrictedDraft && hideSensitive)) {
       dispatch({
         type: 'SET_ERRORS',
         errors: {
-          submit: sensitivePreferenceStatus === 'pending'
+          submit: state.mode === 'edit' && sensitivePreferenceStatus === 'pending'
             ? 'Finishing security check…'
             : 'Reveal sensitive data before saving financial changes.',
         },

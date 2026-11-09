@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { queuedTransactionDeleteCoversTarget, useFinancialData } from './useFinancialData'
 import * as api from '../lib/api'
 import type { RecurringPayment } from '../types'
+import { clearSessionSafeDrafts, markSessionSafeDrafts } from '../lib/sessionSafeDrafts'
 
 class ApiErrorLike extends Error {
   status: number
@@ -61,7 +62,7 @@ const markSessionLocked = vi.fn()
 const markSensitivePreferenceUnavailable = vi.fn()
 const mountedFinancialDataHooks = new Set<() => void>()
 
-function renderFinancialData(guardSensitive: () => boolean = () => true) {
+function renderFinancialData(guardSensitive: () => boolean = () => true, hideSensitive = false) {
   // Every option must be stable across renders -- an inline literal or `vi.fn()` here
   // would churn `loadAll`'s identity by itself and mask the churn these tests pin.
   const setDarkMode = vi.fn()
@@ -74,7 +75,7 @@ function renderFinancialData(guardSensitive: () => boolean = () => true) {
     isLocked: false,
     markSessionLocked,
     handleLogout,
-    hideSensitive: false,
+    hideSensitive,
     darkMode: false,
     showToast,
     guardSensitive,
@@ -88,7 +89,10 @@ function renderFinancialData(guardSensitive: () => boolean = () => true) {
     selectedYear: 2026,
     setSelectedYear: vi.fn(),
   }
-  const rendered = renderHook(() => useFinancialData(options as any))
+  const rendered = renderHook(
+    ({ currentGuardSensitive }) => useFinancialData({ ...options, guardSensitive: currentGuardSensitive } as any),
+    { initialProps: { currentGuardSensitive: guardSensitive } },
+  )
   mountedFinancialDataHooks.add(rendered.unmount)
   return { ...rendered, setDarkMode, showToast, setConfirmModalData }
 }
@@ -121,6 +125,7 @@ function mockHappyApi(recurring: RecurringPayment[] = [payment]) {
 describe('useFinancialData', () => {
   beforeEach(() => {
     localStorage.clear()
+    clearSessionSafeDrafts()
     vi.clearAllMocks()
   })
 
@@ -153,9 +158,8 @@ describe('useFinancialData', () => {
     await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalled())
 
     act(() => {
-      expect(result.current.handleStageDraftTransactions([{} as any])).toEqual([])
-      result.current.handleDeleteDraftTransaction('draft-1')
-      result.current.handleSyncDraftBatch()
+      result.current.handleUpdateTransaction('tx-1', {} as any)
+      result.current.handleDeleteTransaction('tx-1')
       result.current.handleAddPayment({} as any)
       result.current.handleDeletePayment('rp-1')
       result.current.handleUpdateSettings({} as any)
@@ -163,8 +167,160 @@ describe('useFinancialData', () => {
     })
 
     expect(result.current.pendingOps).toHaveLength(0)
+    expect(guardSensitive).toHaveBeenCalledTimes(6)
+  })
+
+  it('blocks editing, deleting, and syncing prior-session drafts while sensitive mode is active', async () => {
+    const draft = {
+      id: 'draft-previous-session',
+      description: 'Earlier purchase',
+      amount: -30,
+      date: '2026-07-13',
+      category: 'Other',
+      ledgerCategory: 'Needs',
+      isPendingSync: true,
+    }
+    localStorage.setItem('draft_transactions', JSON.stringify([draft]))
+    mockHappyApi()
+    const guardSensitive = vi.fn(() => false)
+    const { result } = renderFinancialData(guardSensitive)
+    await waitFor(() => expect(result.current.draftTransactions).toEqual([draft]))
+
+    await act(async () => {
+      await result.current.handleUpdateDraftTransaction(draft.id, { ...draft, description: 'Changed' } as any)
+      await result.current.handleDeleteDraftTransaction(draft.id)
+      await result.current.handleSyncDraftBatch()
+    })
+
+    expect(result.current.draftTransactions).toEqual([draft])
+    expect(result.current.pendingOps).toHaveLength(0)
+    expect(guardSensitive).toHaveBeenCalledTimes(3)
+  })
+
+  it('uses the latest sensitive guard when a draft update is awaiting document storage', async () => {
+    const draft = {
+      id: 'draft-remasked-during-save',
+      description: 'Earlier purchase',
+      amount: -30,
+      date: '2026-07-13',
+      category: 'Other',
+      ledgerCategory: 'Needs',
+      isPendingSync: true,
+    }
+    localStorage.setItem('draft_transactions', JSON.stringify([draft]))
+    mockHappyApi()
+    const documents = await import('../lib/draftTransactionDocuments')
+    let finishSave!: () => void
+    const saveDraftDocuments = vi.spyOn(documents, 'saveDraftTransactionDocumentChanges').mockImplementation(
+      () => new Promise(resolve => { finishSave = resolve }),
+    )
+    const visibleGuard = vi.fn(() => true)
+    const hiddenGuard = vi.fn(() => false)
+    const { result, rerender } = renderFinancialData(visibleGuard)
+    await waitFor(() => expect(result.current.draftTransactions).toEqual([draft]))
+
+    let update!: Promise<void>
+    act(() => {
+      update = result.current.handleUpdateDraftTransaction(draft.id, { ...draft, description: 'Changed' } as any)
+    })
+    await waitFor(() => expect(saveDraftDocuments).toHaveBeenCalledTimes(1))
+    rerender({ currentGuardSensitive: hiddenGuard })
+
+    await act(async () => {
+      finishSave()
+      await update
+    })
+
+    expect(result.current.draftTransactions[0]?.description).toBe('Earlier purchase')
+    expect(visibleGuard).toHaveBeenCalledTimes(2)
+    expect(hiddenGuard).toHaveBeenCalledTimes(1)
+  })
+
+  it('allows staging and queueing draft transactions in sensitive mode without calling guardSensitive', async () => {
+    mockHappyApi()
+    vi.spyOn(api, 'fetchBootstrap').mockResolvedValue({
+      month: 'July',
+      year: 2026,
+      dashboard,
+      insights,
+      transactions: [],
+      recurringPayments: [],
+      categories: [{ id: 'transport', name: 'Transport', type: 'outflow' }],
+      wishlist: [],
+      autocomplete: [],
+      walletBalance: 100,
+    } as any)
+    vi.spyOn(api, 'addTransaction').mockReturnValue(new Promise(() => undefined) as any)
+    const guardSensitive = vi.fn(() => false)
+    const { result } = renderFinancialData(guardSensitive)
+    await waitFor(() => expect(result.current.allCategories).toHaveLength(1))
+
+    act(() => {
+      const staged = result.current.handleStageDraftTransactions([{
+        description: 'Pre-wake Bus',
+        amount: -12,
+        date: '2026-07-13',
+        category: 'Transport',
+        ledgerCategory: 'Essentials',
+        accountId: 'acct-essentials',
+        stabilityReloadIntent: 'NotRequired',
+      }])
+      expect(staged).toHaveLength(1)
+    })
+
+    await act(async () => {
+      await result.current.handleSyncDraftBatch()
+    })
+
     expect(result.current.draftTransactions).toHaveLength(0)
-    expect(guardSensitive).toHaveBeenCalledTimes(7)
+    expect(result.current.pendingOps).toHaveLength(1)
+    expect(result.current.pendingOps[0].entity).toBe('transaction')
+    expect(guardSensitive).not.toHaveBeenCalled()
+  })
+
+  it('syncs current-session drafts while keeping prior-session drafts queued in sensitive mode', async () => {
+    const earlierDraft = {
+      id: 'draft-earlier-session',
+      description: 'Earlier purchase',
+      amount: -30,
+      date: '2026-07-13',
+      category: 'Transport',
+      ledgerCategory: 'Essentials',
+      accountId: 'acct-essentials',
+      stabilityReloadIntent: 'NotRequired',
+      isPendingSync: true,
+    }
+    const currentDraft = {
+      ...earlierDraft,
+      id: 'draft-current-session',
+      description: 'Current purchase',
+    }
+    localStorage.setItem('draft_transactions', JSON.stringify([earlierDraft, currentDraft]))
+    markSessionSafeDrafts([currentDraft.id])
+    mockHappyApi()
+    vi.spyOn(api, 'addTransaction').mockReturnValue(new Promise(() => undefined) as any)
+    vi.mocked(api.fetchBootstrap).mockResolvedValue({
+      month: 'July',
+      year: 2026,
+      dashboard,
+      insights,
+      transactions: [],
+      recurringPayments: [],
+      categories: [{ id: 'transport', name: 'Transport', type: 'outflow' }],
+      wishlist: [],
+      autocomplete: [],
+      walletBalance: 100,
+    } as any)
+    const guardSensitive = vi.fn(() => false)
+    const { result } = renderFinancialData(guardSensitive, true)
+    await waitFor(() => expect(result.current.allCategories).toHaveLength(1))
+
+    await act(async () => { await result.current.handleSyncDraftBatch() })
+
+    expect(result.current.draftTransactions).toEqual([earlierDraft])
+    expect(result.current.pendingOps).toHaveLength(1)
+    expect(result.current.pendingOps[0].payload).toMatchObject({ description: 'Current purchase' })
+    expect(guardSensitive).not.toHaveBeenCalled()
   })
 
   it('restores a deleted draft at its original position through toast Undo', async () => {

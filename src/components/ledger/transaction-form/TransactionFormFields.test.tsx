@@ -274,6 +274,70 @@ describe('TransactionFormFields', () => {
     expect(alert.textContent).toContain('You can still save this transaction')
   })
 
+  it('omits the bucket outflow warning and stability top-up offer when hideSensitive is true', () => {
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+
+    render(
+      <TransactionFormFields
+        state={{
+          ...getInitialState('2026-08-01', 'Rent'),
+          showAddForm: true,
+          amount: '800.00',
+          transactionType: 'inflow',
+          ledgerCategory: 'Income',
+        }}
+        firstInputRef={React.createRef<HTMLInputElement>()}
+        descriptionRef={{ current: 'Salary' }}
+        autocompletedDescriptionRef={{ current: null }}
+        currency="MYR"
+        categories={[{ id: 'salary', name: 'Salary', type: 'inflow' }]}
+        accounts={[{ id: 'acc-1', name: 'Main', bucket: 'Essentials', isArchived: false }] as never}
+        errors={{}}
+        hideSensitive
+        bucketOutflowWarning={{
+          bucket: 'Essentials',
+          shortfall: 250,
+          message: 'This amount leaves your Essentials bucket short of covering upcoming bills this cycle.',
+        }}
+        topUpOffer={{
+          requestedTopUp: 100,
+          proposedTopUp: 100,
+          maxTopUp: 300,
+          safeCap: 250,
+          isReduced: false,
+          isDeferred: false,
+          draws: [],
+        }}
+        onSetField={vi.fn()}
+        onSelectSuggestion={vi.fn()}
+        onSuggestNotes={vi.fn()}
+        onSuggestCategory={vi.fn()}
+        filteredSuggestions={[]}
+        quickSuggestionEntries={[]}
+        suggestions={{
+          categorySuggestions: [],
+          isSuggestingCategory: false,
+          categorySuggestionUnavailable: false,
+          isSuggestingNote: false,
+          noteSuggestions: [],
+          showNoteSuggestions: false,
+          noteSuggestionUnavailable: false,
+          setShowNoteSuggestions: vi.fn(),
+          setNoteSuggestions: vi.fn(),
+          setIsSuggestingNote: vi.fn(),
+        }}
+      />,
+    )
+
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByText(/short of covering upcoming bills/i)).toBeNull()
+    expect(screen.queryByText(/Put money back into your emergency fund/i)).toBeNull()
+  })
+
   it.each(['create', 'edit', 'draft'] as const)('shows the out-of-cycle posting note in %s mode', mode => {
     render(
       <TransactionFormFields
