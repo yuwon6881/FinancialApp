@@ -116,6 +116,7 @@ final class PurchaseNotificationParser {
         Result result = new Result();
         result.transactionType = "outflow";
         PurchaseAmountReader.read(text, result);
+        if (result.amount != null && new java.math.BigDecimal(result.amount).signum() == 0) return null;
         if (result.amount == null && SETTINGS_CHANGE.matcher(text).find()) return null;
         result.description = PurchaseMerchantReader.read(text);
         result.date = PurchaseDateReader.read(text, referenceTimeMillis);

@@ -180,6 +180,20 @@ public class PurchaseNotificationParserTest {
         assertEquals("SHOP", result.description);
         assertEquals("20.00", PurchaseNotificationParser.parse("Payment successful", "Paid RM 20.00; balance RM 500.00").amount);
     }
+    @Test public void ignoresExplicitZeroTransactionsWithoutConfusingContextOrUnknownAmounts() {
+        for (String body : new String[] {
+            "Paid RM 0.00 at SHOP", "Payment of SGD 0.00 to SHOP successful",
+            "You spent 0.00 EUR at SHOP", "Paid $0.00 at SHOP", "Paid ¥0.00 at SHOP", "RM0.00 payment successful: SHOP",
+            "Payment successful. Amount: 0.00", "Payment successful. Amount: $0.00", "Payment successful. Amount: RM0.00; balance RM100.00",
+            "RM0 CIMB: Card txn RM0.00 at SHOP", "Payment successful. Amount: RM0.00; previous bill RM12.00"
+        }) assertNull(body, PurchaseNotificationParser.parse("Bank", body));
+
+        assertCaptured("Paid RM20.00 at SHOP. Available balance: RM0.00", "20.00", "SHOP");
+        assertCaptured("RM0.00 CIMB: Card txn RM12.50 at SHOP", "12.50", "SHOP");
+        assertNotNull(PurchaseNotificationParser.parse("Payment successful", "Thank you"));
+        assertNull(PurchaseNotificationParser.parse("Payment successful", "Paid RM0.00 to SHOP A and RM30.00 to SHOP B").amount);
+        assertNull(PurchaseNotificationParser.parse("Payment successful", "Paid $0.00 to SHOP A and $30.00 to SHOP B").amount);
+    }
     @Test public void stillExcludesVerificationCodes() {
         for (String text : new String[] {"Your TAC for payment RM 20 is 123456", "Security code for purchase RM 20", "Your code is 1234 for payment RM 20", "Payment successful, one-time PIN 1234"}) {
             assertNull(text, PurchaseNotificationParser.parse("Bank", text));
