@@ -85,14 +85,14 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
     },
     {
       label: 'Earned so far',
-      hint: 'What your investments have already paid you or locked in, and their average yearly return.',
+      hint: 'What your investments have paid out, what you locked in by selling, and how the portfolio has performed.',
       rows: [
         { label: 'Already banked', value: signed(realised), hint: 'Profit or loss locked in on investments you have sold, after fees and taxes.', color: tone(realised) },
         { label: 'Dividends received', value: format(portfolio.summary.netDividends), hint: 'Payouts your investments have paid you, after any tax withheld.' },
         {
           label: 'Yearly return',
           value: annualReturn === undefined ? 'Not available yet' : masked ? '••••' : `${annualReturn > 0 ? '+' : ''}${(annualReturn * 100).toFixed(1)}% a year`,
-          hint: 'Average yearly return, adjusted for when each deposit went in.',
+          hint: 'Annualised return based on when money went in or out and the latest saved value of your investments and broker cash. It uses the amounts you actually exchanged and the same current exchange rates for every date.',
           color: tone(annualReturn),
         },
       ],

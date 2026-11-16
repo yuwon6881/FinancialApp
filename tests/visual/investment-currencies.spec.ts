@@ -69,6 +69,12 @@ test('foreign holdings read in their own currency, converted only at today’s r
   await hero.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }))
   await expect(hero).toHaveScreenshot('investment-summary.png')
 
+  const breakdown = hero.getByRole('button', { name: 'Show breakdown' })
+  if (await breakdown.isVisible()) await breakdown.click()
+  await hero.getByRole('button', { name: 'What is Yearly return?' }).click()
+  await expect(page.getByRole('tooltip')).toContainText('the same current exchange rates for every date')
+  await page.keyboard.press('Escape')
+
   // The fund's sheet leads with its own currency and says the exchange rate never moves it.
   await page.getByRole('button', { name: /VOO/ }).first().click()
   const sheet = page.getByRole('dialog', { name: 'Details for VOO' })
