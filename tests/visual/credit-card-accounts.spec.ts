@@ -31,7 +31,7 @@ test('credit card figures and balance fields keep long names contained', async (
   await bucket.getByRole('button', { name: 'Update balances' }).click()
   const dialog = page.getByRole('dialog', { name: 'Update your Essentials account balances' })
   for (const name of names) {
-    const input = dialog.getByRole('textbox', { name: `Current balance for ${name}`, exact: true })
+    const input = dialog.getByRole('textbox', { name: `${name === names[0] ? 'Current balance' : 'Amount owed'} for ${name}`, exact: true })
     await expect(input).toBeVisible()
     await input.scrollIntoViewIfNeeded()
     expect(await input.evaluate(element => {
@@ -39,6 +39,7 @@ test('credit card figures and balance fields keep long names contained', async (
       return element.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2))
     })).toBe(true)
   }
+  await expect(dialog.getByRole('textbox', { name: `Amount owed for ${names[1]}`, exact: true })).toHaveValue('280.00')
   expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
   await expect(dialog).toHaveScreenshot('credit-card-balances.png')
 })

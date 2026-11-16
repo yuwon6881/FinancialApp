@@ -128,7 +128,7 @@ export function getBucketOutflowWarning({
     if (shortfall <= 0) return null
 
     const message = target > 0
-      ? 'This amount drops your emergency fund below your target.'
+      ? 'This takes your emergency fund below its target.'
       : 'This amount exceeds your remaining Stability balance.'
 
     return { bucket, shortfall, message }

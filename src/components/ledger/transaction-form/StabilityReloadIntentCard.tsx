@@ -3,8 +3,9 @@ import { InfoHint } from '../../ui/InfoHint'
 import { Button } from '../../ui/Button'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { FormField } from '../../ui/FormField'
-import { getMonthCycleLabel } from '../../../lib/monthCycleLabel'
-import { cycleKeyForDate, MAX_STABILITY_REPAYMENT_CYCLES, STABILITY_RECOVERY_PLAN_CYCLES } from '../../../lib/stabilityRecoveryPacing'
+import { getMonthCycleLabel, getMonthLabel } from '../../../lib/monthCycleLabel'
+import { cycleKeyForDate, STABILITY_RECOVERY_PLAN_CYCLES } from '../../../lib/stabilityRecoveryPacing'
+import { stabilityRepaymentTermOptions } from '../../../lib/stabilityRepaymentTerms'
 import { formatCurrencyVal } from '../../../lib/utils'
 import type { TransactionFormState } from './transactionFormReducer'
 
@@ -17,10 +18,16 @@ export interface StabilityReloadIntentCardProps {
   onSetField: (field: keyof TransactionFormState, value: any) => void
 }
 
-const repaymentOptions = Array.from({ length: MAX_STABILITY_REPAYMENT_CYCLES }, (_, index) => ({
-  value: index + 1,
-  label: index === 0 ? 'In full next cycle' : (index + 1) + ' months',
-}))
+/** "Sep 2026 cycle" for one payment, otherwise "Sep – Nov 2026 · 3 payments". Repayment opens the cycle after the spending. */
+function repaymentWindowLabel(origin: string, cycles: number): string | undefined {
+  if (cycles === 1) return getMonthCycleLabel(origin, 1)
+  const start = getMonthLabel(origin, 1)
+  const finish = getMonthLabel(origin, cycles)
+  if (!start || !finish) return undefined
+  const [startMonth, startYear] = start.split(' ')
+  const range = startYear === finish.split(' ')[1] ? startMonth + ' – ' + finish : start + ' – ' + finish
+  return range + ' · ' + cycles + ' payments'
+}
 
 export const StabilityReloadIntentCard: React.FC<StabilityReloadIntentCardProps> = ({
   state,
@@ -32,12 +39,14 @@ export const StabilityReloadIntentCard: React.FC<StabilityReloadIntentCardProps>
 }) => {
   const repaymentCycles = state.stabilityRepaymentCycles ?? STABILITY_RECOVERY_PLAN_CYCLES
   const origin = cycleKeyForDate(state.date, cycleDay)
-  const start = origin && getMonthCycleLabel(origin, 1)
-  const finish = origin && getMonthCycleLabel(origin, repaymentCycles)
+  const schedule = origin ? repaymentWindowLabel(origin, repaymentCycles) : undefined
   const cents = Math.round(Math.abs(Number(state.amount)) * 100)
-  const firstPayment = !hideSensitive && cents > 0
+  // Each cycle re-divides what is still owed, so an uneven split is only approximately equal.
+  const share = !hideSensitive && cents > 0
     ? formatCurrencyVal(Math.ceil(cents / repaymentCycles) / 100, currency)
     : null
+  const shareSuffix = repaymentCycles === 1 ? 'in one payment' : 'a month'
+  const isApproximate = repaymentCycles > 1 && cents % repaymentCycles !== 0
 
   return (
     <div className="space-y-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 sm:col-span-2">
@@ -91,16 +100,23 @@ export const StabilityReloadIntentCard: React.FC<StabilityReloadIntentCardProps>
             <CustomSelect
               value={repaymentCycles}
               onChange={value => onSetField('stabilityRepaymentCycles', value)}
-              options={repaymentOptions}
+              options={stabilityRepaymentTermOptions(repaymentCycles)}
               className="w-full"
             />
           </FormField>
-          <div className="space-y-1 text-xs text-muted-foreground" aria-live="polite">
-            {firstPayment && (
-              <p><span className="font-semibold tabular-nums text-foreground">{firstPayment}</span> estimated first payment</p>
+          <div
+            className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 rounded-lg bg-card/60 px-3 py-2.5"
+            aria-live="polite"
+            data-testid="stability-repayment-summary"
+          >
+            {share && (
+              <p className="text-sm font-semibold tabular-nums text-foreground">
+                {isApproximate ? 'About ' : ''}{share}
+                <span className="font-normal text-muted-foreground"> {shareSuffix}</span>
+              </p>
             )}
-            <p>{start ? 'Starts in the ' + start : 'Starts next financial cycle'}
-              {repaymentCycles > 1 && finish ? ' · Planned through the ' + finish : ''}
+            <p className="text-xs text-muted-foreground">
+              {schedule ?? 'Starts next financial cycle'}
             </p>
           </div>
         </div>

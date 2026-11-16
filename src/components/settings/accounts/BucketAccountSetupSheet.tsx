@@ -35,6 +35,9 @@ interface BucketAccountSetupSheetProps {
   onReconcileAccounts: (input: LedgerAccountReconcileInput) => Promise<void> | void
 }
 
+// Card rows are typed as what is owed; the view hook turns that into the below-zero balance.
+const balanceLabel = (kind: LedgerAccountKind) => isCreditCardKind(kind) ? 'Amount owed' : 'Current balance'
+
 function SignedAmount({ value, currency, hideSensitive }: { value: number; currency: string; hideSensitive: boolean }) {
   if (Math.abs(value) < 0.005) return <span className="text-muted-foreground">No change</span>
   return (
@@ -86,7 +89,7 @@ function NewAccountRow({
         <FormField label="Account type" required>
           <CustomSelect value={draft.kind} onChange={(value: LedgerAccountKind) => onChange({ kind: value })} options={accountKindOptionsFor(bucket)} ariaLabel={`${draft.name || 'New'} account type`} className="w-full" />
         </FormField>
-        <FormField label={`Current balance (${currency})`} required error={targetError} hint={isCreditCardKind(draft.kind) ? 'Enter what you owe on this card as a negative amount.' : undefined}>
+        <FormField label={`${balanceLabel(draft.kind)} (${currency})`} required error={targetError}>
           <SmartAmountInput value={draft.target} onChange={event => onTargetChange(event.target.value)} placeholder="0.00" />
         </FormField>
       </div>
@@ -176,10 +179,9 @@ export function BucketAccountSetupSheet({
                 <div className="min-w-0">
                   <p title={account.name} className={`truncate text-xs font-semibold ${account.isArchived ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{account.name}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">{account.isArchived ? 'Closed account · kept for history' : 'Open account'}</p>
-                  {isCreditCardKind(account.kind) && !account.isArchived && <p className="mt-1 text-xs text-muted-foreground">Enter what you owe as a negative amount.</p>}
                 </div>
                 {account.isArchived ? <div className="text-right text-xs">{formatAmount(account.remaining)}</div> : (
-                  <FormField label={<>Current balance<span className="sr-only"> for {account.name}</span></>} error={view.errors[account.id]}>
+                  <FormField label={<>{balanceLabel(account.kind)}<span className="sr-only"> for {account.name}</span></>} error={view.errors[account.id]}>
                     <SmartAmountInput value={hideSensitive ? '' : view.targetInputs[account.id] ?? ''} disabled={isBusy} onChange={event => view.updateTarget(account.id, event.target.value)} placeholder={hideSensitive ? 'Hidden' : '0.00'} />
                   </FormField>
                 )}

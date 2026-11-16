@@ -271,7 +271,7 @@ describe('TransactionFormFields', () => {
     expect(alert).toBeTruthy()
     expect(alert.textContent).toContain('short of covering upcoming bills this cycle')
     expect(alert.textContent).toContain('250.00')
-    expect(alert.textContent).toContain('You can still save this transaction')
+    expect(alert.textContent).toContain('short. You can still save it.')
   })
 
   it('omits the bucket outflow warning and stability top-up offer when hideSensitive is true', () => {

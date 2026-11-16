@@ -123,7 +123,7 @@ describe('getBucketOutflowWarning', () => {
     expect(warning).not.toBeNull()
     expect(warning?.bucket).toBe('Stability')
     expect(warning?.shortfall).toBe(500)
-    expect(warning?.message).toContain('drops your emergency fund below your target')
+    expect(warning?.message).toContain('takes your emergency fund below its target')
   })
 
   it('handles edit mode by crediting back existing amount in the source bucket', () => {

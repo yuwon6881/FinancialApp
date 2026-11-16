@@ -100,11 +100,18 @@ const isInvalidTarget = (value: number, kind: LedgerAccountKind) =>
 const liveTargetError = (value: string, kind: LedgerAccountKind) =>
   parseAmount(value) < 0 && !isNegativeBalanceAllowed(kind) ? NEGATIVE_BALANCE_ERROR : ''
 
+// A card row is typed as the amount owed, a positive number, while its stored balance sits below
+// zero by that amount. The flip happens only here, at the input boundary.
+const balanceSign = (kind: LedgerAccountKind) => isCreditCardKind(kind) ? -1 : 1
+const toBalanceInput = (balance: number, kind: LedgerAccountKind) =>
+  (roundMoney(balance * balanceSign(kind)) + 0).toFixed(2)
+const fromBalanceInput = (value: string, kind: LedgerAccountKind) => parseAmount(value) * balanceSign(kind) + 0
+
 const createDraft = (prefill?: BucketSetupPrefill): BucketSetupDraftAccount => ({
   id: createFinalId('ledgerAccount'),
   name: prefill?.name ?? '',
   kind: prefill?.kind ?? 'Bank',
-  target: prefill ? roundMoney(prefill.target).toFixed(2) : '0.00',
+  target: prefill ? toBalanceInput(prefill.target, prefill.kind) : '0.00',
   ...(prefill?.creditLimit !== undefined ? { creditLimit: prefill.creditLimit } : {}),
 })
 
@@ -145,7 +152,7 @@ export function useBucketAccountSetupView({
         remaining: roundMoney(account.remaining),
       })),
     }
-    setTargetInputs(Object.fromEntries(bucketAccounts.map(account => [account.id, account.remaining.toFixed(2)])))
+    setTargetInputs(Object.fromEntries(bucketAccounts.map(account => [account.id, toBalanceInput(account.remaining, account.kind)])))
     setDrafts(initialDraft ? [createDraft(initialDraft)] : [])
     setErrors({})
     setPending(null)
@@ -159,11 +166,19 @@ export function useBucketAccountSetupView({
   }
 
   const updateDraft = (id: string, change: Partial<Omit<BucketSetupDraftAccount, 'id'>>) => {
-    setDrafts(previous => previous.map(draft => draft.id === id ? { ...draft, ...change } : draft))
     const draft = drafts.find(candidate => candidate.id === id)
+    // Moving a row in or out of the card kind re-expresses the same balance (owed vs held) rather
+    // than silently flipping its sign.
+    const balance = draft ? fromBalanceInput(draft.target, draft.kind) : Number.NaN
+    const reexpressed = change.kind && draft && change.target === undefined && Number.isFinite(balance)
+      && balanceSign(change.kind) !== balanceSign(draft.kind)
+      ? { target: toBalanceInput(balance, change.kind) }
+      : {}
+    const next = { ...change, ...reexpressed }
+    setDrafts(previous => previous.map(candidate => candidate.id === id ? { ...candidate, ...next } : candidate))
     // Whether a negative balance is allowed depends on the type, so a type change re-judges it.
     const targetError = change.kind && draft
-      ? { [`${id}-target`]: liveTargetError(draft.target, change.kind) }
+      ? { [`${id}-target`]: liveTargetError(next.target ?? draft.target, change.kind) }
       : {}
     setErrors(previous => ({ ...previous, [id]: '', ...targetError }))
   }
@@ -184,9 +199,9 @@ export function useBucketAccountSetupView({
 
   const parsedExistingTargets = useMemo(() => bucketAccounts.map(account => ({
     ...account,
-    target: account.isArchived ? account.remaining : parseAmount(targetInputs[account.id] ?? ''),
+    target: account.isArchived ? account.remaining : fromBalanceInput(targetInputs[account.id] ?? '', account.kind),
   })), [bucketAccounts, targetInputs])
-  const parsedDraftTargets = useMemo(() => drafts.map(draft => ({ ...draft, targetValue: parseAmount(draft.target) })), [drafts])
+  const parsedDraftTargets = useMemo(() => drafts.map(draft => ({ ...draft, targetValue: fromBalanceInput(draft.target, draft.kind) })), [drafts])
   const hasInvalidTarget = useMemo(
     () => parsedExistingTargets.some(account => !account.isArchived && isInvalidTarget(account.target, account.kind))
       || parsedDraftTargets.some(draft => isInvalidTarget(draft.targetValue, draft.kind)),
@@ -225,7 +240,7 @@ export function useBucketAccountSetupView({
       if (!name) nextErrors[draft.id] = 'Enter an account name.'
       else if (names.has(name.toLowerCase())) nextErrors[draft.id] = 'This account name is already in use.'
       else names.add(name.toLowerCase())
-      const draftTarget = parseAmount(draft.target)
+      const draftTarget = fromBalanceInput(draft.target, draft.kind)
       if (Number.isNaN(draftTarget)) nextErrors[`${draft.id}-target`] = 'Enter a valid balance.'
       else if (draftTarget < 0 && !isNegativeBalanceAllowed(draft.kind)) nextErrors[`${draft.id}-target`] = NEGATIVE_BALANCE_ERROR
     }

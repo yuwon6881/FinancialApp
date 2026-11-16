@@ -394,7 +394,7 @@ export function TransactionFormFields({
               {bucketOutflowWarning.message}
             </p>
             <p className="text-muted-foreground">
-              Shortfall of <span className="font-semibold text-foreground">{formatCurrencyVal(bucketOutflowWarning.shortfall, currency)}</span>. You can still save this transaction to keep your records accurate.
+              <span className="font-semibold tabular-nums text-foreground">{formatCurrencyVal(bucketOutflowWarning.shortfall, currency)}</span> short. You can still save it.
             </p>
           </div>
         </div>
