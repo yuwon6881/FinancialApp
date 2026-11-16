@@ -8,7 +8,7 @@ test('covered recovery separates this cycle from the remaining balance', async (
   await page.getByRole('button', { name: 'See recovery details' }).click()
   const dialog = page.getByRole('dialog', { name: 'Emergency fund recovery details' })
   await expect(dialog.getByRole('heading', { name: 'This cycle' })).toBeVisible()
-  await expect(dialog.getByText(/Covered\. Remaining balance is for Nov 2026 cycle\./)).toBeVisible()
+  await expect(dialog.getByText('Covered for this cycle. Plan runs through the Nov 2026 cycle.')).toBeVisible()
   await expect(dialog.getByText(/416\.23 of.*416\.23/)).toBeVisible()
   await expect(dialog.getByText('Jul 2026 cycle')).toHaveCount(0)
   await expect(dialog.getByText('Fully put back')).toHaveCount(0)

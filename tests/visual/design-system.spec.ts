@@ -22,7 +22,7 @@ test('covered recovery shows active spending cycles without completed cycles', a
   await page.getByRole('button', { name: 'See recovery details' }).click()
   const dialog = page.getByRole('dialog', { name: 'Emergency fund recovery details' })
   await expect(dialog.getByRole('heading', { name: 'This cycle' })).toBeVisible()
-  await expect(dialog.getByText(/Covered\. Remaining balance is for Nov 2026 cycle\./)).toBeVisible()
+  await expect(dialog.getByText('Covered for this cycle. Plan runs through the Nov 2026 cycle.')).toBeVisible()
   await waitForStableLayout(page)
   await expect(dialog).toHaveScreenshot('stability-recovery-covered.png')
 })

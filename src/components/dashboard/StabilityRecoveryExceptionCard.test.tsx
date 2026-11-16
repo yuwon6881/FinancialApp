@@ -44,7 +44,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     openRecoveryDetails()
     const dialog = screen.getByRole('dialog', { name: 'Emergency fund recovery details' })
     expect(within(dialog).getByText('This cycle')).toBeTruthy()
-    expect(within(dialog).getByText(/Covered\. Remaining balance is for Nov 2026 cycle\./)).toBeTruthy()
+    expect(within(dialog).getByText('Covered for this cycle. Plan runs through the Nov 2026 cycle.')).toBeTruthy()
     expect(within(dialog).getByText('$416.23 of $416.23')).toBeTruthy()
     expect(within(dialog).queryByText('Jul 2026 cycle')).toBeNull()
     expect(within(dialog).queryByText('Fully put back')).toBeNull()
