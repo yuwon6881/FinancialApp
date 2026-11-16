@@ -6,12 +6,15 @@ export type InvestmentMarketValue =
   | { kind: 'unknown' }
 
 /**
- * What the investments are worth at today's prices beside what was sent to the broker, for the
- * Accounts total. Ledger accounts record money sent, never market moves, so the gain is the one
- * figure the ledger cannot know; it is read from the investment ledger, never written back.
+ * What the investments are worth at today's prices beside what was sent to the broker (external
+ * deposits less withdrawals; an exchange inside the broker sends nothing), for the Accounts total.
+ * Ledger accounts record money sent, never market moves, so the gain is the one figure the ledger
+ * cannot know; it is read from the investment ledger, never written back. Both figures are at
+ * today's exchange rate (constant currency), so a change of app currency rescales the gain
+ * rather than recomputing it.
  *
- * Absent (null) when there is nothing invested, when the portfolio is in another currency than
- * the ledger (the two totals cannot be added honestly), or before the portfolio has loaded.
+ * Absent (null) when there is nothing invested, when a cached portfolio is still in the previous
+ * app currency (the two totals cannot be added honestly), or before the portfolio has loaded.
  */
 export function investmentMarketValue(
   portfolio: Pick<InvestmentPortfolio, 'appCurrency' | 'summary'> & { accounts: ReadonlyArray<{ isArchived: boolean }> } | null,

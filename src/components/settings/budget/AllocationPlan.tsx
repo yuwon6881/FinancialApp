@@ -128,7 +128,7 @@ export function AllocationPlan({ view, hideSensitive, settingsSyncing, settingsP
 
   const symbol = getCurrencySymbol(currency)
 
-  // A currency switch recalculates investment history, so it is confirmed before it is saved. The
+  // A currency switch relabels every ledger amount, so it is confirmed before it is saved. The
   // confirmed save resubmits the form, which keeps the view's own validation and focus handling.
   const { confirm } = useAppUi()
   const formRef = React.useRef<HTMLFormElement>(null)
@@ -306,9 +306,9 @@ export function AllocationPlan({ view, hideSensitive, settingsSyncing, settingsP
               />
             </RuleRow>
 
-            <RuleRow label="Currency" hint="Used for new accounts">
+            <RuleRow label="Currency" hint="Labels budget amounts and sets investment reporting currency">
               <CurrencySelect
-                ariaLabel="Default account currency"
+                ariaLabel="App currency"
                 disabled={hideSensitive}
                 value={view.currencyInput}
                 onChange={view.setCurrencyInput}

@@ -114,7 +114,7 @@ export function InvestmentHistoryPanel({ instruments, masked, refreshToken }: {
           {!history.lifetime.isComplete && (
             <p className="mt-4 flex items-start gap-2 text-caption text-muted-foreground">
               <Info className="mt-px size-4 shrink-0" aria-hidden="true" />
-              Some months are missing a price or exchange rate, so figures that depend on them show as unknown until the data arrives.
+              Some months are missing a price, or today’s exchange rate has not arrived, so figures that depend on them show as unknown until the data arrives.
             </p>
           )}
         </>

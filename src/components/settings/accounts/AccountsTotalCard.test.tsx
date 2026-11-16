@@ -38,7 +38,7 @@ describe('Accounts total beside what the investments are worth today', () => {
     expect(screen.getAllByText(/RM\s?5,988\.50/).length).toBeGreaterThan(0)
     // Once on the total card and once on the Growth card.
     expect(screen.getAllByText(/RM\s?511\.50 above money in/)).toHaveLength(2)
-    expect(screen.getByText(/worth RM\s?4,500\.00 today, against the RM\s?3,988\.50 you sent/)).toBeTruthy()
+    expect(screen.getByText(/worth RM\s?4,500\.00 today, against the RM\s?3,988\.50 you sent the broker, both at today’s exchange rate/)).toBeTruthy()
   })
 
   it('takes a loss off the worth and says so', () => {

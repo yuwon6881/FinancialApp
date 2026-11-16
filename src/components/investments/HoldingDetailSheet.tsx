@@ -9,7 +9,6 @@ import { AmountText } from '../ui/AmountText'
 import { InfoHint } from '../ui/InfoHint'
 import { TickerTile } from './HoldingsList'
 import { chartRanges } from '../../lib/investmentChartRanges'
-import { splitUnrealisedGain } from '../../lib/investmentGainSplit'
 import { FundPriceChart } from './FundPriceChart'
 
 type Holding = InvestmentPortfolio['holdings'][number]
@@ -57,33 +56,27 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
   // Keep the previous fund's chart from flashing into the next one's sheet.
   useEffect(() => { setHistory(null) }, [instrumentId])
 
-  // The fund is priced in its own currency but your money is counted in yours, so
-  // every figure is tagged. Without the tag the two sets look contradictory: the
-  // price can fall while your gain rises, purely because the exchange rate moved.
+  // Every figure is in the fund's own currency, so a move in the exchange rate can never make the
+  // fund look better or worse than its price did. Only the headline also reads in your currency,
+  // at today's rate, so it adds up with the rest of the portfolio.
   const foreign = holding !== null && holding.currency.toUpperCase() !== appCurrency.toUpperCase()
-  const gainSplit = holding === null ? undefined : splitUnrealisedGain(holding, appCurrency)
-  // Worth calling out only when the exchange rate is the larger force of the two.
-  const dominatedByCurrency = gainSplit !== undefined &&
-    Math.abs(gainSplit.currency) > Math.abs(gainSplit.price)
 
   const units = holding === null ? '' : new Intl.NumberFormat(undefined, { maximumFractionDigits: 8 }).format(holding.units)
   const exact = (value: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 8 }).format(value)
   const rows = holding === null ? [] : [
     { label: 'Units', value: masked ? '••••' : units, hint: 'How many units you hold.' },
-    { label: `Latest price (${holding.currency})`, value: figure(holding.latestPriceNative, holding.currency, masked), hint: 'The most recent price on record, in the fund’s own currency.' },
-    { label: `Avg price paid (${holding.currency})`, value: figure(holding.averageCostNative, holding.currency, masked), hint: `Your average cost for one unit, in the fund’s own currency.` },
-    ...(foreign ? [{ label: `Value in ${holding.currency}`, value: figure(holding.valueNative, holding.currency, masked), hint: 'What these units are worth in the fund’s own currency, before the exchange rate.' }] : []),
+    { label: 'Latest price', value: figure(holding.latestPriceNative, holding.currency, masked), hint: 'The most recent price on record.' },
+    { label: 'Avg price paid', value: figure(holding.averageCostNative, holding.currency, masked), hint: 'Your average cost for one unit, including fees.' },
+    { label: 'You paid', value: figure(holding.costBasisNative, holding.currency, masked), hint: 'What the units you still hold cost you, including fees.' },
     {
-      label: `Gain on paper (${appCurrency})`,
-      value: figure(holding.unrealisedProfitLossApp, appCurrency, masked),
-      tone: holding.unrealisedProfitLossApp,
-      hint: foreign
-        ? `Profit or loss you have not locked in yet, in ${appCurrency}. It moves with the price and with the ${holding.currency}/${appCurrency} exchange rate.`
-        : 'Profit or loss you have not locked in yet, because you still hold these units.',
+      label: 'Gain on paper',
+      value: figure(holding.unrealisedProfitLossNative, holding.currency, masked),
+      tone: holding.unrealisedProfitLossNative,
+      hint: 'Profit or loss you have not locked in yet, because you still hold these units.',
     },
-    { label: `Latest value move (${appCurrency})`, value: figure(holding.dailyChangeApp, appCurrency, masked), tone: holding.dailyChangeApp, hint: 'Move between its two latest saved prices and exchange rates. It may be from an earlier market day.' },
-    { label: `Already banked (${appCurrency})`, value: figure(holding.realisedProfitLossApp, appCurrency, masked), tone: holding.realisedProfitLossApp, hint: 'Profit or loss locked in on units you have sold, after fees and taxes.' },
-    { label: `Dividends (${appCurrency})`, value: figure(holding.netDividendsApp, appCurrency, masked), hint: 'Payouts this fund has paid you, after any tax withheld.' },
+    { label: 'Latest value move', value: figure(holding.dailyChangeNative, holding.currency, masked), tone: holding.dailyChangeNative, hint: 'Move between its two latest saved prices. It may be from an earlier market day.' },
+    { label: 'Already banked', value: figure(holding.realisedProfitLossNative, holding.currency, masked), tone: holding.realisedProfitLossNative, hint: 'Profit or loss locked in on units you have sold, after fees and taxes.' },
+    { label: 'Dividends', value: figure(holding.netDividendsNative, holding.currency, masked), hint: 'Payouts this fund has paid you, after any tax withheld.' },
   ]
   const toneClass = (value?: number) => masked || value === undefined
     ? 'text-foreground'
@@ -104,15 +97,22 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
           {/* A focus target already in view, so opening the sheet neither scrolls it nor opens a hint. */}
           <div ref={initialFocusRef} tabIndex={-1} className="h-0 outline-none" />
           <div>
-            <p className="text-label text-muted-foreground">Latest value ({appCurrency})</p>
-            {holding.valueApp === undefined
-              ? <p className="mt-1 text-title text-muted-foreground">{holding.latestPriceNative === undefined ? 'No price yet' : 'Exchange rate missing'}</p>
-              : <AmountText value={holding.valueApp} currency={appCurrency} isMasked={masked} className="mt-1 text-display text-foreground" />}
-            {!masked && holding.unrealisedProfitLossApp !== undefined && (
+            <p className="text-label text-muted-foreground">Latest value</p>
+            {holding.valueNative === undefined
+              ? <p className="mt-1 text-title text-muted-foreground">No price yet</p>
+              : <AmountText value={holding.valueNative} currency={holding.currency} isMasked={masked} className="mt-1 text-display text-foreground" />}
+            {!masked && holding.unrealisedProfitLossNative !== undefined && (
               <p className="mt-1 text-label text-muted-foreground">
-                <span className={`font-semibold tabular-nums ${toneClass(holding.unrealisedProfitLossApp)}`}>
-                  {holding.unrealisedProfitLossApp > 0 ? '+' : ''}{formatCurrencyVal(holding.unrealisedProfitLossApp, appCurrency)} · {(holding.unrealisedPercent ?? 0).toFixed(1)}%
+                <span className={`font-semibold tabular-nums ${toneClass(holding.unrealisedProfitLossNative)}`}>
+                  {holding.unrealisedProfitLossNative > 0 ? '+' : ''}{formatCurrencyVal(holding.unrealisedProfitLossNative, holding.currency)} · {(holding.unrealisedPercent ?? 0).toFixed(1)}%
                 </span> on paper
+              </p>
+            )}
+            {foreign && holding.valueNative !== undefined && (
+              <p className="mt-1 text-label text-muted-foreground">
+                {holding.valueApp === undefined
+                  ? `Waiting on today's ${holding.currency}/${appCurrency} rate`
+                  : <>About {figure(holding.valueApp, appCurrency, masked)} at today’s rate</>}
               </p>
             )}
           </div>
@@ -167,18 +167,10 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
                 </div>
               )}
             </div>
-            {foreign && gainSplit !== undefined && (
+            {foreign && (
               <p className="mt-3 rounded-control inset-group p-3 text-caption leading-relaxed text-muted-foreground">
-                Of your {figure(holding.unrealisedProfitLossApp, appCurrency, masked)} gain on paper,{' '}
-                <b className={masked ? '' : toneClass(gainSplit.price)}>
-                  {figure(gainSplit.price, appCurrency, masked)}
-                </b>{' '}
-                came from the fund’s price and{' '}
-                <b className={masked ? '' : toneClass(gainSplit.currency)}>
-                  {figure(gainSplit.currency, appCurrency, masked)}
-                </b>{' '}
-                from the {holding.currency}/{appCurrency} exchange rate
-                {dominatedByCurrency ? ' — most of this move is the exchange rate, not the fund' : ''}.
+                Every figure here is in {holding.currency}, the fund’s own currency, so it shows what the fund did
+                and the exchange rate never moves it. Your portfolio totals convert it at today’s rate.
               </p>
             )}
           </div>
@@ -195,7 +187,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, portfolioUpda
                   : holding.latestPriceNative === undefined
                     ? 'Closing price unavailable'
                     : `${units} × ${exact(holding.latestPriceNative)} ${holding.currency}${foreign
-                      ? ` × ${holding.fxRate === undefined ? 'missing FX' : exact(holding.fxRate)} = ${holding.valueApp === undefined ? 'incomplete' : formatCurrencyVal(holding.valueApp, appCurrency)}`
+                      ? ` × ${holding.fxRate === undefined ? 'no rate today' : exact(holding.fxRate)} = ${holding.valueApp === undefined ? 'incomplete' : formatCurrencyVal(holding.valueApp, appCurrency)}`
                       : ''}`}
               </p>
               <p>Price from {holding.priceSource ?? 'no source on record'} · {holding.priceDate ?? 'no date'}</p>

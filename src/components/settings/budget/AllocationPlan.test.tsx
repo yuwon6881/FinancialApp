@@ -98,7 +98,7 @@ describe('AllocationPlan', () => {
     expect(screen.queryByText(/3,600/)).toBeNull()
     expect((screen.getByRole('button', { name: 'Edit split' }) as HTMLButtonElement).disabled).toBe(true)
   })
-  it('asks before switching the currency and explains what happens to investment history', () => {
+  it('asks before switching the currency and explains that investments are read at today’s rate', () => {
     const confirm = vi.fn()
     const view = makeView({ currencyInput: 'SGD' })
     render(
@@ -116,7 +116,7 @@ describe('AllocationPlan', () => {
     expect(request.confirmText).toBe('Switch to SGD')
     render(<>{request.message}</>)
     expect(screen.getByText(/keep their numbers/)).toBeTruthy()
-    expect(screen.getByText(/each date.s exchange rate/)).toBeTruthy()
+    expect(screen.getByText(/Investments are not recalculated/)).toBeTruthy()
     expect(screen.getByText(/never as zero/)).toBeTruthy()
 
     request.onConfirm()

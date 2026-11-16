@@ -570,33 +570,46 @@ describe('InvestmentsView money-sent-to-broker card', () => {
     expect(screen.queryByText('Change today')).toBeNull()
   })
 
-  it('says how much of the latest move was prices and how much was the exchange rate', async () => {
-    // A rising position reporting a falling day: the shares gained RM 8 and the rate cost RM 20.
-    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(withSummary({
+  it('shows each currency in its own figures, never converted, when something is held abroad', async () => {
+    const portfolio = withSummary({
       totalValue: 1200,
-      unrealisedProfitLoss: 300,
-      dailyChange: -12,
-      dailyPriceChange: 8,
-      dailyCurrencyChange: -20,
-    }))
+      currencies: [
+        {
+          currency: 'SGD', rateToAppCurrency: 0.74, cashValue: 0, marketValue: 500, totalValue: 500,
+          netDeposits: 450, costBasis: 450, unrealisedProfitLoss: 50, unrealisedPercent: 11.1111,
+          realisedProfitLoss: 0, netDividends: 0,
+        },
+        {
+          currency: 'USD', cashValue: 20, marketValue: 610, totalValue: 630,
+          netDeposits: 600, costBasis: 590, unrealisedProfitLoss: 20, unrealisedPercent: 3.39,
+          realisedProfitLoss: 0, netDividends: 0,
+        },
+      ],
+    })
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(portfolio)
     renderView()
 
-    expect(await screen.findByText('From share prices')).toBeTruthy()
-    expect(screen.getByText('From currency')).toBeTruthy()
+    const list = await screen.findByRole('region', { name: 'Each currency' })
+    expect(list.textContent).toContain('1 SGD = 0.74 USD today')
+    expect(list.textContent).toContain('+11.1% on paper')
+    expect(list.textContent).toContain('Your currency')
+    // The split of a day's move into price and currency is gone: rates never move a gain.
+    expect(screen.queryByText('From currency')).toBeNull()
   })
 
-  it('does not split the latest move when no exchange rate moved', async () => {
+  it('leaves out the currency list when everything is in the app currency', async () => {
     vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(withSummary({
       totalValue: 1200,
-      dailyChange: 8,
-      dailyPriceChange: 8,
-      dailyCurrencyChange: 0,
+      currencies: [{
+        currency: 'USD', cashValue: 0, marketValue: 1200, totalValue: 1200,
+        netDeposits: 1000, costBasis: 1000, unrealisedProfitLoss: 200, unrealisedPercent: 20,
+        realisedProfitLoss: 0, netDividends: 0,
+      }],
     }))
     renderView()
 
     expect(await screen.findByText('Latest value move')).toBeTruthy()
-    expect(screen.queryByText('From share prices')).toBeNull()
-    expect(screen.queryByText('From currency')).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Each currency' })).toBeNull()
   })
 
   it('switches panel from cash to activity when a trade draft arrives', async () => {

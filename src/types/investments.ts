@@ -87,13 +87,16 @@ interface InvestmentHolding {
   units: number
   averageCostNative: number
   latestPriceNative?: number
+  /** The fund's own-currency figures. Absent only from a portfolio cached by an older version. */
+  costBasisNative?: number
   valueNative?: number
+  dailyChangeNative?: number
+  unrealisedProfitLossNative?: number
+  realisedProfitLossNative?: number
+  netDividendsNative?: number
+  /** The `*App` figures are the own-currency ones at today's rate (`fxRate`). */
   valueApp?: number
   dailyChangeApp?: number
-  /** How much of `dailyChangeApp` was this fund own price moving. Absent on an older API. */
-  dailyPriceChangeApp?: number
-  /** How much of `dailyChangeApp` was the exchange rate moving. Absent on an older API. */
-  dailyCurrencyChangeApp?: number
   unrealisedProfitLossApp?: number
   unrealisedPercent?: number
   realisedProfitLossApp?: number
@@ -133,6 +136,28 @@ export interface InvestmentCashFlow {
   isPendingDelete?: boolean
 }
 
+/**
+ * One currency's part of the portfolio in its own currency. The app-currency totals are these
+ * figures at today's rate (constant currency), so a change of app currency moves none of them.
+ */
+export interface InvestmentCurrencySummary {
+  currency: string
+  rateToAppCurrency?: number
+  rateDate?: string
+  marketValue?: number
+  cashValue: number
+  totalValue?: number
+  /** Deposits less withdrawals, plus what conversions delivered into it, less what they took out. */
+  netDeposits: number
+  costBasis: number
+  unrealisedProfitLoss?: number
+  unrealisedPercent?: number
+  realisedProfitLoss: number
+  netDividends: number
+  dailyChange?: number
+}
+
+/** Every money figure is in `appCurrency` at today's rate: own-currency figures times one rate. */
 export interface InvestmentPortfolio {
   appCurrency: string
   /** Rate and code of the second currency the plan can be read in; supplied by the API, never assumed. */
@@ -151,13 +176,11 @@ export interface InvestmentPortfolio {
     realisedProfitLoss?: number
     netDividends?: number
     dailyChange?: number
-    /** How much of `dailyChange` was prices moving. Absent on an older API. */
-    dailyPriceChange?: number
-    /** How much of `dailyChange` was the exchange rate moving. Absent on an older API. */
-    dailyCurrencyChange?: number
     annualReturn?: number
     cashValue?: number
     totalValue?: number
+    /** Each currency's part in that currency, never converted. Absent from an older cached portfolio. */
+    currencies?: InvestmentCurrencySummary[]
   }
   accounts: InvestmentAccount[]
   instruments: InvestmentInstrument[]

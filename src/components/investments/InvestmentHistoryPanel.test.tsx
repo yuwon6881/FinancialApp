@@ -54,7 +54,7 @@ describe('InvestmentHistoryPanel', () => {
     expect(screen.getByText('No price for VWRA on 2031-10-31.')).toBeTruthy()
     expect(screen.getByText('US shares')).toBeTruthy()
     expect(screen.getByText('Not sorted yet')).toBeTruthy()
-    expect(screen.getByText(/Some months are missing a price or exchange rate/)).toBeTruthy()
+    expect(screen.getByText(/Some months are missing a price, or today’s exchange rate has not arrived/)).toBeTruthy()
   })
 
   it('hides every figure, including accessible names, while masked', async () => {

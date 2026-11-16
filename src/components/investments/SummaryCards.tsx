@@ -1,6 +1,6 @@
 import { useId, useState, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
-import type { InvestmentPortfolio } from '../../types'
+import type { InvestmentCurrencySummary, InvestmentPortfolio } from '../../types'
 import { InfoHint } from '../ui/InfoHint'
 import { AmountText } from '../ui/AmountText'
 import { Button } from '../ui/Button'
@@ -43,10 +43,6 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
   const unrealised = portfolio.summary.unrealisedProfitLoss
   const realised = portfolio.summary.realisedProfitLoss
   const daily = portfolio.summary.dailyChange
-  const priceMove = portfolio.summary.dailyPriceChange
-  const currencyMove = portfolio.summary.dailyCurrencyChange
-  // Rounding noise on a same-currency portfolio should not earn two rows saying nothing.
-  const hasCurrencyMove = Math.abs(currencyMove ?? 0) >= 0.005
   const percent = portfolio.summary.unrealisedPercent
   const annualReturn = portfolio.summary.annualReturn
   const totalValue = portfolio.summary.totalValue
@@ -123,20 +119,9 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
     },
     {
       label: 'Income and latest move',
-      hint: 'Dividends received, plus the move between the two latest saved market values. It may be from an earlier market day.',
-      // A move stated in one currency cannot say whether the shares fell or the ringgit rose, and
-      // those two regularly point opposite ways: a portfolio can be up on the year and report a
-      // down day purely on the rate. The two parts add back to the move exactly, so the card can
-      // show which one drove it. Only when the server sends them, and only when a rate is actually
-      // involved — a single-currency portfolio has nothing to split.
+      hint: 'Dividends received, plus the move between the two latest saved prices. It may be from an earlier market day.',
       rows: [
-        { label: 'Latest value move', value: signed(daily), hint: 'The move between the two latest saved market values.', color: tone(daily) },
-        ...(priceMove !== undefined && currencyMove !== undefined && hasCurrencyMove
-          ? [
-              { label: 'From share prices', value: signed(priceMove), hint: 'The part of the move that was your funds’ own prices changing.', color: tone(priceMove) },
-              { label: 'From currency', value: signed(currencyMove), hint: `The part of the move that was the rate between your funds’ currencies and ${currency} changing.`, color: tone(currencyMove) },
-            ]
-          : []),
+        { label: 'Latest value move', value: signed(daily), hint: 'The move between your funds’ two latest saved prices. Exchange rates never move it.', color: tone(daily) },
         { label: 'Dividends received', value: format(portfolio.summary.netDividends), hint: 'Payouts your investments have paid you, after any tax withheld.' },
       ],
     },
@@ -157,7 +142,7 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
       <div className="p-5 sm:p-6">
         <div className="flex items-center gap-1">
           <h2 className="text-label text-muted-foreground">What it is worth</h2>
-          <InfoHint label="What it is worth" text={`Latest saved value of your investments and broker cash, shown in ${currency}.`} />
+          <InfoHint label="What it is worth" text={`Latest saved value of your investments and broker cash in ${currency}. Anything held in another currency is converted at today’s rate, so gains show what the markets did, never the exchange rate.`} />
         </div>
         <div data-testid="investment-total" className="mt-1 min-w-0">
           {totalValue === undefined
@@ -177,7 +162,7 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
           {daily !== undefined && (
             <span><span className={cn('font-semibold tabular-nums', masked ? 'text-foreground' : tone(daily))}>{signed(daily)}</span> latest move</span>
           )}
-          {totalValue === undefined && <span>Waiting on prices or an exchange rate</span>}
+          {totalValue === undefined && <span>Waiting on prices or today’s exchange rate</span>}
         </p>
 
         <dl className="mt-5 grid grid-cols-1 divide-y divide-foreground/10 rounded-control inset-group px-3.5 @md:grid-cols-3 @md:divide-x @md:divide-y-0 @md:px-0 @md:py-3">
@@ -195,6 +180,8 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
             </div>
           ))}
         </dl>
+
+        <CurrencyBreakdown currencies={portfolio.summary.currencies ?? []} appCurrency={currency} masked={masked} tone={tone} />
       </div>
 
       {/* Below the expanded tier the breakdown is one tap away; at it there is room to leave it open. */}
@@ -237,6 +224,62 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
       </div>
 
       {actions && <div className="border-t border-border/60 px-5 py-4 sm:px-6">{actions}</div>}
+    </section>
+  )
+}
+
+/**
+ * Each currency's part in its own currency, with no conversion at all: how the markets priced in
+ * that currency have treated you. Shown only when something is held outside the app currency.
+ */
+function CurrencyBreakdown({ currencies, appCurrency, masked, tone }: {
+  currencies: InvestmentCurrencySummary[]
+  appCurrency: string
+  masked: boolean
+  tone: (value?: number) => string
+}) {
+  const home = appCurrency.toUpperCase()
+  if (!currencies.some(value => value.currency.toUpperCase() !== home)) return null
+  const hint = 'Each currency’s own figures, never converted, so an exchange rate cannot make a market look better or worse than it did.'
+  return (
+    <section aria-label="Each currency" className="mt-5">
+      <div className="flex items-center gap-1">
+        <h3 className="text-label font-medium text-foreground">In each currency</h3>
+        <InfoHint label="In each currency" text={hint} />
+      </div>
+      <ul className="mt-1 divide-y divide-border/50">
+        {currencies.map(item => {
+          const gain = item.unrealisedProfitLoss
+          const percent = item.unrealisedPercent
+          const rate = item.currency.toUpperCase() === home
+            ? 'Your currency'
+            : item.rateToAppCurrency === undefined
+              ? 'No rate today'
+              : `1 ${item.currency} = ${new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 }).format(item.rateToAppCurrency)} ${home} today`
+          return (
+            <li key={item.currency} className="flex min-h-11 items-center justify-between gap-3 py-1">
+              <div className="min-w-0">
+                <p className="text-label font-semibold text-foreground">{item.currency}</p>
+                <p className="truncate text-caption text-muted-foreground">{rate}</p>
+              </div>
+              <div className="min-w-0 shrink-0 text-right">
+                <p className="text-label font-semibold tabular-nums text-foreground">
+                  {item.totalValue === undefined
+                    ? <span className="font-normal text-muted-foreground">No price yet</span>
+                    : <AmountText value={item.totalValue} currency={item.currency} isMasked={masked} />}
+                </p>
+                {gain !== undefined && (
+                  <p className={cn('text-caption tabular-nums', masked ? 'text-muted-foreground' : tone(gain))}>
+                    {masked
+                      ? '•••• on paper'
+                      : `${gain > 0 ? '+' : ''}${money(gain, item.currency)}${percent === undefined ? '' : ` · ${percent > 0 ? '+' : ''}${percent.toFixed(1)}%`} on paper`}
+                  </p>
+                )}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
     </section>
   )
 }

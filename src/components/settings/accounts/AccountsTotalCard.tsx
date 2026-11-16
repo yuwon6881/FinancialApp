@@ -104,7 +104,7 @@ function WorthNote({ value, money, hideSensitive }: {
     ? 'Investments are counted at what you sent the broker. Their worth today shows here once prices arrive.'
     : hideSensitive
       ? 'Money in is what the ledger records; worth today adds what the market made of the investments.'
-      : `Investments are worth ${money(value.worth)} today, against the ${money(value.sent)} you sent the broker. The balances and bars above show money in.`
+      : `Investments are worth ${money(value.worth)} today, against the ${money(value.sent)} you sent the broker, both at today’s exchange rate. The balances and bars above show money in.`
   return (
     <p className="mt-4 flex items-start gap-2 border-t border-border/60 pt-4 text-caption text-muted-foreground">
       <TrendingUp className="mt-px size-4 shrink-0" aria-hidden="true" />
