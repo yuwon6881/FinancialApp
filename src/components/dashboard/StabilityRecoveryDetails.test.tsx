@@ -68,7 +68,7 @@ describe('StabilityRecoveryDetails', () => {
     // Current cycle section
     expect(screen.getByRole('heading', { name: 'This cycle' })).toBeTruthy()
     expect(screen.getByText('$416.23 of $416.23')).toBeTruthy()
-    expect(screen.getByText('Covered. Remaining balance is for Nov 2026 cycle.')).toBeTruthy()
+    expect(screen.getByText('Covered for this cycle. Plan runs through the Nov 2026 cycle.')).toBeTruthy()
 
     // Calculation section
     expect(screen.getByText('Calculation')).toBeTruthy()

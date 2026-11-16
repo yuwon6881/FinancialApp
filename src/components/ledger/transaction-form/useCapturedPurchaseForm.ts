@@ -6,7 +6,8 @@ export function capturedPurchaseEdits(state: TransactionFormState): Record<strin
   return { description: state.description, amount: state.amount, date: state.date,
     category: state.category, ledgerCategory: state.ledgerCategory, transactionType: state.transactionType,
     transferSource: state.transferSource, transferTarget: state.transferTarget, accountId: state.accountId,
-    counterAccountId: state.counterAccountId }
+    counterAccountId: state.counterAccountId, stabilityReloadIntent: state.stabilityReloadIntent,
+    stabilityRepaymentCycles: state.stabilityRepaymentCycles }
 }
 
 /**

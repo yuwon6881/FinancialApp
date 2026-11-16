@@ -80,6 +80,7 @@ export function validateTransactionForm(state: {
     transactionType: state.transactionType ?? '',
     ledgerCategory: state.ledgerCategory ?? '',
     transferSource: state.transferSource ?? '',
+    transferTarget: state.transferTarget ?? '',
   }) && state.stabilityReloadIntent !== 'Required' && state.stabilityReloadIntent !== 'NotRequired') {
     errors.stabilityReloadIntent = 'Choose whether you will put this money back.'
   }

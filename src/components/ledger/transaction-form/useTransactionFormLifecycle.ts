@@ -109,6 +109,7 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
         splitAccountIds: deriveIncomeSplitAccountIds(t),
         stabilityRecoveryTopUpAmount: t.stabilityRecoveryTopUpAmount,
         stabilityReloadIntent: t.stabilityReloadIntent,
+        stabilityRepaymentCycles: t.stabilityRepaymentCycles,
       }
     })
     descriptionRef.current = t.description
@@ -169,6 +170,7 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
         splitAccountIds: deriveIncomeSplitAccountIds(draft),
         stabilityRecoveryTopUpAmount: draft.stabilityRecoveryTopUpAmount,
         stabilityReloadIntent: draft.stabilityReloadIntent,
+        stabilityRepaymentCycles: draft.stabilityRepaymentCycles,
       },
     })
     descriptionRef.current = draft.description
@@ -232,6 +234,8 @@ export function useTransactionFormLifecycle(options: UseTransactionFormLifecycle
         dispatch({ type: 'SET_FIELD', field: 'captureSource', value: autoOpenPrefill.captureSource })
         dispatch({ type: 'SET_FIELD', field: 'captureNotices', value: autoOpenPrefill.captureNotices })
         dispatch({ type: 'SET_FIELD', field: 'captureExcerpt', value: autoOpenPrefill.captureExcerpt })
+        dispatch({ type: 'SET_FIELD', field: 'stabilityReloadIntent', value: autoOpenPrefill.stabilityReloadIntent ?? 'Unanswered' })
+        dispatch({ type: 'SET_FIELD', field: 'stabilityRepaymentCycles', value: autoOpenPrefill.stabilityRepaymentCycles })
         dispatch({ type: 'SET_FIELD', field: 'category', value: autoOpenPrefill.category ?? '' })
         dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: autoOpenPrefill.ledgerCategory ?? '' })
         dispatch({ type: 'SET_FIELD', field: 'amount', value: autoOpenPrefill.amount ?? '' })

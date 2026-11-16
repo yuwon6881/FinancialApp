@@ -196,7 +196,7 @@ export function projectStabilityRecovery(input: {
     input.currentCycleKey,
     3,
   )
-  const cohortInputs = new Map<string, RecoveryCohortInput>()
+  const cohortInputs: RecoveryCohortInput[] = []
   for (const obligation of projectedReplay.obligations) {
     const repaidThisCycle = Math.max(
       0,
@@ -206,23 +206,23 @@ export function projectStabilityRecovery(input: {
     if (input.cycleDay === undefined || !obligation.date) continue
     const originCycleKey = cycleKeyForDate(obligation.date, input.cycleDay)
     if (!originCycleKey) continue
-    const existing = cohortInputs.get(originCycleKey)
-    cohortInputs.set(originCycleKey, {
+    cohortInputs.push({
       originCycleKey,
-      fromDate: existing && existing.fromDate < obligation.date ? existing.fromDate : obligation.date,
-      transactionCount: (existing?.transactionCount ?? 0) + 1,
-      remainingShortfall: (existing?.remainingShortfall ?? 0) + Math.max(0, obligation.remainingAmount),
-      repaidThisCycle: (existing?.repaidThisCycle ?? 0) + repaidThisCycle,
+      fromDate: obligation.date,
+      repaymentCycles: obligation.repaymentCycles,
+      transactionCount: 1,
+      remainingShortfall: obligation.remainingAmount,
+      repaidThisCycle,
     })
   }
   const hasCompleteCohortDetail = input.currentCycleKey !== undefined
-    && cohortInputs.size > 0
+    && cohortInputs.length > 0
     && (outstandingShortfall <= 0 || projectedReplay.obligations
       .filter(obligation => obligation.remainingAmount > 0)
       .every(obligation => Boolean(obligation.date)))
   const cohortPlan = hasCompleteCohortDetail
     ? computeRecoveryCohortPlan({
-      cohorts: [...cohortInputs.values()],
+      cohorts: cohortInputs,
       currentCycleKey: input.currentCycleKey!,
       outstandingShortfall,
       toppedUpThisCycle,

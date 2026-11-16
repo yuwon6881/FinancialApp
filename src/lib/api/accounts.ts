@@ -55,6 +55,7 @@ export interface LedgerAccountReconcileTransaction {
   accountId?: string | null
   counterAccountId?: string | null
   isAccountBalanceAdjustment?: boolean
+  stabilityRepaymentCycles?: number | null
   stabilityReloadIntent?: string | null
 }
 

@@ -1,5 +1,6 @@
 import { computeIncomeLedgerCategory } from '../../../lib/incomeSplit'
 import { isStabilityReloadFormDrawdown } from '../../../lib/stabilityRecovery'
+import { STABILITY_RECOVERY_PLAN_CYCLES } from '../../../lib/stabilityRecoveryPacing'
 import type { TransactionFormState } from './transactionFormReducer'
 
 export const getTodayDateString = () => {
@@ -58,6 +59,7 @@ export function mapFormToTransaction(
     })
   }
 
+  const reloadIntent = isStabilityReloadFormDrawdown(state) ? state.stabilityReloadIntent : undefined
   return {
     description: state.description,
     amount: finalAmount,
@@ -65,8 +67,9 @@ export function mapFormToTransaction(
     ledgerCategory: finalLedgerCategory,
     date: state.date,
     stabilityRecoveryTopUpAmount: isIncome ? Math.max(0, options.recoveryTopUp ?? 0) : undefined,
-    stabilityReloadIntent: isStabilityReloadFormDrawdown(state)
-      ? state.stabilityReloadIntent
+    stabilityReloadIntent: reloadIntent,
+    stabilityRepaymentCycles: reloadIntent === 'Required'
+      ? state.stabilityRepaymentCycles ?? STABILITY_RECOVERY_PLAN_CYCLES
       : undefined,
     // The income parent is a bucket-level source record. Its generated children carry the
     // four explicit receiving-account placements instead.

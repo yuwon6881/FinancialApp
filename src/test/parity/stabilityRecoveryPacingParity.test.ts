@@ -20,6 +20,7 @@ interface StabilityRecoveryPacingCase {
     isDeferred: boolean
     cohorts: Array<{
       originCycleKey: string
+      repaymentCycles?: number
       transactionCount: number
       cyclesRemaining: number
       requiredThisCycle: number

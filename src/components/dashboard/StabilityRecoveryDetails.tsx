@@ -1,12 +1,16 @@
 import type { ReactNode } from 'react'
-import type { StabilityRecovery } from '../../types'
+import type { StabilityRecovery, StabilityRecoveryCohort } from '../../types'
 import { getMonthCycleLabel, getMonthLabel } from '../../lib/monthCycleLabel'
-import { STABILITY_RECOVERY_GRACE_CYCLES, STABILITY_RECOVERY_PLAN_CYCLES } from '../../lib/stabilityRecoveryPacing'
+import { STABILITY_RECOVERY_PLAN_CYCLES } from '../../lib/stabilityRecoveryPacing'
 import { describeStabilityRecovery } from '../../lib/stabilityRecoveryNarrative'
 
 interface Props {
   recovery: StabilityRecovery
   formatSensitive: (value: number) => ReactNode
+}
+
+function endOffset(cohort: StabilityRecoveryCohort) {
+  return cohort.repaymentCycles ?? STABILITY_RECOVERY_PLAN_CYCLES
 }
 
 export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
@@ -16,15 +20,18 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
   const activeCohorts = (recovery.recoveryCohorts ?? []).filter(cohort => cohort.remainingShortfall > 0)
 
   const sortedCohorts = [...activeCohorts].sort((a, b) => a.originCycleKey.localeCompare(b.originCycleKey))
-  const latestCohort = sortedCohorts.at(-1)
-  const latestEndMonth = latestCohort
-    ? getMonthLabel(latestCohort.originCycleKey, STABILITY_RECOVERY_GRACE_CYCLES + STABILITY_RECOVERY_PLAN_CYCLES - 1)
+  const latestEnd = activeCohorts.map(cohort => {
+    const [year, month] = cohort.originCycleKey.split('-').map(Number)
+    return Date.UTC(year, month - 1 + endOffset(cohort), 1)
+  }).reduce((latest, end) => Math.max(latest, end), 0)
+  const latestEndMonth = latestEnd > 0
+    ? getMonthLabel(new Date(latestEnd).toISOString().slice(0, 7))
     : undefined
 
   let topCardSubtitle: string | undefined
   if (activeCohorts.length === 1) {
     const originMonth = getMonthLabel(activeCohorts[0].originCycleKey) ?? activeCohorts[0].originCycleKey
-    const endMonth = getMonthLabel(activeCohorts[0].originCycleKey, STABILITY_RECOVERY_GRACE_CYCLES + STABILITY_RECOVERY_PLAN_CYCLES - 1)
+    const endMonth = getMonthLabel(activeCohorts[0].originCycleKey, endOffset(activeCohorts[0]))
     topCardSubtitle = endMonth ? `${originMonth} withdrawal · Plan ends ${endMonth}` : `${originMonth} withdrawal`
   } else if (activeCohorts.length > 1) {
     topCardSubtitle = latestEndMonth
@@ -34,7 +41,7 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
 
   const coveredEndCycle = latestEndMonth
     ?? (recovery.lastDrawdownCycleKey
-      ? getMonthLabel(recovery.lastDrawdownCycleKey, STABILITY_RECOVERY_GRACE_CYCLES + STABILITY_RECOVERY_PLAN_CYCLES - 1)
+      ? getMonthLabel(recovery.lastDrawdownCycleKey, STABILITY_RECOVERY_PLAN_CYCLES)
       : undefined)
 
   const withdrawalsLabel = activeCohorts.length > 1
@@ -69,7 +76,7 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
             </p>
             {covered ? (
               <p className="text-sm text-muted-foreground">
-                Covered. Remaining balance is for {coveredEndCycle ? `${coveredEndCycle} cycle.` : 'later cycles.'}
+                Covered for this cycle. {coveredEndCycle ? `Plan runs through the ${coveredEndCycle} cycle.` : 'The balance is spread over later cycles.'}
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">
@@ -85,13 +92,11 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
           <h3 className="text-sm font-semibold text-foreground">Withdrawal plans</h3>
           <ul className="divide-y divide-foreground/10 rounded-control inset-group" aria-label="Withdrawal plans">
             {sortedCohorts.map(cohort => {
-              // The three repayment cycles follow the spending cycle; the last one is the deadline.
-              const endCycle = getMonthCycleLabel(cohort.originCycleKey,
-                STABILITY_RECOVERY_GRACE_CYCLES + STABILITY_RECOVERY_PLAN_CYCLES - 1)
+              const endCycle = getMonthCycleLabel(cohort.originCycleKey, endOffset(cohort))
               return (
                 // Two columns, so each caption sits under the thing it describes: the deadline under
                 // the cycle name, the amount's status under the amount.
-                <li key={`${cohort.originCycleKey}-${cohort.fromDate}`} className="flex items-start justify-between gap-3 p-3.5 text-sm">
+                <li key={`${cohort.originCycleKey}-${cohort.repaymentCycles}`} className="flex items-start justify-between gap-3 p-3.5 text-sm">
                   <div className="min-w-0 space-y-1.5">
                     <p className="font-semibold text-foreground">{getMonthCycleLabel(cohort.originCycleKey) ?? cohort.originCycleKey}</p>
                     {endCycle && <p className="text-muted-foreground">Plan ends {endCycle}</p>}

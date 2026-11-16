@@ -33,7 +33,7 @@ export interface StabilityRecoveryNarrative {
   askIsWholeShortfall: boolean
   /** Cycles left in the most urgent open plan, counting this one. Never below 1. */
   cyclesRemaining: number
-  /** More than one spending cycle still has its own plan, so the ask is a sum of shares. */
+  /** More than one recovery plan remains open, so the ask is a sum of shares. */
   hasOverlappingPlans: boolean
   /** A plan is past its window. Kept alongside `status`, which an ahead-of-plan cycle outranks. */
   isOverdue: boolean
@@ -54,7 +54,7 @@ export function describeStabilityRecovery(recovery: StabilityRecovery): Stabilit
   // so treating that as the final cycle announced "the last cycle of the plan" every cycle from then
   // on. Overlapping plans are excluded too — the aggregate counts down the *most urgent* cohort, so
   // an older plan on its last cycle called the whole recovery final while the list below it still
-  // offered a newer cohort three more cycles.
+  // showed other plans with time remaining.
   const isFinalCycle = !recovery.isOverdue
     && !hasOverlappingPlans
     && Math.max(1, recovery.cyclesRemaining) <= 1

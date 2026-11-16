@@ -120,10 +120,12 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
             originalAmount: deobfuscateAmount(obligation.originalAmount),
             remainingAmount: deobfuscateAmount(obligation.remainingAmount),
             date: obligation.date ?? undefined,
+            repaymentCycles: obligation.repaymentCycles,
           })),
           recoveryCohorts: (data.stabilityRecovery.recoveryCohorts ?? []).map(cohort => ({
             originCycleKey: cohort.originCycleKey,
             fromDate: cohort.fromDate,
+            repaymentCycles: cohort.repaymentCycles,
             transactionCount: cohort.transactionCount,
             remainingShortfall: deobfuscateAmount(cohort.remainingShortfall),
             cyclesRemaining: cohort.cyclesRemaining,

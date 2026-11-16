@@ -24,6 +24,8 @@ export interface LedgerAddPrefill {
   captureSource?: string
   captureNotices?: string[]
   captureExcerpt?: string
+  stabilityReloadIntent?: Transaction['stabilityReloadIntent']
+  stabilityRepaymentCycles?: number
   category?: string
   ledgerCategory?: 'Essentials' | 'Growth' | 'Stability' | 'Rewards'
   accountId?: string

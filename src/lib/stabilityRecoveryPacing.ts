@@ -27,6 +27,7 @@ export function cycleKeyForDate(date: string, cycleDay: number) {
  */
 export const STABILITY_RECOVERY_GRACE_CYCLES = 1
 export const STABILITY_RECOVERY_PLAN_CYCLES = 3
+export const MAX_STABILITY_REPAYMENT_CYCLES = 24
 
 /** Cycles between two `yyyy-MM` cycle keys, or undefined when either cannot be read. */
 function elapsedCycles(anchor: string | undefined, currentCycleKey: string | undefined) {
@@ -57,6 +58,7 @@ export function isDeferredFromAnchor(anchor: string | undefined, currentCycleKey
 
 export interface RecoveryCohortInput {
   originCycleKey: string
+  repaymentCycles?: number | null
   fromDate: string
   transactionCount: number
   remainingShortfall: number
@@ -85,8 +87,11 @@ export function computeRecoveryCohortPlan(input: {
   const grouped = new Map<string, RecoveryCohortInput>()
   for (const cohort of input.cohorts) {
     if (cohort.remainingShortfall <= 0 && cohort.repaidThisCycle <= 0) continue
-    const existing = grouped.get(cohort.originCycleKey)
-    grouped.set(cohort.originCycleKey, {
+    const repaymentCycles = cohort.repaymentCycles ?? horizon
+    const key = cohort.originCycleKey + ':' + repaymentCycles
+    const existing = grouped.get(key)
+    grouped.set(key, {
+      repaymentCycles,
       originCycleKey: cohort.originCycleKey,
       fromDate: existing && existing.fromDate < cohort.fromDate ? existing.fromDate : cohort.fromDate,
       transactionCount: (existing?.transactionCount ?? 0) + Math.max(1, cohort.transactionCount),
@@ -99,7 +104,7 @@ export function computeRecoveryCohortPlan(input: {
       const rawCyclesRemaining = cyclesFromAnchor(
         cohort.originCycleKey,
         input.currentCycleKey,
-        horizon,
+        cohort.repaymentCycles ?? horizon,
       )
       const cyclesRemaining = Math.max(1, rawCyclesRemaining)
       const isDeferred = isDeferredFromAnchor(cohort.originCycleKey, input.currentCycleKey)
@@ -110,9 +115,10 @@ export function computeRecoveryCohortPlan(input: {
         ? 0
         : cyclesRemaining <= 1
           ? anchor
-          : Math.ceil((anchor / cyclesRemaining) * 100) / 100
+          : Math.ceil(Math.round(anchor * 100) / cyclesRemaining) / 100
       return {
         originCycleKey: cohort.originCycleKey,
+        repaymentCycles: cohort.repaymentCycles,
         fromDate: cohort.fromDate,
         transactionCount: Math.max(1, cohort.transactionCount),
         remainingShortfall: Math.max(0, cohort.remainingShortfall),
@@ -123,7 +129,8 @@ export function computeRecoveryCohortPlan(input: {
       }
     })
     .sort((left, right) =>
-      left.originCycleKey.localeCompare(right.originCycleKey) || left.fromDate.localeCompare(right.fromDate))
+      left.originCycleKey.localeCompare(right.originCycleKey) || left.fromDate.localeCompare(right.fromDate)
+      || (left.repaymentCycles ?? horizon) - (right.repaymentCycles ?? horizon))
   const open = cohorts.filter(cohort => cohort.remainingShortfall > 0)
   const requiredThisCycle = cohorts.reduce((sum, cohort) => sum + cohort.requiredThisCycle, 0)
   const outstandingShortfall = Math.max(0, input.outstandingShortfall)

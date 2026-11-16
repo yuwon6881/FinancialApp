@@ -28,6 +28,9 @@ function asTransaction(value: unknown, fallbackId?: string): Transaction | null 
     stabilityRecoveryTopUpAmount: typeof raw.stabilityRecoveryTopUpAmount === 'number'
       ? raw.stabilityRecoveryTopUpAmount
       : null,
+    stabilityRepaymentCycles: typeof raw.stabilityRepaymentCycles === 'number'
+      ? raw.stabilityRepaymentCycles
+      : undefined,
     stabilityReloadIntent: raw.stabilityReloadIntent === 'Required' || raw.stabilityReloadIntent === 'NotRequired'
       ? raw.stabilityReloadIntent
       : undefined,

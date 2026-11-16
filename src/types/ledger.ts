@@ -10,6 +10,7 @@ export interface Transaction {
   amount: number // Positive for inflow, negative for outflow
   /** Null is legacy unknown intent; zero is ordinary income; positive is applied reimbursement. */
   stabilityRecoveryTopUpAmount?: number | null
+  stabilityRepaymentCycles?: number | null
   stabilityReloadIntent?: StabilityReloadIntent
   /** Server-derived FIFO status for a Stability drawdown. */
   stabilityReloadStatus?: StabilityReloadStatus

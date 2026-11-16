@@ -403,6 +403,9 @@ export function TransactionFormFields({
       {isStabilityReloadFormDrawdown(state) && (
         <StabilityReloadIntentCard
           state={state}
+          cycleDay={cycleDay}
+          currency={currency}
+          hideSensitive={hideSensitive}
           errors={errors}
           onSetField={onSetField}
         />

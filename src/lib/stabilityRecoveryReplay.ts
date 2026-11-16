@@ -17,6 +17,7 @@ export interface StabilityReloadMovement {
   change: number
   repayment: number
   marked: boolean
+  repaymentCycles?: number | null
 }
 
 export interface StabilityReloadPlanPoint {
@@ -67,9 +68,11 @@ export function isStabilityReloadFormDrawdown(input: {
   transactionType: string
   ledgerCategory: string
   transferSource: string
+  transferTarget?: string
 }) {
   return (input.transactionType === 'outflow' && input.ledgerCategory.toLowerCase() === 'stability') ||
-    (input.transactionType === 'transfer' && input.transferSource.toLowerCase() === 'stability')
+    (input.transactionType === 'transfer' && input.transferSource.toLowerCase() === 'stability'
+      && input.transferTarget?.toLowerCase() !== 'stability')
 }
 
 function stabilityReloadIntentLabel(intent: string | null | undefined) {
@@ -115,6 +118,7 @@ function describeReloadMovement(
         ? Math.max(0, transaction.stabilityRecoveryTopUpAmount)
         : Math.max(0, change - normalSalaryShare)
       : 0,
+    repaymentCycles: transaction.stabilityRepaymentCycles,
     marked: transaction.isAccountBalanceAdjustment !== true
       && change < 0 && normalizeReloadIntent(transaction.stabilityReloadIntent) !== 'NotRequired',
   }
@@ -254,6 +258,7 @@ export function replayStabilityReload(
             originalAmount: marked,
             remainingAmount: marked,
             date: movement.date,
+            repaymentCycles: movement.repaymentCycles,
           })
         }
       }

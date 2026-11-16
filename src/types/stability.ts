@@ -24,14 +24,16 @@ export interface StabilityReloadObligation {
   remainingAmount: number
   /** The drawdown's own date, as `yyyy-MM-dd`. */
   date?: string
+  repaymentCycles?: number | null
 }
 
 /**
- * One financial cycle's independent three-cycle Stability recovery schedule. The three cycles are
- * the ones *after* the money left; the spending cycle itself is `isDeferred`.
+ * A Stability recovery schedule for withdrawals with the same origin cycle and term.
+ * Repayment starts after the money left; the spending cycle itself is `isDeferred`.
  */
 export interface StabilityRecoveryCohort {
   originCycleKey: string
+  repaymentCycles?: number | null
   /** Earliest marked withdrawal in this cohort, as `yyyy-MM-dd`. */
   fromDate: string
   transactionCount: number
@@ -75,7 +77,7 @@ export interface StabilityRecovery {
   requiredThisCycle: number
   toppedUpThisCycle: number
   outstandingThisCycle: number
-  /** The three-cycle window has passed and money is still owed. Distinct from the final cycle. */
+  /** The repayment window has passed and money is still owed. Distinct from the final cycle. */
   isOverdue: boolean
   /**
    * Every plan that still owes money opens in a later cycle, so nothing is due now. Not the same as

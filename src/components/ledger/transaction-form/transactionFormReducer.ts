@@ -44,6 +44,7 @@ export interface TransactionFormState {
    */
   stabilityTopUpAmount: string
   /** Required only when the transaction takes money out of Stability. */
+  stabilityRepaymentCycles?: number
   stabilityReloadIntent: StabilityReloadIntent
   /** True when category was explicitly supplied by an OCR scan or AI draft. */
   categoryFromReceipt: boolean
@@ -52,8 +53,8 @@ export interface TransactionFormState {
 
 export type TransactionFormAction =
   | { type: 'OPEN_CREATE'; payload?: { defaultCategory: string; todayDate: string } }
-  | { type: 'OPEN_EDIT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket | ''; transferTarget?: TransferBucket | ''; accountId?: string | null; counterAccountId?: string | null; splitAccountIds?: Record<string, string> | null; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
-  | { type: 'OPEN_DRAFT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket | ''; transferTarget?: TransferBucket | ''; accountId?: string | null; counterAccountId?: string | null; splitAccountIds?: Record<string, string> | null; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
+  | { type: 'OPEN_EDIT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket | ''; transferTarget?: TransferBucket | ''; accountId?: string | null; counterAccountId?: string | null; splitAccountIds?: Record<string, string> | null; stabilityRecoveryTopUpAmount?: number | null; stabilityRepaymentCycles?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
+  | { type: 'OPEN_DRAFT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket | ''; transferTarget?: TransferBucket | ''; accountId?: string | null; counterAccountId?: string | null; splitAccountIds?: Record<string, string> | null; stabilityRecoveryTopUpAmount?: number | null; stabilityRepaymentCycles?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
   | { type: 'SET_FIELD'; field: keyof TransactionFormState; value: any }
   | { type: 'SET_SPLIT_ACCOUNT'; bucket: TransferBucket; accountId: string }
   | { type: 'SWAP_TRANSFER' }
@@ -131,6 +132,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         categoryFromReceipt: false,
         stabilityTopUpAccepted: false,
         stabilityTopUpAmount: '',
+        stabilityRepaymentCycles: undefined,
         stabilityReloadIntent: 'Unanswered',
         errors: {},
       }
@@ -168,6 +170,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
           ? action.payload.stabilityRecoveryTopUpAmount!.toFixed(2)
           : '',
         stabilityReloadIntent: normalizeReloadIntent(action.payload.stabilityReloadIntent),
+        stabilityRepaymentCycles: action.payload.stabilityRepaymentCycles ?? undefined,
         errors: {},
       }
     case 'SET_FIELD':
@@ -217,6 +220,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         counterAccountId: null,
         stabilityTopUpAccepted: false,
         stabilityTopUpAmount: '',
+        stabilityRepaymentCycles: undefined,
         stabilityReloadIntent: 'Unanswered',
         errors: {},
       }
@@ -271,6 +275,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         // arrives pre-accepted.
         stabilityTopUpAccepted: false,
         stabilityTopUpAmount: '',
+        stabilityRepaymentCycles: undefined,
         stabilityReloadIntent: 'Unanswered',
         errors: {},
       }

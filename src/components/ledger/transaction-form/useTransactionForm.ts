@@ -151,6 +151,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       stabilityTopUpAccepted: state.stabilityTopUpAccepted,
       stabilityTopUpAmount: state.stabilityTopUpAmount,
       stabilityReloadIntent: state.stabilityReloadIntent,
+      stabilityRepaymentCycles: state.stabilityRepaymentCycles,
     },
     (saved) => {
       dispatch({
@@ -169,6 +170,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
           counterAccountId: saved.counterAccountId,
           splitAccountIds: saved.splitAccountIds,
           stabilityReloadIntent: saved.stabilityReloadIntent,
+          stabilityRepaymentCycles: saved.stabilityRepaymentCycles,
         }
       })
       descriptionRef.current = saved.description
