@@ -57,14 +57,14 @@ test('foreign holdings read in their own currency, converted only at today’s r
   await page.goto('/investments', { waitUntil: 'domcontentloaded' })
   await waitForStableLayout(page)
 
-  const currencies = page.getByRole('region', { name: 'Each currency' })
+  const currencies = page.getByRole('list', { name: 'Each currency' })
   await expect(currencies).toBeVisible()
   await expect(currencies).toContainText('1 USD = 4.5 MYR today')
   await expect(currencies).toContainText(/\$\s?240\.00/)
   await expect(currencies).toContainText('+10.0% on paper')
   await expect(page.getByText('From currency')).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await expect(currencies).toHaveScreenshot('investment-currencies.png')
+  await expect(page.getByRole('region', { name: 'Investment summary' })).toHaveScreenshot('investment-summary.png')
 
   // The fund's sheet leads with its own currency and says the exchange rate never moves it.
   await page.getByRole('button', { name: /VOO/ }).first().click()

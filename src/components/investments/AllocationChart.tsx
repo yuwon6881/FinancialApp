@@ -45,6 +45,10 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
     return [...map.values()].sort((a, b) => b.value - a.value)
   }, [portfolio.holdings, portfolio.cashBalances, mode, sleeveIndex])
   const total = groups.reduce((sum, group) => sum + group.value, 0)
+  // A holding without a price, or cash without today's rate, cannot be placed. The chart still
+  // shows what can be, but never calls that the total: it says how much is left out.
+  const leftOut = portfolio.holdings.filter(holding => holding.valueApp === undefined).length
+    + portfolio.cashBalances.filter(balance => balance.amountApp === undefined && balance.amount !== 0).length
   const colors = [
     'var(--ledger-purple-500)',
     'var(--ledger-sky-500)',
@@ -105,7 +109,7 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
             key={mode}
             slices={slices}
             ariaLabel={groups.map(group => `${group.label} ${total ? (group.value / total * 100).toFixed(1) : 0}%`).join(', ')}
-            centerLabel="Total"
+            centerLabel={leftOut > 0 ? 'Known so far' : 'Total'}
             centerValue={money(total, portfolio.appCurrency)}
             formatValue={value => money(value, portfolio.appCurrency)}
             masked={masked}
@@ -120,6 +124,11 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
           />
         ) : <p className="w-full rounded-control inset-group px-4 py-6 text-center text-label text-muted-foreground">Add prices to see what you hold.</p>}
       </div>
+      {leftOut > 0 && groups.length > 0 && total > 0 && (
+        <p className="mt-3 text-caption text-muted-foreground">
+          {leftOut === 1 ? 'One holding or cash balance is' : `${leftOut} holdings or cash balances are`} left out until a price or today’s exchange rate arrives, so these shares are of what is known so far.
+        </p>
+      )}
       {/* The slice's contents are listed here rather than only filtering the table
           further down the page: that table is off-screen on a phone, so a click
           previously looked like it had done nothing at all. */}

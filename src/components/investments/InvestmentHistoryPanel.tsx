@@ -55,7 +55,7 @@ export function InvestmentHistoryPanel({ instruments, masked, refreshToken }: {
       <h2 id="investment-history-title" className="text-section text-foreground">Year by year</h2>
       <p className="mt-1 text-caption text-muted-foreground">
         {asOf
-          ? `Settled months up to the end of ${monthLabel(asOf)}; Portfolio shows today’s prices. Money you add is not counted as growth.`
+          ? `Settled months up to the end of ${monthLabel(asOf)}; Portfolio shows today’s prices. Money you add is not counted as growth. Anything held in another currency is converted at today’s exchange rate, so past totals and returns are weighted by today’s rates rather than the figures you saw at the time.`
           : 'Each month appears about a week after it ends, once its closing prices are final.'}
       </p>
 
@@ -84,9 +84,10 @@ export function InvestmentHistoryPanel({ instruments, masked, refreshToken }: {
           </dl>
 
           <div aria-hidden="true" className={cn('mt-5 flex flex-wrap gap-4 text-caption font-medium text-muted-foreground', masked && 'invisible')}>
-            <span><i className="mr-1 inline-block h-1.5 w-3 rounded-full align-middle" style={{ backgroundColor: 'var(--ledger-pending-500)' }} />Added</span>
-            <span><i className="mr-1 inline-block h-1.5 w-3 rounded-full bg-emerald-500 align-middle" />Market growth</span>
-            <span><i className="mr-1 inline-block h-1.5 w-3 rounded-full bg-red-500 align-middle" />Market loss</span>
+            <span><i className="mr-1 inline-block h-1.5 w-3 rounded-full align-middle" style={{ backgroundColor: 'var(--ledger-pending-500)' }} />Net put in</span>
+            <span><i className="mr-1 inline-block h-1.5 w-3 rounded-full align-middle" style={{ backgroundColor: 'var(--ledger-neutral-500)' }} />Net taken out</span>
+            <span><i className="mr-1 inline-block h-1.5 w-3 rounded-full bg-emerald-500 align-middle" />Growth</span>
+            <span><i className="mr-1 inline-block h-1.5 w-3 rounded-full bg-red-500 align-middle" />Loss</span>
           </div>
           <ul className="mt-2 divide-y divide-border/60" aria-label="Each year">
             {shownYears.map(year => (
@@ -146,18 +147,22 @@ function YearRow({ year, firstMonth, scale, masked, money, signedMoney, percent,
   masked: boolean
 }) {
   const added = Math.abs(year.netContributions ?? 0) / scale * 100
+  // A year that took more out than it put in is drawn in its own colour, never as money added.
+  const tookOut = (year.netContributions ?? 0) < 0
+  const flowLabel = tookOut ? 'Net taken out' : 'Net put in'
+  const flow = year.netContributions === undefined ? money(undefined) : money(Math.abs(year.netContributions))
   const grown = year.growth === undefined ? 0 : Math.abs(year.growth) / scale * 100
   const label = yearLabel(year, firstMonth)
   return (
     <details className="group">
       <summary
-        aria-label={`${label}: added ${money(year.netContributions)}, growth ${signedMoney(year.growth)}, return ${percent(year.returnPercent)}`}
+        aria-label={`${label}: ${flowLabel.toLowerCase()} ${flow}, growth or loss ${signedMoney(year.growth)}, return ${percent(year.returnPercent)}`}
         className="grid min-h-14 cursor-pointer select-none grid-cols-[minmax(0,1fr)_auto_1rem] items-center gap-x-3 gap-y-1.5 rounded-control px-1 py-3 outline-none transition-colors hover:bg-surface-2/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden"
       >
         <span className="min-w-0">
           <span className="block text-label font-semibold text-foreground">{label}</span>
           <span className="block text-caption text-muted-foreground">
-            Added {money(year.netContributions)} · ended at {money(year.closingValue)}
+            {flowLabel} {flow} · ended at {money(year.closingValue)}
           </span>
         </span>
         <span className="text-right">
@@ -165,9 +170,10 @@ function YearRow({ year, firstMonth, scale, masked, money, signedMoney, percent,
           <span className={cn('block text-caption tabular-nums', masked ? 'text-muted-foreground' : tone(year.growth, MONEY_DIGITS))}>{signedMoney(year.growth)}</span>
         </span>
         <ChevronDown className="size-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" aria-hidden="true" />
-        {/* What you added beside what the market did, on one scale across every year. */}
+        {/* Money in or out beside the growth or loss (prices, dividends, fees and the exchange
+            difference of any conversion), on one scale across every year. */}
         <span aria-hidden="true" className={cn('col-span-2 flex h-1.5 gap-0.5 overflow-hidden rounded-full bg-foreground/8 dark:bg-foreground/10', masked && 'invisible')}>
-          <span className="h-full rounded-full" style={{ width: `${added}%`, backgroundColor: 'var(--ledger-pending-500)' }} />
+          <span className="h-full rounded-full" style={{ width: `${added}%`, backgroundColor: tookOut ? 'var(--ledger-neutral-500)' : 'var(--ledger-pending-500)' }} />
           {year.growth !== undefined && (
             <span className={cn('h-full rounded-full', year.growth >= 0 ? 'bg-emerald-500' : 'bg-red-500')} style={{ width: `${grown}%` }} />
           )}

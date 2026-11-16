@@ -45,16 +45,29 @@ describe('InvestmentHistoryPanel', () => {
     render(<InvestmentHistoryPanel instruments={[]} masked={false} refreshToken={0} />)
 
     expect(await screen.findByText('Jan–Oct 2031')).toBeTruthy()
-    expect(screen.getByText('Settled months up to the end of Oct 2031; Portfolio shows today’s prices. Money you add is not counted as growth.')).toBeTruthy()
+    expect(screen.getByText('Settled months up to the end of Oct 2031; Portfolio shows today’s prices. Money you add is not counted as growth. Anything held in another currency is converted at today’s exchange rate, so past totals and returns are weighted by today’s rates rather than the figures you saw at the time.')).toBeTruthy()
     expect(screen.getByText('Yearly return')).toBeTruthy()
     expect(screen.getByText('+6.4%')).toBeTruthy()
     expect(screen.getByText('$12,000.00')).toBeTruthy()
-    expect(screen.getByLabelText(/^Jan–Oct 2031: added \$6,000\.00, growth Unknown, return Unknown$/)).toBeTruthy()
-    expect(screen.getByLabelText(/^2030: added \$6,000\.00, growth \+\$200\.00, return \+3\.1%$/)).toBeTruthy()
+    expect(screen.getByLabelText(/^Jan–Oct 2031: net put in \$6,000\.00, growth or loss Unknown, return Unknown$/)).toBeTruthy()
+    expect(screen.getByLabelText(/^2030: net put in \$6,000\.00, growth or loss \+\$200\.00, return \+3\.1%$/)).toBeTruthy()
     expect(screen.getByText('No price for VWRA on 2031-10-31.')).toBeTruthy()
     expect(screen.getByText('US shares')).toBeTruthy()
     expect(screen.getByText('Not sorted yet')).toBeTruthy()
     expect(screen.getByText(/Some months are missing a price, or today’s exchange rate has not arrived/)).toBeTruthy()
+  })
+
+  it('names a year that took more out than it put in, instead of calling it money added', async () => {
+    vi.spyOn(api, 'readCachedInvestmentHistory').mockReturnValue(null)
+    vi.spyOn(api, 'fetchInvestmentHistory').mockResolvedValue({
+      ...history,
+      years: [{ ...history.years[1], netContributions: -500, closingValue: 5900, growth: 200 }],
+    })
+
+    render(<InvestmentHistoryPanel instruments={[]} masked={false} refreshToken={0} />)
+
+    expect(await screen.findByLabelText(/^2030: net taken out \$500\.00, growth or loss \+\$200\.00/)).toBeTruthy()
+    expect(screen.getByText('Net taken out')).toBeTruthy()
   })
 
   it('hides every figure, including accessible names, while masked', async () => {
@@ -65,7 +78,7 @@ describe('InvestmentHistoryPanel', () => {
 
     await screen.findByText('2030')
     expect(container.textContent).not.toMatch(/\$|%/)
-    expect(screen.getByLabelText('2030: added ••, growth ••, return ••')).toBeTruthy()
+    expect(screen.getByLabelText('2030: net put in ••, growth or loss ••, return ••')).toBeTruthy()
   })
 
   it('folds years beyond the latest five so a long history stays short', async () => {

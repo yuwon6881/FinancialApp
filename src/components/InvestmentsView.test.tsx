@@ -503,8 +503,9 @@ describe('InvestmentsView money-sent-to-broker card', () => {
     expect(await screen.findByText('Waiting to be sent')).toBeTruthy()
     expect(screen.getByText('$155.29')).toBeTruthy()
     expect(screen.queryByText('Not yet sent')).toBeNull()
-    expect(screen.getByText('Share sent')).toBeTruthy()
-    expect(screen.getByText('95%')).toBeTruthy()
+    expect(screen.getByText('Sent to broker')).toBeTruthy()
+    // The share sent said the same thing as the waiting amount, so it is gone.
+    expect(screen.queryByText('Share sent')).toBeNull()
   })
 
   it('names the overshoot when the broker received more than the budget earmarked', async () => {
@@ -519,7 +520,7 @@ describe('InvestmentsView money-sent-to-broker card', () => {
     expect(screen.getByText('$250.00')).toBeTruthy()
   })
 
-  it('never reports a negative share-sent percentage after withdrawals', async () => {
+  it('counts money withdrawn from the broker as waiting to be sent again', async () => {
     vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(withSummary({
       growthLedgerBalance: 1000,
       growthContributions: 1000,
@@ -527,8 +528,8 @@ describe('InvestmentsView money-sent-to-broker card', () => {
     }))
     renderView()
 
-    expect(await screen.findByText('Share sent')).toBeTruthy()
-    expect(screen.getByText('0%')).toBeTruthy()
+    expect(await screen.findByText('Waiting to be sent')).toBeTruthy()
+    expect(screen.getByText('$1,250.00')).toBeTruthy()
   })
 
   it('blocks record controls but keeps price refresh available in sensitive mode', async () => {
@@ -563,9 +564,10 @@ describe('InvestmentsView money-sent-to-broker card', () => {
     }))
     renderView()
 
-    expect(await screen.findByText('Latest total')).toBeTruthy()
-    expect(screen.getByText('Income and latest move')).toBeTruthy()
-    expect(screen.getByText('Latest value move')).toBeTruthy()
+    expect(await screen.findByText(/latest move/)).toBeTruthy()
+    // Each figure once: the move lives in the headline, not again in the breakdown.
+    expect(screen.queryByText('Latest value move')).toBeNull()
+    expect(screen.getByText('Earned so far')).toBeTruthy()
     expect(screen.queryByText('Total today')).toBeNull()
     expect(screen.queryByText('Change today')).toBeNull()
   })
@@ -589,12 +591,28 @@ describe('InvestmentsView money-sent-to-broker card', () => {
     vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(portfolio)
     renderView()
 
-    const list = await screen.findByRole('region', { name: 'Each currency' })
+    const list = await screen.findByRole('list', { name: 'Each currency' })
     expect(list.textContent).toContain('1 SGD = 0.74 USD today')
     expect(list.textContent).toContain('+11.1% on paper')
-    expect(list.textContent).toContain('Your currency')
+    // Only currencies besides the app currency get a line; USD is already the total.
+    expect(list.textContent).toContain('In SGD')
+    expect(list.textContent).not.toContain('In USD')
     // The split of a day's move into price and currency is gone: rates never move a gain.
     expect(screen.queryByText('From currency')).toBeNull()
+  })
+
+  it('calls a partly priced allocation what is known so far, never the total', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue({
+      ...tradablePortfolio,
+      holdings: [
+        { accountId: 'a1', accountName: 'Broker', instrumentId: 'i1', symbol: 'VOO', name: 'Vanguard S&P 500', type: 'ETF', currency: 'USD', units: 1, averageCostNative: 100, latestPriceNative: 110, valueNative: 110, valueApp: 110, fxIncomplete: false },
+        { accountId: 'a1', accountName: 'Broker', instrumentId: 'i2', symbol: 'BND', name: 'Bonds', type: 'ETF', currency: 'USD', units: 1, averageCostNative: 100, fxIncomplete: false },
+      ],
+    } as InvestmentPortfolio)
+    renderView()
+
+    expect(await screen.findByText(/One holding or cash balance is left out until a price or today’s exchange rate arrives/)).toBeTruthy()
+    expect(screen.getByText('Known so far')).toBeTruthy()
   })
 
   it('leaves out the currency list when everything is in the app currency', async () => {
@@ -608,8 +626,8 @@ describe('InvestmentsView money-sent-to-broker card', () => {
     }))
     renderView()
 
-    expect(await screen.findByText('Latest value move')).toBeTruthy()
-    expect(screen.queryByRole('region', { name: 'Each currency' })).toBeNull()
+    expect(await screen.findByText('Earned so far')).toBeTruthy()
+    expect(screen.queryByRole('list', { name: 'Each currency' })).toBeNull()
   })
 
   it('switches panel from cash to activity when a trade draft arrives', async () => {

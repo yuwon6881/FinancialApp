@@ -23,9 +23,10 @@ const negativeTone = 'text-red-600 dark:text-red-400'
 
 /**
  * The investments hero: what it is worth as the page's one large figure, the gain and the latest
- * move as one quiet line under it, and three facts in an aligned strip. Every other figure lives in
- * the breakdown below -- always open where there is room for it, one tap away on a phone, where
- * four groups of label/value rows used to push the actions a full screen down.
+ * move as one quiet line under it, a line per foreign currency in its own terms, and three facts in
+ * an aligned strip. Each figure appears once: the breakdown below holds only what the hero does not
+ * -- money in, and what has already been earned -- always open where there is room, one tap away on
+ * a phone.
  */
 export const SummaryCards = ({ portfolio, masked, actions }: {
   portfolio: InvestmentPortfolio
@@ -58,21 +59,18 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
   const earmarked = portfolio.summary.growthContributions ?? 0
   const sentToBroker = portfolio.summary.netDeposits
   const undeployed = sentToBroker === undefined ? undefined : earmarked - sentToBroker
-  const deployedPercent = sentToBroker === undefined || earmarked <= 0
-    ? undefined
-    : Math.max(0, Math.min(999, sentToBroker / earmarked * 100))
 
   const groups: Array<{ label: string; hint: string; rows: SummaryMetric[] }> = [
     {
-      label: 'Money sent to broker',
-      hint: 'Tracks money added to and withdrawn from your broker accounts.',
+      label: 'Money in',
+      hint: 'What your budget set aside for investing, and how much of it has reached your broker.',
       rows: [
-        { label: 'Deposits minus withdrawals', value: format(sentToBroker), hint: 'Everything you sent to your broker accounts, less what you took back out.', color: sentToBroker === undefined ? 'text-muted-foreground' : undefined },
         {
           label: 'Set aside to invest',
           value: format(earmarked),
           hint: 'Total your budget has earmarked for investing so far.',
         },
+        { label: 'Sent to broker', value: format(sentToBroker), hint: 'Deposits into your broker accounts, less withdrawals. Exchanging currency inside the broker sends nothing.', color: sentToBroker === undefined ? 'text-muted-foreground' : undefined },
         undeployed !== undefined && undeployed < -0.005
           ? {
               label: 'More sent than set aside',
@@ -86,43 +84,20 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
               hint: 'Earmarked money your broker has not received yet: what you set aside minus what you sent.',
               color: (undeployed ?? 0) > 0.005 ? 'text-foreground' : positiveTone,
             },
-        {
-          label: 'Share sent',
-          value: deployedPercent === undefined
-            ? '—'
-            : masked ? '••••' : `${deployedPercent.toFixed(0)}%`,
-          hint: 'How much of the money set aside has reached your broker.',
-          color: deployedPercent === undefined || deployedPercent >= 95 ? 'text-foreground' : 'text-amber-700 dark:text-amber-300',
-        },
       ],
     },
     {
-      label: 'Profit and loss',
-      hint: 'Your gain or loss so far: what is still on paper, plus what you have already banked.',
+      label: 'Earned so far',
+      hint: 'What your investments have already paid you or locked in, and their average yearly return.',
       rows: [
-        {
-          label: 'On paper',
-          value: unrealised === undefined || masked
-            ? signed(unrealised)
-            : `${signed(unrealised)} · ${(percent ?? 0) > 0 ? '+' : ''}${(percent ?? 0).toFixed(1)}%`,
-          hint: 'Profit or loss on what you still hold, at the latest saved prices.',
-          color: tone(unrealised),
-        },
         { label: 'Already banked', value: signed(realised), hint: 'Profit or loss locked in on investments you have sold, after fees and taxes.', color: tone(realised) },
+        { label: 'Dividends received', value: format(portfolio.summary.netDividends), hint: 'Payouts your investments have paid you, after any tax withheld.' },
         {
           label: 'Yearly return',
           value: annualReturn === undefined ? 'Not available yet' : masked ? '••••' : `${annualReturn > 0 ? '+' : ''}${(annualReturn * 100).toFixed(1)}% a year`,
           hint: 'Average yearly return, adjusted for when each deposit went in.',
           color: tone(annualReturn),
         },
-      ],
-    },
-    {
-      label: 'Income and latest move',
-      hint: 'Dividends received, plus the move between the two latest saved prices. It may be from an earlier market day.',
-      rows: [
-        { label: 'Latest value move', value: signed(daily), hint: 'The move between your funds’ two latest saved prices. Exchange rates never move it.', color: tone(daily) },
-        { label: 'Dividends received', value: format(portfolio.summary.netDividends), hint: 'Payouts your investments have paid you, after any tax withheld.' },
       ],
     },
   ]
@@ -142,7 +117,7 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
       <div className="p-5 sm:p-6">
         <div className="flex items-center gap-1">
           <h2 className="text-label text-muted-foreground">What it is worth</h2>
-          <InfoHint label="What it is worth" text={`Latest saved value of your investments and broker cash in ${currency}. Anything held in another currency is converted at today’s rate, so gains show what the markets did, never the exchange rate.`} />
+          <InfoHint label="What it is worth" text={`Latest saved value of your investments and broker cash in ${currency}. Anything held in another currency is converted at today’s rate, so gains show what the markets did, never the exchange rate; its line below shows it in that currency itself. The latest move is between your funds’ two latest saved prices, which may be from an earlier market day.`} />
         </div>
         <div data-testid="investment-total" className="mt-1 min-w-0">
           {totalValue === undefined
@@ -150,8 +125,7 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
             : <AmountText animate value={totalValue} currency={currency} isMasked={masked} className="text-display text-foreground @xs:text-hero" />}
         </div>
         <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-label text-muted-foreground">
-          <span>Latest total</span>
-          {/* Unknown figures stay in the breakdown; the headline line only carries real ones. */}
+          {/* Only known figures: an unknown one would read as a claim. */}
           {unrealised !== undefined && (
             <span>
               <span className={cn('font-semibold tabular-nums', masked ? 'text-foreground' : tone(unrealised))}>
@@ -164,6 +138,7 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
           )}
           {totalValue === undefined && <span>Waiting on prices or today’s exchange rate</span>}
         </p>
+        <ForeignCurrencies currencies={portfolio.summary.currencies ?? []} appCurrency={currency} masked={masked} tone={tone} />
 
         <dl className="mt-5 grid grid-cols-1 divide-y divide-foreground/10 rounded-control inset-group px-3.5 @md:grid-cols-3 @md:divide-x @md:divide-y-0 @md:px-0 @md:py-3">
           {facts.map(fact => (
@@ -181,7 +156,6 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
           ))}
         </dl>
 
-        <CurrencyBreakdown currencies={portfolio.summary.currencies ?? []} appCurrency={currency} masked={masked} tone={tone} />
       </div>
 
       {/* Below the expanded tier the breakdown is one tap away; at it there is room to leave it open. */}
@@ -198,7 +172,7 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
       <div
         id={breakdownId}
         className={cn(
-          'gap-x-8 gap-y-5 border-t border-border/60 px-5 py-4 sm:px-6 lg:grid lg:grid-cols-3 lg:py-5',
+          'gap-x-10 gap-y-5 border-t border-border/60 px-5 py-4 sm:px-6 lg:grid lg:grid-cols-2 lg:py-5',
           breakdownOpen ? 'grid' : 'hidden',
         )}
       >
@@ -229,57 +203,47 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
 }
 
 /**
- * Each currency's part in its own currency, with no conversion at all: how the markets priced in
- * that currency have treated you. Shown only when something is held outside the app currency.
+ * One line per currency held besides the app currency, in that currency's own terms and never
+ * converted: how that market has treated you, with today's rate that turns it into the total above.
  */
-function CurrencyBreakdown({ currencies, appCurrency, masked, tone }: {
+function ForeignCurrencies({ currencies, appCurrency, masked, tone }: {
   currencies: InvestmentCurrencySummary[]
   appCurrency: string
   masked: boolean
   tone: (value?: number) => string
 }) {
   const home = appCurrency.toUpperCase()
-  if (!currencies.some(value => value.currency.toUpperCase() !== home)) return null
-  const hint = 'Each currency’s own figures, never converted, so an exchange rate cannot make a market look better or worse than it did.'
+  const foreign = currencies.filter(value => value.currency.toUpperCase() !== home)
+  if (foreign.length === 0) return null
+  const rateFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 })
   return (
-    <section aria-label="Each currency" className="mt-5">
-      <div className="flex items-center gap-1">
-        <h3 className="text-label font-medium text-foreground">In each currency</h3>
-        <InfoHint label="In each currency" text={hint} />
-      </div>
-      <ul className="mt-1 divide-y divide-border/50">
-        {currencies.map(item => {
-          const gain = item.unrealisedProfitLoss
-          const percent = item.unrealisedPercent
-          const rate = item.currency.toUpperCase() === home
-            ? 'Your currency'
-            : item.rateToAppCurrency === undefined
-              ? 'No rate today'
-              : `1 ${item.currency} = ${new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 }).format(item.rateToAppCurrency)} ${home} today`
-          return (
-            <li key={item.currency} className="flex min-h-11 items-center justify-between gap-3 py-1">
-              <div className="min-w-0">
-                <p className="text-label font-semibold text-foreground">{item.currency}</p>
-                <p className="truncate text-caption text-muted-foreground">{rate}</p>
-              </div>
-              <div className="min-w-0 shrink-0 text-right">
-                <p className="text-label font-semibold tabular-nums text-foreground">
-                  {item.totalValue === undefined
-                    ? <span className="font-normal text-muted-foreground">No price yet</span>
-                    : <AmountText value={item.totalValue} currency={item.currency} isMasked={masked} />}
-                </p>
-                {gain !== undefined && (
-                  <p className={cn('text-caption tabular-nums', masked ? 'text-muted-foreground' : tone(gain))}>
-                    {masked
-                      ? '•••• on paper'
-                      : `${gain > 0 ? '+' : ''}${money(gain, item.currency)}${percent === undefined ? '' : ` · ${percent > 0 ? '+' : ''}${percent.toFixed(1)}%`} on paper`}
-                  </p>
-                )}
-              </div>
-            </li>
-          )
-        })}
-      </ul>
-    </section>
+    <ul aria-label="Each currency" className="mt-1.5 space-y-1 text-label text-muted-foreground">
+      {foreign.map(item => {
+        const gain = item.unrealisedProfitLoss
+        const percent = item.unrealisedPercent
+        return (
+          <li key={item.currency} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+            <span>
+              In {item.currency}{' '}
+              <span className="font-semibold tabular-nums text-foreground">
+                {item.totalValue === undefined ? 'no price yet' : masked ? '••••' : money(item.totalValue, item.currency)}
+              </span>
+            </span>
+            {gain !== undefined && (
+              <span>
+                <span className={cn('font-semibold tabular-nums', masked ? 'text-foreground' : tone(gain))}>
+                  {masked ? '••••' : `${gain > 0 ? '+' : ''}${money(gain, item.currency)}${percent === undefined ? '' : ` · ${percent > 0 ? '+' : ''}${percent.toFixed(1)}%`}`}
+                </span> on paper
+              </span>
+            )}
+            <span>
+              {item.rateToAppCurrency === undefined
+                ? `No ${item.currency}/${home} rate today`
+                : `1 ${item.currency} = ${rateFormat.format(item.rateToAppCurrency)} ${home} today`}
+            </span>
+          </li>
+        )
+      })}
+    </ul>
   )
 }

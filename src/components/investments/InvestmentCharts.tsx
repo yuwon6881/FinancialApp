@@ -34,6 +34,13 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
   const line = (key: 'totalValue' | 'netDeposits') =>
     polylinePoints(portfolio.chart.map(point => point[key]), geometry)
   const latest = portfolio.chart.at(-1)
+  // Any currency ever held, not just today's: a closed foreign position still shapes past points.
+  const home = portfolio.appCurrency.toUpperCase()
+  const heldAbroad = [
+    ...portfolio.instruments.map(value => value.currency),
+    ...portfolio.cashBalances.map(value => value.currency),
+    ...(portfolio.summary.currencies ?? []).map(value => value.currency),
+  ].some(value => value.toUpperCase() !== home)
   const hasAnyMarketValue = portfolio.chart.some(point => point.totalValue !== undefined)
   const selectNearest = (clientX: number) => {
     if (!svgRef.current || portfolio.chart.length === 0 || masked) return
@@ -42,7 +49,7 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
     setHoveredIndex(Math.max(0, Math.min(portfolio.chart.length - 1, index)))
   }
   const summary = latest
-    ? `Latest total portfolio value: ${masked || latest.totalValue === undefined ? 'hidden or incomplete' : money(latest.totalValue, portfolio.appCurrency)}; net deposits ${masked || latest.netDeposits === undefined ? 'hidden or incomplete' : money(latest.netDeposits, portfolio.appCurrency)}.`
+    ? `Latest total portfolio value: ${masked || latest.totalValue === undefined ? 'hidden or incomplete' : money(latest.totalValue, portfolio.appCurrency)}; money put in ${masked || latest.netDeposits === undefined ? 'hidden or incomplete' : money(latest.netDeposits, portfolio.appCurrency)}.`
     : 'No chart data is available.'
 
   return (
@@ -121,7 +128,7 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
                   {portfolio.chart[hoveredIndex].totalValue === undefined ? 'Incomplete' : money(portfolio.chart[hoveredIndex].totalValue!, portfolio.appCurrency)}
                 </span>
                 <span className="block text-caption text-muted-foreground">
-                  Deposits {portfolio.chart[hoveredIndex].netDeposits === undefined ? 'incomplete' : money(portfolio.chart[hoveredIndex].netDeposits!, portfolio.appCurrency)}
+                  Put in {portfolio.chart[hoveredIndex].netDeposits === undefined ? 'incomplete' : money(portfolio.chart[hoveredIndex].netDeposits!, portfolio.appCurrency)}
                 </span>
               </div>
             )}
@@ -130,12 +137,15 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
       )}
       <div className="mt-3 flex flex-wrap gap-4 text-caption font-medium text-muted-foreground">
         <span><i className="mr-1 inline-block size-2 rounded-full" style={{ backgroundColor: 'var(--ledger-purple-500)' }} /> Total value</span>
-        <span><i className="mr-1 inline-block w-4 border-t-2 border-dashed border-amber-500 align-middle" /> Net deposits</span>
+        <span><i className="mr-1 inline-block w-4 border-t-2 border-dashed border-amber-500 align-middle" /> Money put in</span>
       </div>
+      {/* Every point uses today's rate (constant currency), so a past point is not the figure
+          seen on that day. Said only when something has been held in another currency. */}
+      {heldAbroad && <p className="mt-1.5 text-caption text-muted-foreground">Past values are converted at today’s exchange rates. The line also reflects money added and withdrawn.</p>}
       <div className="sr-only">
         <table>
           <caption>Portfolio value chart data</caption>
-          <thead><tr><th>Date</th><th>Total value</th><th>Net deposits</th></tr></thead>
+          <thead><tr><th>Date</th><th>Total value</th><th>Money put in</th></tr></thead>
           <tbody>{portfolio.chart.map(point => <tr key={point.date}><td>{point.date}</td><td>{masked ? 'Hidden' : point.totalValue}</td><td>{masked ? 'Hidden' : point.netDeposits}</td></tr>)}</tbody>
         </table>
       </div>
