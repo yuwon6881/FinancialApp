@@ -211,16 +211,13 @@ export function AuthenticatedTabContent({
     </div>
   )
 
-  // The section row sits outside the keyed page: switching Accounts to Investments keeps the row
-  // mounted, so its selection pill slides across instead of the whole row being torn down and
-  // faded back in with the next page. Only the content under it enters. The same holds while a
-  // view's chunk is still downloading: the boundary sits under the row, because one above it would
-  // swap the row for the page skeleton on a first visit and the control just pressed would vanish.
+  // Keep the section row outside the keyed page and the loading boundary so its selection pill
+  // can follow navigation while the new view downloads.
   return (
     <div className="w-full">
       {pageBar}
     <Suspense fallback={<ContentViewFallback tab={prefs.activeTab} />}>
-    <div key={prefs.activeTab === 'recurring' ? `recurring-${sectionId}` : prefs.activeTab} className="w-full view-enter">
+    <div key={prefs.activeTab === 'recurring' ? `recurring-${sectionId}` : prefs.activeTab} className="w-full">
       {prefs.activeTab === 'dashboard' && (
         <DashboardView
           dashboardData={todayDashboardData}

@@ -87,7 +87,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
   const showPlan = part === 'plan'
   const showPreferences = part === 'preferences'
   return (
-    <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className={cn('grid w-full grid-cols-1 gap-6 animate-in fade-in duration-200', showPreferences && 'min-[1280px]:grid-cols-2 min-[1280px]:items-start')}>
+    <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className={cn('grid w-full grid-cols-1 gap-6', showPreferences && 'min-[1280px]:grid-cols-2 min-[1280px]:items-start')}>
       {showPlan && (
         <AllocationPlan
           view={view}

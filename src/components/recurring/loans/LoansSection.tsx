@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { m, useReducedMotion } from 'framer-motion'
-import { Landmark, Plus, RefreshCw } from 'lucide-react'
+import { Landmark, Plus } from 'lucide-react'
 import type { LedgerAccount, Loan, RecurringPayment } from '../../../types'
 import { Button } from '../../ui/Button'
 import { LoanCard } from './LoanCard'
@@ -12,7 +11,7 @@ import { RecurringFilterBar } from '../RecurringFilterBar'
 import { InfoHint } from '../../ui/InfoHint'
 import type { LoanLoadStatus } from '../../../app/financialData/useLoanData'
 import { useHighlightedElement } from '../../ui/useHighlightedElement'
-import { listContainerVariants, listItemVariants } from '../../../lib/animations'
+import { LoanCardsSkeleton } from '../../ui/skeletons/FeatureSkeletons'
 import { DataTablePagination } from '../../ui/DataTable'
 import { useClientPagination } from '../../ui/useClientPagination'
 import { EmptyState } from '../../ui/EmptyState'
@@ -84,7 +83,6 @@ export function LoansSection({
     }
   }
 
-  const reduceMotion = useReducedMotion()
   const view = useLoansView(loans, payments, activeSyncIds)
   const highlightedIndex = highlightedLoanId
     ? view.filteredAndSortedLoans.findIndex(loan => loan.id === highlightedLoanId)
@@ -138,11 +136,8 @@ export function LoansSection({
         />
       )}
 
-      {loadStatus === 'loading' && loans.length === 0 ? (
-        <div className="rounded-control bg-inset p-8 text-center" aria-busy="true">
-          <RefreshCw className="mx-auto size-5 animate-spin text-muted-foreground" aria-hidden="true" />
-          <p className="mt-2 text-xs font-medium text-muted-foreground">Loading loans…</p>
-        </div>
+      {(loadStatus === 'idle' || loadStatus === 'loading') && loans.length === 0 ? (
+        <LoanCardsSkeleton />
       ) : loadStatus === 'error' && loans.length === 0 ? (
         <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-5 text-center text-xs text-destructive">
           <p className="font-semibold">{navigator.onLine === false ? 'Loans are not available offline until loaded once.' : 'Could not load loans.'}</p>
@@ -165,14 +160,9 @@ export function LoansSection({
         <EmptyState density="compact" className="rounded-2xl p-6" title="No loans match the selected filters." />
       ) : (
         <div className="space-y-4 w-full min-w-0 max-w-full">
-        <m.div
-          initial={reduceMotion ? false : 'hidden'}
-          animate="show"
-          variants={listContainerVariants}
-          className="grid grid-cols-1 gap-4 2xl:grid-cols-2 w-full min-w-0 max-w-full"
-        >
+        <div className="grid w-full min-w-0 grid-cols-1 gap-4 2xl:grid-cols-2">
           {visibleLoans.map(loan => (
-            <m.div key={loan.id} variants={listItemVariants} className="w-full min-w-0">
+            <div key={loan.id} className="w-full min-w-0">
               <LoanCard
                 loan={loan}
                 hideSensitive={hideSensitive}
@@ -186,9 +176,9 @@ export function LoansSection({
                   ? () => { void onUndoRepayment(loan.settlementActionId!, loan.id) }
                   : undefined}
               />
-            </m.div>
+            </div>
           ))}
-        </m.div>
+        </div>
         {view.filteredAndSortedLoans.length > pagination.pageSize && (
           <DataTablePagination
             centerOnMobile

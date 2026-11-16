@@ -324,7 +324,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           columns still line up; open, only the column holding the open panel grows. Sign-in (devices,
           password) reads first, then the second factors. */}
       {activeTab === 'security' && (
-        <div id="settings-panel-security" role="tabpanel" aria-labelledby="settings-tab-security" className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start animate-in fade-in duration-200">
+        <div id="settings-panel-security" role="tabpanel" aria-labelledby="settings-tab-security" className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
           <div className="flex min-w-0 flex-col gap-6">
             <ActiveDevicesSection />
             <ChangePasswordSection hideSensitive={hideSensitive} />

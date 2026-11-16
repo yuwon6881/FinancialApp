@@ -346,7 +346,7 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
       />
 
       {isSwitchingCycle ? (
-        <CycleSkeleton variant="wishlist" />
+        <CycleSkeleton variant="wishlist" goalsTab={activeTab} showEssentialsPool={activeTab === 'commitments' && essentialsPool.activeGoals.length > 0} />
       ) : activeTab === 'commitments' ? (
         <div id="commitments-rewards-panel-commitments" role="tabpanel" aria-labelledby="commitments-rewards-tab-commitments" className={PANEL_GRID}>
           <PoolsPanel className={POOLS_COLUMN}>

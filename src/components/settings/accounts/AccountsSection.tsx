@@ -277,7 +277,7 @@ export function AccountsSection({
       <section
         id="settings-panel-accounts"
         aria-labelledby="accounts-region-title"
-        className="space-y-6 animate-in fade-in duration-200"
+        className="space-y-6"
       >
         <h3 id="accounts-region-title" className="sr-only">Accounts</h3>
         {/* What all the accounts add up to, card balances already netted off, then how that total

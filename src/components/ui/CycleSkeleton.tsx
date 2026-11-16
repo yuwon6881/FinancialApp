@@ -3,67 +3,45 @@ import { cn } from '../../lib/utils'
 import { Skeleton } from './Skeleton'
 import {
   CardSkeleton,
-  PlainHeaderSkeleton,
-  SettingsHeaderSkeleton,
   ReportsHeaderSkeleton,
-  WishlistHeaderSkeleton,
   RewardsPoolSkeleton,
   RecurringHeaderSkeleton,
   BillDayStripSkeleton,
   ReportBucketsSkeleton,
   GoalsSectionSkeleton,
-  InvestmentSummarySkeleton,
   CycleCalendarSkeleton,
+  LoansSectionSkeleton,
 } from './skeletons/FeatureSkeletons'
 import { panelClass } from './panelStyles'
+import { PageHeader } from './PageHeader'
+import { AccountsPageSkeleton, BudgetSkeleton, SettingsPageSkeleton } from './skeletons/SettingsPageSkeletons'
+import { InvestmentPageSkeleton, VaultPageSkeleton } from './skeletons/WealthPageSkeletons'
 
 const LedgerToolbarSkeleton: React.FC = () => (
-  <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center rounded-2xl border border-border/60 bg-card p-5">
-    <div className="min-w-0 w-full space-y-2 md:flex-1">
-      <div className="flex flex-wrap items-center gap-3">
-        <Skeleton className="h-6 w-44" />
-        <Skeleton className="h-9 w-48 rounded-xl" />
-        <div className="flex w-full min-w-0 items-center gap-1.5 sm:w-auto">
-          <Skeleton className="h-9 w-0 min-w-0 flex-1 rounded-xl sm:w-56 sm:flex-initial" />
-          <Skeleton className="h-9 w-28 shrink-0 rounded-xl" />
-        </div>
-      </div>
-      <Skeleton className="h-3 w-80 max-w-full" />
-    </div>
-    <div className="flex w-full gap-2 md:w-auto"><Skeleton className="h-11 flex-1 rounded-xl md:w-32 md:flex-initial" /><Skeleton className="h-11 flex-1 rounded-xl md:w-40 md:flex-initial" /></div>
-  </div>
+  <PageHeader
+    title={<Skeleton className="h-7 w-32 sm:h-[34px] sm:w-40" />}
+    titleActions={<Skeleton className="h-13 w-44 rounded-full lg:h-11" />}
+    actionsClassName="hidden sm:flex"
+    actions={<><Skeleton className="h-11 w-28 rounded-full lg:h-9" /><Skeleton className="h-11 w-36 rounded-full lg:h-9" /></>}
+  />
 )
 
 const LedgerFilterSkeleton: React.FC = () => (
-  <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card p-3 shadow-sm lg:flex-row lg:items-center lg:gap-4 lg:rounded-2xl lg:p-4">
-    <Skeleton className="h-10 flex-1 rounded-xl" />
-    <Skeleton className="h-10 w-full rounded-xl sm:w-40" />
-    <Skeleton className="h-10 w-full rounded-xl sm:w-44" />
-  </div>
-)
-
-const CompactMetricGridSkeleton: React.FC<{ count: number; className?: string }> = ({ count, className }) => (
-  <div className={cn('grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3', className)}>
-    {Array.from({ length: count }, (_, i) => (
-      <div key={i} className="space-y-2 rounded-control bg-inset p-4">
-        <Skeleton className="h-3 w-28" />
-        <Skeleton className="h-6 w-24" />
-        <Skeleton className="h-3 w-3/4" />
-      </div>
-    ))}
+  <div className="flex flex-wrap gap-2 py-2">
+    <Skeleton className="h-11 min-w-36 flex-1 rounded-full" />
+    <Skeleton className="h-11 w-11 rounded-full max-sm:block sm:hidden" />
+    <Skeleton className="h-11 w-11 rounded-full lg:w-24" />
   </div>
 )
 
 const ListRowSkeleton: React.FC = () => (
-  <div className="flex items-center justify-between min-w-0 gap-2 py-3 px-3 sm:px-4 rounded-xl border border-border/30 bg-background/50">
-    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-      <Skeleton className="h-4 w-12 sm:w-20 shrink-0" />
-      <Skeleton className="h-4 w-24 sm:w-36 truncate" />
+  <div className="flex min-w-0 items-center gap-3 px-4 py-3.5">
+    <Skeleton className="size-10 shrink-0 rounded-control" />
+    <div className="min-w-0 flex-1 space-y-2">
+      <Skeleton className="h-3.5 w-40 max-w-full" />
+      <Skeleton className="h-3 w-24 max-w-full" />
     </div>
-    <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-      <Skeleton className="h-5 w-14 sm:w-20 rounded-full" />
-      <Skeleton className="h-5 w-16 sm:w-24" />
-    </div>
+    <Skeleton className="h-3.5 w-16 shrink-0" />
   </div>
 )
 
@@ -87,7 +65,7 @@ const DraftRowSkeleton: React.FC = () => (
   </div>
 )
 
-export type PageSkeletonVariant = 'dashboard' | 'reports' | 'ledger' | 'recurring' | 'wishlist' | 'drafts' | 'settings' | 'investments' | 'documents'
+export type PageSkeletonVariant = 'dashboard' | 'reports' | 'ledger' | 'recurring' | 'wishlist' | 'drafts' | 'settings' | 'budget' | 'budget-categories' | 'accounts' | 'loans' | 'investments' | 'documents'
 
 const PanelSkeleton = ({ height = 'h-40' }: { height?: string }) => (
   <div className={`${panelClass} p-5`}>
@@ -96,7 +74,7 @@ const PanelSkeleton = ({ height = 'h-40' }: { height?: string }) => (
   </div>
 )
 
-export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: boolean }> = ({ variant, fullPage = false }) => {
+export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: boolean; goalsTab?: 'commitments' | 'rewards'; showEssentialsPool?: boolean }> = ({ variant, fullPage = false, goalsTab = 'commitments', showEssentialsPool = false }) => {
   if (variant === 'dashboard') {
     // Mirrors Today's layout -- title, hero, plan tiles beside the reward and bills column -- so
     // the page settles into place rather than reflowing when the data lands.
@@ -176,10 +154,19 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
       <div data-testid="ledger-skeleton" className="space-y-6 w-full min-w-0 overflow-hidden">
         <LedgerToolbarSkeleton />
         <LedgerFilterSkeleton />
-        <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs sm:p-4 space-y-3 min-w-0 overflow-hidden">
+        <div className="min-w-0 divide-y divide-border/60 overflow-hidden rounded-panel border border-border/70 bg-card">
           {[1, 2, 3, 4, 5, 6].map(i => <ListRowSkeleton key={i} />)}
         </div>
         <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card p-4 sm:flex-row"><Skeleton className="h-4 w-48" /><div className="flex gap-2"><Skeleton className="h-8 w-20 rounded-lg" /><Skeleton className="h-8 w-24 rounded-lg" /><Skeleton className="h-8 w-20 rounded-lg" /></div></div>
+      </div>
+    )
+  }
+
+  if (variant === 'loans') {
+    return (
+      <div data-testid="loans-skeleton" className="space-y-6">
+        <RecurringHeaderSkeleton loans />
+        <LoansSectionSkeleton />
       </div>
     )
   }
@@ -190,7 +177,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
         <RecurringHeaderSkeleton />
         <BillDayStripSkeleton />
         <div className="flex items-center justify-between gap-3">
-          <div className="flex gap-1.5">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-9 w-20 rounded-full" />)}</div>
+          <div className="flex min-w-0 gap-1.5 overflow-hidden">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-9 w-20 shrink-0 rounded-full" />)}</div>
           <Skeleton className="hidden h-10 w-52 rounded-full sm:block" />
         </div>
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
@@ -215,134 +202,45 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
 
   if (variant === 'wishlist') {
     return (
-      <div data-testid="wishlist-skeleton" className="space-y-5">
-        {fullPage && <WishlistHeaderSkeleton />}
-        <RewardsPoolSkeleton />
+      <div data-testid="wishlist-skeleton" className="@container space-y-5">
         {fullPage && (
-          <div className="flex items-center justify-between gap-3 py-1">
-            <div className="flex gap-1.5 rounded-xl bg-muted/40 p-1">
-              <Skeleton className="h-8 w-16 rounded-lg" />
-              <Skeleton className="h-8 w-28 rounded-lg" />
-              <Skeleton className="h-8 w-24 rounded-lg" />
+          <>
+            <PageHeader title={<Skeleton className="h-7 w-24 sm:h-[34px]" />} titleActions={<Skeleton className="h-11 w-32 rounded-full lg:h-9" />} />
+            <div className="flex h-[45px] items-center gap-5 border-b border-border/70 lg:h-[37px]">
+              <Skeleton className="h-4 w-28" /><Skeleton className="h-4 w-20" />
             </div>
-          </div>
+          </>
         )}
-        <GoalsSectionSkeleton kind="commitments" />
-        <GoalsSectionSkeleton kind="rewards" />
-      </div>
-    )
-  }
-
-  if (variant === 'settings') {
-    return (
-      <div data-testid="settings-skeleton" className="space-y-6">
-        <SettingsHeaderSkeleton />
-        <div className="flex flex-wrap gap-3 sm:gap-6 border-b border-border/30 pb-3">
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-4 w-32" />
-        </div>
-        <div className="grid grid-cols-1 gap-6 min-[1280px]:grid-cols-3 min-[1280px]:items-start">
-          <div className={`${panelClass} space-y-5 p-5 min-[1280px]:col-span-2`}>
-            <div className="space-y-2"><Skeleton className="h-5 w-36" /><Skeleton className="h-3 w-64" /></div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}</div>
-            <CompactMetricGridSkeleton count={4} className="md:grid-cols-2 lg:grid-cols-2" />
+        <div className="grid min-w-0 items-start gap-5 @5xl:grid-cols-[minmax(0,1fr)_22rem] @5xl:gap-6">
+          <div className="space-y-3 @5xl:col-start-2 @5xl:row-start-1">
+            <RewardsPoolSkeleton />
+            {showEssentialsPool && <RewardsPoolSkeleton />}
           </div>
-          <div className="space-y-6 min-[1280px]:col-span-1">
-            <div className={`${panelClass} space-y-4 p-5`}>
-              <div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-3 w-full" /></div>
-              {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}
-            </div>
-            <div className={`${panelClass} space-y-4 p-5`}>
-              <div className="space-y-2"><Skeleton className="h-5 w-28" /><Skeleton className="h-3 w-full" /></div>
-              {[1, 2, 3].map(i => <Skeleton key={i} className="h-11 w-full rounded-xl" />)}
-            </div>
+          <div className="min-w-0 @5xl:col-start-1 @5xl:row-start-1">
+            <GoalsSectionSkeleton kind={goalsTab} />
           </div>
         </div>
       </div>
     )
   }
 
-  if (variant === 'investments') {
-    return (
-      <div data-testid="investments-skeleton" className="space-y-6">
-        <PlainHeaderSkeleton backButton />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[1, 2, 3, 4].map(i => <InvestmentSummarySkeleton key={i} />)}
-        </div>
-        <div className="flex flex-wrap gap-2 rounded-2xl border border-border/60 bg-card/92 p-3">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-9 w-28 rounded-xl" />)}</div>
-        {/* Portfolio | History | Activity */}
-        <div className="flex gap-4 border-b border-border/70 pb-3">{['w-20', 'w-16', 'w-18'].map(width => <Skeleton key={width} className={cn('h-4 rounded-md', width)} />)}</div>
-        <div className={`${panelClass} space-y-5 p-5`}><div className="space-y-2"><Skeleton className="h-5 w-40" /><Skeleton className="h-3 w-72 max-w-full" /></div><CompactMetricGridSkeleton count={3} /></div>
-        <div className={`${panelClass} flex items-center justify-between gap-3 p-4`}>
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-5 w-24 rounded-full" />
-            <Skeleton className="h-5 w-28 rounded-full" />
-          </div>
-          <Skeleton className="size-4 rounded-md" />
-        </div>
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <PanelSkeleton height="h-64" />
-          <PanelSkeleton height="h-64" />
-        </div>
-        <PanelSkeleton height="h-72" />
-        <PanelSkeleton height="h-56" />
-        <PanelSkeleton height="h-64" />
-        <PanelSkeleton height="h-72" />
-      </div>
-    )
-  }
-
-  if (variant === 'documents') {
-    return (
-      <div data-testid="documents-skeleton" className="space-y-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2"><Skeleton className="size-8 rounded-xl" /><Skeleton className="h-6 w-40" /></div>
-            <Skeleton className="h-3 w-72 max-w-full" />
-          </div>
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto"><Skeleton className="h-11 w-full rounded-xl sm:w-36" /><Skeleton className="h-11 w-full rounded-xl sm:w-24" /></div>
-        </div>
-        <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs sm:p-4">
-          <Skeleton className="h-14 w-full rounded-xl" />
-          <Skeleton className="mt-4 h-32 w-full rounded-2xl" />
-        </div>
-        <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs sm:p-4">
-          <div className="mb-3 flex items-end justify-between gap-3 px-3">
-            <div className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-56 max-w-full" /></div>
-            <Skeleton className="h-7 w-16 rounded-lg" />
-          </div>
-          <div className="space-y-2.5 rounded-control bg-inset p-3 lg:flex lg:space-y-0 lg:gap-2.5">
-            <Skeleton className="h-10 flex-1 rounded-xl" />
-            <div className="grid grid-cols-2 gap-2 lg:w-80"><Skeleton className="h-10 rounded-xl" /><Skeleton className="h-10 rounded-xl" /></div>
-          </div>
-          <Skeleton className="h-14 w-full rounded-xl" />
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map(i => <ListRowSkeleton key={i} />)}
-          </div>
-        </div>
-      </div>
-    )
-  }
+  if (variant === 'settings') return <SettingsPageSkeleton />
+  if (variant === 'budget' || variant === 'budget-categories') return <BudgetSkeleton categories={variant === 'budget-categories'} />
+  if (variant === 'accounts') return <AccountsPageSkeleton />
+  if (variant === 'investments') return <InvestmentPageSkeleton />
+  if (variant === 'documents') return <VaultPageSkeleton />
 
   return (
-    <section data-testid="drafts-skeleton" className="mx-auto max-w-4xl space-y-5" aria-label="Loading draft transactions">
-      <div className={`${panelClass} p-4 sm:p-5`}>
-        <div className="flex items-start gap-3">
-          <Skeleton className="size-9 shrink-0 rounded-xl" />
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="flex items-center gap-2"><Skeleton className="size-5 rounded-md" /><Skeleton className="h-6 w-48" /><Skeleton className="h-5 w-8 rounded-full" /></div>
-            <Skeleton className="h-3 w-72 max-w-full" />
-          </div>
-        </div>
+    <section data-testid="drafts-skeleton" className="max-w-5xl space-y-4 sm:space-y-5" aria-label="Loading draft transactions">
+      <PageHeader title={<Skeleton className="h-7 w-36 sm:h-[34px]" />} description={<Skeleton className="h-5 w-64 max-w-full" />} />
+      <div className={cn(panelClass, 'flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3.5 sm:px-5')}>
+        <div className="mr-auto space-y-1"><Skeleton className="h-4 w-20" /><Skeleton className="h-7 w-28" /></div>
+        <Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-24" />
       </div>
       <div className="space-y-3">
+        <div className="flex min-h-11 items-center justify-between gap-3 sm:min-h-9"><Skeleton className="h-5 w-32" /><Skeleton className="h-9 w-28 rounded-full" /></div>
         {[1, 2, 3, 4].map(i => <DraftRowSkeleton key={i} />)}
       </div>
-      <Skeleton className="h-11 w-full rounded-2xl" />
-      <div className="rounded-2xl border border-border/70 bg-card/95 p-3 shadow-xs"><Skeleton className="h-11 w-full rounded-xl" /></div>
     </section>
   )
 }

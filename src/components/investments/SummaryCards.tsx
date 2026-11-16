@@ -22,11 +22,8 @@ const positiveTone = 'text-emerald-600 dark:text-emerald-400'
 const negativeTone = 'text-red-600 dark:text-red-400'
 
 /**
- * The investments hero: what it is worth as the page's one large figure, the gain and the latest
- * move as one quiet line under it, a line per foreign currency in its own terms, and three facts in
- * an aligned strip. Each figure appears once: the breakdown below holds only what the hero does not
- * -- money in, and what has already been earned -- always open where there is room, one tap away on
- * a phone.
+ * The investments hero leads with total worth, then shows market changes and foreign balances
+ * before the breakdown of money in and earnings.
  */
 export const SummaryCards = ({ portfolio, masked, actions }: {
   portfolio: InvestmentPortfolio
@@ -113,7 +110,7 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
   const gainPercent = percent === undefined ? '' : ` · ${percent > 0 ? '+' : ''}${percent.toFixed(1)}%`
 
   return (
-    <section aria-label="Investment summary" className={cn('list-card-enter @container overflow-hidden', panelClass)}>
+    <section aria-label="Investment summary" className={cn('@container overflow-hidden', panelClass)}>
       <div className="p-5 sm:p-6">
         <div className="flex items-center gap-1">
           <h2 className="text-label text-muted-foreground">What it is worth</h2>
@@ -122,22 +119,27 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
         <div data-testid="investment-total" className="mt-1 min-w-0">
           {totalValue === undefined
             ? <p className="text-title text-muted-foreground">Not available yet</p>
-            : <AmountText animate value={totalValue} currency={currency} isMasked={masked} className="text-display text-foreground @xs:text-hero" />}
+            : <AmountText value={totalValue} currency={currency} isMasked={masked} className="text-display text-foreground @xs:text-hero" />}
         </div>
-        <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-label text-muted-foreground">
-          {/* Only known figures: an unknown one would read as a claim. */}
-          {unrealised !== undefined && (
-            <span>
-              <span className={cn('font-semibold tabular-nums', masked ? 'text-foreground' : tone(unrealised))}>
-                {masked ? '••••' : `${signed(unrealised)}${gainPercent}`}
-              </span> on paper
-            </span>
-          )}
-          {daily !== undefined && (
-            <span><span className={cn('font-semibold tabular-nums', masked ? 'text-foreground' : tone(daily))}>{signed(daily)}</span> latest move</span>
-          )}
-          {totalValue === undefined && <span>Waiting on prices or today’s exchange rate</span>}
-        </p>
+        {(unrealised !== undefined || daily !== undefined) && (
+          <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2">
+            {unrealised !== undefined && (
+              <div>
+                <dt className="text-caption text-muted-foreground">Gain on paper</dt>
+                <dd className={cn('mt-0.5 text-body font-semibold tabular-nums', masked ? 'text-foreground' : tone(unrealised))}>
+                  {masked ? '••••' : `${signed(unrealised)}${gainPercent}`}
+                </dd>
+              </div>
+            )}
+            {daily !== undefined && (
+              <div>
+                <dt className="text-caption text-muted-foreground">Latest move</dt>
+                <dd className={cn('mt-0.5 text-body font-semibold tabular-nums', masked ? 'text-foreground' : tone(daily))}>{signed(daily)}</dd>
+              </div>
+            )}
+          </dl>
+        )}
+        {totalValue === undefined && <p className="mt-2 text-label text-muted-foreground">Waiting on prices or today’s exchange rate</p>}
         <ForeignCurrencies currencies={portfolio.summary.currencies ?? []} appCurrency={currency} masked={masked} tone={tone} />
 
         <dl className="mt-5 grid grid-cols-1 divide-y divide-foreground/10 rounded-control inset-group px-3.5 @md:grid-cols-3 @md:divide-x @md:divide-y-0 @md:px-0 @md:py-3">
@@ -203,8 +205,7 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
 }
 
 /**
- * One line per currency held besides the app currency, in that currency's own terms and never
- * converted: how that market has treated you, with today's rate that turns it into the total above.
+ * Show each foreign balance and gain in its own currency alongside today's reference rate.
  */
 function ForeignCurrencies({ currencies, appCurrency, masked, tone }: {
   currencies: InvestmentCurrencySummary[]
@@ -217,26 +218,26 @@ function ForeignCurrencies({ currencies, appCurrency, masked, tone }: {
   if (foreign.length === 0) return null
   const rateFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 })
   return (
-    <ul aria-label="Each currency" className="mt-1.5 space-y-1 text-label text-muted-foreground">
+    <ul aria-label="Each currency" className="mt-4 divide-y divide-border/60 border-y border-border/60">
       {foreign.map(item => {
         const gain = item.unrealisedProfitLoss
         const percent = item.unrealisedPercent
         return (
-          <li key={item.currency} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-            <span>
-              In {item.currency}{' '}
-              <span className="font-semibold tabular-nums text-foreground">
-                {item.totalValue === undefined ? 'no price yet' : masked ? '••••' : money(item.totalValue, item.currency)}
-              </span>
-            </span>
-            {gain !== undefined && (
-              <span>
-                <span className={cn('font-semibold tabular-nums', masked ? 'text-foreground' : tone(gain))}>
-                  {masked ? '••••' : `${gain > 0 ? '+' : ''}${money(gain, item.currency)}${percent === undefined ? '' : ` · ${percent > 0 ? '+' : ''}${percent.toFixed(1)}%`}`}
-                </span> on paper
-              </span>
-            )}
-            <span>
+          <li key={item.currency} className="grid gap-x-6 gap-y-1.5 py-2.5 @lg:grid-cols-[minmax(9rem,auto)_minmax(0,1fr)_auto] @lg:items-baseline">
+            <div className="flex flex-wrap items-baseline gap-x-2 text-label">
+              <span className="text-muted-foreground">In {item.currency}</span>
+              <span className="font-semibold tabular-nums text-foreground">{item.totalValue === undefined ? 'No price yet' : masked ? '••••' : money(item.totalValue, item.currency)}</span>
+            </div>
+            <div className="text-caption text-muted-foreground">
+              {gain !== undefined && (
+                <>
+                  <span className={cn('font-semibold tabular-nums', masked ? 'text-foreground' : tone(gain))}>
+                    {masked ? '••••' : `${gain > 0 ? '+' : ''}${money(gain, item.currency)}${percent === undefined ? '' : ` · ${percent > 0 ? '+' : ''}${percent.toFixed(1)}%`}`}
+                  </span>{' '}on paper
+                </>
+              )}
+            </div>
+            <span className="text-caption tabular-nums text-muted-foreground empty:hidden">
               {item.rateToAppCurrency === undefined
                 ? `No ${item.currency}/${home} rate today`
                 : `1 ${item.currency} = ${rateFormat.format(item.rateToAppCurrency)} ${home} today`}

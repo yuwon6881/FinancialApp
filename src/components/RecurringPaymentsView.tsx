@@ -273,7 +273,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   }, [highlightedRecurringId, view.clearCategoryFilters])
 
   if (isSwitchingCycle) {
-    return <CycleSkeleton variant="recurring" />
+    return <CycleSkeleton variant={activeTab === 'loans' ? 'loans' : 'recurring'} />
   }
 
   return (

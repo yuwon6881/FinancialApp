@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ComponentProps } from 'react'
 import { AppProvider } from '../contexts/AppProvider'
@@ -564,7 +564,8 @@ describe('InvestmentsView money-sent-to-broker card', () => {
     }))
     renderView()
 
-    expect(await screen.findByText(/latest move/)).toBeTruthy()
+    const summary = await screen.findByRole('region', { name: 'Investment summary' })
+    expect(within(summary).getByText('Latest move')).toBeTruthy()
     // Each figure once: the move lives in the headline, not again in the breakdown.
     expect(screen.queryByText('Latest value move')).toBeNull()
     expect(screen.getByText('Earned so far')).toBeTruthy()

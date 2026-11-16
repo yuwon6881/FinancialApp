@@ -299,6 +299,7 @@ export function useDocumentsView(showToast?: (message: string, title?: string, t
     isLoading,
     loadError,
     isTaxInsightsLoading,
+    hasLoadedYears,
     isInitialLoading: !hasLoadedYears || !hasLoadedDocuments,
     page,
     setPage,

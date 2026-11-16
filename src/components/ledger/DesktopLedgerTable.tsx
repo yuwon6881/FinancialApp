@@ -47,13 +47,10 @@ export function DesktopLedgerTable({
           <DataTableHeaderCell className="text-right">Amount</DataTableHeaderCell>
           <DataTableHeaderCell className="w-px"><span className="sr-only">Actions</span></DataTableHeaderCell>
         </DataTableHeader>
-        {/* The entrance is CSS (see .list-container-enter / .list-row-enter in index.css); `key`
-            still remounts the body so a cycle/page change replays it. */}
-        <DataTableBody key={listKey} className="list-container-enter">
-          {transactions.map((t, idx) => (
+        <DataTableBody key={listKey}>
+          {transactions.map(t => (
             <DesktopLedgerRow
               key={t.id}
-              index={idx}
               transaction={t}
               accounts={accounts}
               isDeleting={isTxDeleting(t.id)}
@@ -85,7 +82,7 @@ export function DesktopLedgerTable({
           ))}
 
           {!hasRows && !serverIsLoadingRows && (
-            <tr className="list-row-enter">
+            <tr>
               <td colSpan={columnCount} className="text-center text-body text-muted-foreground">
                 {serverIsFetching ? <p className="p-8">Loading…</p> : <LedgerEmptyState isFiltered={hasAnyFilter} onResetFilters={onResetFilters} onAddTransaction={onAddTransaction} />}
               </td>

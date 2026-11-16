@@ -64,7 +64,10 @@ test('foreign holdings read in their own currency, converted only at today’s r
   await expect(currencies).toContainText('+10.0% on paper')
   await expect(page.getByText('From currency')).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await expect(page.getByRole('region', { name: 'Investment summary' })).toHaveScreenshot('investment-summary.png')
+  const hero = page.getByRole('region', { name: 'Investment summary' })
+  // Centre the card in the viewport so the floating phone navigation stays outside the crop.
+  await hero.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }))
+  await expect(hero).toHaveScreenshot('investment-summary.png')
 
   // The fund's sheet leads with its own currency and says the exchange rate never moves it.
   await page.getByRole('button', { name: /VOO/ }).first().click()

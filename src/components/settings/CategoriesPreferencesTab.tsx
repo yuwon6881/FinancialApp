@@ -114,7 +114,7 @@ export const CategoriesPreferencesTab: React.FC<CategoriesPreferencesTabProps> =
   // way money may flow, and what is no longer used. Side by side once the tab is wide enough for
   // both lists to keep their rows on one line; stacked, limits first, below that.
   return (
-    <div id="settings-panel-categories-preferences" role="tabpanel" aria-labelledby="settings-tab-categories-preferences" className="@container min-w-0 animate-in fade-in duration-200">
+    <div id="settings-panel-categories-preferences" role="tabpanel" aria-labelledby="settings-tab-categories-preferences" className="@container min-w-0">
       <div className="grid min-w-0 grid-cols-1 items-start gap-6 @5xl:grid-cols-2">
       <CategoryLimitsCard
         categories={view.editableCategories}

@@ -20,7 +20,8 @@ import * as documentsApi from '../lib/api/documents'
 import { getErrorMessage } from '../lib/errors'
 import { buildMutationSuccessToast } from '../lib/mutationToast'
 import { Button } from './ui/Button'
-import { CycleSkeleton } from './ui/CycleSkeleton'
+import { Skeleton } from './ui/Skeleton'
+import { VaultBodySkeleton } from './ui/skeletons/WealthPageSkeletons'
 import { createFinalId } from '../lib/outbox'
 import { useOptimisticList } from '../lib/useOptimisticList'
 import { Badge } from './ui/Badge'
@@ -46,6 +47,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     isLoading,
     loadError,
     isTaxInsightsLoading,
+    hasLoadedYears,
     isInitialLoading,
     taxYear,
     setTaxYear,
@@ -169,17 +171,13 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     setIsBulkDeleteOpen(false)
   }, [hideSensitive])
 
-  if (isInitialLoading) {
-    return <CycleSkeleton variant="documents" />
-  }
-
   const openUpload = () => {
     if (!guardSensitive()) return
     setIsUploadSheetOpen(true)
   }
   const downloadLabel = isDownloadingArchive ? 'Preparing ZIP…' : taxYear ? `Download ${taxYear}` : 'Download all'
   const isFiltered = taxYear !== undefined || selectedReliefCategories.length > 0
-  const isEmptyVault = availableYears.length === 0 && totalCount === 0 && !isFiltered
+  const isEmptyVault = !isInitialLoading && availableYears.length === 0 && totalCount === 0 && !isFiltered
   // Counts come from the tracker's summary, which describes one tax year, so they are only shown
   // when the list is showing that same year.
   const countsByCategory = summary && summary.taxYear === taxYear
@@ -214,50 +212,62 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     })
   }
 
-  return (
-    <div className="space-y-5">
-      {/* A compact header: the title with its two actions on one line at every size, and storage
-          as a quiet line beneath. Upload is the page's one primary action; downloading the year's
-          archive is secondary and folds to an icon on a phone. */}
-      <header className="pt-1">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="min-w-0 text-title text-foreground sm:text-display">Vault</h1>
-          <div className="flex shrink-0 items-center gap-2">
-            <Button
-              variant="secondary"
-              type="button"
-              disabled={hideSensitive || isDownloadingArchive || availableYears.length === 0}
-              onClick={() => {
-                if (!guardSensitive()) return
-                setIsDownloadingArchive(true)
-                void documentsApi.downloadDocumentArchive(taxYear).catch(error =>
-                  showToast(getErrorMessage(error, 'The ZIP archive could not be prepared.'), 'Download Failed', 'error'))
-                  .finally(() => setIsDownloadingArchive(false))
-              }}
-              aria-label={downloadLabel}
-              title={downloadLabel}
-              className="size-11 shrink-0 p-0 sm:size-auto sm:px-4 lg:size-auto"
-            >
-              {isDownloadingArchive
-                ? <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                : <Download className="size-4" aria-hidden="true" />}
-              <span className="hidden whitespace-nowrap sm:inline">{downloadLabel}</span>
-            </Button>
-            <Button
-              variant="primary"
-              type="button"
-              disabled={hideSensitive}
-              onClick={openUpload}
-              className="shrink-0 whitespace-nowrap px-4"
-            >
-              <UploadCloud className="size-4" aria-hidden="true" />
-              Upload
-            </Button>
-          </div>
+  const header = (
+    <header className="pt-1">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="min-w-0 text-title text-foreground sm:text-display">Vault</h1>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            variant="secondary"
+            type="button"
+            disabled={hideSensitive || isInitialLoading || isDownloadingArchive || availableYears.length === 0}
+            onClick={() => {
+              if (!guardSensitive()) return
+              setIsDownloadingArchive(true)
+              void documentsApi.downloadDocumentArchive(taxYear).catch(error =>
+                showToast(getErrorMessage(error, 'The ZIP archive could not be prepared.'), 'Download Failed', 'error'))
+                .finally(() => setIsDownloadingArchive(false))
+            }}
+            aria-label={downloadLabel}
+            title={downloadLabel}
+            className="size-11 shrink-0 p-0 sm:size-auto sm:px-4 lg:size-auto"
+          >
+            {isDownloadingArchive
+              ? <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              : <Download className="size-4" aria-hidden="true" />}
+            <span className="hidden whitespace-nowrap sm:inline">{downloadLabel}</span>
+          </Button>
+          <Button
+            variant="primary"
+            type="button"
+            disabled={hideSensitive || isInitialLoading}
+            onClick={openUpload}
+            className="shrink-0 whitespace-nowrap px-4"
+          >
+            <UploadCloud className="size-4" aria-hidden="true" />
+            Upload
+          </Button>
         </div>
-        <p className="mt-1 hidden text-body text-muted-foreground sm:block">Receipts, invoices and statements, kept for tax season.</p>
-        <StorageUsageMeter usage={usage} className="mt-1.5 sm:mt-2" />
-      </header>
+      </div>
+      <p className="mt-1 hidden text-body text-muted-foreground sm:block">Receipts, invoices and statements, kept for tax season.</p>
+      {!hasLoadedYears
+        ? <div className="mt-1.5 flex h-4 items-center sm:mt-2"><Skeleton className="h-3 w-56 max-w-full" /></div>
+        : <StorageUsageMeter usage={usage} className="mt-1.5 sm:mt-2" />}
+    </header>
+  )
+
+  if (!hasLoadedYears) {
+    return (
+      <div data-testid="documents-skeleton" className="space-y-5" aria-busy="true">
+        {header}
+        <VaultBodySkeleton />
+      </div>
+    )
+  }
+
+  return (
+    <div data-testid={isInitialLoading ? 'documents-skeleton' : undefined} className="space-y-5" aria-busy={isInitialLoading}>
+      {header}
 
       <VaultRetentionNotice review={retentionReview} />
 
@@ -334,11 +344,13 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         <SectionHeader
           title="Your documents"
           titleId="vault-documents-heading"
-          meta={<Badge>{totalCount} file{totalCount === 1 ? '' : 's'}</Badge>}
+          meta={isInitialLoading
+            ? <Skeleton className="h-5 w-12 rounded-full" />
+            : <Badge>{totalCount} file{totalCount === 1 ? '' : 's'}</Badge>}
           className="mb-3"
         />
 
-        {(!isEmptyVault || loadError) && (
+        {((!isEmptyVault && (!isInitialLoading || availableYears.length > 0)) || loadError) && (
           <DocumentFilterBar
             taxYear={taxYear}
             setTaxYear={setTaxYear}
@@ -364,7 +376,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               </div>
             </div>
           )}
-          <div className={isLoading && documents.length > 0 ? 'pointer-events-none opacity-55 blur-[1px] transition-all duration-200' : 'transition-all duration-200'}>
+          <div className={isLoading && documents.length > 0 ? 'pointer-events-none opacity-55' : undefined}>
             {(!loadError || documents.length > 0) && <>
               <DocumentList
                 documents={documents}

@@ -1,6 +1,12 @@
 import type { AppTab } from '../types'
 import type { PageSkeletonVariant } from '../components/ui/CycleSkeleton'
+import { isLoansLocation } from '../lib/appLocation'
 
-/** Budget and Accounts were Settings sections and still render through the settings layout. */
-export const getPageSkeletonVariant = (tab: AppTab): PageSkeletonVariant =>
-  tab === 'budget' || tab === 'accounts' ? 'settings' : tab
+export function getPageSkeletonVariant(tab: AppTab): PageSkeletonVariant {
+  if (typeof window !== 'undefined') {
+    const { pathname, search, hash } = window.location
+    if (tab === 'recurring' && isLoansLocation(pathname, search)) return 'loans'
+    if (tab === 'budget' && /categor(y|ies)|limits/.test(search + hash)) return 'budget-categories'
+  }
+  return tab
+}

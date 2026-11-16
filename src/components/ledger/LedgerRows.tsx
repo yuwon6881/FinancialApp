@@ -22,8 +22,6 @@ export interface LedgerRowProps {
   hideSensitive: boolean
   maskFinancialFigures?: boolean
   currency: string
-  /** Position in the rendered page, used only for the CSS entrance stagger. */
-  index?: number
   onStartEdit: (transaction: Transaction) => void
   onDeleteClick: (transaction: Transaction) => void
   onEditBlocked: (transaction: Transaction) => void
@@ -32,17 +30,6 @@ export interface LedgerRowProps {
   isSelected: (transaction: Transaction) => boolean
   canSelect: (transaction: Transaction) => boolean
   onToggleSelected: (transaction: Transaction) => void
-}
-
-// Per-row entrance delay, replacing Framer Motion's `staggerChildren: 0.05`. Capped so
-// that "show all cycles" (up to ~100 rows) does not turn a decorative stagger into a
-// five-second cascade the way the uncapped variant did.
-const STAGGER_STEP_MS = 50
-const STAGGER_MAX_MS = 400
-
-function staggerStyle(index: number | undefined) {
-  if (!index) return undefined
-  return { animationDelay: `${Math.min(index * STAGGER_STEP_MS, STAGGER_MAX_MS)}ms` }
 }
 
 const isTransferRow = (transaction: Transaction) =>
@@ -181,8 +168,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
   return (
     <tr
       id={ledgerTransactionRowId(transaction.id, 'desktop')}
-      className="group list-row-enter transition-colors hover:bg-surface-2/50"
-      style={staggerStyle(props.index)}
+      className="group transition-colors hover:bg-surface-2/50"
     >
       {props.isSelecting && <td className="align-middle">
         <Checkbox
@@ -274,7 +260,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
   const deleteLabel = `Delete ${transaction.description}`
 
   return (
-    <div className="cv-row list-row-enter" style={staggerStyle(props.index)}>
+    <div className="cv-row">
       <SwipeableRow
         id={ledgerTransactionRowId(transaction.id, 'mobile')}
         variant="flush"

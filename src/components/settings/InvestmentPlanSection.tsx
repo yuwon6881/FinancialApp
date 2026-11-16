@@ -385,7 +385,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
   ] as const
 
   return (
-    <div id="settings-panel-investment-plan" role="tabpanel" aria-labelledby="settings-tab-investment-plan" className="grid w-full min-w-0 grid-cols-1 items-start gap-6 animate-in fade-in duration-200 xl:grid-cols-2">
+    <div id="settings-panel-investment-plan" role="tabpanel" aria-labelledby="settings-tab-investment-plan" className="grid w-full min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-2">
       <section aria-labelledby="investment-targets-title" className={cn(panelClass, 'w-full min-w-0 p-4 sm:p-6')}>
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">

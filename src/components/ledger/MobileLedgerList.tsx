@@ -82,7 +82,6 @@ export function MobileLedgerList({
       key={transaction.id}
       transaction={transaction}
       accounts={accounts}
-      index={index}
       hint={index === 0}
       isDeleting={isTxDeleting(transaction.id)}
       isSyncing={isTxSyncing(transaction.id)}
@@ -101,9 +100,7 @@ export function MobileLedgerList({
   )
 
   return (
-    // Entrance is CSS (.list-container-enter / .list-row-enter); `key` still remounts the list so a
-    // cycle/page change replays it.
-    <div key={listKey} className="list-container-enter w-full space-y-5">
+    <div key={listKey} className="w-full space-y-5">
       {hasRows && groups.map(group => {
         const dayNet = group.rows.reduce((sum, { transaction }) => (isTransfer(transaction) ? sum : sum + transaction.amount), 0)
         return (
@@ -136,7 +133,7 @@ export function MobileLedgerList({
       )}
 
       {!hasRows && !serverIsLoadingRows && (
-        <div className="list-row-enter rounded-panel border border-border/70 bg-card">
+        <div className="rounded-panel border border-border/70 bg-card">
           {serverIsFetching
             ? <p className="p-8 text-center text-body text-muted-foreground">Loading…</p>
             : <LedgerEmptyState isFiltered={hasAnyFilter} onResetFilters={onResetFilters} onAddTransaction={onAddTransaction} />}

@@ -7,7 +7,7 @@ const CycleSkeleton = lazy(() => import('../components/ui/CycleSkeleton').then(m
 
 /** Page-shaped placeholder shown while a lazily loaded view's chunk is fetched. */
 export const ContentViewFallback = ({ tab }: { tab: AppTab }) => (
-  <div className="w-full pt-2 view-enter">
+  <div className="w-full" role="status" aria-label="Loading page">
     <Suspense fallback={<div className="space-y-6" aria-hidden="true"><Skeleton className="h-40 w-full rounded-2xl" /><Skeleton className="h-64 w-full rounded-2xl" /></div>}>
       <CycleSkeleton variant={getPageSkeletonVariant(tab)} fullPage />
     </Suspense>

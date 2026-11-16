@@ -16,38 +16,11 @@ export const CardSkeleton: React.FC = () => (
   </div>
 )
 
-export const PlainHeaderSkeleton: React.FC<{ backButton?: boolean }> = ({ backButton = false }) => (
-  <div className="flex items-start gap-3">
-    {backButton && <Skeleton className="size-9 shrink-0 rounded-xl" />}
-    <div className="space-y-2">
-      <Skeleton className="h-6 w-48" />
-      <Skeleton className="h-3 w-72 max-w-full" />
-    </div>
-  </div>
-)
-
-export const SettingsHeaderSkeleton: React.FC = () => (
-  <div className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-card p-4 sm:p-6">
-    <div className="flex items-center gap-2"><Skeleton className="size-5 rounded-md" /><Skeleton className="h-6 w-28" /></div>
-    <Skeleton className="h-3 w-80 max-w-full" />
-  </div>
-)
-
 /** Insights' page header: the title and its Explain action on the canvas, the cycle under it. */
 export const ReportsHeaderSkeleton: React.FC = () => (
   <div className="space-y-2.5 pt-1">
     <div className="flex items-center gap-2.5"><Skeleton className="h-7 w-28 sm:h-8" /><Skeleton className="size-11 rounded-full sm:h-8 sm:w-36" /></div>
     <Skeleton className="h-4 w-48 max-w-full" />
-  </div>
-)
-
-export const WishlistHeaderSkeleton: React.FC = () => (
-  <div data-testid="wishlist-header-skeleton" className={`${panelClass} flex items-center justify-between gap-3 p-4 sm:p-5`}>
-    <div className="min-w-0 space-y-2">
-      <Skeleton className="h-6 w-40" />
-      <Skeleton className="hidden h-3 w-72 max-w-full sm:block" />
-    </div>
-    <Skeleton className="h-9 w-32 shrink-0 rounded-xl" />
   </div>
 )
 
@@ -65,19 +38,20 @@ export const RewardsPoolSkeleton: React.FC = () => (
   </Card>
 )
 
-export const RecurringHeaderSkeleton: React.FC = () => (
-  <Card className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-    <div className="min-w-0 w-full md:flex-1">
-      <Skeleton className="h-6 w-72 max-w-full" />
-      <Skeleton className="mt-1 h-3 w-48" />
-      <div className="mt-4 grid min-w-0 grid-cols-2 gap-y-3 sm:grid-cols-3 sm:gap-y-0">
-        <div className="min-w-0 space-y-1.5 pr-2"><Skeleton className="h-2.5 w-16 max-w-full" /><Skeleton className="h-7 w-20 max-w-full" /></div>
-        <div className="min-w-0 space-y-1.5 border-l border-border/60 pl-2 sm:px-2"><Skeleton className="h-2.5 w-16 max-w-full" /><Skeleton className="h-7 w-20 max-w-full" /></div>
-        <div className="col-span-2 min-w-0 space-y-1.5 border-t border-border/60 pt-2 sm:col-span-1 sm:border-t-0 sm:border-l sm:pl-2 sm:pt-0"><Skeleton className="h-2.5 w-16 max-w-full" /><Skeleton className="h-7 w-12 max-w-full" /></div>
-      </div>
+export const RecurringHeaderSkeleton = ({ loans = false }: { loans?: boolean }) => (
+  <div className="pt-1">
+    <div className="flex items-center justify-between gap-3 sm:max-lg:flex-col sm:max-lg:items-start sm:max-lg:gap-4">
+      <Skeleton className={cn('h-7 min-w-0 sm:h-[34px]', loans ? 'w-24' : 'w-48')} />
+      <Skeleton className="h-11 w-25 shrink-0 rounded-full lg:h-9" />
     </div>
-    <Skeleton className="h-11 w-44 rounded-xl" />
-  </Card>
+    <div className={cn(panelClass, 'mt-5 grid grid-cols-2 gap-4 px-4 py-4 sm:px-5 lg:gap-y-0', loans ? 'lg:grid-cols-3' : 'lg:grid-cols-4')}>
+      {Array.from({ length: loans ? 3 : 4 }, (_, i) => (
+        <div key={i} className={cn('space-y-1', i > 0 && 'lg:border-l lg:border-border/70 lg:pl-2', i === 2 && loans && 'col-span-2 border-t border-border/70 pt-3 lg:col-span-1 lg:border-t-0 lg:pt-0', i % 2 === 1 && 'border-l border-border/70 pl-2')}>
+          <Skeleton className="h-4 w-20 max-w-full" /><Skeleton className="h-6 w-24 max-w-full" />
+        </div>
+      ))}
+    </div>
+  </div>
 )
 
 export const BillDayStripSkeleton: React.FC = () => (
@@ -164,21 +138,17 @@ const LoanCardSkeleton: React.FC = () => (
   </div>
 )
 
-export const LoansSectionSkeleton: React.FC<{ cards?: number }> = ({ cards = 3 }) => (
-  <section className={cn(panelFromMediumClass, 'space-y-4')}>
-    <Skeleton className="h-4 w-32" />
-    <div className="space-y-3">
-      {Array.from({ length: cards }, (_, index) => <LoanCardSkeleton key={index} />)}
-    </div>
-  </section>
+export const LoanCardsSkeleton = () => (
+  <div className="grid gap-4 2xl:grid-cols-2" role="status" aria-label="Loading loans">
+    {[1, 2].map(index => <LoanCardSkeleton key={index} />)}
+  </div>
 )
 
-export const InvestmentSummarySkeleton: React.FC = () => (
-  <div className={`${panelClass} flex flex-col p-4`}>
-    <div className="flex items-center justify-between"><Skeleton className="h-3 w-24" /><Skeleton className="size-8 rounded-lg" /></div>
-    <Skeleton className="mt-3 h-6 w-32" />
-    <div className="mt-3 space-y-2 border-t border-border/40 pt-1"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-3/4" /></div>
-  </div>
+export const LoansSectionSkeleton = () => (
+  <section className={cn(panelFromMediumClass, 'space-y-4')}>
+    <Skeleton className="h-4 w-32" />
+    <LoanCardsSkeleton />
+  </section>
 )
 
 /** The cycle calendar as week rows: dates and a total, with seven day bars under them on a narrow container. */

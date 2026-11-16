@@ -885,10 +885,7 @@ html, body {
     .perimeter-beam::before,
     .press-scale,
     .animate-in,
-    .animate-pulse,
-    .list-container-enter,
-    .list-row-enter,
-    .list-card-enter {
+    .animate-pulse {
         animation: none !important;
         transition-duration: 0.01ms !important;
     }
@@ -1069,45 +1066,6 @@ html {
     }
 }
 
-
-/* One-shot list entrances, previously driven by Framer Motion variants
-   (listContainerVariants / listItemVariants / rowFadeVariants in lib/animations.ts).
-   These are plain opacity/transform entrances that run once and are never
-   interrupted, interpolated against gestures, or read back — so they need no JS frame
-   loop. Doing them in CSS removes a motion component from every ledger row, so the
-   highest-count animated nodes in the app no longer each carry a subscription, a
-   style-diffing pass and a variant-propagation link to their parent.
-
-   Stagger is an inline `animation-delay` on each item (see LedgerRows). The
-   `both` fill mode is what holds an item invisible until its delay elapses. */
-@keyframes list-container-enter {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-}
-.list-container-enter {
-    animation: list-container-enter 150ms ease-out both;
-}
-
-/* Ledger rows: opacity only, deliberately no `y` offset — matching the old
-   rowFadeVariants, whose comment explains that a transform here would make
-   pagination/cycle switches trigger a position-FLIP cascade across siblings. */
-@keyframes list-row-enter {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-}
-.list-row-enter {
-    animation: list-row-enter 180ms ease-out both;
-}
-
-/* Card-style list items (wishlist): rise + fade, replacing listItemVariants' spring.
-   A spring's exact overshoot is not observable in a 300ms one-shot entrance. */
-@keyframes list-card-enter {
-    from { opacity: 0; transform: translateY(15px); }
-    to   { opacity: 1; transform: none; }
-}
-.list-card-enter {
-    animation: list-card-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
 
 /* Skip layout/paint for off-screen ledger rows ("show all cycles" renders up to
    ~100 at once). The intrinsic size keeps scrollbar geometry stable. */
@@ -1442,13 +1400,9 @@ html {
     }
 }
 
-/* The row keeps its own entrance animation while highlighted. Writing `animation: none` here made
-   removing the class restart that fade from opacity 0, which read as the row blinking when the
-   highlight ended. Same name and timing means the finished animation is left untouched. */
 tr.search-target-highlight {
     position: relative;
     z-index: 10;
-    animation: list-row-enter 180ms ease-out both;
 }
 
 tr.search-target-highlight > td {
