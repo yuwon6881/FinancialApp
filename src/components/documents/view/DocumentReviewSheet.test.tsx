@@ -64,6 +64,52 @@ describe('DocumentReviewSheet', () => {
     expect(saveReview).toHaveBeenLastCalledWith(expect.objectContaining({ id: 3 }), expect.objectContaining({ amount: 45 }))
   })
 
+  it('keeps the receipt currency when the app currency differs', async () => {
+    listDocuments.mockResolvedValue({ items: [doc(1)], totalCount: 1 })
+    const saveReview = vi.fn().mockResolvedValue(undefined)
+    render(<DocumentReviewSheet request={{ taxYear: 2026 }} onClose={vi.fn()} currency="USD" saveReview={saveReview} />)
+    const input = await screen.findByLabelText('Amount for receipt-1.pdf')
+    expect(screen.getByText('Amount (RM)')).toBeTruthy()
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(saveReview).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ amountCurrency: 'MYR' })))
+  })
+
+  it('lets the reviewer correct a receipt’s currency before saving', async () => {
+    listDocuments.mockResolvedValue({ items: [doc(1)], totalCount: 1 })
+    const saveReview = vi.fn().mockResolvedValue(undefined)
+    render(<DocumentReviewSheet request={{ taxYear: 2026 }} onClose={vi.fn()} currency="MYR" saveReview={saveReview} />)
+    await screen.findByLabelText('Amount for receipt-1.pdf')
+
+    fireEvent.click(screen.getByRole('combobox', { name: /^Currency for receipt-1.pdf/ }))
+    fireEvent.click(screen.getByRole('option', { name: 'Other currency' }))
+    expect(screen.getByText('Amount (other currency)')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    await waitFor(() => expect(saveReview).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 1 }),
+      { amount: 99, amountCurrency: 'OTHER', amountStatus: 'Confirmed' },
+    ))
+  })
+
+  it('classifies a receipt with no amount from the app currency, and lets it be changed', async () => {
+    listDocuments.mockResolvedValue({ items: [doc(1, { amount: undefined, amountCurrency: 'MYR' })], totalCount: 1 })
+    const saveReview = vi.fn().mockResolvedValue(undefined)
+    render(<DocumentReviewSheet request={{ taxYear: 2026 }} onClose={vi.fn()} currency="USD" saveReview={saveReview} />)
+    const input = await screen.findByLabelText('Amount for receipt-1.pdf') as HTMLInputElement
+    expect(input.value).toBe('')
+    expect(screen.getByText('Amount (other currency)')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('combobox', { name: /^Currency for receipt-1.pdf/ }))
+    fireEvent.click(screen.getByRole('option', { name: 'MYR' }))
+    fireEvent.change(input, { target: { value: '120.50' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    await waitFor(() => expect(saveReview).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 1 }),
+      { amount: 120.5, amountCurrency: 'MYR', amountStatus: 'Confirmed' },
+    ))
+  })
+
   it('reviews exactly the documents just uploaded, and lets one be skipped', async () => {
     listDocuments.mockResolvedValue({ items: [doc(5, { amount: null, amountStatus: 'NotFound' }), doc(6)], totalCount: 2 })
     const saveReview = vi.fn().mockResolvedValue(undefined)

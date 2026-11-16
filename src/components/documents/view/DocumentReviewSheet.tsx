@@ -76,10 +76,14 @@ export function DocumentReviewSheet({ request, onClose, currency, saveReview }: 
 
   const current = queue?.[index] ?? null
   const currentYear = current?.taxYear
+  // A receipt that already has an amount keeps its classification; one with none starts from the app
+  // currency. Either way the reviewer can correct it before saving.
+  const [amountCurrency, setAmountCurrency] = useState<'MYR' | 'OTHER'>('MYR')
 
   useEffect(() => {
     if (!current) return
     setAmount(current.amount != null ? current.amount.toFixed(2) : '')
+    setAmountCurrency(current.amount != null ? current.amountCurrency : (currency.toUpperCase() === 'MYR' ? 'MYR' : 'OTHER'))
     setReliefCategory(current.reliefCategory ?? '')
     setError(null)
     // Focused and selected, so a wrong figure is replaced by typing and a right one kept with Enter.
@@ -87,7 +91,7 @@ export function DocumentReviewSheet({ request, onClose, currency, saveReview }: 
       amountRef.current?.focus()
       amountRef.current?.select()
     })
-  }, [current])
+  }, [current, currency])
 
   useEffect(() => {
     if (currentYear === undefined) return
@@ -118,7 +122,7 @@ export function DocumentReviewSheet({ request, onClose, currency, saveReview }: 
     try {
       await saveReview(current, {
         amount: value,
-        amountCurrency: currency.toUpperCase() === 'MYR' ? 'MYR' : 'OTHER',
+        amountCurrency,
         amountStatus: 'Confirmed',
         ...(reliefCategory && reliefCategory !== current.reliefCategory ? { reliefCategory } : {}),
       })
@@ -208,7 +212,15 @@ export function DocumentReviewSheet({ request, onClose, currency, saveReview }: 
                   {aiNote}
                 </p>
               )}
-              <FormField label={`Amount (${getCurrencySymbol(currency)})`} required error={error ?? undefined}>
+              <FormField label="Receipt currency">
+                <CustomSelect
+                  value={amountCurrency}
+                  onChange={value => setAmountCurrency(value === 'OTHER' ? 'OTHER' : 'MYR')}
+                  options={[{ value: 'MYR', label: 'MYR' }, { value: 'OTHER', label: 'Other currency' }]}
+                  ariaLabel={`Currency for ${current.originalFileName}`}
+                />
+              </FormField>
+              <FormField label={`Amount (${amountCurrency === 'MYR' ? getCurrencySymbol('MYR') : 'other currency'})`} required error={error ?? undefined}>
                 <Input
                   ref={amountRef}
                   value={amount}

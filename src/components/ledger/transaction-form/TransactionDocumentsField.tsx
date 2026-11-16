@@ -244,7 +244,7 @@ export const TransactionDocumentsField = React.forwardRef<
 
   const categoryOptions = [
     { value: '', label: categoriesLoaded ? 'Choose tax relief category' : 'Loading categories…', disabled: true },
-    ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · ${formatCurrencyVal(category.limit, currency)}` })),
+    ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · ${formatCurrencyVal(category.limit, 'MYR')}` })),
   ]
   const canAttach = !disabled && categoriesLoaded && reliefCategories.length > 0
   const hasRows = existingDocuments.length > 0 || pendingDocs.length > 0

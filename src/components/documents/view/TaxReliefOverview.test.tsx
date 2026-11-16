@@ -17,6 +17,7 @@ interface RenderOptions {
   onAddCategory?: (input: { name: string; limit: number }) => Promise<unknown>
   onDeleteCategory?: (categoryId: string) => Promise<unknown>
   summary?: TaxYearReliefSummary | null
+  currency?: string
 }
 
 const summaryWithDocuments = (documentCount: number): TaxYearReliefSummary => ({
@@ -33,12 +34,12 @@ const summaryWithDocuments = (documentCount: number): TaxYearReliefSummary => ({
   }],
 })
 
-const renderOverview = ({ onAddCategory, onDeleteCategory, summary = null }: RenderOptions = {}) => render(
+const renderOverview = ({ onAddCategory, onDeleteCategory, summary = null, currency = 'MYR' }: RenderOptions = {}) => render(
   <TaxReliefOverview
     summary={summary}
     categories={[category]}
     taxYear={CURRENT_YEAR}
-    currency="MYR"
+    currency={currency}
     isLoading={false}
     onShowReliefDocuments={vi.fn()}
     onAddCategory={onAddCategory ?? vi.fn(async () => undefined)}
@@ -57,6 +58,21 @@ function httpError(message: string, status: number): Error {
   error.status = status
   return error
 }
+
+describe('tax relief currency', () => {
+  it('shows MYR totals and limits even when the app uses USD', () => {
+    const summary = summaryWithDocuments(1)
+    summary.confirmedAmount = 600
+    summary.categories[0].confirmedAmount = 600
+    summary.categories[0].otherCurrencyDocumentCount = 1
+    renderOverview({ summary, currency: 'USD' })
+    expect(screen.getAllByText(/RM\s?600/).length).toBeGreaterThan(0)
+    expect(screen.getByText('1 not in MYR')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Manage limits' }))
+    fireEvent.click(screen.getByRole('button', { name: /Add category/i }))
+    expect(screen.getByText('Limit (MYR)')).toBeTruthy()
+  })
+})
 
 describe('TaxReliefOverview category validation', () => {
   it('shows duplicate names inline without calling the add mutation', async () => {

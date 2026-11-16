@@ -3,13 +3,14 @@ import { Check, Pencil, Sparkles, X } from 'lucide-react'
 import type { VaultDocument } from '../../../types'
 import { getErrorMessage } from '../../../lib/errors'
 import { useAppPrefs } from '../../../contexts/AppContext'
-import { cn, formatCurrencyVal, getCurrencySymbol } from '../../../lib/utils'
+import { cn } from '../../../lib/utils'
 import { Input } from '../../ui/Input'
+import { CustomSelect } from '../../ui/CustomSelect'
 import { Button } from '../../ui/Button'
 import { IconButton } from '../../ui/IconButton'
 import { SensitiveMask } from '../../ui/SensitiveAmount'
 import type { UpdateDocumentFn } from './documentRowParts'
-import { confidenceLabel } from './formatters'
+import { confidenceLabel, formatDocumentAmount } from './formatters'
 
 interface DocumentAmountEditorProps {
   document: VaultDocument
@@ -29,8 +30,9 @@ interface DocumentAmountEditorProps {
  */
 export function DocumentAmountEditor({ document, updateDocument, currency, disabled = false, layout = 'stacked' }: DocumentAmountEditorProps) {
   const { currency: appCurrency, hideSensitive } = useAppPrefs()
-  const activeCurrency = currency ?? appCurrency
+  const activeCurrency = document.amount != null ? document.amountCurrency : ((currency ?? appCurrency).toUpperCase() === 'MYR' ? 'MYR' : 'OTHER')
   const [editing, setEditing] = useState(false)
+  const [editCurrency, setEditCurrency] = useState<'MYR' | 'OTHER'>(activeCurrency)
   const needsReview = document.amountStatus === 'NeedsReview'
   const [value, setValue] = useState(document.amount?.toFixed(2) ?? '')
   const [saving, setSaving] = useState(false)
@@ -47,16 +49,17 @@ export function DocumentAmountEditor({ document, updateDocument, currency, disab
   const cancel = () => {
     setValue(document.amount?.toFixed(2) ?? '')
     setError(null)
+    setEditCurrency(activeCurrency)
     setEditing(false)
   }
 
-  const write = async (amount: number) => {
+  const write = async (amount: number, amountCurrency: 'MYR' | 'OTHER') => {
     setError(null)
     setSaving(true)
     try {
       await updateDocument(document.id, {
         amount,
-        amountCurrency: activeCurrency.toUpperCase() === 'MYR' ? 'MYR' : 'OTHER',
+        amountCurrency,
         amountStatus: 'Confirmed',
       })
       setEditing(false)
@@ -82,7 +85,7 @@ export function DocumentAmountEditor({ document, updateDocument, currency, disab
       setError('Enter an amount of zero or more.')
       return
     }
-    void write(amount)
+    void write(amount, editCurrency)
   }
 
   if (hideSensitive) return <SensitiveMask />
@@ -97,7 +100,7 @@ export function DocumentAmountEditor({ document, updateDocument, currency, disab
             if (event.key === 'Enter') { event.preventDefault(); save() }
           }}
         >
-          <span className="text-caption font-semibold text-muted-foreground">{getCurrencySymbol(activeCurrency)}</span>
+          <CustomSelect value={editCurrency} onChange={setEditCurrency} options={[{ value: 'MYR', label: 'MYR' }, { value: 'OTHER', label: 'Other currency' }]} ariaLabel={`Currency for ${document.originalFileName}`} controlSize="sm" />
           <Input
             ref={inputRef}
             value={value}
@@ -134,7 +137,7 @@ export function DocumentAmountEditor({ document, updateDocument, currency, disab
     )
   }
 
-  const formatted = document.amount != null ? formatCurrencyVal(document.amount, activeCurrency) : null
+  const formatted = document.amount != null ? formatDocumentAmount(document.amount, activeCurrency) : null
   const sure = needsReview ? confidenceLabel(document.amountConfidence) : null
 
   return (
@@ -143,7 +146,7 @@ export function DocumentAmountEditor({ document, updateDocument, currency, disab
         <Button
           variant="tertiary"
           size="sm"
-          onClick={() => setEditing(true)}
+          onClick={() => { setEditCurrency(activeCurrency); setEditing(true) }}
           disabled={disabled}
           aria-label={needsReview
             ? `Review the suggested amount for ${document.originalFileName}`
@@ -161,7 +164,7 @@ export function DocumentAmountEditor({ document, updateDocument, currency, disab
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => void write(document.amount!)}
+            onClick={() => void write(document.amount!, activeCurrency)}
             disabled={disabled || saving}
             loading={saving}
             aria-label={`Confirm ${formatted} for ${document.originalFileName}`}

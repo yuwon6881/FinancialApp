@@ -77,7 +77,6 @@ export function TaxReliefOverview({
   summary,
   categories,
   taxYear,
-  currency,
   isLoading,
   selectedReliefCategories = [],
   onShowReliefDocuments,
@@ -87,6 +86,7 @@ export function TaxReliefOverview({
   activeSyncIds = [],
   deletingId: activeDeletingId,
 }: TaxReliefOverviewProps) {
+  const currency = 'MYR'
   const { showToast } = useAppUi()
   const { hideSensitive } = useAppPrefs()
   const [editorOpen, setEditorOpen] = useState(false)

@@ -4,12 +4,13 @@ import type { TaxReliefCategoryDefinition, VaultDocument } from '../../../types'
 import { useAppPrefs } from '../../../contexts/AppContext'
 import { cn } from '../../../lib/utils'
 import { AmountText } from '../../ui/AmountText'
+import { SensitiveMask } from '../../ui/SensitiveAmount'
 import { Button } from '../../ui/Button'
 import { Checkbox } from '../../ui/Checkbox'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { SwipeableRow } from '../../ui/SwipeableRow'
-import { formatBytes, formatDate } from './formatters'
+import { formatBytes, formatDate, formatDocumentAmount } from './formatters'
 import { DocumentAmountEditor } from './DocumentAmountEditor'
 import {
   DeleteDocumentButton,
@@ -195,12 +196,12 @@ export function DocumentCard({
 
           <div className="pointer-events-none relative shrink-0 text-right">
             {document.amount != null ? (
-              <AmountText
+              document.amountCurrency === 'MYR' ? <AmountText
                 value={document.amount}
-                currency={currency}
+                currency="MYR"
                 isMasked={hideSensitive}
                 className={cn('block text-body font-semibold', needsReview ? 'text-amber-700 dark:text-amber-300' : 'text-foreground')}
-              />
+              /> : hideSensitive ? <SensitiveMask /> : <span className="block text-body font-semibold">{formatDocumentAmount(document.amount, document.amountCurrency)}</span>
             ) : (
               <span className="block text-label text-muted-foreground">No amount</span>
             )}

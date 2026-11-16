@@ -50,7 +50,7 @@ const UPLOAD_ERROR_RULES: ServerFieldRule<'taxYear' | 'reliefCategory' | 'files'
   { field: 'files', match: ['exceeds the maximum allowed size', 'unsupported file type', 'storage quota exceeded', 'upload a photo or a pdf'] },
 ]
 
-export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear, defaultTransactionId, currency, onReviewUploaded }: Props) {
+export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear, defaultTransactionId, onReviewUploaded }: Props) {
   const currentYear = new Date().getFullYear()
   const minimumTaxYear = currentYear - TAX_YEAR_LOOKBACK
   const safeInitialTaxYear = initialTaxYear !== undefined && Number.isInteger(initialTaxYear) && initialTaxYear >= minimumTaxYear && initialTaxYear <= currentYear
@@ -335,7 +335,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
                   setReliefCategory(String(value))
                   setValidationErrors(current => ({ ...current, reliefCategory: undefined }))
                 }}
-                options={[{ value: '', label: categoriesLoading ? 'Loading categories…' : 'Choose tax relief category', disabled: true }, ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · ${formatCurrencyVal(category.limit, currency)}` }))]}
+                options={[{ value: '', label: categoriesLoading ? 'Loading categories…' : 'Choose tax relief category', disabled: true }, ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · ${formatCurrencyVal(category.limit, 'MYR')}` }))]}
                 ariaLabel="Tax relief category"
                 className="w-full"
                 required

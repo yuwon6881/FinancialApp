@@ -1,3 +1,8 @@
+import { formatCurrencyVal } from '../../../lib/utils'
+
+export const formatDocumentAmount = (amount: number, currency: 'MYR' | 'OTHER') =>
+  currency === 'MYR' ? formatCurrencyVal(amount, 'MYR') : amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (other currency)'
+
 const BYTE_UNITS = ['Bytes', 'KB', 'MB', 'GB', 'TB']
 
 export const formatBytes = (bytes: number) => {

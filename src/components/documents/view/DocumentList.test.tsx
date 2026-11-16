@@ -41,6 +41,26 @@ const baseProps = {
   onReliefCategoryChange: vi.fn(),
 }
 
+describe('document currency', () => {
+  it('allows correcting a receipt currency explicitly', () => {
+    const updateDocument = vi.fn().mockResolvedValue(undefined)
+    render(<DocumentList {...baseProps} selectedIds={new Set()} documents={[{ ...document, amount: 99, amountCurrency: 'OTHER', amountStatus: 'Confirmed' }]} currency="USD" updateDocument={updateDocument} />)
+    fireEvent.click(screen.getAllByRole('button', { name: /Edit amount .*other currency/ })[0])
+    fireEvent.click(screen.getByRole('combobox', { name: 'Currency for tax.pdf' }))
+    fireEvent.click(screen.getByRole('option', { name: 'MYR' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm amount for tax.pdf' }))
+    expect(updateDocument).toHaveBeenCalledWith(1, expect.objectContaining({ amount: 99, amountCurrency: 'MYR' }))
+  })
+
+  it('shows and confirms an existing MYR amount in MYR when the app uses USD', () => {
+    const updateDocument = vi.fn().mockResolvedValue(undefined)
+    render(<DocumentList {...baseProps} selectedIds={new Set()} documents={[{ ...document, amount: 99, amountStatus: 'NeedsReview' }]} currency="USD" updateDocument={updateDocument} />)
+    const buttons = screen.getAllByRole('button', { name: /Confirm RM\s?99/ })
+    fireEvent.click(buttons[0])
+    expect(updateDocument).toHaveBeenCalledWith(1, expect.objectContaining({ amount: 99, amountCurrency: 'MYR' }))
+  })
+})
+
 describe('DocumentList selection toolbar', () => {
   afterEach(() => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })

@@ -1,7 +1,7 @@
 import { Eye, FileImage, FileText, Link2Off, Undo2, X } from 'lucide-react'
 import type { VaultDocument } from '../../../types'
-import { cn, formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
-import { formatBytes } from '../../documents/view/formatters'
+import { cn, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
+import { formatBytes, formatDocumentAmount } from '../../documents/view/formatters'
 import { CustomSelect, type SelectOption } from '../../ui/CustomSelect'
 import { FormField } from '../../ui/FormField'
 import { IconButton } from '../../ui/IconButton'
@@ -49,7 +49,6 @@ interface FiledDocumentRowProps {
 export function FiledDocumentRow({
   document,
   categoryName,
-  currency,
   masked,
   isDetaching,
   disabled,
@@ -59,7 +58,7 @@ export function FiledDocumentRow({
 }: FiledDocumentRowProps) {
   const facts = [
     categoryName ?? 'No relief category',
-    document.amount != null ? (masked ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(document.amount, currency)) : null,
+    document.amount != null ? (masked ? SENSITIVE_AMOUNT_MASK : formatDocumentAmount(document.amount, document.amountCurrency)) : null,
     `YA ${document.taxYear}`,
   ].filter(Boolean).join(' · ')
   return (
