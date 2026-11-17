@@ -15,7 +15,7 @@ const props = {
     { id: 'bank', name: 'Bank', bucket: 'Essentials', kind: 'Bank', remaining: 2000, isArchived: false },
     { id: 'growth', name: 'Broker money', bucket: 'Growth', kind: 'Bank', remaining: 3988.5, isArchived: false },
   ] as React.ComponentProps<typeof AccountsSection>['accounts'],
-  currency: 'MYR', hideSensitive: false, isCurrentCycle: true,
+  currency: 'MYR', hideSensitive: false,
   onAddAccount: vi.fn(), onUpdateAccount: vi.fn(), onRequestDeleteAccount: vi.fn(), onReconcileAccounts: vi.fn(),
 }
 
@@ -66,15 +66,8 @@ describe('Accounts total beside what the investments are worth today', () => {
     expect(container.textContent).not.toMatch(/4,500|511\.50|6,500|above net broker deposits/)
   })
 
-  it('never mixes today’s prices into a past cycle or another currency', () => {
-    vi.spyOn(api, 'readCachedInvestmentPortfolio').mockReturnValue(portfolio({ totalValue: 4500, netDeposits: 3988.5 }))
-    const fetch = vi.spyOn(api, 'fetchInvestmentPortfolio').mockRejectedValue(new Error('offline'))
-    const { unmount } = render(<AccountsSection {...props} isCurrentCycle={false} />)
-    expect(screen.queryByText('Worth today')).toBeNull()
-    expect(screen.getByText('Total across accounts')).toBeTruthy()
-    expect(fetch).not.toHaveBeenCalled()
-    unmount()
-
+  it('never mixes today’s prices with an account balance in another currency', () => {
+    vi.spyOn(api, 'fetchInvestmentPortfolio').mockRejectedValue(new Error('offline'))
     vi.spyOn(api, 'readCachedInvestmentPortfolio').mockReturnValue(portfolio({ totalValue: 4500, netDeposits: 3988.5 }, 'USD'))
     render(<AccountsSection {...props} />)
     expect(screen.queryByText('Worth today')).toBeNull()
@@ -103,14 +96,10 @@ describe('Growth bucket beside what was put in', () => {
     expect(within(container.querySelector<HTMLElement>('#bucket-account-group-Essentials')!).queryByText('Worth today')).toBeNull()
   })
 
-  it('keeps an unknown worth unknown and shows nothing for a past cycle', () => {
+  it('keeps an unknown worth unknown', () => {
     vi.spyOn(api, 'readCachedInvestmentPortfolio').mockReturnValue(portfolio({ netDeposits: 3988.5 }))
     vi.spyOn(api, 'fetchInvestmentPortfolio').mockRejectedValue(new Error('offline'))
-    const { container, unmount } = render(<AccountsSection {...props} />)
+    const { container } = render(<AccountsSection {...props} />)
     expect(within(container.querySelector<HTMLElement>('#bucket-account-group-Growth')!).getByText('Unknown')).toBeTruthy()
-    unmount()
-
-    const past = render(<AccountsSection {...props} isCurrentCycle={false} />)
-    expect(within(past.container.querySelector<HTMLElement>('#bucket-account-group-Growth')!).queryByText('Worth today')).toBeNull()
   })
 })

@@ -63,6 +63,7 @@ interface RecurringPaymentsViewProps {
   onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
   onPayEarly?: (id: string, amount?: number, accountId?: string, settlesOccurrence?: boolean) => Promise<void> | void
   loans?: Loan[]
+  onNavigateToLoan?: (loanId: string) => void
   onAddLoan?: (loan: Partial<Loan>) => void
   onUpdateLoan?: (id: string, loan: Loan) => void
   onRequestDeleteLoan?: (id: string) => void
@@ -109,6 +110,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   onUpdateReminder,
   onPayEarly = () => {},
   loans = [],
+  onNavigateToLoan,
   onAddLoan = () => {},
   onUpdateLoan = () => {},
   onRequestDeleteLoan = () => {},
@@ -132,7 +134,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       : (app.activeSyncIds?.length ? app.activeSyncIds : (app.activeSyncId ? [app.activeSyncId] : [])))
   const deletingId = deletingIdProp ?? app.deletingId
   const [activeTab, setActiveTab] = React.useState<RecurringTabId>(() => parseInitialRecurringTab(highlightedLoanIdProp))
-  const [internalHighlightedLoanId, setInternalHighlightedLoanId] = React.useState<string | null>(null)
   const [payEarlyPayment, setPayEarlyPayment] = React.useState<RecurringPayment | null>(null)
   // Pay Early always targets an occurrence that is still in the future, and the pending-due list
   // only ever holds occurrences due today or earlier -- so the lookup below never matched and the
@@ -168,10 +169,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       status: 'PartiallyPaid',
     }
   }, [activeRecurringPayments, payEarlyPayment, transactions])
-  const currentHighlightedLoanId = highlightedLoanIdProp || internalHighlightedLoanId
+  const currentHighlightedLoanId = highlightedLoanIdProp
 
   const handleClearHighlightedLoan = React.useCallback(() => {
-    setInternalHighlightedLoanId(null)
     onClearHighlightedLoanProp?.()
   }, [onClearHighlightedLoanProp])
 
@@ -272,8 +272,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     setDayFilter(null)
   }, [highlightedRecurringId, view.clearCategoryFilters])
 
-  if (isSwitchingCycle) {
-    return <CycleSkeleton variant={activeTab === 'loans' ? 'loans' : 'recurring'} />
+  if (isSwitchingCycle && activeTab === 'recurring') {
+    return <CycleSkeleton variant="recurring" />
   }
 
   return (
@@ -343,10 +343,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               const payment = payments.find(p => p.id === id)
               if (payment) setPayEarlyPayment(payment)
             }}
-            onNavigateToLoan={(loanId) => {
-              setActiveTab('loans')
-              setInternalHighlightedLoanId(loanId)
-            }}
+            onNavigateToLoan={onNavigateToLoan}
           />
         </section>
       )}

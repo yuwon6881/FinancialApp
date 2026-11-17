@@ -78,7 +78,7 @@ describe('StabilityRecoveryExceptionCard', () => {
   // 871.77 marked with 520 already put back leaves 351.77 genuinely owed, while the three-cycle
   // pace only asks for ceil(871.77 / 3) = 290.59 -- which the 520 already covers. Gating the card on
   // this cycle's ask hid it in exactly that state: below target, still owing, and never told.
-  it('keeps reporting the overall shortfall when this cycle is already ahead of the plan', () => {
+  it('keeps reporting the overall shortfall once this cycle is covered', () => {
     render(
       <StabilityRecoveryExceptionCard
         recovery={recovery({
@@ -94,6 +94,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     expect(screen.getByText('Emergency fund recovery')).toBeTruthy()
+    expect(screen.getByText('This cycle covered')).toBeTruthy()
     expect(screen.getByText(/\$351\.77 still short/)).toBeTruthy()
     expect(screen.getByText(/nothing due this cycle/)).toBeTruthy()
     expect(screen.queryByText(/Put back \$0\.00/)).toBeNull()
@@ -224,8 +225,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.getByText('Starts next cycle')).toBeTruthy()
     expect(screen.getByText(/\$500\.00 still short/)).toBeTruthy()
     expect(screen.getByText(/recovery starts next cycle/)).toBeTruthy()
-    // A deferred cycle is not a funded one, so it must not be congratulated for being ahead.
-    expect(screen.queryByText('Ahead of plan')).toBeNull()
+    expect(screen.queryByText('This cycle covered')).toBeNull()
     expect(screen.queryByText(/Put back \$0\.00/)).toBeNull()
 
     openRecoveryDetails()

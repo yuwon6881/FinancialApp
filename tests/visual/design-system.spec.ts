@@ -19,6 +19,9 @@ test('covered recovery shows active spending cycles without completed cycles', a
   await establishSession(page)
   await mockApi(page, { stabilityRecovery: coveredRecovery })
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+  const card = page.getByRole('region', { name: 'Emergency fund recovery' })
+  await expect(card.getByText('This cycle covered')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Needs attention' }).getByText('Emergency fund recovery')).toHaveCount(0)
   await page.getByRole('button', { name: 'See recovery details' }).click()
   const dialog = page.getByRole('dialog', { name: 'Emergency fund recovery details' })
   await expect(dialog.getByRole('heading', { name: 'This cycle' })).toBeVisible()
@@ -130,7 +133,7 @@ test('emergency fund recovery card reads as one subtraction', async ({ page }) =
 })
 
 // The cycle the money left in: the plan is known, it just has not opened. The card has to report
-// the shortfall without asking for a share of it, and without the emerald "ahead of plan" badge
+// the shortfall without asking for a share of it or marking this cycle as covered
 // that every other zero-ask cycle earns.
 test('emergency fund recovery card reports a plan that starts next cycle', async ({ page }) => {
   await establishSession(page)

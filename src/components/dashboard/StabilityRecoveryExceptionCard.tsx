@@ -35,8 +35,7 @@ interface StabilityRecoveryExceptionCardProps {
  * put back left 351.77 genuinely owed while the pace asked for ceil(871.77/3) = 290.59, which 520
  * already covers. Gating on it hid the card in exactly the state the user was trying to read: still
  * short of target, still owing, and no longer told about it. It is zero in the spending cycle too,
- * where the plan has not opened yet. Being ahead of the plan, or ahead of its start, changes the
- * sentence rather than whether there is one.
+ * where the plan has not opened yet. The status describes either a covered cycle or a deferred ask.
  *
  * Which sentence that is comes from `describeStabilityRecovery`, so the precedence between those
  * states is decided in one tested place rather than in nested ternaries here.
@@ -73,8 +72,8 @@ export function StabilityRecoveryExceptionCard({
 
   const statusBadge = status === 'deferred'
     ? <Badge tone="neutral">Starts next cycle</Badge>
-    : status === 'aheadOfPace'
-      ? <Badge tone="success">Ahead of plan</Badge>
+    : status === 'covered'
+      ? <Badge tone="success">This cycle covered</Badge>
       : status === 'overdue'
         ? <Badge tone="danger">Plan overdue</Badge>
         : status === 'finalCycle'
@@ -83,7 +82,7 @@ export function StabilityRecoveryExceptionCard({
 
   return (
     <NoticeCard
-      tone={status === 'overdue' ? 'urgent' : 'attention'}
+      tone={status === 'overdue' ? 'urgent' : status === 'covered' ? 'neutral' : 'attention'}
       icon={<ShieldAlert />}
       titleId="stability-recovery-exception"
       title={(
@@ -100,7 +99,7 @@ export function StabilityRecoveryExceptionCard({
       badge={statusBadge}
       description={status === 'deferred' ? (
         <>{formatSensitive(shortfall)} still short · recovery starts next cycle.</>
-      ) : status === 'aheadOfPace' ? (
+      ) : status === 'covered' ? (
         <>{formatSensitive(shortfall)} still short · nothing due this cycle.</>
       ) : askIsWholeShortfall ? (
         <>Put back {formatSensitive(askThisCycle)} this cycle to clear the shortfall.</>
@@ -142,7 +141,7 @@ export function StabilityRecoveryExceptionCard({
             aria-valuetext={isMasked ? 'Hidden' : undefined}
           >
             <div
-              className="h-full rounded-full bg-amber-500 transition-[width] duration-500 ease-fluid"
+              className={`h-full rounded-full transition-[width] duration-500 ease-fluid ${status === 'covered' ? 'bg-emerald-500' : 'bg-amber-500'}`}
               style={{ width: `${isMasked ? 0 : cyclePlanPercent}%` }}
             />
           </div>

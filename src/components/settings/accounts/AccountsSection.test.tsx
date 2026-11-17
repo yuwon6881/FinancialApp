@@ -9,7 +9,7 @@ describe('AccountsSection', () => {
         { id: 'visa', name: 'Visa', bucket: 'Essentials', kind: 'CreditCard', remaining: -280, creditLimit: 4000, isArchived: false },
         { id: 'bank', name: 'Bank', bucket: 'Essentials', kind: 'Bank', remaining: 2000, isArchived: false },
       ] as React.ComponentProps<typeof AccountsSection>['accounts'],
-      currency: 'MYR', hideSensitive: false, isCurrentCycle: true,
+      currency: 'MYR', hideSensitive: false,
       onAddAccount: vi.fn(), onUpdateAccount: vi.fn(), onRequestDeleteAccount: vi.fn(), onReconcileAccounts: vi.fn(),
     }
     const { rerender } = render(<AccountsSection {...props} />)
@@ -26,7 +26,7 @@ describe('AccountsSection', () => {
         { id: 'visa', name: 'Visa', bucket: 'Essentials', kind: 'CreditCard', remaining: -280, isArchived: false },
         { id: 'bank', name: 'Bank', bucket: 'Essentials', kind: 'Bank', remaining: 2000, isArchived: false },
       ] as React.ComponentProps<typeof AccountsSection>['accounts'],
-      currency: 'MYR', hideSensitive: false, isCurrentCycle: true,
+      currency: 'MYR', hideSensitive: false,
       onAddAccount: vi.fn(), onUpdateAccount: vi.fn(), onRequestDeleteAccount: vi.fn(),
       onReconcileAccounts: vi.fn(), onSettleCard: vi.fn(),
     }
@@ -39,41 +39,6 @@ describe('AccountsSection', () => {
     rerender(<AccountsSection {...props} />)
     expect(screen.queryByRole('dialog', { name: 'Clear card balance' })).toBeNull()
   })
-  it('explains that past-cycle navigation does not change today-based account corrections', () => {
-    render(
-      <AccountsSection
-        accounts={[]}
-        currency="MYR"
-        hideSensitive={false}
-        isCurrentCycle={false}
-        onAddAccount={vi.fn()}
-        onUpdateAccount={vi.fn()}
-        onRequestDeleteAccount={vi.fn()}
-        onReconcileAccounts={vi.fn()}
-      />,
-    )
-
-    expect(screen.getByText("Balances shown here are today's")).toBeTruthy()
-    expect(screen.getByText(/corrections always use today's balance and post to today's cycle/)).toBeTruthy()
-  })
-
-  it('does not repeat the cycle explanation on the current cycle', () => {
-    render(
-      <AccountsSection
-        accounts={[]}
-        currency="MYR"
-        hideSensitive={false}
-        isCurrentCycle
-        onAddAccount={vi.fn()}
-        onUpdateAccount={vi.fn()}
-        onRequestDeleteAccount={vi.fn()}
-        onReconcileAccounts={vi.fn()}
-      />,
-    )
-
-    expect(screen.queryByText("Balances shown here are today's")).toBeNull()
-  })
-
   it('clears a local account filter when search navigates to a hidden account', () => {
     const accounts = [
       { id: 'acc-maybank', name: 'Maybank', bucket: 'Essentials', kind: 'Bank', remaining: 100, isArchived: false },
@@ -83,7 +48,6 @@ describe('AccountsSection', () => {
       accounts,
       currency: 'MYR',
       hideSensitive: false,
-      isCurrentCycle: true,
       onAddAccount: vi.fn(),
       onUpdateAccount: vi.fn(),
       onRequestDeleteAccount: vi.fn(),

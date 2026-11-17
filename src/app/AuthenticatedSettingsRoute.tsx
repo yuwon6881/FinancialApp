@@ -7,7 +7,7 @@ import type { useCycleNavigation } from './useCycleNavigation'
 import type { useAppSession } from './useAppSession'
 import type { useAppDialogs } from './useAppDialogs'
 import type { usePushNotifications } from './usePushNotifications'
-import type { InvestmentAllocationOverview } from '../types'
+import type { ActiveRecurringPayment, InvestmentAllocationOverview } from '../types'
 import type { SettingsScope } from '../components/settings/settingsScopes'
 
 const SettingsView = lazy(() => import('../components/SettingsView').then(module => ({ default: module.SettingsView })))
@@ -21,7 +21,7 @@ export interface AuthenticatedSettingsRouteProps {
   session: ReturnType<typeof useAppSession>
   dialogs: ReturnType<typeof useAppDialogs>
   push: ReturnType<typeof usePushNotifications>
-  isCurrentCycle: boolean
+  accountActiveRecurringPayments?: ActiveRecurringPayment[]
   handleToggleDarkMode: () => void
   handleToggleHideSensitive: () => void
   hasPendingLocalChanges: boolean
@@ -38,7 +38,7 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
   session,
   dialogs,
   push,
-  isCurrentCycle,
+  accountActiveRecurringPayments,
   handleToggleDarkMode,
   handleToggleHideSensitive,
   hasPendingLocalChanges,
@@ -71,7 +71,7 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
       onRequestDeleteAccount={financial.requestDeleteAccount}
       onReconcileAccounts={financial.handleReconcileAccounts}
       onSettleCard={financial.handleSettleCard}
-      isCurrentCycle={isCurrentCycle}
+      accountActiveRecurringPayments={accountActiveRecurringPayments}
       pushSupported={push.supported}
       pushLoading={push.loading}
       pushBusyAction={push.busyAction}

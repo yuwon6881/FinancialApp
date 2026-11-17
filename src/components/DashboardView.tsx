@@ -9,6 +9,7 @@ import { useDashboardView } from './dashboard/useDashboardView'
 import { Button } from './ui/Button'
 import { PageHeader } from './ui/PageHeader'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
+import { describeStabilityRecovery } from '../lib/stabilityRecoveryNarrative'
 import { InvestmentPlanExceptionCard } from './dashboard/InvestmentPlanExceptionCard'
 import { StabilityRecoveryExceptionCard } from './dashboard/StabilityRecoveryExceptionCard'
 import { RecurringAccountShortfallCard } from './dashboard/RecurringAccountShortfallCard'
@@ -95,6 +96,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const currency = view.activeSettings.currency || 'USD'
   const openBill = onNavigateToRecurring ?? (() => onNavigate('recurring'))
   const hasOutstandingBills = view.activeRecurring.some(payment => payment.status === 'Pending' || payment.status === 'PartiallyPaid')
+  const recovery = dashboardData?.stabilityRecovery
+  const recoveryCovered = recovery && describeStabilityRecovery(recovery).status === 'covered'
+  const recoveryCard = (
+    <StabilityRecoveryExceptionCard
+      recovery={recovery}
+      formatSensitive={view.formatSensitive}
+      isMasked={hideSensitive}
+      onNavigateToLedger={onNavigateToLedger}
+    />
+  )
 
   return (
     <div className="@container space-y-8">
@@ -147,16 +158,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             isMasked={hideSensitive}
             onOpenCategoryLimits={category => (onNavigateToCategoryLimits ? onNavigateToCategoryLimits(category) : onNavigate('reports'))}
           />
-          <StabilityRecoveryExceptionCard
-            recovery={dashboardData?.stabilityRecovery}
-            formatSensitive={view.formatSensitive}
-            isMasked={hideSensitive}
-            onNavigateToLedger={onNavigateToLedger}
-          />
+          {!recoveryCovered && recoveryCard}
           <InvestmentPlanExceptionCard allocation={investmentAllocation} onNavigate={onNavigate} />
           <VaultRetentionNotice review={retentionReview} onOpenVault={() => onNavigate('documents')} />
         </div>
       </section>
+
+      {recoveryCovered && recoveryCard}
 
       {(view.wishlistGoal || hasOutstandingBills) && (
         <div className="grid grid-cols-1 items-start gap-6 @3xl:grid-cols-2">

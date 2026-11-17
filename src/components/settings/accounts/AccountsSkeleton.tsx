@@ -3,7 +3,7 @@ import { cn } from '../../../lib/utils'
 import { panelClass } from '../../ui/panelStyles'
 
 /** Total, filter, and bucket groups in the same order as the Accounts page. */
-export function AccountsSkeleton({ isCurrentCycle = true }: { isCurrentCycle?: boolean }) {
+export function AccountsSkeleton() {
   return (
     <div data-testid="accounts-skeleton" className="space-y-6">
       <div className={cn(panelClass, 'p-5 sm:p-6')}>
@@ -16,8 +16,6 @@ export function AccountsSkeleton({ isCurrentCycle = true }: { isCurrentCycle?: b
           {[1, 2, 3, 4].map(bucket => <Skeleton key={bucket} className="h-[18px] w-26" />)}
         </div>
       </div>
-
-      {!isCurrentCycle && <Skeleton className="h-16 w-full rounded-xl" />}
 
       {/* Search filter input skeleton */}
       <Skeleton className="h-11 w-full max-w-sm rounded-full lg:h-10" />

@@ -45,17 +45,17 @@ describe('describeStabilityRecovery', () => {
     expect(narrative.cyclesRemaining).toBe(3)
   })
 
-  it('reports being ahead of the plan once this cycle is funded past its share', () => {
+  it.each([290.59, 520])('reports that the cycle is covered after %s is put back', toppedUpThisCycle => {
     const narrative = describeStabilityRecovery(recovery({
       outstandingShortfall: 351.77,
       markedTotal: 871.77,
       repaidTotal: 520,
-      toppedUpThisCycle: 520,
+      toppedUpThisCycle,
       requiredThisCycle: 290.59,
       outstandingThisCycle: 0,
     }))
 
-    expect(narrative.status).toBe('aheadOfPace')
+    expect(narrative.status).toBe('covered')
     expect(narrative.cyclePlanPercent).toBe(100)
     expect(narrative.cyclePlanFunded).toBe(290.59)
   })

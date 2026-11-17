@@ -644,8 +644,7 @@ test('mobile category toolbar keeps the filter and Add action on one row', async
   expect(addBounds.bottom).toBeLessThanOrEqual(toolbarBounds.bottom)
 })
 
-// Bills and Loans share one page header, so switching sections must not change its shape or move
-// its primary action. This measures the header on both sections rather than trusting the snapshot.
+// The primary action stays in the header across both sections. Only Bills has a cycle picker.
 test('recurring summary header keeps its shape and top action across both sections', async ({ page }) => {
   test.skip(!test.info().project.name.startsWith('mobile'), 'The section header is measured on mobile.')
 
@@ -660,7 +659,7 @@ test('recurring summary header keeps its shape and top action across both sectio
     .evaluate(heading => {
       const header = heading.closest('header') ?? heading.parentElement!.parentElement!
       const rect = header.getBoundingClientRect()
-      return { width: Math.round(rect.width), height: Math.round(rect.height) }
+      return { width: Math.round(rect.width), height: Math.round(rect.height), top: Math.round(rect.top) }
     })
 
   const billsHeader = await headerBounds()
@@ -683,7 +682,8 @@ test('recurring summary header keeps its shape and top action across both sectio
 
   expect(loansHeader.width).toBe(billsHeader.width)
   expect(Math.abs(loansHeader.height - billsHeader.height)).toBeLessThanOrEqual(24)
-  expect(Math.abs(loanTop - billTop)).toBeLessThanOrEqual(24)
+  expect(Math.abs((loanTop - loansHeader.top) - (billTop - billsHeader.top))).toBeLessThanOrEqual(24)
+  await expect(page.getByRole('combobox', { name: 'Recurring cycle', exact: true })).toHaveCount(0)
   // Adding a loan lives in the page header, not beside the "Tracked loans" sub-heading.
   await expect(page.getByRole('button', { name: 'Add loan' })).toHaveCount(0)
 

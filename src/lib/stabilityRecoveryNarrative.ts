@@ -1,7 +1,7 @@
 // What the emergency-fund recovery card is allowed to say, worked out once and tested without React.
 //
 // The card used to derive all of this inline: five interacting booleans over six recovery fields,
-// where "ahead of plan", "nothing due yet" and "already funded" all reduce to `outstandingThisCycle
+// where "nothing due yet" and "already funded" both reduce to `outstandingThisCycle
 // === 0` unless something keeps them apart. Reading them off one narrative keeps the component to a
 // lookup, and keeps the one-figure-twice and never-say-final-forever rules in a place a test can
 // reach.
@@ -12,8 +12,8 @@ import type { StabilityRecovery } from '@/types'
 type StabilityRecoveryStatus =
   /** The money left this cycle: the plan is known but opens next cycle, so nothing is due. */
   | 'deferred'
-  /** More has gone back this cycle than the plan asked for. */
-  | 'aheadOfPace'
+  /** This cycle's share is fully funded. */
+  | 'covered'
   /** A plan's cycles have run out with money still owed. */
   | 'overdue'
   /** The last cycle of the only open plan. */
@@ -35,7 +35,7 @@ export interface StabilityRecoveryNarrative {
   cyclesRemaining: number
   /** More than one recovery plan remains open, so the ask is a sum of shares. */
   hasOverlappingPlans: boolean
-  /** A plan is past its window. Kept alongside `status`, which an ahead-of-plan cycle outranks. */
+  /** A plan is past its window. Kept alongside `status`, which can describe the funded cycle. */
   isOverdue: boolean
   /** The only open plan is on its last cycle. Never true for overlapping or overdue plans. */
   isFinalCycle: boolean
@@ -63,7 +63,7 @@ export function describeStabilityRecovery(recovery: StabilityRecovery): Stabilit
   const status: StabilityRecoveryStatus = recovery.isDeferred
     ? 'deferred'
     : askThisCycle <= 0
-      ? 'aheadOfPace'
+      ? 'covered'
       : recovery.isOverdue
         ? 'overdue'
         : isFinalCycle

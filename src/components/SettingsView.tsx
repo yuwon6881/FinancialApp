@@ -82,7 +82,7 @@ interface SettingsViewProps {
   onRequestDeleteAccount?: (id: string) => void
   onReconcileAccounts?: (input: LedgerAccountReconcileInput) => Promise<void> | void
   onSettleCard?: (transactions: Array<Omit<Transaction, 'id'>>) => void
-  isCurrentCycle?: boolean
+  accountActiveRecurringPayments?: DashboardData['activeRecurringPayments']
   activeSyncId?: string | null
   activeSyncIds?: string[]
   deletingId?: string | null
@@ -293,11 +293,11 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       )}
 
       {activeTab === 'accounts' && (
-        <React.Suspense fallback={<AccountsSkeleton isCurrentCycle={props.isCurrentCycle !== false} />}>
+        <React.Suspense fallback={<AccountsSkeleton />}>
           <AccountsSection
             accounts={props.accounts ?? []}
             savingsGoals={props.savingsGoals}
-            activeRecurringPayments={props.dashboardData?.activeRecurringPayments}
+            activeRecurringPayments={props.accountActiveRecurringPayments}
             recurringPayments={props.recurringPayments}
             currency={view.activeSettings.currency || 'USD'}
             hideSensitive={hideSensitive}
@@ -313,7 +313,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             onReconcileAccounts={input => props.onReconcileAccounts?.(input)}
             categories={props.categoriesList || []}
             onSettleCard={props.onSettleCard}
-            isCurrentCycle={props.isCurrentCycle !== false}
           />
         </React.Suspense>
       )}

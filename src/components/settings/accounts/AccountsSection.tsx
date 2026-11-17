@@ -23,7 +23,6 @@ import {
   type BucketSetupSessionSnapshot,
 } from './view/useBucketAccountSetupView'
 import { useAccountsView } from './view/useAccountsView'
-import { AlertBanner } from '../../ui/AlertBanner'
 
 interface AccountsSectionProps {
   savingsGoals?: SavingsGoal[]
@@ -47,7 +46,6 @@ interface AccountsSectionProps {
   categories?: TransactionCategory[]
   /** Queues a card payment and, when the bank took some off, its rebate. */
   onSettleCard?: (transactions: Array<Omit<Transaction, 'id'>>) => void
-  isCurrentCycle: boolean
 }
 
 interface PendingBalanceCorrection {
@@ -92,7 +90,6 @@ export function AccountsSection({
   onNavigateToRecurring,
   categories = [],
   onSettleCard,
-  isCurrentCycle,
 }: AccountsSectionProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const {
@@ -265,7 +262,7 @@ export function AccountsSection({
   }))
   const netTotal = bucketTotals.reduce((sum, item) => sum + item.total, 0)
   // Today's prices belong only beside today's balances, never a past cycle's closing ones.
-  const investmentValue = useInvestmentMarketValue(currency, isCurrentCycle && openAccountCount > 0)
+  const investmentValue = useInvestmentMarketValue(currency, openAccountCount > 0)
 
   const activeGroup = editingAccount
     ? bucketGroups.find(g => g.bucket === editingAccount.bucket)
@@ -292,12 +289,6 @@ export function AccountsSection({
             currency={currency}
             hideSensitive={hideSensitive}
           />
-        )}
-
-        {!isCurrentCycle && (
-          <AlertBanner variant="info" title="Balances shown here are today's">
-            Account corrections always use today's balance and post to today's cycle. A past cycle's closing balance is historical and cannot be changed here.
-          </AlertBanner>
         )}
 
         {/* Search filter input */}
@@ -338,7 +329,7 @@ export function AccountsSection({
               onClearCard={onSettleCard ? openClearCard : undefined}
               searchQuery={searchQuery}
               investmentValue={group.bucket === 'Growth' ? investmentValue : null}
-              rewardsAvailability={group.bucket === 'Rewards' && isCurrentCycle ? getRewardsAvailability(group.balance, savingsGoals, pendingRewardsAmount(activeRecurringPayments)) : undefined}
+              rewardsAvailability={group.bucket === 'Rewards' && activeRecurringPayments ? getRewardsAvailability(group.balance, savingsGoals, pendingRewardsAmount(activeRecurringPayments)) : undefined}
             />
           ))}
         </div>

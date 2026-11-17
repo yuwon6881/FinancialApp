@@ -26,7 +26,6 @@ const HubNav = lazy(() => import('../components/nav/HubNav').then(module => ({ d
 const CycleSwitcher = lazy(() => import('../components/ui/CycleSwitcher').then(module => ({ default: module.CycleSwitcher })))
 
 /** Tabs whose figures are read from the selected financial cycle rather than from today. */
-const CYCLE_DEPENDENT_TABS = ['ledger', 'reports', 'recurring'] as const
 
 const DashboardView = lazy(() => import('../components/DashboardView').then(module => ({ default: module.DashboardView })))
 const ReportsView = lazy(() => import('../components/ReportsView').then(module => ({ default: module.ReportsView })))
@@ -154,7 +153,6 @@ export function AuthenticatedTabContent({
   const ledgerSpansAllCycles = prefs.activeTab === 'ledger'
     && nav.ledgerShowAllCycles
     && prefs.ledgerCyclesRange === 'all'
-  const showCycleSwitcher = (CYCLE_DEPENDENT_TABS as readonly string[]).includes(prefs.activeTab)
   // Read the address through the hook's value rather than `window.location`: the compiler memoises
   // this on its React inputs, so a direct read went stale when Bills switched to Loans in place.
   const locationKey = useAppLocationKey()
@@ -168,6 +166,7 @@ export function AuthenticatedTabContent({
         queryStart < 0 ? '' : locationKey.slice(queryStart),
       )
     : null
+  const showCycleSwitcher = prefs.activeTab === 'ledger' || prefs.activeTab === 'reports' || sectionId === 'bills'
   // Review only appears while drafts wait, so Activity alone has a single section and no row.
   const hiddenSections = draftCount > 0 ? undefined : ['review']
   const showHubNav = (destination?.sections ?? []).filter(section => !hiddenSections?.includes(section.id)).length > 1
@@ -281,7 +280,7 @@ export function AuthenticatedTabContent({
           session={session}
           dialogs={dialogs}
           push={push}
-          isCurrentCycle={isCurrentCycle}
+          accountActiveRecurringPayments={isWishlistCycleStale ? undefined : todayDashboardData?.activeRecurringPayments}
           handleToggleDarkMode={handleToggleDarkMode}
           handleToggleHideSensitive={handleToggleHideSensitive}
           hasPendingLocalChanges={hasPendingLocalChanges}
@@ -311,6 +310,7 @@ export function AuthenticatedTabContent({
           onClearHighlightedRecurring={nav.clearHighlightedRecurring}
           highlightedLoanId={nav.highlightedLoanId}
           onClearHighlightedLoan={nav.clearHighlightedLoan}
+          onNavigateToLoan={nav.handleNavigateToLoan}
           globalPushEnabled={push.billRemindersEnabled || push.otherDevicesBillReminders}
           thisDevicePushEnabled={push.billRemindersEnabled}
           onUpdateReminder={financial.handleUpdateReminder}

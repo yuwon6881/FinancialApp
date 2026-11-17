@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
-import type { AutocompleteSuggestion, InvestmentActivity, Loan, PendingNotification, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, VaultDocument, WishlistItem } from '../../src/types'
+import type { ActiveRecurringPayment, AutocompleteSuggestion, InvestmentActivity, Loan, PendingNotification, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, VaultDocument, WishlistItem } from '../../src/types'
 
 const transaction = {
   id: 'tx-visual-1',
@@ -241,6 +241,7 @@ interface MockApiOptions {
   transactions?: Array<typeof transaction>
   /** Adds report-specific density without replacing unrelated bootstrap fixture fields. */
   dashboard?: Partial<typeof dashboard>
+  currentCycleBills?: ActiveRecurringPayment[]
   pendingNotifications?: PendingNotification[]
   recurringPayments?: RecurringPayment[]
   loans?: Loan[]
@@ -285,6 +286,9 @@ export async function mockApi(page: Page, options: MockApiOptions = {}) {
       })
     }
     if (pathname.endsWith('/bootstrap')) return fulfill(route, themedBootstrap)
+    if (pathname.endsWith('/financial/dashboard') && url.searchParams.get('persistSelection') === 'false' && options.currentCycleBills) {
+      return fulfill(route, { ...themedBootstrap.dashboard, activeRecurringPayments: options.currentCycleBills })
+    }
     if (pathname.endsWith('/loans')) return fulfill(route, options.loans ?? [])
     if (options.failDocuments && pathname.includes('/documents')) {
       return fulfill(route, { message: 'Vault temporarily unavailable.' }, 503)

@@ -15,7 +15,7 @@ function endOffset(cohort: StabilityRecoveryCohort) {
 
 export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
   const { status, shortfall, askThisCycle, cyclePlanFunded } = describeStabilityRecovery(recovery)
-  const covered = status === 'aheadOfPace'
+  const covered = status === 'covered'
 
   const activeCohorts = (recovery.recoveryCohorts ?? []).filter(cohort => cohort.remainingShortfall > 0)
 
