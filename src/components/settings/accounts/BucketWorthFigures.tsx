@@ -1,7 +1,7 @@
 import type { InvestmentMarketValue } from '../../../lib/investmentMarketValue'
 import { formatCurrencyVal } from '../../../lib/utils'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
-import { WorthGainChip } from './WorthGainChip'
+import { WorthGainChip } from '../../investments/WorthGainChip'
 
 /**
  * The Growth bucket's header figures: what it is worth at today's prices (primary) beside the

@@ -65,9 +65,14 @@ test('foreign holdings read in their own currency, converted only at today’s r
   await expect(page.getByText('From currency')).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   const hero = page.getByRole('region', { name: 'Investment summary' })
+  await expect(hero.getByText(/\+RM\s?90\.00 · \+10\.0%/)).toBeVisible()
   // Centre the card in the viewport so the floating phone navigation stays outside the crop.
   await hero.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }))
   await expect(hero).toHaveScreenshot('investment-summary.png')
+
+  await hero.getByRole('button', { name: 'What is on-paper gain or loss?' }).click()
+  await expect(page.getByRole('tooltip')).toContainText('the same rate converts both the value and cost')
+  await page.keyboard.press('Escape')
 
   const breakdown = hero.getByRole('button', { name: 'Show breakdown' })
   if (await breakdown.isVisible()) await breakdown.click()

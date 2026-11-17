@@ -37,8 +37,8 @@ describe('Accounts total beside what the investments are worth today', () => {
     expect(screen.getByText(/RM\s?6,500\.00/)).toBeTruthy()
     expect(screen.getAllByText(/RM\s?5,988\.50/).length).toBeGreaterThan(0)
     // Once on the total card and once on the Growth card.
-    expect(screen.getAllByText(/RM\s?511\.50 above money in/)).toHaveLength(2)
-    expect(screen.getByText(/worth RM\s?4,500\.00 today, against the RM\s?3,988\.50 you sent the broker, both at today’s exchange rate/)).toBeTruthy()
+    expect(screen.getAllByText(/RM\s?511\.50 above net broker deposits/)).toHaveLength(2)
+    expect(screen.getByText(/worth RM\s?4,500\.00\. Net broker deposits were RM\s?3,988\.50 after withdrawals/)).toBeTruthy()
   })
 
   it('takes a loss off the worth and says so', () => {
@@ -47,7 +47,7 @@ describe('Accounts total beside what the investments are worth today', () => {
 
     render(<AccountsSection {...props} />)
 
-    expect(screen.getAllByText(/RM\s?1\.47 below money in/)).toHaveLength(2)
+    expect(screen.getAllByText(/RM\s?1\.47 below net broker deposits/)).toHaveLength(2)
     expect(screen.getByText(/RM\s?5,987\.03/)).toBeTruthy()
   })
 
@@ -55,15 +55,15 @@ describe('Accounts total beside what the investments are worth today', () => {
     vi.spyOn(api, 'readCachedInvestmentPortfolio').mockReturnValue(portfolio({ netDeposits: 3988.5 }))
     vi.spyOn(api, 'fetchInvestmentPortfolio').mockRejectedValue(new Error('offline'))
     const { rerender, container } = render(<AccountsSection {...props} />)
-    expect(screen.getAllByText(/worth today shows here once prices arrive/)[0]).toBeTruthy()
+    expect(screen.getByText(/enough exchange-rate data to compare with net broker deposits/)).toBeTruthy()
     expect(screen.getAllByText('Worth today')[0]).toBeTruthy()
     expect(screen.getAllByText('Unknown')[0]).toBeTruthy()
-    expect(container.textContent).not.toMatch(/6,500|above money in|below money in/)
+    expect(container.textContent).not.toMatch(/6,500|above net broker deposits|below net broker deposits/)
 
     vi.spyOn(api, 'readCachedInvestmentPortfolio').mockReturnValue(portfolio({ totalValue: 4500, netDeposits: 3988.5 }))
     rerender(<AccountsSection key="masked" {...props} hideSensitive />)
     expect(screen.getAllByText('Worth today')[0]).toBeTruthy()
-    expect(container.textContent).not.toMatch(/4,500|511\.50|6,500|above money in/)
+    expect(container.textContent).not.toMatch(/4,500|511\.50|6,500|above net broker deposits/)
   })
 
   it('never mixes today’s prices into a past cycle or another currency', () => {
@@ -99,7 +99,7 @@ describe('Growth bucket beside what was put in', () => {
     expect(within(growth).getByText(/RM\s?4,500\.00/)).toBeTruthy()
     expect(within(growth).getByText('Money in')).toBeTruthy()
     expect(within(growth).getAllByText(/RM\s?3,988\.50/).length).toBeGreaterThan(0)
-    expect(within(growth).getByText(/RM\s?511\.50 above money in/)).toBeTruthy()
+    expect(within(growth).getByText(/RM\s?511\.50 above net broker deposits/)).toBeTruthy()
     expect(within(container.querySelector<HTMLElement>('#bucket-account-group-Essentials')!).queryByText('Worth today')).toBeNull()
   })
 

@@ -11,9 +11,16 @@ export function InvestmentPageSkeleton() {
         <div className="p-5 sm:p-6">
           <Skeleton className="h-11 w-28 sm:h-7" />
           <Skeleton className="mt-1 h-[34px] w-44 @xs:h-11" />
-          <div className="mt-3 flex gap-8">
+          <Skeleton className="mt-1.5 h-5 w-48 rounded-control" />
+          <div className="mt-3 flex flex-wrap gap-x-8 gap-y-2">
             {[1, 2].map(item => (
-              <div key={item} className="space-y-0.5"><Skeleton className="h-4 w-20" /><Skeleton className="h-5 w-24" /></div>
+              <div key={item} className="flex min-h-11 items-center gap-4 pr-3">
+                <div className="space-y-0.5">
+                  <Skeleton className={item === 1 ? 'h-4 w-28' : 'h-4 w-16'} />
+                  <Skeleton className="h-5 w-24" />
+                </div>
+                <Skeleton className="size-4 rounded-full" />
+              </div>
             ))}
           </div>
           <div className="mt-4 grid gap-x-6 gap-y-1.5 border-y border-border/60 py-2.5 @lg:grid-cols-[minmax(9rem,auto)_minmax(0,1fr)_auto]">

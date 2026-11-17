@@ -5,7 +5,7 @@ import { formatCurrencyVal } from '../../../lib/utils'
 import { SegmentedMeter } from '../../ui/SegmentedMeter'
 import { SensitiveAmount } from '../../ui/SensitiveAmount'
 import { panelClass } from '../../ui/panelStyles'
-import { WorthGainChip } from './WorthGainChip'
+import { WorthGainChip } from '../../investments/WorthGainChip'
 
 export type BucketTotal = { bucket: string; total: number }
 
@@ -101,10 +101,10 @@ function WorthNote({ value, money, hideSensitive }: {
   hideSensitive: boolean
 }) {
   const text = value.kind === 'unknown'
-    ? 'Investments are counted at what you sent the broker. Their worth today shows here once prices arrive.'
+    ? 'Worth today needs the value of your investments and broker cash, plus enough exchange-rate data to compare with net broker deposits.'
     : hideSensitive
-      ? 'Money in is what the ledger records; worth today adds what the market made of the investments.'
-      : `Investments are worth ${money(value.worth)} today, against the ${money(value.sent)} you sent the broker, both at today’s exchange rate. The balances and bars above show money in.`
+      ? 'Worth today adjusts your ledger balance by the difference between your portfolio value and net broker deposits.'
+      : `Investments and broker cash are worth ${money(value.worth)}. Net broker deposits were ${money(value.sent)} after withdrawals. Both use today’s exchange rates.`
   return (
     <p className="mt-4 flex items-start gap-2 border-t border-border/60 pt-4 text-caption text-muted-foreground">
       <TrendingUp className="mt-px size-4 shrink-0" aria-hidden="true" />

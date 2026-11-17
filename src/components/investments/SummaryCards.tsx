@@ -1,12 +1,14 @@
 import { useId, useState, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import type { InvestmentCurrencySummary, InvestmentPortfolio } from '../../types'
+import { investmentMarketValue } from '../../lib/investmentMarketValue'
 import { InfoHint } from '../ui/InfoHint'
 import { AmountText } from '../ui/AmountText'
 import { Button } from '../ui/Button'
 import { formatCurrencyVal } from '../../lib/utils'
 import { cn } from '../../lib/utils'
 import { panelClass } from '../ui/panelStyles'
+import { WorthGainChip } from './WorthGainChip'
 
 const money = (value: number, currency: string) =>
   formatCurrencyVal(value, currency)
@@ -44,6 +46,7 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
   const percent = portfolio.summary.unrealisedPercent
   const annualReturn = portfolio.summary.annualReturn
   const totalValue = portfolio.summary.totalValue
+  const brokerComparison = investmentMarketValue(portfolio, currency)
 
   const tone = (value?: number) => {
     // An unknown figure is quiet, not a warning: it is waiting on prices, nothing is wrong.
@@ -104,7 +107,7 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
   const facts: Array<{ label: string; value?: number; hint: string }> = [
     { label: 'Investments', value: portfolio.summary.marketValue, hint: 'Value of the shares and funds you hold, at their latest saved prices.' },
     { label: 'Broker cash', value: portfolio.summary.cashValue, hint: 'Money sitting uninvested in your broker accounts.' },
-    { label: 'You paid', value: portfolio.summary.costBasis, hint: 'What the investments you still hold originally cost you.' },
+    { label: 'Cost of holdings', value: portfolio.summary.costBasis, hint: 'What you paid for the investments you still hold, shown at today’s rates.' },
   ]
 
   const gainPercent = percent === undefined ? '' : ` · ${percent > 0 ? '+' : ''}${percent.toFixed(1)}%`
@@ -113,27 +116,36 @@ export const SummaryCards = ({ portfolio, masked, actions }: {
     <section aria-label="Investment summary" className={cn('@container overflow-hidden', panelClass)}>
       <div className="p-5 sm:p-6">
         <div className="flex items-center gap-1">
-          <h2 className="text-label text-muted-foreground">What it is worth</h2>
-          <InfoHint label="What it is worth" text={`Latest saved value of your investments and broker cash in ${currency}. Anything held in another currency is converted at today’s rate, so gains show what the markets did, never the exchange rate; its line below shows it in that currency itself. The latest move is between your funds’ two latest saved prices, which may be from an earlier market day.`} />
+          <h2 className="text-label text-muted-foreground">Portfolio value</h2>
+          <InfoHint label="portfolio value" text="The latest saved value of your investments plus broker cash. The comparison uses deposits minus withdrawals, with both amounts shown at today’s exchange rates." />
         </div>
         <div data-testid="investment-total" className="mt-1 min-w-0">
           {totalValue === undefined
             ? <p className="text-title text-muted-foreground">Not available yet</p>
             : <AmountText value={totalValue} currency={currency} isMasked={masked} className="text-display text-foreground @xs:text-hero" />}
         </div>
+        {!masked && brokerComparison?.kind === 'known' && (
+          <WorthGainChip gain={brokerComparison.gain} money={value => money(value, currency)} className="mt-1.5" />
+        )}
         {(unrealised !== undefined || daily !== undefined) && (
           <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2">
             {unrealised !== undefined && (
-              <div>
-                <dt className="text-caption text-muted-foreground">Gain on paper</dt>
+              <div className="relative flex min-h-11 flex-col justify-center pr-12 lg:pr-10">
+                <dt className="text-caption text-muted-foreground">
+                  On-paper gain or loss
+                  <InfoHint label="on-paper gain or loss" text="The value of the investments you still hold minus what you paid for them. For holdings in one currency, the same rate converts both the value and cost, so the percentage stays the same." className="absolute top-1/2 right-0 -translate-y-1/2 sm:size-11 lg:size-9" />
+                </dt>
                 <dd className={cn('mt-0.5 text-body font-semibold tabular-nums', masked ? 'text-foreground' : tone(unrealised))}>
                   {masked ? '••••' : `${signed(unrealised)}${gainPercent}`}
                 </dd>
               </div>
             )}
             {daily !== undefined && (
-              <div>
-                <dt className="text-caption text-muted-foreground">Latest move</dt>
+              <div className="relative flex min-h-11 flex-col justify-center pr-12 lg:pr-10">
+                <dt className="text-caption text-muted-foreground">
+                  Latest move
+                  <InfoHint label="latest move" text="The change between your funds’ two latest saved prices. Those prices can be from an earlier market day." className="absolute top-1/2 right-0 -translate-y-1/2 sm:size-11 lg:size-9" />
+                </dt>
                 <dd className={cn('mt-0.5 text-body font-semibold tabular-nums', masked ? 'text-foreground' : tone(daily))}>{signed(daily)}</dd>
               </div>
             )}

@@ -16,12 +16,15 @@ test('the accounts total leads with worth today beside money in, without overflo
   const total = page.locator('#accounts-total-card')
   await expect(total.getByText('Worth today')).toBeVisible()
   await expect(total.getByText('Money in accounts')).toBeVisible()
-  await expect(total.getByText(/RM\s?511\.50 above money in/)).toBeVisible()
+  const comparison = /RM\s?511\.50 above net broker deposits/
+  await expect(total.getByText(comparison)).toBeVisible()
   // The Growth card repeats the pairing in its header and must contain it at every width.
   const growth = page.locator('#bucket-account-group-Growth')
   await expect(growth.getByText('Worth today')).toBeVisible()
   await expect(growth.getByText('Money in', { exact: true })).toBeVisible()
-  await expect(growth.getByText(/RM\s?511\.50 above money in/)).toBeVisible()
+  await expect(growth.getByText(comparison)).toBeVisible()
   expect(await growth.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.getByRole('navigation', { name: 'Wealth sections' }).getByRole('button', { name: 'Investments' }).click()
+  await expect(page.getByRole('region', { name: 'Investment summary' }).getByText(comparison)).toBeVisible()
 })
