@@ -61,7 +61,8 @@ test('inline calculator keys stay on the balance field once the live result appe
   const keys = dialog.locator('[data-smart-amount-calculator]')
   // The sheet's balance field is wide enough for the inline keys at every tier this suite runs.
   await expect(keys).toBeVisible()
-  await dialog.getByRole('button', { name: 'Subtract' }).dispatchEvent('mousedown')
+  await dialog.getByRole('button', { name: 'Subtract' }).click()
+  await expect(balance).toBeFocused()
   await balance.press('End')
   await balance.pressSequentially('2419.44')
   await expect(dialog.getByText(/= -?2,?356\.36/)).toBeVisible()
