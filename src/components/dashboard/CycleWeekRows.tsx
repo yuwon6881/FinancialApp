@@ -1,5 +1,5 @@
 import type React from 'react'
-import type { CycleCalendarDay, CycleWeekSummary } from '../../lib/cycleCalendar'
+import { calendarBillStatus, isPendingCalendarBill, type CycleCalendarDay, type CycleWeekSummary } from '../../lib/cycleCalendar'
 import { cn } from '../../lib/utils'
 import { InteractiveCard } from '../ui/InteractiveCard'
 
@@ -40,7 +40,10 @@ export const CycleWeekRows: React.FC<CycleWeekRowsProps> = ({
     const state = day.isFuture ? 'future' : level > 0 ? 'active' : 'quiet'
     const label = day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     const stateLabel = hideSensitive ? 'Cash activity hidden' : day.isFuture ? 'Not here yet' : HEAT_LABELS[level]
-    const billsLabel = day.recurringNames.length ? ` Bills due: ${day.recurringNames.join(', ')}.` : ''
+    const pendingBillNames = day.recurring.filter(isPendingCalendarBill).map(bill => bill.name)
+    const displayedBillCount = day.recurring.filter(bill => calendarBillStatus(bill) !== 'Discarded').length
+    const billsLabel = pendingBillNames.length ? ` Bills due: ${pendingBillNames.join(', ')}.`
+      : day.hasPaidBills ? ' Bills settled.' : ''
 
     return (
       <InteractiveCard
@@ -74,18 +77,18 @@ export const CycleWeekRows: React.FC<CycleWeekRowsProps> = ({
           {day.date.getDate()}
         </span>
         {/* A bill on this day: amber while it is still to pay, green once paid. */}
-        {day.recurring.length > 0 && (
+        {displayedBillCount > 0 && (
           <span
             aria-hidden="true"
             className={cn(
               'absolute right-1 top-1 flex items-center justify-center rounded-full',
-              day.recurring.length > 1 ? 'h-3.5 min-w-3.5 px-0.5 text-micro font-semibold leading-none' : 'size-1.5',
+              displayedBillCount > 1 ? 'h-3.5 min-w-3.5 px-0.5 text-micro font-semibold leading-none' : 'size-1.5',
               day.hasPendingBills
-                ? day.recurring.length > 1 ? 'bg-amber-500/18 text-amber-700 dark:text-amber-300' : 'bg-amber-500'
-                : day.recurring.length > 1 ? 'bg-emerald-500/18 text-emerald-700 dark:text-emerald-300' : 'bg-emerald-500',
+                ? displayedBillCount > 1 ? 'bg-amber-500/18 text-amber-700 dark:text-amber-300' : 'bg-amber-500'
+                : displayedBillCount > 1 ? 'bg-emerald-500/18 text-emerald-700 dark:text-emerald-300' : 'bg-emerald-500',
             )}
           >
-            {day.recurring.length > 1 ? day.recurring.length : null}
+            {displayedBillCount > 1 ? displayedBillCount : null}
           </span>
         )}
       </InteractiveCard>

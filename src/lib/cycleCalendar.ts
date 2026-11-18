@@ -14,6 +14,18 @@ export const formatCalendarDate = (date: Date): string => {
   return `${year}-${month}-${day}`
 }
 
+export function calendarBillStatus(bill: ActiveRecurringPayment) {
+  if (bill.isDiscarded || bill.status === 'Discarded') return 'Discarded'
+  if (bill.status === 'SettledByLoanPayoff') return 'SettledByLoanPayoff'
+  if (bill.isPaid || bill.status === 'Paid') return 'Paid'
+  return bill.status === 'PartiallyPaid' ? 'PartiallyPaid' : 'Pending'
+}
+
+export function isPendingCalendarBill(bill: ActiveRecurringPayment) {
+  const status = calendarBillStatus(bill)
+  return status === 'Pending' || status === 'PartiallyPaid'
+}
+
 export interface CycleCalendarDay {
   date: Date
   dateKey: string
@@ -52,7 +64,7 @@ interface CycleCalendarStats {
   totalInflow: number
   totalOutflow: number
   totalNet: number
-  averageDailySpend: number
+  averageDailySpend: number | null
   maxExpenseDay: number
   noSpendDaysCount: number
 }
@@ -124,9 +136,10 @@ export function buildCycleCalendar(options: {
     const outflow = outflowByDay.get(dateKey) || 0
     const net = netByDay.get(dateKey)
 
-    const projectedBillsAmount = dayRecurring.reduce((sum, p) => sum + (p.remainingAmount ?? p.scheduledAmount ?? p.amount ?? 0), 0)
-    const hasPendingBills = dayRecurring.some(p => !p.isPaid && !p.isDiscarded && p.status !== 'Paid' && p.status !== 'SettledByLoanPayoff')
-    const hasPaidBills = dayRecurring.some(p => p.isPaid || p.status === 'Paid' || p.status === 'SettledByLoanPayoff')
+    const pendingBills = dayRecurring.filter(isPendingCalendarBill)
+    const projectedBillsAmount = pendingBills.reduce((sum, p) => sum + Math.abs(p.remainingAmount ?? p.scheduledAmount ?? p.amount ?? 0), 0)
+    const hasPendingBills = pendingBills.length > 0
+    const hasPaidBills = dayRecurring.some(bill => ['Paid', 'SettledByLoanPayoff'].includes(calendarBillStatus(bill)))
 
     rawDays.push({
       date,
@@ -199,7 +212,7 @@ export function buildCycleCalendar(options: {
   const totalNet = days.reduce((acc, d) => acc + (d.net ?? 0), 0)
   const pastOrTodayDays = days.filter(d => !d.isFuture)
   const noSpendDaysCount = pastOrTodayDays.filter(d => d.outflow === 0).length
-  const averageDailySpend = pastOrTodayDays.length > 0 ? totalOutflow / pastOrTodayDays.length : 0
+  const averageDailySpend = pastOrTodayDays.length > 0 ? totalOutflow / pastOrTodayDays.length : null
 
   return {
     startDayOfWeek,

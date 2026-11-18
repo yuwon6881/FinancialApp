@@ -33,7 +33,7 @@ function DetailCell({ label, hint, children }: { label: string; hint?: string; c
  * The loan card's Details section.
  *
  * Extracted so demoting the payoff and remaining-interest figures off the summary did not grow an
- * already-oversized card component. Expected payoff and Remaining interest live here rather than
+ * already-oversized card component. Expected payoff and scheduled interest live here rather than
  * on the summary: they answer "how does this end", which is a different question from "what do I
  * owe now" and does not need to compete with it for the first glance.
  */

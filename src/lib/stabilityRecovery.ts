@@ -235,7 +235,7 @@ export function projectStabilityRecovery(input: {
     ? 0
     : cyclesRemaining <= 1
       ? paceAnchor
-      : Math.ceil((paceAnchor / cyclesRemaining) * 100) / 100
+      : Math.ceil(Math.round(paceAnchor * 100) / cyclesRemaining) / 100
   const requiredThisCycle = cohortPlan?.requiredThisCycle ?? fallbackRequiredThisCycle
 
   const effectiveTarget = input.planPoints?.length
@@ -250,7 +250,7 @@ export function projectStabilityRecovery(input: {
     currentBalance: input.projectedBalance,
     outstandingShortfall,
     lastDrawdownCycleKey,
-    recoveryCohorts: cohortPlan?.cohorts ?? input.recovery.recoveryCohorts,
+    recoveryCohorts: outstandingShortfall <= 0 ? [] : cohortPlan?.cohorts ?? input.recovery.recoveryCohorts,
     cyclesRemaining: cohortPlan?.cyclesRemaining ?? Math.max(1, cyclesRemaining),
     isOverdue: cohortPlan?.isOverdue ?? (cyclesRemaining <= 0 && outstandingShortfall > 0),
     isDeferred: cohortPlan?.isDeferred ?? fallbackIsDeferred,

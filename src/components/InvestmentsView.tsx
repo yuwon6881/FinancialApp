@@ -362,7 +362,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
                   portfolio={setupPortfolio ?? portfolio}
                   mutationsDisabled={hideSensitive}
                   onArchiveAccount={id => {
-                    const account = portfolio.accounts.find(a => a.id === id)
+                    const account = (setupPortfolio ?? portfolio).accounts.find(a => a.id === id)
                     if (account) queueInvestment('investmentAccount', 'update', id, { name: account.name, baseCurrency: account.baseCurrency, isArchived: true, undoSnapshot: account })
                   }}
                   onUnarchiveAccount={(id, name, currency) => {
@@ -375,7 +375,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
                     })
                   }}
                   onDeleteAccount={id => {
-                    const account = portfolio.accounts.find(a => a.id === id)
+                    const account = (setupPortfolio ?? portfolio).accounts.find(a => a.id === id)
                     confirm({
                       title: 'Delete investment account?',
                       message: 'Only accounts without activity can be deleted.',
@@ -384,7 +384,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
                     })
                   }}
                   onDeleteInstrument={id => {
-                    const instrument = portfolio.instruments.find(i => i.id === id)
+                    const instrument = (setupPortfolio ?? portfolio).instruments.find(i => i.id === id)
                     confirm({
                       title: 'Delete investment?',
                       message: 'Only investments without activity can be deleted.',
@@ -393,7 +393,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
                     })
                   }}
                   onArchiveInstrument={id => {
-                    const instrument = portfolio.instruments.find(value => value.id === id)
+                    const instrument = (setupPortfolio ?? portfolio).instruments.find(value => value.id === id)
                     if (instrument) queueInvestment('investmentInstrument', 'update', id, {
                       ...instrument,
                       isArchived: true,
@@ -401,7 +401,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
                     })
                   }}
                   onUnarchiveInstrument={id => {
-                    const instrument = portfolio.instruments.find(value => value.id === id)
+                    const instrument = (setupPortfolio ?? portfolio).instruments.find(value => value.id === id)
                     if (instrument) queueInvestment('investmentInstrument', 'update', id, {
                       ...instrument,
                       isArchived: false,

@@ -58,7 +58,7 @@ describe('buildCycleCalendar', () => {
     expect(day?.recurring.length).toBe(2)
     expect(day?.hasPendingBills).toBe(true)
     expect(day?.hasPaidBills).toBe(true)
-    expect(day?.projectedBillsAmount).toBe(60)
+    expect(day?.projectedBillsAmount).toBe(10)
   })
 
   it('distinguishes future days and aggregates weekly subtotals and stats', () => {

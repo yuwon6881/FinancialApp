@@ -227,7 +227,10 @@ export function projectAccountBalancesFromTransactions(
   projectedTransactions: ReadonlyArray<Transaction>,
 ): LedgerAccount[] {
   const baseEffects = getAccountBalances(baseTransactions, snapshot)
-  const projectedEffects = getAccountBalances(projectedTransactions, snapshot)
+  const projectedEffects = getAccountBalances(
+    projectedTransactions.filter(transaction => !transaction.isPendingDelete),
+    snapshot,
+  )
   return snapshot.map(account => ({
     ...account,
     remaining: roundMoney(account.remaining

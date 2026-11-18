@@ -46,6 +46,7 @@ const positiveNumberOrUndefined = (value: string) => {
 }
 const fmtUnits = (value: number) => value.toFixed(6).replace(/\.?0+$/, '')
 const fmtMoney = (value: number) => value.toFixed(2)
+const fmtUnitPrice = (value: number) => Number(fmtMoney(value)) === value ? fmtMoney(value) : String(value)
 
 // Which inputs an activity type actually puts in front of the user. A value left behind in a
 // field the current type hides is still submitted, so nothing — a scan least of all — may write
@@ -115,8 +116,8 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
   const initialScanCosts = initialScan && showsFeesAndTaxes(initialScanType) ? initialScan : null
   const [units, setUnits] = useState(initial?.units ? String(initial.units) : initialScanUnits != null ? String(initialScanUnits) : '')
   const [unitPrice, setUnitPrice] = useState(initial?.unitPrice != null
-    ? String(initial.unitPrice)
-    : initialScanUnitPrice != null ? String(initialScanUnitPrice) : '')
+    ? fmtUnitPrice(initial.unitPrice)
+    : initialScanUnitPrice != null ? fmtUnitPrice(initialScanUnitPrice) : '')
   const initialGross = initial?.cashAmount
     ? Number(initial.cashAmount).toFixed(2)
     : initialScanGross != null
@@ -210,7 +211,7 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
     const scannedUnits = showsUnits(appliedType) ? result.units : null
     const scannedUnitPrice = showsUnitPrice(appliedType) ? result.unitPrice : null
     if (scannedUnits != null) setUnits(String(scannedUnits))
-    if (scannedUnitPrice != null) setUnitPrice(String(scannedUnitPrice))
+    if (scannedUnitPrice != null) setUnitPrice(fmtUnitPrice(scannedUnitPrice))
     if (result.cashAmount != null) setCashAmount(Number(result.cashAmount).toFixed(2))
     if (showsFeesAndTaxes(appliedType)) {
       if (result.fees != null) setFees(Number(result.fees).toFixed(2))

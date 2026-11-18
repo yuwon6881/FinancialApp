@@ -42,8 +42,8 @@ export function priorityRank(priority: string | undefined): number {
 
 // Contributions round UP to the cent so N cycles of the required amount actually clears the
 // target; rounding down leaves it a few cents short on the deadline cycle.
-function roundUpToCent(value: number): number {
-  return Math.ceil(value * 100) / 100
+function requiredContribution(remaining: number, cycles: number): number {
+  return Math.ceil(Math.round(remaining * 100) / cycles) / 100
 }
 
 // Money is compared and summed at cent precision throughout. Without this, accumulated binary
@@ -117,7 +117,7 @@ export function computePace(
   // remainder is due now. Spreading it anyway would hide the missed deadline.
   const requiredPerCycle = cycles <= 1
     ? remainingAtCycleStart
-    : roundUpToCent(remainingAtCycleStart / cycles)
+    : requiredContribution(remainingAtCycleStart, cycles)
 
   // Capped by remaining as well: the final cycle of a goal only needs the remainder, however much
   // its nominal per-cycle pace says.

@@ -48,7 +48,7 @@ export const ActionToolbar = ({
         variant="secondary"
         size="sm"
         className="shrink-0 whitespace-nowrap lg:ml-auto"
-        disabled={isOffline || refreshing || !portfolio.marketDataConfigured || !portfolio.holdings.length}
+            disabled={isOffline || refreshing || !portfolio.marketDataConfigured}
         aria-busy={refreshing}
         onClick={onUpdatePrices}
       >

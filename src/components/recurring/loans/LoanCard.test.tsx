@@ -65,7 +65,7 @@ describe('LoanCard headline', () => {
     // Still reachable, but in the sections below rather than competing for the summary.
     const panel = screen.getByRole('tabpanel')
     expect(within(panel).getByText('Expected payoff')).toBeTruthy()
-    expect(within(panel).getByText('Remaining interest')).toBeTruthy()
+    expect(within(panel).getByText('Originally scheduled interest')).toBeTruthy()
   })
 
   it('shows no balance, meter or percentage when the schedule is unavailable', () => {

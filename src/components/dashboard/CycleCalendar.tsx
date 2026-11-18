@@ -79,7 +79,9 @@ export function CycleCalendar(props: CycleCalendarProps) {
           </div>
           <div>
             <dt className="text-muted-foreground">Average a day</dt>
-            <dd className="text-label text-foreground tabular-nums">{props.formatNet(-Math.round(calendar.stats.averageDailySpend))}</dd>
+            <dd className="text-label text-foreground tabular-nums">
+              {calendar.stats.averageDailySpend === null ? '—' : props.formatNet(-Math.round(calendar.stats.averageDailySpend))}
+            </dd>
           </div>
         </dl>
 

@@ -134,9 +134,10 @@ export function useProjectedFinancialData(deps: ProjectionDependencies) {
       (dashboardData?.categories ?? []).flatMap(category =>
         (category.accounts ?? []).map(account => [account.id, account] as const)),
     )
+    const originalAccounts = new Map(accounts.map(account => [account.id, account]))
     const snapshotAccounts = allAccounts.map(account => ({
       ...account,
-      remaining: accountSnapshots.get(account.id)?.remaining ?? account.remaining,
+      remaining: accountSnapshots.get(account.id)?.remaining ?? originalAccounts.get(account.id)?.remaining ?? 0,
     }))
     const projectedAccounts = projectAccountBalancesFromTransactions(
       snapshotAccounts,
@@ -164,6 +165,7 @@ export function useProjectedFinancialData(deps: ProjectionDependencies) {
             .map(account => ({
               id: account.id,
               name: account.name,
+          kind: account.kind,
               remaining: account.remaining,
               isArchived: account.isArchived,
             })),
@@ -171,7 +173,7 @@ export function useProjectedFinancialData(deps: ProjectionDependencies) {
         return { ...category, accounts: accountsForCategory }
       }),
     }
-  }, [allAccounts, allTransactions, dashboardData, optimisticDashboardData, transactions])
+  }, [accounts, allAccounts, allTransactions, dashboardData, optimisticDashboardData, transactions])
   const queuedLoans = useOptimisticList(loanData.loans, activeOps, 'loan')
   const allLoans = useMemo(() => projectLoanStates(queuedLoans, activeOps, queuedRecurringPayments), [activeOps, queuedLoans, queuedRecurringPayments])
   const allRecurringPayments = useMemo(() => {

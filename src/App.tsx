@@ -115,7 +115,7 @@ function App() {
     {
       verifySession: async () => {
         try {
-          await api.fetchAuthStatus(session.username)
+          await api.getSessions()
           return true
         } catch (error) {
           if (getStatus(error) === 401) await session.handleLogout()

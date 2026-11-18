@@ -68,6 +68,14 @@ describe('projectAccountBalances', () => {
     expect(result.find(account => account.id === 'essentials')?.remaining).toBe(150)
   })
 
+  it('removes the effect of a pending delete from the dashboard account balance', () => {
+    const original = baseTransaction()
+    const [account] = projectAccountBalancesFromTransactions(
+      accounts, [original], [{ ...original, isPendingDelete: true }],
+    )
+    expect(account.remaining).toBe(120)
+  })
+
   it('replaces the base effect for an update and removes it for a delete', () => {
     const updated = projectAccountBalances(accounts, [op({
       type: 'update',

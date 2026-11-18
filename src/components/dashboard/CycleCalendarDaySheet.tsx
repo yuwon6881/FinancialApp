@@ -1,6 +1,6 @@
 import React from 'react'
 import { Clock, ExternalLink } from 'lucide-react'
-import type { CycleCalendarDay } from '../../lib/cycleCalendar'
+import { calendarBillStatus, type CycleCalendarDay } from '../../lib/cycleCalendar'
 import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
 import { cn } from '../../lib/utils'
@@ -108,17 +108,17 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
         <div className="border-t border-border pt-3">
           <div className="mb-2 flex items-center gap-1 text-xs font-semibold text-foreground">
             <Clock className="size-3.5 text-amber-500" />
-            <span>Bills due ({day.recurring.length})</span>
+            <span>Bills ({day.recurring.length})</span>
           </div>
           <div className="max-h-40 space-y-1 overflow-y-auto pr-0.5">
             {day.recurring.map((bill) => {
-              const isSettled = bill.isPaid || bill.status === 'Paid' || bill.status === 'SettledByLoanPayoff'
-              const isPartial = bill.status === 'PartiallyPaid'
+              const status = calendarBillStatus(bill)
+              const isSettled = status === 'Paid' || status === 'SettledByLoanPayoff'
+              const isPartial = status === 'PartiallyPaid'
+              const showAmount = status !== 'Discarded' && status !== 'SettledByLoanPayoff'
               // A settled bill has nothing remaining, so leading with `remainingAmount` showed
               // every paid bill as zero. Show what was actually settled there, and what is still
               // owed only while the bill is outstanding.
-              // A loan payoff settles its occurrence with no tagged transaction of its own, so a
-              // zero paid figure there still falls back to what the bill was scheduled for.
               const settledAmount = bill.paidAmount && bill.paidAmount > 0 ? bill.paidAmount : null
               const amount = isSettled
                 ? settledAmount ?? bill.scheduledAmount ?? bill.amount
@@ -133,7 +133,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
                   <div className="flex shrink-0 items-center gap-1.5">
                     {/* An occurrence with no scheduled amount is genuinely unknown, not zero. */}
                     <span className="font-semibold text-muted-foreground">
-                      {amount == null ? 'Amount not set' : formatAmount(-Math.abs(amount))}
+                      {!showAmount ? '—' : amount == null ? 'Amount not set' : formatAmount(-Math.abs(amount))}
                     </span>
                     <span
                       className={cn(
@@ -143,7 +143,9 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
                         !isSettled && !isPartial && 'bg-primary/15 text-accent-ink',
                       )}
                     >
-                      {isSettled ? 'Paid' : isPartial ? 'Part paid' : 'Due'}
+                      {status === 'Discarded' ? 'Discarded'
+                        : status === 'SettledByLoanPayoff' ? 'Settled by payoff'
+                          : isSettled ? 'Paid' : isPartial ? 'Part paid' : 'Due'}
                     </span>
                   </div>
                 </div>

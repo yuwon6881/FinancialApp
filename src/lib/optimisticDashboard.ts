@@ -49,6 +49,7 @@ export function computeOptimisticDashboard(
   const hasSettingsProjection = settingsOperations.length > 0
   const hasTransactionProjection = activeOps.some(operation =>
     operation.entity === 'transaction' ||
+    operation.entity === 'ledgerAccountReconcile' ||
     (operation.entity === 'wishlistItem' && ['purchase', 'unpurchase', 'delete'].includes(operation.type)) ||
     (operation.entity === 'recurringPayment' && operation.type === 'payEarly') ||
     (operation.entity === 'recurringOccurrence' && operation.type === 'settle'))

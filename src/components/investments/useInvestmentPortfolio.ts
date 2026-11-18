@@ -110,6 +110,7 @@ export function useInvestmentPortfolio() {
         if (result.warnings.length) {
           showToast(result.warnings[0], 'Prices may be stale', 'warning')
         }
+        if (!complete && !result.retryAfterSeconds) break
       }
       if (!cancelRefreshRef.current) await load(range, true)
     } catch (error) {

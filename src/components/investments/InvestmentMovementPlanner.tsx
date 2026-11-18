@@ -27,7 +27,8 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
   const [selections, setSelections] = useState<Record<string, string>>({})
   const requested = Number(amountText) || 0
   const assignedInstruments = instruments.filter(instrument => !instrument.isArchived && instrument.allocationSleeve)
-  const valuesKnown = allocation.sleeves.every(sleeve => sleeve.value !== undefined)
+  const valuesKnown = allocation.status !== 'Incomplete'
+    && allocation.sleeves.every(sleeve => sleeve.value !== undefined)
   const cashKnown = allocation.availableCash !== undefined
   const invested = allocation.investedValue ?? 0
   const canDeposit = valuesKnown && cashKnown && assignedInstruments.length > 0
