@@ -236,12 +236,13 @@ export function applyEntityOp<T extends ProjectionRow>(
         pendingSyncOperationId: op.isCompleted ? undefined : op.id,
       }
       const candidates = rows.rows
-        .map((candidate, index) => ({ candidate: candidate as T & { isPurchased?: boolean; createdAt?: string }, index }))
+        .map((candidate, index) => ({ candidate: candidate as T & { isPurchased?: boolean; isActive?: boolean; createdAt?: string }, index }))
         .filter(({ candidate, index }) => index !== existingIndex && !candidate.isPurchased)
         .sort((left, right) => String(right.candidate.createdAt ?? '').localeCompare(String(left.candidate.createdAt ?? '')))
+      const focused = candidates.find(({ candidate }) => candidate.isActive) ?? candidates[0]
       rows.rows = rows.rows.map((candidate, index) => ({
         ...candidate,
-        isActive: candidates.length > 0 && index === candidates[0].index,
+        isActive: index === focused?.index,
       }))
     }
   } else if (op.type === 'unpurchase') {
@@ -277,7 +278,7 @@ export function applyEntityOp<T extends ProjectionRow>(
       if (!snapshotId) continue
       const restored = {
         ...snapshot,
-        id: snapshotId,
+        id: entity === 'savingsGoal' ? Number(snapshotId) : snapshotId,
         isPendingDelete: false,
         isPendingSync: !op.isCompleted,
         pendingSyncOperationId: op.isCompleted ? undefined : op.id,

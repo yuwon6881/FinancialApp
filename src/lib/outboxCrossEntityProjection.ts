@@ -207,7 +207,9 @@ export function applyCrossEntityOp<T extends ProjectionRow>(
             ...(existingIndex >= 0 ? rows.rows[existingIndex] : {}),
             id: categoryId,
             name,
-            cycleLimit: existingIndex >= 0 ? (rows.rows[existingIndex] as T & { cycleLimit?: number | null }).cycleLimit ?? null : null,
+            ...(typeof action.categoryType === 'string' ? { type: action.categoryType } : {}),
+            cycleLimit: typeof action.cycleLimit === 'number' ? action.cycleLimit
+              : existingIndex >= 0 ? (rows.rows[existingIndex] as T & { cycleLimit?: number | null }).cycleLimit ?? null : null,
             isPendingSync: !op.isCompleted,
             isPendingDelete: false,
           } as unknown as T

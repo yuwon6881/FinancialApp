@@ -274,7 +274,9 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         }
         deps.mutateQueue(prev => {
           let next = prev.filter(item => item.id !== nextOp.id)
-          if (SERVER_ASSIGNED_ID_ENTITIES.has(nextOp.entity) && nextOp.type === 'add' && result && 'id' in result && result.id) {
+          const receivesServerId = SERVER_ASSIGNED_ID_ENTITIES.has(nextOp.entity) && nextOp.type === 'add'
+            || nextOp.entity === 'savingsGoal' && nextOp.type === 'restore'
+          if (receivesServerId && result && 'id' in result && result.id) {
             const realIdStr = String(result.id)
             completedOp = { ...nextOp, targetId: realIdStr }
             deps.remapUndoSnapshot?.(nextOp.entity, nextOp.targetId, realIdStr)

@@ -82,6 +82,9 @@ export function enqueue(
   const sameTarget = (op: QueuedOp) => op.entity === entity && op.targetId === targetIdStr
   const queuedAdd = queue.find(op => sameTarget(op) && op.type === 'add')
   const queuedAddNotInFlight = queuedAdd !== undefined && !activeSyncOpIds?.has(queuedAdd.id)
+  const queuedGoalRestore = entity === 'savingsGoal'
+    ? queue.find(op => sameTarget(op) && op.type === 'restore')
+    : undefined
 
   const queuedDelete = queue.find(op => sameTarget(op) && op.type === 'delete')
   const hasQueuedDelete = queuedDelete !== undefined
@@ -92,7 +95,7 @@ export function enqueue(
       // second DELETE at a row the first one already removed (would 404).
       return queue
     }
-    if (queuedAddNotInFlight) {
+    if (queuedAddNotInFlight || queuedGoalRestore && !activeSyncOpIds?.has(queuedGoalRestore.id)) {
       // Delete against a target with an unsent add: drop every op for that target. Historical
       // ledger transactions are independent records, including rows linked to recurring payments.
       return queue.filter(op => !sameTarget(op))

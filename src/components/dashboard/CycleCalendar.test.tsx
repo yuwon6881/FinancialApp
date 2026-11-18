@@ -283,11 +283,12 @@ describe('CycleCalendar component', () => {
       />,
     )
 
-    fireEvent.click(screen.getByTitle(/Jul 10:.*Bills due: Streaming, Gym/))
+    fireEvent.click(screen.getByTitle(/Jul 10:.*Bills settled/))
 
-    const bills = screen.getByText(/Bills due/).closest('div')?.parentElement
+    const bills = screen.getByText('Bills (2)').closest('div')?.parentElement
     expect(within(bills as HTMLElement).getByText('$-15')).toBeTruthy()
-    expect(within(bills as HTMLElement).getByText('$-40')).toBeTruthy()
+    expect(within(bills as HTMLElement).getByText('Settled by payoff')).toBeTruthy()
+    expect(within(bills as HTMLElement).queryByText('$-40')).toBeNull()
     expect(within(bills as HTMLElement).queryByText('$-0')).toBeNull()
   })
 })

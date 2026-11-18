@@ -39,6 +39,8 @@ export interface CategoryCleanupAction {
   transactionIds?: string[]
   recurringPaymentIds?: string[]
   categoryId?: string | null
+  categoryType?: CategoryFlowType | null
+  cycleLimit?: number | null
 }
 
 export interface CategoryCleanupApplyResult {
