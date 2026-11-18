@@ -76,6 +76,24 @@ describe('projectAccountBalances', () => {
     expect(account.remaining).toBe(120)
   })
 
+  it('replaces the base effect of a pending amount edit on the dashboard account balance', () => {
+    // The snapshot (100) already includes the confirmed -20; the queued edit makes it -35.
+    const original = baseTransaction()
+    const [account] = projectAccountBalancesFromTransactions(
+      accounts, [original], [{ ...original, amount: -35, isPendingSync: true }],
+    )
+    expect(account.remaining).toBe(85)
+  })
+
+  it('moves the effect of a pending edit to the account it now names', () => {
+    const original = baseTransaction()
+    const result = projectAccountBalancesFromTransactions(
+      accounts, [original], [{ ...original, accountId: 'rewards', ledgerCategory: 'Rewards', isPendingSync: true }],
+    )
+    expect(result.find(account => account.id === 'essentials')?.remaining).toBe(120)
+    expect(result.find(account => account.id === 'rewards')?.remaining).toBe(-20)
+  })
+
   it('replaces the base effect for an update and removes it for a delete', () => {
     const updated = projectAccountBalances(accounts, [op({
       type: 'update',

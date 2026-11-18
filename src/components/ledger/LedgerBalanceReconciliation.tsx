@@ -7,10 +7,13 @@ interface LedgerBalanceReconciliationProps {
   category: CategorySummary
   cycleLabel: string
   formatSensitive: (value: number) => ReactNode
+  /** Masked: the direction of the movement is as private as its size. */
+  hideSensitive?: boolean
 }
 
-export function LedgerBalanceReconciliation({ category, cycleLabel, formatSensitive }: LedgerBalanceReconciliationProps) {
-  const movementPrefix = category.netChange > 0 ? '+' : category.netChange < 0 ? '−' : ''
+export function LedgerBalanceReconciliation({ category, cycleLabel, formatSensitive, hideSensitive = false }: LedgerBalanceReconciliationProps) {
+  const movementPrefix = hideSensitive ? '' : category.netChange > 0 ? '+' : category.netChange < 0 ? '−' : ''
+  const movementTone = !hideSensitive && category.netChange > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'
   return (
     <Panel as="section" aria-labelledby="ledger-balance-reconciliation-title">
       <div className="flex items-start justify-between gap-3">
@@ -27,7 +30,7 @@ export function LedgerBalanceReconciliation({ category, cycleLabel, formatSensit
         <span className="hidden text-center text-section text-muted-foreground sm:block" aria-hidden="true">+</span>
         <div className="rounded-control inset-group px-3.5 py-3">
           <dt className="text-label text-muted-foreground">Movement this cycle</dt>
-          <dd className={`mt-1 text-section tabular-nums ${category.netChange > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>{movementPrefix}{formatSensitive(Math.abs(category.netChange))}</dd>
+          <dd className={`mt-1 text-section tabular-nums ${movementTone}`}>{movementPrefix}{formatSensitive(Math.abs(category.netChange))}</dd>
         </div>
         <span className="hidden text-center text-section text-muted-foreground sm:block" aria-hidden="true">=</span>
         <div className="rounded-control bg-primary/8 px-3.5 py-3">

@@ -42,7 +42,7 @@ export function ForecastControls({
         label={<span className="flex justify-between gap-3"><span>Monthly contribution</span><strong className="text-foreground">{money(monthlyContribution)}</strong></span>}
         hint={`${money(monthlyContribution * 12)} a year`}
       >
-        <RangeInput aria-label="Hypothetical monthly contribution" min={0} max={contributionMax} step={contributionStep} value={Math.min(monthlyContribution, contributionMax)} disabled={masked} onChange={event => onMonthlyContributionChange(Number(event.target.value))} />
+        <RangeInput aria-label="Hypothetical monthly contribution" min={0} max={contributionMax} step={contributionStep} value={masked ? 0 : Math.min(monthlyContribution, contributionMax)} disabled={masked} onChange={event => onMonthlyContributionChange(Number(event.target.value))} />
       </FormField>
       {years > 30 && (
         <p className="text-caption leading-relaxed text-muted-foreground">Years 31–50 use a less certain part of the model.</p>

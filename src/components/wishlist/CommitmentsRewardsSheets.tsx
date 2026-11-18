@@ -116,9 +116,16 @@ export function CommitmentsRewardsSheets(props: Props) {
                 className="w-full"
               />
             </FormField>
+            {/* Completing writes a ledger row and a rollback snapshot the server must own, so it is
+                online only. Saying so here keeps the chosen account instead of closing on a toast. */}
+            {props.isOffline && (
+              <p className="text-xs font-medium text-muted-foreground">
+                Reconnect to complete this commitment. Its ledger entry is recorded live.
+              </p>
+            )}
             <ModalActions className="pt-2">
               <Button variant="secondary" className="rounded-xl" onClick={() => props.setCompletingGoal(null)}>Cancel</Button>
-              <Button variant="primary" className="rounded-xl font-semibold shadow-md" onClick={props.onConfirmCompletion} disabled={props.hideSensitive || !props.completionAccountId}>
+              <Button variant="primary" className="rounded-xl font-semibold shadow-md" onClick={props.onConfirmCompletion} disabled={props.hideSensitive || props.isOffline || !props.completionAccountId}>
                 Complete &amp; Log to Ledger
               </Button>
             </ModalActions>

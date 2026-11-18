@@ -13,6 +13,7 @@ import type { SavingsGoal, SavingsGoalFundingBucket, Transaction } from '../type
 import type { ToastAction } from '../components/ui/ToastViewport'
 import { getErrorMessage } from '../lib/errors'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
+import { financialDate } from '../lib/financialDate'
 import { createFinalId } from '../lib/outbox'
 import { formatCurrencyVal } from '../lib/utils'
 import { collectRefreshHints, type RefreshSlice } from '../lib/refreshSlices'
@@ -283,13 +284,16 @@ function showOnlineOnlyMessage(deps: SavingsGoalActionDeps, message: string): vo
 }
 
 function createPendingCompletionTransaction(goal: SavingsGoal, accountId?: string): Transaction {
-  const postedAt = new Date().toISOString()
+  const now = new Date()
+  const postedAt = now.toISOString()
   return {
     // This is the final ledger ID, not a disposable placeholder. A lost completion response can
     // therefore be retried without creating a second expense, and optimistic account attribution
     // exactly matches the server row from the first frame.
     id: createFinalId('transaction'),
-    date: postedAt.slice(0, 10),
+    // The financial day, not the UTC one: just after midnight in Kuala Lumpur the UTC slice is
+    // still yesterday, and the row would land in the previous day (or cycle) until the server answered.
+    date: financialDate(now),
     postedAt,
     description: `Completed commitment: ${goal.name}`,
     category: 'Other',

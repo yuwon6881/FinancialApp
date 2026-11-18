@@ -9,6 +9,7 @@ import { Button } from '../ui/Button'
 import { CategoryIcon } from '../ui/CategoryIcon'
 import { InteractiveCard } from '../ui/InteractiveCard'
 import { SegmentedMeter } from '../ui/SegmentedMeter'
+import { useAppPrefs } from '../../contexts/AppContext'
 
 interface CategoryLimitPerformanceProps {
   items: CategoryLimitProgress[]
@@ -43,6 +44,9 @@ export function CategoryLimitPerformance({
   revealCategory = null,
 }: CategoryLimitPerformanceProps) {
   const [showAll, setShowAll] = React.useState(Boolean(revealCategory))
+  // The bar's length is what masking already shows; the exact share is derived from hidden
+  // amounts, so it stays out of what a screen reader announces.
+  const { hideSensitive } = useAppPrefs()
   React.useEffect(() => {
     if (revealCategory) setShowAll(true)
   }, [revealCategory])
@@ -136,7 +140,7 @@ export function CategoryLimitPerformance({
                       className="mt-2"
                       size="sm"
                       total={100}
-                      label={`${item.category}: ${Math.round(usedPct)}% of limit used`}
+                      label={hideSensitive ? `${item.category}: share of limit used` : `${item.category}: ${Math.round(usedPct)}% of limit used`}
                       segments={[{ label: 'Spent', value: Math.min(100, usedPct), color: status.fill }]}
                       markerPercent={showMarker ? Math.min(100, projectedPct) : undefined}
                       markerLabel="Where this bar is heading by the end of the cycle at the current pace"

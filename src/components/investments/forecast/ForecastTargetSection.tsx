@@ -56,7 +56,7 @@ export function ForecastTargetSection({
       <FormField
         label={<span className="flex justify-between gap-3"><span>Target amount</span><strong className="text-foreground">{money(target)}</strong></span>}
       >
-        <RangeInput aria-label="Forecast target amount" min={0} max={targetMax} step={targetStep} value={Math.min(target, targetMax)} disabled={masked} onChange={event => onChange(Number(event.target.value))} />
+        <RangeInput aria-label="Forecast target amount" min={0} max={targetMax} step={targetStep} value={masked ? 0 : Math.min(target, targetMax)} disabled={masked} onChange={event => onChange(Number(event.target.value))} />
       </FormField>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -69,7 +69,8 @@ export function ForecastTargetSection({
             />
           </div>
           <strong className="mt-1 block break-words text-section tabular-nums text-foreground">
-            {targetChance === undefined ? 'Calculating…' : `${Math.round(targetChance * 100)}%`}
+            {/* The chance is computed from the hidden portfolio value, so it is masked with it. */}
+            {masked ? '••%' : targetChance === undefined ? 'Calculating…' : `${Math.round(targetChance * 100)}%`}
           </strong>
         </article>
         <article className="rounded-control bg-muted dark:bg-card p-3">

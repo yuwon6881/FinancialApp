@@ -5,6 +5,7 @@ import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
 import { cn } from '../../lib/utils'
 import { Badge } from '../ui/Badge'
+import { useAppPrefs } from '../../contexts/AppContext'
 
 interface CycleCalendarDaySheetProps {
   day: CycleCalendarDay | null
@@ -26,6 +27,7 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
   onViewInLedger,
   formatAmount,
 }) => {
+  const { hideSensitive } = useAppPrefs()
   if (!day) return null
 
   const formattedDateTitle = day.date.toLocaleDateString('en-US', {
@@ -166,7 +168,8 @@ export const CycleCalendarDaySheet: React.FC<CycleCalendarDaySheetProps> = ({
         ) : (
           <div className="max-h-52 space-y-1 overflow-y-auto pr-0.5">
             {day.transactions.map((tx) => {
-              const isPositive = tx.amount >= 0
+              // Masked, the green "money in" colour would say which way a hidden amount went.
+              const isPositive = !hideSensitive && tx.amount >= 0
               return (
                 <div
                   key={tx.id}

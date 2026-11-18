@@ -66,7 +66,9 @@ export const RewardCard: React.FC<RewardCardProps> = ({
   const cutsIntoCommitments = canAfford && item.price > freeAfterGoalPace
   const isBusy = isSyncing || isDeleting || item.isPendingSync === true
   // The date in brackets is for the tooltip; the row only has room for the span.
-  const timelineShort = timeline ? timeline.replace(/ \(.*\)$/, '').replace(/^about/, 'in about') : null
+  // A timeline is the hidden balance divided by its pace, so masking hides it too.
+  const visibleTimeline = hideSensitive ? null : timeline
+  const timelineShort = visibleTimeline ? visibleTimeline.replace(/ \(.*\)$/, '').replace(/^about/, 'in about') : null
 
   return (
     <li id={elementId} className="flex gap-3 py-3 pl-4 pr-2 transition-colors duration-300 sm:pl-5 sm:pr-3">
@@ -112,7 +114,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
                 ? 'text-amber-700 dark:text-amber-300'
                 : canAfford ? 'font-medium text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground',
             )}
-            title={cutsIntoCommitments ? 'Buying this leaves your commitments short of what they need this cycle' : timeline ?? undefined}
+            title={cutsIntoCommitments ? 'Buying this leaves your commitments short of what they need this cycle' : visibleTimeline ?? undefined}
           >
             {cutsIntoCommitments ? (
               <>Leaves commitments <span className="font-semibold tabular-nums">{formatSensitive(goalPaceShortfall)}</span> short</>

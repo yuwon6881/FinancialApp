@@ -320,6 +320,32 @@ describe('recordInterestOnGoal', () => {
   })
 })
 
+describe('completeGoal financial date', () => {
+  it('dates the optimistic completion row on the financial day, not the UTC day', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    // 00:30 on 2 August in Kuala Lumpur is still 1 August in UTC.
+    vi.setSystemTime(new Date('2026-08-01T16:30:00Z'))
+    vi.mocked(completeSavingsGoal).mockResolvedValue({ goal, transaction })
+    const addPendingLedgerTransaction = vi.fn()
+    try {
+      await completeGoal({
+        currency: 'MYR',
+        commitGoals: vi.fn(),
+        commitGoal: vi.fn(),
+        getGoalName: () => goal.name,
+        getGoal: () => ({ ...goal, earmarkedAmount: 1200 }),
+        addPendingLedgerTransaction,
+        refreshAll: vi.fn().mockResolvedValue(undefined),
+        showToast: vi.fn(),
+      }, goal.id, 'acct-1')
+    } finally {
+      vi.useRealTimers()
+    }
+
+    expect(addPendingLedgerTransaction.mock.calls[0]?.[0]).toMatchObject({ date: '2026-08-02' })
+  })
+})
+
 describe('contributeToGoal', () => {
   beforeEach(() => {
     vi.clearAllMocks()

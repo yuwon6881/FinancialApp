@@ -347,6 +347,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
           category={balanceSummary}
           cycleLabel={getCycleLabelForDropdown(props.selectedMonth, props.selectedYear, props.cycleDay)}
           formatSensitive={formatSensitive}
+          hideSensitive={hideSensitive}
         />
       )}
 

@@ -38,7 +38,8 @@ export function RewardsSection(props: RewardsSectionProps) {
         <div className="min-w-0">
           <h3 id="commitments-rewards-rewards-heading" className="flex items-center gap-1.5 text-section text-foreground">
             Rewards
-            {props.affordableCount > 0 && (
+            {/* How many rewards the hidden balance covers is derived from that balance. */}
+            {!props.hideSensitive && props.affordableCount > 0 && (
               <Badge tone="success">
                 {props.affordableCount} claimable
               </Badge>
@@ -67,7 +68,7 @@ export function RewardsSection(props: RewardsSectionProps) {
               elementId={`reward-card-${item.id}`}
               item={item}
               isFocused={props.activeItem?.id === item.id}
-              timeline={props.activeItem?.id === item.id && props.claimableBalance < item.price
+              timeline={!props.hideSensitive && props.activeItem?.id === item.id && props.claimableBalance < item.price
                 ? props.rewardTimeline(item.price)
                 : null}
               claimableBalance={props.claimableBalance}

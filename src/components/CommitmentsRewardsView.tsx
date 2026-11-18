@@ -289,6 +289,8 @@ export const CommitmentsRewardsView: React.FC<CommitmentsRewardsViewProps> = ({
     setPurchasingItem(null)
     setContributeTarget(null)
     setInterestTarget(null)
+    // Its account picker and confirm action belong to an unmasked session too.
+    setCompletingGoal(null)
   }, [hideSensitive])
 
   const {
