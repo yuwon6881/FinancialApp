@@ -275,7 +275,9 @@ for (const file of allSourceFiles(SRC)) {
   const constants = stringConstants(sourceFile)
   const visit = node => {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-      const tag = jsxTagName(node)
+      // A Framer Motion element (`m.button`, `motion.input`) renders the same native control, so
+      // the raw-element rules apply to it too.
+      const tag = jsxTagName(node).replace(/^(?:m|motion)\./, '')
 
       if (tag === 'select') report(file, sourceFile, node, 'Use CustomSelect instead of native <select>.')
       if ((tag === 'input' || tag === 'textarea') && !CONTROL_IMPLEMENTATIONS.has(fileName)) {

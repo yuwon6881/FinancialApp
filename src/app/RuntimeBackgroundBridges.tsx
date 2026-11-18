@@ -58,6 +58,7 @@ export function RuntimeBackgroundBridges(props: RuntimeBackgroundBridgesProps) {
   const investmentAllocation = useInvestmentRefreshCoordinator(true, props.isOffline)
   const receiptScan = useReceiptScanPolling({
     token,
+    account,
     activeTabRef: props.activeTabRef,
     isLedgerAddOpenRef: props.isLedgerAddOpenRef,
     setActiveTab,
@@ -66,6 +67,7 @@ export function RuntimeBackgroundBridges(props: RuntimeBackgroundBridgesProps) {
   })
   const receiptSplit = useReceiptSplitPolling({
     token,
+    account,
     isReceiptSplitOpenRef: props.isReceiptSplitOpenRef,
     setActiveTab,
     setAutoOpenReceiptSplit: shortcutNavigation.setAutoOpenReceiptSplit,
@@ -73,6 +75,7 @@ export function RuntimeBackgroundBridges(props: RuntimeBackgroundBridgesProps) {
   })
   const investmentScan = useInvestmentScanPolling({
     token,
+    account,
     activeTabRef: props.activeTabRef,
     isInvestmentAddOpenRef: props.isInvestmentAddOpenRef,
     setActiveTab,

@@ -102,6 +102,7 @@ interface SettingsViewProps {
   onToggleChannel?: (channel: PushChannel, checked: boolean) => void
   /** Rises per server-confirmed enrolment change; the devices roster re-reads on it. */
   pushEnrolmentRevision?: number
+  onPushDevicesChanged?: () => void
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = (props) => {
@@ -265,6 +266,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           otherDevicesCategoryAlerts={props.otherDevicesCategoryAlerts}
           onToggleChannel={props.onToggleChannel}
           pushEnrolmentRevision={props.pushEnrolmentRevision}
+          onPushDevicesChanged={props.onPushDevicesChanged}
           hasSpendingGuides={hasSpendingGuides}
           onNavigateToCategoryLimits={() => navigateToAppTab('budget', { search: { section: 'categories' } })}
           part={scope === 'budget' ? 'plan' : 'preferences'}

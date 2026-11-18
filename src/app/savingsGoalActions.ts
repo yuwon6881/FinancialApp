@@ -55,18 +55,24 @@ export async function contributeToGoal(
   const { contributeToSavingsGoal, fetchSavingsGoals } = await import('../lib/api/savingsGoals')
   deps.beginDirectSync?.([id])
   try {
-    const { hints } = await collectRefreshHints(() => contributeToSavingsGoal(id, amount))
+    const { value: { appliedAmount }, hints } = await collectRefreshHints(() => contributeToSavingsGoal(id, amount))
     deps.commitGoals(await fetchSavingsGoals())
     await deps.refreshAll(hintedSlices(hints))
+    // The server clamps a top-up at the target and a release at zero, so describe and reverse
+    // what it applied rather than what was typed.
+    if (appliedAmount === 0) {
+      deps.showToast('Nothing needed to move: this goal was already at that limit.', 'No change', 'info')
+      return null
+    }
     const copy = buildMutationSuccessToast({
       entity: 'Savings Goal',
       action: 'Updated',
       recordName: deps.getGoalName(id),
-      messageSuffix: amount > 0
-        ? `${formatCurrencyVal(Math.abs(amount), deps.currency)} was moved into this goal.`
-        : `${formatCurrencyVal(Math.abs(amount), deps.currency)} was released back to free ${bucketLabel(deps.getGoal?.(id))}.`,
+      messageSuffix: appliedAmount > 0
+        ? `${formatCurrencyVal(Math.abs(appliedAmount), deps.currency)} was moved into this goal.`
+        : `${formatCurrencyVal(Math.abs(appliedAmount), deps.currency)} was released back to free ${bucketLabel(deps.getGoal?.(id))}.`,
     })
-    const undoAmount = -amount
+    const undoAmount = -appliedAmount
     deps.showToast(copy.message, copy.title, copy.tone, {
       label: 'Undo',
       onAction: () => {

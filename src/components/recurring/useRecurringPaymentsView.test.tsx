@@ -40,3 +40,24 @@ describe('useRecurringPaymentsView', () => {
     expect(result.current.totalCommittedMonthly).toBe(60)
   })
 })
+
+describe('useRecurringPaymentsView category default', () => {
+  it('defaults a new bill to the first category a bill can use, skipping inflow-only ones', () => {
+    const { result } = renderHook(() => useRecurringPaymentsView({
+      payments: [],
+      accounts: [],
+      categories: [
+        { id: 'c-salary', name: 'Salary', type: 'inflow' },
+        { id: 'c-bills', name: 'Bills', type: 'outflow' },
+      ],
+      hideSensitive: false,
+      currency: 'MYR',
+      activeSyncId: null,
+      deletingId: null,
+      onAddPayment: () => {},
+      onUpdatePayment: () => {},
+    }))
+
+    expect(result.current.category).toBe('Bills')
+  })
+})

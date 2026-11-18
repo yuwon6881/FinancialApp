@@ -21,7 +21,7 @@ describe('useReceiptSplitPolling', () => {
   })
 
   it('restores a persisted scan, opens its review sheet, and clears it after consumption', async () => {
-    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['ocr-split-complete']))
+    localStorage.setItem('receipt_split_scan_job_ids:sam', JSON.stringify(['ocr-split-complete']))
     apiMocks.fetchReceiptSplitScanJob.mockResolvedValue({
       scanId: 'ocr-split-complete',
       status: 'completed',
@@ -45,6 +45,7 @@ describe('useReceiptSplitPolling', () => {
     })
     const options = {
       token: 'token',
+      account: 'sam',
       isReceiptSplitOpenRef: { current: false },
       setActiveTab: vi.fn(),
       setAutoOpenReceiptSplit: vi.fn(),
@@ -74,12 +75,12 @@ describe('useReceiptSplitPolling', () => {
     expect(result.current.receiptSplitJobIds).toEqual([])
     expect(result.current.activeReceiptSplitDraft).toBeNull()
     expect(apiMocks.deleteReceiptScanJob).toHaveBeenCalledWith('ocr-split-complete')
-    expect(JSON.parse(localStorage.getItem('receipt_split_scan_job_ids') || '[]')).toEqual([])
+    expect(JSON.parse(localStorage.getItem('receipt_split_scan_job_ids:sam') || '[]')).toEqual([])
     unmount()
   })
 
   it('announces each completed scan once when two are waiting', async () => {
-    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['ocr-split-a', 'ocr-split-b']))
+    localStorage.setItem('receipt_split_scan_job_ids:sam', JSON.stringify(['ocr-split-a', 'ocr-split-b']))
     apiMocks.fetchReceiptSplitScanJob.mockImplementation(async (scanId: string) => ({
       scanId,
       status: 'completed',
@@ -103,6 +104,7 @@ describe('useReceiptSplitPolling', () => {
     }))
     const options = {
       token: 'token',
+      account: 'sam',
       isReceiptSplitOpenRef: { current: false },
       setActiveTab: vi.fn(),
       setAutoOpenReceiptSplit: vi.fn(),
@@ -147,6 +149,7 @@ describe('useReceiptSplitPolling', () => {
 
   const pollingOptions = () => ({
     token: 'token',
+    account: 'sam',
     isReceiptSplitOpenRef: { current: false },
     setActiveTab: vi.fn(),
     setAutoOpenReceiptSplit: vi.fn(),
@@ -157,7 +160,7 @@ describe('useReceiptSplitPolling', () => {
   // an open editor from a different receipt every three seconds and discarded the quantities,
   // unlocked prices and edited description already chosen there.
   it('holds a second finished scan instead of swapping the draft under the editor', async () => {
-    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['ocr-split-a', 'ocr-split-b']))
+    localStorage.setItem('receipt_split_scan_job_ids:sam', JSON.stringify(['ocr-split-a', 'ocr-split-b']))
     apiMocks.fetchReceiptSplitScanJob.mockImplementation(async (scanId: string) => completed(scanId))
     const options = pollingOptions()
     const { result, unmount } = renderHook(() => useReceiptSplitPolling(options))
@@ -177,7 +180,7 @@ describe('useReceiptSplitPolling', () => {
   })
 
   it('reveals the next finished scan once the active one is cleared', async () => {
-    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['ocr-split-a', 'ocr-split-b']))
+    localStorage.setItem('receipt_split_scan_job_ids:sam', JSON.stringify(['ocr-split-a', 'ocr-split-b']))
     apiMocks.fetchReceiptSplitScanJob.mockImplementation(async (scanId: string) => completed(scanId))
     const options = pollingOptions()
     const { result, unmount } = renderHook(() => useReceiptSplitPolling(options))
@@ -229,7 +232,7 @@ describe('useReceiptSplitPolling', () => {
   // A second finished receipt's toast must open its own receipt, not whichever draft happens to
   // be active.
   it('reviews the scan its own toast names', async () => {
-    localStorage.setItem('receipt_split_scan_job_ids', JSON.stringify(['ocr-split-a', 'ocr-split-b']))
+    localStorage.setItem('receipt_split_scan_job_ids:sam', JSON.stringify(['ocr-split-a', 'ocr-split-b']))
     apiMocks.fetchReceiptSplitScanJob.mockImplementation(async (scanId: string) => completed(scanId))
     const options = pollingOptions()
     const { result, unmount } = renderHook(() => useReceiptSplitPolling(options))

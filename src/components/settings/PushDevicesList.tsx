@@ -25,12 +25,17 @@ interface PushDevicesListProps {
   // switch state: that state flips optimistically, so keying on it read the roster while the write
   // was still in flight and then had no reason to read again.
   refreshKey: number
+  /**
+   * Called after a revoke succeeds. The "enabled on another device" hints come from the separate
+   * push status, which would otherwise keep reporting the device that was just removed.
+   */
+  onRevoked?: () => void
 }
 
 // Push opt-in is per device, and until this list existed the only evidence that another browser
 // was enrolled was a one-line amber hint. Someone who enabled notifications on a shared or
 // replaced machine had no way to see it, let alone stop it.
-export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) => {
+export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey, onRevoked }) => {
   const { showToast } = useAppUi()
   const [devices, setDevices] = React.useState<PushDevice[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -73,6 +78,7 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
     setRevokingId(device.id)
     try {
       await api.revokePushDevice(device.id)
+      onRevoked?.()
       await load()
       const copy = buildMutationSuccessToast({
         entity: 'Device',

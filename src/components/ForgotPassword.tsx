@@ -307,6 +307,22 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                     'Reset password'
                   )}
                 </Button>
+                {/* Answers are only checked when the reset is submitted, so a rejection lands
+                    here and the user needs a way back to correct them. */}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="lg"
+                  disabled={loading}
+                  className="w-full"
+                  onClick={() => {
+                    setError(null)
+                    setFieldErrors({})
+                    setStep(2)
+                  }}
+                >
+                  Change answers
+                </Button>
               </form>
             )}
 

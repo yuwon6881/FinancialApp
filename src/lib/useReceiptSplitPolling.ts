@@ -4,9 +4,7 @@ import type { ReceiptSplitScanResult } from './api'
 import type { AppTab } from '../types'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
-import { readStoredScanJobIds } from './scanJobIds'
-
-const JOB_IDS_KEY = 'receipt_split_scan_job_ids'
+import { readStoredScanJobIds, scanJobIdsStorageKey } from './scanJobIds'
 
 function storeIds(key: string, ids: string[]) {
   try {
@@ -28,6 +26,8 @@ export interface ReceiptSplitFailure {
 
 interface Options {
   token: string | null
+  /** Signed-in username; tracked scan ids are stored per account. */
+  account: string
   isReceiptSplitOpenRef: MutableRefObject<boolean>
   setActiveTab: (tab: AppTab) => void
   setAutoOpenReceiptSplit: (open: boolean) => void
@@ -37,12 +37,14 @@ interface Options {
 export function useReceiptSplitPolling(options: Options) {
   const {
     token,
+    account,
     isReceiptSplitOpenRef,
     setActiveTab,
     setAutoOpenReceiptSplit,
     showToast,
   } = options
-  const [jobIds, setJobIds] = useState<string[]>(() => readStoredScanJobIds(JOB_IDS_KEY))
+  const storageKey = scanJobIdsStorageKey('receipt_split_scan_job_ids', account)
+  const [jobIds, setJobIds] = useState<string[]>(() => readStoredScanJobIds('receipt_split_scan_job_ids', account))
   const jobIdsRef = useRef(jobIds)
   /**
    * One-shot record of the completion toasts already raised, and of every result already read
@@ -69,8 +71,8 @@ export function useReceiptSplitPolling(options: Options) {
     const next = update(jobIdsRef.current)
     jobIdsRef.current = next
     setJobIds(next)
-    storeIds(JOB_IDS_KEY, next)
-  }, [])
+    storeIds(storageKey, next)
+  }, [storageKey])
 
   const setActiveDraft = useCallback((draft: ReceiptSplitDraft | null) => {
     activeDraftRef.current = draft

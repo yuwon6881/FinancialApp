@@ -61,6 +61,12 @@ export interface PendingNotification {
   year: number
   month: number
   cycleLabel: string
+  /** Occurrence lifecycle status from the server, e.g. 'Pending' or 'PartiallyPaid'. */
+  status?: string
+  /** Already settled against this occurrence. A partly paid bill cannot be discarded. */
+  paidAmount?: number
+  /** The occurrence's payment mode. An auto-deduct bill cannot be part paid. */
+  paymentMode?: string
 }
 
 export interface CategoryBreakdown {

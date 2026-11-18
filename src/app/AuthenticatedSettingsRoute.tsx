@@ -81,6 +81,7 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
       otherDevicesBillReminders={push.otherDevicesBillReminders}
       otherDevicesCategoryAlerts={push.otherDevicesCategoryAlerts}
       pushEnrolmentRevision={push.enrolmentRevision}
+      onPushDevicesChanged={() => { void push.refresh() }}
       onToggleChannel={(channel, checked) => {
         void (async () => {
           const succeeded = await push.setChannelEnabled(channel, checked)

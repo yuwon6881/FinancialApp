@@ -64,6 +64,8 @@ export interface NotificationsCardProps {
    * on. Deriving it from the switch booleans read the roster while the write was still in flight.
    */
   enrolmentRevision: number
+  /** Revoking a device in the roster changes the account-wide "on another device" flags. */
+  onPushDevicesChanged?: () => void
   /** False when no category has a spending guide to alert on yet. */
   hasSpendingGuides: boolean
   onNavigateToCategoryLimits?: () => void
@@ -177,7 +179,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
             {/* Re-reads once each enrolment change is acknowledged by the server, so the roster
                 never shows a browser that was just switched on or off — and never reads back the
                 state from before the write it is reacting to. */}
-            <PushDevicesList refreshKey={props.enrolmentRevision} />
+            <PushDevicesList refreshKey={props.enrolmentRevision} onRevoked={props.onPushDevicesChanged} />
           </div>
         </details>
       </div>

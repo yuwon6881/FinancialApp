@@ -387,6 +387,8 @@ function App() {
         <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-primary/25 selection:text-foreground">
         {enableRuntimeBackgroundBridges && <Suspense fallback={null}>
           <RuntimeBackgroundBridges
+            // Scan tracking and push state are per account; a different sign-in starts them fresh.
+            key={session.username}
             session={session}
             bridge={[nav, openSensitivePrompt, prefs.setActiveTab, setAutoOpenInvestmentAdd]}
             urgentPush={prefs.activeTab === 'settings'}

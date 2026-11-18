@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SavingsGoal, Transaction } from '../types'
-import { completeGoal, fundGoalsForCycle, recordInterestOnGoal } from './savingsGoalActions'
-import { completeSavingsGoal, fetchSavingsGoals, fundSavingsGoalsForCycle, recordSavingsGoalInterest, undoSavingsGoalsCycleFunding } from '../lib/api/savingsGoals'
+import { completeGoal, contributeToGoal, fundGoalsForCycle, recordInterestOnGoal } from './savingsGoalActions'
+import { completeSavingsGoal, contributeToSavingsGoal, fetchSavingsGoals, fundSavingsGoalsForCycle, recordSavingsGoalInterest, undoSavingsGoalsCycleFunding } from '../lib/api/savingsGoals'
 import { deleteTransaction } from '../lib/api/transactions'
 
 vi.mock('../lib/api/savingsGoals', () => ({
   completeSavingsGoal: vi.fn(),
+  contributeToSavingsGoal: vi.fn(),
   fetchSavingsGoals: vi.fn(),
   fundSavingsGoalsForCycle: vi.fn(),
   recordSavingsGoalInterest: vi.fn(),
@@ -316,5 +317,49 @@ describe('recordInterestOnGoal', () => {
       'success',
     )
     vi.unstubAllGlobals()
+  })
+})
+
+describe('contributeToGoal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(fetchSavingsGoals).mockResolvedValue([goal])
+  })
+
+  it('reports and undoes the amount the server applied, not the amount requested', async () => {
+    // The goal needed only 100 more, so the server clamped a 900 top-up to 100.
+    vi.mocked(contributeToSavingsGoal).mockResolvedValue({ goal: { ...goal, earmarkedAmount: 1200 }, appliedAmount: 100 })
+    const showToast = vi.fn()
+
+    await contributeToGoal({
+      currency: 'MYR',
+      commitGoals: vi.fn(),
+      commitGoal: vi.fn(),
+      getGoalName: () => goal.name,
+      getGoal: () => goal,
+      refreshAll: vi.fn().mockResolvedValue(undefined),
+      showToast,
+    }, goal.id, 900)
+
+    expect(showToast.mock.calls[0]?.[0]).toContain('100.00')
+    expect(showToast.mock.calls[0]?.[0]).not.toContain('900.00')
+    showToast.mock.calls[0]?.[3]?.onAction()
+    await vi.waitFor(() => expect(contributeToSavingsGoal).toHaveBeenLastCalledWith(goal.id, -100))
+  })
+
+  it('offers no Undo when the server moved nothing', async () => {
+    vi.mocked(contributeToSavingsGoal).mockResolvedValue({ goal, appliedAmount: 0 })
+    const showToast = vi.fn()
+
+    await contributeToGoal({
+      currency: 'MYR',
+      commitGoals: vi.fn(),
+      commitGoal: vi.fn(),
+      getGoalName: () => goal.name,
+      refreshAll: vi.fn().mockResolvedValue(undefined),
+      showToast,
+    }, goal.id, 50)
+
+    expect(showToast.mock.calls[0]?.[3]).toBeUndefined()
   })
 })

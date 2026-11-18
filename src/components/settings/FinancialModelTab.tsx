@@ -43,6 +43,7 @@ export interface FinancialModelTabProps {
   otherDevicesCategoryAlerts?: boolean
   onToggleChannel?: (channel: PushChannel, checked: boolean) => void
   pushEnrolmentRevision?: number
+  onPushDevicesChanged?: () => void
   hasSpendingGuides: boolean
   onNavigateToCategoryLimits: () => void
   /**
@@ -79,6 +80,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
   otherDevicesCategoryAlerts,
   onToggleChannel,
   pushEnrolmentRevision,
+  onPushDevicesChanged,
   hasSpendingGuides,
   onNavigateToCategoryLimits,
   part = 'plan',
@@ -178,6 +180,7 @@ export const FinancialModelTab: React.FC<FinancialModelTabProps> = ({
             otherDevicesCategoryAlerts={otherDevicesCategoryAlerts || false}
             onToggleChannel={(channel, checked) => onToggleChannel?.(channel, checked)}
             enrolmentRevision={pushEnrolmentRevision ?? 0}
+            onPushDevicesChanged={onPushDevicesChanged}
             hasSpendingGuides={hasSpendingGuides}
             onNavigateToCategoryLimits={onNavigateToCategoryLimits}
           />

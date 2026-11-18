@@ -2,6 +2,11 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { m, useReducedMotion } from 'framer-motion'
 import { motionSafeScrollBehavior } from '../../lib/motionPreference'
 import { revealWithinScrollParent } from '../../lib/scrollContainment'
+import { InteractiveCard } from './InteractiveCard'
+
+// The row is the motion element itself, not a wrapper: legends size and scroll their rows as
+// direct children, so an extra box between them breaks both.
+const MotionInteractiveCard = m.create(InteractiveCard)
 
 export interface DoughnutSlice {
   key: string
@@ -136,17 +141,17 @@ export function InteractiveDoughnutChart({
 
       <div className={legendClassName}>
         {chartSlices.map(slice => (
-          <m.button
+          <MotionInteractiveCard
             key={slice.key}
+            layout
+            surface="plain"
             ref={node => {
               if (node) legendRefs.current.set(slice.key, node)
               else legendRefs.current.delete(slice.key)
             }}
-            layout
-            type="button"
             aria-label={`${slice.label}: ${masked ? 'hidden' : `${formatValue(slice.value)}, ${(slice.percentage * 100).toFixed(1)}%`}`}
             aria-pressed={selectedKey === slice.key}
-            className={`flex w-full min-w-0 cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${
+            className={`flex min-w-0 items-center justify-between rounded-lg px-2 py-1.5 text-xs ${
               activeKey === slice.key ? 'bg-muted/60 ring-1 ring-border/50' : 'hover:bg-muted/30'
             }`}
             onMouseEnter={() => setHoveredKey(slice.key)}
@@ -162,7 +167,7 @@ export function InteractiveDoughnutChart({
             <span className="shrink-0 font-semibold tabular-nums text-foreground/90">
               {masked ? '••••' : <>{formatValue(slice.value)} ({(slice.percentage * 100).toFixed(1)}%)</>}
             </span>
-          </m.button>
+          </MotionInteractiveCard>
         ))}
       </div>
     </>

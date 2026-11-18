@@ -230,7 +230,10 @@ export function PendingSubscriptionsModal({
           const pendingAction = pendingActions[noti.id]
           const isPending = pendingAction !== undefined
           const amountState = paymentAmountStateFor(noti)
-          const isPartial = Boolean(partialModes[noti.id])
+          // Mirrors the server's settlement rules so the sheet never offers an action it rejects.
+          const canPayPartially = noti.paymentMode !== 'AutoDeduct'
+          const hasPartPayment = noti.status === 'PartiallyPaid' || (noti.paidAmount ?? 0) > 0
+          const isPartial = canPayPartially && Boolean(partialModes[noti.id])
           const paidPercent = amountState.kind === 'partial' ? (amountState.amount / amountState.due) * 100 : 0
           return (
           <article
@@ -274,7 +277,7 @@ export function PendingSubscriptionsModal({
                   className="w-full"
                 />
               </div>
-              <div className="flex min-h-11 items-center gap-2 rounded-control bg-muted dark:bg-card/70 pr-3.5 sm:h-11">
+              {canPayPartially && <div className="flex min-h-11 items-center gap-2 rounded-control bg-muted dark:bg-card/70 pr-3.5 sm:h-11">
                 <ToggleButton
                   active={isPartial}
                   label={`Pay partial amount for ${noti.name}`}
@@ -288,7 +291,7 @@ export function PendingSubscriptionsModal({
                   disabled={hideSensitive || isPending}
                 />
                 <span className="text-label text-foreground">Pay partial amount</span>
-              </div>
+              </div>}
             </div>
 
             {isPartial && (
@@ -410,8 +413,12 @@ export function PendingSubscriptionsModal({
               <Button
                 variant="secondary"
                 onClick={() => runSubscriptionAction(noti, 'discard', () => onDiscardSubscription(noti))}
-                disabled={hideSensitive || isPending}
-                title={hideSensitive ? 'Show sensitive information to change bills' : 'Skip this occurrence without recording a payment'}
+                disabled={hideSensitive || isPending || hasPartPayment}
+                title={hideSensitive
+                  ? 'Show sensitive information to change bills'
+                  : hasPartPayment
+                    ? 'Part of this bill has already been paid, so it cannot be skipped. Pay the rest instead.'
+                    : 'Skip this occurrence without recording a payment'}
                 size="sm"
                 className="min-w-0 whitespace-nowrap px-4 disabled:cursor-wait disabled:opacity-70 sm:order-2 sm:ml-auto"
               >

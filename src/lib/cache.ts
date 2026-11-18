@@ -1,6 +1,7 @@
 import type { Transaction, DashboardData, WishlistItem } from '../types'
 import { sanitizeQueuedOps, type QueuedOp } from './outbox'
 import { clearAllModalDrafts } from './modalDrafts'
+import { allScanJobIdsStorageKeys } from './scanJobIds'
 
 type LegacyPendingTransaction = Transaction & { serverTxId?: string }
 
@@ -281,7 +282,7 @@ export async function clearLocalFinancialData(): Promise<void> {
   for (const key of [
     'draft_transactions', 'pending_operations_backup', 'pending_transactions_backup',
     'draft_transactions_backup', 'failed_operations', 'failed_operations_backup',
-    'receipt_scan_job_ids', 'receipt_split_scan_job_ids', 'investment_scan_job_ids',
+    ...allScanJobIdsStorageKeys(),
   ]) {
     try {
       localStorage.removeItem(key)

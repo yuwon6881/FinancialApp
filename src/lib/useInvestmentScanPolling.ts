@@ -5,9 +5,7 @@ import type { AppTab } from '../types'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
 import { scanReviewAction } from './scanReviewAction'
-import { readStoredScanJobIds } from './scanJobIds'
-
-const JOB_IDS_KEY = 'investment_scan_job_ids'
+import { readStoredScanJobIds, scanJobIdsStorageKey } from './scanJobIds'
 
 const storeIds = (key: string, ids: string[]) => {
   try {
@@ -29,6 +27,8 @@ export interface InvestmentScanFailure {
 
 interface Options {
   token: string | null
+  /** Signed-in username; tracked scan ids are stored per account. */
+  account: string
   activeTabRef: MutableRefObject<AppTab>
   isInvestmentAddOpenRef: MutableRefObject<boolean>
   setActiveTab: (tab: AppTab) => void
@@ -39,13 +39,15 @@ interface Options {
 export function useInvestmentScanPolling(options: Options) {
   const {
     token,
+    account,
     activeTabRef,
     isInvestmentAddOpenRef,
     setActiveTab,
     setAutoOpenInvestmentAdd,
     showToast,
   } = options
-  const [jobIds, setJobIds] = useState<string[]>(() => readStoredScanJobIds(JOB_IDS_KEY))
+  const storageKey = scanJobIdsStorageKey('investment_scan_job_ids', account)
+  const [jobIds, setJobIds] = useState<string[]>(() => readStoredScanJobIds('investment_scan_job_ids', account))
   const jobIdsRef = useRef(jobIds)
   /**
    * One-shot record of the completion toasts already raised. Two finished scans take turns being
@@ -64,8 +66,8 @@ export function useInvestmentScanPolling(options: Options) {
     const next = update(jobIdsRef.current)
     jobIdsRef.current = next
     setJobIds(next)
-    storeIds(JOB_IDS_KEY, next)
-  }, [])
+    storeIds(storageKey, next)
+  }, [storageKey])
 
   const deleteOnce = useCallback((jobId: string): Promise<void> => {
     if (deletedIdsRef.current.has(jobId)) return Promise.resolve()

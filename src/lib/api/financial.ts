@@ -92,6 +92,7 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
       pendingNotifications: (data.pendingNotifications || []).map((notification: WirePendingNotification) => ({
         ...notification,
         amount: deobfuscateAmount(notification.amount),
+        paidAmount: notification.paidAmount === undefined ? undefined : deobfuscateAmount(notification.paidAmount),
       })),
       monthlyCategoryBreakdown: (data.monthlyCategoryBreakdown || []).map((category: WireCategoryBreakdown) => ({
         ...category,

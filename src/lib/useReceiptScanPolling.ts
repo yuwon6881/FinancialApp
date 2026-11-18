@@ -5,9 +5,7 @@ import type { AppTab } from '../types'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
 import { scanReviewAction } from './scanReviewAction'
-import { readStoredScanJobIds } from './scanJobIds'
-
-const RECEIPT_SCAN_JOB_IDS_KEY = 'receipt_scan_job_ids'
+import { readStoredScanJobIds, scanJobIdsStorageKey } from './scanJobIds'
 
 function storeIds(key: string, ids: string[]): void {
   try {
@@ -29,6 +27,8 @@ interface FailedScanJob {
 
 export interface UseReceiptScanPollingOptions {
   token: string | null
+  /** Signed-in username; tracked scan ids are stored per account. */
+  account: string
   /** Ref to the currently-active tab (kept as a ref to avoid re-subscribing). */
   activeTabRef: MutableRefObject<AppTab>
   /** Ref to whether the Ledger add-transaction modal is open. */
@@ -53,9 +53,10 @@ export interface UseReceiptScanPollingResult {
  * of App.tsx; cross-cutting tab/modal refs and the toast fn are injected.
  */
 export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): UseReceiptScanPollingResult {
-  const { token, activeTabRef, isLedgerAddOpenRef, setActiveTab, setAutoOpenLedgerAdd, showToast } = options
+  const { token, account, activeTabRef, isLedgerAddOpenRef, setActiveTab, setAutoOpenLedgerAdd, showToast } = options
 
-  const [receiptScanJobIds, setReceiptScanJobIds] = useState<string[]>(() => readStoredScanJobIds(RECEIPT_SCAN_JOB_IDS_KEY))
+  const storageKey = scanJobIdsStorageKey('receipt_scan_job_ids', account)
+  const [receiptScanJobIds, setReceiptScanJobIds] = useState<string[]>(() => readStoredScanJobIds('receipt_scan_job_ids', account))
   const receiptScanJobIdsRef = useRef(receiptScanJobIds)
   /**
    * One-shot record of the completion toasts already raised. Two finished scans take turns being
@@ -75,8 +76,8 @@ export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): Us
     setReceiptScanJobIds(next)
     // Persist synchronously so a consumed result cannot be restored if the app
     // closes before React has a chance to run a persistence effect.
-    storeIds(RECEIPT_SCAN_JOB_IDS_KEY, next)
-  }, [])
+    storeIds(storageKey, next)
+  }, [storageKey])
 
   const handleReceiptScanStarted = useCallback((scanId: string) => {
     deletedReceiptScanJobIdsRef.current.delete(scanId)

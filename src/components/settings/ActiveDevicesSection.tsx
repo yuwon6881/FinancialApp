@@ -7,6 +7,7 @@ import type { SessionSummary } from '../../lib/api'
 import { getErrorMessage } from '../../lib/errors'
 import { buildMutationSuccessToast } from '../../lib/mutationToast'
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
+import { AlertBanner } from '../ui/AlertBanner'
 import { DisclosurePanel } from '../ui/DisclosurePanel'
 import { MutationButtonContent, MutationStatusAnnouncement } from '../ui/MutationButtonContent'
 
@@ -25,17 +26,23 @@ export function ActiveDevicesSection() {
   const [open, setOpen] = useState(false)
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [loading, setLoading] = useState(true)
+  // A failed load is not an empty roster: say so and keep whatever list was last known.
+  const [loadFailed, setLoadFailed] = useState(false)
   const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null)
   const [revokingOthers, setRevokingOthers] = useState(false)
   const load = async () => {
     setLoading(true)
     try {
       setSessions(await api.getSessions())
+      setLoadFailed(false)
+    } catch (error) {
+      console.error(error)
+      setLoadFailed(true)
     } finally {
       setLoading(false)
     }
   }
-  useEffect(() => { void load().catch(console.error) }, [])
+  useEffect(() => { void load() }, [])
 
   const revoke = async (id: string) => {
     if (hideSensitive || revokingSessionId !== null || revokingOthers) return
@@ -85,10 +92,18 @@ export function ActiveDevicesSection() {
       title="Active Devices"
       status={(
         <span className="inline-flex items-center gap-1 text-muted-foreground tabular-nums">
-          {loading ? <><Loader2 className="size-3 animate-spin" /> Checking…</> : sessions.length}
+          {loading ? <><Loader2 className="size-3 animate-spin" /> Checking…</> : loadFailed ? 'Unavailable' : sessions.length}
         </span>
       )}
     >
+      {loadFailed && !loading && (
+        <AlertBanner variant="error" className="mb-2">
+          <p>We could not load your devices. Check your connection and try again.</p>
+          <div className="mt-2 flex justify-end">
+            <Button variant="secondary" size="sm" type="button" onClick={() => void load()}>Try again</Button>
+          </div>
+        </AlertBanner>
+      )}
       <div className="space-y-1.5">
         {sessions.map(session => {
           const isRevoking = revokingSessionId === session.id || (revokingOthers && !session.isCurrent)

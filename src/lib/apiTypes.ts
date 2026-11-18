@@ -143,8 +143,9 @@ export type WireTrendPoint = Omit<TrendPoint, 'balance'> & {
   balance: WireAmount
 }
 
-export type WirePendingNotification = Omit<PendingNotification, 'amount'> & {
+export type WirePendingNotification = Omit<PendingNotification, 'amount' | 'paidAmount'> & {
   amount: WireAmount
+  paidAmount?: WireAmount
 }
 
 export type WireCategoryBreakdown = Omit<CategoryBreakdown, 'amount'> & {

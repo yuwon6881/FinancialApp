@@ -15,6 +15,7 @@ vi.mock('./api', () => ({
 
 const options = (isOpen: boolean) => ({
   token: 'token',
+  account: 'sam',
   activeTabRef: { current: 'dashboard' as AppTab },
   isInvestmentAddOpenRef: { current: isOpen },
   setActiveTab: vi.fn(),
@@ -51,7 +52,7 @@ describe('useInvestmentScanPolling', () => {
   })
 
   it('keeps a completed result until the modal consumes and clears it once', async () => {
-    localStorage.setItem('investment_scan_job_ids', JSON.stringify(['ocr-investment-1']))
+    localStorage.setItem('investment_scan_job_ids:sam', JSON.stringify(['ocr-investment-1']))
     apiMocks.fetchInvestmentScanJob.mockResolvedValue(completedJob)
     const scanOptions = options(true)
     scanOptions.activeTabRef.current = 'investments'
@@ -72,7 +73,7 @@ describe('useInvestmentScanPolling', () => {
   })
 
   it('stays on the current page until Review is selected', async () => {
-    localStorage.setItem('investment_scan_job_ids', JSON.stringify(['ocr-investment-1']))
+    localStorage.setItem('investment_scan_job_ids:sam', JSON.stringify(['ocr-investment-1']))
     apiMocks.fetchInvestmentScanJob.mockResolvedValue(completedJob)
     const scanOptions = options(false)
     const { result, unmount } = renderHook(() => useInvestmentScanPolling(scanOptions))
@@ -94,7 +95,7 @@ describe('useInvestmentScanPolling', () => {
   })
 
   it('clears draft, notified IDs, and tracked job IDs when job returns not found', async () => {
-    localStorage.setItem('investment_scan_job_ids', JSON.stringify(['ocr-investment-missing']))
+    localStorage.setItem('investment_scan_job_ids:sam', JSON.stringify(['ocr-investment-missing']))
     localStorage.setItem('investment_scan_notified_ids', JSON.stringify(['ocr-investment-missing']))
     apiMocks.fetchInvestmentScanJob.mockRejectedValue(new Error('Job not found (404)'))
     const scanOptions = options(false)

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fundSavingsGoalsForCycle, recordSavingsGoalInterest, undoSavingsGoalsCycleFunding } from './savingsGoals'
+import { fundSavingsGoalsForCycle, recordSavingsGoalInterest, restoreDeletedSavingsGoal, undoSavingsGoalsCycleFunding } from './savingsGoals'
+import { deobfuscateAmount } from './amounts'
 
 describe('savings-goal API contract', () => {
   afterEach(() => {
@@ -42,6 +43,26 @@ describe('savings-goal API contract', () => {
     await fundSavingsGoalsForCycle()
 
     expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toEqual({ fundingBucket: 'Rewards' })
+  })
+
+  it('obfuscates every amount in a restore, including the cycle funded tally', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({ id: 7, name: 'Trip', targetAmount: '0', earmarkedAmount: '0', cycleFundedAmount: '0' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await restoreDeletedSavingsGoal({
+      id: 7, name: 'Trip', targetAmount: 900, earmarkedAmount: 300, cycleFundedAmount: 125,
+      targetDate: '2026-12-01', priority: 'Medium', status: 'active', isRecurring: false, recurrenceMonths: 0,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }, 'op-1')
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0][1].body))
+    expect(typeof body.cycleFundedAmount).toBe('string')
+    expect(deobfuscateAmount(body.cycleFundedAmount)).toBe(125)
   })
 
   it('uses the server rollback route for a funding action', async () => {

@@ -7,8 +7,8 @@ const UTF8_BOM = '\ufeff'
 
 function escapeCsvField(val: string | number): string {
   const str = String(val)
-  // Wrap in quotes if it contains comma, quote, or newline
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+  // A bare \r is a record break to spreadsheet readers, so it needs quoting like \n.
+  if (/[",\r\n]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`
   }
   return str

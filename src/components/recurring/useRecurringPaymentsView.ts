@@ -10,6 +10,7 @@ import { formatSensitiveAmount, formatCurrencyAmount } from './formatters'
 import { focusFirstInvalidField } from '../ui/formValidation'
 import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
 import { isRecurringLedgerCategory, type RecurringLedgerCategory } from '../../lib/ledgerCategories'
+import { isSelectableTransactionCategory } from '../../lib/categoryFlow'
 
 export type { RecurringLedgerCategory } from '../../lib/ledgerCategories'
 
@@ -236,8 +237,10 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
 
 
   React.useEffect(() => {
-    if (categories.length > 0 && !category) {
-      setCategory(categories[0].name)
+    // A bill is an outflow, so its default must be a category the form's own list offers.
+    const firstBillCategory = categories.find(c => isSelectableTransactionCategory(c, 'outflow'))
+    if (firstBillCategory && !category) {
+      setCategory(firstBillCategory.name)
     }
   }, [categories, category])
 

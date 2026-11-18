@@ -204,4 +204,24 @@ describe('PendingSubscriptionsModal', () => {
     expect(document.body.textContent).not.toContain('870.00')
     expect((screen.getByRole('switch', { name: 'Pay partial amount for Household' }) as HTMLButtonElement).disabled).toBe(true)
   })
+
+  it('offers no part payment for an auto-deduct bill, which the server would reject', () => {
+    renderModal({ pendingNotifications: [{ ...notification, paymentMode: 'AutoDeduct' }] })
+
+    expect(screen.queryByRole('switch', { name: /Pay partial amount/i })).toBeNull()
+    expect(screen.queryByText('Pay partial amount')).toBeNull()
+  })
+
+  it('blocks Discard once part of the bill has been paid, and says why', () => {
+    const props = renderModal({
+      pendingNotifications: [{ ...notification, status: 'PartiallyPaid', paidAmount: 200 }],
+    })
+
+    const discard = screen.getByRole('button', { name: /Discard/ }) as HTMLButtonElement
+    expect(discard.disabled).toBe(true)
+    expect(discard.title).toMatch(/already been paid/i)
+    fireEvent.click(discard)
+    expect(props.onDiscardSubscription).not.toHaveBeenCalled()
+  })
+
 })

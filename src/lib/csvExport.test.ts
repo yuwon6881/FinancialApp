@@ -38,6 +38,12 @@ describe('buildCsvContent', () => {
     expect(csv).toContain('Essentials -> Rewards,,,50.00')
   })
 
+  it('quotes a field containing a bare carriage return, as the server export does', () => {
+    const csv = buildCsvContent([row({ description: 'Coffee\rBeans' })])
+
+    expect(csv).toContain('"Coffee\rBeans"')
+  })
+
   it('leaves the account column blank rather than writing an opaque account id', () => {
     const namedCsv = buildCsvContent(
       [row({ accountId: 'acc-1' })],

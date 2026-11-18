@@ -51,14 +51,21 @@ export async function deleteSavingsGoal(id: number): Promise<void> {
 }
 
 /** Positive tops the goal up from the free remainder; negative releases back to it. */
-export async function contributeToSavingsGoal(id: number, amount: number): Promise<SavingsGoal> {
-  const data = await request<WireSavingsGoal>(`/savings-goals/${id}/contribute`, {
+/**
+ * `appliedAmount` is the signed earmark change the server made. It can be smaller than `amount`:
+ * a top-up stops at the target and a release stops at zero.
+ */
+export async function contributeToSavingsGoal(
+  id: number,
+  amount: number,
+): Promise<{ goal: SavingsGoal; appliedAmount: number }> {
+  const data = await request<WireSavingsGoal & { appliedAmount: string }>(`/savings-goals/${id}/contribute`, {
     method: 'POST',
     ...jsonBody({ amount: obfuscateAmount(amount) }),
     errorMessage: 'Failed to move money for this savings goal',
   })
   invalidateCache()
-  return deobfuscateSavingsGoal(data)
+  return { goal: deobfuscateSavingsGoal(data), appliedAmount: deobfuscateAmount(data.appliedAmount) }
 }
 
 /** Records pocket interest: credits `accountId` and raises the goal's earmark by the same amount, so free-to-spend does not move. */
@@ -113,7 +120,13 @@ export async function fundSavingsGoalsForCycle(
 export async function restoreDeletedSavingsGoal(goal: SavingsGoal, clientKey: string): Promise<SavingsGoal> {
   const data = await request<WireSavingsGoal>('/savings-goals/restore', {
     method: 'POST',
-    ...jsonBody({ ...toMutationBody(goal), clientKey }),
+    // Restore is the one request that carries the cycle tally, so it is obfuscated here like the
+    // other amounts rather than in the shared mutation body.
+    ...jsonBody({
+      ...toMutationBody(goal),
+      cycleFundedAmount: obfuscateAmount(goal.cycleFundedAmount ?? 0),
+      clientKey,
+    }),
     errorMessage: 'Failed to restore savings goal',
   })
   invalidateCache()

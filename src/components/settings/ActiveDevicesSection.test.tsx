@@ -137,4 +137,29 @@ describe('ActiveDevicesSection', () => {
     await act(async () => resolveRevokeAll({ revokedCount: 1 }))
     await waitFor(() => expect(screen.queryByRole('button', { name: /Revoking/i })).toBeNull())
   })
+
+  it('says the list could not load instead of showing an empty roster, and retries', async () => {
+    getSessions.mockRejectedValueOnce(new Error('offline'))
+    getSessions.mockResolvedValueOnce([{
+      id: 'session-1',
+      deviceName: 'Pixel phone',
+      createdAt: '2026-07-20T00:00:00Z',
+      expiresAt: '2026-08-20T00:00:00Z',
+      isLocked: false,
+      lastActiveAt: '2026-07-20T00:00:00Z',
+      ipAddress: null,
+      userAgent: null,
+      isCurrent: true,
+    }])
+
+    render(<ActiveDevicesSection />)
+    fireEvent.click(screen.getByRole('button', { name: /Active Devices/i }))
+
+    await screen.findByText(/could not load your devices/i)
+    expect(screen.queryByText('0')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    await screen.findByText('Pixel phone')
+    expect(screen.queryByText(/could not load your devices/i)).toBeNull()
+  })
 })
