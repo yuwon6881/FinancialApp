@@ -148,12 +148,22 @@ export function useAiConversation({
   }, [clearTurnStream])
 
   useEffect(() => {
+    if (!sensitiveMode) return
+    hydrationRequestRef.current?.abort()
+    cancelInFlight()
+    conversationStateRef.current = null
+    setMessages([])
+    setInput('')
+    setHistoryRedacted(true)
+    setPendingActionBatches([])
+    setLastFailedTurn(null)
+    setRecoverableTurn(null)
+  }, [cancelInFlight, sensitiveMode])
+
+  useEffect(() => {
     if (isOpen && !isOffline) {
       hydratedRef.current = false
-      if (sensitiveMode) {
-        setMessages([])
-        setHistoryRedacted(true)
-      }
+      if (sensitiveMode) setHistoryRedacted(true)
       void hydrate().catch(error => {
         if (!(error instanceof DOMException && error.name === 'AbortError')) {
           setResetError('The saved conversation could not be loaded. Close and reopen Ask AI to retry.')
@@ -161,11 +171,6 @@ export function useAiConversation({
       })
     }
   }, [hydrate, isOffline, isOpen, sensitiveMode])
-
-  useEffect(() => {
-    if (!sensitiveMode) return
-    cancelInFlight({ recoverable: true })
-  }, [cancelInFlight, sensitiveMode])
 
   useEffect(() => {
     if (!isOpen) cancelInFlight({ recoverable: true })

@@ -49,7 +49,7 @@ export const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
           >
             <Input
               type="text"
-              inputMode="numeric"
+          inputMode="text"
               autoFocus
               disabled={twoFactorLoading}
               placeholder="123456"

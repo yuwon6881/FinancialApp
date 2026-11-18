@@ -2,6 +2,7 @@ import type { AutocompleteSuggestion, Transaction } from '../../types'
 import type { TransactionSort } from '../transactionOrdering'
 import type { StabilityReloadFilter, TransactionLinkFilter, TransactionSearchMode } from '../transactionFilters'
 import type { WirePagedTransactionResult, WireTransaction } from '../apiTypes'
+import { getCurrentCycleYearAndMonth } from '../cycle'
 import { deobfuscateTransaction, obfuscateAmount } from './amounts'
 import { API_BASE_URL, apiFetch, cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
@@ -12,8 +13,10 @@ function isClosedCycle(month?: string, year?: number): boolean {
   if (!month || !year) return false
   const monthIndex = MONTH_ABBREVIATIONS.indexOf(month)
   if (monthIndex === -1) return false
-  const now = new Date()
-  return year < now.getFullYear() || (year === now.getFullYear() && monthIndex < now.getMonth())
+  // Until the settings arrive the cycle may start on any day, including the last day.
+  // Only use the long cache for a cycle that is closed for every supported start day.
+  const current = getCurrentCycleYearAndMonth(31)
+  return year * 12 + monthIndex + 1 < current.year * 12 + current.monthIndex
 }
 
 export async function fetchAutocompleteSuggestions(signal?: AbortSignal): Promise<AutocompleteSuggestion[]> {
@@ -41,7 +44,7 @@ export function fetchTransactions(month?: string, year?: number, all?: boolean, 
     return (data || []).map(deobfuscateTransaction)
   }, {
     signal,
-    staleTime: isClosedCycle(month, year) ? CLOSED_CYCLE_STALE_TIME : undefined,
+    staleTime: !all && isClosedCycle(month, year) ? CLOSED_CYCLE_STALE_TIME : undefined,
   })
 }
 

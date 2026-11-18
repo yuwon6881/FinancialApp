@@ -73,7 +73,7 @@ describe('setCachedJSON', () => {
     setItem.mockRestore()
   })
 
-  it('continues clearing other local data when one storage removal throws', () => {
+  it('continues clearing other local data when one storage removal throws', async () => {
     localStorage.setItem(CACHE_KEYS.dashboardData, JSON.stringify({ stale: true }))
     localStorage.setItem(CACHE_KEYS.transactions, JSON.stringify([{ id: 'cached-transaction' }]))
     localStorage.setItem('draft_transactions', JSON.stringify([{ id: 'draft-transaction' }]))
@@ -86,7 +86,7 @@ describe('setCachedJSON', () => {
       return originalRemoveItem.call(this, key)
     })
 
-    expect(() => clearLocalFinancialData()).not.toThrow()
+    await expect(clearLocalFinancialData()).resolves.toBeUndefined()
     expect(localStorage.getItem(CACHE_KEYS.dashboardData)).not.toBeNull()
     expect(localStorage.getItem(CACHE_KEYS.transactions)).toBeNull()
     expect(localStorage.getItem('draft_transactions')).toBeNull()
@@ -172,13 +172,15 @@ describe('local financial data clearing', () => {
     localStorage.setItem(CACHE_KEYS.pendingTransactions, 'pending')
     localStorage.setItem('failed_operations', 'failed')
     localStorage.setItem('draft_transactions', 'draft')
+    localStorage.setItem('receipt_scan_job_ids', 'active scans')
 
-    clearLocalFinancialData()
+    await clearLocalFinancialData()
 
     expect(localStorage.getItem(CACHE_KEYS.pendingOperations)).toBeNull()
     expect(localStorage.getItem(CACHE_KEYS.pendingTransactions)).toBeNull()
     expect(localStorage.getItem('failed_operations')).toBeNull()
     expect(localStorage.getItem('draft_transactions')).toBeNull()
+    expect(localStorage.getItem('receipt_scan_job_ids')).toBeNull()
     await vi.waitFor(() => {
       expect(wipes.purchaseCaptures).toHaveBeenCalled()
       expect(wipes.draftDocuments).toHaveBeenCalled()

@@ -150,7 +150,7 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
                 try {
                   await financial.handleLogoutCleanup(session.username, false)
                 } finally {
-                  clearLocalFinancialData()
+                  await clearLocalFinancialData()
                 }
                 await financial.loadAll(month, year, true)
                 const copy = buildMutationSuccessToast({
@@ -159,7 +159,10 @@ export const AuthenticatedSettingsRoute: React.FC<AuthenticatedSettingsRouteProp
                   message: 'Cached financial data, offline drafts, scan images and unsynced changes were removed from this device.',
                 })
                 dialogs.showToast(copy.message, copy.title, copy.tone)
-              })()
+              })().catch(error => {
+                console.warn('Local data removal did not complete.', error)
+                dialogs.showToast('Some local data could not be cleared. Try again.', 'Local data', 'error')
+              })
             },
           })
         })

@@ -72,6 +72,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
 
   const handleConfirmSetup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (hideSensitive) return
     if (!setupCode.trim()) {
       setSetupError('Verification code is required.')
       focusFirstInvalidField(e.currentTarget)
@@ -108,6 +109,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
 
   const handleDisable = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (hideSensitive) return
     const newErrors: Record<string, string> = {}
     if (!disablePassword.trim()) newErrors.password = 'Password is required.'
     if (!disableCode.trim()) newErrors.code = 'Verification code is required.'
@@ -138,6 +140,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
   }
 
   const handleRegenerateRecoveryCodes = async (password: string) => {
+    if (hideSensitive) return
     try {
       const { recoveryCodes: codes } = await api.regenerateRecoveryCodes(password)
       setRecoveryCodes(codes)
@@ -188,7 +191,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
         </div>
       )}
 
-      {loaded && enabled && showDisableForm && (
+      {loaded && enabled && showDisableForm && !hideSensitive && (
         <form noValidate onSubmit={handleDisable} className="space-y-2.5">
           <FormField label="Current password" required error={disableErrors.password}>
             <Input
@@ -201,7 +204,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
           <FormField label="Verification or recovery code" required error={disableErrors.code}>
             <Input
               type="text"
-              inputMode="numeric"
+              inputMode="text"
               autoComplete="one-time-code"
               value={disableCode}
               onChange={e => { setDisableCode(e.target.value); if (disableErrors.code) setDisableErrors(prev => ({ ...prev, code: '' })) }}
@@ -248,7 +251,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
         </Button>
       )}
 
-      {loaded && !enabled && setupSecret && (
+      {loaded && !enabled && setupSecret && !hideSensitive && (
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
             Scan the QR code in your authenticator app, then enter its 6-digit code.
@@ -303,20 +306,20 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
 
     </DisclosurePanel>
 
-      <RecoveryCodesModal
+      {!hideSensitive && <RecoveryCodesModal
         isOpen={recoveryCodes !== null}
         codes={recoveryCodes || []}
         onAcknowledge={() => setRecoveryCodes(null)}
-      />
+      />}
 
-      <PasswordEntryModal
+      {!hideSensitive && <PasswordEntryModal
         isOpen={showRegenerateModal}
         title="Regenerate recovery codes"
         description="Your existing recovery codes will stop working. Enter your password to generate a new set."
         confirmText="Regenerate"
         onClose={() => setShowRegenerateModal(false)}
         onSubmit={handleRegenerateRecoveryCodes}
-      />
+      />}
     </>
   )
 }

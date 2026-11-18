@@ -1,5 +1,6 @@
 import type { Transaction, DashboardData, WishlistItem } from '../types'
 import { sanitizeQueuedOps, type QueuedOp } from './outbox'
+import { clearAllModalDrafts } from './modalDrafts'
 
 type LegacyPendingTransaction = Transaction & { serverTxId?: string }
 
@@ -265,14 +266,7 @@ export function clearDisposableFinancialCaches(): void {
   clearCachedInvestmentPages()
 }
 
-export function clearLocalFinancialData(): void {
-  void import('./native/purchaseCapture').then(({ wipePurchaseCaptures }) => wipePurchaseCaptures())
-  void import('./draftTransactionDocuments').then(({ clearDraftTransactionDocuments }) =>
-    clearDraftTransactionDocuments())
-  // Images picked for a scan that never finished uploading are unsynced local work, so they are
-  // treated exactly like the draft attachment files above: kept across relaunches and sign-out,
-  // and removed only by this explicit wipe.
-  void import('./scanUploadStore').then(({ clearPendingScanUploads }) => clearPendingScanUploads())
+export async function clearLocalFinancialData(): Promise<void> {
   for (const key of [...Object.values(CACHE_KEYS), CYCLE_SNAPSHOTS_KEY]) {
     try {
       removeCachedKey(key)
@@ -283,9 +277,11 @@ export function clearLocalFinancialData(): void {
   }
   clearCachedInvestmentPages()
   clearLegacyVaultDocumentTypeState()
+  clearAllModalDrafts()
   for (const key of [
     'draft_transactions', 'pending_operations_backup', 'pending_transactions_backup',
     'draft_transactions_backup', 'failed_operations', 'failed_operations_backup',
+    'receipt_scan_job_ids', 'receipt_split_scan_job_ids', 'investment_scan_job_ids',
   ]) {
     try {
       localStorage.removeItem(key)
@@ -293,6 +289,13 @@ export function clearLocalFinancialData(): void {
       // See above.
     }
   }
+  const wipes = await Promise.allSettled([
+    import('./native/purchaseCapture').then(({ wipePurchaseCaptures }) => wipePurchaseCaptures()),
+    import('./draftTransactionDocuments').then(({ clearDraftTransactionDocuments }) => clearDraftTransactionDocuments()),
+    import('./scanUploadStore').then(({ clearPendingScanUploads }) => clearPendingScanUploads()),
+  ])
+  const failed = wipes.find(result => result.status === 'rejected')
+  if (failed) throw failed.reason
 }
 
 // The dashboard cache is the source of truth for which month/year was last active,

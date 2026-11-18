@@ -114,7 +114,9 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
   const initialScanGross = initialScan?.cashAmount != null ? initialScan.cashAmount : null
   const initialScanCosts = initialScan && showsFeesAndTaxes(initialScanType) ? initialScan : null
   const [units, setUnits] = useState(initial?.units ? String(initial.units) : initialScanUnits != null ? String(initialScanUnits) : '')
-  const [unitPrice, setUnitPrice] = useState(initial?.unitPrice ? Number(initial.unitPrice).toFixed(2) : initialScanUnitPrice != null ? Number(initialScanUnitPrice).toFixed(2) : '')
+  const [unitPrice, setUnitPrice] = useState(initial?.unitPrice != null
+    ? String(initial.unitPrice)
+    : initialScanUnitPrice != null ? String(initialScanUnitPrice) : '')
   const initialGross = initial?.cashAmount
     ? Number(initial.cashAmount).toFixed(2)
     : initialScanGross != null
@@ -208,7 +210,7 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
     const scannedUnits = showsUnits(appliedType) ? result.units : null
     const scannedUnitPrice = showsUnitPrice(appliedType) ? result.unitPrice : null
     if (scannedUnits != null) setUnits(String(scannedUnits))
-    if (scannedUnitPrice != null) setUnitPrice(Number(scannedUnitPrice).toFixed(2))
+    if (scannedUnitPrice != null) setUnitPrice(String(scannedUnitPrice))
     if (result.cashAmount != null) setCashAmount(Number(result.cashAmount).toFixed(2))
     if (showsFeesAndTaxes(appliedType)) {
       if (result.fees != null) setFees(Number(result.fees).toFixed(2))
@@ -319,34 +321,42 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
   const needsUnits = !['Dividend', 'FeeTax'].includes(type)
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    let numFields = 0
-    if (numberOrUndefined(units) !== undefined) numFields++
-    if (numberOrUndefined(unitPrice) !== undefined) numFields++
-    if (numberOrUndefined(cashAmount) !== undefined) numFields++
-    if (trade && numFields < 2) {
-      const field = numberOrUndefined(units) === undefined
+    const positiveUnits = positiveNumberOrUndefined(units)
+    const positivePrice = positiveNumberOrUndefined(unitPrice)
+    const positiveGross = positiveNumberOrUndefined(cashAmount)
+    const suppliedFields = [positiveUnits, positivePrice, positiveGross].filter(value => value !== undefined).length
+    if (trade && suppliedFields < 2) {
+      const field = positiveUnits === undefined
         ? 'units'
-        : numberOrUndefined(unitPrice) === undefined
+        : positivePrice === undefined
           ? 'unitPrice'
           : 'cashAmount'
       setErrors({ [field]: 'Enter any two of units, unit price, and gross amount; the missing value is calculated.' })
       focusFirstInvalidField(event.currentTarget)
       return
     }
-    if (type === 'Dividend' && numberOrUndefined(cashAmount) === undefined) {
-      setErrors({ cashAmount: 'Gross dividend is required.' })
+    const feeAmount = showsFeesAndTaxes(type) ? Number(fees || 0) : 0
+    const taxAmount = showsFeesAndTaxes(type) ? Number(taxes || 0) : 0
+    if ((type === 'Dividend' && positiveGross === undefined)
+      || (type === 'FeeTax' && (positiveGross ?? 0) + feeAmount + taxAmount <= 0)) {
+      setErrors({ cashAmount: type === 'Dividend' ? 'Enter a positive gross dividend.' : 'Enter a positive fee or tax charge.' })
       focusFirstInvalidField(event.currentTarget)
       return
     }
+    // The read-only fields display rounded figures. Keep the full result for validation and sync.
+    const exactUnits = trade && workedOutField === 'units' && positiveGross && positivePrice
+      ? positiveGross / positivePrice : positiveUnits
+    const exactPrice = trade && workedOutField === 'price' && positiveGross && positiveUnits
+      ? positiveGross / positiveUnits : positivePrice
     const issue = validateActivityBalances(portfolio, {
       type,
       accountId,
       instrumentId,
-      units: numberOrUndefined(units),
-      unitPrice: numberOrUndefined(unitPrice),
-      cashAmount: numberOrUndefined(cashAmount),
-      fees: Number(fees || 0),
-      taxes: Number(taxes || 0),
+      units: exactUnits,
+      unitPrice: exactPrice,
+      cashAmount: positiveGross,
+      fees: feeAmount,
+      taxes: taxAmount,
     }, initial, pendingActivities)
     if (issue) {
       setErrors({ [issue.field]: issue.message })
@@ -356,11 +366,11 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
     setErrors({})
     void onSave({
       accountId, instrumentId, type, tradeDate,
-      units: needsUnits ? numberOrUndefined(units) : undefined,
-      unitPrice: trade ? numberOrUndefined(unitPrice) : undefined,
-      cashAmount: numberOrUndefined(cashAmount),
-      fees: showsFeesAndTaxes(type) ? Number(fees || 0) : 0,
-      taxes: showsFeesAndTaxes(type) ? Number(taxes || 0) : 0,
+      units: needsUnits ? exactUnits : undefined,
+      unitPrice: trade ? exactPrice : undefined,
+      cashAmount: positiveGross,
+      fees: feeAmount,
+      taxes: taxAmount,
     }).then(saved => {
       if (saved) clearScan()
     })
@@ -445,7 +455,7 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
         <Field className={type === 'Dividend' ? 'sm:col-span-2' : ''} label={`Taxes${feesLabelSuffix}`}><SmartAmountInput min="0" value={taxes} onChange={event => setTaxes(maskCurrencyInput(event.target.value, taxes))} /></Field>
       </>}
     </div>
-    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-xs text-muted-foreground">Amounts use {selectedInstrument.currency}; reports use {portfolio?.appCurrency} at that date's rate. Convert cash in "Manage cash" before trading.</p>}
+    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-xs text-muted-foreground">Amounts use {selectedInstrument.currency}. Reports show {portfolio?.appCurrency} at today’s rate. Convert cash in “Manage cash” before trading.</p>}
     <FormActions busy={busy} onCancel={() => { clearScan(); onCancel() }} submitLabel="Save activity" />
   </form>
 }
