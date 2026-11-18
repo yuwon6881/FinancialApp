@@ -88,7 +88,7 @@ export default defineConfig(({ mode }) => {
       // prompt is shown; the new worker activates when the running app is naturally closed.
       injectRegister: false,
       registerType: 'prompt',
-      includeAssets: ['favicon.svg'],
+      includeManifestIcons: false,
       manifest: {
         // Chromium renders `name` under its generated Android splash icon.
         // Keep the required field non-empty but visually blank; `short_name`
@@ -178,11 +178,11 @@ export default defineConfig(({ mode }) => {
   ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
       ...(isNativeBuild ? {
         // PWA registration is disabled in native mode, but its dynamic import still has to resolve
         // during bundling. The stub is never called by OfflineSupportRuntime.
-        "virtual:pwa-register": path.resolve(__dirname, "./src/lib/pwaRegisterNative.ts"),
+        "virtual:pwa-register": path.resolve(import.meta.dirname, "./src/lib/pwaRegisterNative.ts"),
       } : {}),
       // Framer Motion's feature bundle, addressed directly so LazyMotion can actually
       // code-split it (see src/lib/motionFeatures.ts for the full reasoning). The package's
@@ -191,7 +191,7 @@ export default defineConfig(({ mode }) => {
       // nature, which is why motionFeatures.test.ts asserts the module still resolves and
       // still looks like a feature bundle.
       "framer-motion-features": path.resolve(
-        __dirname,
+        import.meta.dirname,
         "./node_modules/framer-motion/dist/es/render/dom/features-max.mjs",
       ),
     },

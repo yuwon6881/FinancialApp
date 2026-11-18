@@ -143,6 +143,8 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
     const selectedTaxYear = Number(taxYear)
     const errors: UploadValidationErrors = {}
     if (files.length === 0) errors.files = 'Choose at least one document.'
+    else if (files.some(file => file.size > constraints.maxDocumentBytes))
+      errors.files = 'Remove the files that exceed the upload size limit.'
     if (!Number.isInteger(selectedTaxYear) || selectedTaxYear < minimumTaxYear || selectedTaxYear > currentYear) {
       errors.taxYear = `Choose a tax year from ${minimumTaxYear} to ${currentYear}.`
     }

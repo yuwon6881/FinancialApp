@@ -94,7 +94,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   // renders from it, and it must survive the re-renders each backoff change causes.
   const backoffAttemptRef = useRef(0)
   const isSyncingRef = useRef(false)
-  const activeSyncOpIdRef = useRef<string | null>(null)
+  const activeSyncOpIdsRef = useRef<ReadonlySet<string> | undefined>(undefined)
   const nextToastAtRef = useRef(0)
   const undoSnapshotsRef = useRef<Map<string, UndoSnapshot>>(new Map())
   const dispatchModuleRef = useRef<Promise<typeof import('./outboxDispatch')> | null>(null)
@@ -149,7 +149,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   }, [syncBackoffUntil])
 
   const enqueue = useCallback<UseOutboxResult['enqueue']>((queue, entity, type, targetId, payload, isUndo) => {
-    return enqueueOperation(queue, entity, type, targetId, payload, isUndo, activeSyncOpIdRef.current)
+    return enqueueOperation(queue, entity, type, targetId, payload, isUndo, activeSyncOpIdsRef.current)
   }, [])
 
   const mutateQueue = useCallback((updater: (previous: QueuedOp[]) => QueuedOp[]) => {
@@ -207,8 +207,8 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
       setActiveSyncId: id => {
         if (mountedRef.current) setActiveSyncId(id)
       },
-      setActiveSyncOpId: id => {
-        activeSyncOpIdRef.current = id
+      setActiveSyncOpIds: ids => {
+        activeSyncOpIdsRef.current = ids
       },
       setError: current.setError,
       setBackoff: until => {

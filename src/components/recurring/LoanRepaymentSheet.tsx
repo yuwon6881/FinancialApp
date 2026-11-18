@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { LedgerAccount, Loan, LoanRepaymentPreviewResult, RecurringPayment } from '../../types'
 import { previewAdvanceRepayment } from '../../lib/api/loans'
 import { formatCurrencyVal } from '../../lib/utils'
@@ -41,7 +41,8 @@ export function LoanRepaymentSheet({
   const [quoteAmount, setQuoteAmount] = useState('')
   const [selectedAccountId, setSelectedAccountId] = useState('')
   const [preview, setPreview] = useState<LoanRepaymentPreviewResult | null>(null)
-  const [previewLoanId, setPreviewLoanId] = useState<string | null>(null)
+  const completedPreview = useRef<{ loan: Loan; cycles: number; result: LoanRepaymentPreviewResult } | null>(null)
+  const initializedLoanId = useRef<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -75,12 +76,13 @@ export function LoanRepaymentSheet({
 
   useEffect(() => {
     if (!isOpen || !loan) {
+      initializedLoanId.current = null
+      completedPreview.current = null
       setTab('advance')
       setCyclesInput('1')
       setQuoteAmount('')
       setSelectedAccountId('')
       setPreview(null)
-      setPreviewLoanId(null)
       setPreviewLoading(false)
       setPreviewError(null)
       setSubmitting(false)
@@ -88,6 +90,8 @@ export function LoanRepaymentSheet({
       return
     }
 
+    if (initializedLoanId.current === loan.id) return
+    initializedLoanId.current = loan.id
     const defaultAccId = payment?.accountId || eligibleAccounts[0]?.id || ''
     setSelectedAccountId(defaultAccId)
     setQuoteAmount(loan.snapshot.outstandingBalance > 0 ? String(loan.snapshot.outstandingBalance) : '')
@@ -105,20 +109,24 @@ export function LoanRepaymentSheet({
 
   useEffect(() => {
     if (!isOpen || !loan || tab !== 'advance' || isAutoDeduct) return
-    if (previewLoanId === loan.id && preview?.cyclesCount === cycles) {
+    const completed = completedPreview.current
+    if (completed?.loan === loan && completed.cycles === cycles) {
+      setPreview(completed.result)
       setPreviewLoading(false)
       setPreviewError(null)
       return
     }
     const controller = new AbortController()
+    setPreview(null)
     setPreviewLoading(true)
     setPreviewError(null)
     const timer = window.setTimeout(() => {
       setPreviewLoading(true)
       previewAdvanceRepayment(loan.id, cycles, controller.signal)
         .then(result => {
+          if (controller.signal.aborted) return
+          completedPreview.current = { loan, cycles, result }
           setPreview(result)
-          setPreviewLoanId(loan.id)
         })
         .catch(err => {
           if (!controller.signal.aborted) {
@@ -136,7 +144,7 @@ export function LoanRepaymentSheet({
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [isOpen, loan, cycles, tab, isAutoDeduct, preview, previewLoanId])
+  }, [isOpen, loan, cycles, tab, isAutoDeduct])
 
   if (!loan) return null
 

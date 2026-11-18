@@ -81,7 +81,7 @@ export interface DrainQueueDeps {
   // --- lifecycle / UI side effects ---
   setSyncing: (v: boolean) => void
   setActiveSyncId: (id: string | null) => void
-  setActiveSyncOpId?: (id: string | null) => void
+  setActiveSyncOpIds?: (ids: ReadonlySet<string> | undefined) => void
   setError: (msg: string | null) => void
   setBackoff: (until: number) => void
   addRecentlyCompleted: (op: QueuedOp) => void
@@ -93,7 +93,7 @@ export interface DrainQueueDeps {
   // --- toasts / undo ---
   getSyncSuccessToast: (op: QueuedOp) => ToastCopy | null
   buildUndoAction: (op: QueuedOp, result: DispatchResult) => ToastAction | undefined
-  // Optional, matching setActiveSyncOpId: the drain is exercised by harnesses that do not model
+  // Optional, matching setActiveSyncOpIds: the drain is exercised by harnesses that do not model
   // undo state at all, and a missing remap only costs an Undo button, never correctness.
   remapUndoSnapshot?: (entity: QueuedOp['entity'], fromTargetId: string, toTargetId: string) => void
   emitToast: (copy: ToastCopy, action: ToastAction | undefined) => void
@@ -161,7 +161,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
       }
 
       deps.setActiveSyncId(nextOp.targetId)
-      deps.setActiveSyncOpId?.(nextOp.id)
+      deps.setActiveSyncOpIds?.(new Set([nextOp.id]))
 
       try {
         const dispatchFn = deps.resolveDispatch(nextOp)
@@ -176,7 +176,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
             lastError: getErrorMessage(err, String(err)),
           })
           deps.setError(null)
-          deps.setActiveSyncOpId?.(null)
+          deps.setActiveSyncOpIds?.(undefined)
           continue
         }
 
@@ -195,6 +195,8 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
               ...nextOp, type: 'bulkAdd' as OpType,
             })
             if (bulkDispatchFn) {
+              const batchIds = new Set(batchOps.map(operation => operation.id))
+              deps.setActiveSyncOpIds?.(batchIds)
               try {
                 const syntheticOp: QueuedOp = {
                   ...nextOp,
@@ -215,7 +217,6 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
                 await bulkDispatchFn(syntheticOp)
 
                 // Success: remove all constituent ops from the queue.
-                const batchIds = new Set(batchOps.map(o => o.id))
                 deps.mutateQueue(prev => prev.filter(item => !batchIds.has(item.id)))
 
                 for (const batchedOp of batchOps) {
@@ -299,7 +300,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           deps.emitToast(toastMsg, undoAction)
         }
       } catch (err: unknown) {
-        deps.setActiveSyncOpId?.(null)
+        deps.setActiveSyncOpIds?.(undefined)
         const status = getStatus(err)
         const authError = isAuthError(err)
         const lockError = isLockError(err)
@@ -436,6 +437,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
     }
   } finally {
     hintCollection.dispose()
+    deps.setActiveSyncOpIds?.(undefined)
     deps.onSettled()
     deps.setSyncing(false)
     const queue = deps.getQueue()

@@ -234,7 +234,7 @@ export function useBucketAccountSetupView({
     if (!bucket) return
     const nextErrors: Record<string, string> = {}
     const hasExternalChanges = hasBucketAccountSetupChanged(sessionSnapshotRef.current, bucketTotal, bucketAccounts)
-    const names = new Set(bucketAccounts.map(account => account.name.trim().toLowerCase()))
+    const names = new Set(accounts.map(account => account.name.trim().toLowerCase()))
     for (const draft of drafts) {
       const name = draft.name.trim()
       if (!name) nextErrors[draft.id] = 'Enter an account name.'

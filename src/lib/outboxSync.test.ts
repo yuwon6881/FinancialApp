@@ -11,6 +11,7 @@ import {
   type SuccessfulSyncOp,
 } from './outboxSync'
 import type { QueuedOp, DispatchResult, ToastCopy } from './outbox'
+import { enqueue } from './outboxEnqueue'
 
 function op(partial: Partial<QueuedOp>): QueuedOp {
   return {
@@ -796,6 +797,27 @@ describe('drainQueue — settle', () => {
   })
 
   // --- Bulk transaction:add batching ---
+
+  it.each(['update', 'delete'] as const)('dispatches a %s queued against the second in-flight bulk add', async type => {
+    let activeIds: ReadonlySet<string> | undefined
+    const dispatched: QueuedOp[] = []
+    const harness = makeHarness({
+      setActiveSyncOpIds: ids => { activeIds = ids },
+      resolveDispatch: () => async operation => {
+        dispatched.push(operation)
+        if (operation.type === 'bulkAdd') {
+          harness.deps.mutateQueue(queue =>
+            enqueue(queue, 'transaction', type, 't2', { amount: -20 }, false, activeIds))
+        }
+      },
+    }, [op({}), op({ id: 'op2', targetId: 't2' })])
+
+    await drainQueue(harness.deps)
+
+    expect(dispatched.map(operation => operation.type)).toEqual(['bulkAdd', type])
+    expect(dispatched[1].targetId).toBe('t2')
+    expect(harness.queue).toEqual([])
+  })
 
   it('batches consecutive transaction:add ops into a single bulkAdd dispatch', async () => {
     const dispatchCalls: string[] = []

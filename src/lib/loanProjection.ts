@@ -84,6 +84,9 @@ function projectLoan(
   const linkedPayment = loan.recurringPaymentId
     ? recurringPaymentsById.get(loan.recurringPaymentId)
     : undefined
+  applyPaymentMetadata(projectedLoan, linkedPayment)
+  if (ops.length === 0) return projectedLoan
+
   const inputs: LoanPaymentInput[] = loan.snapshot.payments.map(payment => ({
     occurrenceDate: payment.occurrenceDate,
     postedAt: '',
@@ -92,9 +95,7 @@ function projectLoan(
   }))
   let hadPendingEffect = false
   let firstPendingEffectId: string | undefined
-  let settledByPayoff = false
-
-  applyPaymentMetadata(projectedLoan, linkedPayment)
+  let settledByPayoff = Boolean(loan.settlementActionId)
 
   for (const op of ops) {
     if (op.entity === 'recurringPayment' && op.targetId === loan.recurringPaymentId) {
@@ -184,7 +185,7 @@ function projectLoan(
   // instalments can produce it. The bill stops with the loan, so the card must also stop advertising
   // a next due date.
   const snapshot = settledByPayoff
-    ? { ...replayed, outstandingBalance: 0, nextPayment: null, futureSchedule: [] }
+    ? { ...(loan.settlementActionId ? loan.snapshot : replayed), outstandingBalance: 0, nextPayment: null, futureSchedule: [] }
     : replayed
   return {
     ...projectedLoan,

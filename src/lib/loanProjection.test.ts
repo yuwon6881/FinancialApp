@@ -115,6 +115,26 @@ describe('loan repayment projection', () => {
 })
 
 describe('projectLoanStates', () => {
+  it('preserves the server payoff when there are no pending mutations', () => {
+    const settled = { ...loan(), settlementActionId: 'repay-1' }
+    settled.snapshot.outstandingBalance = 0
+    settled.snapshot.payoffDate = '2026-01-01'
+    settled.snapshot.payments = [{
+      occurrenceDate: '2026-01-01', payment: 950, interest: 0, principal: 950,
+      balanceBefore: 1000, balanceAfter: 50, surplus: 0,
+      paymentDidNotCoverInterest: false, transactionId: 'tx-payoff',
+    }]
+    expect(projectLoanStates([settled], [])[0].snapshot).toEqual(settled.snapshot)
+  })
+
+  it('preserves a server schedule advanced past discarded occurrences', () => {
+    const server = loan()
+    server.snapshot.futureSchedule = [{
+      occurrenceDate: '2026-02-01', payment: 100, interest: 0, principal: 100, balanceAfter: 900,
+    }]
+    expect(projectLoanStates([server], [])[0].snapshot).toEqual(server.snapshot)
+  })
+
   it('projects a pending settle immediately', () => {
     const projected = projectLoanStates([loan()], [op({ payload: {
       recurringPaymentId: 'bill-test', occurrenceDate: '2026-01-01', status: 'Paid', optimisticTransaction: { id: 'tx-1', amount: -100, postedAt: '2026-01-01T12:00:00Z' },

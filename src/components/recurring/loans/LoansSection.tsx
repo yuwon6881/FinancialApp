@@ -74,7 +74,10 @@ export function LoansSection({
     setEditingLoan(loan)
     onOpenAddForm()
   }
-  const closeForm = () => onCloseAddForm()
+  const closeForm = () => {
+    setEditingLoan(null)
+    onCloseAddForm()
+  }
   const handleSave = (loan: Partial<Loan>) => {
     if (editingLoan) {
       onUpdateLoan(editingLoan.id, { ...editingLoan, ...loan } as Loan)

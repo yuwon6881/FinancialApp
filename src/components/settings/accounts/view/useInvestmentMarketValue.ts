@@ -17,6 +17,6 @@ export function useInvestmentMarketValue(ledgerCurrency: string, enabled: boolea
     const abort = new AbortController()
     api.fetchInvestmentPortfolio('3m', abort.signal).then(setPortfolio, () => undefined)
     return () => abort.abort()
-  }, [enabled, isOffline])
+  }, [enabled, isOffline, ledgerCurrency])
   return enabled ? investmentMarketValue(portfolio, ledgerCurrency) : null
 }

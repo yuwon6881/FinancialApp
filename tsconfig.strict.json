@@ -4,8 +4,9 @@
     "strictNullChecks": true
   },
   "include": [
-    "src/lib/api.ts",
+    "src/lib/api/**/*.ts",
     "src/lib/apiTypes.ts",
     "src/lib/outbox.ts"
-  ]
+  ],
+  "exclude": ["src/lib/api/**/*.test.ts"]
 }

@@ -276,8 +276,12 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   }, [token, isLocked, hideSensitive, hasFingerprintSetup])
 
   async function handleLogout() {
-    const { suspendPurchaseCapture } = await import('../lib/native/purchaseCapture')
-    await suspendPurchaseCapture()
+    try {
+      const { suspendPurchaseCapture } = await import('../lib/native/purchaseCapture')
+      await suspendPurchaseCapture()
+    } catch (error) {
+      console.warn('Could not suspend transaction detection during sign-out.', error)
+    }
     sensitiveAssertionAbortRef.current?.abort()
     sensitiveAssertionAbortRef.current = null
     cancelActiveWebAuthnRequest()

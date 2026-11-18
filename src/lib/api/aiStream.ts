@@ -19,8 +19,12 @@ export interface SseEvent {
 // until a blank line closes an event. Comment lines (": keep-alive") are ignored.
 export class SseParser {
   private buffer = ''
+  private endedWithCarriageReturn = false
 
   push(chunk: string): SseEvent[] {
+    if (chunk.length === 0) return []
+    if (this.endedWithCarriageReturn && chunk.startsWith('\n')) chunk = chunk.slice(1)
+    this.endedWithCarriageReturn = chunk.endsWith('\r')
     this.buffer += chunk.replace(/\r\n?/g, '\n')
     const events: SseEvent[] = []
     let boundary = this.buffer.indexOf('\n\n')
@@ -37,6 +41,7 @@ export class SseParser {
   flush(): SseEvent[] {
     const rest = this.buffer
     this.buffer = ''
+    this.endedWithCarriageReturn = false
     const event = parseBlock(rest)
     return event ? [event] : []
   }

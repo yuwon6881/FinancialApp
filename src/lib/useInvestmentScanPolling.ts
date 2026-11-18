@@ -94,7 +94,7 @@ export function useInvestmentScanPolling(options: Options) {
   }, [updateJobIds])
 
   useEffect(() => {
-    if (!token || jobIds.length === 0) return
+    if (!token || jobIds.length === 0 || draft) return
     let cancelled = false
 
     const poll = async () => {
@@ -102,7 +102,7 @@ export function useInvestmentScanPolling(options: Options) {
       pollInFlightRef.current = true
       try {
         for (const jobId of jobIds) {
-          if (cancelled || draft?.jobId === jobId) continue
+          if (cancelled) break
           try {
             const job = await api.fetchInvestmentScanJob(jobId)
             if (cancelled || !jobIdsRef.current.includes(jobId)) continue
@@ -125,6 +125,7 @@ export function useInvestmentScanPolling(options: Options) {
                   showToast('Investment record was scanned successfully.', 'Investment Scan Completed', 'success', scanReviewAction(setActiveTab, setAutoOpenInvestmentAdd, 'investments'))
                 }
               }
+              break
             }
           } catch (error: unknown) {
             if (errorMessageIncludes(error, '401') || errorMessageIncludes(error, '423')) continue

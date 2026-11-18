@@ -150,7 +150,7 @@ export const RecurringBills: React.FC<RecurringBillsProps> = ({
 
       {isWide && selectedRow && (
         <aside aria-label={`${selectedRow.payment.name} details`} className={cn(panelClass, 'sticky top-6 max-h-[calc(100dvh-3rem)] overflow-y-auto overscroll-contain p-5')}>
-          <BillDetail payment={selectedRow.payment} state={selectedRow.state} {...detailProps} />
+              <BillDetail key={selectedRow.payment.id} payment={selectedRow.payment} state={selectedRow.state} {...detailProps} />
         </aside>
       )}
 

@@ -103,9 +103,10 @@ function applyScheduledPayment(
   paymentNumber: number,
   flatInterestPaidBefore: number,
   previousAccrualDate: string,
+  interestDueOverride?: number,
 ): LoanScheduleEntry {
-  const split = applyPayment(loan, frequency, occurrenceDate, balanceBefore, scheduledPayment(loan, frequency), paymentNumber, flatInterestPaidBefore, previousAccrualDate)
-  return { occurrenceDate, payment: split.payment, interest: split.interest, principal: split.principal, balanceAfter: split.balanceAfter }
+  const split = applyPayment(loan, frequency, occurrenceDate, balanceBefore, scheduledPayment(loan, frequency), paymentNumber, flatInterestPaidBefore, previousAccrualDate, undefined, interestDueOverride)
+  return { occurrenceDate, payment: roundMoney(split.payment - split.surplus), interest: split.interest, principal: split.principal, balanceAfter: split.balanceAfter }
 }
 
 export function replayLoan(
@@ -148,6 +149,7 @@ export function replayLoan(
   let lastOccurrenceComplete = true
   let lastOccurrenceRemainder = 0
   let lastOccurrenceRemainingInterest = 0
+  let unpaidDailyInterest = 0
   let payoffDate: string | undefined
   const payments: LoanPaymentSplit[] = []
 
@@ -155,9 +157,8 @@ export function replayLoan(
 
   for (const [occurrenceDate, txs] of groupedInputs) {
     lastOccurrenceDate = occurrenceDate
-    const nonDiscarded = txs.filter(t => !t.isDiscarded)
-    if (nonDiscarded.length === 0) {
-      paymentNumber += 1
+    if (txs.some(input => input.isDiscarded)) {
+      lastOccurrenceComplete = true
       continue
     }
 
@@ -165,14 +166,13 @@ export function replayLoan(
     const periodInitialInterest = loan.interestMethod === 'Flat'
       ? flatInterestForPayment(loan, resolvedFrequency, paymentNumber + 1, flatInterestPaid)
       : loan.interestMethod === 'ReducingBalanceDaily'
-        ? dailyInterest(loan, balance, accrualDate, occurrenceDate)
+        ? roundMoney(unpaidDailyInterest + dailyInterest(loan, balance, accrualDate, occurrenceDate))
         : roundMoney(balance * annualRate(loan.annualRatePercent) / periodsPerYear(resolvedFrequency))
 
     let remainingInterestForPeriod = periodInitialInterest
     let totalPaidForPeriod = 0
 
-    for (let j = 0; j < nonDiscarded.length; j += 1) {
-      const input = nonDiscarded[j]
+    for (const input of txs) {
       const split = applyPayment(
         loan,
         resolvedFrequency,
@@ -198,9 +198,11 @@ export function replayLoan(
       }
     }
 
+    // A part payment closes the accrual interval. Carry unpaid interest to the next date.
+    accrualDate = occurrenceDate
+    unpaidDailyInterest = loan.interestMethod === 'ReducingBalanceDaily' ? remainingInterestForPeriod : 0
     if (totalPaidForPeriod >= scheduledForPeriod || balance <= 0) {
       paymentNumber += 1
-      accrualDate = occurrenceDate
       lastOccurrenceComplete = true
       lastOccurrenceRemainder = 0
       lastOccurrenceRemainingInterest = 0
@@ -241,10 +243,15 @@ export function replayLoan(
         balanceAfter: roundMoney(balanceAfter),
       }
     } else {
-      entry = applyScheduledPayment(loan, resolvedFrequency, nextDate, balance, paymentNumber + i + 1, flatInterestPaid, accrualDate)
+      const interestDue = loan.interestMethod === 'ReducingBalanceDaily'
+        ? roundMoney(unpaidDailyInterest + dailyInterest(loan, balance, accrualDate, nextDate))
+        : undefined
+      entry = applyScheduledPayment(loan, resolvedFrequency, nextDate, balance, paymentNumber + i + 1, flatInterestPaid, accrualDate, interestDue)
+      unpaidDailyInterest = interestDue ?? 0
     }
 
     futureSchedule.push(entry)
+    unpaidDailyInterest = roundMoney(Math.max(0, unpaidDailyInterest - entry.interest))
     balance = entry.balanceAfter
     flatInterestPaid = roundMoney(flatInterestPaid + entry.interest)
     accrualDate = nextDate

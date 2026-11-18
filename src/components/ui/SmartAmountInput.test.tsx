@@ -119,10 +119,10 @@ describe('SmartAmountInput live result', () => {
     const input = screen.getByLabelText('amount') as HTMLInputElement
     expect(screen.getByText('Try 12.50 × 3')).toBeTruthy()
     fireEvent.change(input, { target: { value: '12.00' } })
-    fireEvent.mouseDown(screen.getByRole('button', { name: 'Multiply' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Multiply' }))
     fireEvent.change(input, { target: { value: `${input.value}2` } })
     expect(screen.getByText('24.00')).toBeTruthy()
-    fireEvent.mouseDown(screen.getByRole('button', { name: 'Calculate result' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Calculate result' }))
     expect(input.value).toBe('24.00')
   })
 })

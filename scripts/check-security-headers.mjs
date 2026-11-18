@@ -24,7 +24,6 @@ for (const directive of [
   "script-src 'self'",
   "object-src 'none'",
   "frame-ancestors 'none'",
-  "worker-src 'self' blob:",
   'https://firebaseinstallations.googleapis.com',
   'https://fcmregistrations.googleapis.com',
   'https://fcm.googleapis.com',
@@ -60,6 +59,11 @@ const metaContent = encodedMetaContent
   .replaceAll('&amp;', '&')
 if (!metaContent.includes("default-src 'self'")) {
   throw new Error('The built Capacitor/web shell must retain its generated meta CSP.')
+}
+const workerSources = policy => policy.split(';').map(value => value.trim())
+  .find(value => value.startsWith('worker-src '))
+if (workerSources(csp) !== "worker-src 'self'" || workerSources(metaContent) !== workerSources(csp)) {
+  throw new Error('The HTTP and built-shell policies must both restrict workers to the app origin.')
 }
 const assetNames = readdirSync(join('dist', 'assets'))
 if (!assetNames.some(name => /^index-[A-Za-z0-9_-]+\.js$/.test(name))) {

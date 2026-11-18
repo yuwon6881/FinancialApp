@@ -328,13 +328,13 @@ export function LockScreen({
               focusFirstInvalidField(e.currentTarget)
               return
             }
-            setPasswordVerifying(true)
             setLockError(null)
             setPasswordError(null)
             if (mode === 'pwa-launch' && !navigator.onLine) {
               setLockError('Password unlock needs an internet connection. Try device unlock instead.')
               return
             }
+            setPasswordVerifying(true)
             try {
               const res = await api.verifyPassword(lockPassword)
               if (res.verified) {

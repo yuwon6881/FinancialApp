@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import type { DashboardData, LedgerAccount, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, TransactionDocumentChanges, WishlistItem } from '../../types'
-import { CACHE_KEYS, sanitizeTransactions, setCachedJSON } from '../../lib/cache'
+import { CACHE_KEYS, clearDisposableFinancialCaches, sanitizeTransactions, setCachedJSON } from '../../lib/cache'
 import { backupModalDraftsOnLogout, clearAllModalDrafts, restoreModalDraftsOnLogin } from '../../lib/modalDrafts'
 import { sanitizeQueuedOps } from '../../lib/outbox'
 import type { UseOutboxResult } from '../../lib/useOutbox'
@@ -140,17 +140,9 @@ export function useSessionRestore(deps: SessionRestoreDependencies) {
     setSelectedYear(0)
     setLoading(true)
 
-    // Clear LocalStorage cache
+    clearDisposableFinancialCaches()
+    // Clear local work after its account-scoped backup.
     for (const key of [
-      CACHE_KEYS.dashboardData,
-      CACHE_KEYS.transactions,
-      CACHE_KEYS.recurringPayments,
-      CACHE_KEYS.categories,
-      CACHE_KEYS.wishlist,
-      CACHE_KEYS.savingsGoals,
-      CACHE_KEYS.accounts,
-      CACHE_KEYS.loans,
-      CACHE_KEYS.walletBalance,
       CACHE_KEYS.pendingTransactions,
       CACHE_KEYS.pendingOperations,
       'failed_operations',

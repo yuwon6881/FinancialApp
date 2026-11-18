@@ -144,7 +144,8 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, SmartAmountIn
                 type="button"
                 tabIndex={-1}
                 aria-label={ariaLabel}
-                onMouseDown={event => { event.preventDefault(); appendOperator(operator) }}
+                onMouseDown={event => event.preventDefault()}
+              onClick={() => appendOperator(operator)}
                 className="h-8 rounded-none border-r border-border/60 px-2.5 text-body font-medium text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground active:scale-95"
               >
                 {label}
@@ -156,7 +157,8 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, SmartAmountIn
               type="button"
               tabIndex={-1}
               aria-label="Calculate result"
-              onMouseDown={event => { event.preventDefault(); evaluate() }}
+              onMouseDown={event => event.preventDefault()}
+            onClick={() => evaluate()}
               className="h-8 rounded-none bg-primary px-3 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-95"
             >
               =
@@ -186,7 +188,8 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, SmartAmountIn
                 key={operator}
                 type="button"
                 aria-label={ariaLabel}
-                onMouseDown={event => { event.preventDefault(); appendOperator(operator) }}
+                onMouseDown={event => event.preventDefault()}
+                onClick={() => appendOperator(operator)}
                 className="rounded-full text-callout text-foreground hover:bg-surface-3 dark:hover:bg-card lg:size-9"
               >
                 {label}
@@ -196,7 +199,8 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, SmartAmountIn
               size="icon"
               type="button"
               aria-label="Calculate result"
-              onMouseDown={event => { event.preventDefault(); evaluate() }}
+              onMouseDown={event => event.preventDefault()}
+              onClick={() => evaluate()}
               className="rounded-full bg-primary text-callout font-semibold text-primary-foreground hover:bg-primary/90 lg:size-9"
             >
               =

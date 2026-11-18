@@ -247,7 +247,7 @@ const precacheFiles = walkFiles(path.join(process.cwd(), 'dist')).filter(filePat
   // Mirrors globIgnores in vite.config.ts: the lazy pdfjs renderer is not precached, so it
   // must not count against the ceiling either.
   if (/^pdf-.*\.js$/.test(name)) return false
-  return precacheExtensions.has(path.extname(name)) || /^inter-latin-opsz-normal-.*\.woff2$/.test(name)
+  return precacheExtensions.has(path.extname(name)) || /^geist-latin-wght-normal-.*\.woff2$/.test(name)
 })
 const precacheRawKb = precacheFiles.reduce((sum, filePath) => sum + fs.statSync(filePath).size, 0) / 1024
 const precachePassed = precacheRawKb <= PRECACHE_RAW_LIMIT_KB

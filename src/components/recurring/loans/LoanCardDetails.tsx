@@ -53,7 +53,7 @@ export function LoanCardDetails({
       <DetailCell label="Expected payoff">
         {interestOnlyBalanceRemains ? 'No automatic payoff' : formatOccurrenceDate(loan.snapshot.payoffDate)}
       </DetailCell>
-      <DetailCell label="Remaining interest">
+        <DetailCell label="Originally scheduled interest">
         {formatSensitive(loan.snapshot.totalScheduledInterest)}
       </DetailCell>
       <DetailCell label="Interest rate">

@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
  * names may be English or Malay. Two different dates, or an impossible one, stay absent rather than guessed.
  */
 final class PurchaseDateReader {
+    private static final TimeZone BANK_TIME_ZONE = TimeZone.getTimeZone("Asia/Kuala_Lumpur");
     private static final String MONTH = "(jan(?:uary|uari)?|feb(?:ruary|ruari)?|march|mar|mac|apr(?:il)?|may|mei|june|jun|julai|july|jul"
         + "|aug(?:ust)?|ogos|ogo|sept(?:ember)?|sep|oct(?:ober)?|okt(?:ober)?|nov(?:ember)?|dec(?:ember)?|dis(?:ember)?)";
     private static final Pattern ISO = Pattern.compile("\\b(20[0-9]{2})[-/.]([0-9]{1,2})[-/.]([0-9]{1,2})\\b");
@@ -71,7 +72,7 @@ final class PurchaseDateReader {
         // footers; it is never a transaction date, so it is excluded by idiom rather than validity.
         if ("24".equals(day) && "7".equals(month)) return;
         if (NOT_PAYMENT_DATE.matcher(text.substring(Math.max(0, match.start() - 30), match.start())).find()) return;
-        Calendar reference = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        Calendar reference = Calendar.getInstance(BANK_TIME_ZONE);
         reference.setTimeInMillis(referenceTimeMillis);
         int referenceYear = reference.get(Calendar.YEAR);
         String candidate = valid(day, month, String.valueOf(referenceYear));
@@ -87,7 +88,7 @@ final class PurchaseDateReader {
     private static boolean isMoreThanADayAfter(String isoDate, long referenceTimeMillis) {
         try {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT);
-            format.setTimeZone(TimeZone.getTimeZone("UTC"));
+            format.setTimeZone(BANK_TIME_ZONE);
             return format.parse(isoDate).getTime() - referenceTimeMillis > 24L * 60 * 60 * 1000;
         } catch (ParseException ignored) { return false; }
     }

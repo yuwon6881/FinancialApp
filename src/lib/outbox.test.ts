@@ -1236,13 +1236,12 @@ describe('applyOpsToList', () => {
     const queued = enqueue([], 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', payload)
     expect(enqueue(queued, 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', payload)).toHaveLength(1)
 
-    // An occurrence can take more than one payment now, so two part payments for the same bill have
-    // to queue separately. Collapsing on the target alone silently dropped the second and the money
-    // was never recorded; a repeat of the same amount is still treated as a double-submit.
+    // Equal instalments are distinct when they have different transaction ids.
     const partA = enqueue([], 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', { ...payload, amount: 20 })
-    const partB = enqueue(partA, 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', { ...payload, amount: 30 })
+    const second = { ...payload, amount: 20, optimisticTransaction: { ...payload.optimisticTransaction, id: 'tx-second' } }
+    const partB = enqueue(partA, 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', second)
     expect(partB).toHaveLength(2)
-    expect(enqueue(partB, 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', { ...payload, amount: 30 })).toHaveLength(2)
+    expect(enqueue(partB, 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', second)).toHaveLength(2)
 
     const recurring = applyOpsToList([{ id: 'rp-1', nextDueDate: '2026-08-10' }], queued, 'recurringPayment')
     const transactions = applyOpsToList([], queued, 'transaction')
@@ -1323,7 +1322,7 @@ describe('enqueue', () => {
 
   it('does not collapse a delete against an add that is currently in flight', () => {
     const addOp = makeOp({ id: 'op-add', type: 'add', targetId: 'local-1', payload: { name: 'Draft' } })
-    const next = enqueue([addOp], 'transaction', 'delete', 'local-1', undefined, false, 'op-add')
+    const next = enqueue([addOp], 'transaction', 'delete', 'local-1', undefined, false, new Set(['op-add']))
     expect(next.some(op => op.type === 'delete')).toBe(true)
     expect(next.some(op => op.type === 'add')).toBe(true)
   })
@@ -1382,7 +1381,7 @@ describe('enqueue', () => {
 
   it('queues unpurchase after an in-flight purchase so undo can reverse a synced purchase', () => {
     const purchaseOp = makeOp({ id: 'op-purchase', entity: 'wishlistItem', type: 'purchase', targetId: '1' })
-    const next = enqueue([purchaseOp], 'wishlistItem', 'unpurchase', '1', undefined, true, 'op-purchase')
+    const next = enqueue([purchaseOp], 'wishlistItem', 'unpurchase', '1', undefined, true, new Set(['op-purchase']))
     expect(next).toHaveLength(2)
     expect(next[1]).toMatchObject({ entity: 'wishlistItem', type: 'unpurchase', targetId: '1', isUndo: true })
   })

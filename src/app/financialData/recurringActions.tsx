@@ -113,9 +113,7 @@ export function createRecurringActions(deps: RecurringActionDependencies) {
     if (!guardSensitive()) return
     const current = allRecurringPayments.find(p => String(p.id) === String(id))
     const nextActive = current ? !current.active : false
-    const tomorrow = new Date(`${financialDate()}T12:00:00`)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const trackingStart = tomorrow.toLocaleDateString('en-CA')
+    const trackingStart = financialDate()
     const payload = current ? {
       active: nextActive,
       name: current.name,

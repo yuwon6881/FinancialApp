@@ -124,7 +124,7 @@ export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): Us
   const receiptScanPollInFlightRef = useRef(false)
 
   useEffect(() => {
-    if (!token || receiptScanJobIds.length === 0) return
+    if (!token || receiptScanJobIds.length === 0 || activeReceiptScanDraft) return
 
     let cancelled = false
 
@@ -134,7 +134,7 @@ export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): Us
 
       try {
         for (const scanId of receiptScanJobIds) {
-          if (cancelled || activeReceiptScanDraft?.jobId === scanId) continue
+          if (cancelled) break
 
           try {
             const job = await api.fetchReceiptScanJob(scanId)
@@ -167,6 +167,7 @@ export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): Us
                   showToast('Receipt was scanned successfully.', 'Receipt Scan Completed', 'success', scanReviewAction(setActiveTab, setAutoOpenLedgerAdd, 'ledger'))
                 }
               }
+              break
             }
           } catch (err: unknown) {
             if (errorMessageIncludes(err, '401') || errorMessageIncludes(err, '423')) {

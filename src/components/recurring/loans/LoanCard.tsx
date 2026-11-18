@@ -213,7 +213,7 @@ export function LoanCard({
         </div>
       )}
 
-      {!loan.isRecalculating && !scheduleUnavailable && (
+      {!loan.isRecalculating && !scheduleUnavailable && loan.snapshot.outstandingBalance > 0 && (
         <div className="mt-4 flex items-center justify-between gap-3 rounded-control inset-group px-3.5 py-3 text-label">
           <span className="min-w-0 text-muted-foreground">Next instalment</span>
           <span className="shrink-0 text-body font-semibold text-foreground tabular-nums">

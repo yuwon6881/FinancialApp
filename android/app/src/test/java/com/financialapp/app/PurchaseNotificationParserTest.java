@@ -256,6 +256,11 @@ public class PurchaseNotificationParserTest {
         assertNotNull(result);
         assertNull(result.date);
     }
+
+    @Test public void resolvesTheLocalNewYearBeforeUtcMidnight() {
+        long postedAt = java.time.Instant.parse("2026-12-31T17:00:00Z").toEpochMilli();
+        assertEquals("2027-01-01", PurchaseDateReader.read("Paid RM 12.00 at SHOP on 01/01", postedAt));
+    }
     private static long utc(int year, int month, int day) {
         java.util.Calendar calendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
         calendar.clear();

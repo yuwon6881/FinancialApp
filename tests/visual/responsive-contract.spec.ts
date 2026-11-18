@@ -1012,8 +1012,7 @@ test('the page heading keeps its type role at every tier', async ({ page }) => {
     await waitForStableLayout(page)
     const heading = page.locator('main h1').first()
     await expect(heading, `${route} renders a page heading`).toBeVisible()
-    const size = await heading.evaluate(node => Number.parseFloat(getComputedStyle(node).fontSize))
-    expect(size, `${route} page heading at ${width}px`).toBeCloseTo(expected, 1)
+    await expect(heading, `${route} page heading at ${width}px`).toHaveCSS('font-size', `${expected}px`)
     checked++
   }
   // A loop that can skip its way to green is worse than no test.

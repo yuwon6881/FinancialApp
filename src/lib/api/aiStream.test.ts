@@ -57,6 +57,12 @@ afterEach(() => {
 })
 
 describe('SseParser', () => {
+  it('preserves event names when a chunk ends between CR and LF', () => {
+    const parser = new SseParser()
+    expect(parser.push('event: done\r')).toEqual([])
+    expect(parser.push('\ndata: {}\r\n\r\n')).toEqual([{ event: 'done', data: '{}' }])
+  })
+
   it('assembles events split across arbitrary chunks and skips keep-alive comments', () => {
     const parser = new SseParser()
     const text = ': keep-alive\n\nevent: status\ndata: {"label":"Searching"}\r\n\r\nevent: delta\ndata: {"text":"hi"}\n\n'

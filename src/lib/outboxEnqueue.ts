@@ -56,7 +56,7 @@ export function enqueue(
   targetId: string,
   rawPayload?: OutboxPayload,
   isUndo?: boolean,
-  activeSyncOpId?: string | null
+  activeSyncOpIds?: ReadonlySet<string>
 ): QueuedOp[] {
   const targetIdStr = String(targetId)
   const createdAt = Date.now()
@@ -81,7 +81,7 @@ export function enqueue(
 
   const sameTarget = (op: QueuedOp) => op.entity === entity && op.targetId === targetIdStr
   const queuedAdd = queue.find(op => sameTarget(op) && op.type === 'add')
-  const queuedAddNotInFlight = queuedAdd !== undefined && queuedAdd.id !== activeSyncOpId
+  const queuedAddNotInFlight = queuedAdd !== undefined && !activeSyncOpIds?.has(queuedAdd.id)
 
   const queuedDelete = queue.find(op => sameTarget(op) && op.type === 'delete')
   const hasQueuedDelete = queuedDelete !== undefined
@@ -98,7 +98,7 @@ export function enqueue(
       return queue.filter(op => !sameTarget(op))
     } else {
       // Delete against existing entity: drop queued update/toggle/purchase/unpurchase (not in-flight) for that target & append delete
-      const filtered = queue.filter(op => !(sameTarget(op) && (op.type === 'update' || op.type === 'toggle' || op.type === 'purchase' || op.type === 'unpurchase') && op.id !== activeSyncOpId))
+      const filtered = queue.filter(op => !(sameTarget(op) && (op.type === 'update' || op.type === 'toggle' || op.type === 'purchase' || op.type === 'unpurchase') && !activeSyncOpIds?.has(op.id)))
       return [...filtered, newOp]
     }
   }
@@ -124,7 +124,7 @@ export function enqueue(
       })
     } else {
       // Update against existing entity: replace existing queued update payload or append
-      const existingUpdateIndex = queue.findIndex(op => op.entity === entity && op.targetId === targetIdStr && op.type === 'update' && op.id !== activeSyncOpId)
+      const existingUpdateIndex = queue.findIndex(op => op.entity === entity && op.targetId === targetIdStr && op.type === 'update' && !activeSyncOpIds?.has(op.id))
       if (existingUpdateIndex >= 0) {
         const next = [...queue]
         const existingPayload = next[existingUpdateIndex].payload
@@ -155,7 +155,7 @@ export function enqueue(
       })
     } else {
       // Toggle against an existing entity: replace existing queued toggle payload or append
-      const existingToggleIndex = queue.findIndex(op => op.entity === entity && op.targetId === targetIdStr && op.type === 'toggle' && op.id !== activeSyncOpId)
+      const existingToggleIndex = queue.findIndex(op => op.entity === entity && op.targetId === targetIdStr && op.type === 'toggle' && !activeSyncOpIds?.has(op.id))
       if (existingToggleIndex >= 0) {
         const next = [...queue]
         // The toggle payload is the absolute desired state, so it replaces rather than merges --
@@ -176,7 +176,7 @@ export function enqueue(
       // A queued delete + a re-add of the same id cancel out (e.g. undoing a
       // not-yet-synced delete). The row still exists server-side, so just drop
       // the pending delete instead of round-tripping delete-then-add.
-      const deleteNotInFlight = queuedDelete !== undefined && queuedDelete.id !== activeSyncOpId
+      const deleteNotInFlight = queuedDelete !== undefined && !activeSyncOpIds?.has(queuedDelete.id)
       if (deleteNotInFlight) {
         return queue.filter(op => !(sameTarget(op) && op.type === 'delete'))
       }
@@ -193,7 +193,7 @@ export function enqueue(
   if (type === 'reminder') {
     if (hasQueuedDelete) return queue
     const existingReminder = queue.find(op => sameTarget(op) && op.type === 'reminder')
-    if (existingReminder && existingReminder.id !== activeSyncOpId) {
+    if (existingReminder && !activeSyncOpIds?.has(existingReminder.id)) {
       return queue.map(op => op.id === existingReminder.id
         ? {
             ...op,
@@ -216,14 +216,17 @@ export function enqueue(
   }
 
   if (type === 'settle') {
-    // Same occurrence AND same amount is a duplicate submit; same occurrence for a different amount
-    // is a second part payment and has to queue on its own. A full settlement (no amount) still
-    // collapses against another full settlement, as it always did.
-    const settleAmount = typeof payload?.amount === 'number' ? payload.amount : undefined
-    const duplicate = queue.some(op => op.entity === entity
-      && op.targetId === targetIdStr
+    // Part payments can be equal. Only the same transaction identifies a repeat submission.
+    const transactionId = (value: OutboxPayload | undefined) => {
+      const transaction = value?.optimisticTransaction
+      return transaction && typeof transaction === 'object' && 'id' in transaction ? transaction.id : undefined
+    }
+    const id = transactionId(payload)
+    const duplicate = queue.some(op => sameTarget(op)
       && op.type === 'settle'
-      && (typeof op.payload?.amount === 'number' ? op.payload.amount : undefined) === settleAmount)
+      && (id !== undefined && transactionId(op.payload) === id
+        || typeof payload?.amount !== 'number' && typeof op.payload?.amount !== 'number'
+          && op.payload?.status === payload?.status))
     if (duplicate) return queue
     return [...queue, newOp]
   }
@@ -243,7 +246,7 @@ export function enqueue(
 
   if (type === 'unpurchase') {
     const queuedPurchase = queue.find(op => sameTarget(op) && op.type === 'purchase')
-    if (queuedPurchase && queuedPurchase.id !== activeSyncOpId) {
+    if (queuedPurchase && !activeSyncOpIds?.has(queuedPurchase.id)) {
       return queue.filter(op => !(sameTarget(op) && op.type === 'purchase'))
     }
     if (queue.some(op => sameTarget(op) && op.type === 'unpurchase')) {
