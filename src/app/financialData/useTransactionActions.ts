@@ -245,10 +245,26 @@ export function useTransactionActions(deps: TransactionActionDependencies) {
     void triggerHaptic([25, 45, 25])
     const batchPostedAt = Date.now()
     const firstDraftPostedAt = batchPostedAt - Math.max(0, drafts.length - 1)
+    // Ids are fixed before queueing so each draft's attachment changes can be re-filed durably
+    // under its transaction before the draft's own record is deleted. Held only in memory, a
+    // reload before the add synced lost every attached file and detach.
+    const finalIds = new Map(drafts.map(draft => [draft.id, createFinalId('transaction')] as const))
+    try {
+      const { saveDraftTransactionDocumentChanges } = await import('../../lib/draftTransactionDocuments')
+      await Promise.all(drafts.map(draft => {
+        const changes = documentChangesByDraft.get(draft.id)
+        return changes && (changes.pending.length > 0 || changes.unlinkIds.length > 0)
+          ? saveDraftTransactionDocumentChanges(username, finalIds.get(draft.id)!, changes)
+          : Promise.resolve()
+      }))
+    } catch (error) {
+      showToast(getErrorMessage(error, 'Draft attachments could not be saved for syncing. Try again before adding these transactions.'), 'Draft files unavailable', 'error')
+      return
+    }
     mutateQueue(prev => {
       let nextQueue = prev
       drafts.forEach((d, index) => {
-        const finalId = createFinalId('transaction')
+        const finalId = finalIds.get(d.id)!
         const documentChanges = documentChangesByDraft.get(d.id)
         if (documentChanges && (documentChanges.pending.length > 0 || documentChanges.unlinkIds.length > 0)) {
           pendingTransactionDocumentsRef.current.set(finalId, documentChanges)

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { InvestmentPortfolio } from '../types'
 import { buildSleeveIndex } from './investmentAllocation'
-import { filterHoldings, matchesAllocationFilter } from './investmentHoldingFilter'
+import { filterHoldings, matchesAllocationFilter, matchesCashFilter } from './investmentHoldingFilter'
 
 type Holding = InvestmentPortfolio['holdings'][number]
 
@@ -41,5 +41,15 @@ describe('investment holding allocation filters', () => {
 
   it('returns all holdings when no slice is selected', () => {
     expect(filterHoldings(holdings, null, index)).toEqual(holdings)
+  })
+
+  it('keeps cash only in the slice the chart put it in', () => {
+    const cash = { accountId: 'a', accountName: 'Broker A', currency: 'SGD', amount: 50, amountApp: 40 }
+    expect(matchesCashFilter(cash, null)).toBe(true)
+    expect(matchesCashFilter(cash, { mode: 'account', key: 'Broker A' })).toBe(true)
+    expect(matchesCashFilter(cash, { mode: 'account', key: 'Broker B' })).toBe(false)
+    expect(matchesCashFilter(cash, { mode: 'currency', key: 'SGD' })).toBe(true)
+    expect(matchesCashFilter(cash, { mode: 'sleeve', key: 'USEquity' })).toBe(false)
+    expect(matchesCashFilter(cash, { mode: 'sleeve', key: 'Cash' })).toBe(true)
   })
 })

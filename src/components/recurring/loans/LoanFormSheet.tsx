@@ -116,7 +116,8 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
   }
 
   const handleRateBasisChange = (nextBasis: LoanRateBasis) => {
-    if (Number.isFinite(enteredRate)) {
+    // Number('') is 0, so a blank entry would come back as "0": a rate nobody typed.
+    if (rateEntry.trim() !== '' && Number.isFinite(enteredRate)) {
       const annual = annualRateFromEntry(enteredRate, rateBasis)
       setRateEntry(String(entryRateFromAnnual(annual, nextBasis)))
     }

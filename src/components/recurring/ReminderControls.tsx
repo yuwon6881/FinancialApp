@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Button } from '../ui/Button'
-import { m, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Bell, Check, Loader2 } from 'lucide-react'
 import type { RecurringPayment, RecurringReminderMode, RecurringReminderSettings } from '../../types'
 import { buildReminderPreview, getEffectiveReminderSettings, REMINDER_LEAD_DAY_OPTIONS } from '../../lib/recurringPayments'
@@ -31,6 +31,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
   onUpdateReminder,
 }) => {
   const savedSettings = getEffectiveReminderSettings(payment)
+  const reduceMotion = useReducedMotion()
   const [draftSettings, setDraftSettings] = useState<RecurringReminderSettings>(savedSettings)
 
   const currentSavedKey = `${savedSettings.enabled}-${savedSettings.mode}-${savedSettings.leadDays}`
@@ -99,7 +100,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
             className="overflow-hidden space-y-2"
           >
             <div className={paused ? 'opacity-50' : undefined}>
@@ -161,12 +162,12 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.15 }}
             className="overflow-hidden"
           >
             <div className="flex items-center justify-between gap-2 pt-2">
               <span role="status" aria-label="Unsaved changes" title="Unsaved changes" className="flex items-center">
-                <span className="size-2 rounded-full bg-amber-500 inline-block animate-pulse shrink-0" />
+                <span className="size-2 rounded-full bg-amber-500 inline-block motion-safe:animate-pulse shrink-0" />
                 <span className="sr-only">Unsaved changes</span>
               </span>
               <div className="flex items-center gap-1.5 shrink-0">

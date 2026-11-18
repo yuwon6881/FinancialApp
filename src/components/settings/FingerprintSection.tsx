@@ -113,13 +113,16 @@ export function FingerprintSection() {
             )
             return
           }
-          const { challengeId, options } = await api.getFingerprintAssertOptions()
+          // The restore ceremony, not a session unlock: the server checks the credential is on this
+          // device and names it, and the marker records the id the server returned.
+          const { challengeId, options } = await api.getFingerprintRestoreOptions()
           const existing = await getFingerprintAssertion(options, abortController.signal)
-          if (existing.authenticatorAttachment !== 'platform') {
+          const attachment = existing.authenticatorAttachment ?? (Capacitor.isNativePlatform() ? 'platform' : null)
+          if (attachment !== 'platform') {
             throw new Error('This passkey belongs to another device. Use this phone’s own screen lock or add a credential here.', { cause: error })
           }
-          await api.verifyFingerprintAssert(challengeId, existing)
-          rememberDeviceUnlockCredential(username, existing.id)
+          const { credentialId } = await api.verifyFingerprintRestore(challengeId, existing, attachment)
+          rememberDeviceUnlockCredential(username, credentialId)
           await load()
           const copy = buildMutationSuccessToast({
             entity: 'Device Unlock',

@@ -128,3 +128,20 @@ export function forgetDeviceUnlockCredential(username: string, credentialId: str
   }
   if (changed) announceRegistrationChange()
 }
+
+/**
+ * Records the marker only for a credential this device holds itself. A passkey reached over hybrid
+ * transport answers from another phone, and arming the installed-PWA launch gate against it would
+ * demand a credential this device cannot produce (SEC-17). The native app asks only for
+ * immediately available credentials, so a missing attachment there still means "on this device".
+ */
+export function rememberLocalDeviceUnlockCredential(
+  username: string,
+  credential: { id: string; authenticatorAttachment?: string | null },
+  isNative: boolean,
+): boolean {
+  const attachment = credential.authenticatorAttachment ?? null
+  if (attachment !== 'platform' && !(isNative && attachment === null)) return false
+  rememberDeviceUnlockCredential(username, credential.id)
+  return true
+}

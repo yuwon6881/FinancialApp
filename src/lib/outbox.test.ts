@@ -1249,6 +1249,21 @@ describe('applyOpsToList', () => {
     expect(transactions[0]).toMatchObject({ id: 'tx-local', amount: -50, isPendingSync: true })
   })
 
+  it('keeps the next due date while a queued part payment leaves the occurrence open', () => {
+    const queued = enqueue([], 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', {
+      recurringPaymentId: 'rp-1', occurrenceDate: '2026-08-10', status: 'Paid', amount: 20,
+      optimisticTransaction: {
+        id: 'tx-part', date: '2026-08-05', amount: -20, description: 'Internet',
+        category: 'Bills', ledgerCategory: 'Essentials', recurringPaymentId: 'rp-1',
+        recurringOccurrenceDate: '2026-08-10',
+      },
+    })
+
+    const recurring = applyOpsToList([{ id: 'rp-1', nextDueDate: '2026-08-10' }], queued, 'recurringPayment')
+
+    expect(recurring[0]).toMatchObject({ nextDueDate: '2026-08-10', isPendingSync: true })
+  })
+
   it('projects category cleanup across categories and dependent records', () => {
     const op = makeOp({
       entity: 'category', type: 'cleanup', targetId: 'cleanup-1',

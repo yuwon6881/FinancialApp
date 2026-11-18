@@ -121,6 +121,26 @@ describe('LoanFormSheet', () => {
     unmount()
   })
 
+  it('keeps a blank rate blank when the rate basis is switched', () => {
+    render(
+      <LoanFormSheet
+        isOpen
+        editingLoan={editingLoan}
+        payments={[bill('bill-a', 'Old bill')]}
+        linkedPaymentIds={new Set(['bill-a'])}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    )
+    const rateInput = screen.getByRole('spinbutton', { name: /^Interest rate/ }) as HTMLInputElement
+    fireEvent.change(rateInput, { target: { value: '' } })
+
+    fireEvent.click(screen.getByRole('combobox', { name: /^Interest rate/ }))
+    fireEvent.click(screen.getByRole('option', { name: 'per month' }))
+
+    expect(rateInput.value).toBe('')
+  })
+
   it('rejects a monthly entry whose derived annual rate exceeds the cap', () => {
     const onSave = vi.fn()
     render(

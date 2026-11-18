@@ -228,12 +228,20 @@ export function computeOptimisticDashboard(
     const index = data.activeRecurringPayments.findIndex(payment =>
       payment.recurringPaymentId === paymentId && payment.dueDate === occurrenceDate)
     const existing = index >= 0 ? data.activeRecurringPayments[index] : undefined
+    // A prior-cycle bill has an alert but no selected-cycle row, so its figures come from the alert:
+    // the server sends what is still owed as the alert's (positive) amount beside what was paid.
+    const notiIndex = data.pendingNotifications.findIndex(notification =>
+      notification.recurringPaymentId === paymentId && notification.billingDate === occurrenceDate)
+    const noti = notiIndex >= 0 ? data.pendingNotifications[notiIndex] : undefined
+    const notiPaid = noti?.paidAmount ?? 0
     // An explicit amount that does not cover what is left is a part payment, and the server will
     // answer PartiallyPaid. Projecting Paid there showed the bill as settled for as long as the
     // queue held, then visibly undid itself on the next refresh.
     const requestedAmount = typeof operation.payload?.amount === 'number' ? operation.payload.amount : undefined
-    const scheduled = Math.abs(existing?.scheduledAmount ?? existing?.amount ?? 0)
-    const alreadyPaid = existing?.paidAmount ?? 0
+    const scheduled = existing
+      ? Math.abs(existing.scheduledAmount ?? existing.amount ?? 0)
+      : noti ? notiPaid + Math.abs(noti.amount) : 0
+    const alreadyPaid = existing ? existing.paidAmount ?? 0 : notiPaid
     const coversRemainder = requestedAmount == null
       || scheduled <= 0
       || alreadyPaid + requestedAmount >= scheduled - 0.005
@@ -260,14 +268,13 @@ export function computeOptimisticDashboard(
     }
     // A part-paid bill still needs reviewing, so its prompt stays with the remaining amount.
     if (status === 'PartiallyPaid') {
-      const notiIndex = data.pendingNotifications.findIndex(notification =>
-        notification.recurringPaymentId === paymentId && notification.billingDate === occurrenceDate)
-      if (notiIndex >= 0) {
-        const noti = data.pendingNotifications[notiIndex]
-        const remaining = Math.max(0, scheduled - (alreadyPaid + (requestedAmount ?? 0)))
+      if (noti) {
+        const paidAmount = alreadyPaid + (requestedAmount ?? 0)
         data.pendingNotifications[notiIndex] = {
           ...noti,
-          amount: -remaining,
+          amount: Math.max(0, scheduled - paidAmount),
+          paidAmount,
+          status: 'PartiallyPaid',
         }
       }
     } else {

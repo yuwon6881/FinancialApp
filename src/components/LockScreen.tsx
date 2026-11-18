@@ -18,7 +18,8 @@ import { Z_LAYERS } from '../lib/zLayers'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
 import { useDialog } from '../lib/useDialog'
-import { rememberDeviceUnlockCredential } from '../lib/deviceUnlockRegistration'
+import { rememberLocalDeviceUnlockCredential } from '../lib/deviceUnlockRegistration'
+import { Capacitor } from '@capacitor/core'
 import { retryWhileServerWakes } from '../lib/serverWakeRetry'
 import { authenticateNativeDevice, checkNativeDeviceAuthentication } from '../lib/native/deviceAuthentication'
 
@@ -216,7 +217,7 @@ export function LockScreen({
       if (abortController.signal.aborted) return
       await api.verifyFingerprintAssert(challengeId, credential)
       if (abortController.signal.aborted) return
-      rememberDeviceUnlockCredential(username, credential.id)
+      rememberLocalDeviceUnlockCredential(username, credential, Capacitor.isNativePlatform())
       setLockPassword('')
       onUnlocked()
     } catch (err: unknown) {

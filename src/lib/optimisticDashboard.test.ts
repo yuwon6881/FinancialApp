@@ -227,4 +227,50 @@ describe('computeOptimisticDashboard', () => {
     expect(result.pendingNotifications).toEqual([])
     expect(result.stats.monthlyExpenses).toBe(70)
   })
+
+  it('keeps a part-paid prior-cycle alert, with the remaining amount in the server sign', () => {
+    const source = dashboard()
+    // The bill is from last cycle, so only its alert is visible -- no selected-cycle bill row.
+    source.pendingNotifications = [{
+      id: 'occ-jul', recurringPaymentId: 'rent', name: 'Rent', amount: 50, paidAmount: 0, status: 'Pending',
+      category: 'Bills', ledgerCategory: 'Essentials', billingDate: '2026-07-12', year: 2026, month: 7, cycleLabel: 'Jul',
+    }]
+    const result = computeOptimisticDashboard(source, {
+      activeOps: [op({
+        entity: 'recurringOccurrence', type: 'settle', targetId: 'occ-jul',
+        payload: {
+          recurringPaymentId: 'rent', occurrenceDate: '2026-07-12', status: 'Paid', amount: 20,
+          optimisticTransaction: transaction({ id: 'rent-part', amount: -20, category: 'Bills', recurringPaymentId: 'rent' }),
+        },
+      })],
+      transactions: baseTransactions(),
+    })!
+
+    expect(result.pendingNotifications).toHaveLength(1)
+    expect(result.pendingNotifications[0]).toMatchObject({ amount: 30, paidAmount: 20, status: 'PartiallyPaid' })
+  })
+
+  it('keeps a part-paid selected-cycle alert positive like the server sends it', () => {
+    const source = dashboard()
+    source.activeRecurringPayments = [{
+      id: 'occ', recurringPaymentId: 'rent', name: 'Rent', amount: 50, category: 'Bills',
+      ledgerCategory: 'Essentials', dueDate: '2026-08-12', isPaid: false, isDiscarded: false, status: 'Pending',
+    }]
+    source.pendingNotifications = [{
+      id: 'occ', recurringPaymentId: 'rent', name: 'Rent', amount: 50, category: 'Bills',
+      ledgerCategory: 'Essentials', billingDate: '2026-08-12', year: 2026, month: 8, cycleLabel: 'Aug',
+    }]
+    const result = computeOptimisticDashboard(source, {
+      activeOps: [op({
+        entity: 'recurringOccurrence', type: 'settle', targetId: 'occ',
+        payload: {
+          recurringPaymentId: 'rent', occurrenceDate: '2026-08-12', status: 'Paid', amount: 20,
+          optimisticTransaction: transaction({ id: 'rent-part', amount: -20, category: 'Bills', recurringPaymentId: 'rent' }),
+        },
+      })],
+      transactions: baseTransactions(),
+    })!
+
+    expect(result.pendingNotifications[0].amount).toBe(30)
+  })
 })

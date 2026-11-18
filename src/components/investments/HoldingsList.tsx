@@ -3,7 +3,7 @@ import { ChevronRight, X } from 'lucide-react'
 import type { InvestmentPortfolio } from '../../types'
 import { cn, formatCurrencyVal } from '../../lib/utils'
 import { buildSleeveIndex, sleeveLabelFor } from '../../lib/investmentAllocation'
-import { filterHoldings, type AllocationFilter } from '../../lib/investmentHoldingFilter'
+import { filterHoldings, matchesCashFilter, type AllocationFilter } from '../../lib/investmentHoldingFilter'
 import { useIsExpanded } from '../../lib/breakpoints'
 import { AmountText } from '../ui/AmountText'
 import { Button } from '../ui/Button'
@@ -26,6 +26,9 @@ const gainTone = (value?: number) => value === undefined
 const missingValueLabel = (holding: Holding) =>
   holding.latestPriceNative === undefined ? 'No price yet' : 'Exchange rate missing'
 
+// An unknown return is shown as nothing, never as 0%: a flat return and no return are different facts.
+const returnPercent = (holding: Holding) =>
+  holding.unrealisedPercent === undefined ? null : `${holding.unrealisedPercent.toFixed(1)}%`
 /** The ticker in a quiet rounded tile -- the investments counterpart of a category icon. */
 export function TickerTile({ symbol, className }: { symbol?: string; className?: string }) {
   return (
@@ -74,17 +77,22 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding, onCl
   const accountGroups = portfolio.accounts
     .map(account => {
       const accountHoldings = holdings.filter(holding => holding.accountId === account.id)
-      const cash = portfolio.cashBalances.filter(balance => balance.accountId === account.id)
+      const cash = portfolio.cashBalances.filter(balance =>
+        balance.accountId === account.id && matchesCashFilter(balance, filter))
       const accountTotal = [...accountHoldings.map(value => value.valueApp), ...cash.map(value => value.amountApp)]
         .reduce<number | undefined>((sum, value) => sum === undefined || value === undefined ? undefined : sum + value, 0)
-      return { account, holdings: accountHoldings, page: paginatedHoldings.filter(holding => holding.accountId === account.id), cash, total: accountTotal }
+      // Name the actual gap: an unpriced fund is a missing price, not a missing exchange rate.
+      const missingLabel = accountHoldings.some(holding => holding.latestPriceNative === undefined)
+        ? 'No price yet'
+        : 'Exchange rate missing'
+      return { account, holdings: accountHoldings, page: paginatedHoldings.filter(holding => holding.accountId === account.id), cash, total: accountTotal, missingLabel }
     })
     .filter(group => group.holdings.length > 0 || group.cash.length > 0)
 
-  const accountTotal = (value: number | undefined) => masked
+  const accountTotal = (value: number | undefined, missingLabel: string) => masked
     ? <AmountText value={0} isMasked />
     : value === undefined
-      ? <span className="font-normal text-muted-foreground">Exchange rate missing</span>
+      ? <span className="font-normal text-muted-foreground">{missingLabel}</span>
       : <AmountText value={value} currency={currency} />
 
   const cashLine = (cash: InvestmentPortfolio['cashBalances']) => cash.map(balance => (
@@ -109,7 +117,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding, onCl
 
       {!expanded ? (
         <div className="mt-2">
-          {accountGroups.map(({ account, holdings: accountHoldings, page: rows, cash, total: groupTotal }) => (
+          {accountGroups.map(({ account, holdings: accountHoldings, page: rows, cash, total: groupTotal, missingLabel }) => (
             <section key={account.id} aria-label={account.name} className="border-t border-border/60 first:border-t-0">
               <div className="flex items-center justify-between gap-3 px-5 py-2.5 sm:px-6">
                 <div className="min-w-0">
@@ -120,7 +128,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding, onCl
                     {cashLine(cash)}
                   </p>
                 </div>
-                <span className="shrink-0 text-label font-semibold tabular-nums text-foreground">{accountTotal(groupTotal)}</span>
+                <span className="shrink-0 text-label font-semibold tabular-nums text-foreground">{accountTotal(groupTotal, missingLabel)}</span>
               </div>
               <ul className="divide-y divide-border/50 border-t border-border/50">
                 {rows.map(holding => (
@@ -150,7 +158,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding, onCl
                         </span>
                         {!masked && holding.unrealisedProfitLossApp !== undefined && (
                           <span className={cn('mt-0.5 text-caption tabular-nums', gainTone(holding.unrealisedProfitLossApp))}>
-                            {holding.unrealisedProfitLossApp > 0 ? '+' : ''}{money(holding.unrealisedProfitLossApp, currency)} · {(holding.unrealisedPercent ?? 0).toFixed(1)}%
+                            {holding.unrealisedProfitLossApp > 0 ? '+' : ''}{money(holding.unrealisedProfitLossApp, currency)}{returnPercent(holding) && <> · {returnPercent(holding)}</>}
                           </span>
                         )}
                       </span>
@@ -170,14 +178,14 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding, onCl
               every currency -- each a label over a number, so the cash reads as money rather than
               as a footnote in a sentence. */}
           <ul className="mt-4 grid gap-3 px-5 sm:px-6 @4xl:grid-cols-2">
-            {accountGroups.map(({ account, holdings: accountHoldings, cash, total: groupTotal }) => (
+            {accountGroups.map(({ account, holdings: accountHoldings, cash, total: groupTotal, missingLabel }) => (
               <li key={account.id} className="min-w-0 rounded-control inset-group p-4">
                 <div className="flex min-w-0 items-center justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-body font-semibold text-foreground">{account.name}</span>
                     <Badge className="shrink-0">{account.baseCurrency}</Badge>
                   </span>
-                  <span className="shrink-0 text-subsection tabular-nums text-foreground">{accountTotal(groupTotal)}</span>
+                  <span className="shrink-0 text-subsection tabular-nums text-foreground">{accountTotal(groupTotal, missingLabel)}</span>
                 </div>
                 <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-2 border-t border-foreground/10 pt-3">
                   <div className="min-w-0">
@@ -245,7 +253,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding, onCl
                     {masked ? '••••' : holding.unrealisedProfitLossApp === undefined ? '—' : (
                       <>
                         {holding.unrealisedProfitLossApp > 0 ? '+' : ''}{money(holding.unrealisedProfitLossApp, currency)}
-                        <span className="block text-caption font-normal">{(holding.unrealisedPercent ?? 0).toFixed(1)}%</span>
+                        {returnPercent(holding) && <span className="block text-caption font-normal">{returnPercent(holding)}</span>}
                       </>
                     )}
                   </td>

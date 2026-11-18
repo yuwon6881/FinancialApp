@@ -5,6 +5,7 @@ import {
   getDeviceUnlockRegistrationMarker,
   getRegisteredDeviceCredentialId,
   rememberDeviceUnlockCredential,
+  rememberLocalDeviceUnlockCredential,
 } from './deviceUnlockRegistration'
 
 describe('device unlock registration', () => {
@@ -54,5 +55,22 @@ describe('device unlock registration', () => {
     } finally {
       window.removeEventListener(DEVICE_UNLOCK_REGISTRATION_EVENT, listener)
     }
+  })
+})
+
+describe('rememberLocalDeviceUnlockCredential', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('records a platform credential and refuses one reached from another device', () => {
+    expect(rememberLocalDeviceUnlockCredential('sam', { id: 'AQID', authenticatorAttachment: 'cross-platform' }, false)).toBe(false)
+    expect(getRegisteredDeviceCredentialId('sam')).toBeNull()
+
+    expect(rememberLocalDeviceUnlockCredential('sam', { id: 'AQID', authenticatorAttachment: 'platform' }, false)).toBe(true)
+    expect(getRegisteredDeviceCredentialId('sam')).toBe('010203')
+  })
+
+  it('refuses an unknown attachment on the web but accepts it from the native app', () => {
+    expect(rememberLocalDeviceUnlockCredential('sam', { id: 'AQID', authenticatorAttachment: null }, false)).toBe(false)
+    expect(rememberLocalDeviceUnlockCredential('sam', { id: 'AQID' }, true)).toBe(true)
   })
 })

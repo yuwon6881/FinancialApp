@@ -153,7 +153,7 @@ export function LoansSection({
           title="No loans tracked yet"
           description="Link a recurring bill to track repayment."
           actions={(
-            <Button variant="primary" size="sm" onClick={openAdd}>
+            <Button variant="primary" size="sm" onClick={openAdd} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a loan' : undefined}>
               <Plus className="size-3.5" aria-hidden="true" />
               Add your first loan
             </Button>

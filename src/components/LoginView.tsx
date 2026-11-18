@@ -14,8 +14,9 @@ import {
   forgetDeviceUnlockCredential,
   getDeviceUnlockRegistrationMarker,
   getLastEnrolledUsername,
-  rememberDeviceUnlockCredential,
+  rememberLocalDeviceUnlockCredential,
 } from '../lib/deviceUnlockRegistration'
+import { Capacitor } from '@capacitor/core'
 import { SecurityQuestionSetup } from './SecurityQuestionSetup'
 import { ForgotPassword } from './ForgotPassword'
 import { AlertBanner } from './ui/AlertBanner'
@@ -244,7 +245,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       if (abortController.signal.aborted) return
       const res = await api.verifyFingerprintLogin(challengeId, credential)
       if (abortController.signal.aborted) return
-      rememberDeviceUnlockCredential(res.username || username.trim(), credential.id)
+      rememberLocalDeviceUnlockCredential(res.username || username.trim(), credential, Capacitor.isNativePlatform())
       if (res.hasSetupSecurityQuestions === false) {
         setLoginResData({ token: res.token, username: res.username })
         setNeedsSecuritySetup(true)

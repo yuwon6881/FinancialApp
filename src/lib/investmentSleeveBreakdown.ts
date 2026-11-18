@@ -21,13 +21,16 @@ export function breakdownBySleeve(
   })
 
   return new Map([...grouped].map(([key, constituents]) => {
+    // One unpriced holding makes the sleeve's total unknown, and a share of an unknown total is
+    // unknown too: dividing by the priced holdings alone would inflate every other share.
+    const sleeveTotalKnown = constituents.every(holding => holding.valueApp !== undefined)
     const valuedTotal = constituents
       .flatMap(holding => holding.valueApp === undefined ? [] : [holding.valueApp])
       .reduce((sum, value) => sum + value, 0)
     return [key, constituents
       .map<SleeveConstituent>(holding => ({
         ...holding,
-        shareOfSleeve: holding.valueApp === undefined || valuedTotal <= 0
+        shareOfSleeve: !sleeveTotalKnown || holding.valueApp === undefined || valuedTotal <= 0
           ? undefined
           : holding.valueApp / valuedTotal * 100,
       }))

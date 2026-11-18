@@ -159,9 +159,13 @@ export function applyCrossEntityOp<T extends ProjectionRow>(
         const nextDate = op.isCompleted
           ? op.payload?.nextOccurrenceDate
           : op.payload?.optimisticNextOccurrenceDate
+        const current = (rows.rows[existingIndex] as T & { nextDueDate?: string | null }).nextDueDate ?? null
+        // A queued part payment carries no next date because the occurrence stays open; that means
+        // "unchanged", not "no next bill", so the current due date stays until the server answers.
+        const keepCurrent = !op.isCompleted && op.payload?.optimisticNextOccurrenceDate === undefined
         rows.rows[existingIndex] = {
           ...rows.rows[existingIndex],
-          nextDueDate: typeof nextDate === 'string' ? nextDate : null,
+          nextDueDate: keepCurrent ? current : typeof nextDate === 'string' ? nextDate : null,
           isPendingSync: !op.isCompleted,
           pendingSyncOperationId: op.isCompleted ? undefined : op.id,
         } as unknown as T

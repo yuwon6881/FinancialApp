@@ -10,8 +10,12 @@ const {
   isPlatformAuthenticatorAvailable,
   verifyFingerprintAssert,
   verifyFingerprintRegistration,
+  getFingerprintRestoreOptions,
+  verifyFingerprintRestore,
   showToast,
 } = vi.hoisted(() => ({
+  getFingerprintRestoreOptions: vi.fn(),
+  verifyFingerprintRestore: vi.fn(),
   createFingerprintCredential: vi.fn(),
   getFingerprintAssertion: vi.fn(),
   getFingerprintAssertOptions: vi.fn(),
@@ -30,6 +34,8 @@ vi.mock('../../lib/api', () => ({
   getFingerprintRegisterOptions,
   verifyFingerprintAssert,
   verifyFingerprintRegistration,
+  getFingerprintRestoreOptions,
+  verifyFingerprintRestore,
   deleteFingerprintCredential: (id: string) => deleteFingerprintCredential(id),
 }))
 
@@ -61,6 +67,8 @@ describe('FingerprintSection', () => {
     isPlatformAuthenticatorAvailable.mockReset()
     isPlatformAuthenticatorAvailable.mockResolvedValue(true)
     getFingerprintAssertOptions.mockReset()
+    getFingerprintRestoreOptions.mockReset()
+    verifyFingerprintRestore.mockReset()
     getFingerprintAssertOptions.mockResolvedValue({ challengeId: 'assert-1', options: {} })
     getFingerprintAssertion.mockReset()
     verifyFingerprintAssert.mockReset()
@@ -79,8 +87,10 @@ describe('FingerprintSection', () => {
     expect(await screen.findByRole('button', { name: 'Set up this device' })).toBeTruthy()
   })
 
-  it('verifies an existing passkey after duplicate creation and records its exact credential id', async () => {
+  it('restores an existing passkey after duplicate creation and records the id the server names', async () => {
     localStorage.setItem('auth_username', 'alice')
+    getFingerprintRestoreOptions.mockResolvedValue({ challengeId: 'restore-1', options: {} })
+    verifyFingerprintRestore.mockResolvedValue({ verified: true, credentialId: 'AQID' })
     createFingerprintCredential.mockRejectedValue(Object.assign(new Error('Credential already exists'), { name: 'InvalidStateError' }))
     getFingerprintAssertion.mockResolvedValue({ id: 'AQID', authenticatorAttachment: 'platform' })
     listFingerprintCredentials.mockImplementation(async () => [
@@ -95,7 +105,9 @@ describe('FingerprintSection', () => {
     await waitFor(() => expect(setupButton.hasAttribute('disabled')).toBe(false))
     fireEvent.click(setupButton)
 
-    await waitFor(() => expect(verifyFingerprintAssert).toHaveBeenCalledWith('assert-1', expect.objectContaining({ id: 'AQID' })))
+    // The restore ceremony, never a session unlock.
+    await waitFor(() => expect(verifyFingerprintRestore).toHaveBeenCalledWith('restore-1', expect.objectContaining({ id: 'AQID' }), 'platform'))
+    expect(verifyFingerprintAssert).not.toHaveBeenCalled()
     await waitFor(() => expect(localStorage.getItem('fingerprint_credential_id_on_this_device:ALICE')).toBe('AQID'))
     expect(verifyFingerprintRegistration).not.toHaveBeenCalled()
     expect(await screen.findByText('Enabled here')).toBeTruthy()
@@ -119,6 +131,7 @@ describe('FingerprintSection', () => {
       'error',
     ))
     expect(getFingerprintAssertOptions).not.toHaveBeenCalled()
+    expect(getFingerprintRestoreOptions).not.toHaveBeenCalled()
     expect(verifyFingerprintAssert).not.toHaveBeenCalled()
   })
 

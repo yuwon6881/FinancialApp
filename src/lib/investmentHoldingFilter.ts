@@ -34,3 +34,19 @@ export function filterHoldings(
 ): Holding[] {
   return holdings.filter(holding => matchesAllocationFilter(holding, filter, sleeveIndex))
 }
+
+type CashBalance = InvestmentPortfolio['cashBalances'][number]
+
+/**
+ * Cash's counterpart to `matchesAllocationFilter`, using the keys the allocation chart gives cash
+ * slices: the account name, the currency, or the single "Cash" slice in every other mode. Without
+ * it a filtered table kept listing every account's cash under a heading that named one slice.
+ */
+export function matchesCashFilter(balance: CashBalance, filter: AllocationFilter): boolean {
+  if (!filter) return true
+  switch (filter.mode) {
+    case 'account': return balance.accountName === filter.key
+    case 'currency': return balance.currency === filter.key
+    default: return filter.key === 'Cash'
+  }
+}

@@ -209,8 +209,9 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
                     <span className="text-caption font-semibold text-foreground">
                       {formatSensitive(row.primaryAmount)}
                     </span>
+                    {/* A share of a masked total is derived from it, so it is masked too. */}
                     <Badge tone="neutral">
-                      {row.percentage.toFixed(1)}%
+                      {hideSensitive ? '••%' : `${row.percentage.toFixed(1)}%`}
                     </Badge>
                   </div>
                   <span className="text-xs text-muted-foreground">

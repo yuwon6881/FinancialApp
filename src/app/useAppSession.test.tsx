@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   prefetchFingerprintAssertOptions: vi.fn(),
   getRegisteredDeviceCredentialId: vi.fn(),
   rememberDeviceUnlockCredential: vi.fn(),
+  rememberLocalDeviceUnlockCredential: vi.fn(),
   forgetDeviceUnlockCredential: vi.fn(),
   syncDeviceUnlockFromSecureStorage: vi.fn(),
   verifyMobilePwaDeviceGate: vi.fn(),
@@ -60,6 +61,7 @@ vi.mock('../lib/deviceUnlockRegistration', () => ({
   DEVICE_UNLOCK_REGISTRATION_EVENT: 'device-unlock-registration-changed',
   getRegisteredDeviceCredentialId: mocks.getRegisteredDeviceCredentialId,
   rememberDeviceUnlockCredential: mocks.rememberDeviceUnlockCredential,
+  rememberLocalDeviceUnlockCredential: mocks.rememberLocalDeviceUnlockCredential,
   forgetDeviceUnlockCredential: mocks.forgetDeviceUnlockCredential,
   syncDeviceUnlockFromSecureStorage: mocks.syncDeviceUnlockFromSecureStorage,
 }))
@@ -268,7 +270,8 @@ describe('useAppSession', () => {
 
     expect(verified).toBe(true)
     expect(mocks.verifyFingerprintAssert).toHaveBeenCalledWith('challenge-1', { id: 'AQID' })
-    expect(mocks.rememberDeviceUnlockCredential).toHaveBeenCalledWith('alice', 'AQID')
+    // The marker helper decides whether the credential is local; the reveal hands it the whole credential.
+    expect(mocks.rememberLocalDeviceUnlockCredential).toHaveBeenCalledWith('alice', { id: 'AQID' }, false)
     expect(options.setHideSensitive).toHaveBeenCalledWith(false)
   })
 
@@ -289,7 +292,7 @@ describe('useAppSession', () => {
 
     expect(options.setHideSensitive).not.toHaveBeenCalledWith(false)
     expect(mocks.verifyFingerprintAssert).not.toHaveBeenCalled()
-    expect(mocks.rememberDeviceUnlockCredential).not.toHaveBeenCalled()
+    expect(mocks.rememberLocalDeviceUnlockCredential).not.toHaveBeenCalled()
   })
 
   it('restores the account marker and clears the lock on login success', async () => {

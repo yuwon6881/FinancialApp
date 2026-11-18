@@ -146,9 +146,10 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       selectedMonth,
       selectedYear,
       unconfirmedSettingWritesRef,
+      documentOwner: username,
     })
     await handler(successfulOps, refreshHints)
-  }, [loanData, selectedMonth, selectedYear, setError, setWishlist, setSavingsGoals, setRecurringPayments, setAccounts, setCategoriesList, showToast])
+  }, [loanData, selectedMonth, selectedYear, setError, setWishlist, setSavingsGoals, setRecurringPayments, setAccounts, setCategoriesList, showToast, username])
 
   const {
     pendingOps,

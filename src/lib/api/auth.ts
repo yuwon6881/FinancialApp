@@ -328,6 +328,30 @@ export async function verifyFingerprintAssert(challengeId: string, credential: u
   return data
 }
 
+/**
+ * Re-learns which credential this device holds after its marker was lost (SEC-17). Its own
+ * challenge purpose: it never unlocks the session, and the server refuses a credential reached
+ * from another device.
+ */
+export async function getFingerprintRestoreOptions(): Promise<{ challengeId: string; options: AssertionOptionsJson }> {
+  return request('/auth/webauthn/restore/options', {
+    method: 'POST',
+    errorMessage: 'Device unlock cannot be restored on this device right now',
+  })
+}
+
+export async function verifyFingerprintRestore(
+  challengeId: string,
+  credential: unknown,
+  authenticatorAttachment: string | null,
+): Promise<{ verified: boolean; credentialId: string }> {
+  return request('/auth/webauthn/restore/verify', {
+    method: 'POST',
+    ...jsonBody({ challengeId, credential, authenticatorAttachment }),
+    errorMessage: 'Device unlock could not be restored',
+  })
+}
+
 export async function getAvailableSecurityQuestions(): Promise<string[]> {
   return request('/auth/security-questions/available', { authenticated: false, errorMessage: 'Failed to load security questions' })
 }

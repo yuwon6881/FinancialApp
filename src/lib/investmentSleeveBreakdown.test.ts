@@ -25,4 +25,10 @@ describe('breakdownBySleeve', () => {
     const result = breakdownBySleeve([holding('other')], buildSleeveIndex(instruments))
     expect(result.get('Unassigned')?.[0]).toMatchObject({ valueApp: undefined, shareOfSleeve: undefined })
   })
+
+  it('leaves every share unknown while any holding in the sleeve is unpriced', () => {
+    // VTI's value is unknown, so VOO's 25 is not 100% of the sleeve; it is an unknown share of it.
+    const result = breakdownBySleeve([holding('voo', 25), holding('vti')], buildSleeveIndex(instruments))
+    expect(result.get('USEquity')?.map(item => item.shareOfSleeve)).toEqual([undefined, undefined])
+  })
 })

@@ -11,7 +11,7 @@ import {
   DEVICE_UNLOCK_REGISTRATION_EVENT,
   forgetDeviceUnlockCredential,
   getRegisteredDeviceCredentialId,
-  rememberDeviceUnlockCredential,
+  rememberLocalDeviceUnlockCredential,
 } from '../lib/deviceUnlockRegistration'
 import { useAutoLock } from '../lib/useAutoLock'
 import { retryWhileServerWakes } from '../lib/serverWakeRetry'
@@ -386,7 +386,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
       if (assertionAbortController.signal.aborted) return false
       await api.verifyFingerprintAssert(challengeId, credential)
       if (assertionAbortController.signal.aborted) return false
-      rememberDeviceUnlockCredential(username, credential.id)
+      rememberLocalDeviceUnlockCredential(username, credential, Capacitor.isNativePlatform())
       setHideSensitive(false)
       verified = true
       return true

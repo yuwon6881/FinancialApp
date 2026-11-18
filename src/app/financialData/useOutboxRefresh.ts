@@ -39,6 +39,11 @@ export interface UseOutboxRefreshOptions {
   selectedMonth: string
   selectedYear: number
   unconfirmedSettingWritesRef: React.MutableRefObject<Map<string, unknown>>
+  /**
+   * The signed-in account. Attachment changes waiting on a queued add are also kept in IndexedDB
+   * under this owner, so a reload before the add syncs does not lose them.
+   */
+  documentOwner?: string
 }
 
 export function createOutboxRefreshHandler(options: UseOutboxRefreshOptions) {
@@ -59,7 +64,31 @@ export function createOutboxRefreshHandler(options: UseOutboxRefreshOptions) {
     selectedMonth,
     selectedYear,
     unconfirmedSettingWritesRef,
+    documentOwner,
   } = options
+
+  // Memory first; after a reload only the durable copy is left.
+  const loadDocumentChanges = async (targetId: string): Promise<TransactionDocumentChanges | undefined> => {
+    const inMemory = pendingTransactionDocumentsRef.current.get(targetId)
+    if (inMemory || !documentOwner) return inMemory
+    try {
+      const { loadDraftTransactionDocumentChanges } = await import('../../lib/draftTransactionDocuments')
+      const stored = await loadDraftTransactionDocumentChanges(documentOwner, targetId)
+      return stored.pending.length > 0 || stored.unlinkIds.length > 0 ? stored : undefined
+    } catch {
+      return undefined
+    }
+  }
+  const forgetDocumentChanges = async (targetId: string) => {
+    pendingTransactionDocumentsRef.current.delete(targetId)
+    if (!documentOwner) return
+    try {
+      const { deleteDraftTransactionDocumentChanges } = await import('../../lib/draftTransactionDocuments')
+      await deleteDraftTransactionDocumentChanges(documentOwner, targetId)
+    } catch {
+      // A leftover record is retried on the next sync and cleared by the local-data wipe.
+    }
+  }
 
   const awaitInvestmentReconciliation = async (operationIds?: string[]) => {
     const reconciliations: Promise<void>[] = []
@@ -112,7 +141,7 @@ export function createOutboxRefreshHandler(options: UseOutboxRefreshOptions) {
       }
 
       if (op.type !== 'add' && op.type !== 'update') continue
-      const documentChanges = pendingTransactionDocumentsRef.current.get(op.targetId)
+      const documentChanges = await loadDocumentChanges(op.targetId)
       if (!documentChanges) continue
       documentsNeedRefresh = true
 
@@ -120,7 +149,7 @@ export function createOutboxRefreshHandler(options: UseOutboxRefreshOptions) {
       // still running, so uploading here would attach files to a row that is about to go and
       // leave them orphaned in the vault with the user believing they undid the whole thing.
       if (getPendingOps().some(pending => queuedTransactionDeleteCoversTarget(pending, op.targetId))) {
-        pendingTransactionDocumentsRef.current.delete(op.targetId)
+        await forgetDocumentChanges(op.targetId)
         continue
       }
 
@@ -160,7 +189,7 @@ export function createOutboxRefreshHandler(options: UseOutboxRefreshOptions) {
           'error',
         )
       } finally {
-        pendingTransactionDocumentsRef.current.delete(op.targetId)
+        await forgetDocumentChanges(op.targetId)
       }
     }
 

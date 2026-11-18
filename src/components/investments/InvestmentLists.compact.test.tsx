@@ -51,6 +51,32 @@ describe('investment lists on a phone', () => {
   })
   afterEach(() => setWidth(originalWidth))
 
+  it('shows no return percentage when the return is unknown, never 0%', () => {
+    const unknownReturn: InvestmentPortfolio = {
+      ...portfolio,
+      holdings: [{ ...portfolio.holdings[0], unrealisedPercent: undefined }],
+    }
+    render(<HoldingsTable portfolio={unknownReturn} masked={false} filter={null} onSelectHolding={vi.fn()} />)
+
+    expect(screen.queryByText(/0.0%/)).toBeNull()
+  })
+
+  it('names a missing price, not a missing exchange rate, when that is why an account total is unknown', () => {
+    render(<HoldingsTable portfolio={portfolio} masked={false} filter={null} onSelectHolding={vi.fn()} />)
+
+    expect(screen.queryByText('Exchange rate missing')).toBeNull()
+  })
+
+  it('drops cash that the active filter excludes', () => {
+    const withCash: InvestmentPortfolio = {
+      ...portfolio,
+      cashBalances: [{ accountId: 'a1', accountName: 'Broker', currency: 'USD', amount: 25, amountApp: 25 }],
+    }
+    render(<HoldingsTable portfolio={withCash} masked={false} filter={{ mode: 'instrument', key: 'VOO' }} onSelectHolding={vi.fn()} />)
+
+    expect(screen.queryByText(/Cash/)).toBeNull()
+  })
+
   it('lists holdings as rows that open the fund, without a table or a single-page pager', () => {
     const onSelect = vi.fn()
     render(<HoldingsTable portfolio={portfolio} masked={false} filter={null} onSelectHolding={onSelect} />)
