@@ -180,7 +180,16 @@ function projectLoan(
     }
   }
 
-  const replayed = replayLoan(projectedLoan, undefined, inputs)
+  // The bill decides when an occurrence is paid, as on the server. The client does not see each
+  // occurrence's frozen amount, so it uses the bill's current one until the server's replay lands.
+  const billAmount = projectedLoan.recurringPaymentId
+    ? recurringPaymentsById.get(projectedLoan.recurringPaymentId)?.amount
+    : undefined
+  const replayed = replayLoan(
+    projectedLoan,
+    undefined,
+    billAmount === undefined ? inputs : inputs.map(input => ({ ...input, billScheduledAmount: Math.abs(billAmount) })),
+  )
   // Applied after the replay: a payoff is not a scheduled payment, so no replay of recorded
   // instalments can produce it. The bill stops with the loan, so the card must also stop advertising
   // a next due date.

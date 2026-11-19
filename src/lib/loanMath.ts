@@ -9,6 +9,12 @@ export interface LoanPaymentInput {
   amount: number
   isDiscarded?: boolean
   transactionId?: string | null
+  /**
+   * What the linked bill expects for this occurrence. The bill decides when an occurrence is paid,
+   * so when it is known it sets the completion threshold instead of the loan's own instalment;
+   * otherwise the loan could offer a date the bill already treats as settled.
+   */
+  billScheduledAmount?: number | null
 }
 
 export interface LoanReplayResult {
@@ -162,7 +168,8 @@ export function replayLoan(
       continue
     }
 
-    const scheduledForPeriod = baseScheduled
+    const billAmount = txs.map(input => Math.abs(input.billScheduledAmount ?? 0)).find(amount => amount > 0)
+    const scheduledForPeriod = billAmount ?? baseScheduled
     const periodInitialInterest = loan.interestMethod === 'Flat'
       ? flatInterestForPayment(loan, resolvedFrequency, paymentNumber + 1, flatInterestPaid)
       : loan.interestMethod === 'ReducingBalanceDaily'
