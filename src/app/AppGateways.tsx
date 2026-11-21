@@ -103,7 +103,7 @@ export const AppGateways: React.FC<AppGatewaysProps> = ({
           aria-busy="true"
           aria-label="Loading your financial data securely"
         >
-          <PageContainer className="safe-screen-inset space-y-6 [--safe-screen-block:1.5rem] !px-0 sm:[--safe-screen-inline:1.5rem] lg:[--safe-screen-inline:2rem]">
+          <PageContainer className="safe-screen-inset space-y-6 [--safe-screen-block:1.5rem] sm:[--safe-screen-inline:1.5rem] lg:[--safe-screen-inline:2rem]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <AppLogo className="size-12 rounded-2xl" animated />
