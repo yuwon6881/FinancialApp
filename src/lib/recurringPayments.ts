@@ -102,9 +102,7 @@ export interface RecurringYearProjection {
 /** Scheduled charges from today through the day before the next anniversary. */
 export function buildRecurringYearProjection(payments: readonly RecurringPayment[], today: string): RecurringYearProjection {
   const start = parseDateOnly(today)
-  const year = start.getFullYear() + 1
-  const month = start.getMonth()
-  const anniversary = new Date(year, month, Math.min(start.getDate(), new Date(year, month + 1, 0).getDate()))
+  const anniversary = new Date(start.getFullYear() + 1, start.getMonth(), start.getDate())
   const end = formatDateOnly(anniversary)
   const days = Math.round((anniversary.getTime() - start.getTime()) / 86_400_000)
   const bills: ProjectedBill[] = []
@@ -112,15 +110,17 @@ export function buildRecurringYearProjection(payments: readonly RecurringPayment
 
   for (const payment of payments) {
     if (!payment.active || payment.isPendingDelete) continue
+    const frequency = normalizeRecurringFrequency(payment.frequency)
+    const maxOccurrences = frequency === 'Annually' ? 1 : 12
     const schedule = {
       startDate: payment.startDate,
       endDate: payment.endDate,
-      frequency: normalizeRecurringFrequency(payment.frequency),
+      frequency,
       dueDate: Math.max(1, Math.min(31, payment.dueDate)),
     }
     let due = computeOccurrenceOnOrAfter(schedule, today)
     let occurrences = 0
-    while (due && due < end) {
+    while (due && due < end && occurrences < maxOccurrences) {
       occurrences++
       due = computeNextOccurrenceDate({ ...schedule, nextDueDate: due })
     }

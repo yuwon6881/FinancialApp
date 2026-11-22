@@ -141,6 +141,24 @@ describe('buildRecurringYearProjection', () => {
     expect(projection.bills.map(({ id, occurrences }) => [id, occurrences])).toEqual([['last date before due day', 1]])
     expect(projection.total).toBe(100)
   })
+
+  it('projects leap-year schedules into non-leap anniversary years without dropping February 28', () => {
+    const projection = buildRecurringYearProjection([
+      bill('monthly-28', { dueDate: 28, startDate: '2023-01-28', amount: -100 }),
+      bill('monthly-29', { dueDate: 29, startDate: '2024-02-29', amount: -50 }),
+      bill('annual-28', { frequency: 'Annually', dueDate: 28, startDate: '2023-02-28', amount: -500 }),
+      bill('annual-29', { frequency: 'Annually', dueDate: 29, startDate: '2024-02-29', amount: -1200 }),
+    ], '2024-02-29')
+
+    expect(projection.days).toBe(366)
+    expect(projection.total).toBe(3500)
+    expect(projection.bills.map(({ id, occurrences, amount }) => [id, occurrences, amount])).toEqual([
+      ['annual-29', 1, 1200],
+      ['monthly-28', 12, 1200],
+      ['monthly-29', 12, 600],
+      ['annual-28', 1, 500],
+    ])
+  })
 })
 
 describe('occurrencePaidSoFar', () => {
