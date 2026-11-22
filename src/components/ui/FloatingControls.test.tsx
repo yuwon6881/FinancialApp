@@ -131,6 +131,24 @@ describe('floating form controls', () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger))
   })
 
+  it('limits the year selector to allowed years and keeps the chosen date until a day is picked', () => {
+    const onChange = vi.fn()
+    render(<DatePicker value="2024-02-29" min="2023-01-01" max="2025-02-20" onChange={onChange} />)
+    fireEvent.click(screen.getByRole('button', { name: /Choose date: Feb 29, 2024/i }))
+
+    const year = screen.getByRole('combobox', { name: 'Calendar year' })
+    fireEvent.click(year)
+    expect(screen.getAllByRole('option').map(option => option.textContent)).toEqual(['2023', '2024', '2025'])
+    fireEvent.click(screen.getByRole('option', { name: '2023' }))
+    expect(screen.getByRole('grid', { name: 'February 2023' })).toBeTruthy()
+    expect(screen.getByRole('gridcell', { name: /28 February 2023|February 28, 2023/ }).tabIndex).toBe(0)
+
+    fireEvent.click(year)
+    fireEvent.click(screen.getByRole('option', { name: '2025' }))
+    expect(screen.getByRole('gridcell', { name: /20 February 2025|February 20, 2025/ }).tabIndex).toBe(0)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it('keeps clear as a sibling action and exposes disabled and invalid states', () => {
     const { rerender } = render(
       <DatePicker value="2026-07-17" onChange={vi.fn()} clearable invalid />,

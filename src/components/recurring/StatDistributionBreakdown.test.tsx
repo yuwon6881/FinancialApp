@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { RecurringPayment } from '../../types'
+import { buildRecurringYearProjection } from '../../lib/recurringPayments'
 import { StatDistributionBreakdown } from './StatDistributionBreakdown'
 
 const payment = (id: string, amount: number): RecurringPayment => ({
@@ -8,13 +9,16 @@ const payment = (id: string, amount: number): RecurringPayment => ({
   nextDueDate: '2099-08-20', dueDate: 20, startDate: '2026-01-20', active: true, paymentMode: 'Manual',
 } as RecurringPayment)
 
+const recurringYear = buildRecurringYearProjection([
+  payment('Internet', -25), payment('Phone', -75),
+], '2026-11-22')
+
 describe('StatDistributionBreakdown', () => {
   it('masks each share of a masked total', () => {
     render(
       <StatDistributionBreakdown
         mode="recurring-annual"
-        payments={[payment('Internet', -25), payment('Phone', -75)]}
-        totalCommittedAnnual={1200}
+        recurringYear={recurringYear}
         formatSensitive={() => '••••'}
         hideSensitive
       />,
@@ -27,8 +31,7 @@ describe('StatDistributionBreakdown', () => {
     render(
       <StatDistributionBreakdown
         mode="recurring-annual"
-        payments={[payment('Internet', -25), payment('Phone', -75)]}
-        totalCommittedAnnual={1200}
+        recurringYear={recurringYear}
         formatSensitive={value => String(value)}
       />,
     )

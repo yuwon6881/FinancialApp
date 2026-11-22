@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef, useState, type FocusEventHandler } from 'react'
+import { useEffect, useId, useRef, useState, type FocusEventHandler, type RefObject } from 'react'
 import { Button } from './Button'
 import { ChevronDown } from 'lucide-react'
 import { AnchoredPopover } from './AnchoredPopover'
+import { cn } from '../../lib/utils'
 import { controlTriggerClassName, type ControlSize } from './controlStyles'
 import { useFormFieldControlProps } from './formFieldControl'
 
@@ -18,6 +19,8 @@ export interface CustomSelectProps<T extends string | number = string | number> 
   options: SelectOption<T>[]
   placeholder?: string
   className?: string
+  popoverClassName?: string
+  popoverRef?: RefObject<HTMLDivElement | null>
   align?: 'left' | 'right'
   direction?: 'up' | 'down'
   ariaLabel?: string
@@ -41,6 +44,8 @@ export function CustomSelect<T extends string | number>({
   options,
   placeholder,
   className = '',
+  popoverClassName,
+  popoverRef,
   align = 'left',
   direction = 'down',
   ariaLabel,
@@ -57,7 +62,8 @@ export function CustomSelect<T extends string | number>({
   const [activeIndex, setActiveIndex] = useState(-1)
   const containerRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const panelRef = useRef<HTMLDivElement>(null)
+  const internalPanelRef = useRef<HTMLDivElement>(null)
+  const panelRef = popoverRef ?? internalPanelRef
   const listboxId = useId()
   const typeaheadRef = useRef('')
   const typeaheadTimerRef = useRef<number | null>(null)
@@ -120,7 +126,23 @@ export function CustomSelect<T extends string | number>({
       document.removeEventListener('mousedown', handleClickOutside)
       if (typeaheadTimerRef.current !== null) window.clearTimeout(typeaheadTimerRef.current)
     }
-  }, [])
+  }, [panelRef])
+
+  useEffect(() => {
+    if (!isOpen || activeIndex < 0) return
+    const frame = window.requestAnimationFrame(() => {
+      const panel = panelRef.current
+      const option = document.getElementById(`${listboxId}-option-${activeIndex}`)
+      if (!panel || !option) return
+      const bounds = panel.getBoundingClientRect()
+      const row = option.getBoundingClientRect()
+      const top = bounds.top + panel.clientTop
+      const bottom = top + panel.clientHeight
+      if (row.top < top) panel.scrollTop -= top - row.top
+      else if (row.bottom > bottom) panel.scrollTop += row.bottom - bottom
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [activeIndex, isOpen, listboxId, panelRef])
 
   return (
     <div
@@ -225,7 +247,11 @@ export function CustomSelect<T extends string | number>({
         minWidth={180}
         role="listbox"
         aria-label={ariaLabel ?? 'Select an option'}
-        className={`bg-popover text-popover-foreground border border-border/70 rounded-overlay shadow-(--app-shadow-overlay) p-1.5 z-[200] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-[0.98] ${direction === 'up' ? 'slide-in-from-bottom-1' : 'slide-in-from-top-1'} duration-150 space-y-0.5`}
+        className={cn(
+          'bg-popover text-popover-foreground border border-border/70 rounded-overlay shadow-(--app-shadow-overlay) p-1.5 z-[200] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-[0.98] duration-150 space-y-0.5',
+          direction === 'up' ? 'slide-in-from-bottom-1' : 'slide-in-from-top-1',
+          popoverClassName,
+        )}
       >
         {options.map((option, index) => (
           <Button variant="tertiary"
@@ -238,7 +264,10 @@ export function CustomSelect<T extends string | number>({
             aria-disabled={option.disabled || undefined}
             disabled={option.disabled}
             tabIndex={-1}
-            onMouseEnter={() => setActiveIndex(index)}
+            onPointerMove={event => {
+              // Keyboard scrolling can bring a row under a stationary pointer.
+              if (event.pointerType === 'mouse') setActiveIndex(index)
+            }}
             onClick={() => selectIndex(index)}
             className={`h-auto min-h-9 w-full min-w-0 shrink-0 px-3 py-2 text-left text-body leading-5 rounded-[0.625rem] transition duration-100 cursor-pointer ${option.badge ? 'flex items-center justify-between gap-2' : 'block truncate whitespace-nowrap'} ${
               index === activeIndex

@@ -2,9 +2,10 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Button } from './Button'
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { AnchoredPopover } from './AnchoredPopover'
+import { CustomSelect } from './CustomSelect'
 import { cn } from '../../lib/utils'
 import { controlTriggerClassName, type ControlSize } from './controlStyles'
-import { useFormFieldControlProps } from './formFieldControl'
+import { FormFieldContext, useFormFieldControlProps } from './formFieldControl'
 
 export interface DatePickerProps {
   /** Value as an ISO date string (YYYY-MM-DD) or '' when unset. */
@@ -33,6 +34,7 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
 const PANEL_WIDTH = 272
+const YEAR_SELECTION_RADIUS = 100
 
 function parseISO(value: string): { year: number; month: number; day: number } | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
@@ -47,7 +49,7 @@ function parseISO(value: string): { year: number; month: number; day: number } |
 }
 
 function toISO(year: number, month: number, day: number): string {
-  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  return `${String(year).padStart(4, '0')}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
 function dateToISO(date: Date) {
@@ -100,6 +102,8 @@ export function DatePicker({
   const containerRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const calendarHeaderRef = useRef<HTMLDivElement>(null)
+  const yearMenuRef = useRef<HTMLDivElement>(null)
   const dayRefs = useRef(new Map<string, HTMLButtonElement>())
   const dialogId = useId()
   const now = new Date()
@@ -147,6 +151,7 @@ export function DatePicker({
       if (
         containerRef.current && !containerRef.current.contains(target)
         && panelRef.current && !panelRef.current.contains(target)
+        && !yearMenuRef.current?.contains(target)
       ) close()
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -159,11 +164,21 @@ export function DatePicker({
 
   useEffect(() => {
     if (!isOpen) return
-    const frame = window.requestAnimationFrame(() => dayRefs.current.get(activeISO)?.focus())
+    const frame = window.requestAnimationFrame(() => {
+      // Keep navigation controls in focus and in view while paging a scrollable calendar.
+      if (calendarHeaderRef.current?.contains(document.activeElement)) return
+      dayRefs.current.get(activeISO)?.focus()
+    })
     return () => window.cancelAnimationFrame(frame)
   }, [activeISO, isOpen, viewDate])
 
   const display = formatDisplay(value)
+  const monthLabel = `${MONTHS[viewDate.month]} ${viewDate.year}`
+  const currentYear = now.getFullYear()
+  const firstYear = (min ? parseISO(min)?.year : undefined)
+    ?? Math.max(100, Math.min(currentYear - YEAR_SELECTION_RADIUS, viewDate.year))
+  const lastYear = (max ? parseISO(max)?.year : undefined)
+    ?? Math.min(9999, Math.max(currentYear + YEAR_SELECTION_RADIUS, viewDate.year))
   const firstWeekday = new Date(viewDate.year, viewDate.month, 1).getDay()
   const daysInMonth = new Date(viewDate.year, viewDate.month + 1, 0).getDate()
   const cells: Array<number | null> = [
@@ -197,8 +212,8 @@ export function DatePicker({
     close(true)
   }
 
-  const goToMonth = (delta: number) => {
-    const next = new Date(viewDate.year, viewDate.month + delta, 1)
+  const goToMonth = (year: number, month: number) => {
+    const next = new Date(year, month, 1)
     const active = parseISO(activeISO)
     const day = Math.min(active?.day ?? 1, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate())
     setActiveDate(new Date(next.getFullYear(), next.getMonth(), day))
@@ -274,21 +289,38 @@ export function DatePicker({
           }
         }}
       >
-        <div className="mb-2.5 flex items-center justify-between">
+        <div ref={calendarHeaderRef} className="mb-2.5 flex items-center justify-between">
           <Button variant="tertiary"
             type="button"
-            onClick={() => goToMonth(-1)}
+            onClick={() => goToMonth(viewDate.year, viewDate.month - 1)}
             className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted/80 hover:text-foreground"
             aria-label="Previous month"
           >
             <ChevronLeft className="size-4" />
           </Button>
-          <span aria-live="polite" className="text-caption font-semibold text-foreground select-none">
-            {MONTHS[viewDate.month]} {viewDate.year}
-          </span>
+          <span aria-live="polite" className="sr-only">{monthLabel}</span>
+          <div className="flex items-center gap-2">
+            <span aria-hidden="true" className="select-none text-caption font-semibold">
+              {MONTHS[viewDate.month]}
+            </span>
+            <FormFieldContext.Provider value={null}>
+              <CustomSelect
+                ariaLabel="Calendar year"
+                value={viewDate.year}
+                onChange={year => goToMonth(year, viewDate.month)}
+                options={isOpen ? Array.from({ length: lastYear - firstYear + 1 }, (_, index) => {
+                  const year = firstYear + index
+                  return { value: year, label: String(year) }
+                }) : []}
+                variant="ghost"
+                popoverRef={yearMenuRef}
+                popoverClassName="z-[220]"
+              />
+            </FormFieldContext.Provider>
+          </div>
           <Button variant="tertiary"
             type="button"
-            onClick={() => goToMonth(1)}
+            onClick={() => goToMonth(viewDate.year, viewDate.month + 1)}
             className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted/80 hover:text-foreground"
             aria-label="Next month"
           >
@@ -296,7 +328,7 @@ export function DatePicker({
           </Button>
         </div>
 
-        <div role="grid" aria-label={`${MONTHS[viewDate.month]} ${viewDate.year}`}>
+        <div role="grid" aria-label={monthLabel}>
           <div role="row" className="mb-1 grid grid-cols-7 gap-0.5">
             {WEEKDAYS.map(label => (
               <span
@@ -309,7 +341,8 @@ export function DatePicker({
               </span>
             ))}
           </div>
-          <div role="rowgroup" className="grid grid-cols-7 gap-0.5">
+          {/* Reserve all six weeks so the popover never flips when the month changes. */}
+          <div role="rowgroup" className="grid grid-cols-7 grid-rows-[repeat(6,2rem)] gap-0.5">
             {cells.map((day, index) => {
               if (day === null) return <span role="presentation" key={`empty-${index}`} />
               const cellISO = toISO(viewDate.year, viewDate.month, day)

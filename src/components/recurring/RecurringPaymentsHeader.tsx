@@ -4,22 +4,20 @@ import { Button } from '../ui/Button'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
 import { BottomSheet } from '../ui/BottomSheet'
 import { useIsCompact } from '../../lib/breakpoints'
-import type { Loan, RecurringPayment } from '../../types'
+import type { Loan } from '../../types'
+import type { RecurringYearProjection } from '../../lib/recurringPayments'
 import { StatDistributionBreakdown, type DistributionBreakdownMode } from './StatDistributionBreakdown'
 import { PageHeader } from '../ui/PageHeader'
 import { panelClass } from '../ui/panelStyles'
 
 interface RecurringPaymentsHeaderProps {
   activeView: 'recurring' | 'loans'
-  totalCommittedMonthly: number
-  totalCommittedAnnual: number
-  totalCommittedDaily: number
+  recurringYear: RecurringYearProjection
   activeCount: number
   totalCount: number
   loanTotalOutstanding?: number | null
   loanTotalAnnual?: number | null
   loanCount?: number
-  payments?: RecurringPayment[]
   loans?: Loan[]
   showAddForm: boolean
   hideSensitive: boolean
@@ -61,9 +59,8 @@ const InteractiveStatTile: React.FC<{
   title?: string
   className?: string
   mode: DistributionBreakdownMode
-  payments?: RecurringPayment[]
+  recurringYear?: RecurringYearProjection
   loans?: Loan[]
-  totalCommittedAnnual?: number
   loanTotalOutstanding?: number | null
   loanTotalAnnual?: number | null
   formatSensitive: (val: number) => React.ReactNode
@@ -76,9 +73,8 @@ const InteractiveStatTile: React.FC<{
   title,
   className = '',
   mode,
-  payments,
+  recurringYear,
   loans,
-  totalCommittedAnnual,
   loanTotalOutstanding,
   loanTotalAnnual,
   formatSensitive,
@@ -182,9 +178,8 @@ const InteractiveStatTile: React.FC<{
         >
           <StatDistributionBreakdown
             mode={mode}
-            payments={payments}
+            recurringYear={recurringYear}
             loans={loans}
-            totalCommittedAnnual={totalCommittedAnnual}
             loanTotalOutstanding={loanTotalOutstanding}
             loanTotalAnnual={loanTotalAnnual}
             formatSensitive={formatSensitive}
@@ -203,9 +198,8 @@ const InteractiveStatTile: React.FC<{
           <div className="p-1">
             <StatDistributionBreakdown
               mode={mode}
-              payments={payments}
+              recurringYear={recurringYear}
               loans={loans}
-              totalCommittedAnnual={totalCommittedAnnual}
               loanTotalOutstanding={loanTotalOutstanding}
               loanTotalAnnual={loanTotalAnnual}
               formatSensitive={formatSensitive}
@@ -221,15 +215,12 @@ const InteractiveStatTile: React.FC<{
 // Header section with Stats
 export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = ({
   activeView,
-  totalCommittedMonthly,
-  totalCommittedAnnual,
-  totalCommittedDaily,
+  recurringYear,
   activeCount,
   totalCount,
   loanTotalOutstanding = null,
   loanTotalAnnual = null,
   loanCount = 0,
-  payments = [],
   loans = [],
   showAddForm,
   hideSensitive,
@@ -300,21 +291,20 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
               </>
             ) : (
               <>
-                <StatTile label="Monthly total" value={formatSensitive(totalCommittedMonthly)} className="pr-2" />
+                <StatTile label="Monthly average" value={formatSensitive(recurringYear.total / 12)} className="pr-2" />
                 <InteractiveStatTile
                   label="Yearly total"
-                  value={formatSensitive(totalCommittedAnnual)}
+                  value={formatSensitive(recurringYear.total)}
                   mode="recurring-annual"
-                  payments={payments}
-                  totalCommittedAnnual={totalCommittedAnnual}
+                  recurringYear={recurringYear}
                   formatSensitive={formatSensitive}
                   hideSensitive={hideSensitive}
                   isMobile={isMobile}
                   className="border-l border-border/70 pl-2 pr-1 lg:px-2"
                 />
                 <StatTile
-                  label="Daily cost"
-                  value={formatSensitive(totalCommittedDaily)}
+                  label="Daily average"
+                  value={formatSensitive(recurringYear.total / recurringYear.days)}
                   className="border-t border-border/70 pr-2 pt-3 lg:border-t-0 lg:border-l lg:px-2 lg:pt-0"
                 />
                 <StatTile

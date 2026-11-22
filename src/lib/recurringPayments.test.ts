@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildReminderPreview,
+  buildRecurringYearProjection,
   computeOccurrenceOnOrAfter,
   computeNextOccurrenceDate,
   DEFAULT_REMINDER_SETTINGS,
@@ -13,6 +14,7 @@ import {
   occurrenceRemaining,
   REMINDER_LEAD_DAY_OPTIONS,
 } from './recurringPayments'
+import type { RecurringPayment } from '../types'
 
 describe('normalizeRecurringFrequency', () => {
   it('coerces a legacy Weekly value to Monthly', () => {
@@ -102,6 +104,42 @@ describe('computeOccurrenceOnOrAfter', () => {
     expect(computeOccurrenceOnOrAfter({
       startDate: '2027-03-15', dueDate: 15, frequency: 'Annually', endDate: undefined,
     }, '2026-11-01')).toBe('2027-03-15')
+  })
+})
+
+describe('buildRecurringYearProjection', () => {
+  const bill = (id: string, overrides: Partial<RecurringPayment> = {}): RecurringPayment => ({
+    id, name: id, amount: -100, frequency: 'Monthly', category: 'Bills', ledgerCategory: 'Essentials',
+    accountId: 'acct-1', startDate: '2026-01-31', dueDate: 31, nextDueDate: null, active: true,
+    paymentMode: 'Manual', ...overrides,
+  })
+
+  it('sums actual scheduled dates, including today and the billing end date', () => {
+    const projection = buildRecurringYearProjection([
+      bill('installment', { endDate: '2027-02-28' }),
+      bill('ongoing', { amount: -20 }),
+      bill('annual', { frequency: 'Annually', startDate: '2026-12-31', endDate: '2026-12-31' }),
+      bill('future', { startDate: '2027-10-31' }),
+    ], '2026-12-31')
+
+    expect(projection.total).toBe(840)
+    expect(projection.days).toBe(365)
+    expect(projection.bills.map(({ id, occurrences, amount }) => [id, occurrences, amount])).toEqual([
+      ['installment', 3, 300], ['ongoing', 12, 240], ['future', 2, 200], ['annual', 1, 100],
+    ])
+  })
+
+  it('excludes paused bills and schedules with no occurrence in the window', () => {
+    const projection = buildRecurringYearProjection([
+      bill('paused', { active: false }),
+      bill('queued removal', { isPendingDelete: true }),
+      bill('ended', { endDate: '2026-12-30' }),
+      bill('last date before due day', { endDate: '2027-01-30' }),
+      bill('anniversary', { frequency: 'Annually', startDate: '2027-12-31' }),
+    ], '2026-12-31')
+
+    expect(projection.bills.map(({ id, occurrences }) => [id, occurrences])).toEqual([['last date before due day', 1]])
+    expect(projection.total).toBe(100)
   })
 })
 

@@ -1,16 +1,16 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { RecurringPaymentsHeader } from './RecurringPaymentsHeader'
+import { buildRecurringYearProjection } from '../../lib/recurringPayments'
+import type { RecurringPayment } from '../../types'
 
 const baseProps = {
-  totalCommittedMonthly: 420,
-  totalCommittedAnnual: 5040,
-  totalCommittedDaily: 13.81,
+  recurringYear: { total: 5040, days: 365, bills: [] },
   activeCount: 2,
   totalCount: 3,
   showAddForm: false,
   hideSensitive: false,
-  formatSensitive: (value: number) => `$${value}`,
+  formatSensitive: (value: number) => `$${Number(value.toFixed(2))}`,
   onToggleForm: vi.fn(),
   onAddLoan: vi.fn(),
 }
@@ -52,20 +52,30 @@ describe('RecurringPaymentsHeader', () => {
     render(<RecurringPaymentsHeader {...baseProps} activeView="recurring" />)
 
     expect(screen.getByRole('heading', { name: 'Bills & subscriptions' })).not.toBeNull()
-    expect(screen.getByText('Monthly total')).not.toBeNull()
+    expect(screen.getByText('Monthly average')).not.toBeNull()
     expect(screen.getByText('Yearly total')).not.toBeNull()
     expect(screen.getByText('$5040')).not.toBeNull()
-    expect(screen.getByText('Daily cost')).not.toBeNull()
+    expect(screen.getByText('Daily average')).not.toBeNull()
     expect(screen.getByText('$13.81')).not.toBeNull()
     expect(screen.getByRole('button', { name: /new bill/i })).not.toBeNull()
     expect(screen.queryByRole('button', { name: /new loan/i })).toBeNull()
   })
 
-  it('opens breakdown dialog when clicking stat tile', () => {
-    render(<RecurringPaymentsHeader {...baseProps} activeView="recurring" />)
+  it('shows the same scheduled yearly total in the summary and in its breakdown', () => {
+    const monthlyBill: RecurringPayment = {
+      id: 'installment', name: 'Installment', amount: 100, frequency: 'Monthly', category: 'Bills',
+      ledgerCategory: 'Essentials', accountId: 'acct-1', nextDueDate: '2026-11-28', dueDate: 28,
+      startDate: '2026-08-28', endDate: '2027-01-28', active: true, paymentMode: 'Manual',
+    }
+    const recurringYear = buildRecurringYearProjection([monthlyBill], '2026-11-22')
+    render(<RecurringPaymentsHeader {...baseProps} activeView="recurring" recurringYear={recurringYear} />)
 
     const tile = screen.getByRole('button', { name: /yearly total.*breakdown/i })
+    expect(screen.getByText('$300')).not.toBeNull()
     fireEvent.click(tile)
     expect(screen.getByRole('dialog')).not.toBeNull()
+    expect(screen.getAllByText('$300')).toHaveLength(3)
+    expect(screen.getByText('3 payments')).not.toBeNull()
+    expect(screen.getByText('next 12 months')).not.toBeNull()
   })
 })

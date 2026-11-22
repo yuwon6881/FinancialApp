@@ -37,7 +37,7 @@ describe('useRecurringPaymentsView', () => {
     }))
 
     expect(result.current.activeCount).toBe(1)
-    expect(result.current.totalCommittedMonthly).toBe(60)
+    expect(result.current.recurringYear.bills.map(bill => bill.id)).toEqual(['current'])
   })
 })
 

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
-import type { Loan, RecurringPayment } from '../../types'
-import { hasBillingEnded, normalizeRecurringFrequency } from '../../lib/recurringPayments'
+import type { Loan } from '../../types'
+import type { RecurringYearProjection } from '../../lib/recurringPayments'
 import { getCategoryBadgeClass, getCategoryDotClass } from '../../lib/categoryColors'
 import { Badge } from '../ui/Badge'
 import { Meter } from '../ui/Meter'
@@ -9,9 +9,8 @@ export type DistributionBreakdownMode = 'recurring-annual' | 'loan-owed' | 'loan
 
 export interface StatDistributionBreakdownProps {
   mode: DistributionBreakdownMode
-  payments?: RecurringPayment[]
+  recurringYear?: RecurringYearProjection
   loans?: Loan[]
-  totalCommittedAnnual?: number
   loanTotalOutstanding?: number | null
   loanTotalAnnual?: number | null
   formatSensitive: (value: number) => React.ReactNode
@@ -27,15 +26,15 @@ interface BreakdownRow {
   secondaryLabel?: string
   monthlyAmount?: number
   dailyAmount?: number
+  scheduledPayments?: number
   originalPrincipal?: number
   percentage: number
 }
 
 export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps> = ({
   mode,
-  payments = [],
+  recurringYear,
   loans = [],
-  totalCommittedAnnual = 0,
   loanTotalOutstanding = null,
   loanTotalAnnual = null,
   formatSensitive,
@@ -44,31 +43,24 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
 }) => {
   const { title, subtitle, rows, totalFormatted } = useMemo(() => {
     if (mode === 'recurring-annual') {
-      const active = payments.filter(p => p.active && !hasBillingEnded(p))
-      const calculatedRows: BreakdownRow[] = active.map(p => {
-        const rawAmt = Math.abs(p.amount)
-        const isAnnual = normalizeRecurringFrequency(p.frequency) === 'Annually'
-        const annualAmt = isAnnual ? rawAmt : rawAmt * 12
-        const monthlyAmt = annualAmt / 12
-        const pct = totalCommittedAnnual > 0 ? (annualAmt / totalCommittedAnnual) * 100 : 0
-
-        return {
-          id: p.id,
-          name: p.name,
-          category: p.category,
-          primaryAmount: annualAmt,
-          secondaryLabel: `${isAnnual ? 'Billed annually' : 'Billed monthly'} · approx. / mo`,
-          monthlyAmount: monthlyAmt,
-          dailyAmount: annualAmt / 365,
-          percentage: pct,
-        }
-      }).sort((a, b) => b.primaryAmount - a.primaryAmount)
+      const total = recurringYear?.total ?? 0
+      const calculatedRows: BreakdownRow[] = recurringYear?.bills.map(bill => ({
+        id: bill.id,
+        name: bill.name,
+        category: bill.category,
+        primaryAmount: bill.amount,
+        monthlyAmount: bill.amount / 12,
+        dailyAmount: bill.amount / recurringYear.days,
+        scheduledPayments: bill.occurrences,
+        percentage: total > 0 ? (bill.amount / total) * 100 : 0,
+      })) ?? []
+      const count = calculatedRows.length
 
       return {
         title: 'Yearly Bills Distribution',
-        subtitle: `${active.length} active recurring ${active.length === 1 ? 'bill' : 'bills'}`,
+        subtitle: `${count} scheduled ${count === 1 ? 'bill' : 'bills'}`,
         rows: calculatedRows,
-        totalFormatted: formatSensitive(totalCommittedAnnual),
+        totalFormatted: formatSensitive(total),
       }
     }
 
@@ -148,7 +140,7 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
       rows: calculatedRows,
       totalFormatted: formatSensitive(totalAnnual),
     }
-  }, [formatSensitive, loanTotalAnnual, loanTotalOutstanding, loans, mode, payments, totalCommittedAnnual])
+  }, [formatSensitive, loanTotalAnnual, loanTotalOutstanding, loans, mode, recurringYear])
 
   return (
     <div className={`space-y-3 ${className}`}>
@@ -160,7 +152,7 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
         <div className="text-right shrink-0">
           <span className="text-xs font-semibold text-accent-ink sm:text-sm">{totalFormatted}</span>
           <span className="block text-label font-medium text-muted-foreground">
-            {mode === 'loan-owed' ? 'total owed' : 'total / year'}
+            {mode === 'recurring-annual' ? 'next 12 months' : mode === 'loan-owed' ? 'total owed' : 'total / year'}
           </span>
         </div>
       </div>
@@ -196,6 +188,7 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
                       <span>Original principal: {formatSensitive(row.originalPrincipal)}</span>
                     ) : row.monthlyAmount !== undefined ? (
                       <span>
+                        {mode === 'recurring-annual' && 'Avg. '}
                         {formatSensitive(row.monthlyAmount)} / month
                         {row.dailyAmount !== undefined && (
                           <span className="ml-1 text-muted-foreground">· {formatSensitive(row.dailyAmount)} / day</span>
@@ -215,7 +208,9 @@ export const StatDistributionBreakdown: React.FC<StatDistributionBreakdownProps>
                     </Badge>
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {mode === 'loan-owed' ? 'outstanding' : 'per year'}
+                    {row.scheduledPayments !== undefined
+                      ? `${row.scheduledPayments} ${row.scheduledPayments === 1 ? 'payment' : 'payments'}`
+                      : mode === 'loan-owed' ? 'outstanding' : 'per year'}
                   </span>
                 </div>
               </div>

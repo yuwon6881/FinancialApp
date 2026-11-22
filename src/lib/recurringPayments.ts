@@ -88,6 +88,52 @@ export function computeOccurrenceOnOrAfter(
   return payment.endDate && result > payment.endDate ? null : result
 }
 
+interface ProjectedBill extends Pick<RecurringPayment, 'id' | 'name' | 'category'> {
+  occurrences: number
+  amount: number
+}
+
+export interface RecurringYearProjection {
+  bills: ProjectedBill[]
+  total: number
+  days: number
+}
+
+/** Scheduled charges from today through the day before the next anniversary. */
+export function buildRecurringYearProjection(payments: readonly RecurringPayment[], today: string): RecurringYearProjection {
+  const start = parseDateOnly(today)
+  const year = start.getFullYear() + 1
+  const month = start.getMonth()
+  const anniversary = new Date(year, month, Math.min(start.getDate(), new Date(year, month + 1, 0).getDate()))
+  const end = formatDateOnly(anniversary)
+  const days = Math.round((anniversary.getTime() - start.getTime()) / 86_400_000)
+  const bills: ProjectedBill[] = []
+  let total = 0
+
+  for (const payment of payments) {
+    if (!payment.active || payment.isPendingDelete) continue
+    const schedule = {
+      startDate: payment.startDate,
+      endDate: payment.endDate,
+      frequency: normalizeRecurringFrequency(payment.frequency),
+      dueDate: Math.max(1, Math.min(31, payment.dueDate)),
+    }
+    let due = computeOccurrenceOnOrAfter(schedule, today)
+    let occurrences = 0
+    while (due && due < end) {
+      occurrences++
+      due = computeNextOccurrenceDate({ ...schedule, nextDueDate: due })
+    }
+    if (!occurrences) continue
+
+    const amount = Math.abs(payment.amount) * occurrences
+    bills.push({ id: payment.id, name: payment.name, category: payment.category, occurrences, amount })
+    total += amount
+  }
+
+  return { bills: bills.sort((a, b) => b.amount - a.amount), total, days }
+}
+
 /**
  * What one occurrence has already taken, and what it still owes.
  *

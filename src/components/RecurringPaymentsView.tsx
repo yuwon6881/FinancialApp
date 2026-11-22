@@ -282,15 +282,12 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       {/* Header section with Stats */}
       <RecurringPaymentsHeader
         activeView={activeTab}
-        totalCommittedMonthly={view.totalCommittedMonthly}
-        totalCommittedAnnual={view.totalCommittedAnnual}
-        totalCommittedDaily={view.totalCommittedDaily}
+        recurringYear={view.recurringYear}
         activeCount={view.activeCount}
         totalCount={payments.length}
         loanTotalOutstanding={loanTotalOutstanding}
         loanTotalAnnual={loanTotalAnnual}
         loanCount={loans.length}
-        payments={payments}
         loans={loans}
         showAddForm={view.showAddForm}
         hideSensitive={hideSensitive}

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { establishSession, mockApi, seedDraftTransaction, vaultDocuments, waitForStableLayout, openTransactionForm } from './visualTestSupport'
 import { coveredRecovery } from './recoveryFixtures'
+import { DENSE_CONTENT_BREAKPOINT } from '../../src/lib/breakpoints'
 
 test('covered recovery separates this cycle from the remaining balance', async ({ page }) => {
   await mockApi(page, { stabilityRecovery: coveredRecovery })
@@ -736,6 +737,96 @@ test('investment plan Configure opens its settings tab', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/settings\?.*section=investment-plan/)
   await expect(page.getByRole('tab', { name: 'Investment plan' })).toHaveAttribute('aria-selected', 'true')
+})
+
+test('bill calendar stays anchored while changing months and jumping to another year', async ({ page }) => {
+  const viewport = page.viewportSize()
+  if (viewport && test.info().project.name.startsWith('desktop-')) {
+    // Put the trigger where a five-week panel used to fit below it and a six-week panel did not.
+    await page.setViewportSize({ ...viewport, height: 975 })
+  }
+  await page.clock.setFixedTime(new Date('2026-11-22T10:00:00+08:00'))
+  await mockApi(page, {
+    recurringPayments: [{
+      id: 'calendar-bill', name: 'Installment', amount: 85.56, frequency: 'Monthly',
+      category: 'Loan', ledgerCategory: 'Essentials', accountId: 'account-visual-essentials',
+      nextDueDate: '2026-12-28', dueDate: 28, startDate: '2026-10-28', active: true,
+      paymentMode: 'Manual',
+    }],
+  })
+  await page.goto('/recurring', { waitUntil: 'domcontentloaded' })
+  if ((viewport?.width ?? 0) < DENSE_CONTENT_BREAKPOINT) {
+    await page.locator('#recur-card-calendar-bill').getByRole('button', { name: 'Show details for Installment' }).click()
+  }
+  await page.getByRole('button', { name: 'Edit Installment' }).click()
+  const trigger = page.getByRole('dialog', { name: 'Edit bill' }).getByRole('button', { name: /End billing date/ })
+  await trigger.click()
+
+  const calendar = page.getByRole('dialog', { name: 'Choose date' })
+  const grid = calendar.getByRole('grid')
+  const next = calendar.getByRole('button', { name: 'Next month' })
+  const previous = calendar.getByRole('button', { name: 'Previous month' })
+  await expect(grid).toHaveAccessibleName('November 2026')
+  await waitForStableLayout(page)
+  const position = await calendar.boundingBox()
+  const side = await calendar.getAttribute('data-side') ?? ''
+  expect(position).not.toBeNull()
+  expect(side).toMatch(/^(top|bottom)$/)
+
+  for (const [arrow, month] of [
+    [next, 'December 2026'], [next, 'January 2027'], [previous, 'December 2026'], [next, 'January 2027'], [next, 'February 2027'],
+  ] as const) {
+    await arrow.click()
+    await expect(grid).toHaveAccessibleName(month)
+    await waitForStableLayout(page)
+    expect(await calendar.boundingBox()).toEqual(position)
+    await expect(calendar).toHaveAttribute('data-side', side)
+  }
+
+  const year = calendar.getByRole('combobox', { name: 'Calendar year' })
+  await year.click()
+  const yearOptions = page.getByRole('listbox', { name: 'Calendar year' })
+  await expect(yearOptions.getByRole('option', { name: '2027' })).toBeInViewport()
+  await yearOptions.getByRole('option', { name: '2026' }).click()
+  await expect(grid).toHaveAccessibleName('February 2026')
+  await waitForStableLayout(page)
+  expect(await calendar.boundingBox()).toEqual(position)
+
+  await page.keyboard.type('2040')
+  const targetYear = yearOptions.getByRole('option', { name: '2040' })
+  await expect(targetYear).toBeInViewport()
+  await expect(year).toHaveAttribute('aria-activedescendant', await targetYear.getAttribute('id') ?? '')
+  await year.press('Enter')
+  await expect(grid).toHaveAccessibleName('February 2040')
+  await expect(year).toBeFocused()
+  await waitForStableLayout(page)
+  expect(await calendar.boundingBox()).toEqual(position)
+  await grid.getByRole('gridcell', { name: /February 22, 2040|22 February 2040/ }).click()
+  await expect(calendar).toHaveCount(0)
+  await expect(trigger).toHaveText('Feb 22, 2040')
+})
+
+test('yearly bills show only payments through the billing end date', async ({ page }) => {
+  test.skip(!['mobile-dark', 'desktop-dark'].includes(test.info().project.name), 'The breakdown opens as a phone sheet or desktop popover.')
+  await page.clock.setFixedTime(new Date('2026-11-22T10:00:00+08:00'))
+  await mockApi(page, {
+    recurringPayments: [{
+      id: 'ending-bill', name: 'Installment', amount: 85.56, frequency: 'Monthly',
+      category: 'Loan', ledgerCategory: 'Essentials', accountId: 'account-visual-essentials',
+      nextDueDate: '2026-12-28', dueDate: 28, startDate: '2026-12-28', endDate: '2027-01-28',
+      active: true, paymentMode: 'Manual',
+    }],
+  })
+  await page.goto('/recurring', { waitUntil: 'domcontentloaded' })
+
+  const yearly = page.getByRole('button', { name: /yearly total.*breakdown/i })
+  await expect(yearly).toContainText('171.12')
+  await yearly.click()
+  const breakdown = page.getByRole('dialog', { name: 'Yearly Bills Distribution' })
+  await expect(breakdown).toBeVisible()
+  await expect(breakdown.getByText('next 12 months')).toBeVisible()
+  await expect(breakdown.getByText('2 payments')).toBeVisible()
+  await expect(breakdown.getByText('100.0%', { exact: true })).toBeVisible()
 })
 
 test('recurring bill detail actions and linked loan badge keep compact heights', async ({ page }) => {

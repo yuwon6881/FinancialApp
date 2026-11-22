@@ -4,7 +4,7 @@ import { maskCurrencyInput } from '../../lib/utils'
 import { useSyncStatus } from '../../lib/useOptimisticList'
 import { useAutoOpenModal } from '../../lib/useAutoOpenModal'
 import { canOpenBlankMutationForm } from '../../lib/quickAddAvailability'
-import { computeOccurrenceOnOrAfter, hasBillingEnded, normalizeRecurringFrequency } from '../../lib/recurringPayments'
+import { buildRecurringYearProjection, computeOccurrenceOnOrAfter, normalizeRecurringFrequency } from '../../lib/recurringPayments'
 import { financialDate } from '../../lib/financialDate'
 import { formatSensitiveAmount, formatCurrencyAmount } from './formatters'
 import { focusFirstInvalidField } from '../ui/formValidation'
@@ -244,15 +244,9 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     }
   }, [categories, category])
 
-  // Only subscriptions that still bill count toward the committed total: an expired one keeps its
-  // `active` flag (that toggle is the user's pause switch, not an expiry flag) but costs nothing.
-  const totalCommittedMonthly = payments
-    .filter(p => p.active && !hasBillingEnded(p))
-    .reduce((acc, p) => acc + Math.abs(p.amount) / (normalizeRecurringFrequency(p.frequency) === 'Annually' ? 12 : 1), 0)
-  const totalCommittedAnnual = totalCommittedMonthly * 12
-  const totalCommittedDaily = totalCommittedAnnual / 365
-
-  const activeCount = payments.filter(p => p.active && !hasBillingEnded(p)).length
+  const today = financialDate()
+  const recurringYear = React.useMemo(() => buildRecurringYearProjection(payments, today), [payments, today])
+  const activeCount = payments.filter(p => p.active && !p.isPendingDelete && (!p.endDate || p.endDate >= today)).length
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -472,9 +466,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     clearCategoryFilters,
     filteredAndSortedPayments,
     // derived stats
-    totalCommittedMonthly,
-    totalCommittedAnnual,
-    totalCommittedDaily,
+    recurringYear,
     activeCount,
     // formatters
     formatCurrency,
