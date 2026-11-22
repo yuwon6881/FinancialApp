@@ -131,7 +131,7 @@ export function buildRecurringYearProjection(payments: readonly RecurringPayment
     total += amount
   }
 
-  return { bills: bills.sort((a, b) => b.amount - a.amount), total, days }
+  return { bills: bills.sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name)), total, days }
 }
 
 /**
