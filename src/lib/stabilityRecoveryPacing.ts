@@ -131,10 +131,10 @@ export function computeRecoveryCohortPlan(input: {
   const horizon = Math.max(1, input.horizon ?? STABILITY_RECOVERY_PLAN_CYCLES)
   const grouped = new Map<string, CohortGroup>()
   for (const cohort of input.cohorts) {
-    if (cohort.remainingShortfall <= 0 && cohort.repaidThisCycle <= 0) continue
     const repaymentCycles = cohort.repaymentCycles ?? horizon
     const key = cohort.originCycleKey + ':' + repaymentCycles
     const rawCyclesRemaining = cyclesFromAnchor(cohort.originCycleKey, input.currentCycleKey, repaymentCycles)
+    if (cohort.remainingShortfall <= 0 && cohort.repaidThisCycle <= 0 && rawCyclesRemaining <= 0) continue
     const isDeferred = isDeferredFromAnchor(cohort.originCycleKey, input.currentCycleKey)
     const remainingCents = Math.max(0, toCents(cohort.remainingShortfall))
     const openingCents = remainingCents + Math.max(0, toCents(cohort.repaidThisCycle))

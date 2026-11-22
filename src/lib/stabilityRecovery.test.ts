@@ -364,6 +364,29 @@ describe('proposeTopUp', () => {
 })
 
 describe('stability reload projection', () => {
+  it('uses pooled credit from a fully repaid withdrawal carried by the API', () => {
+    const projected = projectStabilityRecovery({
+      recovery: recovery({
+        currentBalance: 2700,
+        openingOutstanding: 300,
+        outstandingShortfall: 300,
+        toppedUpThisCycle: 0,
+        openingObligations: [
+          { transactionId: 'older', date: '2026-01-04', originalAmount: 300, remainingAmount: 0, repaymentCycles: 6 },
+          { transactionId: 'newer', date: '2026-02-04', originalAmount: 300, remainingAmount: 300, repaymentCycles: 3 },
+        ],
+      }),
+      baseTransactions: [],
+      projectedTransactions: [],
+      stabilityAlloc: 0.15,
+      projectedBalance: 2700,
+      currentCycleKey: '2026-03',
+      cycleDay: 1,
+    })
+
+    expect(projected.outstandingShortfall).toBe(300)
+    expect(projected.outstandingThisCycle).toBe(0)
+  })
   it('keeps carried installments in the quote when a pending reimbursement is applied', () => {
     const repayment = transaction({
       id: 'repayment', date: '2027-01-18', amount: 25, ledgerCategory: 'Stability',
@@ -396,7 +419,7 @@ describe('stability reload projection', () => {
     })
   })
 
-  it('opens the three-cycle pace at the next cycle boundary', () => {
+  it('keeps the API quote and carry-over when the opening obligations are unavailable', () => {
     const projected = projectStabilityRecovery({
       recovery: recovery({
         lastDrawdownCycleKey: '2026-07',
@@ -405,6 +428,10 @@ describe('stability reload projection', () => {
         currentBalance: 7000,
         openingOutstanding: 300,
         toppedUpThisCycle: 0,
+        cyclesRemaining: 7,
+        requiredThisCycle: 100,
+        outstandingThisCycle: 100,
+        carriedThisCycle: 60,
       }),
       baseTransactions: [],
       projectedTransactions: [],
@@ -413,12 +440,10 @@ describe('stability reload projection', () => {
       currentCycleKey: '2026-08',
     })
 
-    // The cycle after the drawdown is the plan's first instalment, so all three are still ahead
-    // and this one asks for a third. No cycleDay was given, so this is the aggregate fallback path.
-    expect(projected.cyclesRemaining).toBe(3)
+    expect(projected.cyclesRemaining).toBe(7)
     expect(projected.requiredThisCycle).toBe(100)
     expect(projected.outstandingThisCycle).toBe(100)
-    expect(projected.isDeferred).toBe(false)
+    expect(projected.carriedThisCycle).toBe(60)
   })
 
   it('asks for nothing on the fallback path while the drawdown cycle is still on screen', () => {
@@ -430,6 +455,9 @@ describe('stability reload projection', () => {
         currentBalance: 7000,
         openingOutstanding: 300,
         toppedUpThisCycle: 0,
+        requiredThisCycle: 0,
+        outstandingThisCycle: 0,
+        isDeferred: true,
       }),
       baseTransactions: [],
       projectedTransactions: [],

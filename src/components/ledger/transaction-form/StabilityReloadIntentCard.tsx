@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { InfoHint } from '../../ui/InfoHint'
 import { Button } from '../../ui/Button'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { FormField } from '../../ui/FormField'
 import { getMonthCycleLabel, getMonthLabel } from '../../../lib/monthCycleLabel'
 import { cycleKeyForDate, STABILITY_RECOVERY_PLAN_CYCLES } from '../../../lib/stabilityRecoveryPacing'
-import { stabilityRepaymentTermOptions } from '../../../lib/stabilityRepaymentTerms'
+import { stabilityRepaymentPresets, stabilityRepaymentTermOptions } from '../../../lib/stabilityRepaymentTerms'
 import { formatCurrencyVal } from '../../../lib/utils'
 import type { TransactionFormState } from './transactionFormReducer'
 
@@ -38,6 +38,8 @@ export const StabilityReloadIntentCard: React.FC<StabilityReloadIntentCardProps>
   onSetField,
 }) => {
   const repaymentCycles = state.stabilityRepaymentCycles ?? STABILITY_RECOVERY_PLAN_CYCLES
+  const [choosingOther, setChoosingOther] = useState(false)
+  const isCustomTerm = choosingOther || !stabilityRepaymentPresets.some(option => option.value === repaymentCycles)
   const origin = cycleKeyForDate(state.date, cycleDay)
   const schedule = origin ? repaymentWindowLabel(origin, repaymentCycles) : undefined
   const cents = Math.round(Math.abs(Number(state.amount)) * 100)
@@ -45,7 +47,7 @@ export const StabilityReloadIntentCard: React.FC<StabilityReloadIntentCardProps>
   const share = !hideSensitive && cents > 0
     ? formatCurrencyVal(Math.ceil(cents / repaymentCycles) / 100, currency)
     : null
-  const shareSuffix = repaymentCycles === 1 ? 'in one payment' : 'a month'
+  const shareSuffix = repaymentCycles === 1 ? 'in one payment' : 'per cycle'
   const isApproximate = repaymentCycles > 1 && cents % repaymentCycles !== 0
 
   return (
@@ -98,12 +100,25 @@ export const StabilityReloadIntentCard: React.FC<StabilityReloadIntentCardProps>
         <div className="space-y-2 border-t border-border pt-3">
           <FormField label="Repayment term">
             <CustomSelect
-              value={repaymentCycles}
-              onChange={value => onSetField('stabilityRepaymentCycles', value)}
-              options={stabilityRepaymentTermOptions()}
+              value={isCustomTerm ? 'other' : repaymentCycles}
+              onChange={value => {
+                setChoosingOther(value === 'other')
+                if (value !== 'other') onSetField('stabilityRepaymentCycles', value)
+              }}
+              options={stabilityRepaymentPresets}
               className="w-full"
             />
           </FormField>
+          {isCustomTerm && (
+            <FormField label="Custom repayment term">
+              <CustomSelect
+                value={repaymentCycles}
+                onChange={value => onSetField('stabilityRepaymentCycles', value)}
+                options={stabilityRepaymentTermOptions()}
+                className="w-full"
+              />
+            </FormField>
+          )}
           <div
             className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 rounded-lg bg-card/60 px-3 py-2.5"
             aria-live="polite"

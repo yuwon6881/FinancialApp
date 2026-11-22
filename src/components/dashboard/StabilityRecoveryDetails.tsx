@@ -18,9 +18,16 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
   const covered = status === 'covered'
   const carriedThisCycle = Math.max(0, recovery.carriedThisCycle ?? 0)
 
-  const activeCohorts = (recovery.recoveryCohorts ?? []).filter(cohort => cohort.remainingShortfall > 0)
-
-  const sortedCohorts = [...activeCohorts].sort((a, b) => a.originCycleKey.localeCompare(b.originCycleKey))
+  const cohorts = [...(recovery.recoveryCohorts ?? [])].sort((left, right) =>
+    left.originCycleKey.localeCompare(right.originCycleKey) || left.fromDate.localeCompare(right.fromDate)
+    || endOffset(left) - endOffset(right))
+  let paymentCredit = cyclePlanFunded
+  const planAmounts = cohorts.map(cohort => {
+    const applied = Math.min(paymentCredit, cohort.requiredThisCycle)
+    paymentCredit -= applied
+    return { cohort, due: Math.round((cohort.requiredThisCycle - applied) * 100) / 100 }
+  }).filter(({ cohort }) => cohort.remainingShortfall > 0)
+  const activeCohorts = planAmounts.map(({ cohort }) => cohort)
   const latestEnd = activeCohorts.map(cohort => {
     const [year, month] = cohort.originCycleKey.split('-').map(Number)
     return Date.UTC(year, month - 1 + endOffset(cohort), 1)
@@ -105,7 +112,7 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
         <section aria-label="Withdrawal plans" className="space-y-2">
           <h3 className="text-sm font-semibold text-foreground">Withdrawal plans</h3>
           <ul className="divide-y divide-foreground/10 rounded-control inset-group" aria-label="Withdrawal plans">
-            {sortedCohorts.map(cohort => {
+            {planAmounts.map(({ cohort, due }) => {
               const endCycle = getMonthCycleLabel(cohort.originCycleKey, endOffset(cohort))
               return (
                 // Two columns, so each caption sits under the thing it describes: the deadline under
@@ -114,8 +121,8 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
                   <div className="min-w-0 space-y-1.5">
                     <p className="font-semibold text-foreground">{getMonthCycleLabel(cohort.originCycleKey) ?? cohort.originCycleKey}</p>
                     {endCycle && <p className="text-muted-foreground">Plan ends {endCycle}</p>}
-                    {!cohort.isDeferred && cohort.requiredThisCycle > 0 && (
-                      <p className="text-muted-foreground">Due this cycle {formatSensitive(cohort.requiredThisCycle)}</p>
+                    {!cohort.isDeferred && due > 0 && (
+                      <p className="text-muted-foreground">Due this cycle {formatSensitive(due)}</p>
                     )}
                   </div>
                   <div className="shrink-0 space-y-1.5 text-right">

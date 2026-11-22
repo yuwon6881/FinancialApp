@@ -52,6 +52,7 @@ export interface StabilityRecoveryNarrative {
 export function describeStabilityRecovery(recovery: StabilityRecovery): StabilityRecoveryNarrative {
   const shortfall = Math.max(0, recovery.outstandingShortfall)
   const askThisCycle = Math.max(0, recovery.outstandingThisCycle)
+  const askIsWholeShortfall = askThisCycle >= shortfall - 0.005
   const cohorts = (recovery.recoveryCohorts ?? []).filter(cohort => cohort.remainingShortfall > 0)
   const hasOverlappingPlans = cohorts.length > 1
   // Overdue is checked before the final cycle: past the window `cyclesRemaining` sits at 1 forever,
@@ -61,6 +62,7 @@ export function describeStabilityRecovery(recovery: StabilityRecovery): Stabilit
   // showed other plans with time remaining.
   const isFinalCycle = !recovery.isOverdue
     && !hasOverlappingPlans
+    && askIsWholeShortfall
     && Math.max(1, recovery.cyclesRemaining) <= 1
   const toppedUp = Math.max(0, recovery.toppedUpThisCycle)
   const carriedStillDue = Math.min(askThisCycle, Math.max(0, (recovery.carriedThisCycle ?? 0) - toppedUp))
@@ -82,7 +84,7 @@ export function describeStabilityRecovery(recovery: StabilityRecovery): Stabilit
     status,
     shortfall,
     askThisCycle,
-    askIsWholeShortfall: askThisCycle >= shortfall - 0.005,
+    askIsWholeShortfall,
     carriedStillDue,
     cyclesRemaining: Math.max(1, recovery.cyclesRemaining),
     hasOverlappingPlans,

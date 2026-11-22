@@ -149,6 +149,14 @@ describe('describeStabilityRecovery', () => {
     expect(narrative.cyclePlanPercent).toBe(25)
   })
 
+  it('keeps a later balance visible when pooled credit outlasts the open withdrawal term', () => {
+    const narrative = describeStabilityRecovery(recovery({
+      cyclesRemaining: 1, outstandingThisCycle: 25, outstandingShortfall: 100,
+    }))
+    expect(narrative.status).toBe('onPlan')
+    expect(narrative.isFinalCycle).toBe(false)
+  })
+
   it('has no progress bar target in the deferred spending cycle', () => {
     expect(describeStabilityRecovery(recovery({
       isDeferred: true, requiredThisCycle: 0, toppedUpThisCycle: 50, outstandingThisCycle: 0,

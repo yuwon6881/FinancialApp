@@ -33,6 +33,7 @@ export interface StabilityReloadReplay {
   repaidThisRun: number
   /** FIFO attribution used only to hold each origin-cycle cohort's current requirement stable. */
   repaidByObligationThisRun: Record<string, number>
+  paidInFull: ReadonlySet<string>
   /**
    * Retained after they are fully discharged so per-row status can still say "complete"; only the
    * two totals below drop them.
@@ -166,6 +167,7 @@ export function replayStabilityReload(
     outstanding: number
     oldestOutstandingDate?: string
     obligations?: StabilityReloadObligation[]
+    paidInFull?: ReadonlySet<string>
   },
   openingBalance: number,
   target: number,
@@ -177,10 +179,13 @@ export function replayStabilityReload(
 ): StabilityReloadReplay {
   const queue: { id?: string; date?: string; amount: number }[] = []
   const obligations = new Map<string, StabilityReloadObligation>()
+  const paidInFull = new Set<string>()
   if (opening.obligations?.length) {
     for (const obligation of opening.obligations) {
-      if (obligation.remainingAmount <= 0) continue
-      queue.push({ id: obligation.transactionId, date: obligation.date, amount: obligation.remainingAmount })
+      if (obligation.remainingAmount > 0)
+        queue.push({ id: obligation.transactionId, date: obligation.date, amount: obligation.remainingAmount })
+      else if (opening.paidInFull?.has(obligation.transactionId)) paidInFull.add(obligation.transactionId)
+      else continue
       obligations.set(obligation.transactionId, { ...obligation })
     }
   } else if (opening.outstanding > 0) {
@@ -222,6 +227,7 @@ export function replayStabilityReload(
     // markedThisRun survives, as an audit total of what left the fund during this run.
     repaidThisRun = 0
     repaidByObligationThisRun.clear()
+    paidInFull.clear()
   }
 
   const applyPlanPoint = (point: StabilityReloadPlanPoint) => {
@@ -281,6 +287,7 @@ export function replayStabilityReload(
               oldest.id,
               (repaidByObligationThisRun.get(oldest.id) ?? 0) + discharged,
             )
+            if (left === 0) paidInFull.add(oldest.id)
           }
           if (left > 0) queue.unshift({ ...oldest, amount: left })
         }
@@ -321,6 +328,7 @@ export function replayStabilityReload(
     markedThisRun,
     repaidThisRun,
     repaidByObligationThisRun: Object.fromEntries(repaidByObligationThisRun),
+    paidInFull,
     // Map iteration is insertion/FIFO order. The server's cycle cache carries open entries in this
     // exact order; sorting by id swaps same-day withdrawals and completes the wrong Ledger row.
     obligations: [...obligations.values()],

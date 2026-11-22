@@ -11,12 +11,9 @@ import {
   type RecoveryCohortInput,
   computeRecoveryCohortPlan,
   cycleKeyForDate,
-  cyclesFromAnchor,
-  isDeferredFromAnchor,
 } from './stabilityRecoveryPacing'
 import {
   type StabilityReloadMovement,
-  type StabilityReloadObligation,
   type StabilityReloadPlanPoint,
   describeStabilityReloadMovements,
   isStabilityReloadDrawdown,
@@ -53,8 +50,8 @@ function allocationFromPlanPoints(
 function openingStateFor(
   recovery: StabilityRecovery,
   baseMovements: StabilityReloadMovement[],
-): { outstanding: number; oldestOutstandingDate?: string; obligations?: StabilityReloadObligation[] } {
-  const open = (recovery.openingObligations ?? []).filter(obligation => obligation.remainingAmount > 0)
+): Parameters<typeof replayStabilityReload>[0] {
+  const open = recovery.openingObligations ?? []
   const detailedOutstanding = open.reduce((sum, obligation) => sum + obligation.remainingAmount, 0)
   const identitiesAreUnique = new Set(open.map(obligation => obligation.transactionId)).size === open.length
   const detailMatchesAggregate = recovery.openingOutstanding === undefined
@@ -62,8 +59,9 @@ function openingStateFor(
   if (open.length && identitiesAreUnique && detailMatchesAggregate) {
     return {
       outstanding: detailedOutstanding,
-      oldestOutstandingDate: recovery.openingOldestDate ?? open[0]?.date,
+      oldestOutstandingDate: recovery.openingOldestDate ?? open.find(obligation => obligation.remainingAmount > 0)?.date,
       obligations: open,
+      paidInFull: new Set(open.filter(obligation => obligation.remainingAmount === 0).map(obligation => obligation.transactionId)),
     }
   }
   const outstanding = recovery.openingOutstanding ?? Math.max(
@@ -191,18 +189,13 @@ export function projectStabilityRecovery(input: {
       ?? (opening.outstanding <= 0 && projectedReplay.markedThisRun > 0 && input.currentCycleKey
         ? input.currentCycleKey
         : input.recovery.lastDrawdownCycleKey)
-  const cyclesRemaining = cyclesFromAnchor(
-    lastDrawdownCycleKey,
-    input.currentCycleKey,
-    3,
-  )
   const cohortInputs: RecoveryCohortInput[] = []
   for (const obligation of projectedReplay.obligations) {
     const repaidThisCycle = Math.max(
       0,
       projectedReplay.repaidByObligationThisRun[obligation.transactionId] ?? 0,
     )
-    if (obligation.remainingAmount <= 0 && repaidThisCycle <= 0) continue
+    if (obligation.remainingAmount <= 0 && !projectedReplay.paidInFull.has(obligation.transactionId)) continue
     if (input.cycleDay === undefined || !obligation.date) continue
     const originCycleKey = cycleKeyForDate(obligation.date, input.cycleDay)
     if (!originCycleKey) continue
@@ -218,9 +211,7 @@ export function projectStabilityRecovery(input: {
   }
   const hasCompleteCohortDetail = input.currentCycleKey !== undefined
     && cohortInputs.length > 0
-    && (outstandingShortfall <= 0 || projectedReplay.obligations
-      .filter(obligation => obligation.remainingAmount > 0)
-      .every(obligation => Boolean(obligation.date)))
+    && Math.abs(cohortInputs.reduce((sum, cohort) => sum + cohort.remainingShortfall, 0) - outstandingShortfall) < 0.005
   const cohortPlan = hasCompleteCohortDetail
     ? computeRecoveryCohortPlan({
       cohorts: cohortInputs,
@@ -229,15 +220,9 @@ export function projectStabilityRecovery(input: {
       toppedUpThisCycle,
     })
     : undefined
-  const paceAnchor = outstandingShortfall + toppedUpThisCycle
-  const fallbackIsDeferred = outstandingShortfall > 0
-    && isDeferredFromAnchor(lastDrawdownCycleKey, input.currentCycleKey)
-  const fallbackRequiredThisCycle = fallbackIsDeferred
-    ? 0
-    : cyclesRemaining <= 1
-      ? paceAnchor
-      : Math.ceil(Math.round(paceAnchor * 100) / cyclesRemaining) / 100
-  const requiredThisCycle = cohortPlan?.requiredThisCycle ?? fallbackRequiredThisCycle
+  // Without complete dated obligations, the server's quote is the only available schedule.
+  const requiredThisCycle = cohortPlan?.requiredThisCycle
+    ?? (outstandingShortfall > 0 ? input.recovery.requiredThisCycle : 0)
 
   const effectiveTarget = input.planPoints?.length
     ? input.planPoints[input.planPoints.length - 1].target
@@ -252,16 +237,17 @@ export function projectStabilityRecovery(input: {
     outstandingShortfall,
     lastDrawdownCycleKey,
     recoveryCohorts: outstandingShortfall <= 0 ? [] : cohortPlan?.cohorts ?? input.recovery.recoveryCohorts,
-    cyclesRemaining: cohortPlan?.cyclesRemaining ?? Math.max(1, cyclesRemaining),
-    isOverdue: cohortPlan?.isOverdue ?? (cyclesRemaining <= 0 && outstandingShortfall > 0),
-    isDeferred: cohortPlan?.isDeferred ?? fallbackIsDeferred,
+    cyclesRemaining: cohortPlan?.cyclesRemaining ?? input.recovery.cyclesRemaining,
+    isOverdue: cohortPlan?.isOverdue ?? (outstandingShortfall > 0 && input.recovery.isOverdue),
+    isDeferred: cohortPlan?.isDeferred ?? (outstandingShortfall > 0 && input.recovery.isDeferred),
     toppedUpThisCycle,
     requiredThisCycle,
     outstandingThisCycle: cohortPlan?.outstandingThisCycle ?? Math.max(
       0,
       Math.min(requiredThisCycle - toppedUpThisCycle, outstandingShortfall),
     ),
-    carriedThisCycle: cohortPlan?.carriedThisCycle ?? 0,
+    carriedThisCycle: cohortPlan?.carriedThisCycle
+      ?? (outstandingShortfall > 0 ? input.recovery.carriedThisCycle : 0),
     isActive: outstandingShortfall > 0,
     // The same obligations the totals were measured over, so "see every movement since then" lands
     // on exactly the rows those figures came from.
