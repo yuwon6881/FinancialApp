@@ -138,6 +138,9 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
           requiredThisCycle: deobfuscateAmount(data.stabilityRecovery.requiredThisCycle),
           toppedUpThisCycle: deobfuscateAmount(data.stabilityRecovery.toppedUpThisCycle),
           outstandingThisCycle: deobfuscateAmount(data.stabilityRecovery.outstandingThisCycle),
+          carriedThisCycle: data.stabilityRecovery.carriedThisCycle == null
+            ? undefined
+            : deobfuscateAmount(data.stabilityRecovery.carriedThisCycle),
           isOverdue: Boolean(data.stabilityRecovery.isOverdue),
           isDeferred: Boolean(data.stabilityRecovery.isDeferred),
           lastDrawdownCycleKey: data.stabilityRecovery.lastDrawdownCycleKey,

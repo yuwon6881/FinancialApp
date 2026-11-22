@@ -41,7 +41,7 @@ export const StabilityReloadIntentCard: React.FC<StabilityReloadIntentCardProps>
   const origin = cycleKeyForDate(state.date, cycleDay)
   const schedule = origin ? repaymentWindowLabel(origin, repaymentCycles) : undefined
   const cents = Math.round(Math.abs(Number(state.amount)) * 100)
-  // Each cycle re-divides what is still owed, so an uneven split is only approximately equal.
+  // The cumulative schedule rounds to cents, so individual installments may differ by a cent.
   const share = !hideSensitive && cents > 0
     ? formatCurrencyVal(Math.ceil(cents / repaymentCycles) / 100, currency)
     : null
@@ -54,7 +54,7 @@ export const StabilityReloadIntentCard: React.FC<StabilityReloadIntentCardProps>
         Money out of your emergency fund
         <InfoHint
           label="Emergency-fund putting-back choice"
-          text="Only I'll put this back keeps the Today reminder alive. Choose spent for good when this money will not return to the fund."
+          text="Choose I'll put this back to start a repayment plan next financial cycle. Any unpaid part of an installment is added to the next cycle's amount due. Choose spent for good if you won't reimburse the fund."
         />
       </p>
       <div
@@ -100,7 +100,7 @@ export const StabilityReloadIntentCard: React.FC<StabilityReloadIntentCardProps>
             <CustomSelect
               value={repaymentCycles}
               onChange={value => onSetField('stabilityRepaymentCycles', value)}
-              options={stabilityRepaymentTermOptions(repaymentCycles)}
+              options={stabilityRepaymentTermOptions()}
               className="w-full"
             />
           </FormField>

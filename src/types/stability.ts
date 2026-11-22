@@ -77,6 +77,11 @@ export interface StabilityRecovery {
   requiredThisCycle: number
   toppedUpThisCycle: number
   outstandingThisCycle: number
+  /**
+   * The part of `requiredThisCycle` that is earlier installments not yet put back, so the card can
+   * say why the ask is more than one installment. Absent on payloads from before it was sent.
+   */
+  carriedThisCycle?: number
   /** The repayment window has passed and money is still owed. Distinct from the final cycle. */
   isOverdue: boolean
   /**

@@ -213,6 +213,7 @@ export function projectStabilityRecovery(input: {
       transactionCount: 1,
       remainingShortfall: obligation.remainingAmount,
       repaidThisCycle,
+      originalAmount: obligation.originalAmount,
     })
   }
   const hasCompleteCohortDetail = input.currentCycleKey !== undefined
@@ -260,6 +261,7 @@ export function projectStabilityRecovery(input: {
       0,
       Math.min(requiredThisCycle - toppedUpThisCycle, outstandingShortfall),
     ),
+    carriedThisCycle: cohortPlan?.carriedThisCycle ?? 0,
     isActive: outstandingShortfall > 0,
     // The same obligations the totals were measured over, so "see every movement since then" lands
     // on exactly the rows those figures came from.

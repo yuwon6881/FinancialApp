@@ -16,6 +16,7 @@ function endOffset(cohort: StabilityRecoveryCohort) {
 export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
   const { status, shortfall, askThisCycle, cyclePlanFunded } = describeStabilityRecovery(recovery)
   const covered = status === 'covered'
+  const carriedThisCycle = Math.max(0, recovery.carriedThisCycle ?? 0)
 
   const activeCohorts = (recovery.recoveryCohorts ?? []).filter(cohort => cohort.remainingShortfall > 0)
 
@@ -71,9 +72,22 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
           </>
         ) : (
           <>
-            <p className="text-sm font-semibold tabular-nums text-foreground">
-              {formatSensitive(cyclePlanFunded)} of {formatSensitive(recovery.requiredThisCycle)}
-            </p>
+            {recovery.requiredThisCycle > 0 && (
+              <p className="text-sm font-semibold tabular-nums text-foreground">
+                {formatSensitive(cyclePlanFunded)} of {formatSensitive(recovery.requiredThisCycle)}
+              </p>
+            )}
+            {carriedThisCycle > 0 && recovery.requiredThisCycle > carriedThisCycle && (
+              <p className="text-sm text-muted-foreground">
+                This cycle's installment {formatSensitive(Math.round((recovery.requiredThisCycle - carriedThisCycle) * 100) / 100)} plus{' '}
+                {formatSensitive(carriedThisCycle)} carried over from an earlier installment.
+              </p>
+            )}
+            {carriedThisCycle > 0 && recovery.requiredThisCycle <= carriedThisCycle && (
+              <p className="text-sm text-muted-foreground">
+                All of it is carried over from an earlier installment.
+              </p>
+            )}
             {covered ? (
               <p className="text-sm text-muted-foreground">
                 Covered for this cycle. {coveredEndCycle ? `Plan runs through the ${coveredEndCycle} cycle.` : 'The balance is spread over later cycles.'}
@@ -100,6 +114,9 @@ export function StabilityRecoveryDetails({ recovery, formatSensitive }: Props) {
                   <div className="min-w-0 space-y-1.5">
                     <p className="font-semibold text-foreground">{getMonthCycleLabel(cohort.originCycleKey) ?? cohort.originCycleKey}</p>
                     {endCycle && <p className="text-muted-foreground">Plan ends {endCycle}</p>}
+                    {!cohort.isDeferred && cohort.requiredThisCycle > 0 && (
+                      <p className="text-muted-foreground">Due this cycle {formatSensitive(cohort.requiredThisCycle)}</p>
+                    )}
                   </div>
                   <div className="shrink-0 space-y-1.5 text-right">
                     <p className="font-semibold tabular-nums text-foreground">

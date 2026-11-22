@@ -29,6 +29,38 @@ describe('describeStabilityRecovery', () => {
     expect(narrative.askIsWholeShortfall).toBe(false)
   })
 
+  it('reports being behind schedule when earlier installments ride along, and lets funding cover them first', () => {
+    const behind = describeStabilityRecovery(recovery({
+      requiredThisCycle: 160,
+      outstandingThisCycle: 160,
+      carriedThisCycle: 60,
+    }))
+    expect(behind.status).toBe('behind')
+    expect(behind.carriedStillDue).toBe(60)
+
+    const partlyFunded = describeStabilityRecovery(recovery({
+      requiredThisCycle: 160,
+      toppedUpThisCycle: 40,
+      outstandingThisCycle: 120,
+      carriedThisCycle: 60,
+    }))
+    expect(partlyFunded.carriedStillDue).toBe(20)
+
+    const caughtUp = describeStabilityRecovery(recovery({
+      requiredThisCycle: 160,
+      toppedUpThisCycle: 70,
+      outstandingThisCycle: 90,
+      carriedThisCycle: 60,
+    }))
+    expect(caughtUp.carriedStillDue).toBe(0)
+    expect(caughtUp.status).toBe('onPlan')
+  })
+
+  it('keeps overdue ahead of behind, and treats a payload without a carried figure as on plan', () => {
+    expect(describeStabilityRecovery(recovery({ isOverdue: true, carriedThisCycle: 500 })).status).toBe('overdue')
+    expect(describeStabilityRecovery(recovery()).carriedStillDue).toBe(0)
+  })
+
   // The distinction the amounts alone cannot make: nothing due and nothing funded is not the same
   // as a cycle whose share is already back, and telling the user they are "ahead of the plan" in
   // the cycle they just raided the fund reads as praise for spending it.

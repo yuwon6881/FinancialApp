@@ -64,6 +64,7 @@ export function StabilityRecoveryExceptionCard({
     // cycle's ask is a slice of the shortfall, never money owed on top of it. Once the ask covers
     // the whole remaining shortfall, naming both would print the same figure twice.
     askIsWholeShortfall,
+    carriedStillDue,
     cyclePlanFunded,
     cyclePlanPercent,
   } = describeStabilityRecovery(recovery)
@@ -78,7 +79,13 @@ export function StabilityRecoveryExceptionCard({
         ? <Badge tone="danger">Plan overdue</Badge>
         : status === 'finalCycle'
           ? <Badge tone="warning">Final cycle</Badge>
-          : null
+          : status === 'behind'
+            ? <Badge tone="warning">Behind schedule</Badge>
+            : null
+  // An ask bigger than one installment needs saying why, or it reads as the plan getting steeper.
+  const carriedNote = carriedStillDue > 0
+    ? <> {formatSensitive(carriedStillDue)} of it is from an earlier installment.</>
+    : null
 
   return (
     <NoticeCard
@@ -102,9 +109,9 @@ export function StabilityRecoveryExceptionCard({
       ) : status === 'covered' ? (
         <>{formatSensitive(shortfall)} still short · nothing due this cycle.</>
       ) : askIsWholeShortfall ? (
-        <>Put back {formatSensitive(askThisCycle)} this cycle to clear the shortfall.</>
+        <>Put back {formatSensitive(askThisCycle)} this cycle to clear the shortfall.{carriedNote}</>
       ) : (
-        <>Put back {formatSensitive(askThisCycle)} this cycle · {formatSensitive(shortfall)} still short.</>
+        <>Put back {formatSensitive(askThisCycle)} this cycle · {formatSensitive(shortfall)} still short.{carriedNote}</>
       )}
       actions={(
         <Button

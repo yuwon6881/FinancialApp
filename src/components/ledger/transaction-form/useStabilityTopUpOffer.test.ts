@@ -142,12 +142,7 @@ describe('useStabilityTopUpOffer', () => {
     expect(withPoints.current.topUpOffer).toBeNull()
   })
 
-  // The offer used to project without a cycleDay, which silently disabled the origin-cycle cohort
-  // plan and fell back to the pre-cohort single window anchored on the oldest drawdown. June's 600
-  // is two instalments into its plan (300 due) while August's 300 was spent in the cycle on screen
-  // and asks for nothing yet, so the combined ask is 300 -- the fallback asked for the whole 900
-  // and a blank amount box would have saved it.
-  it('paces the offer on the combined cohort plan, not the oldest drawdown alone', () => {
+  it('offers the missed and current installments while the new withdrawal is deferred', () => {
     const originalSalary = {
       id: 'salary-1',
       date: '2026-08-30',
@@ -212,9 +207,9 @@ describe('useStabilityTopUpOffer', () => {
       }),
     )
 
-    expect(result.current.topUpOffer?.requestedTopUp).toBe(300)
-    expect(result.current.topUpOffer?.proposedTopUp).toBe(300)
-    // One live cohort, so the offer is not deferred even though August's plan has not opened.
+    // June's 600 has two unpaid 200 installments. August's 300 starts the following cycle.
+    expect(result.current.topUpOffer?.requestedTopUp).toBe(400)
+    expect(result.current.topUpOffer?.proposedTopUp).toBe(400)
     expect(result.current.topUpOffer?.isDeferred).toBe(false)
   })
 })

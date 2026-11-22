@@ -193,6 +193,7 @@ type WireStabilityRecovery = Omit<
   | 'requiredThisCycle'
   | 'toppedUpThisCycle'
   | 'outstandingThisCycle'
+  | 'carriedThisCycle'
   | 'markedTotal'
   | 'repaidTotal'
   | 'essentialsCommitted'
@@ -204,6 +205,7 @@ type WireStabilityRecovery = Omit<
   requiredThisCycle: WireAmount
   toppedUpThisCycle: WireAmount
   outstandingThisCycle: WireAmount
+  carriedThisCycle?: WireAmount
   markedTotal: WireAmount
   repaidTotal: WireAmount
   essentialsCommitted: WireAmount

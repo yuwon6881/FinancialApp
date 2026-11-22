@@ -76,11 +76,11 @@ describe('independent Stability recovery cohorts', () => {
       cohorts: [
         {
           originCycleKey: '2026-06', fromDate: '2026-06-04', transactionCount: 1,
-          remainingShortfall: 600, repaidThisCycle: 0,
+          remainingShortfall: 600, repaidThisCycle: 0, originalAmount: 600,
         },
         {
           originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 1,
-          remainingShortfall: 300, repaidThisCycle: 0,
+          remainingShortfall: 300, repaidThisCycle: 0, originalAmount: 300,
         },
       ],
       currentCycleKey: '2026-07',
@@ -105,7 +105,7 @@ describe('independent Stability recovery cohorts', () => {
       cohorts: [
         {
           originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 2,
-          remainingShortfall: 300, repaidThisCycle: 0,
+          remainingShortfall: 300, repaidThisCycle: 0, originalAmount: 300,
         },
       ],
       currentCycleKey: '2026-07',
@@ -126,7 +126,7 @@ describe('independent Stability recovery cohorts', () => {
       cohorts: [
         {
           originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 1,
-          remainingShortfall: 300, repaidThisCycle: 0,
+          remainingShortfall: 300, repaidThisCycle: 0, originalAmount: 300,
         },
       ],
       currentCycleKey: '2026-08',
@@ -144,7 +144,7 @@ describe('independent Stability recovery cohorts', () => {
       cohorts: [
         {
           originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 1,
-          remainingShortfall: 200, repaidThisCycle: 100,
+          remainingShortfall: 200, repaidThisCycle: 100, originalAmount: 300,
         },
       ],
       currentCycleKey: '2026-07',
@@ -162,11 +162,11 @@ describe('independent Stability recovery cohorts', () => {
       cohorts: [
         {
           originCycleKey: '2026-06', fromDate: '2026-06-04', transactionCount: 1,
-          remainingShortfall: 500, repaidThisCycle: 100,
+          remainingShortfall: 500, repaidThisCycle: 100, originalAmount: 600,
         },
         {
           originCycleKey: '2026-07', fromDate: '2026-07-04', transactionCount: 1,
-          remainingShortfall: 300, repaidThisCycle: 0,
+          remainingShortfall: 300, repaidThisCycle: 0, originalAmount: 300,
         },
       ],
       currentCycleKey: '2026-07',
@@ -364,6 +364,38 @@ describe('proposeTopUp', () => {
 })
 
 describe('stability reload projection', () => {
+  it('keeps carried installments in the quote when a pending reimbursement is applied', () => {
+    const repayment = transaction({
+      id: 'repayment', date: '2027-01-18', amount: 25, ledgerCategory: 'Stability',
+    })
+    const projected = projectStabilityRecovery({
+      recovery: recovery({
+        currentBalance: 2640,
+        openingOutstanding: 360,
+        outstandingShortfall: 360,
+        toppedUpThisCycle: 0,
+        openingObligations: [
+          { transactionId: 'first', date: '2026-11-04', originalAmount: 300, remainingAmount: 260, repaymentCycles: 3 },
+          { transactionId: 'second', date: '2026-12-14', originalAmount: 100, remainingAmount: 100, repaymentCycles: 2 },
+        ],
+      }),
+      baseTransactions: [],
+      projectedTransactions: [repayment],
+      stabilityAlloc: 0.15,
+      projectedBalance: 2665,
+      currentCycleKey: '2027-01',
+      cycleDay: 1,
+    })
+
+    expect(projected).toMatchObject({
+      outstandingShortfall: 335,
+      requiredThisCycle: 210,
+      carriedThisCycle: 60,
+      toppedUpThisCycle: 25,
+      outstandingThisCycle: 185,
+    })
+  })
+
   it('opens the three-cycle pace at the next cycle boundary', () => {
     const projected = projectStabilityRecovery({
       recovery: recovery({

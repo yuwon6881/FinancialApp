@@ -1,7 +1,33 @@
 import { expect, test } from '@playwright/test'
 import { establishSession, mockApi, seedDraftTransaction, vaultDocuments, waitForStableLayout, openTransactionForm } from './visualTestSupport'
-import { coveredRecovery } from './recoveryFixtures'
+import { behindRecovery, coveredRecovery } from './recoveryFixtures'
 import { DENSE_CONTENT_BREAKPOINT } from '../../src/lib/breakpoints'
+
+test('behind recovery says why the ask is bigger than one installment', async ({ page }) => {
+  await mockApi(page, { stabilityRecovery: behindRecovery })
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByText('Behind schedule')).toBeVisible()
+  await expect(page.getByText(/of it is from an earlier installment/)).toBeVisible()
+  await page.getByRole('button', { name: 'See recovery details' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Emergency fund recovery details' })
+  await expect(dialog.getByText(/installment .*150\.00 plus.*60\.00 carried over/)).toBeVisible()
+  await expect(dialog.getByText(/Due this cycle .*160\.00/)).toBeVisible()
+  await expect(dialog.getByText(/Due this cycle .*50\.00/)).toBeVisible()
+  await waitForStableLayout(page)
+  const bounds = await dialog.evaluate(element => {
+    const rect = element.getBoundingClientRect()
+    return { left: rect.left, right: rect.right, width: window.innerWidth,
+      overflow: element.scrollWidth > element.clientWidth + 1 }
+  })
+  expect(bounds.left).toBeGreaterThanOrEqual(0)
+  expect(bounds.right).toBeLessThanOrEqual(bounds.width)
+  expect(bounds.overflow).toBe(false)
+  const close = dialog.getByRole('button', { name: 'Close', exact: true })
+  await close.scrollIntoViewIfNeeded()
+  await expect(close).toBeVisible()
+  await close.click()
+  await expect(dialog).toHaveCount(0)
+})
 
 test('covered recovery separates this cycle from the remaining balance', async ({ page }) => {
   await mockApi(page, { stabilityRecovery: coveredRecovery })

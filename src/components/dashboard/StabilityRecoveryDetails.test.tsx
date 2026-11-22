@@ -26,6 +26,35 @@ const baseRecovery = (overrides: Partial<StabilityRecovery> = {}): StabilityReco
 })
 
 describe('StabilityRecoveryDetails', () => {
+  it('explains an ask that includes a carried installment and shows each plan due amount', () => {
+    const recovery = baseRecovery({
+      outstandingShortfall: 410,
+      requiredThisCycle: 210,
+      outstandingThisCycle: 210,
+      carriedThisCycle: 60,
+      recoveryCohorts: [
+        { originCycleKey: '2026-11', repaymentCycles: 3, fromDate: '2026-11-04', transactionCount: 1, remainingShortfall: 260, cyclesRemaining: 2, requiredThisCycle: 160, isOverdue: false },
+        { originCycleKey: '2026-12', repaymentCycles: 3, fromDate: '2026-12-14', transactionCount: 1, remainingShortfall: 150, cyclesRemaining: 3, requiredThisCycle: 50, isOverdue: false },
+      ],
+    })
+    render(<StabilityRecoveryDetails recovery={recovery} formatSensitive={format} />)
+
+    const currentCycle = within(screen.getByRole('region', { name: 'Current cycle recovery' }))
+    expect(currentCycle.getByText(/installment \$150\.00 plus \$60\.00 carried over/)).toBeTruthy()
+    const plans = within(screen.getByRole('list', { name: 'Withdrawal plans' }))
+    expect(plans.getByText('Due this cycle $160.00')).toBeTruthy()
+    expect(plans.getByText('Due this cycle $50.00')).toBeTruthy()
+  })
+
+  it('shows a covered cycle without a zero-amount progress line when money was put back early', () => {
+    const recovery = baseRecovery({ requiredThisCycle: 0, outstandingThisCycle: 0 })
+    render(<StabilityRecoveryDetails recovery={recovery} formatSensitive={format} />)
+
+    const currentCycle = within(screen.getByRole('region', { name: 'Current cycle recovery' }))
+    expect(currentCycle.getByText(/Covered for this cycle/)).toBeTruthy()
+    expect(currentCycle.queryByText('$0.00 of $0.00')).toBeNull()
+  })
+
   it('renders single active cohort without redundant list box', () => {
     const recovery = baseRecovery({
       markedTotal: 696.05,

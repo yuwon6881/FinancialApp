@@ -16,6 +16,7 @@ interface StabilityRecoveryPacingCase {
     cyclesRemaining: number
     requiredThisCycle: number
     outstandingThisCycle: number
+    carriedThisCycle: number
     isOverdue: boolean
     isDeferred: boolean
     cohorts: Array<{
@@ -40,6 +41,7 @@ describe('Stability recovery pacing parity', () => {
       expect(actual.cyclesRemaining).toBe(expected.cyclesRemaining)
       expect(actual.requiredThisCycle).toBeCloseTo(expected.requiredThisCycle, 2)
       expect(actual.outstandingThisCycle).toBeCloseTo(expected.outstandingThisCycle, 2)
+      expect(actual.carriedThisCycle).toBeCloseTo(expected.carriedThisCycle, 2)
       expect(actual.isOverdue).toBe(expected.isOverdue)
       expect(actual.isDeferred).toBe(expected.isDeferred)
       expect(actual.cohorts).toHaveLength(expected.cohorts.length)

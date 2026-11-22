@@ -18,6 +18,8 @@ type StabilityRecoveryStatus =
   | 'overdue'
   /** The last cycle of the only open plan. */
   | 'finalCycle'
+  /** Earlier installments are still unpaid and ride along with this cycle's own, before any plan has run out. */
+  | 'behind'
   | 'onPlan'
 
 export interface StabilityRecoveryNarrative {
@@ -31,6 +33,8 @@ export interface StabilityRecoveryNarrative {
    * twice. True on the final cycle and every cycle past the window.
    */
   askIsWholeShortfall: boolean
+  /** Part of the still-due ask that is earlier installments rather than this cycle's own. Funding covers it first. */
+  carriedStillDue: number
   /** Cycles left in the most urgent open plan, counting this one. Never below 1. */
   cyclesRemaining: number
   /** More than one recovery plan remains open, so the ask is a sum of shares. */
@@ -58,6 +62,8 @@ export function describeStabilityRecovery(recovery: StabilityRecovery): Stabilit
   const isFinalCycle = !recovery.isOverdue
     && !hasOverlappingPlans
     && Math.max(1, recovery.cyclesRemaining) <= 1
+  const toppedUp = Math.max(0, recovery.toppedUpThisCycle)
+  const carriedStillDue = Math.min(askThisCycle, Math.max(0, (recovery.carriedThisCycle ?? 0) - toppedUp))
   // Deferral outranks everything: nothing was funded and nothing was due, which no amount on its own
   // can distinguish from a cycle that has already been paid.
   const status: StabilityRecoveryStatus = recovery.isDeferred
@@ -68,13 +74,16 @@ export function describeStabilityRecovery(recovery: StabilityRecovery): Stabilit
         ? 'overdue'
         : isFinalCycle
           ? 'finalCycle'
-          : 'onPlan'
+          : carriedStillDue > 0
+            ? 'behind'
+            : 'onPlan'
 
   return {
     status,
     shortfall,
     askThisCycle,
     askIsWholeShortfall: askThisCycle >= shortfall - 0.005,
+    carriedStillDue,
     cyclesRemaining: Math.max(1, recovery.cyclesRemaining),
     hasOverlappingPlans,
     isOverdue: recovery.isOverdue,
