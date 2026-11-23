@@ -291,6 +291,7 @@ export async function clearLocalFinancialData(): Promise<void> {
     }
   }
   const wipes = await Promise.allSettled([
+    import('./forecastScenario').then(({ clearForecastDrafts }) => clearForecastDrafts()),
     import('./native/purchaseCapture').then(({ wipePurchaseCaptures }) => wipePurchaseCaptures()),
     import('./draftTransactionDocuments').then(({ clearDraftTransactionDocuments }) => clearDraftTransactionDocuments()),
     import('./scanUploadStore').then(({ clearPendingScanUploads }) => clearPendingScanUploads()),

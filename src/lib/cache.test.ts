@@ -173,6 +173,8 @@ describe('local financial data clearing', () => {
     localStorage.setItem('failed_operations', 'failed')
     localStorage.setItem('draft_transactions', 'draft')
     localStorage.setItem('receipt_scan_job_ids', 'active scans')
+    localStorage.setItem('financial-app:forecast-scenario:v1', 'unscoped forecast')
+    localStorage.setItem('financial-app:forecast-scenario:v2:["alex","MYR"]', 'scoped forecast')
 
     await clearLocalFinancialData()
 
@@ -181,6 +183,8 @@ describe('local financial data clearing', () => {
     expect(localStorage.getItem('failed_operations')).toBeNull()
     expect(localStorage.getItem('draft_transactions')).toBeNull()
     expect(localStorage.getItem('receipt_scan_job_ids')).toBeNull()
+    expect(localStorage.getItem('financial-app:forecast-scenario:v1')).toBeNull()
+    expect(localStorage.getItem('financial-app:forecast-scenario:v2:["alex","MYR"]')).toBeNull()
     await vi.waitFor(() => {
       expect(wipes.purchaseCaptures).toHaveBeenCalled()
       expect(wipes.draftDocuments).toHaveBeenCalled()

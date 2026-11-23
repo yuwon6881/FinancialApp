@@ -4,8 +4,6 @@ import { fetchCashFlowForecast } from '../../../lib/api/forecast'
 import { getErrorMessage } from '../../../lib/errors'
 import {
   addScenarioItem,
-  clearScenarioDraft,
-  emptyScenario,
   loadScenarioDraft,
   removeScenarioItem,
   saveScenarioDraft,
@@ -15,32 +13,31 @@ import {
 /** Typing in an amount should not fire a request per keystroke. */
 const REFRESH_DELAY_MS = 350
 
-export function useForecastView() {
-  const [scenario, setScenario] = useState<ForecastScenario>(loadScenarioDraft)
+export function useForecastView(account: string, currency: string) {
+  const [scenario, setScenario] = useState<ForecastScenario>(() => loadScenarioDraft(account, currency))
   const [forecast, setForecast] = useState<CashFlowForecast | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [settled, setSettled] = useState<{ scenario: ForecastScenario; reloadKey: number; error: string | null } | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const isFirstLoad = useRef(true)
 
   useEffect(() => {
-    saveScenarioDraft(scenario)
+    saveScenarioDraft(account, currency, scenario)
+  }, [account, currency, scenario])
+
+  useEffect(() => {
     const controller = new AbortController()
     const delay = isFirstLoad.current ? 0 : REFRESH_DELAY_MS
     isFirstLoad.current = false
     const timer = window.setTimeout(() => {
-      setIsLoading(true)
       fetchCashFlowForecast(scenario, controller.signal)
         .then(result => {
+          if (controller.signal.aborted) return
           setForecast(result)
-          setError(null)
+          setSettled({ scenario, reloadKey, error: null })
         })
         .catch((reason: unknown) => {
           if (controller.signal.aborted) return
-          setError(getErrorMessage(reason, 'Could not build the forecast'))
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setIsLoading(false)
+          setSettled({ scenario, reloadKey, error: getErrorMessage(reason, 'Could not build the forecast') })
         })
     }, delay)
     return () => {
@@ -49,27 +46,23 @@ export function useForecastView() {
     }
   }, [scenario, reloadKey])
 
-  const update = useCallback((change: Partial<ForecastScenario>) => {
-    setScenario(previous => ({ ...previous, ...change }))
+  const update = useCallback(<K extends 'cycles' | 'incomePerCycle' | 'everydaySpendingPerCycle'>(key: K, value: ForecastScenario[K]) => {
+    setScenario(previous => previous[key] === value ? previous : { ...previous, [key]: value })
   }, [])
+  const isLoading = settled?.scenario !== scenario || settled.reloadKey !== reloadKey
 
   return {
     scenario,
     forecast,
-    error,
+    error: isLoading ? null : settled.error,
     isLoading,
-    setCycles: (cycles: number) => update({ cycles }),
-    setIncome: (incomePerCycle: number | null) => update({ incomePerCycle }),
-    setEverydaySpending: (everydaySpendingPerCycle: number | null) => update({ everydaySpendingPerCycle }),
+    setCycles: (cycles: number) => update('cycles', cycles),
+    setIncome: (incomePerCycle: number | null) => update('incomePerCycle', incomePerCycle),
+    setEverydaySpending: (everydaySpendingPerCycle: number | null) => update('everydaySpendingPerCycle', everydaySpendingPerCycle),
     addItem: (item: ForecastScenarioItem) => setScenario(previous => addScenarioItem(previous, item)),
     removeItem: (id: string) => setScenario(previous => removeScenarioItem(previous, id)),
     toggleBill: (billKey: string) => setScenario(previous => toggleSkippedBill(previous, billKey)),
-    reset: () => {
-      clearScenarioDraft()
-      // Income and everyday spending are the user's own baseline, so Reset keeps them and only
-      // drops the what-ifs layered on top.
-      setScenario(previous => ({ ...emptyScenario(), cycles: previous.cycles, incomePerCycle: previous.incomePerCycle, everydaySpendingPerCycle: previous.everydaySpendingPerCycle }))
-    },
+    reset: () => setScenario(previous => ({ ...previous, items: [], skippedBills: [] })),
     retry: () => setReloadKey(key => key + 1),
   }
 }

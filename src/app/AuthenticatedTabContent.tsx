@@ -563,7 +563,7 @@ export function AuthenticatedTabContent({
         <DocumentsView onNavigateToTransaction={openLinkedVaultTransaction} />
       )}
 
-      {prefs.activeTab === 'forecast' && <ForecastView />}
+      {prefs.activeTab === 'forecast' && <ForecastView account={session.username} />}
     </div>
     </Suspense>
     </div>

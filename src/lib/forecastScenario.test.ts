@@ -6,9 +6,11 @@ import {
   emptyScenario,
   FORECAST_MAX_ITEMS,
   isScenarioChanged,
+  loadScenarioDraft,
   parseOptionalAmount,
   parseScenarioDraft,
   removeScenarioItem,
+  saveScenarioDraft,
   toggleSkippedBill,
 } from './forecastScenario'
 
@@ -26,8 +28,11 @@ describe('buildScenarioItem', () => {
   it.each([
     [{ label: '', date: '2026-12-10', amount: '10' }, 'Give it a name.'],
     [{ label: 'x', date: '', amount: '10' }, 'Pick a date.'],
+    [{ label: 'x', date: '2026-02-30', amount: '10' }, 'Pick a date.'],
     [{ label: 'x', date: '2026-12-10', amount: '0' }, 'Enter an amount above zero.'],
     [{ label: 'x', date: '2026-12-10', amount: 'abc' }, 'Enter an amount above zero.'],
+    [{ label: 'x', date: '2026-12-10', amount: '0.001' }, 'Enter an amount above zero.'],
+    [{ label: 'x', date: '2026-12-10', amount: '100000001' }, 'Enter an amount of 100,000,000 or less.'],
   ])('explains why %o cannot be added', (draft, message) => {
     expect(buildScenarioItem({ ...draft, target: 'Essentials' }, 'c')).toBe(message)
   })
@@ -92,5 +97,15 @@ describe('parseScenarioDraft', () => {
       items: [{ id: 'a', label: 'Crown', date: '2026-12-10', amount: -1800, bucket: 'Essentials' }],
       skippedBills: ['gym:2026-12-05'],
     })
+  })
+
+  it('only restores an on-device draft for the same account and currency', () => {
+    const draft = { ...emptyScenario(), incomePerCycle: 4800 }
+    saveScenarioDraft('alex', 'MYR', draft)
+
+    expect(loadScenarioDraft('alex', 'MYR')).toEqual(draft)
+    expect(loadScenarioDraft('other', 'MYR')).toEqual(emptyScenario())
+    expect(loadScenarioDraft('alex', 'USD')).toEqual(emptyScenario())
+    localStorage.clear()
   })
 })

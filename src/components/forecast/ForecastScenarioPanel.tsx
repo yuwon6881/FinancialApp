@@ -1,43 +1,54 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import type { ForecastScenario, ForecastScenarioItem } from '../../types'
-import { FORECAST_BUCKETS } from '../../types'
 import {
-  buildScenarioItem,
   clampCycles,
   FORECAST_MAX_CYCLES,
   FORECAST_MAX_ITEMS,
   FORECAST_MIN_CYCLES,
+  formatForecastDate,
   parseOptionalAmount,
-  type ScenarioItemDraft,
 } from '../../lib/forecastScenario'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
-import { DatePicker } from '../ui/DatePicker'
 import { FormField } from '../ui/FormField'
 import { IconButton } from '../ui/IconButton'
 import { Input } from '../ui/Input'
 import { AmountText } from '../ui/AmountText'
-import { panelClass } from '../ui/panelStyles'
-import { cn } from '../../lib/utils'
+import { Panel } from '../ui/Panel'
+import { ForecastWhatIfSheet } from './ForecastWhatIfSheet'
 
 const CYCLE_OPTIONS = Array.from({ length: FORECAST_MAX_CYCLES - FORECAST_MIN_CYCLES + 1 }, (_, index) => {
   const value = index + FORECAST_MIN_CYCLES
-  return { value, label: value === 1 ? '1 cycle' : `${value} cycles` }
+  return { value, label: value === 1 ? '1 cycle ahead' : `${value} cycles ahead` }
 })
 
-const TARGET_OPTIONS: { value: ScenarioItemDraft['target']; label: string }[] = [
-  { value: 'In', label: 'Money in (split like salary)' },
-  ...FORECAST_BUCKETS.map(bucket => ({ value: bucket, label: `Spend from ${bucket}` })),
-]
+function ScenarioAmount({ label, value, onChange }: {
+  label: string
+  value: number | null
+  onChange: (value: number | null) => void
+}) {
+  const [text, setText] = useState(value === null ? '' : String(value))
+  const parsed = parseOptionalAmount(text)
+  const error = text.trim() && parsed === null ? 'Enter an amount from 0 to 100,000,000.' : undefined
 
-const emptyDraft = (today: string): ScenarioItemDraft => ({ label: '', date: today, amount: '', target: 'Essentials' })
-
-const amountText = (value: number | null) => (value === null ? '' : String(value))
+  return (
+    <FormField label={label} error={error}>
+      <Input inputMode="decimal" value={text} placeholder="Optional"
+        onChange={event => {
+          const next = event.target.value
+          setText(next)
+          const amount = parseOptionalAmount(next)
+          if (amount !== null || !next.trim()) onChange(amount)
+        }} />
+    </FormField>
+  )
+}
 
 interface ForecastScenarioPanelProps {
   scenario: ForecastScenario
   today: string
+  horizonEnd: string | undefined
   currency: string
   masked: boolean
   onCyclesChange: (cycles: number) => void
@@ -45,113 +56,68 @@ interface ForecastScenarioPanelProps {
   onEverydaySpendingChange: (value: number | null) => void
   onAddItem: (item: ForecastScenarioItem) => void
   onRemoveItem: (id: string) => void
+  resetAction: ReactNode
 }
 
 export function ForecastScenarioPanel({
-  scenario, today, currency, masked,
-  onCyclesChange, onIncomeChange, onEverydaySpendingChange, onAddItem, onRemoveItem,
+  scenario, today, horizonEnd, currency, masked,
+  onCyclesChange, onIncomeChange, onEverydaySpendingChange, onAddItem, onRemoveItem, resetAction,
 }: ForecastScenarioPanelProps) {
-  // Raw text keeps "48" from snapping to a number mid-typing; the parsed value drives the forecast.
-  const [income, setIncome] = useState(amountText(scenario.incomePerCycle))
-  const [everyday, setEveryday] = useState(amountText(scenario.everydaySpendingPerCycle))
-  const [draft, setDraft] = useState<ScenarioItemDraft>(() => emptyDraft(today))
-  const [draftError, setDraftError] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
   const atLimit = scenario.items.length >= FORECAST_MAX_ITEMS
 
-  const submitItem = () => {
-    const result = buildScenarioItem(draft, crypto.randomUUID())
-    if (typeof result === 'string') {
-      setDraftError(result)
-      return
-    }
-    onAddItem(result)
-    setDraft(emptyDraft(draft.date))
-    setDraftError(null)
+  if (masked) {
+    return <p className="text-body text-muted-foreground">Amounts are hidden. Turn off Hide Sensitive to edit your scenario.</p>
   }
 
   return (
-    <section aria-labelledby="forecast-scenario-title" className={cn(panelClass, 'space-y-5 p-4 sm:p-5')}>
-      <div>
-        <h2 id="forecast-scenario-title" className="text-section text-foreground">Your scenario</h2>
-        <p className="mt-1 text-caption text-muted-foreground">
-          Changes here stay in this workspace. They never touch your ledger, bills or balances.
-        </p>
+    <Panel as="section" aria-labelledby="forecast-scenario-title" className="space-y-3 p-3.5 sm:p-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <h2 id="forecast-scenario-title" className="text-section text-foreground">Scenario</h2>
+        <CustomSelect value={scenario.cycles} options={CYCLE_OPTIONS} ariaLabel="Cycles to forecast"
+          onChange={value => onCyclesChange(clampCycles(value))} />
       </div>
 
-      {masked ? (
-        <p className="rounded-control inset-group px-3 py-2 text-caption text-muted-foreground">
-          Amounts are hidden. Turn off Hide Sensitive from your profile menu to edit the scenario.
-        </p>
-      ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <FormField label="Income each cycle" hint="Leave blank if you are not sure.">
-              <Input inputMode="decimal" value={income} placeholder="e.g. 4800"
-                onChange={event => { setIncome(event.target.value); onIncomeChange(parseOptionalAmount(event.target.value)) }} />
-            </FormField>
-            <FormField label="Everyday spending each cycle" hint="Food and day-to-day costs beyond your bills.">
-              <Input inputMode="decimal" value={everyday} placeholder="e.g. 600"
-                onChange={event => { setEveryday(event.target.value); onEverydaySpendingChange(parseOptionalAmount(event.target.value)) }} />
-            </FormField>
-            <FormField label="Look ahead">
-              <CustomSelect value={scenario.cycles} options={CYCLE_OPTIONS} ariaLabel="Cycles to forecast"
-                onChange={value => onCyclesChange(clampCycles(value))} />
-            </FormField>
-          </div>
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+        <ScenarioAmount label="Income per cycle" value={scenario.incomePerCycle} onChange={onIncomeChange} />
+        <ScenarioAmount label="Everyday spending" value={scenario.everydaySpendingPerCycle} onChange={onEverydaySpendingChange} />
+      </div>
+      <p className="text-caption text-muted-foreground">Both start next cycle. Everyday spending is what you spend beyond your bills.</p>
 
-          <div className="space-y-3">
-            <h3 className="text-label text-foreground">What-if items</h3>
-            {scenario.items.length === 0 && (
-              <p className="text-caption text-muted-foreground">Add a one-off cost or extra money to see how it plays out.</p>
-            )}
-            {scenario.items.length > 0 && (
-              <ul className="divide-y divide-border/60">
-                {scenario.items.map(item => (
-                  <li key={item.id} className="flex min-w-0 items-center justify-between gap-3 py-2">
-                    <span className="min-w-0">
-                      <span className="block truncate text-body text-foreground">{item.label}</span>
-                      <span className="text-caption text-muted-foreground">
-                        {item.date} · {item.bucket ? `From ${item.bucket}` : 'Money in, split like salary'}
-                      </span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-1">
-                      <AmountText value={item.amount} currency={currency} signDisplay="always"
-                        tone={item.amount > 0 ? 'positive' : 'neutral'} className="text-body" />
-                      <IconButton type="button" label={`Remove ${item.label}`} onClick={() => onRemoveItem(item.id)}>
-                        <Trash2 className="size-4" />
-                      </IconButton>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <div className="grid gap-3 rounded-control inset-group p-3 sm:grid-cols-2 lg:grid-cols-4">
-              <FormField label="Name">
-                <Input value={draft.label} maxLength={80} placeholder="e.g. Tooth crown"
-                  onChange={event => setDraft({ ...draft, label: event.target.value })} />
-              </FormField>
-              <FormField label="Date">
-                <DatePicker value={draft.date} min={today} onChange={date => setDraft({ ...draft, date })} />
-              </FormField>
-              <FormField label="Amount">
-                <Input inputMode="decimal" value={draft.amount} placeholder="0.00"
-                  onChange={event => setDraft({ ...draft, amount: event.target.value })} />
-              </FormField>
-              <FormField label="Type">
-                <CustomSelect value={draft.target} options={TARGET_OPTIONS} ariaLabel="What-if type"
-                  onChange={target => setDraft({ ...draft, target })} />
-              </FormField>
-              <div className="flex items-center justify-end gap-3 sm:col-span-2 lg:col-span-4">
-                {draftError && <p role="alert" className="text-caption text-destructive">{draftError}</p>}
-                <Button type="button" variant="secondary" size="md" onClick={submitItem} disabled={atLimit}>
-                  <Plus className="size-4" /> Add what-if
-                </Button>
-              </div>
-            </div>
-          </div>
-        </>
+      {scenario.items.length > 0 && (
+        <ul aria-label="What-if items" className="divide-y divide-border/60 border-t border-border">
+          {scenario.items.map(item => {
+            const outsideForecast = item.date < today || (horizonEnd !== undefined && item.date > horizonEnd)
+            return (
+              <li key={item.id} className="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 py-1.5">
+                <span className="mr-auto min-w-0 flex-[1_1_8rem]">
+                  <span className="block wrap-anywhere text-body text-foreground">{item.label}</span>
+                  <span className="block text-caption text-muted-foreground">
+                    {formatForecastDate(item.date)} · {item.bucket ?? 'Extra income'}{outsideForecast && ' · Outside forecast dates'}
+                  </span>
+                </span>
+                <AmountText value={item.amount} currency={currency} signDisplay="always"
+                  tone={item.amount > 0 ? 'positive' : 'neutral'} className="text-body" />
+                <IconButton type="button" label={`Remove ${item.label}`} onClick={() => onRemoveItem(item.id)}>
+                  <Trash2 className="size-4" />
+                </IconButton>
+              </li>
+            )
+          })}
+        </ul>
       )}
-    </section>
+
+      <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 border-t border-border pt-2">
+        {atLimit && <p className="mr-auto text-caption text-muted-foreground">Limit reached ({FORECAST_MAX_ITEMS} items).</p>}
+        {resetAction}
+        <Button type="button" variant="secondary" size="sm" onClick={() => setAdding(true)} disabled={atLimit}>
+          <Plus className="size-4" aria-hidden="true" /> Add what-if
+        </Button>
+      </div>
+      {adding && (
+        <ForecastWhatIfSheet today={today} horizonEnd={horizonEnd} currency={currency}
+          onClose={() => setAdding(false)} onAddItem={item => { onAddItem(item); setAdding(false) }} />
+      )}
+    </Panel>
   )
 }
