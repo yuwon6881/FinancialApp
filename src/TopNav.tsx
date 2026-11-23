@@ -138,7 +138,6 @@ const TopNav: React.FC<TopNavProps> = ({
             onOpenNotifications={onOpenNotifications}
             pendingNotificationCount={pendingNotificationCount}
             syncStatus={syncStatus}
-            retrying={Boolean(syncLabel?.startsWith('Retrying'))}
             draftCount={draftCount}
             failedOpsCount={failedOpsCount}
             onOpenFailedOps={onOpenFailedOps}

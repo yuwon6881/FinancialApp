@@ -7,7 +7,7 @@ describe('useOutbox', () => {
 
   it('persists a durable mutation before reporting success and fails without changing the queue', () => {
     const { result } = renderHook(() => useOutbox({
-      token: null, lastUnlockedTimeRef: { current: 0 }, setError: vi.fn(), showToast: vi.fn(),
+      token: null, lastUnlockedTimeRef: { current: 0 }, showToast: vi.fn(),
       onAuthError: vi.fn(), onLockError: vi.fn(), refresh: vi.fn(async () => undefined),
     }))
     act(() => result.current.mutateQueueDurably(previous => result.current.enqueue(previous, 'transaction', 'add', 'capture', { description: 'Cafe' })))
@@ -23,7 +23,6 @@ describe('useOutbox', () => {
     const { result } = renderHook(() => useOutbox({
       token: null,
       lastUnlockedTimeRef,
-      setError: vi.fn(),
       showToast: vi.fn(),
       onAuthError: vi.fn(),
       onLockError: vi.fn(),
@@ -43,7 +42,6 @@ describe('useOutbox', () => {
     const { result } = renderHook(() => useOutbox({
       token: null,
       lastUnlockedTimeRef: { current: 0 },
-      setError: vi.fn(),
       showToast: vi.fn(),
       onAuthError: vi.fn(),
       onLockError: vi.fn(),
@@ -71,7 +69,6 @@ describe('useOutbox', () => {
     renderHook(() => useOutbox({
       token: null,
       lastUnlockedTimeRef: { current: 0 },
-      setError: vi.fn(),
       showToast,
       onAuthError: vi.fn(),
       onLockError: vi.fn(),

@@ -39,7 +39,9 @@ import {
   isRecurringSettlementResult,
   isServiceWakeFailure,
   mergeCompletedOps,
-  retryMessage,
+  describeSyncIssue,
+  OFFLINE_SYNC_ISSUE,
+  type SyncIssue,
 } from './outboxDrainHelpers'
 import { beginRefreshHintCollection, type RefreshHintSummary } from './refreshSlices'
 
@@ -82,7 +84,7 @@ export interface DrainQueueDeps {
   setSyncing: (v: boolean) => void
   setActiveSyncId: (id: string | null) => void
   setActiveSyncOpIds?: (ids: ReadonlySet<string> | undefined) => void
-  setError: (msg: string | null) => void
+  setSyncIssue: (issue: SyncIssue | null) => void
   setBackoff: (until: number) => void
   addRecentlyCompleted: (op: QueuedOp) => void
   removeRecentlyCompleted: (ids: Set<string>) => void
@@ -119,7 +121,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
   if (!deps.token || deps.isSyncing()) return
   const isOnline = () => deps.isOnline?.() ?? true
   if (!isOnline()) {
-    deps.setError('Sync pending: You are offline. Changes will sync when your connection returns.')
+    deps.setSyncIssue(OFFLINE_SYNC_ISSUE)
     return
   }
   deps.setSyncing(true)
@@ -147,7 +149,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
       if (!nextOp) break
 
       if (!isOnline()) {
-        deps.setError('Sync pending: You are offline. Changes will sync when your connection returns.')
+        deps.setSyncIssue(OFFLINE_SYNC_ISSUE)
         break
       }
 
@@ -175,7 +177,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
             retryCount: (nextOp.retryCount || 0) + 1,
             lastError: getErrorMessage(err, String(err)),
           })
-          deps.setError(null)
+          deps.setSyncIssue(null)
           deps.setActiveSyncOpIds?.(undefined)
           continue
         }
@@ -225,7 +227,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
                 }
 
                 clearBackoffAttempts()
-                deps.setError(null)
+                deps.setSyncIssue(null)
                 processedAny = true
                 deps.setActiveSyncId(null)
 
@@ -290,7 +292,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         deps.addRecentlyCompleted({ ...completedOp, isCompleted: true })
 
         clearBackoffAttempts()
-        deps.setError(null)
+        deps.setSyncIssue(null)
         processedAny = true
         successfulOps.push({ op: completedOp, result })
 
@@ -322,7 +324,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         if (isIdempotentMissingDelete) {
           deps.mutateQueue(prev => prev.filter(item => item.id !== nextOp.id))
           deps.addRecentlyCompleted({ ...nextOp, isCompleted: true })
-          deps.setError(null)
+          deps.setSyncIssue(null)
           deps.setActiveSyncId(null)
           processedAny = true
           successfulOps.push({ op: nextOp, result: undefined })
@@ -336,13 +338,11 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           deps.onLockError()
           break
         } else if (authError) {
-          deps.setError('Sync pending: reconnecting...')
+          deps.setSyncIssue({ message: 'Your session is still reconnecting.', status })
           deps.setBackoff(deps.now() + AUTH_RACE_BACKOFF_MS)
           break
         } else if (isConnectionFailure || isServerWaking) {
-          deps.setError(online
-            ? (status === 429 ? retryMessage(status) : 'Sync pending: Server is offline or waking up...')
-            : 'Sync pending: You are offline. Changes will sync when your connection returns.')
+          deps.setSyncIssue(describeSyncIssue(err, online))
           deps.setBackoff(online ? scheduleBackoff(err) : 0)
           break
         } else if (isPermanentError) {
@@ -360,7 +360,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
             lastError: getErrorMessage(err, String(err)),
             ...accountReviewFlags(err),
           })
-          deps.setError(null)
+          deps.setSyncIssue(null)
           continue
         } else {
           const updatedRetryCount = (nextOp.retryCount || 0) + 1
@@ -377,13 +377,13 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
               lastError: getErrorMessage(err, String(err)),
               ...accountReviewFlags(err),
             })
-            deps.setError(null)
+            deps.setSyncIssue(null)
             continue
           } else {
             deps.mutateQueue(prev => prev.map(item =>
               item.id === nextOp.id ? { ...item, retryCount: updatedRetryCount } : item
             ))
-            deps.setError(retryMessage(status))
+            deps.setSyncIssue(describeSyncIssue(err, online))
             deps.setBackoff(scheduleBackoff(err))
             break
           }
@@ -421,6 +421,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
             else deps.removeRecentlyCompleted(new Set(completedOps.map(({ op }) => op.id)))
             deps.onLockError()
           } else {
+            deps.setSyncIssue(describeSyncIssue(refreshErr, isOnline()))
             deps.setBackoff(isRefreshAuthError
               ? deps.now() + AUTH_RACE_BACKOFF_MS
               : scheduleBackoff(refreshErr))
@@ -428,6 +429,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         }
 
         if (refreshSucceeded) {
+          deps.setSyncIssue(null)
           clearBackoffAttempts()
           if (deps.clearRecentlyCompleted) {
             deps.clearRecentlyCompleted()

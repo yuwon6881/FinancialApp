@@ -17,7 +17,6 @@ export interface MobileTopBarProps {
   onOpenNotifications: () => void
   pendingNotificationCount: number
   syncStatus: { busy: boolean; offline: boolean; label?: string }
-  retrying?: boolean
   draftCount: number
   failedOpsCount: number
   onOpenFailedOps?: () => void
@@ -65,7 +64,6 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
   onOpenNotifications,
   pendingNotificationCount,
   syncStatus,
-  retrying = false,
   draftCount,
   failedOpsCount,
   onOpenFailedOps,
@@ -121,12 +119,12 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
           </span>
         </div>
 
-        {(syncStatus.offline || retrying) && (
+        {syncStatus.offline && (
           <span
             role="status"
-            className={cn('shrink-0 rounded-full px-2 py-0.5 text-caption font-medium', syncStatus.offline ? 'bg-amber-500/12 text-amber-700 dark:text-amber-300' : 'bg-primary/12 text-accent-ink')}
+            className="shrink-0 rounded-full bg-amber-500/12 px-2 py-0.5 text-caption font-medium text-amber-700 dark:text-amber-300"
           >
-            {syncStatus.offline ? 'Offline' : syncStatus.label}
+            Offline
           </span>
         )}
         {failedOpsCount > 0 && (

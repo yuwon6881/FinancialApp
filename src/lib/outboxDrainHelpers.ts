@@ -3,6 +3,7 @@ import type { PayEarlyResult, RecurringSettlementResult } from '../types'
 import {
   getErrorMessage,
   getMissingBuckets,
+  getRetryAfterMs,
   getStatus,
   isLedgerAccountRefusal,
 } from './errors'
@@ -53,11 +54,27 @@ export function isServiceWakeFailure(status: number | undefined): boolean {
   return status === 502 || status === 503 || status === 504
 }
 
-export function retryMessage(status: number | undefined): string {
-  if (status === 429) return 'Sync pending: Server is busy; retrying...'
-  return status !== undefined && status >= 500 && status < 600
-    ? 'Sync pending: Server error; retrying...'
-    : 'Sync pending: Server is offline or waking up...'
+export interface SyncIssue {
+  message: string
+  status?: number
+  waitForServer?: boolean
+}
+
+export const OFFLINE_SYNC_ISSUE: SyncIssue = { message: 'This device is offline.' }
+
+export function describeSyncIssue(err: unknown, online: boolean): SyncIssue {
+  if (!online) return OFFLINE_SYNC_ISSUE
+
+  const status = getStatus(err)
+  let message = 'The last sync attempt did not complete.'
+  if (status === 429) message = 'The server is receiving too many requests.'
+  else if (status === 401) message = 'Your session is still reconnecting.'
+  else if (status === 408 || status === 504) message = 'The request timed out.'
+  else if (isServiceWakeFailure(status)) message = 'The server is temporarily unavailable.'
+  else if (status !== undefined && status >= 500) message = 'The server returned an error.'
+  else if (isNetworkFailure(err, online)) message = 'The app could not reach the server.'
+
+  return { message, status: status || undefined, waitForServer: status === 429 || getRetryAfterMs(err) !== undefined }
 }
 
 export function mergeCompletedOps(

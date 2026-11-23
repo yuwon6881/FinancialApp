@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import TopNav from "./TopNav.tsx"
 import * as api from './lib/api'
 import { ToastHost } from './components/ui/ToastHost'
-import { AlertBanner } from './components/ui/AlertBanner'
 import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
 import { hasActiveWebAuthnRequest } from './lib/webauthnRequest'
 import { NativeAppResumeLock } from './lib/nativeAppLifecyclePolicy'
@@ -10,7 +9,8 @@ import { setNativeFinancialContentHidden } from './lib/native/privacyScreen'
 import { getStatus } from './lib/errors'
 const AiAssistantPanel = lazy(() => import('./components/AiAssistantPanel').then(m => ({ default: m.AiAssistantPanel })))
 import { AppProvider } from './contexts/AppProvider'
-import { Button } from './components/ui/Button'
+import { AppErrorBanner, SyncPendingBanner } from './app/AppStatusBanner'
+import { OFFLINE_SYNC_ISSUE } from './lib/outboxDrainHelpers'
 
 // Domain Hooks
 import { useAppPreferences } from './app/useAppPreferences'
@@ -358,6 +358,12 @@ function App() {
     dialogs,
     guardSensitive,
   })
+  const syncIssue = financial.activeOps.length > 0
+    ? financial.isOffline ? OFFLINE_SYNC_ISSUE : financial.syncIssue
+    : null
+  const retryCountdown = !financial.isOffline && financial.syncCountdownMs > 0
+    ? `Retrying in ${Math.ceil(financial.syncCountdownMs / 1000)}s`
+    : undefined
 
   return (
     <AppGateways
@@ -428,8 +434,8 @@ function App() {
           isSyncing={financial.isBackgroundSyncing || Boolean(financial.activeSyncId) || financial.activeSyncIds.length > 0}
           isOffline={financial.isOffline}
           syncLabel={
-            financial.syncCountdownMs > 0
-              ? `Retrying ${Math.ceil(financial.syncCountdownMs / 1000)}s`
+            retryCountdown
+              ? 'Sync pending'
               : financial.activeSyncId
                 ? mutationBusyLabel('syncing')
                 : financial.pendingOps.length > 0
@@ -458,23 +464,23 @@ function App() {
           />
         </Suspense>
 
+        {syncIssue && (
+          <SyncPendingBanner
+            issue={syncIssue}
+            countdown={retryCountdown}
+            offline={financial.isOffline}
+            syncing={financial.isBackgroundSyncing}
+            editing={Boolean(financial.editingPendingId)}
+            hasPendingChanges={financial.pendingOps.length > 0}
+            onRetry={financial.retrySync}
+          />
+        )}
         {financial.error && (
-          <AlertBanner
-            variant={financial.error.startsWith('Sync pending:') ? 'info' : 'error'}
-            className="justify-center rounded-none border-x-0 border-t-0 px-4 py-2"
-          >
-            <div className="flex items-center justify-center gap-2">
-            <span className="select-none">{financial.error}</span>
-            <Button variant="tertiary"
-              type="button"
-              onClick={() => financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)}
-              disabled={financial.isBackgroundSyncing}
-              className="ml-1 font-semibold underline underline-offset-2 hover:text-destructive/80 disabled:opacity-60 disabled:cursor-default cursor-pointer"
-            >
-              {financial.isBackgroundSyncing ? 'Retrying…' : 'Retry'}
-            </Button>
-            </div>
-          </AlertBanner>
+          <AppErrorBanner
+            message={financial.error}
+            retrying={financial.isBackgroundSyncing}
+            onRetry={() => financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)}
+          />
         )}
 
         {prefs.activeTab === 'ledger' && <PurchaseCapturePanelSlot />}

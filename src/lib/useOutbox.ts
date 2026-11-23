@@ -12,7 +12,7 @@ import {
   type OutboxPayload,
   type QueuedOp,
 } from './outbox'
-import { drainQueue, type SuccessfulSyncOp } from './outboxSync'
+import { drainQueue, type SuccessfulSyncOp, type SyncIssue } from './outboxSync'
 import type { RefreshHintSummary } from './refreshSlices'
 import { buildUndoAction, releaseUndoSnapshot, remapUndoSnapshotTarget, snapshotForUndo, type RequestSensitiveReveal, type UndoSnapshot } from './undo'
 import { Eye } from 'lucide-react'
@@ -23,7 +23,6 @@ const TOAST_STAGGER_MS = 350
 interface UseOutboxOptions {
   token: string | null
   lastUnlockedTimeRef: MutableRefObject<number>
-  setError: (message: string | null) => void
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
   onAuthError: () => void
   onLockError: () => void
@@ -41,6 +40,8 @@ export interface UseOutboxResult {
   activeSyncId: string | null
   deletingId: string | null
   syncCountdownMs: number
+  syncIssue: SyncIssue | null
+  retrySync: () => void
   editingPendingId: string | null
   enqueue: (
     queue: QueuedOp[],
@@ -82,6 +83,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [syncBackoffUntil, setSyncBackoffUntil] = useState(0)
   const [syncCountdownMs, setSyncCountdownMs] = useState(0)
+  const [syncIssue, setSyncIssue] = useState<SyncIssue | null>(null)
   const [editingPendingId, setEditingPendingIdState] = useState<string | null>(null)
 
   const optionsRef = useRef(options)
@@ -101,6 +103,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   const mountedRef = useRef(true)
 
   useEffect(() => {
+    mountedRef.current = true
     return () => {
       mountedRef.current = false
     }
@@ -210,7 +213,9 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
       setActiveSyncOpIds: ids => {
         activeSyncOpIdsRef.current = ids
       },
-      setError: current.setError,
+      setSyncIssue: issue => {
+        if (mountedRef.current) setSyncIssue(issue)
+      },
       setBackoff: until => {
         syncBackoffUntilRef.current = until
         if (mountedRef.current) setSyncBackoffUntil(until)
@@ -266,7 +271,10 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
       onAuthError: current.onAuthError,
       onLockError: () => {
         syncBackoffUntilRef.current = 0
-        if (mountedRef.current) setSyncBackoffUntil(0)
+        if (mountedRef.current) {
+          setSyncBackoffUntil(0)
+          setSyncIssue(null)
+        }
         current.onLockError()
       },
       shouldRefresh: current.shouldRefresh ?? (successfulOps => successfulOps.some(({ op }) =>
@@ -281,6 +289,14 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
       reTrigger: () => processQueueRef.current(),
     })
   }, [createUndo, mutateQueue])
+
+  const retrySync = useCallback(() => {
+    if (navigator.onLine === false || isSyncingRef.current || editingPendingIdRef.current) return
+    if (syncIssue?.waitForServer && Date.now() < syncBackoffUntilRef.current) return
+    syncBackoffUntilRef.current = 0
+    setSyncBackoffUntil(0)
+    void processQueue()
+  }, [processQueue, syncIssue])
 
   useEffect(() => {
     processQueueRef.current = () => { void processQueue() }
@@ -347,6 +363,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
     setDeletingId(null)
     syncBackoffUntilRef.current = 0
     setSyncBackoffUntil(0)
+    setSyncIssue(null)
     backoffAttemptRef.current = 0
     undoSnapshotsRef.current.clear()
   }, [mutateQueue, setEditingPendingId])
@@ -361,6 +378,8 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
     activeSyncId,
     deletingId,
     syncCountdownMs,
+    syncIssue,
+    retrySync,
     editingPendingId,
     enqueue,
     mutateQueue,

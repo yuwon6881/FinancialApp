@@ -34,7 +34,7 @@ interface Harness {
   calls: Record<string, number>
   activeSyncIds: (string | null)[]
   backoffSetTo: number[]
-  errors: (string | null)[]
+  errors: Parameters<DrainQueueDeps['setSyncIssue']>[0][]
   refreshArgs: SuccessfulSyncOp[][]
   syncing: { value: boolean }
   backoffAttempt: { value: number }
@@ -47,7 +47,7 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
   const emittedToasts: Array<{ copy: ToastCopy; hasUndo: boolean }> = []
   const activeSyncIds: (string | null)[] = []
   const backoffSetTo: number[] = []
-  const errors: (string | null)[] = []
+  const errors: Parameters<DrainQueueDeps['setSyncIssue']>[0][] = []
   const refreshArgs: SuccessfulSyncOp[][] = []
   const syncing = { value: false }
   const backoffAttempt = { value: 0 }
@@ -79,7 +79,7 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
     resolveDispatch: (o) => (o.type === 'bulkAdd' ? undefined : defaultDispatch),
     setSyncing: (v) => { syncing.value = v },
     setActiveSyncId: (id) => { activeSyncIds.push(id) },
-    setError: (message) => { errors.push(message) },
+    setSyncIssue: (message) => { errors.push(message) },
     setBackoff: (until) => {
       backoffUntil = until
       backoffSetTo.push(until)
@@ -188,7 +188,7 @@ describe('drainQueue — guards', () => {
     expect(dispatch).not.toHaveBeenCalled()
     expect(h.queue[0].retryCount).toBe(MAX_RETRIES - 1)
     expect(h.failedOps).toEqual([])
-    expect(h.errors.at(-1)).toContain('offline')
+    expect(h.errors.at(-1)?.message).toContain('offline')
   })
 })
 
@@ -442,7 +442,7 @@ describe('drainQueue — error taxonomy', () => {
     await drainQueue(h.deps)
 
     expect(h.queue).toHaveLength(1)
-    expect(h.errors.at(-1)).toBe('Sync pending: Server error; retrying...')
+    expect(h.errors.at(-1)).toMatchObject({ message: 'The server returned an error.', status: 500 })
     spy.mockRestore()
   })
 
@@ -555,7 +555,7 @@ describe('drainQueue — error taxonomy', () => {
     expect(h.queue[0].retryCount).toBe(MAX_RETRIES - 1)
     expect(h.failedOps).toEqual([])
     expect(h.backoffSetTo).toEqual([1_040_000])
-    expect(h.errors.at(-1)).toBe('Sync pending: Server is busy; retrying...')
+    expect(h.errors.at(-1)).toMatchObject({ status: 429, waitForServer: true })
     spy.mockRestore()
   })
 

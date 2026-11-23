@@ -45,7 +45,7 @@ function makeDrainDeps(queue: QueuedOp[], overrides: Partial<DrainQueueDeps> = {
     resolveDispatch: (op) => DISPATCH[`${op.entity}:${op.type}`],
     setSyncing: () => {},
     setActiveSyncId: () => {},
-    setError: () => {},
+    setSyncIssue: () => {},
     setBackoff: (until) => {
       setBackoffCalls.push(until)
     },
@@ -130,7 +130,6 @@ describe('Adversarial Stress Test: Pre-Wake Outbox & Gating Engine', () => {
         useOutbox({
           token: null,
           lastUnlockedTimeRef: { current: Date.now() },
-          setError: vi.fn(),
           showToast,
           onAuthError: vi.fn(),
           onLockError: vi.fn(),
@@ -180,7 +179,6 @@ describe('Adversarial Stress Test: Pre-Wake Outbox & Gating Engine', () => {
           useOutbox({
             token: null,
             lastUnlockedTimeRef: { current: Date.now() },
-            setError: vi.fn(),
             showToast,
             onAuthError: vi.fn(),
             onLockError: vi.fn(),
@@ -236,13 +234,13 @@ describe('Adversarial Stress Test: Pre-Wake Outbox & Gating Engine', () => {
           })
         )
 
-        const setErrorMock = vi.fn()
+        const setSyncIssueMock = vi.fn()
         const setBackoffMock = vi.fn()
         const addFailedOpMock = vi.fn()
         let backoffAttempt = 0
 
         const { deps } = makeDrainDeps(queue, {
-          setError: setErrorMock,
+          setSyncIssue: setSyncIssueMock,
           setBackoff: setBackoffMock,
           addFailedOp: addFailedOpMock,
           getBackoffAttempt: () => backoffAttempt,
@@ -266,7 +264,7 @@ describe('Adversarial Stress Test: Pre-Wake Outbox & Gating Engine', () => {
         expect(backoffAttempt).toBe(1)
 
         // 5. User-facing status reflects wake status
-        expect(setErrorMock).toHaveBeenCalledWith('Sync pending: Server is offline or waking up...')
+        expect(setSyncIssueMock).toHaveBeenCalledWith(expect.objectContaining({ status }))
       }
     })
 
@@ -318,10 +316,10 @@ describe('Adversarial Stress Test: Pre-Wake Outbox & Gating Engine', () => {
 
       let backoffAttempt = 0
       let backoffUntil = 0
-      const setErrorMock = vi.fn()
+      const setSyncIssueMock = vi.fn()
 
       const { deps } = makeDrainDeps(queue, {
-        setError: setErrorMock,
+        setSyncIssue: setSyncIssueMock,
         getBackoffUntil: () => backoffUntil,
         setBackoff: (until) => { backoffUntil = until },
         getBackoffAttempt: () => backoffAttempt,
@@ -333,7 +331,7 @@ describe('Adversarial Stress Test: Pre-Wake Outbox & Gating Engine', () => {
       expect(queue).toHaveLength(1)
       expect(queue[0].retryCount).toBe(0)
       expect(backoffAttempt).toBe(1)
-      expect(setErrorMock).toHaveBeenCalledWith('Sync pending: Server is offline or waking up...')
+      expect(setSyncIssueMock).toHaveBeenCalledWith(expect.objectContaining({ status: 503 }))
 
       // Fast forward past backoff
       backoffUntil = 0
@@ -343,7 +341,7 @@ describe('Adversarial Stress Test: Pre-Wake Outbox & Gating Engine', () => {
       expect(queue).toHaveLength(1)
       expect(queue[0].retryCount).toBe(0)
       expect(backoffAttempt).toBe(2)
-      expect(setErrorMock).toHaveBeenCalledWith('Sync pending: Server is busy; retrying...')
+      expect(setSyncIssueMock).toHaveBeenCalledWith(expect.objectContaining({ status: 429, waitForServer: true }))
 
       // Fast forward past backoff
       backoffUntil = 0
