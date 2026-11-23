@@ -73,7 +73,7 @@ export function SleeveCard({
             <p className="min-w-0 truncate text-caption text-muted-foreground">
               {known || (sleeve.value ?? 0) > 0 ? money(sleeve.value) : 'Waiting on prices'}
               {sleeve.driftPercentagePoints !== undefined
-                ? ` · ${Math.abs(sleeve.driftPercentagePoints) < 0.05 ? 'on your aim' : `${Math.abs(sleeve.driftPercentagePoints).toFixed(1)}% ${sleeve.driftPercentagePoints > 0 ? 'above' : 'below'} your aim`}`
+                ? ` · ${Math.abs(sleeve.driftPercentagePoints) < 0.05 ? 'on target' : `${Math.abs(sleeve.driftPercentagePoints).toFixed(1)} percentage points ${sleeve.driftPercentagePoints > 0 ? 'above' : 'below'} target`}`
                 : ''}
             </p>
             {tone && <Badge tone={tone}>{allocationStatusLabel(sleeve.status)}</Badge>}

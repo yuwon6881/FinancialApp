@@ -1,4 +1,5 @@
-import type { InvestmentAllocationStatus, InvestmentAllocationSleeve, InvestmentInstrument, InvestmentPlan } from '../types'
+import type { InvestmentAllocationStatus, InvestmentAllocationSleeve, InvestmentGroup, InvestmentInstrument, InvestmentPlan } from '../types'
+import { getInvestmentGroups, MAX_INVESTMENT_GROUPS } from './investmentGroups'
 
 /**
  * `key` is what code groups and matches on; `label` is only ever shown to a person.
@@ -14,22 +15,23 @@ export type SleeveIndexEntry = {
 
 export const UNASSIGNED_SLEEVE_KEY = 'Unassigned'
 
-const sleeveLabels: Record<InvestmentAllocationSleeve, string> = {
-  USEquity: 'US shares',
-  InternationalExUS: 'Shares outside the US',
-  Bonds: 'Bonds',
-}
+const sleeveLabels = new Map([
+  ['USEquity', 'US shares'],
+  ['InternationalExUS', 'Shares outside the US'],
+  ['Bonds', 'Bonds'],
+])
 
 const unassignedSleeve: SleeveIndexEntry = { key: UNASSIGNED_SLEEVE_KEY, label: 'Not sorted yet' }
 
-export function buildSleeveIndex(instruments: InvestmentInstrument[]) {
+export function buildSleeveIndex(instruments: InvestmentInstrument[], groups?: readonly InvestmentGroup[]) {
+  const names = new Map(groups?.map(group => [group.key, group.label]))
   return new Map(instruments.map(instrument => [
     instrument.id,
     instrument.allocationSleeve
       ? {
           sleeve: instrument.allocationSleeve,
           key: instrument.allocationSleeve,
-          label: sleeveLabels[instrument.allocationSleeve],
+          label: sleeveLabels.get(instrument.allocationSleeve) ?? names.get(instrument.allocationSleeve) ?? 'Unnamed group',
         }
       : unassignedSleeve,
   ]))
@@ -43,18 +45,18 @@ export function sleeveOf(
 }
 
 /** The human label for a sleeve key, for UI that only has the key to hand. */
-export function sleeveLabelFor(key: string, index: Map<string, SleeveIndexEntry>) {
+export function sleeveLabelFor(key: string, index: Map<string, SleeveIndexEntry>, groups?: readonly InvestmentGroup[]) {
   if (key === UNASSIGNED_SLEEVE_KEY) return unassignedSleeve.label
   // History can name a sleeve no current instrument sits in; it still needs a person's label.
   return [...index.values()].find(entry => entry.key === key)?.label
-    ?? sleeveLabels[key as InvestmentAllocationSleeve]
-    ?? wordsFromCode(key)
+    ?? sleeveLabels.get(key)
+    ?? groups?.find(group => group.key === key)?.label
+    ?? (/^[a-f\d]{32}$/i.test(key) ? 'Former group' : wordsFromCode(key))
 }
 
-/** `EmergingMarkets` -> `Emerging markets`: a basket this build has no label for still reads as words. */
 function wordsFromCode(code: string) {
   const [first = '', ...rest] = code.replace(/([a-z])([A-Z])/g, '$1 $2').split(' ')
-  return [first, ...rest.map(word => (word === word.toUpperCase() ? word : word.toLowerCase()))].join(' ')
+  return [first, ...rest.map(word => word === word.toUpperCase() ? word : word.toLowerCase())].join(' ')
 }
 
 const statusLabels: Record<InvestmentAllocationStatus, string> = {
@@ -71,51 +73,17 @@ export function allocationStatusLabel(status: InvestmentAllocationStatus) {
 }
 
 export function validateInvestmentPlan(plan: InvestmentPlan) {
-  const targets = [plan.usEquityTarget, plan.internationalExUsTarget, plan.bondsTarget]
+  const groups = getInvestmentGroups(plan)
+  const targets = groups.map(group => group.targetPercentage)
   const driftBands = [plan.watchDrift, plan.alertDrift]
   if (![...targets, ...driftBands].every(Number.isFinite)) return 'Targets and drift bands must be valid numbers.'
-  if (targets.some(value => value <= 0) || targets.reduce((sum, value) => sum + value, 0) !== 100)
+  if (groups.length < 1 || groups.length > MAX_INVESTMENT_GROUPS) return `Use between 1 and ${MAX_INVESTMENT_GROUPS} portfolio groups.`
+  if (new Set(groups.map(group => group.label.trim().toLowerCase())).size !== groups.length) return 'Group names must be unique.'
+  if (targets.some(value => value <= 0) || targets.reduce((sum, value) => sum + Math.round(value * 100), 0) !== 10000)
     return 'Targets must be positive and total exactly 100%.'
   if (plan.watchDrift <= 0 || plan.alertDrift <= plan.watchDrift || plan.alertDrift > 100)
     return 'Alert drift must be greater than Watch drift and no more than 100 points.'
   return ''
-}
-
-type TargetKey = 'usEquityTarget' | 'internationalExUsTarget' | 'bondsTarget'
-
-export function redistributeInvestmentTargets(
-  current: Pick<InvestmentPlan, TargetKey>,
-  changed: TargetKey,
-  requested: number,
-  lockedKey?: TargetKey,
-): Pick<InvestmentPlan, TargetKey> {
-  const keys: TargetKey[] = ['usEquityTarget', 'internationalExUsTarget', 'bondsTarget']
-  const value = Math.max(1, Math.min(lockedKey ? 99 - current[lockedKey] : 98, Math.round(requested)))
-  const others = keys.filter(key => key !== changed)
-  const remainder = 100 - value
-  
-  if (lockedKey && lockedKey !== changed) {
-    const unlockedOther = others.find(key => key !== lockedKey)!
-    const lockedValue = current[lockedKey]
-    const remainingForUnlocked = Math.max(1, remainder - lockedValue)
-    const finalLockedValue = Math.max(1, remainder - remainingForUnlocked)
-    return {
-      ...current,
-      [changed]: value,
-      [lockedKey]: finalLockedValue,
-      [unlockedOther]: remainingForUnlocked,
-    }
-  }
-
-  const otherTotal = current[others[0]] + current[others[1]]
-  const first = Math.max(1, Math.min(remainder - 1,
-    Math.round(remainder * (otherTotal > 0 ? current[others[0]] / otherTotal : 0.5))))
-  return {
-    ...current,
-    [changed]: value,
-    [others[0]]: first,
-    [others[1]]: remainder - first,
-  }
 }
 
 /**

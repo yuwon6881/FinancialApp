@@ -13,6 +13,7 @@ import {
   UNASSIGNED_SLEEVE_KEY,
 } from '../../lib/investmentAllocation'
 import { breakdownBySleeve } from '../../lib/investmentSleeveBreakdown'
+import { investmentGroupColor } from '../../lib/investmentGroups'
 import { SleeveCard } from './SleeveCard'
 import { InvestmentMovementPlanner } from './InvestmentMovementPlanner'
 import { panelClass } from '../ui/panelStyles'
@@ -26,9 +27,6 @@ const STATUS_TONES: Record<InvestmentAllocationStatus, BadgeTone> = {
   Alert: 'urgent',
 }
 
-/** Fill classes for the planner, and the same three colours as CSS values for the meters. */
-const colors = ['bg-primary', 'bg-amber-500', 'bg-emerald-500']
-const sleeveColors = ['var(--primary)', 'var(--color-amber-500)', 'var(--color-emerald-500)']
 const UNSORTED_COLOR = 'var(--muted-foreground)'
 /** A checklist longer than this hides the rest behind "Show all": nine lines of setup was a wall. */
 const CHECKLIST_PREVIEW = 3
@@ -64,8 +62,8 @@ export function InvestmentPlanPanel({
   // Grouped once here, not per row — every row needs a different slice of the
   // same single pass over the holdings.
   const constituentsBySleeve = useMemo(
-    () => breakdownBySleeve(holdings, buildSleeveIndex(instruments)),
-    [holdings, instruments],
+    () => breakdownBySleeve(holdings, buildSleeveIndex(instruments, allocation.plan.groups)),
+    [holdings, instruments, allocation.plan.groups],
   )
   const unassigned = constituentsBySleeve.get(UNASSIGNED_SLEEVE_KEY) ?? []
   const steps = showAllSteps ? allocation.incompleteReasons : allocation.incompleteReasons.slice(0, CHECKLIST_PREVIEW)
@@ -86,9 +84,9 @@ export function InvestmentPlanPanel({
       <div className="flex items-start justify-between gap-3 px-5 pt-5 sm:px-6">
         <div className="min-w-0">
           <h2 id="investment-plan-heading" className="flex items-center gap-1 text-section text-foreground">
-            Three-fund investment plan
+            Investment plan
             <InfoHint
-              label="the three-fund plan"
+              label="the investment plan"
               align="left"
               text="See your target mix, current holdings, and what to buy next."
             />
@@ -110,7 +108,7 @@ export function InvestmentPlanPanel({
               constituents={constituentsBySleeve.get(sleeve.sleeve) ?? []}
               masked={masked}
               money={money}
-              color={sleeveColors[index] ?? UNSORTED_COLOR}
+              color={investmentGroupColor(index)}
             />
           ))}
           {unassigned.length > 0 && (
@@ -140,14 +138,14 @@ export function InvestmentPlanPanel({
               {actualKnown
                 ? <SegmentedMeter
                     size="md"
-                    segments={allocation.sleeves.map((sleeve, index) => ({ value: sleeve.currentPercentage ?? 0, color: sleeveColors[index] ?? UNSORTED_COLOR, label: sleeve.label }))}
+                    segments={allocation.sleeves.map((sleeve, index) => ({ value: sleeve.currentPercentage ?? 0, color: investmentGroupColor(index), label: sleeve.label }))}
                     label={`Current mix: ${allocation.sleeves.map((sleeve, index) => `${sleeve.label} ${displayShare(index) === 'unknown' ? 'unknown' : `${displayShare(index)}%`}`).join(', ')}`}
                   />
                 : <span>Waiting on prices</span>}
               <span>Target</span>
               <SegmentedMeter
                 size="md"
-                segments={allocation.sleeves.map((sleeve, index) => ({ value: sleeve.targetPercentage, color: sleeveColors[index] ?? UNSORTED_COLOR, label: sleeve.label }))}
+                segments={allocation.sleeves.map((sleeve, index) => ({ value: sleeve.targetPercentage, color: investmentGroupColor(index), label: sleeve.label }))}
                 label={`Target mix: ${allocation.sleeves.map(sleeve => `${sleeve.label} ${sleeve.targetPercentage}%`).join(', ')}`}
               />
             </div>
@@ -194,7 +192,7 @@ export function InvestmentPlanPanel({
         </div>
       </div>
 
-      <InvestmentMovementPlanner allocation={allocation} holdings={holdings} instruments={instruments} fxRates={fxRates} masked={masked} money={money} colors={colors} />
+      <InvestmentMovementPlanner allocation={allocation} holdings={holdings} instruments={instruments} fxRates={fxRates} masked={masked} money={money} />
     </section>
   )
 }

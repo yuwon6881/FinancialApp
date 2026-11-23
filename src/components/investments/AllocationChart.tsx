@@ -17,7 +17,8 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
   onSelect: (value: AllocationFilter) => void
 }) {
   const [mode, setMode] = useState<AllocationMode>('sleeve')
-  const sleeveIndex = useMemo(() => buildSleeveIndex(portfolio.instruments), [portfolio.instruments])
+  const sleeveIndex = useMemo(() => buildSleeveIndex(portfolio.instruments, portfolio.allocation.plan.groups),
+    [portfolio.instruments, portfolio.allocation.plan.groups])
   // Each group carries the string a person reads (`label`) and the one the holdings
   // filter matches on (`filterKey`) — for funds those differ, so keep them apart
   // rather than parsing the label back apart later.

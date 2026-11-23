@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, Info } from 'lucide-react'
-import type { InvestmentHistorySegment, InvestmentHistoryYear, InvestmentInstrument } from '../../types'
+import type { InvestmentGroup, InvestmentHistorySegment, InvestmentHistoryYear, InvestmentInstrument } from '../../types'
 import { buildSleeveIndex, sleeveLabelFor } from '../../lib/investmentAllocation'
 import { formatSignedPercent, headlineReturn, monthLabel, shownDirection, yearBarScale, yearLabel } from '../../lib/investmentHistory'
 import { cn, formatCurrencyVal } from '../../lib/utils'
@@ -26,14 +26,15 @@ const tone = (value: number | undefined, digits: number) => {
  * start, overall and per market. Built from settled month-ends only, so a figure here never
  * moves once shown unless older activity is edited.
  */
-export function InvestmentHistoryPanel({ instruments, masked, refreshToken }: {
+export function InvestmentHistoryPanel({ instruments, groups, masked, refreshToken }: {
   instruments: InvestmentInstrument[]
+  groups?: InvestmentGroup[]
   masked: boolean
   refreshToken: number
 }) {
   const { history, error, loading } = useInvestmentHistory(refreshToken)
   const [showAllYears, setShowAllYears] = useState(false)
-  const sleeves = useMemo(() => buildSleeveIndex(instruments), [instruments])
+  const sleeves = useMemo(() => buildSleeveIndex(instruments, groups), [instruments, groups])
   const currency = history?.currency ?? 'USD'
   const money = (value: number | undefined) =>
     masked ? MASK : value === undefined ? 'Unknown' : formatCurrencyVal(value, currency)
@@ -41,7 +42,7 @@ export function InvestmentHistoryPanel({ instruments, masked, refreshToken }: {
     masked || value === undefined || value <= 0 ? money(value) : `+${money(value)}`
   const percent = (value: number | undefined) =>
     masked ? MASK : value === undefined ? 'Unknown' : formatSignedPercent(value)
-  const marketName = (segment: InvestmentHistorySegment) => sleeveLabelFor(segment.segment, sleeves)
+  const marketName = (segment: InvestmentHistorySegment) => sleeveLabelFor(segment.segment, sleeves, groups)
 
   const years = history?.years ?? []
   const shownYears = showAllYears ? years : years.slice(0, RECENT_YEARS)

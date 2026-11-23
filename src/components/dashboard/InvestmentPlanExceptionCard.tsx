@@ -35,7 +35,7 @@ export function InvestmentPlanExceptionCard({
       title={incomplete ? 'Investment plan needs setup' : 'Investment allocation needs attention'}
       description={incomplete
         ? allocation.incompleteReasons[0] ?? 'Classify every open investment to complete its valuation.'
-        : `${alertSleeve?.label ?? 'A basket'} is ${Math.abs(alertSleeve?.driftPercentagePoints ?? 0).toFixed(1)} points from target.`}
+        : `${alertSleeve?.label ?? 'A portfolio group'} is ${Math.abs(alertSleeve?.driftPercentagePoints ?? 0).toFixed(1)} percentage points from target.`}
       actions={(
         <Button variant="secondary" size="sm" onClick={open}>
           {incomplete ? 'Finish setup' : 'Review plan'}

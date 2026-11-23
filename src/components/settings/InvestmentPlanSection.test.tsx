@@ -126,8 +126,8 @@ describe('InvestmentPlanSection sliders', () => {
 
     await waitFor(() => expect(api.fetchInvestmentAllocation).toHaveBeenCalled())
 
-    const watchSlider = screen.getByRole('slider', { name: 'Watch when off by, in percentage points' }) as HTMLInputElement
-    const alertSlider = screen.getByRole('slider', { name: 'Alert when off by, in percentage points' }) as HTMLInputElement
+    const watchSlider = screen.getByRole('slider', { name: 'Watch threshold, in percentage points' }) as HTMLInputElement
+    const alertSlider = screen.getByRole('slider', { name: 'Off-target alert, in percentage points' }) as HTMLInputElement
 
     expect(watchSlider.disabled).toBe(true)
     expect(alertSlider.disabled).toBe(true)

@@ -22,6 +22,15 @@ const model = (annualReturn = 0, annualVolatility = 0): ForecastModel => ({
 })
 
 describe('investment forecast model', () => {
+  it('uses chosen forecast assumptions for custom groups and rejects a missing assumption', () => {
+    const plan = { usEquityTarget: 66, internationalExUsTarget: 10, bondsTarget: 24, watchDrift: 3, alertDrift: 5 }
+    const groups = [
+      { key: 'a', label: 'Shares', targetPercentage: 60, forecastClass: 'USEquity' as const },
+      { key: 'b', label: 'Funds', targetPercentage: 40, forecastClass: 'Bonds' as const },
+    ]
+    expect(buildForecastModel({ ...plan, groups }).weights).toEqual({ USEquity: 0.6, InternationalExUS: 0, Bonds: 0.4 })
+    expect(() => buildForecastModel({ ...plan, groups: [groups[0], { ...groups[1], forecastClass: null }] })).toThrow(/forecast assumption/)
+  })
   it('weights the researched return and conservative volatility by the investment plan', () => {
     const result = buildForecastModel({
       usEquityTarget: 66,

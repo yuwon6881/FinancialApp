@@ -1,6 +1,7 @@
 import type { PushChannel, PushDevice, PushStatus } from '../../types'
 import { request, requestVoid } from './client'
 import type { getPushPlatform } from '../push/support'
+import { getFriendlyDeviceLabel } from '../deviceLabel'
 
 type PushPlatform = ReturnType<typeof getPushPlatform>
 
@@ -41,7 +42,7 @@ export function upsertPushSubscription(
   return requestVoid('/push/subscriptions', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ deviceId, fcmToken, platform, ...channels }),
+    body: JSON.stringify({ deviceId, fcmToken, platform, deviceLabel: getFriendlyDeviceLabel(), ...channels }),
     errorMessage: 'Failed to register this device for push notifications',
   })
 }

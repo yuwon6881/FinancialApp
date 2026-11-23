@@ -5,6 +5,8 @@
 // portfolio, so planning a deposit costs no request and no market-data quota,
 // and the answer can update while the user is still typing an amount.
 
+import { roundInvestmentSplit } from './investmentSplitRounding'
+
 /** Values are all in the app currency. */
 export interface DepositSleeveInput {
   sleeve: string
@@ -84,15 +86,7 @@ export function planDeposit(
     return requested * deficits[index] / totalDeficit
   })
 
-  // Rounding to cents must not invent or lose money: the largest allocation
-  // absorbs the difference so the parts add back up to the requested amount.
-  const amounts = raw.map(round)
-  const drift = round(requested) - amounts.reduce((sum, value) => sum + value, 0)
-  if (drift !== 0 && amounts.length > 0) {
-    const largest = amounts.reduce(
-      (best, value, index) => (value > amounts[best] ? index : best), 0)
-    amounts[largest] = round(amounts[largest] + drift)
-  }
+  const amounts = roundInvestmentSplit(raw, requested)
 
   const planned = sleeves.map<DepositSleevePlan>((sleeve, index) => {
     const amount = amounts[index]

@@ -60,7 +60,8 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding, onCl
   const expanded = useIsExpanded()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZES)[number]>(10)
-  const sleeveIndex = useMemo(() => buildSleeveIndex(portfolio.instruments), [portfolio.instruments])
+  const sleeveIndex = useMemo(() => buildSleeveIndex(portfolio.instruments, portfolio.allocation.plan.groups),
+    [portfolio.instruments, portfolio.allocation.plan.groups])
   const filterLabel = filter?.mode === 'sleeve' ? sleeveLabelFor(filter.key, sleeveIndex) : filter?.key
   const currency = portfolio.appCurrency
 

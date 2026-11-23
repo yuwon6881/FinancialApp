@@ -416,7 +416,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           )}
           {view === 'history' && (
             <div role="tabpanel" id="investment-view-history-panel" aria-labelledby="investment-view-history">
-              <InvestmentHistoryPanel instruments={portfolio.instruments} masked={passiveMask} refreshToken={activityRevision} />
+              <InvestmentHistoryPanel instruments={portfolio.instruments} groups={portfolio.allocation.plan.groups} masked={passiveMask} refreshToken={activityRevision} />
             </div>
           )}
           {view === 'activity' && (

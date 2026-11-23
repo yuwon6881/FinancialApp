@@ -1,6 +1,14 @@
 export type InvestmentRange = '1m' | '3m' | '6m' | '1y' | '3y' | '5y' | 'all'
 type InvestmentInstrumentType = 'Stock' | 'ETF' | 'MutualFund'
-export type InvestmentAllocationSleeve = 'USEquity' | 'InternationalExUS' | 'Bonds'
+export type InvestmentAllocationSleeve = string
+export type InvestmentForecastClass = 'USEquity' | 'InternationalExUS' | 'Bonds'
+
+export interface InvestmentGroup {
+  key: InvestmentAllocationSleeve
+  label: string
+  targetPercentage: number
+  forecastClass: InvestmentForecastClass | null
+}
 export type InvestmentAllocationStatus = 'NotStarted' | 'Incomplete' | 'OnTrack' | 'Watch' | 'Alert'
 export type InvestmentTransactionType =
   | 'Buy' | 'Sell' | 'Dividend' | 'FeeTax'
@@ -202,6 +210,7 @@ export interface InvestmentPortfolio {
 
 export interface InvestmentPlan {
   id?: string
+  groups?: InvestmentGroup[]
   usEquityTarget: number
   internationalExUsTarget: number
   bondsTarget: number

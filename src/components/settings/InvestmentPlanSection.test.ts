@@ -1,31 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { redistributeInvestmentTargets } from '../../lib/investmentAllocation'
+import { changeGroupTarget, getInvestmentGroups, removeInvestmentGroup } from '../../lib/investmentGroups'
 
-describe('redistributeInvestmentTargets', () => {
-  it('keeps all sleeves positive and the total at 100', () => {
-    const result = redistributeInvestmentTargets({
-      usEquityTarget: 66,
-      internationalExUsTarget: 10,
-      bondsTarget: 24,
-    }, 'usEquityTarget', 75)
+const groups = getInvestmentGroups({ usEquityTarget: 66, internationalExUsTarget: 10, bondsTarget: 24, watchDrift: 3, alertDrift: 5 })
+const weights = (values: typeof groups) => values.map(group => group.targetPercentage)
 
-    expect(result).toEqual({
-      usEquityTarget: 75,
-      internationalExUsTarget: 7,
-      bondsTarget: 18,
-    })
-    expect(Object.values(result).reduce((sum, value) => sum + value, 0)).toBe(100)
+describe('portfolio group target redistribution', () => {
+  it('keeps all the targets positive and the total at 100', () => {
+    expect(weights(changeGroupTarget(groups, 'USEquity', 75))).toEqual([75, 7, 18])
+    expect(weights(changeGroupTarget(groups, 'Bonds', 100))).toEqual([1, 1, 98])
+    expect(weights(changeGroupTarget(groups, 'USEquity', 75, 'InternationalExUS'))).toEqual([75, 10, 15])
   })
 
-  it('clamps extreme target changes so the other sleeves remain assignable', () => {
-    const result = redistributeInvestmentTargets({
-      usEquityTarget: 66,
-      internationalExUsTarget: 10,
-      bondsTarget: 24,
-    }, 'bondsTarget', 100)
-
-    expect(result.bondsTarget).toBe(98)
-    expect(result.usEquityTarget).toBe(1)
-    expect(result.internationalExUsTarget).toBe(1)
+  it('reallocates a removed group and leaves a sole group at 100%', () => {
+    const two = removeInvestmentGroup(groups, 'InternationalExUS')
+    expect(weights(two)).toEqual([73, 27])
+    expect(weights(removeInvestmentGroup(two, 'USEquity'))).toEqual([100])
   })
 })

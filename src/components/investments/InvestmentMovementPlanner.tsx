@@ -5,6 +5,7 @@ import { formatCurrencyVal, maskCurrencyInput } from '../../lib/utils'
 import { planDeposit, splitDepositFunding } from '../../lib/investmentDeposit'
 import { planWithdrawal } from '../../lib/investmentWithdrawal'
 import { buildEtfPlan } from '../../lib/investmentEtfPlan'
+import { investmentGroupColor } from '../../lib/investmentGroups'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
@@ -17,10 +18,9 @@ interface Props {
   fxRates: NonNullable<InvestmentPortfolio['planFxRates']>
   masked: boolean
   money: (value?: number) => string
-  colors: string[]
 }
 
-export function InvestmentMovementPlanner({ allocation, holdings, instruments, fxRates, masked, money, colors }: Props) {
+export function InvestmentMovementPlanner({ allocation, holdings, instruments, fxRates, masked, money }: Props) {
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<'deposit' | 'withdrawal'>('deposit')
   const [amountText, setAmountText] = useState('')
@@ -139,7 +139,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
             {plan.sleeves.map((sleeve, index) => {
               const etfPlan = etfPlans.find(item => item.sleeve === sleeve.sleeve)
               return <li key={sleeve.sleeve} className="rounded-control inset-group p-3">
-                <div className="flex items-center gap-2"><span className={`size-2 rounded-full ${colors[index]}`} /><strong className="text-caption text-foreground">{sleeve.label}</strong></div>
+                <div className="flex items-center gap-2"><span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: investmentGroupColor(index) }} /><strong className="text-caption text-foreground">{sleeve.label}</strong></div>
                 <strong className="mt-2 block text-section tabular-nums text-foreground">{sleeve.amount > 0 ? money(sleeve.amount) : mode === 'deposit' ? 'Skip' : 'Leave alone'}</strong>
                 <p className="text-caption text-muted-foreground">Leaves {sleeve.projectedPercentage.toFixed(1)}%</p>
                 {etfPlan?.requiresChoice && <CustomSelect ariaLabel={`ETF for ${sleeve.label}`} value={selections[sleeve.sleeve] ?? ''} onChange={value => setSelections(previous => ({ ...previous, [sleeve.sleeve]: String(value) }))} options={[{ value: '', label: 'Choose an ETF' }, ...etfPlan.choices.map(choice => ({ value: choice.id, label: `${choice.symbol} · ${choice.currency}` }))]} className="mt-2 w-full" />}

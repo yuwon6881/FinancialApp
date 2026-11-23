@@ -20,6 +20,7 @@ vi.mock('../../contexts/AppContext', () => ({
 const other = {
   id: 'other',
   isCurrent: false,
+  deviceLabel: 'Chrome on Android',
   billRemindersEnabled: true,
   categoryAlertsEnabled: false,
   enrolledAt: '2026-07-01T00:00:00Z',
@@ -32,7 +33,8 @@ describe('PushDevicesList', () => {
     const onRevoked = vi.fn()
 
     render(<PushDevicesList refreshKey={0} onRevoked={onRevoked} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Stop notifications for this other device' }))
+    expect(await screen.findByText('Chrome on Android')).toBeTruthy()
+    fireEvent.click(await screen.findByRole('button', { name: 'Stop notifications for Chrome on Android' }))
 
     await waitFor(() => expect(onRevoked).toHaveBeenCalledOnce())
     await screen.findByText(/No device is set up/)
@@ -44,7 +46,7 @@ describe('PushDevicesList', () => {
     const onRevoked = vi.fn()
 
     render(<PushDevicesList refreshKey={0} onRevoked={onRevoked} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Stop notifications for this other device' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Stop notifications for Chrome on Android' }))
 
     await waitFor(() => expect(revokePushDevice).toHaveBeenCalled())
     expect(onRevoked).not.toHaveBeenCalled()

@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { planDeposit, splitDepositFunding, type DepositSleeveInput } from './investmentDeposit'
+import contributionParity from '../test/parity/fixtures/contribution-plan.cases.json'
+
+it.each(contributionParity.cases)('matches the server contribution split for $id', ({ input, expected }) => {
+  const values: Record<string, number | undefined> = input.values
+  const planned = planDeposit(expected.amount, Object.entries(input.targets).map(([sleeve, targetPercentage]) => ({
+    sleeve, label: sleeve, targetPercentage: targetPercentage!, value: values[sleeve],
+  })))
+  expect(planned?.requested).toBe(expected.amount)
+  expect(Object.fromEntries(planned!.sleeves.map(group => [group.sleeve, group.amount]))).toEqual(expected.sleeves)
+})
 
 describe('splitDepositFunding', () => {
   it('uses only the requested part of spare broker cash', () => {

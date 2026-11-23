@@ -1,8 +1,6 @@
-import { RangeInput } from '../ui/RangeInput'
-import type React from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type SetStateAction } from 'react'
 import { Reorder } from 'framer-motion'
-import { AlertCircle, Loader2, Save, Lock, Unlock, WifiOff } from 'lucide-react'
+import { AlertCircle, Save, WifiOff } from 'lucide-react'
 import type {
   InvestmentAllocationOverview,
   InvestmentAllocationSleeve,
@@ -11,59 +9,17 @@ import type {
 import * as api from '../../lib/api'
 import { useAppContext } from '../../contexts/AppContext'
 import { Button } from '../ui/Button'
-import { IconButton } from '../ui/IconButton'
 import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
-import { redistributeInvestmentTargets, validateInvestmentPlan } from '../../lib/investmentAllocation'
+import { validateInvestmentPlan } from '../../lib/investmentAllocation'
+import { getInvestmentGroups } from '../../lib/investmentGroups'
+import { InvestmentGroupTargets } from './InvestmentGroupTargets'
+import { InvestmentDriftSettings } from './InvestmentDriftSettings'
 import { InvestmentClassificationRow } from './InvestmentClassificationRow'
 import { EmptyState } from '../ui/EmptyState'
-import { SegmentedMeter } from '../ui/SegmentedMeter'
+import { InvestmentPlanSettingsSkeleton } from '../ui/skeletons/InvestmentPlanSettingsSkeleton'
 import { panelClass } from '../ui/panelStyles'
 import { cn } from '../../lib/utils'
-
-type TargetKey = 'usEquityTarget' | 'internationalExUsTarget' | 'bondsTarget'
-type DriftKey = 'watchDrift' | 'alertDrift'
-
-/**
- * The two drift thresholds, as one pair on a shared scale. Colour carries which is which -- the
- * same amber/orange pair `PANEL_TONES` uses for "worth a look" and "already past it" -- because the
- * two sliders are otherwise identical controls sitting one above the other.
- */
-// The same three fills the Investments page draws its sleeves with.
-const SLEEVE_COLORS = ['var(--primary)', 'var(--color-amber-500)', 'var(--color-emerald-500)'] as const
-
-const DRIFT_BANDS: ReadonlyArray<{
-  key: DriftKey
-  label: string
-  hint: string
-  badge: string
-  /** Slider fill. */
-  color: string
-  lockColor: string
-}> = [
-  {
-    key: 'watchDrift',
-    label: 'Watch when off by',
-    hint: 'Early warning threshold before rebalancing.',
-    badge: 'bg-amber-500/12 text-amber-700 dark:text-amber-300',
-    color: 'var(--color-amber-500)',
-    lockColor: 'text-amber-500',
-  },
-  {
-    key: 'alertDrift',
-    label: 'Alert when off by',
-    hint: 'Marks a larger mismatch that triggers alerts.',
-    badge: 'bg-orange-500/12 text-orange-700 dark:text-orange-300',
-    color: 'var(--color-orange-500)',
-    lockColor: 'text-orange-500',
-  },
-]
-
-/** Thresholds past thirty points are theoretical, so the scale stops there unless a saved plan
-    already sits above it. Taken from the loaded plan rather than the live one, so the axis cannot
-    move under the handle mid-drag. */
-const driftScaleMax = (plan?: InvestmentPlan | null) =>
-  Math.max(30, plan?.watchDrift ?? 0, plan?.alertDrift ?? 0)
 
 const defaults: InvestmentPlan = {
   usEquityTarget: 66,
@@ -132,13 +88,12 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
   }
   const initialOverview = () => projectQueuedChanges(cachedOverview())
   const [overview, setOverview] = useState<InvestmentAllocationOverview | null>(initialOverview)
-  const [plan, setPlan] = useState<InvestmentPlan>(() => initialOverview()?.plan ?? defaults)
-  const [lockedSleeve, setLockedSleeve] = useState<TargetKey | null>(null)
-  const [globalTargetLock, setGlobalTargetLock] = useState(true)
-  const [lockedDrift, setLockedDrift] = useState<Record<DriftKey, boolean>>({
-    watchDrift: true,
-    alertDrift: true,
-  })
+  const [draft, setDraft] = useState<InvestmentPlan | null>(null)
+  const savedPlan = overview?.plan ?? defaults
+  const plan = draft ?? savedPlan
+  const setPlan = (change: SetStateAction<InvestmentPlan>) => {
+    setDraft(previous => typeof change === 'function' ? change(previous ?? savedPlan) : change)
+  }
   const [loading, setLoading] = useState(() => !cachedOverview())
   const [error, setError] = useState('')
 
@@ -146,7 +101,6 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
     if (!providedOverview) return
     const projected = projectQueuedChanges(providedOverview)
     setOverview(projected)
-    setPlan(projected?.plan ?? providedOverview.plan)
   }, [providedOverview])
 
   const load = async () => {
@@ -159,7 +113,6 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
       const value = await api.fetchInvestmentAllocation()
       const projected = projectQueuedChanges(value)
       setOverview(projected)
-      setPlan(projected?.plan ?? value.plan)
       setError('')
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not load the investment plan.')
@@ -186,21 +139,16 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
   useEffect(() => {
     const queuedPlan = [...investmentOps].reverse().find(value =>
       value.entity === 'investmentPlan' && value.type === 'update')
-    if (queuedPlan?.payload) {
-      setPlan(previous => ({
-        ...previous,
-        ...queuedPlan.payload,
-      } as InvestmentPlan))
-    }
     const queuedAssignments = new Map(investmentOps
       .filter(value => value.entity === 'investmentAllocation' && value.type === 'update')
       .map(value => [value.targetId,
         typeof value.payload?.sleeve === 'string'
           ? value.payload.sleeve as InvestmentAllocationSleeve
           : undefined]))
-    if (queuedAssignments.size > 0) {
+    if (queuedPlan?.payload || queuedAssignments.size > 0) {
       setOverview(previous => previous ? {
         ...previous,
+        plan: projectQueuedPlan(previous.plan),
         assignments: previous.assignments.map(value => queuedAssignments.has(value.instrumentId)
           ? { ...value, sleeve: queuedAssignments.get(value.instrumentId) }
           : value),
@@ -217,7 +165,6 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
       if (allocation) {
         const projected = projectQueuedChangesRef.current(allocation)
         setOverview(projected)
-        setPlan(projected?.plan ?? allocation.plan)
         setLoading(false)
         setError('')
         detail?.acknowledge?.(Promise.resolve())
@@ -231,63 +178,17 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
     return () => window.removeEventListener('investment-sync', synced)
   }, [])
 
-  const total = plan.usEquityTarget + plan.internationalExUsTarget + plan.bondsTarget
-  const validation = useMemo(() => validateInvestmentPlan(plan), [plan])
-
-  const changeTarget = (key: TargetKey, value: number) => {
-    if (hideSensitive) return
-    setPlan(previous => ({
-      ...previous,
-      ...redistributeInvestmentTargets(previous, key, value, lockedSleeve ?? undefined),
-    }))
-  }
-
-  const driftMax = driftScaleMax(overview?.plan)
-
-  // The plan is only valid while Alert sits above Watch, so dragging one past the other pushes the
-  // other along instead of parking the form on a validation error the slider caused.
-  const changeDrift = (key: DriftKey, value: number) => {
-    if (hideSensitive || lockedDrift[key]) return
-    const isOtherLocked = key === 'watchDrift' ? lockedDrift.alertDrift : lockedDrift.watchDrift
-    if (isOtherLocked) {
-      if (key === 'watchDrift') {
-        const next = Math.max(1, Math.min(plan.alertDrift - 1, Math.round(value)))
-        setPlan(previous => ({ ...previous, watchDrift: next }))
-      } else {
-        const next = Math.max(plan.watchDrift + 1, Math.min(driftMax, Math.round(value)))
-        setPlan(previous => ({ ...previous, alertDrift: next }))
-      }
-      return
-    }
-    const next = key === 'watchDrift'
-      ? Math.max(1, Math.min(driftMax - 1, Math.round(value)))
-      : Math.max(2, Math.min(driftMax, Math.round(value)))
-    setPlan(previous => key === 'watchDrift'
-      ? { ...previous, watchDrift: next, alertDrift: Math.max(previous.alertDrift, Math.min(driftMax, next + 1)) }
-      : { ...previous, alertDrift: next, watchDrift: Math.min(previous.watchDrift, Math.max(1, next - 1)) })
-  }
-
-  const toggleDriftLock = (key: DriftKey) => {
-    if (hideSensitive) return
-    setLockedDrift(previous => ({
-      ...previous,
-      [key]: !previous[key],
-    }))
-  }
-
-  const toggleSleeveLock = (key: TargetKey) => {
-    if (hideSensitive) return
-    setLockedSleeve(current => {
-      if (current === key) return null
-      // Three sleeves need two adjustable values to preserve a 100% total. Keep the
-      // first lock in place until the user explicitly unlocks it.
-      return current ?? key
-    })
-  }
+  const groups = getInvestmentGroups(plan)
+  const draftKeys = new Set(groups.map(group => group.key))
+  const assignedKeys = new Set(overview?.assignments.flatMap(assignment => assignment.sleeve ? [assignment.sleeve] : []))
+  const validation = [...assignedKeys].some(key => !draftKeys.has(key))
+    ? 'Move investments to another portfolio group before removing their group.'
+    : validateInvestmentPlan(plan)
 
   const save = () => {
-    if (hideSensitive || validation) return
+    if (hideSensitive || validation || !overview) return
     const payload = {
+      groups,
       usEquityTarget: plan.usEquityTarget,
       internationalExUsTarget: plan.internationalExUsTarget,
       bondsTarget: plan.bondsTarget,
@@ -296,14 +197,15 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
     }
     const accepted = queueMutation('investmentPlan', 'update', 'three-fund', {
       ...payload,
-      undoSnapshot: overview?.plan,
+      undoSnapshot: { ...overview.plan, groups: getInvestmentGroups(overview.plan) },
     })
     if (!accepted) return
     setOverview(previous => previous ? { ...previous, plan: { ...previous.plan, ...payload } } : previous)
+    setDraft(null)
   }
 
   const classify = (instrumentId: string, sleeve?: InvestmentAllocationSleeve) => {
-    if (hideSensitive) return
+    if (hideSensitive || (sleeve && !getInvestmentGroups(overview?.plan ?? defaults).some(group => group.key === sleeve))) return
     const previousSleeve = overview?.assignments.find(value => value.instrumentId === instrumentId)?.sleeve
     const accepted = queueMutation('investmentAllocation', 'update', instrumentId, {
       sleeve: sleeve ?? null,
@@ -366,155 +268,37 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
     if (!hideSensitive) return
     const projectQueued = projectQueuedChanges(cachedOverview())
     setOverview(projectQueued)
-    setPlan(projectQueued?.plan ?? defaults)
-    setLockedSleeve(null)
-    setGlobalTargetLock(true)
+    setDraft(null)
   }, [hideSensitive])
 
   if (!overview && isOffline) {
     return <div role="status" className={cn(panelClass, 'flex h-40 flex-col items-center justify-center gap-2 p-5 text-center')}><WifiOff className="size-6 text-muted-foreground" /><p className="text-subsection text-foreground">Investment plan unavailable offline</p><p className="text-caption text-muted-foreground">Connect once to load your investment plan on this device.</p></div>
   }
   if (!overview && loading) {
-    return <div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>
+    return <InvestmentPlanSettingsSkeleton />
   }
 
-  const sleeveRows = [
-    ['US Equity', 'usEquityTarget', SLEEVE_COLORS[0]],
-    ['International ex-US', 'internationalExUsTarget', SLEEVE_COLORS[1]],
-    ['Bonds', 'bondsTarget', SLEEVE_COLORS[2]],
-  ] as const
+  if (hideSensitive) {
+    return <div id="settings-panel-investment-plan" role="tabpanel" aria-labelledby="settings-tab-investment-plan"
+      className={cn(panelClass, 'p-5 text-body text-muted-foreground')}>Unhide balances to view or edit your investment plan.</div>
+  }
+
+  const savedGroups = getInvestmentGroups(savedPlan)
+  const classificationGroups = savedGroups.filter(group => draftKeys.has(group.key) || assignedKeys.has(group.key))
+  const hasNewGroups = groups.some(group => !savedGroups.some(saved => saved.key === group.key))
 
   return (
     <div id="settings-panel-investment-plan" role="tabpanel" aria-labelledby="settings-tab-investment-plan" className="grid w-full min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-2">
       <section aria-labelledby="investment-targets-title" className={cn(panelClass, 'w-full min-w-0 p-4 sm:p-6')}>
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 id="investment-targets-title" className="text-section text-foreground">Portfolio targets</h3>
-            <p className="mt-1 text-caption text-muted-foreground">The mix your Growth money should hold.</p>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            type="button"
-            onClick={() => setGlobalTargetLock(!globalTargetLock)}
-            disabled={hideSensitive}
-            aria-pressed={globalTargetLock}
-            className="shrink-0"
-          >
-            {globalTargetLock ? <Lock className="size-3.5" /> : <Unlock className="size-3.5" />}
-            {globalTargetLock ? 'Locked' : 'Unlocked'}
-          </Button>
-        </div>
-
-        {/* The whole mix first, as one bar, so a change to one sleeve visibly takes from the others. */}
-        <div className="mt-5 space-y-2">
-          <SegmentedMeter
-            size="md"
-            total={100}
-            label={`Target mix: ${sleeveRows.map(([label, key]) => `${label} ${plan[key]}%`).join(', ')}`}
-            segments={sleeveRows.map(([label, key, color]) => ({ label, value: plan[key], color }))}
-          />
-          <p className={cn('text-right text-caption tabular-nums', total === 100 ? 'text-muted-foreground' : 'text-red-600 dark:text-red-400')}>
-            Total: {total}%
-          </p>
-        </div>
-
-        <div className="mt-2 divide-y divide-border/60">
-          {sleeveRows.map(([label, key, color]) => (
-            // A div, not a label. A <label> wrapping this row took the *lock button* as its labelled
-            // control (first labelable descendant, ahead of the slider) and forwarded every click in
-            // the row to it. The slider carries its own aria-label.
-            <div key={key} className="w-full min-w-0 space-y-2 py-4">
-              <div className="flex min-w-0 items-center justify-between gap-2">
-                <span className="flex min-w-0 items-center gap-2">
-                  <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-                  <span className="truncate text-label text-foreground">{label}</span>
-                  <IconButton
-                    type="button"
-                    label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`}
-                    onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }}
-                    className="-my-2 shrink-0 text-muted-foreground hover:text-foreground"
-                    disabled={hideSensitive || (lockedSleeve !== null && lockedSleeve !== key)}
-                    tooltip={lockedSleeve === key ? 'Unlock target' : lockedSleeve ? 'Unlock the current target before locking another' : 'Lock target'}
-                  >
-                    {lockedSleeve === key ? <Lock className="size-3.5 text-accent-ink" /> : <Unlock className="size-3.5" />}
-                  </IconButton>
-                </span>
-                <span className="shrink-0 text-subsection text-foreground tabular-nums">{plan[key]}%</span>
-              </div>
-              <RangeInput
-                aria-label={`${label} target`}
-                min="1"
-                max="98"
-                step="1"
-                disabled={hideSensitive || globalTargetLock || lockedSleeve === key}
-                value={plan[key]}
-                onChange={event => changeTarget(key, Number(event.target.value))}
-                style={{ '--range-color': color } as React.CSSProperties}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Two sliders on one shared scale. A drift band is a threshold on the same axis the sleeve
-            targets use; the handler holds Alert above Watch, so the pair cannot be dragged into an
-            invalid plan. Amber is the early warning, orange the one that means rebalance. */}
-        <div className="mt-2 border-t border-border/60 pt-5">
-          <h4 className="text-subsection text-foreground">Drift alerts</h4>
-          <p className="mt-1 text-caption text-muted-foreground">How far a holding may stray from its target before you hear about it.</p>
-          <div className="mt-2 divide-y divide-border/60">
-            {DRIFT_BANDS.map(band => {
-              const isLocked = lockedDrift[band.key]
-              const minVal = band.key === 'watchDrift'
-                ? 1
-                : (lockedDrift.watchDrift ? plan.watchDrift + 1 : 2)
-              const maxVal = band.key === 'watchDrift'
-                ? (lockedDrift.alertDrift ? Math.min(driftMax - 1, plan.alertDrift - 1) : driftMax - 1)
-                : driftMax
-
-              return (
-                <div key={band.key} className="w-full min-w-0 space-y-2 py-4">
-                  <div className="flex min-w-0 items-center justify-between gap-2">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="truncate text-label text-foreground">{band.label}</span>
-                      <IconButton
-                        type="button"
-                        label={`${isLocked ? 'Unlock' : 'Lock'} ${band.key === 'watchDrift' ? 'watch' : 'alert'} drift threshold`}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          toggleDriftLock(band.key)
-                        }}
-                        className="-my-2 shrink-0 text-muted-foreground hover:text-foreground"
-                        disabled={hideSensitive}
-                        tooltip={isLocked ? `Unlock ${band.key === 'watchDrift' ? 'watch' : 'alert'} drift threshold` : `Lock ${band.key === 'watchDrift' ? 'watch' : 'alert'} drift threshold`}
-                      >
-                        {isLocked ? <Lock className={`size-3.5 ${band.lockColor}`} /> : <Unlock className="size-3.5" />}
-                      </IconButton>
-                    </span>
-                    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-label tabular-nums ${band.badge}`}>
-                      {plan[band.key]} pp
-                    </span>
-                  </div>
-                  <RangeInput
-                    aria-label={`${band.label}, in percentage points`}
-                    min={minVal}
-                    max={maxVal}
-                    step="1"
-                    disabled={hideSensitive || isLocked}
-                    value={plan[band.key]}
-                    onChange={event => changeDrift(band.key, Number(event.target.value))}
-                    style={{ '--range-color': band.color } as React.CSSProperties}
-                  />
-                  <p className="text-caption text-muted-foreground">{band.hint}</p>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        <InvestmentGroupTargets groups={groups} assignedKeys={assignedKeys}
+          disabled={!overview || planSyncing || planPending}
+          onChange={groups => setPlan(previous => ({ ...previous, groups }))} />
+        <InvestmentDriftSettings plan={plan} savedPlan={overview?.plan} setPlan={setPlan}
+          hideSensitive={planSyncing || planPending || !overview} />
 
         {(validation || error) && <p role="alert" className="mt-2 flex gap-2 text-caption text-red-600 dark:text-red-400"><AlertCircle className="size-4 shrink-0" />{validation || error}</p>}
         <div className="mt-4 flex justify-end">
-          <Button variant="primary" disabled={hideSensitive || Boolean(validation) || planSyncing || planPending} aria-busy={planSyncing} onClick={save}>
+          <Button variant="primary" disabled={!overview || Boolean(validation) || planSyncing || planPending} aria-busy={planSyncing} onClick={save}>
             <MutationButtonContent
               state={planSyncing ? 'syncing' : planPending ? 'pending' : null}
               entityLabel="investment plan"
@@ -532,6 +316,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
             Investment classification <RowSyncStatus isSyncing={orderSyncing} isPending={orderPending} entityLabel="classification order" />
           </h3>
           <p className="mt-1 text-caption text-muted-foreground">Which target each holding counts towards. Drag to set the order money is planned in.</p>
+          {hasNewGroups && <p className="mt-1 text-caption text-muted-foreground">Save targets to make new groups available here.</p>}
         </div>
         <Reorder.Group
           axis="y"
@@ -543,6 +328,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
             <InvestmentClassificationRow
               key={value.instrumentId}
               value={value}
+              groups={classificationGroups}
               classify={classify}
               onReorderFinished={saveAssignmentOrder}
               onMove={direction => moveAssignment(value.instrumentId, direction)}

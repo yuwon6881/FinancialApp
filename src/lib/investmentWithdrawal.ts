@@ -5,6 +5,8 @@
 // portfolio, so planning a withdrawal costs no request and no market-data quota,
 // and the answer can update while the user is still typing an amount.
 
+import { roundInvestmentSplit } from './investmentSplitRounding'
+
 /** Values are all in the app currency. */
 export interface WithdrawalSleeveInput {
   sleeve: string
@@ -97,15 +99,7 @@ export function planWithdrawal(
     return fromHoldings * surpluses[index] / totalSurplus
   })
 
-  // Rounding to cents must not invent or lose money: the largest sale absorbs the
-  // difference so the parts add back up to the amount the user asked to withdraw.
-  const amounts = raw.map(round)
-  const drift = round(fromHoldings) - amounts.reduce((sum, value) => sum + value, 0)
-  if (drift !== 0 && amounts.length > 0) {
-    const largest = amounts.reduce(
-      (best, value, index) => (value > amounts[best] ? index : best), 0)
-    amounts[largest] = round(amounts[largest] + drift)
-  }
+  const amounts = roundInvestmentSplit(raw, fromHoldings, sleeves.map(sleeve => Math.max(0, sleeve.value)))
 
   const planned = sleeves.map<WithdrawalSleevePlan>((sleeve, index) => {
     const amount = amounts[index]

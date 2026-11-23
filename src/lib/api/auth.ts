@@ -3,6 +3,7 @@ import type { LoginCredentials, RegisterCredentials } from '../apiTypes'
 import type { QuestionAnswerDto, SecurityQuestionsRecoveryStartResponse } from '../../types'
 import { apiFetch, invalidateCache, jsonBody, noteSessionUnlocked, request, requestVoid } from './client'
 import { tokenStore } from '../auth'
+import { getFriendlyDeviceLabel } from '../deviceLabel'
 import { getDeviceUnlockRegistrationMarker } from '../deviceUnlockRegistration'
 
 function getDeviceInfo(): { deviceId: string; deviceName: string } {
@@ -14,20 +15,7 @@ function getDeviceInfo(): { deviceId: string; deviceName: string } {
     localStorage.setItem('deviceId', deviceId)
   }
 
-  const userAgent = navigator.userAgent
-  let browser = 'Unknown Browser'
-  let os = 'Unknown OS'
-  if (userAgent.includes('Firefox/')) browser = 'Firefox'
-  else if (userAgent.includes('Edg/')) browser = 'Edge'
-  else if (userAgent.includes('Chrome/')) browser = 'Chrome'
-  else if (userAgent.includes('Safari/') && !userAgent.includes('Chrome/')) browser = 'Safari'
-
-  if (userAgent.includes('Windows NT')) os = 'Windows'
-  else if (userAgent.includes('Mac OS X')) os = 'macOS'
-  else if (userAgent.includes('Android')) os = 'Android'
-  else if (userAgent.includes('iPhone')) os = 'iOS'
-  else if (userAgent.includes('Linux')) os = 'Linux'
-  return { deviceId, deviceName: `${browser} on ${os}` }
+  return { deviceId, deviceName: getFriendlyDeviceLabel() }
 }
 
 export interface AuthStatus {

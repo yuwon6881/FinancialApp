@@ -1,4 +1,5 @@
-import type { InvestmentPlan } from '../types'
+import type { InvestmentForecastClass, InvestmentPlan } from '../types'
+import { getInvestmentGroups } from './investmentGroups'
 
 export const FORECAST_MIN_YEARS = 5
 export const FORECAST_MAX_YEARS = 50
@@ -8,7 +9,7 @@ export const FORECAST_MAX_TARGET = 10_000_000
 export const FORECAST_MAX_MONTHLY_CONTRIBUTION = 10_000
 
 interface ForecastAssetAssumption {
-  key: 'USEquity' | 'InternationalExUS' | 'Bonds'
+  key: InvestmentForecastClass
   label: string
   annualReturn: number
   annualVolatility: number
@@ -62,9 +63,13 @@ export const FORECAST_ASSUMPTIONS: ForecastAssumptionSet = {
 
 export function buildForecastModel(plan: InvestmentPlan): ForecastModel {
   const rawWeights: Record<ForecastAssetAssumption['key'], number> = {
-    USEquity: Math.max(0, plan.usEquityTarget),
-    InternationalExUS: Math.max(0, plan.internationalExUsTarget),
-    Bonds: Math.max(0, plan.bondsTarget),
+    USEquity: 0,
+    InternationalExUS: 0,
+    Bonds: 0,
+  }
+  for (const group of getInvestmentGroups(plan)) {
+    if (!group.forecastClass) throw new Error('Every portfolio group needs a forecast assumption.')
+    rawWeights[group.forecastClass] += Math.max(0, group.targetPercentage)
   }
   const total = Object.values(rawWeights).reduce((sum, value) => sum + value, 0)
   const weights = Object.fromEntries(

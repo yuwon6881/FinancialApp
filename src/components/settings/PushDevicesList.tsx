@@ -5,6 +5,7 @@ import type { PushDevice } from '../../types'
 import { getErrorMessage } from '../../lib/errors'
 import { buildMutationSuccessToast } from '../../lib/mutationToast'
 import { PUSH_DEVICES_UNAVAILABLE } from '../../lib/push/messages'
+import { getFriendlyDeviceLabel } from '../../lib/deviceLabel'
 import { useAppUi } from '../../contexts/AppContext'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
@@ -132,6 +133,7 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey, on
     <ul className="space-y-1.5">
       {devices.map(device => {
         const isRevoking = revokingId === device.id
+        const label = device.deviceLabel || (device.isCurrent ? getFriendlyDeviceLabel() : 'Unidentified device')
         return (
           <li
             key={device.id}
@@ -139,9 +141,10 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey, on
             className="flex items-center justify-between gap-2 rounded-control inset-group px-3 py-2"
           >
             <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+              <span className="flex flex-wrap items-center gap-2 text-xs font-semibold text-foreground">
                 <MonitorSmartphone className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                {device.isCurrent ? 'Current installation' : 'Another installation'}
+                <span className="min-w-0 break-words">{label}</span>
+                {device.isCurrent && <small className="text-accent-ink">Current</small>}
               </span>
               {/* Naming what each device receives is what makes "on for another device" checkable
                   rather than something the app just asserts. */}
@@ -156,7 +159,7 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey, on
                 type="button"
                 onClick={() => void revoke(device)}
                 disabled={revokingId !== null}
-                label="Stop notifications for this other device"
+                label={`Stop notifications for ${label}`}
                 aria-busy={isRevoking}
                 className="size-11 shrink-0 rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive disabled:opacity-40 sm:size-8"
               >

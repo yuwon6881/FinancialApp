@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { InvestmentPortfolio } from '../../../types'
 import { formatCurrencyVal } from '../../../lib/utils'
+import { getInvestmentGroups } from '../../../lib/investmentGroups'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { LineChart } from 'lucide-react'
 import { ForecastControls } from './ForecastControls'
@@ -16,10 +17,22 @@ function percentage(value: number) {
   return `${(value * 100).toFixed(1)}%`
 }
 
-export function InvestmentForecastPanel({ portfolio, masked }: {
+interface InvestmentForecastPanelProps {
   portfolio: InvestmentPortfolio
   masked: boolean
-}) {
+}
+
+export function InvestmentForecastPanel(props: InvestmentForecastPanelProps) {
+  if (getInvestmentGroups(props.portfolio.allocation.plan).some(group => !group.forecastClass)) {
+    return (
+      <InvestmentToolRow icon={<LineChart className="size-4" />} title="Investment forecast" titleId="forecast-title"
+        subtitle="Choose a forecast assumption for each group under Settings → Investment plan." />
+    )
+  }
+  return <AvailableInvestmentForecast {...props} />
+}
+
+function AvailableInvestmentForecast({ portfolio, masked }: InvestmentForecastPanelProps) {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const initialFocusRef = useRef<HTMLDivElement>(null)
   const [isOpen, setIsOpen] = useState(false)

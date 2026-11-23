@@ -85,30 +85,46 @@ const InteractiveStatTile: React.FC<{
   const [pinned, setPinned] = React.useState(false)
   const anchorRef = React.useRef<HTMLButtonElement | null>(null)
   const popoverRef = React.useRef<HTMLDivElement | null>(null)
+  const hoverCloseTimer = React.useRef<number | undefined>(undefined)
   const id = React.useId()
 
+  const cancelHoverClose = React.useCallback(() => {
+    window.clearTimeout(hoverCloseTimer.current)
+  }, [])
+
+  React.useEffect(() => cancelHoverClose, [cancelHoverClose, isMobile])
+
+  const closeBreakdown = React.useCallback(() => {
+    cancelHoverClose()
+    setPinned(false)
+    setOpen(false)
+  }, [cancelHoverClose])
+
   React.useEffect(() => {
-    if (!pinned || isMobile) return
-    const dismiss = (event: Event) => {
-      const target = event.target as Node
-      if (anchorRef.current?.contains(target)) return
-      if (popoverRef.current?.contains(target)) return
-      setPinned(false)
-      setOpen(false)
-    }
+    if (isMobile || (!open && !pinned)) return
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setPinned(false)
-        setOpen(false)
-      }
+      if (event.key !== 'Escape') return
+      if (popoverRef.current?.contains(document.activeElement)) anchorRef.current?.focus()
+      closeBreakdown()
     }
-    document.addEventListener('pointerdown', dismiss)
     document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('pointerdown', dismiss)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [pinned, isMobile])
+    return () => document.removeEventListener('keydown', onKey)
+  }, [closeBreakdown, isMobile, open, pinned])
+
+  const isInsideBreakdown = (target: EventTarget | null) => target instanceof Node && (
+    anchorRef.current?.contains(target) || popoverRef.current?.contains(target)
+  )
+
+  const handlePointerLeave = (event: React.PointerEvent) => {
+    if (event.pointerType !== 'mouse' || pinned || isInsideBreakdown(event.relatedTarget)) return
+    cancelHoverClose()
+    // The panel is portalled and separated from the tile by a gap.
+    hoverCloseTimer.current = window.setTimeout(() => setOpen(false), 200)
+  }
+
+  const handleBlur = (event: React.FocusEvent) => {
+    if (!pinned && !isInsideBreakdown(event.relatedTarget)) setOpen(false)
+  }
 
   const sheetTitle = mode === 'recurring-annual'
     ? 'Yearly Bills Distribution'
@@ -126,14 +142,22 @@ const InteractiveStatTile: React.FC<{
         aria-expanded={open || pinned}
         aria-controls={(open || pinned) ? id : undefined}
         onClick={() => {
+          cancelHoverClose()
           const next = !pinned
           setPinned(next)
           setOpen(next)
         }}
-        onMouseEnter={() => { if (!isMobile) setOpen(true) }}
-        onMouseLeave={() => { if (!isMobile && !pinned) setOpen(false) }}
-        onFocus={() => { if (!isMobile) setOpen(true) }}
-        onBlur={() => { if (!isMobile && !pinned) setOpen(false) }}
+        onPointerEnter={isMobile ? undefined : event => {
+          if (event.pointerType !== 'mouse') return
+          cancelHoverClose()
+          setOpen(true)
+        }}
+        onPointerLeave={isMobile ? undefined : handlePointerLeave}
+        onFocus={isMobile ? undefined : () => {
+          cancelHoverClose()
+          setOpen(true)
+        }}
+        onBlur={isMobile ? undefined : handleBlur}
         // The hover surface covers the tile exactly. It used to bleed 4px sideways (`px-1 -mx-1`),
         // which put the truncation edge of a long figure right on the neighbour's divider -- the
         // yearly total and the count beside it read as one run-on number.
@@ -174,7 +198,12 @@ const InteractiveStatTile: React.FC<{
           role="dialog"
           aria-label={sheetTitle}
           id={id}
-          className="z-[200] w-84 rounded-overlay border border-border/70 bg-popover p-4 shadow-(--app-shadow-overlay) animate-in fade-in slide-in-from-top-1 duration-150"
+          onPointerEnter={cancelHoverClose}
+          onPointerLeave={handlePointerLeave}
+          onFocus={cancelHoverClose}
+          onBlur={handleBlur}
+          onDismiss={closeBreakdown}
+          className="z-[200] w-120 rounded-overlay border border-border/70 bg-popover p-4 shadow-(--app-shadow-overlay) motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150 lg:w-136"
         >
           <StatDistributionBreakdown
             mode={mode}
@@ -193,7 +222,7 @@ const InteractiveStatTile: React.FC<{
         <BottomSheet
           isOpen={pinned}
           title={sheetTitle}
-          onClose={() => { setPinned(false); setOpen(false) }}
+          onClose={closeBreakdown}
         >
           <div className="p-1">
             <StatDistributionBreakdown

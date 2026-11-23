@@ -151,6 +151,7 @@ export interface PushStatus {
 
 export interface PushDevice {
   id: string
+  deviceLabel?: string | null
   isCurrent: boolean
   billRemindersEnabled: boolean
   categoryAlertsEnabled: boolean

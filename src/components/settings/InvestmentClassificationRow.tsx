@@ -1,12 +1,13 @@
 import { Reorder, useDragControls, useReducedMotion } from 'framer-motion'
 import { GripVertical } from 'lucide-react'
-import type { InvestmentAllocationOverview, InvestmentAllocationSleeve } from '../../types'
+import type { InvestmentAllocationOverview, InvestmentAllocationSleeve, InvestmentGroup } from '../../types'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 
 interface InvestmentClassificationRowProps {
   value: InvestmentAllocationOverview['assignments'][number]
+  groups: InvestmentGroup[]
   classify: (instrumentId: string, sleeve?: InvestmentAllocationSleeve) => void
   onReorderFinished: () => void
   onMove: (direction: -1 | 1) => void
@@ -20,6 +21,7 @@ interface InvestmentClassificationRowProps {
 
 export function InvestmentClassificationRow({
   value,
+  groups,
   classify,
   onReorderFinished,
   onMove,
@@ -78,13 +80,11 @@ export function InvestmentClassificationRow({
         <CustomSelect
           ariaLabel={`Classify ${value.symbol}`}
           value={value.sleeve ?? ''}
-          onChange={next => classify(value.instrumentId, String(next) === '' ? undefined : String(next) as InvestmentAllocationSleeve)}
+          onChange={next => classify(value.instrumentId, next || undefined)}
           disabled={isBusy}
           options={[
             { value: '', label: 'Unassigned' },
-            { value: 'USEquity', label: 'US Equity' },
-            { value: 'InternationalExUS', label: 'International ex-US' },
-            { value: 'Bonds', label: 'Bonds' },
+            ...groups.map(group => ({ value: group.key, label: group.label })),
           ]}
           className="w-full"
         />

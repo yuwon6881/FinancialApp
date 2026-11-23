@@ -54,7 +54,9 @@ const budgets = [
   // SettingsView. Vite's generated dependency-preload wrapper could remain pending forever for
   // those runtime chunks; keeping the focused components in the already-lazy Settings route
   // removes that failure path without adding them to the eager application graph.
-  { name: 'SettingsView-*.js', pattern: /^SettingsView-.*\.js$/, limitKb: 38.0 }
+  // 41.5: raised from 38.0 (measured 39.89) for editable portfolio groups and drift settings in the
+  // Investment Plan card, which must stay in this chunk for the reason above.
+  { name: 'SettingsView-*.js', pattern: /^SettingsView-.*\.js$/, limitKb: 41.5 }
 ]
 
 function getGzipSize(filePath) {

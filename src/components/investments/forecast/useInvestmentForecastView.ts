@@ -30,11 +30,7 @@ export function useInvestmentForecastView(portfolio: InvestmentPortfolio, nearVi
   )
   const model = useMemo(
     () => buildForecastModel(portfolio.allocation.plan),
-    [
-      portfolio.allocation.plan.usEquityTarget,
-      portfolio.allocation.plan.internationalExUsTarget,
-      portfolio.allocation.plan.bondsTarget,
-    ],
+    [portfolio.allocation.plan],
   )
 
   const [years, setYears] = useState(FORECAST_DEFAULT_YEARS)
