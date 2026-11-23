@@ -76,7 +76,7 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
   onLogout,
 }) => {
   const scrolled = useScrolledPast(12)
-  const title = activeTab === 'settings' ? 'Settings' : destinationForTab(activeTab)?.label ?? ''
+  const title = activeTab === 'settings' ? 'Settings' : activeTab === 'forecast' ? 'Forecast' : destinationForTab(activeTab)?.label ?? ''
   const hasAlerts = pendingNotificationCount > 0
 
   return (

@@ -16,6 +16,7 @@ import { panelClass } from './panelStyles'
 import { PageHeader } from './PageHeader'
 import { AccountsPageSkeleton, BudgetSkeleton, SettingsPageSkeleton } from './skeletons/SettingsPageSkeletons'
 import { InvestmentPageSkeleton, VaultPageSkeleton } from './skeletons/WealthPageSkeletons'
+import { ForecastPageSkeleton } from './skeletons/ForecastPageSkeleton'
 
 const LedgerToolbarSkeleton: React.FC = () => (
   <PageHeader
@@ -65,7 +66,7 @@ const DraftRowSkeleton: React.FC = () => (
   </div>
 )
 
-export type PageSkeletonVariant = 'dashboard' | 'reports' | 'ledger' | 'recurring' | 'wishlist' | 'drafts' | 'settings' | 'budget' | 'budget-categories' | 'accounts' | 'loans' | 'investments' | 'documents'
+export type PageSkeletonVariant = 'dashboard' | 'reports' | 'ledger' | 'recurring' | 'wishlist' | 'drafts' | 'settings' | 'budget' | 'budget-categories' | 'accounts' | 'loans' | 'investments' | 'documents' | 'forecast'
 
 const PanelSkeleton = ({ height = 'h-40' }: { height?: string }) => (
   <div className={`${panelClass} p-5`}>
@@ -229,6 +230,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
   if (variant === 'accounts') return <AccountsPageSkeleton />
   if (variant === 'investments') return <InvestmentPageSkeleton />
   if (variant === 'documents') return <VaultPageSkeleton />
+  if (variant === 'forecast') return <ForecastPageSkeleton />
 
   return (
     <section data-testid="drafts-skeleton" className="max-w-5xl space-y-4 sm:space-y-5" aria-label="Loading draft transactions">

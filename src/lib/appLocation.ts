@@ -71,6 +71,7 @@ const PATH_BY_TAB: Record<AppTab, string> = {
   documents: '/wealth/vault',
   reports: '/insights',
   settings: '/settings',
+  forecast: '/forecast',
 }
 
 /** Loans live on the Recurring tab but have an address of their own. */

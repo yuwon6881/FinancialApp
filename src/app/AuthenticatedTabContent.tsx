@@ -35,6 +35,7 @@ const CommitmentsRewardsView = lazy(() => import('../components/CommitmentsRewar
 const DraftStagingView = lazy(() => import('../components/DraftStagingView').then(module => ({ default: module.DraftStagingView })))
 const InvestmentsView = lazy(() => import('../components/InvestmentsView').then(module => ({ default: module.InvestmentsView })))
 const DocumentsView = lazy(() => import('../components/DocumentsView').then(module => ({ default: module.DocumentsView })))
+const ForecastView = lazy(() => import('../components/ForecastView').then(module => ({ default: module.ForecastView })))
 
 export interface AuthenticatedTabContentProps {
   prefs: ReturnType<typeof useAppPreferences>
@@ -561,6 +562,8 @@ export function AuthenticatedTabContent({
       {prefs.activeTab === 'documents' && (
         <DocumentsView onNavigateToTransaction={openLinkedVaultTransaction} />
       )}
+
+      {prefs.activeTab === 'forecast' && <ForecastView />}
     </div>
     </Suspense>
     </div>

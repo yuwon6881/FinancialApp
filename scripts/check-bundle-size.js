@@ -169,7 +169,10 @@ if (!fs.existsSync(distAssetsPath)) {
 // carry, so a queued limit change shows before sync. The card helpers and the Pay card prefill stay
 // lazy (Settings and an on-demand import). The same seven chunks remain eager, and the limit
 // restores the established ~1.5 kB margin.
-const CRITICAL_PATH_LIMIT_KB = 227.0
+// 228.5: raised from 227.0 (measured 227.04; 226.68 before the change). The Forecast workspace adds
+// one route, its lazy import and a profile-menu entry; the view, its API client and scenario logic
+// stay in a lazy chunk. The same seven chunks remain eager, and the limit restores the ~1.5 kB margin.
+const CRITICAL_PATH_LIMIT_KB = 228.5
 const PRECACHE_RAW_LIMIT_KB = 3 * 1024
 
 function criticalPathChunks(files) {
