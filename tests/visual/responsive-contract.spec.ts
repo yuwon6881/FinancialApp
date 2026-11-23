@@ -140,9 +140,16 @@ test('ledger mutation status keeps row copy and geometry fixed', async ({ page }
     const line = title?.parentElement
     const slot = row?.querySelector<HTMLElement>('[data-mutation-status-slot]')
     if (!row || !title || !line || !slot) return null
+    // A queued op legitimately shows the Sync pending banner above the page; the row itself
+    // must not move relative to it, so measure with the banner's footprint removed.
+    const banner = document.querySelector<HTMLElement>('[role="region"][aria-label="Sync pending"]')
+    const bannerStyle = banner && getComputedStyle(banner)
+    const bannerShift = banner && bannerStyle
+      ? banner.getBoundingClientRect().height + parseFloat(bannerStyle.marginTop) + parseFloat(bannerStyle.marginBottom)
+      : 0
     const rect = (element: Element) => {
       const value = element.getBoundingClientRect()
-      return { x: value.x, y: value.y, width: value.width, height: value.height }
+      return { x: value.x, y: value.y - bannerShift, width: value.width, height: value.height }
     }
     return { row: rect(row), title: rect(title), line: rect(line), state: slot.dataset.mutationState }
   })
